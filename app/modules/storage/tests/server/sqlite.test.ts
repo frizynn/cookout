@@ -22,6 +22,11 @@ const ONE_REPLY = 1;
 const OCTAL = 8;
 const PERMISSION_DIGITS = -3;
 const OWNER_ONLY = "600";
+const FIRST = 0;
+const SCHEMA_VERSION_OFFSET = 60;
+const SCHEMA_VERSION_BYTES = 4;
+const NEWER_VERSION = 1000;
+const NEGATIVE_VERSION = -1;
 const hashA = tokenHash(Str.repeat(HASH_LENGTH)("a"));
 const hashB = tokenHash(Str.repeat(HASH_LENGTH)("b"));
 const griller = identityFixture("auth-griller", { owner: "matt" });
@@ -58,6 +63,39 @@ function postTwo(path: string): OnDisk<MessageId> {
   });
 }
 
+function asText(bytes: Iterable<number>): string {
+  return Arr.join(
+    Arr.map(Arr.fromIterable(bytes), (byte) => String.fromCodePoint(byte)),
+    "",
+  );
+}
+
+function asBytes(text: string): Uint8Array {
+  return Uint8Array.from(text, (char) => Option.getOrElse(Str.codePointAt(FIRST)(char), () => FIRST));
+}
+
+function damage(path: string, edit: (file: string) => string): OnDisk<void> {
+  return Effect.gen(function* rewriteFile() {
+    const fs = yield* FileSystem.FileSystem;
+    const file = yield* fs.readFile(path);
+    const edited = edit(asText(file));
+    yield* fs.writeFile(path, asBytes(edited));
+  }).pipe(Effect.catchTag("PlatformError", Effect.die));
+}
+
+function schemaVersion(version: number): (file: string) => string {
+  const field = new Uint8Array(SCHEMA_VERSION_BYTES);
+  new DataView(field.buffer).setInt32(FIRST, version);
+  return (file) =>
+    Str.slice(FIRST, SCHEMA_VERSION_OFFSET)(file) +
+    asText(field) +
+    Str.slice(SCHEMA_VERSION_OFFSET + SCHEMA_VERSION_BYTES)(file);
+}
+
+function upperCased(word: string): (file: string) => string {
+  return (file) => Str.replaceAll(word, Str.toUpperCase(word))(file);
+}
+
 function postThread(path: string): OnDisk<ThreadResponse | undefined> {
   return Effect.gen(function* postAndClose() {
     const { close, storage } = yield* openStore(sqliteStorage(path));
@@ -91,6 +129,46 @@ it.effect("a database file that can't be created fails with StorageUnavailable",
     const error = yield* Effect.flip(openStore(sqliteStorage(`${path}/missing-folder/cookout.db`)));
 
     expect(error).toBeInstanceOf(StorageUnavailable);
+  }).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect("a database at a newer schema version than this cookout fails with StorageUnavailable", () =>
+  Effect.gen(function* tooNewSchema() {
+    const path = yield* freshDatabasePath;
+    yield* openAndClose(path);
+    yield* damage(path, schemaVersion(NEWER_VERSION));
+    const error = yield* Effect.flip(openStore(sqliteStorage(path)));
+
+    expect(error).toStrictEqual(
+      StorageUnavailable.make({
+        message: "The database is at schema version 1000, newer than this cookout (4). Upgrade cookout.",
+      }),
+    );
+  }).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect("a database with a negative schema version fails with StorageUnavailable", () =>
+  Effect.gen(function* negativeSchema() {
+    const path = yield* freshDatabasePath;
+    yield* openAndClose(path);
+    yield* damage(path, schemaVersion(NEGATIVE_VERSION));
+    const error = yield* Effect.flip(openStore(sqliteStorage(path)));
+
+    expect(error).toStrictEqual(StorageUnavailable.make({ message: "The database has no readable schema version." }));
+  }).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect("a damaged channel row fails with StorageUnavailable when it is read", () =>
+  Effect.gen(function* damagedRow() {
+    const path = yield* freshDatabasePath;
+    yield* postTwo(path);
+    yield* damage(path, upperCased("grill"));
+    const { storage } = yield* openStore(sqliteStorage(path));
+    const error = yield* Effect.flip(storage.listChannels());
+
+    expect(error).toStrictEqual(
+      StorageUnavailable.make({ message: "The database holds a row this cookout can't read." }),
+    );
   }).pipe(Effect.provide(NodeServices.layer)),
 );
 
