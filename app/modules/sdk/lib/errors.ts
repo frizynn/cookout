@@ -1,6 +1,6 @@
 import type { ErrorCode } from "../../http/index.ts";
 
-export type CookoutErrorCode = ErrorCode | "bad_response";
+export type CookoutErrorCode = ErrorCode | "bad_response" | "url_missing";
 
 export class CookoutError extends Error {
   override readonly name = "CookoutError";

@@ -14,3 +14,9 @@ export const host = Config.String("COOKOUT_HOST").pipe(Config.withDefault("0.0.0
 
 /** `COOKOUT_DB`: the SQLite file `cookout serve` keeps its data in. */
 export const databasePath = Config.String("COOKOUT_DB").pipe(Config.withDefault("cookout.db"));
+
+/** `COOKOUT_URL`: the server every CLI verb but `serve` talks to. Empty counts as unset. */
+export const cookoutUrl = Config.String("COOKOUT_URL").pipe(Config.withDefault(""));
+
+/** `COOKOUT_TOKEN`: the bearer token every CLI verb but `serve` sends. Empty counts as unset. */
+export const cookoutToken = Config.String("COOKOUT_TOKEN").pipe(Config.withDefault(""));

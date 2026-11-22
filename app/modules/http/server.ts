@@ -16,10 +16,8 @@ import { ErrorResponseSchema, HealthResponseSchema } from "./lib/server/wire.ts"
 
 export type { Route };
 
-/** Every response Schema, by the module whose `index.ts` holds its wire type. The SDK's validators are generated from these. */
-export const responseSchemas = {
-  http: { HealthResponse: HealthResponseSchema, ErrorResponse: ErrorResponseSchema },
-};
+/** The response Schemas of `/v1/health` and of every refusal, for the SDK's generated validators. */
+export const httpResponseSchemas = { HealthResponse: HealthResponseSchema, ErrorResponse: ErrorResponseSchema };
 
 const maxBodySize = ByteSize.bytes(1024 * 1024);
 
