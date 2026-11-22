@@ -15,6 +15,7 @@ import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
 import type { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
+import { echoed } from "../../../http/index.ts";
 
 const CreateIdentityRequestSchema = Schema.Struct({
   name: IdentityNameSchema,
@@ -28,7 +29,7 @@ const CREATED = 201;
 const NOT_FOUND = 404;
 
 function identityNotFound(name: string): Refusal {
-  return { code: "identity_not_found", message: `There is no identity named ${name}.`, status: NOT_FOUND };
+  return { code: "identity_not_found", message: `There is no identity named ${echoed(name)}.`, status: NOT_FOUND };
 }
 
 function identityExists(name: string): Refusal {

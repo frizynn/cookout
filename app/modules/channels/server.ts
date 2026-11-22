@@ -12,6 +12,7 @@ import type { Refusal } from "../http/index.ts";
 import type { Route } from "../http/server.ts";
 import { Storage } from "../storage/server.ts";
 import type { StorageUnavailable } from "../storage/server.ts";
+import { echoed } from "../http/index.ts";
 
 type NewChannel = typeof CreateChannelRequestSchema.Type;
 
@@ -24,7 +25,7 @@ function channelExists(name: string): Refusal {
 }
 
 function missingChannel(name: string): Refusal {
-  return { code: "channel_not_found", message: `There is no channel named ${name}.`, status: NOT_FOUND };
+  return { code: "channel_not_found", message: `There is no channel named ${echoed(name)}.`, status: NOT_FOUND };
 }
 
 function stamped(fields: NewChannel, createdAt: string): Channel {

@@ -4,6 +4,7 @@ import { methodNotAllowed, notFound } from "./refusals.ts";
 import type { HttpMethod } from "../../client.ts";
 import type { Refusal } from "../../index.ts";
 import { HttpServerRequest as Request } from "effect/http";
+import { echoed } from "../../index.ts";
 
 type Params = Readonly<Record<string, string>>;
 
@@ -45,7 +46,11 @@ const PARAM_NAME_START = 1;
 const SEPARATOR = "/";
 
 function invalidPath(path: string): Refusal {
-  return { code: "invalid_path", message: `The path ${path} is not valid percent-encoding.`, status: BAD_REQUEST };
+  return {
+    code: "invalid_path",
+    message: `The path ${echoed(path)} is not valid percent-encoding.`,
+    status: BAD_REQUEST,
+  };
 }
 
 function isParam(pattern: string): boolean {

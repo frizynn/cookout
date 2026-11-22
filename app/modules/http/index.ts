@@ -8,13 +8,24 @@ import { identityErrorCodes } from "../identities/index.ts";
 import { leaseErrorCodes } from "../leases/index.ts";
 import { messageErrorCodes } from "../messages/index.ts";
 
+type Same<Left, Right> = [Left] extends [Right] ? ([Right] extends [Left] ? true : false) : false;
+type SameShape<Left, Right> = Same<Left, Right> extends true ? Same<keyof Left, keyof Right> : false;
+type Matching<Schema extends { readonly Type: unknown }, Wire> =
+  SameShape<Schema["Type"], Wire> extends true ? unknown : { readonly wireMismatch: Wire };
+
+const ECHO_LIMIT = 100;
+const ECHO_START = 0;
+
+/** The path of the health check, the one route without a token. */
 export const healthPath = "/v1/health";
 
-export type HealthResponse = {
+/** The answer to the health check. */
+export interface HealthResponse {
   readonly status: "ok";
   readonly time: string;
-};
+}
 
+/** Every code a cookout server refuses with. */
 export const errorCodes = [
   ...identityErrorCodes,
   ...channelErrorCodes,
@@ -30,37 +41,50 @@ export const errorCodes = [
   "internal_error",
 ] as const;
 
+/** A code a cookout server refuses with. */
 export type ErrorCode = (typeof errorCodes)[number];
 
-export type ErrorBody = {
+/** The error body of a refusal, as the server builds it. */
+export interface ErrorBody {
   readonly code: ErrorCode;
   readonly message: string;
   readonly details?: unknown;
-};
+}
 
 /**
  * Every refusal's body on the wire. The server answers only with an
  * `ErrorCode`, but a client accepts any non-empty code, so a client older
  * than the server still reads the codes added after it.
  */
-export type ErrorResponse = {
+export interface ErrorResponse {
   readonly error: Omit<ErrorBody, "code"> & { readonly code: string };
-};
+}
 
 /** A refusal a backend handler fails with: the HTTP status and the error body to answer with. */
 export type Refusal = ErrorBody & {
   readonly status: number;
 };
 
-type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
-type SameShape<A, B> = Same<A, B> extends true ? Same<keyof A, keyof B> : false;
+/**
+ * `value` as a refusal's message may echo it: at most 100 characters, then
+ * `…`, so a caller's path or name can't make the message as long as the request.
+ * @param value The path or name the caller sent.
+ * @returns The text to put in the message.
+ */
+export function echoed(value: string): string {
+  if (value.length <= ECHO_LIMIT) {
+    return value;
+  }
+  return `${value.slice(ECHO_START, ECHO_LIMIT)}…`;
+}
 
 /**
  * Returns the backend Schema unchanged, and fails to compile unless the type it
  * decodes to and the wire type are assignable both ways and have the same keys.
+ * @returns The check, which takes the Schema.
  */
-export function matchesWire<Wire>() {
-  return <S extends { readonly Type: unknown }>(
-    schema: S & (SameShape<S["Type"], Wire> extends true ? unknown : { readonly wireMismatch: Wire }),
-  ): S => schema;
+export function matchesWire<Wire>(): <Schema extends { readonly Type: unknown }>(
+  schema: Schema & Matching<Schema, Wire>,
+) => Schema {
+  return (schema) => schema;
 }

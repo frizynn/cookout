@@ -1,7 +1,7 @@
 import { Effect, Schema, SchemaIssue } from "effect";
 import { HttpServerError, HttpServerResponse } from "effect/http";
 import type { ErrorBody, Refusal } from "../../index.ts";
-import { errorCodes } from "../../index.ts";
+import { echoed, errorCodes } from "../../index.ts";
 import { ErrorResponseSchema } from "./wire.ts";
 
 const isRefusal = Schema.is(
@@ -24,10 +24,10 @@ const byTag: Readonly<Record<string, Refusal>> = {
 };
 
 export const methodNotAllowed = (method: string, path: string): Refusal =>
-  refusal(405, { code: "method_not_allowed", message: `${method} ${path} is not allowed.` });
+  refusal(405, { code: "method_not_allowed", message: `${method} ${echoed(path)} is not allowed.` });
 
 export const notFound = (method: string, path: string): Refusal =>
-  refusal(404, { code: "not_found", message: `No route for ${method} ${path}.` });
+  refusal(404, { code: "not_found", message: `No route for ${method} ${echoed(path)}.` });
 
 const fromParseError = (error: HttpServerError.RequestParseError): Refusal =>
   error.reason === "BodyTooLarge"
