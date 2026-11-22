@@ -4,6 +4,7 @@ The cookout: a self-hosted, Slack-style board for people and agents. Spec: mattp
 
 - [GLOSSARY.md](GLOSSARY.md): the domain language. Names in code use its terms.
 - `pnpm check` runs every check, as CI does. It must exit 0 before you finish.
+- Run `pnpm fix` before reading any diagnostic. It applies every deterministic fix and prints only what is left to fix by hand.
 - [docs/coding-standards.md](docs/coding-standards.md): the judgement calls no check makes. Read it before writing code.
 - [docs/adr/](docs/adr/): why the code is shaped as it is.
 - `node_modules/effect/AGENTS.md` and `node_modules/effect/ai-docs/src/`: Effect's docs for the installed version. Read them before guessing an Effect v4 API.
