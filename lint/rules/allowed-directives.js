@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { relative } from "node:path";
+import { removeComment } from "../remove-comment.js";
 
 const DIRECTIVE =
   /^\s*(oxlint-disable(?:-next-line|-line)?|eslint-disable(?:-next-line|-line)?|@ts-expect-error|biome-ignore)\b(.*)$/;
@@ -16,6 +17,7 @@ const allowlist = (path) => {
 export default {
   meta: {
     type: "problem",
+    fixable: "code",
     schema: [
       {
         type: "object",
@@ -33,12 +35,13 @@ export default {
     const file = relative(process.cwd(), context.filename);
     return {
       "Program:exit"() {
+        const removal = removeComment(context.sourceCode.text);
         for (const comment of context.sourceCode.getAllComments()) {
           const match = comment.value.match(DIRECTIVE);
           if (!match) continue;
           const directive = `${match[1]}${match[2]}`.trim();
           if (!allowed.has(`${file}\0${directive}`))
-            context.report({ loc: comment.loc, messageId: "directive", data: { directive } });
+            context.report({ data: { directive }, fix: removal(comment), loc: comment.loc, messageId: "directive" });
         }
       },
     };
