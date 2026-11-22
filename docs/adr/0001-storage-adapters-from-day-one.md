@@ -1,0 +1,3 @@
+# Storage adapters from day one
+
+On 2026-11-22 Matt chose to ship the cookout as one server process with SQLite as its first store, over Postgres-first or serverless-first, and asked to "build in adapters early on here" so that Postgres and other stores can plug in later. So storage is a seam from the start: one `Storage` service that speaks in domain operations (never rows or queries), with SQLite and memory Layers behind it, only the SQLite adapter knowing SQL or `node:sqlite`, and every operation that must be atomic being one method so each adapter decides how to make it a transaction. Adding the seam later would mean pulling SQL back out of every caller, which costs far more than one interface now.

@@ -18,6 +18,12 @@
       }
     ],
     "local/branded-ids": "error",
+    "local/glossary-terms": [
+      "error",
+      {
+        "glossary": "GLOSSARY.md"
+      }
+    ],
     "local/max-file-tokens": [
       "error",
       {
@@ -807,6 +813,72 @@
             "object": "vi",
             "property": "doMock",
             "message": "Substitute through a seam with a Layer from app/modules/testing/."
+          }
+        ]
+      }
+    },
+    {
+      "files": ["app/modules/webhook-fake/lib/server/adapters/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "node:sqlite",
+                "message": "Only the storage SQLite adapter opens SQLite: use the Storage service from app/modules/storage/server.ts."
+              },
+              {
+                "name": "node:crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "node:fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "node:child_process",
+                "message": "Run processes with Effect's ChildProcess (effect/process)."
+              },
+              {
+                "name": "child_process",
+                "message": "Run processes with Effect's ChildProcess (effect/process)."
+              },
+              {
+                "name": "zod",
+                "message": "Validate with Effect Schema, at the edge only."
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["effect", "effect/*", "@effect/*"],
+                "message": "Effect is backend only: keep it in server.ts and lib/server/ (and tests)."
+              }
+            ]
           }
         ]
       }
