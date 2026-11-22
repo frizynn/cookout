@@ -14,7 +14,6 @@
   "app/main.ts eslint(sort-keys)": 1,
   "app/main.ts typescript(no-confusing-void-expression)": 2,
   "app/main.ts typescript(prefer-readonly-parameter-types)": 1,
-  "app/main.ts vitest(require-hook)": 1,
   "app/modules/cli/lib/server/adapters/sdk.ts effecttsgo(async-function)": 1,
   "app/modules/cli/lib/server/adapters/sdk.ts effecttsgo(prefer-effect-string)": 1,
   "app/modules/cli/lib/server/adapters/sdk.ts eslint(func-names)": 1,
@@ -838,7 +837,6 @@
   "scripts/check.ts unicorn(no-array-for-each)": 1,
   "scripts/check.ts unicorn(no-process-exit)": 1,
   "scripts/check.ts unicorn(prefer-string-replace-all)": 1,
-  "scripts/check.ts vitest(require-hook)": 2,
   "scripts/generate-validators.ts eslint(curly)": 1,
   "scripts/generate-validators.ts eslint(func-style)": 1,
   "scripts/generate-validators.ts eslint(no-magic-numbers)": 3,
@@ -963,6 +961,5 @@
   "scripts/pack-smoke.ts typescript(strict-void-return)": 1,
   "scripts/pack-smoke.ts unicorn(import-style)": 1,
   "scripts/pack-smoke.ts unicorn(max-nested-calls)": 1,
-  "scripts/pack-smoke.ts vitest(require-hook)": 13,
   "vitest.config.ts eslint(sort-keys)": 3
 }

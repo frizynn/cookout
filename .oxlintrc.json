@@ -1576,6 +1576,13 @@
       }
     },
     {
+      "files": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.cjs"],
+      "excludeFiles": ["**/*.test.ts", "**/*.test.tsx", "**/*.test.js"],
+      "rules": {
+        "vitest/require-hook": "off"
+      }
+    },
+    {
       "files": ["vitest.config.ts", "tsdown.config.ts"],
       "rules": {
         "import/no-default-export": "off"
