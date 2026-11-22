@@ -45,6 +45,7 @@ export type {
   ListChannelsResponse,
 } from "../channels/index.ts";
 export type { HealthResponse } from "../http/index.ts";
+export type { IsoTime } from "../time/index.ts";
 export type {
   CreateIdentityRequest,
   Identity,
