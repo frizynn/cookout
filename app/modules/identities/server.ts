@@ -47,7 +47,11 @@ export const identitiesLayer: Layer.Layer<Identities, never, Storage | Secrets> 
  * request's bearer token and provides its identity as `Caller`. Refuses
  * with 401 `token_missing`, `token_unknown` or `token_revoked`.
  */
-export const requireToken: Gate<Caller, Identities | HttpServerRequest.HttpServerRequest> = (effect) =>
+export const requireToken: Gate<
+  Caller,
+  Identities | HttpServerRequest.HttpServerRequest,
+  Refusal | StorageUnavailable
+> = (effect) =>
   Effect.gen(function* () {
     const identities = yield* Identities;
     const request = yield* HttpServerRequest.HttpServerRequest;

@@ -5,7 +5,8 @@
  */
 import { Context, Effect, Layer, Ref } from "effect";
 import { type Token, type TokenHash, token, tokenHash } from "../identities/index.ts";
-import { liveSecrets } from "./lib/server/live.ts";
+import { asLeaseId, liveSecrets } from "./lib/server/live.ts";
+import type { LeaseId } from "../leases/index.ts";
 
 export type SecretsService = {
   /** A new bearer token: `cookout_` and at least 256 random bits. */
@@ -13,7 +14,9 @@ export type SecretsService = {
   /** What the store keeps instead of the token. The same token always hashes the same. */
   readonly hashToken: (token: Token) => Effect.Effect<TokenHash>;
   /** A new lease ID: `lease_` and 128 random bits. */
-  readonly newLeaseId: Effect.Effect<string>;
+  readonly newLeaseId: Effect.Effect<LeaseId>;
+  /** The SHA-256 of `text`, as hex: a file name that doesn't give away what it was made from. */
+  readonly digest: (text: string) => Effect.Effect<string>;
 };
 
 export class Secrets extends Context.Service<Secrets, SecretsService>()("cookout/secrets/Secrets") {}
@@ -29,7 +32,8 @@ export const secretsTest: Layer.Layer<Secrets> = Layer.effect(
     return {
       newToken: Effect.map(next("cookout_test_"), token),
       hashToken: (issued: Token) => Effect.succeed(tokenHash(`hash:${issued}`)),
-      newLeaseId: next("lease_test_"),
+      newLeaseId: Effect.map(next("lease_test_"), asLeaseId),
+      digest: liveSecrets.digest,
     };
   }),
 );

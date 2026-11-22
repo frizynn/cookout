@@ -55,4 +55,4 @@ function refused(error: { readonly code: string }): Effect.Effect<never, Command
   );
 }
 
-export { printAnswer, printLine, refused, usageFailed, withJsonPresenter };
+export { type CommandFailed, printAnswer, printLine, refused, usageFailed, withJsonPresenter };

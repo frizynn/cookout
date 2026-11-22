@@ -3,6 +3,7 @@ import { memoryStorage, sqliteStorage } from "../../../storage/server.ts";
 import { secretsLive, secretsTest } from "../../../secrets/server.ts";
 import { NodeServices } from "@effect/platform-node";
 import type { Scope } from "effect";
+import type { Secrets } from "../../../secrets/server.ts";
 import type { ServeLayers } from "../../../cli/server.ts";
 import { TestConsole } from "effect/testing";
 import { devCommandLine } from "./dev.ts";
@@ -36,10 +37,13 @@ interface Invocation {
   readonly env: Readonly<Record<string, string>>;
 }
 
+type Needs = NodeServices.NodeServices | Secrets;
+
 interface CommandLine {
   readonly console: Console.Console;
   readonly env: Readonly<Record<string, string>>;
-  readonly program: Effect.Effect<number, never, NodeServices.NodeServices>;
+  readonly program: Effect.Effect<number, never, Needs>;
+  readonly secrets: Layer.Layer<Secrets>;
 }
 
 interface Started<Line> {
@@ -51,8 +55,8 @@ interface Started<Line> {
 
 const EXIT_SUCCESS = 0;
 const EXIT_FAILURE = 1;
-const verbLayers: ServeLayers = { secrets: secretsTest, storage: () => memoryStorage };
-const serveLayers: ServeLayers = { secrets: secretsLive, storage: sqliteStorage };
+const verbLayers: ServeLayers = { storage: () => memoryStorage };
+const serveLayers: ServeLayers = { storage: sqliteStorage };
 const isListening = Schema.is(Schema.Struct({ listening: Schema.String }));
 const isDevRunning = Schema.is(
   Schema.Struct({
@@ -84,15 +88,13 @@ function succeeded(): number {
   return EXIT_SUCCESS;
 }
 
-function exitCodeAfter<Failure>(
-  command: Effect.Effect<void, Failure, NodeServices.NodeServices>,
-): Effect.Effect<number, never, NodeServices.NodeServices> {
+function exitCodeAfter<Failure>(command: Effect.Effect<void, Failure, Needs>): Effect.Effect<number, never, Needs> {
   return Effect.matchCause(command, { onFailure: failed, onSuccess: succeeded });
 }
 
-function exitCodeOf({ console, env, program }: CommandLine): Effect.Effect<number, never, Scope.Scope> {
+function exitCodeOf({ console, env, program, secrets }: CommandLine): Effect.Effect<number, never, Scope.Scope> {
   return Effect.gen(function* runInProcess() {
-    const node = yield* Layer.build(NodeServices.layer);
+    const node = yield* Layer.build(Layer.merge(NodeServices.layer, secrets));
     return yield* program.pipe(
       Effect.provideService(Console.Console, console),
       Effect.provideService(ConfigProvider.ConfigProvider, ConfigProvider.fromEnv({ env })),
@@ -101,10 +103,13 @@ function exitCodeOf({ console, env, program }: CommandLine): Effect.Effect<numbe
   });
 }
 
-function captured({ env, program }: Omit<CommandLine, "console">): Effect.Effect<CliResult, never, Scope.Scope> {
+function captured({
+  env,
+  program,
+}: Omit<CommandLine, "console" | "secrets">): Effect.Effect<CliResult, never, Scope.Scope> {
   return Effect.gen(function* runCaptured() {
     const console = yield* TestConsole.make;
-    const exitCode = yield* exitCodeOf({ console, env, program });
+    const exitCode = yield* exitCodeOf({ console, env, program, secrets: secretsTest });
     const stdout = yield* console.logLines;
     const stderr = yield* console.errorLines;
     return cliResult({ exitCode, stderr: textOf(stderr), stdout: textOf(stdout) });
@@ -120,7 +125,7 @@ function runDev({ args, env }: Invocation): Effect.Effect<CliResult, never, Scop
 }
 
 function startUntil<Line>(
-  program: Effect.Effect<number, never, NodeServices.NodeServices>,
+  { program, secrets }: Pick<CommandLine, "program" | "secrets">,
   isReady: (line: unknown) => line is Line,
 ): Effect.Effect<Started<Line>, never, Scope.Scope> {
   return Effect.gen(function* startInProcess() {
@@ -136,7 +141,7 @@ function startUntil<Line>(
         }
       },
     };
-    const server = yield* Effect.forkScoped(exitCodeOf({ console, env: {}, program }));
+    const server = yield* Effect.forkScoped(exitCodeOf({ console, env: {}, program, secrets }));
     const stopped = Effect.andThen(
       Fiber.join(server),
       Effect.die(new Error("The command stopped before it was ready.")),
@@ -155,18 +160,21 @@ function startUntil<Line>(
 function startServe(database: string): Effect.Effect<ServeProcess, never, Scope.Scope> {
   const args = ["serve", "--port", "0", "--host", "127.0.0.1", "--db", database];
   const serve = exitCodeAfter(runCommandLine(args, serveLayers));
-  return Effect.map(startUntil(serve, isListening), ({ line, lines, stdout, stop }) => ({
-    lines,
-    stdout,
-    stop,
-    url: line.listening,
-  }));
+  return Effect.map(
+    startUntil({ program: serve, secrets: secretsLive }, isListening),
+    ({ line, lines, stdout, stop }) => ({
+      lines,
+      stdout,
+      stop,
+      url: line.listening,
+    }),
+  );
 }
 
 const devStart = exitCodeAfter(devCommandLine(["start"]));
 
 const startDev: Effect.Effect<DevProcess, never, Scope.Scope> = Effect.map(
-  startUntil(devStart, isDevRunning),
+  startUntil({ program: devStart, secrets: secretsTest }, isDevRunning),
   ({ line, stop }) => ({ ...line, stop }),
 );
 

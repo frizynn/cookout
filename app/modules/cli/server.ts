@@ -1,7 +1,15 @@
 /**
  * The `cookout` command tree. `serve` starts the server; every other verb
  * calls the server through the SDK. Answers are JSON on stdout; refusals are
- * `{ error: { code, message } }` on stderr with exit code 1.
+ * `{ error: { code, message } }` on stderr with exit code 1. `Secrets` comes
+ * from the caller: `serve` issues tokens and lease IDs with it, and `join`
+ * names its lease-state file with it.
+ *
+ * `join` keeps its lease in a lease-state file for one server and token, so one
+ * identity, under `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then
+ * `~/.local/state/cookout`). Every later command sends the lease ID from it. The
+ * file's name is a hash, so the token is never written to disk. On `lease_lost`
+ * the stored lease is deleted and the message says to run `cookout join` again.
  */
 import { Effect } from "effect";
 import { CliError, Command } from "effect/cli";

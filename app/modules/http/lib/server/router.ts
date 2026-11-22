@@ -48,9 +48,9 @@ const decodeParams = (pattern: string, path: string): Effect.Effect<Params, Refu
     catch: () => invalidPath(path),
   });
 
-export type Gate<Provides, Needs> = <A, E, R>(
+export type Gate<Provides, Needs, Fails = unknown> = <A, E, R>(
   effect: Effect.Effect<A, E, R>,
-) => Effect.Effect<A, unknown, Exclude<R, Provides> | Needs>;
+) => Effect.Effect<A, E | Fails, Exclude<R, Provides> | Needs>;
 
 type Target = { readonly method: string; readonly path: string };
 
@@ -65,10 +65,10 @@ const paramsOf = <R>(onPath: ReadonlyArray<Route<R>>, target: Target) =>
 const onPathOf = <R>(routes: ReadonlyArray<Route<R>>, path: string) =>
   routes.filter((route) => matches(route.path, path));
 
-export const dispatch = <Open, R, Provides, Needs>(
+export const dispatch = <Open, R, Provides, Needs, Fails>(
   open: ReadonlyArray<Route<Open>>,
   gated: ReadonlyArray<Route<R>>,
-  gate: Gate<Provides, Needs>,
+  gate: Gate<Provides, Needs, Fails>,
 ) =>
   Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest;
