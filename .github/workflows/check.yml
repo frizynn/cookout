@@ -32,6 +32,7 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
+          echo "cores: $(nproc)"
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then BASE=HEAD^; fi
           node scripts/check.ts --job=${{ matrix.job }} --base="$BASE" --ci
 
