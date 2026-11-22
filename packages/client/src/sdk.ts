@@ -128,7 +128,7 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
   const token = options.token ?? (env["COOKOUT_TOKEN"] === "" ? undefined : env["COOKOUT_TOKEN"]);
   const baseUrl = url.replace(/\/+$/, "");
   const doFetch = options.fetch ?? fetch;
-  /** Kept after a 409 `lease_lost`, so every later request says so until the session joins again. */
+  /** Dropped on a 409 `lease_lost`: the lease is gone, so the client stops sending it. */
   let leaseId = options.leaseId;
 
   async function request<Schema extends z.ZodType>(
@@ -157,6 +157,7 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
     if (!response.ok) {
       const parsed = errorResponseSchema.safeParse(json);
       if (parsed.success) {
+        if (parsed.data.error.code === "lease_lost") leaseId = undefined;
         throw new CookoutError({ status: response.status, ...parsed.data.error });
       }
       throw new CookoutError({

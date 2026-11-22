@@ -196,23 +196,35 @@ function leaseLost(caller: Identity, heldUntil: string | null): HttpError {
 }
 
 /**
- * For actions that need the lease (leave; ack and watch from #7 and #8): the
- * request must carry a lease ID, or this throws 409 `lease_required` with when
- * the current holder's lease ends. A lease ID that is sent has already been
- * checked and renewed for every route but `/v1/lease`. The web UI never takes
- * a lease, so whatever it may do must not call this.
+ * The one gate for actions that need the lease (leave now; ack and watch in
+ * #7 and #8). Only routes that call this refuse a stale lease ID; every other
+ * route lets the request through and renews nothing.
+ *
+ * - No lease ID sent: 409 `lease_required`, with when the holder's lease ends.
+ * - A lease ID that is not the identity's live lease (taken over, expired,
+ *   released): 409 `lease_lost`. This is how `watch` (#8) finds out it lost
+ *   the identity.
+ * - Otherwise returns the lease ID.
+ *
+ * For #7 (chief-of-staff, 2026-11-22): ack and watch without a lease ID will
+ * be allowed only while nobody holds a live lease on the identity (that is
+ * how the web UI, which takes no lease, acks); with a lease ID it must match.
+ * Build that on top of this; it is not done yet.
  */
-async function requireLease(
+export async function requireLease(
   storage: StorageAdapter,
   caller: Identity,
   leaseIdSent: string | undefined,
   now: Date,
 ): Promise<string> {
-  if (leaseIdSent !== undefined) return leaseIdSent;
   const current = await storage.findLease(caller.name, now.toISOString());
-  throw leaseConflict("lease_required", current?.expiresAt ?? null, {
-    message: `This needs the lease on ${caller.name}. Run \`cookout join --as ${caller.name}\` first.`,
-  });
+  if (leaseIdSent === undefined) {
+    throw leaseConflict("lease_required", current?.expiresAt ?? null, {
+      message: `This needs the lease on ${caller.name}. Run \`cookout join --as ${caller.name}\` first.`,
+    });
+  }
+  if (current?.leaseId !== leaseIdSent) throw leaseLost(caller, current?.expiresAt ?? null);
+  return leaseIdSent;
 }
 
 /**
@@ -335,17 +347,11 @@ async function handle(options: ServerOptions, request: IncomingMessage, response
     throw notAllowed(method, path);
   }
 
-  // A lease ID sent on any other request must be the identity's live lease,
-  // and the request renews it. A session that lost its lease hears it here,
-  // on whatever it sends next, never by silence.
+  // Any other request carrying the identity's live lease ID renews it. A
+  // stale lease ID changes nothing and doesn't block the request: only routes
+  // that call `requireLease` refuse it (chief-of-staff, 2026-11-22).
   if (leaseIdSent !== undefined) {
-    const renewed = await storage.renewLease({
-      identity: caller.name,
-      leaseId: leaseIdSent,
-      now: now.toISOString(),
-      expiresAt: leaseEnd,
-    });
-    if (renewed.status === "lost") throw leaseLost(caller, renewed.heldUntil);
+    await storage.renewLease({ identity: caller.name, leaseId: leaseIdSent, now: now.toISOString(), expiresAt: leaseEnd });
   }
 
   if (path === channelsPath) {

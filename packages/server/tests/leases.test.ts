@@ -117,13 +117,17 @@ it("a lease left idle for 60 s expires, and the next join succeeds", async () =>
   expect(await second.join({ as: "auth-griller" })).toMatchObject({ expiresAt: "2026-01-01T00:02:00.000Z" });
 });
 
-it("a session whose lease expired hears so on its next request, even a read", async () => {
-  const { cookout, first } = await twoSessions();
+it("after its lease expires a session still posts and reads, but an action that needs the lease gets lease_lost", async () => {
+  const { cookout, first, second } = await twoSessions();
   await first.join({ as: "auth-griller" });
   cookout.clock.advance(60_000);
-  const error = await errorOf(first.listChannels());
+  await expect(first.postMessage({ channel: "grill", text: "still here" })).resolves.toMatchObject({});
+  await expect(first.listChannels()).resolves.toMatchObject({});
+  const error = await errorOf(first.leave());
   expect(error).toMatchObject({ status: 409, code: "lease_lost" });
   expect(heldUntilOf(error)).toBeNull();
+  // The stale lease ID renewed nothing, so another session can join.
+  await expect(second.join({ as: "auth-griller" })).resolves.toMatchObject({});
 });
 
 it("join --force takes over a held lease, and the old lease ID stops working at once", async () => {
@@ -134,14 +138,14 @@ it("join --force takes over a held lease, and the old lease ID stops working at 
   expect(taken.leaseId).not.toBe(old.leaseId);
   expect(taken.expiresAt).toBe("2026-01-01T00:01:05.000Z");
 
-  // The old session can tell it lost the identity, and to whom: on reads,
-  // posts and lease actions alike.
-  const attempts = [() => first.listChannels(), () => first.postMessage({ channel: "grill", text: "hi" }), () => first.leave()];
-  for (const attempt of attempts) {
-    const error = await errorOf(attempt());
-    expect(error).toMatchObject({ status: 409, code: "lease_lost" });
-    expect(heldUntilOf(error)).toBe("2026-01-01T00:01:05.000Z");
-  }
+  // The old session still reads and posts, renewing nothing...
+  cookout.clock.advance(30_000);
+  await expect(first.listChannels()).resolves.toMatchObject({});
+  await expect(first.postMessage({ channel: "grill", text: "hi" })).resolves.toMatchObject({});
+  // ...but an action that needs the lease tells it it lost the identity, and until when.
+  const error = await errorOf(first.leave());
+  expect(error).toMatchObject({ status: 409, code: "lease_lost" });
+  expect(heldUntilOf(error)).toBe("2026-01-01T00:01:05.000Z");
   // The new holder carries on.
   await expect(second.listChannels()).resolves.toMatchObject({});
 });
@@ -177,7 +181,8 @@ it("a lease ID sent with another identity's token is refused", async () => {
   const { leaseId } = await first.join({ as: "auth-griller" });
   const other = await cookout.createIdentity("other-agent");
   const borrowed = cookout.clientFor(other.token, { leaseId });
-  expect(await errorOf(borrowed.listChannels())).toMatchObject({ status: 409, code: "lease_lost" });
+  await expect(borrowed.listChannels()).resolves.toMatchObject({});
+  expect(await errorOf(borrowed.leave())).toMatchObject({ status: 409, code: "lease_lost" });
 });
 
 it("join needs a token like every other route", async () => {

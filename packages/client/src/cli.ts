@@ -31,7 +31,8 @@ const usage = `Usage:
 
 Reads COOKOUT_URL and COOKOUT_TOKEN. Prints JSON on stdout; errors are JSON on stderr.
 \`join\` keeps the lease ID in COOKOUT_STATE_DIR (default ~/.local/state/cookout) and
-every later call sends it, which keeps the lease alive. Give each session its own folder.`;
+every later call sends it, which keeps the lease alive. Two sessions on one machine with
+the same token share a lease unless their COOKOUT_STATE_DIR differs.`;
 
 class UsageError extends Error {}
 
@@ -146,15 +147,9 @@ const verbs: readonly Verb[] = [
     args: 0,
     options: [],
     run: async (client, _args, _values, session) => {
-      try {
-        const left = await client.leave();
-        session.leaseState?.remove();
-        return left;
-      } catch (error) {
-        // The lease is gone either way; forget it, and still say it was lost.
-        if (error instanceof CookoutError && error.code === "lease_lost") session.leaseState?.remove();
-        throw error;
-      }
+      const left = await client.leave();
+      session.leaseState?.remove();
+      return left;
     },
   },
 ];
@@ -209,13 +204,28 @@ async function run(positionals: string[], values: Values, io: CliIo): Promise<un
   const token = io.env["COOKOUT_TOKEN"];
   const leaseState =
     url === "" || token === undefined || token === "" ? undefined : leaseStateFile(stateDirectory(io.env), url, token);
-  // A saved lease ID goes on every call: it renews the lease, and a lease
-  // lost to `join --force` or expiry comes back as 409 `lease_lost`.
+  // A saved lease ID goes on every call, which renews it while it is live.
+  // A lost one only matters to actions that need the lease (409 `lease_lost`).
   const leaseId = leaseState?.read()?.leaseId;
   const client = createCookoutClient({
     env: io.env,
     ...(io.fetch === undefined ? {} : { fetch: io.fetch }),
     ...(leaseId === undefined ? {} : { leaseId }),
   });
-  return verb.run(client, positionals.slice(verb.words.length), values, { leaseState, url });
+  try {
+    return await verb.run(client, positionals.slice(verb.words.length), values, { leaseState, url });
+  } catch (error) {
+    // The lease is gone: forget it, and say how to take the identity again.
+    if (error instanceof CookoutError && error.code === "lease_lost") {
+      const identity = leaseState?.read()?.identity ?? "<name>";
+      leaseState?.remove();
+      throw new CookoutError({
+        status: error.status,
+        code: error.code,
+        message: `${error.message} The stored lease was deleted; run \`cookout join --as ${identity}\` to take it again.`,
+        details: error.details,
+      });
+    }
+    throw error;
+  }
 }

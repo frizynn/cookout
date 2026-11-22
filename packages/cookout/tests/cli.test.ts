@@ -126,10 +126,16 @@ it("two CLI sessions with the same token: the second join is refused with heldUn
   const forced = await runCookout(["join", "--as", "agent", "--force"], secondSession);
   expect(forced, forced.stderr).toMatchObject({ exitCode: 0 });
 
-  // The first session hears that it lost the identity on its next call.
-  const lost = await runCookout(["channel", "list"], firstSession);
+  // The first session still reads; an action that needs the lease says it was
+  // lost, and the stored lease is forgotten.
+  expect(await runCookout(["channel", "list"], firstSession)).toMatchObject({ exitCode: 0 });
+  const lost = await runCookout(["leave"], firstSession);
   expect(lost.exitCode).toBe(1);
-  expect(errorResponseSchema.parse(JSON.parse(lost.stderr)).error.code).toBe("lease_lost");
+  const lostError = errorResponseSchema.parse(JSON.parse(lost.stderr)).error;
+  expect(lostError.code).toBe("lease_lost");
+  expect(lostError.message).toContain("cookout join --as agent");
+  const noLease = await runCookout(["leave"], firstSession);
+  expect(errorResponseSchema.parse(JSON.parse(noLease.stderr)).error.code).toBe("lease_required");
 
   // The second session leaves, and the first can join straight away.
   expect(await runCookout(["leave"], secondSession)).toMatchObject({ exitCode: 0 });

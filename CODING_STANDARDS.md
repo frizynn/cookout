@@ -245,16 +245,19 @@ Don't cast (`as`) untrusted data into a type.
   `expiresAt`. Lease IDs come from the injected `newLeaseId`
   (`randomLeaseId` at start-up); time from the injected clock only.
 - A session sends its lease ID in the `cookout-lease` header (`leaseHeader`).
-  On every route but `/v1/lease`, a sent lease ID must be the identity's
-  live lease, and the request renews it; otherwise 409 `lease_lost`, on reads
-  too, so a session that lost the identity to `--force` or expiry hears it
-  on its next request (`watch`, #8, exits loudly on it). Requests without
-  the header never renew anything.
+  Any request carrying the identity's live lease ID renews it. A stale one
+  (taken over, expired, released) renews nothing and doesn't block the
+  request: only routes that need the lease refuse it (chief-of-staff,
+  2026-11-22). Requests without the header never renew anything.
 - Only **ack and watch** need the lease (chief-of-staff decision on
-  cookout#6, 2026-11-22). Posting and reading don't, and the web UI never
-  takes one. A route that needs the lease calls `requireLease(...)` in
-  `server.ts`, which throws 409 `lease_required` when no lease ID was sent.
-  Leave also needs it.
+  cookout#6, 2026-11-22), and leave. Posting and reading don't, and the web
+  UI never takes one. A route that needs the lease calls the exported
+  `requireLease(storage, caller, leaseIdSent, now)` in `server.ts`: 409
+  `lease_required` when no lease ID was sent, 409 `lease_lost` when it isn't
+  the live one (how `watch`, #8, learns it lost the identity and exits
+  loudly). Recorded for #7, not built yet: without a lease ID, ack and watch
+  are allowed only while nobody holds a live lease on the identity (that is
+  how the web UI acks); with one, it must match.
 - Lease errors are all 409 with `details: { heldUntil }`
   (`leaseConflictDetailsSchema`): `lease_held` (join while another session
   holds it), `lease_required`, `lease_lost`. `heldUntil` is the live lease's
@@ -263,14 +266,14 @@ Don't cast (`as`) untrusted data into a type.
   atomic step, given `now` as an ISO string. Deleting an identity drops its
   lease.
 - The SDK client remembers the lease ID after `join` and sends it on every
-  request until `leave`; it keeps it after a `lease_lost`, so every later
-  call keeps saying so until the session joins again. `createCookoutClient`
+  request until `leave`, and drops it on a `lease_lost`. `createCookoutClient`
   takes `leaseId` to resume one.
 - The CLI keeps the lease in `<state dir>/leases/<hash of url and token>.json`.
   The state dir is `COOKOUT_STATE_DIR`, else `$XDG_STATE_HOME/cookout`, else
-  `~/.local/state/cookout`. Two sessions on one machine need separate state
-  dirs, or they share one lease. `leave` deletes the file (also on
-  `lease_lost`). Process tests get a fresh state dir per `runCookout` call
+  `~/.local/state/cookout`. Two sessions on one machine with the same token
+  share a lease unless their `COOKOUT_STATE_DIR` differs. `leave` deletes
+  the file; on any `lease_lost` the CLI deletes it too and says (on stderr)
+  to run `cookout join` again. Process tests get a fresh state dir per `runCookout` call
   unless they pass `COOKOUT_STATE_DIR`. CLI errors print the server's
   `details` too.
 - "Lease ID" is used as the spec and #6 use it; the term itself is still
