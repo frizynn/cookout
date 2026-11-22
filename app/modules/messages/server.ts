@@ -14,14 +14,13 @@ import {
   ThreadResponseSchema,
 } from "./lib/server/wire.ts";
 import { channelMessagesPath, isMessageId, messagesPath, threadPath } from "./index.ts";
-import { channelNotFound, messageNotFound } from "./lib/server/refusals.ts";
 import { Caller } from "../identities/server.ts";
 import { Effect } from "effect";
 import type { MessageId } from "./index.ts";
 import { Messages } from "./lib/server/service.ts";
 import type { Refusal } from "../http/index.ts";
 import type { Route } from "../http/server.ts";
-import { isChannelName } from "../channels/index.ts";
+import { messageNotFound } from "./lib/server/refusals.ts";
 
 const CREATED = 201;
 const ALL_ERRORS = { errors: "all" } as const;
@@ -70,12 +69,8 @@ const pageRoute: Route<Messages> = {
       const query = yield* HttpServerRequest.schemaSearchParams(ListMessagesQuerySchema, ALL_ERRORS).pipe(
         Effect.provideService(HttpServerRequest.ParsedSearchParams, search),
       );
-      const channel = String(params["name"]);
-      if (!isChannelName(channel)) {
-        return yield* Effect.fail(channelNotFound(channel));
-      }
       const messages = yield* Messages;
-      const page = yield* messages.page(channel, query);
+      const page = yield* messages.page(String(params["name"]), query);
       return yield* HttpServerResponse.schemaJson(ListMessagesResponseSchema)(page);
     }),
   method: "GET",

@@ -23,7 +23,7 @@ function channelExists(name: string): Refusal {
   return { code: "channel_exists", message: `The channel ${name} already exists.`, status: CONFLICT };
 }
 
-function channelNotFound(name: string): Refusal {
+function missingChannel(name: string): Refusal {
   return { code: "channel_not_found", message: `There is no channel named ${name}.`, status: NOT_FOUND };
 }
 
@@ -49,17 +49,23 @@ function channelsOn(storage: Storage["Service"]): ChannelsService {
     get: (name) =>
       Effect.gen(function* getChannel() {
         if (!isChannelName(name)) {
-          return yield* Effect.fail(channelNotFound(name));
+          return yield* Effect.fail(missingChannel(name));
         }
         const found = yield* storage.findChannel(name);
         if (typeof found === "object") {
           return found;
         }
-        return yield* Effect.fail(channelNotFound(name));
+        return yield* Effect.fail(missingChannel(name));
       }),
     list: Effect.suspend(() => storage.listChannels()),
   };
 }
+
+/**
+ * The refusal for a channel that doesn't exist, 404 `channel_not_found`, for
+ * every route that names a channel.
+ */
+export const channelNotFound: (name: string) => Refusal = missingChannel;
 
 export interface ChannelsService {
   /** Makes a channel, stamped with the current time. Refuses with 409 `channel_exists` when the name is in use. */

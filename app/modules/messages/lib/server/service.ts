@@ -1,11 +1,13 @@
 import type { Author, JsonValue, ListMessagesResponse, Message, MessageId, ThreadResponse } from "../../index.ts";
 import { Context, DateTime, Effect, Layer, Predicate } from "effect";
 import type { NewMessage, StorageUnavailable } from "../../../storage/server.ts";
-import { channelNotFound, messageNotFound, replyInOtherChannel } from "./refusals.ts";
+import { messageNotFound, replyInOtherChannel } from "./refusals.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { Identity } from "../../../identities/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { Storage } from "../../../storage/server.ts";
+import { channelNotFound } from "../../../channels/server.ts";
+import { isChannelName } from "../../../channels/index.ts";
 import { pageSize } from "../../index.ts";
 
 interface PostMessage {
@@ -72,6 +74,9 @@ function messagesOn(storage: Storage["Service"]): MessagesService {
   return {
     page: (channel, query) =>
       Effect.gen(function* pageChannel() {
+        if (!isChannelName(channel)) {
+          return yield* Effect.fail(channelNotFound(channel));
+        }
         const page = yield* storage.listChannelMessages(channel, pageRequest(query));
         if (Predicate.isUndefined(page)) {
           return yield* Effect.fail(channelNotFound(channel));
@@ -101,7 +106,7 @@ function messagesOn(storage: Storage["Service"]): MessagesService {
 export interface MessagesService {
   readonly post: (author: Identity, message: PostMessage) => Fails<Message>;
   readonly thread: (id: MessageId) => Fails<ThreadResponse>;
-  readonly page: (channel: ChannelName, query: PageQuery) => Fails<ListMessagesResponse>;
+  readonly page: (channel: string, query: PageQuery) => Fails<ListMessagesResponse>;
 }
 
 export class Messages extends Context.Service<Messages, MessagesService>()(

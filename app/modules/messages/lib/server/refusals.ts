@@ -9,10 +9,6 @@ interface MisplacedReply {
 const BAD_REQUEST = 400;
 const NOT_FOUND = 404;
 
-function channelNotFound(name: string): Refusal {
-  return { code: "channel_not_found", message: `There is no channel named ${name}.`, status: NOT_FOUND };
-}
-
 function messageNotFound(asked: string): Refusal {
   return { code: "message_not_found", message: `There is no message ${asked}.`, status: NOT_FOUND };
 }
@@ -25,4 +21,4 @@ function replyInOtherChannel({ channel, replyTo }: MisplacedReply): Refusal {
   };
 }
 
-export { channelNotFound, messageNotFound, replyInOtherChannel };
+export { messageNotFound, replyInOtherChannel };
