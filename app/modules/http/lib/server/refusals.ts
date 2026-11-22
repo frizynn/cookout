@@ -1,4 +1,4 @@
-import { Effect, Schema } from "effect";
+import { Effect, Schema, SchemaIssue } from "effect";
 import { HttpServerError, HttpServerResponse } from "effect/http";
 import type { ErrorBody, Refusal } from "../../index.ts";
 import { errorCodes } from "../../index.ts";
@@ -21,7 +21,6 @@ const internal = refusal(500, { code: "internal_error", message: "Something went
 
 const byTag: Readonly<Record<string, Refusal>> = {
   StorageUnavailable: refusal(503, { code: "storage_unavailable", message: "Storage is not usable." }),
-  SchemaError: refusal(400, { code: "invalid_request", message: "The request doesn't match the protocol." }),
 };
 
 export const methodNotAllowed = (method: string, path: string): Refusal =>
@@ -35,8 +34,22 @@ const fromParseError = (error: HttpServerError.RequestParseError): Refusal =>
     ? refusal(413, { code: "body_too_large", message: "The body is over 1 MiB." })
     : refusal(400, { code: "invalid_json", message: "The body is not valid JSON." });
 
-const fromServerError = (error: unknown): Refusal | undefined =>
-  error instanceof HttpServerError.RequestParseError ? fromParseError(error) : undefined;
+const standardIssues = SchemaIssue.makeFormatterStandardSchemaV1();
+
+const keyOf = (segment: PropertyKey | { readonly key: PropertyKey }) =>
+  typeof segment === "object" ? segment.key : segment;
+
+const fromSchemaError = (error: Schema.SchemaError): Refusal =>
+  refusal(400, {
+    code: "invalid_request",
+    message: "The request doesn't match the protocol.",
+    details: standardIssues(error.issue).issues.map(({ path = [], message }) => ({ path: path.map(keyOf), message })),
+  });
+
+const fromServerError = (error: unknown): Refusal | undefined => {
+  if (error instanceof HttpServerError.RequestParseError) return fromParseError(error);
+  return Schema.isSchemaError(error) ? fromSchemaError(error) : undefined;
+};
 
 export const toRefusal = (error: unknown): Refusal => {
   if (isRefusal(error)) return error;

@@ -2,12 +2,14 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import standaloneCode from "ajv/dist/standalone/index.js";
 import { Schema } from "effect";
+import { channelResponseSchemas } from "../app/modules/channels/server.ts";
 import { httpResponseSchemas } from "../app/modules/http/server.ts";
 import { identityResponseSchemas } from "../app/modules/identities/server.ts";
 
 const responseSchemas: Readonly<Record<string, Readonly<Record<string, Schema.Constraint>>>> = {
   http: httpResponseSchemas,
   identities: identityResponseSchemas,
+  channels: channelResponseSchemas,
 };
 
 const outDir = new URL("../app/modules/sdk/lib/generated/", import.meta.url);

@@ -3,15 +3,29 @@
  * for Node and the browser. Every answer is checked against the protocol; one
  * that doesn't match fails with `CookoutError` code `bad_response`.
  */
+import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "../channels/index.ts";
+import { channelPath, channelsPath } from "../channels/index.ts";
 import { readCookoutConnection } from "../config/index.ts";
 import type { HealthResponse } from "../http/index.ts";
 import { healthPath } from "../http/index.ts";
 import type { IdentityResponse } from "../identities/index.ts";
 import { whoamiPath } from "../identities/index.ts";
 import { CookoutError } from "./lib/errors.ts";
-import { getJson } from "./lib/request.ts";
-import { isHealthResponse, isIdentityResponse } from "./lib/generated/validators.js";
+import { getJson, send } from "./lib/request.ts";
+import {
+  isChannelResponse,
+  isHealthResponse,
+  isIdentityResponse,
+  isListChannelsResponse,
+} from "./lib/generated/validators.js";
 
+export type {
+  Channel,
+  ChannelName,
+  ChannelResponse,
+  CreateChannelRequest,
+  ListChannelsResponse,
+} from "../channels/index.ts";
 export type { HealthResponse } from "../http/index.ts";
 export type { Identity, IdentityName, IdentityResponse, Owner } from "../identities/index.ts";
 export { CookoutError, type CookoutErrorCode } from "./lib/errors.ts";
@@ -30,6 +44,12 @@ export type CookoutClient = {
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */
   readonly whoami: () => Promise<IdentityResponse>;
+  /** `POST /v1/channels`: any identity can create a channel. A name in use is 409 `channel_exists`. */
+  readonly createChannel: (request: CreateChannelRequest) => Promise<ChannelResponse>;
+  /** `GET /v1/channels`: every channel, sorted by name. */
+  readonly listChannels: () => Promise<ListChannelsResponse>;
+  /** `GET /v1/channels/:name`. A missing channel is 404 `channel_not_found`. */
+  readonly getChannel: (name: string) => Promise<ChannelResponse>;
 };
 
 /**
@@ -47,8 +67,13 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
       message: "Set COOKOUT_URL to the cookout server's address.",
     });
   }
+  const server = { ...connection, url };
   return {
-    health: () => getJson({ ...connection, url }, healthPath, isHealthResponse),
-    whoami: () => getJson({ ...connection, url }, whoamiPath, isIdentityResponse),
+    health: () => getJson(server, healthPath, isHealthResponse),
+    whoami: () => getJson(server, whoamiPath, isIdentityResponse),
+    createChannel: (body) => send(server, { method: "POST", path: channelsPath, body, isExpected: isChannelResponse }),
+    listChannels: () => getJson(server, channelsPath, isListChannelsResponse),
+    getChannel: (name) =>
+      send(server, { method: "GET", path: channelPath, params: { name }, isExpected: isChannelResponse }),
   };
 }

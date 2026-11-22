@@ -3,11 +3,48 @@
 The SDK's public surface: the built `dist/sdk.d.ts`, as consumers of the published package see it. `pnpm check` fails when it and the code disagree; after a deliberate change to the SDK's surface, run `pnpm api:write` and commit the result.
 
 ```ts
+/**
+ * `@ai-hero/cookout/sdk`: a client for a cookout server, in plain TypeScript
+ * for Node and the browser. Every answer is checked against the protocol; one
+ * that doesn't match fails with `CookoutError` code `bad_response`.
+ */
+/**
+ * Channels on the wire, shared by the server, the SDK and the web: the
+ * `ChannelName` brand and its check, the channel as the server shows it, the
+ * request and answers of the channel routes, their paths, and the error codes
+ * they refuse with.
+ */
+declare const brand$1: unique symbol;
+/** A channel's name: 1–80 lowercase letters, digits or `-`. Unique on a server. */
+type ChannelName = string & {
+  readonly [brand$1]: "ChannelName";
+};
+/** A channel as the server shows it. */
+type Channel = {
+  readonly name: ChannelName;
+  /** 1–500 characters. */
+  readonly description?: string;
+  /** ISO 8601 UTC. */
+  readonly createdAt: string;
+};
+/** The body of `POST /v1/channels`. The server checks the name and description. */
+type CreateChannelRequest = {
+  readonly name: string;
+  readonly description?: string;
+};
+/** The answer to creating or getting a channel. */
+type ChannelResponse = {
+  readonly channel: Channel;
+};
+/** The answer to `GET /v1/channels`: every channel, sorted by name. */
+type ListChannelsResponse = {
+  readonly channels: ReadonlyArray<Channel>;
+};
 type HealthResponse = {
   readonly status: "ok";
   readonly time: string;
 };
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "admin_only", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "admin_only", "channel_exists", "channel_not_found", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "storage_unavailable", "internal_error"];
 type ErrorCode = (typeof errorCodes)[number];
 /**
  * Identities on the wire, shared by the server, the SDK and the web: the
@@ -62,6 +99,12 @@ export type CookoutClient = {
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */
   readonly whoami: () => Promise<IdentityResponse>;
+  /** `POST /v1/channels`: any identity can create a channel. A name in use is 409 `channel_exists`. */
+  readonly createChannel: (request: CreateChannelRequest) => Promise<ChannelResponse>;
+  /** `GET /v1/channels`: every channel, sorted by name. */
+  readonly listChannels: () => Promise<ListChannelsResponse>;
+  /** `GET /v1/channels/:name`. A missing channel is 404 `channel_not_found`. */
+  readonly getChannel: (name: string) => Promise<ChannelResponse>;
 };
 /**
  * A client for the server at `url` with `token`, each defaulting to
@@ -69,5 +112,5 @@ export type CookoutClient = {
  * (status 0) when there is no URL.
  */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export type { CookoutErrorCode, HealthResponse, Identity, IdentityName, IdentityResponse, Owner };
+export type { Channel, ChannelName, ChannelResponse, CookoutErrorCode, CreateChannelRequest, HealthResponse, Identity, IdentityName, IdentityResponse, ListChannelsResponse, Owner };
 ```
