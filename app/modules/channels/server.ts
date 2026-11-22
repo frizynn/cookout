@@ -3,93 +3,123 @@
  * routes that create, list and get channels. Any identity can create a
  * channel; the routes sit behind the server's token gate.
  */
+import { ChannelResponseSchema, CreateChannelRequestSchema, ListChannelsResponseSchema } from "./lib/server/wire.ts";
 import { Context, DateTime, Effect, Layer } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
+import { channelPath, channelsPath, isChannelName } from "./index.ts";
+import type { Channel } from "./index.ts";
 import type { Refusal } from "../http/index.ts";
 import type { Route } from "../http/server.ts";
-import { Storage, type StorageUnavailable } from "../storage/server.ts";
-import type { Channel } from "./index.ts";
-import { channelPath, channelsPath, isChannelName } from "./index.ts";
-import { ChannelResponseSchema, CreateChannelRequestSchema, ListChannelsResponseSchema } from "./lib/server/wire.ts";
+import { Storage } from "../storage/server.ts";
+import type { StorageUnavailable } from "../storage/server.ts";
 
 type NewChannel = typeof CreateChannelRequestSchema.Type;
 
-export type ChannelsService = {
+const CONFLICT = 409;
+const CREATED = 201;
+const NOT_FOUND = 404;
+
+function channelExists(name: string): Refusal {
+  return { code: "channel_exists", message: `The channel ${name} already exists.`, status: CONFLICT };
+}
+
+function channelNotFound(name: string): Refusal {
+  return { code: "channel_not_found", message: `There is no channel named ${name}.`, status: NOT_FOUND };
+}
+
+function stamped(fields: NewChannel, createdAt: string): Channel {
+  if (typeof fields.description === "string") {
+    return { createdAt, description: fields.description, name: fields.name };
+  }
+  return { createdAt, name: fields.name };
+}
+
+function channelsOn(storage: Storage["Service"]): ChannelsService {
+  return {
+    create: (fields) =>
+      Effect.gen(function* createChannel() {
+        const now = yield* DateTime.now;
+        const channel = stamped(fields, DateTime.formatIso(now));
+        const outcome = yield* storage.createChannel(channel);
+        if (outcome === "name_taken") {
+          return yield* Effect.fail(channelExists(channel.name));
+        }
+        return channel;
+      }),
+    get: (name) =>
+      Effect.gen(function* getChannel() {
+        if (!isChannelName(name)) {
+          return yield* Effect.fail(channelNotFound(name));
+        }
+        const found = yield* storage.findChannel(name);
+        if (typeof found === "object") {
+          return found;
+        }
+        return yield* Effect.fail(channelNotFound(name));
+      }),
+    list: Effect.suspend(() => storage.listChannels()),
+  };
+}
+
+export interface ChannelsService {
   /** Makes a channel, stamped with the current time. Refuses with 409 `channel_exists` when the name is in use. */
   readonly create: (channel: NewChannel) => Effect.Effect<Channel, Refusal | StorageUnavailable>;
   /** Every channel, sorted by name. */
-  readonly list: Effect.Effect<ReadonlyArray<Channel>, StorageUnavailable>;
+  readonly list: Effect.Effect<readonly Channel[], StorageUnavailable>;
   /** The channel named `name`. Refuses with 404 `channel_not_found` when there is none. */
   readonly get: (name: string) => Effect.Effect<Channel, Refusal | StorageUnavailable>;
-};
+}
 
-export class Channels extends Context.Service<Channels, ChannelsService>()("cookout/channels/Channels") {}
-
-const channelExists = (name: string): Refusal => ({
-  status: 409,
-  code: "channel_exists",
-  message: `The channel ${name} already exists.`,
-});
-
-const channelNotFound = (name: string): Refusal => ({
-  status: 404,
-  code: "channel_not_found",
-  message: `There is no channel named ${name}.`,
-});
+export class Channels extends Context.Service<Channels, ChannelsService>()(
+  "@ai-hero/cookout/channels/server/Channels",
+) {}
 
 /** `Channels` on the running `Storage`. */
 export const channelsLayer: Layer.Layer<Channels, never, Storage> = Layer.effect(
   Channels,
-  Effect.map(Storage, (storage) => ({
-    create: (fields) =>
-      Effect.gen(function* () {
-        const channel: Channel = { ...fields, createdAt: DateTime.formatIso(yield* DateTime.now) };
-        if ((yield* storage.createChannel(channel)) === "name_taken")
-          return yield* Effect.fail(channelExists(channel.name));
-        return channel;
-      }),
-    list: Effect.suspend(() => storage.listChannels()),
-    get: (name) =>
-      Effect.gen(function* () {
-        const found = isChannelName(name) ? yield* storage.findChannel(name) : undefined;
-        return found ?? (yield* Effect.fail(channelNotFound(name)));
-      }),
-  })),
+  Effect.gen(function* channelsOnStorage() {
+    const storage = yield* Storage;
+    return channelsOn(storage);
+  }),
 );
 
-const createRoute: Route<Channels> = {
-  method: "POST",
-  path: channelsPath,
-  handle: () =>
-    Effect.gen(function* () {
-      const fields = yield* HttpServerRequest.schemaBodyJson(CreateChannelRequestSchema, { errors: "all" });
-      const channel = yield* (yield* Channels).create(fields);
-      return yield* HttpServerResponse.schemaJson(ChannelResponseSchema)({ channel }, { status: 201 });
-    }),
-};
-
-const listRoute: Route<Channels> = {
-  method: "GET",
-  path: channelsPath,
-  handle: () =>
-    Effect.gen(function* () {
-      const channels = yield* (yield* Channels).list;
-      return yield* HttpServerResponse.schemaJson(ListChannelsResponseSchema)({ channels });
-    }),
-};
-
-const getRoute: Route<Channels> = {
-  method: "GET",
-  path: channelPath,
-  handle: (params) =>
-    Effect.gen(function* () {
-      const channel = yield* (yield* Channels).get(params["name"] ?? "");
-      return yield* HttpServerResponse.schemaJson(ChannelResponseSchema)({ channel });
-    }),
-};
-
-/** The channel routes, for the server's route list. They need `Channels`, which `channelsLayer` provides. */
-export const channelRoutes: ReadonlyArray<Route<Channels>> = [createRoute, listRoute, getRoute];
+/**
+ * The channel routes, for the server's route list. They need `Channels`, which `channelsLayer` provides.
+ * @internal
+ */
+export const channelRoutes: readonly Route<Channels>[] = [
+  {
+    handle: () =>
+      Effect.gen(function* createChannelRoute() {
+        const fields = yield* HttpServerRequest.schemaBodyJson(CreateChannelRequestSchema, { errors: "all" });
+        const channels = yield* Channels;
+        const channel = yield* channels.create(fields);
+        return yield* HttpServerResponse.schemaJson(ChannelResponseSchema)({ channel }, { status: CREATED });
+      }),
+    method: "POST",
+    path: channelsPath,
+  },
+  {
+    handle: () =>
+      Effect.gen(function* listChannelsRoute() {
+        const service = yield* Channels;
+        const channels = yield* service.list;
+        return yield* HttpServerResponse.schemaJson(ListChannelsResponseSchema)({ channels });
+      }),
+    method: "GET",
+    path: channelsPath,
+  },
+  {
+    handle: (params) =>
+      Effect.gen(function* getChannelRoute() {
+        const channels = yield* Channels;
+        const channel = yield* channels.get(params["name"] ?? "");
+        return yield* HttpServerResponse.schemaJson(ChannelResponseSchema)({ channel });
+      }),
+    method: "GET",
+    path: channelPath,
+  },
+];
 
 /** The response Schemas of the channel routes, for the SDK's generated validators. */
 export const channelResponseSchemas = {

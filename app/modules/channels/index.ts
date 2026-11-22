@@ -13,7 +13,11 @@ export type ChannelName = string & { readonly [brand]: "ChannelName" };
 /** The rule every channel name follows, for the backend's Schemas. */
 export const channelNamePattern = /^[a-z0-9-]{1,80}$/u;
 
-/** Whether `value` follows the channel-name rule; if so, it is a `ChannelName`. */
+/**
+ * Whether `value` follows the channel-name rule; if so, it is a `ChannelName`.
+ * @param value The name to check.
+ * @returns Whether `value` is a `ChannelName`.
+ */
 export function isChannelName(value: string): value is ChannelName {
   return channelNamePattern.test(value);
 }

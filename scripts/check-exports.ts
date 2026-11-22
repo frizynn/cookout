@@ -1,108 +1,176 @@
-import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
-import buildConfigs from "../tsdown.config.ts";
 import { field, list, parseJson, text } from "./lib/json.ts";
+import buildConfigs from "../tsdown.config.ts";
+import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 
-type BuildEntry = { readonly name: string; readonly source: string; readonly declarations: boolean };
+interface BuildEntry {
+  readonly declarations: boolean;
+  readonly name: string;
+  readonly source: string;
+}
 
 const SCRIPT = "exports";
 const PUBLISHED_RULE = "published-entries-ship-no-test-code";
 const DIST_ONLY = ["dist"];
+const EXIT_FAILURE = 1;
+const EXIT_SUCCESS = 0;
+const NONE = 0;
 
-const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
-const recordOf = (value: unknown): Readonly<Record<string, unknown>> => (isRecord(value) ? value : {});
+function recordOf(value: unknown): Readonly<Record<string, unknown>> {
+  if (isRecord(value)) {
+    return value;
+  }
+  return {};
+}
 
-const relative = (path: string) => path.replace(/^\.\//u, "");
+function when(condition: boolean, message: string): readonly string[] {
+  if (condition) {
+    return [message];
+  }
+  return [];
+}
 
-const buildEntries: ReadonlyArray<BuildEntry> = buildConfigs.flatMap((config) =>
-  Object.entries(recordOf(config.entry)).flatMap(([name, source]) =>
-    typeof source === "string" ? [{ name, source: relative(source), declarations: config.dts === true }] : [],
-  ),
-);
+function relative(path: string): string {
+  return path.replace(/^\.\//u, "");
+}
 
+function textOr(value: unknown): string {
+  return text(value) ?? "";
+}
+
+function entriesOfConfig(entry: unknown, declarations: boolean): readonly BuildEntry[] {
+  const found: BuildEntry[] = [];
+  for (const [name, source] of Object.entries(recordOf(entry))) {
+    if (typeof source === "string") {
+      found.push({ declarations, name, source: relative(source) });
+    }
+  }
+  return found;
+}
+
+function allBuildEntries(): readonly BuildEntry[] {
+  const found: BuildEntry[] = [];
+  for (const config of buildConfigs) {
+    found.push(...entriesOfConfig(config.entry, config.dts === true));
+  }
+  return found;
+}
+
+function unescape(pattern: string): string {
+  return pattern.replace(/^\^/u, "").replace(/\$$/u, "").replaceAll(String.raw`\.`, ".");
+}
+
+const buildEntries = allBuildEntries();
 const manifest = parseJson(readFileSync("package.json", "utf8"));
 const exportsMap = recordOf(field(manifest, "exports"));
 const publishedExports = recordOf(field(field(manifest, "publishConfig"), "exports"));
 const bins = recordOf(field(manifest, "bin"));
 const files = list(field(manifest, "files")) ?? [];
-
-const knipEntries = new Set(
-  (list(field(parseJson(readFileSync("knip.json", "utf8")), "entry")) ?? []).map((entry) => text(entry) ?? ""),
-);
-
+const knipConfig = parseJson(readFileSync("knip.json", "utf8"));
+const knipEntries = new Set((list(field(knipConfig, "entry")) ?? []).map((entry) => textOr(entry)));
 const depcruiseConfig: unknown = createRequire(import.meta.url)("../.dependency-cruiser.cjs");
-const publishedRule = (list(field(depcruiseConfig, "forbidden")) ?? []).find(
+const publishedRules = (list(field(depcruiseConfig, "forbidden")) ?? []).filter(
   (rule) => field(rule, "name") === PUBLISHED_RULE,
 );
-const unescape = (pattern: string) => pattern.replace(/^\^/u, "").replace(/\$$/u, "").replaceAll("\\.", ".");
-const depcruiseEntries = new Set(
-  (list(field(field(publishedRule, "from"), "path")) ?? []).map((pattern) => unescape(text(pattern) ?? "")),
-);
+const publishedFrom = publishedRules.flatMap((rule) => list(field(field(rule, "from"), "path")) ?? []);
+const depcruiseEntries = new Set(publishedFrom.map((pattern) => unescape(textOr(pattern))));
 
-const entryFor = (source: string) => buildEntries.find((entry) => entry.source === source);
-const builtJs = (entry: BuildEntry) => `./dist/${entry.name}.js`;
-const builtTypes = (entry: BuildEntry) => `./dist/${entry.name}.d.ts`;
+function entriesFor(source: string): readonly BuildEntry[] {
+  return buildEntries.filter((entry) => entry.source === source);
+}
 
-const publishedFailures = (subpath: string, entry: BuildEntry): ReadonlyArray<string> => {
-  const expected = { types: builtTypes(entry), default: builtJs(entry) };
+function builtJs(entry: BuildEntry): string {
+  return `./dist/${entry.name}.js`;
+}
+
+function builtTypes(entry: BuildEntry): string {
+  return `./dist/${entry.name}.d.ts`;
+}
+
+function publishedFailures(subpath: string, entry: BuildEntry): readonly string[] {
+  const expected = JSON.stringify(
+    Object.fromEntries([
+      ["types", builtTypes(entry)],
+      ["default", builtJs(entry)],
+    ]),
+  );
   const published = JSON.stringify(field(publishedExports, subpath));
-  return published === JSON.stringify(expected)
-    ? []
-    : [`publishConfig.exports["${subpath}"] must be ${JSON.stringify(expected)}, the build of ${entry.source}.`];
-};
+  return when(
+    published !== expected,
+    `publishConfig.exports["${subpath}"] must be ${expected}, the build of ${entry.source}.`,
+  );
+}
 
-const declarationFailures = (entry: BuildEntry): ReadonlyArray<string> =>
-  entry.declarations ? [] : [`tsdown.config.ts builds ${entry.source} without declarations, but it is exported.`];
+function declarationFailures(entry: BuildEntry): readonly string[] {
+  return when(!entry.declarations, `tsdown.config.ts builds ${entry.source} without declarations, but it is exported.`);
+}
 
-const exportFailures = (subpath: string, target: unknown): ReadonlyArray<string> => {
-  const source = relative(text(target) ?? "");
-  const entry = entryFor(source);
-  if (entry === undefined)
-    return [`exports["${subpath}"] is ${String(target)}, which no build entry in tsdown.config.ts builds.`];
-  return [...publishedFailures(subpath, entry), ...declarationFailures(entry)];
-};
+function exportFailures([subpath, target]: readonly [string, unknown]): readonly string[] {
+  const matches = entriesFor(relative(textOr(target)));
+  const found = [
+    ...when(
+      matches.length === NONE,
+      `exports["${subpath}"] is ${String(target)}, which no build entry in tsdown.config.ts builds.`,
+    ),
+  ];
+  for (const entry of matches) {
+    found.push(...publishedFailures(subpath, entry), ...declarationFailures(entry));
+  }
+  return found;
+}
 
-const binFailures = (name: string, target: unknown): ReadonlyArray<string> =>
-  buildEntries.some((entry) => builtJs(entry) === target)
-    ? []
-    : [`bin.${name} is ${String(target)}, which no build entry in tsdown.config.ts writes.`];
+function binFailures([name, target]: readonly [string, unknown]): readonly string[] {
+  return when(
+    !buildEntries.some((entry) => builtJs(entry) === target),
+    `bin.${name} is ${String(target)}, which no build entry in tsdown.config.ts writes.`,
+  );
+}
 
-const isShipped = (entry: BuildEntry) =>
-  Object.values(bins).includes(builtJs(entry)) ||
-  Object.values(exportsMap).some((target) => relative(text(target) ?? "") === entry.source);
+function isShipped(entry: BuildEntry): boolean {
+  return (
+    Object.values(bins).includes(builtJs(entry)) ||
+    Object.values(exportsMap).some((target) => relative(textOr(target)) === entry.source)
+  );
+}
 
-const entryFailures = (entry: BuildEntry): ReadonlyArray<string> => [
-  ...(isShipped(entry) ? [] : [`tsdown.config.ts builds ${entry.source}, but no bin or export ships it.`]),
-  ...(knipEntries.has(`${entry.source}!`) ? [] : [`knip.json has no production entry "${entry.source}!".`]),
-  ...(depcruiseEntries.has(entry.source)
-    ? []
-    : [`.dependency-cruiser.cjs rule ${PUBLISHED_RULE} doesn't start from ${entry.source}.`]),
-];
+function entryFailures(entry: BuildEntry): readonly string[] {
+  return [
+    ...when(!isShipped(entry), `tsdown.config.ts builds ${entry.source}, but no bin or export ships it.`),
+    ...when(!knipEntries.has(`${entry.source}!`), `knip.json has no production entry "${entry.source}!".`),
+    ...when(
+      !depcruiseEntries.has(entry.source),
+      `.dependency-cruiser.cjs rule ${PUBLISHED_RULE} doesn't start from ${entry.source}.`,
+    ),
+  ];
+}
 
 const extraDepcruiseEntries = [...depcruiseEntries]
-  .filter((source) => entryFor(source) === undefined)
+  .filter((source) => entriesFor(source).length === NONE)
   .map((source) => `.dependency-cruiser.cjs rule ${PUBLISHED_RULE} starts from ${source}, which nothing builds.`);
-
 const subpathFailures = [
   ...Object.keys(publishedExports)
     .filter((subpath) => !(subpath in exportsMap))
     .map((subpath) => `publishConfig.exports["${subpath}"] has no exports["${subpath}"] for workspace consumers.`),
-  ...("." in exportsMap ? ['exports["."] must not exist: the package ships the bin and ./sdk only.'] : []),
+  ...when("." in exportsMap, 'exports["."] must not exist: the package ships the bin and ./sdk only.'),
 ];
-
-const filesFailures =
-  JSON.stringify(files) === JSON.stringify(DIST_ONLY) ? [] : [`files must be ${JSON.stringify(DIST_ONLY)}.`];
-
 const failures = [
-  ...Object.entries(exportsMap).flatMap(([subpath, target]) => exportFailures(subpath, target)),
-  ...Object.entries(bins).flatMap(([name, target]) => binFailures(name, target)),
-  ...buildEntries.flatMap(entryFailures),
+  ...Object.entries(exportsMap).flatMap((entry: readonly [string, unknown]) => exportFailures(entry)),
+  ...Object.entries(bins).flatMap((entry: readonly [string, unknown]) => binFailures(entry)),
+  ...buildEntries.flatMap((entry) => entryFailures(entry)),
   ...extraDepcruiseEntries,
   ...subpathFailures,
-  ...filesFailures,
-  ...(publishedRule === undefined ? [`.dependency-cruiser.cjs has no rule ${PUBLISHED_RULE}.`] : []),
+  ...when(JSON.stringify(files) !== JSON.stringify(DIST_ONLY), `files must be ${JSON.stringify(DIST_ONLY)}.`),
+  ...when(publishedRules.length === NONE, `.dependency-cruiser.cjs has no rule ${PUBLISHED_RULE}.`),
 ];
-for (const failure of failures) console.error(`${SCRIPT}: ${failure}`);
-process.exitCode = failures.length > 0 ? 1 : 0;
+
+for (const failure of failures) {
+  console.error(`${SCRIPT}: ${failure}`);
+}
+process.exitCode = EXIT_SUCCESS;
+if (failures.length > NONE) {
+  process.exitCode = EXIT_FAILURE;
+}
