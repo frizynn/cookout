@@ -1,6 +1,6 @@
 import { expect, it } from "@effect/vitest";
 import { Effect, Schema } from "effect";
-import { type CliResult, runCookout, TestCookout, testCookout } from "../../testing/server.ts";
+import { type CliResult, runCookout, runCookoutBinary, TestCookout, testCookout } from "../../testing/server.ts";
 
 const hasToken = Schema.is(Schema.Struct({ token: Schema.String }));
 
@@ -79,7 +79,7 @@ it.effect("the CLI creates, lists and gets channels, as JSON", () =>
 it.effect("the CLI exits 1 with a JSON error on stderr when the token is missing", () =>
   Effect.gen(function* () {
     const cookout = yield* TestCookout;
-    const result = yield* runCookout(["whoami"], { COOKOUT_URL: cookout.url });
+    const result = yield* runCookoutBinary(["whoami"], { COOKOUT_URL: cookout.url });
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toBe("");
     expect(JSON.parse(result.stderr)).toMatchObject({ error: { code: "token_missing", status: 401 } });

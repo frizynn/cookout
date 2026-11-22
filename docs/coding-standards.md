@@ -15,10 +15,11 @@ The judgement calls that no check makes. Everything mechanical is a check in `pn
 ## Tests
 
 - Write the failing test first, then the code.
-- A test drives the cookout the way a caller does and checks what the caller sees: the SDK against a real server, the `cookout` binary as a process, or the `Storage` service. It must keep passing through a refactor that doesn't change behaviour.
+- A test drives the cookout the way a caller does and checks what the caller sees: the SDK against a real server, a `cookout` command line run in the test's process through `testing`, or the `Storage` service. It must keep passing through a refactor that doesn't change behaviour.
 - If a test needs state no interface can make, extend `app/modules/testing/`; never reach into storage by hand.
 - Storage behaviour goes in the shared contract tests in `app/modules/storage/tests/`, run on both Layers and never branching on which one. Only behaviour one Layer alone has (SQLite keeping data across a reopen) goes in that Layer's own tests.
-- Keep process tests of the binary few: arguments, env vars and JSON output.
+- Test files in one Vitest worker share one module graph (`isolate: false`), because importing Effect again for every file cost most of a CI shard's time. Keep no state at module level in a test file or in `app/modules/testing/`: put it in the test's own Layer.
+- Spawn the binary as a process only for what the process alone shows (exit codes, stdout against stderr): each spawn is a cold start of about 0.4s locally, run one after another within a file.
 
 ## Storage
 
