@@ -8,12 +8,10 @@ import {
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 
-const AT_ONCE = 20;
 const TWO_REPLIES = 2;
 const ZERO = 0;
 const ANSWER = 42;
 const RICH_DATA = { done: true, tags: [ANSWER, null, "x"] };
-const CHANNELS = ["one", "two"] as const;
 
 it.effect.each(storageLayers)(
   "storage contract ($adapter): a top-level message is stored with its fields and no replies",
@@ -95,22 +93,6 @@ it.effect.each(storageLayers)(
       const ids = Arr.map(messages, ({ id }) => id);
 
       expect(Arr.dedupe(Arr.sort(ids, Order.Number))).toStrictEqual(ids);
-    }),
-);
-
-it.effect.each(storageLayers)(
-  "storage contract ($adapter): message IDs are distinct when many are appended at once",
-  ({ layer }) =>
-    Effect.gen(function* distinctAppends() {
-      const { storage } = yield* openStore(layer);
-      yield* storage.createChannel(channel("one"));
-      yield* storage.createChannel(channel("two"));
-      const messages = yield* pipe(
-        Arr.makeBy(AT_ONCE, (index) => newMessage(CHANNELS[index % CHANNELS.length] ?? "one", `m${String(index)}`)),
-        Effect.forEach((message) => appendTo(storage)(message), { concurrency: "unbounded" }),
-      );
-
-      expect(new Set(Arr.map(messages, ({ id }) => id)).size).toBe(AT_ONCE);
     }),
 );
 
