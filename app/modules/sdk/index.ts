@@ -1,7 +1,9 @@
 /**
  * `@ai-hero/cookout/sdk`: a client for a cookout server, in plain TypeScript
  * for Node and the browser. Every answer is checked against the protocol; one
- * that doesn't match fails with `CookoutError` code `bad_response`.
+ * that doesn't match fails with `CookoutError` code `bad_response`. A refusal
+ * with a code this SDK doesn't know (from a newer server) still fails with
+ * that code, typed as `UnknownErrorCode`.
  */
 import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "../channels/index.ts";
 import type {
@@ -74,7 +76,7 @@ export type {
   LeaseResponse,
   LeaveResponse,
 } from "../leases/index.ts";
-export { CookoutError, type CookoutErrorCode } from "./lib/errors.ts";
+export { CookoutError, type CookoutErrorCode, type UnknownErrorCode } from "./lib/errors.ts";
 
 export type CookoutClientOptions = {
   /** The server's base URL, such as `https://cookout.example.com`. Default: `COOKOUT_URL`. */

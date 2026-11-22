@@ -31,7 +31,7 @@ export {
 export { devCommandLine } from "./lib/server/dev.ts";
 export { type InterruptedDev, interruptDevBinary, runCookoutBinary } from "./lib/server/process.ts";
 export { type IdentityFixtureOptions, identityFixture, identityName } from "./lib/server/identities.ts";
-export { serverAnswering } from "./lib/server/fixed-answer.ts";
+export { type FixedAnswer, serverAnswering } from "./lib/server/fixed-answer.ts";
 export {
   type TwoSessions,
   damageLeaseStates,

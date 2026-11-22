@@ -3,16 +3,23 @@ import { HttpServer, HttpServerResponse } from "effect/http";
 import { nodeHttpServer, serverUrl } from "../../../http/server.ts";
 import type { Scope } from "effect";
 
-const LISTEN = { host: "127.0.0.1", port: 0 } as const;
+interface FixedAnswer {
+  readonly body: unknown;
+  readonly headers?: Readonly<Record<string, string>>;
+  readonly status?: number;
+}
 
-function serverAnswering(body: unknown): Effect.Effect<string, never, Scope.Scope> {
+const LISTEN = { host: "127.0.0.1", port: 0 } as const;
+const OK = 200;
+
+function serverAnswering({ body, headers = {}, status = OK }: FixedAnswer): Effect.Effect<string, never, Scope.Scope> {
   return Effect.gen(function* startFixedServer() {
-    const serving = HttpServer.serve(Effect.succeed(HttpServerResponse.jsonUnsafe(body))).pipe(
-      Layer.provideMerge(nodeHttpServer(LISTEN)),
-    );
+    const response = HttpServerResponse.jsonUnsafe(body, { headers, status });
+    const serving = HttpServer.serve(Effect.succeed(response)).pipe(Layer.provideMerge(nodeHttpServer(LISTEN)));
     const server = yield* Layer.build(serving);
-    return yield* Effect.provideContext(serverUrl, server);
+    const url = yield* Effect.provideContext(serverUrl, server);
+    return url;
   }).pipe(Effect.orDie);
 }
 
-export { serverAnswering };
+export { type FixedAnswer, serverAnswering };

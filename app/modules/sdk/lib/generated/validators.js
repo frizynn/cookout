@@ -340,7 +340,7 @@ return errors === 0;
 validate22.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 
 export const isErrorResponse = validate23;
-const schema36 = {"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["token_missing","token_unknown","token_revoked","admin_only","identity_exists","identity_not_found","last_admin","channel_exists","channel_not_found","message_not_found","reply_in_other_channel","not_your_identity","lease_held","lease_required","lease_lost","not_found","method_not_allowed","invalid_path","invalid_json","invalid_request","body_too_large","storage_unavailable","internal_error"]},"message":{"type":"string"},"details":{}},"required":["code","message"],"additionalProperties":true}},"required":["error"],"additionalProperties":true,"$defs":{}};
+const schema36 = {"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","minLength":1},"details":{},"message":{"type":"string"}},"required":["code","message"],"additionalProperties":true}},"required":["error"],"additionalProperties":true,"$defs":{}};
 
 function validate23(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
 let vErrors = null;
@@ -374,13 +374,17 @@ else {
 if(data0.code !== undefined){
 let data1 = data0.code;
 const _errs5 = errors;
-if(typeof data1 !== "string"){
+if(errors === _errs5){
+if(typeof data1 === "string"){
+if(data1.length < 1){
+validate23.errors = [{instancePath:instancePath+"/error/code",schemaPath:"#/properties/error/properties/code/minLength",keyword:"minLength",params:{limit: 1},message:"must NOT have fewer than 1 characters"}];
+return false;
+}
+}
+else {
 validate23.errors = [{instancePath:instancePath+"/error/code",schemaPath:"#/properties/error/properties/code/type",keyword:"type",params:{type: "string"},message:"must be string"}];
 return false;
 }
-if(!(((((((((((((((((((((((data1 === "token_missing") || (data1 === "token_unknown")) || (data1 === "token_revoked")) || (data1 === "admin_only")) || (data1 === "identity_exists")) || (data1 === "identity_not_found")) || (data1 === "last_admin")) || (data1 === "channel_exists")) || (data1 === "channel_not_found")) || (data1 === "message_not_found")) || (data1 === "reply_in_other_channel")) || (data1 === "not_your_identity")) || (data1 === "lease_held")) || (data1 === "lease_required")) || (data1 === "lease_lost")) || (data1 === "not_found")) || (data1 === "method_not_allowed")) || (data1 === "invalid_path")) || (data1 === "invalid_json")) || (data1 === "invalid_request")) || (data1 === "body_too_large")) || (data1 === "storage_unavailable")) || (data1 === "internal_error"))){
-validate23.errors = [{instancePath:instancePath+"/error/code",schemaPath:"#/properties/error/properties/code/enum",keyword:"enum",params:{allowedValues: schema36.properties.error.properties.code.enum},message:"must be equal to one of the allowed values"}];
-return false;
 }
 var valid1 = _errs5 === errors;
 }

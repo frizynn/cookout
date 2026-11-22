@@ -1,5 +1,5 @@
 import type { HttpMethod, HttpRequest, HttpResponse } from "../../http/client.ts";
-import { CookoutError } from "./errors.ts";
+import { CookoutError, isServerErrorCode } from "./errors.ts";
 import type { HeldLease } from "./held-lease.ts";
 import type { LeaseId } from "../../leases/index.ts";
 import { heldLease } from "./held-lease.ts";
@@ -35,8 +35,8 @@ function forgetLostLease(lease: HeldLease, code: string): void {
 }
 
 const refusal = (method: HttpMethod, path: string, response: HttpResponse): CookoutError =>
-  isErrorResponse(response.json)
-    ? new CookoutError({ status: response.status, ...response.json.error })
+  isErrorResponse(response.json) && isServerErrorCode(response.json.error.code)
+    ? new CookoutError({ status: response.status, ...response.json.error, code: response.json.error.code })
     : new CookoutError({
         status: response.status,
         code: "bad_response",

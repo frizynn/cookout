@@ -17,7 +17,7 @@ const reply = { ...base, id: 2, kind: "reply", replyTo: 1 };
 function threadAnswered(body: unknown): Effect.Effect<unknown> {
   return Effect.scoped(
     Effect.gen(function* askThread() {
-      const url = yield* serverAnswering(body);
+      const url = yield* serverAnswering({ body });
       const client = createCookoutClient({ env: {}, token: "cookout_x", url });
       return yield* answer(() => client.getThread(messageId(PARENT)));
     }),
@@ -27,7 +27,7 @@ function threadAnswered(body: unknown): Effect.Effect<unknown> {
 function threadRefused(body: unknown): Effect.Effect<unknown> {
   return Effect.scoped(
     Effect.gen(function* askThread() {
-      const url = yield* serverAnswering(body);
+      const url = yield* serverAnswering({ body });
       const client = createCookoutClient({ env: {}, token: "cookout_x", url });
       return yield* refusal(() => client.getThread(messageId(PARENT)));
     }),

@@ -38,8 +38,13 @@ export type ErrorBody = {
   readonly details?: unknown;
 };
 
+/**
+ * Every refusal's body on the wire. The server answers only with an
+ * `ErrorCode`, but a client accepts any non-empty code, so a client older
+ * than the server still reads the codes added after it.
+ */
 export type ErrorResponse = {
-  readonly error: ErrorBody;
+  readonly error: Omit<ErrorBody, "code"> & { readonly code: string };
 };
 
 /** A refusal a backend handler fails with: the HTTP status and the error body to answer with. */
