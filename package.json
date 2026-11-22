@@ -47,8 +47,9 @@
     "validators:check": "node scripts/generate-validators.ts --check",
     "hygiene": "node scripts/hygiene.ts",
     "test": "vitest run --coverage",
-    "test:shard": "vitest run --coverage --reporter=blob --coverage.thresholds.statements=0 --coverage.thresholds.branches=0 --coverage.thresholds.functions=0 --coverage.thresholds.lines=0 --coverage.thresholds.autoUpdate=false",
+    "test:shard": "vitest run --coverage --reporter=blob --coverage.thresholds.statements=0 --coverage.thresholds.branches=0 --coverage.thresholds.functions=0 --coverage.thresholds.lines=0",
     "test:merge": "vitest run --merge-reports --coverage",
+    "coverage:raise": "vitest run --coverage --coverage.thresholds.autoUpdate=true",
     "test:watch": "vitest"
   },
   "dependencies": {
