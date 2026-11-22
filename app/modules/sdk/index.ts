@@ -4,6 +4,14 @@
  * that doesn't match fails with `CookoutError` code `bad_response`.
  */
 import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "../channels/index.ts";
+import type {
+  ListMessagesQuery,
+  ListMessagesResponse,
+  MessageId,
+  MessageResponse,
+  PostMessageRequest,
+  ThreadResponse,
+} from "../messages/index.ts";
 import { channelPath, channelsPath } from "../channels/index.ts";
 import { readCookoutConnection } from "../config/index.ts";
 import type { HealthResponse } from "../http/index.ts";
@@ -25,6 +33,7 @@ import {
   isListChannelsResponse,
   isListIdentitiesResponse,
 } from "./lib/generated/validators.js";
+import { messageCalls } from "./lib/messages.ts";
 
 export type {
   Channel,
@@ -44,6 +53,20 @@ export type {
   Owner,
   Token,
 } from "../identities/index.ts";
+export type {
+  Author,
+  JsonValue,
+  ListMessagesQuery,
+  ListMessagesResponse,
+  Message,
+  MessageFields,
+  MessageId,
+  MessageResponse,
+  PostMessageRequest,
+  Reply,
+  ThreadResponse,
+  TopLevelMessage,
+} from "../messages/index.ts";
 export { CookoutError, type CookoutErrorCode } from "./lib/errors.ts";
 
 export type CookoutClientOptions = {
@@ -74,6 +97,18 @@ export type CookoutClient = {
   readonly listChannels: () => Promise<ListChannelsResponse>;
   /** `GET /v1/channels/:name`. A missing channel is 404 `channel_not_found`. */
   readonly getChannel: (name: string) => Promise<ChannelResponse>;
+  /**
+   * `POST /v1/messages`: a top-level message, or a reply with `replyTo` (a reply to a reply joins the parent's thread).
+   * A missing channel or message is 404; replying in another channel is 400 `reply_in_other_channel`.
+   */
+  readonly createMessage: (request: PostMessageRequest) => Promise<MessageResponse>;
+  /**
+   * `GET /v1/channels/:name/messages`: the channel's top-level messages, oldest first: the newest `limit` (default 50),
+   * or those before `before`. Page back by passing the first message's ID as `before` while `hasMore` is true.
+   */
+  readonly listMessages: (channel: string, query?: ListMessagesQuery) => Promise<ListMessagesResponse>;
+  /** `GET /v1/messages/:id/thread`: the thread holding the message, its top-level message and every reply in order. */
+  readonly getThread: (messageId: MessageId) => Promise<ThreadResponse>;
 };
 
 /**
@@ -111,5 +146,6 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
     listChannels: () => getJson(server, channelsPath, isListChannelsResponse),
     getChannel: (name) =>
       send(server, { method: "GET", path: channelPath, params: { name }, isExpected: isChannelResponse }),
+    ...messageCalls(server),
   };
 }

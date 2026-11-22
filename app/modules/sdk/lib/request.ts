@@ -1,4 +1,4 @@
-import type { HttpMethod, HttpResponse } from "../../http/client.ts";
+import type { HttpMethod, HttpRequest, HttpResponse } from "../../http/client.ts";
 import { request } from "../../http/client.ts";
 import { CookoutError } from "./errors.ts";
 import { isErrorResponse } from "./generated/validators.js";
@@ -30,6 +30,7 @@ type Call<T> = {
   readonly method: HttpMethod;
   readonly path: string;
   readonly params?: Readonly<Record<string, string>>;
+  readonly query?: NonNullable<HttpRequest["query"]>;
   readonly body?: unknown;
   readonly isExpected: (body: unknown) => body is T;
 };

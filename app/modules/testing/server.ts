@@ -14,6 +14,8 @@ export { type ChannelFixtureOptions, channelFixture, channelName } from "./lib/s
 export { type CliResult, runCookout, type ServeProcess, startServe } from "./lib/server/cli.ts";
 export { runCookoutBinary } from "./lib/server/process.ts";
 export { type IdentityFixtureOptions, identityFixture, identityName } from "./lib/server/identities.ts";
+export { serverAnswering } from "./lib/server/fixed-answer.ts";
+export { type NewMessageOptions, appendTo, messageId, newMessageFixture } from "./lib/server/messages.ts";
 export { freshDatabasePath, openStore, storageLayers } from "./lib/server/storage.ts";
 export {
   type BootedServer,

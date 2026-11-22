@@ -3,6 +3,7 @@ import { channelResponseSchemas } from "../app/modules/channels/server.ts";
 import { generateValidators } from "./lib/validators.ts";
 import { httpResponseSchemas } from "../app/modules/http/server.ts";
 import { identityResponseSchemas } from "../app/modules/identities/server.ts";
+import { messageResponseSchemas } from "../app/modules/messages/server.ts";
 
 interface GeneratedFile {
   readonly contents: string;
@@ -18,6 +19,7 @@ const generated = generateValidators({
   channels: channelResponseSchemas,
   http: httpResponseSchemas,
   identities: identityResponseSchemas,
+  messages: messageResponseSchemas,
 });
 const files: readonly GeneratedFile[] = [
   { contents: generated.javascript, path: `${OUT_DIR}/validators.js` },
