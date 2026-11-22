@@ -63,7 +63,7 @@ function unshaped(diagnostics: readonly unknown[]): string {
     .join("\n");
 }
 
-function reportOf(run: Run): Outcome<readonly Diagnostic[]> {
+export function reportOf(run: Run): Outcome<readonly Diagnostic[]> {
   const diagnostics = list(field(parseJson(run.stdout), "diagnostics"));
   if (!diagnostics) {
     const output = `${run.stdout}${run.stderr}`.trim();
