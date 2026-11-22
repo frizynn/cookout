@@ -24,5 +24,5 @@ export const callServer = <A>(call: (client: CookoutClient) => Promise<A>) =>
   Effect.gen(function* () {
     const url = (yield* Effect.orDie(cookoutUrl)).replace(/\/+$/u, "");
     const token = yield* Effect.orDie(cookoutToken);
-    return yield* Effect.tryPromise({ try: async () => call(connect(url, token)), catch: toFailure });
+    return yield* Effect.tryPromise({ try: () => call(connect(url, token)), catch: toFailure });
   });

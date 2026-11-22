@@ -5,24 +5,54 @@ class CommandFailed extends Schema.TaggedError<CommandFailed>()("CommandFailed",
   code: Schema.String,
 }) {}
 
-export const printLine = (line: Readonly<Record<string, unknown>>) => Console.log(JSON.stringify(line));
+const PRETTY = 2;
+const toLine = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown));
+const toPretty = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown, { space: PRETTY }));
 
-const printError = (code: string, message: string) => Console.error(JSON.stringify({ error: { code, message } }));
+function printLine(line: Readonly<Record<string, unknown>>): Effect.Effect<void> {
+  return toLine(line).pipe(Effect.orDie, Effect.flatMap(Console.log));
+}
 
-const presentInvalid = (event: CliOutput.Presenter.InvalidInvocation) =>
-  Effect.gen(function* () {
+function printError(code: string, message: string): Effect.Effect<void> {
+  return toLine({ error: { code, message } }).pipe(Effect.orDie, Effect.flatMap(Console.error));
+}
+
+function presentInvalid(event: CliOutput.Presenter.InvalidInvocation): Effect.Effect<void> {
+  return Effect.gen(function* presentUsage() {
     const formatter = yield* CliOutput.Formatter;
-    yield* printError("usage", `${formatter.formatErrors(event.errors)}\n\n${formatter.formatHelpDoc(event.helpDoc)}`);
+    const errors = formatter.formatErrors(event.errors);
+    const help = formatter.formatHelpDoc(event.helpDoc);
+    yield* printError("usage", `${errors}\n\n${help}`);
   });
+}
 
-export const jsonPresenter = CliOutput.layerPresenter({
-  present: (event) =>
-    event._tag === "InvalidInvocation" ? presentInvalid(event) : CliOutput.defaultPresenter.present(event),
-});
+const jsonPresenter: CliOutput.Presenter = {
+  present: (event) => {
+    if (event._tag === "InvalidInvocation") {
+      return presentInvalid(event);
+    }
+    return CliOutput.defaultPresenter.present(event);
+  },
+};
 
-export const usageFailed = Effect.fail(new CommandFailed({ code: "usage" }));
+function withJsonPresenter<Value, Failure, Needs>(
+  effect: Effect.Effect<Value, Failure, Needs>,
+): Effect.Effect<Value, Failure, Needs> {
+  return Effect.provideService(effect, CliOutput.Presenter, jsonPresenter);
+}
 
-export const printAnswer = (answer: unknown) => Console.log(JSON.stringify(answer, null, 2));
+const usageFailed = Effect.fail(CommandFailed.make({ code: "usage" }));
 
-export const refused = (error: { readonly code: string }) =>
-  Console.error(JSON.stringify({ error })).pipe(Effect.andThen(Effect.fail(new CommandFailed({ code: error.code }))));
+function printAnswer(answer: unknown): Effect.Effect<void> {
+  return toPretty(answer).pipe(Effect.orDie, Effect.flatMap(Console.log));
+}
+
+function refused(error: { readonly code: string }): Effect.Effect<never, CommandFailed> {
+  return toLine({ error }).pipe(
+    Effect.orDie,
+    Effect.flatMap(Console.error),
+    Effect.andThen(Effect.fail(CommandFailed.make({ code: error.code }))),
+  );
+}
+
+export { printAnswer, printLine, refused, usageFailed, withJsonPresenter };
