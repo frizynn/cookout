@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: ${{ matrix.job == 'lint' && 0 || 1 }}
+          fetch-depth: ${{ matrix.job == 'lint' && '0' || '1' }}
       - uses: ./.github/actions/setup
         with:
           cache-name: ${{ matrix.job }}

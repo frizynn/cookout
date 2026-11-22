@@ -20,16 +20,16 @@ const testScript = (): ReadonlyArray<string> => {
 };
 
 const checks: ReadonlyArray<Check> = [
-  { name: "lint", job: "lint", script: base ? ["lint", `--base=${base}`] : ["lint"], budget: 20 },
-  { name: "canaries", job: "lint", script: ["canaries"], budget: 20 },
-  { name: "types", job: "types", script: ["typecheck"], budget: 20 },
-  { name: "seams", job: "seams", script: ["seams"], budget: 20 },
-  { name: "tests", job: "tests", script: testScript(), budget: 30 },
-  { name: "knip", job: "knip", script: ["knip"], budget: 20 },
-  { name: "validators", job: "drift", script: ["validators:check"], budget: 20 },
-  { name: "hygiene", job: "drift", script: ["hygiene"], budget: 10 },
-  { name: "docs", job: "drift", script: ["docs"], budget: 10 },
-  { name: "format", job: "format", script: ["format:check"], budget: 10, afterTests: true },
+  { name: "lint", job: "lint", script: base ? ["lint", `--base=${base}`] : ["lint"], budget: 8 },
+  { name: "canaries", job: "lint", script: ["canaries"], budget: 9 },
+  { name: "types", job: "types", script: ["typecheck"], budget: 5 },
+  { name: "seams", job: "seams", script: ["seams"], budget: 4 },
+  { name: "tests", job: "tests", script: testScript(), budget: 13 },
+  { name: "knip", job: "knip", script: ["knip"], budget: 5 },
+  { name: "validators", job: "drift", script: ["validators:check"], budget: 5 },
+  { name: "hygiene", job: "drift", script: ["hygiene"], budget: 3 },
+  { name: "docs", job: "drift", script: ["docs"], budget: 3 },
+  { name: "format", job: "format", script: ["format:check"], budget: 3, afterTests: true },
 ];
 
 const run = (check: Check): Promise<Outcome> =>
