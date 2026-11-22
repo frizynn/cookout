@@ -37,7 +37,7 @@ const toDiagnostic = (diagnostic: unknown): ReadonlyArray<Diagnostic> => {
 };
 
 export const oxlint = (args: ReadonlyArray<string>): Outcome<ReadonlyArray<Diagnostic>> => {
-  const run = tool("oxlint", ["--type-aware", "-f", "json", ...args]);
+  const run = tool("effect-tsgo", ["oxlint", "--type-aware", "-f", "json", ...args]);
   if (!run.ok) return run;
   const diagnostics = list(field(parseJson(run.value.stdout), "diagnostics"));
   if (!diagnostics) {

@@ -35,9 +35,20 @@ const nativeRules: ReadonlyArray<readonly [string, string]> = [
   ["eslint(no-restricted-imports)", "no-restricted-imports.sqlite"],
 ];
 
+const testRules: ReadonlyArray<readonly [string, string]> = [
+  ["vitest(max-nested-describe)", "max-nested-describe"],
+  ["vitest(no-hooks)", "no-hooks"],
+  ["vitest(require-hook)", "require-hook"],
+  ["vitest-js(padding-around-all)", "padding-around-all"],
+];
+
+const backendRules: ReadonlyArray<readonly [string, string]> = [["effecttsgo(global-date)", "global-date"]];
+
 const lintCanaries: ReadonlyArray<Canary> = [
   ...localRules.map((rule) => ({ check: "oxlint", code: `local(${rule})`, file: localRuleFile(rule) })),
   ...nativeRules.map(([code, name]) => ({ check: "oxlint", code, file: `${MODULE}/lib/${name}.ts` })),
+  ...testRules.map(([code, name]) => ({ check: "oxlint", code, file: `${MODULE}/tests/${name}.test.ts` })),
+  ...backendRules.map(([code, name]) => ({ check: "oxlint", code, file: `${MODULE}/lib/server/${name}.ts` })),
 ];
 
 const tscCanaries: ReadonlyArray<Canary> = [
