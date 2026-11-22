@@ -136,62 +136,62 @@
       {
         "object": "Effect",
         "property": "runCallback",
-        "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
       },
       {
         "object": "Effect",
         "property": "runCallbackWith",
-        "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
       },
       {
         "object": "Effect",
         "property": "runFork",
-        "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
       },
       {
         "object": "Effect",
         "property": "runForkWith",
-        "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
       },
       {
         "object": "Effect",
         "property": "runPromise",
-        "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
       },
       {
         "object": "Effect",
         "property": "runPromiseExit",
-        "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
       },
       {
         "object": "Effect",
         "property": "runPromiseExitWith",
-        "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
       },
       {
         "object": "Effect",
         "property": "runPromiseWith",
-        "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
       },
       {
         "object": "Effect",
         "property": "runSync",
-        "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
       },
       {
         "object": "Effect",
         "property": "runSyncExit",
-        "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
       },
       {
         "object": "Effect",
         "property": "runSyncExitWith",
-        "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
       },
       {
         "object": "Effect",
         "property": "runSyncWith",
-        "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
       },
       {
         "object": "vi",
@@ -206,67 +206,67 @@
       {
         "object": "Schema",
         "property": "decode",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeEffect",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeExit",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeOption",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodePromise",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeResult",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeSync",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeUnknownEffect",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeUnknownExit",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeUnknownOption",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeUnknownPromise",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeUnknownResult",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeUnknownSync",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       }
     ],
     "no-restricted-imports": [
@@ -389,13 +389,16 @@
             "from": "package",
             "name": [
               "Constraint",
+              "DateTime",
               "Effect",
               "Exit",
               "HttpClientRequest",
               "HttpClientResponse",
               "Layer",
               "Option",
-              "Stream"
+              "Stream",
+              "Utc",
+              "Zoned"
             ],
             "package": "effect"
           }
@@ -505,7 +508,7 @@
               {
                 "group": ["**/testing/server.ts"],
                 "importNames": ["runCookoutBinary"],
-                "message": "Tests run cookout in process: use runCookout or startServe. Only app/modules/cli/tests/server/cli.test.ts spawns the binary."
+                "message": "Tests run cookout in process: use runCookout or startServe. Only app/modules/cli/tests/server/cli.test.ts and app/modules/dev/tests/server/dev.test.ts spawn a program."
               }
             ]
           }
@@ -621,7 +624,7 @@
               {
                 "group": ["**/testing/server.ts"],
                 "importNames": ["runCookoutBinary", "interruptDevBinary"],
-                "message": "Tests run cookout in process: use runCookout or startServe. Only app/modules/cli/tests/server/cli.test.ts spawns the binary."
+                "message": "Tests run cookout in process: use runCookout or startServe. Only app/modules/cli/tests/server/cli.test.ts and app/modules/dev/tests/server/dev.test.ts spawn a program."
               }
             ],
             "paths": [
@@ -692,7 +695,7 @@
       }
     },
     {
-      "files": ["app/modules/cli/tests/server/cli.test.ts"],
+      "files": ["app/modules/cli/tests/server/cli.test.ts", "app/modules/dev/tests/server/dev.test.ts"],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -783,6 +786,21 @@
       }
     },
     {
+      "files": [
+        "app/modules/cli/server.ts",
+        "app/modules/cli/lib/server/**",
+        "app/modules/storage/server.ts",
+        "app/modules/storage/lib/server/**",
+        "app/modules/testing/server.ts",
+        "app/modules/testing/lib/server/**",
+        "app/modules/dev/server.ts",
+        "app/modules/dev/lib/server/**"
+      ],
+      "rules": {
+        "effecttsgo/api-stability-leak": "off"
+      }
+    },
+    {
       "files": ["app/modules/*/server.ts", "app/modules/*/lib/server/**"],
       "excludeFiles": ["app/modules/*/lib/server/adapters/**"],
       "rules": {
@@ -829,67 +847,67 @@
           {
             "object": "Schema",
             "property": "decode",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeEffect",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeExit",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeOption",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodePromise",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeResult",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeSync",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownEffect",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownExit",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownOption",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownPromise",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownResult",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownSync",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           }
         ],
         "effecttsgo/strict-effect-provide": "off"
@@ -1000,62 +1018,62 @@
           {
             "object": "Effect",
             "property": "runCallback",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runCallbackWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runFork",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runForkWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runPromise",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runPromiseExit",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runPromiseExitWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runPromiseWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runSync",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runSyncExit",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runSyncExitWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runSyncWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "vi",
@@ -1096,62 +1114,62 @@
           {
             "object": "Effect",
             "property": "runCallback",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runCallbackWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runFork",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runForkWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runPromise",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runPromiseExit",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runPromiseExitWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runPromiseWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runSync",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runSyncExit",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runSyncExitWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runSyncWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "vi",
@@ -1300,62 +1318,62 @@
           {
             "object": "Effect",
             "property": "runCallback",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runCallbackWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runFork",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runForkWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runPromise",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runPromiseExit",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runPromiseExitWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runPromiseWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runSync",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runSyncExit",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runSyncExitWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runSyncWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "vi",
@@ -1370,67 +1388,67 @@
           {
             "object": "Schema",
             "property": "decode",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeEffect",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeExit",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeOption",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodePromise",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeResult",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeSync",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownEffect",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownExit",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownOption",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownPromise",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownResult",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownSync",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           }
         ],
         "effecttsgo/node-builtin-import": "off",
@@ -1451,62 +1469,62 @@
           {
             "object": "Effect",
             "property": "runCallback",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runCallbackWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runFork",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runForkWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runPromise",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runPromiseExit",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runPromiseExitWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runPromiseWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runSync",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runSyncExit",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runSyncExitWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "Effect",
             "property": "runSyncWith",
-            "message": "Run effects only in app/main.ts; tests run them with @effect/vitest's it.effect."
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
           },
           {
             "object": "vi",

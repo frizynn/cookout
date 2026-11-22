@@ -1,7 +1,6 @@
 import { Context, Effect, FileSystem, Layer, Path } from "effect";
 import { WebhookFake, webhookFake } from "../../../webhook-fake/server.ts";
 import { FirstBoot } from "../../../identities/server.ts";
-import { NodeServices } from "@effect/platform-node";
 import type { Scope } from "effect";
 import { cookoutServer } from "../../../cli/server.ts";
 import { secretsLive } from "../../../secrets/server.ts";
@@ -15,18 +14,20 @@ interface DevCookout {
   readonly webhookFakeUrl: string;
 }
 
+type Needs = FileSystem.FileSystem | Path.Path | Scope.Scope;
+
 const LOCAL = "127.0.0.1";
 
-function databaseInTempFolder(): Effect.Effect<string, never, Scope.Scope> {
+function databaseInTempFolder(): Effect.Effect<string, never, Needs> {
   return Effect.gen(function* makeDatabasePath() {
-    const node = yield* Layer.build(NodeServices.layer);
-    const fs = Context.get(node, FileSystem.FileSystem);
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
     const folder = yield* Effect.orDie(fs.makeTempDirectoryScoped({ prefix: "cookout-dev-" }));
-    return Context.get(node, Path.Path).join(folder, "cookout.db");
+    return path.join(folder, "cookout.db");
   });
 }
 
-function devCookout(port: number): Effect.Effect<DevCookout, never, Scope.Scope> {
+function devCookout(port: number): Effect.Effect<DevCookout, never, Needs> {
   return Effect.gen(function* startDevCookout() {
     const database = yield* databaseInTempFolder();
     const live = Layer.mergeAll(sqliteStorage(database), secretsLive);

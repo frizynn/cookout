@@ -4,6 +4,7 @@
  * requests and answers of join and leave, and the error codes the lease
  * refuses with.
  */
+import type { IsoTime } from "../time/index.ts";
 
 declare const brand: unique symbol;
 
@@ -42,8 +43,8 @@ export interface JoinRequest {
 /** The answer to `join`. */
 export interface LeaseResponse {
   readonly leaseId: LeaseId;
-  /** ISO 8601 UTC. Each request carrying the lease ID moves it forward. */
-  readonly expiresAt: string;
+  /** Each request carrying the lease ID moves it forward. */
+  readonly expiresAt: IsoTime;
 }
 
 /** The answer to `leave`. */
@@ -56,13 +57,19 @@ export interface LeaveResponse {
  * ends, or `null` if nobody holds the identity.
  */
 export interface LeaseConflictDetails {
-  readonly heldUntil: string | null;
+  readonly heldUntil: IsoTime | null;
 }
+
+/**
+ * The code for a lease ID that is no longer live (taken over, expired or
+ * released). A client that gets it stops sending the lease ID.
+ */
+export const leaseLost = "lease_lost";
 
 /**
  * The codes the lease refuses with: `not_your_identity` (403, join as another
  * identity), and the 409s `lease_held` (join while another session holds it),
  * `lease_required` (an action that needs the lease, sent without one) and
- * `lease_lost` (the lease ID sent is no longer live: taken over, expired or released).
+ * `leaseLost`.
  */
-export const leaseErrorCodes = ["not_your_identity", "lease_held", "lease_required", "lease_lost"] as const;
+export const leaseErrorCodes = ["not_your_identity", "lease_held", "lease_required", leaseLost] as const;

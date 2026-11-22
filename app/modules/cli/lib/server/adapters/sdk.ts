@@ -1,59 +1,68 @@
-import type { CookoutClient, CookoutClientOptions } from "../../../../sdk/index.ts";
+import type { CookoutClient, CookoutClientOptions, CookoutErrorCode } from "../../../../sdk/index.ts";
 import { CookoutError, createCookoutClient } from "../../../../sdk/index.ts";
-import { Effect, Option, Predicate, String as Str } from "effect";
-import type { LeaseState, LeaseStateFile } from "../lease-state.ts";
+import { Effect, Option, Predicate } from "effect";
+import type { LeaseState, LeaseStateFailure, LeaseStateFile, LeaseStateNeeds } from "../lease-state.ts";
 import { cookoutToken, cookoutUrl } from "../../../../config/server.ts";
-import type { Secrets } from "../../../../secrets/server.ts";
+import type { CookoutConnection } from "../../../../config/index.ts";
+import { baseUrlOf } from "../../../../http/client.ts";
+import { leaseLost } from "../../../../leases/index.ts";
 import { leaseStateFile } from "../lease-state.ts";
 
+type CallFailureCode = CookoutErrorCode | LeaseStateFailure["code"] | "usage";
+
 interface CallFailure {
-  readonly code: string;
+  readonly code: CallFailureCode;
   readonly message: string;
   readonly status?: number;
   readonly details?: unknown;
 }
 
-interface Session {
+interface ClientWithLeaseState {
   readonly client: CookoutClient;
-  readonly url: string;
+  readonly connection: CookoutConnection;
   readonly file: LeaseStateFile;
   readonly saved: Option.Option<LeaseState>;
-}
-
-interface Connection {
-  readonly url: string;
-  readonly token: string;
 }
 
 type Call<Value> = (client: CookoutClient) => Promise<Value>;
 
 const NO_STATUS = 0;
-const TRAILING_SLASHES = /\/+$/u;
+const NOTHING = {};
+
+function statusOf(status: number): { readonly status?: number } {
+  if (status === NO_STATUS) {
+    return NOTHING;
+  }
+  return { status };
+}
 
 function toFailure(error: unknown): CallFailure {
   if (!(error instanceof CookoutError)) {
-    return { code: "cli_error", message: error instanceof Error ? error.message : String(error) };
+    return { code: "cli_error", message: String(error) };
   }
   const { code, details, message, status } = error;
-  const withStatus = { code, message, ...(status === NO_STATUS ? {} : { status }) };
+  const withStatus = { code, message, ...statusOf(status) };
   if (Predicate.isUndefined(details)) {
     return withStatus;
   }
   return { ...withStatus, details };
 }
 
-function clientOptions({ token, url }: Connection, saved: Option.Option<LeaseState>): CookoutClientOptions {
-  const withToken = { env: {}, url, ...(token === "" ? {} : { token }) };
+function clientOptions(connection: CookoutConnection, saved: Option.Option<LeaseState>): CookoutClientOptions {
+  const withConnection = { ...connection, env: NOTHING };
   if (Option.isNone(saved)) {
-    return withToken;
+    return withConnection;
   }
-  return { ...withToken, leaseId: saved.value.leaseId };
+  return { ...withConnection, leaseId: saved.value.leaseId };
 }
 
-function onLeaseLost({ file, saved }: Pick<Session, "file" | "saved">) {
-  return (failure: CallFailure): Effect.Effect<never, CallFailure> =>
+function onLeaseLost({
+  file,
+  saved,
+}: ClientWithLeaseState): (failure: CallFailure) => Effect.Effect<never, CallFailure> {
+  return (failure) =>
     Effect.gen(function* forgetLostLease() {
-      if (failure.code !== "lease_lost" || Option.isNone(saved)) {
+      if (failure.code !== leaseLost || Option.isNone(saved)) {
         return yield* Effect.fail(failure);
       }
       yield* file.remove;
@@ -62,35 +71,42 @@ function onLeaseLost({ file, saved }: Pick<Session, "file" | "saved">) {
     });
 }
 
-function sessionFor(connection: Connection): Effect.Effect<Session, CallFailure, Secrets> {
-  return Effect.gen(function* openSession() {
+function connectionFrom(url: string, token: string): CookoutConnection {
+  if (token === "") {
+    return { url: baseUrlOf(url) };
+  }
+  return { token, url: baseUrlOf(url) };
+}
+
+function clientFor(connection: CookoutConnection): Effect.Effect<ClientWithLeaseState, CallFailure, LeaseStateNeeds> {
+  return Effect.gen(function* openClient() {
     const file = yield* leaseStateFile(connection);
     const saved = yield* file.read;
     const client = yield* Effect.try({
       catch: toFailure,
       try: () => createCookoutClient(clientOptions(connection, saved)),
     });
-    return { client, file, saved, url: connection.url };
+    return { client, connection, file, saved };
   });
 }
 
-function withSession<Value>(
-  run: (session: Session) => Effect.Effect<Value, CallFailure>,
-): Effect.Effect<Value, CallFailure, Secrets> {
-  return Effect.gen(function* callWithSession() {
-    const setUrl = yield* Effect.orDie(cookoutUrl);
+function withClient<Value>(
+  run: (client: ClientWithLeaseState) => Effect.Effect<Value, CallFailure>,
+): Effect.Effect<Value, CallFailure, LeaseStateNeeds> {
+  return Effect.gen(function* callWithClient() {
+    const url = yield* Effect.orDie(cookoutUrl);
     const token = yield* Effect.orDie(cookoutToken);
-    const session = yield* sessionFor({ token, url: Str.replace(TRAILING_SLASHES, "")(setUrl) });
-    return yield* run(session).pipe(Effect.catch(onLeaseLost(session)));
+    const opened = yield* clientFor(connectionFrom(url, token));
+    return yield* run(opened).pipe(Effect.catch(onLeaseLost(opened)));
   });
 }
 
-function callClient<Value>(call: Call<Value>): (session: Session) => Effect.Effect<Value, CallFailure> {
-  return (session) => Effect.tryPromise({ catch: toFailure, try: () => call(session.client) });
+function callClient<Value>(call: Call<Value>): (opened: ClientWithLeaseState) => Effect.Effect<Value, CallFailure> {
+  return ({ client }) => Effect.tryPromise({ catch: toFailure, try: () => call(client) });
 }
 
-function callServer<Value>(call: Call<Value>): Effect.Effect<Value, CallFailure, Secrets> {
-  return withSession(callClient(call));
+function callServer<Value>(call: Call<Value>): Effect.Effect<Value, CallFailure, LeaseStateNeeds> {
+  return withClient(callClient(call));
 }
 
-export { type CallFailure, type Session, callClient, callServer, withSession };
+export { type CallFailure, type ClientWithLeaseState, callClient, callServer, withClient };

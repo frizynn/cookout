@@ -1,8 +1,13 @@
 import { Array as Arr, Effect, pipe } from "effect";
-import { TestCookout, freshStateFolder, runCookout, testCookout } from "../../../testing/server.ts";
+import type { CliResult, CommandLineNeeds } from "../../../testing/server.ts";
+import {
+  TestCookout,
+  commandLineServices,
+  freshStateFolder,
+  runCookout,
+  testCookout,
+} from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
-import type { CliResult } from "../../../testing/server.ts";
-import type { Scope } from "effect";
 
 interface Step {
   readonly args: readonly string[];
@@ -24,7 +29,7 @@ function failedWith(code: string): object {
   return { exitCode: EXIT_FAILURE, stderrJson: { error: { code } } };
 }
 
-function runAll(steps: readonly Step[]): Effect.Effect<readonly CliResult[], never, Scope.Scope> {
+function runAll(steps: readonly Step[]): Effect.Effect<readonly CliResult[], never, CommandLineNeeds> {
   return pipe(steps, Effect.forEach(runCookout, ONE_AT_A_TIME));
 }
 
@@ -67,16 +72,15 @@ it.effect(
           "\n",
         ),
       ).toContain("The stored lease was deleted; run `cookout join --as agent` to take it again.");
-    }).pipe(Effect.provide(testCookout())),
+    }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("cookout join without --as is a usage error", () =>
+it.effect("cookout join without --as, or with a name that breaks the naming rule, is a usage error", () =>
   Effect.gen(function* joinWithoutAs() {
-    const result = yield* runCookout({
-      args: ["join"],
-      env: { COOKOUT_TOKEN: "cookout_x", COOKOUT_URL: "http://127.0.0.1:1" },
-    });
+    const env = { COOKOUT_TOKEN: "cookout_x", COOKOUT_URL: "http://127.0.0.1:1" };
+    const withoutAs = yield* runCookout({ args: ["join"], env });
+    const badName = yield* runCookout({ args: ["join", "--as", "Not A Name"], env });
 
-    expect(result).toMatchObject(failedWith("usage"));
-  }),
+    expect([withoutAs, badName]).toMatchObject([failedWith("usage"), failedWith("usage")]);
+  }).pipe(Effect.provide(commandLineServices)),
 );

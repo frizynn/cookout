@@ -4,10 +4,12 @@ import type { LeaseId, LeaseResponse } from "../../index.ts";
 import type { StorageUnavailable, StoredLease } from "../../../storage/server.ts";
 import { leaseHeld, leaseLost, leaseRequired, notYourIdentity } from "./refusals.ts";
 import type { Config } from "effect";
+import type { IsoTime } from "../../../time/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import { isLeaseId } from "../../index.ts";
+import { isoTimeOf } from "../../../time/server.ts";
 import { leaseSeconds } from "../../../config/server.ts";
 
 interface Join {
@@ -16,8 +18,8 @@ interface Join {
 }
 
 interface Times {
-  readonly now: string;
-  readonly expiresAt: string;
+  readonly now: IsoTime;
+  readonly expiresAt: IsoTime;
 }
 
 interface LeasesOn {
@@ -43,7 +45,7 @@ function responseOf({ expiresAt, leaseId }: StoredLease): LeaseResponse {
   return { expiresAt, leaseId };
 }
 
-function heldUntil(lease: StoredLease | undefined): string | null {
+function heldUntil(lease: StoredLease | undefined): IsoTime | null {
   if (Predicate.isUndefined(lease)) {
     return null;
   }
@@ -53,7 +55,7 @@ function heldUntil(lease: StoredLease | undefined): string | null {
 function timesFor(seconds: number): Effect.Effect<Times> {
   return Effect.gen(function* leaseTimes() {
     const now = yield* DateTime.now;
-    return { expiresAt: DateTime.formatIso(DateTime.add(now, { seconds })), now: DateTime.formatIso(now) };
+    return { expiresAt: isoTimeOf(DateTime.add(now, { seconds })), now: isoTimeOf(now) };
   });
 }
 

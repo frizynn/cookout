@@ -1,9 +1,9 @@
-import { Array as Arr, Context, Effect, FileSystem, Layer, Path, Schema, String as Str, pipe } from "effect";
+import { Array as Arr, Effect, FileSystem, Path, Schema, String as Str, pipe } from "effect";
 import { answer, freshDatabasePath, startServe } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { NodeServices } from "@effect/platform-node";
-import type { Scope } from "effect";
 import { createCookoutClient } from "../../../sdk/index.ts";
+import { secretsLive } from "../../../secrets/server.ts";
 
 interface StoredFiles {
   readonly files: readonly string[];
@@ -21,11 +21,10 @@ function adminTokensIn(lines: readonly unknown[]): readonly string[] {
   );
 }
 
-function filesNextTo(database: string): Effect.Effect<StoredFiles, never, Scope.Scope> {
+function filesNextTo(database: string): Effect.Effect<StoredFiles, never, FileSystem.FileSystem | Path.Path> {
   return Effect.gen(function* readStoredFiles() {
-    const node = yield* Layer.build(NodeServices.layer);
-    const fs = Context.get(node, FileSystem.FileSystem);
-    const path = Context.get(node, Path.Path);
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
     const folder = path.dirname(database);
     const files = yield* fs.readDirectory(folder);
     const contents = yield* Effect.forEach(files, (file) => fs.readFileString(path.join(folder, file), "latin1"), {
@@ -58,7 +57,7 @@ it.effect("cookout serve prints the admin token on the first boot only", () =>
     expect(adminTokensIn(second.lines)).toStrictEqual([]);
     expect(second.stdout).not.toContain(adminToken);
     expect(whoami.identity).toMatchObject({ admin: true, name: "admin" });
-  }),
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );
 
 it.effect("the database never holds a token itself", () =>
@@ -73,5 +72,5 @@ it.effect("the database never holds a token itself", () =>
     expect(files).toContain("cookout.db");
     expect(tokens).toHaveLength(ISSUED);
     expect(onDisk).toStrictEqual([]);
-  }),
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );

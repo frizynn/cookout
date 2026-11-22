@@ -2,6 +2,7 @@ import type { Author, JsonValue, Message, MessageId } from "../../../messages/in
 import { Effect, Option, Predicate } from "effect";
 import type { NewMessage, Storage } from "../../../storage/server.ts";
 import { channelName } from "./channels.ts";
+import { fixtureTime } from "./time.ts";
 import { identityName } from "./identities.ts";
 import { isMessageId } from "../../../messages/index.ts";
 import { isOwner } from "../../../identities/index.ts";
@@ -19,7 +20,6 @@ interface NewMessageOptions {
 
 type Append = (message: NewMessage) => Effect.Effect<Message>;
 
-const CREATED_AT = "2026-01-01T00:00:00.000Z";
 const AGENT: AuthorOptions = { name: "agent", owner: "matt" };
 
 function messageId(value: number): MessageId {
@@ -52,7 +52,7 @@ function newMessageFixture(channel: string, text: string, ...options: readonly N
   const message: NewMessage = {
     author: authorFixture(extra.author ?? AGENT),
     channel: channelName(channel),
-    createdAt: CREATED_AT,
+    createdAt: fixtureTime,
     mentions: [],
     text,
   };

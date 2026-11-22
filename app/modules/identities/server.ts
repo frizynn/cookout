@@ -3,15 +3,15 @@
  * the admin identity made on first boot, and `GET /v1/whoami`. A token is
  * never stored: only its hash, made by `Secrets`, goes into `Storage`.
  */
-import { Context, DateTime, Effect, Layer } from "effect";
+import { Context, Effect, Layer } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import type { Refusal } from "../http/index.ts";
 import type { Gate, Route } from "../http/server.ts";
 import { Secrets } from "../secrets/server.ts";
 import { Storage, type StorageUnavailable } from "../storage/server.ts";
-import { firstAdminName, type Identity, type Token, whoamiPath } from "./index.ts";
+import { type Identity, type Token, whoamiPath } from "./index.ts";
 import { authenticate, Caller, type IssuedToken, issueToken } from "./lib/server/auth.ts";
-import { identityAdminRoutes } from "./lib/server/routes.ts";
+import { firstAdmin, identityAdminRoutes } from "./lib/server/routes.ts";
 import {
   IdentityResponseSchema,
   IdentityWithTokenResponseSchema,
@@ -72,8 +72,8 @@ export const firstBoot: Layer.Layer<FirstBoot, StorageUnavailable, Identities | 
   Effect.gen(function* () {
     const storage = yield* Storage;
     const { token, hash } = yield* (yield* Identities).issueToken;
-    const createdAt = DateTime.formatIso(yield* DateTime.now);
-    const made = yield* storage.createIdentityIfNoneExist({ name: firstAdminName, admin: true, createdAt }, hash);
+    const admin = yield* firstAdmin;
+    const made = yield* storage.createIdentityIfNoneExist(admin, hash);
     return { adminToken: made ? token : undefined };
   }),
 );

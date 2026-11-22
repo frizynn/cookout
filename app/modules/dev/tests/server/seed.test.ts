@@ -1,13 +1,30 @@
-import { Array as Arr, Effect, pipe } from "effect";
-import { TestCookout, answer, seedBoard, testCookout } from "../../../testing/server.ts";
+import { Array as Arr, Effect, Schema, pipe } from "effect";
+import type { CommandLineNeeds, TestCookoutService } from "../../../testing/server.ts";
+import { TestCookout, answer, commandLineServices, messageId, runDev, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 
 const NO_OWNER = "(no owner)";
+const SeedOutput = Schema.Struct({
+  identities: Schema.Array(Schema.Struct({ token: Schema.String })),
+  thread: Schema.Int,
+});
+const isSeedOutput = Schema.is(SeedOutput);
+
+function seeded(cookout: TestCookoutService): Effect.Effect<typeof SeedOutput.Type, never, CommandLineNeeds> {
+  return Effect.gen(function* seedTheCookout() {
+    const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const { stdoutJson } = yield* runDev({ args: ["seed"], env });
+    if (isSeedOutput(stdoutJson)) {
+      return stdoutJson;
+    }
+    return expect.unreachable("pnpm seed printed no board");
+  });
+}
 
 it.effect("the seed makes identities with and without owners, each with a working token", () =>
   Effect.gen(function* seededIdentities() {
     const cookout = yield* TestCookout;
-    const board = yield* seedBoard({ token: cookout.adminToken, url: cookout.url });
+    const board = yield* seeded(cookout);
     const { identities } = yield* answer(() => cookout.client.listIdentities());
     const whoami = yield* pipe(
       board.identities,
@@ -27,16 +44,16 @@ it.effect("the seed makes identities with and without owners, each with a workin
       "release-bot",
       "triage-agent",
     ]);
-  }).pipe(Effect.provide(testCookout())),
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
 it.effect("the seed makes channels with top-level messages and a thread holding a reply to a reply", () =>
   Effect.gen(function* seededThread() {
     const cookout = yield* TestCookout;
-    const board = yield* seedBoard({ token: cookout.adminToken, url: cookout.url });
+    const board = yield* seeded(cookout);
     const { channels } = yield* answer(() => cookout.client.listChannels());
     const general = yield* answer(() => cookout.client.listMessages("general"));
-    const thread = yield* answer(() => cookout.client.getThread(board.thread));
+    const thread = yield* answer(() => cookout.client.getThread(messageId(board.thread)));
 
     expect(Arr.map(channels, ({ name }) => name)).toStrictEqual(["deploys", "general"]);
     expect(Arr.map(general.messages, ({ text }) => text)).toStrictEqual([
@@ -49,5 +66,5 @@ it.effect("the seed makes channels with top-level messages and a thread holding 
       ["grace", board.thread, "@triage-agent can you post the failing run?"],
       ["ada", board.thread, "Thanks, both of you."],
     ]);
-  }).pipe(Effect.provide(testCookout())),
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

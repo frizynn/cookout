@@ -1,18 +1,20 @@
 import { Argument, Command, Flag } from "effect/cli";
 import { Effect, Option, Schema } from "effect";
 import type { ListMessagesQuery, MessageId, PostMessageRequest } from "../../../messages/index.ts";
-import { join, leave } from "./lease-sessions.ts";
+import { identityNamePattern, isIdentityName } from "../../../identities/index.ts";
+import { join, leave } from "./join-and-leave.ts";
 import { printAnswer, refused } from "./output.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
 import type { CommandFailed } from "./output.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
-import type { Secrets } from "../../../secrets/server.ts";
+import type { IdentityName } from "../../../identities/index.ts";
+import type { LeaseStateNeeds } from "./lease-state.ts";
 import { callServer } from "./adapters/sdk.ts";
 import { isMessageId } from "../../../messages/index.ts";
 
 function answered<Value>(
-  effect: Effect.Effect<Value, CallFailure, Secrets>,
-): Effect.Effect<void, CommandFailed, Secrets> {
+  effect: Effect.Effect<Value, CallFailure, LeaseStateNeeds>,
+): Effect.Effect<void, CommandFailed, LeaseStateNeeds> {
   return effect.pipe(Effect.flatMap(printAnswer), Effect.catch(refused));
 }
 
@@ -160,7 +162,11 @@ const threadCommand = Command.make("thread").pipe(
   Command.withSubcommands([threadGetCommand]),
 );
 
+const identityNameFlag = Schema.String.check(Schema.isPattern(identityNamePattern).abort()).pipe(
+  Schema.refine(isIdentityName),
+);
 const asFlag = Flag.String("as").pipe(
+  Flag.withSchema(identityNameFlag),
   Flag.optional,
   Flag.withDescription("The token's own identity: a check, not a switch. Required."),
 );
@@ -174,11 +180,11 @@ function notForced(): boolean {
 }
 
 interface JoinInput {
-  readonly as: Option.Option<string>;
+  readonly as: Option.Option<IdentityName>;
   readonly force: Option.Option<boolean>;
 }
 
-type JoinCommand = Command.Command<"join", JoinInput, object, CommandFailed, Secrets>;
+type JoinCommand = Command.Command<"join", JoinInput, object, CommandFailed, LeaseStateNeeds>;
 
 const joinCommand: JoinCommand = Command.make("join", { as: asFlag, force: forceFlag }, ({ as, force }) =>
   answered(join({ as, force: Option.getOrElse(force, notForced) })),

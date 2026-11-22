@@ -1,17 +1,15 @@
-import { ConfigProvider, Context, DateTime, Effect, Layer } from "effect";
+import { ConfigProvider, Context, Effect, Layer } from "effect";
 import type { CookoutClient, CookoutClientOptions } from "../../../sdk/index.ts";
 import { FirstBoot, Identities } from "../../../identities/server.ts";
 import type { Identity, Token } from "../../../identities/index.ts";
 import { Storage, memoryStorage } from "../../../storage/server.ts";
+import { currentTime, startTestClock } from "./time.ts";
 import { isIdentityName, isOwner } from "../../../identities/index.ts";
-import { secretsLive, secretsTest } from "../../../secrets/server.ts";
-import { TestClock } from "effect/testing";
 import { cookoutServer } from "../../../cli/server.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
+import { secretsOf } from "./secrets.ts";
 import { serverUrl } from "../../../http/server.ts";
 import { unusableStorage } from "./storage.ts";
-
-export const testStartTime = "2026-01-01T00:00:00.000Z";
 
 export type TestIdentity = {
   readonly identity: Identity;
@@ -45,7 +43,7 @@ export type TestCookoutOptions = {
 
 const storageFor = (options: TestCookoutOptions) => (options.storage === "unusable" ? unusableStorage : memoryStorage);
 
-const secretsFor = (options: TestCookoutOptions) => (options.secrets === "live" ? secretsLive : secretsTest);
+const secretsFor = (options: TestCookoutOptions) => secretsOf(options.secrets ?? "test");
 
 function serverEnv({ leaseSeconds }: TestCookoutOptions): ConfigProvider.ConfigProvider {
   if (typeof leaseSeconds === "number") {
@@ -74,7 +72,7 @@ const seedIdentity =
       const identity: Identity = {
         ...(yield* identityFields(name, options.owner)),
         admin: options.admin === true,
-        createdAt: DateTime.formatIso(yield* DateTime.now),
+        createdAt: yield* currentTime,
       };
       const { token, hash } = yield* identities.issueToken;
       if ((yield* storage.createIdentity(identity, hash)) === "name_taken") {
@@ -87,7 +85,7 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
   Layer.effect(
     TestCookout,
     Effect.gen(function* () {
-      yield* TestClock.setTime(DateTime.toEpochMillis(DateTime.makeUnsafe(testStartTime)));
+      yield* startTestClock;
       const scope = yield* Effect.scope;
       const store = yield* Layer.build(Layer.mergeAll(storageFor(options), secretsFor(options)));
       const config = serverEnv(options);

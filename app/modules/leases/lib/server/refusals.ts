@@ -1,14 +1,15 @@
 import type { IdentityName } from "../../../identities/index.ts";
+import type { IsoTime } from "../../../time/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 
 interface Conflict {
   readonly identity: IdentityName;
-  readonly heldUntil: string | null;
+  readonly heldUntil: IsoTime | null;
 }
 
 interface Held {
   readonly identity: IdentityName;
-  readonly heldUntil: string;
+  readonly heldUntil: IsoTime;
 }
 
 interface WrongIdentity {

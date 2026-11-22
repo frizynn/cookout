@@ -6,49 +6,48 @@ The SDK's public surface: the built `dist/sdk.d.ts`, as consumers of the publish
 /**
  * `@ai-hero/cookout/sdk`: a client for a cookout server, in plain TypeScript
  * for Node and the browser. Every answer is checked against the protocol; one
- * that doesn't match fails with `CookoutError` code `bad_response`.
+ * that doesn't match fails with `CookoutError` code `bad_response`. A refusal
+ * with a code this SDK doesn't know (from a newer server) still fails with
+ * that code, typed as `UnknownErrorCode`.
  */
 /**
- * Channels on the wire, shared by the server, the SDK and the web: the
- * `ChannelName` brand and its check, the channel as the server shows it, the
- * request and answers of the channel routes, their paths, and the error codes
- * they refuse with.
+ * A moment on the wire, shared by the server, the SDK and the web: the
+ * `IsoTime` brand and its check. Every timestamp the protocol carries
+ * (`createdAt`, `expiresAt`, `heldUntil`, the health check's `time`) is one.
  */
-declare const brand$3: unique symbol;
+declare const brand$5: unique symbol;
+/** A moment as the wire writes it: ISO 8601 in UTC with milliseconds, such as `2026-01-01T00:00:00.000Z`. */
+type IsoTime = string & {
+  readonly [brand$5]: "IsoTime";
+};
+declare const brand$4: unique symbol;
 /** A channel's name: 1–80 lowercase letters, digits or `-`. Unique on a server. */
 type ChannelName = string & {
-  readonly [brand$3]: "ChannelName";
+  readonly [brand$4]: "ChannelName";
 };
 /** A channel as the server shows it. */
-type Channel = {
+interface Channel {
   readonly name: ChannelName;
   /** 1–500 characters. */
   readonly description?: string;
-  /** ISO 8601 UTC. */
-  readonly createdAt: string;
-};
+  readonly createdAt: IsoTime;
+}
 /** The body of `POST /v1/channels`. The server checks the name and description. */
-type CreateChannelRequest = {
+interface CreateChannelRequest {
   readonly name: string;
   readonly description?: string;
-};
+}
 /** The answer to creating or getting a channel. */
-type ChannelResponse = {
+interface ChannelResponse {
   readonly channel: Channel;
-};
+}
 /** The answer to `GET /v1/channels`: every channel, sorted by name. */
-type ListChannelsResponse = {
-  readonly channels: ReadonlyArray<Channel>;
-};
-/**
- * Identities on the wire, shared by the server, the SDK and the web: the
- * `IdentityName`, `Owner`, `Token` and `TokenHash` brands and their
- * constructors, the identity as the server shows it, the routes, and the
- * error codes bearer auth and the admin check answer with.
- */
-declare const brand$2: unique symbol;
+interface ListChannelsResponse {
+  readonly channels: readonly Channel[];
+}
+declare const brand$3: unique symbol;
 type Brand<Name extends string> = string & {
-  readonly [brand$2]: Name;
+  readonly [brand$3]: Name;
 };
 /** An identity's name: 1–64 lowercase letters, digits or `-`, so `@name` mentions parse cleanly. Unique on a server. */
 type IdentityName = Brand<"IdentityName">;
@@ -62,8 +61,7 @@ type Identity = {
   readonly owner?: Owner;
   /** Admins can create identities, rotate tokens and delete identities. */
   readonly admin: boolean;
-  /** ISO 8601 UTC. */
-  readonly createdAt: string;
+  readonly createdAt: IsoTime;
 };
 /** The answer to `GET /v1/whoami` and `DELETE /v1/identities/<name>`. */
 type IdentityResponse = {
@@ -83,16 +81,10 @@ type CreateIdentityRequest = {
   readonly name: string;
   readonly owner?: string;
 };
-/**
- * The identity lease on the wire, shared by the server, the SDK and the CLI:
- * the `LeaseId` brand and its check, the header a session sends it in, the
- * requests and answers of join and leave, and the error codes the lease
- * refuses with.
- */
-declare const brand$1: unique symbol;
+declare const brand$2: unique symbol;
 /** The value `join` returns and a session sends in `cookout-lease` to show it holds the identity. */
 type LeaseId = string & {
-  readonly [brand$1]: "LeaseId";
+  readonly [brand$2]: "LeaseId";
 };
 /** The body of `POST /v1/lease`. `as` must be the token's own identity: a check, not a switch. */
 interface JoinRequest {
@@ -103,8 +95,8 @@ interface JoinRequest {
 /** The answer to `join`. */
 interface LeaseResponse {
   readonly leaseId: LeaseId;
-  /** ISO 8601 UTC. Each request carrying the lease ID moves it forward. */
-  readonly expiresAt: string;
+  /** Each request carrying the lease ID moves it forward. */
+  readonly expiresAt: IsoTime;
 }
 /** The answer to `leave`. */
 interface LeaveResponse {
@@ -115,15 +107,15 @@ interface LeaveResponse {
  * ends, or `null` if nobody holds the identity.
  */
 interface LeaseConflictDetails {
-  readonly heldUntil: string | null;
+  readonly heldUntil: IsoTime | null;
 }
-declare const brand: unique symbol;
+declare const brand$1: unique symbol;
 /**
  * A message's ID: a positive whole number. Message IDs are one increasing
  * sequence across the whole server, so they order messages.
  */
 type MessageId = number & {
-  readonly [brand]: "MessageId";
+  readonly [brand$1]: "MessageId";
 };
 /** Any JSON value. */
 type JsonValue = null | boolean | number | string | readonly JsonValue[] | {
@@ -145,8 +137,7 @@ interface MessageFields {
   readonly data?: JsonValue;
   /** Names of the identities the text mentions. */
   readonly mentions: readonly IdentityName[];
-  /** ISO 8601 UTC. */
-  readonly createdAt: string;
+  readonly createdAt: IsoTime;
 }
 /** A message posted straight into a channel. It may have a thread of replies. */
 interface TopLevelMessage extends MessageFields {
@@ -191,24 +182,32 @@ interface ThreadResponse {
   readonly parent: TopLevelMessage;
   readonly replies: readonly Reply[];
 }
-type HealthResponse = {
+/** The answer to the health check. */
+interface HealthResponse {
   readonly status: "ok";
-  readonly time: string;
-};
+  readonly time: IsoTime;
+}
+/** Every code a cookout server refuses with. */
 declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "admin_only", "identity_exists", "identity_not_found", "last_admin", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "lease_held", "lease_required", "lease_lost", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "storage_unavailable", "internal_error"];
+/** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
-type CookoutErrorCode = ErrorCode | "bad_response" | "url_missing";
-export declare class CookoutError extends Error {
+declare const brand: unique symbol;
+type UnknownErrorCode = string & {
+  readonly [brand]: "UnknownErrorCode";
+};
+type CookoutErrorCode = ErrorCode | "bad_response" | "url_missing" | UnknownErrorCode;
+interface CookoutErrorOptions {
+  readonly code: CookoutErrorCode;
+  readonly details?: unknown;
+  readonly message: string;
+  readonly status: number;
+}
+declare class CookoutError extends Error {
   readonly name = "CookoutError";
   readonly status: number;
   readonly code: CookoutErrorCode;
   readonly details: unknown;
-  constructor(options: {
-    status: number;
-    code: CookoutErrorCode;
-    message: string;
-    details?: unknown;
-  });
+  constructor(options: CookoutErrorOptions);
 }
 export type CookoutClientOptions = {
   /** The server's base URL, such as `https://cookout.example.com`. Default: `COOKOUT_URL`. */
@@ -269,5 +268,5 @@ export type CookoutClient = {
  * (status 0) when there is no URL.
  */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export type { Author, Channel, ChannelName, ChannelResponse, CookoutErrorCode, CreateChannelRequest, CreateIdentityRequest, HealthResponse, Identity, IdentityName, IdentityResponse, IdentityWithTokenResponse, JoinRequest, JsonValue, LeaseConflictDetails, LeaseId, LeaseResponse, LeaveResponse, ListChannelsResponse, ListIdentitiesResponse, ListMessagesQuery, ListMessagesResponse, Message, MessageFields, MessageId, MessageResponse, Owner, PostMessageRequest, Reply, ThreadResponse, Token, TopLevelMessage };
+export { type Author, type Channel, type ChannelName, type ChannelResponse, CookoutError, type CookoutErrorCode, type CreateChannelRequest, type CreateIdentityRequest, type HealthResponse, type Identity, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IsoTime, type JoinRequest, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type Reply, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode };
 ```

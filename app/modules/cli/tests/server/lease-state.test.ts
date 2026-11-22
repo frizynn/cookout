@@ -1,18 +1,75 @@
-import { Array as Arr, Effect } from "effect";
+import { Array as Arr, Effect, FileSystem, String as Str, pipe } from "effect";
 import {
   TestCookout,
-  damageLeaseStates,
+  commandLineServices,
   freshStateFolder,
   leaseStateFiles,
   runCookout,
   testCookout,
+  writeLeaseStates,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
+import type { CommandLineNeeds } from "../../../testing/server.ts";
+import type { Scope } from "effect";
 
 const EXIT_FAILURE = 1;
+const EXIT_SUCCESS = 0;
+const SHARED_FILE = 0o644;
+const OPEN_FOLDER = 0o755;
+const unsafe = { exitCode: EXIT_FAILURE, stderrJson: { error: { code: "lease_state_unsafe" } } };
+const OWNER_ONLY = "600";
+const OCTAL = 8;
+const PERMISSION_DIGITS = -3;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const ONE_FILE = 1;
 const JOIN = ["join", "--as", "agent"];
+const DAMAGED = "is damaged. Delete it and join again.";
+const damaged = { exitCode: EXIT_FAILURE, stderrJson: { error: { code: "lease_state_damaged" } } };
+const brokenStates = [
+  "{",
+  '{"expiresAt":"tomorrow","identity":"agent","leaseId":"lease_test_3","url":"http://x"}',
+  '{"expiresAt":"2026-01-01T00:01:00.000Z","identity":"Not A Name","leaseId":"lease_test_3","url":"http://x"}',
+];
+
+function permissionsOf(file: string): Effect.Effect<string, never, FileSystem.FileSystem> {
+  return Effect.gen(function* readPermissions() {
+    const fs = yield* FileSystem.FileSystem;
+    const { mode } = yield* Effect.orDie(fs.stat(file));
+    return Str.slice(PERMISSION_DIGITS)(mode.toString(OCTAL));
+  });
+}
+
+interface UnsafeStateFolders {
+  readonly linked: string;
+  readonly open: string;
+  readonly target: string;
+}
+
+const unsafeStateFolders: Effect.Effect<UnsafeStateFolders, never, CommandLineNeeds | Scope.Scope> = Effect.gen(
+  function* makeUnsafeFolders() {
+    const fs = yield* FileSystem.FileSystem;
+    const [open, linked, target] = yield* Effect.all(
+      [freshStateFolder, freshStateFolder, freshStateFolder],
+      ONE_AT_A_TIME,
+    );
+    yield* Effect.orDie(fs.chmod(open, OPEN_FOLDER));
+    yield* Effect.orDie(fs.symlink(target, `${linked}/leases`));
+    return { linked, open, target };
+  },
+);
+
+function filesIn(folder: string): Effect.Effect<readonly string[], never, FileSystem.FileSystem> {
+  return Effect.flatMap(FileSystem.FileSystem, (fs) => Effect.orDie(fs.readDirectory(folder)));
+}
+
+function plantSharedTemporary(folder: string): Effect.Effect<string, never, CommandLineNeeds> {
+  return Effect.gen(function* plantTemporary() {
+    const fs = yield* FileSystem.FileSystem;
+    const [file = ""] = yield* leaseStateFiles(folder);
+    yield* Effect.orDie(fs.writeFileString(`${file}.tmp`, "{}", { mode: SHARED_FILE }));
+    return file;
+  });
+}
 
 it.effect(
   "without COOKOUT_STATE_DIR, join keeps its lease under $XDG_STATE_HOME/cookout, else ~/.local/state/cookout",
@@ -36,20 +93,88 @@ it.effect(
       );
 
       expect(Arr.map(found, Arr.length)).toStrictEqual([ONE_FILE, ONE_FILE]);
-    }).pipe(Effect.provide(testCookout())),
+    }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("a damaged lease-state file fails the command and says to delete it", () =>
-  Effect.gen(function* damagedState() {
+it.effect("join writes its lease-state file readable by its owner only, even over a stale temporary file", () =>
+  Effect.gen(function* ownerOnlyState() {
     const cookout = yield* TestCookout;
     const agent = yield* cookout.createIdentity("agent");
     const folder = yield* freshStateFolder;
     const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
     yield* runCookout({ args: JOIN, env });
-    yield* damageLeaseStates(folder);
-    const result = yield* runCookout({ args: ["channel", "list"], env });
+    const file = yield* plantSharedTemporary(folder);
+    const again = yield* runCookout({ args: [...JOIN, "--force"], env });
+    const mode = yield* permissionsOf(file);
+
+    expect(again.exitCode).toBe(EXIT_SUCCESS);
+    expect(mode).toBe(OWNER_ONLY);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("a state folder others can open, or a leases folder that is a symlink, is refused as unsafe", () =>
+  Effect.gen(function* unsafeFolders() {
+    const cookout = yield* TestCookout;
+    const agent = yield* cookout.createIdentity("agent");
+    const { linked, open, target } = yield* unsafeStateFolders;
+    const session = { COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
+    const results = yield* pipe(
+      [open, linked],
+      Effect.forEach(
+        (folder) => runCookout({ args: JOIN, env: { ...session, COOKOUT_STATE_DIR: folder } }),
+        ONE_AT_A_TIME,
+      ),
+    );
+    const written = yield* filesIn(target);
+
+    expect(results).toMatchObject([unsafe, unsafe]);
+    expect(written).toStrictEqual([]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("with none of HOME, XDG_STATE_HOME or COOKOUT_STATE_DIR set, join is refused and other verbs work", () =>
+  Effect.gen(function* noStateFolder() {
+    const cookout = yield* TestCookout;
+    const agent = yield* cookout.createIdentity("agent");
+    const env = { COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
+    const joined = yield* runCookout({ args: JOIN, env });
+    const listed = yield* runCookout({ args: ["channel", "list"], env });
+
+    expect(joined).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "state_folder_missing" } } });
+    expect(listed).toMatchObject({ exitCode: EXIT_SUCCESS, stdoutJson: { channels: [] } });
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("a state folder that can't be made fails join with cli_error", () =>
+  Effect.gen(function* folderCantBeMade() {
+    const fs = yield* FileSystem.FileSystem;
+    const cookout = yield* TestCookout;
+    const agent = yield* cookout.createIdentity("agent");
+    const folder = yield* freshStateFolder;
+    yield* Effect.orDie(fs.writeFileString(`${folder}/a-file`, ""));
+    const env = { COOKOUT_STATE_DIR: `${folder}/a-file/state`, COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
+    const result = yield* runCookout({ args: JOIN, env });
 
     expect(result).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "cli_error" } } });
-    expect(result.stderr).toContain("is damaged. Delete it and join again.");
-  }).pipe(Effect.provide(testCookout())),
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("a lease-state file that isn't JSON, or breaks the expiry or identity rule, is damaged", () =>
+  Effect.gen(function* damagedStates() {
+    const cookout = yield* TestCookout;
+    const agent = yield* cookout.createIdentity("agent");
+    const folder = yield* freshStateFolder;
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
+    yield* runCookout({ args: JOIN, env });
+    const results = yield* pipe(
+      brokenStates,
+      Effect.forEach(
+        (text) => Effect.andThen(writeLeaseStates({ folder, text }), runCookout({ args: ["channel", "list"], env })),
+        ONE_AT_A_TIME,
+      ),
+    );
+
+    expect(results).toMatchObject([damaged, damaged, damaged]);
+    expect(Arr.every(results, ({ stderr }) => Str.includes(DAMAGED)(stderr))).toBe(true);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

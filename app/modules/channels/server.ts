@@ -8,10 +8,13 @@ import { Context, DateTime, Effect, Layer } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { channelPath, channelsPath, isChannelName } from "./index.ts";
 import type { Channel } from "./index.ts";
+import type { IsoTime } from "../time/index.ts";
 import type { Refusal } from "../http/index.ts";
 import type { Route } from "../http/server.ts";
 import { Storage } from "../storage/server.ts";
 import type { StorageUnavailable } from "../storage/server.ts";
+import { echoed } from "../http/index.ts";
+import { isoTimeOf } from "../time/server.ts";
 
 type NewChannel = typeof CreateChannelRequestSchema.Type;
 
@@ -23,11 +26,11 @@ function channelExists(name: string): Refusal {
   return { code: "channel_exists", message: `The channel ${name} already exists.`, status: CONFLICT };
 }
 
-function channelNotFound(name: string): Refusal {
-  return { code: "channel_not_found", message: `There is no channel named ${name}.`, status: NOT_FOUND };
+function missingChannel(name: string): Refusal {
+  return { code: "channel_not_found", message: `There is no channel named ${echoed(name)}.`, status: NOT_FOUND };
 }
 
-function stamped(fields: NewChannel, createdAt: string): Channel {
+function stamped(fields: NewChannel, createdAt: IsoTime): Channel {
   if (typeof fields.description === "string") {
     return { createdAt, description: fields.description, name: fields.name };
   }
@@ -39,7 +42,7 @@ function channelsOn(storage: Storage["Service"]): ChannelsService {
     create: (fields) =>
       Effect.gen(function* createChannel() {
         const now = yield* DateTime.now;
-        const channel = stamped(fields, DateTime.formatIso(now));
+        const channel = stamped(fields, isoTimeOf(now));
         const outcome = yield* storage.createChannel(channel);
         if (outcome === "name_taken") {
           return yield* Effect.fail(channelExists(channel.name));
@@ -49,17 +52,23 @@ function channelsOn(storage: Storage["Service"]): ChannelsService {
     get: (name) =>
       Effect.gen(function* getChannel() {
         if (!isChannelName(name)) {
-          return yield* Effect.fail(channelNotFound(name));
+          return yield* Effect.fail(missingChannel(name));
         }
         const found = yield* storage.findChannel(name);
         if (typeof found === "object") {
           return found;
         }
-        return yield* Effect.fail(channelNotFound(name));
+        return yield* Effect.fail(missingChannel(name));
       }),
     list: Effect.suspend(() => storage.listChannels()),
   };
 }
+
+/**
+ * The refusal for a channel that doesn't exist, 404 `channel_not_found`, for
+ * every route that names a channel.
+ */
+export const channelNotFound: (name: string) => Refusal = missingChannel;
 
 export interface ChannelsService {
   /** Makes a channel, stamped with the current time. Refuses with 409 `channel_exists` when the name is in use. */

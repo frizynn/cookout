@@ -11,6 +11,7 @@ import type {
 } from "./leases.ts";
 import { heldWith, liveAt, lost } from "./leases.ts";
 import type { IdentityName } from "../../../identities/index.ts";
+import type { IsoTime } from "../../../time/index.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { StorageUnavailable } from "./errors.ts";
 
@@ -24,7 +25,7 @@ interface MemoryLeases extends LeasesSection {
 
 interface Asked {
   readonly identity: IdentityName;
-  readonly now: string;
+  readonly now: IsoTime;
 }
 
 function liveIn(leases: Leases, { identity, now }: Asked): Option.Option<StoredLease> {

@@ -1,5 +1,6 @@
 import { Array as Arr, Effect, Order, Schema } from "effect";
 import type { Channel, ChannelName } from "../../../channels/index.ts";
+import { IsoTimeSchema } from "../../../time/server.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
@@ -19,7 +20,7 @@ const CHANNEL_COLUMNS = "name, description, created_at";
 const byName: Order.Order<Channel> = Order.mapInput(Order.String, (channel: Channel) => channel.name);
 
 const ChannelRow = Schema.Struct({
-  created_at: Schema.String,
+  created_at: IsoTimeSchema,
   description: Schema.NullOr(Schema.String),
   name: Schema.String.pipe(Schema.refine(isChannelName)),
 });

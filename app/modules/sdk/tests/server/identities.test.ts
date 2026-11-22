@@ -16,6 +16,7 @@ const TOO_LONG = 65;
 const LONGEST_OWNER = 100;
 const TOO_LONG_OWNER = 101;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
+const BAD_NAMES = ["", "Auth", "auth_griller", "auth griller", "@auth", Str.repeat(TOO_LONG)("x")];
 const BOOT = "2026-01-01T00:00:00.000Z";
 const nameRefused = {
   code: "invalid_request",
@@ -92,14 +93,9 @@ it.effect("identity names are 1-64 lowercase letters, digits or '-'", () =>
   Effect.gen(function* identityNameRule() {
     const cookout = yield* TestCookout;
     const good = ["auth-griller", "a", "agent-7", Str.repeat(LONGEST)("x")];
-    const bad = ["", "Auth", "auth_griller", "auth griller", "@auth", Str.repeat(TOO_LONG)("x")];
     const created = yield* pipe(
       good,
       Effect.forEach((name) => answer(() => cookout.client.createIdentity({ name })), ONE_AT_A_TIME),
-    );
-    const refused = yield* pipe(
-      bad,
-      Effect.forEach((name) => refusal(() => cookout.client.createIdentity({ name })), ONE_AT_A_TIME),
     );
 
     expect(created).toMatchObject(
@@ -108,12 +104,37 @@ it.effect("identity names are 1-64 lowercase letters, digits or '-'", () =>
         Arr.map((name) => ({ identity: { name } })),
       ),
     );
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a name that breaks the naming rule is refused with 400", () =>
+  Effect.gen(function* nameRuleRefusal() {
+    const cookout = yield* TestCookout;
+    const refused = yield* pipe(
+      BAD_NAMES,
+      Effect.forEach((name) => refusal(() => cookout.client.createIdentity({ name })), ONE_AT_A_TIME),
+    );
+    const { identities } = yield* answer(() => cookout.client.listIdentities());
+
     expect(refused).toMatchObject(
       pipe(
-        bad,
-        Arr.map(() => nameRefused),
+        BAD_NAMES,
+        Arr.map(() => ({ code: "invalid_request", status: BAD_REQUEST })),
       ),
     );
+    expect(Arr.map(identities, ({ name }) => name)).toStrictEqual(["admin"]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a refused identity says, for each field, which rule it broke", () =>
+  Effect.gen(function* schemaErrors() {
+    const cookout = yield* TestCookout;
+    const name = yield* refusal(() => cookout.client.createIdentity({ name: "Auth" }));
+    const owner = yield* refusal(() =>
+      cookout.client.createIdentity({ name: "agent", owner: Str.repeat(TOO_LONG_OWNER)("x") }),
+    );
+
+    expect([name, owner]).toMatchObject([nameRefused, ownerRefused]);
   }).pipe(Effect.provide(testCookout())),
 );
 

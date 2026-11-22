@@ -1,11 +1,15 @@
 import type { Author, JsonValue, ListMessagesResponse, Message, MessageId, ThreadResponse } from "../../index.ts";
 import { Context, DateTime, Effect, Layer, Predicate } from "effect";
 import type { NewMessage, StorageUnavailable } from "../../../storage/server.ts";
-import { channelNotFound, messageNotFound, replyInOtherChannel } from "./refusals.ts";
+import { messageNotFound, replyInOtherChannel } from "./refusals.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { Identity } from "../../../identities/index.ts";
+import type { IsoTime } from "../../../time/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { Storage } from "../../../storage/server.ts";
+import { channelNotFound } from "../../../channels/server.ts";
+import { isChannelName } from "../../../channels/index.ts";
+import { isoTimeOf } from "../../../time/server.ts";
 import { pageSize } from "../../index.ts";
 
 interface PostMessage {
@@ -43,7 +47,7 @@ function withReplyTo(message: NewMessage, replyTo: MessageId | undefined): NewMe
   return { ...message, replyTo };
 }
 
-function newMessage(author: Identity, { channel, data, replyTo, text }: PostMessage, createdAt: string): NewMessage {
+function newMessage(author: Identity, { channel, data, replyTo, text }: PostMessage, createdAt: IsoTime): NewMessage {
   const fields: NewMessage = { author: authorOf(author), channel, createdAt, mentions: [], text };
   if (Predicate.isUndefined(data)) {
     return withReplyTo(fields, replyTo);
@@ -72,6 +76,9 @@ function messagesOn(storage: Storage["Service"]): MessagesService {
   return {
     page: (channel, query) =>
       Effect.gen(function* pageChannel() {
+        if (!isChannelName(channel)) {
+          return yield* Effect.fail(channelNotFound(channel));
+        }
         const page = yield* storage.listChannelMessages(channel, pageRequest(query));
         if (Predicate.isUndefined(page)) {
           return yield* Effect.fail(channelNotFound(channel));
@@ -81,7 +88,7 @@ function messagesOn(storage: Storage["Service"]): MessagesService {
     post: (author, message) =>
       Effect.gen(function* postMessage() {
         const now = yield* DateTime.now;
-        const result = yield* storage.appendMessage(newMessage(author, message, DateTime.formatIso(now)));
+        const result = yield* storage.appendMessage(newMessage(author, message, isoTimeOf(now)));
         if (result.status === "appended") {
           return result.message;
         }
@@ -101,7 +108,7 @@ function messagesOn(storage: Storage["Service"]): MessagesService {
 export interface MessagesService {
   readonly post: (author: Identity, message: PostMessage) => Fails<Message>;
   readonly thread: (id: MessageId) => Fails<ThreadResponse>;
-  readonly page: (channel: ChannelName, query: PageQuery) => Fails<ListMessagesResponse>;
+  readonly page: (channel: string, query: PageQuery) => Fails<ListMessagesResponse>;
 }
 
 export class Messages extends Context.Service<Messages, MessagesService>()(

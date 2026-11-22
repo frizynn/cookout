@@ -3,6 +3,7 @@ import type { Storage, StorageUnavailable } from "../../server.ts";
 import { expect, it } from "@effect/vitest";
 import {
   identityFixture as identity,
+  isoTime,
   leaseId,
   identityName as nameOf,
   openStore,
@@ -12,10 +13,10 @@ import type { Layer } from "effect";
 import { tokenHash } from "../../../identities/index.ts";
 
 const HASH_LENGTH = 64;
-const T0 = "2026-01-01T00:00:00.000Z";
-const T30 = "2026-01-01T00:00:30.000Z";
-const T60 = "2026-01-01T00:01:00.000Z";
-const T90 = "2026-01-01T00:01:30.000Z";
+const T0 = isoTime("2026-01-01T00:00:00.000Z");
+const T30 = isoTime("2026-01-01T00:00:30.000Z");
+const T60 = isoTime("2026-01-01T00:01:00.000Z");
+const T90 = isoTime("2026-01-01T00:01:30.000Z");
 const AGENT = nameOf("agent");
 const OTHER = nameOf("other");
 const LEASE_ONE = leaseId("lease_one_0123456789");
@@ -26,10 +27,10 @@ const ONE_AT_A_TIME = { concurrency: 1 } as const;
 type TakeResult = ReturnType<Storage["Service"]["takeLease"]>;
 
 interface Take {
-  readonly expiresAt: string;
+  readonly expiresAt: typeof T0;
   readonly force?: boolean;
   readonly id: typeof LEASE_ONE;
-  readonly now: string;
+  readonly now: typeof T0;
 }
 
 function withIdentities(

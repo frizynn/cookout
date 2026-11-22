@@ -1,82 +1,156 @@
-import { Effect } from "effect";
-import { HttpServerRequest, type HttpServerResponse } from "effect/http";
+import { Array as Arr, Effect, Option, Record, String as Str, pipe } from "effect";
+import type { HttpServerRequest, HttpServerResponse } from "effect/http";
+import { methodNotAllowed, notFound } from "./refusals.ts";
 import type { HttpMethod } from "../../client.ts";
 import type { Refusal } from "../../index.ts";
-import { methodNotAllowed, notFound } from "./refusals.ts";
+import { HttpServerRequest as Request } from "effect/http";
+import { echoed } from "../../index.ts";
 
-export type Params = Readonly<Record<string, string>>;
+type Params = Readonly<Record<string, string>>;
 
-export type Route<R> = {
+type SegmentPair = readonly [string, string];
+
+type Handled<Needs> = Effect.Effect<
+  HttpServerResponse.HttpServerResponse,
+  unknown,
+  Needs | HttpServerRequest.HttpServerRequest
+>;
+
+interface Route<Needs> {
+  readonly handle: (params: Params) => Handled<Needs>;
   readonly method: HttpMethod;
   readonly path: string;
-  readonly handle: (
-    params: Params,
-  ) => Effect.Effect<HttpServerResponse.HttpServerResponse, unknown, R | HttpServerRequest.HttpServerRequest>;
-};
+  readonly segments?: Readonly<Record<string, (segment: string) => boolean>>;
+}
 
-const invalidPath = (path: string): Refusal => ({
-  status: 400,
-  code: "invalid_path",
-  message: `The path ${path} is not valid percent-encoding.`,
-});
+type Segments = NonNullable<Route<unknown>["segments"]>;
 
-const segmentMatches = (pattern: string, segment: string | undefined) =>
-  segment !== undefined && segment !== "" && (pattern.startsWith(":") || pattern === segment);
+type Gate<Provides, Needs, Fails = unknown> = <Value, Failure, Requires>(
+  effect: Effect.Effect<Value, Failure, Requires>,
+) => Effect.Effect<Value, Failure | Fails, Exclude<Requires, Provides> | Needs>;
 
-const matches = (pattern: string, path: string) => {
-  const patternSegments = pattern.split("/");
-  const segments = path.split("/");
-  return (
-    patternSegments.length === segments.length &&
-    patternSegments.every((p, i) => (p === "" ? segments[i] === "" : segmentMatches(p, segments[i])))
+interface Target {
+  readonly method: string;
+  readonly path: string;
+}
+
+interface Routes<Open, Gated, Provides, Needs, Fails> {
+  readonly gate: Gate<Provides, Needs, Fails>;
+  readonly gated: readonly Route<Gated>[];
+  readonly open: readonly Route<Open>[];
+}
+
+const BAD_REQUEST = 400;
+const PARAM = ":";
+const PARAM_NAME_START = 1;
+const SEPARATOR = "/";
+
+function invalidPath(path: string): Refusal {
+  return {
+    code: "invalid_path",
+    message: `The path ${echoed(path)} is not valid percent-encoding.`,
+    status: BAD_REQUEST,
+  };
+}
+
+function isParam(pattern: string): boolean {
+  return Str.startsWith(PARAM)(pattern);
+}
+
+function paramName(pattern: string): string {
+  return Str.slice(PARAM_NAME_START)(pattern);
+}
+
+function paramMatches(pattern: string, segment: string, segments: Segments): boolean {
+  const rule = Option.fromNullishOr(segments[paramName(pattern)]);
+  return Option.match(rule, { onNone: () => true, onSome: (matchesRule) => matchesRule(segment) });
+}
+
+function segmentMatches(pattern: string, segment: string, segments: Segments): boolean {
+  if (isParam(pattern)) {
+    return segment !== "" && paramMatches(pattern, segment, segments);
+  }
+  return pattern === segment;
+}
+
+function segmentPairs(pattern: string, path: string): readonly SegmentPair[] {
+  return Arr.zip(Str.split(SEPARATOR)(pattern), Str.split(SEPARATOR)(path));
+}
+
+function matches<Needs>({ path: pattern, segments = {} }: Route<Needs>, path: string): boolean {
+  if (Str.split(SEPARATOR)(pattern).length !== Str.split(SEPARATOR)(path).length) {
+    return false;
+  }
+  return Arr.every(segmentPairs(pattern, path), ([expected, actual]: SegmentPair) =>
+    segmentMatches(expected, actual, segments),
   );
-};
+}
 
-const decodeParams = (pattern: string, path: string): Effect.Effect<Params, Refusal> =>
-  Effect.try({
-    try: () => {
-      const segments = path.split("/");
-      const entries = pattern
-        .split("/")
-        .flatMap(
-          (p, i): Array<[string, string]> =>
-            p.startsWith(":") ? [[p.slice(1), decodeURIComponent(segments[i] ?? "")]] : [],
-        );
-      const params: Params = Object.fromEntries(entries);
-      return params;
-    },
+function decodedParam([expected, actual]: SegmentPair): SegmentPair {
+  return [paramName(expected), decodeURIComponent(actual)];
+}
+
+function decodeParams(pattern: string, path: string): Effect.Effect<Params, Refusal> {
+  return Effect.try({
     catch: () => invalidPath(path),
+    try: (): Params =>
+      pipe(
+        segmentPairs(pattern, path),
+        Arr.filter(([expected]: SegmentPair) => isParam(expected)),
+        Arr.map(decodedParam),
+        Record.fromEntries,
+      ),
   });
+}
 
-export type Gate<Provides, Needs, Fails = unknown> = <A, E, R>(
-  effect: Effect.Effect<A, E, R>,
-) => Effect.Effect<A, E | Fails, Exclude<R, Provides> | Needs>;
+function answer<Needs>(onPath: readonly Route<Needs>[], target: Target, params: Params): Handled<Needs> {
+  const route = Arr.findFirst(onPath, (candidate) => candidate.method === target.method);
+  return Option.match(route, {
+    onNone: () => Effect.fail(methodNotAllowed(target.method, target.path)),
+    onSome: (found) => found.handle(params),
+  });
+}
 
-type Target = { readonly method: string; readonly path: string };
+function paramsOf<Needs>(
+  onPath: Arr.NonEmptyReadonlyArray<Route<Needs>>,
+  target: Target,
+): Effect.Effect<Params, Refusal> {
+  return decodeParams(Arr.headNonEmpty(onPath).path, target.path);
+}
 
-const answer = <R>(onPath: ReadonlyArray<Route<R>>, target: Target, params: Params) => {
-  const route = onPath.find((candidate) => candidate.method === target.method);
-  return route === undefined ? Effect.fail(methodNotAllowed(target.method, target.path)) : route.handle(params);
-};
+function onPathOf<Needs>(routes: readonly Route<Needs>[], path: string): readonly Route<Needs>[] {
+  return Arr.filter(routes, (route) => matches(route, path));
+}
 
-const paramsOf = <R>(onPath: ReadonlyArray<Route<R>>, target: Target) =>
-  decodeParams(onPath[0]?.path ?? target.path, target.path);
+function targetOf(request: HttpServerRequest.HttpServerRequest): Target {
+  const [path] = Str.split("?")(request.url);
+  return { method: request.method, path };
+}
 
-const onPathOf = <R>(routes: ReadonlyArray<Route<R>>, path: string) =>
-  routes.filter((route) => matches(route.path, path));
+const requestTarget: Effect.Effect<Target, never, HttpServerRequest.HttpServerRequest> = Effect.map(
+  Request.HttpServerRequest,
+  targetOf,
+);
 
-export const dispatch = <Open, R, Provides, Needs, Fails>(
-  open: ReadonlyArray<Route<Open>>,
-  gated: ReadonlyArray<Route<R>>,
-  gate: Gate<Provides, Needs, Fails>,
-) =>
-  Effect.gen(function* () {
-    const request = yield* HttpServerRequest.HttpServerRequest;
-    const target = { method: request.method, path: request.url.split("?")[0] ?? "/" };
+function dispatch<Open, Gated, Provides, Needs, Fails>({
+  gate,
+  gated,
+  open,
+}: Routes<Open, Gated, Provides, Needs, Fails>): Handled<Open | Exclude<Gated, Provides> | Needs> {
+  return Effect.gen(function* routeRequest() {
+    const target = yield* requestTarget;
     const openOnPath = onPathOf(open, target.path);
-    if (openOnPath.length > 0) return yield* answer(openOnPath, target, yield* paramsOf(openOnPath, target));
+    if (Arr.isReadonlyArrayNonEmpty(openOnPath)) {
+      const openParams = yield* paramsOf(openOnPath, target);
+      return yield* answer(openOnPath, target, openParams);
+    }
     const gatedOnPath = onPathOf(gated, target.path);
-    if (gatedOnPath.length === 0) return yield* Effect.fail(notFound(target.method, target.path));
+    if (!Arr.isReadonlyArrayNonEmpty(gatedOnPath)) {
+      return yield* Effect.fail(notFound(target.method, target.path));
+    }
     const params = yield* paramsOf(gatedOnPath, target);
     return yield* gate(answer(gatedOnPath, target, params));
   });
+}
+
+export { type Gate, type Route, dispatch };

@@ -8,14 +8,8 @@ import type {
 } from "../../messages/index.ts";
 import { channelMessagesPath, messagesPath, threadPath } from "../../messages/index.ts";
 import { isListMessagesResponse, isMessageResponse, isThreadResponse } from "./generated/validators.js";
-import type { HeldLease } from "./held-lease.ts";
+import type { ClientConnection } from "./request.ts";
 import { send } from "./request.ts";
-
-interface Server {
-  readonly url: string;
-  readonly token?: string;
-  readonly lease: HeldLease;
-}
 
 interface MessageCalls {
   readonly createMessage: (request: PostMessageRequest) => Promise<MessageResponse>;
@@ -23,7 +17,7 @@ interface MessageCalls {
   readonly getThread: (messageId: MessageId) => Promise<ThreadResponse>;
 }
 
-function messageCalls(server: Server): MessageCalls {
+function messageCalls(server: ClientConnection): MessageCalls {
   return {
     createMessage: async (body) => {
       const posted = await send(server, { body, isExpected: isMessageResponse, method: "POST", path: messagesPath });

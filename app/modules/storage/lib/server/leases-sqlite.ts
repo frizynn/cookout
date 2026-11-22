@@ -11,6 +11,8 @@ import type {
 } from "./leases.ts";
 import { heldWith, liveAt, lost } from "./leases.ts";
 import type { IdentityName } from "../../../identities/index.ts";
+import type { IsoTime } from "../../../time/index.ts";
+import { IsoTimeSchema } from "../../../time/server.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isIdentityName } from "../../../identities/index.ts";
@@ -21,11 +23,11 @@ type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
 interface Asked {
   readonly identity: IdentityName;
-  readonly now: string;
+  readonly now: IsoTime;
 }
 
 const LeaseRow = Schema.Struct({
-  expires_at: Schema.String,
+  expires_at: IsoTimeSchema,
   identity_name: Schema.String.pipe(Schema.refine(isIdentityName)),
   lease_id: Schema.String.pipe(Schema.refine(isLeaseId)),
 });

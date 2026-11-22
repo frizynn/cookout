@@ -4,6 +4,7 @@
  * constructors, the identity as the server shows it, the routes, and the
  * error codes bearer auth and the admin check answer with.
  */
+import type { IsoTime } from "../time/index.ts";
 
 declare const brand: unique symbol;
 
@@ -58,8 +59,7 @@ export type Identity = {
   readonly owner?: Owner;
   /** Admins can create identities, rotate tokens and delete identities. */
   readonly admin: boolean;
-  /** ISO 8601 UTC. */
-  readonly createdAt: string;
+  readonly createdAt: IsoTime;
 };
 
 /** The answer to `GET /v1/whoami` and `DELETE /v1/identities/<name>`. */

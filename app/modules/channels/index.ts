@@ -4,6 +4,7 @@
  * request and answers of the channel routes, their paths, and the error codes
  * they refuse with.
  */
+import type { IsoTime } from "../time/index.ts";
 
 declare const brand: unique symbol;
 
@@ -26,29 +27,28 @@ export function isChannelName(value: string): value is ChannelName {
 export const descriptionLength = { maximum: 500, minimum: 1 } as const;
 
 /** A channel as the server shows it. */
-export type Channel = {
+export interface Channel {
   readonly name: ChannelName;
   /** 1–500 characters. */
   readonly description?: string;
-  /** ISO 8601 UTC. */
-  readonly createdAt: string;
-};
+  readonly createdAt: IsoTime;
+}
 
 /** The body of `POST /v1/channels`. The server checks the name and description. */
-export type CreateChannelRequest = {
+export interface CreateChannelRequest {
   readonly name: string;
   readonly description?: string;
-};
+}
 
 /** The answer to creating or getting a channel. */
-export type ChannelResponse = {
+export interface ChannelResponse {
   readonly channel: Channel;
-};
+}
 
 /** The answer to `GET /v1/channels`: every channel, sorted by name. */
-export type ListChannelsResponse = {
-  readonly channels: ReadonlyArray<Channel>;
-};
+export interface ListChannelsResponse {
+  readonly channels: readonly Channel[];
+}
 
 /** `GET /v1/channels` lists channels; `POST /v1/channels` creates one, for any identity. */
 export const channelsPath = "/v1/channels";

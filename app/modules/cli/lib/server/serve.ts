@@ -1,4 +1,5 @@
 import { Effect, Layer } from "effect";
+import type { FileSystem } from "effect";
 import { Command, Flag } from "effect/cli";
 import { databasePath, host, port } from "../../../config/server.ts";
 import { channelRoutes, channelsLayer } from "../../../channels/server.ts";
@@ -10,7 +11,7 @@ import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import { printLine } from "./output.ts";
 
 export type ServeLayers = {
-  readonly storage: (path: string) => Layer.Layer<Storage, StorageUnavailable>;
+  readonly storage: (path: string) => Layer.Layer<Storage, StorageUnavailable, FileSystem.FileSystem>;
 };
 
 type NeedsOf<Routes> = Routes extends readonly Route<infer Needs>[] ? Needs : never;

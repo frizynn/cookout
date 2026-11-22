@@ -1,6 +1,7 @@
 import { Effect, Schema } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import { isIdentityName, isOwner } from "../../../identities/index.ts";
+import { IsoTimeSchema } from "../../../time/server.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { StorageUnavailable } from "./errors.ts";
 import type { MemoryState } from "./memory-state.ts";
@@ -97,7 +98,7 @@ const IdentityRow = Schema.Struct({
   name: Schema.String.pipe(Schema.refine(isIdentityName)),
   owner: Schema.NullOr(Schema.String.pipe(Schema.refine(isOwner))),
   admin: Schema.Literals([0, 1]),
-  created_at: Schema.String,
+  created_at: IsoTimeSchema,
 });
 
 const TokenRow = Schema.Struct({ revoked: Schema.Literals([0, 1]), name: Schema.NullOr(Schema.String) });

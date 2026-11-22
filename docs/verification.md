@@ -71,10 +71,9 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity delete reviewer
 
 ## Take an identity's lease
 
-A session takes an identity with `join --as <name>`, the token's own identity. The CLI keeps the lease ID in a lease-state file under `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then `~/.local/state/cookout`), one per server and token, and sends it on every later command, which renews the lease. Two sessions with the same token need separate state folders. These commands play two sessions of the seeded `grace`, each with its own folder:
+A session takes an identity with `join --as <name>`, the token's own identity. The CLI keeps the lease ID in a lease-state file under `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then `~/.local/state/cookout`), one per server and token, and sends it on every later command, which renews the lease. Two sessions with the same token need separate state folders. These commands play two sessions of the seeded `grace`, each with its own folder. `join` creates the folder and its leases folder with mode 700, and refuses with `lease_state_unsafe` a folder that isn't mode 700 or isn't yours, so don't make the folders yourself with plain `mkdir`:
 
 ```sh
-mkdir -p /tmp/cookout-session-1 /tmp/cookout-session-2
 jq -r '.identities[] | select(.identity.name == "grace") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-grace.env
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=/tmp/cookout-session-1 node app/main.ts join --as grace
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts join --as grace

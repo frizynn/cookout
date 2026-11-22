@@ -8,13 +8,15 @@ import {
   ListIdentitiesResponseSchema,
   OwnerSchema,
 } from "./wire.ts";
-import { identitiesPath, identityPath, identityTokenPath, isIdentityName } from "../../index.ts";
+import { firstAdminName, identitiesPath, identityPath, identityTokenPath, isIdentityName } from "../../index.ts";
 import { issueToken, requireAdmin } from "./auth.ts";
 import type { Caller } from "./auth.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
 import type { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
+import { echoed } from "../../../http/index.ts";
+import { isoTimeOf } from "../../../time/server.ts";
 
 const CreateIdentityRequestSchema = Schema.Struct({
   name: IdentityNameSchema,
@@ -28,7 +30,7 @@ const CREATED = 201;
 const NOT_FOUND = 404;
 
 function identityNotFound(name: string): Refusal {
-  return { code: "identity_not_found", message: `There is no identity named ${name}.`, status: NOT_FOUND };
+  return { code: "identity_not_found", message: `There is no identity named ${echoed(name)}.`, status: NOT_FOUND };
 }
 
 function identityExists(name: string): Refusal {
@@ -51,7 +53,7 @@ function nameParam(params: Readonly<Record<string, string>>): Effect.Effect<Iden
   return Effect.fail(identityNotFound(name));
 }
 
-function newIdentity({ name, owner }: CreateIdentityBody, createdAt: string): Identity {
+function newIdentity({ name, owner }: CreateIdentityBody, createdAt: Identity["createdAt"]): Identity {
   if (typeof owner === "string") {
     return { admin: false, createdAt, name, owner };
   }
@@ -66,7 +68,7 @@ const createRoute: Route<Caller | Storage | Secrets> = {
       yield* requireAdmin;
       const body = yield* HttpServerRequest.schemaBodyJson(CreateIdentityRequestSchema);
       const now = yield* DateTime.now;
-      const identity = newIdentity(body, DateTime.formatIso(now));
+      const identity = newIdentity(body, isoTimeOf(now));
       const { token, hash } = yield* issueToken;
       const storage = yield* Storage;
       const result = yield* storage.createIdentity(identity, hash);
@@ -125,6 +127,12 @@ const deleteRoute: Route<Caller | Storage> = {
   method: "DELETE",
   path: identityPath,
 };
+
+export const firstAdmin: Effect.Effect<Identity> = Effect.map(DateTime.now, (now) => ({
+  admin: true,
+  createdAt: isoTimeOf(now),
+  name: firstAdminName,
+}));
 
 export const identityAdminRoutes: readonly Route<Caller | Storage | Secrets>[] = [
   createRoute,
