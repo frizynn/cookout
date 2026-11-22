@@ -1,3 +1,5 @@
+import { removeComment } from "../remove-comment.js";
+
 const DIRECTIVE = /^\s*(oxlint-disable|oxlint-enable|eslint-disable|eslint-enable|@ts-expect-error|biome-ignore)/;
 const isJsDoc = (comment) => comment.type === "Block" && comment.value.startsWith("*");
 const isShebang = (comment) => comment.type === "Shebang";
@@ -19,10 +21,12 @@ const isExported = (node) => {
 
 export default {
   meta: {
+    hasSuggestions: true,
     type: "suggestion",
     schema: [{ type: "object", properties: { allowInterfaceJsDoc: { type: "boolean" } }, additionalProperties: false }],
     messages: {
       comment: "Delete this comment: a tautology, excuse, or stale note goes; a decision record moves to an ADR.",
+      remove: "Delete the comment.",
     },
   },
   create(context) {
@@ -34,9 +38,14 @@ export default {
     };
     const visitors = {
       "Program:exit"() {
+        const removal = removeComment(context.sourceCode.text);
         for (const comment of context.sourceCode.getAllComments()) {
           if (isShebang(comment) || DIRECTIVE.test(comment.value) || allowed.has(comment)) continue;
-          context.report({ loc: comment.loc, messageId: "comment" });
+          context.report({
+            loc: comment.loc,
+            messageId: "comment",
+            suggest: [{ fix: removal(comment), messageId: "remove" }],
+          });
         }
       },
     };
