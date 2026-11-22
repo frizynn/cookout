@@ -11,6 +11,8 @@ import {
   identityRoutes,
   requireToken,
 } from "../../../identities/server.ts";
+import { messageRoutes, messagesLayer } from "../../../messages/server.ts";
+import type { Messages } from "../../../messages/server.ts";
 import type { Secrets } from "../../../secrets/server.ts";
 import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import { printLine } from "./output.ts";
@@ -20,12 +22,16 @@ export type ServeLayers = {
   readonly secrets: Layer.Layer<Secrets>;
 };
 
-const routes: ReadonlyArray<Route<Caller | Channels | Storage | Secrets>> = [...identityRoutes, ...channelRoutes];
+const routes: ReadonlyArray<Route<Caller | Channels | Messages | Storage | Secrets>> = [
+  ...identityRoutes,
+  ...channelRoutes,
+  ...messageRoutes,
+];
 
 export const cookoutServer = (listen: Listen) =>
   httpServer(listen, routes, requireToken).pipe(
     Layer.provideMerge(firstBoot),
-    Layer.provideMerge(Layer.mergeAll(identitiesLayer, channelsLayer)),
+    Layer.provideMerge(Layer.mergeAll(identitiesLayer, channelsLayer, messagesLayer)),
   );
 
 const printAdminToken = Effect.gen(function* () {

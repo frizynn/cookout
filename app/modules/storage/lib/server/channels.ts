@@ -2,8 +2,9 @@ import { Array as Arr, Effect, Order, Schema } from "effect";
 import type { Channel, ChannelName } from "../../../channels/index.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
-import { StorageUnavailable } from "./errors.ts";
+import type { StorageUnavailable } from "./errors.ts";
 import { isChannelName } from "../../../channels/index.ts";
+import { unreadable } from "./errors.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
@@ -42,10 +43,6 @@ function memoryChannels(state: MemoryState): ChannelsSection {
     findChannel: (name) => open(() => channels.get(name)),
     listChannels: () => open(() => Arr.sort(channels.values(), byName)),
   };
-}
-
-function unreadable(): StorageUnavailable {
-  return StorageUnavailable.make({ message: "The database holds a row this cookout can't read." });
 }
 
 function fromRow({ created_at: createdAt, description, name }: ChannelRowType): Channel {

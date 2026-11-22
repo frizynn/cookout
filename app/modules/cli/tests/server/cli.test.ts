@@ -7,18 +7,32 @@ const BOOT = "2026-01-01T00:00:00.000Z";
 const succeeded = { exitCode: 0, stderr: "" };
 const griller = { admin: false, createdAt: BOOT, name: "auth-griller", owner: "matt" };
 const admin = { admin: true, createdAt: BOOT, name: "admin" };
+const bot = { admin: false, createdAt: BOOT, name: "bot" };
+const FIRST_ID = 1;
+const SECOND_ID = 2;
+const postedParent = {
+  author: { name: "agent", owner: "matt" },
+  data: { question: 1 },
+  id: FIRST_ID,
+  kind: "top-level",
+  text: "Is the lease 60 s?",
+};
+const postedReply = { id: SECOND_ID, kind: "reply", replyTo: FIRST_ID, text: "Yes." };
+const oneReply = { latestReplyId: SECOND_ID, replyCount: 1 };
+const onlyParent = { hasMore: false, messages: [{ id: FIRST_ID }] };
 
 it.effect("the cookout CLI creates and lists identities and says who you are, as JSON", () =>
   Effect.gen(function* identityVerbs() {
     const cookout = yield* TestCookout;
     const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
     const created = yield* runCookout({ args: ["identity", "create", "auth-griller", "--owner", "matt"], env });
+    yield* runCookout({ args: ["identity", "create", "bot"], env });
     const listed = yield* runCookout({ args: ["identity", "list"], env });
     const whoami = yield* runCookout({ args: ["whoami"], env });
 
     expect(created).toMatchObject({ ...succeeded, stdoutJson: { identity: griller } });
     expect(created.stdout).toMatch(/"token": "cookout_test_\d+"/u);
-    expect(listed).toMatchObject({ ...succeeded, stdoutJson: { identities: [admin, griller] } });
+    expect(listed).toMatchObject({ ...succeeded, stdoutJson: { identities: [admin, griller, bot] } });
     expect(whoami).toMatchObject({ ...succeeded, stdoutJson: { identity: admin } });
   }).pipe(Effect.provide(testCookout())),
 );
@@ -57,6 +71,50 @@ it.effect("the CLI creates, lists and gets channels, as JSON", () =>
     expect(listed).toMatchObject({ ...succeeded, stdoutJson: { channels: [grill.channel] } });
     expect(got).toMatchObject({ ...succeeded, stdoutJson: grill });
   }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("the CLI makes a channel, posts a message and a reply, and reads the thread back as JSON", () =>
+  Effect.gen(function* messageVerbs() {
+    const cookout = yield* TestCookout;
+    const agent = yield* cookout.createIdentity("agent", { owner: "matt" });
+    const env = { COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
+    yield* runCookout({ args: ["channel", "create", "grill"], env });
+    const posted = yield* runCookout({
+      args: ["message", "post", "grill", "Is the lease 60 s?", "--data", '{"question":1}'],
+      env,
+    });
+    const replied = yield* runCookout({ args: ["message", "post", "grill", "Yes.", "--reply-to", "1"], env });
+    const thread = yield* runCookout({ args: ["thread", "get", "2"], env });
+    const page = yield* runCookout({ args: ["message", "list", "grill", "--limit", "1", "--before", "2"], env });
+    const newest = yield* runCookout({ args: ["message", "list", "grill"], env });
+
+    expect([posted, replied, thread, page, newest]).toMatchObject([
+      { ...succeeded, stdoutJson: { message: postedParent } },
+      { ...succeeded, stdoutJson: { message: postedReply } },
+      { ...succeeded, stdoutJson: { parent: { ...postedParent, ...oneReply }, replies: [postedReply] } },
+      { ...succeeded, stdoutJson: onlyParent },
+      { ...succeeded, stdoutJson: onlyParent },
+    ]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("the CLI refuses --data that isn't JSON with a usage error", () =>
+  Effect.gen(function* badData() {
+    const result = yield* runCookout({
+      args: ["message", "post", "grill", "hi", "--data", "{nope"],
+      env: { COOKOUT_URL: "http://127.0.0.1:1" },
+    });
+
+    expect(result).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "usage" } } });
+  }),
+);
+
+it.effect("the CLI refuses a message ID that isn't a positive whole number with a usage error", () =>
+  Effect.gen(function* badMessageId() {
+    const result = yield* runCookout({ args: ["thread", "get", "0"], env: { COOKOUT_URL: "http://127.0.0.1:1" } });
+
+    expect(result).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "usage" } } });
+  }),
 );
 
 it.effect("the CLI exits 1 with a JSON error on stderr when the token is missing", () =>

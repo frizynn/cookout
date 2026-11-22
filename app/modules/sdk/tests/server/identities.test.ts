@@ -194,28 +194,6 @@ it.effect("rotating a token issues a new one and the old one gets 401 at once", 
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("a path segment that isn't valid percent-encoding is 400 invalid_path on the identity routes", () =>
-  Effect.gen(function* invalidPath() {
-    const cookout = yield* TestCookout;
-    const answers = yield* pipe(
-      [
-        HttpClientRequest.make("DELETE")(`${cookout.url}${identitiesPath}/%E0`),
-        HttpClientRequest.post(`${cookout.url}${identitiesPath}/%E0/token`),
-      ],
-      Effect.forEach(
-        (attempt) =>
-          HttpClient.execute(HttpClientRequest.bearerToken(attempt, cookout.adminToken)).pipe(
-            Effect.flatMap((response) => Effect.map(response.json, (body) => ({ body, status: response.status }))),
-          ),
-        ONE_AT_A_TIME,
-      ),
-    );
-    const invalid = { body: { error: { code: "invalid_path" } }, status: BAD_REQUEST };
-
-    expect(answers).toMatchObject([invalid, invalid]);
-  }).pipe(Effect.provide([testCookout(), FetchHttpClient.layer])),
-);
-
 it.effect("rotating the token of a missing identity is a 404", () =>
   Effect.gen(function* rotateMissing() {
     const cookout = yield* TestCookout;

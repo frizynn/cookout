@@ -2,6 +2,7 @@
 import type { ChannelResponse, ListChannelsResponse } from "../../../channels/index.ts";
 import type { HealthResponse, ErrorResponse } from "../../../http/index.ts";
 import type { IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";
+import type { ListMessagesResponse, MessageResponse, ThreadResponse } from "../../../messages/index.ts";
 
 export declare function isChannelResponse(data: unknown): data is ChannelResponse;
 export declare function isListChannelsResponse(data: unknown): data is ListChannelsResponse;
@@ -10,3 +11,6 @@ export declare function isErrorResponse(data: unknown): data is ErrorResponse;
 export declare function isIdentityResponse(data: unknown): data is IdentityResponse;
 export declare function isIdentityWithTokenResponse(data: unknown): data is IdentityWithTokenResponse;
 export declare function isListIdentitiesResponse(data: unknown): data is ListIdentitiesResponse;
+export declare function isListMessagesResponse(data: unknown): data is ListMessagesResponse;
+export declare function isMessageResponse(data: unknown): data is MessageResponse;
+export declare function isThreadResponse(data: unknown): data is ThreadResponse;
