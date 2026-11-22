@@ -2,6 +2,7 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
     "app/main.ts!",
+    "app/dev.ts!",
     "app/modules/sdk/index.ts!",
     "app/web.tsx!",
     "app/modules/testing/server.ts!",

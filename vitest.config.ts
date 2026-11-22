@@ -7,13 +7,13 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["app/**/*.{ts,tsx}"],
-      exclude: ["app/**/tests/**", "app/modules/sdk/lib/generated/**"],
+      exclude: ["app/**/tests/**", "app/modules/sdk/lib/generated/**", "app/main.ts", "app/dev.ts"],
       thresholds: {
         autoUpdate: true,
-        statements: 98.52,
-        branches: 89.81,
-        functions: 98.21,
-        lines: 99.13,
+        statements: 98.8,
+        branches: 91.13,
+        functions: 98.36,
+        lines: 99.47,
       },
     },
   },
