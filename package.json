@@ -25,6 +25,8 @@
     }
   },
   "scripts": {
+    "dev": "node app/dev.ts start",
+    "seed": "node app/dev.ts seed",
     "build": "tsdown --log-level warn",
     "api": "node scripts/api-report.ts",
     "api:write": "node scripts/api-report.ts --write",
