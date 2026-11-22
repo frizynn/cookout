@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { matchesGlob } from "node:path";
 import { counts, field, list, parseJson, text } from "./lib/json.ts";
+import { lintFixed } from "./lib/fix-until-stable.ts";
 import { rulesOn } from "./lib/rules-on.ts";
 import { type Diagnostic, describe, fail, oxlint, unwrap } from "./lib/tools.ts";
 
@@ -12,6 +13,7 @@ const BASELINE = "lint-baseline.json";
 const args = process.argv.slice(2);
 const files = args.filter((arg) => !arg.startsWith("--"));
 const writing = args.includes("--write");
+const fixing = args.includes("--fix");
 const base = args.find((arg) => arg.startsWith("--base="))?.slice("--base=".length) ?? "HEAD";
 
 const keyOf = (diagnostic: Diagnostic) => `${diagnostic.filename} ${diagnostic.code}`;
@@ -65,12 +67,22 @@ const raisedOnRulesAlreadyOn = (raises: ReadonlyArray<readonly [string, number]>
 };
 
 if (writing && files.length > 0) fail(SCRIPT, "--write needs a whole-repo run, with no files");
+if (writing && fixing) {
+  fail(SCRIPT, "--write and --fix do not combine: fix first, then write the baseline");
+}
 
 const ignored = ignorePatterns();
 const targets = files.filter((file) => !ignored.some((pattern) => matchesGlob(file, pattern)));
 if (files.length > 0 && targets.length === 0) process.exit(0);
 
-const diagnostics = unwrap(SCRIPT, oxlint(["--disable-nested-config", ...targets]));
+function lintTargets(): readonly Diagnostic[] {
+  if (fixing) {
+    return unwrap(SCRIPT, lintFixed({ files: targets, ignored }));
+  }
+  return unwrap(SCRIPT, oxlint(["--disable-nested-config", ...targets]));
+}
+
+const diagnostics = lintTargets();
 const current = tally(diagnostics);
 
 if (writing) {
