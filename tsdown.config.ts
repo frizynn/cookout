@@ -1,14 +1,25 @@
-import { defineConfig, type UserConfig } from "tsdown";
-
-const shared: UserConfig = {
-  outDir: "dist",
-  format: "esm",
-  platform: "node",
-  target: "node22.18",
-  fixedExtension: false,
-};
+import { defineConfig } from "tsdown";
 
 export default defineConfig([
-  { ...shared, entry: { main: "app/main.ts" }, dts: false, clean: true },
-  { ...shared, entry: { sdk: "app/modules/sdk/index.ts" }, tsconfig: "tsconfig.sdk.json", dts: true, clean: true },
+  {
+    clean: true,
+    dts: false,
+    entry: { main: "app/main.ts" },
+    fixedExtension: false,
+    format: "esm",
+    outDir: "dist",
+    platform: "node",
+    target: "node22.18",
+  },
+  {
+    clean: true,
+    dts: true,
+    entry: { sdk: "app/modules/sdk/index.ts" },
+    fixedExtension: false,
+    format: "esm",
+    outDir: "dist",
+    platform: "node",
+    target: "node22.18",
+    tsconfig: "tsconfig.sdk.json",
+  },
 ]);

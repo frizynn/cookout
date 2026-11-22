@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { matchesGlob } from "node:path";
 import { counts, field, list, parseJson, text } from "./lib/json.ts";
+import { rulesOn } from "./lib/rules-on.ts";
 import { type Diagnostic, describe, fail, oxlint, unwrap } from "./lib/tools.ts";
 
 type Counts = Readonly<Record<string, number>>;
@@ -43,6 +44,26 @@ const baselineAtBase = (): Counts => {
 const above = (current: Counts, limit: Counts) =>
   Object.entries(current).filter(([key, count]) => count > (limit[key] ?? 0));
 
+const rulesOnAt = (ref: string): ReadonlySet<string> => {
+  const shown = git(["show", `${ref}:.oxlintrc.json`]);
+  return shown.status === 0 ? unwrap(SCRIPT, rulesOn(shown.stdout)) : new Set();
+};
+
+const parentsOfHead = () => git(["rev-list", "--parents", "--max-count=1", "HEAD"]).stdout.trim().split(" ").slice(1);
+
+const merging = (): ReadonlyArray<string> => {
+  if (base !== "HEAD") return parentsOfHead().length > 1 ? parentsOfHead() : [];
+  return git(["rev-parse", "--verify", "--quiet", "MERGE_HEAD"]).status === 0 ? ["MERGE_HEAD"] : [];
+};
+
+const codeOfKey = (key: string) => key.slice(key.lastIndexOf(" ") + 1);
+
+const raisedOnRulesAlreadyOn = (raises: ReadonlyArray<readonly [string, number]>) => {
+  if (raises.length === 0) return raises;
+  const onAtEveryParent = [base, ...merging()].map(rulesOnAt);
+  return raises.filter(([key]) => onAtEveryParent.every((rules) => rules.has(codeOfKey(key))));
+};
+
 if (writing && files.length > 0) fail(SCRIPT, "--write needs a whole-repo run, with no files");
 
 const ignored = ignorePatterns();
@@ -60,9 +81,9 @@ if (writing) {
 if (!existsSync(BASELINE)) fail(SCRIPT, `${BASELINE} is missing. Restore it from git; it is never deleted.`);
 const baseline = readCounts(readFileSync(BASELINE, "utf8"), BASELINE);
 
-const raised = above(baseline, baselineAtBase());
+const raised = raisedOnRulesAlreadyOn(above(baseline, baselineAtBase()));
 for (const [key, count] of raised)
-  console.error(`${BASELINE} raises ${key} to ${count} over ${base}. Fix the code instead.`);
+  console.error(`${BASELINE} raises ${key} to ${count} over ${base}, a rule already on there. Fix the code instead.`);
 
 const grown = above(current, baseline);
 const grownKeys = new Set(grown.map(([key]) => key));

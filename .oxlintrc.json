@@ -1,8 +1,39 @@
 {
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "jsPlugins": ["./lint/local.js"],
+  "$schema": "./node_modules/@effect/tsgo/oxlint-schema.json",
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "oxc",
+    "import",
+    "jsdoc",
+    "promise",
+    "node",
+    "react",
+    "react-perf",
+    "jsx-a11y",
+    "vitest",
+    "effecttsgo"
+  ],
+  "jsPlugins": [
+    "./lint/local.js",
+    {
+      "name": "react-hooks-js",
+      "specifier": "eslint-plugin-react-hooks"
+    },
+    {
+      "name": "vitest-js",
+      "specifier": "@vitest/eslint-plugin"
+    }
+  ],
   "categories": {
-    "correctness": "error"
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "error",
+    "perf": "error",
+    "style": "error",
+    "restriction": "error",
+    "nursery": "error"
   },
   "options": {
     "reportUnusedDisableDirectives": "error",
@@ -300,11 +331,88 @@
           }
         ]
       }
+    ],
+    "import/no-named-export": "off",
+    "import/prefer-default-export": "off",
+    "import/group-exports": "off",
+    "import/no-relative-parent-imports": "off",
+    "vitest/no-importing-vitest-globals": "off",
+    "react/react-in-jsx-scope": "off",
+    "unicorn/throw-new-error": "off",
+    "jsdoc/require-param-type": "off",
+    "jsdoc/require-property-type": "off",
+    "jsdoc/require-returns-type": "off",
+    "no-undef": "off",
+    "no-redeclare": "off",
+    "func-style": ["error", "declaration"],
+    "no-duplicate-imports": [
+      "error",
+      {
+        "allowSeparateTypeImports": true
+      }
+    ],
+    "new-cap": [
+      "error",
+      {
+        "properties": false
+      }
+    ],
+    "react/jsx-filename-extension": [
+      "error",
+      {
+        "extensions": [".tsx"]
+      }
+    ],
+    "vitest/require-hook": "error",
+    "vitest/no-standalone-expect": [
+      "error",
+      {
+        "additionalTestBlockFunctions": ["it.effect", "it.live", "it.prop"]
+      }
+    ],
+    "typescript/prefer-readonly-parameter-types": [
+      "error",
+      {
+        "allow": [
+          {
+            "from": "package",
+            "name": ["Methods", "MethodsNonLive"],
+            "package": "@effect/vitest"
+          }
+        ]
+      }
+    ],
+    "react-hooks-js/config": "error",
+    "react-hooks-js/fbt": "error",
+    "react-hooks-js/gating": "error",
+    "react-hooks-js/memoized-effect-dependencies": "error",
+    "vitest-js/padding-around-all": "error",
+    "vitest-js/padding-around-expect-groups": "error",
+    "vitest-js/prefer-vi-mocked": "error",
+    "vitest/no-hooks": [
+      "error",
+      {
+        "allow": []
+      }
+    ],
+    "vitest/require-top-level-describe": "off",
+    "vitest/max-nested-describe": [
+      "error",
+      {
+        "max": 0
+      }
+    ],
+    "vitest/consistent-test-it": [
+      "error",
+      {
+        "fn": "it",
+        "withinDescribe": "it"
+      }
     ]
   },
   "overrides": [
     {
-      "files": ["app/modules/**/*.ts", "app/modules/**/*.tsx"],
+      "files": ["app/web.tsx", "app/modules/**/*.ts", "app/modules/**/*.tsx"],
       "excludeFiles": ["app/modules/*/server.ts", "app/modules/*/lib/server/**", "app/modules/*/tests/**"],
       "rules": {
         "no-restricted-imports": [
@@ -375,7 +483,22 @@
               }
             ]
           }
-        ]
+        ],
+        "effecttsgo/async-function": "off",
+        "effecttsgo/crypto-random-uuid": "off",
+        "effecttsgo/extends-native-error": "off",
+        "effecttsgo/global-console": "off",
+        "effecttsgo/global-date": "off",
+        "effecttsgo/global-fetch": "off",
+        "effecttsgo/global-json": "off",
+        "effecttsgo/global-random": "off",
+        "effecttsgo/global-timers": "off",
+        "effecttsgo/new-promise": "off",
+        "effecttsgo/node-builtin-import": "off",
+        "effecttsgo/prefer-effect-array": "off",
+        "effecttsgo/prefer-effect-record": "off",
+        "effecttsgo/prefer-effect-string": "off",
+        "effecttsgo/process-env": "off"
       }
     },
     {
@@ -527,7 +650,8 @@
               }
             ]
           }
-        ]
+        ],
+        "effecttsgo/strict-effect-provide": "off"
       }
     },
     {
@@ -639,7 +763,8 @@
             "property": "decodeUnknownSync",
             "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
           }
-        ]
+        ],
+        "effecttsgo/strict-effect-provide": "off"
       }
     },
     {
@@ -814,7 +939,9 @@
             "property": "doMock",
             "message": "Substitute through a seam with a Layer from app/modules/testing/."
           }
-        ]
+        ],
+        "effecttsgo/node-builtin-import": "off",
+        "import/no-nodejs-modules": "off"
       }
     },
     {
@@ -1037,7 +1164,9 @@
               }
             ]
           }
-        ]
+        ],
+        "effecttsgo/node-builtin-import": "off",
+        "import/no-nodejs-modules": "off"
       }
     },
     {
@@ -1240,7 +1369,9 @@
             "property": "decodeUnknownSync",
             "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file). Internal data is trusted."
           }
-        ]
+        ],
+        "effecttsgo/node-builtin-import": "off",
+        "import/no-nodejs-modules": "off"
       }
     },
     {
@@ -1324,7 +1455,9 @@
             "property": "doMock",
             "message": "Substitute through a seam with a Layer from app/modules/testing/."
           }
-        ]
+        ],
+        "effecttsgo/process-env": "off",
+        "node/no-process-env": "off"
       }
     },
     {
@@ -1418,6 +1551,41 @@
         "typescript/no-unsafe-call": "off",
         "typescript/no-unsafe-member-access": "off",
         "typescript/no-unsafe-return": "off"
+      }
+    },
+    {
+      "files": ["scripts/**", "lint/**", "*.cjs", "vitest.config.ts", "tsdown.config.ts"],
+      "rules": {
+        "effecttsgo/async-function": "off",
+        "effecttsgo/crypto-random-uuid": "off",
+        "effecttsgo/extends-native-error": "off",
+        "effecttsgo/global-console": "off",
+        "effecttsgo/global-date": "off",
+        "effecttsgo/global-fetch": "off",
+        "effecttsgo/global-json": "off",
+        "effecttsgo/global-random": "off",
+        "effecttsgo/global-timers": "off",
+        "effecttsgo/new-promise": "off",
+        "effecttsgo/node-builtin-import": "off",
+        "effecttsgo/prefer-effect-array": "off",
+        "effecttsgo/prefer-effect-record": "off",
+        "effecttsgo/prefer-effect-string": "off",
+        "effecttsgo/process-env": "off",
+        "import/no-nodejs-modules": "off",
+        "no-console": "off"
+      }
+    },
+    {
+      "files": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.cjs"],
+      "excludeFiles": ["**/*.test.ts", "**/*.test.tsx", "**/*.test.js"],
+      "rules": {
+        "vitest/require-hook": "off"
+      }
+    },
+    {
+      "files": ["vitest.config.ts", "tsdown.config.ts"],
+      "rules": {
+        "import/no-default-export": "off"
       }
     }
   ]

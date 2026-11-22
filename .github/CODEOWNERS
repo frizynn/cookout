@@ -2,3 +2,5 @@
 /lint/allowed-directives.json @mattpocock
 /lint-baseline.json @mattpocock
 /api/sdk.api.md @mattpocock
+/tsconfig.json @mattpocock
+/docs/adr/0012-lint-opt-outs.md @mattpocock
