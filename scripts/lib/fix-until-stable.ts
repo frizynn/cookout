@@ -50,7 +50,7 @@ function statusOf(closed: readonly unknown[]): number {
   return FAILED;
 }
 
-async function lint(args: readonly string[]): Promise<Outcome<readonly Diagnostic[]>> {
+export async function lint(args: readonly string[]): Promise<Outcome<readonly Diagnostic[]>> {
   const child = spawn("node_modules/.bin/effect-tsgo", ["oxlint", "--type-aware", "-f", "json", ...args]);
   const stdout: string[] = [];
   const stderr: string[] = [];
