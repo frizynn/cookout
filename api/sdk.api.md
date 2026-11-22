@@ -26,25 +26,25 @@ type ChannelName = string & {
   readonly [brand$4]: "ChannelName";
 };
 /** A channel as the server shows it. */
-type Channel = {
+interface Channel {
   readonly name: ChannelName;
   /** 1–500 characters. */
   readonly description?: string;
   readonly createdAt: IsoTime;
-};
+}
 /** The body of `POST /v1/channels`. The server checks the name and description. */
-type CreateChannelRequest = {
+interface CreateChannelRequest {
   readonly name: string;
   readonly description?: string;
-};
+}
 /** The answer to creating or getting a channel. */
-type ChannelResponse = {
+interface ChannelResponse {
   readonly channel: Channel;
-};
+}
 /** The answer to `GET /v1/channels`: every channel, sorted by name. */
-type ListChannelsResponse = {
-  readonly channels: ReadonlyArray<Channel>;
-};
+interface ListChannelsResponse {
+  readonly channels: readonly Channel[];
+}
 declare const brand$3: unique symbol;
 type Brand<Name extends string> = string & {
   readonly [brand$3]: Name;

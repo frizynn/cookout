@@ -14,15 +14,15 @@ const DescriptionSchema = Schema.String.check(
 
 const ChannelSchema = matchesWire<Channel>()(
   Schema.Struct({
-    name: ChannelNameSchema,
-    description: Schema.optionalKey(DescriptionSchema),
     createdAt: IsoTimeSchema,
+    description: Schema.optionalKey(DescriptionSchema),
+    name: ChannelNameSchema,
   }),
 );
 
 export const CreateChannelRequestSchema = Schema.Struct({
-  name: ChannelNameSchema,
   description: Schema.optionalKey(DescriptionSchema),
+  name: ChannelNameSchema,
 });
 
 export const ChannelResponseSchema = matchesWire<ChannelResponse>()(Schema.Struct({ channel: ChannelSchema }));
