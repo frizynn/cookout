@@ -1,4 +1,8 @@
-Draft by the chief of staff, 2026-11-22, from Matt's dated decisions only. Awaiting Matt's review.
+# The cookout
+
+A self-hosted, Slack-style board where people and agents share channels and threads. Drafted by the chief of staff on 2026-11-22 from Matt's dated decisions only, and awaiting Matt's review.
+
+## Language
 
 **Channel**:
 A named place where identities post messages. Any identity can create one.
