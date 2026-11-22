@@ -3,6 +3,7 @@
  * paths, the error body every refusal uses, the union of every error code, and
  * the check that ties each backend Schema to its plain-TS wire type.
  */
+import { identityErrorCodes } from "../identities/index.ts";
 
 export const healthPath = "/v1/health";
 
@@ -12,6 +13,7 @@ export type HealthResponse = {
 };
 
 export const errorCodes = [
+  ...identityErrorCodes,
   "not_found",
   "method_not_allowed",
   "invalid_path",

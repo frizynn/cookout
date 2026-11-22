@@ -21,3 +21,8 @@ export const jsonPresenter = CliOutput.layerPresenter({
 });
 
 export const usageFailed = Effect.fail(new CommandFailed({ code: "usage" }));
+
+export const printAnswer = (answer: unknown) => Console.log(JSON.stringify(answer, null, 2));
+
+export const refused = (error: { readonly code: string }) =>
+  Console.error(JSON.stringify({ error })).pipe(Effect.andThen(Effect.fail(new CommandFailed({ code: error.code }))));

@@ -10,6 +10,7 @@ import type { StorageService } from "./lib/server/service.ts";
 import { openSqliteStorage } from "./lib/server/sqlite.ts";
 
 export { StorageUnavailable };
+export type { TokenLookup } from "./lib/server/identities.ts";
 
 export class Storage extends Context.Service<Storage, StorageService>()("cookout/storage/Storage") {}
 

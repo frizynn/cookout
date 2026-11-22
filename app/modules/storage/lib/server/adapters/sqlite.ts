@@ -1,5 +1,5 @@
 import type { DatabaseSync, SQLInputValue } from "node:sqlite";
-import { Effect, type Scope } from "effect";
+import { Effect, type Scope, Semaphore } from "effect";
 import { StorageUnavailable } from "../errors.ts";
 
 type SqlValue = SQLInputValue;
@@ -22,16 +22,19 @@ const wrap = (db: DatabaseSync): SqliteDatabase => {
   const attempt = <A>(work: () => A): Effect.Effect<A, StorageUnavailable> =>
     Effect.try({ try: work, catch: unavailable });
   const exec = (sql: string) => attempt(() => db.exec(sql));
+  const oneAtATime = Semaphore.makeUnsafe(1);
   return {
     get: (sql, ...params) => attempt((): unknown => db.prepare(sql).get(...params)),
     all: (sql, ...params) => attempt((): ReadonlyArray<unknown> => db.prepare(sql).all(...params)),
     run: (sql, ...params) => attempt(() => void db.prepare(sql).run(...params)),
     exec,
     transaction: (work) =>
-      Effect.acquireUseRelease(
-        exec("BEGIN IMMEDIATE"),
-        () => work,
-        (_, exit) => exec(exit._tag === "Success" ? "COMMIT" : "ROLLBACK").pipe(Effect.orDie),
+      oneAtATime.withPermits(1)(
+        Effect.acquireUseRelease(
+          exec("BEGIN IMMEDIATE"),
+          () => work,
+          (_, exit) => exec(exit._tag === "Success" ? "COMMIT" : "ROLLBACK").pipe(Effect.orDie),
+        ),
       ),
   };
 };

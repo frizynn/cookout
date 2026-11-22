@@ -11,15 +11,13 @@ import { HttpIncomingMessage, HttpServer, HttpServerResponse } from "effect/http
 import { Storage } from "../storage/server.ts";
 import { healthPath } from "./index.ts";
 import { respond, toRefusal } from "./lib/server/refusals.ts";
-import { dispatch, type Route } from "./lib/server/router.ts";
+import { dispatch, type Gate, type Route } from "./lib/server/router.ts";
 import { ErrorResponseSchema, HealthResponseSchema } from "./lib/server/wire.ts";
 
-export type { Route };
+export type { Gate, Route };
 
-/** Every response Schema, by the module whose `index.ts` holds its wire type. The SDK's validators are generated from these. */
-export const responseSchemas = {
-  http: { HealthResponse: HealthResponseSchema, ErrorResponse: ErrorResponseSchema },
-};
+/** The response Schemas of `/v1/health` and of every refusal, for the SDK's generated validators. */
+export const httpResponseSchemas = { HealthResponse: HealthResponseSchema, ErrorResponse: ErrorResponseSchema };
 
 const maxBodySize = ByteSize.bytes(1024 * 1024);
 
@@ -39,11 +37,18 @@ export type Listen = { readonly port: number; readonly host: string };
 
 /**
  * Serves `/v1/health` and the given routes on `listen` until the Layer is
- * released. The `HttpServer` it provides says which address it took: port 0 picks a free one.
+ * released. Every request to a path one of `routes` serves goes through
+ * `gate` first, before a wrong method is refused with 405; `/v1/health` and
+ * unknown paths (404) never do. The `HttpServer` it provides says which
+ * address it took: port 0 picks a free one.
  */
-export const httpServer = <R = never>(listen: Listen, routes: ReadonlyArray<Route<R>>) =>
+export const httpServer = <R, Provides, Needs>(
+  listen: Listen,
+  routes: ReadonlyArray<Route<R>>,
+  gate: Gate<Provides, Needs>,
+) =>
   HttpServer.serve(
-    dispatch<R | Storage>([healthRoute, ...routes]).pipe(
+    dispatch([healthRoute], routes, gate).pipe(
       Effect.catch((error) => respond(toRefusal(error))),
       Effect.provideService(HttpIncomingMessage.MaxBodySize, maxBodySize),
     ),
