@@ -5,15 +5,15 @@ import { isIdentityName, isOwner } from "../../../identities/index.ts";
 import { isPlaced, placeIn, placed, threadIdOf } from "./messages.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
-import { StorageUnavailable } from "./errors.ts";
+import type { StorageUnavailable } from "./errors.ts";
 import { isChannelName } from "../../../channels/index.ts";
 import { isMessageId } from "../../../messages/index.ts";
+import { unreadable } from "./errors.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
 const FOUND = 1;
 const ONE_MORE = 1;
-const SQL_NULL = Option.getOrNull(Option.none());
 const ALL_IDS = Number.MAX_SAFE_INTEGER;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 
@@ -57,10 +57,6 @@ const MESSAGE_COLUMNS = `id, channel, author_name, author_owner, text, data, rep
 const INSERT_MESSAGE = `INSERT INTO messages (id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at)
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-function unreadable(): StorageUnavailable {
-  return StorageUnavailable.make({ message: "The database holds a row this cookout can't read." });
-}
-
 function authorOf(row: MessageRowType): Author {
   if (Predicate.isNull(row.author_owner)) {
     return { name: row.author_name };
@@ -96,7 +92,7 @@ function toMessage(row: unknown): Fails<Message> {
 
 function dataText(message: NewMessage): Fails<string | null> {
   if (Predicate.isUndefined(message.data)) {
-    return Effect.succeed(SQL_NULL);
+    return Effect.succeed(null);
   }
   return Schema.encodeEffect(JsonText)(message.data).pipe(Effect.mapError(unreadable));
 }
@@ -105,7 +101,7 @@ function replyToOf(message: Message): MessageId | null {
   if (message.kind === "reply") {
     return message.replyTo;
   }
-  return SQL_NULL;
+  return null;
 }
 
 function find(db: SqliteDatabase, id: MessageId): Fails<Message | undefined> {
@@ -140,7 +136,7 @@ function placementOf(db: SqliteDatabase, { channel, replyTo }: NewMessage): Fail
 function insert(db: SqliteDatabase, message: Message, data: string | null): Fails<void> {
   return Effect.gen(function* insertMessage() {
     const mentions = yield* Schema.encodeEffect(MentionsText)(message.mentions).pipe(Effect.mapError(unreadable));
-    const owner = Option.getOrNull(Option.fromUndefinedOr(message.author.owner));
+    const owner = message.author.owner ?? null;
     const replyTo = replyToOf(message);
     const { author, channel, createdAt, id, text } = message;
     yield* db.run(INSERT_MESSAGE, id, channel, author.name, owner, text, data, replyTo, mentions, createdAt);

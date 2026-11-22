@@ -52,7 +52,7 @@ const postRoute: Route<Caller | Messages> = {
 const threadRoute: Route<Messages> = {
   handle: (params) =>
     Effect.gen(function* getThreadRoute() {
-      const id = yield* threadIdOf(params["id"] ?? "");
+      const id = yield* threadIdOf(String(params["id"]));
       const messages = yield* Messages;
       const thread = yield* messages.thread(id);
       return yield* HttpServerResponse.schemaJson(ThreadResponseSchema)(thread);
@@ -69,7 +69,7 @@ const pageRoute: Route<Messages> = {
       const query = yield* HttpServerRequest.schemaSearchParams(ListMessagesQuerySchema, ALL_ERRORS).pipe(
         Effect.provideService(HttpServerRequest.ParsedSearchParams, search),
       );
-      const channel = params["name"] ?? "";
+      const channel = String(params["name"]);
       if (!isChannelName(channel)) {
         return yield* Effect.fail(channelNotFound(channel));
       }

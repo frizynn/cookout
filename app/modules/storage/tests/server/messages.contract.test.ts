@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, Option, Order, pipe } from "effect";
+import { Array as Arr, Effect, Order, pipe } from "effect";
 import {
   appendTo,
   channelFixture as channel,
@@ -11,9 +11,8 @@ import { expect, it } from "@effect/vitest";
 const AT_ONCE = 20;
 const TWO_REPLIES = 2;
 const ZERO = 0;
-const JSON_NULL = Option.getOrNull(Option.none());
 const ANSWER = 42;
-const RICH_DATA = { done: true, tags: [ANSWER, JSON_NULL, "x"] };
+const RICH_DATA = { done: true, tags: [ANSWER, null, "x"] };
 const CHANNELS = ["one", "two"] as const;
 
 it.effect.each(storageLayers)(
@@ -32,7 +31,7 @@ it.effect.each(storageLayers)(
         data: RICH_DATA,
         id: message.id,
         kind: "top-level",
-        latestReplyId: JSON_NULL,
+        latestReplyId: null,
         mentions: [],
         replyCount: ZERO,
         text: "hi",
@@ -63,7 +62,7 @@ it.effect.each(storageLayers)(
       const { storage } = yield* openStore(layer);
       yield* storage.createChannel(channel("grill"));
       const kept = yield* pipe(
-        ["text", ZERO, JSON_NULL, []] as const,
+        ["text", ZERO, null, []] as const,
         Effect.forEach(
           (data) =>
             appendTo(storage)(newMessage("grill", "hi", { data })).pipe(
@@ -76,7 +75,7 @@ it.effect.each(storageLayers)(
       expect(kept).toMatchObject([
         { parent: { data: "text" } },
         { parent: { data: ZERO } },
-        { parent: { data: JSON_NULL } },
+        { parent: { data: null } },
         { parent: { data: [] } },
       ]);
     }),

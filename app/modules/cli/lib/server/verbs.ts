@@ -1,4 +1,4 @@
-import { Effect, Option, Predicate, Schema } from "effect";
+import { Effect, Option, Schema } from "effect";
 import { Argument, Command, Flag } from "effect/cli";
 import type { ListMessagesQuery, MessageId, PostMessageRequest } from "../../../messages/index.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
@@ -13,6 +13,8 @@ const whoamiCommand = Command.make("whoami", {}, () => answer((client) => client
   Command.withDescription("Show the identity behind COOKOUT_TOKEN."),
 );
 
+const NOTHING = {};
+
 const identityName = Argument.String("name").pipe(Argument.withDescription("The identity's name."));
 
 const identityCreateCommand = Command.make(
@@ -22,8 +24,8 @@ const identityCreateCommand = Command.make(
     owner: Flag.String("owner").pipe(Flag.optional, Flag.withDescription("The person the identity belongs to.")),
   },
   ({ name, owner }) => {
-    const request = Option.isSome(owner) ? { name, owner: owner.value } : { name };
-    return answer((client) => client.createIdentity(request));
+    const withOwner = Option.match(owner, { onNone: () => NOTHING, onSome: (value) => ({ owner: value }) });
+    return answer((client) => client.createIdentity({ name, ...withOwner }));
   },
 ).pipe(Command.withDescription("Create an identity (admin only). Its token is shown this once."));
 
@@ -54,8 +56,11 @@ const channelCreateCommand = Command.make(
     ),
   },
   ({ name, description }) => {
-    const request = Option.isSome(description) ? { name, description: description.value } : { name };
-    return answer((client) => client.createChannel(request));
+    const withDescription = Option.match(description, {
+      onNone: () => NOTHING,
+      onSome: (value) => ({ description: value }),
+    });
+    return answer((client) => client.createChannel({ name, ...withDescription }));
   },
 ).pipe(Command.withDescription("Create a channel. Any identity can."));
 
@@ -74,51 +79,27 @@ const channelCommand = Command.make("channel").pipe(
 
 interface PostFlags {
   readonly channel: string;
-  readonly data: Schema.Json | undefined;
-  readonly replyTo: number | undefined;
+  readonly data: Option.Option<Schema.Json>;
+  readonly replyTo: Option.Option<number>;
   readonly text: string;
 }
 
 interface ListFlags {
-  readonly before: number | undefined;
+  readonly before: Option.Option<number>;
   readonly channel: string;
-  readonly limit: number | undefined;
-}
-
-function dataPart(data: Schema.Json | undefined): Pick<PostMessageRequest, "data"> {
-  if (Predicate.isUndefined(data)) {
-    return {};
-  }
-  return { data };
-}
-
-function replyToPart(replyTo: number | undefined): Pick<PostMessageRequest, "replyTo"> {
-  if (Predicate.isUndefined(replyTo)) {
-    return {};
-  }
-  return { replyTo };
-}
-
-function beforePart(before: number | undefined): Pick<ListMessagesQuery, "before"> {
-  if (Predicate.isUndefined(before)) {
-    return {};
-  }
-  return { before };
-}
-
-function limitPart(limit: number | undefined): Pick<ListMessagesQuery, "limit"> {
-  if (Predicate.isUndefined(limit)) {
-    return {};
-  }
-  return { limit };
+  readonly limit: Option.Option<number>;
 }
 
 function postRequest({ channel, data, replyTo, text }: PostFlags): PostMessageRequest {
-  return { channel, text, ...dataPart(data), ...replyToPart(replyTo) };
+  const withData = Option.match(data, { onNone: () => NOTHING, onSome: (value) => ({ data: value }) });
+  const withReplyTo = Option.match(replyTo, { onNone: () => NOTHING, onSome: (value) => ({ replyTo: value }) });
+  return { channel, text, ...withData, ...withReplyTo };
 }
 
 function pageQuery({ before, limit }: ListFlags): ListMessagesQuery {
-  return { ...beforePart(before), ...limitPart(limit) };
+  const withBefore = Option.match(before, { onNone: () => NOTHING, onSome: (value) => ({ before: value }) });
+  const withLimit = Option.match(limit, { onNone: () => NOTHING, onSome: (value) => ({ limit: value }) });
+  return { ...withBefore, ...withLimit };
 }
 
 function messageIdOf(value: number): Option.Option<MessageId> {
@@ -132,22 +113,16 @@ function notAMessageId(value: number): string {
 const channelArgument = Argument.String("channel").pipe(Argument.withDescription("The channel's name."));
 const textArgument = Argument.String("text").pipe(Argument.withDescription("The message, 1-40,000 characters."));
 const jsonData = Flag.String("data").pipe(Flag.withSchema(Schema.fromJsonString(Schema.Json)));
-const dataFlag = jsonData.pipe(
-  Flag.withDefault(Effect.undefined),
-  Flag.withDescription("Any JSON value, for commands and agents to read."),
-);
+const dataFlag = jsonData.pipe(Flag.optional, Flag.withDescription("Any JSON value, for commands and agents to read."));
 const replyToFlag = Flag.Int("reply-to").pipe(
-  Flag.withDefault(Effect.undefined),
+  Flag.optional,
   Flag.withDescription("Reply in this message's thread. A reply to a reply joins the same thread."),
 );
 const beforeFlag = Flag.Int("before").pipe(
-  Flag.withDefault(Effect.undefined),
+  Flag.optional,
   Flag.withDescription("Only messages before this message ID."),
 );
-const limitFlag = Flag.Int("limit").pipe(
-  Flag.withDefault(Effect.undefined),
-  Flag.withDescription("1-200 messages. Default 50."),
-);
+const limitFlag = Flag.Int("limit").pipe(Flag.optional, Flag.withDescription("1-200 messages. Default 50."));
 const messageIdArgument = Argument.Int("message-id").pipe(Argument.filterMap(messageIdOf, notAMessageId));
 
 const messagePostCommand = Command.make(

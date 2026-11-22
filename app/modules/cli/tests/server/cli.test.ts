@@ -7,6 +7,7 @@ const BOOT = "2026-01-01T00:00:00.000Z";
 const succeeded = { exitCode: 0, stderr: "" };
 const griller = { admin: false, createdAt: BOOT, name: "auth-griller", owner: "matt" };
 const admin = { admin: true, createdAt: BOOT, name: "admin" };
+const bot = { admin: false, createdAt: BOOT, name: "bot" };
 const FIRST_ID = 1;
 const SECOND_ID = 2;
 const postedParent = {
@@ -25,12 +26,13 @@ it.effect("the cookout CLI creates and lists identities and says who you are, as
     const cookout = yield* TestCookout;
     const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
     const created = yield* runCookout({ args: ["identity", "create", "auth-griller", "--owner", "matt"], env });
+    yield* runCookout({ args: ["identity", "create", "bot"], env });
     const listed = yield* runCookout({ args: ["identity", "list"], env });
     const whoami = yield* runCookout({ args: ["whoami"], env });
 
     expect(created).toMatchObject({ ...succeeded, stdoutJson: { identity: griller } });
     expect(created.stdout).toMatch(/"token": "cookout_test_\d+"/u);
-    expect(listed).toMatchObject({ ...succeeded, stdoutJson: { identities: [admin, griller] } });
+    expect(listed).toMatchObject({ ...succeeded, stdoutJson: { identities: [admin, griller, bot] } });
     expect(whoami).toMatchObject({ ...succeeded, stdoutJson: { identity: admin } });
   }).pipe(Effect.provide(testCookout())),
 );

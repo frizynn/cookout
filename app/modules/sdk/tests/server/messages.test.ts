@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, Option, Order, pipe } from "effect";
+import { Array as Arr, Effect, Order, pipe } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
@@ -9,7 +9,6 @@ import { TestClock } from "effect/testing";
 const BAD_REQUEST = 400;
 const FOUR_POSTS = 4;
 const NO_REPLIES = 0;
-const JSON_NULL = Option.getOrNull(Option.none());
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const BAD_BODIES = [
   { channel: "grill" },
@@ -35,7 +34,7 @@ it.effect("an identity posts a top-level message with JSON data, and sees its au
     const cookout = yield* TestCookout;
     const agent = yield* withChannel(cookout);
     yield* TestClock.adjust("5 seconds");
-    const data = { note: JSON_NULL, open: true, question: 1, tags: ["lease"] };
+    const data = { note: null, open: true, question: 1, tags: ["lease"] };
     const { message } = yield* answer(() =>
       agent.client.createMessage({ channel: "grill", data, text: "Is the lease 60 s?" }),
     );
@@ -47,7 +46,7 @@ it.effect("an identity posts a top-level message with JSON data, and sees its au
       data,
       id: message.id,
       kind: "top-level",
-      latestReplyId: JSON_NULL,
+      latestReplyId: null,
       mentions: [],
       replyCount: NO_REPLIES,
       text: "Is the lease 60 s?",

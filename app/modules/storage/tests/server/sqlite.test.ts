@@ -17,7 +17,6 @@ import { tokenHash } from "../../../identities/index.ts";
 const HASH_LENGTH = 64;
 const REOPENS = 3;
 const ONE_REPLY = 1;
-const JSON_NULL = Option.getOrNull(Option.none());
 const hashA = tokenHash(Str.repeat(HASH_LENGTH)("a"));
 const hashB = tokenHash(Str.repeat(HASH_LENGTH)("b"));
 const griller = identityFixture("auth-griller", { owner: "matt" });
@@ -54,9 +53,7 @@ function postThread(path: string): Effect.Effect<ThreadResponse | undefined, Sto
   return Effect.gen(function* postAndClose() {
     const { close, storage } = yield* openStore(sqliteStorage(path));
     yield* storage.createChannel(channelFixture("grill", { description: "d" }));
-    const parent = yield* appendTo(storage)(
-      newMessageFixture("grill", "p", { author: { name: "a" }, data: JSON_NULL }),
-    );
+    const parent = yield* appendTo(storage)(newMessageFixture("grill", "p", { author: { name: "a" }, data: null }));
     yield* appendTo(storage)(
       newMessageFixture("grill", "r", { author: { name: "b", owner: "matt" }, replyTo: parent.id }),
     );
@@ -87,7 +84,7 @@ it.effect("channels, messages and threads are kept after the database is reopene
 
     expect(channels).toStrictEqual([channelFixture("grill", { description: "d" })]);
     expect(after).toStrictEqual(before);
-    expect(after).toMatchObject({ parent: { data: JSON_NULL, replyCount: ONE_REPLY }, replies: [{ text: "r" }] });
+    expect(after).toMatchObject({ parent: { data: null, replyCount: ONE_REPLY }, replies: [{ text: "r" }] });
   }),
 );
 

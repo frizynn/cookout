@@ -348,6 +348,7 @@
     "oxc/no-rest-spread-properties": "off",
     "vitest/prefer-to-be-falsy": "off",
     "vitest/prefer-to-be-truthy": "off",
+    "unicorn/no-null": "off",
     "func-style": ["error", "declaration"],
     "one-var": ["error", "never"],
     "no-duplicate-imports": [
@@ -386,7 +387,16 @@
           },
           {
             "from": "package",
-            "name": ["Constraint", "Effect", "Exit", "HttpClientRequest", "HttpClientResponse", "Layer", "Stream"],
+            "name": [
+              "Constraint",
+              "Effect",
+              "Exit",
+              "HttpClientRequest",
+              "HttpClientResponse",
+              "Layer",
+              "Option",
+              "Stream"
+            ],
             "package": "effect"
           }
         ],

@@ -4,3 +4,4 @@
 /api/sdk.api.md @mattpocock
 /tsconfig.json @mattpocock
 /docs/adr/0012-lint-opt-outs.md @mattpocock
+/docs/adr/0016-null-is-allowed-because-the-protocol-uses-it.md @mattpocock

@@ -61,7 +61,6 @@ interface MessagesSection {
 }
 
 const NO_REPLIES = 0;
-const NO_REPLY: MessageId | null = Option.getOrNull(Option.none());
 
 function asMessageId(value: number): MessageId {
   return Option.getOrThrow(Option.liftPredicate(value, isMessageId));
@@ -92,7 +91,7 @@ function placed({ id, message, placement }: Placing): Message {
   if (placement.status === "reply") {
     return { ...message, id, kind: "reply", replyTo: placement.parent };
   }
-  return { ...message, id, kind: "top-level", latestReplyId: NO_REPLY, replyCount: NO_REPLIES };
+  return { ...message, id, kind: "top-level", latestReplyId: null, replyCount: NO_REPLIES };
 }
 
 function counted({ parent, replies }: Counting): TopLevelMessage {
