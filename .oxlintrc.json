@@ -344,7 +344,9 @@
     "jsdoc/require-returns-type": "off",
     "no-undef": "off",
     "no-redeclare": "off",
+    "oxc/no-async-await": "off",
     "func-style": ["error", "declaration"],
+    "one-var": ["error", "never"],
     "no-duplicate-imports": [
       "error",
       {
@@ -378,8 +380,14 @@
             "from": "package",
             "name": ["Methods", "MethodsNonLive"],
             "package": "@effect/vitest"
+          },
+          {
+            "from": "package",
+            "name": ["Constraint"],
+            "package": "effect"
           }
-        ]
+        ],
+        "treatMethodsAsReadonly": true
       }
     ],
     "react-hooks-js/config": "error",
@@ -652,6 +660,12 @@
           }
         ],
         "effecttsgo/strict-effect-provide": "off"
+      }
+    },
+    {
+      "files": ["app/main.ts", "app/modules/*/server.ts", "app/modules/*/lib/server/**", "app/modules/*/tests/**"],
+      "rules": {
+        "typescript/promise-function-async": ["error", { "checkArrowFunctions": false }]
       }
     },
     {
@@ -1572,7 +1586,8 @@
         "effecttsgo/prefer-effect-string": "off",
         "effecttsgo/process-env": "off",
         "import/no-nodejs-modules": "off",
-        "no-console": "off"
+        "no-console": "off",
+        "node/no-sync": "off"
       }
     },
     {
