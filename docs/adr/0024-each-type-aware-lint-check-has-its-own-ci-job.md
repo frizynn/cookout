@@ -9,4 +9,4 @@ The CI runners for this private repository have 2 cores (`nproc` on run 45072577
 
 ## Consequences
 
-The workflow starts two more runners. Each job's setup (checkout, install, cache) runs in parallel with the others, so the run's wall time does not grow. A new type-aware check gets its own job too, rather than joining an existing one.
+On push run 45073088815, the first with separate jobs, `lint` took 4.5s and `fixers` 5.3s on their first timing. The workflow starts two more runners. Each job's setup (checkout, install, cache) runs in parallel with the others, so the run's wall time does not grow. A new type-aware check gets its own job too, rather than joining an existing one.
