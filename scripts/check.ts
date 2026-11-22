@@ -13,6 +13,7 @@ const option = (name: string) => process.argv.find((arg) => arg.startsWith(`--${
 const job = option("job");
 const shard = option("shard");
 const base = option("base");
+const enforceBudgets = process.argv.includes("--ci");
 
 const testScript = (): ReadonlyArray<string> => {
   if (shard) return ["test:shard", `--shard=${shard}`];
@@ -46,18 +47,23 @@ const run = (check: Check): Promise<Outcome> =>
   });
 
 const overBudget = (outcome: Outcome) => outcome.seconds > outcome.budget;
-const passed = (outcome: Outcome) => outcome.code === 0 && !overBudget(outcome);
+const failsBudget = (outcome: Outcome) => enforceBudgets && overBudget(outcome);
+const passed = (outcome: Outcome) => outcome.code === 0 && !failsBudget(outcome);
 
 const statusOf = (outcome: Outcome) => {
   if (outcome.code !== 0) return "FAIL";
-  return overBudget(outcome) ? "SLOW" : "ok  ";
+  return failsBudget(outcome) ? "SLOW" : "ok  ";
 };
 
 const report = (outcome: Outcome) => {
   const status = statusOf(outcome);
   console.log(`${status} ${outcome.name} (${outcome.seconds.toFixed(1)}s, budget ${outcome.budget}s)`);
   if (outcome.code !== 0) console.log(outcome.output.trimEnd().replace(/^/gm, "     "));
-  if (overBudget(outcome)) console.log(`     ${outcome.name} took longer than its ${outcome.budget}s budget.`);
+  if (failsBudget(outcome)) console.log(`     ${outcome.name} took longer than its ${outcome.budget}s budget.`);
+  else if (overBudget(outcome))
+    console.error(
+      `warning: ${outcome.name} took ${outcome.seconds.toFixed(1)}s, over its ${outcome.budget}s budget. CI fails it; locally it only warns.`,
+    );
 };
 
 const selected = checks.filter((check) => job === undefined || check.job === job);

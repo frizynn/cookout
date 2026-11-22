@@ -33,7 +33,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then BASE=HEAD^; fi
-          node scripts/check.ts --job=${{ matrix.job }} --base="$BASE"
+          node scripts/check.ts --job=${{ matrix.job }} --base="$BASE" --ci
 
   tests:
     name: tests ${{ matrix.shard }}/2
@@ -48,7 +48,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-name: tests
-      - run: node scripts/check.ts --job=tests --shard=${{ matrix.shard }}/2
+      - run: node scripts/check.ts --job=tests --shard=${{ matrix.shard }}/2 --ci
       - uses: actions/upload-artifact@v4
         with:
           name: vitest-blob-${{ matrix.shard }}
@@ -70,4 +70,4 @@ jobs:
           pattern: vitest-blob-*
           path: .vitest/blob
           merge-multiple: true
-      - run: node scripts/check.ts --job=tests --merge
+      - run: node scripts/check.ts --job=tests --merge --ci
