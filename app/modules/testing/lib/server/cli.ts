@@ -1,73 +1,107 @@
-import { NodeServices } from "@effect/platform-node";
-import { ConfigProvider, Console, Deferred, Effect, Exit, Fiber, Layer, Schema, type Scope } from "effect";
-import { TestConsole } from "effect/testing";
-import { runCookout as runCommandLine, type ServeLayers } from "../../../cli/server.ts";
-import { secretsLive, secretsTest } from "../../../secrets/server.ts";
+import { Array as Arr, ConfigProvider, Console, Deferred, Effect, Fiber, Layer, Option, Schema, pipe } from "effect";
 import { memoryStorage, sqliteStorage } from "../../../storage/server.ts";
+import { secretsLive, secretsTest } from "../../../secrets/server.ts";
+import { NodeServices } from "@effect/platform-node";
+import type { Scope } from "effect";
+import type { ServeLayers } from "../../../cli/server.ts";
+import { TestConsole } from "effect/testing";
+import { runCookout as runCommandLine } from "../../../cli/server.ts";
 
-export type CliResult = { readonly exitCode: number; readonly stdout: string; readonly stderr: string };
+interface CliResult {
+  readonly exitCode: number;
+  readonly stderr: string;
+  readonly stderrJson: unknown;
+  readonly stdout: string;
+  readonly stdoutJson: unknown;
+}
 
-export type ServeProcess = {
-  readonly url: string;
-  readonly lines: ReadonlyArray<unknown>;
+interface ServeProcess {
+  readonly lines: readonly unknown[];
+  readonly stdout: string;
   readonly stop: Effect.Effect<void>;
-};
+  readonly url: string;
+}
 
-const verbLayers: ServeLayers = { storage: () => memoryStorage, secrets: secretsTest };
+interface CommandLine {
+  readonly args: readonly string[];
+  readonly console: Console.Console;
+  readonly env: Readonly<Record<string, string>>;
+  readonly layers: ServeLayers;
+}
 
-const serveLayers: ServeLayers = { storage: sqliteStorage, secrets: secretsLive };
-
-const textOf = (lines: ReadonlyArray<unknown>) => lines.map(String).join("\n");
-
-const commandLine = (
-  args: ReadonlyArray<string>,
-  env: Readonly<Record<string, string>>,
-  layers: ServeLayers,
-  console: Console.Console,
-) =>
-  runCommandLine(args, layers).pipe(
-    Effect.provideService(Console.Console, console),
-    Effect.provide(
-      Layer.mergeAll(ConfigProvider.layer(ConfigProvider.fromEnv({ env: { ...env } })), NodeServices.layer),
-    ),
-  );
-
-export const runCookout = (args: ReadonlyArray<string>, env: Readonly<Record<string, string>> = {}) =>
-  Effect.gen(function* () {
-    const console = yield* TestConsole.make;
-    const exit = yield* Effect.exit(commandLine(args, env, verbLayers, console));
-    const result: CliResult = {
-      exitCode: Exit.isSuccess(exit) ? 0 : 1,
-      stdout: textOf(yield* console.logLines),
-      stderr: textOf(yield* console.errorLines),
-    };
-    return result;
-  });
-
+const EXIT_SUCCESS = 0;
+const EXIT_FAILURE = 1;
+const verbLayers: ServeLayers = { secrets: secretsTest, storage: () => memoryStorage };
+const serveLayers: ServeLayers = { secrets: secretsLive, storage: sqliteStorage };
 const isListening = Schema.is(Schema.Struct({ listening: Schema.String }));
+const parseJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown));
 
-const parseLine = (line: unknown): unknown => JSON.parse(String(line));
+function parseLine(line: unknown): unknown {
+  return Option.getOrElse(parseJson(String(line)), () => line);
+}
 
-export const startServe = (database: string): Effect.Effect<ServeProcess, never, Scope.Scope> =>
-  Effect.gen(function* () {
+function textOf(lines: readonly unknown[]): string {
+  return Arr.join(Arr.map(lines, String), "\n");
+}
+
+function cliResult({ exitCode, stderr, stdout }: Pick<CliResult, "exitCode" | "stderr" | "stdout">): CliResult {
+  return { exitCode, stderr, stderrJson: parseLine(stderr), stdout, stdoutJson: parseLine(stdout) };
+}
+
+function failed(): number {
+  return EXIT_FAILURE;
+}
+
+function succeeded(): number {
+  return EXIT_SUCCESS;
+}
+
+function exitCodeOf({ args, console, env, layers }: CommandLine): Effect.Effect<number, never, Scope.Scope> {
+  return Effect.gen(function* runInProcess() {
+    const node = yield* Layer.build(NodeServices.layer);
+    return yield* runCommandLine(args, layers).pipe(
+      Effect.provideService(Console.Console, console),
+      Effect.provideService(ConfigProvider.ConfigProvider, ConfigProvider.fromEnv({ env })),
+      Effect.provideContext(node),
+      Effect.matchCause({ onFailure: failed, onSuccess: succeeded }),
+    );
+  });
+}
+
+function runCookout({ args, env }: Pick<CommandLine, "args" | "env">): Effect.Effect<CliResult, never, Scope.Scope> {
+  return Effect.gen(function* runCookoutInProcess() {
+    const console = yield* TestConsole.make;
+    const exitCode = yield* exitCodeOf({ args, console, env, layers: verbLayers });
+    const stdout = yield* console.logLines;
+    const stderr = yield* console.errorLines;
+    return cliResult({ exitCode, stderr: textOf(stderr), stdout: textOf(stdout) });
+  });
+}
+
+function startServe(database: string): Effect.Effect<ServeProcess, never, Scope.Scope> {
+  return Effect.gen(function* startServeInProcess() {
     const captured = yield* TestConsole.make;
     const listening = yield* Deferred.make<string>();
     const console: Console.Console = {
       ...captured,
-      log: (...line: ReadonlyArray<unknown>) => {
+      log: (...line: readonly unknown[]): void => {
         captured.log(...line);
-        const parsed = line.map(parseLine).find(isListening);
-        if (parsed !== undefined) Deferred.doneUnsafe(listening, Effect.succeed(parsed.listening));
+        const found = pipe(line, Arr.map(parseLine), Arr.findFirst(isListening));
+        if (Option.isSome(found)) {
+          Deferred.doneUnsafe(listening, Effect.succeed(found.value.listening));
+        }
       },
     };
     const args = ["serve", "--port", "0", "--host", "127.0.0.1", "--db", database];
-    const server = yield* Effect.forkScoped(commandLine(args, {}, serveLayers, console));
-    const url = yield* Deferred.await(listening).pipe(
-      Effect.raceFirst(
-        Fiber.join(server).pipe(Effect.andThen(Effect.die(new Error("cookout serve stopped before listening.")))),
-      ),
-      Effect.orDie,
+    const server = yield* Effect.forkScoped(exitCodeOf({ args, console, env: {}, layers: serveLayers }));
+    const stopped = Effect.andThen(
+      Fiber.join(server),
+      Effect.die(new Error("cookout serve stopped before listening.")),
     );
-    const lines = (yield* captured.logLines).map(parseLine);
-    return { url, lines, stop: Fiber.interrupt(server) };
+    const url = yield* Effect.raceFirst(Deferred.await(listening), stopped);
+    const lines = yield* captured.logLines;
+    return { lines: Arr.map(lines, parseLine), stdout: textOf(lines), stop: Fiber.interrupt(server), url };
   });
+}
+
+export { type CliResult, type ServeProcess, cliResult, runCookout, startServe };
