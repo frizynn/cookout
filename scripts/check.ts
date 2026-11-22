@@ -7,7 +7,12 @@ type Check = {
   readonly budget: number;
   readonly afterTests?: true;
 };
-type Outcome = Check & { readonly code: number; readonly output: string; readonly seconds: number };
+type Outcome = Check & {
+  readonly code: number;
+  readonly output: string;
+  readonly seconds: number;
+  readonly firstSeconds?: number;
+};
 
 const option = (name: string) => process.argv.find((arg) => arg.startsWith(`--${name}=`))?.slice(`--${name}=`.length);
 const job = option("job");
@@ -57,14 +62,31 @@ const statusOf = (outcome: Outcome) => {
   return failsBudget(outcome) ? "SLOW" : "ok  ";
 };
 
+const retime = async (outcome: Outcome): Promise<Outcome> => {
+  if (!enforceBudgets || outcome.code !== 0 || !overBudget(outcome)) return outcome;
+  return { ...(await run(outcome)), firstSeconds: outcome.seconds };
+};
+
+const retimeOneAtATime = (outcomes: ReadonlyArray<Outcome>) =>
+  outcomes.reduce<Promise<ReadonlyArray<Outcome>>>(
+    async (done, outcome) => [...(await done), await retime(outcome)],
+    Promise.resolve([]),
+  );
+
+const firstRunNote = (outcome: Outcome) =>
+  outcome.firstSeconds === undefined ? "" : `, first run ${outcome.firstSeconds.toFixed(1)}s, timed again alone`;
+
 const report = (outcome: Outcome) => {
   const status = statusOf(outcome);
-  console.log(`${status} ${outcome.name} (${outcome.seconds.toFixed(1)}s, budget ${outcome.budget}s)`);
+  console.log(
+    `${status} ${outcome.name} (${outcome.seconds.toFixed(1)}s, budget ${outcome.budget}s${firstRunNote(outcome)})`,
+  );
   if (outcome.code !== 0) console.log(outcome.output.trimEnd().replace(/^/gm, "     "));
-  if (failsBudget(outcome)) console.log(`     ${outcome.name} took longer than its ${outcome.budget}s budget.`);
+  if (failsBudget(outcome))
+    console.log(`     ${outcome.name} took longer than its ${outcome.budget}s budget on two runs in a row.`);
   else if (overBudget(outcome))
     console.error(
-      `warning: ${outcome.name} took ${outcome.seconds.toFixed(1)}s, over its ${outcome.budget}s budget. CI fails it; locally it only warns.`,
+      `warning: ${outcome.name} took ${outcome.seconds.toFixed(1)}s, over its ${outcome.budget}s budget. CI fails it if it is over again when timed alone; locally it only warns.`,
     );
 };
 
@@ -76,5 +98,6 @@ if (selected.length === 0) {
 
 const outcomes = await Promise.all(selected.filter((check) => !check.afterTests).map(run));
 outcomes.push(...(await Promise.all(selected.filter((check) => check.afterTests).map(run))));
-outcomes.forEach(report);
-process.exitCode = outcomes.every(passed) ? 0 : 1;
+const final = await retimeOneAtATime(outcomes);
+final.forEach(report);
+process.exitCode = final.every(passed) ? 0 : 1;
