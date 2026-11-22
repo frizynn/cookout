@@ -6,7 +6,7 @@ import type { Identity, Token } from "../../../identities/index.ts";
 import { isIdentityName, isOwner } from "../../../identities/index.ts";
 import { FirstBoot, Identities } from "../../../identities/server.ts";
 import { type CookoutClient, createCookoutClient } from "../../../sdk/index.ts";
-import { secretsTest } from "../../../secrets/server.ts";
+import { secretsLive, secretsTest } from "../../../secrets/server.ts";
 import { memoryStorage, Storage } from "../../../storage/server.ts";
 import { unusableStorage } from "./storage.ts";
 
@@ -38,9 +38,12 @@ export class TestCookout extends Context.Service<TestCookout, TestCookoutService
 
 export type TestCookoutOptions = {
   readonly storage?: "memory" | "unusable";
+  readonly secrets?: "test" | "live";
 };
 
 const storageFor = (options: TestCookoutOptions) => (options.storage === "unusable" ? unusableStorage : memoryStorage);
+
+const secretsFor = (options: TestCookoutOptions) => (options.secrets === "live" ? secretsLive : secretsTest);
 
 const clientAt =
   (url: string) =>
@@ -77,7 +80,7 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
     Effect.gen(function* () {
       yield* TestClock.setTime(DateTime.toEpochMillis(DateTime.makeUnsafe(testStartTime)));
       const scope = yield* Effect.scope;
-      const store = yield* Layer.build(Layer.mergeAll(storageFor(options), secretsTest));
+      const store = yield* Layer.build(Layer.mergeAll(storageFor(options), secretsFor(options)));
       const boot = Effect.gen(function* () {
         const server = yield* Layer.buildWithScope(
           cookoutServer({ port: 0, host: "127.0.0.1" }).pipe(Layer.provide(Layer.succeedContext(store))),

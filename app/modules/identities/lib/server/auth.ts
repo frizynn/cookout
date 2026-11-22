@@ -1,8 +1,8 @@
-import { Effect } from "effect";
+import { Context, Effect } from "effect";
 import type { Refusal } from "../../../http/index.ts";
-import type { Secrets } from "../../../secrets/server.ts";
+import { Secrets } from "../../../secrets/server.ts";
 import type { Storage, StorageUnavailable, TokenLookup } from "../../../storage/server.ts";
-import type { Identity, Token } from "../../index.ts";
+import type { Identity, Token, TokenHash } from "../../index.ts";
 import { token } from "../../index.ts";
 
 const bearer = /^Bearer +(\S+)\s*$/iu;
@@ -49,3 +49,20 @@ export const authenticate =
       Effect.flatMap(storage.findIdentityByTokenHash),
       Effect.flatMap(identityOf),
     );
+
+export class Caller extends Context.Service<Caller, Identity>()("cookout/identities/Caller") {}
+
+const adminOnly: Refusal = { status: 403, code: "admin_only", message: "Only an admin identity can do this." };
+
+export const requireAdmin: Effect.Effect<void, Refusal, Caller> = Effect.gen(function* () {
+  const caller = yield* Caller;
+  if (!caller.admin) return yield* Effect.fail(adminOnly);
+});
+
+export type IssuedToken = { readonly token: Token; readonly hash: TokenHash };
+
+export const issueToken: Effect.Effect<IssuedToken, never, Secrets> = Effect.gen(function* () {
+  const secrets = yield* Secrets;
+  const token = yield* secrets.newToken;
+  return { token, hash: yield* secrets.hashToken(token) };
+});

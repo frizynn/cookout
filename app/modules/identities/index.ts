@@ -62,13 +62,65 @@ export type Identity = {
   readonly createdAt: string;
 };
 
-/** The answer to `GET /v1/whoami`. */
+/** The answer to `GET /v1/whoami` and `DELETE /v1/identities/<name>`. */
 export type IdentityResponse = {
   readonly identity: Identity;
+};
+
+/** The answer to creating an identity and rotating its token. The token is shown this once only. */
+export type IdentityWithTokenResponse = {
+  readonly identity: Identity;
+  readonly token: Token;
+};
+
+/** The answer to `GET /v1/identities`: every identity, sorted by name. */
+export type ListIdentitiesResponse = {
+  readonly identities: ReadonlyArray<Identity>;
+};
+
+/** The body of `POST /v1/identities`. The server checks the name and owner rules. */
+export type CreateIdentityRequest = {
+  readonly name: string;
+  readonly owner?: string;
 };
 
 /** `GET /v1/whoami`: the identity behind the token. */
 export const whoamiPath = "/v1/whoami";
 
-/** The codes bearer auth (401) and the admin check (403) refuse with. */
-export const identityErrorCodes = ["token_missing", "token_unknown", "token_revoked", "admin_only"] as const;
+/** `GET /v1/identities` (any identity) and `POST /v1/identities` (admin). */
+export const identitiesPath = "/v1/identities";
+
+/** `DELETE /v1/identities/<name>` (admin): removes the identity, and its token stops working. */
+export const identityPathPattern = `${identitiesPath}/:name`;
+
+/** `POST /v1/identities/<name>/token` (admin): issues a new token, and the old one stops working at once. */
+export const identityTokenPathPattern = `${identityPathPattern}/token`;
+
+/** The path of the identity called `name`. */
+export function identityPath(name: string): string {
+  return `${identitiesPath}/${encodeURIComponent(name)}`;
+}
+
+/** The path that rotates the token of the identity called `name`. */
+export function identityTokenPath(name: string): string {
+  return `${identityPath(name)}/token`;
+}
+
+/** The rule every token the server issues follows, for the backend's Schemas. */
+export const tokenPattern = /^cookout_[A-Za-z0-9_-]+$/u;
+
+/** Whether `value` looks like a token the server issued; if so, it is a `Token`. */
+export function isToken(value: string): value is Token {
+  return tokenPattern.test(value);
+}
+
+/** The codes bearer auth (401), the admin check (403) and identity admin refuse with. */
+export const identityErrorCodes = [
+  "token_missing",
+  "token_unknown",
+  "token_revoked",
+  "admin_only",
+  "identity_exists",
+  "identity_not_found",
+  "last_admin",
+] as const;

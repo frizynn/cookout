@@ -1,14 +1,18 @@
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
-import type { Identity, IdentityResponse } from "../../index.ts";
-import { identityNamePattern, isIdentityName, isOwner, ownerPattern } from "../../index.ts";
+import type { Identity, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../index.ts";
+import { identityNamePattern, isIdentityName, isOwner, isToken, ownerPattern, tokenPattern } from "../../index.ts";
 
-const IdentityNameSchema = Schema.String.check(Schema.isPattern(identityNamePattern)).pipe(
-  Schema.refine(isIdentityName, { identifier: "IdentityName" }),
-);
+export const IdentityNameSchema = Schema.String.check(
+  Schema.isPattern(identityNamePattern, { message: "Use 1-64 lowercase letters, digits or '-'." }),
+).pipe(Schema.refine(isIdentityName, { identifier: "IdentityName" }));
 
-const OwnerSchema = Schema.String.check(Schema.isPattern(ownerPattern)).pipe(
-  Schema.refine(isOwner, { identifier: "Owner" }),
+export const OwnerSchema = Schema.String.check(
+  Schema.isPattern(ownerPattern, { message: "Use 1-100 characters." }),
+).pipe(Schema.refine(isOwner, { identifier: "Owner" }));
+
+const TokenSchema = Schema.String.check(Schema.isPattern(tokenPattern)).pipe(
+  Schema.refine(isToken, { identifier: "Token" }),
 );
 
 const IdentitySchema = matchesWire<Identity>()(
@@ -21,3 +25,11 @@ const IdentitySchema = matchesWire<Identity>()(
 );
 
 export const IdentityResponseSchema = matchesWire<IdentityResponse>()(Schema.Struct({ identity: IdentitySchema }));
+
+export const IdentityWithTokenResponseSchema = matchesWire<IdentityWithTokenResponse>()(
+  Schema.Struct({ identity: IdentitySchema, token: TokenSchema }),
+);
+
+export const ListIdentitiesResponseSchema = matchesWire<ListIdentitiesResponse>()(
+  Schema.Struct({ identities: Schema.Array(IdentitySchema) }),
+);

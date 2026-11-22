@@ -9,11 +9,16 @@ import type { Refusal } from "../http/index.ts";
 import type { Gate, Route } from "../http/server.ts";
 import { Secrets } from "../secrets/server.ts";
 import { Storage, type StorageUnavailable } from "../storage/server.ts";
-import { firstAdminName, type Identity, type Token, type TokenHash, whoamiPath } from "./index.ts";
-import { authenticate } from "./lib/server/auth.ts";
-import { IdentityResponseSchema } from "./lib/server/wire.ts";
+import { firstAdminName, type Identity, type Token, whoamiPath } from "./index.ts";
+import { authenticate, Caller, type IssuedToken, issueToken } from "./lib/server/auth.ts";
+import { identityAdminRoutes } from "./lib/server/routes.ts";
+import {
+  IdentityResponseSchema,
+  IdentityWithTokenResponseSchema,
+  ListIdentitiesResponseSchema,
+} from "./lib/server/wire.ts";
 
-type IssuedToken = { readonly token: Token; readonly hash: TokenHash };
+export { Caller };
 
 export type IdentitiesService = {
   /** The identity behind an `Authorization` header. Refuses with 401 `token_missing`, `token_unknown` or `token_revoked`. */
@@ -30,16 +35,12 @@ export const identitiesLayer: Layer.Layer<Identities, never, Storage | Secrets> 
   Effect.gen(function* () {
     const storage = yield* Storage;
     const secrets = yield* Secrets;
-    const issueToken = Effect.gen(function* () {
-      const token = yield* secrets.newToken;
-      return { token, hash: yield* secrets.hashToken(token) };
-    });
-    return { authenticate: authenticate(storage, secrets), issueToken };
+    return {
+      authenticate: authenticate(storage, secrets),
+      issueToken: Effect.provideService(issueToken, Secrets, secrets),
+    };
   }),
 );
-
-/** The identity behind the current request's bearer token, inside a route `requireToken` let through. */
-export class Caller extends Context.Service<Caller, Identity>()("cookout/identities/Caller") {}
 
 /**
  * The gate every route but `/v1/health` sits behind: authenticates the
@@ -83,8 +84,15 @@ const whoamiRoute: Route<Caller> = {
     }),
 };
 
-/** The identity routes, for the server's route list. They need `Caller`, which `requireToken` provides. */
-export const identityRoutes: ReadonlyArray<Route<Caller>> = [whoamiRoute];
+/**
+ * The identity routes, for the server's route list: whoami, and create,
+ * list, rotate and delete. They need `Caller`, which `requireToken` provides.
+ */
+export const identityRoutes: ReadonlyArray<Route<Caller | Storage | Secrets>> = [whoamiRoute, ...identityAdminRoutes];
 
 /** The response Schemas of the identity routes, for the SDK's generated validators. */
-export const identityResponseSchemas = { IdentityResponse: IdentityResponseSchema };
+export const identityResponseSchemas = {
+  IdentityResponse: IdentityResponseSchema,
+  IdentityWithTokenResponse: IdentityWithTokenResponseSchema,
+  ListIdentitiesResponse: ListIdentitiesResponseSchema,
+};

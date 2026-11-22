@@ -35,8 +35,12 @@ const fromParseError = (error: HttpServerError.RequestParseError): Refusal =>
     ? refusal(413, { code: "body_too_large", message: "The body is over 1 MiB." })
     : refusal(400, { code: "invalid_json", message: "The body is not valid JSON." });
 
-const fromServerError = (error: unknown): Refusal | undefined =>
-  error instanceof HttpServerError.RequestParseError ? fromParseError(error) : undefined;
+const parseErrorIn = (error: unknown) => (error instanceof HttpServerError.HttpServerError ? error.reason : error);
+
+const fromServerError = (error: unknown): Refusal | undefined => {
+  const reason = parseErrorIn(error);
+  return reason instanceof HttpServerError.RequestParseError ? fromParseError(reason) : undefined;
+};
 
 export const toRefusal = (error: unknown): Refusal => {
   if (isRefusal(error)) return error;

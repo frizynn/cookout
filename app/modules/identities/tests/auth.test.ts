@@ -76,10 +76,10 @@ it.effect("a server on a store that already has identities makes no new admin", 
     const cookout = yield* TestCookout;
     const second = yield* cookout.startSecondServer;
     expect(second.adminToken).toBeUndefined();
-    const admin = yield* answer(() =>
-      createCookoutClient({ url: second.url, token: cookout.adminToken, env: {} }).whoami(),
+    const { identities } = yield* answer(() =>
+      createCookoutClient({ url: second.url, token: cookout.adminToken, env: {} }).listIdentities(),
     );
-    expect(admin.identity).toMatchObject({ name: "admin", admin: true });
+    expect(identities.map((identity) => identity.name)).toEqual(["admin"]);
   }).pipe(Effect.provide(testCookout())),
 );
 

@@ -73,7 +73,7 @@ return errors === 0;
 validate20.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 
 export const isErrorResponse = validate21;
-const schema32 = {"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["token_missing","token_unknown","token_revoked","admin_only","not_found","method_not_allowed","invalid_path","invalid_json","invalid_request","body_too_large","storage_unavailable","internal_error"]},"message":{"type":"string"},"details":{}},"required":["code","message"],"additionalProperties":true}},"required":["error"],"additionalProperties":true,"$defs":{}};
+const schema32 = {"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["token_missing","token_unknown","token_revoked","admin_only","identity_exists","identity_not_found","last_admin","not_found","method_not_allowed","invalid_path","invalid_json","invalid_request","body_too_large","storage_unavailable","internal_error"]},"message":{"type":"string"},"details":{}},"required":["code","message"],"additionalProperties":true}},"required":["error"],"additionalProperties":true,"$defs":{}};
 
 function validate21(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
 let vErrors = null;
@@ -111,7 +111,7 @@ if(typeof data1 !== "string"){
 validate21.errors = [{instancePath:instancePath+"/error/code",schemaPath:"#/properties/error/properties/code/type",keyword:"type",params:{type: "string"},message:"must be string"}];
 return false;
 }
-if(!((((((((((((data1 === "token_missing") || (data1 === "token_unknown")) || (data1 === "token_revoked")) || (data1 === "admin_only")) || (data1 === "not_found")) || (data1 === "method_not_allowed")) || (data1 === "invalid_path")) || (data1 === "invalid_json")) || (data1 === "invalid_request")) || (data1 === "body_too_large")) || (data1 === "storage_unavailable")) || (data1 === "internal_error"))){
+if(!(((((((((((((((data1 === "token_missing") || (data1 === "token_unknown")) || (data1 === "token_revoked")) || (data1 === "admin_only")) || (data1 === "identity_exists")) || (data1 === "identity_not_found")) || (data1 === "last_admin")) || (data1 === "not_found")) || (data1 === "method_not_allowed")) || (data1 === "invalid_path")) || (data1 === "invalid_json")) || (data1 === "invalid_request")) || (data1 === "body_too_large")) || (data1 === "storage_unavailable")) || (data1 === "internal_error"))){
 validate21.errors = [{instancePath:instancePath+"/error/code",schemaPath:"#/properties/error/properties/code/enum",keyword:"enum",params:{allowedValues: schema32.properties.error.properties.code.enum},message:"must be equal to one of the allowed values"}];
 return false;
 }
@@ -287,4 +287,317 @@ validate22.errors = vErrors;
 return errors === 0;
 }
 validate22.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
+
+export const isIdentityWithTokenResponse = validate23;
+const schema36 = {"type":"object","properties":{"identity":{"type":"object","properties":{"name":{"$ref":"#/$defs/IdentityName"},"owner":{"$ref":"#/$defs/Owner"},"admin":{"type":"boolean"},"createdAt":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"}},"required":["name","admin","createdAt"],"additionalProperties":true},"token":{"$ref":"#/$defs/Token"}},"required":["identity","token"],"additionalProperties":true,"$defs":{"IdentityName":{"type":"string","pattern":"^[a-z0-9-]{1,64}$"},"Owner":{"type":"string","pattern":"^[\\s\\S]{1,100}$"},"Token":{"type":"string","pattern":"^cookout_[A-Za-z0-9_-]+$"}}};
+const schema37 = {"type":"string","pattern":"^[a-z0-9-]{1,64}$"};
+const schema38 = {"type":"string","pattern":"^[\\s\\S]{1,100}$"};
+const schema39 = {"type":"string","pattern":"^cookout_[A-Za-z0-9_-]+$"};
+const pattern11 = new RegExp("^cookout_[A-Za-z0-9_-]+$", "u");
+
+function validate23(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
+let vErrors = null;
+let errors = 0;
+const evaluated0 = validate23.evaluated;
+if(evaluated0.dynamicProps){
+evaluated0.props = undefined;
+}
+if(evaluated0.dynamicItems){
+evaluated0.items = undefined;
+}
+if(errors === 0){
+if(data && typeof data == "object" && !Array.isArray(data)){
+let missing0;
+if(((data.identity === undefined) && (missing0 = "identity")) || ((data.token === undefined) && (missing0 = "token"))){
+validate23.errors = [{instancePath,schemaPath:"#/required",keyword:"required",params:{missingProperty: missing0},message:"must have required property '"+missing0+"'"}];
+return false;
+}
+else {
+if(data.identity !== undefined){
+let data0 = data.identity;
+const _errs2 = errors;
+if(errors === _errs2){
+if(data0 && typeof data0 == "object" && !Array.isArray(data0)){
+let missing1;
+if((((data0.name === undefined) && (missing1 = "name")) || ((data0.admin === undefined) && (missing1 = "admin"))) || ((data0.createdAt === undefined) && (missing1 = "createdAt"))){
+validate23.errors = [{instancePath:instancePath+"/identity",schemaPath:"#/properties/identity/required",keyword:"required",params:{missingProperty: missing1},message:"must have required property '"+missing1+"'"}];
+return false;
+}
+else {
+if(data0.name !== undefined){
+let data1 = data0.name;
+const _errs5 = errors;
+const _errs6 = errors;
+if(errors === _errs6){
+if(typeof data1 === "string"){
+if(!pattern5.test(data1)){
+validate23.errors = [{instancePath:instancePath+"/identity/name",schemaPath:"#/$defs/IdentityName/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9-]{1,64}$"},message:"must match pattern \""+"^[a-z0-9-]{1,64}$"+"\""}];
+return false;
+}
+}
+else {
+validate23.errors = [{instancePath:instancePath+"/identity/name",schemaPath:"#/$defs/IdentityName/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid1 = _errs5 === errors;
+}
+else {
+var valid1 = true;
+}
+if(valid1){
+if(data0.owner !== undefined){
+let data2 = data0.owner;
+const _errs8 = errors;
+const _errs9 = errors;
+if(errors === _errs9){
+if(typeof data2 === "string"){
+if(!pattern6.test(data2)){
+validate23.errors = [{instancePath:instancePath+"/identity/owner",schemaPath:"#/$defs/Owner/pattern",keyword:"pattern",params:{pattern: "^[\\s\\S]{1,100}$"},message:"must match pattern \""+"^[\\s\\S]{1,100}$"+"\""}];
+return false;
+}
+}
+else {
+validate23.errors = [{instancePath:instancePath+"/identity/owner",schemaPath:"#/$defs/Owner/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid1 = _errs8 === errors;
+}
+else {
+var valid1 = true;
+}
+if(valid1){
+if(data0.admin !== undefined){
+const _errs11 = errors;
+if(typeof data0.admin !== "boolean"){
+validate23.errors = [{instancePath:instancePath+"/identity/admin",schemaPath:"#/properties/identity/properties/admin/type",keyword:"type",params:{type: "boolean"},message:"must be boolean"}];
+return false;
+}
+var valid1 = _errs11 === errors;
+}
+else {
+var valid1 = true;
+}
+if(valid1){
+if(data0.createdAt !== undefined){
+let data4 = data0.createdAt;
+const _errs13 = errors;
+if(errors === _errs13){
+if(typeof data4 === "string"){
+if(!pattern4.test(data4)){
+validate23.errors = [{instancePath:instancePath+"/identity/createdAt",schemaPath:"#/properties/identity/properties/createdAt/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
+return false;
+}
+}
+else {
+validate23.errors = [{instancePath:instancePath+"/identity/createdAt",schemaPath:"#/properties/identity/properties/createdAt/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid1 = _errs13 === errors;
+}
+else {
+var valid1 = true;
+}
+}
+}
+}
+}
+}
+else {
+validate23.errors = [{instancePath:instancePath+"/identity",schemaPath:"#/properties/identity/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+return false;
+}
+}
+var valid0 = _errs2 === errors;
+}
+else {
+var valid0 = true;
+}
+if(valid0){
+if(data.token !== undefined){
+let data5 = data.token;
+const _errs15 = errors;
+const _errs16 = errors;
+if(errors === _errs16){
+if(typeof data5 === "string"){
+if(!pattern11.test(data5)){
+validate23.errors = [{instancePath:instancePath+"/token",schemaPath:"#/$defs/Token/pattern",keyword:"pattern",params:{pattern: "^cookout_[A-Za-z0-9_-]+$"},message:"must match pattern \""+"^cookout_[A-Za-z0-9_-]+$"+"\""}];
+return false;
+}
+}
+else {
+validate23.errors = [{instancePath:instancePath+"/token",schemaPath:"#/$defs/Token/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid0 = _errs15 === errors;
+}
+else {
+var valid0 = true;
+}
+}
+}
+}
+else {
+validate23.errors = [{instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+return false;
+}
+}
+validate23.errors = vErrors;
+return errors === 0;
+}
+validate23.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
+
+export const isListIdentitiesResponse = validate24;
+const schema40 = {"type":"object","properties":{"identities":{"type":"array","items":{"type":"object","properties":{"name":{"$ref":"#/$defs/IdentityName"},"owner":{"$ref":"#/$defs/Owner"},"admin":{"type":"boolean"},"createdAt":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"}},"required":["name","admin","createdAt"],"additionalProperties":true}}},"required":["identities"],"additionalProperties":true,"$defs":{"IdentityName":{"type":"string","pattern":"^[a-z0-9-]{1,64}$"},"Owner":{"type":"string","pattern":"^[\\s\\S]{1,100}$"}}};
+const schema41 = {"type":"string","pattern":"^[a-z0-9-]{1,64}$"};
+const schema42 = {"type":"string","pattern":"^[\\s\\S]{1,100}$"};
+
+function validate24(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
+let vErrors = null;
+let errors = 0;
+const evaluated0 = validate24.evaluated;
+if(evaluated0.dynamicProps){
+evaluated0.props = undefined;
+}
+if(evaluated0.dynamicItems){
+evaluated0.items = undefined;
+}
+if(errors === 0){
+if(data && typeof data == "object" && !Array.isArray(data)){
+let missing0;
+if((data.identities === undefined) && (missing0 = "identities")){
+validate24.errors = [{instancePath,schemaPath:"#/required",keyword:"required",params:{missingProperty: missing0},message:"must have required property '"+missing0+"'"}];
+return false;
+}
+else {
+if(data.identities !== undefined){
+let data0 = data.identities;
+const _errs2 = errors;
+if(errors === _errs2){
+if(Array.isArray(data0)){
+var valid1 = true;
+const len0 = data0.length;
+for(let i0=0; i0<len0; i0++){
+let data1 = data0[i0];
+const _errs4 = errors;
+if(errors === _errs4){
+if(data1 && typeof data1 == "object" && !Array.isArray(data1)){
+let missing1;
+if((((data1.name === undefined) && (missing1 = "name")) || ((data1.admin === undefined) && (missing1 = "admin"))) || ((data1.createdAt === undefined) && (missing1 = "createdAt"))){
+validate24.errors = [{instancePath:instancePath+"/identities/" + i0,schemaPath:"#/properties/identities/items/required",keyword:"required",params:{missingProperty: missing1},message:"must have required property '"+missing1+"'"}];
+return false;
+}
+else {
+if(data1.name !== undefined){
+let data2 = data1.name;
+const _errs7 = errors;
+const _errs8 = errors;
+if(errors === _errs8){
+if(typeof data2 === "string"){
+if(!pattern5.test(data2)){
+validate24.errors = [{instancePath:instancePath+"/identities/" + i0+"/name",schemaPath:"#/$defs/IdentityName/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9-]{1,64}$"},message:"must match pattern \""+"^[a-z0-9-]{1,64}$"+"\""}];
+return false;
+}
+}
+else {
+validate24.errors = [{instancePath:instancePath+"/identities/" + i0+"/name",schemaPath:"#/$defs/IdentityName/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid2 = _errs7 === errors;
+}
+else {
+var valid2 = true;
+}
+if(valid2){
+if(data1.owner !== undefined){
+let data3 = data1.owner;
+const _errs10 = errors;
+const _errs11 = errors;
+if(errors === _errs11){
+if(typeof data3 === "string"){
+if(!pattern6.test(data3)){
+validate24.errors = [{instancePath:instancePath+"/identities/" + i0+"/owner",schemaPath:"#/$defs/Owner/pattern",keyword:"pattern",params:{pattern: "^[\\s\\S]{1,100}$"},message:"must match pattern \""+"^[\\s\\S]{1,100}$"+"\""}];
+return false;
+}
+}
+else {
+validate24.errors = [{instancePath:instancePath+"/identities/" + i0+"/owner",schemaPath:"#/$defs/Owner/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid2 = _errs10 === errors;
+}
+else {
+var valid2 = true;
+}
+if(valid2){
+if(data1.admin !== undefined){
+const _errs13 = errors;
+if(typeof data1.admin !== "boolean"){
+validate24.errors = [{instancePath:instancePath+"/identities/" + i0+"/admin",schemaPath:"#/properties/identities/items/properties/admin/type",keyword:"type",params:{type: "boolean"},message:"must be boolean"}];
+return false;
+}
+var valid2 = _errs13 === errors;
+}
+else {
+var valid2 = true;
+}
+if(valid2){
+if(data1.createdAt !== undefined){
+let data5 = data1.createdAt;
+const _errs15 = errors;
+if(errors === _errs15){
+if(typeof data5 === "string"){
+if(!pattern4.test(data5)){
+validate24.errors = [{instancePath:instancePath+"/identities/" + i0+"/createdAt",schemaPath:"#/properties/identities/items/properties/createdAt/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
+return false;
+}
+}
+else {
+validate24.errors = [{instancePath:instancePath+"/identities/" + i0+"/createdAt",schemaPath:"#/properties/identities/items/properties/createdAt/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid2 = _errs15 === errors;
+}
+else {
+var valid2 = true;
+}
+}
+}
+}
+}
+}
+else {
+validate24.errors = [{instancePath:instancePath+"/identities/" + i0,schemaPath:"#/properties/identities/items/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+return false;
+}
+}
+var valid1 = _errs4 === errors;
+if(!valid1){
+break;
+}
+}
+}
+else {
+validate24.errors = [{instancePath:instancePath+"/identities",schemaPath:"#/properties/identities/type",keyword:"type",params:{type: "array"},message:"must be array"}];
+return false;
+}
+}
+}
+}
+}
+else {
+validate24.errors = [{instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+return false;
+}
+}
+validate24.errors = vErrors;
+return errors === 0;
+}
+validate24.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 

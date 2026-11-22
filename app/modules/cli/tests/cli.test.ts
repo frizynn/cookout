@@ -1,14 +1,56 @@
 import { expect, it } from "@effect/vitest";
-import { Effect } from "effect";
-import { runCookout, TestCookout, testCookout } from "../../testing/server.ts";
+import { Effect, Schema } from "effect";
+import { type CliResult, runCookout, TestCookout, testCookout } from "../../testing/server.ts";
 
-it.effect("the CLI says who you are, as JSON", () =>
+const hasToken = Schema.is(Schema.Struct({ token: Schema.String }));
+
+const json = (result: CliResult): unknown => {
+  expect(result, result.stderr).toMatchObject({ exitCode: 0 });
+  return JSON.parse(result.stdout);
+};
+
+it.effect("the cookout CLI creates and lists identities and says who you are, as JSON", () =>
   Effect.gen(function* () {
     const cookout = yield* TestCookout;
-    const agent = yield* cookout.createIdentity("agent", { owner: "matt" });
-    const result = yield* runCookout(["whoami"], { COOKOUT_URL: cookout.url, COOKOUT_TOKEN: agent.token });
-    expect(result, result.stderr).toMatchObject({ exitCode: 0 });
-    expect(JSON.parse(result.stdout)).toEqual({ identity: agent.identity });
+    const asAdmin = { COOKOUT_URL: cookout.url, COOKOUT_TOKEN: cookout.adminToken };
+
+    const created = json(yield* runCookout(["identity", "create", "auth-griller", "--owner", "matt"], asAdmin));
+    expect(created).toMatchObject({ identity: { name: "auth-griller", owner: "matt", admin: false } });
+    if (!hasToken(created)) return expect.unreachable("identity create printed no token.");
+    const noOwner = json(yield* runCookout(["identity", "create", "company-bot"], asAdmin));
+    expect(noOwner).toMatchObject({ identity: { name: "company-bot", admin: false } });
+    expect(noOwner).not.toHaveProperty("identity.owner");
+
+    const asAgent = { COOKOUT_URL: cookout.url, COOKOUT_TOKEN: created.token };
+    const { identity } = yield* Effect.promise(() => cookout.clientFor(created.token).whoami());
+    expect(json(yield* runCookout(["identity", "list"], asAgent))).toEqual({
+      identities: [
+        { name: "admin", admin: true, createdAt: "2026-01-01T00:00:00.000Z" },
+        identity,
+        { name: "company-bot", admin: false, createdAt: "2026-01-01T00:00:00.000Z" },
+      ],
+    });
+    expect(json(yield* runCookout(["whoami"], asAgent))).toEqual({ identity });
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("the CLI rotates and deletes identities", () =>
+  Effect.gen(function* () {
+    const cookout = yield* TestCookout;
+    const leaky = yield* cookout.createIdentity("leaky");
+    const asAdmin = { COOKOUT_URL: cookout.url, COOKOUT_TOKEN: cookout.adminToken };
+
+    const rotated = json(yield* runCookout(["identity", "rotate", "leaky"], asAdmin));
+    expect(rotated).toMatchObject({ identity: leaky.identity });
+    if (!hasToken(rotated)) return expect.unreachable("identity rotate printed no token.");
+    expect(rotated.token).not.toBe(leaky.token);
+    const whoami = yield* Effect.promise(() => cookout.clientFor(rotated.token).whoami());
+    expect(whoami).toEqual({ identity: leaky.identity });
+
+    expect(json(yield* runCookout(["identity", "delete", "leaky"], asAdmin))).toEqual({ identity: leaky.identity });
+    const gone = yield* runCookout(["identity", "delete", "leaky"], asAdmin);
+    expect(gone.exitCode).toBe(1);
+    expect(JSON.parse(gone.stderr)).toMatchObject({ error: { code: "identity_not_found", status: 404 } });
   }).pipe(Effect.provide(testCookout())),
 );
 

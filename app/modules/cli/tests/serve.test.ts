@@ -36,15 +36,17 @@ it.effect("the database never holds a token itself", () =>
     const [adminToken] = adminTokensIn(server.lines);
     if (adminToken === undefined) return expect.unreachable("The first boot printed no admin token.");
     const admin = createCookoutClient({ url: server.url, token: adminToken, env: {} });
-    yield* Effect.promise(() => admin.whoami());
+    const created = yield* Effect.promise(() => admin.createIdentity({ name: "agent", owner: "matt" }));
+    const rotated = yield* Effect.promise(() => admin.rotateToken("agent"));
     yield* server.stop;
 
+    const tokens = [adminToken, created.token, rotated.token];
     const folder = path.dirname(database);
     const files = yield* fs.readDirectory(folder);
     expect(files).toContain("cookout.db");
     for (const file of files) {
-      const bytes = yield* fs.readFile(path.join(folder, file));
-      expect(new TextDecoder("latin1").decode(bytes)).not.toContain(adminToken);
+      const contents = new TextDecoder("latin1").decode(yield* fs.readFile(path.join(folder, file)));
+      for (const token of tokens) expect(contents).not.toContain(token);
     }
   }).pipe(Effect.provide(NodeServices.layer)),
 );

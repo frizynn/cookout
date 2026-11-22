@@ -6,14 +6,33 @@
 import { readCookoutConnection } from "../config/index.ts";
 import type { HealthResponse } from "../http/index.ts";
 import { healthPath } from "../http/index.ts";
-import type { IdentityResponse } from "../identities/index.ts";
-import { whoamiPath } from "../identities/index.ts";
+import type {
+  CreateIdentityRequest,
+  IdentityResponse,
+  IdentityWithTokenResponse,
+  ListIdentitiesResponse,
+} from "../identities/index.ts";
+import { identitiesPath, identityPath, identityTokenPath, whoamiPath } from "../identities/index.ts";
 import { CookoutError } from "./lib/errors.ts";
-import { getJson } from "./lib/request.ts";
-import { isHealthResponse, isIdentityResponse } from "./lib/generated/validators.js";
+import { send } from "./lib/request.ts";
+import {
+  isHealthResponse,
+  isIdentityResponse,
+  isIdentityWithTokenResponse,
+  isListIdentitiesResponse,
+} from "./lib/generated/validators.js";
 
 export type { HealthResponse } from "../http/index.ts";
-export type { Identity, IdentityName, IdentityResponse, Owner } from "../identities/index.ts";
+export type {
+  CreateIdentityRequest,
+  Identity,
+  IdentityName,
+  IdentityResponse,
+  IdentityWithTokenResponse,
+  ListIdentitiesResponse,
+  Owner,
+  Token,
+} from "../identities/index.ts";
 export { CookoutError, type CookoutErrorCode } from "./lib/errors.ts";
 
 export type CookoutClientOptions = {
@@ -30,6 +49,14 @@ export type CookoutClient = {
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */
   readonly whoami: () => Promise<IdentityResponse>;
+  /** `GET /v1/identities`: every identity and its owner, sorted by name. */
+  readonly listIdentities: () => Promise<ListIdentitiesResponse>;
+  /** Admin only. The token in the answer is shown this once. A name in use is 409 `identity_exists`. */
+  readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;
+  /** Admin only. Issues a new token; the old one stops working at once. */
+  readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
+  /** Admin only. Removes the identity; its token stops working. The last admin can't be deleted (409 `last_admin`). */
+  readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
 };
 
 /**
@@ -38,8 +65,8 @@ export type CookoutClient = {
  * (status 0) when there is no URL.
  */
 export function createCookoutClient(options: CookoutClientOptions = {}): CookoutClient {
-  const connection = { ...readCookoutConnection(options.env), ...options };
-  const url = connection.url ?? "";
+  const merged = { ...readCookoutConnection(options.env), ...options };
+  const url = merged.url ?? "";
   if (url === "") {
     throw new CookoutError({
       status: 0,
@@ -47,8 +74,17 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
       message: "Set COOKOUT_URL to the cookout server's address.",
     });
   }
+  const connection = { ...merged, url };
   return {
-    health: () => getJson({ ...connection, url }, healthPath, isHealthResponse),
-    whoami: () => getJson({ ...connection, url }, whoamiPath, isIdentityResponse),
+    health: () => send(connection, { method: "GET", path: healthPath, isExpected: isHealthResponse }),
+    whoami: () => send(connection, { method: "GET", path: whoamiPath, isExpected: isIdentityResponse }),
+    listIdentities: () =>
+      send(connection, { method: "GET", path: identitiesPath, isExpected: isListIdentitiesResponse }),
+    createIdentity: (body) =>
+      send(connection, { method: "POST", path: identitiesPath, isExpected: isIdentityWithTokenResponse, body }),
+    rotateToken: (name) =>
+      send(connection, { method: "POST", path: identityTokenPath(name), isExpected: isIdentityWithTokenResponse }),
+    deleteIdentity: (name) =>
+      send(connection, { method: "DELETE", path: identityPath(name), isExpected: isIdentityResponse }),
   };
 }
