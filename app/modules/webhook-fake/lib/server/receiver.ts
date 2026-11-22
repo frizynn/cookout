@@ -28,17 +28,13 @@ function nextStatus(queued: readonly number[]): readonly [number, readonly numbe
   return [status, rest];
 }
 
-function noCalls(): readonly ReceivedCall[] {
-  return [];
-}
-
 const receiver: Effect.Effect<Receiver, never, Scope.Scope> = Effect.gen(function* startReceiver() {
   const calls = yield* SubscriptionRef.make<readonly ReceivedCall[]>([]);
   const failures = yield* Ref.make<readonly number[]>([]);
 
   const receive = Effect.gen(function* receiveCall() {
     const request = yield* HttpServerRequest.HttpServerRequest;
-    const rawBody = yield* Effect.orElseSucceed(request.text, () => "");
+    const rawBody = yield* Effect.orDie(request.text);
     const body = yield* Effect.option(request.json);
     const status = yield* Ref.modify(failures, nextStatus);
     const call: ReceivedCall = {
@@ -62,7 +58,7 @@ const receiver: Effect.Effect<Receiver, never, Scope.Scope> = Effect.gen(functio
     return SubscriptionRef.changes(calls).pipe(
       Stream.filter((received) => received.length >= count),
       Stream.runHead,
-      Effect.map(Option.getOrElse(noCalls)),
+      Effect.map(Option.getOrThrow),
     );
   }
 

@@ -80,6 +80,15 @@ it.effect("the CLI says so when COOKOUT_URL is not set", () =>
   }),
 );
 
+it.effect("the CLI prints its help and exits 1 when no command is given", () =>
+  Effect.gen(function* noCommand() {
+    const result = yield* runCookout({ args: [], env: {} });
+
+    expect(result).toMatchObject({ exitCode: EXIT_FAILURE });
+    expect(result.stdout).toContain("identity");
+  }),
+);
+
 it.effect("the CLI refuses an unknown command with a usage error", () =>
   Effect.gen(function* unknownCommand() {
     const result = yield* runCookout({ args: ["identity", "explode"], env: { COOKOUT_URL: "http://127.0.0.1:1" } });

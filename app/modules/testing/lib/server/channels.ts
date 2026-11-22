@@ -1,5 +1,5 @@
 import type { Channel, ChannelName } from "../../../channels/index.ts";
-import { expect } from "@effect/vitest";
+import { Option } from "effect";
 import { isChannelName } from "../../../channels/index.ts";
 
 interface ChannelFixtureOptions {
@@ -9,10 +9,7 @@ interface ChannelFixtureOptions {
 const CREATED_AT = "2026-01-01T00:00:00.000Z";
 
 function channelName(value: string): ChannelName {
-  if (isChannelName(value)) {
-    return value;
-  }
-  return expect.unreachable(`${value} is not a channel name`);
+  return Option.getOrThrow(Option.liftPredicate(value, isChannelName));
 }
 
 function channelFixture(name: string, ...options: readonly ChannelFixtureOptions[]): Channel {
