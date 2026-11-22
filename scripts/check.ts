@@ -9,6 +9,7 @@ const parallel: ReadonlyArray<Check> = [
   { name: "seams", script: "seams" },
   { name: "knip", script: "knip" },
   { name: "validators", script: "validators:check" },
+  { name: "docs", script: "docs" },
   { name: "tests", script: "test" },
 ];
 const afterTests: ReadonlyArray<Check> = [{ name: "format", script: "format:check" }];

@@ -1,0 +1,3 @@
+# 0003: Admin is a flag on an identity
+
+2026-11-22. Someone has to create identities, and the board needs a first one to start with. Admin is a flag on an ordinary identity, not a separate kind of account or a shared secret: on first boot, a store with no identities gets an `admin` identity, and `cookout serve` prints its token once. Admin-only actions from anyone else are 403 `admin_only`, and the last admin can't be deleted (409 `last_admin`), so the board never locks itself out. One kind of principal keeps auth to one token check. Source: wiki `chief-of-staff/cookout/decision-spec-defaults.md` (2026-11-22, answer 2), building on `chief-of-staff/cookout/decision-auth.md` (2026-11-22, a token per identity).

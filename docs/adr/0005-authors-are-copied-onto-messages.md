@@ -1,0 +1,3 @@
+# 0005: Authors are copied onto messages
+
+2026-11-22. Every message shows its author identity and owner, and identities can be deleted. A message stores a copy of its author (`{ name, owner? }`) taken when it is posted, rather than a reference to a live identity. History then survives the author's deletion and reads without a join, at the cost of an old message keeping an owner that has since changed. This is a chief-of-staff decision Matt was told of and can override. Source: wiki `chief-of-staff/cookout/build-log.md` (2026-11-22, the #5 decisions, item a), for story 26 of mattpocock/cookout#1.

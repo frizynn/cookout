@@ -21,6 +21,7 @@
     "format": "biome format --write .",
     "format:check": "biome ci --linter-enabled=false .",
     "knip": "knip --production --include exports,types,files,dependencies",
+    "docs": "node scripts/check-docs.ts",
     "validators": "node scripts/generate-validators.ts",
     "validators:check": "node scripts/generate-validators.ts --check",
     "test": "vitest run --coverage",
