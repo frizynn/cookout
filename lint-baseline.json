@@ -151,7 +151,6 @@
   "app/modules/sdk/lib/request.ts eslint(id-length)": 3,
   "app/modules/sdk/lib/request.ts eslint(no-ternary)": 2,
   "app/modules/sdk/lib/request.ts eslint(no-undefined)": 1,
-  "app/modules/sdk/lib/request.ts eslint(sort-imports)": 1,
   "app/modules/sdk/lib/request.ts eslint(sort-keys)": 4,
   "app/modules/sdk/lib/request.ts typescript(consistent-type-definitions)": 2,
   "app/modules/sdk/lib/request.ts typescript(explicit-function-return-type)": 1,

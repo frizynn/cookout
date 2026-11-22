@@ -188,4 +188,4 @@ function leaseStateFile(session: Session): Effect.Effect<LeaseStateFile, never, 
   return Effect.map(locationOf(session), Option.match({ onNone: () => noStateFolder, onSome: fileAt }));
 }
 
-export { type LeaseState, type LeaseStateFile, type Needs as LeaseStateNeeds, leaseStateFile };
+export { type LeaseState, type LeaseStateFailure, type LeaseStateFile, type Needs as LeaseStateNeeds, leaseStateFile };

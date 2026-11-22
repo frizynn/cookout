@@ -1,12 +1,15 @@
-import type { CookoutClient, CookoutClientOptions } from "../../../../sdk/index.ts";
+import type { CookoutClient, CookoutClientOptions, CookoutErrorCode } from "../../../../sdk/index.ts";
 import { CookoutError, createCookoutClient } from "../../../../sdk/index.ts";
 import { Effect, Option, Predicate, String as Str } from "effect";
-import type { LeaseState, LeaseStateFile, LeaseStateNeeds } from "../lease-state.ts";
+import type { LeaseState, LeaseStateFailure, LeaseStateFile, LeaseStateNeeds } from "../lease-state.ts";
 import { cookoutToken, cookoutUrl } from "../../../../config/server.ts";
+import { leaseLost } from "../../../../leases/index.ts";
 import { leaseStateFile } from "../lease-state.ts";
 
+type CallFailureCode = CookoutErrorCode | LeaseStateFailure["code"] | "usage";
+
 interface CallFailure {
-  readonly code: string;
+  readonly code: CallFailureCode;
   readonly message: string;
   readonly status?: number;
   readonly details?: unknown;
@@ -52,7 +55,7 @@ function clientOptions({ token, url }: Connection, saved: Option.Option<LeaseSta
 function onLeaseLost({ file, saved }: Pick<Session, "file" | "saved">) {
   return (failure: CallFailure): Effect.Effect<never, CallFailure> =>
     Effect.gen(function* forgetLostLease() {
-      if (failure.code !== "lease_lost" || Option.isNone(saved)) {
+      if (failure.code !== leaseLost || Option.isNone(saved)) {
         return yield* Effect.fail(failure);
       }
       yield* file.remove;

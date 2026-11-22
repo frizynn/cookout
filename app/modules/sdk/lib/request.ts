@@ -1,10 +1,11 @@
-import type { HttpMethod, HttpRequest, HttpResponse } from "../../http/client.ts";
 import { CookoutError, isServerErrorCode } from "./errors.ts";
+import type { HttpMethod, HttpRequest, HttpResponse } from "../../http/client.ts";
+import { leaseHeader, leaseLost } from "../../leases/index.ts";
+import type { CookoutErrorCode } from "./errors.ts";
 import type { HeldLease } from "./held-lease.ts";
 import type { LeaseId } from "../../leases/index.ts";
 import { heldLease } from "./held-lease.ts";
 import { isErrorResponse } from "./generated/validators.js";
-import { leaseHeader } from "../../leases/index.ts";
 import { readCookoutConnection } from "../../config/index.ts";
 import { request } from "../../http/client.ts";
 
@@ -28,8 +29,8 @@ function withLease(headers: Readonly<Record<string, string>>, lease: HeldLease):
   return headers;
 }
 
-function forgetLostLease(lease: HeldLease, code: string): void {
-  if (code === "lease_lost") {
+function forgetLostLease(lease: HeldLease, code: CookoutErrorCode): void {
+  if (code === leaseLost) {
     lease.drop();
   }
 }
