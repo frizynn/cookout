@@ -3,4 +3,4 @@ export const packageName = "@ai-hero/cookout-server";
 
 export { startServer } from "./server.ts";
 export type { Clock, RunningServer, ServerOptions } from "./server.ts";
-export { hashToken, randomToken } from "./tokens.ts";
+export { hashToken, randomLeaseId, randomToken } from "./tokens.ts";

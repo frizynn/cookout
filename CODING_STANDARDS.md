@@ -115,7 +115,9 @@ and a fake webhook receiver (`webhooks.calls`, `failNext(count, status)`,
 `waitForCalls(count)`). `await createIdentity(name, { owner, admin })` makes an
 identity as the admin and returns `{ identity, token, client }`, a client
 for that identity. `clientFor(token)` (or `clientFor(undefined)`) is a
-client with any token. `startSecondServer()` boots another server on the
+client with any token; each such client is a separate session for the
+lease (`clientFor(token, { leaseId })` resumes one), and
+`startTestServer({ leaseMilliseconds })` changes the lease length. `startSecondServer()` boots another server on the
 same store, like a restart. Everything closes when the test ends
 (`onTestFinished`), so tests need no `afterEach`. Extend this helper rather
 than starting servers by hand.
@@ -233,6 +235,47 @@ Don't cast (`as`) untrusted data into a type.
   `decodeURIComponent` on a segment yourself: a malformed one (`%E0`) must be
   400 `invalid_path`, not a 500.
 
+## The identity lease
+
+- `POST /v1/lease` `{ as, force? }` is join, `DELETE /v1/lease` is leave.
+  `as` must be the token's own identity (403 `not_your_identity`): a check,
+  not a switch. The lease lasts `leaseMilliseconds` (default 60 s,
+  `defaultLeaseMilliseconds`) after the last request carrying it (wiki
+  `decision-spec-defaults.md`, 2026-11-22, answer 1). It ends *at*
+  `expiresAt`. Lease IDs come from the injected `newLeaseId`
+  (`randomLeaseId` at start-up); time from the injected clock only.
+- A session sends its lease ID in the `cookout-lease` header (`leaseHeader`).
+  On every route but `/v1/lease`, a sent lease ID must be the identity's
+  live lease, and the request renews it; otherwise 409 `lease_lost`, on reads
+  too, so a session that lost the identity to `--force` or expiry hears it
+  on its next request (`watch`, #8, exits loudly on it). Requests without
+  the header never renew anything.
+- Only **ack and watch** need the lease (chief-of-staff decision on
+  cookout#6, 2026-11-22). Posting and reading don't, and the web UI never
+  takes one. A route that needs the lease calls `requireLease(...)` in
+  `server.ts`, which throws 409 `lease_required` when no lease ID was sent.
+  Leave also needs it.
+- Lease errors are all 409 with `details: { heldUntil }`
+  (`leaseConflictDetailsSchema`): `lease_held` (join while another session
+  holds it), `lease_required`, `lease_lost`. `heldUntil` is the live lease's
+  end, or `null` when nobody holds the identity.
+- Adapters: `takeLease`, `renewLease`, `releaseLease`, `findLease`, each one
+  atomic step, given `now` as an ISO string. Deleting an identity drops its
+  lease.
+- The SDK client remembers the lease ID after `join` and sends it on every
+  request until `leave`; it keeps it after a `lease_lost`, so every later
+  call keeps saying so until the session joins again. `createCookoutClient`
+  takes `leaseId` to resume one.
+- The CLI keeps the lease in `<state dir>/leases/<hash of url and token>.json`.
+  The state dir is `COOKOUT_STATE_DIR`, else `$XDG_STATE_HOME/cookout`, else
+  `~/.local/state/cookout`. Two sessions on one machine need separate state
+  dirs, or they share one lease. `leave` deletes the file (also on
+  `lease_lost`). Process tests get a fresh state dir per `runCookout` call
+  unless they pass `COOKOUT_STATE_DIR`. CLI errors print the server's
+  `details` too.
+- "Lease ID" is used as the spec and #6 use it; the term itself is still
+  proposed (see Plain words in names).
+
 ## The CLI
 
 - `runCli(args, io)` in `client` runs every verb except `serve`. It prints
@@ -241,7 +284,8 @@ Don't cast (`as`) untrusted data into a type.
   bad arguments, `url_missing` when `COOKOUT_URL` is unset).
 - Verbs are `<noun> <verb>` (`identity create`, `channel list`, `message
   post`, `thread get`), each one entry in the `verbs` table in `cli.ts` with
-  its positional count and the options it allows. Any other option is a
+  its positional count and the options it allows (`join` and `leave` are
+  single words, as the spec names them). Any other option is a
   usage error. Numbers (`--reply-to`, `--before`, `--limit`) are checked
   as whole numbers; `--data` must be JSON.
 - The SDK and CLI read `COOKOUT_URL` and `COOKOUT_TOKEN` (`createCookoutClient`

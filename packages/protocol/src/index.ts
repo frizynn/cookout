@@ -74,12 +74,28 @@ export type {
   ThreadResponse,
   TopLevelMessage,
 } from "./messages.ts";
+export {
+  defaultLeaseMilliseconds,
+  joinRequestSchema,
+  leaseConflictDetailsSchema,
+  leaseHeader,
+  leaseIdSchema,
+  leasePath,
+  leaseResponseSchema,
+  leaveResponseSchema,
+} from "./leases.ts";
+export type { JoinRequest, LeaseConflictDetails, LeaseResponse, LeaveResponse } from "./leases.ts";
 export type {
   AppendMessageResult,
   ChannelPage,
   DeleteIdentityResult,
   NewMessage,
+  ReleaseLeaseResult,
+  RenewLeaseResult,
   StorageAdapter,
+  StoredLease,
+  TakeLeaseRequest,
+  TakeLeaseResult,
   Thread,
   TokenLookup,
 } from "./storage.ts";

@@ -9,6 +9,14 @@ export function randomToken(): string {
 }
 
 /**
+ * The real lease ID source: `lease_` and 16 random bytes in base64url.
+ * Start-up passes it to `startServer` as `newLeaseId`.
+ */
+export function randomLeaseId(): string {
+  return `lease_${randomBytes(16).toString("base64url")}`;
+}
+
+/**
  * What the store keeps instead of the token. Tokens carry 256 random bits,
  * so a plain SHA-256 is enough; no salt or slow hash is needed.
  */

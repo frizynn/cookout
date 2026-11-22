@@ -6,6 +6,9 @@ import type {
   HealthResponse,
   IdentityResponse,
   IdentityWithTokenResponse,
+  JoinRequest,
+  LeaseResponse,
+  LeaveResponse,
   ListChannelsResponse,
   ListIdentitiesResponse,
   ListMessagesQuery,
@@ -16,6 +19,10 @@ import type {
   ThreadResponse,
 } from "@ai-hero/cookout-protocol";
 import {
+  leaseHeader,
+  leasePath,
+  leaseResponseSchema,
+  leaveResponseSchema,
   channelMessagesPath,
   channelPath,
   channelResponseSchema,
@@ -47,6 +54,11 @@ export type CookoutClientOptions = {
   env?: Record<string, string | undefined>;
   /** Defaults to the global `fetch`. */
   fetch?: typeof fetch;
+  /**
+   * A lease ID from an earlier `join` (the CLI keeps it in its state file).
+   * The client sends it on every request, which renews the lease.
+   */
+  leaseId?: string;
 };
 
 export type CookoutClient = {
@@ -77,6 +89,15 @@ export type CookoutClient = {
   listMessages(channel: string, query?: ListMessagesQuery): Promise<ListMessagesResponse>;
   /** The thread holding the message: its top-level message and every reply, in order. */
   getThread(messageId: MessageId): Promise<ThreadResponse>;
+  /**
+   * Takes the lease on the token's identity (`as` must be its name). From
+   * then on this client sends the lease ID on every request, renewing it.
+   * 409 `lease_held` (with `details.heldUntil`) if another session holds it,
+   * unless `force`, which takes it over.
+   */
+  join(request: JoinRequest): Promise<LeaseResponse>;
+  /** Releases this client's lease, so another session can join at once. Needs the lease (409 `lease_required`). */
+  leave(): Promise<LeaveResponse>;
 };
 
 /**
@@ -107,6 +128,8 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
   const token = options.token ?? (env["COOKOUT_TOKEN"] === "" ? undefined : env["COOKOUT_TOKEN"]);
   const baseUrl = url.replace(/\/+$/, "");
   const doFetch = options.fetch ?? fetch;
+  /** Kept after a 409 `lease_lost`, so every later request says so until the session joins again. */
+  let leaseId = options.leaseId;
 
   async function request<Schema extends z.ZodType>(
     method: string,
@@ -116,6 +139,7 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
   ): Promise<z.infer<Schema>> {
     const headers: Record<string, string> = { accept: "application/json" };
     if (token !== undefined) headers["authorization"] = `Bearer ${token}`;
+    if (leaseId !== undefined) headers[leaseHeader] = leaseId;
     const init: RequestInit = { method, headers };
     if (body !== undefined) {
       headers["content-type"] = "application/json";
@@ -175,5 +199,15 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
       return request("GET", `${channelMessagesPath(channel)}${suffix}`, listMessagesResponseSchema);
     },
     getThread: (messageId) => request("GET", threadPath(messageId), threadResponseSchema),
+    join: async (body) => {
+      const lease = await request("POST", leasePath, leaseResponseSchema, body);
+      leaseId = lease.leaseId;
+      return lease;
+    },
+    leave: async () => {
+      const left = await request("DELETE", leasePath, leaveResponseSchema);
+      leaseId = undefined;
+      return left;
+    },
   };
 }

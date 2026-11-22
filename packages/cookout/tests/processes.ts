@@ -64,9 +64,20 @@ export async function startServeProcess(databasePath: string): Promise<ServeProc
 
 export type CliResult = { exitCode: number; stdout: string; stderr: string };
 
-/** Runs the `cookout` binary as a process with only the given environment variables added. */
+/**
+ * Runs the `cookout` binary as a process with only the given environment
+ * variables added. Without `COOKOUT_STATE_DIR` each run gets a fresh state
+ * folder (a session of its own), so tests never touch the real home folder.
+ * Pass the same `COOKOUT_STATE_DIR` to runs that are one session.
+ */
 export async function runCookout(args: string[], env: Record<string, string>): Promise<CliResult> {
-  const cleanEnv: Record<string, string | undefined> = { ...process.env, COOKOUT_URL: undefined, COOKOUT_TOKEN: undefined, ...env };
+  const cleanEnv: Record<string, string | undefined> = {
+    ...process.env,
+    COOKOUT_URL: undefined,
+    COOKOUT_TOKEN: undefined,
+    COOKOUT_STATE_DIR: env["COOKOUT_STATE_DIR"] ?? (await freshFolder()),
+    ...env,
+  };
   try {
     const { stdout, stderr } = await promisify(execFile)(process.execPath, [cookoutBin, ...args], { env: cleanEnv });
     return { exitCode: 0, stdout, stderr };

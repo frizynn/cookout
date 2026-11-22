@@ -6,6 +6,8 @@ import {
   errorResponseSchema,
   identityResponseSchema,
   identityWithTokenResponseSchema,
+  leaseConflictDetailsSchema,
+  leaseResponseSchema,
   listChannelsResponseSchema,
   listIdentitiesResponseSchema,
   listMessagesResponseSchema,
@@ -98,6 +100,46 @@ it("the CLI makes a channel, posts a message and a reply, and reads the thread b
 
   const page = listMessagesResponseSchema.parse(await json(["message", "list", "grill", "--limit", "1"]));
   expect(page.messages.map((message) => message.id)).toEqual([parent.id]);
+});
+
+it("two CLI sessions with the same token: the second join is refused with heldUntil, join --force takes over", async () => {
+  const { url, adminToken } = await startCookout();
+  const { token } = identityWithTokenResponseSchema.parse(
+    JSON.parse((await runCookout(["identity", "create", "agent"], { COOKOUT_URL: url, COOKOUT_TOKEN: adminToken })).stdout),
+  );
+  const firstSession = { COOKOUT_URL: url, COOKOUT_TOKEN: token, COOKOUT_STATE_DIR: await freshFolder() };
+  const secondSession = { COOKOUT_URL: url, COOKOUT_TOKEN: token, COOKOUT_STATE_DIR: await freshFolder() };
+
+  const joined = await runCookout(["join", "--as", "agent"], firstSession);
+  expect(joined, joined.stderr).toMatchObject({ exitCode: 0 });
+  const lease = leaseResponseSchema.parse(JSON.parse(joined.stdout));
+  // The same session runs `join` again from its state file: it keeps the lease.
+  const again = await runCookout(["join", "--as", "agent"], firstSession);
+  expect(leaseResponseSchema.parse(JSON.parse(again.stdout)).leaseId).toBe(lease.leaseId);
+
+  const refused = await runCookout(["join", "--as", "agent"], secondSession);
+  expect(refused.exitCode).not.toBe(0);
+  const refusal = errorResponseSchema.parse(JSON.parse(refused.stderr)).error;
+  expect(refusal.code).toBe("lease_held");
+  expect(leaseConflictDetailsSchema.parse(refusal.details).heldUntil).toEqual(expect.any(String));
+
+  const forced = await runCookout(["join", "--as", "agent", "--force"], secondSession);
+  expect(forced, forced.stderr).toMatchObject({ exitCode: 0 });
+
+  // The first session hears that it lost the identity on its next call.
+  const lost = await runCookout(["channel", "list"], firstSession);
+  expect(lost.exitCode).toBe(1);
+  expect(errorResponseSchema.parse(JSON.parse(lost.stderr)).error.code).toBe("lease_lost");
+
+  // The second session leaves, and the first can join straight away.
+  expect(await runCookout(["leave"], secondSession)).toMatchObject({ exitCode: 0 });
+  expect(await runCookout(["join", "--as", "agent"], firstSession)).toMatchObject({ exitCode: 0 });
+});
+
+it("cookout join without --as is a usage error", async () => {
+  const result = await runCookout(["join"], { COOKOUT_URL: "http://127.0.0.1:1", COOKOUT_TOKEN: "cookout_x" });
+  expect(result.exitCode).toBe(1);
+  expect(errorResponseSchema.parse(JSON.parse(result.stderr)).error.code).toBe("usage");
 });
 
 it("the CLI refuses --data that isn't JSON with a usage error", async () => {

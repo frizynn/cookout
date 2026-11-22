@@ -9,12 +9,16 @@ import type {
   Identity,
   IdentityResponse,
   IdentityWithTokenResponse,
+  LeaseConflictDetails,
+  LeaseResponse,
+  LeaveResponse,
   ListChannelsResponse,
   ListIdentitiesResponse,
   ListMessagesResponse,
   MessageResponse,
   NewMessage,
   StorageAdapter,
+  StoredLease,
   ThreadResponse,
 } from "@ai-hero/cookout-protocol";
 import {
@@ -22,6 +26,13 @@ import {
   channelsPath,
   createChannelRequestSchema,
   createIdentityRequestSchema,
+  defaultLeaseMilliseconds,
+  joinRequestSchema,
+  leaseConflictDetailsSchema,
+  leaseHeader,
+  leasePath,
+  leaseResponseSchema,
+  leaveResponseSchema,
   errorResponseSchema,
   healthPath,
   healthResponseSchema,
@@ -48,6 +59,10 @@ export type ServerOptions = {
   clock: Clock;
   /** Makes a new random token (at least 256 bits). Start-up passes `randomToken`. */
   newToken: () => string;
+  /** Makes a new random lease ID. Start-up passes `randomLeaseId`. */
+  newLeaseId: () => string;
+  /** How long a lease lasts after the last request that carried it. Default 60 s. */
+  leaseMilliseconds?: number;
   /** 0 picks a free port. */
   port: number;
   /** Default `0.0.0.0`. */
@@ -153,6 +168,53 @@ function messageNotFound(id: number): HttpError {
   return new HttpError(404, { code: "message_not_found", message: `There is no message ${id}.` });
 }
 
+/** The `cookout-lease` header, if the request sent one. An empty one counts as sent (and is never live). */
+function sentLeaseId(request: IncomingMessage): string | undefined {
+  const header = request.headers[leaseHeader];
+  return Array.isArray(header) ? header.join(",") : header;
+}
+
+function sendLease(response: ServerResponse, lease: StoredLease): void {
+  const body: LeaseResponse = { leaseId: lease.leaseId, expiresAt: lease.expiresAt };
+  sendJson(response, 200, leaseResponseSchema.parse(body));
+}
+
+/** A 409 lease error with `{ heldUntil }` in its details (`leaseConflictDetailsSchema`). */
+function leaseConflict(code: string, heldUntil: string | null, { message }: { message: string }): HttpError {
+  const details: LeaseConflictDetails = { heldUntil };
+  return new HttpError(409, { code, message, details: leaseConflictDetailsSchema.parse(details) });
+}
+
+/** The lease ID sent is not the identity's live lease: taken over, expired or released. */
+function leaseLost(caller: Identity, heldUntil: string | null): HttpError {
+  return leaseConflict("lease_lost", heldUntil, {
+    message:
+      heldUntil === null
+        ? `This session's lease on ${caller.name} has ended (expired or released). Join again.`
+        : `Another session took over ${caller.name}; its lease runs until ${heldUntil}. This session no longer holds it.`,
+  });
+}
+
+/**
+ * For actions that need the lease (leave; ack and watch from #7 and #8): the
+ * request must carry a lease ID, or this throws 409 `lease_required` with when
+ * the current holder's lease ends. A lease ID that is sent has already been
+ * checked and renewed for every route but `/v1/lease`. The web UI never takes
+ * a lease, so whatever it may do must not call this.
+ */
+async function requireLease(
+  storage: StorageAdapter,
+  caller: Identity,
+  leaseIdSent: string | undefined,
+  now: Date,
+): Promise<string> {
+  if (leaseIdSent !== undefined) return leaseIdSent;
+  const current = await storage.findLease(caller.name, now.toISOString());
+  throw leaseConflict("lease_required", current?.expiresAt ?? null, {
+    message: `This needs the lease on ${caller.name}. Run \`cookout join --as ${caller.name}\` first.`,
+  });
+}
+
 /**
  * Matches a route pattern and returns its captured path segments, already
  * percent-decoded (index 0 is the whole path). Every route with a parameter
@@ -210,6 +272,7 @@ async function handle(options: ServerOptions, request: IncomingMessage, response
     path !== identitiesPath &&
     path !== channelsPath &&
     path !== messagesPath &&
+    path !== leasePath &&
     identityRoute === null &&
     channelRoute === null &&
     threadRoute === null
@@ -219,6 +282,71 @@ async function handle(options: ServerOptions, request: IncomingMessage, response
 
   // Every route below needs a token.
   const caller = await authenticate(storage, request);
+
+  const now = clock.now();
+  const leaseEnd = new Date(now.getTime() + (options.leaseMilliseconds ?? defaultLeaseMilliseconds)).toISOString();
+  const leaseIdSent = sentLeaseId(request);
+
+  if (path === leasePath) {
+    if (method === "POST") {
+      const parsed = parseRequest(joinRequestSchema, await readJson(request));
+      if (parsed.as !== caller.name) {
+        throw new HttpError(403, {
+          code: "not_your_identity",
+          message: `This token belongs to ${caller.name}, not ${parsed.as}. Join as the token's own identity.`,
+        });
+      }
+      // The holding session joining again keeps its lease (and renews it).
+      if (leaseIdSent !== undefined) {
+        const renewed = await storage.renewLease({
+          identity: caller.name,
+          leaseId: leaseIdSent,
+          now: now.toISOString(),
+          expiresAt: leaseEnd,
+        });
+        if (renewed.status === "renewed") {
+          sendLease(response, renewed.lease);
+          return;
+        }
+      }
+      const taken = await storage.takeLease({
+        identity: caller.name,
+        leaseId: options.newLeaseId(),
+        now: now.toISOString(),
+        expiresAt: leaseEnd,
+        force: parsed.force === true,
+      });
+      if (taken.status === "held") {
+        throw leaseConflict("lease_held", taken.heldUntil, {
+          message: `Another session holds ${caller.name} until ${taken.heldUntil}. Wait, or take it over with --force.`,
+        });
+      }
+      sendLease(response, taken.lease);
+      return;
+    }
+    if (method === "DELETE") {
+      const leaseId = await requireLease(storage, caller, leaseIdSent, now);
+      const released = await storage.releaseLease({ identity: caller.name, leaseId, now: now.toISOString() });
+      if (released.status === "lost") throw leaseLost(caller, released.heldUntil);
+      const body: LeaveResponse = { released: true };
+      sendJson(response, 200, leaveResponseSchema.parse(body));
+      return;
+    }
+    throw notAllowed(method, path);
+  }
+
+  // A lease ID sent on any other request must be the identity's live lease,
+  // and the request renews it. A session that lost its lease hears it here,
+  // on whatever it sends next, never by silence.
+  if (leaseIdSent !== undefined) {
+    const renewed = await storage.renewLease({
+      identity: caller.name,
+      leaseId: leaseIdSent,
+      now: now.toISOString(),
+      expiresAt: leaseEnd,
+    });
+    if (renewed.status === "lost") throw leaseLost(caller, renewed.heldUntil);
+  }
 
   if (path === channelsPath) {
     if (method === "GET") {

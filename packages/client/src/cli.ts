@@ -2,6 +2,8 @@ import { parseArgs } from "node:util";
 import type { ListMessagesQuery, PostMessageRequest } from "@ai-hero/cookout-protocol";
 import type { CookoutClient } from "./sdk.ts";
 import { CookoutError, createCookoutClient } from "./sdk.ts";
+import type { LeaseStateFile } from "./lease-state.ts";
+import { leaseStateFile, stateDirectory } from "./lease-state.ts";
 
 export type CliIo = {
   /** Where `COOKOUT_URL` and `COOKOUT_TOKEN` are read from. */
@@ -24,8 +26,12 @@ const usage = `Usage:
   cookout message post <channel> <text> [--data <json>] [--reply-to <message-id>]
   cookout message list <channel> [--before <message-id>] [--limit <n>]
   cookout thread get <message-id>
+  cookout join --as <name> [--force]
+  cookout leave
 
-Reads COOKOUT_URL and COOKOUT_TOKEN. Prints JSON on stdout; errors are JSON on stderr.`;
+Reads COOKOUT_URL and COOKOUT_TOKEN. Prints JSON on stdout; errors are JSON on stderr.
+\`join\` keeps the lease ID in COOKOUT_STATE_DIR (default ~/.local/state/cookout) and
+every later call sends it, which keeps the lease alive. Give each session its own folder.`;
 
 class UsageError extends Error {}
 
@@ -36,19 +42,28 @@ const options = {
   "reply-to": { type: "string" },
   before: { type: "string" },
   limit: { type: "string" },
+  as: { type: "string" },
+  force: { type: "boolean" },
   help: { type: "boolean", short: "h" },
 } as const;
 
-const optionNames = ["owner", "description", "data", "reply-to", "before", "limit"] as const;
+const optionNames = ["owner", "description", "data", "reply-to", "before", "limit", "as", "force"] as const;
 type OptionName = (typeof optionNames)[number];
-type Values = Partial<Record<OptionName, string>>;
+type Values = Partial<Record<Exclude<OptionName, "force">, string>> & { force?: boolean };
+
+/** What a verb knows about the session beyond its client. */
+type Session = {
+  /** The lease state file for this server and token, or `undefined` without a token. */
+  leaseState: LeaseStateFile | undefined;
+  url: string;
+};
 
 /** One verb: how many positionals it takes, which options it allows, and what it does. */
 type Verb = {
   words: readonly string[];
   args: number;
   options: readonly OptionName[];
-  run(client: CookoutClient, args: string[], values: Values): Promise<unknown>;
+  run(client: CookoutClient, args: string[], values: Values, session: Session): Promise<unknown>;
 };
 
 /** A whole number from an option or argument, or a usage error. */
@@ -115,6 +130,33 @@ const verbs: readonly Verb[] = [
     options: [],
     run: (client, [id = ""]) => client.getThread(wholeNumber("<message-id>", id)),
   },
+  {
+    words: ["join"],
+    args: 0,
+    options: ["as", "force"],
+    run: async (client, _args, values, session) => {
+      if (values.as === undefined) throw new UsageError("`cookout join` needs --as <name>, the token's own identity.");
+      const lease = await client.join(values.force === true ? { as: values.as, force: true } : { as: values.as });
+      session.leaseState?.write({ identity: values.as, url: session.url, ...lease });
+      return lease;
+    },
+  },
+  {
+    words: ["leave"],
+    args: 0,
+    options: [],
+    run: async (client, _args, _values, session) => {
+      try {
+        const left = await client.leave();
+        session.leaseState?.remove();
+        return left;
+      } catch (error) {
+        // The lease is gone either way; forget it, and still say it was lost.
+        if (error instanceof CookoutError && error.code === "lease_lost") session.leaseState?.remove();
+        throw error;
+      }
+    },
+  },
 ];
 
 /**
@@ -122,8 +164,11 @@ const verbs: readonly Verb[] = [
  * package handles). Prints the JSON answer on stdout and returns the exit code.
  */
 export async function runCli(args: readonly string[], io: CliIo): Promise<number> {
-  const printError = (code: string, message: string, status?: number): void => {
-    io.stderr(`${JSON.stringify({ error: status === undefined ? { code, message } : { code, message, status } })}\n`);
+  const printError = (code: string, message: string, status?: number, details?: unknown): void => {
+    const error: Record<string, unknown> = { code, message };
+    if (status !== undefined) error["status"] = status;
+    if (details !== undefined) error["details"] = details;
+    io.stderr(`${JSON.stringify({ error })}\n`);
   };
 
   try {
@@ -137,7 +182,7 @@ export async function runCli(args: readonly string[], io: CliIo): Promise<number
     return 0;
   } catch (error) {
     if (error instanceof CookoutError) {
-      printError(error.code, error.message, error.status === 0 ? undefined : error.status);
+      printError(error.code, error.message, error.status === 0 ? undefined : error.status, error.details);
     } else if (error instanceof UsageError || (error instanceof TypeError && "code" in error)) {
       // parseArgs throws TypeErrors with a `code` for unknown or bad options.
       printError("usage", `${error.message}\n\n${usage}`);
@@ -160,6 +205,17 @@ async function run(positionals: string[], values: Values, io: CliIo): Promise<un
       throw new UsageError(`--${name} is not an option of \`cookout ${verb.words.join(" ")}\`.`);
     }
   }
-  const client = createCookoutClient(io.fetch === undefined ? { env: io.env } : { env: io.env, fetch: io.fetch });
-  return verb.run(client, positionals.slice(verb.words.length), values);
+  const url = (io.env["COOKOUT_URL"] ?? "").replace(/\/+$/, "");
+  const token = io.env["COOKOUT_TOKEN"];
+  const leaseState =
+    url === "" || token === undefined || token === "" ? undefined : leaseStateFile(stateDirectory(io.env), url, token);
+  // A saved lease ID goes on every call: it renews the lease, and a lease
+  // lost to `join --force` or expiry comes back as 409 `lease_lost`.
+  const leaseId = leaseState?.read()?.leaseId;
+  const client = createCookoutClient({
+    env: io.env,
+    ...(io.fetch === undefined ? {} : { fetch: io.fetch }),
+    ...(leaseId === undefined ? {} : { leaseId }),
+  });
+  return verb.run(client, positionals.slice(verb.words.length), values, { leaseState, url });
 }

@@ -6,8 +6,12 @@ import type {
   DeleteIdentityResult,
   Identity,
   MessageId,
+  ReleaseLeaseResult,
+  RenewLeaseResult,
   Reply,
   StorageAdapter,
+  StoredLease,
+  TakeLeaseResult,
   TokenLookup,
   TopLevelMessage,
 } from "@ai-hero/cookout-protocol";
@@ -48,6 +52,9 @@ const channelRow = z
     if (row.description !== null) channel.description = row.description;
     return channelSchema.parse(channel);
   });
+const leaseRow = z
+  .object({ identity_name: z.string(), lease_id: z.string(), expires_at: z.iso.datetime() })
+  .transform((row): StoredLease => ({ identity: row.identity_name, leaseId: row.lease_id, expiresAt: row.expires_at }));
 /** Where a message sits: enough to resolve a reply's thread. */
 const placeRow = z.object({ id: messageIdSchema, channel: z.string(), reply_to: messageIdSchema.nullable() });
 const messageColumns = z.object({
@@ -134,7 +141,21 @@ export function openSqliteStorage(options: SqliteStorageOptions): StorageAdapter
   const selectChannelPage = db.prepare(
     `${topLevelSelect} WHERE m.channel = ? AND m.reply_to IS NULL AND m.id < ? ORDER BY m.id DESC LIMIT ?`,
   );
+  const selectLease = db.prepare("SELECT identity_name, lease_id, expires_at FROM leases WHERE identity_name = ?");
+  const upsertLease = db.prepare(
+    `INSERT INTO leases (identity_name, lease_id, expires_at) VALUES (?, ?, ?)
+     ON CONFLICT (identity_name) DO UPDATE SET lease_id = excluded.lease_id, expires_at = excluded.expires_at`,
+  );
+  const deleteLease = db.prepare("DELETE FROM leases WHERE identity_name = ?");
   let closed = false;
+
+  /** The identity's lease if it is still live at `now` (it ends at `expires_at`). */
+  function liveLease(identity: string, now: string): StoredLease | undefined {
+    const row = selectLease.get(identity);
+    if (row === undefined) return undefined;
+    const lease = leaseRow.parse(row);
+    return Date.parse(lease.expiresAt) <= Date.parse(now) ? undefined : lease;
+  }
 
   function assertOpen(): void {
     if (closed) throw new Error("The SQLite store is closed.");
@@ -283,6 +304,44 @@ export function openSqliteStorage(options: SqliteStorageOptions): StorageAdapter
         parent: topLevelRow.parse(selectTopLevel.get(parentId)),
         replies: selectReplies.all(parentId).map((reply) => replyRow.parse(reply)),
       };
+    },
+    async takeLease(request) {
+      assertOpen();
+      return inTransaction((): TakeLeaseResult => {
+        const current = liveLease(request.identity, request.now);
+        if (current !== undefined && !request.force) return { status: "held", heldUntil: current.expiresAt };
+        upsertLease.run(request.identity, request.leaseId, request.expiresAt);
+        return {
+          status: "taken",
+          lease: { identity: request.identity, leaseId: request.leaseId, expiresAt: request.expiresAt },
+        };
+      });
+    },
+    async renewLease(request) {
+      assertOpen();
+      return inTransaction((): RenewLeaseResult => {
+        const current = liveLease(request.identity, request.now);
+        if (current === undefined || current.leaseId !== request.leaseId) {
+          return { status: "lost", heldUntil: current?.expiresAt ?? null };
+        }
+        upsertLease.run(request.identity, request.leaseId, request.expiresAt);
+        return { status: "renewed", lease: { ...current, expiresAt: request.expiresAt } };
+      });
+    },
+    async releaseLease(request) {
+      assertOpen();
+      return inTransaction((): ReleaseLeaseResult => {
+        const current = liveLease(request.identity, request.now);
+        if (current === undefined || current.leaseId !== request.leaseId) {
+          return { status: "lost", heldUntil: current?.expiresAt ?? null };
+        }
+        deleteLease.run(request.identity);
+        return { status: "released" };
+      });
+    },
+    async findLease(identity, now) {
+      assertOpen();
+      return liveLease(identity, now);
     },
     async checkHealth(): Promise<void> {
       assertOpen();

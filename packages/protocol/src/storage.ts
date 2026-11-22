@@ -1,5 +1,5 @@
 import type { Channel } from "./channels.ts";
-import type { Identity } from "./identities.ts";
+import type { Identity, IdentityName } from "./identities.ts";
 import type { ListMessagesResponse, Message, MessageId, ThreadResponse } from "./messages.ts";
 
 /** A message to append: everything but its ID and reply counts, which the store sets. */
@@ -35,6 +35,34 @@ export type DeleteIdentityResult =
   | { status: "deleted"; identity: Identity }
   | { status: "not_found" }
   | { status: "last_admin" };
+
+/** An identity's lease as the store keeps it. Times are ISO 8601 UTC. */
+export type StoredLease = { identity: IdentityName; leaseId: string; expiresAt: string };
+
+/**
+ * A lease is live while `now` is before its `expiresAt`; from `expiresAt` on
+ * it has ended, and the store treats the identity as not held.
+ */
+export type TakeLeaseRequest = {
+  identity: IdentityName;
+  /** The new lease ID, made by the server's injected ID source. */
+  leaseId: string;
+  now: string;
+  expiresAt: string;
+  /** Takes the lease even if another live lease holds the identity. */
+  force: boolean;
+};
+
+/** What `takeLease` did. `held` changed nothing. */
+export type TakeLeaseResult = { status: "taken"; lease: StoredLease } | { status: "held"; heldUntil: string };
+
+/**
+ * What `renewLease` and `releaseLease` did. `lost` (the lease ID is not the
+ * identity's live lease) changed nothing; `heldUntil` is when the live lease
+ * ends, or `null` if nobody holds the identity.
+ */
+export type RenewLeaseResult = { status: "renewed"; lease: StoredLease } | { status: "lost"; heldUntil: string | null };
+export type ReleaseLeaseResult = { status: "released" } | { status: "lost"; heldUntil: string | null };
 
 /**
  * Where the server keeps its data. It speaks in domain operations, never in
@@ -93,6 +121,18 @@ export interface StorageAdapter {
   listChannelMessages(channel: string, page: { before?: MessageId; limit: number }): Promise<ChannelPage | undefined>;
   /** The thread holding the message (top-level or reply), or `undefined` if there is no such message. */
   getThread(messageId: MessageId): Promise<Thread | undefined>;
+  /**
+   * Gives the identity a new lease, in one step, unless another live lease
+   * holds it and `force` is false. Taking over replaces the old lease ID,
+   * which stops working at once.
+   */
+  takeLease(request: TakeLeaseRequest): Promise<TakeLeaseResult>;
+  /** Moves the lease's `expiresAt` to the one given, only if `leaseId` is the identity's live lease at `now`. In one step. */
+  renewLease(request: { identity: IdentityName; leaseId: string; now: string; expiresAt: string }): Promise<RenewLeaseResult>;
+  /** Ends the lease, only if `leaseId` is the identity's live lease at `now`. In one step. */
+  releaseLease(request: { identity: IdentityName; leaseId: string; now: string }): Promise<ReleaseLeaseResult>;
+  /** The identity's live lease at `now`, or `undefined`. Deleting an identity drops its lease. */
+  findLease(identity: IdentityName, now: string): Promise<StoredLease | undefined>;
   /** Resolves if the store can be used, rejects if not. Backs `GET /v1/health`. */
   checkHealth(): Promise<void>;
   /** Releases the store. Later calls reject. Closing twice is fine. */

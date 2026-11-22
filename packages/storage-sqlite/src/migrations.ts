@@ -48,6 +48,13 @@ const migrations: readonly string[] = [
    ) STRICT;
    CREATE INDEX top_level_messages_by_channel ON messages (channel, id) WHERE reply_to IS NULL;
    CREATE INDEX replies_by_thread ON messages (reply_to, id) WHERE reply_to IS NOT NULL;`,
+  // 4: one lease row per identity, live or ended (it ends at `expires_at`,
+  // ISO 8601 UTC). Deleting the identity drops it.
+  `CREATE TABLE leases (
+     identity_name TEXT PRIMARY KEY REFERENCES identities (name) ON DELETE CASCADE,
+     lease_id TEXT NOT NULL,
+     expires_at TEXT NOT NULL
+   ) STRICT;`,
 ];
 
 const userVersionRow = z.object({ user_version: z.number().int().nonnegative() });

@@ -433,5 +433,127 @@ export function testStorageAdapter(adapterName: string, openFresh: OpenFreshStor
         await expect(storage.listChannels()).rejects.toThrow();
       });
     });
+
+    describe("identity leases", () => {
+      const t0 = "2026-01-01T00:00:00.000Z";
+      const t30 = "2026-01-01T00:00:30.000Z";
+      const t60 = "2026-01-01T00:01:00.000Z";
+      const t90 = "2026-01-01T00:01:30.000Z";
+      const leaseOne = "lease-one-0123456789";
+      const leaseTwo = "lease-two-0123456789";
+
+      async function withIdentity(): Promise<StorageAdapter> {
+        const storage = await open();
+        await storage.createIdentity(identity("agent"), hashA);
+        await storage.createIdentity(identity("other"), hashB);
+        return storage;
+      }
+
+      const take = (storage: StorageAdapter, leaseId: string, now: string, expiresAt: string, force = false) =>
+        storage.takeLease({ identity: "agent", leaseId, now, expiresAt, force });
+
+      it("an identity nobody holds can be leased, and the lease is found until it ends", async () => {
+        const storage = await withIdentity();
+        expect(await storage.findLease("agent", t0)).toBeUndefined();
+        expect(await take(storage, leaseOne, t0, t60)).toEqual({
+          status: "taken",
+          lease: { identity: "agent", leaseId: leaseOne, expiresAt: t60 },
+        });
+        expect(await storage.findLease("agent", t30)).toEqual({ identity: "agent", leaseId: leaseOne, expiresAt: t60 });
+        expect(await storage.findLease("agent", t60)).toBeUndefined();
+        expect(await storage.findLease("other", t30)).toBeUndefined();
+      });
+
+      it("a live lease refuses a second take and says until when", async () => {
+        const storage = await withIdentity();
+        await take(storage, leaseOne, t0, t60);
+        expect(await take(storage, leaseTwo, t30, t90)).toEqual({ status: "held", heldUntil: t60 });
+        expect(await storage.findLease("agent", t30)).toMatchObject({ leaseId: leaseOne });
+      });
+
+      it("an ended lease can be taken again", async () => {
+        const storage = await withIdentity();
+        await take(storage, leaseOne, t0, t60);
+        expect(await take(storage, leaseTwo, t60, t90)).toMatchObject({ status: "taken" });
+        expect(await storage.findLease("agent", t60)).toMatchObject({ leaseId: leaseTwo });
+      });
+
+      it("a forced take replaces a live lease, and the old lease ID stops working", async () => {
+        const storage = await withIdentity();
+        await take(storage, leaseOne, t0, t60);
+        expect(await take(storage, leaseTwo, t30, t90, true)).toMatchObject({ status: "taken" });
+        expect(await storage.renewLease({ identity: "agent", leaseId: leaseOne, now: t30, expiresAt: t90 })).toEqual({
+          status: "lost",
+          heldUntil: t90,
+        });
+        expect(await storage.releaseLease({ identity: "agent", leaseId: leaseOne, now: t30 })).toEqual({
+          status: "lost",
+          heldUntil: t90,
+        });
+        expect(await storage.findLease("agent", t30)).toMatchObject({ leaseId: leaseTwo });
+      });
+
+      it("renewing the live lease moves its end", async () => {
+        const storage = await withIdentity();
+        await take(storage, leaseOne, t0, t60);
+        expect(await storage.renewLease({ identity: "agent", leaseId: leaseOne, now: t30, expiresAt: t90 })).toEqual({
+          status: "renewed",
+          lease: { identity: "agent", leaseId: leaseOne, expiresAt: t90 },
+        });
+        expect(await storage.findLease("agent", t60)).toMatchObject({ leaseId: leaseOne, expiresAt: t90 });
+      });
+
+      it("an ended lease cannot be renewed", async () => {
+        const storage = await withIdentity();
+        await take(storage, leaseOne, t0, t30);
+        expect(await storage.renewLease({ identity: "agent", leaseId: leaseOne, now: t30, expiresAt: t90 })).toEqual({
+          status: "lost",
+          heldUntil: null,
+        });
+        expect(await storage.findLease("agent", t30)).toBeUndefined();
+      });
+
+      it("a lease ID only works for its own identity", async () => {
+        const storage = await withIdentity();
+        await take(storage, leaseOne, t0, t60);
+        expect(await storage.renewLease({ identity: "other", leaseId: leaseOne, now: t30, expiresAt: t90 })).toEqual({
+          status: "lost",
+          heldUntil: null,
+        });
+        expect(await storage.releaseLease({ identity: "other", leaseId: leaseOne, now: t30 })).toEqual({
+          status: "lost",
+          heldUntil: null,
+        });
+        expect(await storage.findLease("agent", t30)).toMatchObject({ leaseId: leaseOne });
+      });
+
+      it("releasing the live lease lets the next take succeed at once", async () => {
+        const storage = await withIdentity();
+        await take(storage, leaseOne, t0, t60);
+        expect(await storage.releaseLease({ identity: "agent", leaseId: leaseOne, now: t30 })).toEqual({ status: "released" });
+        expect(await storage.findLease("agent", t30)).toBeUndefined();
+        expect(await storage.releaseLease({ identity: "agent", leaseId: leaseOne, now: t30 })).toEqual({
+          status: "lost",
+          heldUntil: null,
+        });
+        expect(await take(storage, leaseTwo, t30, t90)).toMatchObject({ status: "taken" });
+      });
+
+      it("deleting an identity drops its lease", async () => {
+        const storage = await withIdentity();
+        await take(storage, leaseOne, t0, t60);
+        await storage.deleteIdentity("agent");
+        expect(await storage.findLease("agent", t30)).toBeUndefined();
+      });
+
+      it("leases cannot be used in a closed store", async () => {
+        const storage = await withIdentity();
+        await storage.close();
+        await expect(take(storage, leaseOne, t0, t60)).rejects.toThrow();
+        await expect(storage.findLease("agent", t0)).rejects.toThrow();
+        await expect(storage.renewLease({ identity: "agent", leaseId: leaseOne, now: t0, expiresAt: t60 })).rejects.toThrow();
+        await expect(storage.releaseLease({ identity: "agent", leaseId: leaseOne, now: t0 })).rejects.toThrow();
+      });
+    });
   });
 }

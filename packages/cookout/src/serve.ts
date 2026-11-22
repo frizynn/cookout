@@ -1,4 +1,4 @@
-import { randomToken, startServer } from "@ai-hero/cookout-server";
+import { randomLeaseId, randomToken, startServer } from "@ai-hero/cookout-server";
 import type { Clock } from "@ai-hero/cookout-server";
 import { openSqliteStorage } from "@ai-hero/cookout-storage-sqlite";
 
@@ -35,6 +35,7 @@ export async function serve(options: ServeOptions): Promise<RunningCookout> {
       storage,
       clock: systemClock,
       newToken: randomToken,
+      newLeaseId: randomLeaseId,
       port: options.port,
       host: options.host,
     });

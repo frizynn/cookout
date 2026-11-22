@@ -5,6 +5,7 @@ import type {
   NewMessage,
   Reply,
   StorageAdapter,
+  StoredLease,
   TokenLookup,
   TopLevelMessage,
 } from "@ai-hero/cookout-protocol";
@@ -44,6 +45,16 @@ export function createMemoryStorage(): StorageAdapter {
   /** Token hash to the identity name it was issued to. */
   const activeTokens = new Map<string, string>();
   const revokedTokens = new Set<string>();
+
+  /** Identity name to its lease, live or ended. */
+  const leases = new Map<string, StoredLease>();
+
+  /** The identity's lease if it is still live at `now` (it ends at `expiresAt`). */
+  function liveLease(identity: string, now: string): StoredLease | undefined {
+    const lease = leases.get(identity);
+    if (lease === undefined || Date.parse(lease.expiresAt) <= Date.parse(now)) return undefined;
+    return lease;
+  }
 
   function assertOpen(): void {
     if (closed) throw new Error("The in-memory store is closed.");
@@ -115,6 +126,7 @@ export function createMemoryStorage(): StorageAdapter {
       }
       revokeTokensOf(name);
       identities.delete(name);
+      leases.delete(name);
       return { status: "deleted", identity: copy(identity) };
     },
     async createChannel(channel) {
@@ -180,6 +192,38 @@ export function createMemoryStorage(): StorageAdapter {
         return asReply({ ...reply, replyTo: reply.replyTo });
       });
       return { parent: asTopLevel(parent), replies };
+    },
+    async takeLease(request) {
+      assertOpen();
+      const current = liveLease(request.identity, request.now);
+      if (current !== undefined && !request.force) return { status: "held", heldUntil: current.expiresAt };
+      const lease: StoredLease = { identity: request.identity, leaseId: request.leaseId, expiresAt: request.expiresAt };
+      leases.set(request.identity, lease);
+      return { status: "taken", lease: { ...lease } };
+    },
+    async renewLease(request) {
+      assertOpen();
+      const current = liveLease(request.identity, request.now);
+      if (current === undefined || current.leaseId !== request.leaseId) {
+        return { status: "lost", heldUntil: current?.expiresAt ?? null };
+      }
+      const lease: StoredLease = { ...current, expiresAt: request.expiresAt };
+      leases.set(request.identity, lease);
+      return { status: "renewed", lease: { ...lease } };
+    },
+    async releaseLease(request) {
+      assertOpen();
+      const current = liveLease(request.identity, request.now);
+      if (current === undefined || current.leaseId !== request.leaseId) {
+        return { status: "lost", heldUntil: current?.expiresAt ?? null };
+      }
+      leases.delete(request.identity);
+      return { status: "released" };
+    },
+    async findLease(identity, now) {
+      assertOpen();
+      const current = liveLease(identity, now);
+      return current === undefined ? undefined : { ...current };
     },
     async checkHealth(): Promise<void> {
       assertOpen();
