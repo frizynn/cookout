@@ -2,9 +2,9 @@ import { Effect, Schema } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import { isIdentityName, isOwner } from "../../../identities/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
+import type { MemoryState } from "./memory-state.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { StorageUnavailable } from "./errors.ts";
-import type { MemoryState } from "./memory-state.ts";
 
 export type TokenLookup =
   | { readonly status: "active"; readonly identity: Identity }
@@ -25,7 +25,7 @@ type Fails<A> = Effect.Effect<A, StorageUnavailable>;
 export type IdentitiesSection = {
   readonly createIdentity: (identity: Identity, hash: TokenHash) => Fails<"created" | "name_taken">;
   readonly createIdentityIfNoneExist: (identity: Identity, hash: TokenHash) => Fails<boolean>;
-  readonly listIdentities: () => Fails<ReadonlyArray<Identity>>;
+  readonly listIdentities: () => Fails<readonly Identity[]>;
   readonly findIdentityByTokenHash: (hash: TokenHash) => Fails<TokenLookup>;
   readonly replaceToken: (name: IdentityName, hash: TokenHash) => Fails<ReplaceTokenResult>;
   readonly deleteIdentity: (name: IdentityName) => Fails<DeleteIdentityResult>;
@@ -56,7 +56,9 @@ const add = (data: MemoryIdentities, identity: Identity, hash: TokenHash) => {
 const lookUp = (data: MemoryIdentities, hash: TokenHash): TokenLookup => {
   const name = data.activeTokens.get(hash);
   const identity = name === undefined ? undefined : data.identities.get(name);
-  if (identity !== undefined) return { status: "active", identity: { ...identity } };
+  if (identity !== undefined) {
+    return { identity: { ...identity }, status: "active" };
+  }
   return data.revokedTokens.has(hash) ? { status: "revoked" } : { status: "unknown" };
 };
 
@@ -65,43 +67,49 @@ const isLastAdmin = (data: MemoryIdentities, identity: Identity) =>
 
 const remove = (data: MemoryIdentities, name: IdentityName): DeleteIdentityResult => {
   const identity = data.identities.get(name);
-  if (identity === undefined) return { status: "not_found" };
-  if (isLastAdmin(data, identity)) return { status: "last_admin" };
+  if (identity === undefined) {
+    return { status: "not_found" };
+  }
+  if (isLastAdmin(data, identity)) {
+    return { status: "last_admin" };
+  }
   revokeTokensOf(data, name);
   data.identities.delete(name);
-  return { status: "deleted", identity: { ...identity } };
+  return { identity: { ...identity }, status: "deleted" };
 };
 
 export const memoryIdentities = (state: MemoryState): IdentitiesSection => {
-  const data: MemoryIdentities = { identities: new Map(), activeTokens: new Map(), revokedTokens: new Set() };
+  const data: MemoryIdentities = { activeTokens: new Map(), identities: new Map(), revokedTokens: new Set() };
   const open = <A>(work: () => A): Fails<A> => Effect.andThen(state.ensureOpen, Effect.sync(work));
   return {
     createIdentity: (identity, hash) =>
       open(() => (data.identities.has(identity.name) ? "name_taken" : (add(data, identity, hash), "created"))),
     createIdentityIfNoneExist: (identity, hash) =>
       open(() => data.identities.size === 0 && (add(data, identity, hash), true)),
-    listIdentities: () => open(() => [...data.identities.values()].sort(byName).map((found) => ({ ...found }))),
+    deleteIdentity: (name) => open(() => remove(data, name)),
     findIdentityByTokenHash: (hash) => open(() => lookUp(data, hash)),
+    listIdentities: () => open(() => [...data.identities.values()].sort(byName).map((found) => ({ ...found }))),
     replaceToken: (name, hash) =>
       open((): ReplaceTokenResult => {
         const identity = data.identities.get(name);
-        if (identity === undefined) return { status: "not_found" };
+        if (identity === undefined) {
+          return { status: "not_found" };
+        }
         revokeTokensOf(data, name);
         data.activeTokens.set(hash, name);
-        return { status: "replaced", identity: { ...identity } };
+        return { identity: { ...identity }, status: "replaced" };
       }),
-    deleteIdentity: (name) => open(() => remove(data, name)),
   };
 };
 
 const IdentityRow = Schema.Struct({
-  name: Schema.String.pipe(Schema.refine(isIdentityName)),
-  owner: Schema.NullOr(Schema.String.pipe(Schema.refine(isOwner))),
   admin: Schema.Literals([0, 1]),
   created_at: IsoTimeSchema,
+  name: Schema.String.pipe(Schema.refine(isIdentityName)),
+  owner: Schema.NullOr(Schema.String.pipe(Schema.refine(isOwner))),
 });
 
-const TokenRow = Schema.Struct({ revoked: Schema.Literals([0, 1]), name: Schema.NullOr(Schema.String) });
+const TokenRow = Schema.Struct({ name: Schema.NullOr(Schema.String), revoked: Schema.Literals([0, 1]) });
 
 const CountRow = Schema.Struct({ count: Schema.Int });
 
@@ -113,7 +121,7 @@ const decode =
     Schema.decodeUnknownEffect(schema)(row).pipe(Effect.mapError(unreadable));
 
 const toIdentity = (row: typeof IdentityRow.Type): Identity => {
-  const fields = { name: row.name, admin: row.admin === 1, createdAt: row.created_at };
+  const fields = { admin: row.admin === 1, createdAt: row.created_at, name: row.name };
   return row.owner === null ? fields : { ...fields, owner: row.owner };
 };
 
@@ -126,15 +134,15 @@ const toLookup = (row: unknown): Fails<TokenLookup> =>
           token.revoked === 1 || token.name === null
             ? Effect.succeed({ status: "revoked" })
             : Effect.map(decode(IdentityRow)(row), (identity) => ({
-                status: "active",
                 identity: toIdentity(identity),
+                status: "active",
               })),
       );
 
 const identityColumns = "name, owner, admin, created_at";
 
 export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
-  const count = (sql: string, ...params: ReadonlyArray<string>) =>
+  const count = (sql: string, ...params: readonly string[]) =>
     db.get(sql, ...params).pipe(
       Effect.flatMap(decode(CountRow)),
       Effect.map((row) => row.count),
@@ -160,7 +168,9 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
     createIdentity: (identity, hash) =>
       db.transaction(
         Effect.gen(function* () {
-          if ((yield* find(identity.name)) !== undefined) return "name_taken" as const;
+          if ((yield* find(identity.name)) !== undefined) {
+            return "name_taken" as const;
+          }
           yield* insert(identity, hash);
           return "created" as const;
         }),
@@ -168,15 +178,28 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
     createIdentityIfNoneExist: (identity, hash) =>
       db.transaction(
         Effect.gen(function* () {
-          if ((yield* count("SELECT count(*) AS count FROM identities")) > 0) return false;
+          if ((yield* count("SELECT count(*) AS count FROM identities")) > 0) {
+            return false;
+          }
           yield* insert(identity, hash);
           return true;
         }),
       ),
-    listIdentities: () =>
-      db
-        .all(`SELECT ${identityColumns} FROM identities ORDER BY name`)
-        .pipe(Effect.flatMap(Effect.forEach((row) => Effect.map(decode(IdentityRow)(row), toIdentity)))),
+    deleteIdentity: (name) =>
+      db.transaction(
+        Effect.gen(function* () {
+          const row = yield* find(name);
+          if (row === undefined) {
+            return { status: "not_found" } as const;
+          }
+          if (row.admin === 1 && (yield* count("SELECT count(*) AS count FROM identities WHERE admin = 1")) === 1) {
+            return { status: "last_admin" } as const;
+          }
+          yield* revokeTokensOfName(name);
+          yield* db.run("DELETE FROM identities WHERE name = ?", name);
+          return { identity: toIdentity(row), status: "deleted" } as const;
+        }),
+      ),
     findIdentityByTokenHash: (hash) =>
       db
         .get(
@@ -186,27 +209,20 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
           hash,
         )
         .pipe(Effect.flatMap(toLookup)),
+    listIdentities: () =>
+      db
+        .all(`SELECT ${identityColumns} FROM identities ORDER BY name`)
+        .pipe(Effect.flatMap(Effect.forEach((row) => Effect.map(decode(IdentityRow)(row), toIdentity)))),
     replaceToken: (name, hash) =>
       db.transaction(
         Effect.gen(function* () {
           const row = yield* find(name);
-          if (row === undefined) return { status: "not_found" } as const;
-          yield* revokeTokensOfName(name);
-          yield* db.run("INSERT INTO tokens (token_hash, identity_name, revoked) VALUES (?, ?, 0)", hash, name);
-          return { status: "replaced", identity: toIdentity(row) } as const;
-        }),
-      ),
-    deleteIdentity: (name) =>
-      db.transaction(
-        Effect.gen(function* () {
-          const row = yield* find(name);
-          if (row === undefined) return { status: "not_found" } as const;
-          if (row.admin === 1 && (yield* count("SELECT count(*) AS count FROM identities WHERE admin = 1")) === 1) {
-            return { status: "last_admin" } as const;
+          if (row === undefined) {
+            return { status: "not_found" } as const;
           }
           yield* revokeTokensOfName(name);
-          yield* db.run("DELETE FROM identities WHERE name = ?", name);
-          return { status: "deleted", identity: toIdentity(row) } as const;
+          yield* db.run("INSERT INTO tokens (token_hash, identity_name, revoked) VALUES (?, ?, 0)", hash, name);
+          return { identity: toIdentity(row), status: "replaced" } as const;
         }),
       ),
   };

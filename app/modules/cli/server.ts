@@ -16,16 +16,17 @@
  * be read as one is `lease_state_damaged`; any other failure of the CLI
  * itself, rather than a refusal, is `cli_error`.
  */
-import { Effect } from "effect";
 import { CliError, Command } from "effect/cli";
+import { cookoutServer, serveCommand } from "./lib/server/serve.ts";
 import { usageFailed, withJsonPresenter } from "./lib/server/output.ts";
-import { cookoutServer, type ServeLayers, serveCommand } from "./lib/server/serve.ts";
+import { Effect } from "effect";
+import type { ServeLayers } from "./lib/server/serve.ts";
 import { verbCommands } from "./lib/server/verbs.ts";
 
 export { cookoutServer, type ServeLayers };
 
 /** Runs one `cookout` command line (without the `node` and script words). */
-export const runCookout = (args: ReadonlyArray<string>, layers: ServeLayers) =>
+export const runCookout = (args: readonly string[], layers: ServeLayers) =>
   Command.make("cookout").pipe(
     Command.withDescription("A self-hosted, Slack-style board for people and agents."),
     Command.withSubcommands([serveCommand(layers), ...verbCommands]),

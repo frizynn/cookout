@@ -1,7 +1,8 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { field, list, parseJson, text } from "./json.ts";
-import { type Outcome, tool } from "./tools.ts";
+import { mkdirSync, writeFileSync } from "node:fs";
+import type { Outcome } from "./tools.ts";
+import { resolve } from "node:path";
+import { tool } from "./tools.ts";
 
 const CACHE = "node_modules/.cache/lint-ratchet";
 
@@ -15,7 +16,7 @@ const codeOf = (rule: string) => {
   return slash === -1 ? `eslint(${rule})` : `${rule.slice(0, slash)}(${rule.slice(slash + 1)})`;
 };
 
-const onIn = (rules: unknown): ReadonlyArray<string> =>
+const onIn = (rules: unknown): readonly string[] =>
   typeof rules === "object" && rules !== null
     ? Object.entries(rules).flatMap(([rule, setting]) => (isOn(setting) ? [codeOf(rule)] : []))
     : [];
@@ -32,15 +33,20 @@ const withAbsolutePlugins = (config: unknown) => {
 
 export const rulesOn = (source: string): Outcome<ReadonlySet<string>> => {
   const config = parseJson(source);
-  if (config === undefined) return { ok: false, reason: "the base .oxlintrc.json is not JSON" };
+  if (config === undefined) {
+    return { ok: false, reason: "the base .oxlintrc.json is not JSON" };
+  }
   mkdirSync(CACHE, { recursive: true });
   const path = `${CACHE}/base.oxlintrc.json`;
   writeFileSync(path, JSON.stringify(withAbsolutePlugins(config)));
   const run = tool("effect-tsgo", ["oxlint", "--print-config", "-c", path]);
-  if (!run.ok) return run;
+  if (!run.ok) {
+    return run;
+  }
   const printed = parseJson(run.value.stdout);
-  if (printed === undefined)
+  if (printed === undefined) {
     return { ok: false, reason: `oxlint could not print the base config: ${run.value.stdout}${run.value.stderr}` };
+  }
   const overrides = list(field(printed, "overrides")) ?? [];
   const codes = [field(printed, "rules"), ...overrides.map((override) => field(override, "rules"))].flatMap(onIn);
   return { ok: true, value: new Set(codes) };

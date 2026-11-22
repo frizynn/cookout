@@ -1,15 +1,15 @@
 import { Effect, Schema, SchemaIssue } from "effect";
-import { HttpServerError, HttpServerResponse } from "effect/http";
 import type { ErrorBody, Refusal } from "../../index.ts";
+import { HttpServerError, HttpServerResponse } from "effect/http";
 import { echoed, errorCodes } from "../../index.ts";
 import { ErrorResponseSchema } from "./wire.ts";
 
 const isRefusal = Schema.is(
   Schema.Struct({
-    status: Schema.Int,
     code: Schema.Literals(errorCodes),
-    message: Schema.String,
     details: Schema.optionalKey(Schema.Unknown),
+    message: Schema.String,
+    status: Schema.Int,
   }),
 );
 
@@ -42,20 +42,24 @@ const keyOf = (segment: PropertyKey | { readonly key: PropertyKey }) =>
 const fromSchemaError = (error: Schema.SchemaError): Refusal =>
   refusal(400, {
     code: "invalid_request",
+    details: standardIssues(error.issue).issues.map(({ path = [], message }) => ({ message, path: path.map(keyOf) })),
     message: "The request doesn't match the protocol.",
-    details: standardIssues(error.issue).issues.map(({ path = [], message }) => ({ path: path.map(keyOf), message })),
   });
 
 const parseErrorIn = (error: unknown) => (error instanceof HttpServerError.HttpServerError ? error.reason : error);
 
 const fromServerError = (error: unknown): Refusal | undefined => {
   const reason = parseErrorIn(error);
-  if (reason instanceof HttpServerError.RequestParseError) return fromParseError(reason);
+  if (reason instanceof HttpServerError.RequestParseError) {
+    return fromParseError(reason);
+  }
   return Schema.isSchemaError(error) ? fromSchemaError(error) : undefined;
 };
 
 export const toRefusal = (error: unknown): Refusal => {
-  if (isRefusal(error)) return error;
+  if (isRefusal(error)) {
+    return error;
+  }
   const tagged = isTagged(error) ? byTag[error._tag] : undefined;
   return tagged ?? fromServerError(error) ?? internal;
 };

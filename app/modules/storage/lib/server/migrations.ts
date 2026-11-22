@@ -2,7 +2,7 @@ import { Effect, Schema } from "effect";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { StorageUnavailable } from "./errors.ts";
 
-const migrations: ReadonlyArray<string> = [
+const migrations: readonly string[] = [
   `CREATE TABLE message_id_sequence (
      only_row INTEGER PRIMARY KEY CHECK (only_row = 1),
      last_id INTEGER NOT NULL
@@ -63,8 +63,12 @@ const apply = (db: SqliteDatabase, sql: string, version: number) =>
 export const migrate = (db: SqliteDatabase): Effect.Effect<void, StorageUnavailable> =>
   Effect.gen(function* () {
     const { user_version: current } = yield* db.get("PRAGMA user_version").pipe(Effect.flatMap(decodeUserVersion));
-    if (current > migrations.length) return yield* tooNew(current);
+    if (current > migrations.length) {
+      return yield* tooNew(current);
+    }
     for (const [index, sql] of migrations.entries()) {
-      if (index + 1 > current) yield* apply(db, sql, index + 1);
+      if (index + 1 > current) {
+        yield* apply(db, sql, index + 1);
+      }
     }
   });

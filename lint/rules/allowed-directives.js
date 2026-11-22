@@ -15,21 +15,6 @@ const allowlist = (path) => {
 };
 
 export default {
-  meta: {
-    type: "problem",
-    fixable: "code",
-    schema: [
-      {
-        type: "object",
-        properties: { allowlist: { type: "string" } },
-        required: ["allowlist"],
-        additionalProperties: false,
-      },
-    ],
-    messages: {
-      directive: "'{{directive}}' is not on the reviewed allowlist. Fix the code instead of silencing the check.",
-    },
-  },
   create(context) {
     const allowed = allowlist(context.options[0].allowlist);
     const file = relative(process.cwd(), context.filename);
@@ -38,12 +23,30 @@ export default {
         const removal = removeComment(context.sourceCode.text);
         for (const comment of context.sourceCode.getAllComments()) {
           const match = comment.value.match(DIRECTIVE);
-          if (!match) continue;
+          if (!match) {
+            continue;
+          }
           const directive = `${match[1]}${match[2]}`.trim();
-          if (!allowed.has(`${file}\0${directive}`))
+          if (!allowed.has(`${file}\0${directive}`)) {
             context.report({ data: { directive }, fix: removal(comment), loc: comment.loc, messageId: "directive" });
+          }
         }
       },
     };
+  },
+  meta: {
+    fixable: "code",
+    messages: {
+      directive: "'{{directive}}' is not on the reviewed allowlist. Fix the code instead of silencing the check.",
+    },
+    schema: [
+      {
+        additionalProperties: false,
+        properties: { allowlist: { type: "string" } },
+        required: ["allowlist"],
+        type: "object",
+      },
+    ],
+    type: "problem",
   },
 };

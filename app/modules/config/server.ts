@@ -8,7 +8,7 @@ const SHORTEST_LEASE_SECONDS = 1;
 const DEFAULT_LEASE_SECONDS = 60;
 
 /** `PORT`: the port `cookout serve` listens on. 0 picks a free port. */
-export const port = Config.schema(Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 65535 })), "PORT").pipe(
+export const port = Config.schema(Schema.Int.check(Schema.isBetween({ maximum: 65_535, minimum: 0 })), "PORT").pipe(
   Config.withDefault(3000),
 );
 

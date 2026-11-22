@@ -1,16 +1,14 @@
 import type { DatabaseSync, SQLInputValue } from "node:sqlite";
-import { Effect, type Scope, Semaphore } from "effect";
+import { Effect, Semaphore } from "effect";
+import type { Scope } from "effect";
 import { StorageUnavailable } from "../errors.ts";
 
 type SqlValue = SQLInputValue;
 
 export type SqliteDatabase = {
-  readonly get: (sql: string, ...params: ReadonlyArray<SqlValue>) => Effect.Effect<unknown, StorageUnavailable>;
-  readonly all: (
-    sql: string,
-    ...params: ReadonlyArray<SqlValue>
-  ) => Effect.Effect<ReadonlyArray<unknown>, StorageUnavailable>;
-  readonly run: (sql: string, ...params: ReadonlyArray<SqlValue>) => Effect.Effect<void, StorageUnavailable>;
+  readonly get: (sql: string, ...params: readonly SqlValue[]) => Effect.Effect<unknown, StorageUnavailable>;
+  readonly all: (sql: string, ...params: readonly SqlValue[]) => Effect.Effect<readonly unknown[], StorageUnavailable>;
+  readonly run: (sql: string, ...params: readonly SqlValue[]) => Effect.Effect<void, StorageUnavailable>;
   readonly exec: (sql: string) => Effect.Effect<void, StorageUnavailable>;
   readonly transaction: <A, E>(work: Effect.Effect<A, E>) => Effect.Effect<A, E | StorageUnavailable>;
 };
@@ -20,14 +18,14 @@ const unavailable = (cause: unknown): StorageUnavailable =>
 
 const wrap = (db: DatabaseSync): SqliteDatabase => {
   const attempt = <A>(work: () => A): Effect.Effect<A, StorageUnavailable> =>
-    Effect.try({ try: work, catch: unavailable });
+    Effect.try({ catch: unavailable, try: work });
   const exec = (sql: string) => attempt(() => db.exec(sql));
   const oneAtATime = Semaphore.makeUnsafe(1);
   return {
-    get: (sql, ...params) => attempt((): unknown => db.prepare(sql).get(...params)),
-    all: (sql, ...params) => attempt((): ReadonlyArray<unknown> => db.prepare(sql).all(...params)),
-    run: (sql, ...params) => attempt(() => void db.prepare(sql).run(...params)),
+    all: (sql, ...params) => attempt((): readonly unknown[] => db.prepare(sql).all(...params)),
     exec,
+    get: (sql, ...params) => attempt((): unknown => db.prepare(sql).get(...params)),
+    run: (sql, ...params) => attempt(() => void db.prepare(sql).run(...params)),
     transaction: (work) =>
       oneAtATime.withPermits(1)(
         Effect.acquireUseRelease(
