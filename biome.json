@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!app/modules/sdk/lib/generated/**", "!pnpm-lock.yaml", "!api/sdk.api.md"]
+    "includes": ["**", "!app/modules/sdk/lib/generated/**", "!pnpm-lock.yaml", "!api/sdk.api.md", "!lint/fixers-run/**"]
   },
   "formatter": {
     "enabled": true,

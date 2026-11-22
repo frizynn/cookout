@@ -142,24 +142,24 @@ export type CookoutClient = {
 export function createCookoutClient(options: CookoutClientOptions = {}): CookoutClient {
   const server = connectionFor(options);
   return {
-    health: () => getJson(server, healthPath, isHealthResponse),
-    whoami: () => getJson(server, whoamiPath, isIdentityResponse),
-    listIdentities: () => getJson(server, identitiesPath, isListIdentitiesResponse),
+    createChannel: (body) => send(server, { body, isExpected: isChannelResponse, method: "POST", path: channelsPath }),
     createIdentity: (body) =>
-      send(server, { method: "POST", path: identitiesPath, body, isExpected: isIdentityWithTokenResponse }),
+      send(server, { body, isExpected: isIdentityWithTokenResponse, method: "POST", path: identitiesPath }),
+    deleteIdentity: (name) =>
+      send(server, { isExpected: isIdentityResponse, method: "DELETE", params: { name }, path: identityPath }),
+    getChannel: (name) =>
+      send(server, { isExpected: isChannelResponse, method: "GET", params: { name }, path: channelPath }),
+    health: () => getJson(server, healthPath, isHealthResponse),
+    listChannels: () => getJson(server, channelsPath, isListChannelsResponse),
+    listIdentities: () => getJson(server, identitiesPath, isListIdentitiesResponse),
     rotateToken: (name) =>
       send(server, {
-        method: "POST",
-        path: identityTokenPath,
-        params: { name },
         isExpected: isIdentityWithTokenResponse,
+        method: "POST",
+        params: { name },
+        path: identityTokenPath,
       }),
-    deleteIdentity: (name) =>
-      send(server, { method: "DELETE", path: identityPath, params: { name }, isExpected: isIdentityResponse }),
-    createChannel: (body) => send(server, { method: "POST", path: channelsPath, body, isExpected: isChannelResponse }),
-    listChannels: () => getJson(server, channelsPath, isListChannelsResponse),
-    getChannel: (name) =>
-      send(server, { method: "GET", path: channelPath, params: { name }, isExpected: isChannelResponse }),
+    whoami: () => getJson(server, whoamiPath, isIdentityResponse),
     ...messageCalls(server),
     ...leaseCalls(server),
   };

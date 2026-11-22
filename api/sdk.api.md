@@ -74,7 +74,7 @@ type IdentityWithTokenResponse = {
 };
 /** The answer to `GET /v1/identities`: every identity, sorted by name. */
 type ListIdentitiesResponse = {
-  readonly identities: ReadonlyArray<Identity>;
+  readonly identities: readonly Identity[];
 };
 /** The body of `POST /v1/identities`. The server checks the name and owner rules. */
 type CreateIdentityRequest = {

@@ -1,8 +1,8 @@
+import type { Identity, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../index.ts";
+import { identityNamePattern, isIdentityName, isOwner, isToken, ownerLength, tokenPattern } from "../../index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
-import type { Identity, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../index.ts";
-import { identityNamePattern, isIdentityName, isOwner, isToken, ownerLength, tokenPattern } from "../../index.ts";
 
 export const IdentityNameSchema = Schema.String.check(
   Schema.isPattern(identityNamePattern, { message: "Use 1-64 lowercase letters, digits or '-'." }),
@@ -18,10 +18,10 @@ const TokenSchema = Schema.String.check(Schema.isPattern(tokenPattern)).pipe(
 
 const IdentitySchema = matchesWire<Identity>()(
   Schema.Struct({
-    name: IdentityNameSchema,
-    owner: Schema.optionalKey(OwnerSchema),
     admin: Schema.Boolean,
     createdAt: IsoTimeSchema,
+    name: IdentityNameSchema,
+    owner: Schema.optionalKey(OwnerSchema),
   }),
 );
 

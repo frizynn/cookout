@@ -1,7 +1,7 @@
 import { Effect } from "effect";
+import type { MemoryState } from "./memory-state.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
-import type { MemoryState } from "./memory-state.ts";
 
 export type HealthSection = {
   readonly checkHealth: () => Effect.Effect<void, StorageUnavailable>;

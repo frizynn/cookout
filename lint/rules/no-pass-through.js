@@ -3,22 +3,22 @@ const reExport = (node) =>
 const ownModule = (node) => node.source.value.startsWith("./");
 
 export default {
+  create(context) {
+    return {
+      Program(program) {
+        const { body } = program;
+        if (body.length > 0 && body.every(reExport) && !body.some(ownModule)) {
+          context.report({ messageId: "passThrough", node: program });
+        }
+      },
+    };
+  },
   meta: {
-    type: "problem",
-    schema: [],
     messages: {
       passThrough:
         "This entry point only forwards another module. Import that module directly, or give this one behaviour of its own.",
     },
-  },
-  create(context) {
-    return {
-      Program(program) {
-        const body = program.body;
-        if (body.length > 0 && body.every(reExport) && !body.some(ownModule)) {
-          context.report({ node: program, messageId: "passThrough" });
-        }
-      },
-    };
+    schema: [],
+    type: "problem",
   },
 };

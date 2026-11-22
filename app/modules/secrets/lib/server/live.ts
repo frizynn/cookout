@@ -1,7 +1,7 @@
-import type { Token, TokenHash } from "../../../identities/index.ts";
-import { token, tokenHash } from "../../../identities/index.ts";
 import { Effect, Option } from "effect";
+import type { Token, TokenHash } from "../../../identities/index.ts";
 import { createHash, randomBytes } from "node:crypto";
+import { token, tokenHash } from "../../../identities/index.ts";
 import type { LeaseId } from "../../../leases/index.ts";
 import { isLeaseId } from "../../../leases/index.ts";
 

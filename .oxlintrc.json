@@ -39,7 +39,13 @@
     "reportUnusedDisableDirectives": "error",
     "typeAware": true
   },
-  "ignorePatterns": ["lint/canary/**", "app/modules/sdk/lib/generated/**", "coverage/**"],
+  "ignorePatterns": [
+    "lint/canary/**",
+    "lint/fixers/**",
+    "lint/fixers-run/**",
+    "app/modules/sdk/lib/generated/**",
+    "coverage/**"
+  ],
   "rules": {
     "local/no-comments": "error",
     "local/allowed-directives": [
@@ -63,6 +69,8 @@
     ],
     "local/no-unsafe-as": "error",
     "local/no-overloads": "error",
+    "local/sort-imports": "error",
+    "sort-imports": "off",
     "typescript/ban-ts-comment": "error",
     "typescript/no-explicit-any": "error",
     "typescript/no-non-null-assertion": "error",
@@ -369,7 +377,12 @@
         "extensions": [".tsx"]
       }
     ],
-    "vitest/require-hook": "error",
+    "vitest/require-hook": [
+      "error",
+      {
+        "allowedFunctionCalls": ["ruleTester.run"]
+      }
+    ],
     "vitest/no-standalone-expect": [
       "error",
       {

@@ -60,11 +60,11 @@ const identityCommand = Command.make("identity").pipe(
 const channelCreateCommand = Command.make(
   "create",
   {
-    name: Argument.String("name").pipe(Argument.withDescription("1-80 lowercase letters, digits or '-'.")),
     description: Flag.String("description").pipe(
       Flag.optional,
       Flag.withDescription("What the channel is for, 1-500 characters."),
     ),
+    name: Argument.String("name").pipe(Argument.withDescription("1-80 lowercase letters, digits or '-'.")),
   },
   ({ name, description }) => {
     const withDescription = Option.match(description, {

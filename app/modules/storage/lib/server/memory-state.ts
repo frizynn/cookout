@@ -1,4 +1,5 @@
-import { Effect, Ref, type Scope } from "effect";
+import { Effect, Ref } from "effect";
+import type { Scope } from "effect";
 import { StorageUnavailable } from "./errors.ts";
 
 export type MemoryState = {

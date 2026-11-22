@@ -5,9 +5,9 @@
  */
 import { Context, Layer } from "effect";
 import type { FileSystem } from "effect";
+import type { StorageService } from "./lib/server/service.ts";
 import { StorageUnavailable } from "./lib/server/errors.ts";
 import { openMemoryStorage } from "./lib/server/memory.ts";
-import type { StorageService } from "./lib/server/service.ts";
 import { openSqliteStorage } from "./lib/server/sqlite.ts";
 
 export { StorageUnavailable };

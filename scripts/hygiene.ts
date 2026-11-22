@@ -1,12 +1,13 @@
-import { type SpawnSyncReturns, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import type { SpawnSyncReturns } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
 const SELF = "scripts/hygiene.ts";
 const WIKI = "personal-wiki";
 
 const failed = (run: SpawnSyncReturns<string>) => run.error !== undefined || run.status === null || run.status > 1;
 
-const git = (args: ReadonlyArray<string>) => {
+const git = (args: readonly string[]) => {
   const run = spawnSync("git", args, { encoding: "utf8", maxBuffer: 1 << 26 });
   if (failed(run)) {
     console.error(`hygiene: git ${args.join(" ")} failed: ${run.stderr}`);
@@ -43,7 +44,9 @@ const exampleLines = () =>
   );
 
 const envExample = () => {
-  if (!existsSync(".env.example")) return [".env.example is missing."];
+  if (!existsSync(".env.example")) {
+    return [".env.example is missing."];
+  }
   const read = configReads();
   const listed = exampleLines();
   return [
@@ -62,5 +65,7 @@ const wikiCitations = () =>
   );
 
 const failures = [...gitlinks(), ...workspaceFile(), ...envExample(), ...wikiCitations()];
-for (const failure of failures) console.error(`hygiene: ${failure}`);
+for (const failure of failures) {
+  console.error(`hygiene: ${failure}`);
+}
 process.exitCode = failures.length > 0 ? 1 : 0;

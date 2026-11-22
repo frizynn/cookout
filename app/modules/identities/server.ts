@@ -3,20 +3,23 @@
  * the admin identity made on first boot, and `GET /v1/whoami`. A token is
  * never stored: only its hash, made by `Secrets`, goes into `Storage`.
  */
+import { Caller, authenticate, issueToken } from "./lib/server/auth.ts";
 import { Context, Effect, Layer } from "effect";
-import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import type { Refusal } from "../http/index.ts";
 import type { Gate, Route } from "../http/server.ts";
-import { Secrets } from "../secrets/server.ts";
-import { Storage, type StorageUnavailable } from "../storage/server.ts";
-import { type Identity, type Token, whoamiPath } from "./index.ts";
-import { authenticate, Caller, type IssuedToken, issueToken } from "./lib/server/auth.ts";
-import { firstAdmin, identityAdminRoutes } from "./lib/server/routes.ts";
+import { HttpServerRequest, HttpServerResponse } from "effect/http";
+import type { Identity, Token } from "./index.ts";
 import {
   IdentityResponseSchema,
   IdentityWithTokenResponseSchema,
   ListIdentitiesResponseSchema,
 } from "./lib/server/wire.ts";
+import { firstAdmin, identityAdminRoutes } from "./lib/server/routes.ts";
+import type { IssuedToken } from "./lib/server/auth.ts";
+import type { Refusal } from "../http/index.ts";
+import { Secrets } from "../secrets/server.ts";
+import { Storage } from "../storage/server.ts";
+import type { StorageUnavailable } from "../storage/server.ts";
+import { whoamiPath } from "./index.ts";
 
 export { Caller };
 
@@ -79,20 +82,20 @@ export const firstBoot: Layer.Layer<FirstBoot, StorageUnavailable, Identities | 
 );
 
 const whoamiRoute: Route<Caller> = {
-  method: "GET",
-  path: whoamiPath,
   handle: () =>
     Effect.gen(function* () {
       const identity = yield* Caller;
       return yield* HttpServerResponse.schemaJson(IdentityResponseSchema)({ identity });
     }),
+  method: "GET",
+  path: whoamiPath,
 };
 
 /**
  * The identity routes, for the server's route list: whoami, and create,
  * list, rotate and delete. They need `Caller`, which `requireToken` provides.
  */
-export const identityRoutes: ReadonlyArray<Route<Caller | Storage | Secrets>> = [whoamiRoute, ...identityAdminRoutes];
+export const identityRoutes: readonly Route<Caller | Storage | Secrets>[] = [whoamiRoute, ...identityAdminRoutes];
 
 /** The response Schemas of the identity routes, for the SDK's generated validators. */
 export const identityResponseSchemas = {
