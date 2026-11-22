@@ -1,0 +1,24 @@
+name: Set up
+description: Install Node and the locked dependencies, and restore the check caches.
+
+inputs:
+  cache-name:
+    description: The job whose tool caches (tsc, dependency-cruiser) to restore.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+    - run: pnpm install --frozen-lockfile
+      shell: bash
+    - uses: actions/cache@v4
+      with:
+        path: node_modules/.cache
+        key: checks-${{ inputs.cache-name }}-${{ hashFiles('pnpm-lock.yaml', 'tsconfig.json', '.oxlintrc.json', '.dependency-cruiser.cjs', 'vitest.config.ts', 'biome.json', 'knip.json') }}-${{ github.sha }}
+        restore-keys: |
+          checks-${{ inputs.cache-name }}-${{ hashFiles('pnpm-lock.yaml', 'tsconfig.json', '.oxlintrc.json', '.dependency-cruiser.cjs', 'vitest.config.ts', 'biome.json', 'knip.json') }}-
