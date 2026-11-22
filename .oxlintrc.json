@@ -783,6 +783,19 @@
       }
     },
     {
+      "files": [
+        "app/modules/cli/server.ts",
+        "app/modules/cli/lib/server/**",
+        "app/modules/storage/server.ts",
+        "app/modules/storage/lib/server/**",
+        "app/modules/testing/server.ts",
+        "app/modules/testing/lib/server/**"
+      ],
+      "rules": {
+        "effecttsgo/api-stability-leak": "off"
+      }
+    },
+    {
       "files": ["app/modules/*/server.ts", "app/modules/*/lib/server/**"],
       "excludeFiles": ["app/modules/*/lib/server/adapters/**"],
       "rules": {
