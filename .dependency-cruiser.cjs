@@ -6,6 +6,7 @@ const ENTRIES = "^app/(main\\.ts|web\\.tsx)$";
 const WEB = `^app/web\\.tsx$|^${R}/(design-system|session|board|unread|composer|live|routes|format|views)/`;
 const PUBLISHED_ENTRIES = ["app/main.ts", `${R}/sdk/index.ts`];
 const PUBLISHED_SDK = `${R}/sdk/index.ts`;
+const TESTED_INTERFACES = ["sdk", "cli", "storage", "webhook-fake", "secrets"];
 const exactly = (file) => `^${file.replaceAll(".", "\\.")}$`;
 
 module.exports = {
@@ -39,6 +40,15 @@ module.exports = {
       severity: "error",
       from: { path: `^${R}/([^/]+)/tests/` },
       to: { path: INTERNALS, pathNot: `^${R}/$1/tests/` },
+    },
+    {
+      from: {
+        path: String.raw`\.test\.tsx?$`,
+        pathNot: `^${R}/(${TESTED_INTERFACES.join("|")})/tests/`,
+      },
+      name: "tests-only-at-tested-interfaces",
+      severity: "error",
+      to: {},
     },
     {
       name: "tests-folder-is-private",

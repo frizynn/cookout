@@ -42,6 +42,9 @@ const testRules: ReadonlyArray<readonly [string, string]> = [
   ["vitest(no-hooks)", "server/no-hooks"],
   ["vitest(require-hook)", "server/require-hook"],
   ["vitest-js(padding-around-all)", "server/padding-around-all"],
+  ["eslint(no-restricted-imports)", "server/no-restricted-imports.process"],
+  ["eslint(no-restricted-imports)", "server/no-restricted-imports.binary"],
+  ["eslint(no-restricted-imports)", "no-restricted-imports.effect"],
 ];
 
 const backendRules: ReadonlyArray<readonly [string, string]> = [["effecttsgo(global-date)", "global-date"]];
@@ -61,6 +64,11 @@ const tscCanaries: ReadonlyArray<Canary> = [
 const seamCanaries: ReadonlyArray<Canary> = [
   { check: "dependency-cruiser", code: "entry-points-only-from-app", file: `${ROOT}/seams/deep-import.ts` },
   { check: "dependency-cruiser", code: "sqlite-only-in-storage-adapter", file: `${ROOT}/seams/sqlite.ts` },
+  {
+    check: "dependency-cruiser",
+    code: "tests-only-at-tested-interfaces",
+    file: `${ROOT}/seams/app/modules/http/tests/server/health.test.ts`,
+  },
 ];
 
 const key = (code: string, file: string) => `${code} ${file}`;
