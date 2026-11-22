@@ -14,4 +14,4 @@ So `lint`, `canaries` and `fixers` each run in their own matrix job in `.github/
 
 ## Consequences
 
-On push run 45073088815, the first with separate jobs, `lint` took 4.5s and `fixers` 5.3s on their first timing. The workflow starts two more runners. Each job's setup (checkout, install, cache) runs in parallel with the others, so the run's wall time does not grow. A new type-aware check also gets its own job, rather than joining an existing one.
+With separate jobs, `lint` took 3.9s to 5.5s and `fixers` 4.4s to 7.4s on their first timing, over runs 45073088815, 45073211039, 45073328831, 45073753544 and 45073758595. The workflow starts two more runners. Each job's setup (checkout, install, cache) runs in parallel with the others, so the run's wall time does not grow. A new type-aware check also gets its own job, rather than joining an existing one.
