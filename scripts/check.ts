@@ -62,6 +62,7 @@ const checks: readonly Check[] = [
   { budget: 8, job: "lint", name: "lint", script: lintScript() },
   { budget: 9, job: "lint", name: "canaries", script: ["canaries"] },
   { budget: 5, job: "types", name: "types", script: ["typecheck"] },
+  { budget: 8, job: "types", name: "fixers", script: ["fixers"] },
   { budget: 4, job: "seams", name: "seams", script: ["seams"] },
   { budget: 13, job: "tests", name: "tests", script: testScript() },
   { budget: 5, job: "knip", name: "knip", script: ["knip"] },

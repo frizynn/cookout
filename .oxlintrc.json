@@ -39,7 +39,13 @@
     "reportUnusedDisableDirectives": "error",
     "typeAware": true
   },
-  "ignorePatterns": ["lint/canary/**", "app/modules/sdk/lib/generated/**", "coverage/**"],
+  "ignorePatterns": [
+    "lint/canary/**",
+    "lint/fixers/**",
+    "lint/fixers-run/**",
+    "app/modules/sdk/lib/generated/**",
+    "coverage/**"
+  ],
   "rules": {
     "local/no-comments": "error",
     "local/allowed-directives": [
