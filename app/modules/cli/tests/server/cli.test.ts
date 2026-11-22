@@ -1,8 +1,10 @@
-import { TestCookout, runCookout, runCookoutBinary, testCookout } from "../../../testing/server.ts";
+import { Context, Effect, FileSystem, Layer } from "effect";
+import { TestCookout, interruptDevBinary, runCookout, runCookoutBinary, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
-import { Effect } from "effect";
+import { NodeServices } from "@effect/platform-node";
 
 const EXIT_FAILURE = 1;
+const EXIT_SUCCESS = 0;
 const BOOT = "2026-01-01T00:00:00.000Z";
 const succeeded = { exitCode: 0, stderr: "" };
 const griller = { admin: false, createdAt: BOOT, name: "auth-griller", owner: "matt" };
@@ -152,5 +154,17 @@ it.effect("the CLI refuses an unknown command with a usage error", () =>
     const result = yield* runCookout({ args: ["identity", "explode"], env: { COOKOUT_URL: "http://127.0.0.1:1" } });
 
     expect(result).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "usage" } } });
+  }),
+);
+
+it.effect("pnpm dev exits 0 on Ctrl-C and deletes its database", () =>
+  Effect.gen(function* devStopsOnInterrupt() {
+    const node = yield* Layer.build(NodeServices.layer);
+    const { database, exitCode } = yield* interruptDevBinary();
+    const kept = yield* Effect.orDie(Context.get(node, FileSystem.FileSystem).exists(database));
+
+    expect(database).toContain("cookout-dev-");
+    expect(exitCode).toBe(EXIT_SUCCESS);
+    expect(kept).toBe(false);
   }),
 );

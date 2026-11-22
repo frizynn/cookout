@@ -2,7 +2,8 @@ const R = "app/modules";
 const INTERNALS = `^${R}/[^/]+/[^/]+/`;
 const TESTS = `^${R}/[^/]+/tests/`;
 const BACKEND = `^${R}/[^/]+/(server\\.ts$|lib/server/)`;
-const ENTRIES = "^app/(main\\.ts|web\\.tsx)$";
+const ENTRIES = "^app/(main\\.ts|dev\\.ts|web\\.tsx)$";
+const DEV_ENTRY = "^app/dev\\.ts$";
 const WEB = `^app/web\\.tsx$|^${R}/(design-system|session|board|unread|composer|live|routes|format|views)/`;
 const PUBLISHED_ENTRIES = ["app/main.ts", `${R}/sdk/index.ts`];
 const PUBLISHED_SDK = `${R}/sdk/index.ts`;
@@ -65,13 +66,13 @@ module.exports = {
     {
       name: "testing-only-from-tests",
       severity: "error",
-      from: { pathNot: [TESTS, `^${R}/testing/`] },
+      from: { pathNot: [TESTS, `^${R}/testing/`, DEV_ENTRY] },
       to: { path: `^${R}/testing/` },
     },
     {
       name: "webhook-fake-only-from-tests-and-dev",
       severity: "error",
-      from: { pathNot: [TESTS, `^${R}/testing/`, `^${R}/webhook-fake/`, "^scripts/dev\\."] },
+      from: { pathNot: [TESTS, `^${R}/testing/`, `^${R}/webhook-fake/`] },
       to: { path: `^${R}/webhook-fake/` },
     },
     {
@@ -83,7 +84,7 @@ module.exports = {
     {
       name: "client-never-imports-server",
       severity: "error",
-      from: { path: "^app/", pathNot: [BACKEND, "^app/main\\.ts$", TESTS] },
+      from: { path: "^app/", pathNot: [BACKEND, "^app/main\\.ts$", DEV_ENTRY, TESTS] },
       to: { path: `^${R}/[^/]+/server\\.ts$` },
     },
     {

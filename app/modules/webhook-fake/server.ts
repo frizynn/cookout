@@ -6,7 +6,7 @@
  * with `status` (default 500), then 200 again, and `waitForCalls(count)`
  * waits until at least `count` calls have arrived. `webhookFake` is a scoped
  * Layer: the server stops, dropping open connections, when its scope closes.
- * Reachable only from tests and the dev script.
+ * Reachable only from tests and `testing`, which the dev program runs it from.
  */
 import { Context, Effect, Layer } from "effect";
 import type { ReceivedCall } from "./lib/server/receiver.ts";
