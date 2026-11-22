@@ -8,15 +8,22 @@ import { channelPath, channelsPath } from "../channels/index.ts";
 import { readCookoutConnection } from "../config/index.ts";
 import type { HealthResponse } from "../http/index.ts";
 import { healthPath } from "../http/index.ts";
-import type { IdentityResponse } from "../identities/index.ts";
-import { whoamiPath } from "../identities/index.ts";
+import type {
+  CreateIdentityRequest,
+  IdentityResponse,
+  IdentityWithTokenResponse,
+  ListIdentitiesResponse,
+} from "../identities/index.ts";
+import { identitiesPath, identityPath, identityTokenPath, whoamiPath } from "../identities/index.ts";
 import { CookoutError } from "./lib/errors.ts";
 import { getJson, send } from "./lib/request.ts";
 import {
   isChannelResponse,
   isHealthResponse,
   isIdentityResponse,
+  isIdentityWithTokenResponse,
   isListChannelsResponse,
+  isListIdentitiesResponse,
 } from "./lib/generated/validators.js";
 
 export type {
@@ -27,7 +34,16 @@ export type {
   ListChannelsResponse,
 } from "../channels/index.ts";
 export type { HealthResponse } from "../http/index.ts";
-export type { Identity, IdentityName, IdentityResponse, Owner } from "../identities/index.ts";
+export type {
+  CreateIdentityRequest,
+  Identity,
+  IdentityName,
+  IdentityResponse,
+  IdentityWithTokenResponse,
+  ListIdentitiesResponse,
+  Owner,
+  Token,
+} from "../identities/index.ts";
 export { CookoutError, type CookoutErrorCode } from "./lib/errors.ts";
 
 export type CookoutClientOptions = {
@@ -44,6 +60,14 @@ export type CookoutClient = {
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */
   readonly whoami: () => Promise<IdentityResponse>;
+  /** `GET /v1/identities`: every identity and its owner, sorted by name. */
+  readonly listIdentities: () => Promise<ListIdentitiesResponse>;
+  /** Admin only. The token in the answer is shown this once. A name in use is 409 `identity_exists`. */
+  readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;
+  /** Admin only. Issues a new token; the old one stops working at once. */
+  readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
+  /** Admin only. Removes the identity; its token stops working. The last admin can't be deleted (409 `last_admin`). */
+  readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
   /** `POST /v1/channels`: any identity can create a channel. A name in use is 409 `channel_exists`. */
   readonly createChannel: (request: CreateChannelRequest) => Promise<ChannelResponse>;
   /** `GET /v1/channels`: every channel, sorted by name. */
@@ -71,6 +95,18 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
   return {
     health: () => getJson(server, healthPath, isHealthResponse),
     whoami: () => getJson(server, whoamiPath, isIdentityResponse),
+    listIdentities: () => getJson(server, identitiesPath, isListIdentitiesResponse),
+    createIdentity: (body) =>
+      send(server, { method: "POST", path: identitiesPath, body, isExpected: isIdentityWithTokenResponse }),
+    rotateToken: (name) =>
+      send(server, {
+        method: "POST",
+        path: identityTokenPath,
+        params: { name },
+        isExpected: isIdentityWithTokenResponse,
+      }),
+    deleteIdentity: (name) =>
+      send(server, { method: "DELETE", path: identityPath, params: { name }, isExpected: isIdentityResponse }),
     createChannel: (body) => send(server, { method: "POST", path: channelsPath, body, isExpected: isChannelResponse }),
     listChannels: () => getJson(server, channelsPath, isListChannelsResponse),
     getChannel: (name) =>

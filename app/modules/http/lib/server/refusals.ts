@@ -46,8 +46,11 @@ const fromSchemaError = (error: Schema.SchemaError): Refusal =>
     details: standardIssues(error.issue).issues.map(({ path = [], message }) => ({ path: path.map(keyOf), message })),
   });
 
+const parseErrorIn = (error: unknown) => (error instanceof HttpServerError.HttpServerError ? error.reason : error);
+
 const fromServerError = (error: unknown): Refusal | undefined => {
-  if (error instanceof HttpServerError.RequestParseError) return fromParseError(error);
+  const reason = parseErrorIn(error);
+  if (reason instanceof HttpServerError.RequestParseError) return fromParseError(reason);
   return Schema.isSchemaError(error) ? fromSchemaError(error) : undefined;
 };
 

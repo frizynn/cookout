@@ -44,7 +44,7 @@ type HealthResponse = {
   readonly status: "ok";
   readonly time: string;
 };
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "admin_only", "channel_exists", "channel_not_found", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "admin_only", "identity_exists", "identity_not_found", "last_admin", "channel_exists", "channel_not_found", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "storage_unavailable", "internal_error"];
 type ErrorCode = (typeof errorCodes)[number];
 /**
  * Identities on the wire, shared by the server, the SDK and the web: the
@@ -60,6 +60,8 @@ type Brand<Name extends string> = string & {
 type IdentityName = Brand<"IdentityName">;
 /** The person an identity belongs to, such as `matt`: 1–100 characters. */
 type Owner = Brand<"Owner">;
+/** The secret an identity sends as `Authorization: Bearer <token>`. */
+type Token = Brand<"Token">;
 /** An identity as the server shows it. Its token is never part of it. */
 type Identity = {
   readonly name: IdentityName;
@@ -69,9 +71,23 @@ type Identity = {
   /** ISO 8601 UTC. */
   readonly createdAt: string;
 };
-/** The answer to `GET /v1/whoami`. */
+/** The answer to `GET /v1/whoami` and `DELETE /v1/identities/<name>`. */
 type IdentityResponse = {
   readonly identity: Identity;
+};
+/** The answer to creating an identity and rotating its token. The token is shown this once only. */
+type IdentityWithTokenResponse = {
+  readonly identity: Identity;
+  readonly token: Token;
+};
+/** The answer to `GET /v1/identities`: every identity, sorted by name. */
+type ListIdentitiesResponse = {
+  readonly identities: ReadonlyArray<Identity>;
+};
+/** The body of `POST /v1/identities`. The server checks the name and owner rules. */
+type CreateIdentityRequest = {
+  readonly name: string;
+  readonly owner?: string;
 };
 type CookoutErrorCode = ErrorCode | "bad_response" | "url_missing";
 export declare class CookoutError extends Error {
@@ -99,6 +115,14 @@ export type CookoutClient = {
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */
   readonly whoami: () => Promise<IdentityResponse>;
+  /** `GET /v1/identities`: every identity and its owner, sorted by name. */
+  readonly listIdentities: () => Promise<ListIdentitiesResponse>;
+  /** Admin only. The token in the answer is shown this once. A name in use is 409 `identity_exists`. */
+  readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;
+  /** Admin only. Issues a new token; the old one stops working at once. */
+  readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
+  /** Admin only. Removes the identity; its token stops working. The last admin can't be deleted (409 `last_admin`). */
+  readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
   /** `POST /v1/channels`: any identity can create a channel. A name in use is 409 `channel_exists`. */
   readonly createChannel: (request: CreateChannelRequest) => Promise<ChannelResponse>;
   /** `GET /v1/channels`: every channel, sorted by name. */
@@ -112,5 +136,5 @@ export type CookoutClient = {
  * (status 0) when there is no URL.
  */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export type { Channel, ChannelName, ChannelResponse, CookoutErrorCode, CreateChannelRequest, HealthResponse, Identity, IdentityName, IdentityResponse, ListChannelsResponse, Owner };
+export type { Channel, ChannelName, ChannelResponse, CookoutErrorCode, CreateChannelRequest, CreateIdentityRequest, HealthResponse, Identity, IdentityName, IdentityResponse, IdentityWithTokenResponse, ListChannelsResponse, ListIdentitiesResponse, Owner, Token };
 ```

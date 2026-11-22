@@ -20,7 +20,7 @@ export type ServeLayers = {
   readonly secrets: Layer.Layer<Secrets>;
 };
 
-const routes: ReadonlyArray<Route<Caller | Channels>> = [...identityRoutes, ...channelRoutes];
+const routes: ReadonlyArray<Route<Caller | Channels | Storage | Secrets>> = [...identityRoutes, ...channelRoutes];
 
 export const cookoutServer = (listen: Listen) =>
   httpServer(listen, routes, requireToken).pipe(

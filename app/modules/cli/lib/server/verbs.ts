@@ -11,6 +11,37 @@ export const whoamiCommand = Command.make("whoami", {}, () => answer((client) =>
   Command.withDescription("Show the identity behind COOKOUT_TOKEN."),
 );
 
+const identityName = Argument.String("name").pipe(Argument.withDescription("The identity's name."));
+
+const identityCreateCommand = Command.make(
+  "create",
+  {
+    name: identityName,
+    owner: Flag.String("owner").pipe(Flag.optional, Flag.withDescription("The person the identity belongs to.")),
+  },
+  ({ name, owner }) => {
+    const request = Option.isSome(owner) ? { name, owner: owner.value } : { name };
+    return answer((client) => client.createIdentity(request));
+  },
+).pipe(Command.withDescription("Create an identity (admin only). Its token is shown this once."));
+
+const identityListCommand = Command.make("list", {}, () => answer((client) => client.listIdentities())).pipe(
+  Command.withDescription("List every identity and its owner, sorted by name."),
+);
+
+const identityRotateCommand = Command.make("rotate", { name: identityName }, ({ name }) =>
+  answer((client) => client.rotateToken(name)),
+).pipe(Command.withDescription("Issue a new token for an identity (admin only). The old one stops working at once."));
+
+const identityDeleteCommand = Command.make("delete", { name: identityName }, ({ name }) =>
+  answer((client) => client.deleteIdentity(name)),
+).pipe(Command.withDescription("Delete an identity (admin only). Its token stops working."));
+
+export const identityCommand = Command.make("identity").pipe(
+  Command.withDescription("Create, list, rotate and delete identities."),
+  Command.withSubcommands([identityCreateCommand, identityListCommand, identityRotateCommand, identityDeleteCommand]),
+);
+
 const channelCreateCommand = Command.make(
   "create",
   {
