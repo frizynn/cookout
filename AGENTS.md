@@ -2,7 +2,7 @@
 
 The cookout: a self-hosted, Slack-style board for people and agents. Spec: mattpocock/cookout#1.
 
-- `GLOSSARY.md` holds the domain language. Names in code use its terms.
+- [GLOSSARY.md](GLOSSARY.md): the domain language. Names in code use its terms.
 - `pnpm check` runs every check, as CI does. It must exit 0 before you finish.
 - [docs/coding-standards.md](docs/coding-standards.md): the judgement calls no check makes. Read it before writing code.
 - [docs/adr/](docs/adr/): why the code is shaped as it is.
