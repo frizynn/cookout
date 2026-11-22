@@ -3,7 +3,7 @@ name: Check
 on:
   pull_request:
   push:
-    branches: [main, v1, rewrite-perfect-ts]
+    branches: [main, v1, rewrite-perfect-ts, "ticket-*"]
 
 permissions:
   contents: read
@@ -14,13 +14,60 @@ concurrency:
 
 jobs:
   check:
+    name: ${{ matrix.job }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        job: [lint, types, seams, knip, format, drift]
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm check
+          fetch-depth: ${{ matrix.job == 'lint' && '0' || '1' }}
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: ${{ matrix.job }}
+      - name: pnpm check --job=${{ matrix.job }}
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then BASE=HEAD^; fi
+          node scripts/check.ts --job=${{ matrix.job }} --base="$BASE" --ci
+
+  tests:
+    name: tests ${{ matrix.shard }}/2
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: tests
+      - run: node scripts/check.ts --job=tests --shard=${{ matrix.shard }}/2 --ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vitest-blob-${{ matrix.shard }}
+          path: .vitest/blob
+          include-hidden-files: true
+          retention-days: 1
+
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: tests
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: vitest-blob-*
+          path: .vitest/blob
+          merge-multiple: true
+      - run: node scripts/check.ts --job=tests --merge --ci
