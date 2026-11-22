@@ -50,10 +50,14 @@ function urlFor(options: HttpRequest): string {
   return `${options.baseUrl.replace(/\/+$/, "")}${path}${queryString(options.query)}`;
 }
 
-/** Sends one request and reads the whole answer. A body that is not JSON reads as `undefined`. */
+/**
+ * Sends one request and reads the whole answer. A body that is not JSON reads
+ * as `undefined`. A redirect is never followed, so the headers (the token and
+ * the lease ID) go only to `baseUrl`: the redirect itself is the answer.
+ */
 export async function request(options: HttpRequest): Promise<HttpResponse> {
   const headers = new Headers({ accept: "application/json", ...options.headers });
-  const init: RequestInit = { method: options.method, headers };
+  const init: RequestInit = { method: options.method, headers, redirect: "manual" };
   if (options.body !== undefined) {
     headers.set("content-type", "application/json");
     init.body = JSON.stringify(options.body);
