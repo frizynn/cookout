@@ -18,6 +18,12 @@
       }
     ],
     "local/branded-ids": "error",
+    "local/glossary-terms": [
+      "error",
+      {
+        "glossary": "GLOSSARY.md"
+      }
+    ],
     "local/max-file-tokens": [
       "error",
       {
