@@ -1,7 +1,7 @@
-import { createHash } from "node:crypto";
 import { expect, it } from "vitest";
 import { CookoutError } from "@ai-hero/cookout-client";
 import { errorResponseSchema } from "@ai-hero/cookout-protocol";
+import { hashToken } from "../src/index.ts";
 import { startTestServer } from "./test-server.ts";
 
 async function errorOf(promise: Promise<unknown>): Promise<CookoutError> {
@@ -60,6 +60,7 @@ it("the store holds only a hash of each token", async () => {
   const created = await cookout.client.createIdentity({ name: "agent" });
   for (const token of [cookout.adminToken, created.token]) {
     expect(await cookout.storage.findIdentityByTokenHash(token)).toEqual({ status: "unknown" });
+    expect(await cookout.storage.findIdentityByTokenHash(hashToken(token))).toMatchObject({ status: "active" });
   }
 });
 
@@ -149,18 +150,11 @@ it("deleting the last admin is refused with 409 last_admin", async () => {
 
 it("an admin can delete itself while another admin remains", async () => {
   const cookout = await startTestServer();
-  // v1 has no route that makes a second admin, so put one straight into the
-  // store, hashed the way the server hashes tokens (SHA-256, hex).
-  const token = `cookout_${"s".repeat(43)}`;
-  await cookout.storage.createIdentity(
-    { name: "admin-2", admin: true, createdAt: "2026-01-01T00:00:00.000Z" },
-    createHash("sha256").update(token).digest("hex"),
-  );
+  const second = await cookout.createIdentity("admin-2", { admin: true });
   const deleted = await cookout.client.deleteIdentity("admin");
   expect(deleted.identity).toMatchObject({ name: "admin", admin: true });
   expect(await errorOf(cookout.client.whoami())).toMatchObject({ status: 401, code: "token_revoked" });
-  const second = cookout.clientFor(token);
-  expect(await errorOf(second.deleteIdentity("admin-2"))).toMatchObject({ status: 409, code: "last_admin" });
+  expect(await errorOf(second.client.deleteIdentity("admin-2"))).toMatchObject({ status: 409, code: "last_admin" });
 });
 
 it("deleting a missing identity is a 404", async () => {

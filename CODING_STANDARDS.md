@@ -112,13 +112,18 @@ clock, storage, webhooks }`: a real server on port 0, a fresh in-memory
 adapter, a fake clock (`clock.advance(ms)`; it starts at
 2026-01-01T00:00:00.000Z), an SDK client using the first-boot admin token,
 and a fake webhook receiver (`webhooks.calls`, `failNext(count, status)`,
-`waitForCalls(count)`). `await createIdentity(name, { owner })` makes an
+`waitForCalls(count)`). `await createIdentity(name, { owner, admin })` makes an
 identity as the admin and returns `{ identity, token, client }`, a client
 for that identity. `clientFor(token)` (or `clientFor(undefined)`) is a
 client with any token. `startSecondServer()` boots another server on the
 same store, like a restart. Everything closes when the test ends
 (`onTestFinished`), so tests need no `afterEach`. Extend this helper rather
 than starting servers by hand.
+
+`createIdentity(name, { admin: true })` makes a second admin (v1 has no route
+for that) by writing it into the store with the server's own `hashToken`
+(exported by `server`). Tests never write to `storage` or hash tokens by hand;
+if a test needs state no route can make, add it to the helper.
 
 ### Process tests (CLI and `cookout serve`)
 

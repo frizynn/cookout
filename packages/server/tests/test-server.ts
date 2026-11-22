@@ -7,7 +7,7 @@ import type { FakeClock } from "./fake-clock.ts";
 import { createFakeClock } from "./fake-clock.ts";
 import type { FakeWebhookReceiver } from "./fake-webhook-receiver.ts";
 import { startFakeWebhookReceiver } from "./fake-webhook-receiver.ts";
-import { randomToken, startServer } from "../src/index.ts";
+import { hashToken, randomToken, startServer } from "../src/index.ts";
 
 /** An identity made through the helper, with a client that uses its token. */
 export type TestIdentity = {
@@ -15,6 +15,8 @@ export type TestIdentity = {
   token: string;
   client: CookoutClient;
 };
+
+export type CreateTestIdentityOptions = { owner?: string; admin?: boolean };
 
 export type TestServer = {
   /** The server's base URL, e.g. `http://127.0.0.1:54321`. */
@@ -25,8 +27,13 @@ export type TestServer = {
   adminToken: string;
   /** An SDK client pointed at the server with any token (or none). */
   clientFor(token: string | undefined): CookoutClient;
-  /** Creates an identity as the admin and returns a client that uses its token. */
-  createIdentity(name: string, options?: { owner?: string }): Promise<TestIdentity>;
+  /**
+   * Creates an identity and returns a client that uses its token. Without
+   * `admin` it goes through the protocol as the first-boot admin. With
+   * `admin: true` (no route makes a second admin in v1) it is written into
+   * the store, its token hashed by the server's own `hashToken`.
+   */
+  createIdentity(name: string, options?: CreateTestIdentityOptions): Promise<TestIdentity>;
   /**
    * Starts another server on the same store and clock (like a restart).
    * Its `client` uses the first boot's admin token.
@@ -76,6 +83,15 @@ export async function startTestServer(options: TestServerOptions = {}): Promise<
     adminToken,
     clientFor,
     async createIdentity(name, identityOptions = {}) {
+      if (identityOptions.admin === true) {
+        const token = randomToken();
+        const identity: Identity = { name, admin: true, createdAt: clock.now().toISOString() };
+        if (identityOptions.owner !== undefined) identity.owner = identityOptions.owner;
+        if ((await storage.createIdentity(identity, hashToken(token))) === "name_taken") {
+          throw new Error(`The name ${name} is taken.`);
+        }
+        return { identity, token, client: clientFor(token) };
+      }
       const created = await client.createIdentity(
         identityOptions.owner === undefined ? { name } : { name, owner: identityOptions.owner },
       );

@@ -12,4 +12,11 @@ mattpocock/cookout#1. pnpm workspace, packages in `packages/`.
 - Never loosen `tsconfig.base.json`, `eslint.config.js` or
   `.dependency-cruiser.cjs` to get the check green. Fix the code, or change
   the rule in its own commit and say why.
-- Check new domain terms with Matt before using them in names.
+- Check new domain terms with Matt before using them in names. Only Matt
+  approves a domain term. You may mark a term approved (in
+  `CODING_STANDARDS.md` or anywhere else) only by citing a dated decision in
+  the wiki (`~/repos/matt/personal-wiki/chief-of-staff/cookout/`). Without
+  one, the term stays proposed.
+- In a git worktree, create files with the Write tool (not `cat > … <<EOF`
+  in a shell) and run every command from the worktree root, not after a `cd`
+  elsewhere.
