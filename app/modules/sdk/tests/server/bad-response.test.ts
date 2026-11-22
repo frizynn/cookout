@@ -7,6 +7,7 @@ import { createCookoutClient } from "../../index.ts";
 const ONE_CALL = 1;
 const TEAPOT = 418;
 const TEMPORARY_REDIRECT = 307;
+const BAD_GATEWAY = 502;
 
 it.effect("an answer that isn't the cookout protocol fails with bad_response", () =>
   Effect.gen(function* notTheProtocol() {
@@ -19,6 +20,16 @@ it.effect("an answer that isn't the cookout protocol fails with bad_response", (
     expect(answered).toMatchObject({ code: "bad_response", details: { ok: true }, status: 200 });
     expect(refused).toMatchObject({ code: "bad_response", status: 500 });
   }).pipe(Effect.provide(webhookFake)),
+);
+
+it.effect("a refusal whose body isn't JSON fails with bad_response, with the body's text as its details", () =>
+  Effect.gen(function* notJson() {
+    const url = yield* serverAnswering({ status: BAD_GATEWAY, text: "<html>Bad gateway</html>" });
+    const client = createCookoutClient({ env: {}, token: "cookout_x", url });
+    const refused = yield* refusal(client.whoami);
+
+    expect(refused).toMatchObject({ code: "bad_response", details: "<html>Bad gateway</html>", status: BAD_GATEWAY });
+  }),
 );
 
 it.effect("the SDK doesn't follow a redirect, so the token and lease ID never reach another server", () =>

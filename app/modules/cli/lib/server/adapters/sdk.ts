@@ -1,8 +1,9 @@
 import type { CookoutClient, CookoutClientOptions, CookoutErrorCode } from "../../../../sdk/index.ts";
 import { CookoutError, createCookoutClient } from "../../../../sdk/index.ts";
-import { Effect, Option, Predicate, String as Str } from "effect";
+import { Effect, Option, Predicate } from "effect";
 import type { LeaseState, LeaseStateFailure, LeaseStateFile, LeaseStateNeeds } from "../lease-state.ts";
 import { cookoutToken, cookoutUrl } from "../../../../config/server.ts";
+import { baseUrlOf } from "../../../../http/client.ts";
 import { leaseLost } from "../../../../leases/index.ts";
 import { leaseStateFile } from "../lease-state.ts";
 
@@ -30,7 +31,6 @@ interface Connection {
 type Call<Value> = (client: CookoutClient) => Promise<Value>;
 
 const NO_STATUS = 0;
-const TRAILING_SLASHES = /\/+$/u;
 
 function toFailure(error: unknown): CallFailure {
   if (!(error instanceof CookoutError)) {
@@ -82,7 +82,7 @@ function withSession<Value>(
   return Effect.gen(function* callWithSession() {
     const setUrl = yield* Effect.orDie(cookoutUrl);
     const token = yield* Effect.orDie(cookoutToken);
-    const session = yield* sessionFor({ token, url: Str.replace(TRAILING_SLASHES, "")(setUrl) });
+    const session = yield* sessionFor({ token, url: baseUrlOf(setUrl) });
     return yield* run(session).pipe(Effect.catch(onLeaseLost(session)));
   });
 }
