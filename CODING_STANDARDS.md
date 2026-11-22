@@ -12,6 +12,8 @@ pnpm typecheck        # tsc --build over every package, in dependency order
 pnpm lint             # ESLint (no barrels, injected clocks, ids and timers)
 pnpm lint:boundaries  # dependency-cruiser (package boundaries, see below)
 pnpm test             # Vitest, every package plus tests/ at the root
+pnpm -r test          # each package's own `test` script, one by one
+pnpm --filter "*storage-sqlite" test   # one package (filter by name glob; names are scoped)
 ```
 
 CI (`.github/workflows/check.yml`) runs `pnpm check` on every PR and on push
@@ -38,6 +40,7 @@ packages/<name>/
 | `server`         | `@ai-hero/cookout-server`         | HTTP + SSE server. Depends on `protocol` only and is given a storage adapter. |
 | `storage-sqlite` | `@ai-hero/cookout-storage-sqlite` | The SQLite adapter. The only place a SQLite driver or SQL lives. |
 | `storage-memory` | `@ai-hero/cookout-storage-memory` | The in-memory adapter. HTTP protocol tests run on it. |
+| `storage-tests`  | `@ai-hero/cookout-storage-tests`  | The adapter contract suite (`testStorageAdapter`). Only adapter tests import it. |
 | `client`         | `@ai-hero/cookout-client`         | The TypeScript SDK and the `cookout` CLI on top of it. |
 | `web`            | `@ai-hero/cookout-web`            | The React + shadcn/ui app, built to static files the server serves. |
 | `cookout`        | `@ai-hero/cookout`                | The one published package (bin `cookout`, SDK at `@ai-hero/cookout/sdk`). Bundles the rest. Wires `cookout serve` to SQLite. |
@@ -101,6 +104,34 @@ test must keep passing through a refactor that doesn't change behaviour.
 - CLI: a few tests of the binary (arguments, env vars, JSON output).
 - Browser: Playwright.
 
+### The protocol test helper
+
+`packages/server/tests/test-server.ts`: `await startTestServer()` gives
+`{ url, client, clock, storage, webhooks }`: a real server on port 0, a fresh
+in-memory adapter, a fake clock (`clock.advance(ms)`; it starts at
+2026-01-01T00:00:00.000Z), an SDK client and a fake webhook receiver
+(`webhooks.calls`, `failNext(count, status)`, `waitForCalls(count)`).
+Everything closes when the test ends (`onTestFinished`), so tests need no
+`afterEach`. Extend this helper (for example a client per identity) rather
+than starting servers by hand.
+
+### The adapter contract suite
+
+`packages/storage-tests/src/contract.ts` is one function,
+`testStorageAdapter(adapterName, openFresh)`, and each adapter's
+`tests/contract.test.ts` calls it with a factory for a fresh, empty store
+(SQLite: a new file in a temp folder deleted when the test ends). A ticket
+that adds an adapter operation:
+
+1. adds the method to `StorageAdapter` in `protocol/src/storage.ts`,
+2. adds its behaviour tests to the contract suite (same names for every
+   adapter; never branch on the adapter name),
+3. implements it in every adapter.
+
+Only behaviour a single adapter has (SQLite keeping data across a reopen)
+goes in that adapter's own tests. A future adapter (Postgres) gets the whole
+suite by calling `testStorageAdapter` from its tests.
+
 Write the failing test first, then the code (red, green). Vitest for
 everything. Name tests as behaviour ("a reply to a reply joins the parent
 thread"), not as functions.
@@ -113,6 +144,19 @@ webhook payloads, command data, CLI input files, and adapter results. The
 schemas live in `protocol` and the types come from them (one source of truth).
 Don't cast (`as`) untrusted data into a type.
 
+- **zod** for cookout's own data (every schema in `protocol`, rows read back
+  in `storage-sqlite`). **ajv** only for JSON Schemas that users register
+  (command input).
+- Each schema is exported as `<thing>Schema` with its type
+  `type <Thing> = z.infer<typeof <thing>Schema>` next to it.
+- Errors are `{ error: { code, message, details? } }` (`errorResponseSchema`).
+  `code` is a stable snake_case string callers branch on (`not_found`,
+  `storage_unavailable`, `bad_response`...); `message` is for people. The SDK
+  throws `CookoutError` with `status`, `code`, `message` and `details`, and
+  uses `bad_response` when the server's answer doesn't match the protocol.
+- Each route's path is a constant in `protocol` (`healthPath`), shared by the
+  server and the SDK.
+
 ## Inject every clock, ID source and timer
 
 Code never reads the time, makes a random ID or sets a timer on its own. It
@@ -123,13 +167,26 @@ comment that says why. Outside tests, ESLint bans `Date.now()`, `new Date()`
 with no argument, `Math.random()`, `crypto.randomUUID()`, `setTimeout` and
 `setInterval`.
 
+The clock is `Clock = { now(): Date }` (exported by `server`). Timestamps on
+the wire are ISO 8601 UTC strings (`date.toISOString()`).
+
 ## No SQL outside the adapter
 
 SQL strings, migrations and driver calls live in `storage-sqlite` only. The
 adapter interface in `protocol` speaks in domain operations ("append a
 message", "take a lease"), never in rows or queries. Operations that must be
 atomic are one adapter method each, so each adapter decides how to do the
-transaction.
+transaction. Adapter methods return promises, even where SQLite is
+synchronous, so a networked adapter (Postgres) fits the same interface.
+
+- **Driver:** `node:sqlite` (`DatabaseSync`, built into Node >= 22.13, no
+  native build). On open the adapter sets `journal_mode = WAL`,
+  `synchronous = NORMAL`, `busy_timeout = 5000`, `foreign_keys = ON`.
+- **Migrations** are an append-only list in `storage-sqlite/src/migrations.ts`;
+  `PRAGMA user_version` records how many have run. Never edit or reorder a
+  shipped migration; add a new one at the end. They run inside
+  `openSqliteStorage`, which is called at server start, never during a build
+  (the data volume isn't there at build time). Use `STRICT` tables.
 
 ## Plain words in names
 

@@ -1,0 +1,17 @@
+{
+  "name": "@ai-hero/cookout-storage-tests",
+  "version": "0.0.0",
+  "description": "The storage adapter contract suite: every storage behaviour, run against any adapter.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@ai-hero/cookout-protocol": "workspace:*",
+    "vitest": "^5.1.1"
+  }
+}

@@ -4,6 +4,7 @@
   "files": [],
   "references": [
     { "path": "packages/protocol" },
+    { "path": "packages/storage-tests" },
     { "path": "packages/storage-sqlite" },
     { "path": "packages/storage-memory" },
     { "path": "packages/server" },

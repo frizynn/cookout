@@ -7,10 +7,14 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "test": "vitest run"
+  },
   "dependencies": {
     "@ai-hero/cookout-protocol": "workspace:*"
   },
   "devDependencies": {
-    "@ai-hero/cookout-storage-memory": "workspace:*"
+    "@ai-hero/cookout-storage-memory": "workspace:*",
+    "@ai-hero/cookout-client": "workspace:*"
   }
 }

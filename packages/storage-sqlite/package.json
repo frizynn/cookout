@@ -7,7 +7,14 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "test": "vitest run --reporter=verbose"
+  },
   "dependencies": {
-    "@ai-hero/cookout-protocol": "workspace:*"
+    "@ai-hero/cookout-protocol": "workspace:*",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@ai-hero/cookout-storage-tests": "workspace:*"
   }
 }
