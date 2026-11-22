@@ -4,9 +4,24 @@ const TESTS = `^${R}/[^/]+/tests/`;
 const BACKEND = `^${R}/[^/]+/(server\\.ts$|lib/server/)`;
 const ENTRIES = "^app/(main\\.ts|web\\.tsx)$";
 const WEB = `^app/web\\.tsx$|^${R}/(design-system|session|board|unread|composer|live|routes|format|views)/`;
+const PUBLISHED_ENTRIES = ["app/main.ts", `${R}/sdk/index.ts`];
+const PUBLISHED_SDK = `${R}/sdk/index.ts`;
+const exactly = (file) => `^${file.replaceAll(".", "\\.")}$`;
 
 module.exports = {
   forbidden: [
+    {
+      name: "published-entries-ship-no-test-code",
+      severity: "error",
+      from: { path: PUBLISHED_ENTRIES.map(exactly) },
+      to: { path: `^${R}/(testing|webhook-fake)/`, reachable: true },
+    },
+    {
+      name: "published-sdk-reaches-no-effect",
+      severity: "error",
+      from: { path: exactly(PUBLISHED_SDK) },
+      to: { path: "(^|/)node_modules/(effect|@effect/[^/]+)/", reachable: true },
+    },
     {
       name: "entry-points-only-from-app",
       severity: "error",
