@@ -286,6 +286,23 @@ it("a bad page cursor or limit is refused with 400", async () => {
   }
 });
 
+it("a path segment that isn't valid percent-encoding is 400 invalid_path on every route", async () => {
+  const cookout = await startTestServer();
+  for (const [method, path] of [
+    ["GET", "/v1/channels/%E0"],
+    ["GET", "/v1/channels/%E0/messages"],
+    ["DELETE", "/v1/identities/%E0"],
+    ["POST", "/v1/identities/%E0/token"],
+  ] as const) {
+    const response = await fetch(`${cookout.url}${path}`, {
+      method,
+      headers: { authorization: `Bearer ${cookout.adminToken}` },
+    });
+    expect(response.status, `${method} ${path}`).toBe(400);
+    expect(errorResponseSchema.parse(await response.json()).error.code).toBe("invalid_path");
+  }
+});
+
 it("reading a missing channel's messages is a 404", async () => {
   const { agent } = await withChannel();
   expect(await errorOf(agent.client.listMessages("nowhere"))).toMatchObject({ status: 404, code: "channel_not_found" });

@@ -228,6 +228,10 @@ Don't cast (`as`) untrusted data into a type.
 - `GET /v1/messages/<id>/thread` works from any message in the thread.
 - In the server, `parseRequest(schema, input)` is how a body or query becomes
   typed data (400 `invalid_request` with the zod issues otherwise).
+- Routes with a path parameter match through `matchPath(pattern, path)`,
+  which returns the segments percent-decoded. Never call
+  `decodeURIComponent` on a segment yourself: a malformed one (`%E0`) must be
+  400 `invalid_path`, not a 500.
 
 ## The CLI
 

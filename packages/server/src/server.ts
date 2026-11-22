@@ -153,6 +153,22 @@ function messageNotFound(id: number): HttpError {
   return new HttpError(404, { code: "message_not_found", message: `There is no message ${id}.` });
 }
 
+/**
+ * Matches a route pattern and returns its captured path segments, already
+ * percent-decoded (index 0 is the whole path). Every route with a parameter
+ * goes through here, so a malformed segment (`%E0`) is 400 `invalid_path`,
+ * never a 500. Returns `null` if the pattern doesn't match.
+ */
+function matchPath(pattern: RegExp, path: string): (string | undefined)[] | null {
+  const match = pattern.exec(path);
+  if (match === null) return null;
+  try {
+    return match.map((segment: string | undefined) => (segment === undefined ? undefined : decodeURIComponent(segment)));
+  } catch {
+    throw new HttpError(400, { code: "invalid_path", message: `The path ${path} is not valid percent-encoding.` });
+  }
+}
+
 /** Parses a request body or query, or throws 400 `invalid_request` with the schema errors. */
 function parseRequest<T>(
   schema: { safeParse(input: unknown): { success: true; data: T } | { success: false; error: { issues: unknown } } },
@@ -186,9 +202,9 @@ async function handle(options: ServerOptions, request: IncomingMessage, response
     return;
   }
 
-  const identityRoute = /^\/v1\/identities\/([^/]+)(\/token)?$/.exec(path);
-  const channelRoute = /^\/v1\/channels\/([^/]+)(\/messages)?$/.exec(path);
-  const threadRoute = /^\/v1\/messages\/(\d+)\/thread$/.exec(path);
+  const identityRoute = matchPath(/^\/v1\/identities\/([^/]+)(\/token)?$/, path);
+  const channelRoute = matchPath(/^\/v1\/channels\/([^/]+)(\/messages)?$/, path);
+  const threadRoute = matchPath(/^\/v1\/messages\/(\d+)\/thread$/, path);
   if (
     path !== whoamiPath &&
     path !== identitiesPath &&
@@ -227,7 +243,7 @@ async function handle(options: ServerOptions, request: IncomingMessage, response
 
   if (channelRoute !== null) {
     if (method !== "GET") throw notAllowed(method, path);
-    const name = decodeURIComponent(channelRoute[1] ?? "");
+    const name = channelRoute[1] ?? "";
     if (channelRoute[2] === undefined) {
       const channel = await storage.findChannel(name);
       if (channel === undefined) throw channelNotFound(name);
@@ -313,7 +329,7 @@ async function handle(options: ServerOptions, request: IncomingMessage, response
   }
 
   if (identityRoute !== null) {
-    const name = decodeURIComponent(identityRoute[1] ?? "");
+    const name = identityRoute[1] ?? "";
     const isTokenRoute = identityRoute[2] !== undefined;
     if (isTokenRoute && method === "POST") {
       requireAdmin(caller);
