@@ -56,6 +56,17 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
+  pack:
+    name: pack smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: pack
+      - run: pnpm run --silent pack:smoke
+
   coverage:
     runs-on: ubuntu-latest
     timeout-minutes: 5
