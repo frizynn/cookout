@@ -141,14 +141,46 @@ export function testStorageAdapter(adapterName: string, openFresh: OpenFreshStor
         const storage = await open();
         await storage.createIdentity(identity("gone", { owner: "matt" }), hashA);
         await storage.createIdentity(identity("stays"), hashB);
-        expect(await storage.deleteIdentity("gone")).toEqual(identity("gone", { owner: "matt" }));
+        expect(await storage.deleteIdentity("gone")).toEqual({
+          status: "deleted",
+          identity: identity("gone", { owner: "matt" }),
+        });
         expect(await storage.listIdentities()).toEqual([identity("stays")]);
         expect(await storage.findIdentityByTokenHash(hashA)).toEqual({ status: "revoked" });
       });
 
       it("deleting a missing identity returns nothing", async () => {
         const storage = await open();
-        expect(await storage.deleteIdentity("nobody")).toBeUndefined();
+        expect(await storage.deleteIdentity("nobody")).toEqual({ status: "not_found" });
+      });
+
+      it("the last admin can't be deleted", async () => {
+        const storage = await open();
+        await storage.createIdentity(identity("boss", { admin: true }), hashA);
+        await storage.createIdentity(identity("agent"), hashB);
+        expect(await storage.deleteIdentity("boss")).toEqual({ status: "last_admin" });
+        expect(await storage.listIdentities()).toEqual([identity("agent"), identity("boss", { admin: true })]);
+        expect(await storage.findIdentityByTokenHash(hashA)).toEqual({
+          status: "active",
+          identity: identity("boss", { admin: true }),
+        });
+      });
+
+      it("an admin can be deleted while another admin remains", async () => {
+        const storage = await open();
+        await storage.createIdentity(identity("boss", { admin: true }), hashA);
+        await storage.createIdentity(identity("boss-2", { admin: true }), hashB);
+        expect(await storage.deleteIdentity("boss")).toMatchObject({ status: "deleted" });
+        expect(await storage.deleteIdentity("boss-2")).toEqual({ status: "last_admin" });
+      });
+
+      it("two admins deleted at once leave one admin", async () => {
+        const storage = await open();
+        await storage.createIdentity(identity("boss", { admin: true }), hashA);
+        await storage.createIdentity(identity("boss-2", { admin: true }), hashB);
+        const results = await Promise.all([storage.deleteIdentity("boss"), storage.deleteIdentity("boss-2")]);
+        expect(results.map((result) => result.status).sort()).toEqual(["deleted", "last_admin"]);
+        expect((await storage.listIdentities()).filter((found) => found.admin)).toHaveLength(1);
       });
 
       it("a deleted name can be created again, and the old token stays revoked", async () => {

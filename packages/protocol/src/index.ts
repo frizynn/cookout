@@ -28,4 +28,4 @@ export type {
   ListIdentitiesResponse,
 } from "./identities.ts";
 export { messageIdSchema } from "./storage.ts";
-export type { MessageId, StorageAdapter, TokenLookup } from "./storage.ts";
+export type { DeleteIdentityResult, MessageId, StorageAdapter, TokenLookup } from "./storage.ts";

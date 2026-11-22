@@ -183,7 +183,9 @@ Don't cast (`as`) untrusted data into a type.
   The server checks the route exists first (unknown routes are 404 without a
   token), then the token: 401 `token_missing`, `token_unknown` (never issued)
   or `token_revoked` (rotated away, or its identity was deleted). An admin-only
-  action from a non-admin is 403 `admin_only`.
+  action from a non-admin is 403 `admin_only`. Deleting the last admin is
+  409 `last_admin` (checked inside the adapter's `deleteIdentity`, so it is
+  atomic). Any future way to drop the admin flag must keep the same rule.
 - Tokens are `cookout_` plus 32 random bytes in base64url, made by the
   injected `newToken` (`randomToken` from `server` at start-up). The server
   hands the store only `sha256(token)` in hex; no adapter ever sees a token.

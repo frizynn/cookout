@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { expect, it } from "vitest";
 import { CookoutError } from "@ai-hero/cookout-client";
 import { errorResponseSchema } from "@ai-hero/cookout-protocol";
@@ -136,6 +137,30 @@ it("deleting an identity removes it and its token stops working", async () => {
   expect(identities.map((identity) => identity.name)).toEqual(["admin"]);
   const error = await errorOf(agent.client.whoami());
   expect(error).toMatchObject({ status: 401, code: "token_revoked" });
+});
+
+it("deleting the last admin is refused with 409 last_admin", async () => {
+  const cookout = await startTestServer();
+  await cookout.createIdentity("agent");
+  const error = await errorOf(cookout.client.deleteIdentity("admin"));
+  expect(error).toMatchObject({ status: 409, code: "last_admin" });
+  expect((await cookout.client.whoami()).identity).toMatchObject({ name: "admin", admin: true });
+});
+
+it("an admin can delete itself while another admin remains", async () => {
+  const cookout = await startTestServer();
+  // v1 has no route that makes a second admin, so put one straight into the
+  // store, hashed the way the server hashes tokens (SHA-256, hex).
+  const token = `cookout_${"s".repeat(43)}`;
+  await cookout.storage.createIdentity(
+    { name: "admin-2", admin: true, createdAt: "2026-01-01T00:00:00.000Z" },
+    createHash("sha256").update(token).digest("hex"),
+  );
+  const deleted = await cookout.client.deleteIdentity("admin");
+  expect(deleted.identity).toMatchObject({ name: "admin", admin: true });
+  expect(await errorOf(cookout.client.whoami())).toMatchObject({ status: 401, code: "token_revoked" });
+  const second = cookout.clientFor(token);
+  expect(await errorOf(second.deleteIdentity("admin-2"))).toMatchObject({ status: 409, code: "last_admin" });
 });
 
 it("deleting a missing identity is a 404", async () => {

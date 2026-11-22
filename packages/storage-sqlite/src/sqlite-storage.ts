@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import type { Identity, MessageId, StorageAdapter, TokenLookup } from "@ai-hero/cookout-protocol";
+import type { DeleteIdentityResult, Identity, MessageId, StorageAdapter, TokenLookup } from "@ai-hero/cookout-protocol";
 import { identitySchema, messageIdSchema } from "@ai-hero/cookout-protocol";
 import { migrate } from "./migrations.ts";
 
@@ -47,6 +47,7 @@ export function openSqliteStorage(options: SqliteStorageOptions): StorageAdapter
   );
   const insertToken = db.prepare("INSERT INTO tokens (token_hash, identity_name, revoked) VALUES (?, ?, 0)");
   const countIdentities = db.prepare("SELECT count(*) AS count FROM identities");
+  const countAdmins = db.prepare("SELECT count(*) AS count FROM identities WHERE admin = 1");
   const selectIdentities = db.prepare("SELECT name, owner, admin, created_at FROM identities ORDER BY name");
   const selectIdentity = db.prepare("SELECT name, owner, admin, created_at FROM identities WHERE name = ?");
   const selectToken = db.prepare("SELECT identity_name, revoked FROM tokens WHERE token_hash = ?");
@@ -130,12 +131,13 @@ export function openSqliteStorage(options: SqliteStorageOptions): StorageAdapter
     },
     async deleteIdentity(name) {
       assertOpen();
-      return inTransaction(() => {
+      return inTransaction((): DeleteIdentityResult => {
         const identity = findIdentity(name);
-        if (identity === undefined) return undefined;
+        if (identity === undefined) return { status: "not_found" };
+        if (identity.admin && countRow.parse(countAdmins.get()).count === 1) return { status: "last_admin" };
         revokeTokens.run(name);
         removeIdentity.run(name);
-        return identity;
+        return { status: "deleted", identity };
       });
     },
     async checkHealth(): Promise<void> {

@@ -73,10 +73,13 @@ export function createMemoryStorage(): StorageAdapter {
     async deleteIdentity(name) {
       assertOpen();
       const identity = identities.get(name);
-      if (identity === undefined) return undefined;
+      if (identity === undefined) return { status: "not_found" };
+      if (identity.admin && [...identities.values()].filter((found) => found.admin).length === 1) {
+        return { status: "last_admin" };
+      }
       revokeTokensOf(name);
       identities.delete(name);
-      return copy(identity);
+      return { status: "deleted", identity: copy(identity) };
     },
     async checkHealth(): Promise<void> {
       assertOpen();

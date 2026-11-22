@@ -17,6 +17,12 @@ export type TokenLookup =
   | { status: "revoked" }
   | { status: "unknown" };
 
+/** What `deleteIdentity` did. */
+export type DeleteIdentityResult =
+  | { status: "deleted"; identity: Identity }
+  | { status: "not_found" }
+  | { status: "last_admin" };
+
 /**
  * Where the server keeps its data. It speaks in domain operations, never in
  * rows or queries. Each operation that must be atomic is one method, so each
@@ -49,10 +55,10 @@ export interface StorageAdapter {
    */
   replaceToken(name: string, tokenHash: string): Promise<Identity | undefined>;
   /**
-   * Removes the identity and revokes its token. Returns what was removed, or
-   * `undefined` if there is no such name.
+   * Removes the identity and revokes its token, in one step. Refuses (and
+   * changes nothing) if it is the last admin, so a cookout always has one.
    */
-  deleteIdentity(name: string): Promise<Identity | undefined>;
+  deleteIdentity(name: string): Promise<DeleteIdentityResult>;
   /** Resolves if the store can be used, rejects if not. Backs `GET /v1/health`. */
   checkHealth(): Promise<void>;
   /** Releases the store. Later calls reject. Closing twice is fine. */

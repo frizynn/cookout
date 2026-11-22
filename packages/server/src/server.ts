@@ -203,9 +203,15 @@ async function handle(options: ServerOptions, request: IncomingMessage, response
     }
     if (!isTokenRoute && method === "DELETE") {
       requireAdmin(caller);
-      const identity = await storage.deleteIdentity(name);
-      if (identity === undefined) throw identityNotFound(name);
-      const body: IdentityResponse = { identity };
+      const result = await storage.deleteIdentity(name);
+      if (result.status === "not_found") throw identityNotFound(name);
+      if (result.status === "last_admin") {
+        throw new HttpError(409, {
+          code: "last_admin",
+          message: `${name} is the last admin. Make another admin before deleting it.`,
+        });
+      }
+      const body: IdentityResponse = { identity: result.identity };
       sendJson(response, 200, identityResponseSchema.parse(body));
       return;
     }
