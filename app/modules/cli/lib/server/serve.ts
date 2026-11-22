@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect";
 import { Command, Flag } from "effect/cli";
 import { databasePath, host, port } from "../../../config/server.ts";
 import { httpServer, type Listen, serverUrl } from "../../../http/server.ts";
-import { FirstBoot, firstBoot, identitiesLayer, identityRoutes } from "../../../identities/server.ts";
+import { FirstBoot, firstBoot, identitiesLayer, identityRoutes, requireToken } from "../../../identities/server.ts";
 import type { Secrets } from "../../../secrets/server.ts";
 import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import { printLine } from "./output.ts";
@@ -13,7 +13,10 @@ export type ServeLayers = {
 };
 
 export const cookoutServer = (listen: Listen) =>
-  httpServer(listen, [...identityRoutes]).pipe(Layer.provideMerge(firstBoot), Layer.provideMerge(identitiesLayer));
+  httpServer(listen, [...identityRoutes], requireToken).pipe(
+    Layer.provideMerge(firstBoot),
+    Layer.provideMerge(identitiesLayer),
+  );
 
 const printAdminToken = Effect.gen(function* () {
   const { adminToken } = yield* FirstBoot;

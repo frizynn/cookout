@@ -48,18 +48,35 @@ const decodeParams = (pattern: string, path: string): Effect.Effect<Params, Refu
     catch: () => invalidPath(path),
   });
 
-const pick = <R>(routes: ReadonlyArray<Route<R>>, method: string, path: string): Effect.Effect<Route<R>, Refusal> => {
-  const onPath = routes.filter((route) => matches(route.path, path));
-  const route = onPath.find((candidate) => candidate.method === method);
-  if (route !== undefined) return Effect.succeed(route);
-  return Effect.fail(onPath.length === 0 ? notFound(method, path) : methodNotAllowed(method, path));
+export type Gate<Provides, Needs> = <A, E, R>(
+  effect: Effect.Effect<A, E, R>,
+) => Effect.Effect<A, unknown, Exclude<R, Provides> | Needs>;
+
+type Target = { readonly method: string; readonly path: string };
+
+const answer = <R>(onPath: ReadonlyArray<Route<R>>, target: Target, params: Params) => {
+  const route = onPath.find((candidate) => candidate.method === target.method);
+  return route === undefined ? Effect.fail(methodNotAllowed(target.method, target.path)) : route.handle(params);
 };
 
-export const dispatch = <R>(routes: ReadonlyArray<Route<R>>) =>
+const paramsOf = <R>(onPath: ReadonlyArray<Route<R>>, target: Target) =>
+  decodeParams(onPath[0]?.path ?? target.path, target.path);
+
+const onPathOf = <R>(routes: ReadonlyArray<Route<R>>, path: string) =>
+  routes.filter((route) => matches(route.path, path));
+
+export const dispatch = <Open, R, Provides, Needs>(
+  open: ReadonlyArray<Route<Open>>,
+  gated: ReadonlyArray<Route<R>>,
+  gate: Gate<Provides, Needs>,
+) =>
   Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest;
-    const path = request.url.split("?")[0] ?? "/";
-    const route = yield* pick(routes, request.method, path);
-    const params = yield* decodeParams(route.path, path);
-    return yield* route.handle(params);
+    const target = { method: request.method, path: request.url.split("?")[0] ?? "/" };
+    const openOnPath = onPathOf(open, target.path);
+    if (openOnPath.length > 0) return yield* answer(openOnPath, target, yield* paramsOf(openOnPath, target));
+    const gatedOnPath = onPathOf(gated, target.path);
+    if (gatedOnPath.length === 0) return yield* Effect.fail(notFound(target.method, target.path));
+    const params = yield* paramsOf(gatedOnPath, target);
+    return yield* gate(answer(gatedOnPath, target, params));
   });

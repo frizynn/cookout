@@ -82,3 +82,45 @@ it.effect("a server on a store that already has identities makes no new admin", 
     expect(admin.identity).toMatchObject({ name: "admin", admin: true });
   }).pipe(Effect.provide(testCookout())),
 );
+
+it.effect("a wrong-method request with no token gets 401", () =>
+  Effect.gen(function* () {
+    const cookout = yield* TestCookout;
+    const response = yield* answer(() => request({ baseUrl: cookout.url, method: "POST", path: whoamiPath }));
+    expect(response.status).toBe(401);
+    expect(response.json).toMatchObject({ error: { code: "token_missing" } });
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a wrong-method request with a working token gets 405", () =>
+  Effect.gen(function* () {
+    const cookout = yield* TestCookout;
+    const response = yield* answer(() =>
+      request({
+        baseUrl: cookout.url,
+        method: "POST",
+        path: whoamiPath,
+        headers: { authorization: `Bearer ${cookout.adminToken}` },
+      }),
+    );
+    expect(response.status).toBe(405);
+    expect(response.json).toMatchObject({ error: { code: "method_not_allowed" } });
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("an unknown path with no token gets 404, not 401", () =>
+  Effect.gen(function* () {
+    const cookout = yield* TestCookout;
+    const response = yield* answer(() => request({ baseUrl: cookout.url, method: "GET", path: "/v1/no-such-route" }));
+    expect(response.status).toBe(404);
+    expect(response.json).toMatchObject({ error: { code: "not_found" } });
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a wrong-method health check needs no token", () =>
+  Effect.gen(function* () {
+    const cookout = yield* TestCookout;
+    const response = yield* answer(() => request({ baseUrl: cookout.url, method: "POST", path: "/v1/health" }));
+    expect(response.status).toBe(405);
+  }).pipe(Effect.provide(testCookout())),
+);

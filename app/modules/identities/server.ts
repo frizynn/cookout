@@ -6,7 +6,7 @@
 import { Context, DateTime, Effect, Layer } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import type { Refusal } from "../http/index.ts";
-import type { Route } from "../http/server.ts";
+import type { Gate, Route } from "../http/server.ts";
 import { Secrets } from "../secrets/server.ts";
 import { Storage, type StorageUnavailable } from "../storage/server.ts";
 import { firstAdminName, type Identity, type Token, type TokenHash, whoamiPath } from "./index.ts";
@@ -38,15 +38,21 @@ export const identitiesLayer: Layer.Layer<Identities, never, Storage | Secrets> 
   }),
 );
 
-const authenticated: Effect.Effect<
-  Identity,
-  Refusal | StorageUnavailable,
-  Identities | HttpServerRequest.HttpServerRequest
-> = Effect.gen(function* () {
-  const identities = yield* Identities;
-  const request = yield* HttpServerRequest.HttpServerRequest;
-  return yield* identities.authenticate(request.headers["authorization"]);
-});
+/** The identity behind the current request's bearer token, inside a route `requireToken` let through. */
+export class Caller extends Context.Service<Caller, Identity>()("cookout/identities/Caller") {}
+
+/**
+ * The gate every route but `/v1/health` sits behind: authenticates the
+ * request's bearer token and provides its identity as `Caller`. Refuses
+ * with 401 `token_missing`, `token_unknown` or `token_revoked`.
+ */
+export const requireToken: Gate<Caller, Identities | HttpServerRequest.HttpServerRequest> = (effect) =>
+  Effect.gen(function* () {
+    const identities = yield* Identities;
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const identity = yield* identities.authenticate(request.headers["authorization"]);
+    return yield* Effect.provideService(effect, Caller, identity);
+  });
 
 export type FirstBootService = {
   /** The token of the `admin` identity, if this boot made it. Shown this once; later boots have none. */
@@ -67,15 +73,18 @@ export const firstBoot: Layer.Layer<FirstBoot, StorageUnavailable, Identities | 
   }),
 );
 
-const whoamiRoute: Route<Identities> = {
+const whoamiRoute: Route<Caller> = {
   method: "GET",
   path: whoamiPath,
   handle: () =>
-    Effect.flatMap(authenticated, (identity) => HttpServerResponse.schemaJson(IdentityResponseSchema)({ identity })),
+    Effect.gen(function* () {
+      const identity = yield* Caller;
+      return yield* HttpServerResponse.schemaJson(IdentityResponseSchema)({ identity });
+    }),
 };
 
-/** The identity routes, for the server's route list. */
-export const identityRoutes: ReadonlyArray<Route<Identities>> = [whoamiRoute];
+/** The identity routes, for the server's route list. They need `Caller`, which `requireToken` provides. */
+export const identityRoutes: ReadonlyArray<Route<Caller>> = [whoamiRoute];
 
 /** The response Schemas of the identity routes, for the SDK's generated validators. */
 export const identityResponseSchemas = { IdentityResponse: IdentityResponseSchema };
