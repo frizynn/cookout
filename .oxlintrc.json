@@ -369,7 +369,12 @@
         "extensions": [".tsx"]
       }
     ],
-    "vitest/require-hook": "error",
+    "vitest/require-hook": [
+      "error",
+      {
+        "allowedFunctionCalls": ["ruleTester.run"]
+      }
+    ],
     "vitest/no-standalone-expect": [
       "error",
       {
