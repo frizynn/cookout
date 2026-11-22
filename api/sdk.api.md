@@ -14,10 +14,10 @@ The SDK's public surface: the built `dist/sdk.d.ts`, as consumers of the publish
  * request and answers of the channel routes, their paths, and the error codes
  * they refuse with.
  */
-declare const brand$2: unique symbol;
+declare const brand$3: unique symbol;
 /** A channel's name: 1–80 lowercase letters, digits or `-`. Unique on a server. */
 type ChannelName = string & {
-  readonly [brand$2]: "ChannelName";
+  readonly [brand$3]: "ChannelName";
 };
 /** A channel as the server shows it. */
 type Channel = {
@@ -46,9 +46,9 @@ type ListChannelsResponse = {
  * constructors, the identity as the server shows it, the routes, and the
  * error codes bearer auth and the admin check answer with.
  */
-declare const brand$1: unique symbol;
+declare const brand$2: unique symbol;
 type Brand<Name extends string> = string & {
-  readonly [brand$1]: Name;
+  readonly [brand$2]: Name;
 };
 /** An identity's name: 1–64 lowercase letters, digits or `-`, so `@name` mentions parse cleanly. Unique on a server. */
 type IdentityName = Brand<"IdentityName">;
@@ -83,6 +83,40 @@ type CreateIdentityRequest = {
   readonly name: string;
   readonly owner?: string;
 };
+/**
+ * The identity lease on the wire, shared by the server, the SDK and the CLI:
+ * the `LeaseId` brand and its check, the header a session sends it in, the
+ * requests and answers of join and leave, and the error codes the lease
+ * refuses with.
+ */
+declare const brand$1: unique symbol;
+/** The value `join` returns and a session sends in `cookout-lease` to show it holds the identity. */
+type LeaseId = string & {
+  readonly [brand$1]: "LeaseId";
+};
+/** The body of `POST /v1/lease`. `as` must be the token's own identity: a check, not a switch. */
+interface JoinRequest {
+  readonly as: string;
+  /** Takes the lease even if another session holds it; that session's lease ID stops working at once. */
+  readonly force?: boolean;
+}
+/** The answer to `join`. */
+interface LeaseResponse {
+  readonly leaseId: LeaseId;
+  /** ISO 8601 UTC. Each request carrying the lease ID moves it forward. */
+  readonly expiresAt: string;
+}
+/** The answer to `leave`. */
+interface LeaveResponse {
+  readonly released: true;
+}
+/**
+ * The `details` of the 409 lease refusals: when the current holder's lease
+ * ends, or `null` if nobody holds the identity.
+ */
+interface LeaseConflictDetails {
+  readonly heldUntil: string | null;
+}
 declare const brand: unique symbol;
 /**
  * A message's ID: a positive whole number. Message IDs are one increasing
@@ -161,7 +195,7 @@ type HealthResponse = {
   readonly status: "ok";
   readonly time: string;
 };
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "admin_only", "identity_exists", "identity_not_found", "last_admin", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "admin_only", "identity_exists", "identity_not_found", "last_admin", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "lease_held", "lease_required", "lease_lost", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "storage_unavailable", "internal_error"];
 type ErrorCode = (typeof errorCodes)[number];
 type CookoutErrorCode = ErrorCode | "bad_response" | "url_missing";
 export declare class CookoutError extends Error {
@@ -183,6 +217,8 @@ export type CookoutClientOptions = {
   readonly token?: string;
   /** Where `COOKOUT_URL` and `COOKOUT_TOKEN` are read from. Default: the process's environment (none in a browser). */
   readonly env?: Readonly<Record<string, string | undefined>>;
+  /** A lease ID from an earlier `join` (the CLI keeps it in its lease-state file). The client sends it on every request, which renews the lease. */
+  readonly leaseId?: LeaseId;
 };
 export type CookoutClient = {
   /** `GET /v1/health`. Resolves when the server and its storage are usable. */
@@ -215,6 +251,17 @@ export type CookoutClient = {
   readonly listMessages: (channel: string, query?: ListMessagesQuery) => Promise<ListMessagesResponse>;
   /** `GET /v1/messages/:id/thread`: the thread holding the message, its top-level message and every reply in order. */
   readonly getThread: (messageId: MessageId) => Promise<ThreadResponse>;
+  /**
+   * `POST /v1/lease`: takes the lease on the token's identity (`as` must be its name). From then on this client sends
+   * the lease ID on every request, renewing it. 409 `lease_held` (with `details.heldUntil`) if another session holds
+   * it, unless `force`, which takes it over.
+   */
+  readonly join: (request: JoinRequest) => Promise<LeaseResponse>;
+  /**
+   * `DELETE /v1/lease`: releases this client's lease, so another session can join at once. Needs the lease: 409
+   * `lease_required` without one, `lease_lost` if it is no longer live. After a `lease_lost` the client stops sending it.
+   */
+  readonly leave: () => Promise<LeaveResponse>;
 };
 /**
  * A client for the server at `url` with `token`, each defaulting to
@@ -222,5 +269,5 @@ export type CookoutClient = {
  * (status 0) when there is no URL.
  */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export type { Author, Channel, ChannelName, ChannelResponse, CookoutErrorCode, CreateChannelRequest, CreateIdentityRequest, HealthResponse, Identity, IdentityName, IdentityResponse, IdentityWithTokenResponse, JsonValue, ListChannelsResponse, ListIdentitiesResponse, ListMessagesQuery, ListMessagesResponse, Message, MessageFields, MessageId, MessageResponse, Owner, PostMessageRequest, Reply, ThreadResponse, Token, TopLevelMessage };
+export type { Author, Channel, ChannelName, ChannelResponse, CookoutErrorCode, CreateChannelRequest, CreateIdentityRequest, HealthResponse, Identity, IdentityName, IdentityResponse, IdentityWithTokenResponse, JoinRequest, JsonValue, LeaseConflictDetails, LeaseId, LeaseResponse, LeaveResponse, ListChannelsResponse, ListIdentitiesResponse, ListMessagesQuery, ListMessagesResponse, Message, MessageFields, MessageId, MessageResponse, Owner, PostMessageRequest, Reply, ThreadResponse, Token, TopLevelMessage };
 ```

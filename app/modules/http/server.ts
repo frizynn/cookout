@@ -54,10 +54,10 @@ export function nodeHttpServer(listen: Listen): ReturnType<typeof NodeHttpServer
  * unknown paths (404) never do. The `HttpServer` it provides says which
  * address it took: port 0 picks a free one.
  */
-export const httpServer = <R, Provides, Needs>(
+export const httpServer = <R, Provides, Needs, Fails>(
   listen: Listen,
   routes: ReadonlyArray<Route<R>>,
-  gate: Gate<Provides, Needs>,
+  gate: Gate<Provides, Needs, Fails>,
 ) =>
   HttpServer.serve(
     dispatch([healthRoute], routes, gate).pipe(

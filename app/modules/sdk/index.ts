@@ -5,6 +5,13 @@
  */
 import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "../channels/index.ts";
 import type {
+  CreateIdentityRequest,
+  IdentityResponse,
+  IdentityWithTokenResponse,
+  ListIdentitiesResponse,
+} from "../identities/index.ts";
+import type { JoinRequest, LeaseId, LeaseResponse, LeaveResponse } from "../leases/index.ts";
+import type {
   ListMessagesQuery,
   ListMessagesResponse,
   MessageId,
@@ -13,18 +20,8 @@ import type {
   ThreadResponse,
 } from "../messages/index.ts";
 import { channelPath, channelsPath } from "../channels/index.ts";
-import { readCookoutConnection } from "../config/index.ts";
-import type { HealthResponse } from "../http/index.ts";
-import { healthPath } from "../http/index.ts";
-import type {
-  CreateIdentityRequest,
-  IdentityResponse,
-  IdentityWithTokenResponse,
-  ListIdentitiesResponse,
-} from "../identities/index.ts";
+import { connectionFor, getJson, send } from "./lib/request.ts";
 import { identitiesPath, identityPath, identityTokenPath, whoamiPath } from "../identities/index.ts";
-import { CookoutError } from "./lib/errors.ts";
-import { getJson, send } from "./lib/request.ts";
 import {
   isChannelResponse,
   isHealthResponse,
@@ -33,6 +30,9 @@ import {
   isListChannelsResponse,
   isListIdentitiesResponse,
 } from "./lib/generated/validators.js";
+import type { HealthResponse } from "../http/index.ts";
+import { healthPath } from "../http/index.ts";
+import { leaseCalls } from "./lib/leases.ts";
 import { messageCalls } from "./lib/messages.ts";
 
 export type {
@@ -67,6 +67,13 @@ export type {
   ThreadResponse,
   TopLevelMessage,
 } from "../messages/index.ts";
+export type {
+  JoinRequest,
+  LeaseConflictDetails,
+  LeaseId,
+  LeaseResponse,
+  LeaveResponse,
+} from "../leases/index.ts";
 export { CookoutError, type CookoutErrorCode } from "./lib/errors.ts";
 
 export type CookoutClientOptions = {
@@ -76,6 +83,8 @@ export type CookoutClientOptions = {
   readonly token?: string;
   /** Where `COOKOUT_URL` and `COOKOUT_TOKEN` are read from. Default: the process's environment (none in a browser). */
   readonly env?: Readonly<Record<string, string | undefined>>;
+  /** A lease ID from an earlier `join` (the CLI keeps it in its lease-state file). The client sends it on every request, which renews the lease. */
+  readonly leaseId?: LeaseId;
 };
 
 export type CookoutClient = {
@@ -109,6 +118,17 @@ export type CookoutClient = {
   readonly listMessages: (channel: string, query?: ListMessagesQuery) => Promise<ListMessagesResponse>;
   /** `GET /v1/messages/:id/thread`: the thread holding the message, its top-level message and every reply in order. */
   readonly getThread: (messageId: MessageId) => Promise<ThreadResponse>;
+  /**
+   * `POST /v1/lease`: takes the lease on the token's identity (`as` must be its name). From then on this client sends
+   * the lease ID on every request, renewing it. 409 `lease_held` (with `details.heldUntil`) if another session holds
+   * it, unless `force`, which takes it over.
+   */
+  readonly join: (request: JoinRequest) => Promise<LeaseResponse>;
+  /**
+   * `DELETE /v1/lease`: releases this client's lease, so another session can join at once. Needs the lease: 409
+   * `lease_required` without one, `lease_lost` if it is no longer live. After a `lease_lost` the client stops sending it.
+   */
+  readonly leave: () => Promise<LeaveResponse>;
 };
 
 /**
@@ -117,16 +137,7 @@ export type CookoutClient = {
  * (status 0) when there is no URL.
  */
 export function createCookoutClient(options: CookoutClientOptions = {}): CookoutClient {
-  const connection = { ...readCookoutConnection(options.env), ...options };
-  const url = connection.url ?? "";
-  if (url === "") {
-    throw new CookoutError({
-      status: 0,
-      code: "url_missing",
-      message: "Set COOKOUT_URL to the cookout server's address.",
-    });
-  }
-  const server = { ...connection, url };
+  const server = connectionFor(options);
   return {
     health: () => getJson(server, healthPath, isHealthResponse),
     whoami: () => getJson(server, whoamiPath, isIdentityResponse),
@@ -147,5 +158,6 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
     getChannel: (name) =>
       send(server, { method: "GET", path: channelPath, params: { name }, isExpected: isChannelResponse }),
     ...messageCalls(server),
+    ...leaseCalls(server),
   };
 }

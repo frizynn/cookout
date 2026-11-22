@@ -7,7 +7,7 @@ const DEV_ENTRY = "^app/dev\\.ts$";
 const WEB = `^app/web\\.tsx$|^${R}/(design-system|session|board|unread|composer|live|routes|format|views)/`;
 const PUBLISHED_ENTRIES = ["app/main.ts", `${R}/sdk/index.ts`];
 const PUBLISHED_SDK = `${R}/sdk/index.ts`;
-const TESTED_INTERFACES = ["sdk", "cli", "storage", "webhook-fake", "secrets"];
+const TESTED_INTERFACES = ["sdk", "cli", "storage", "webhook-fake"];
 const exactly = (file) => `^${file.replaceAll(".", "\\.")}$`;
 
 module.exports = {

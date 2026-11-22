@@ -5,6 +5,7 @@
  */
 import { channelErrorCodes } from "../channels/index.ts";
 import { identityErrorCodes } from "../identities/index.ts";
+import { leaseErrorCodes } from "../leases/index.ts";
 import { messageErrorCodes } from "../messages/index.ts";
 
 export const healthPath = "/v1/health";
@@ -18,6 +19,7 @@ export const errorCodes = [
   ...identityErrorCodes,
   ...channelErrorCodes,
   ...messageErrorCodes,
+  ...leaseErrorCodes,
   "not_found",
   "method_not_allowed",
   "invalid_path",

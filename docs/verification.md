@@ -69,6 +69,22 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity rotate reviewer
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity delete reviewer
 ```
 
+## Take an identity's lease
+
+A session takes an identity with `join --as <name>`, the token's own identity. The CLI keeps the lease ID in a lease-state file under `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then `~/.local/state/cookout`), one per server and token, and sends it on every later command, which renews the lease. Two sessions with the same token need separate state folders. These commands play two sessions of the seeded `grace`, each with its own folder:
+
+```sh
+mkdir -p /tmp/cookout-session-1 /tmp/cookout-session-2
+jq -r '.identities[] | select(.identity.name == "grace") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-grace.env
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=/tmp/cookout-session-1 node app/main.ts join --as grace
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts join --as grace
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts join --as grace --force
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=/tmp/cookout-session-1 node app/main.ts leave
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts leave
+```
+
+The first `join` prints `{ "leaseId", "expiresAt" }`, 60 s on. The second is refused with 409 `lease_held` and `details.heldUntil`. `--force` takes the lease over. The first session's `leave` is then refused with 409 `lease_lost`, and its stored lease is deleted, so a second `leave` there says `lease_required`. The second session's `leave` prints `{ "released": true }`. A lease left idle for `COOKOUT_LEASE_SECONDS` (default 60) expires.
+
 ## Drive it with the SDK
 
 The SDK is `@ai-hero/cookout/sdk`; from a checkout, import `app/modules/sdk/index.ts`. `createCookoutClient()` reads `COOKOUT_URL` and `COOKOUT_TOKEN`:

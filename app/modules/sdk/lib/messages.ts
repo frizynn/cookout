@@ -8,11 +8,13 @@ import type {
 } from "../../messages/index.ts";
 import { channelMessagesPath, messagesPath, threadPath } from "../../messages/index.ts";
 import { isListMessagesResponse, isMessageResponse, isThreadResponse } from "./generated/validators.js";
+import type { HeldLease } from "./held-lease.ts";
 import { send } from "./request.ts";
 
 interface Server {
   readonly url: string;
   readonly token?: string;
+  readonly lease: HeldLease;
 }
 
 interface MessageCalls {

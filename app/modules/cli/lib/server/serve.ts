@@ -1,37 +1,32 @@
 import { Effect, Layer } from "effect";
 import { Command, Flag } from "effect/cli";
 import { databasePath, host, port } from "../../../config/server.ts";
-import { type Channels, channelRoutes, channelsLayer } from "../../../channels/server.ts";
+import { channelRoutes, channelsLayer } from "../../../channels/server.ts";
 import { httpServer, type Listen, type Route, serverUrl } from "../../../http/server.ts";
-import {
-  type Caller,
-  FirstBoot,
-  firstBoot,
-  identitiesLayer,
-  identityRoutes,
-  requireToken,
-} from "../../../identities/server.ts";
+import { FirstBoot, firstBoot, identitiesLayer, identityRoutes } from "../../../identities/server.ts";
+import { leaseRoutes, leasesLayer, requireTokenAndRenewLease } from "../../../leases/server.ts";
 import { messageRoutes, messagesLayer } from "../../../messages/server.ts";
-import type { Messages } from "../../../messages/server.ts";
-import type { Secrets } from "../../../secrets/server.ts";
 import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import { printLine } from "./output.ts";
 
 export type ServeLayers = {
   readonly storage: (path: string) => Layer.Layer<Storage, StorageUnavailable>;
-  readonly secrets: Layer.Layer<Secrets>;
 };
 
-const routes: ReadonlyArray<Route<Caller | Channels | Messages | Storage | Secrets>> = [
-  ...identityRoutes,
-  ...channelRoutes,
-  ...messageRoutes,
-];
+type NeedsOf<Routes> = Routes extends readonly Route<infer Needs>[] ? Needs : never;
+
+type RouteNeeds =
+  | NeedsOf<typeof identityRoutes>
+  | NeedsOf<typeof channelRoutes>
+  | NeedsOf<typeof messageRoutes>
+  | NeedsOf<typeof leaseRoutes>;
+
+const routes: readonly Route<RouteNeeds>[] = [...identityRoutes, ...channelRoutes, ...messageRoutes, ...leaseRoutes];
 
 export const cookoutServer = (listen: Listen) =>
-  httpServer(listen, routes, requireToken).pipe(
+  httpServer(listen, routes, requireTokenAndRenewLease).pipe(
     Layer.provideMerge(firstBoot),
-    Layer.provideMerge(Layer.mergeAll(identitiesLayer, channelsLayer, messagesLayer)),
+    Layer.provideMerge(Layer.mergeAll(identitiesLayer, channelsLayer, messagesLayer, leasesLayer)),
   );
 
 const printAdminToken = Effect.gen(function* () {
@@ -46,9 +41,7 @@ const printAdminToken = Effect.gen(function* () {
 
 const runServer = (layers: ServeLayers, listen: Listen, database: string) =>
   Effect.gen(function* () {
-    const services = yield* Layer.build(
-      cookoutServer(listen).pipe(Layer.provide(Layer.mergeAll(layers.storage(database), layers.secrets))),
-    );
+    const services = yield* Layer.build(cookoutServer(listen).pipe(Layer.provide(layers.storage(database))));
     yield* printAdminToken.pipe(Effect.provideContext(services));
     const url = yield* serverUrl.pipe(Effect.provideContext(services));
     yield* printLine({ listening: url, database });

@@ -1,13 +1,22 @@
-import { Effect, Option, Schema } from "effect";
 import { Argument, Command, Flag } from "effect/cli";
+import { Effect, Option, Schema } from "effect";
 import type { ListMessagesQuery, MessageId, PostMessageRequest } from "../../../messages/index.ts";
+import { join, leave } from "./lease-sessions.ts";
+import { printAnswer, refused } from "./output.ts";
+import type { CallFailure } from "./adapters/sdk.ts";
+import type { CommandFailed } from "./output.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
+import type { Secrets } from "../../../secrets/server.ts";
 import { callServer } from "./adapters/sdk.ts";
 import { isMessageId } from "../../../messages/index.ts";
-import { printAnswer, refused } from "./output.ts";
 
-const answer = <A>(call: (client: CookoutClient) => Promise<A>) =>
-  callServer(call).pipe(Effect.flatMap(printAnswer), Effect.catch(refused));
+function answered<Value>(
+  effect: Effect.Effect<Value, CallFailure, Secrets>,
+): Effect.Effect<void, CommandFailed, Secrets> {
+  return effect.pipe(Effect.flatMap(printAnswer), Effect.catch(refused));
+}
+
+const answer = <A>(call: (client: CookoutClient) => Promise<A>) => answered(callServer(call));
 
 const whoamiCommand = Command.make("whoami", {}, () => answer((client) => client.whoami())).pipe(
   Command.withDescription("Show the identity behind COOKOUT_TOKEN."),
@@ -151,4 +160,46 @@ const threadCommand = Command.make("thread").pipe(
   Command.withSubcommands([threadGetCommand]),
 );
 
-export const verbCommands = [whoamiCommand, identityCommand, channelCommand, messageCommand, threadCommand] as const;
+const asFlag = Flag.String("as").pipe(
+  Flag.optional,
+  Flag.withDescription("The token's own identity: a check, not a switch. Required."),
+);
+const forceFlag = Flag.Boolean("force").pipe(
+  Flag.optional,
+  Flag.withDescription("Take the lease even if another session holds it; that session loses it at once."),
+);
+
+function notForced(): boolean {
+  return false;
+}
+
+interface JoinInput {
+  readonly as: Option.Option<string>;
+  readonly force: Option.Option<boolean>;
+}
+
+type JoinCommand = Command.Command<"join", JoinInput, object, CommandFailed, Secrets>;
+
+const joinCommand: JoinCommand = Command.make("join", { as: asFlag, force: forceFlag }, ({ as, force }) =>
+  answered(join({ as, force: Option.getOrElse(force, notForced) })),
+).pipe(
+  Command.withDescription(
+    "Take the lease on the token's identity. The lease ID is kept in COOKOUT_STATE_DIR (default " +
+      "~/.local/state/cookout), and every later command sends it, which keeps the lease alive. Two sessions on one " +
+      "machine with the same token share a lease unless their COOKOUT_STATE_DIR differs.",
+  ),
+);
+
+const leaveCommand = Command.make("leave", {}, () => answered(leave)).pipe(
+  Command.withDescription("Release the lease this session took with join, so another session can join at once."),
+);
+
+export const verbCommands = [
+  whoamiCommand,
+  identityCommand,
+  channelCommand,
+  messageCommand,
+  threadCommand,
+  joinCommand,
+  leaveCommand,
+] as const;
