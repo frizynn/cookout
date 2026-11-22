@@ -1,20 +1,19 @@
 import { defineConfig } from "vitest/config";
 
-// One run covers every package's tests plus the repo-level tests in tests/.
-// A package that needs its own environment (e.g. web with a DOM) adds a
-// vitest.config.ts in its folder; the glob below picks it up as a project.
 export default defineConfig({
   test: {
-    projects: [
-      "packages/*",
-      {
-        test: {
-          name: "repo",
-          include: ["tests/**/*.test.ts"],
-          // Probes write into real packages; keep runs of this file serial.
-          fileParallelism: false,
-        },
+    include: ["app/**/*.test.ts", "lint/**/*.test.js"],
+    coverage: {
+      provider: "v8",
+      include: ["app/**/*.{ts,tsx}"],
+      exclude: ["app/**/tests/**", "app/modules/sdk/lib/generated/**"],
+      thresholds: {
+        autoUpdate: true,
+        statements: 84.61,
+        branches: 55.88,
+        functions: 75.92,
+        lines: 86.52,
       },
-    ],
+    },
   },
 });

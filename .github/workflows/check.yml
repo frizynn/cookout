@@ -1,12 +1,9 @@
 name: Check
 
-# Runs the one root command, `pnpm check` (typecheck, lint, boundary check,
-# tests), on every PR and on push to main.
-
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, v1, rewrite-perfect-ts]
 
 permissions:
   contents: read

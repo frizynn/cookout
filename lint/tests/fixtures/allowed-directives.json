@@ -1,0 +1,12 @@
+[
+  {
+    "file": "app/modules/storage/lib/server/adapters/sqlite.ts",
+    "directive": "oxlint-disable-next-line no-debugger",
+    "reason": "A reviewed exception."
+  },
+  {
+    "file": "app/modules/storage/lib/server/adapters/sqlite.ts",
+    "directive": "@ts-expect-error",
+    "reason": " "
+  }
+]

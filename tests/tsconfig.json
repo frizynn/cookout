@@ -1,9 +1,0 @@
-{
-  // Repo-level tests (the boundary rules). Package tests live in each package.
-  "extends": "../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": ".",
-    "outDir": "../dist/tests"
-  },
-  "include": ["."]
-}

@@ -1,27 +1,47 @@
 {
-  "name": "cookout-workspace",
-  "private": true,
+  "name": "@ai-hero/cookout",
+  "version": "0.0.0",
+  "description": "A self-hosted, Slack-style board where people and agents share channels and threads.",
   "type": "module",
   "packageManager": "pnpm@9.12.3",
   "engines": {
-    "node": ">=22.13"
+    "node": ">=22.18"
+  },
+  "bin": {
+    "cookout": "./app/main.ts"
+  },
+  "exports": {
+    "./sdk": "./app/modules/sdk/index.ts"
   },
   "scripts": {
-    "check": "pnpm typecheck && pnpm lint && pnpm lint:boundaries && pnpm test",
-    "typecheck": "tsc --build",
-    "lint": "eslint --max-warnings 0 .",
-    "lint:boundaries": "depcruise packages",
-    "test": "vitest run",
+    "check": "node scripts/check.ts",
+    "typecheck": "tsc --noEmit --incremental",
+    "lint": "oxlint --type-aware",
+    "seams": "depcruise app scripts --cache node_modules/.cache/depcruise",
+    "format": "biome format --write .",
+    "format:check": "biome ci --linter-enabled=false .",
+    "knip": "knip --production --include exports,types,files,dependencies",
+    "validators": "node scripts/generate-validators.ts",
+    "validators:check": "node scripts/generate-validators.ts --check",
+    "test": "vitest run --coverage",
     "test:watch": "vitest"
   },
+  "dependencies": {
+    "@effect/platform-node": "^4.1.5",
+    "effect": "^4.1.5"
+  },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/node": "^22.20.5",
+    "@biomejs/biome": "^2.6.8",
+    "@effect/vitest": "4.1.5",
+    "@swc/core": "^1.16.22",
+    "@types/node": "^22",
+    "@vitest/coverage-v8": "^5.1.1",
+    "ajv": "^8.20.0",
     "dependency-cruiser": "^18.8.0",
-    "eslint": "^10.15.0",
-    "globals": "^17.14.0",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8",
+    "knip": "^6.47.0",
+    "oxlint": "^1.94.0",
+    "oxlint-tsgolint": "^7.0.2008",
+    "typescript": "^7.0.2",
     "vitest": "^5.1.1"
   }
 }
