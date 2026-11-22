@@ -8,6 +8,7 @@ import { TestClock } from "effect/testing";
 
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const MISSING = 999;
+const NOT_FOUND = 404;
 const TWO_REPLIES = 2;
 const THREE_REPLIES = 3;
 const MIDDLE = 1;
@@ -128,12 +129,25 @@ it.effect("getting the thread of a missing message is a 404", () =>
     const cookout = yield* TestCookout;
     const agent = yield* withChannel(cookout);
     const error = yield* refusal(() => agent.client.getThread(messageId(MISSING)));
-    const notAnId = yield* HttpClient.execute(
-      HttpClientRequest.bearerToken(HttpClientRequest.get(`${cookout.url}/v1/messages/one/thread`), agent.token),
-    );
-    const notAnIdBody = yield* notAnId.json;
+    const zero = HttpClientRequest.get(`${cookout.url}/v1/messages/0/thread`);
+    const zeroAnswer = yield* HttpClient.execute(HttpClientRequest.bearerToken(zero, agent.token));
+    const zeroBody = yield* zeroAnswer.json;
 
     expect(error).toMatchObject({ code: "message_not_found", status: 404 });
-    expect(notAnIdBody).toMatchObject({ error: { code: "message_not_found" } });
+    expect(zeroBody).toMatchObject({ error: { code: "message_not_found" } });
+  }).pipe(Effect.provide([testCookout(), FetchHttpClient.layer])),
+);
+
+it.effect("a thread path whose message ID isn't digits is no route: 404 not_found, with or without a token", () =>
+  Effect.gen(function* notAnId() {
+    const cookout = yield* TestCookout;
+    const agent = yield* withChannel(cookout);
+    const thread = HttpClientRequest.get(`${cookout.url}/v1/messages/one/thread`);
+    const withToken = yield* HttpClient.execute(HttpClientRequest.bearerToken(thread, agent.token));
+    const withoutToken = yield* HttpClient.execute(thread);
+    const bodies = yield* Effect.all([withToken.json, withoutToken.json], ONE_AT_A_TIME);
+
+    expect([withToken.status, withoutToken.status]).toStrictEqual([NOT_FOUND, NOT_FOUND]);
+    expect(bodies).toMatchObject([{ error: { code: "not_found" } }, { error: { code: "not_found" } }]);
   }).pipe(Effect.provide([testCookout(), FetchHttpClient.layer])),
 );

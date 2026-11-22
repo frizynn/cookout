@@ -30,7 +30,7 @@ const DIGITS = /^\d+$/u;
 
 function threadIdOf(asked: string): Effect.Effect<MessageId, Refusal> {
   const id = Number(asked);
-  if (DIGITS.test(asked) && isMessageId(id)) {
+  if (isMessageId(id)) {
     return Effect.succeed(id);
   }
   return Effect.fail(messageNotFound(asked));
@@ -59,6 +59,7 @@ const threadRoute: Route<Messages> = {
     }),
   method: "GET",
   path: threadPath,
+  segments: { id: (segment) => DIGITS.test(segment) },
 };
 
 const pageRoute: Route<Messages> = {

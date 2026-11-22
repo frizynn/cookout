@@ -4,36 +4,49 @@
  * handler fails with a `Refusal` to answer with it; storage, body and path
  * failures are answered by kind, and anything else is a 500.
  */
-import { createServer } from "node:http";
-import { NodeHttpServer } from "@effect/platform-node";
 import { ByteSize, DateTime, Effect, Layer } from "effect";
-import { HttpIncomingMessage, HttpServer, HttpServerResponse } from "effect/http";
-import { Storage } from "../storage/server.ts";
-import { healthPath } from "./index.ts";
-import { respond, toRefusal } from "./lib/server/refusals.ts";
-import { dispatch, type Gate, type Route } from "./lib/server/router.ts";
 import { ErrorResponseSchema, HealthResponseSchema } from "./lib/server/wire.ts";
+import type { Gate, Route } from "./lib/server/router.ts";
+import { HttpIncomingMessage, HttpServer, HttpServerResponse } from "effect/http";
+import { respond, toRefusal } from "./lib/server/refusals.ts";
+import { NodeHttpServer } from "@effect/platform-node";
+import { Storage } from "../storage/server.ts";
+import { createServer } from "node:http";
+import { dispatch } from "./lib/server/router.ts";
+import { healthPath } from "./index.ts";
 
-export type { Gate, Route };
+interface Listen {
+  readonly host: string;
+  readonly port: number;
+}
 
-/** The response Schemas of `/v1/health` and of every refusal, for the SDK's generated validators. */
-export const httpResponseSchemas = { HealthResponse: HealthResponseSchema, ErrorResponse: ErrorResponseSchema };
+type NodeHttp = ReturnType<typeof NodeHttpServer.layer>;
 
-const maxBodySize = ByteSize.bytes(1024 * 1024);
+const MEBIBYTE = 1_048_576;
+const maxBodySize = ByteSize.bytes(MEBIBYTE);
 
 const healthRoute: Route<Storage> = {
-  method: "GET",
-  path: healthPath,
   handle: () =>
-    Effect.gen(function* () {
+    Effect.gen(function* healthCheck() {
       const storage = yield* Storage;
       yield* storage.checkHealth();
-      const time = DateTime.formatIso(yield* DateTime.now);
+      const now = yield* DateTime.now;
+      const time = DateTime.formatIso(now);
       return yield* HttpServerResponse.schemaJson(HealthResponseSchema)({ status: "ok", time });
     }),
+  method: "GET",
+  path: healthPath,
 };
 
-export type Listen = { readonly port: number; readonly host: string };
+function answerFailure(failure: unknown): Effect.Effect<HttpServerResponse.HttpServerResponse> {
+  return respond(toRefusal(failure));
+}
+
+export type { Gate, Route } from "./lib/server/router.ts";
+export type { Listen };
+
+/** The response Schemas of `/v1/health` and of every refusal, for the SDK's generated validators. */
+export const httpResponseSchemas = { ErrorResponse: ErrorResponseSchema, HealthResponse: HealthResponseSchema };
 
 /**
  * Node's HTTP server on `listen`, for any `HttpServer.serve` app: the one
@@ -43,28 +56,34 @@ export type Listen = { readonly port: number; readonly host: string };
  * @param listen The port and host to listen on.
  * @returns The `HttpServer` and Node's HTTP platform.
  */
-export function nodeHttpServer(listen: Listen): ReturnType<typeof NodeHttpServer.layer> {
+export function nodeHttpServer(listen: Listen): NodeHttp {
   return NodeHttpServer.layer(createServer, { ...listen, disablePreemptiveShutdown: true });
 }
 
 /**
  * Serves `/v1/health` and the given routes on `listen` until the Layer is
- * released. Every request to a path one of `routes` serves goes through
+ * released. A route's `segments` give the pattern each named `:param`
+ * segment must match; a path that breaks one is no route's (404
+ * `not_found`). Every request to a path one of `routes` serves goes through
  * `gate` first, before a wrong method is refused with 405; `/v1/health` and
  * unknown paths (404) never do. The `HttpServer` it provides says which
  * address it took: port 0 picks a free one.
+ * @param listen The port and host to listen on.
+ * @param routes Every route but `/v1/health`.
+ * @param gate What every request to one of `routes` goes through first.
+ * @returns The server, as a Layer.
  */
-export const httpServer = <R, Provides, Needs, Fails>(
+export function httpServer<Needs, Provides, Requires, Fails>(
   listen: Listen,
-  routes: ReadonlyArray<Route<R>>,
-  gate: Gate<Provides, Needs, Fails>,
-) =>
-  HttpServer.serve(
-    dispatch([healthRoute], routes, gate).pipe(
-      Effect.catch((error) => respond(toRefusal(error))),
-      Effect.provideService(HttpIncomingMessage.MaxBodySize, maxBodySize),
-    ),
-  ).pipe(Layer.provideMerge(nodeHttpServer(listen)));
+  routes: readonly Route<Needs>[],
+  gate: Gate<Provides, Requires, Fails>,
+) {
+  const app = dispatch({ gate, gated: routes, open: [healthRoute] }).pipe(
+    Effect.catch(answerFailure),
+    Effect.provideService(HttpIncomingMessage.MaxBodySize, maxBodySize),
+  );
+  return Layer.provideMerge(HttpServer.serve(app), nodeHttpServer(listen));
+}
 
 /** The base URL a running `httpServer` answers on, such as `http://127.0.0.1:54321`. */
 export const serverUrl: Effect.Effect<string, never, HttpServer.HttpServer> = Effect.map(

@@ -89,14 +89,13 @@ it.effect("a bad page cursor or limit is refused with 400", () =>
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("a path segment that isn't valid percent-encoding is 400 invalid_path on every route", () =>
+it.effect("a path segment that isn't valid percent-encoding is 400 invalid_path on every route that takes a name", () =>
   Effect.gen(function* invalidPath() {
     const cookout = yield* TestCookout;
     const answers = yield* pipe(
       [
         HttpClientRequest.get(`${cookout.url}/v1/channels/%E0`),
         HttpClientRequest.get(`${cookout.url}/v1/channels/%E0/messages`),
-        HttpClientRequest.get(`${cookout.url}/v1/messages/%E0/thread`),
         HttpClientRequest.make("DELETE")(`${cookout.url}/v1/identities/%E0`),
         HttpClientRequest.post(`${cookout.url}/v1/identities/%E0/token`),
       ],
@@ -109,7 +108,7 @@ it.effect("a path segment that isn't valid percent-encoding is 400 invalid_path 
       ),
     );
 
-    expect(answers).toMatchObject([INVALID_PATH, INVALID_PATH, INVALID_PATH, INVALID_PATH, INVALID_PATH]);
+    expect(answers).toMatchObject([INVALID_PATH, INVALID_PATH, INVALID_PATH, INVALID_PATH]);
   }).pipe(Effect.provide([testCookout(), FetchHttpClient.layer])),
 );
 
