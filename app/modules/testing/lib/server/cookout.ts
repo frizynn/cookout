@@ -4,10 +4,10 @@ import { FirstBoot, Identities } from "../../../identities/server.ts";
 import type { Identity, Token } from "../../../identities/index.ts";
 import { Storage, memoryStorage } from "../../../storage/server.ts";
 import { isIdentityName, isOwner } from "../../../identities/index.ts";
-import { secretsLive, secretsTest } from "../../../secrets/server.ts";
 import { TestClock } from "effect/testing";
 import { cookoutServer } from "../../../cli/server.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
+import { secretsOf } from "./secrets.ts";
 import { serverUrl } from "../../../http/server.ts";
 import { unusableStorage } from "./storage.ts";
 
@@ -45,7 +45,7 @@ export type TestCookoutOptions = {
 
 const storageFor = (options: TestCookoutOptions) => (options.storage === "unusable" ? unusableStorage : memoryStorage);
 
-const secretsFor = (options: TestCookoutOptions) => (options.secrets === "live" ? secretsLive : secretsTest);
+const secretsFor = (options: TestCookoutOptions) => secretsOf(options.secrets ?? "test");
 
 function serverEnv({ leaseSeconds }: TestCookoutOptions): ConfigProvider.ConfigProvider {
   if (typeof leaseSeconds === "number") {

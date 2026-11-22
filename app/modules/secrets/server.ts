@@ -1,14 +1,15 @@
 /**
  * The one source of randomness and hashing: bearer tokens, what the store
  * keeps instead of a token, and lease IDs. The live Layer uses `node:crypto`;
- * the test Layer counts, so tests see the same values on every run.
+ * tests count instead, with the Layer `testing` builds over this one.
  */
-import { Context, Effect, Layer, Ref } from "effect";
-import { type Token, type TokenHash, token, tokenHash } from "../identities/index.ts";
-import { asLeaseId, liveSecrets } from "./lib/server/live.ts";
+import { Context, Layer } from "effect";
+import type { Token, TokenHash } from "../identities/index.ts";
+import type { Effect } from "effect";
 import type { LeaseId } from "../leases/index.ts";
+import { liveSecrets } from "./lib/server/live.ts";
 
-export type SecretsService = {
+export interface SecretsService {
   /** A new bearer token: `cookout_` and at least 256 random bits. */
   readonly newToken: Effect.Effect<Token>;
   /** What the store keeps instead of the token. The same token always hashes the same. */
@@ -17,23 +18,9 @@ export type SecretsService = {
   readonly newLeaseId: Effect.Effect<LeaseId>;
   /** The SHA-256 of `text`, as hex: a file name that doesn't give away what it was made from. */
   readonly digest: (text: string) => Effect.Effect<string>;
-};
+}
 
-export class Secrets extends Context.Service<Secrets, SecretsService>()("cookout/secrets/Secrets") {}
+export class Secrets extends Context.Service<Secrets, SecretsService>()("@ai-hero/cookout/secrets/server/Secrets") {}
 
 /** Secrets from `node:crypto`, for the running cookout. */
 export const secretsLive: Layer.Layer<Secrets> = Layer.succeed(Secrets, liveSecrets);
-
-/** Deterministic secrets for tests: `cookout_test_1`, `cookout_test_2`… and `lease_test_1`… */
-export const secretsTest: Layer.Layer<Secrets> = Layer.effect(
-  Secrets,
-  Effect.map(Ref.make(0), (counter) => {
-    const next = (prefix: string) => Ref.updateAndGet(counter, (n) => n + 1).pipe(Effect.map((n) => `${prefix}${n}`));
-    return {
-      newToken: Effect.map(next("cookout_test_"), token),
-      hashToken: (issued: Token) => Effect.succeed(tokenHash(`hash:${issued}`)),
-      newLeaseId: Effect.map(next("lease_test_"), asLeaseId),
-      digest: liveSecrets.digest,
-    };
-  }),
-);

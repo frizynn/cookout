@@ -1,6 +1,5 @@
 import { Array as Arr, ConfigProvider, Console, Deferred, Effect, Fiber, Layer, Option, Schema, pipe } from "effect";
 import { memoryStorage, sqliteStorage } from "../../../storage/server.ts";
-import { secretsLive, secretsTest } from "../../../secrets/server.ts";
 import { NodeServices } from "@effect/platform-node";
 import type { Scope } from "effect";
 import type { Secrets } from "../../../secrets/server.ts";
@@ -8,6 +7,8 @@ import type { ServeLayers } from "../../../cli/server.ts";
 import { TestConsole } from "effect/testing";
 import { devCommandLine } from "./dev.ts";
 import { runCookout as runCommandLine } from "../../../cli/server.ts";
+import { secretsLive } from "../../../secrets/server.ts";
+import { secretsTest } from "./secrets.ts";
 
 interface CliResult {
   readonly exitCode: number;

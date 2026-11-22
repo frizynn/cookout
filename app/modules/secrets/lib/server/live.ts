@@ -30,4 +30,4 @@ const liveSecrets: LiveSecrets = {
   newToken: Effect.sync(() => token(`cookout_${randomBytes(TOKEN_BYTES).toString("base64url")}`)),
 };
 
-export { asLeaseId, liveSecrets };
+export { liveSecrets };

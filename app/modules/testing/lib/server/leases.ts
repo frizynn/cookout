@@ -1,19 +1,13 @@
-import { Array as Arr, Context, Effect, FileSystem, Layer, Option, Path } from "effect";
+import { Array as Arr, Context, Effect, FileSystem, Layer, Path } from "effect";
 import type { TestCookoutService, TestIdentity } from "./cookout.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
-import type { LeaseId } from "../../../leases/index.ts";
 import { NodeServices } from "@effect/platform-node";
 import type { Scope } from "effect";
-import { isLeaseId } from "../../../leases/index.ts";
 
 interface TwoSessions {
   readonly agent: TestIdentity;
   readonly first: CookoutClient;
   readonly second: CookoutClient;
-}
-
-function leaseId(value: string): LeaseId {
-  return Option.getOrThrow(Option.liftPredicate(value, isLeaseId));
 }
 
 function twoSessions(cookout: TestCookoutService): Effect.Effect<TwoSessions> {
@@ -52,4 +46,4 @@ function damageLeaseStates(stateFolder: string): Effect.Effect<void> {
   }).pipe(Effect.scoped, Effect.orDie);
 }
 
-export { type TwoSessions, damageLeaseStates, freshStateFolder, leaseId, leaseStateFiles, twoSessions };
+export { type TwoSessions, damageLeaseStates, freshStateFolder, leaseStateFiles, twoSessions };

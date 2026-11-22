@@ -36,10 +36,10 @@ export {
   type TwoSessions,
   damageLeaseStates,
   freshStateFolder,
-  leaseId,
   leaseStateFiles,
   twoSessions,
 } from "./lib/server/leases.ts";
+export { leaseId, secretsTest } from "./lib/server/secrets.ts";
 export { type NewMessageOptions, appendTo, messageId, newMessageFixture } from "./lib/server/messages.ts";
 export { freshDatabasePath, openStore, storageLayers } from "./lib/server/storage.ts";
 export {
