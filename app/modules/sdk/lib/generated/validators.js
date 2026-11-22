@@ -73,7 +73,7 @@ return errors === 0;
 validate20.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 
 export const isErrorResponse = validate21;
-const schema32 = {"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["token_missing","token_unknown","token_revoked","admin_only","not_found","method_not_allowed","invalid_path","invalid_json","invalid_request","body_too_large","storage_unavailable","internal_error"]},"message":{"type":"string"},"details":{}},"required":["code","message"],"additionalProperties":true}},"required":["error"],"additionalProperties":true,"$defs":{}};
+const schema32 = {"type":"object","properties":{"error":{"type":"object","properties":{"code":{"type":"string","enum":["token_missing","token_unknown","token_revoked","admin_only","channel_exists","channel_not_found","not_found","method_not_allowed","invalid_path","invalid_json","invalid_request","body_too_large","storage_unavailable","internal_error"]},"message":{"type":"string"},"details":{}},"required":["code","message"],"additionalProperties":true}},"required":["error"],"additionalProperties":true,"$defs":{}};
 
 function validate21(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
 let vErrors = null;
@@ -111,7 +111,7 @@ if(typeof data1 !== "string"){
 validate21.errors = [{instancePath:instancePath+"/error/code",schemaPath:"#/properties/error/properties/code/type",keyword:"type",params:{type: "string"},message:"must be string"}];
 return false;
 }
-if(!((((((((((((data1 === "token_missing") || (data1 === "token_unknown")) || (data1 === "token_revoked")) || (data1 === "admin_only")) || (data1 === "not_found")) || (data1 === "method_not_allowed")) || (data1 === "invalid_path")) || (data1 === "invalid_json")) || (data1 === "invalid_request")) || (data1 === "body_too_large")) || (data1 === "storage_unavailable")) || (data1 === "internal_error"))){
+if(!((((((((((((((data1 === "token_missing") || (data1 === "token_unknown")) || (data1 === "token_revoked")) || (data1 === "admin_only")) || (data1 === "channel_exists")) || (data1 === "channel_not_found")) || (data1 === "not_found")) || (data1 === "method_not_allowed")) || (data1 === "invalid_path")) || (data1 === "invalid_json")) || (data1 === "invalid_request")) || (data1 === "body_too_large")) || (data1 === "storage_unavailable")) || (data1 === "internal_error"))){
 validate21.errors = [{instancePath:instancePath+"/error/code",schemaPath:"#/properties/error/properties/code/enum",keyword:"enum",params:{allowedValues: schema32.properties.error.properties.code.enum},message:"must be equal to one of the allowed values"}];
 return false;
 }
@@ -287,4 +287,260 @@ validate22.errors = vErrors;
 return errors === 0;
 }
 validate22.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
+
+export const isChannelResponse = validate23;
+const schema36 = {"type":"object","properties":{"channel":{"type":"object","properties":{"name":{"$ref":"#/$defs/ChannelName"},"description":{"type":"string","pattern":"^[\\s\\S]{1,500}$"},"createdAt":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"}},"required":["name","createdAt"],"additionalProperties":true}},"required":["channel"],"additionalProperties":true,"$defs":{"ChannelName":{"type":"string","pattern":"^[a-z0-9-]{1,80}$"}}};
+const schema37 = {"type":"string","pattern":"^[a-z0-9-]{1,80}$"};
+const pattern8 = new RegExp("^[a-z0-9-]{1,80}$", "u");
+const pattern9 = new RegExp("^[\\s\\S]{1,500}$", "u");
+
+function validate23(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
+let vErrors = null;
+let errors = 0;
+const evaluated0 = validate23.evaluated;
+if(evaluated0.dynamicProps){
+evaluated0.props = undefined;
+}
+if(evaluated0.dynamicItems){
+evaluated0.items = undefined;
+}
+if(errors === 0){
+if(data && typeof data == "object" && !Array.isArray(data)){
+let missing0;
+if((data.channel === undefined) && (missing0 = "channel")){
+validate23.errors = [{instancePath,schemaPath:"#/required",keyword:"required",params:{missingProperty: missing0},message:"must have required property '"+missing0+"'"}];
+return false;
+}
+else {
+if(data.channel !== undefined){
+let data0 = data.channel;
+const _errs2 = errors;
+if(errors === _errs2){
+if(data0 && typeof data0 == "object" && !Array.isArray(data0)){
+let missing1;
+if(((data0.name === undefined) && (missing1 = "name")) || ((data0.createdAt === undefined) && (missing1 = "createdAt"))){
+validate23.errors = [{instancePath:instancePath+"/channel",schemaPath:"#/properties/channel/required",keyword:"required",params:{missingProperty: missing1},message:"must have required property '"+missing1+"'"}];
+return false;
+}
+else {
+if(data0.name !== undefined){
+let data1 = data0.name;
+const _errs5 = errors;
+const _errs6 = errors;
+if(errors === _errs6){
+if(typeof data1 === "string"){
+if(!pattern8.test(data1)){
+validate23.errors = [{instancePath:instancePath+"/channel/name",schemaPath:"#/$defs/ChannelName/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9-]{1,80}$"},message:"must match pattern \""+"^[a-z0-9-]{1,80}$"+"\""}];
+return false;
+}
+}
+else {
+validate23.errors = [{instancePath:instancePath+"/channel/name",schemaPath:"#/$defs/ChannelName/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid1 = _errs5 === errors;
+}
+else {
+var valid1 = true;
+}
+if(valid1){
+if(data0.description !== undefined){
+let data2 = data0.description;
+const _errs8 = errors;
+if(errors === _errs8){
+if(typeof data2 === "string"){
+if(!pattern9.test(data2)){
+validate23.errors = [{instancePath:instancePath+"/channel/description",schemaPath:"#/properties/channel/properties/description/pattern",keyword:"pattern",params:{pattern: "^[\\s\\S]{1,500}$"},message:"must match pattern \""+"^[\\s\\S]{1,500}$"+"\""}];
+return false;
+}
+}
+else {
+validate23.errors = [{instancePath:instancePath+"/channel/description",schemaPath:"#/properties/channel/properties/description/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid1 = _errs8 === errors;
+}
+else {
+var valid1 = true;
+}
+if(valid1){
+if(data0.createdAt !== undefined){
+let data3 = data0.createdAt;
+const _errs10 = errors;
+if(errors === _errs10){
+if(typeof data3 === "string"){
+if(!pattern4.test(data3)){
+validate23.errors = [{instancePath:instancePath+"/channel/createdAt",schemaPath:"#/properties/channel/properties/createdAt/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
+return false;
+}
+}
+else {
+validate23.errors = [{instancePath:instancePath+"/channel/createdAt",schemaPath:"#/properties/channel/properties/createdAt/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid1 = _errs10 === errors;
+}
+else {
+var valid1 = true;
+}
+}
+}
+}
+}
+else {
+validate23.errors = [{instancePath:instancePath+"/channel",schemaPath:"#/properties/channel/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+return false;
+}
+}
+}
+}
+}
+else {
+validate23.errors = [{instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+return false;
+}
+}
+validate23.errors = vErrors;
+return errors === 0;
+}
+validate23.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
+
+export const isListChannelsResponse = validate24;
+const schema38 = {"type":"object","properties":{"channels":{"type":"array","items":{"type":"object","properties":{"name":{"$ref":"#/$defs/ChannelName"},"description":{"type":"string","pattern":"^[\\s\\S]{1,500}$"},"createdAt":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"}},"required":["name","createdAt"],"additionalProperties":true}}},"required":["channels"],"additionalProperties":true,"$defs":{"ChannelName":{"type":"string","pattern":"^[a-z0-9-]{1,80}$"}}};
+const schema39 = {"type":"string","pattern":"^[a-z0-9-]{1,80}$"};
+
+function validate24(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
+let vErrors = null;
+let errors = 0;
+const evaluated0 = validate24.evaluated;
+if(evaluated0.dynamicProps){
+evaluated0.props = undefined;
+}
+if(evaluated0.dynamicItems){
+evaluated0.items = undefined;
+}
+if(errors === 0){
+if(data && typeof data == "object" && !Array.isArray(data)){
+let missing0;
+if((data.channels === undefined) && (missing0 = "channels")){
+validate24.errors = [{instancePath,schemaPath:"#/required",keyword:"required",params:{missingProperty: missing0},message:"must have required property '"+missing0+"'"}];
+return false;
+}
+else {
+if(data.channels !== undefined){
+let data0 = data.channels;
+const _errs2 = errors;
+if(errors === _errs2){
+if(Array.isArray(data0)){
+var valid1 = true;
+const len0 = data0.length;
+for(let i0=0; i0<len0; i0++){
+let data1 = data0[i0];
+const _errs4 = errors;
+if(errors === _errs4){
+if(data1 && typeof data1 == "object" && !Array.isArray(data1)){
+let missing1;
+if(((data1.name === undefined) && (missing1 = "name")) || ((data1.createdAt === undefined) && (missing1 = "createdAt"))){
+validate24.errors = [{instancePath:instancePath+"/channels/" + i0,schemaPath:"#/properties/channels/items/required",keyword:"required",params:{missingProperty: missing1},message:"must have required property '"+missing1+"'"}];
+return false;
+}
+else {
+if(data1.name !== undefined){
+let data2 = data1.name;
+const _errs7 = errors;
+const _errs8 = errors;
+if(errors === _errs8){
+if(typeof data2 === "string"){
+if(!pattern8.test(data2)){
+validate24.errors = [{instancePath:instancePath+"/channels/" + i0+"/name",schemaPath:"#/$defs/ChannelName/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9-]{1,80}$"},message:"must match pattern \""+"^[a-z0-9-]{1,80}$"+"\""}];
+return false;
+}
+}
+else {
+validate24.errors = [{instancePath:instancePath+"/channels/" + i0+"/name",schemaPath:"#/$defs/ChannelName/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid2 = _errs7 === errors;
+}
+else {
+var valid2 = true;
+}
+if(valid2){
+if(data1.description !== undefined){
+let data3 = data1.description;
+const _errs10 = errors;
+if(errors === _errs10){
+if(typeof data3 === "string"){
+if(!pattern9.test(data3)){
+validate24.errors = [{instancePath:instancePath+"/channels/" + i0+"/description",schemaPath:"#/properties/channels/items/properties/description/pattern",keyword:"pattern",params:{pattern: "^[\\s\\S]{1,500}$"},message:"must match pattern \""+"^[\\s\\S]{1,500}$"+"\""}];
+return false;
+}
+}
+else {
+validate24.errors = [{instancePath:instancePath+"/channels/" + i0+"/description",schemaPath:"#/properties/channels/items/properties/description/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid2 = _errs10 === errors;
+}
+else {
+var valid2 = true;
+}
+if(valid2){
+if(data1.createdAt !== undefined){
+let data4 = data1.createdAt;
+const _errs12 = errors;
+if(errors === _errs12){
+if(typeof data4 === "string"){
+if(!pattern4.test(data4)){
+validate24.errors = [{instancePath:instancePath+"/channels/" + i0+"/createdAt",schemaPath:"#/properties/channels/items/properties/createdAt/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
+return false;
+}
+}
+else {
+validate24.errors = [{instancePath:instancePath+"/channels/" + i0+"/createdAt",schemaPath:"#/properties/channels/items/properties/createdAt/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid2 = _errs12 === errors;
+}
+else {
+var valid2 = true;
+}
+}
+}
+}
+}
+else {
+validate24.errors = [{instancePath:instancePath+"/channels/" + i0,schemaPath:"#/properties/channels/items/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+return false;
+}
+}
+var valid1 = _errs4 === errors;
+if(!valid1){
+break;
+}
+}
+}
+else {
+validate24.errors = [{instancePath:instancePath+"/channels",schemaPath:"#/properties/channels/type",keyword:"type",params:{type: "array"},message:"must be array"}];
+return false;
+}
+}
+}
+}
+}
+else {
+validate24.errors = [{instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+return false;
+}
+}
+validate24.errors = vErrors;
+return errors === 0;
+}
+validate24.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 
