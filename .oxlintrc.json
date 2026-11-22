@@ -1554,7 +1554,7 @@
       }
     },
     {
-      "files": ["scripts/**", "lint/**", "*.cjs", "vitest.config.ts"],
+      "files": ["scripts/**", "lint/**", "*.cjs", "vitest.config.ts", "tsdown.config.ts"],
       "rules": {
         "effecttsgo/async-function": "off",
         "effecttsgo/crypto-random-uuid": "off",
@@ -1573,6 +1573,12 @@
         "effecttsgo/process-env": "off",
         "import/no-nodejs-modules": "off",
         "no-console": "off"
+      }
+    },
+    {
+      "files": ["vitest.config.ts", "tsdown.config.ts"],
+      "rules": {
+        "import/no-default-export": "off"
       }
     }
   ]

@@ -44,17 +44,20 @@ const baselineAtBase = (): Counts => {
 const above = (current: Counts, limit: Counts) =>
   Object.entries(current).filter(([key, count]) => count > (limit[key] ?? 0));
 
-const rulesOnAtBase = (): ReadonlySet<string> => {
-  const shown = git(["show", `${base}:.oxlintrc.json`]);
+const rulesOnAt = (ref: string): ReadonlySet<string> => {
+  const shown = git(["show", `${ref}:.oxlintrc.json`]);
   return shown.status === 0 ? unwrap(SCRIPT, rulesOn(shown.stdout)) : new Set();
 };
+
+const merging = () =>
+  base === "HEAD" && git(["rev-parse", "--verify", "--quiet", "MERGE_HEAD"]).status === 0 ? ["MERGE_HEAD"] : [];
 
 const codeOfKey = (key: string) => key.slice(key.lastIndexOf(" ") + 1);
 
 const raisedOnRulesAlreadyOn = (raises: ReadonlyArray<readonly [string, number]>) => {
   if (raises.length === 0) return raises;
-  const alreadyOn = rulesOnAtBase();
-  return raises.filter(([key]) => alreadyOn.has(codeOfKey(key)));
+  const onAtEveryParent = [base, ...merging()].map(rulesOnAt);
+  return raises.filter(([key]) => onAtEveryParent.every((rules) => rules.has(codeOfKey(key))));
 };
 
 if (writing && files.length > 0) fail(SCRIPT, "--write needs a whole-repo run, with no files");
