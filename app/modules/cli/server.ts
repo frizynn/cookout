@@ -7,7 +7,7 @@ import { Effect } from "effect";
 import { CliError, Command } from "effect/cli";
 import { jsonPresenter, usageFailed } from "./lib/server/output.ts";
 import { cookoutServer, type ServeLayers, serveCommand } from "./lib/server/serve.ts";
-import { identityCommand, whoamiCommand } from "./lib/server/verbs.ts";
+import { channelCommand, identityCommand, whoamiCommand } from "./lib/server/verbs.ts";
 
 export { cookoutServer, type ServeLayers };
 
@@ -15,7 +15,7 @@ export { cookoutServer, type ServeLayers };
 export const runCookout = (args: ReadonlyArray<string>, layers: ServeLayers) =>
   Command.make("cookout").pipe(
     Command.withDescription("A self-hosted, Slack-style board for people and agents."),
-    Command.withSubcommands([serveCommand(layers), whoamiCommand, identityCommand]),
+    Command.withSubcommands([serveCommand(layers), whoamiCommand, identityCommand, channelCommand]),
     (command) => Command.runWith(command, { version: "0.0.0" })(args),
     Effect.catchIf(CliError.isCliError, () => usageFailed),
     Effect.provide(jsonPresenter),

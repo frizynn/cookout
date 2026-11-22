@@ -90,21 +90,11 @@ export const whoamiPath = "/v1/whoami";
 /** `GET /v1/identities` (any identity) and `POST /v1/identities` (admin). */
 export const identitiesPath = "/v1/identities";
 
-/** `DELETE /v1/identities/<name>` (admin): removes the identity, and its token stops working. */
-export const identityPathPattern = `${identitiesPath}/:name`;
+/** `DELETE /v1/identities/:name` (admin): removes the identity, and its token stops working. */
+export const identityPath = "/v1/identities/:name";
 
-/** `POST /v1/identities/<name>/token` (admin): issues a new token, and the old one stops working at once. */
-export const identityTokenPathPattern = `${identityPathPattern}/token`;
-
-/** The path of the identity called `name`. */
-export function identityPath(name: string): string {
-  return `${identitiesPath}/${encodeURIComponent(name)}`;
-}
-
-/** The path that rotates the token of the identity called `name`. */
-export function identityTokenPath(name: string): string {
-  return `${identityPath(name)}/token`;
-}
+/** `POST /v1/identities/:name/token` (admin): issues a new token, and the old one stops working at once. */
+export const identityTokenPath = "/v1/identities/:name/token";
 
 /** The rule every token the server issues follows, for the backend's Schemas. */
 export const tokenPattern = /^cookout_[A-Za-z0-9_-]+$/u;

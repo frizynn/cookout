@@ -5,7 +5,7 @@ import type { Route } from "../../../http/server.ts";
 import type { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import type { Identity, IdentityName } from "../../index.ts";
-import { identitiesPath, identityPathPattern, identityTokenPathPattern, isIdentityName } from "../../index.ts";
+import { identitiesPath, identityPath, identityTokenPath, isIdentityName } from "../../index.ts";
 import { type Caller, issueToken, requireAdmin } from "./auth.ts";
 import {
   IdentityNameSchema,
@@ -72,7 +72,7 @@ const listRoute: Route<Storage> = {
 
 const rotateRoute: Route<Caller | Storage | Secrets> = {
   method: "POST",
-  path: identityTokenPathPattern,
+  path: identityTokenPath,
   handle: (params) =>
     Effect.gen(function* () {
       yield* requireAdmin;
@@ -86,7 +86,7 @@ const rotateRoute: Route<Caller | Storage | Secrets> = {
 
 const deleteRoute: Route<Caller | Storage> = {
   method: "DELETE",
-  path: identityPathPattern,
+  path: identityPath,
   handle: (params) =>
     Effect.gen(function* () {
       yield* requireAdmin;

@@ -29,13 +29,18 @@ const badBody = (method: HttpMethod, path: string, response: HttpResponse): Cook
 type Call<T> = {
   readonly method: HttpMethod;
   readonly path: string;
-  readonly isExpected: (body: unknown) => body is T;
+  readonly params?: Readonly<Record<string, string>>;
   readonly body?: unknown;
+  readonly isExpected: (body: unknown) => body is T;
 };
 
-export async function send<T>(connection: Connection, { method, path, isExpected, body }: Call<T>): Promise<T> {
-  const response = await request({ baseUrl: connection.url, method, path, headers: headersFor(connection), body });
+export async function send<T>(connection: Connection, call: Call<T>): Promise<T> {
+  const { method, path, isExpected, ...rest } = call;
+  const response = await request({ ...rest, baseUrl: connection.url, method, path, headers: headersFor(connection) });
   if (!response.ok) throw refusal(method, path, response);
   if (!isExpected(response.json)) throw badBody(method, path, response);
   return response.json;
 }
+
+export const getJson = <T>(connection: Connection, path: string, isExpected: (body: unknown) => body is T) =>
+  send(connection, { method: "GET", path, isExpected });

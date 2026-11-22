@@ -3,6 +3,8 @@
  * for Node and the browser. Every answer is checked against the protocol; one
  * that doesn't match fails with `CookoutError` code `bad_response`.
  */
+import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "../channels/index.ts";
+import { channelPath, channelsPath } from "../channels/index.ts";
 import { readCookoutConnection } from "../config/index.ts";
 import type { HealthResponse } from "../http/index.ts";
 import { healthPath } from "../http/index.ts";
@@ -14,14 +16,23 @@ import type {
 } from "../identities/index.ts";
 import { identitiesPath, identityPath, identityTokenPath, whoamiPath } from "../identities/index.ts";
 import { CookoutError } from "./lib/errors.ts";
-import { send } from "./lib/request.ts";
+import { getJson, send } from "./lib/request.ts";
 import {
+  isChannelResponse,
   isHealthResponse,
   isIdentityResponse,
   isIdentityWithTokenResponse,
+  isListChannelsResponse,
   isListIdentitiesResponse,
 } from "./lib/generated/validators.js";
 
+export type {
+  Channel,
+  ChannelName,
+  ChannelResponse,
+  CreateChannelRequest,
+  ListChannelsResponse,
+} from "../channels/index.ts";
 export type { HealthResponse } from "../http/index.ts";
 export type {
   CreateIdentityRequest,
@@ -57,6 +68,12 @@ export type CookoutClient = {
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
   /** Admin only. Removes the identity; its token stops working. The last admin can't be deleted (409 `last_admin`). */
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
+  /** `POST /v1/channels`: any identity can create a channel. A name in use is 409 `channel_exists`. */
+  readonly createChannel: (request: CreateChannelRequest) => Promise<ChannelResponse>;
+  /** `GET /v1/channels`: every channel, sorted by name. */
+  readonly listChannels: () => Promise<ListChannelsResponse>;
+  /** `GET /v1/channels/:name`. A missing channel is 404 `channel_not_found`. */
+  readonly getChannel: (name: string) => Promise<ChannelResponse>;
 };
 
 /**
@@ -65,8 +82,8 @@ export type CookoutClient = {
  * (status 0) when there is no URL.
  */
 export function createCookoutClient(options: CookoutClientOptions = {}): CookoutClient {
-  const merged = { ...readCookoutConnection(options.env), ...options };
-  const url = merged.url ?? "";
+  const connection = { ...readCookoutConnection(options.env), ...options };
+  const url = connection.url ?? "";
   if (url === "") {
     throw new CookoutError({
       status: 0,
@@ -74,17 +91,25 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
       message: "Set COOKOUT_URL to the cookout server's address.",
     });
   }
-  const connection = { ...merged, url };
+  const server = { ...connection, url };
   return {
-    health: () => send(connection, { method: "GET", path: healthPath, isExpected: isHealthResponse }),
-    whoami: () => send(connection, { method: "GET", path: whoamiPath, isExpected: isIdentityResponse }),
-    listIdentities: () =>
-      send(connection, { method: "GET", path: identitiesPath, isExpected: isListIdentitiesResponse }),
+    health: () => getJson(server, healthPath, isHealthResponse),
+    whoami: () => getJson(server, whoamiPath, isIdentityResponse),
+    listIdentities: () => getJson(server, identitiesPath, isListIdentitiesResponse),
     createIdentity: (body) =>
-      send(connection, { method: "POST", path: identitiesPath, isExpected: isIdentityWithTokenResponse, body }),
+      send(server, { method: "POST", path: identitiesPath, body, isExpected: isIdentityWithTokenResponse }),
     rotateToken: (name) =>
-      send(connection, { method: "POST", path: identityTokenPath(name), isExpected: isIdentityWithTokenResponse }),
+      send(server, {
+        method: "POST",
+        path: identityTokenPath,
+        params: { name },
+        isExpected: isIdentityWithTokenResponse,
+      }),
     deleteIdentity: (name) =>
-      send(connection, { method: "DELETE", path: identityPath(name), isExpected: isIdentityResponse }),
+      send(server, { method: "DELETE", path: identityPath, params: { name }, isExpected: isIdentityResponse }),
+    createChannel: (body) => send(server, { method: "POST", path: channelsPath, body, isExpected: isChannelResponse }),
+    listChannels: () => getJson(server, channelsPath, isListChannelsResponse),
+    getChannel: (name) =>
+      send(server, { method: "GET", path: channelPath, params: { name }, isExpected: isChannelResponse }),
   };
 }

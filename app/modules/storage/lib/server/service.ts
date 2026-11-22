@@ -1,4 +1,5 @@
+import type { ChannelsSection } from "./channels.ts";
 import type { HealthSection } from "./health.ts";
 import type { IdentitiesSection } from "./identities.ts";
 
-export type StorageService = HealthSection & IdentitiesSection;
+export type StorageService = HealthSection & IdentitiesSection & ChannelsSection;
