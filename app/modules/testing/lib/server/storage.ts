@@ -12,17 +12,18 @@ interface OpenStore {
   readonly storage: Storage["Service"];
 }
 
-const freshDatabasePath: Effect.Effect<string, never, Scope.Scope> = Effect.gen(function* makeDatabasePath() {
-  const node = yield* Layer.build(NodeServices.layer);
-  const fs = Context.get(node, FileSystem.FileSystem);
-  const path = Context.get(node, Path.Path);
-  const folder = yield* fs.makeTempDirectoryScoped({ prefix: "cookout-sqlite-" });
-  return path.join(folder, "cookout.db");
-}).pipe(Effect.orDie);
+const freshDatabasePath: Effect.Effect<string, never, FileSystem.FileSystem | Path.Path | Scope.Scope> = Effect.gen(
+  function* makeDatabasePath() {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const folder = yield* fs.makeTempDirectoryScoped({ prefix: "cookout-sqlite-" });
+    return path.join(folder, "cookout.db");
+  },
+).pipe(Effect.orDie);
 
 const freshSqliteStorage: Layer.Layer<Storage, StorageUnavailable> = Layer.unwrap(
   Effect.map(freshDatabasePath, sqliteStorage),
-);
+).pipe(Layer.provide(NodeServices.layer));
 
 const storageLayers: readonly StorageLayer[] = [
   { adapter: "memory", layer: memoryStorage },
@@ -38,7 +39,9 @@ const unusableStorage: Layer.Layer<Storage> = Layer.effect(
   })),
 ).pipe(Layer.provide(memoryStorage));
 
-function openStore<Failure>(layer: Layer.Layer<Storage, Failure>): Effect.Effect<OpenStore, Failure> {
+function openStore<Failure, Needs>(
+  layer: Layer.Layer<Storage, Failure, Needs>,
+): Effect.Effect<OpenStore, Failure, Needs> {
   return Effect.gen(function* buildStore() {
     const scope = yield* Scope.make();
     const context = yield* Layer.buildWithScope(layer, scope);
