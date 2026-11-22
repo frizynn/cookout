@@ -132,6 +132,19 @@ it.effect("a state folder others can open, or a leases folder that is a symlink,
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
+it.effect("with none of HOME, XDG_STATE_HOME or COOKOUT_STATE_DIR set, join is refused and other verbs work", () =>
+  Effect.gen(function* noStateFolder() {
+    const cookout = yield* TestCookout;
+    const agent = yield* cookout.createIdentity("agent");
+    const env = { COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
+    const joined = yield* runCookout({ args: JOIN, env });
+    const listed = yield* runCookout({ args: ["channel", "list"], env });
+
+    expect(joined).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "state_folder_missing" } } });
+    expect(listed).toMatchObject({ exitCode: EXIT_SUCCESS, stdoutJson: { channels: [] } });
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
 it.effect("a state folder that can't be made fails join with cli_error", () =>
   Effect.gen(function* folderCantBeMade() {
     const fs = yield* FileSystem.FileSystem;

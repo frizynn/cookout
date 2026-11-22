@@ -30,7 +30,11 @@ export const stateDirectory = Config.String("COOKOUT_STATE_DIR").pipe(Config.wit
 /** `XDG_STATE_HOME`: the CLI keeps its state in `cookout/` under it when `COOKOUT_STATE_DIR` is unset. */
 export const xdgStateHome = Config.String("XDG_STATE_HOME").pipe(Config.withDefault(""));
 
-/** `HOME`: the CLI keeps its state in `~/.local/state/cookout` when neither of the above is set. */
+/**
+ * `HOME`: the CLI keeps its state in `~/.local/state/cookout` when neither of
+ * the above is set. With none of the three, the CLI keeps no lease and `join`
+ * is refused with `state_folder_missing`.
+ */
 export const home = Config.String("HOME").pipe(Config.withDefault(""));
 
 /** `COOKOUT_URL`: the server every CLI verb but `serve` talks to. Empty counts as unset. */

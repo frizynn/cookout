@@ -1,4 +1,4 @@
-import { Effect, Equal, FileSystem, Option, Path, Random, Schema, String as Str } from "effect";
+import { Effect, Equal, FileSystem, Option, Path, Random, Schema, String as Str, pipe } from "effect";
 import { home, stateDirectory, xdgStateHome } from "../../../config/server.ts";
 import { identityNamePattern, isIdentityName } from "../../../identities/index.ts";
 import { isLeaseId, leaseIdPattern } from "../../../leases/index.ts";
@@ -9,7 +9,7 @@ import type { LeaseId } from "../../../leases/index.ts";
 import { Secrets } from "../../../secrets/server.ts";
 
 interface LeaseStateFailure {
-  readonly code: "cli_error" | "lease_state_damaged" | "lease_state_unsafe";
+  readonly code: "cli_error" | "lease_state_damaged" | "lease_state_unsafe" | "state_folder_missing";
   readonly message: string;
 }
 
@@ -69,18 +69,20 @@ function damaged(file: string): LeaseStateFailure {
   return { code: "lease_state_damaged", message: `The lease state file ${file} is damaged. Delete it and join again.` };
 }
 
-function stateFolder(path: Path.Path): Effect.Effect<string> {
+function setTo(value: string): Option.Option<string> {
+  return Option.liftPredicate(value, Str.isNonEmpty);
+}
+
+function stateFolder(path: Path.Path): Effect.Effect<Option.Option<string>> {
   return Effect.gen(function* findStateFolder() {
     const explicit = yield* stateDirectory;
-    if (explicit !== "") {
-      return explicit;
-    }
     const xdg = yield* xdgStateHome;
-    if (xdg !== "") {
-      return path.join(xdg, "cookout");
-    }
     const homeFolder = yield* home;
-    return path.join(homeFolder, ".local", "state", "cookout");
+    return pipe(
+      setTo(explicit),
+      Option.orElse(() => Option.map(setTo(xdg), (folder) => path.join(folder, "cookout"))),
+      Option.orElse(() => Option.map(setTo(homeFolder), (folder) => path.join(folder, ".local", "state", "cookout"))),
+    );
   }).pipe(Effect.orDie);
 }
 
@@ -149,25 +151,41 @@ function writeTo(location: LeaseStateLocation): (state: LeaseState) => Effect.Ef
     });
 }
 
-function locationOf(session: Session): Effect.Effect<LeaseStateLocation, never, Needs> {
+function locationOf(session: Session): Effect.Effect<Option.Option<LeaseStateLocation>, never, Needs> {
   return Effect.gen(function* findLeaseState() {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const secrets = yield* Secrets;
-    const base = yield* stateFolder(path);
+    const found = yield* stateFolder(path);
     const digest = yield* secrets.digest(`${session.url}\n${session.token}`);
-    const folder = path.join(base, "leases");
-    const file = path.join(folder, `${Str.slice(KEY_START, KEY_LENGTH)(digest)}.json`);
-    return { base, file, folder, fs };
+    const name = `${Str.slice(KEY_START, KEY_LENGTH)(digest)}.json`;
+    return Option.map(found, (base) => {
+      const folder = path.join(base, "leases");
+      return { base, file: path.join(folder, name), folder, fs };
+    });
   });
 }
 
-function leaseStateFile(session: Session): Effect.Effect<LeaseStateFile, never, Needs> {
-  return Effect.map(locationOf(session), (location) => ({
+function fileAt(location: LeaseStateLocation): LeaseStateFile {
+  return {
     read: readFrom(location),
     remove: Effect.mapError(location.fs.remove(location.file, { force: true }), failure),
     write: writeTo(location),
-  }));
+  };
+}
+
+const noStateFolder: LeaseStateFile = {
+  read: Effect.succeedNone,
+  remove: Effect.void,
+  write: () =>
+    Effect.fail({
+      code: "state_folder_missing",
+      message: "Set HOME, XDG_STATE_HOME or COOKOUT_STATE_DIR so join has a folder to keep its lease in.",
+    }),
+};
+
+function leaseStateFile(session: Session): Effect.Effect<LeaseStateFile, never, Needs> {
+  return Effect.map(locationOf(session), Option.match({ onNone: () => noStateFolder, onSome: fileAt }));
 }
 
 export { type LeaseState, type LeaseStateFile, type Needs as LeaseStateNeeds, leaseStateFile };
