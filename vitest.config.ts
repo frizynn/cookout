@@ -9,7 +9,7 @@ export default defineConfig({
       include: ["app/**/*.{ts,tsx}"],
       exclude: ["app/**/tests/**", "app/modules/sdk/lib/generated/**", "app/main.ts", "app/dev.ts"],
       thresholds: {
-        autoUpdate: true,
+        autoUpdate: false,
         statements: 99.22,
         branches: 95.02,
         functions: 98.95,
