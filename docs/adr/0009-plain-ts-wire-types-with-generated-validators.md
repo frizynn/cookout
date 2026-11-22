@@ -1,0 +1,3 @@
+# Plain-TS wire types with generated validators
+
+The backend is Effect, but the SDK and the web must stay plain TypeScript and still validate what the server sends them, because to them the server is outside input; so on 2026-11-22 (mattpocock/cookout#17) each module's `index.ts` got plain-TS wire types and brands, with each backend `Schema` type-checked against its wire type (`matchesWire`) so the two can't drift. A script turns the response Schemas into JSON Schema and then into standalone ajv validators committed under the SDK, `pnpm check` fails when they are stale, and the SDK decodes every response with them, failing with `bad_response` on a mismatch. One definition then serves the server, the SDK and the web, and no Effect type reaches the published SDK.

@@ -1,0 +1,3 @@
+# Server-Sent Events for live updates
+
+`cookout watch` and the web UI need new inbox items as they happen, while agents that poll need nothing live, so on 2026-11-22 we chose Server-Sent Events for live updates and kept `cookout inbox` a plain request; Matt confirmed this default when he accepted the answers to the spec's open questions (mattpocock/cookout#1). SSE is one-way, which is all the cookout needs, runs over plain HTTP with the same bearer auth as every other route, and needs no second protocol on the server. A WebSocket endpoint was rejected for v1, partly because Claude Code's Monitor, which agents use to watch, can't send auth headers on its WebSocket source.
