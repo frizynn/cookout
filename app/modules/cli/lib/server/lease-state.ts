@@ -2,6 +2,7 @@ import { Effect, Equal, FileSystem, Option, Path, Random, Schema, String as Str,
 import { home, stateDirectory, xdgStateHome } from "../../../config/server.ts";
 import { identityNamePattern, isIdentityName } from "../../../identities/index.ts";
 import { isLeaseId, leaseIdPattern } from "../../../leases/index.ts";
+import type { CookoutConnection } from "../../../config/index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
@@ -19,11 +20,6 @@ interface LeaseStateFile {
   readonly read: Effect.Effect<Option.Option<LeaseState>, LeaseStateFailure>;
   readonly write: (state: LeaseState) => Effect.Effect<void, LeaseStateFailure>;
   readonly remove: Effect.Effect<void, LeaseStateFailure>;
-}
-
-interface Session {
-  readonly url: string;
-  readonly token: string;
 }
 
 interface LeaseStateLocation {
@@ -151,13 +147,16 @@ function writeTo(location: LeaseStateLocation): (state: LeaseState) => Effect.Ef
     });
 }
 
-function locationOf(session: Session): Effect.Effect<Option.Option<LeaseStateLocation>, never, Needs> {
+function locationOf({
+  token = "",
+  url,
+}: CookoutConnection): Effect.Effect<Option.Option<LeaseStateLocation>, never, Needs> {
   return Effect.gen(function* findLeaseState() {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const secrets = yield* Secrets;
     const found = yield* stateFolder(path);
-    const digest = yield* secrets.digest(`${session.url}\n${session.token}`);
+    const digest = yield* secrets.digest(`${url}\n${token}`);
     const name = `${Str.slice(KEY_START, KEY_LENGTH)(digest)}.json`;
     return Option.map(found, (base) => {
       const folder = path.join(base, "leases");
@@ -184,8 +183,8 @@ const noStateFolder: LeaseStateFile = {
     }),
 };
 
-function leaseStateFile(session: Session): Effect.Effect<LeaseStateFile, never, Needs> {
-  return Effect.map(locationOf(session), Option.match({ onNone: () => noStateFolder, onSome: fileAt }));
+function leaseStateFile(connection: CookoutConnection): Effect.Effect<LeaseStateFile, never, Needs> {
+  return Effect.map(locationOf(connection), Option.match({ onNone: () => noStateFolder, onSome: fileAt }));
 }
 
 export { type LeaseState, type LeaseStateFailure, type LeaseStateFile, type Needs as LeaseStateNeeds, leaseStateFile };

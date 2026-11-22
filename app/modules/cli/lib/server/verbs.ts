@@ -2,7 +2,7 @@ import { Argument, Command, Flag } from "effect/cli";
 import { Effect, Option, Schema } from "effect";
 import type { ListMessagesQuery, MessageId, PostMessageRequest } from "../../../messages/index.ts";
 import { identityNamePattern, isIdentityName } from "../../../identities/index.ts";
-import { join, leave } from "./lease-sessions.ts";
+import { join, leave } from "./join-and-leave.ts";
 import { printAnswer, refused } from "./output.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
 import type { CommandFailed } from "./output.ts";

@@ -10,9 +10,9 @@ export default defineConfig({
       exclude: ["app/**/tests/**", "app/modules/sdk/lib/generated/**", "app/main.ts", "app/dev.ts"],
       thresholds: {
         autoUpdate: true,
-        statements: 99.15,
-        branches: 94.02,
-        functions: 98.79,
+        statements: 99.22,
+        branches: 95.02,
+        functions: 98.95,
         lines: 99.61,
       },
     },

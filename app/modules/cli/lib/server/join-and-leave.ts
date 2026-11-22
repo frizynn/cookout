@@ -1,7 +1,7 @@
-import type { CallFailure, Session } from "./adapters/sdk.ts";
+import type { CallFailure, ClientWithLeaseState } from "./adapters/sdk.ts";
 import { Effect, Option } from "effect";
 import type { JoinRequest, LeaseResponse, LeaveResponse } from "../../../leases/index.ts";
-import { callClient, withSession } from "./adapters/sdk.ts";
+import { callClient, withClient } from "./adapters/sdk.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { LeaseStateNeeds } from "./lease-state.ts";
 
@@ -27,20 +27,20 @@ function joinRequest({ as, force }: JoinFlags): JoinRequest {
   return { as };
 }
 
-function joinAndSave(flags: JoinFlags): (session: Session) => Effect.Effect<LeaseResponse, CallFailure> {
-  return (session) =>
+function joinAndSave(flags: JoinFlags): (opened: ClientWithLeaseState) => Effect.Effect<LeaseResponse, CallFailure> {
+  return (opened) =>
     Effect.gen(function* joinAs() {
-      const lease = yield* callClient((client) => client.join(joinRequest(flags)))(session);
-      const state = { ...lease, identity: flags.as, url: session.url };
-      yield* session.file.write(state);
+      const lease = yield* callClient((client) => client.join(joinRequest(flags)))(opened);
+      const state = { ...lease, identity: flags.as, url: opened.connection.url };
+      yield* opened.file.write(state);
       return lease;
     });
 }
 
-function leaveAndForget(session: Session): Effect.Effect<LeaveResponse, CallFailure> {
+function leaveAndForget(opened: ClientWithLeaseState): Effect.Effect<LeaveResponse, CallFailure> {
   return Effect.gen(function* leaveLease() {
-    const left = yield* callClient((client) => client.leave())(session);
-    yield* session.file.remove;
+    const left = yield* callClient((client) => client.leave())(opened);
+    yield* opened.file.remove;
     return left;
   });
 }
@@ -49,9 +49,9 @@ function join({ as, force }: JoinOptions): Effect.Effect<LeaseResponse, CallFail
   if (Option.isNone(as)) {
     return Effect.fail(asMissing);
   }
-  return withSession(joinAndSave({ as: as.value, force }));
+  return withClient(joinAndSave({ as: as.value, force }));
 }
 
-const leave: Effect.Effect<LeaveResponse, CallFailure, LeaseStateNeeds> = withSession(leaveAndForget);
+const leave: Effect.Effect<LeaveResponse, CallFailure, LeaseStateNeeds> = withClient(leaveAndForget);
 
 export { join, leave };
