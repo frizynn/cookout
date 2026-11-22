@@ -3,8 +3,8 @@
  * temporary SQLite file with a webhook fake, for verifying a change locally
  * (ADR 0017). It is never built or published.
  */
-import { Cause, Exit, Runtime } from "effect";
-import { NodeRuntime } from "@effect/platform-node";
+import { Cause, Effect, Exit, Runtime } from "effect";
+import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import { devCommandLine } from "./modules/testing/server.ts";
 
 const ARGUMENTS_FROM = 2;
@@ -18,7 +18,7 @@ function stopIsSuccess(exit: Exit.Exit<unknown, unknown>, onExit: (code: number)
   Runtime.defaultTeardown(exit, onExit);
 }
 
-NodeRuntime.runMain(devCommandLine(process.argv.slice(ARGUMENTS_FROM)), {
+NodeRuntime.runMain(devCommandLine(process.argv.slice(ARGUMENTS_FROM)).pipe(Effect.provide(NodeServices.layer)), {
   disableErrorReporting: true,
   teardown: stopIsSuccess,
 });

@@ -1,8 +1,8 @@
 import type { BoardConnection, SeedFailure } from "./board.ts";
 import { CliError, Command, Flag } from "effect/cli";
-import { Console, Effect, Layer, Schema } from "effect";
+import { Console, Effect, Schema } from "effect";
 import { cookoutToken, cookoutUrl } from "../../../config/server.ts";
-import { NodeServices } from "@effect/platform-node";
+import type { NodeServices } from "@effect/platform-node";
 import { devCookout } from "./dev-cookout.ts";
 import { seedBoard } from "./board.ts";
 
@@ -59,14 +59,10 @@ const devCommand = Command.make("dev").pipe(
   Command.withSubcommands([startCommand, seedCommand]),
 );
 
-function devCommandLine(args: readonly string[]): Effect.Effect<void, SeedFailure> {
-  return Effect.gen(function* runDevCommandLine() {
-    const node = yield* Layer.build(NodeServices.layer);
-    return yield* Command.runWith(devCommand, { version: "0.0.0" })(args).pipe(
-      Effect.provideContext(node),
-      Effect.catchIf(CliError.isCliError, () => Effect.fail(usage)),
-    );
-  }).pipe(Effect.scoped);
+function devCommandLine(args: readonly string[]): Effect.Effect<void, SeedFailure, NodeServices.NodeServices> {
+  return Command.runWith(devCommand, { version: "0.0.0" })(args).pipe(
+    Effect.catchIf(CliError.isCliError, () => Effect.fail(usage)),
+  );
 }
 
 export { devCommandLine };

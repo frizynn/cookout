@@ -1,8 +1,7 @@
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
-import { Context, Effect, Layer, Option, Path, Schema, Stream, pipe } from "effect";
+import { Effect, Option, Path, Schema, Stream, pipe } from "effect";
 import { cliResult, parseLine } from "./cli.ts";
 import type { CliResult } from "./cli.ts";
-import { NodeServices } from "@effect/platform-node";
 import type { Scope } from "effect";
 
 interface BinaryRun {
@@ -15,6 +14,8 @@ interface InterruptedDev {
   readonly exitCode: number;
 }
 
+type Spawns = ChildProcessSpawner.ChildProcessSpawner | Path.Path | Scope.Scope;
+
 const MAIN = new URL("../../../../main.ts", import.meta.url);
 const DEV = new URL("../../../../dev.ts", import.meta.url);
 const isDevRunning = Schema.is(Schema.Struct({ database: Schema.String }));
@@ -23,11 +24,11 @@ function collect<Failure>(stream: Stream.Stream<Uint8Array, Failure>): Effect.Ef
   return stream.pipe(Stream.decodeText(), Stream.mkString);
 }
 
-function runCookoutBinary({ args, env }: BinaryRun): Effect.Effect<CliResult, never, Scope.Scope> {
+function runCookoutBinary({ args, env }: BinaryRun): Effect.Effect<CliResult, never, Spawns> {
   return Effect.gen(function* spawnCookout() {
-    const node = yield* Layer.build(NodeServices.layer);
-    const main = yield* Context.get(node, Path.Path).fromFileUrl(MAIN);
-    const spawner = Context.get(node, ChildProcessSpawner.ChildProcessSpawner);
+    const path = yield* Path.Path;
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+    const main = yield* path.fromFileUrl(MAIN);
     const handle = yield* spawner.spawn(
       ChildProcess.make(process.execPath, [main, ...args], { env: { ...env }, extendEnv: false }),
     );
@@ -46,11 +47,11 @@ function databaseIn(line: string): Option.Option<string> {
   );
 }
 
-function interruptDevBinary(): Effect.Effect<InterruptedDev, never, Scope.Scope> {
+function interruptDevBinary(): Effect.Effect<InterruptedDev, never, Spawns> {
   return Effect.gen(function* spawnDev() {
-    const node = yield* Layer.build(NodeServices.layer);
-    const dev = yield* Context.get(node, Path.Path).fromFileUrl(DEV);
-    const spawner = Context.get(node, ChildProcessSpawner.ChildProcessSpawner);
+    const path = yield* Path.Path;
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+    const dev = yield* path.fromFileUrl(DEV);
     const handle = yield* spawner.spawn(ChildProcess.make(process.execPath, [dev, "start"], { extendEnv: true }));
     const lines = pipe(handle.stdout, Stream.decodeText(), Stream.splitLines, Stream.map(databaseIn));
     const found = yield* Stream.runHead(Stream.filter(lines, Option.isSome));

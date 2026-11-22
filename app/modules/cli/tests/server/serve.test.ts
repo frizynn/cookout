@@ -3,6 +3,7 @@ import { answer, freshDatabasePath, startServe } from "../../../testing/server.t
 import { expect, it } from "@effect/vitest";
 import { NodeServices } from "@effect/platform-node";
 import { createCookoutClient } from "../../../sdk/index.ts";
+import { secretsLive } from "../../../secrets/server.ts";
 
 interface StoredFiles {
   readonly files: readonly string[];
@@ -56,7 +57,7 @@ it.effect("cookout serve prints the admin token on the first boot only", () =>
     expect(adminTokensIn(second.lines)).toStrictEqual([]);
     expect(second.stdout).not.toContain(adminToken);
     expect(whoami.identity).toMatchObject({ admin: true, name: "admin" });
-  }).pipe(Effect.provide(NodeServices.layer)),
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );
 
 it.effect("the database never holds a token itself", () =>
@@ -71,5 +72,5 @@ it.effect("the database never holds a token itself", () =>
     expect(files).toContain("cookout.db");
     expect(tokens).toHaveLength(ISSUED);
     expect(onDisk).toStrictEqual([]);
-  }).pipe(Effect.provide(NodeServices.layer)),
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );

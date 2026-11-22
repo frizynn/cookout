@@ -1,6 +1,7 @@
 import { Array as Arr, Effect } from "effect";
 import {
   TestCookout,
+  commandLineServices,
   damageLeaseStates,
   freshStateFolder,
   leaseStateFiles,
@@ -36,7 +37,7 @@ it.effect(
       );
 
       expect(Arr.map(found, Arr.length)).toStrictEqual([ONE_FILE, ONE_FILE]);
-    }).pipe(Effect.provide(testCookout())),
+    }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
 it.effect("a damaged lease-state file fails the command and says to delete it", () =>
@@ -51,5 +52,5 @@ it.effect("a damaged lease-state file fails the command and says to delete it", 
 
     expect(result).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "cli_error" } } });
     expect(result.stderr).toContain("is damaged. Delete it and join again.");
-  }).pipe(Effect.provide(testCookout())),
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

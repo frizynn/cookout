@@ -21,7 +21,9 @@ export { type BoardConnection, type SeedFailure, type SeededBoard, seedBoard } f
 export { type ChannelFixtureOptions, channelFixture, channelName } from "./lib/server/channels.ts";
 export {
   type CliResult,
+  type CommandLineNeeds,
   type DevProcess,
+  commandLineServices,
   runCookout,
   runDev,
   type ServeProcess,

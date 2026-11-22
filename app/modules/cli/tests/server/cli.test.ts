@@ -1,7 +1,13 @@
-import { Context, Effect, FileSystem, Layer } from "effect";
-import { TestCookout, interruptDevBinary, runCookout, runCookoutBinary, testCookout } from "../../../testing/server.ts";
+import { Effect, FileSystem } from "effect";
+import {
+  TestCookout,
+  commandLineServices,
+  interruptDevBinary,
+  runCookout,
+  runCookoutBinary,
+  testCookout,
+} from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
-import { NodeServices } from "@effect/platform-node";
 
 const EXIT_FAILURE = 1;
 const EXIT_SUCCESS = 0;
@@ -36,7 +42,7 @@ it.effect("the cookout CLI creates and lists identities and says who you are, as
     expect(created.stdout).toMatch(/"token": "cookout_test_\d+"/u);
     expect(listed).toMatchObject({ ...succeeded, stdoutJson: { identities: [admin, griller, bot] } });
     expect(whoami).toMatchObject({ ...succeeded, stdoutJson: { identity: admin } });
-  }).pipe(Effect.provide(testCookout())),
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
 it.effect("the CLI rotates and deletes identities", () =>
@@ -56,7 +62,7 @@ it.effect("the CLI rotates and deletes identities", () =>
       stderrJson: { error: { code: "identity_not_found", status: 404 } },
       stdout: "",
     });
-  }).pipe(Effect.provide(testCookout())),
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
 it.effect("the CLI creates, lists and gets channels, as JSON", () =>
@@ -72,7 +78,7 @@ it.effect("the CLI creates, lists and gets channels, as JSON", () =>
     expect(created).toMatchObject({ ...succeeded, stdoutJson: grill });
     expect(listed).toMatchObject({ ...succeeded, stdoutJson: { channels: [grill.channel] } });
     expect(got).toMatchObject({ ...succeeded, stdoutJson: grill });
-  }).pipe(Effect.provide(testCookout())),
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
 it.effect("the CLI makes a channel, posts a message and a reply, and reads the thread back as JSON", () =>
@@ -97,7 +103,7 @@ it.effect("the CLI makes a channel, posts a message and a reply, and reads the t
       { ...succeeded, stdoutJson: onlyParent },
       { ...succeeded, stdoutJson: onlyParent },
     ]);
-  }).pipe(Effect.provide(testCookout())),
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
 it.effect("the CLI refuses --data that isn't JSON with a usage error", () =>
@@ -108,7 +114,7 @@ it.effect("the CLI refuses --data that isn't JSON with a usage error", () =>
     });
 
     expect(result).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "usage" } } });
-  }),
+  }).pipe(Effect.provide(commandLineServices)),
 );
 
 it.effect("the CLI refuses a message ID that isn't a positive whole number with a usage error", () =>
@@ -116,7 +122,7 @@ it.effect("the CLI refuses a message ID that isn't a positive whole number with 
     const result = yield* runCookout({ args: ["thread", "get", "0"], env: { COOKOUT_URL: "http://127.0.0.1:1" } });
 
     expect(result).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "usage" } } });
-  }),
+  }).pipe(Effect.provide(commandLineServices)),
 );
 
 it.effect("the CLI exits 1 with a JSON error on stderr when the token is missing", () =>
@@ -129,7 +135,7 @@ it.effect("the CLI exits 1 with a JSON error on stderr when the token is missing
       stderrJson: { error: { code: "token_missing", status: 401 } },
       stdout: "",
     });
-  }).pipe(Effect.provide(testCookout())),
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
 it.effect("the CLI says so when COOKOUT_URL is not set", () =>
@@ -137,7 +143,7 @@ it.effect("the CLI says so when COOKOUT_URL is not set", () =>
     const result = yield* runCookout({ args: ["whoami"], env: {} });
 
     expect(result).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "url_missing" } } });
-  }),
+  }).pipe(Effect.provide(commandLineServices)),
 );
 
 it.effect("the CLI prints its help and exits 1 when no command is given", () =>
@@ -146,7 +152,7 @@ it.effect("the CLI prints its help and exits 1 when no command is given", () =>
 
     expect(result).toMatchObject({ exitCode: EXIT_FAILURE });
     expect(result.stdout).toContain("identity");
-  }),
+  }).pipe(Effect.provide(commandLineServices)),
 );
 
 it.effect("the CLI refuses an unknown command with a usage error", () =>
@@ -154,17 +160,17 @@ it.effect("the CLI refuses an unknown command with a usage error", () =>
     const result = yield* runCookout({ args: ["identity", "explode"], env: { COOKOUT_URL: "http://127.0.0.1:1" } });
 
     expect(result).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "usage" } } });
-  }),
+  }).pipe(Effect.provide(commandLineServices)),
 );
 
 it.effect("pnpm dev exits 0 on Ctrl-C and deletes its database", () =>
   Effect.gen(function* devStopsOnInterrupt() {
-    const node = yield* Layer.build(NodeServices.layer);
+    const fs = yield* FileSystem.FileSystem;
     const { database, exitCode } = yield* interruptDevBinary();
-    const kept = yield* Effect.orDie(Context.get(node, FileSystem.FileSystem).exists(database));
+    const kept = yield* Effect.orDie(fs.exists(database));
 
     expect(database).toContain("cookout-dev-");
     expect(exitCode).toBe(EXIT_SUCCESS);
     expect(kept).toBe(false);
-  }),
+  }).pipe(Effect.provide(commandLineServices)),
 );

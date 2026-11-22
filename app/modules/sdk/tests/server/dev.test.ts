@@ -1,9 +1,7 @@
-import { Context, Effect, FileSystem, Layer, Schema } from "effect";
+import { Effect, FileSystem, Schema } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
-import { answer, runCookout, runDev, startDev } from "../../../testing/server.ts";
+import { answer, commandLineServices, runCookout, runDev, startDev } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
-import { NodeServices } from "@effect/platform-node";
-import type { Scope } from "effect";
 import { createCookoutClient } from "../../index.ts";
 
 const OK = 200;
@@ -22,10 +20,10 @@ function shaped<Shape>(value: unknown, isShape: (input: unknown) => input is Sha
   return expect.unreachable(otherwise);
 }
 
-function databaseExists(database: string): Effect.Effect<boolean, never, Scope.Scope> {
+function databaseExists(database: string): Effect.Effect<boolean, never, FileSystem.FileSystem> {
   return Effect.gen(function* checkDatabase() {
-    const node = yield* Layer.build(NodeServices.layer);
-    return yield* Effect.orDie(Context.get(node, FileSystem.FileSystem).exists(database));
+    const fs = yield* FileSystem.FileSystem;
+    return yield* Effect.orDie(fs.exists(database));
   });
 }
 
@@ -52,7 +50,7 @@ it.effect("pnpm dev serves a fresh board and a webhook fake, and removes its dat
     expect(fakeStatus).toBe(OK);
     expect(keptWhileRunning).toBe(true);
     expect(keptAfterStop).toBe(false);
-  }),
+  }).pipe(Effect.provide(commandLineServices)),
 );
 
 it.effect("pnpm seed prints the seeded tokens, and the cookout CLI reads the seeded thread with one", () =>
@@ -70,7 +68,7 @@ it.effect("pnpm seed prints the seeded tokens, and the cookout CLI reads the see
     expect(seeded.exitCode).toBe(EXIT_SUCCESS);
     expect(thread.parent.text).toBe("Morning! Who is looking at the flaky login test?");
     expect(thread.replies).toHaveLength(THREE_REPLIES);
-  }),
+  }).pipe(Effect.provide(commandLineServices)),
 );
 
 it.effect("pnpm seed without COOKOUT_URL and COOKOUT_TOKEN is refused as JSON on stderr", () =>
@@ -84,7 +82,7 @@ it.effect("pnpm seed without COOKOUT_URL and COOKOUT_TOKEN is refused as JSON on
         message: "Set COOKOUT_URL and COOKOUT_TOKEN to the url and adminToken that pnpm dev printed.",
       },
     });
-  }),
+  }).pipe(Effect.provide(commandLineServices)),
 );
 
 it.effect("pnpm seed on a board it already seeded is refused with the server's code", () =>
@@ -98,7 +96,7 @@ it.effect("pnpm seed on a board it already seeded is refused with the server's c
     expect(again.stderrJson).toStrictEqual({
       error: { code: "identity_exists", message: "The name ada is taken." },
     });
-  }),
+  }).pipe(Effect.provide(commandLineServices)),
 );
 
 it.effect("pnpm seed against a stopped cookout is refused", () =>
@@ -109,7 +107,7 @@ it.effect("pnpm seed against a stopped cookout is refused", () =>
 
     expect(seeded.exitCode).toBe(EXIT_FAILURE);
     expect(seeded.stderrJson).toMatchObject({ error: { code: "seed_failed" } });
-  }),
+  }).pipe(Effect.provide(commandLineServices)),
 );
 
 it.effect("the dev program refuses a command it doesn't have", () =>
@@ -117,5 +115,5 @@ it.effect("the dev program refuses a command it doesn't have", () =>
     const result = yield* runDev({ args: ["deploy"], env: {} });
 
     expect(result.exitCode).toBe(EXIT_FAILURE);
-  }),
+  }).pipe(Effect.provide(commandLineServices)),
 );
