@@ -1,0 +1,13 @@
+{
+  "name": "@ai-hero/cookout-storage-sqlite",
+  "version": "0.0.0",
+  "description": "The SQLite storage adapter. The only package allowed to import a SQLite driver.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ai-hero/cookout-protocol": "workspace:*"
+  }
+}

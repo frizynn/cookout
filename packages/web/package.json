@@ -1,0 +1,13 @@
+{
+  "name": "@ai-hero/cookout-web",
+  "version": "0.0.0",
+  "description": "The React web UI, built to static files the server serves.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ai-hero/cookout-protocol": "workspace:*"
+  }
+}

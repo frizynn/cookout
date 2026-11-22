@@ -1,0 +1,15 @@
+{
+  // Solution file: `pnpm typecheck` runs `tsc --build` here, which checks
+  // every project below in dependency order. Add each new package here.
+  "files": [],
+  "references": [
+    { "path": "packages/protocol" },
+    { "path": "packages/storage-sqlite" },
+    { "path": "packages/storage-memory" },
+    { "path": "packages/server" },
+    { "path": "packages/client" },
+    { "path": "packages/web" },
+    { "path": "packages/cookout" },
+    { "path": "tests" }
+  ]
+}
