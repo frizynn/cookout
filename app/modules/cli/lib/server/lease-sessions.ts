@@ -2,7 +2,7 @@ import type { CallFailure, Session } from "./adapters/sdk.ts";
 import { Effect, Option } from "effect";
 import type { JoinRequest, LeaseResponse, LeaveResponse } from "../../../leases/index.ts";
 import { callClient, withSession } from "./adapters/sdk.ts";
-import type { Secrets } from "../../../secrets/server.ts";
+import type { LeaseStateNeeds } from "./lease-state.ts";
 
 interface JoinFlags {
   readonly as: string;
@@ -44,13 +44,13 @@ function leaveAndForget(session: Session): Effect.Effect<LeaveResponse, CallFail
   });
 }
 
-function join({ as, force }: JoinOptions): Effect.Effect<LeaseResponse, CallFailure, Secrets> {
+function join({ as, force }: JoinOptions): Effect.Effect<LeaseResponse, CallFailure, LeaseStateNeeds> {
   if (Option.isNone(as)) {
     return Effect.fail(asMissing);
   }
   return withSession(joinAndSave({ as: as.value, force }));
 }
 
-const leave: Effect.Effect<LeaveResponse, CallFailure, Secrets> = withSession(leaveAndForget);
+const leave: Effect.Effect<LeaveResponse, CallFailure, LeaseStateNeeds> = withSession(leaveAndForget);
 
 export { join, leave };

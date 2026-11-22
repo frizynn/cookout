@@ -6,13 +6,13 @@ import { printAnswer, refused } from "./output.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
 import type { CommandFailed } from "./output.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
-import type { Secrets } from "../../../secrets/server.ts";
+import type { LeaseStateNeeds } from "./lease-state.ts";
 import { callServer } from "./adapters/sdk.ts";
 import { isMessageId } from "../../../messages/index.ts";
 
 function answered<Value>(
-  effect: Effect.Effect<Value, CallFailure, Secrets>,
-): Effect.Effect<void, CommandFailed, Secrets> {
+  effect: Effect.Effect<Value, CallFailure, LeaseStateNeeds>,
+): Effect.Effect<void, CommandFailed, LeaseStateNeeds> {
   return effect.pipe(Effect.flatMap(printAnswer), Effect.catch(refused));
 }
 
@@ -178,7 +178,7 @@ interface JoinInput {
   readonly force: Option.Option<boolean>;
 }
 
-type JoinCommand = Command.Command<"join", JoinInput, object, CommandFailed, Secrets>;
+type JoinCommand = Command.Command<"join", JoinInput, object, CommandFailed, LeaseStateNeeds>;
 
 const joinCommand: JoinCommand = Command.make("join", { as: asFlag, force: forceFlag }, ({ as, force }) =>
   answered(join({ as, force: Option.getOrElse(force, notForced) })),

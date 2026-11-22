@@ -1,9 +1,8 @@
 import type { CookoutClient, CookoutClientOptions } from "../../../../sdk/index.ts";
 import { CookoutError, createCookoutClient } from "../../../../sdk/index.ts";
 import { Effect, Option, Predicate, String as Str } from "effect";
-import type { LeaseState, LeaseStateFile } from "../lease-state.ts";
+import type { LeaseState, LeaseStateFile, LeaseStateNeeds } from "../lease-state.ts";
 import { cookoutToken, cookoutUrl } from "../../../../config/server.ts";
-import type { Secrets } from "../../../../secrets/server.ts";
 import { leaseStateFile } from "../lease-state.ts";
 
 interface CallFailure {
@@ -62,7 +61,7 @@ function onLeaseLost({ file, saved }: Pick<Session, "file" | "saved">) {
     });
 }
 
-function sessionFor(connection: Connection): Effect.Effect<Session, CallFailure, Secrets> {
+function sessionFor(connection: Connection): Effect.Effect<Session, CallFailure, LeaseStateNeeds> {
   return Effect.gen(function* openSession() {
     const file = yield* leaseStateFile(connection);
     const saved = yield* file.read;
@@ -76,7 +75,7 @@ function sessionFor(connection: Connection): Effect.Effect<Session, CallFailure,
 
 function withSession<Value>(
   run: (session: Session) => Effect.Effect<Value, CallFailure>,
-): Effect.Effect<Value, CallFailure, Secrets> {
+): Effect.Effect<Value, CallFailure, LeaseStateNeeds> {
   return Effect.gen(function* callWithSession() {
     const setUrl = yield* Effect.orDie(cookoutUrl);
     const token = yield* Effect.orDie(cookoutToken);
@@ -89,7 +88,7 @@ function callClient<Value>(call: Call<Value>): (session: Session) => Effect.Effe
   return (session) => Effect.tryPromise({ catch: toFailure, try: () => call(session.client) });
 }
 
-function callServer<Value>(call: Call<Value>): Effect.Effect<Value, CallFailure, Secrets> {
+function callServer<Value>(call: Call<Value>): Effect.Effect<Value, CallFailure, LeaseStateNeeds> {
   return withSession(callClient(call));
 }
 

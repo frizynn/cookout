@@ -1,8 +1,7 @@
-import { Context, Effect, FileSystem, Layer, Option, Path, Schema, String as Str } from "effect";
+import { Effect, FileSystem, Option, Path, Schema, String as Str } from "effect";
 import { home, stateDirectory, xdgStateHome } from "../../../config/server.ts";
 import { isLeaseId, leaseIdPattern } from "../../../leases/index.ts";
 import type { LeaseId } from "../../../leases/index.ts";
-import { NodeServices } from "@effect/platform-node";
 import { Secrets } from "../../../secrets/server.ts";
 
 interface LeaseStateFailure {
@@ -10,7 +9,7 @@ interface LeaseStateFailure {
   readonly message: string;
 }
 
-type Fails<Value> = Effect.Effect<Value, LeaseStateFailure>;
+type Needs = FileSystem.FileSystem | Path.Path | Secrets;
 
 interface LeaseStateFile {
   readonly read: Effect.Effect<Option.Option<LeaseState>, LeaseStateFailure>;
@@ -23,7 +22,7 @@ interface Session {
   readonly token: string;
 }
 
-interface Place {
+interface LeaseStateLocation {
   readonly file: string;
   readonly folder: string;
   readonly fs: FileSystem.FileSystem;
@@ -71,7 +70,7 @@ function stateFolder(path: Path.Path): Effect.Effect<string> {
   }).pipe(Effect.orDie);
 }
 
-function readFrom({ file, fs }: Place): Fails<Option.Option<LeaseState>> {
+function readFrom({ file, fs }: LeaseStateLocation): Effect.Effect<Option.Option<LeaseState>, LeaseStateFailure> {
   return Effect.gen(function* readLeaseState() {
     const exists = yield* Effect.mapError(fs.exists(file), failure);
     if (!exists) {
@@ -84,7 +83,11 @@ function readFrom({ file, fs }: Place): Fails<Option.Option<LeaseState>> {
   });
 }
 
-function writeTo({ file, folder, fs }: Place): (state: LeaseState) => Fails<void> {
+function writeTo({
+  file,
+  folder,
+  fs,
+}: LeaseStateLocation): (state: LeaseState) => Effect.Effect<void, LeaseStateFailure> {
   return (state) =>
     Effect.gen(function* writeLeaseState() {
       const text = yield* Effect.orDie(encodeLeaseState(state));
@@ -95,27 +98,25 @@ function writeTo({ file, folder, fs }: Place): (state: LeaseState) => Fails<void
     }).pipe(Effect.mapError(failure));
 }
 
-function placeOf(session: Session): Effect.Effect<Place, never, Secrets> {
-  return Effect.scoped(
-    Effect.gen(function* findLeaseState() {
-      const node = yield* Layer.build(NodeServices.layer);
-      const path = Context.get(node, Path.Path);
-      const secrets = yield* Secrets;
-      const base = yield* stateFolder(path);
-      const digest = yield* secrets.digest(`${session.url}\n${session.token}`);
-      const folder = path.join(base, "leases");
-      const file = path.join(folder, `${Str.slice(KEY_START, KEY_LENGTH)(digest)}.json`);
-      return { file, folder, fs: Context.get(node, FileSystem.FileSystem) };
-    }),
-  );
+function locationOf(session: Session): Effect.Effect<LeaseStateLocation, never, Needs> {
+  return Effect.gen(function* findLeaseState() {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const secrets = yield* Secrets;
+    const base = yield* stateFolder(path);
+    const digest = yield* secrets.digest(`${session.url}\n${session.token}`);
+    const folder = path.join(base, "leases");
+    const file = path.join(folder, `${Str.slice(KEY_START, KEY_LENGTH)(digest)}.json`);
+    return { file, folder, fs };
+  });
 }
 
-function leaseStateFile(session: Session): Effect.Effect<LeaseStateFile, never, Secrets> {
-  return Effect.map(placeOf(session), (place) => ({
-    read: readFrom(place),
-    remove: Effect.mapError(place.fs.remove(place.file, { force: true }), failure),
-    write: writeTo(place),
+function leaseStateFile(session: Session): Effect.Effect<LeaseStateFile, never, Needs> {
+  return Effect.map(locationOf(session), (location) => ({
+    read: readFrom(location),
+    remove: Effect.mapError(location.fs.remove(location.file, { force: true }), failure),
+    write: writeTo(location),
   }));
 }
 
-export { type LeaseState, type LeaseStateFile, leaseStateFile };
+export { type LeaseState, type LeaseStateFile, type Needs as LeaseStateNeeds, leaseStateFile };
