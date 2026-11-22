@@ -26,8 +26,8 @@ const as = <B extends Brand<string>>(value: string): B => value as B;
 /** The rule every identity name follows, for the backend's Schemas. */
 export const identityNamePattern = /^[a-z0-9-]{1,64}$/u;
 
-/** 1–100 characters: the owner rule as the SDK's validators check it. */
-export const ownerPattern = /^[\s\S]{1,100}$/u;
+/** The owner rule, in UTF-16 code units as `String.length` counts them. */
+export const ownerLength = { maximum: 100, minimum: 1 } as const;
 
 /** Whether `value` follows the identity-name rule; if so, it is an `IdentityName`. */
 export function isIdentityName(value: string): value is IdentityName {
@@ -36,7 +36,7 @@ export function isIdentityName(value: string): value is IdentityName {
 
 /** Whether `value` is the length of an owner; if so, it is an `Owner`. */
 export function isOwner(value: string): value is Owner {
-  return value.length >= 1 && value.length <= 100;
+  return value.length >= ownerLength.minimum && value.length <= ownerLength.maximum;
 }
 
 /** Marks a string as a token. Only `secrets` issues one, and only bearer auth reads one from a request. */

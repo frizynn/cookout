@@ -1,14 +1,14 @@
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
 import type { Identity, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../index.ts";
-import { identityNamePattern, isIdentityName, isOwner, isToken, ownerPattern, tokenPattern } from "../../index.ts";
+import { identityNamePattern, isIdentityName, isOwner, isToken, ownerLength, tokenPattern } from "../../index.ts";
 
 export const IdentityNameSchema = Schema.String.check(
   Schema.isPattern(identityNamePattern, { message: "Use 1-64 lowercase letters, digits or '-'." }),
 ).pipe(Schema.refine(isIdentityName, { identifier: "IdentityName" }));
 
 export const OwnerSchema = Schema.String.check(
-  Schema.isPattern(ownerPattern, { message: "Use 1-100 characters." }),
+  Schema.isBetweenLength(ownerLength.minimum, ownerLength.maximum, { message: "Use 1-100 characters." }),
 ).pipe(Schema.refine(isOwner, { identifier: "Owner" }));
 
 const TokenSchema = Schema.String.check(Schema.isPattern(tokenPattern)).pipe(

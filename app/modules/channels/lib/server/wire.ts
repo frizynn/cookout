@@ -1,13 +1,15 @@
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
 import type { Channel, ChannelResponse, ListChannelsResponse } from "../../index.ts";
-import { channelNamePattern, descriptionPattern, isChannelName } from "../../index.ts";
+import { channelNamePattern, descriptionLength, isChannelName } from "../../index.ts";
 
 const ChannelNameSchema = Schema.String.check(Schema.isPattern(channelNamePattern).abort()).pipe(
   Schema.refine(isChannelName, { identifier: "ChannelName" }),
 );
 
-const DescriptionSchema = Schema.String.check(Schema.isPattern(descriptionPattern));
+const DescriptionSchema = Schema.String.check(
+  Schema.isBetweenLength(descriptionLength.minimum, descriptionLength.maximum),
+);
 
 const ChannelSchema = matchesWire<Channel>()(
   Schema.Struct({

@@ -18,8 +18,8 @@ export function isChannelName(value: string): value is ChannelName {
   return channelNamePattern.test(value);
 }
 
-/** 1–500 characters: the description rule as a pattern, so the SDK's validators need no length helper. */
-export const descriptionPattern = /^[\s\S]{1,500}$/u;
+/** The description rule, in UTF-16 code units as `String.length` counts them. */
+export const descriptionLength = { maximum: 500, minimum: 1 } as const;
 
 /** A channel as the server shows it. */
 export type Channel = {
