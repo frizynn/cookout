@@ -3,7 +3,7 @@ import { CliError, Command, Flag } from "effect/cli";
 import { Console, Effect, Schema } from "effect";
 import { cookoutToken, cookoutUrl } from "../../../config/server.ts";
 import type { NodeServices } from "@effect/platform-node";
-import { devCookout } from "./dev-cookout.ts";
+import { devCookout } from "./cookout.ts";
 import { seedBoard } from "./board.ts";
 
 const PRETTY = 2;

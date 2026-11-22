@@ -1,8 +1,15 @@
 import { Effect, FileSystem, Schema } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
-import { answer, commandLineServices, runCookout, runDev, startDev } from "../../../testing/server.ts";
+import {
+  answer,
+  commandLineServices,
+  interruptDevBinary,
+  runCookout,
+  runDev,
+  startDev,
+} from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
-import { createCookoutClient } from "../../index.ts";
+import { createCookoutClient } from "../../../sdk/index.ts";
 
 const OK = 200;
 const EXIT_SUCCESS = 0;
@@ -107,6 +114,17 @@ it.effect("pnpm seed against a stopped cookout is refused", () =>
 
     expect(seeded.exitCode).toBe(EXIT_FAILURE);
     expect(seeded.stderrJson).toMatchObject({ error: { code: "seed_failed" } });
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
+it.effect("pnpm dev exits 0 on Ctrl-C and deletes its database", () =>
+  Effect.gen(function* devStopsOnInterrupt() {
+    const { database, exitCode } = yield* interruptDevBinary();
+    const kept = yield* databaseExists(database);
+
+    expect(database).toContain("cookout-dev-");
+    expect(exitCode).toBe(EXIT_SUCCESS);
+    expect(kept).toBe(false);
   }).pipe(Effect.provide(commandLineServices)),
 );
 

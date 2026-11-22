@@ -5,7 +5,7 @@ import type { Scope } from "effect";
 import type { Secrets } from "../../../secrets/server.ts";
 import type { ServeLayers } from "../../../cli/server.ts";
 import { TestConsole } from "effect/testing";
-import { devCommandLine } from "./dev.ts";
+import { devCommandLine } from "../../../dev/server.ts";
 import { runCookout as runCommandLine } from "../../../cli/server.ts";
 import { secretsTest } from "./secrets.ts";
 

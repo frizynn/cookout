@@ -113,4 +113,4 @@ function seedBoard(connection: BoardConnection): Effect.Effect<SeededBoard, Seed
   });
 }
 
-export { type BoardConnection, type SeedFailure, type SeededBoard, seedBoard };
+export { type BoardConnection, type SeedFailure, seedBoard };

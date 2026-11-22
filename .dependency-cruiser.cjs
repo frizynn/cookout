@@ -7,7 +7,7 @@ const DEV_ENTRY = "^app/dev\\.ts$";
 const WEB = `^app/web\\.tsx$|^${R}/(design-system|session|board|unread|composer|live|routes|format|views)/`;
 const PUBLISHED_ENTRIES = ["app/main.ts", `${R}/sdk/index.ts`];
 const PUBLISHED_SDK = `${R}/sdk/index.ts`;
-const TESTED_INTERFACES = ["sdk", "cli", "storage", "webhook-fake"];
+const TESTED_INTERFACES = ["sdk", "cli", "storage", "webhook-fake", "dev"];
 const exactly = (file) => `^${file.replaceAll(".", "\\.")}$`;
 
 module.exports = {
@@ -16,7 +16,7 @@ module.exports = {
       name: "published-entries-ship-no-test-code",
       severity: "error",
       from: { path: PUBLISHED_ENTRIES.map(exactly) },
-      to: { path: `^${R}/(testing|webhook-fake)/`, reachable: true },
+      to: { path: `^${R}/(testing|webhook-fake|dev)/`, reachable: true },
     },
     {
       name: "published-sdk-reaches-no-effect",
@@ -66,14 +66,20 @@ module.exports = {
     {
       name: "testing-only-from-tests",
       severity: "error",
-      from: { pathNot: [TESTS, `^${R}/testing/`, DEV_ENTRY] },
+      from: { pathNot: [TESTS, `^${R}/testing/`, `^${R}/dev/`, DEV_ENTRY] },
       to: { path: `^${R}/testing/` },
     },
     {
       name: "webhook-fake-only-from-tests-and-dev",
       severity: "error",
-      from: { pathNot: [TESTS, `^${R}/testing/`, `^${R}/webhook-fake/`] },
+      from: { pathNot: [TESTS, `^${R}/testing/`, `^${R}/webhook-fake/`, `^${R}/dev/`] },
       to: { path: `^${R}/webhook-fake/` },
+    },
+    {
+      from: { pathNot: [TESTS, `^${R}/testing/`, `^${R}/dev/`, DEV_ENTRY] },
+      name: "dev-only-from-the-dev-entry",
+      severity: "error",
+      to: { path: `^${R}/dev/` },
     },
     {
       name: "no-node-builtins-in-client",

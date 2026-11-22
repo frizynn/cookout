@@ -1,8 +1,7 @@
-import { Effect, FileSystem, pipe } from "effect";
+import { Effect, pipe } from "effect";
 import {
   TestCookout,
   commandLineServices,
-  interruptDevBinary,
   runCookout,
   runCookoutBinary,
   testCookout,
@@ -10,7 +9,6 @@ import {
 import { expect, it } from "@effect/vitest";
 
 const EXIT_FAILURE = 1;
-const EXIT_SUCCESS = 0;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const succeeded = { exitCode: 0, stderr: "" };
 const verbs: readonly (readonly string[])[] = [
@@ -136,17 +134,5 @@ it.effect("the CLI refuses an unknown command with a usage error", () =>
     const result = yield* runCookout({ args: ["identity", "explode"], env: { COOKOUT_URL: "http://127.0.0.1:1" } });
 
     expect(result).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "usage" } } });
-  }).pipe(Effect.provide(commandLineServices)),
-);
-
-it.effect("pnpm dev exits 0 on Ctrl-C and deletes its database", () =>
-  Effect.gen(function* devStopsOnInterrupt() {
-    const fs = yield* FileSystem.FileSystem;
-    const { database, exitCode } = yield* interruptDevBinary();
-    const kept = yield* Effect.orDie(fs.exists(database));
-
-    expect(database).toContain("cookout-dev-");
-    expect(exitCode).toBe(EXIT_SUCCESS);
-    expect(kept).toBe(false);
   }).pipe(Effect.provide(commandLineServices)),
 );

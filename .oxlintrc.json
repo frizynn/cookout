@@ -508,7 +508,7 @@
               {
                 "group": ["**/testing/server.ts"],
                 "importNames": ["runCookoutBinary"],
-                "message": "Tests run cookout in process: use runCookout or startServe. Only app/modules/cli/tests/server/cli.test.ts spawns the binary."
+                "message": "Tests run cookout in process: use runCookout or startServe. Only app/modules/cli/tests/server/cli.test.ts and app/modules/dev/tests/server/dev.test.ts spawn a program."
               }
             ]
           }
@@ -624,7 +624,7 @@
               {
                 "group": ["**/testing/server.ts"],
                 "importNames": ["runCookoutBinary", "interruptDevBinary"],
-                "message": "Tests run cookout in process: use runCookout or startServe. Only app/modules/cli/tests/server/cli.test.ts spawns the binary."
+                "message": "Tests run cookout in process: use runCookout or startServe. Only app/modules/cli/tests/server/cli.test.ts and app/modules/dev/tests/server/dev.test.ts spawn a program."
               }
             ],
             "paths": [
@@ -695,7 +695,7 @@
       }
     },
     {
-      "files": ["app/modules/cli/tests/server/cli.test.ts"],
+      "files": ["app/modules/cli/tests/server/cli.test.ts", "app/modules/dev/tests/server/dev.test.ts"],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -792,7 +792,9 @@
         "app/modules/storage/server.ts",
         "app/modules/storage/lib/server/**",
         "app/modules/testing/server.ts",
-        "app/modules/testing/lib/server/**"
+        "app/modules/testing/lib/server/**",
+        "app/modules/dev/server.ts",
+        "app/modules/dev/lib/server/**"
       ],
       "rules": {
         "effecttsgo/api-stability-leak": "off"
