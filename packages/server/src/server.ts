@@ -2,15 +2,25 @@ import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import type {
+  Channel,
+  ChannelResponse,
   ErrorResponse,
   HealthResponse,
   Identity,
   IdentityResponse,
   IdentityWithTokenResponse,
+  ListChannelsResponse,
   ListIdentitiesResponse,
+  ListMessagesResponse,
+  MessageResponse,
+  NewMessage,
   StorageAdapter,
+  ThreadResponse,
 } from "@ai-hero/cookout-protocol";
 import {
+  channelResponseSchema,
+  channelsPath,
+  createChannelRequestSchema,
   createIdentityRequestSchema,
   errorResponseSchema,
   healthPath,
@@ -18,7 +28,14 @@ import {
   identitiesPath,
   identityResponseSchema,
   identityWithTokenResponseSchema,
+  listChannelsResponseSchema,
   listIdentitiesResponseSchema,
+  listMessagesQuerySchema,
+  listMessagesResponseSchema,
+  messageResponseSchema,
+  messagesPath,
+  postMessageRequestSchema,
+  threadResponseSchema,
   whoamiPath,
 } from "@ai-hero/cookout-protocol";
 import { hashToken } from "./tokens.ts";
@@ -128,6 +145,30 @@ function identityNotFound(name: string): HttpError {
   return new HttpError(404, { code: "identity_not_found", message: `There is no identity named ${name}.` });
 }
 
+function channelNotFound(name: string): HttpError {
+  return new HttpError(404, { code: "channel_not_found", message: `There is no channel named ${name}.` });
+}
+
+function messageNotFound(id: number): HttpError {
+  return new HttpError(404, { code: "message_not_found", message: `There is no message ${id}.` });
+}
+
+/** Parses a request body or query, or throws 400 `invalid_request` with the schema errors. */
+function parseRequest<T>(
+  schema: { safeParse(input: unknown): { success: true; data: T } | { success: false; error: { issues: unknown } } },
+  input: unknown,
+): T {
+  const parsed = schema.safeParse(input);
+  if (!parsed.success) {
+    throw new HttpError(400, {
+      code: "invalid_request",
+      message: "The request doesn't match the protocol.",
+      details: parsed.error.issues,
+    });
+  }
+  return parsed.data;
+}
+
 async function handle(options: ServerOptions, request: IncomingMessage, response: ServerResponse): Promise<void> {
   const { storage, clock } = options;
   const path = new URL(request.url ?? "/", "http://localhost").pathname;
@@ -146,12 +187,101 @@ async function handle(options: ServerOptions, request: IncomingMessage, response
   }
 
   const identityRoute = /^\/v1\/identities\/([^/]+)(\/token)?$/.exec(path);
-  if (path !== whoamiPath && path !== identitiesPath && identityRoute === null) {
+  const channelRoute = /^\/v1\/channels\/([^/]+)(\/messages)?$/.exec(path);
+  const threadRoute = /^\/v1\/messages\/(\d+)\/thread$/.exec(path);
+  if (
+    path !== whoamiPath &&
+    path !== identitiesPath &&
+    path !== channelsPath &&
+    path !== messagesPath &&
+    identityRoute === null &&
+    channelRoute === null &&
+    threadRoute === null
+  ) {
     throw new HttpError(404, { code: "not_found", message: `No route for ${method} ${path}.` });
   }
 
   // Every route below needs a token.
   const caller = await authenticate(storage, request);
+
+  if (path === channelsPath) {
+    if (method === "GET") {
+      const body: ListChannelsResponse = { channels: await storage.listChannels() };
+      sendJson(response, 200, listChannelsResponseSchema.parse(body));
+      return;
+    }
+    if (method === "POST") {
+      // Any identity can create a channel (spec answer 12).
+      const parsed = parseRequest(createChannelRequestSchema, await readJson(request));
+      const channel: Channel = { name: parsed.name, createdAt: clock.now().toISOString() };
+      if (parsed.description !== undefined) channel.description = parsed.description;
+      if ((await storage.createChannel(channel)) === "name_taken") {
+        throw new HttpError(409, { code: "channel_exists", message: `The channel ${channel.name} already exists.` });
+      }
+      const body: ChannelResponse = { channel };
+      sendJson(response, 201, channelResponseSchema.parse(body));
+      return;
+    }
+    throw notAllowed(method, path);
+  }
+
+  if (channelRoute !== null) {
+    if (method !== "GET") throw notAllowed(method, path);
+    const name = decodeURIComponent(channelRoute[1] ?? "");
+    if (channelRoute[2] === undefined) {
+      const channel = await storage.findChannel(name);
+      if (channel === undefined) throw channelNotFound(name);
+      const body: ChannelResponse = { channel };
+      sendJson(response, 200, channelResponseSchema.parse(body));
+      return;
+    }
+    const search = new URL(request.url ?? "/", "http://localhost").searchParams;
+    const query = parseRequest(listMessagesQuerySchema, Object.fromEntries(search));
+    const page = await storage.listChannelMessages(
+      name,
+      query.before === undefined ? { limit: query.limit } : { before: query.before, limit: query.limit },
+    );
+    if (page === undefined) throw channelNotFound(name);
+    const body: ListMessagesResponse = page;
+    sendJson(response, 200, listMessagesResponseSchema.parse(body));
+    return;
+  }
+
+  if (path === messagesPath) {
+    if (method !== "POST") throw notAllowed(method, path);
+    const parsed = parseRequest(postMessageRequestSchema, await readJson(request));
+    const message: NewMessage = {
+      channel: parsed.channel,
+      author: caller.owner === undefined ? { name: caller.name } : { name: caller.name, owner: caller.owner },
+      text: parsed.text,
+      mentions: [],
+      createdAt: clock.now().toISOString(),
+    };
+    if (parsed.data !== undefined) message.data = parsed.data;
+    if (parsed.replyTo !== undefined) message.replyTo = parsed.replyTo;
+    const result = await storage.appendMessage(message);
+    if (result.status === "channel_not_found") throw channelNotFound(parsed.channel);
+    if (result.status === "reply_to_not_found") throw messageNotFound(parsed.replyTo ?? 0);
+    if (result.status === "reply_in_other_channel") {
+      throw new HttpError(400, {
+        code: "reply_in_other_channel",
+        message: `Message ${parsed.replyTo} is not in ${parsed.channel}. Reply in the message's own channel.`,
+      });
+    }
+    const body: MessageResponse = { message: result.message };
+    sendJson(response, 201, messageResponseSchema.parse(body));
+    return;
+  }
+
+  if (threadRoute !== null) {
+    if (method !== "GET") throw notAllowed(method, path);
+    const id = Number(threadRoute[1]);
+    const thread = await storage.getThread(id);
+    if (thread === undefined) throw messageNotFound(id);
+    const body: ThreadResponse = thread;
+    sendJson(response, 200, threadResponseSchema.parse(body));
+    return;
+  }
 
   if (path === whoamiPath) {
     if (method !== "GET") throw notAllowed(method, path);
@@ -168,16 +298,9 @@ async function handle(options: ServerOptions, request: IncomingMessage, response
     }
     if (method === "POST") {
       requireAdmin(caller);
-      const parsed = createIdentityRequestSchema.safeParse(await readJson(request));
-      if (!parsed.success) {
-        throw new HttpError(400, {
-          code: "invalid_request",
-          message: "The body doesn't match the protocol.",
-          details: parsed.error.issues,
-        });
-      }
-      const identity: Identity = { name: parsed.data.name, admin: false, createdAt: clock.now().toISOString() };
-      if (parsed.data.owner !== undefined) identity.owner = parsed.data.owner;
+      const parsed = parseRequest(createIdentityRequestSchema, await readJson(request));
+      const identity: Identity = { name: parsed.name, admin: false, createdAt: clock.now().toISOString() };
+      if (parsed.owner !== undefined) identity.owner = parsed.owner;
       const token = options.newToken();
       if ((await storage.createIdentity(identity, hashToken(token))) === "name_taken") {
         throw new HttpError(409, { code: "identity_exists", message: `The name ${identity.name} is taken.` });

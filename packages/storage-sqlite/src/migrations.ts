@@ -27,6 +27,27 @@ const migrations: readonly string[] = [
      revoked INTEGER NOT NULL CHECK (revoked IN (0, 1))
    ) STRICT;
    CREATE INDEX tokens_by_identity ON tokens (identity_name) WHERE revoked = 0;`,
+  // 3: channels and messages. A message's author is copied in, so it outlives
+  // the identity. `reply_to` is always a top-level message (one level deep).
+  // `data` is JSON text; SQL NULL means no data was sent (JSON null is 'null').
+  `CREATE TABLE channels (
+     name TEXT PRIMARY KEY,
+     description TEXT,
+     created_at TEXT NOT NULL
+   ) STRICT;
+   CREATE TABLE messages (
+     id INTEGER PRIMARY KEY,
+     channel TEXT NOT NULL REFERENCES channels (name),
+     author_name TEXT NOT NULL,
+     author_owner TEXT,
+     text TEXT NOT NULL,
+     data TEXT,
+     reply_to INTEGER REFERENCES messages (id),
+     mentions TEXT NOT NULL,
+     created_at TEXT NOT NULL
+   ) STRICT;
+   CREATE INDEX top_level_messages_by_channel ON messages (channel, id) WHERE reply_to IS NULL;
+   CREATE INDEX replies_by_thread ON messages (reply_to, id) WHERE reply_to IS NOT NULL;`,
 ];
 
 const userVersionRow = z.object({ user_version: z.number().int().nonnegative() });

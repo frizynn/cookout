@@ -1,12 +1,25 @@
-import { z } from "zod";
+import type { Channel } from "./channels.ts";
 import type { Identity } from "./identities.ts";
+import type { ListMessagesResponse, Message, MessageId, ThreadResponse } from "./messages.ts";
 
-/**
- * Message IDs are one increasing sequence across the whole server. They are
- * the order of messages, the read-position markers and the SSE event IDs.
- */
-export const messageIdSchema = z.number().int().positive();
-export type MessageId = z.infer<typeof messageIdSchema>;
+/** A message to append: everything but its ID and reply counts, which the store sets. */
+export type NewMessage = Omit<Message, "id" | "replyTo" | "replyCount" | "latestReplyId"> & {
+  /** The message replied to. The store moves a reply to a reply onto the top-level message. */
+  replyTo?: MessageId;
+};
+
+/** What `appendMessage` did. Every refusal stores nothing and takes no ID. */
+export type AppendMessageResult =
+  | { status: "appended"; message: Message }
+  | { status: "channel_not_found" }
+  | { status: "reply_to_not_found" }
+  | { status: "reply_in_other_channel" };
+
+/** A page of a channel's top-level messages (see `listChannelMessages`). */
+export type ChannelPage = ListMessagesResponse;
+
+/** A top-level message and its replies in order. */
+export type Thread = ThreadResponse;
 
 /**
  * What a token hash leads to. `revoked` is a token that was rotated away or
@@ -59,6 +72,27 @@ export interface StorageAdapter {
    * changes nothing) if it is the last admin, so a cookout always has one.
    */
   deleteIdentity(name: string): Promise<DeleteIdentityResult>;
+  /** Adds a channel. Returns `name_taken` (and changes nothing) if the name is used. */
+  createChannel(channel: Channel): Promise<"created" | "name_taken">;
+  /** Every channel, sorted by name. */
+  listChannels(): Promise<Channel[]>;
+  /** The channel with this name, or `undefined`. */
+  findChannel(name: string): Promise<Channel | undefined>;
+  /**
+   * Checks the channel and the message replied to, takes the next message ID
+   * and stores the message, in one step. A reply to a reply is stored with
+   * `replyTo` set to the top-level message. Later tickets add mentions and
+   * follows to this same step.
+   */
+  appendMessage(message: NewMessage): Promise<AppendMessageResult>;
+  /**
+   * Up to `limit` of the channel's newest top-level messages with IDs below
+   * `before` (all, if absent), oldest first, with reply counts. `undefined`
+   * if there is no such channel.
+   */
+  listChannelMessages(channel: string, page: { before?: MessageId; limit: number }): Promise<ChannelPage | undefined>;
+  /** The thread holding the message (top-level or reply), or `undefined` if there is no such message. */
+  getThread(messageId: MessageId): Promise<Thread | undefined>;
   /** Resolves if the store can be used, rejects if not. Backs `GET /v1/health`. */
   checkHealth(): Promise<void>;
   /** Releases the store. Later calls reject. Closing twice is fine. */

@@ -1,9 +1,31 @@
 import { describe, expect, it, onTestFinished } from "vitest";
-import type { Identity, StorageAdapter } from "@ai-hero/cookout-protocol";
+import type { Channel, Identity, Message, NewMessage, StorageAdapter } from "@ai-hero/cookout-protocol";
 import { messageIdSchema } from "@ai-hero/cookout-protocol";
 
 function identity(name: string, extra: Partial<Identity> = {}): Identity {
   return { name, admin: false, createdAt: "2026-01-01T00:00:00.000Z", ...extra };
+}
+
+function channel(name: string, extra: Partial<Channel> = {}): Channel {
+  return { name, createdAt: "2026-01-01T00:00:00.000Z", ...extra };
+}
+
+function newMessage(channelName: string, text: string, extra: Partial<NewMessage> = {}): NewMessage {
+  return {
+    channel: channelName,
+    author: { name: "agent", owner: "matt" },
+    text,
+    mentions: [],
+    createdAt: "2026-01-01T00:00:00.000Z",
+    ...extra,
+  };
+}
+
+/** Appends and returns the stored message, failing the test if it was refused. */
+async function append(storage: StorageAdapter, message: NewMessage): Promise<Message> {
+  const result = await storage.appendMessage(message);
+  if (result.status !== "appended") throw new Error(`appendMessage refused: ${result.status}`);
+  return result.message;
 }
 
 /** Stand-ins for token hashes. The store treats them as opaque strings. */
@@ -217,6 +239,198 @@ export function testStorageAdapter(adapterName: string, openFresh: OpenFreshStor
         await expect(storage.listIdentities()).rejects.toThrow();
         await expect(storage.createIdentity(identity("late"), hashA)).rejects.toThrow();
         await expect(storage.findIdentityByTokenHash(hashA)).rejects.toThrow();
+      });
+    });
+
+    describe("channels", () => {
+      it("a new store has no channels", async () => {
+        const storage = await open();
+        expect(await storage.listChannels()).toEqual([]);
+      });
+
+      it("a channel is created with or without a description and listed by name", async () => {
+        const storage = await open();
+        expect(await storage.createChannel(channel("zed", { description: "Last" }))).toBe("created");
+        expect(await storage.createChannel(channel("alpha"))).toBe("created");
+        expect(await storage.listChannels()).toEqual([channel("alpha"), channel("zed", { description: "Last" })]);
+      });
+
+      it("a channel name can be used only once", async () => {
+        const storage = await open();
+        await storage.createChannel(channel("grill", { description: "first" }));
+        expect(await storage.createChannel(channel("grill"))).toBe("name_taken");
+        expect(await storage.listChannels()).toEqual([channel("grill", { description: "first" })]);
+      });
+
+      it("a channel is found by name", async () => {
+        const storage = await open();
+        await storage.createChannel(channel("grill", { description: "d" }));
+        expect(await storage.findChannel("grill")).toEqual(channel("grill", { description: "d" }));
+        expect(await storage.findChannel("nowhere")).toBeUndefined();
+      });
+    });
+
+    describe("messages and threads", () => {
+      it("a top-level message is stored with its fields and no replies", async () => {
+        const storage = await open();
+        await storage.createChannel(channel("grill"));
+        const message = await append(storage, newMessage("grill", "hi", { data: { a: [1, null, "x"], b: true } }));
+        expect(message).toEqual({
+          id: expect.any(Number),
+          channel: "grill",
+          author: { name: "agent", owner: "matt" },
+          text: "hi",
+          data: { a: [1, null, "x"], b: true },
+          mentions: [],
+          createdAt: "2026-01-01T00:00:00.000Z",
+          replyCount: 0,
+          latestReplyId: null,
+        });
+        expect(await storage.getThread(message.id)).toEqual({ parent: message, replies: [] });
+      });
+
+      it("an author with no owner and a message with no data keep those fields absent", async () => {
+        const storage = await open();
+        await storage.createChannel(channel("grill"));
+        const message = await append(storage, newMessage("grill", "hi", { author: { name: "bot" } }));
+        expect(message.author).toEqual({ name: "bot" });
+        expect("data" in message).toBe(false);
+        expect((await storage.getThread(message.id))?.parent).toEqual(message);
+      });
+
+      it("JSON data that is a plain string, number or null is kept as it is", async () => {
+        const storage = await open();
+        await storage.createChannel(channel("grill"));
+        for (const data of ["text", 0, null, []]) {
+          const message = await append(storage, newMessage("grill", "hi", { data }));
+          expect((await storage.getThread(message.id))?.parent.data).toEqual(data);
+        }
+      });
+
+      it("message IDs strictly increase across channels and with nextMessageId", async () => {
+        const storage = await open();
+        await storage.createChannel(channel("one"));
+        await storage.createChannel(channel("two"));
+        const ids = [
+          (await append(storage, newMessage("one", "a"))).id,
+          (await append(storage, newMessage("two", "b"))).id,
+          await storage.nextMessageId(),
+          (await append(storage, newMessage("one", "c"))).id,
+          (await append(storage, newMessage("two", "d"))).id,
+        ];
+        for (let i = 1; i < ids.length; i++) expect(ids[i]).toBeGreaterThan(ids[i - 1] ?? Infinity);
+      });
+
+      it("message IDs are distinct when many are appended at once", async () => {
+        const storage = await open();
+        await storage.createChannel(channel("one"));
+        await storage.createChannel(channel("two"));
+        const messages = await Promise.all(
+          Array.from({ length: 20 }, (_, i) => append(storage, newMessage(i % 2 === 0 ? "one" : "two", `m${i}`))),
+        );
+        expect(new Set(messages.map((message) => message.id)).size).toBe(20);
+      });
+
+      it("a reply is stored in its parent's thread and counted on the parent", async () => {
+        const storage = await open();
+        await storage.createChannel(channel("grill"));
+        const parent = await append(storage, newMessage("grill", "parent"));
+        const first = await append(storage, newMessage("grill", "first", { replyTo: parent.id }));
+        const second = await append(storage, newMessage("grill", "second", { replyTo: parent.id }));
+        expect(first).toEqual({ ...newMessage("grill", "first"), id: first.id, replyTo: parent.id });
+        expect(await storage.getThread(parent.id)).toEqual({
+          parent: { ...parent, replyCount: 2, latestReplyId: second.id },
+          replies: [first, second],
+        });
+      });
+
+      it("a reply to a reply is stored on the top-level message's thread", async () => {
+        const storage = await open();
+        await storage.createChannel(channel("grill"));
+        const parent = await append(storage, newMessage("grill", "parent"));
+        const reply = await append(storage, newMessage("grill", "reply", { replyTo: parent.id }));
+        const nested = await append(storage, newMessage("grill", "nested", { replyTo: reply.id }));
+        expect(nested).toMatchObject({ replyTo: parent.id });
+        expect((await storage.getThread(parent.id))?.replies.map((message) => message.text)).toEqual(["reply", "nested"]);
+      });
+
+      it("a thread is found from any message in it", async () => {
+        const storage = await open();
+        await storage.createChannel(channel("grill"));
+        const parent = await append(storage, newMessage("grill", "parent"));
+        const reply = await append(storage, newMessage("grill", "reply", { replyTo: parent.id }));
+        expect(await storage.getThread(reply.id)).toEqual(await storage.getThread(parent.id));
+        expect(await storage.getThread(999_999)).toBeUndefined();
+      });
+
+      it("appending to a missing channel is refused and takes nothing", async () => {
+        const storage = await open();
+        expect(await storage.appendMessage(newMessage("nowhere", "hi"))).toEqual({ status: "channel_not_found" });
+        expect(await storage.listChannels()).toEqual([]);
+      });
+
+      it("replying to a missing message is refused and stores nothing", async () => {
+        const storage = await open();
+        await storage.createChannel(channel("grill"));
+        expect(await storage.appendMessage(newMessage("grill", "hi", { replyTo: 999_999 }))).toEqual({
+          status: "reply_to_not_found",
+        });
+        expect(await storage.listChannelMessages("grill", { limit: 10 })).toEqual({ messages: [], hasMore: false });
+      });
+
+      it("replying to a message in another channel is refused and stores nothing", async () => {
+        const storage = await open();
+        await storage.createChannel(channel("one"));
+        await storage.createChannel(channel("two"));
+        const parent = await append(storage, newMessage("one", "parent"));
+        expect(await storage.appendMessage(newMessage("two", "hi", { replyTo: parent.id }))).toEqual({
+          status: "reply_in_other_channel",
+        });
+        expect((await storage.getThread(parent.id))?.replies).toEqual([]);
+      });
+
+      it("a channel page is its newest top-level messages, oldest first, with reply counts", async () => {
+        const storage = await open();
+        await storage.createChannel(channel("grill"));
+        await storage.createChannel(channel("other"));
+        const a = await append(storage, newMessage("grill", "a"));
+        const reply = await append(storage, newMessage("grill", "reply", { replyTo: a.id }));
+        await append(storage, newMessage("other", "elsewhere"));
+        const b = await append(storage, newMessage("grill", "b"));
+        expect(await storage.listChannelMessages("grill", { limit: 10 })).toEqual({
+          messages: [{ ...a, replyCount: 1, latestReplyId: reply.id }, b],
+          hasMore: false,
+        });
+      });
+
+      it("a channel page goes back from a message ID", async () => {
+        const storage = await open();
+        await storage.createChannel(channel("grill"));
+        const ids: number[] = [];
+        for (let i = 0; i < 5; i++) ids.push((await append(storage, newMessage("grill", `m${i}`))).id);
+        const texts = async (options: { before?: number; limit: number }) => {
+          const page = await storage.listChannelMessages("grill", options);
+          return { texts: page?.messages.map((message) => message.text), hasMore: page?.hasMore };
+        };
+        expect(await texts({ limit: 2 })).toEqual({ texts: ["m3", "m4"], hasMore: true });
+        expect(await texts({ before: ids[3] ?? 0, limit: 2 })).toEqual({ texts: ["m1", "m2"], hasMore: true });
+        expect(await texts({ before: ids[1] ?? 0, limit: 2 })).toEqual({ texts: ["m0"], hasMore: false });
+        expect(await texts({ before: ids[2] ?? 0, limit: 2 })).toEqual({ texts: ["m0", "m1"], hasMore: false });
+      });
+
+      it("the page of a missing channel is undefined", async () => {
+        const storage = await open();
+        expect(await storage.listChannelMessages("nowhere", { limit: 10 })).toBeUndefined();
+      });
+
+      it("messages cannot be used in a closed store", async () => {
+        const storage = await open();
+        await storage.createChannel(channel("grill"));
+        await storage.close();
+        await expect(storage.appendMessage(newMessage("grill", "hi"))).rejects.toThrow();
+        await expect(storage.listChannelMessages("grill", { limit: 10 })).rejects.toThrow();
+        await expect(storage.getThread(1)).rejects.toThrow();
+        await expect(storage.listChannels()).rejects.toThrow();
       });
     });
   });

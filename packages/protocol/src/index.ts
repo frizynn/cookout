@@ -27,5 +27,59 @@ export type {
   IdentityWithTokenResponse,
   ListIdentitiesResponse,
 } from "./identities.ts";
-export { messageIdSchema } from "./storage.ts";
-export type { DeleteIdentityResult, MessageId, StorageAdapter, TokenLookup } from "./storage.ts";
+export {
+  channelDescriptionSchema,
+  channelNameSchema,
+  channelPath,
+  channelResponseSchema,
+  channelSchema,
+  channelsPath,
+  createChannelRequestSchema,
+  listChannelsResponseSchema,
+} from "./channels.ts";
+export type {
+  Channel,
+  ChannelName,
+  ChannelResponse,
+  CreateChannelRequest,
+  ListChannelsResponse,
+} from "./channels.ts";
+export {
+  authorSchema,
+  channelMessagesPath,
+  defaultPageSize,
+  listMessagesQuerySchema,
+  listMessagesResponseSchema,
+  maxPageSize,
+  messageIdSchema,
+  messageResponseSchema,
+  messageSchema,
+  messagesPath,
+  messageTextSchema,
+  postMessageRequestSchema,
+  replySchema,
+  threadPath,
+  threadResponseSchema,
+  topLevelMessageSchema,
+} from "./messages.ts";
+export type {
+  Author,
+  ListMessagesQuery,
+  ListMessagesResponse,
+  Message,
+  MessageId,
+  MessageResponse,
+  PostMessageRequest,
+  Reply,
+  ThreadResponse,
+  TopLevelMessage,
+} from "./messages.ts";
+export type {
+  AppendMessageResult,
+  ChannelPage,
+  DeleteIdentityResult,
+  NewMessage,
+  StorageAdapter,
+  Thread,
+  TokenLookup,
+} from "./storage.ts";

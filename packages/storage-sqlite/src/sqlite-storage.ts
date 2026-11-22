@@ -1,7 +1,23 @@
 import { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import type { DeleteIdentityResult, Identity, MessageId, StorageAdapter, TokenLookup } from "@ai-hero/cookout-protocol";
-import { identitySchema, messageIdSchema } from "@ai-hero/cookout-protocol";
+import type {
+  AppendMessageResult,
+  Channel,
+  DeleteIdentityResult,
+  Identity,
+  MessageId,
+  Reply,
+  StorageAdapter,
+  TokenLookup,
+  TopLevelMessage,
+} from "@ai-hero/cookout-protocol";
+import {
+  channelSchema,
+  identitySchema,
+  messageIdSchema,
+  replySchema,
+  topLevelMessageSchema,
+} from "@ai-hero/cookout-protocol";
 import { migrate } from "./migrations.ts";
 
 export type SqliteStorageOptions = {
@@ -25,6 +41,55 @@ const identityRow = z
   });
 const tokenRow = z.object({ identity_name: z.string(), revoked: z.union([z.literal(0), z.literal(1)]) });
 const countRow = z.object({ count: z.number().int() });
+const channelRow = z
+  .object({ name: z.string(), description: z.string().nullable(), created_at: z.string() })
+  .transform((row): Channel => {
+    const channel: Channel = { name: row.name, createdAt: row.created_at };
+    if (row.description !== null) channel.description = row.description;
+    return channelSchema.parse(channel);
+  });
+/** Where a message sits: enough to resolve a reply's thread. */
+const placeRow = z.object({ id: messageIdSchema, channel: z.string(), reply_to: messageIdSchema.nullable() });
+const messageColumns = z.object({
+  id: messageIdSchema,
+  channel: z.string(),
+  author_name: z.string(),
+  author_owner: z.string().nullable(),
+  text: z.string(),
+  data: z.string().nullable(),
+  mentions: z.string(),
+  created_at: z.string(),
+});
+
+/** The fields every message has, from its row. */
+function messageFields(row: z.infer<typeof messageColumns>) {
+  const fields = {
+    id: row.id,
+    channel: row.channel,
+    author: row.author_owner === null ? { name: row.author_name } : { name: row.author_name, owner: row.author_owner },
+    text: row.text,
+    mentions: z.array(z.string()).parse(JSON.parse(row.mentions)),
+    createdAt: row.created_at,
+  };
+  return row.data === null ? fields : { ...fields, data: z.json().parse(JSON.parse(row.data)) };
+}
+
+const topLevelRow = messageColumns
+  .extend({ reply_count: z.number().int(), latest_reply_id: messageIdSchema.nullable() })
+  .transform(
+    (row): TopLevelMessage =>
+      topLevelMessageSchema.parse({ ...messageFields(row), replyCount: row.reply_count, latestReplyId: row.latest_reply_id }),
+  );
+const replyRow = messageColumns
+  .extend({ reply_to: messageIdSchema })
+  .transform((row): Reply => replySchema.parse({ ...messageFields(row), replyTo: row.reply_to }));
+
+const messageSelect =
+  "SELECT id, channel, author_name, author_owner, text, data, mentions, created_at, reply_to FROM messages";
+const topLevelSelect = `SELECT m.id, m.channel, m.author_name, m.author_owner, m.text, m.data, m.mentions, m.created_at,
+   (SELECT count(*) FROM messages r WHERE r.reply_to = m.id) AS reply_count,
+   (SELECT max(r.id) FROM messages r WHERE r.reply_to = m.id) AS latest_reply_id
+ FROM messages m`;
 
 /**
  * Opens (or creates) the database at `path` and brings its schema up to date.
@@ -53,6 +118,22 @@ export function openSqliteStorage(options: SqliteStorageOptions): StorageAdapter
   const selectToken = db.prepare("SELECT identity_name, revoked FROM tokens WHERE token_hash = ?");
   const revokeTokens = db.prepare("UPDATE tokens SET revoked = 1 WHERE identity_name = ? AND revoked = 0");
   const removeIdentity = db.prepare("DELETE FROM identities WHERE name = ?");
+  const insertChannel = db.prepare(
+    "INSERT INTO channels (name, description, created_at) VALUES (?, ?, ?) ON CONFLICT (name) DO NOTHING",
+  );
+  const selectChannels = db.prepare("SELECT name, description, created_at FROM channels ORDER BY name");
+  const selectChannel = db.prepare("SELECT name, description, created_at FROM channels WHERE name = ?");
+  const selectPlace = db.prepare("SELECT id, channel, reply_to FROM messages WHERE id = ?");
+  const insertMessage = db.prepare(
+    `INSERT INTO messages (id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  const selectTopLevel = db.prepare(`${topLevelSelect} WHERE m.id = ? AND m.reply_to IS NULL`);
+  const selectReply = db.prepare(`${messageSelect} WHERE id = ? AND reply_to IS NOT NULL`);
+  const selectReplies = db.prepare(`${messageSelect} WHERE reply_to = ? ORDER BY id`);
+  const selectChannelPage = db.prepare(
+    `${topLevelSelect} WHERE m.channel = ? AND m.reply_to IS NULL AND m.id < ? ORDER BY m.id DESC LIMIT ?`,
+  );
   let closed = false;
 
   function assertOpen(): void {
@@ -139,6 +220,69 @@ export function openSqliteStorage(options: SqliteStorageOptions): StorageAdapter
         removeIdentity.run(name);
         return { status: "deleted", identity };
       });
+    },
+    async createChannel(channel) {
+      assertOpen();
+      const { changes } = insertChannel.run(channel.name, channel.description ?? null, channel.createdAt);
+      return changes === 0 ? "name_taken" : "created";
+    },
+    async listChannels() {
+      assertOpen();
+      return selectChannels.all().map((row) => channelRow.parse(row));
+    },
+    async findChannel(name) {
+      assertOpen();
+      const row = selectChannel.get(name);
+      return row === undefined ? undefined : channelRow.parse(row);
+    },
+    async appendMessage(message) {
+      assertOpen();
+      return inTransaction((): AppendMessageResult => {
+        if (selectChannel.get(message.channel) === undefined) return { status: "channel_not_found" };
+        let parentId: MessageId | null = null;
+        if (message.replyTo !== undefined) {
+          const row = selectPlace.get(message.replyTo);
+          if (row === undefined) return { status: "reply_to_not_found" };
+          const repliedTo = placeRow.parse(row);
+          if (repliedTo.channel !== message.channel) return { status: "reply_in_other_channel" };
+          parentId = repliedTo.reply_to ?? repliedTo.id;
+        }
+        const id = nextIdRow.parse(takeNextId.get()).last_id;
+        insertMessage.run(
+          id,
+          message.channel,
+          message.author.name,
+          message.author.owner ?? null,
+          message.text,
+          "data" in message ? JSON.stringify(message.data) : null,
+          parentId,
+          JSON.stringify(message.mentions),
+          message.createdAt,
+        );
+        const stored = parentId === null ? selectTopLevel.get(id) : selectReply.get(id);
+        return {
+          status: "appended",
+          message: parentId === null ? topLevelRow.parse(stored) : replyRow.parse(stored),
+        };
+      });
+    },
+    async listChannelMessages(channel, page) {
+      assertOpen();
+      if (selectChannel.get(channel) === undefined) return undefined;
+      const rows = selectChannelPage.all(channel, page.before ?? Number.MAX_SAFE_INTEGER, page.limit + 1);
+      const newestFirst = rows.slice(0, page.limit).map((row) => topLevelRow.parse(row));
+      return { messages: newestFirst.reverse(), hasMore: rows.length > page.limit };
+    },
+    async getThread(messageId) {
+      assertOpen();
+      const row = selectPlace.get(messageId);
+      if (row === undefined) return undefined;
+      const place = placeRow.parse(row);
+      const parentId = place.reply_to ?? place.id;
+      return {
+        parent: topLevelRow.parse(selectTopLevel.get(parentId)),
+        replies: selectReplies.all(parentId).map((reply) => replyRow.parse(reply)),
+      };
     },
     async checkHealth(): Promise<void> {
       assertOpen();

@@ -51,3 +51,38 @@ it("an existing database opens again without losing its data", async () => {
     await storage.close();
   }
 });
+
+it("channels, messages and threads are kept after the database is reopened", async () => {
+  const path = await freshDatabasePath();
+  const createdAt = "2026-01-01T00:00:00.000Z";
+  const first = openSqliteStorage({ path });
+  await first.createChannel({ name: "grill", description: "d", createdAt });
+  const parent = await first.appendMessage({
+    channel: "grill",
+    author: { name: "a" },
+    text: "p",
+    data: null,
+    mentions: [],
+    createdAt,
+  });
+  if (parent.status !== "appended") throw new Error(parent.status);
+  await first.appendMessage({
+    channel: "grill",
+    author: { name: "b", owner: "matt" },
+    text: "r",
+    replyTo: parent.message.id,
+    mentions: [],
+    createdAt,
+  });
+  const thread = await first.getThread(parent.message.id);
+  await first.close();
+
+  const second = openSqliteStorage({ path });
+  try {
+    expect(await second.listChannels()).toEqual([{ name: "grill", description: "d", createdAt }]);
+    expect(await second.getThread(parent.message.id)).toEqual(thread);
+    expect(thread?.replies).toHaveLength(1);
+  } finally {
+    await second.close();
+  }
+});

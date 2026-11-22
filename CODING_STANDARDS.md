@@ -194,11 +194,40 @@ Don't cast (`as`) untrusted data into a type.
 - Tokens are `cookout_` plus 32 random bytes in base64url, made by the
   injected `newToken` (`randomToken` from `server` at start-up). The server
   hands the store only `sha256(token)` in hex; no adapter ever sees a token.
-- **Admin** is a flag on an identity (Matt, spec answer 2, so the term is
-  approved). On first boot, a store with no identities gets an `admin`
+- **Admin** is a flag on an identity (approved: wiki
+  `decision-spec-defaults.md`, 2026-11-22, answer 2). On first boot, a store with no identities gets an `admin`
   identity; `startServer` returns its token as `adminToken` and `cookout
   serve` prints it once as a JSON line on stdout. Later boots print nothing.
 - Identity names: 1-64 lowercase letters, digits or `-` (`identityNameSchema`).
+
+## Channels, messages and threads
+
+- Any identity creates, lists and reads channels and posts anywhere (spec
+  answer 12; wiki `decision-spec-defaults.md`, 2026-11-22, answer 8). Channel
+  names are 1-80 lowercase letters, digits or `-`, unique (409
+  `channel_exists`). That rule is a working default from #5, kept in one
+  place: `channelNameSchema` in `protocol/src/channels.ts`.
+- Threads are one level deep. A message is a `TopLevelMessage` (with
+  `replyCount` and `latestReplyId`, `null` when there are no replies) or a
+  `Reply` (with `replyTo`, always the top-level message). A `replyTo` that
+  points at a reply is moved to that reply's parent, not refused (wiki
+  `decision-spec-defaults.md`, answer 7). Replying across channels is 400
+  `reply_in_other_channel`. There is no "also send to channel" and no
+  `@channel`/`@here` (wiki `decision-cookout-v1-scope.md`, 2026-11-22).
+- `appendMessage` is the one atomic adapter step for posting: it checks the
+  channel and the message replied to, takes the next ID from the same
+  sequence as `nextMessageId`, and stores the message. Mentions and follows
+  (#7) go inside it, not in extra calls from the server.
+- A message's `author` (`{ name, owner? }`) is copied when it is posted, so
+  messages outlive a deleted identity. `data` is any JSON value; absent means
+  none was sent, which is different from `null`.
+- Paging: `GET /v1/channels/<name>/messages?before=<id>&limit=<n>` returns the
+  newest `limit` (default 50, max 200) top-level messages below `before`,
+  oldest first, and `hasMore`. Page back with the first message's ID. Query
+  strings are parsed with a schema (`listMessagesQuerySchema`) like bodies.
+- `GET /v1/messages/<id>/thread` works from any message in the thread.
+- In the server, `parseRequest(schema, input)` is how a body or query becomes
+  typed data (400 `invalid_request` with the zod issues otherwise).
 
 ## The CLI
 
@@ -206,6 +235,11 @@ Don't cast (`as`) untrusted data into a type.
   the server's JSON answer on stdout and exits 0; on failure it prints
   `{ error: { code, message, status? } }` on stderr and exits 1 (`usage` for
   bad arguments, `url_missing` when `COOKOUT_URL` is unset).
+- Verbs are `<noun> <verb>` (`identity create`, `channel list`, `message
+  post`, `thread get`), each one entry in the `verbs` table in `cli.ts` with
+  its positional count and the options it allows. Any other option is a
+  usage error. Numbers (`--reply-to`, `--before`, `--limit`) are checked
+  as whole numbers; `--data` must be JSON.
 - The SDK and CLI read `COOKOUT_URL` and `COOKOUT_TOKEN` (`createCookoutClient`
   takes an `env` option; tests pass `env: {}` so the developer's shell can't
   leak in).
@@ -251,9 +285,12 @@ Name things with plain words a newcomer understands. Use the domain words the
 spec already uses: channel, message, thread, reply, identity, owner, token,
 inbox, ack, read position, follow, subscribe, mention, command, webhook,
 handler, lease, adapter, session. **A new domain term is checked with Matt
-first.** Of the spec's "proposed terms", admin is approved (spec answer 2);
-command token, lease ID, call ID, inbox reason and contract suite are not yet. Don't coin a word to save
-typing; don't use two words for one thing.
+first.** Only Matt approves a term, and a term counts as approved here only
+with a dated decision in the wiki (`~/repos/matt/personal-wiki/chief-of-staff/cookout/`)
+cited next to it. Of the spec's "proposed terms", admin is approved (wiki
+`decision-spec-defaults.md`, 2026-11-22, answer 2); command token, lease ID,
+call ID, inbox reason and contract suite are not yet. Don't coin a word to
+save typing; don't use two words for one thing.
 
 ## TypeScript
 

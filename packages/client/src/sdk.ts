@@ -1,12 +1,31 @@
 import type { z } from "zod";
 import type {
+  ChannelResponse,
+  CreateChannelRequest,
   CreateIdentityRequest,
   HealthResponse,
   IdentityResponse,
   IdentityWithTokenResponse,
+  ListChannelsResponse,
   ListIdentitiesResponse,
+  ListMessagesQuery,
+  ListMessagesResponse,
+  MessageId,
+  MessageResponse,
+  PostMessageRequest,
+  ThreadResponse,
 } from "@ai-hero/cookout-protocol";
 import {
+  channelMessagesPath,
+  channelPath,
+  channelResponseSchema,
+  channelsPath,
+  listChannelsResponseSchema,
+  listMessagesResponseSchema,
+  messageResponseSchema,
+  messagesPath,
+  threadPath,
+  threadResponseSchema,
   errorResponseSchema,
   healthPath,
   healthResponseSchema,
@@ -43,6 +62,21 @@ export type CookoutClient = {
   rotateToken(name: string): Promise<IdentityWithTokenResponse>;
   /** Admin only. Removes the identity; its token stops working. */
   deleteIdentity(name: string): Promise<IdentityResponse>;
+  /** Any identity can create a channel. A name already in use is 409 `channel_exists`. */
+  createChannel(request: CreateChannelRequest): Promise<ChannelResponse>;
+  /** Every channel, sorted by name. */
+  listChannels(): Promise<ListChannelsResponse>;
+  getChannel(name: string): Promise<ChannelResponse>;
+  /** Posts a top-level message, or a reply with `replyTo` (a reply to a reply joins the parent's thread). */
+  postMessage(request: PostMessageRequest): Promise<MessageResponse>;
+  /**
+   * A page of the channel's top-level messages, oldest first: the newest
+   * `limit` (default 50), or those before `before`. Page back by passing the
+   * first message's ID as `before` while `hasMore` is true.
+   */
+  listMessages(channel: string, query?: ListMessagesQuery): Promise<ListMessagesResponse>;
+  /** The thread holding the message: its top-level message and every reply, in order. */
+  getThread(messageId: MessageId): Promise<ThreadResponse>;
 };
 
 /**
@@ -129,5 +163,17 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
       request("POST", identitiesPath, identityWithTokenResponseSchema, body),
     rotateToken: (name) => request("POST", identityTokenPath(name), identityWithTokenResponseSchema),
     deleteIdentity: (name) => request("DELETE", identityPath(name), identityResponseSchema),
+    createChannel: (body) => request("POST", channelsPath, channelResponseSchema, body),
+    listChannels: () => request("GET", channelsPath, listChannelsResponseSchema),
+    getChannel: (name) => request("GET", channelPath(name), channelResponseSchema),
+    postMessage: (body) => request("POST", messagesPath, messageResponseSchema, body),
+    listMessages: (channel, query = {}) => {
+      const search = new URLSearchParams();
+      if (query.before !== undefined) search.set("before", String(query.before));
+      if (query.limit !== undefined) search.set("limit", String(query.limit));
+      const suffix = search.size === 0 ? "" : `?${search.toString()}`;
+      return request("GET", `${channelMessagesPath(channel)}${suffix}`, listMessagesResponseSchema);
+    },
+    getThread: (messageId) => request("GET", threadPath(messageId), threadResponseSchema),
   };
 }
