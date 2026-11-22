@@ -2,15 +2,16 @@ import type { CallFailure, Session } from "./adapters/sdk.ts";
 import { Effect, Option } from "effect";
 import type { JoinRequest, LeaseResponse, LeaveResponse } from "../../../leases/index.ts";
 import { callClient, withSession } from "./adapters/sdk.ts";
+import type { IdentityName } from "../../../identities/index.ts";
 import type { LeaseStateNeeds } from "./lease-state.ts";
 
 interface JoinFlags {
-  readonly as: string;
+  readonly as: IdentityName;
   readonly force: boolean;
 }
 
 interface JoinOptions {
-  readonly as: Option.Option<string>;
+  readonly as: Option.Option<IdentityName>;
   readonly force: boolean;
 }
 

@@ -9,6 +9,11 @@ interface TwoSessions {
   readonly second: CookoutClient;
 }
 
+interface LeaseStateText {
+  readonly folder: string;
+  readonly text: string;
+}
+
 type Files = FileSystem.FileSystem | Path.Path;
 
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
@@ -38,12 +43,12 @@ function leaseStateFiles(stateFolder: string): Effect.Effect<readonly string[], 
   }).pipe(Effect.orDie);
 }
 
-function damageLeaseStates(stateFolder: string): Effect.Effect<void, never, Files> {
+function writeLeaseStates({ folder, text }: LeaseStateText): Effect.Effect<void, never, Files> {
   return Effect.gen(function* overwriteLeaseStates() {
     const fs = yield* FileSystem.FileSystem;
-    const files = yield* leaseStateFiles(stateFolder);
-    yield* Effect.forEach(files, (file) => fs.writeFileString(file, "{"), ONE_AT_A_TIME);
+    const files = yield* leaseStateFiles(folder);
+    yield* Effect.forEach(files, (file) => fs.writeFileString(file, text), ONE_AT_A_TIME);
   }).pipe(Effect.orDie);
 }
 
-export { type TwoSessions, damageLeaseStates, freshStateFolder, leaseStateFiles, twoSessions };
+export { type TwoSessions, freshStateFolder, leaseStateFiles, twoSessions, writeLeaseStates };

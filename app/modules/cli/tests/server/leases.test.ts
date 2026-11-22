@@ -75,13 +75,12 @@ it.effect(
     }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("cookout join without --as is a usage error", () =>
+it.effect("cookout join without --as, or with a name that breaks the naming rule, is a usage error", () =>
   Effect.gen(function* joinWithoutAs() {
-    const result = yield* runCookout({
-      args: ["join"],
-      env: { COOKOUT_TOKEN: "cookout_x", COOKOUT_URL: "http://127.0.0.1:1" },
-    });
+    const env = { COOKOUT_TOKEN: "cookout_x", COOKOUT_URL: "http://127.0.0.1:1" };
+    const withoutAs = yield* runCookout({ args: ["join"], env });
+    const badName = yield* runCookout({ args: ["join", "--as", "Not A Name"], env });
 
-    expect(result).toMatchObject(failedWith("usage"));
+    expect([withoutAs, badName]).toMatchObject([failedWith("usage"), failedWith("usage")]);
   }).pipe(Effect.provide(commandLineServices)),
 );

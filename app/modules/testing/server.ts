@@ -13,7 +13,7 @@
  * Tests run effects with `@effect/vitest`, which provides `TestClock`: a
  * test cookout starts at `testStartTime`, and a lease's expiry moves with it.
  * `twoSessions` gives an identity two separate SDK sessions, and
- * `freshStateFolder`, `leaseStateFiles` and `damageLeaseStates` make and
+ * `freshStateFolder`, `leaseStateFiles` and `writeLeaseStates` make and
  * read a CLI session's lease-state folder.
  */
 export { answer, refusal } from "./lib/server/calls.ts";
@@ -36,10 +36,10 @@ export { type IdentityFixtureOptions, identityFixture, identityName } from "./li
 export { type FixedAnswer, serverAnswering } from "./lib/server/fixed-answer.ts";
 export {
   type TwoSessions,
-  damageLeaseStates,
   freshStateFolder,
   leaseStateFiles,
   twoSessions,
+  writeLeaseStates,
 } from "./lib/server/leases.ts";
 export { leaseId, secretsTest } from "./lib/server/secrets.ts";
 export { type NewMessageOptions, appendTo, messageId, newMessageFixture } from "./lib/server/messages.ts";

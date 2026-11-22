@@ -1,12 +1,12 @@
-import { Array as Arr, Effect } from "effect";
+import { Array as Arr, Effect, String as Str, pipe } from "effect";
 import {
   TestCookout,
   commandLineServices,
-  damageLeaseStates,
   freshStateFolder,
   leaseStateFiles,
   runCookout,
   testCookout,
+  writeLeaseStates,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 
@@ -14,6 +14,13 @@ const EXIT_FAILURE = 1;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const ONE_FILE = 1;
 const JOIN = ["join", "--as", "agent"];
+const DAMAGED = "is damaged. Delete it and join again.";
+const damaged = { exitCode: EXIT_FAILURE, stderrJson: { error: { code: "cli_error" } } };
+const brokenStates = [
+  "{",
+  '{"expiresAt":"tomorrow","identity":"agent","leaseId":"lease_test_3","url":"http://x"}',
+  '{"expiresAt":"2026-01-01T00:01:00.000Z","identity":"Not A Name","leaseId":"lease_test_3","url":"http://x"}',
+];
 
 it.effect(
   "without COOKOUT_STATE_DIR, join keeps its lease under $XDG_STATE_HOME/cookout, else ~/.local/state/cookout",
@@ -40,17 +47,22 @@ it.effect(
     }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("a damaged lease-state file fails the command and says to delete it", () =>
-  Effect.gen(function* damagedState() {
+it.effect("a lease-state file that isn't JSON, or breaks the expiry or identity rule, is damaged", () =>
+  Effect.gen(function* damagedStates() {
     const cookout = yield* TestCookout;
     const agent = yield* cookout.createIdentity("agent");
     const folder = yield* freshStateFolder;
     const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
     yield* runCookout({ args: JOIN, env });
-    yield* damageLeaseStates(folder);
-    const result = yield* runCookout({ args: ["channel", "list"], env });
+    const results = yield* pipe(
+      brokenStates,
+      Effect.forEach(
+        (text) => Effect.andThen(writeLeaseStates({ folder, text }), runCookout({ args: ["channel", "list"], env })),
+        ONE_AT_A_TIME,
+      ),
+    );
 
-    expect(result).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "cli_error" } } });
-    expect(result.stderr).toContain("is damaged. Delete it and join again.");
+    expect(results).toMatchObject([damaged, damaged, damaged]);
+    expect(Arr.every(results, ({ stderr }) => Str.includes(DAMAGED)(stderr))).toBe(true);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

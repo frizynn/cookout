@@ -1,6 +1,10 @@
 import { Effect, FileSystem, Option, Path, Schema, String as Str } from "effect";
 import { home, stateDirectory, xdgStateHome } from "../../../config/server.ts";
+import { identityNamePattern, isIdentityName } from "../../../identities/index.ts";
 import { isLeaseId, leaseIdPattern } from "../../../leases/index.ts";
+import type { IdentityName } from "../../../identities/index.ts";
+import type { IsoTime } from "../../../time/index.ts";
+import { IsoTimeSchema } from "../../../time/server.ts";
 import type { LeaseId } from "../../../leases/index.ts";
 import { Secrets } from "../../../secrets/server.ts";
 
@@ -35,15 +39,15 @@ const PRIVATE_FOLDER = 0o700;
 const PRIVATE_FILE = 0o600;
 
 const LeaseStateSchema = Schema.Struct({
-  expiresAt: Schema.String,
-  identity: Schema.String,
+  expiresAt: IsoTimeSchema,
+  identity: Schema.String.check(Schema.isPattern(identityNamePattern).abort()).pipe(Schema.refine(isIdentityName)),
   leaseId: Schema.String.check(Schema.isPattern(leaseIdPattern).abort()).pipe(Schema.refine(isLeaseId)),
   url: Schema.String,
 });
 
 interface LeaseState {
-  readonly expiresAt: string;
-  readonly identity: string;
+  readonly expiresAt: IsoTime;
+  readonly identity: IdentityName;
   readonly leaseId: LeaseId;
   readonly url: string;
 }
