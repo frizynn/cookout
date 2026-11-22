@@ -15,7 +15,7 @@ const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const ONE_FILE = 1;
 const JOIN = ["join", "--as", "agent"];
 const DAMAGED = "is damaged. Delete it and join again.";
-const damaged = { exitCode: EXIT_FAILURE, stderrJson: { error: { code: "cli_error" } } };
+const damaged = { exitCode: EXIT_FAILURE, stderrJson: { error: { code: "lease_state_damaged" } } };
 const brokenStates = [
   "{",
   '{"expiresAt":"tomorrow","identity":"agent","leaseId":"lease_test_3","url":"http://x"}',

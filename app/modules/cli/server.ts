@@ -10,6 +10,8 @@
  * `~/.local/state/cookout`). Every later command sends the lease ID from it. The
  * file's name is a hash, so the token is never written to disk. On `lease_lost`
  * the stored lease is deleted and the message says to run `cookout join` again.
+ * A lease-state file that can't be read as one is `lease_state_damaged`; any
+ * other failure of the CLI itself, rather than a refusal, is `cli_error`.
  */
 import { Effect } from "effect";
 import { CliError, Command } from "effect/cli";

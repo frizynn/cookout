@@ -9,7 +9,7 @@ import type { LeaseId } from "../../../leases/index.ts";
 import { Secrets } from "../../../secrets/server.ts";
 
 interface LeaseStateFailure {
-  readonly code: "cli_error";
+  readonly code: "cli_error" | "lease_state_damaged";
   readonly message: string;
 }
 
@@ -59,6 +59,10 @@ function failure(error: { readonly message: string }): LeaseStateFailure {
   return { code: "cli_error", message: error.message };
 }
 
+function damaged(file: string): LeaseStateFailure {
+  return { code: "lease_state_damaged", message: `The lease state file ${file} is damaged. Delete it and join again.` };
+}
+
 function stateFolder(path: Path.Path): Effect.Effect<string> {
   return Effect.gen(function* findStateFolder() {
     const explicit = yield* stateDirectory;
@@ -81,8 +85,7 @@ function readFrom({ file, fs }: LeaseStateLocation): Effect.Effect<Option.Option
       return Option.none();
     }
     const text = yield* Effect.mapError(fs.readFileString(file), failure);
-    const damaged = { message: `The lease state file ${file} is damaged. Delete it and join again.` };
-    const state = yield* Effect.mapError(decodeLeaseState(text), () => failure(damaged));
+    const state = yield* Effect.mapError(decodeLeaseState(text), () => damaged(file));
     return Option.some(state);
   });
 }
