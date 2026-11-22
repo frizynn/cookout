@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, Order, pipe } from "effect";
+import { Array as Arr, Effect, Order, String as Str, pipe } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
@@ -10,6 +10,8 @@ const BAD_REQUEST = 400;
 const FOUR_POSTS = 4;
 const NO_REPLIES = 0;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
+const OVER_A_MEBIBYTE = 1_048_577;
+const PAYLOAD_TOO_LARGE = 413;
 const BAD_BODIES = [
   { channel: "grill" },
   { channel: "grill", text: "" },
@@ -127,6 +129,19 @@ it.effect("a bad message body is refused with 400 and the schema errors", () =>
     expect(answers).toMatchObject([refusedOn("text"), refusedOn("text"), refusedOn("replyTo"), refusedOn("text")]);
     expect(page.messages).toStrictEqual([]);
   }).pipe(Effect.provide([testCookout(), FetchHttpClient.layer])),
+);
+
+it.effect("a body over 1 MiB is refused with 413 body_too_large and posts nothing", () =>
+  Effect.gen(function* bodyTooLarge() {
+    const cookout = yield* TestCookout;
+    const agent = yield* withChannel(cookout);
+    const text = Str.repeat(OVER_A_MEBIBYTE)("x");
+    const error = yield* refusal(() => agent.client.createMessage({ channel: "grill", text }));
+    const page = yield* answer(() => agent.client.listMessages("grill"));
+
+    expect(error).toMatchObject({ code: "body_too_large", status: PAYLOAD_TOO_LARGE });
+    expect(page.messages).toStrictEqual([]);
+  }).pipe(Effect.provide(testCookout())),
 );
 
 it.effect("posting needs a token", () =>
