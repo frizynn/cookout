@@ -103,8 +103,10 @@ it.effect("getting a missing channel is a 404", () =>
     const agent = yield* cookout.createIdentity("agent");
     yield* answer(() => agent.client.createChannel({ name: "grill" }));
     const error = yield* refusal(() => agent.client.getChannel("nowhere"));
+    const badName = yield* refusal(() => agent.client.getChannel("Not A Name"));
 
     expect(error).toMatchObject({ code: "channel_not_found", status: 404 });
+    expect(badName).toMatchObject({ code: "channel_not_found", status: 404 });
   }).pipe(Effect.provide(testCookout())),
 );
 

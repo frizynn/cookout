@@ -220,8 +220,10 @@ it.effect("rotating the token of a missing identity is a 404", () =>
   Effect.gen(function* rotateMissing() {
     const cookout = yield* TestCookout;
     const error = yield* refusal(() => cookout.client.rotateToken("nobody"));
+    const badName = yield* refusal(() => cookout.client.rotateToken("Not A Name"));
 
     expect(error).toMatchObject({ code: "identity_not_found", status: 404 });
+    expect(badName).toMatchObject({ code: "identity_not_found", status: 404 });
   }).pipe(Effect.provide(testCookout())),
 );
 

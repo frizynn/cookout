@@ -1,15 +1,8 @@
-import { Cause, Effect, Exit } from "effect";
+import { Cause, Effect } from "effect";
 import { CookoutError } from "../../../sdk/index.ts";
 
-function refusalIn(exit: Exit.Exit<unknown>): Effect.Effect<CookoutError> {
-  if (Exit.isSuccess(exit)) {
-    return Effect.die(new Error("The call should have been refused."));
-  }
-  const error = Cause.squash(exit.cause);
-  if (error instanceof CookoutError) {
-    return Effect.succeed(error);
-  }
-  return Effect.die(error);
+function isCookoutError(error: unknown): error is CookoutError {
+  return error instanceof CookoutError;
 }
 
 function answer<Answer>(call: () => Promise<Answer>): Effect.Effect<Answer> {
@@ -17,7 +10,13 @@ function answer<Answer>(call: () => Promise<Answer>): Effect.Effect<Answer> {
 }
 
 function refusal(call: () => Promise<unknown>): Effect.Effect<CookoutError> {
-  return Effect.exit(Effect.promise(call)).pipe(Effect.flatMap(refusalIn));
+  return Effect.promise(call).pipe(
+    Effect.sandbox,
+    Effect.flip,
+    Effect.map(Cause.squash),
+    Effect.filterOrFail(isCookoutError),
+    Effect.orDie,
+  );
 }
 
 export { answer, refusal };
