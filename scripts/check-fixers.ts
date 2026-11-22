@@ -29,7 +29,12 @@ function total(counts: ReadonlyMap<string, number>): number {
   return [...counts.values()].reduce((sum, count) => sum + count, NONE);
 }
 
-rmSync(RUN, { force: true, recursive: true });
+function removeRun(): void {
+  rmSync(RUN, { force: true, recursive: true });
+}
+
+removeRun();
+process.on("exit", removeRun);
 cpSync(FIXTURE, RUN, { recursive: true });
 cpSync(".oxlintrc.fix.json", `${RUN}/.oxlintrc.fix.json`);
 const paths = readdirSync(TREE, { encoding: "utf8", recursive: true })
@@ -48,7 +53,6 @@ for (const line of raised) {
   console.error(line);
 }
 const compiled = unwrap(SCRIPT, tool("tsc", ["-p", `${RUN}/tsconfig.json`, "--noEmit"]));
-rmSync(RUN, { force: true, recursive: true });
 
 if (compiled.status !== PASSED) {
   fail(SCRIPT, `the fixed tree no longer compiles:\n${compiled.stdout}`);
