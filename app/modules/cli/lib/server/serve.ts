@@ -1,8 +1,16 @@
 import { Effect, Layer } from "effect";
 import { Command, Flag } from "effect/cli";
 import { databasePath, host, port } from "../../../config/server.ts";
-import { httpServer, type Listen, serverUrl } from "../../../http/server.ts";
-import { FirstBoot, firstBoot, identitiesLayer, identityRoutes, requireToken } from "../../../identities/server.ts";
+import { type Channels, channelRoutes, channelsLayer } from "../../../channels/server.ts";
+import { httpServer, type Listen, type Route, serverUrl } from "../../../http/server.ts";
+import {
+  type Caller,
+  FirstBoot,
+  firstBoot,
+  identitiesLayer,
+  identityRoutes,
+  requireToken,
+} from "../../../identities/server.ts";
 import type { Secrets } from "../../../secrets/server.ts";
 import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import { printLine } from "./output.ts";
@@ -12,10 +20,12 @@ export type ServeLayers = {
   readonly secrets: Layer.Layer<Secrets>;
 };
 
+const routes: ReadonlyArray<Route<Caller | Channels | Storage | Secrets>> = [...identityRoutes, ...channelRoutes];
+
 export const cookoutServer = (listen: Listen) =>
-  httpServer(listen, [...identityRoutes], requireToken).pipe(
+  httpServer(listen, routes, requireToken).pipe(
     Layer.provideMerge(firstBoot),
-    Layer.provideMerge(identitiesLayer),
+    Layer.provideMerge(Layer.mergeAll(identitiesLayer, channelsLayer)),
   );
 
 const printAdminToken = Effect.gen(function* () {

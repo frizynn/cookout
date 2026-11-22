@@ -49,8 +49,12 @@ const rulesOnAt = (ref: string): ReadonlySet<string> => {
   return shown.status === 0 ? unwrap(SCRIPT, rulesOn(shown.stdout)) : new Set();
 };
 
-const merging = () =>
-  base === "HEAD" && git(["rev-parse", "--verify", "--quiet", "MERGE_HEAD"]).status === 0 ? ["MERGE_HEAD"] : [];
+const parentsOfHead = () => git(["rev-list", "--parents", "--max-count=1", "HEAD"]).stdout.trim().split(" ").slice(1);
+
+const merging = (): ReadonlyArray<string> => {
+  if (base !== "HEAD") return parentsOfHead().length > 1 ? parentsOfHead() : [];
+  return git(["rev-parse", "--verify", "--quiet", "MERGE_HEAD"]).status === 0 ? ["MERGE_HEAD"] : [];
+};
 
 const codeOfKey = (key: string) => key.slice(key.lastIndexOf(" ") + 1);
 
