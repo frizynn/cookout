@@ -3,6 +3,7 @@
  * paths, the error body every refusal uses, the union of every error code, and
  * the check that ties each backend Schema to its plain-TS wire type.
  */
+import type { IsoTime } from "../time/index.ts";
 import { channelErrorCodes } from "../channels/index.ts";
 import { identityErrorCodes } from "../identities/index.ts";
 import { leaseErrorCodes } from "../leases/index.ts";
@@ -22,7 +23,7 @@ export const healthPath = "/v1/health";
 /** The answer to the health check. */
 export interface HealthResponse {
   readonly status: "ok";
-  readonly time: string;
+  readonly time: IsoTime;
 }
 
 /** Every code a cookout server refuses with. */

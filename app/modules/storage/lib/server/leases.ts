@@ -1,5 +1,6 @@
 import type { Effect } from "effect";
 import type { IdentityName } from "../../../identities/index.ts";
+import type { IsoTime } from "../../../time/index.ts";
 import type { LeaseId } from "../../../leases/index.ts";
 import { Option } from "effect";
 import type { StorageUnavailable } from "./errors.ts";
@@ -9,37 +10,37 @@ type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 interface StoredLease {
   readonly identity: IdentityName;
   readonly leaseId: LeaseId;
-  readonly expiresAt: string;
+  readonly expiresAt: IsoTime;
 }
 
 interface TakeLease {
   readonly identity: IdentityName;
   readonly leaseId: LeaseId;
-  readonly now: string;
-  readonly expiresAt: string;
+  readonly now: IsoTime;
+  readonly expiresAt: IsoTime;
   readonly force: boolean;
 }
 
 interface RenewLease {
   readonly identity: IdentityName;
   readonly leaseId: LeaseId;
-  readonly now: string;
-  readonly expiresAt: string;
+  readonly now: IsoTime;
+  readonly expiresAt: IsoTime;
 }
 
 interface ReleaseLease {
   readonly identity: IdentityName;
   readonly leaseId: LeaseId;
-  readonly now: string;
+  readonly now: IsoTime;
 }
 
 type TakeLeaseResult =
   | { readonly status: "taken"; readonly lease: StoredLease }
-  | { readonly status: "held"; readonly heldUntil: string };
+  | { readonly status: "held"; readonly heldUntil: IsoTime };
 
 interface LeaseLost {
   readonly status: "lost";
-  readonly heldUntil: string | null;
+  readonly heldUntil: IsoTime | null;
 }
 
 type RenewLeaseResult = { readonly status: "renewed"; readonly lease: StoredLease } | LeaseLost;
@@ -50,14 +51,14 @@ interface LeasesSection {
   readonly takeLease: (request: TakeLease) => Fails<TakeLeaseResult>;
   readonly renewLease: (request: RenewLease) => Fails<RenewLeaseResult>;
   readonly releaseLease: (request: ReleaseLease) => Fails<ReleaseLeaseResult>;
-  readonly findLease: (identity: IdentityName, now: string) => Fails<StoredLease | undefined>;
+  readonly findLease: (identity: IdentityName, now: IsoTime) => Fails<StoredLease | undefined>;
 }
 
-function liveAt(now: string): (lease: StoredLease) => boolean {
+function liveAt(now: IsoTime): (lease: StoredLease) => boolean {
   return (lease) => now < lease.expiresAt;
 }
 
-function expiryOf(lease: StoredLease): string {
+function expiryOf(lease: StoredLease): IsoTime {
   return lease.expiresAt;
 }
 

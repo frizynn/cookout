@@ -9,6 +9,7 @@ import type {
 import { channelNamePattern, isChannelName } from "../../../channels/index.ts";
 import { identityNamePattern, isIdentityName, isOwner, ownerLength } from "../../../identities/index.ts";
 import { isMessageId, messageTextLength, pageSize } from "../../index.ts";
+import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
 
@@ -33,9 +34,6 @@ const MessageIdSchema = Schema.Int.check(positive).pipe(Schema.refine(isMessageI
 
 const textRule = Schema.isBetweenLength(messageTextLength.minimum, messageTextLength.maximum);
 const TextSchema = Schema.String.check(textRule);
-
-const isoTime = Schema.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u);
-const IsoTimeSchema = Schema.String.check(isoTime);
 
 const AuthorSchema = matchesWire<Author>()(
   Schema.Struct({ name: IdentityNameSchema, owner: Schema.optionalKey(OwnerSchema) }),

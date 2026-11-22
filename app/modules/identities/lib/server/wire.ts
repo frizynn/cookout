@@ -1,3 +1,4 @@
+import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
 import type { Identity, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../index.ts";
@@ -20,7 +21,7 @@ const IdentitySchema = matchesWire<Identity>()(
     name: IdentityNameSchema,
     owner: Schema.optionalKey(OwnerSchema),
     admin: Schema.Boolean,
-    createdAt: Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u)),
+    createdAt: IsoTimeSchema,
   }),
 );
 

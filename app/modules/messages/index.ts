@@ -6,6 +6,7 @@
  */
 import type { IdentityName, Owner } from "../identities/index.ts";
 import type { ChannelName } from "../channels/index.ts";
+import type { IsoTime } from "../time/index.ts";
 
 declare const brand: unique symbol;
 
@@ -49,8 +50,7 @@ export interface MessageFields {
   readonly data?: JsonValue;
   /** Names of the identities the text mentions. */
   readonly mentions: readonly IdentityName[];
-  /** ISO 8601 UTC. */
-  readonly createdAt: string;
+  readonly createdAt: IsoTime;
 }
 
 /** A message posted straight into a channel. It may have a thread of replies. */

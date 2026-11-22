@@ -50,5 +50,5 @@ export {
   type TestCookoutService,
   type TestIdentity,
   testCookout,
-  testStartTime,
 } from "./lib/server/cookout.ts";
+export { isoTime, testStartTime } from "./lib/server/time.ts";

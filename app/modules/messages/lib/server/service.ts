@@ -4,10 +4,12 @@ import type { NewMessage, StorageUnavailable } from "../../../storage/server.ts"
 import { messageNotFound, replyInOtherChannel } from "./refusals.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { Identity } from "../../../identities/index.ts";
+import type { IsoTime } from "../../../time/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { Storage } from "../../../storage/server.ts";
 import { channelNotFound } from "../../../channels/server.ts";
 import { isChannelName } from "../../../channels/index.ts";
+import { isoTimeOf } from "../../../time/server.ts";
 import { pageSize } from "../../index.ts";
 
 interface PostMessage {
@@ -45,7 +47,7 @@ function withReplyTo(message: NewMessage, replyTo: MessageId | undefined): NewMe
   return { ...message, replyTo };
 }
 
-function newMessage(author: Identity, { channel, data, replyTo, text }: PostMessage, createdAt: string): NewMessage {
+function newMessage(author: Identity, { channel, data, replyTo, text }: PostMessage, createdAt: IsoTime): NewMessage {
   const fields: NewMessage = { author: authorOf(author), channel, createdAt, mentions: [], text };
   if (Predicate.isUndefined(data)) {
     return withReplyTo(fields, replyTo);
@@ -86,7 +88,7 @@ function messagesOn(storage: Storage["Service"]): MessagesService {
     post: (author, message) =>
       Effect.gen(function* postMessage() {
         const now = yield* DateTime.now;
-        const result = yield* storage.appendMessage(newMessage(author, message, DateTime.formatIso(now)));
+        const result = yield* storage.appendMessage(newMessage(author, message, isoTimeOf(now)));
         if (result.status === "appended") {
           return result.message;
         }

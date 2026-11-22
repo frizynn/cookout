@@ -4,6 +4,7 @@
  * request and answers of the channel routes, their paths, and the error codes
  * they refuse with.
  */
+import type { IsoTime } from "../time/index.ts";
 
 declare const brand: unique symbol;
 
@@ -30,8 +31,7 @@ export type Channel = {
   readonly name: ChannelName;
   /** 1–500 characters. */
   readonly description?: string;
-  /** ISO 8601 UTC. */
-  readonly createdAt: string;
+  readonly createdAt: IsoTime;
 };
 
 /** The body of `POST /v1/channels`. The server checks the name and description. */

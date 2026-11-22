@@ -14,6 +14,7 @@ import { Storage } from "../storage/server.ts";
 import { createServer } from "node:http";
 import { dispatch } from "./lib/server/router.ts";
 import { healthPath } from "./index.ts";
+import { isoTimeOf } from "../time/server.ts";
 
 interface Listen {
   readonly host: string;
@@ -31,7 +32,7 @@ const healthRoute: Route<Storage> = {
       const storage = yield* Storage;
       yield* storage.checkHealth();
       const now = yield* DateTime.now;
-      const time = DateTime.formatIso(now);
+      const time = isoTimeOf(now);
       return yield* HttpServerResponse.schemaJson(HealthResponseSchema)({ status: "ok", time });
     }),
   method: "GET",

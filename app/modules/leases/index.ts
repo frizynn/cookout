@@ -4,6 +4,7 @@
  * requests and answers of join and leave, and the error codes the lease
  * refuses with.
  */
+import type { IsoTime } from "../time/index.ts";
 
 declare const brand: unique symbol;
 
@@ -42,8 +43,8 @@ export interface JoinRequest {
 /** The answer to `join`. */
 export interface LeaseResponse {
   readonly leaseId: LeaseId;
-  /** ISO 8601 UTC. Each request carrying the lease ID moves it forward. */
-  readonly expiresAt: string;
+  /** Each request carrying the lease ID moves it forward. */
+  readonly expiresAt: IsoTime;
 }
 
 /** The answer to `leave`. */
@@ -56,7 +57,7 @@ export interface LeaveResponse {
  * ends, or `null` if nobody holds the identity.
  */
 export interface LeaseConflictDetails {
-  readonly heldUntil: string | null;
+  readonly heldUntil: IsoTime | null;
 }
 
 /**

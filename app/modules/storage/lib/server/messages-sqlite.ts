@@ -4,6 +4,7 @@ import type { Author, ListMessagesResponse, Message, MessageId, ThreadResponse }
 import { isIdentityName, isOwner } from "../../../identities/index.ts";
 import { isPlaced, placeIn, placed, threadIdOf } from "./messages.ts";
 import type { ChannelName } from "../../../channels/index.ts";
+import { IsoTimeSchema } from "../../../time/server.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isChannelName } from "../../../channels/index.ts";
@@ -28,7 +29,7 @@ const MessageRow = Schema.Struct({
   author_name: IdentityNameColumn,
   author_owner: Schema.NullOr(OwnerColumn),
   channel: Schema.String.pipe(Schema.refine(isChannelName)),
-  created_at: Schema.String,
+  created_at: IsoTimeSchema,
   data: Schema.NullOr(Schema.String),
   id: MessageIdColumn,
   latest_reply_id: Schema.NullOr(MessageIdColumn),
