@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Option, Path, Schema, String as Str } from "effect";
+import { Effect, FileSystem, Option, Path, Random, Schema, String as Str } from "effect";
 import { home, stateDirectory, xdgStateHome } from "../../../config/server.ts";
 import { identityNamePattern, isIdentityName } from "../../../identities/index.ts";
 import { isLeaseId, leaseIdPattern } from "../../../leases/index.ts";
@@ -98,9 +98,11 @@ function writeTo({
   return (state) =>
     Effect.gen(function* writeLeaseState() {
       const text = yield* Effect.orDie(encodeLeaseState(state));
-      const temporary = `${file}.tmp`;
+      const suffix = yield* Random.nextInt;
+      const temporary = `${file}.${String(suffix)}.tmp`;
       yield* fs.makeDirectory(folder, { mode: PRIVATE_FOLDER, recursive: true });
-      yield* fs.writeFileString(temporary, `${text}\n`, { mode: PRIVATE_FILE });
+      yield* fs.writeFileString(temporary, `${text}\n`, { flag: "wx", mode: PRIVATE_FILE });
+      yield* fs.chmod(temporary, PRIVATE_FILE);
       yield* fs.rename(temporary, file);
     }).pipe(Effect.mapError(failure));
 }
