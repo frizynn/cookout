@@ -46,4 +46,4 @@ function openStore<Failure>(layer: Layer.Layer<Storage, Failure>): Effect.Effect
   });
 }
 
-export { type StorageLayer, freshDatabasePath, openStore, storageLayers, unusableStorage };
+export { freshDatabasePath, openStore, storageLayers, unusableStorage };

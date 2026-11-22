@@ -74,4 +74,4 @@ function generateValidators(schemas: SchemasByModule): GeneratedValidators {
   return { declarations: declare(entries), javascript, requires: requiresIn(javascript) };
 }
 
-export { type GeneratedValidators, generateValidators };
+export { generateValidators };
