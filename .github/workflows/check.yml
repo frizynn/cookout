@@ -20,7 +20,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        job: [lint, types, seams, knip, format, drift]
+        # A runner has 2 cores, and lint, canaries and fixers ran about 1.7 times slower when two of
+        # them shared one, so each gets its own job (ADR 0024).
+        job: [lint, canaries, types, fixers, seams, knip, format, drift]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,6 +33,7 @@ jobs:
       - name: pnpm check --job=${{ matrix.job }}
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          NODE_COMPILE_CACHE: node_modules/.cache/node-compile
         run: |
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then BASE=HEAD^; fi
           node scripts/check.ts --job=${{ matrix.job }} --base="$BASE" --ci
