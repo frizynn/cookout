@@ -1,0 +1,18 @@
+pre-commit:
+  jobs:
+    - name: refuse partially staged files
+      run: scripts/refuse-partially-staged.sh
+    - name: format
+      glob: "*.{js,ts,cjs,mjs,jsx,tsx,json,jsonc,css}"
+      run: node_modules/.bin/biome format --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      stage_fixed: true
+    - group:
+        parallel: true
+        jobs:
+          - name: lint
+            glob: "*.{js,ts,cjs,mjs,jsx,tsx}"
+            run: node scripts/lint-ratchet.ts {staged_files}
+          - name: types
+            run: node_modules/.bin/tsc --noEmit --incremental
+          - name: seams
+            run: node_modules/.bin/depcruise app scripts --cache node_modules/.cache/depcruise

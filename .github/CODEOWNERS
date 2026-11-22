@@ -1,0 +1,3 @@
+/.oxlintrc.json @mattpocock
+/lint/allowed-directives.json @mattpocock
+/lint-baseline.json @mattpocock
