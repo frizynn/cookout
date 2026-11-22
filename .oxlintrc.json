@@ -389,13 +389,16 @@
             "from": "package",
             "name": [
               "Constraint",
+              "DateTime",
               "Effect",
               "Exit",
               "HttpClientRequest",
               "HttpClientResponse",
               "Layer",
               "Option",
-              "Stream"
+              "Stream",
+              "Utc",
+              "Zoned"
             ],
             "package": "effect"
           }
