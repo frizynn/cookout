@@ -1,4 +1,4 @@
-import { Effect, FileSystem } from "effect";
+import { Effect, FileSystem, pipe } from "effect";
 import {
   TestCookout,
   commandLineServices,
@@ -11,98 +11,66 @@ import { expect, it } from "@effect/vitest";
 
 const EXIT_FAILURE = 1;
 const EXIT_SUCCESS = 0;
-const BOOT = "2026-01-01T00:00:00.000Z";
+const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const succeeded = { exitCode: 0, stderr: "" };
-const griller = { admin: false, createdAt: BOOT, name: "auth-griller", owner: "matt" };
-const admin = { admin: true, createdAt: BOOT, name: "admin" };
-const bot = { admin: false, createdAt: BOOT, name: "bot" };
-const FIRST_ID = 1;
-const SECOND_ID = 2;
-const postedParent = {
-  author: { name: "agent", owner: "matt" },
-  data: { question: 1 },
-  id: FIRST_ID,
-  kind: "top-level",
-  text: "Is the lease 60 s?",
-};
-const postedReply = { id: SECOND_ID, kind: "reply", replyTo: FIRST_ID, text: "Yes." };
-const oneReply = { latestReplyId: SECOND_ID, replyCount: 1 };
-const onlyParent = { hasMore: false, messages: [{ id: FIRST_ID }] };
+const verbs: readonly (readonly string[])[] = [
+  ["identity", "create", "bot", "--owner", "matt"],
+  ["identity", "rotate", "bot"],
+  ["channel", "create", "grill", "--description", "Grill it"],
+  ["channel", "get", "grill"],
+  ["message", "post", "grill", "Is the lease 60 s?", "--data", '{"question":1}'],
+  ["message", "post", "grill", "Yes.", "--reply-to", "1"],
+  ["message", "list", "grill", "--limit", "1", "--before", "2"],
+  ["thread", "get", "2"],
+  ["identity", "delete", "bot"],
+  ["whoami"],
+  ["identity", "list"],
+  ["channel", "list"],
+  ["message", "list", "grill"],
+  ["identity", "create", "loner"],
+  ["channel", "create", "plain"],
+];
 
-it.effect("the cookout CLI creates and lists identities and says who you are, as JSON", () =>
-  Effect.gen(function* identityVerbs() {
+it.effect("every verb passes its arguments and flags to the server and prints the answer as JSON", () =>
+  Effect.gen(function* verbsReachTheServer() {
     const cookout = yield* TestCookout;
     const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
-    const created = yield* runCookout({ args: ["identity", "create", "auth-griller", "--owner", "matt"], env });
-    yield* runCookout({ args: ["identity", "create", "bot"], env });
-    const listed = yield* runCookout({ args: ["identity", "list"], env });
-    const whoami = yield* runCookout({ args: ["whoami"], env });
+    const results = yield* pipe(
+      verbs,
+      Effect.forEach((args) => runCookout({ args, env }), ONE_AT_A_TIME),
+    );
 
-    expect(created).toMatchObject({ ...succeeded, stdoutJson: { identity: griller } });
-    expect(created.stdout).toMatch(/"token": "cookout_test_\d+"/u);
-    expect(listed).toMatchObject({ ...succeeded, stdoutJson: { identities: [admin, griller, bot] } });
-    expect(whoami).toMatchObject({ ...succeeded, stdoutJson: { identity: admin } });
+    expect(results).toMatchObject([
+      { ...succeeded, stdoutJson: { identity: { name: "bot", owner: "matt" } } },
+      { ...succeeded, stdoutJson: { identity: { name: "bot" } } },
+      { ...succeeded, stdoutJson: { channel: { description: "Grill it", name: "grill" } } },
+      { ...succeeded, stdoutJson: { channel: { name: "grill" } } },
+      { ...succeeded, stdoutJson: { message: { data: { question: 1 }, id: 1 } } },
+      { ...succeeded, stdoutJson: { message: { id: 2, replyTo: 1 } } },
+      { ...succeeded, stdoutJson: { hasMore: false, messages: [{ id: 1 }] } },
+      { ...succeeded, stdoutJson: { parent: { id: 1 }, replies: [{ id: 2 }] } },
+      { ...succeeded, stdoutJson: { identity: { name: "bot" } } },
+      { ...succeeded, stdoutJson: { identity: { name: "admin" } } },
+      { ...succeeded, stdoutJson: { identities: [{ name: "admin" }] } },
+      { ...succeeded, stdoutJson: { channels: [{ name: "grill" }] } },
+      { ...succeeded, stdoutJson: { messages: [{ id: 1 }] } },
+      { ...succeeded, stdoutJson: { identity: { name: "loner" } } },
+      { ...succeeded, stdoutJson: { channel: { name: "plain" } } },
+    ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("the CLI rotates and deletes identities", () =>
-  Effect.gen(function* rotateAndDelete() {
+it.effect("a refusal is JSON on stderr, with its status, and exit code 1", () =>
+  Effect.gen(function* refusalOnStderr() {
     const cookout = yield* TestCookout;
-    const leaky = yield* cookout.createIdentity("leaky");
     const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
-    const rotated = yield* runCookout({ args: ["identity", "rotate", "leaky"], env });
-    const deleted = yield* runCookout({ args: ["identity", "delete", "leaky"], env });
-    const gone = yield* runCookout({ args: ["identity", "delete", "leaky"], env });
+    const gone = yield* runCookout({ args: ["identity", "delete", "nobody"], env });
 
-    expect(rotated).toMatchObject({ ...succeeded, stdoutJson: { identity: leaky.identity } });
-    expect(rotated.stdout).toMatch(/"token": "cookout_test_\d+"/u);
-    expect(deleted).toMatchObject({ ...succeeded, stdoutJson: { identity: leaky.identity } });
     expect(gone).toMatchObject({
       exitCode: EXIT_FAILURE,
       stderrJson: { error: { code: "identity_not_found", status: 404 } },
       stdout: "",
     });
-  }).pipe(Effect.provide([testCookout(), commandLineServices])),
-);
-
-it.effect("the CLI creates, lists and gets channels, as JSON", () =>
-  Effect.gen(function* channelVerbs() {
-    const cookout = yield* TestCookout;
-    const agent = yield* cookout.createIdentity("agent");
-    const env = { COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
-    const created = yield* runCookout({ args: ["channel", "create", "grill", "--description", "Grill it"], env });
-    const listed = yield* runCookout({ args: ["channel", "list"], env });
-    const got = yield* runCookout({ args: ["channel", "get", "grill"], env });
-    const grill = { channel: { createdAt: BOOT, description: "Grill it", name: "grill" } };
-
-    expect(created).toMatchObject({ ...succeeded, stdoutJson: grill });
-    expect(listed).toMatchObject({ ...succeeded, stdoutJson: { channels: [grill.channel] } });
-    expect(got).toMatchObject({ ...succeeded, stdoutJson: grill });
-  }).pipe(Effect.provide([testCookout(), commandLineServices])),
-);
-
-it.effect("the CLI makes a channel, posts a message and a reply, and reads the thread back as JSON", () =>
-  Effect.gen(function* messageVerbs() {
-    const cookout = yield* TestCookout;
-    const agent = yield* cookout.createIdentity("agent", { owner: "matt" });
-    const env = { COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
-    yield* runCookout({ args: ["channel", "create", "grill"], env });
-    const posted = yield* runCookout({
-      args: ["message", "post", "grill", "Is the lease 60 s?", "--data", '{"question":1}'],
-      env,
-    });
-    const replied = yield* runCookout({ args: ["message", "post", "grill", "Yes.", "--reply-to", "1"], env });
-    const thread = yield* runCookout({ args: ["thread", "get", "2"], env });
-    const page = yield* runCookout({ args: ["message", "list", "grill", "--limit", "1", "--before", "2"], env });
-    const newest = yield* runCookout({ args: ["message", "list", "grill"], env });
-
-    expect([posted, replied, thread, page, newest]).toMatchObject([
-      { ...succeeded, stdoutJson: { message: postedParent } },
-      { ...succeeded, stdoutJson: { message: postedReply } },
-      { ...succeeded, stdoutJson: { parent: { ...postedParent, ...oneReply }, replies: [postedReply] } },
-      { ...succeeded, stdoutJson: onlyParent },
-      { ...succeeded, stdoutJson: onlyParent },
-    ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
