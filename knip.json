@@ -1,6 +1,11 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["app/web.tsx!", "app/modules/testing/server.ts!", "scripts/*.{ts,mjs}!"],
+  "entry": [
+    "app/web.tsx!",
+    "app/modules/testing/server.ts!",
+    "app/modules/webhook-fake/server.ts!",
+    "scripts/*.{ts,mjs}!"
+  ],
   "project": ["app/**/*.{ts,tsx}!", "scripts/**/*.{ts,mjs}!"],
   "ignoreDependencies": ["@swc/core"]
 }
