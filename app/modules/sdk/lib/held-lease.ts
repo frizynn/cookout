@@ -6,19 +6,22 @@ interface HeldLease {
   readonly drop: () => void;
 }
 
+interface Holder {
+  leaseId?: LeaseId;
+}
+
 function heldLease(first: LeaseId | undefined): HeldLease {
-  const held = new Set<LeaseId>();
+  const holder: Holder = {};
   if (typeof first === "string") {
-    held.add(first);
+    holder.leaseId = first;
   }
   return {
-    current: () => held.values().next().value,
+    current: () => holder.leaseId,
     drop: () => {
-      held.clear();
+      delete holder.leaseId;
     },
     hold: (leaseId) => {
-      held.clear();
-      held.add(leaseId);
+      holder.leaseId = leaseId;
     },
   };
 }
