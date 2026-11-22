@@ -41,16 +41,18 @@ const wrap = (db: DatabaseSync): SqliteDatabase => {
 
 export const openSqlite = (path: string): Effect.Effect<SqliteDatabase, StorageUnavailable, Scope.Scope> =>
   Effect.acquireRelease(
-    Effect.tryPromise({
-      try: async () => {
-        const { DatabaseSync } = await import("node:sqlite");
-        const db = new DatabaseSync(path);
-        db.exec(
-          "PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;",
-        );
-        return db;
-      },
-      catch: unavailable,
+    Effect.gen(function* openDatabase() {
+      const { DatabaseSync } = yield* Effect.tryPromise({ catch: unavailable, try: () => import("node:sqlite") });
+      return yield* Effect.try({
+        catch: unavailable,
+        try: () => {
+          const db = new DatabaseSync(path);
+          db.exec(
+            "PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;",
+          );
+          return db;
+        },
+      });
     }),
     (db) => Effect.sync(() => (db.isOpen ? db.close() : undefined)),
   ).pipe(Effect.map(wrap));

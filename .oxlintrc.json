@@ -344,7 +344,12 @@
     "jsdoc/require-returns-type": "off",
     "no-undef": "off",
     "no-redeclare": "off",
+    "oxc/no-async-await": "off",
+    "oxc/no-rest-spread-properties": "off",
+    "vitest/prefer-to-be-falsy": "off",
+    "vitest/prefer-to-be-truthy": "off",
     "func-style": ["error", "declaration"],
+    "one-var": ["error", "never"],
     "no-duplicate-imports": [
       "error",
       {
@@ -367,7 +372,7 @@
     "vitest/no-standalone-expect": [
       "error",
       {
-        "additionalTestBlockFunctions": ["it.effect", "it.live", "it.prop"]
+        "additionalTestBlockFunctions": ["it.effect", "it.effect.each", "it.live", "it.prop"]
       }
     ],
     "typescript/prefer-readonly-parameter-types": [
@@ -378,8 +383,14 @@
             "from": "package",
             "name": ["Methods", "MethodsNonLive"],
             "package": "@effect/vitest"
+          },
+          {
+            "from": "package",
+            "name": ["Constraint", "Effect", "Exit", "HttpClientRequest", "HttpClientResponse", "Layer", "Stream"],
+            "package": "effect"
           }
-        ]
+        ],
+        "treatMethodsAsReadonly": true
       }
     ],
     "react-hooks-js/config": "error",
@@ -413,7 +424,7 @@
   "overrides": [
     {
       "files": ["app/web.tsx", "app/modules/**/*.ts", "app/modules/**/*.tsx"],
-      "excludeFiles": ["app/modules/*/server.ts", "app/modules/*/lib/server/**", "app/modules/*/tests/**"],
+      "excludeFiles": ["app/modules/*/server.ts", "app/modules/*/lib/server/**", "app/modules/*/tests/server/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -479,7 +490,12 @@
             "patterns": [
               {
                 "group": ["effect", "effect/*", "@effect/*"],
-                "message": "Effect is backend only: keep it in server.ts and lib/server/ (and tests)."
+                "message": "Effect is backend only: keep it in server.ts, lib/server/ and tests/server/."
+              },
+              {
+                "group": ["**/testing/server.ts"],
+                "importNames": ["runCookoutBinary"],
+                "message": "Tests run cookout in process: use runCookout or startServe. Only app/modules/cli/tests/server/cli.test.ts spawns the binary."
               }
             ]
           }
@@ -574,7 +590,7 @@
             "patterns": [
               {
                 "group": ["effect", "effect/*", "@effect/*"],
-                "message": "Effect is backend only: keep it in server.ts and lib/server/ (and tests)."
+                "message": "Effect is backend only: keep it in server.ts, lib/server/ and tests/server/."
               }
             ]
           }
@@ -582,11 +598,22 @@
       }
     },
     {
-      "files": ["app/modules/*/tests/**"],
+      "files": ["app/modules/*/tests/server/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
           {
+            "patterns": [
+              {
+                "group": ["effect/process", "effect/process/*"],
+                "message": "Tests run cookout in process: use runCookout or startServe from app/modules/testing/server.ts."
+              },
+              {
+                "group": ["**/testing/server.ts"],
+                "importNames": ["runCookoutBinary"],
+                "message": "Tests run cookout in process: use runCookout or startServe. Only app/modules/cli/tests/server/cli.test.ts spawns the binary."
+              }
+            ],
             "paths": [
               {
                 "name": "node:sqlite",
@@ -634,11 +661,11 @@
               },
               {
                 "name": "node:child_process",
-                "message": "Run processes with Effect's ChildProcess (effect/process)."
+                "message": "Tests run cookout in process: use runCookout or startServe from app/modules/testing/server.ts."
               },
               {
                 "name": "child_process",
-                "message": "Run processes with Effect's ChildProcess (effect/process)."
+                "message": "Tests run cookout in process: use runCookout or startServe from app/modules/testing/server.ts."
               },
               {
                 "name": "zod",
@@ -646,12 +673,102 @@
               },
               {
                 "name": "vitest",
-                "message": "Import it, describe and expect from @effect/vitest."
+                "message": "Import it and expect from @effect/vitest in tests/server/."
               }
             ]
           }
         ],
         "effecttsgo/strict-effect-provide": "off"
+      }
+    },
+    {
+      "files": ["app/modules/cli/tests/server/cli.test.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["effect/process", "effect/process/*"],
+                "message": "Run the binary with runCookoutBinary from app/modules/testing/server.ts."
+              }
+            ],
+            "paths": [
+              {
+                "name": "node:sqlite",
+                "message": "Only the storage SQLite adapter opens SQLite: use the Storage service from app/modules/storage/server.ts."
+              },
+              {
+                "name": "node:crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "node:fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:http",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "node:https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "http",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "node:child_process",
+                "message": "Run the binary with runCookoutBinary from app/modules/testing/server.ts."
+              },
+              {
+                "name": "child_process",
+                "message": "Run the binary with runCookoutBinary from app/modules/testing/server.ts."
+              },
+              {
+                "name": "zod",
+                "message": "Validate with Effect Schema, at the edge only."
+              },
+              {
+                "name": "vitest",
+                "message": "Import it and expect from @effect/vitest in tests/server/."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "app/main.ts",
+        "app/modules/*/server.ts",
+        "app/modules/*/lib/server/**",
+        "app/modules/*/tests/server/**"
+      ],
+      "rules": {
+        "typescript/promise-function-async": ["error", { "checkArrowFunctions": false }],
+        "unicorn/no-array-method-this-argument": "off"
       }
     },
     {
@@ -945,77 +1062,12 @@
       }
     },
     {
-      "files": ["app/modules/webhook-fake/lib/server/adapters/**"],
-      "rules": {
-        "no-restricted-imports": [
-          "error",
-          {
-            "paths": [
-              {
-                "name": "node:sqlite",
-                "message": "Only the storage SQLite adapter opens SQLite: use the Storage service from app/modules/storage/server.ts."
-              },
-              {
-                "name": "node:crypto",
-                "message": "Use the Secrets service from app/modules/secrets/server.ts."
-              },
-              {
-                "name": "crypto",
-                "message": "Use the Secrets service from app/modules/secrets/server.ts."
-              },
-              {
-                "name": "node:fs",
-                "message": "Use Effect's FileSystem; the cli module owns file writes."
-              },
-              {
-                "name": "node:fs/promises",
-                "message": "Use Effect's FileSystem; the cli module owns file writes."
-              },
-              {
-                "name": "fs",
-                "message": "Use Effect's FileSystem; the cli module owns file writes."
-              },
-              {
-                "name": "fs/promises",
-                "message": "Use Effect's FileSystem; the cli module owns file writes."
-              },
-              {
-                "name": "node:https",
-                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
-              },
-              {
-                "name": "https",
-                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
-              },
-              {
-                "name": "node:child_process",
-                "message": "Run processes with Effect's ChildProcess (effect/process)."
-              },
-              {
-                "name": "child_process",
-                "message": "Run processes with Effect's ChildProcess (effect/process)."
-              },
-              {
-                "name": "zod",
-                "message": "Validate with Effect Schema, at the edge only."
-              }
-            ],
-            "patterns": [
-              {
-                "group": ["effect", "effect/*", "@effect/*"],
-                "message": "Effect is backend only: keep it in server.ts and lib/server/ (and tests)."
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
       "files": [
         "app/modules/*/lib/server/routes.ts",
         "app/modules/*/lib/server/routes/**",
         "app/modules/storage/lib/server/**",
-        "app/modules/cli/lib/server/lease-state.ts"
+        "app/modules/cli/lib/server/lease-state.ts",
+        "app/modules/testing/lib/server/cli.ts"
       ],
       "rules": {
         "no-restricted-properties": [
@@ -1572,7 +1624,9 @@
         "effecttsgo/prefer-effect-string": "off",
         "effecttsgo/process-env": "off",
         "import/no-nodejs-modules": "off",
-        "no-console": "off"
+        "no-console": "off",
+        "node/no-sync": "off",
+        "node/no-top-level-await": "off"
       }
     },
     {

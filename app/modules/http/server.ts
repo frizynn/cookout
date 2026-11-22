@@ -36,6 +36,18 @@ const healthRoute: Route<Storage> = {
 export type Listen = { readonly port: number; readonly host: string };
 
 /**
+ * Node's HTTP server on `listen`, for any `HttpServer.serve` app: the one
+ * place `node:http` is opened. Port 0 picks a free port; the server closes
+ * with the Layer's scope.
+ * @internal
+ * @param listen The port and host to listen on.
+ * @returns The `HttpServer` and Node's HTTP platform.
+ */
+export function nodeHttpServer(listen: Listen): ReturnType<typeof NodeHttpServer.layer> {
+  return NodeHttpServer.layer(createServer, { ...listen, disablePreemptiveShutdown: true });
+}
+
+/**
  * Serves `/v1/health` and the given routes on `listen` until the Layer is
  * released. Every request to a path one of `routes` serves goes through
  * `gate` first, before a wrong method is refused with 405; `/v1/health` and
@@ -52,7 +64,7 @@ export const httpServer = <R, Provides, Needs>(
       Effect.catch((error) => respond(toRefusal(error))),
       Effect.provideService(HttpIncomingMessage.MaxBodySize, maxBodySize),
     ),
-  ).pipe(Layer.provideMerge(NodeHttpServer.layer(createServer, { ...listen, disablePreemptiveShutdown: true })));
+  ).pipe(Layer.provideMerge(nodeHttpServer(listen)));
 
 /** The base URL a running `httpServer` answers on, such as `http://127.0.0.1:54321`. */
 export const serverUrl: Effect.Effect<string, never, HttpServer.HttpServer> = Effect.map(

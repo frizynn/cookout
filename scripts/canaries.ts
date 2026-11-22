@@ -1,6 +1,8 @@
-import { readdirSync } from "node:fs";
-import { field, list, parseJson, text } from "./lib/json.ts";
 import { fail, oxlint, tool, unwrap } from "./lib/tools.ts";
+import { field, list, parseJson, text } from "./lib/json.ts";
+import { canaryResponseSchemas } from "../lint/canary/validators/schemas.ts";
+import { generateValidators } from "./lib/validators.ts";
+import { readdirSync } from "node:fs";
 
 type Canary = { readonly check: string; readonly code: string; readonly file: string };
 
@@ -36,10 +38,13 @@ const nativeRules: ReadonlyArray<readonly [string, string]> = [
 ];
 
 const testRules: ReadonlyArray<readonly [string, string]> = [
-  ["vitest(max-nested-describe)", "max-nested-describe"],
-  ["vitest(no-hooks)", "no-hooks"],
-  ["vitest(require-hook)", "require-hook"],
-  ["vitest-js(padding-around-all)", "padding-around-all"],
+  ["vitest(max-nested-describe)", "server/max-nested-describe"],
+  ["vitest(no-hooks)", "server/no-hooks"],
+  ["vitest(require-hook)", "server/require-hook"],
+  ["vitest-js(padding-around-all)", "server/padding-around-all"],
+  ["eslint(no-restricted-imports)", "server/no-restricted-imports.process"],
+  ["eslint(no-restricted-imports)", "server/no-restricted-imports.binary"],
+  ["eslint(no-restricted-imports)", "no-restricted-imports.effect"],
 ];
 
 const backendRules: ReadonlyArray<readonly [string, string]> = [["effecttsgo(global-date)", "global-date"]];
@@ -59,6 +64,11 @@ const tscCanaries: ReadonlyArray<Canary> = [
 const seamCanaries: ReadonlyArray<Canary> = [
   { check: "dependency-cruiser", code: "entry-points-only-from-app", file: `${ROOT}/seams/deep-import.ts` },
   { check: "dependency-cruiser", code: "sqlite-only-in-storage-adapter", file: `${ROOT}/seams/sqlite.ts` },
+  {
+    check: "dependency-cruiser",
+    code: "tests-only-at-tested-interfaces",
+    file: `${ROOT}/seams/app/modules/http/tests/server/health.test.ts`,
+  },
 ];
 
 const key = (code: string, file: string) => `${code} ${file}`;
@@ -90,10 +100,20 @@ const seamsCaught = (): ReadonlySet<string> => {
 const missing = (canaries: ReadonlyArray<Canary>, caught: ReadonlySet<string>) =>
   canaries.filter((canary) => !caught.has(key(canary.code, canary.file)));
 
+const VALIDATOR_CANARY = `${ROOT}/validators/schemas.ts`;
+
+const validatorCanaries: readonly Canary[] = [{ check: "validators", code: "require(", file: VALIDATOR_CANARY }];
+
+function validatorsCaught(): ReadonlySet<string> {
+  const { requires } = generateValidators({ canary: canaryResponseSchemas });
+  return new Set(requires.map(() => key("require(", VALIDATOR_CANARY)));
+}
+
 const escaped = [
   ...missing(lintCanaries, lintCaught()),
   ...missing(tscCanaries, tscCaught()),
   ...missing(seamCanaries, seamsCaught()),
+  ...missing(validatorCanaries, validatorsCaught()),
 ];
 for (const canary of escaped)
   console.error(`${SCRIPT}: ${canary.check} did not report ${canary.code} for its planted violation in ${canary.file}`);

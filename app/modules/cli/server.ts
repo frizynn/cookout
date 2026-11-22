@@ -5,7 +5,7 @@
  */
 import { Effect } from "effect";
 import { CliError, Command } from "effect/cli";
-import { jsonPresenter, usageFailed } from "./lib/server/output.ts";
+import { usageFailed, withJsonPresenter } from "./lib/server/output.ts";
 import { cookoutServer, type ServeLayers, serveCommand } from "./lib/server/serve.ts";
 import { channelCommand, identityCommand, whoamiCommand } from "./lib/server/verbs.ts";
 
@@ -18,5 +18,5 @@ export const runCookout = (args: ReadonlyArray<string>, layers: ServeLayers) =>
     Command.withSubcommands([serveCommand(layers), whoamiCommand, identityCommand, channelCommand]),
     (command) => Command.runWith(command, { version: "0.0.0" })(args),
     Effect.catchIf(CliError.isCliError, () => usageFailed),
-    Effect.provide(jsonPresenter),
+    withJsonPresenter,
   );

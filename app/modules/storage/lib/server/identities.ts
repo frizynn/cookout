@@ -5,14 +5,19 @@ import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { StorageUnavailable } from "./errors.ts";
 import type { MemoryState } from "./memory-state.ts";
 
-export type TokenLookup = { status: "active"; identity: Identity } | { status: "revoked" } | { status: "unknown" };
+export type TokenLookup =
+  | { readonly status: "active"; readonly identity: Identity }
+  | { readonly status: "revoked" }
+  | { readonly status: "unknown" };
 
-type ReplaceTokenResult = { status: "replaced"; identity: Identity } | { status: "not_found" };
+type ReplaceTokenResult =
+  | { readonly status: "replaced"; readonly identity: Identity }
+  | { readonly status: "not_found" };
 
 type DeleteIdentityResult =
-  | { status: "deleted"; identity: Identity }
-  | { status: "not_found" }
-  | { status: "last_admin" };
+  | { readonly status: "deleted"; readonly identity: Identity }
+  | { readonly status: "not_found" }
+  | { readonly status: "last_admin" };
 
 type Fails<A> = Effect.Effect<A, StorageUnavailable>;
 

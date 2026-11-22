@@ -35,7 +35,8 @@
           "effect/process",
           "effect/FileSystem",
           "effect/Path",
-          "effect/ByteSize"
+          "effect/ByteSize",
+          "effect/testing/TestConsole"
         ],
         "keyPatterns": [
           { "target": "service", "pattern": "default", "skipLeadingPath": ["app/modules/"] },

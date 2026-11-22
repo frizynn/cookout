@@ -9,6 +9,7 @@
  * Tests run effects with `@effect/vitest`, which provides `TestClock`: a
  * test cookout starts at `testStartTime`.
  */
+export { answer, refusal } from "./lib/server/calls.ts";
 export { type ChannelFixtureOptions, channelFixture, channelName } from "./lib/server/channels.ts";
 export { type CliResult, runCookout, type ServeProcess, startServe } from "./lib/server/cli.ts";
 export { runCookoutBinary } from "./lib/server/process.ts";
