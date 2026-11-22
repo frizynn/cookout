@@ -1,4 +1,4 @@
-import { DateTime, Effect, Schema, SchemaIssue } from "effect";
+import { DateTime, Effect, Schema } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
@@ -38,22 +38,6 @@ const lastAdmin = (name: string): Refusal => ({
   message: `${name} is the last admin. Make another admin before deleting it.`,
 });
 
-const schemaIssues = SchemaIssue.makeFormatterStandardSchemaV1();
-
-const invalidRequest = (error: Schema.SchemaError): Refusal => ({
-  status: 400,
-  code: "invalid_request",
-  message: "The request doesn't match the protocol.",
-  details: schemaIssues(error.issue).issues.map(({ message, path = [] }) => ({ path: path.map(String), message })),
-});
-
-const requestBody = <S extends Schema.Decoder<unknown>>(schema: S) =>
-  Effect.gen(function* () {
-    const request = yield* HttpServerRequest.HttpServerRequest;
-    const json = yield* request.json;
-    return yield* Schema.decodeUnknownEffect(schema)(json).pipe(Effect.mapError(invalidRequest));
-  });
-
 const nameParam = (params: Readonly<Record<string, string>>): Effect.Effect<IdentityName, Refusal> => {
   const name = params["name"] ?? "";
   return isIdentityName(name) ? Effect.succeed(name) : Effect.fail(identityNotFound(name));
@@ -67,7 +51,7 @@ const createRoute: Route<Caller | Storage | Secrets> = {
   handle: () =>
     Effect.gen(function* () {
       yield* requireAdmin;
-      const body = yield* requestBody(CreateIdentityRequestSchema);
+      const body = yield* HttpServerRequest.schemaBodyJson(CreateIdentityRequestSchema);
       const identity: Identity = { ...body, admin: false, createdAt: DateTime.formatIso(yield* DateTime.now) };
       const { token, hash } = yield* issueToken;
       const result = yield* (yield* Storage).createIdentity(identity, hash);
