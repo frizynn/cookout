@@ -30,6 +30,8 @@ const checks: ReadonlyArray<Check> = [
   { name: "validators", job: "drift", script: ["validators:check"], budget: 5 },
   { name: "hygiene", job: "drift", script: ["hygiene"], budget: 3 },
   { name: "docs", job: "drift", script: ["docs"], budget: 3 },
+  { name: "api", job: "drift", script: ["api"], budget: 5 },
+  { name: "exports", job: "drift", script: ["exports"], budget: 3 },
   { name: "format", job: "format", script: ["format:check"], budget: 3, afterTests: true },
 ];
 
