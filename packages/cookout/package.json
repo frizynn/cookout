@@ -6,6 +6,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "bin": {
+    "cookout": "./src/bin.ts"
+  },
   "scripts": {
     "test": "vitest run"
   },
@@ -15,5 +18,8 @@
     "@ai-hero/cookout-storage-sqlite": "workspace:*",
     "@ai-hero/cookout-client": "workspace:*",
     "@ai-hero/cookout-web": "workspace:*"
+  },
+  "devDependencies": {
+    "zod": "^4.6.7"
   }
 }

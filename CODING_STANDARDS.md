@@ -107,13 +107,29 @@ test must keep passing through a refactor that doesn't change behaviour.
 ### The protocol test helper
 
 `packages/server/tests/test-server.ts`: `await startTestServer()` gives
-`{ url, client, clock, storage, webhooks }`: a real server on port 0, a fresh
-in-memory adapter, a fake clock (`clock.advance(ms)`; it starts at
-2026-01-01T00:00:00.000Z), an SDK client and a fake webhook receiver
-(`webhooks.calls`, `failNext(count, status)`, `waitForCalls(count)`).
-Everything closes when the test ends (`onTestFinished`), so tests need no
-`afterEach`. Extend this helper (for example a client per identity) rather
+`{ url, client, adminToken, clientFor, createIdentity, startSecondServer,
+clock, storage, webhooks }`: a real server on port 0, a fresh in-memory
+adapter, a fake clock (`clock.advance(ms)`; it starts at
+2026-01-01T00:00:00.000Z), an SDK client using the first-boot admin token,
+and a fake webhook receiver (`webhooks.calls`, `failNext(count, status)`,
+`waitForCalls(count)`). `await createIdentity(name, { owner })` makes an
+identity as the admin and returns `{ identity, token, client }`, a client
+for that identity. `clientFor(token)` (or `clientFor(undefined)`) is a
+client with any token. `startSecondServer()` boots another server on the
+same store, like a restart. Everything closes when the test ends
+(`onTestFinished`), so tests need no `afterEach`. Extend this helper rather
 than starting servers by hand.
+
+### Process tests (CLI and `cookout serve`)
+
+The `client` package can't start a server, even in tests, so tests that run
+the `cookout` binary live in `packages/cookout/tests/`. `processes.ts` there
+has `startServeProcess(databasePath)` (runs `cookout serve` on a free port
+and returns its stdout JSON lines and `url`) and `runCookout(args, env)` (runs
+the binary with only the env vars you give, plus `PATH` and the like, and
+returns `{ exitCode, stdout, stderr }`). The binary is `src/bin.ts` run by
+Node's built-in TypeScript type stripping until the package is bundled (#12).
+Keep these tests few: argument parsing, env vars, JSON output.
 
 ### The adapter contract suite
 
@@ -155,7 +171,41 @@ Don't cast (`as`) untrusted data into a type.
   throws `CookoutError` with `status`, `code`, `message` and `details`, and
   uses `bad_response` when the server's answer doesn't match the protocol.
 - Each route's path is a constant in `protocol` (`healthPath`), shared by the
-  server and the SDK.
+  server and the SDK. Paths with a parameter are functions
+  (`identityPath(name)`).
+- Request bodies are parsed by the server only: the SDK sends what it is
+  given, and a bad body comes back as 400 `invalid_request` with the zod
+  issues in `details` (400 `invalid_json` if it isn't JSON).
+
+## Tokens and auth
+
+- Every route except `GET /v1/health` needs `Authorization: Bearer <token>`.
+  The server checks the route exists first (unknown routes are 404 without a
+  token), then the token: 401 `token_missing`, `token_unknown` (never issued)
+  or `token_revoked` (rotated away, or its identity was deleted). An admin-only
+  action from a non-admin is 403 `admin_only`.
+- Tokens are `cookout_` plus 32 random bytes in base64url, made by the
+  injected `newToken` (`randomToken` from `server` at start-up). The server
+  hands the store only `sha256(token)` in hex; no adapter ever sees a token.
+- **Admin** is a flag on an identity (Matt, spec answer 2, so the term is
+  approved). On first boot, a store with no identities gets an `admin`
+  identity; `startServer` returns its token as `adminToken` and `cookout
+  serve` prints it once as a JSON line on stdout. Later boots print nothing.
+- Identity names: 1-64 lowercase letters, digits or `-` (`identityNameSchema`).
+
+## The CLI
+
+- `runCli(args, io)` in `client` runs every verb except `serve`. It prints
+  the server's JSON answer on stdout and exits 0; on failure it prints
+  `{ error: { code, message, status? } }` on stderr and exits 1 (`usage` for
+  bad arguments, `url_missing` when `COOKOUT_URL` is unset).
+- The SDK and CLI read `COOKOUT_URL` and `COOKOUT_TOKEN` (`createCookoutClient`
+  takes an `env` option; tests pass `env: {}` so the developer's shell can't
+  leak in).
+- `packages/cookout/src/bin.ts` is the binary: `serve` goes to `serve.ts`
+  (loaded lazily, so other verbs never open SQLite), everything else to
+  `runCli`. `serve.ts` is the one start-up path that wires the real clock,
+  token source and SQLite. There is no `server/src/start.ts` yet.
 
 ## Inject every clock, ID source and timer
 
@@ -194,8 +244,8 @@ Name things with plain words a newcomer understands. Use the domain words the
 spec already uses: channel, message, thread, reply, identity, owner, token,
 inbox, ack, read position, follow, subscribe, mention, command, webhook,
 handler, lease, adapter, session. **A new domain term is checked with Matt
-first.** The spec's "proposed terms" (admin, command token, lease ID, call ID,
-inbox reason, contract suite) are not yet approved. Don't coin a word to save
+first.** Of the spec's "proposed terms", admin is approved (spec answer 2);
+command token, lease ID, call ID, inbox reason and contract suite are not yet. Don't coin a word to save
 typing; don't use two words for one thing.
 
 ## TypeScript

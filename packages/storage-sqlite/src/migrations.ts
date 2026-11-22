@@ -13,6 +13,20 @@ const migrations: readonly string[] = [
      last_id INTEGER NOT NULL
    ) STRICT;
    INSERT INTO message_id_sequence (only_row, last_id) VALUES (1, 0);`,
+  // 2: identities and their token hashes. Revoked hashes are kept so a
+  // rotated or deleted token can be told apart from one never issued.
+  `CREATE TABLE identities (
+     name TEXT PRIMARY KEY,
+     owner TEXT,
+     admin INTEGER NOT NULL CHECK (admin IN (0, 1)),
+     created_at TEXT NOT NULL
+   ) STRICT;
+   CREATE TABLE tokens (
+     token_hash TEXT PRIMARY KEY,
+     identity_name TEXT NOT NULL,
+     revoked INTEGER NOT NULL CHECK (revoked IN (0, 1))
+   ) STRICT;
+   CREATE INDEX tokens_by_identity ON tokens (identity_name) WHERE revoked = 0;`,
 ];
 
 const userVersionRow = z.object({ user_version: z.number().int().nonnegative() });

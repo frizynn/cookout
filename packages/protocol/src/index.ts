@@ -5,5 +5,27 @@ export { errorResponseSchema } from "./errors.ts";
 export type { ErrorResponse } from "./errors.ts";
 export { healthPath, healthResponseSchema } from "./health.ts";
 export type { HealthResponse } from "./health.ts";
+export {
+  createIdentityRequestSchema,
+  identitiesPath,
+  identityNameSchema,
+  identityPath,
+  identityResponseSchema,
+  identitySchema,
+  identityTokenPath,
+  identityWithTokenResponseSchema,
+  listIdentitiesResponseSchema,
+  ownerSchema,
+  tokenSchema,
+  whoamiPath,
+} from "./identities.ts";
+export type {
+  CreateIdentityRequest,
+  Identity,
+  IdentityName,
+  IdentityResponse,
+  IdentityWithTokenResponse,
+  ListIdentitiesResponse,
+} from "./identities.ts";
 export { messageIdSchema } from "./storage.ts";
-export type { MessageId, StorageAdapter } from "./storage.ts";
+export type { MessageId, StorageAdapter, TokenLookup } from "./storage.ts";

@@ -1,8 +1,27 @@
 import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import type { ErrorResponse, HealthResponse, StorageAdapter } from "@ai-hero/cookout-protocol";
-import { errorResponseSchema, healthPath, healthResponseSchema } from "@ai-hero/cookout-protocol";
+import type {
+  ErrorResponse,
+  HealthResponse,
+  Identity,
+  IdentityResponse,
+  IdentityWithTokenResponse,
+  ListIdentitiesResponse,
+  StorageAdapter,
+} from "@ai-hero/cookout-protocol";
+import {
+  createIdentityRequestSchema,
+  errorResponseSchema,
+  healthPath,
+  healthResponseSchema,
+  identitiesPath,
+  identityResponseSchema,
+  identityWithTokenResponseSchema,
+  listIdentitiesResponseSchema,
+  whoamiPath,
+} from "@ai-hero/cookout-protocol";
+import { hashToken } from "./tokens.ts";
 
 /** Where the server reads the time. Tests pass a fake one. */
 export type Clock = { now(): Date };
@@ -10,6 +29,8 @@ export type Clock = { now(): Date };
 export type ServerOptions = {
   storage: StorageAdapter;
   clock: Clock;
+  /** Makes a new random token (at least 256 bits). Start-up passes `randomToken`. */
+  newToken: () => string;
   /** 0 picks a free port. */
   port: number;
   /** Default `0.0.0.0`. */
@@ -19,9 +40,31 @@ export type ServerOptions = {
 export type RunningServer = {
   /** Base URL, e.g. `http://127.0.0.1:54321`. */
   url: string;
+  /**
+   * On first boot (a store with no identities) the server makes the `admin`
+   * identity, and this is its token. Shown this once; `undefined` on later boots.
+   */
+  adminToken: string | undefined;
   /** Stops accepting requests and closes open connections. Doesn't close storage. */
   close(): Promise<void>;
 };
+
+/** The name of the admin identity made on first boot. */
+const firstAdminName = "admin";
+/** Request bodies larger than this are refused. */
+const maxBodyBytes = 1024 * 1024;
+
+/** Thrown by a handler to answer with an error body. */
+class HttpError extends Error {
+  readonly status: number;
+  readonly error: ErrorResponse["error"];
+
+  constructor(status: number, error: ErrorResponse["error"]) {
+    super(error.message);
+    this.status = status;
+    this.error = error;
+  }
+}
 
 function sendJson(response: ServerResponse, status: number, body: unknown): void {
   response.writeHead(status, { "content-type": "application/json; charset=utf-8" });
@@ -32,36 +75,166 @@ function sendError(response: ServerResponse, status: number, error: ErrorRespons
   sendJson(response, status, errorResponseSchema.parse({ error }));
 }
 
+async function readJson(request: IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
+    size += buffer.length;
+    if (size > maxBodyBytes) {
+      throw new HttpError(413, { code: "body_too_large", message: `The body is over ${maxBodyBytes} bytes.` });
+    }
+    chunks.push(buffer);
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    throw new HttpError(400, { code: "invalid_json", message: "The body is not valid JSON." });
+  }
+}
+
+/** Finds the identity behind the request's bearer token, or throws a 401. */
+async function authenticate(storage: StorageAdapter, request: IncomingMessage): Promise<Identity> {
+  const header = request.headers.authorization;
+  const match = header === undefined ? null : /^Bearer +(\S+)\s*$/i.exec(header);
+  const token = match?.[1];
+  if (token === undefined) {
+    throw new HttpError(401, {
+      code: "token_missing",
+      message: "Send your token as `Authorization: Bearer <token>` (COOKOUT_TOKEN).",
+    });
+  }
+  const found = await storage.findIdentityByTokenHash(hashToken(token));
+  if (found.status === "revoked") {
+    throw new HttpError(401, { code: "token_revoked", message: "This token was revoked. Ask an admin for a new one." });
+  }
+  if (found.status === "unknown") {
+    throw new HttpError(401, { code: "token_unknown", message: "This token is not known to this cookout." });
+  }
+  return found.identity;
+}
+
+function requireAdmin(identity: Identity): void {
+  if (!identity.admin) {
+    throw new HttpError(403, { code: "admin_only", message: "Only an admin identity can do this." });
+  }
+}
+
+function notAllowed(method: string | undefined, path: string): HttpError {
+  return new HttpError(405, { code: "method_not_allowed", message: `${method} ${path} is not allowed.` });
+}
+
+function identityNotFound(name: string): HttpError {
+  return new HttpError(404, { code: "identity_not_found", message: `There is no identity named ${name}.` });
+}
+
 async function handle(options: ServerOptions, request: IncomingMessage, response: ServerResponse): Promise<void> {
+  const { storage, clock } = options;
   const path = new URL(request.url ?? "/", "http://localhost").pathname;
+  const method = request.method;
 
   if (path === healthPath) {
-    if (request.method !== "GET") {
-      sendError(response, 405, { code: "method_not_allowed", message: `${request.method} ${path} is not allowed.` });
-      return;
-    }
+    if (method !== "GET") throw notAllowed(method, path);
     try {
-      await options.storage.checkHealth();
+      await storage.checkHealth();
     } catch {
-      sendError(response, 503, { code: "storage_unavailable", message: "Storage is not usable." });
-      return;
+      throw new HttpError(503, { code: "storage_unavailable", message: "Storage is not usable." });
     }
-    const body: HealthResponse = { status: "ok", time: options.clock.now().toISOString() };
+    const body: HealthResponse = { status: "ok", time: clock.now().toISOString() };
     sendJson(response, 200, healthResponseSchema.parse(body));
     return;
   }
 
-  sendError(response, 404, { code: "not_found", message: `No route for ${request.method} ${path}.` });
+  const identityRoute = /^\/v1\/identities\/([^/]+)(\/token)?$/.exec(path);
+  if (path !== whoamiPath && path !== identitiesPath && identityRoute === null) {
+    throw new HttpError(404, { code: "not_found", message: `No route for ${method} ${path}.` });
+  }
+
+  // Every route below needs a token.
+  const caller = await authenticate(storage, request);
+
+  if (path === whoamiPath) {
+    if (method !== "GET") throw notAllowed(method, path);
+    const body: IdentityResponse = { identity: caller };
+    sendJson(response, 200, identityResponseSchema.parse(body));
+    return;
+  }
+
+  if (path === identitiesPath) {
+    if (method === "GET") {
+      const body: ListIdentitiesResponse = { identities: await storage.listIdentities() };
+      sendJson(response, 200, listIdentitiesResponseSchema.parse(body));
+      return;
+    }
+    if (method === "POST") {
+      requireAdmin(caller);
+      const parsed = createIdentityRequestSchema.safeParse(await readJson(request));
+      if (!parsed.success) {
+        throw new HttpError(400, {
+          code: "invalid_request",
+          message: "The body doesn't match the protocol.",
+          details: parsed.error.issues,
+        });
+      }
+      const identity: Identity = { name: parsed.data.name, admin: false, createdAt: clock.now().toISOString() };
+      if (parsed.data.owner !== undefined) identity.owner = parsed.data.owner;
+      const token = options.newToken();
+      if ((await storage.createIdentity(identity, hashToken(token))) === "name_taken") {
+        throw new HttpError(409, { code: "identity_exists", message: `The name ${identity.name} is taken.` });
+      }
+      const body: IdentityWithTokenResponse = { identity, token };
+      sendJson(response, 201, identityWithTokenResponseSchema.parse(body));
+      return;
+    }
+    throw notAllowed(method, path);
+  }
+
+  if (identityRoute !== null) {
+    const name = decodeURIComponent(identityRoute[1] ?? "");
+    const isTokenRoute = identityRoute[2] !== undefined;
+    if (isTokenRoute && method === "POST") {
+      requireAdmin(caller);
+      const token = options.newToken();
+      const identity = await storage.replaceToken(name, hashToken(token));
+      if (identity === undefined) throw identityNotFound(name);
+      const body: IdentityWithTokenResponse = { identity, token };
+      sendJson(response, 200, identityWithTokenResponseSchema.parse(body));
+      return;
+    }
+    if (!isTokenRoute && method === "DELETE") {
+      requireAdmin(caller);
+      const identity = await storage.deleteIdentity(name);
+      if (identity === undefined) throw identityNotFound(name);
+      const body: IdentityResponse = { identity };
+      sendJson(response, 200, identityResponseSchema.parse(body));
+      return;
+    }
+  }
+  throw notAllowed(method, path);
 }
 
-/** Starts the HTTP server with the storage and clock it is given. */
+/** On a store with no identities, makes the `admin` identity and returns its token. */
+async function createFirstAdmin(options: ServerOptions): Promise<string | undefined> {
+  const token = options.newToken();
+  const admin: Identity = { name: firstAdminName, admin: true, createdAt: options.clock.now().toISOString() };
+  return (await options.storage.createIdentityIfNoneExist(admin, hashToken(token))) ? token : undefined;
+}
+
+/**
+ * Starts the HTTP server with the storage, clock and token source it is
+ * given. On first boot it also makes the admin identity (see `adminToken`).
+ */
 export async function startServer(options: ServerOptions): Promise<RunningServer> {
+  const adminToken = await createFirstAdmin(options);
+
   const server = createServer((request, response) => {
-    handle(options, request, response).catch(() => {
-      if (!response.headersSent) {
-        sendError(response, 500, { code: "internal_error", message: "Something went wrong on the server." });
-      } else {
+    handle(options, request, response).catch((error: unknown) => {
+      if (response.headersSent) {
         response.end();
+      } else if (error instanceof HttpError) {
+        sendError(response, error.status, error.error);
+      } else {
+        sendError(response, 500, { code: "internal_error", message: "Something went wrong on the server." });
       }
     });
   });
@@ -81,6 +254,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
 
   return {
     url: `http://${urlHost}:${address.port}`,
+    adminToken,
     close: () =>
       new Promise<void>((resolve, reject) => {
         server.closeAllConnections();
