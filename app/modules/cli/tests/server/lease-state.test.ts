@@ -10,10 +10,13 @@ import {
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import type { CommandLineNeeds } from "../../../testing/server.ts";
+import type { Scope } from "effect";
 
 const EXIT_FAILURE = 1;
 const EXIT_SUCCESS = 0;
 const SHARED_FILE = 0o644;
+const OPEN_FOLDER = 0o755;
+const unsafe = { exitCode: EXIT_FAILURE, stderrJson: { error: { code: "lease_state_unsafe" } } };
 const OWNER_ONLY = "600";
 const OCTAL = 8;
 const PERMISSION_DIGITS = -3;
@@ -34,6 +37,29 @@ function permissionsOf(file: string): Effect.Effect<string, never, FileSystem.Fi
     const { mode } = yield* Effect.orDie(fs.stat(file));
     return Str.slice(PERMISSION_DIGITS)(mode.toString(OCTAL));
   });
+}
+
+interface UnsafeStateFolders {
+  readonly linked: string;
+  readonly open: string;
+  readonly target: string;
+}
+
+const unsafeStateFolders: Effect.Effect<UnsafeStateFolders, never, CommandLineNeeds | Scope.Scope> = Effect.gen(
+  function* makeUnsafeFolders() {
+    const fs = yield* FileSystem.FileSystem;
+    const [open, linked, target] = yield* Effect.all(
+      [freshStateFolder, freshStateFolder, freshStateFolder],
+      ONE_AT_A_TIME,
+    );
+    yield* Effect.orDie(fs.chmod(open, OPEN_FOLDER));
+    yield* Effect.orDie(fs.symlink(target, `${linked}/leases`));
+    return { linked, open, target };
+  },
+);
+
+function filesIn(folder: string): Effect.Effect<readonly string[], never, FileSystem.FileSystem> {
+  return Effect.flatMap(FileSystem.FileSystem, (fs) => Effect.orDie(fs.readDirectory(folder)));
 }
 
 function plantSharedTemporary(folder: string): Effect.Effect<string, never, CommandLineNeeds> {
@@ -83,6 +109,40 @@ it.effect("join writes its lease-state file readable by its owner only, even ove
 
     expect(again.exitCode).toBe(EXIT_SUCCESS);
     expect(mode).toBe(OWNER_ONLY);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("a state folder others can open, or a leases folder that is a symlink, is refused as unsafe", () =>
+  Effect.gen(function* unsafeFolders() {
+    const cookout = yield* TestCookout;
+    const agent = yield* cookout.createIdentity("agent");
+    const { linked, open, target } = yield* unsafeStateFolders;
+    const session = { COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
+    const results = yield* pipe(
+      [open, linked],
+      Effect.forEach(
+        (folder) => runCookout({ args: JOIN, env: { ...session, COOKOUT_STATE_DIR: folder } }),
+        ONE_AT_A_TIME,
+      ),
+    );
+    const written = yield* filesIn(target);
+
+    expect(results).toMatchObject([unsafe, unsafe]);
+    expect(written).toStrictEqual([]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("a state folder that can't be made fails join with cli_error", () =>
+  Effect.gen(function* folderCantBeMade() {
+    const fs = yield* FileSystem.FileSystem;
+    const cookout = yield* TestCookout;
+    const agent = yield* cookout.createIdentity("agent");
+    const folder = yield* freshStateFolder;
+    yield* Effect.orDie(fs.writeFileString(`${folder}/a-file`, ""));
+    const env = { COOKOUT_STATE_DIR: `${folder}/a-file/state`, COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
+    const result = yield* runCookout({ args: JOIN, env });
+
+    expect(result).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "cli_error" } } });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
