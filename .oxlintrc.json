@@ -345,6 +345,9 @@
     "no-undef": "off",
     "no-redeclare": "off",
     "oxc/no-async-await": "off",
+    "oxc/no-rest-spread-properties": "off",
+    "vitest/prefer-to-be-falsy": "off",
+    "vitest/prefer-to-be-truthy": "off",
     "func-style": ["error", "declaration"],
     "one-var": ["error", "never"],
     "no-duplicate-imports": [
@@ -369,7 +372,7 @@
     "vitest/no-standalone-expect": [
       "error",
       {
-        "additionalTestBlockFunctions": ["it.effect", "it.live", "it.prop"]
+        "additionalTestBlockFunctions": ["it.effect", "it.effect.each", "it.live", "it.prop"]
       }
     ],
     "typescript/prefer-readonly-parameter-types": [
@@ -383,7 +386,7 @@
           },
           {
             "from": "package",
-            "name": ["Constraint", "Effect", "Exit", "HttpClientRequest", "HttpClientResponse"],
+            "name": ["Constraint", "Effect", "Exit", "HttpClientRequest", "HttpClientResponse", "Layer"],
             "package": "effect"
           }
         ],
