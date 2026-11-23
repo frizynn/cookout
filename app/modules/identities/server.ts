@@ -155,7 +155,7 @@ export { transferRoutes } from "./lib/server/transfer.ts";
 
 /**
  * `POST /v1/identities/:name/deactivate` and `/reactivate`: an admin, or the human who owns an agent, switches an
- * identity off or back on (ADR 0044). Nothing deletes an identity.
+ * identity off or back on (ADR 0045). Nothing deletes an identity.
  */
 export { deactivationRoutes } from "./lib/server/deactivation.ts";
 
