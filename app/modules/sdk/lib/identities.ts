@@ -27,6 +27,13 @@ interface IdentityCalls {
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
 }
 
+function sessionCall(server: ClientConnection, method: "POST" | "DELETE") {
+  return async (): Promise<IdentityResponse> => {
+    const answer = await send(server, { isExpected: isIdentityResponse, method, path: sessionPath });
+    return answer;
+  };
+}
+
 function identityCalls(server: ClientConnection): IdentityCalls {
   return {
     createIdentity: async (body) => {
@@ -56,14 +63,8 @@ function identityCalls(server: ClientConnection): IdentityCalls {
       const listed = await getJson(server, identitiesPath, isListIdentitiesResponse);
       return listed;
     },
-    login: async () => {
-      const loggedIn = await send(server, { isExpected: isIdentityResponse, method: "POST", path: sessionPath });
-      return loggedIn;
-    },
-    logout: async () => {
-      const loggedOut = await send(server, { isExpected: isIdentityResponse, method: "DELETE", path: sessionPath });
-      return loggedOut;
-    },
+    login: sessionCall(server, "POST"),
+    logout: sessionCall(server, "DELETE"),
     rotateToken: async (name) => {
       const rotated = await send(server, {
         isExpected: isIdentityWithTokenResponse,
