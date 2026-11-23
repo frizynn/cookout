@@ -28,7 +28,9 @@ function ofKind(listed: readonly Identity[], kind: KindChoice): readonly Identit
 
 function named(listed: readonly Identity[], filter: string): readonly Identity[] {
   const text = filter.trim().toLowerCase();
-  return listed.filter((identity) => identity.name.includes(text));
+  return listed.filter((identity) =>
+    [identity.name, identity.displayName ?? ""].some((each) => each.toLowerCase().includes(text)),
+  );
 }
 
 export function PeopleView(props: PeopleProps): ReactNode {
