@@ -128,7 +128,7 @@ env $(cat /tmp/cookout-e2e.env) pnpm --filter ./packages/e2e test
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '[.identities[].name]'
 ```
 
-The test script builds the package first (`pnpm build`), so the bin it runs is `dist/main.js`, as published. Each test draws a fresh prefix such as `e2e-k3j9x0qa` and names every identity and channel it makes with it, so runs never collide on a shared server. When a test ends, passing or failing, it deletes every identity whose name starts with its prefix, so the `identity list` afterwards shows none of the run's identities (on a fresh board, only `admin`). Channels can't be deleted, so a run's channels stay, under its prefix. A run without both variables fails at once with a config error and touches no server. Tests are never retried.
+The test script builds the package first (`pnpm build`), so the bin it runs is the built one, as published. Each test draws a fresh prefix such as `e2e-k3j9x0qa` and names every identity and channel it makes with it, so runs never collide on a shared server. When a test ends, passing or failing, it deletes every identity whose name starts with its prefix, so the `identity list` afterwards shows none of the run's identities (on a fresh board, only `admin`). Channels can't be deleted, so a run's channels stay, under its prefix. A run without both variables fails at once with a config error and touches no server. Tests are never retried.
 
 ## Stop it
 
