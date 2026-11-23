@@ -31,9 +31,11 @@ it.live("two agents each join through the cookout bin, and a second join on one 
     const again = yield* joinInItsOwnProcess(cookout, first);
 
     expect([first.identity.kind, second.identity.kind]).toStrictEqual(["agent", "agent"]);
-    expect([firstJoin, secondJoin]).toMatchObject([joined, joined]);
-    expect(firstJoin.stdoutJson).toHaveProperty("agentSessionToken");
-    expect(secondJoin.stdoutJson).toHaveProperty("agentSessionToken");
+    expect([firstJoin, secondJoin]).toMatchObject([
+      { ...joined, stdoutJson: { identity: "agent-1", source: "COOKOUT_TOKEN" } },
+      { ...joined, stdoutJson: { identity: "agent-2", source: "COOKOUT_TOKEN" } },
+    ]);
+    expect(`${firstJoin.stdout}${secondJoin.stdout}`).not.toContain("agentSessionToken");
     expect(again).toMatchObject({
       exitCode: EXIT_FAILURE,
       stderrJson: { error: { code: "agent_session_live", status: 409 } },

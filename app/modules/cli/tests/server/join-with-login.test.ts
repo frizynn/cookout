@@ -1,5 +1,5 @@
+import { Array as Arr, Effect, FileSystem, Stdio, Stream } from "effect";
 import type { CliResult, CommandLineNeeds } from "../../../testing/server.ts";
-import { Effect, FileSystem, Stdio, Stream } from "effect";
 import {
   TestCookout,
   answer,
@@ -47,9 +47,42 @@ it.effect("inside Claude Code, join uses the Login to join an agent the human ow
 
     expect(results).toMatchObject([
       { exitCode: EXIT_FAILURE, stderrJson: { error: { code: "not_joined" } } },
-      { exitCode: 0, stdoutJson: { created: false, identity: "triage-agent" } },
+      { exitCode: 0, stdoutJson: { created: false, identity: "triage-agent", source: "login" } },
       { exitCode: 0, stdoutJson: { message: { author: { name: "triage-agent" } } } },
     ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("join inside Claude Code prints no agent session token, whether it used the Login or COOKOUT_TOKEN", () =>
+  Effect.gen(function* joinPrintsNoToken() {
+    const cookout = yield* TestCookout;
+    const grace = yield* cookout.createIdentity("grace", { kind: "human" });
+    const bot = yield* cookout.createIdentity("release-bot");
+    const terminal = {
+      COOKOUT_STATE_DIR: yield* freshStateFolder,
+      COOKOUT_URL: cookout.url,
+      XDG_CONFIG_HOME: yield* configFolder,
+    };
+    yield* logIn(terminal, grace.token);
+    const joins = [
+      { args: ["join", "--as", "triage-agent"], env: { ...terminal, CLAUDECODE: "1", CLAUDE_CODE_SESSION_ID: "s1" } },
+      {
+        args: ["join", "--as", "release-bot"],
+        env: { ...terminal, CLAUDECODE: "1", CLAUDE_CODE_SESSION_ID: "s2", COOKOUT_TOKEN: bot.token },
+      },
+    ];
+    const results = yield* Effect.forEach(joins, runCookout, ONE_AT_A_TIME);
+
+    expect(results).toMatchObject([
+      { exitCode: 0, stdoutJson: { created: true, identity: "triage-agent", source: "login" } },
+      { exitCode: 0, stdoutJson: { created: false, identity: "release-bot", source: "COOKOUT_TOKEN" } },
+    ]);
+    expect(
+      Arr.join(
+        Arr.map(results, ({ stdout }) => stdout),
+        "",
+      ),
+    ).not.toContain("agentSessionToken");
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 

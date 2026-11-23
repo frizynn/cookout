@@ -141,7 +141,10 @@ const identityNameFlag = Schema.String.check(Schema.isPattern(identityNamePatter
 const asFlag = Flag.String("as").pipe(
   Flag.withSchema(identityNameFlag),
   Flag.optional,
-  Flag.withDescription("The token's own identity: a check, not a switch. Required."),
+  Flag.withDescription(
+    "The agent to join, as name or owner/name: with your Login, one you own or a new one; with COOKOUT_TOKEN, " +
+      "the token's own agent. Required.",
+  ),
 );
 const forceFlag = Flag.Boolean("force").pipe(
   Flag.optional,
@@ -188,11 +191,13 @@ const joinCommand: JoinCommand = Command.make(
     }),
 ).pipe(
   Command.withDescription(
-    "Join as COOKOUT_TOKEN's own agent (a human identity never joins) for this agent tool session, such as one Claude " +
-      "Code session and its subagents (CLAUDE_CODE_SESSION_ID): the server issues an agent session token, kept in " +
-      "COOKOUT_STATE_DIR (default ~/.local/state/cookout), and every later command in the session sends it, which " +
-      "moves its expiry on. A session joins once; outside an agent tool, join only with --print-env. An agent has one " +
-      "live agent session token: a second join is refused unless --force.",
+    "Join as an agent for this agent tool session, such as one Claude Code session and its subagents " +
+      "(CLAUDE_CODE_SESSION_ID). With your Login, --as name joins the agent you own by that name, or creates it, or " +
+      "owner/name; with COOKOUT_TOKEN, --as is the token's own agent. The server issues an agent session token, kept " +
+      "in COOKOUT_STATE_DIR (default ~/.local/state/cookout) and never printed; every later command in the session " +
+      "sends it, which moves its expiry on. Prints the agent, whether it was created, the expiry and the credential " +
+      "used. A session joins once; outside an agent tool, join only with --print-env. An agent has one live agent " +
+      "session token: a second join is refused unless --force.",
   ),
 );
 
