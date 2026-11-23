@@ -1,8 +1,8 @@
 import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { inPane, inSidebar } from "./regions.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
-import { inSidebar } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
 const DATE_LENGTH = 10;
@@ -35,7 +35,7 @@ function filterBy(text: string): void {
 }
 
 function chip(label: string): HTMLElement {
-  return screen.getByRole("button", { name: (name) => name.startsWith(`${label} `) });
+  return inPane().getByRole("button", { name: (name) => name.startsWith(`${label} `) });
 }
 
 async function openFiltered(client: CookoutClient, hash: string, filter: string): Promise<() => void> {

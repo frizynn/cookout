@@ -1,8 +1,8 @@
 import { adminClient, anonymousClient, newIdentity, sessionOf } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { inPane, inSidebar } from "./regions.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
-import { inSidebar } from "./regions.ts";
 import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";
 
@@ -41,7 +41,7 @@ it("a fresh login opens the inbox", { timeout: 5000 }, async () => {
   const { client, token } = await newIdentity({ kind: "human", name: "web-sidebar-fresh" });
   const close = openAt({ client, hash: "", session: sessionOf(anonymousClient()) });
   fireEvent.change(await screen.findByLabelText("Token"), { target: { value: token } });
-  fireEvent.click(screen.getByRole("button", { name: "Log in" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Log in" }));
 
   const heading = await screen.findByRole("heading", { level: 1, name: "Inbox" });
 

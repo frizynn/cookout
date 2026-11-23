@@ -3,7 +3,9 @@ import { adminClient, clientWith, newIdentity, revocableView } from "./identitie
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import { messagesIn, parentShown } from "./messages.ts";
+import { alertsShown } from "./alerts.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
+import { inThread } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
 const NONE = 0;
@@ -47,7 +49,7 @@ async function followedThreadIn(channel: string, client: CookoutClient): Promise
 
 function sendReply(text: string): void {
   fireEvent.change(screen.getByLabelText("Reply"), { target: { value: text } });
-  fireEvent.click(screen.getByRole("button", { name: "Send reply" }));
+  fireEvent.click(inThread().getByRole("button", { name: "Send reply" }));
 }
 
 async function threadPanel(): Promise<HTMLElement> {
@@ -138,7 +140,7 @@ it("a thread with no replies says so", { timeout: 5000 }, async () => {
 
   const empty = await screen.findByText("No replies yet.");
 
-  expect([empty.textContent, screen.queryByRole("alert")]).toStrictEqual(["No replies yet.", null]);
+  expect([empty.textContent, alertsShown()]).toStrictEqual(["No replies yet.", []]);
 
   close();
 });

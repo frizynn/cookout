@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { adminClient } from "./identities.ts";
+import { inPane } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
 async function channelWith(channel: string, replies: readonly string[]): Promise<void> {
@@ -31,7 +32,7 @@ it('"Reply" on a message opens its thread in the panel with the cursor in the re
   await channelWith("web-reply-focus", []);
   const close = openAt({ client: adminClient(), hash: "#/channels/web-reply-focus" });
 
-  fireEvent.click(await screen.findByRole("link", { name: "Reply" }));
+  fireEvent.click(await inPane().findByRole("link", { name: "Reply" }));
 
   await expect(focusedBox()).resolves.toBe("text");
 
@@ -44,7 +45,7 @@ it("a message's thread summary opens its thread with the cursor in the reply box
   await channelWith("web-reply-count-focus", ["The reply"]);
   const close = openAt({ client: adminClient(), hash: "#/channels/web-reply-count-focus" });
 
-  fireEvent.click(await screen.findByRole("link", { name: /^1 reply/u }));
+  fireEvent.click(await inPane().findByRole("link", { name: /^1 reply/u }));
 
   await expect(focusedBox()).resolves.toBe("text");
 

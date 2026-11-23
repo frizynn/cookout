@@ -1,7 +1,9 @@
 import { anonymousClient, newIdentity, sessionOf } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
+import { alertSaying } from "./alerts.ts";
 import { createLoginApprovals } from "../../session/index.ts";
+import { inPane } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
 const host = { host: "ada-laptop" };
@@ -13,7 +15,7 @@ async function shownThenApproved(): Promise<readonly unknown[]> {
     screen.getByText(/^Requested by ada-laptop/u).textContent,
     screen.queryByRole("navigation", { name: "Sidebar" }),
   ];
-  fireEvent.click(screen.getByRole("button", { name: "Approve" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Approve" }));
   await screen.findByText(/^Approved\./u);
   return shown;
 }
@@ -53,7 +55,7 @@ it("logged out, the approval page asks for a login first, then shows the request
 
   await screen.findByRole("form", { name: "Log in" });
   fireEvent.change(screen.getByLabelText("Token"), { target: { value: human.token } });
-  fireEvent.click(screen.getByRole("button", { name: "Log in" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Log in" }));
   const code = await screen.findByLabelText("Code");
 
   expect(code.textContent).toBe(started.userCode);
@@ -71,7 +73,7 @@ it("a user code with no live login request says why it can't be shown", { timeou
     loginApprovals: createLoginApprovals(human.client),
   });
 
-  const alert = await screen.findByRole("alert");
+  const alert = await alertSaying("Couldn't show this login");
 
   expect(alert.textContent).toMatch(/^Couldn't show this login \(login_request_not_found\)/u);
 

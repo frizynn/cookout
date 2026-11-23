@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { messagesIn, parentShown } from "./messages.ts";
 import type { Message } from "../../sdk/index.ts";
 import { adminClient } from "./identities.ts";
+import { inPane } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
 async function threadIn(channel: string): Promise<Message> {
@@ -55,7 +56,7 @@ it("following a message's reply count opens its thread in the panel, beside the 
   const parent = await threadIn("web-thread-opens");
   const close = openAt({ client: adminClient(), hash: `#/channels/${parent.channel}` });
 
-  fireEvent.click(await screen.findByRole("link", { name: /^2 replies/u }));
+  fireEvent.click(await inPane().findByRole("link", { name: /^2 replies/u }));
   await threadPanel();
 
   expect([globalThis.location.hash, await parentShown(), await messagesIn("Messages")]).toStrictEqual([

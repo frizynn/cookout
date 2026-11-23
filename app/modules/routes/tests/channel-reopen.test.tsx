@@ -3,6 +3,7 @@ import { adminClient, newIdentity, revocableView } from "./identities.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import { alertSaying } from "./alerts.ts";
+import { inPane } from "./regions.ts";
 import { messagesIn } from "./messages.ts";
 import { openAt } from "./render.tsx";
 
@@ -56,7 +57,7 @@ async function leaveForTheList(): Promise<void> {
 
 async function bothPagesLoaded(): Promise<void> {
   await shownMessages();
-  fireEvent.click(screen.getByRole("button", { name: "Load older messages" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Load older messages" }));
   await screen.findByText("A");
 }
 
@@ -85,7 +86,7 @@ it("reopening a channel shows what was posted while it was closed, keeping the o
   globalThis.location.hash = "#/channels/web-channel-reopen";
   await screen.findByText("C");
 
-  expect([await shownMessages(), screen.queryByRole("button", { name: "Load older messages" })]).toStrictEqual([
+  expect([await shownMessages(), inPane().queryByRole("button", { name: "Load older messages" })]).toStrictEqual([
     ["adminA", "B", "C"],
     null,
   ]);

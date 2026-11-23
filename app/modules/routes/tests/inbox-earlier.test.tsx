@@ -4,6 +4,7 @@ import { fireEvent, screen } from "@testing-library/react";
 import { rowsOf, subscribedReader } from "./inbox-reader.ts";
 import { alertSaying } from "./alerts.ts";
 import { anonymousClient } from "./identities.ts";
+import { inPane } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
 const NONE = 0;
@@ -79,10 +80,10 @@ it("earlier lists read items newest first, a page at a time, until there are no 
     null,
   ]);
 
-  fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Load more" }));
   await screen.findByText("That's everything.");
 
-  expect([rowsOf("Earlier"), rowsOf("Unread"), screen.queryByRole("button", { name: "Load more" })]).toStrictEqual([
+  expect([rowsOf("Earlier"), rowsOf("Unread"), inPane().queryByRole("button", { name: "Load more" })]).toStrictEqual([
     ["Three", "Two", "One"].map((text) => postedRow(channel, text)),
     ["Six", "Five", "Four"].map((text) => postedRow(channel, text)),
     null,
@@ -97,7 +98,7 @@ it("clicking Load more twice before it answers reads the next page once", { time
   const channel = "web-inbox-double-click";
   const reader = await readThenUnread(channel);
   const unmount = openAt({ client: reader, hash: "#/inbox", pageSize: TWO_A_PAGE });
-  const more = await screen.findByRole("button", { name: "Load more" });
+  const more = await inPane().findByRole("button", { name: "Load more" });
 
   fireEvent.click(more);
   fireEvent.click(more);
@@ -116,7 +117,7 @@ it("an Earlier page that can't be read says why, at first or on Load more", { ti
   const first = await alertSaying("Couldn't load what you've read (");
   unmount();
   const reopened = openAt({ client: historyRefusedAfter(reader, TWO_A_PAGE), hash: "#/inbox", pageSize: TWO_A_PAGE });
-  fireEvent.click(await screen.findByRole("button", { name: "Load more" }));
+  fireEvent.click(await inPane().findByRole("button", { name: "Load more" }));
   const more = await alertSaying("Couldn't load more (");
 
   expect([first.textContent, more.textContent]).toStrictEqual([

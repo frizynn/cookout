@@ -17,6 +17,7 @@
   ],
   "jsPlugins": [
     "./lint/local.js",
+    "./lint/test-rules.js",
     {
       "name": "react-hooks-js",
       "specifier": "eslint-plugin-react-hooks"
@@ -472,6 +473,17 @@
     ]
   },
   "overrides": [
+    {
+      "files": ["app/modules/routes/tests/**"],
+      "excludeFiles": [
+        "app/modules/routes/tests/alerts.ts",
+        "app/modules/routes/tests/regions.ts",
+        "app/modules/routes/tests/browser/regions.ts"
+      ],
+      "rules": {
+        "test-rules/region-lookups": ["error", { "pages": ["screen", "page", "other", "second"] }]
+      }
+    },
     {
       "files": ["app/web.tsx", "app/modules/**/*.ts", "app/modules/**/*.tsx"],
       "excludeFiles": ["app/modules/*/server.ts", "app/modules/*/lib/server/**", "app/modules/*/tests/server/**"],
@@ -1991,6 +2003,7 @@
         "scripts/browser-test-server.ts",
         "scripts/jsdom-server-environment.ts",
         "scripts/web-test-environment.ts",
+        "lint/test-rules.js",
         "packages/e2e/vitest.config.ts",
         "packages/e2e/playwright.config.ts",
         "packages/e2e/.dependency-cruiser.mjs"

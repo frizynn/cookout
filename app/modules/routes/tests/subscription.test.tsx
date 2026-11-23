@@ -1,9 +1,10 @@
 import { adminClient, newIdentity, sessionOf } from "./identities.ts";
+import { alertSaying, alertsShown } from "./alerts.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
-import { alertSaying } from "./alerts.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
+import { inPane } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
 async function subscribedNames(client: CookoutClient): Promise<readonly string[]> {
@@ -24,7 +25,7 @@ async function openChannel(channel: string): Promise<OpenChannel> {
 }
 
 async function refusedIn(channel: string): Promise<HTMLElement> {
-  const toggle = await screen.findByRole("button", { name: "Subscribe" });
+  const toggle = await inPane().findByRole("button", { name: "Subscribe" });
   await adminClient().deleteChannel(channel);
   fireEvent.click(toggle);
   const alert = await alertSaying("Couldn't change the subscription");
@@ -32,7 +33,7 @@ async function refusedIn(channel: string): Promise<HTMLElement> {
 }
 
 function pressedOf(name: string): string | null {
-  return screen.getByRole("button", { name }).getAttribute("aria-pressed");
+  return inPane().getByRole("button", { name }).getAttribute("aria-pressed");
 }
 
 it("the channel header's toggle subscribes the logged-in human to the channel and unsubscribes them again", {
@@ -41,12 +42,12 @@ it("the channel header's toggle subscribes the logged-in human to the channel an
   expect.hasAssertions();
 
   const { client, close } = await openChannel("web-subscribe");
-  fireEvent.click(await screen.findByRole("button", { name: "Subscribe" }));
-  await screen.findByRole("button", { name: "Subscribed" });
+  fireEvent.click(await inPane().findByRole("button", { name: "Subscribe" }));
+  await inPane().findByRole("button", { name: "Subscribed" });
   const afterSubscribe = await subscribedNames(client);
   const pressed = pressedOf("Subscribed");
-  fireEvent.click(screen.getByRole("button", { name: "Subscribed" }));
-  await screen.findByRole("button", { name: "Subscribe" });
+  fireEvent.click(inPane().getByRole("button", { name: "Subscribed" }));
+  await inPane().findByRole("button", { name: "Subscribe" });
 
   expect([afterSubscribe, pressed, pressedOf("Subscribe"), await subscribedNames(client)]).toStrictEqual([
     ["web-subscribe"],
@@ -68,10 +69,13 @@ it("a channel the human already subscribes to shows Subscribed, and another chan
   const reader = await newIdentity({ kind: "human", name: "web-subscribed-reader" });
   await reader.client.subscribe("web-subscribed-already");
   const close = openAt({ client: reader.client, hash: "#/channels/web-subscribed-already" });
-  await screen.findByRole("button", { name: "Subscribed" });
+  await inPane().findByRole("button", { name: "Subscribed" });
   globalThis.location.hash = "#/channels/web-subscribed-not";
 
-  await expect(screen.findByRole("button", { name: "Subscribe" })).resolves.toHaveProperty("textContent", "Subscribe");
+  await expect(inPane().findByRole("button", { name: "Subscribe" })).resolves.toHaveProperty(
+    "textContent",
+    "Subscribe",
+  );
 
   close();
 });
@@ -99,7 +103,7 @@ it("a refused subscription's alert stays with its channel", { timeout: 5000 }, a
   globalThis.location.hash = "#/channels/web-subscribe-other";
   await screen.findByRole("heading", { name: "#web-subscribe-other" });
 
-  expect(screen.queryAllByRole("alert")).toStrictEqual([]);
+  expect(alertsShown()).toStrictEqual([]);
 
   close();
 });

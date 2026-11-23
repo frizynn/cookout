@@ -57,5 +57,5 @@ export function inProfile(): Region {
 }
 
 export function inTopBar(): Region {
-  return regionOf(() => screen.getByRole("banner"));
+  return regionOf(() => screen.getByRole("banner", { name: "Top bar" }));
 }
