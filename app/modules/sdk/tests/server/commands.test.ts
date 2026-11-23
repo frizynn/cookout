@@ -125,7 +125,7 @@ it.effect("a command with a bad name, url or schema is refused with 400", () =>
 
 function withDeployInGrill(cookout: TestCookoutService): Effect.Effect<void> {
   return Effect.gen(function* addDeploy() {
-    yield* answer(() => cookout.client.addCommand(deploy));
+    yield* answer(() => cookout.client.addCommand({ ...deploy, url: `${cookout.webhook.url}/deploy` }));
     yield* answer(() => cookout.client.createChannel({ name: "grill" }));
   });
 }

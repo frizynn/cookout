@@ -38,7 +38,9 @@ function deployInGrill(
   return Effect.gen(function* addDeployAndGrill() {
     const folder = yield* freshStateFolder;
     const required = { ...schema, required: ["branch"] };
-    yield* answer(() => cookout.client.addCommand({ name: "deploy", schema: required, url }));
+    yield* answer(() =>
+      cookout.client.addCommand({ name: "deploy", schema: required, url: `${cookout.webhook.url}/deploy` }),
+    );
     yield* answer(() => cookout.client.createChannel({ name: "grill" }));
     return { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
   });
