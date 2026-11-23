@@ -63,3 +63,7 @@ export function inProfile(): Region {
 export function inTopBar(): Region {
   return regionOf(() => screen.getByRole("banner", { name: "Top bar" }));
 }
+
+export function inDialog(): Region {
+  return regionOf(() => screen.getByRole("alertdialog"));
+}

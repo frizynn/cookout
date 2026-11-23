@@ -24,12 +24,12 @@ function subscriptionOf(props: RemovalButtonProps): IdentityActions["subscribe"]
 export function RemovalButton(props: RemovalButtonProps): ReactNode {
   const { actions } = props;
   const state = useSyncExternalStore(subscriptionOf(props), actions.snapshot);
-  const handleDelete = actions.askToDelete;
+  const handleDelete = actions.ask.delete;
   if (!props.active || !props.deletable || state.messages !== NO_MESSAGES) {
     return <ActivationButton actions={actions} active={props.active} />;
   }
   return (
-    <Button disabled={state.action.status === "sending" || state.confirmingDelete} onClick={handleDelete}>
+    <Button disabled={state.action.status === "sending"} onClick={handleDelete}>
       {TEXT.delete}
     </Button>
   );

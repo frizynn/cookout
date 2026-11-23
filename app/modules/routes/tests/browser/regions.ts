@@ -27,6 +27,10 @@ export function inTopBar(page: Page): Locator {
   return page.getByRole("banner", { name: "Top bar" });
 }
 
+export function inDialog(page: Page): Locator {
+  return page.getByRole("alertdialog");
+}
+
 export function alertSaying({ page, start }: Saying): Locator {
   return page.getByRole("alert").filter({ hasText: new RegExp(`^${start.replaceAll(SPECIAL, String.raw`\$&`)}`, "u") });
 }

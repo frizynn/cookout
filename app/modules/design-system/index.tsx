@@ -47,6 +47,14 @@
  * it, such as an `Alert`. `ActionGroup` is a named group of what can be done
  * to one thing, `ButtonRow` puts buttons side by side, and `TokenText` shows a
  * secret, such as a fresh token, to copy.
+ * `ConfirmDialog` asks before an action, in a modal shadcn AlertDialog on
+ * Radix's primitives (ADR: one confirmation dialog, on Radix): its title, a
+ * body naming exactly what happens, Cancel and a confirm button, in the
+ * destructive colour when the action can't be undone. It holds focus inside
+ * while open, Escape or Cancel calls `onCancel`, and focus goes back to what
+ * opened it when it closes. While `pending` both buttons are disabled and the
+ * confirm button says so; an `error` shows inside it. Its owner decides
+ * when it is `open`, so it never closes on its own.
  * `PaneHeader`'s title is mono, as a channel's name, unless `sans`. A
  * `Toolbar` under it holds a `FilterField` (a labelled box whose text its
  * owner holds) and `Chip`s, buttons pressed or not; a named `ListArea` scrolls
@@ -112,6 +120,7 @@
  */
 export { ActionGroup } from "./lib/action-group.tsx";
 export { Alert } from "./lib/alert.tsx";
+export { ConfirmDialog } from "./lib/confirm-dialog.tsx";
 export { ButtonRow } from "./lib/button-row.tsx";
 export { TokenText } from "./lib/token-text.tsx";
 export { CallChip } from "./lib/call-chip.tsx";
