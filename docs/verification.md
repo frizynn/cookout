@@ -225,6 +225,26 @@ node dist/main.js serve --port 3000 --host 127.0.0.1 --db /tmp/cookout-built.db 
 
 Run the second command in the background (or its own terminal). `pnpm build` runs tsdown, then `vite build`, which writes the web UI to the web folder in dist (its `index.html` and its assets). `cookout serve` serves that `index.html` at `/` and each asset at `/assets/<file>`, without a token, so open `http://127.0.0.1:3000/`, or run `curl -fsS http://127.0.0.1:3000/`. Running `node app/main.ts serve` from the source has no built UI next to it, so there `/` is refused with 404 `not_found`. Stop it with `pkill -INT -f "[d]ist/main.js serve"`.
 
+## See the channel list
+
+The web UI (`app/web.tsx`) draws `CookoutApp` from the `routes` module, which picks a view from the page's location hash: `#/` (or no hash) is the channel list, and `#/login`, `#/channels/<name>` and `#/channels/<name>/threads/<id>` have routes that say they aren't built yet; any other hash says "Nothing here". There is no login yet, so the page's SDK client has no token, and the channel list shows the server's refusal (`token_missing`). To see the channels, have the browser send a token itself. With the built server from "Open the web UI" up on port 3000, make some channels, then drive it with `agent-browser`:
+
+```sh
+grep '^{"adminToken' /tmp/cookout-built.log | jq -r '"COOKOUT_URL=http://127.0.0.1:3000 COOKOUT_TOKEN=\(.adminToken)"' > /tmp/cookout-built.env
+env $(cat /tmp/cookout-built.env) node app/main.ts channel create general --description "The general channel."
+env $(cat /tmp/cookout-built.env) node app/main.ts channel create deploys
+agent-browser open http://127.0.0.1:3000/ && agent-browser snapshot
+agent-browser close
+agent-browser open http://127.0.0.1:3000/ --headers "{\"Authorization\":\"Bearer $(grep '^{"adminToken' /tmp/cookout-built.log | jq -r .adminToken)\"}"
+agent-browser snapshot
+agent-browser find text "#general" click && agent-browser get url
+agent-browser close
+```
+
+The first snapshot shows the `Channels` card with an alert: `Couldn't load the channels (token_missing): …`. With the header, the second shows a list named `Channels` with one link per channel, sorted by name, each `#<name>` with its description under it: `#deploys` and `#general`. Clicking `#general` moves to `http://127.0.0.1:3000/#/channels/general`, whose heading is `#general`. Take a picture of any of them with `agent-browser screenshot <file>.png`.
+
+The web tests (`app/modules/routes/tests/`, the `web` Vitest project) render `CookoutApp` in jsdom against one real `cookout serve` that `scripts/web-test-server.ts` starts for the run; run them alone with `node_modules/.bin/vitest run --project web`.
+
 ## Other checks
 
 - `pnpm pack:smoke` proves the published package works (CI runs it as its own job): it builds with tsdown and Vite, packs `@ai-hero/cookout`, installs the tarball in a temp directory, and drives `cookout serve` (its health check and the web UI at `/`), `cookout whoami` and `@ai-hero/cookout/sdk` from there. Nothing is published.
