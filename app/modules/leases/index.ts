@@ -67,9 +67,15 @@ export interface LeaseConflictDetails {
 export const leaseLost = "lease_lost";
 
 /**
- * The codes the lease refuses with: `not_your_identity` (403, join as another
- * identity), and the 409s `lease_held` (join while another session holds it),
+ * The codes the lease refuses with: the 403s `not_your_identity` (join as another
+ * identity) and `identity_kind` (join as a human identity: only agents join), and the 409s `lease_held` (join while another session holds it),
  * `lease_required` (an action that needs the lease, sent without one) and
  * `leaseLost`.
  */
-export const leaseErrorCodes = ["not_your_identity", "lease_held", "lease_required", leaseLost] as const;
+export const leaseErrorCodes = [
+  "not_your_identity",
+  "identity_kind",
+  "lease_held",
+  "lease_required",
+  leaseLost,
+] as const;

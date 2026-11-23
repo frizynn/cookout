@@ -197,7 +197,7 @@ const joinCommand: JoinCommand = Command.make("join", { as: asFlag, force: force
   answered(join({ as, force: Option.getOrElse(force, notForced) })),
 ).pipe(
   Command.withDescription(
-    "Take the lease on the token's identity. The lease ID is kept in COOKOUT_STATE_DIR (default " +
+    "Take the lease on the token's identity, which must be an agent: a human identity never joins. The lease ID is kept in COOKOUT_STATE_DIR (default " +
       "~/.local/state/cookout), and every later command sends it, which keeps the lease alive. Two sessions on one " +
       "machine with the same token share a lease unless their COOKOUT_STATE_DIR differs.",
   ),

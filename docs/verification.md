@@ -85,18 +85,19 @@ On a fresh seed the list gives `["ada","human",null]`, `["admin","human",null]`,
 
 ## Take an identity's lease
 
-A session takes an identity with `join --as <name>`, the token's own identity. The CLI keeps the lease ID in a lease-state file under `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then `~/.local/state/cookout`), one per server and token, and sends it on every later command, which renews the lease. Two sessions with the same token need separate state folders. These commands play two sessions of the seeded `grace`, each with its own folder. `join` creates the folder and its leases folder with mode 700, and refuses with `lease_state_unsafe` a folder that isn't mode 700 or isn't yours, so don't make the folders yourself with plain `mkdir`:
+A session takes an identity with `join --as <name>`, the token's own identity. The CLI keeps the lease ID in a lease-state file under `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then `~/.local/state/cookout`), one per server and token, and sends it on every later command, which renews the lease. Two sessions with the same token need separate state folders. Only an agent identity joins: a human's `join` is refused with 403 `identity_kind`, and a human never needs a lease for anything. These commands play two sessions of the seeded agent `release-bot`, each with its own folder. `join` creates the folder and its leases folder with mode 700, and refuses with `lease_state_unsafe` a folder that isn't mode 700 or isn't yours, so don't make the folders yourself with plain `mkdir`:
 
 ```sh
-jq -r '.identities[] | select(.identity.name == "grace") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-grace.env
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=/tmp/cookout-session-1 node app/main.ts join --as grace
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts join --as grace
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts join --as grace --force
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=/tmp/cookout-session-1 node app/main.ts leave
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts leave
+jq -r '.identities[] | select(.identity.name == "release-bot") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-release.env
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-release.env) COOKOUT_STATE_DIR=/tmp/cookout-session-1 node app/main.ts join --as release-bot
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-release.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts join --as release-bot
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-release.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts join --as release-bot --force
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-release.env) COOKOUT_STATE_DIR=/tmp/cookout-session-1 node app/main.ts leave
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-release.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts leave
+env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-seed.json) COOKOUT_STATE_DIR=/tmp/cookout-session-3 node app/main.ts join --as grace
 ```
 
-The first `join` prints `{ "leaseId", "expiresAt" }`, 60 s on. The second is refused with 409 `lease_held` and `details.heldUntil`. `--force` takes the lease over. The first session's `leave` is then refused with 409 `lease_lost`, and its stored lease is deleted, so a second `leave` there says `lease_required`. The second session's `leave` prints `{ "released": true }`. A lease left idle for `COOKOUT_LEASE_SECONDS` (default 60) expires.
+The first `join` prints `{ "leaseId", "expiresAt" }`, 60 s on. The second is refused with 409 `lease_held` and `details.heldUntil`. `--force` takes the lease over. The first session's `leave` is then refused with 409 `lease_lost`, and its stored lease is deleted, so a second `leave` there says `lease_required`. The second session's `leave` prints `{ "released": true }`. Joining as the seeded human `grace` with her own token, with or without `--force`, is refused with `identity_kind`. A lease left idle for `COOKOUT_LEASE_SECONDS` (default 60) expires.
 
 ## Read the inbox
 
@@ -109,7 +110,7 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts 
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
 ```
 
-On a fresh seed the first `inbox` gives `[3,["followed-thread","mention"]]` and `[5,["followed-thread"]]`. `ack 3` prints `{ "readPosition": { "channel": "general", "thread": 1, "messageId": 3 } }`: a reply's ack moves the thread's read position, a top-level message's ack moves the channel's (`thread: null`). The second `inbox` gives only `[5,["followed-thread"]]`. An ack older than the read position changes nothing. Without a lease ID, ack is allowed only while no session holds the identity's lease; run it from a joined session's state folder otherwise (see the lease recipe above).
+On a fresh seed the first `inbox` gives `[3,["followed-thread","mention"]]` and `[5,["followed-thread"]]`. `ack 3` prints `{ "readPosition": { "channel": "general", "thread": 1, "messageId": 3 } }`: a reply's ack moves the thread's read position, a top-level message's ack moves the channel's (`thread: null`). The second `inbox` gives only `[5,["followed-thread"]]`. An ack older than the read position changes nothing. A human's ack never needs a lease. An agent's ack without a lease ID is allowed only while no session holds the identity's lease; run it from a joined session's state folder otherwise (see the lease recipe above).
 
 ## Follow and subscribe
 
