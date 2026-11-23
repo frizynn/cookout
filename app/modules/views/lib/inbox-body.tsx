@@ -1,5 +1,6 @@
 import { Alert, FeedNote, Skeleton } from "../../design-system/index.tsx";
-import type { InboxItem } from "../../sdk/index.ts";
+import type { InboxItem, OfflineAlertId } from "../../sdk/index.ts";
+import { InboxAlerts } from "./inbox-alerts.tsx";
 import { InboxSection } from "./inbox-section.tsx";
 import type { ReactNode } from "react";
 import type { UnreadState } from "../../unread/index.ts";
@@ -20,6 +21,7 @@ function itemsOf(unread: UnreadState): readonly InboxItem[] {
 interface InboxBodyProps {
   readonly unread: UnreadState;
   readonly me: string;
+  readonly onMarkAlertRead: (id: OfflineAlertId) => void;
 }
 
 export function InboxBody(props: InboxBodyProps): ReactNode {
@@ -38,7 +40,8 @@ export function InboxBody(props: InboxBodyProps): ReactNode {
   }
   return (
     <>
-      {unread.items.length === NONE && <FeedNote place="empty">{TEXT.empty}</FeedNote>}
+      {unread.items.length === NONE && unread.alerts.length === NONE && <FeedNote place="empty">{TEXT.empty}</FeedNote>}
+      <InboxAlerts alerts={unread.alerts} onMarkRead={props.onMarkAlertRead} />
       <InboxSection forYou me={me} rows={rows} title={TEXT.forYou} />
       <InboxSection forYou={false} me={me} rows={rows} title={TEXT.activity} />
     </>

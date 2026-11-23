@@ -39,9 +39,22 @@
  * of a view open there above the first of them, or above every message when
  * it was a channel's first. `menu` is what a message's actions menu uses: its
  * Mark unread calls `markUnread`, and its `refusal` is why the last
- * Mark unread was refused, until the next one.
+ * Mark unread was refused, until the next one. `alerts` holds the caller's offline alerts: the unread ones, from the
+ * inbox and each `offline-alert` event, join the loaded state beside the items, and its own snapshot, loaded from the
+ * inbox history's first page, lists them all, read or not, for the Earlier list. Marking one read
+ * (`POST /v1/inbox/alerts/:id/read`) takes it out of the unread ones, and `markAllRead` marks every alert up to the
+ * newest it holds read with the items.
  */
-import type { ChannelName, CookoutClient, CookoutEvent, InboxItem, MessageId, Refusal } from "../sdk/index.ts";
+import type { Alerts, LiveAlerts } from "./lib/alerts.ts";
+import type {
+  ChannelName,
+  CookoutClient,
+  CookoutEvent,
+  InboxItem,
+  MessageId,
+  OfflineAlert,
+  Refusal,
+} from "../sdk/index.ts";
 import type { MarkAll, MarkAllState } from "./lib/mark-all.ts";
 import { createInboxItems, readInto } from "./lib/inbox-items.ts";
 import type { Earlier } from "./lib/earlier.ts";
@@ -49,6 +62,8 @@ import type { InboxItems } from "./lib/inbox-items.ts";
 import type { Live } from "../live/index.ts";
 import type { MessageMenu } from "./lib/message-menu.ts";
 import type { NewLine } from "./lib/new-lines.ts";
+import type { Notifier } from "./lib/notifier.ts";
+import { createAlerts } from "./lib/alerts.ts";
 import { createEarlier } from "./lib/earlier.ts";
 import { createMarkAll } from "./lib/mark-all.ts";
 import { createMarkUnread } from "./lib/mark-unread.ts";
@@ -57,21 +72,25 @@ import { createNotifier } from "./lib/notifier.ts";
 import { refusalOf } from "../sdk/index.ts";
 import { withNewLines } from "./lib/new-lines.ts";
 
-function loadedOf(items: InboxItems, markAll: MarkAllState): UnreadState {
-  return { items: items.list(), markAll, status: "loaded" };
+interface Held {
+  readonly items: InboxItems;
+  readonly alerts: LiveAlerts;
 }
 
-interface Loading {
+function loadedOf({ alerts, items }: Held, markAll: MarkAllState): UnreadState {
+  return { alerts: alerts.unread(), items: items.list(), markAll, status: "loaded" };
+}
+
+interface Loading extends Held {
   readonly client: UnreadOptions["client"];
-  readonly items: InboxItems;
   readonly markAll: MarkAll;
   readonly onRead: (item: InboxItem) => void;
 }
 
-async function loadedOrFailed({ client, items, markAll, onRead }: Loading): Promise<UnreadState> {
+async function loadedOrFailed({ alerts, client, items, markAll, onRead }: Loading): Promise<UnreadState> {
   try {
-    await readInto({ client, items, onRead });
-    return loadedOf(items, markAll.state());
+    await readInto({ client, items, onAlerts: alerts.addAll, onRead });
+    return loadedOf({ alerts, items }, markAll.state());
   } catch (error: unknown) {
     return { ...refusalOf(error), status: "failed" };
   }
@@ -83,12 +102,38 @@ function follow(live: Live | null, onEvent: (event: CookoutEvent) => void): void
   }
 }
 
+interface Parts extends Held {
+  readonly earlier: ReturnType<typeof createEarlier>;
+}
+
+function withAlerts(shown: Notifier<UnreadState>, alerts: readonly OfflineAlert[]): void {
+  const current = shown.current();
+  if (current.status === "loaded") {
+    shown.publish({ ...current, alerts });
+  }
+}
+
+function partsOf(options: UnreadOptions, shown: Notifier<UnreadState>): Parts {
+  const items = createInboxItems();
+  return {
+    alerts: createAlerts({
+      client: options.client,
+      onChange: (unread) => {
+        withAlerts(shown, unread);
+      },
+    }),
+    earlier: createEarlier({ ...options, unread: items }),
+    items,
+  };
+}
+
 /** The unread inbox items, oldest first, once they have loaded. */
 export type UnreadState =
   | { readonly status: "loading" }
   | {
       readonly status: "loaded";
       readonly items: readonly InboxItem[];
+      readonly alerts: readonly OfflineAlert[];
       readonly markAll: MarkAllState;
     }
   | (Refusal & { readonly status: "failed" });
@@ -115,6 +160,8 @@ export interface Unread {
   readonly markUnread: (messageId: MessageId) => void;
   /** What a message's actions menu needs: Mark unread, and why the last one was refused. An external store of its own. */
   readonly menu: MessageMenu;
+  /** Every offline alert of the caller's, read or not, newest first, and marking one read: an external store of its own. */
+  readonly alerts: Alerts;
 }
 
 /**
@@ -122,7 +169,10 @@ export interface Unread {
  * a page (50 unless given), and the live stream.
  */
 export interface UnreadOptions {
-  readonly client: Pick<CookoutClient, "ackAll" | "inbox" | "inboxHistory" | "markUnread" | "readPositions">;
+  readonly client: Pick<
+    CookoutClient,
+    "ackAll" | "inbox" | "inboxHistory" | "markOfflineAlertRead" | "markUnread" | "readPositions"
+  >;
   readonly pageSize?: number;
   readonly live?: Live;
 }
@@ -133,39 +183,42 @@ export interface UnreadOptions {
  * @returns The store.
  */
 export function createUnread(options: UnreadOptions): Unread {
-  const items = createInboxItems();
-  const earlier = createEarlier({ ...options, unread: items });
   const shown = createNotifier<UnreadState>({ status: "loading" });
+  const { alerts, earlier, items } = partsOf(options, shown);
   let loading: Promise<void> | null = null;
 
   const markAll = createMarkAll({
     ...options,
+    alerts,
     items,
     onChange: (state) => {
-      shown.publish(loadedOf(items, state));
+      shown.publish(loadedOf({ alerts, items }, state));
     },
     onRead: earlier.add,
   });
 
   function republish(): void {
     if (shown.current().status === "loaded") {
-      shown.publish(loadedOf(items, markAll.state()));
+      shown.publish(loadedOf({ alerts, items }, markAll.state()));
     }
   }
   const markUnread = createMarkUnread({ client: options.client, dropRead: earlier.drop, items, onChange: republish });
 
   async function load(): Promise<void> {
     follow(options.live ?? null, (event) => {
-      if (markUnread.receive(event) || items.receive(event, earlier.add)) {
+      if (markUnread.receive(event) || items.receive(event, earlier.add) || alerts.receive(event)) {
         republish();
       }
     });
-    shown.publish(await loadedOrFailed({ client: options.client, items, markAll, onRead: earlier.add }));
+    shown.publish(await loadedOrFailed({ alerts, client: options.client, items, markAll, onRead: earlier.add }));
   }
 
   const menu = createMessageMenu(markUnread.markUnread);
 
-  return withNewLines<Pick<Unread, "earlier" | "markAllRead" | "markUnread" | "menu" | "snapshot" | "subscribe">>({
+  return withNewLines<
+    Pick<Unread, "alerts" | "earlier" | "markAllRead" | "markUnread" | "menu" | "snapshot" | "subscribe">
+  >({
+    alerts,
     earlier,
     markAllRead: markAll.markAllRead,
     markUnread: menu.markUnread,
@@ -182,6 +235,7 @@ export function createUnread(options: UnreadOptions): Unread {
 
 export type { Earlier, EarlierState } from "./lib/earlier.ts";
 export type { MarkAllState } from "./lib/mark-all.ts";
+export type { Alerts, AlertsState } from "./lib/alerts.ts";
 export type { MessageMenu } from "./lib/message-menu.ts";
 export type { InboxRow } from "./lib/rows.ts";
 export { rowsOf } from "./lib/rows.ts";

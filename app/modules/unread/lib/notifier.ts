@@ -24,4 +24,4 @@ function createNotifier<State>(initial: State): Notifier<State> {
   };
 }
 
-export { createNotifier };
+export { type Notifier, createNotifier };

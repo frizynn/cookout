@@ -17,7 +17,10 @@ export function MarkAllRead(props: MarkAllReadProps): ReactNode {
   const { state } = props;
   const handleClick = props.unread.markAllRead;
   return (
-    <Button disabled={state.items.length === NONE || state.markAll.status === "marking"} onClick={handleClick}>
+    <Button
+      disabled={(state.items.length === NONE && state.alerts.length === NONE) || state.markAll.status === "marking"}
+      onClick={handleClick}
+    >
       {TEXT.markAll}
     </Button>
   );
