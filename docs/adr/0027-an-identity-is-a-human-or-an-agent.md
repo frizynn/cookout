@@ -10,3 +10,5 @@ Matt decided (questions board #422) that every identity is a **human** or an **a
 - **Rows already stored get a kind from the migration.** Admin rows with no owner become humans and every other row becomes an agent. On v1 only the first-boot admin has the admin flag (no route sets it), so this makes the old admin match the rule above. Every other v1 identity was made for an agent, and any row with an owner must be an agent.
 
 If Matt chooses otherwise, the owner rule lives in the request Schema and the SQLite `CHECK`, and the two defaults in `firstAdmin` and ticket 9a's handler identity.
+
+Only a human can be an admin, and any admin can make any human one: [ADR 0037](0037-any-admin-can-make-any-human-an-admin.md).

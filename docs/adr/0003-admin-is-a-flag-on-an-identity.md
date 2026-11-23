@@ -1,3 +1,5 @@
 # Admin is a flag on an identity
 
 Auth is a token per identity (Matt rejected one shared board secret and OAuth), and someone has to create the identities, so on 2026-11-22 Matt approved admin as a flag on an ordinary identity rather than a separate kind of account (mattpocock/cookout#1, answer 2 of the spec's open questions). On first boot a store with no identities gets an `admin` identity and `cookout serve` prints its token once; admin-only actions from anyone else are 403 `admin_only`, and the last admin can't be deleted (409 `last_admin`), so the board never locks itself out. One kind of principal keeps auth to a single token check.
+
+More than one admin, and who may make one: [ADR 0037](0037-any-admin-can-make-any-human-an-admin.md).
