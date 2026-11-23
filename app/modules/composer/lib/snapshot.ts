@@ -1,4 +1,4 @@
-import type { Command, Identity } from "../../sdk/index.ts";
+import type { Command, Identity, IdentityName } from "../../sdk/index.ts";
 
 const MOST_SUGGESTIONS = 8;
 const NOTHING = 0;
@@ -9,16 +9,23 @@ const STEPS = { down: ONE, up: -ONE } as const;
 const typedMention = /(?<![\w.@-])@[a-z0-9-]*$/u;
 const typedCommand = /^\/[a-z0-9-]*$/u;
 
-function suggestionsFor(identities: readonly Identity[], text: string, caret: number): readonly Identity[] {
+function membersFirst(matches: readonly Identity[], members: readonly IdentityName[]): readonly Identity[] {
+  const named = new Map(matches.map((identity) => [identity.name, identity] as const));
+  const first = members.flatMap((name) => named.get(name) ?? []);
+  return [...first, ...matches.filter((identity) => !members.includes(identity.name))];
+}
+
+function suggestionsFor(sources: Sources, text: string, caret: number): readonly Identity[] {
   const found = typedMention.exec(text.slice(NOTHING, caret));
   if (found === null) {
     return [];
   }
   const [mention] = found;
   const prefix = mention.slice(AT_SIGN);
-  return identities
-    .filter((identity) => identity.deactivated !== true && identity.name.startsWith(prefix))
-    .slice(NOTHING, MOST_SUGGESTIONS);
+  const matches = sources
+    .identities()
+    .filter((identity) => identity.deactivated !== true && identity.name.startsWith(prefix));
+  return membersFirst(matches, sources.members()).slice(NOTHING, MOST_SUGGESTIONS);
 }
 
 function commandsFor(commands: readonly Command[], text: string): readonly Command[] {
@@ -42,6 +49,7 @@ interface DraftSnapshot {
 interface Sources {
   readonly identities: () => readonly Identity[];
   readonly commands: () => readonly Command[];
+  readonly members: () => readonly IdentityName[];
 }
 
 const EMPTY = {
@@ -59,7 +67,7 @@ type Typed = Pick<DraftSnapshot, "caret" | "text">;
 function written(sources: Sources, previous: DraftSnapshot, typed: Typed): DraftSnapshot {
   const { caret, text } = typed;
   const commands = commandsFor(sources.commands(), text);
-  const suggestions = suggestionsFor(sources.identities(), text, caret);
+  const suggestions = suggestionsFor(sources, text, caret);
   return { caret, command: previous.command, commands, highlighted: NOTHING, returned: false, suggestions, text };
 }
 

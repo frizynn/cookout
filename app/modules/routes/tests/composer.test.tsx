@@ -1,7 +1,7 @@
+import type { CookoutClient, Message } from "../../sdk/index.ts";
 import { adminClient, clientWith, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, getDefaultNormalizer, screen, within } from "@testing-library/react";
-import type { Message } from "../../sdk/index.ts";
 import { inPane } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
@@ -44,6 +44,49 @@ it("typing @ and a prefix suggests the identities whose names start with it, hum
   await typeInReply("Ping @sugg");
 
   await expect(suggested()).resolves.toStrictEqual(["@suggest-ada", "@suggest-agent"]);
+
+  close();
+});
+
+const MEMBERS = ["@member-dot", "@member-cy", "@member-bea"];
+const FIRST = 0;
+
+async function repliesBy(parent: Message, earlier: CookoutClient, latest: CookoutClient): Promise<void> {
+  const reply = { channel: parent.channel, replyTo: parent.id, text: "Reply" };
+  await earlier.createMessage(reply);
+  await latest.createMessage(reply);
+  await earlier.createMessage(reply);
+  await latest.createMessage(reply);
+  await adminClient().createMessage(reply);
+}
+
+async function threadWithMembers(): Promise<Message> {
+  await newIdentity({ kind: "human", name: "member-ada" });
+  const starter = await newIdentity({ kind: "human", name: "member-bea" });
+  const earlier = await newIdentity({ kind: "agent", name: "member-cy" });
+  const latest = await newIdentity({ kind: "human", name: "member-dot" });
+  await newIdentity({ kind: "human", name: "member-eve" });
+  await adminClient().createChannel({ name: "web-composer-members" });
+  const { message } = await starter.client.createMessage({ channel: "web-composer-members", text: "Hi" });
+  await repliesBy(message, earlier.client, latest.client);
+  return message;
+}
+
+it("in a thread, its members are suggested first, most recent poster first, then the other matches", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const close = openAt({ client: adminClient(), hash: hashOf(await threadWithMembers()) });
+  await typeInReply("Ping @member");
+  const matching = await suggested();
+  await typeInReply("Ping @");
+  const everyone = await suggested();
+
+  expect([matching, everyone.slice(FIRST, MEMBERS.length)]).toStrictEqual([
+    [...MEMBERS, "@member-ada", "@member-eve"],
+    MEMBERS,
+  ]);
 
   close();
 });

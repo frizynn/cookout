@@ -8,7 +8,8 @@
  * for one key, so a draft is still there on coming back to its box. `edit` takes the box's text
  * and caret: when the caret sits just after `@` and the start of a name, as
  * `mentionPattern` reads a mention, the suggestions are the identities whose
- * names start with it. `choose` swaps that `@` and prefix for the whole
+ * names start with it, a thread's members first (those `draft` is given,
+ * most recent poster first), then the rest by name. `choose` swaps that `@` and prefix for the whole
  * mention and a space (or puts it at the caret if no mention is being typed),
  * and puts the caret after it; `clear` empties the box. While there are
  * suggestions, one is `highlighted` (the first, after each edit): `highlight`
@@ -58,6 +59,11 @@ import { createIdentityList } from "./lib/identity-list.ts";
 import { listenersOf } from "./lib/listeners.ts";
 
 const NO_COMMANDS: readonly Command[] = [];
+const NO_MEMBERS: readonly IdentityName[] = [];
+
+function noMembers(): readonly IdentityName[] {
+  return NO_MEMBERS;
+}
 
 function createDraft(list: IdentityList, sources: Sources, load: () => void): Draft {
   const listeners = listenersOf(load);
@@ -183,8 +189,11 @@ export interface Identities extends AdminChanges {
 
 /** The composer store: a draft for each message box, and for each display name being edited. */
 export interface Composer {
-  /** The draft for the box with this key (`channel/id` for a thread's reply box): the same store each time for one key. It suggests no commands. */
-  readonly draft: (key: string) => Draft;
+  /**
+   * The draft for the box with this key (`channel/id` for a thread's reply box): the same store each time for one key. It suggests no commands.
+   * `members`, read at each edit, names the identities to suggest ahead of the other matches, in its order (a thread's members, most recent poster first); the first call for a key sets it.
+   */
+  readonly draft: (key: string, members?: () => readonly IdentityName[]) => Draft;
   /** The draft for a channel's message box, which also suggests commands: the same store each time for one channel. */
   readonly channelDraft: (channel: string) => Draft;
   /** The display name being edited for this identity: the same store each time for one name. */
@@ -220,10 +229,14 @@ export function createComposer(options: ComposerOptions): Composer {
   list.onChange(readers.notify);
   return {
     channelDraft: (channel) =>
-      storeIn(drafts, channel, () => createDraft(list, { commands: registered, identities: list.identities }, load)),
+      storeIn(drafts, channel, () =>
+        createDraft(list, { commands: registered, identities: list.identities, members: noMembers }, load),
+      ),
     displayName: (name) => storeIn(displayNames, name, () => createDisplayName({ client, list, name })),
-    draft: (key) =>
-      storeIn(drafts, key, () => createDraft(list, { commands: () => NO_COMMANDS, identities: list.identities }, load)),
+    draft: (key, members = noMembers) =>
+      storeIn(drafts, key, () =>
+        createDraft(list, { commands: () => NO_COMMANDS, identities: list.identities, members }, load),
+      ),
     identities: {
       ...createAdminChanges({ client, identities: list.identities, publish: list.publish }),
       ...ownerPowersOf(client, list),
