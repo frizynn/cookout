@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, Option, Predicate } from "effect";
+import { Array as Arr, Effect, Option, Predicate, String as Str } from "effect";
 import { EnvHttpProxyAgent, getGlobalDispatcher, setGlobalDispatcher } from "undici";
 import { CookoutError } from "../../../../sdk/index.ts";
 import type { CookoutErrorCode } from "../../../../sdk/index.ts";
@@ -25,15 +25,21 @@ function unreachableMessage({ url, why }: Unreachable): string {
   return `cannot reach ${url}: ${why} (check COOKOUT_URL, or HTTPS_PROXY if you are behind a proxy)`;
 }
 
+function isError(value: unknown): value is Error {
+  return value instanceof Error;
+}
+
+function messagesIn(cause: { readonly message: string }): readonly string[] {
+  const nested = Arr.filter(Arr.ensure<unknown>(Reflect.get(cause, "errors")), isError);
+  return [cause.message, ...Arr.flatMap(nested, messagesIn)];
+}
+
 function whyOf(cause: { readonly message: string }): string {
-  if (cause instanceof AggregateError) {
-    return Arr.join(Arr.map(cause.errors, whyOf), "; ");
-  }
-  return cause.message;
+  return Arr.join(Arr.filter(messagesIn(cause), Str.isNonEmpty), "; ");
 }
 
 function networkFailureCause(error: unknown): Option.Option<string> {
-  if (!(error instanceof TypeError) || error.message !== NETWORK_FAILURE || !(error.cause instanceof Error)) {
+  if (!(error instanceof TypeError) || error.message !== NETWORK_FAILURE || !isError(error.cause)) {
     return Option.none();
   }
   return Option.some(whyOf(error.cause));
