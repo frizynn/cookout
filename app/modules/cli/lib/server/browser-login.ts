@@ -1,4 +1,4 @@
-import { Console, Duration, Effect, Schedule } from "effect";
+import { Console, Duration, Effect, Function } from "effect";
 import type { LoginCollectedResponse, LoginRequestStartedResponse, LogoutResponse } from "../../../logins/index.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
@@ -28,22 +28,22 @@ function isApproved(collected: LoginCollectedResponse): collected is ApprovedLog
   return collected.status === "approved";
 }
 
-function expiredWhenGone(failure: CallFailure): CallFailure {
-  if (failure.code === "login_request_not_found") {
-    return expired;
-  }
-  return failure;
+const failExpired = Function.constant(Effect.fail(expired));
+
+function isGone(failure: CallFailure): boolean {
+  return failure.code === "login_request_not_found";
 }
 
 function approvalOf(
   client: CookoutClient,
   requestId: LoginRequestStartedResponse["requestId"],
 ): Effect.Effect<ApprovedLogin, CallFailure> {
-  const collect = Effect.tryPromise({ catch: toFailure, try: () => client.collectLogin(requestId) });
-  return Effect.repeat(collect, { schedule: Schedule.spaced(pollEvery), until: isApproved }).pipe(
-    Effect.filterOrElse(isApproved, () => Effect.die(new Error("Polling stopped before the login was approved."))),
-    Effect.mapError(expiredWhenGone),
+  const collect = Effect.tryPromise({ catch: toFailure, try: () => client.collectLogin(requestId) }).pipe(
+    Effect.catchIf(isGone, failExpired),
   );
+  const again = Effect.suspend(() => approvalOf(client, requestId));
+  const pollAgain = Effect.andThen(Effect.sleep(pollEvery), again);
+  return Effect.filterOrElse(collect, isApproved, Function.constant(pollAgain));
 }
 
 function approvalPrompt(url: string, { approvalPath, expiresAt, userCode }: LoginRequestStartedResponse): string {
@@ -68,7 +68,7 @@ function revokedOnServer({ token, url }: { readonly token: string; readonly url:
     try: (): Promise<LogoutResponse> => createCookoutClient({ env: NOTHING, token, url }).revokeLogin(),
   }).pipe(
     Effect.map(({ revoked }) => revoked),
-    Effect.orElseSucceed(() => false),
+    Effect.orElseSucceed(Function.constFalse),
   );
 }
 

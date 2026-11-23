@@ -48,7 +48,7 @@ function createLoginApproval(client: LoginApprovalClient, userCode: string): Log
     }
   }
 
-  async function approveAfter(previous: Promise<void>, shown: LoginRequest): Promise<void> {
+  async function approveAfter(previous: Promise<void> | null, shown: LoginRequest): Promise<void> {
     await previous;
     publish({ loginRequest: shown, status: "approving" });
     await settle(client.approveLogin(userCode));
@@ -57,7 +57,7 @@ function createLoginApproval(client: LoginApprovalClient, userCode: string): Log
   return {
     approve: () => {
       if (current.status === "shown") {
-        loaded = approveAfter(loaded ?? Promise.resolve(), current.loginRequest);
+        loaded = approveAfter(loaded, current.loginRequest);
       }
     },
     snapshot: () => current,

@@ -8,7 +8,7 @@ import {
   LogoutResponseSchema,
   StartLoginRequestSchema,
 } from "./login-wire.ts";
-import { Effect, Option, Predicate } from "effect";
+import { Effect, Function, Option, Predicate } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import type { LoginCollection, LoginRequest, NewLoginRequest, StorageUnavailable } from "../../../storage/server.ts";
 import {
@@ -43,7 +43,7 @@ function withinAddressLimit<Value, Failure, Needs>(
   return Effect.gen(function* admitAddressThenRun() {
     const limit = yield* AddressLimit;
     const request = yield* HttpServerRequest.HttpServerRequest;
-    yield* limit.admit(Option.getOrElse(request.remoteAddress, () => "unknown"));
+    yield* limit.admit(Option.getOrElse(request.remoteAddress, Function.constant("unknown")));
     return yield* effect;
   });
 }
@@ -58,11 +58,7 @@ function addWithCode(request: UnnamedRequest): Effect.Effect<string, StorageUnav
     const secrets = yield* Secrets;
     const userCode = yield* secrets.newUserCode;
     const added = storage.addLoginRequest({ ...request, userCode }, request.createdAt);
-    yield* Effect.filterOrElse(
-      added,
-      (result) => result === "added",
-      () => Effect.die(codeTaken),
-    );
+    yield* Effect.filterOrElse(added, (result) => result === "added", Function.constant(Effect.die(codeTaken)));
     return userCode;
   });
 }
