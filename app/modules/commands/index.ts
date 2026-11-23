@@ -48,16 +48,13 @@ export function isCommandSecret(value: string): value is CommandSecret {
 /** The ID of one command call, sent with its webhook delivery and repeated on each retry, so a handler can drop repeats. */
 export type CallId = Brand<"CallId">;
 
-/** The rule every call ID the server issues follows. */
-export const callIdPattern = /^call_[A-Za-z0-9_-]+$/u;
-
 /**
- * Whether `value` looks like a call ID the server issued; if so, it is a `CallId`.
+ * Whether `value` looks like a call ID the server issued (`call_` and base64url characters); if so, it is a `CallId`.
  * @param value The ID to check.
  * @returns Whether `value` is a `CallId`.
  */
 export function isCallId(value: string): value is CallId {
-  return callIdPattern.test(value);
+  return /^call_[A-Za-z0-9_-]+$/u.test(value);
 }
 
 /** The description rule, in UTF-16 code units as `String.length` counts them. */

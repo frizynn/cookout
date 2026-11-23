@@ -76,4 +76,4 @@ const deliveriesLayer: Layer.Layer<Deliveries, Config.ConfigError, Secrets> = La
   }),
 ).pipe(Layer.provide(FetchHttpClient.layer));
 
-export { Deliveries, type DeliveriesService, deliveriesLayer, type WebhookBody };
+export { Deliveries, deliveriesLayer };
