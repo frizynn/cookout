@@ -1,4 +1,10 @@
-import { ChannelEventSchema, MessageEventSchema, ReactionEventSchema, ReadReceiptEventSchema } from "./wire.ts";
+import {
+  ChannelEventSchema,
+  MessageEventSchema,
+  ReactionEventSchema,
+  ReadReceiptEventSchema,
+  ThreadEventSchema,
+} from "./wire.ts";
 import type { Connected, StreamRequest } from "./source.ts";
 import { Effect, Record, Stream } from "effect";
 import { Messages, Reactions, ReadReceipts } from "../../../messages/server.ts";
@@ -12,6 +18,7 @@ const messageEvent = sseEvent(MessageEventSchema);
 const channelEvent = sseEvent(ChannelEventSchema);
 const readReceiptEvent = sseEvent(ReadReceiptEventSchema);
 const reactionEvent = sseEvent(ReactionEventSchema);
+const threadEvent = sseEvent(ThreadEventSchema);
 
 type AllChannelsNeeds = Messages | Channels | ReadReceipts | Reactions;
 
@@ -30,6 +37,17 @@ function allChannels(request: StreamRequest): Connected<Messages> {
     return Stream.fromSubscription(posted).pipe(
       Stream.mapEffect((message) => messageEvent({ message, type: "message" })),
     );
+  });
+}
+
+function threads(request: StreamRequest): Connected<Messages> {
+  return Effect.gen(function* subscribeToThreads() {
+    if (!asksForAllChannels(request)) {
+      return Stream.empty;
+    }
+    const messages = yield* Messages;
+    const changed = yield* messages.threadChanged;
+    return Stream.fromSubscription(changed).pipe(Stream.mapEffect((parent) => threadEvent({ parent, type: "thread" })));
   });
 }
 
@@ -72,4 +90,4 @@ function reactions(request: StreamRequest): Connected<Reactions> {
   });
 }
 
-export { type AllChannelsNeeds, allChannels, asksForAllChannels, channels, reactions, readReceipts };
+export { type AllChannelsNeeds, allChannels, asksForAllChannels, channels, reactions, readReceipts, threads };

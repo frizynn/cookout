@@ -1,18 +1,23 @@
 import type { AppendMessageResult, ChannelPageRequest, MessagesSection, NewMessage, Placement } from "./messages.ts";
-import { Array as Arr, Effect, Option, Order, Predicate, Schema, pipe } from "effect";
-import type { Author, ListMessagesResponse, Message, MessageId, ThreadResponse } from "../../../messages/index.ts";
-import type { Harness, IdentityName, Owner } from "../../../identities/index.ts";
-import { isHarness, isIdentityName, isOwner } from "../../../identities/index.ts";
-import { isMessageId, shownRepliers } from "../../../messages/index.ts";
+import { Array as Arr, Effect, Option, Predicate, Schema, pipe } from "effect";
+import type {
+  ListMessagesResponse,
+  Message,
+  MessageId,
+  ReadReceipt,
+  ThreadResponse,
+  TopLevelMessage,
+} from "../../../messages/index.ts";
+import { MESSAGE_COLUMNS, MentionsText, MessageIdColumn, dataText, toMessage } from "./message-rows-sqlite.ts";
 import { isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
 import { recordAppended, sqliteInbox } from "./inbox-sqlite.ts";
+import { reopenedBy, sqliteClosedThreads } from "./closed-threads-sqlite.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { CommandCallsSection } from "./command-calls.ts";
-import { IsoTimeSchema } from "../../../time/server.ts";
 import type { MessageReader } from "./inbox-sqlite.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
-import { isChannelName } from "../../../channels/index.ts";
+import { isMessageId } from "../../../messages/index.ts";
 import { sqliteCommandCalls } from "./command-calls.ts";
 import { unreadable } from "./errors.ts";
 
@@ -24,127 +29,13 @@ const ONE_MORE = 1;
 const ALL_IDS = Number.MAX_SAFE_INTEGER;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 
-const MessageIdColumn = Schema.Int.pipe(Schema.refine(isMessageId));
-const IdentityNameColumn = Schema.String.pipe(Schema.refine(isIdentityName));
-const MentionsColumn = Schema.fromJsonString(Schema.Array(IdentityNameColumn));
-const OwnerColumn = Schema.String.pipe(Schema.refine(isOwner));
-const HarnessColumn = Schema.String.pipe(Schema.refine(isHarness));
-const MentionsText = Schema.fromJsonString(Schema.Array(Schema.String));
-const JsonText = Schema.fromJsonString(Schema.Json);
-const ReplierCell = Schema.Struct({ last: Schema.Int, name: IdentityNameColumn, owner: Schema.NullOr(OwnerColumn) });
-const RepliersColumn = Schema.fromJsonString(Schema.Array(ReplierCell));
-const latestFirst = Order.flip(Order.mapInput(Order.Number, (cell: typeof ReplierCell.Type) => cell.last));
-
-const MessageRow = Schema.Struct({
-  author_name: IdentityNameColumn,
-  author_owner: Schema.NullOr(OwnerColumn),
-  channel: Schema.String.pipe(Schema.refine(isChannelName)),
-  created_at: IsoTimeSchema,
-  data: Schema.NullOr(Schema.String),
-  harness: Schema.NullOr(HarnessColumn),
-  id: MessageIdColumn,
-  latest_reply_at: Schema.NullOr(IsoTimeSchema),
-  latest_reply_id: Schema.NullOr(MessageIdColumn),
-  mentions: MentionsColumn,
-  repliers: RepliersColumn,
-  reply_count: Schema.Int,
-  reply_to: Schema.NullOr(MessageIdColumn),
-  text: Schema.String,
-});
-
-type MessageRowType = typeof MessageRow.Type;
-
-interface DataField {
-  readonly data?: Schema.Json;
-}
-
-const NO_DATA: DataField = {};
-const NO_HARNESS = {};
-
 const SequenceRow = Schema.Struct({ last_id: MessageIdColumn });
 
 const isFoundRow = Schema.is(Schema.Struct({ found: Schema.Literal(FOUND) }));
 
-const MESSAGE_COLUMNS = `id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, harness,
-  (SELECT count(*) FROM messages AS replies WHERE replies.reply_to = messages.id) AS reply_count,
-  (SELECT max(replies.id) FROM messages AS replies WHERE replies.reply_to = messages.id) AS latest_reply_id,
-  (SELECT replies.created_at FROM messages AS replies WHERE replies.reply_to = messages.id
-    ORDER BY replies.id DESC LIMIT 1) AS latest_reply_at,
-  (SELECT json_group_array(json_object('name', name, 'owner', owner, 'last', last)) FROM (
-    SELECT replies.author_name AS name, replies.author_owner AS owner, max(replies.id) AS last
-    FROM messages AS replies WHERE replies.reply_to = messages.id
-    GROUP BY replies.author_name ORDER BY last DESC LIMIT ${String(shownRepliers)}
-  )) AS repliers`;
-
 const INSERT_MESSAGE = `INSERT INTO messages
   (id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, harness)
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
-interface StoredAuthor {
-  readonly name: IdentityName;
-  readonly owner: Owner | null;
-}
-
-function authorOf({ name, owner }: StoredAuthor): Author {
-  if (Predicate.isNull(owner)) {
-    return { name };
-  }
-  return { name, owner };
-}
-
-function repliersOf(row: MessageRowType): readonly Author[] {
-  return Arr.map(Arr.sort(row.repliers, latestFirst), authorOf);
-}
-
-function harnessOf(row: MessageRowType): { readonly harness?: Harness } {
-  if (Predicate.isNull(row.harness)) {
-    return NO_HARNESS;
-  }
-  return { harness: row.harness };
-}
-
-function messageOf(row: MessageRowType, data: DataField): Message {
-  const fields = {
-    author: authorOf({ name: row.author_name, owner: row.author_owner }),
-    channel: row.channel,
-    createdAt: row.created_at,
-    id: row.id,
-  };
-  const content = { ...fields, ...harnessOf(row), ...data, mentions: row.mentions, text: row.text };
-  if (Predicate.isNull(row.reply_to)) {
-    const replies = {
-      latestReplyAt: row.latest_reply_at,
-      latestReplyId: row.latest_reply_id,
-      replyCount: row.reply_count,
-    };
-    return { ...content, ...replies, kind: "top-level", repliers: repliersOf(row) };
-  }
-  return { ...content, kind: "reply", replyTo: row.reply_to };
-}
-
-function dataOf(text: string | null): Fails<DataField> {
-  if (Predicate.isNull(text)) {
-    return Effect.succeed(NO_DATA);
-  }
-  return Schema.decodeEffect(JsonText)(text).pipe(
-    Effect.mapBoth({ onFailure: unreadable, onSuccess: (data): DataField => ({ data }) }),
-  );
-}
-
-function toMessage(row: unknown): Fails<Message> {
-  return Effect.gen(function* readMessage() {
-    const decoded = yield* Schema.decodeUnknownEffect(MessageRow)(row).pipe(Effect.mapError(unreadable));
-    const data = yield* dataOf(decoded.data);
-    return messageOf(decoded, data);
-  });
-}
-
-function dataText(message: NewMessage): Fails<string | null> {
-  if (Predicate.isUndefined(message.data)) {
-    return Effect.succeed(null);
-  }
-  return Schema.encodeEffect(JsonText)(message.data).pipe(Effect.mapError(unreadable));
-}
 
 function replyToOf(message: Message): MessageId | null {
   if (message.kind === "reply") {
@@ -202,14 +93,26 @@ function insert(db: SqliteDatabase, message: Message, data: string | null): Fail
   });
 }
 
-function knownNames(db: SqliteDatabase, names: readonly IdentityName[]): Fails<ReadonlySet<IdentityName>> {
+function knownNames(db: SqliteDatabase, names: Message["mentions"]): Fails<ReadonlySet<Message["mentions"][number]>> {
   return pipe(
     names,
     Effect.filter((name) =>
       db.get("SELECT 1 AS found FROM identities WHERE name = ? AND deactivated = 0", name).pipe(Effect.map(isFoundRow)),
     ),
-    Effect.map((found: readonly IdentityName[]) => new Set(found)),
+    Effect.map((found: Message["mentions"]) => new Set(found)),
   );
+}
+
+function sqliteMessageReader(db: SqliteDatabase): MessageReader {
+  return { columns: MESSAGE_COLUMNS, findMessage: (id) => find(db, id), toMessage };
+}
+
+function afterInsert(
+  db: SqliteDatabase,
+  message: Message,
+): Fails<readonly [readonly ReadReceipt[], TopLevelMessage | undefined]> {
+  const reader = sqliteMessageReader(db);
+  return Effect.all([recordAppended({ db, message }), reopenedBy({ db, message, reader })], ONE_AT_A_TIME);
 }
 
 function appendInChannel(db: SqliteDatabase, message: NewMessage): Fails<AppendMessageResult> {
@@ -223,8 +126,8 @@ function appendInChannel(db: SqliteDatabase, message: NewMessage): Fails<AppendM
     const mentioning = withKnownMentions({ known, message });
     const id = yield* takeId(db);
     const stored = placed({ id, message: mentioning, placement });
-    const receipts = yield* Effect.andThen(insert(db, stored, data), recordAppended({ db, message: stored }));
-    return { message: stored, receipts, status: "appended" } as const;
+    const [receipts, reopened] = yield* Effect.andThen(insert(db, stored, data), afterInsert(db, stored));
+    return { message: stored, receipts, reopened, status: "appended" } as const;
   });
 }
 
@@ -274,13 +177,10 @@ function pageOf(db: SqliteDatabase, channel: ChannelName, page: ChannelPageReque
   });
 }
 
-function sqliteMessageReader(db: SqliteDatabase): MessageReader {
-  return { columns: MESSAGE_COLUMNS, findMessage: (id) => find(db, id), toMessage };
-}
-
 function sqliteMessages(db: SqliteDatabase): MessagesSection & ReturnType<typeof sqliteInbox> & CommandCallsSection {
   return {
     ...sqliteInbox({ db, reader: sqliteMessageReader(db) }),
+    ...sqliteClosedThreads({ db, reader: sqliteMessageReader(db) }),
     ...sqliteCommandCalls({ appendMessage: (message) => append(db, message), db }),
     appendMessage: (message) => db.transaction(append(db, message)),
     getThread: (id) => threadOf(db, id),

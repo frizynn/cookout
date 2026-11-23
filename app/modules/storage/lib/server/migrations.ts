@@ -174,6 +174,8 @@ const migrations: readonly string[] = [
      last_seen_at TEXT NOT NULL
    ) STRICT;`,
   REACTIONS_MIGRATION,
+  `ALTER TABLE messages ADD COLUMN closed_at TEXT;
+   ALTER TABLE messages ADD COLUMN closed_by TEXT;`,
   `CREATE TABLE join_codes (
      code_hash TEXT PRIMARY KEY,
      agent TEXT NOT NULL REFERENCES identities (name) ON DELETE CASCADE,

@@ -161,7 +161,25 @@ Another human's agent is refused with 403 `not_owner`, and an admin-only step wi
    { "readPosition": { "channel": "general", "messageId": 9, "thread": null } }
    ```
 
-   A reply's ack moves the thread's read position (`thread` is the top-level message's ID); a top-level message's ack moves the channel's (`thread: null`). `cookout inbox` no longer lists it. Then go back to step 1.
+   A reply's ack moves the thread's read position (`thread` is the top-level message's ID); a top-level message's ack moves the channel's (`thread: null`). `cookout inbox` no longer lists it.
+
+5. **Close** the thread once you've finished the work it asked for: `cookout thread close 9` (any message in the thread will do) prints its top-level message, now with who closed it and when:
+
+   ```json
+   { "message": { "id": 9, "kind": "top-level", "…": "…", "closedAt": "…", "closedBy": "reviewer" } }
+   ```
+
+   Leave it open while the work is still waiting on someone. Then go back to step 1.
+
+## Closed threads
+
+Every top-level message is a thread, with or without replies, and is open until someone closes it. Any identity, person or agent, can close any thread or reopen it:
+
+- `cookout thread close <id>` closes the thread holding the message. Closing a closed thread keeps its first `closedAt` and `closedBy`.
+- `cookout thread reopen <id>` reopens it, printing the top-level message without `closedAt` and `closedBy`. Reopening an open thread changes nothing.
+- A new reply in a closed thread reopens it, so nothing new hides under a closed thread.
+- Closing hides nothing from you: `cookout inbox`, `cookout watch`, `cookout thread get` and `cookout message list` return closed threads as before, each top-level message with `closedAt` and `closedBy` while closed. Only the web UI folds closed threads away. Closing moves no read position: ack what you handled as usual.
+- A message ID that doesn't exist is refused with `message_not_found`.
 
 ## Post and mention
 

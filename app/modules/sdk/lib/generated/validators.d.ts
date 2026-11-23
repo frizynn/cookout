@@ -2,12 +2,12 @@
 import type { AgentJoinCollectedResponse, AgentJoinRequestResponse, AgentJoinRequestStartedResponse, AgentSessionResponse, JoinCodeResponse, LeaveResponse, ListAgentSessionsResponse, RevokeAgentSessionResponse } from "../../../agent-sessions/index.ts";
 import type { ChannelResponse, ListChannelsResponse } from "../../../channels/index.ts";
 import type { CallCommandResponse, CommandWithSecretResponse, ListCommandsResponse } from "../../../commands/index.ts";
-import type { AgentSessionEvent, ChannelDeletedEvent, ChannelEvent, CleanCloseResponse, CommandEvent, ConnectedEvent, IdentityDeletedEvent, IdentityEvent, InboxItemEvent, MessageEvent, PresenceEvent, PresenceResponse, ReactionEvent, ReadPositionEvent, ReadPositionMovedBackEvent, ReadReceiptEvent, SubscriptionEvent } from "../../../events/index.ts";
+import type { AgentSessionEvent, ChannelDeletedEvent, ChannelEvent, CleanCloseResponse, CommandEvent, ConnectedEvent, IdentityDeletedEvent, IdentityEvent, InboxItemEvent, MessageEvent, PresenceEvent, PresenceResponse, ReactionEvent, ReadPositionEvent, ReadPositionMovedBackEvent, ReadReceiptEvent, SubscriptionEvent, ThreadEvent } from "../../../events/index.ts";
 import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../../http/index.ts";
 import type { DeactivateIdentityResponse, IdentityMessageCountResponse, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";
 import type { AckAllResponse, AckResponse, FollowResponse, InboxHistoryResponse, InboxResponse, MarkUnreadResponse, ReadPositionsResponse, SubscriptionResponse } from "../../../inbox/index.ts";
 import type { LoginCollectedResponse, LoginRequestResponse, LoginRequestStartedResponse, LogoutResponse } from "../../../logins/index.ts";
-import type { ListMessagesResponse, MessageResponse, ReactionsResponse, ThreadResponse } from "../../../messages/index.ts";
+import type { ListMessagesResponse, MessageResponse, ReactionsResponse, ThreadResponse, TopLevelMessageResponse } from "../../../messages/index.ts";
 
 export declare function isAgentJoinCollectedResponse(data: unknown): data is AgentJoinCollectedResponse;
 export declare function isAgentJoinRequestResponse(data: unknown): data is AgentJoinRequestResponse;
@@ -39,6 +39,7 @@ export declare function isReadPositionEvent(data: unknown): data is ReadPosition
 export declare function isReadPositionMovedBackEvent(data: unknown): data is ReadPositionMovedBackEvent;
 export declare function isReadReceiptEvent(data: unknown): data is ReadReceiptEvent;
 export declare function isSubscriptionEvent(data: unknown): data is SubscriptionEvent;
+export declare function isThreadEvent(data: unknown): data is ThreadEvent;
 export declare function isErrorResponse(data: unknown): data is ErrorResponse;
 export declare function isHealthResponse(data: unknown): data is HealthResponse;
 export declare function isSchemaProblems(data: unknown): data is SchemaProblems;
@@ -63,3 +64,4 @@ export declare function isListMessagesResponse(data: unknown): data is ListMessa
 export declare function isMessageResponse(data: unknown): data is MessageResponse;
 export declare function isReactionsResponse(data: unknown): data is ReactionsResponse;
 export declare function isThreadResponse(data: unknown): data is ThreadResponse;
+export declare function isTopLevelMessageResponse(data: unknown): data is TopLevelMessageResponse;

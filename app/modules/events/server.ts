@@ -50,6 +50,7 @@ import {
   ReadPositionMovedBackEventSchema,
   ReadReceiptEventSchema,
   SubscriptionEventSchema,
+  ThreadEventSchema,
 } from "./lib/server/wire.ts";
 import { Effect, Exit, Scope, Stream } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
@@ -122,4 +123,5 @@ export const eventResponseSchemas = {
   ReadPositionMovedBackEvent: ReadPositionMovedBackEventSchema,
   ReadReceiptEvent: ReadReceiptEventSchema,
   SubscriptionEvent: SubscriptionEventSchema,
+  ThreadEvent: ThreadEventSchema,
 };

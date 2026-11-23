@@ -241,7 +241,7 @@ export type CookoutClient = CallGroups & {
    * `GET /v1/events`: opens one Server-Sent Events stream, resolving once the server has accepted it. Iterate it for
    * each new inbox item (`inbox-item`) the moment another identity posts it (the caller's own posts never arrive), and
    * each new read position (`read-position`) the moment any session of the caller acks, and each read position moved
-   * back (`read-position-moved-back`) the moment one marks a message unread, so several sessions stay in sync. With `allChannels`, it also sends every new message on every channel (`message`), each newly recorded read receipt (`read-receipt`), each change to a message's reactions (`reaction`) and each change to anyone's presence (`presence`), as the web UI needs.
+   * back (`read-position-moved-back`) the moment one marks a message unread, so several sessions stay in sync. With `allChannels`, it also sends every new message on every channel (`message`), each newly recorded read receipt (`read-receipt`), each change to a message's reactions (`reaction`), each thread closed or reopened (`thread`) and each change to anyone's presence (`presence`), as the web UI needs.
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
    * a newer server, is skipped. `close` drops the connection, which the server counts as a drop ("connection lost" after the grace); `closeCleanly` first sends `DELETE /v1/events/:connection` with the `connected` event's connection ID, so the end is expected, as `cookout watch` exiting on purpose does.
    * Opened with an agent session token, the stream moves its expiry on while open, and once the token is revoked (`leave`, or another session's `join --force`) the

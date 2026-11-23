@@ -1,5 +1,6 @@
 import { Array as Arr, Option, Predicate } from "effect";
 import type {
+  Closing,
   ListMessagesResponse,
   Message,
   MessageId,
@@ -18,7 +19,7 @@ type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
 type MessageContent = Omit<
   TopLevelMessage,
-  "id" | "kind" | "latestReplyAt" | "latestReplyId" | "replyCount" | "repliers"
+  "id" | "kind" | "latestReplyAt" | "latestReplyId" | "replyCount" | "repliers" | "closedAt" | "closedBy"
 >;
 
 type NewMessage = MessageContent & {
@@ -26,7 +27,12 @@ type NewMessage = MessageContent & {
 };
 
 type AppendMessageResult =
-  | { readonly status: "appended"; readonly message: Message; readonly receipts: readonly ReadReceipt[] }
+  | {
+      readonly status: "appended";
+      readonly message: Message;
+      readonly receipts: readonly ReadReceipt[];
+      readonly reopened: TopLevelMessage | undefined;
+    }
   | { readonly status: "channel_not_found" }
   | { readonly status: "reply_to_not_found" }
   | { readonly status: "reply_in_other_channel" };
@@ -67,11 +73,18 @@ type StoredPage = Omit<ListMessagesResponse, "receipts">;
 
 type StoredThread = Omit<ThreadResponse, "receipts">;
 
+interface ThreadStateChange {
+  readonly changed: boolean;
+  readonly parent: TopLevelMessage;
+}
+
 interface MessagesSection {
   readonly appendMessage: (message: NewMessage) => Fails<AppendMessageResult>;
   readonly listChannelMessages: (channel: ChannelName, page: ChannelPageRequest) => Fails<StoredPage | undefined>;
   readonly getThread: (id: MessageId) => Fails<StoredThread | undefined>;
   readonly latestMessageId: Effect.Effect<MessageId | undefined, StorageUnavailable>;
+  readonly closeThread: (id: MessageId, closing: Closing) => Fails<ThreadStateChange | undefined>;
+  readonly reopenThread: (id: MessageId) => Fails<ThreadStateChange | undefined>;
 }
 
 const NO_REPLIES = 0;
@@ -123,8 +136,18 @@ function withKnownMentions({ known, message }: Mentioning): NewMessage {
   return { ...message, mentions: Arr.filter(message.mentions, (name) => known.has(name)) };
 }
 
+function closingOf({ closedAt, closedBy }: TopLevelMessage): Partial<Closing> {
+  if (Predicate.isUndefined(closedAt) || Predicate.isUndefined(closedBy)) {
+    return {};
+  }
+  return { closedAt, closedBy };
+}
+
 function counted({ parent, replies }: Counting): TopLevelMessage {
-  return Arr.reduce(replies, unreplied(parent), (counting, reply) => withNewestReply({ parent: counting, reply }));
+  const fold = Arr.reduce(replies, unreplied(parent), (counting, reply) =>
+    withNewestReply({ parent: counting, reply }),
+  );
+  return { ...fold, ...closingOf(parent) };
 }
 
 export {
@@ -136,6 +159,7 @@ export {
   type Placement,
   type StoredPage,
   type StoredThread,
+  type ThreadStateChange,
   asMessageId,
   counted,
   isPlaced,

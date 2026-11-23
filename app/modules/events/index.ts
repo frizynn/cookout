@@ -10,7 +10,7 @@
 import type { Identity, IdentityName } from "../identities/index.ts";
 import type { InboxItem, MovedBackReadPosition, ReadPosition, SubscriptionResponse } from "../inbox/index.ts";
 import type { LiveConnectionId, Presence, presenceName } from "../presence/index.ts";
-import type { Message, MessageId, ReactionsResponse, ReadReceipt } from "../messages/index.ts";
+import type { Message, MessageId, ReactionsResponse, ReadReceipt, TopLevelMessage } from "../messages/index.ts";
 import type { Channel } from "../channels/index.ts";
 import type { Command } from "../commands/index.ts";
 
@@ -47,6 +47,15 @@ export interface ReadPositionMovedBackEvent {
 export interface MessageEvent {
   readonly type: "message";
   readonly message: Message;
+}
+
+/**
+ * A thread just closed or reopened, by Close, Reopen or a reply in a closed thread: its top-level message as it now
+ * stands, with `closedAt` and `closedBy` while closed. Sent only on the all-channels feed. It has no SSE `id`.
+ */
+export interface ThreadEvent {
+  readonly type: "thread";
+  readonly parent: TopLevelMessage;
 }
 
 /**
@@ -163,6 +172,7 @@ export type CookoutEvent =
   | ReadPositionEvent
   | ReadPositionMovedBackEvent
   | MessageEvent
+  | ThreadEvent
   | IdentityEvent
   | ReadReceiptEvent
   | ReactionEvent

@@ -7,23 +7,34 @@ import type {
   ReactionName,
   ReactionsResponse,
   ThreadResponse,
+  TopLevelMessageResponse,
 } from "../../messages/index.ts";
-import { channelMessagesPath, messagesPath, reactionPath, threadPath } from "../../messages/index.ts";
+import { channelMessagesPath, closedPath, messagesPath, reactionPath, threadPath } from "../../messages/index.ts";
 import {
   isListMessagesResponse,
   isMessageResponse,
   isReactionsResponse,
   isThreadResponse,
+  isTopLevelMessageResponse,
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
+import type { ClosedThreadCalls } from "../../messages/client.ts";
 import { send } from "./request.ts";
 
-interface MessageCalls {
+interface MessageCalls extends ClosedThreadCalls {
   readonly createMessage: (request: PostMessageRequest) => Promise<MessageResponse>;
   readonly listMessages: (channel: string, query?: ListMessagesQuery) => Promise<ListMessagesResponse>;
   readonly getThread: (messageId: MessageId) => Promise<ThreadResponse>;
   readonly react: (messageId: MessageId, reaction: ReactionName) => Promise<ReactionsResponse>;
   readonly unreact: (messageId: MessageId, reaction: ReactionName) => Promise<ReactionsResponse>;
+}
+
+function closedCall(server: ClientConnection, method: "PUT" | "DELETE") {
+  return async (messageId: MessageId): Promise<TopLevelMessageResponse> => {
+    const params = { id: String(messageId) };
+    const answer = await send(server, { isExpected: isTopLevelMessageResponse, method, params, path: closedPath });
+    return answer;
+  };
 }
 
 function reactionCall(server: ClientConnection, method: "PUT" | "DELETE") {
@@ -36,6 +47,7 @@ function reactionCall(server: ClientConnection, method: "PUT" | "DELETE") {
 
 function messageCalls(server: ClientConnection): MessageCalls {
   return {
+    closeThread: closedCall(server, "PUT"),
     createMessage: async (body) => {
       const posted = await send(server, { body, isExpected: isMessageResponse, method: "POST", path: messagesPath });
       return posted;
@@ -56,6 +68,7 @@ function messageCalls(server: ClientConnection): MessageCalls {
       return page;
     },
     react: reactionCall(server, "PUT"),
+    reopenThread: closedCall(server, "DELETE"),
     unreact: reactionCall(server, "DELETE"),
   };
 }

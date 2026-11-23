@@ -15,6 +15,7 @@ import type {
   ReadPositionMovedBackEvent,
   ReadReceiptEvent,
   SubscriptionEvent,
+  ThreadEvent,
 } from "../../index.ts";
 import { ChannelNameSchema, ChannelSchema } from "../../../channels/server.ts";
 import { IdentityNameSchema, IdentitySchema } from "../../../identities/server.ts";
@@ -24,7 +25,13 @@ import {
   ReadPositionSchema,
   SubscriptionResponseSchema,
 } from "../../../inbox/server.ts";
-import { MessageIdSchema, MessageSchema, ReactionCountSchema, ReadReceiptSchema } from "../../../messages/server.ts";
+import {
+  MessageIdSchema,
+  MessageSchema,
+  ReactionCountSchema,
+  ReadReceiptSchema,
+  TopLevelMessageSchema,
+} from "../../../messages/server.ts";
 import { isLiveConnectionId, presenceName } from "../../../presence/index.ts";
 import { CommandSchema } from "../../../commands/server.ts";
 import { PresenceSchema } from "../../../presence/server.ts";
@@ -47,6 +54,10 @@ export const ReadPositionMovedBackEventSchema = matchesWire<ReadPositionMovedBac
 
 export const MessageEventSchema = matchesWire<MessageEvent>()(
   Schema.Struct({ message: MessageSchema, type: Schema.Literal("message") }),
+);
+
+export const ThreadEventSchema = matchesWire<ThreadEvent>()(
+  Schema.Struct({ parent: TopLevelMessageSchema, type: Schema.Literal("thread") }),
 );
 
 export const IdentityEventSchema = matchesWire<IdentityEvent>()(

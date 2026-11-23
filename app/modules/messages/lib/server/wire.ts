@@ -9,6 +9,7 @@ import type {
   Reply,
   ThreadResponse,
   TopLevelMessage,
+  TopLevelMessageResponse,
 } from "../../index.ts";
 import { channelNamePattern, isChannelName } from "../../../channels/index.ts";
 import {
@@ -84,6 +85,8 @@ const RepliersSchema = Schema.Array(AuthorSchema).check(Schema.isMaxLength(shown
 const TopLevelMessageSchema = matchesWire<TopLevelMessage>()(
   Schema.Struct({
     ...messageFields,
+    closedAt: Schema.optionalKey(IsoTimeSchema),
+    closedBy: Schema.optionalKey(IdentityNameSchema),
     kind: Schema.Literal("top-level"),
     latestReplyAt: Schema.NullOr(IsoTimeSchema),
     latestReplyId: Schema.NullOr(MessageIdSchema),
@@ -161,6 +164,10 @@ export const ReactionsResponseSchema = matchesWire<ReactionsResponse>()(
     messageId: MessageIdSchema,
     reactions: Schema.Array(ReactionCountSchema),
   }),
+);
+
+export const TopLevelMessageResponseSchema = matchesWire<TopLevelMessageResponse>()(
+  Schema.Struct({ message: TopLevelMessageSchema }),
 );
 
 export { MessageIdSchema, MessageSchema, ReactionCountSchema, TopLevelMessageSchema };

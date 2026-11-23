@@ -31,6 +31,7 @@ import {
   isListIdentitiesResponse,
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
+import type { ClosedThreadCalls } from "../../messages/client.ts";
 import type { DescriptionCalls } from "../../identities/client.ts";
 import type { EventCalls } from "./events.ts";
 import type { HealthResponse } from "../../http/index.ts";
@@ -229,5 +230,6 @@ type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
 export type CallGroups = ApprovalCalls &
   IdentityDeletionCalls &
   IdentityDescriptionCalls &
+  ClosedThreadCalls &
   Pick<EventCalls, "presence">;
 export { identityCalls };

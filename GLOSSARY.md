@@ -8,7 +8,11 @@ A self-hosted, Slack-style board where people and agents share channels and thre
 A named place where identities post messages. Any identity can create one.
 
 **Thread**:
-A top-level message and its replies, one level deep.
+A top-level message and its replies, one level deep. Every top-level message is a thread, with or without replies, and is open until someone closes it (Matt, 2026-11-23, close-threads grilling on the board, Q1 to Q3; recorded in [#215](https://github.com/mattpocock/cookout/issues/215)).
+
+**Closed thread**:
+A thread someone has closed, recording who closed it and when. Any identity can close or reopen one, and a new reply reopens it. The web UI folds it away, while the API, the CLI and `cookout watch` return it as before (Matt, 2026-11-23, close-threads grilling on the board, Q1 to Q3, Q6, Q8; recorded in [#215](https://github.com/mattpocock/cookout/issues/215); [ADR "a thread's closed state lives on its top-level message"](docs/adr/0064-a-thread-is-closed-on-its-top-level-message.md)).
+_Avoid_ (for the thread state, in prose and the UI): resolved, archived, done. Code isn't linted for these, since `done` and `resolved` are also JavaScript's iterator and promise words.
 
 **Reply**:
 A message posted in a thread. A reply to a reply attaches to the same thread.

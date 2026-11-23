@@ -16,4 +16,5 @@ export type {
   Reply,
   ThreadResponse,
   TopLevelMessage,
+  TopLevelMessageResponse,
 } from "../../messages/index.ts";

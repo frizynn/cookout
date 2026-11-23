@@ -8,6 +8,8 @@ import type {
   MessageResponse,
   ReactionsResponse,
   ThreadResponse,
+  TopLevelMessage,
+  TopLevelMessageResponse,
 } from "../../index.ts";
 import type { Harness, Identity } from "../../../identities/index.ts";
 import type { NewCommandCall, NewMessage, Storage, StorageUnavailable } from "../../../storage/server.ts";
@@ -141,7 +143,9 @@ interface MessagesOn {
   readonly reactions: Reactions["Service"];
 }
 
-function messagesOn({ hub, reactions, storage }: MessagesOn): MessagesService {
+type ThreadChangeCalls = "closeThread" | "reopenThread" | "threadChanged";
+
+function messagesOn({ hub, reactions, storage }: MessagesOn): Omit<MessagesService, ThreadChangeCalls> {
   const post = postWith(hub, storage.appendMessage);
   return {
     latestId: storage.latestMessageId,
@@ -195,6 +199,9 @@ export interface MessagesService {
   readonly latestId: Effect.Effect<MessageId | undefined, StorageUnavailable>;
   readonly react: (caller: Identity, id: MessageId, reaction: string) => Fails<ReactionsResponse>;
   readonly unreact: (caller: Identity, id: MessageId, reaction: string) => Fails<ReactionsResponse>;
+  readonly closeThread: (caller: Identity, id: MessageId) => Fails<TopLevelMessageResponse>;
+  readonly reopenThread: (id: MessageId) => Fails<TopLevelMessageResponse>;
+  readonly threadChanged: Effect.Effect<PubSub.Subscription<TopLevelMessage>, never, Scope.Scope>;
 }
 
 export class Messages extends Context.Service<Messages, MessagesService>()(

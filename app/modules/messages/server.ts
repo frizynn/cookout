@@ -17,8 +17,9 @@ import {
   PostMessageRequestSchema,
   ReactionsResponseSchema,
   ThreadResponseSchema,
+  TopLevelMessageResponseSchema,
 } from "./lib/server/wire.ts";
-import { channelMessagesPath, isMessageId, messagesPath, reactionPath, threadPath } from "./index.ts";
+import { channelMessagesPath, closedPath, isMessageId, messagesPath, reactionPath, threadPath } from "./index.ts";
 import type { MessageId } from "./index.ts";
 import { Messages } from "./lib/server/service.ts";
 import type { Refusal } from "../http/index.ts";
@@ -103,6 +104,33 @@ const pageRoute: Route<Messages> = {
   path: channelMessagesPath,
 };
 
+const closeRoute: Route<Caller | Messages> = {
+  handle: (params) =>
+    Effect.gen(function* closeThreadRoute() {
+      const id = yield* threadIdOf(String(params["id"]));
+      const caller = yield* Caller;
+      const messages = yield* Messages;
+      const answer = yield* messages.closeThread(caller, id);
+      return yield* HttpServerResponse.schemaJson(TopLevelMessageResponseSchema)(answer);
+    }),
+  method: "PUT",
+  path: closedPath,
+  segments: { id: (segment) => DIGITS.test(segment) },
+};
+
+const reopenRoute: Route<Messages> = {
+  handle: (params) =>
+    Effect.gen(function* reopenThreadRoute() {
+      const id = yield* threadIdOf(String(params["id"]));
+      const messages = yield* Messages;
+      const answer = yield* messages.reopenThread(id);
+      return yield* HttpServerResponse.schemaJson(TopLevelMessageResponseSchema)(answer);
+    }),
+  method: "DELETE",
+  path: closedPath,
+  segments: { id: (segment) => DIGITS.test(segment) },
+};
+
 export { Messages } from "./lib/server/service.ts";
 export { messagesLayer } from "./lib/server/layer.ts";
 export { ReadReceipts, readReceiptsLayer } from "./lib/server/read-receipts.ts";
@@ -132,6 +160,8 @@ export const messageRoutes: readonly Route<Caller | Messages>[] = [
   pageRoute,
   reactionRoute("PUT", (messages) => messages.react),
   reactionRoute("DELETE", (messages) => messages.unreact),
+  closeRoute,
+  reopenRoute,
 ];
 
 /** The response Schemas of the message routes, for the SDK's generated validators. */
@@ -140,4 +170,5 @@ export const messageResponseSchemas = {
   MessageResponse: MessageResponseSchema,
   ReactionsResponse: ReactionsResponseSchema,
   ThreadResponse: ThreadResponseSchema,
+  TopLevelMessageResponse: TopLevelMessageResponseSchema,
 };
