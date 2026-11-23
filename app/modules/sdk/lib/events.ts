@@ -1,9 +1,11 @@
+import { CookoutError, isServerErrorCode } from "./errors.ts";
+import { eventsPath, refusalEvent } from "../../events/index.ts";
+import { isErrorResponse, isInboxItemEvent } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
-import { CookoutError } from "./errors.ts";
 import type { CookoutEvent } from "../../events/index.ts";
+import type { HeldLease } from "./held-lease.ts";
 import type { ServerSentEvent } from "../../http/client.ts";
-import { eventsPath } from "../../events/index.ts";
-import { isInboxItemEvent } from "./generated/validators.js";
+import { leaseLost } from "../../leases/index.ts";
 import { openEvents } from "./request.ts";
 
 type EventType = CookoutEvent["type"];
@@ -52,8 +54,25 @@ function checked({ data, event }: ServerSentEvent & { readonly event: EventType 
   return json;
 }
 
-async function* cookoutEvents(events: AsyncIterable<ServerSentEvent>): AsyncGenerator<CookoutEvent, void, undefined> {
+function refused(lease: HeldLease, data: string): CookoutError {
+  const json = parsedData(data);
+  if (!isErrorResponse(json) || !isServerErrorCode(json.error.code)) {
+    return badEvent(refusalEvent, json);
+  }
+  if (json.error.code === leaseLost) {
+    lease.drop();
+  }
+  return new CookoutError({ ...json.error, code: json.error.code, status: OK });
+}
+
+async function* cookoutEvents(
+  events: AsyncIterable<ServerSentEvent>,
+  lease: HeldLease,
+): AsyncGenerator<CookoutEvent, void, undefined> {
   for await (const event of events) {
+    if (event.event === refusalEvent) {
+      throw refused(lease, event.data);
+    }
     if (isEventType(event.event)) {
       yield checked({ ...event, event: event.event });
     }
@@ -64,7 +83,7 @@ function eventCalls(server: ClientConnection): EventCalls {
   return {
     watch: async () => {
       const { close, events } = await openEvents({ connection: server, path: eventsPath });
-      return { [Symbol.asyncIterator]: () => cookoutEvents(events), close };
+      return { [Symbol.asyncIterator]: () => cookoutEvents(events, server.lease), close };
     },
   };
 }

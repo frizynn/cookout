@@ -1,4 +1,4 @@
-import { Context, DateTime, Effect, Layer, Option, Predicate } from "effect";
+import { Context, DateTime, Duration, Effect, Layer, Option, Predicate } from "effect";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
 import type { LeaseId, LeaseResponse } from "../../index.ts";
 import type { StorageUnavailable, StoredLease } from "../../../storage/server.ts";
@@ -36,6 +36,7 @@ type LeaseRule = "while-held" | "none";
 
 interface LeasesService {
   readonly join: (caller: Identity, request: Join, sent: Sent) => Fails<LeaseResponse>;
+  readonly keepRenewing: (caller: Identity, sent: Sent) => Effect.Effect<Refusal, StorageUnavailable>;
   readonly leave: (caller: Identity, sent: Sent) => Fails<void>;
   readonly renew: (caller: Identity, sent: Sent) => Effect.Effect<void, StorageUnavailable>;
   readonly requireLease: (caller: Identity, sent: Sent, rule: LeaseRule) => Fails<void>;
@@ -156,10 +157,34 @@ function leaver(on: LeasesOn) {
     });
 }
 
+const RENEWALS_PER_LEASE = 3;
+
+function keeper(on: LeasesOn) {
+  const renew = renewer(on);
+  const interval = Duration.seconds(on.seconds / RENEWALS_PER_LEASE);
+  function lost(caller: Identity): Effect.Effect<Refusal, StorageUnavailable> {
+    return Effect.gen(function* lostLease() {
+      const { now } = yield* timesFor(on.seconds);
+      const current = yield* on.storage.findLease(caller.name, now);
+      return leaseLost({ heldUntil: heldUntil(current), identity: caller.name });
+    });
+  }
+  return (caller: Identity, sent: Sent): Effect.Effect<Refusal, StorageUnavailable> => {
+    if (caller.kind === "human" || Predicate.isUndefined(sent)) {
+      return Effect.never;
+    }
+    return Effect.delay(renew(caller, sent), interval).pipe(
+      Effect.repeat({ until: Option.isNone }),
+      Effect.andThen(lost(caller)),
+    );
+  };
+}
+
 function leasesOn(on: LeasesOn): LeasesService {
   const renew = renewer(on);
   return {
     join: joiner(on),
+    keepRenewing: keeper(on),
     leave: leaver(on),
     renew: (caller, sent) => Effect.asVoid(renew(caller, sent)),
     requireLease: ruleRequirer(on),

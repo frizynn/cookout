@@ -143,3 +143,14 @@ it.effect("an event type this SDK doesn't know, from a newer server, is skipped"
     expect(result).toMatchObject({ done: true });
   }),
 );
+
+it.effect("a refusal event that isn't an error body fails with bad_response", () =>
+  Effect.gen(function* badRefusal() {
+    const url = yield* serverAnswering({ headers: SSE, text: 'event: refusal\ndata: {"error":{}}\n\n' });
+    const client = createCookoutClient({ env: {}, token: "cookout_x", url });
+    const events = yield* answer(() => client.watch());
+    const refused = yield* refusal(() => events[Symbol.asyncIterator]().next());
+
+    expect(refused).toMatchObject({ code: "bad_response", details: { error: {} } });
+  }),
+);

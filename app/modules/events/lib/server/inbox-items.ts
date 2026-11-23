@@ -8,7 +8,9 @@ import { sseEvent } from "./source.ts";
 
 const inboxItemEvent = sseEvent(InboxItemEventSchema);
 
-function inboxItems(caller: Identity): Connected<Inbox | Messages> {
+type InboxItemNeeds = Inbox | Messages;
+
+function inboxItems(caller: Identity): Connected<InboxItemNeeds> {
   return Effect.gen(function* subscribeToInboxItems() {
     const messages = yield* Messages;
     const inbox = yield* Inbox;
@@ -21,4 +23,4 @@ function inboxItems(caller: Identity): Connected<Inbox | Messages> {
   });
 }
 
-export { inboxItems };
+export { type InboxItemNeeds, inboxItems };
