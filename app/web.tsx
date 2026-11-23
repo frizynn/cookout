@@ -36,6 +36,7 @@ if (root !== null) {
       board={board}
       composer={createComposer({ client, commands: board.commands, live })}
       layout={layout}
+      live={live}
       loginApprovals={createLoginApprovals(client)}
       session={session}
       unread={unread}

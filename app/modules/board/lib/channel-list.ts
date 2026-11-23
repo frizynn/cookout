@@ -16,6 +16,7 @@ interface ChannelList {
   readonly snapshot: () => Snapshot;
   readonly receive: (message: Message) => void;
   readonly add: (channel: Channel) => void;
+  readonly reload: () => void;
 }
 
 type ListClient = Pick<CookoutClient, "listChannels">;
@@ -65,6 +66,9 @@ function createChannelList(client: ListClient): ChannelList {
       if (isMissing(current.channels, message)) {
         loading = reloadAfter(loading);
       }
+    },
+    reload: () => {
+      loading = reloadAfter(loading);
     },
     snapshot: () => current,
     subscribe: (listener) => {

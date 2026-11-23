@@ -19,6 +19,11 @@ function withIdentity(identities: readonly Identity[], changed: Identity): reado
   return [...others, changed].toSorted((first, second) => first.name.localeCompare(second.name));
 }
 
+function follow(live: Live, receive: (event: CookoutEvent) => void, reload: () => void): void {
+  live.subscribe(receive);
+  live.onBack(reload);
+}
+
 function createIdentityList(options: IdentityListOptions): IdentityList {
   const refreshes = new Set<() => void>();
   let identities: readonly Identity[] = [];
@@ -55,7 +60,9 @@ function createIdentityList(options: IdentityListOptions): IdentityList {
     load: () => {
       if (loading === null) {
         if (options.live !== null) {
-          options.live.subscribe(receive);
+          follow(options.live, receive, () => {
+            loading = loadIdentities();
+          });
         }
         loading = loadIdentities();
       }

@@ -41,6 +41,7 @@ interface BoardOpening {
   readonly board: Board;
   readonly composer?: Composer;
   readonly layout?: Layout;
+  readonly live?: NonNullable<BoardOptions["live"]>;
   readonly loginApprovals?: LoginApprovals;
   readonly agentJoinApprovals?: AgentJoinApprovals;
   readonly session: Session;
@@ -112,6 +113,7 @@ export function openBoard(opening: BoardOpening): () => void {
       board={opening.board}
       composer={composer}
       layout={layout}
+      live={opening.live ?? null}
       loginApprovals={loginApprovals}
       session={opening.session}
       unread={unread}
@@ -126,6 +128,7 @@ export function openAt(opening: Opening): () => void {
     board,
     composer: createComposer({ ...opening, commands: board.commands }),
     hash: opening.hash,
+    ...(opening.live && { live: opening.live }),
     ...(opening.loginApprovals && { loginApprovals: opening.loginApprovals }),
     ...(opening.agentJoinApprovals && { agentJoinApprovals: opening.agentJoinApprovals }),
     session,

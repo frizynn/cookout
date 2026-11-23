@@ -108,6 +108,10 @@ interface IdentityLinkParts {
   readonly active: boolean;
 }
 
+interface StatusBarParts extends ListParts {
+  readonly shown: boolean;
+}
+
 interface WorkspaceParts extends Parts {
   readonly sidebarOpen: boolean;
   readonly onToggleSidebar: () => void;
@@ -248,6 +252,7 @@ interface SkeletonParts {
 }
 
 export type {
+  StatusBarParts,
   IdentityLinkParts,
   ChipParts,
   DateTextParts,

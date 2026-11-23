@@ -2,6 +2,8 @@
  * The views: each screen of the web UI, drawn from the design system and read
  * from the stores with `useSyncExternalStore`. `LoginView` swaps a human
  * identity's token for the session cookie, or shows who is logged in.
+ * `ReconnectingView` is the "Reconnecting…" bar at the top of the workspace,
+ * shown while the live stream's link to the server is down.
  * `SidebarView` is the workspace's sidebar: the Inbox link with the inbox's
  * total unread count (in the unread colour when any item is a mention), the
  * People & agents link, every channel sorted by name, bold when it has unread
@@ -79,6 +81,7 @@ export { NotBuiltView } from "./lib/not-built.tsx";
 export { PeopleView } from "./lib/people.tsx";
 export { ProfileLinks } from "./lib/profile-links.tsx";
 export { ProfileView } from "./lib/profile.tsx";
+export { ReconnectingView } from "./lib/reconnecting.tsx";
 export { SettingsView } from "./lib/settings.tsx";
 export { SidebarView } from "./lib/sidebar.tsx";
 export { ThreadView } from "./lib/thread.tsx";
