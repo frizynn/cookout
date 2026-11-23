@@ -1,8 +1,10 @@
-import { adminClient, logInWithStream, newIdentity } from "./people.ts";
+import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
+import { inPane, inSidebar } from "./regions.ts";
 import type { Message } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
 import type { Person } from "./people.ts";
+import { logInWithStream } from "./login.ts";
 
 interface Posted {
   readonly parent: Message;
@@ -15,7 +17,9 @@ async function openChannel(page: Page, channel: string): Promise<Posted> {
   const { message: parent } = await poster.client.createMessage({ channel, text: "Deploy at noon?" });
   const reader = await newIdentity({ kind: "human", name: "browser-live-reader" });
   await logInWithStream({ page, token: reader.token });
-  await page.getByRole("link", { name: `#${channel}` }).click();
+  await inSidebar(page)
+    .getByRole("link", { name: `#${channel}` })
+    .click();
   return { parent, poster };
 }
 
@@ -35,7 +39,7 @@ test("a message posted by another identity appears in the open channel and threa
     "Or at one?",
   ]);
 
-  await page.getByRole("link", { name: "1 reply" }).click();
+  await inPane(page).getByRole("link", { name: "1 reply" }).click();
 
   await expect(page.getByRole("list", { name: "Replies" })).toContainText("Noon works");
 

@@ -52,11 +52,6 @@ function sendReply(text: string): void {
   fireEvent.click(inThread().getByRole("button", { name: "Send reply" }));
 }
 
-async function threadPanel(): Promise<HTMLElement> {
-  const panel = await screen.findByRole("complementary", { name: "Thread" });
-  return panel;
-}
-
 function hashOf(parent: Message): string {
   return `#/channels/${parent.channel}/threads/${String(parent.id)}`;
 }
@@ -150,7 +145,7 @@ it("a thread that doesn't exist shows the server's refusal", { timeout: 5000 }, 
 
   const close = openAt({ client: adminClient(), hash: "#/channels/general/threads/999999" });
 
-  const alert = await within(await threadPanel()).findByRole("alert");
+  const alert = await inThread().findByRole("alert");
 
   expect(alert.textContent).toMatch(/^Couldn't load the thread \(message_not_found\)/u);
 
@@ -165,7 +160,7 @@ it("a refused ack says the thread couldn't be marked read", { timeout: 5000 }, a
   const client = await ackingWithALeftSession(agent.token, "web-thread-left");
   const close = openAt({ client, hash: hashOf(parent) });
 
-  const alert = await within(await threadPanel()).findByRole("alert");
+  const alert = await inThread().findByRole("alert");
 
   expect(alert.textContent).toMatch(/^Couldn't mark the thread read \(agent_session_revoked\)/u);
 
@@ -186,7 +181,7 @@ it("a refused reply says so and keeps the thread shown, and its text in the box"
   await writer.rotateToken();
 
   sendReply("Too late");
-  const alert = await within(await threadPanel()).findByRole("alert");
+  const alert = await inThread().findByRole("alert");
 
   expect([alert.textContent, await shownReplies(), screen.queryByDisplayValue("Too late")]).toStrictEqual([
     expect.stringMatching(/^Couldn't post the reply \(token_revoked\)/u),
@@ -206,7 +201,7 @@ async function inboxEmptied(client: CookoutClient): Promise<InboxResponse | fals
 }
 
 async function alerted(): Promise<void> {
-  await within(await threadPanel()).findByRole("alert");
+  await inThread().findByRole("alert");
 }
 
 async function leaveForTheList(): Promise<void> {
@@ -267,7 +262,7 @@ it("reopening a thread that can no longer be read says so and keeps its replies 
   await reader.rotateToken();
 
   globalThis.location.hash = hashOf(parent);
-  const alert = await within(await threadPanel()).findByRole("alert");
+  const alert = await inThread().findByRole("alert");
 
   expect([alert.textContent, await shownReplies()]).toStrictEqual([
     expect.stringMatching(/^Couldn't mark the thread read \(token_revoked\)/u),

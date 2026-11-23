@@ -1,7 +1,7 @@
 import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { inPane, inSidebar } from "./regions.ts";
+import { inPane, inProfile, inSidebar } from "./regions.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
 import { openAt } from "./render.tsx";
 
@@ -54,7 +54,7 @@ async function profile(): Promise<HTMLElement> {
 }
 
 async function profileName(): Promise<string> {
-  const heading = await within(await profile()).findByRole("heading", { level: 3 });
+  const heading = await inProfile().findByRole("heading", { level: 3 });
   return heading.textContent;
 }
 
@@ -180,7 +180,7 @@ it("a profile's address opens it, with the admin tag and display name, and an un
     within(panel).getByText("Human").textContent,
   ];
   globalThis.location.hash = "#/people/web-people-link-nobody";
-  const unknown = await within(await profile()).findByText("Unknown identity");
+  const unknown = await inProfile().findByText("Unknown identity");
 
   expect([shown, unknown.textContent]).toStrictEqual([
     ["The Boss@web-people-link-bossadmin", "The Boss", "Human"],
@@ -196,7 +196,7 @@ it("the sidebar's footer opens your own profile", { timeout: 5000 }, async () =>
   const close = openAt({ client: await crewOf("web-people-self"), hash: "#/" });
   const nav = await screen.findByRole("navigation", { name: "Sidebar" });
   fireEvent.click(await within(nav).findByRole("link", { name: "web-people-self-human" }));
-  const name = await within(await profile()).findByRole("heading", { level: 3 });
+  const name = await inProfile().findByRole("heading", { level: 3 });
 
   expect([globalThis.location.hash, name.textContent]).toStrictEqual([
     "#/people/web-people-self-human",
@@ -235,11 +235,11 @@ it("an admin makes a human an admin from their profile and removes it, the tag f
   expect.hasAssertions();
 
   const close = openAt({ client: await adminOf("web-people-promote"), hash: "#/people/web-people-promote-human" });
-  fireEvent.click(await within(await profile()).findByRole("button", { name: "Make admin" }));
-  const remove = await within(await profile()).findByRole("button", { name: "Remove admin" });
+  fireEvent.click(await inProfile().findByRole("button", { name: "Make admin" }));
+  const remove = await inProfile().findByRole("button", { name: "Remove admin" });
   const promoted = [await profileName(), rowOf("web-people-promote-human").textContent];
   fireEvent.click(remove);
-  await within(await profile()).findByRole("button", { name: "Make admin" });
+  await inProfile().findByRole("button", { name: "Make admin" });
 
   expect([promoted, await profileName(), rowOf("web-people-promote-human").textContent]).toStrictEqual([
     ["web-people-promote-humanadmin", "web-people-promote-humanadminHuman"],
@@ -269,10 +269,10 @@ it("a refused admin change says why and leaves the tags as they were", { timeout
   expect.hasAssertions();
 
   const close = openAt({ client: await adminOf("web-people-refused"), hash: "#/people/web-people-refused-human" });
-  const make = await within(await profile()).findByRole("button", { name: "Make admin" });
+  const make = await inProfile().findByRole("button", { name: "Make admin" });
   await adminClient().removeAdmin("web-people-refused-viewer");
   fireEvent.click(make);
-  const alert = await within(await profile()).findByRole("alert");
+  const alert = await inProfile().findByRole("alert");
 
   expect([alert.textContent, await profileName()]).toStrictEqual([
     "Couldn't change admin (admin_only): Only an admin identity can do this.",

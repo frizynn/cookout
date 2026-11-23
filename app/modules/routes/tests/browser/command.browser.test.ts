@@ -1,8 +1,10 @@
 import type { Locator, Page } from "@playwright/test";
-import { adminClient, logInToChannels, newIdentity } from "./people.ts";
+import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import type { CookoutClient } from "../../../sdk/index.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
+import { inSidebar } from "./regions.ts";
+import { logInToChannels } from "./login.ts";
 
 const schema = {
   properties: { branch: { description: "The branch to ship", minLength: 3, type: "string" } },
@@ -50,7 +52,9 @@ async function typeAndSend({ page, text }: Typing): Promise<void> {
 async function openAsCaller({ channel, page }: Opened): Promise<void> {
   const { token } = await newIdentity({ kind: "human", name: "browser-command-caller" });
   await logInToChannels({ page, token });
-  await page.getByRole("link", { name: `#${channel}` }).click();
+  await inSidebar(page)
+    .getByRole("link", { name: `#${channel}` })
+    .click();
   await page.getByRole("textbox", { name: "Message" }).pressSequentially("/browser-call");
 }
 
