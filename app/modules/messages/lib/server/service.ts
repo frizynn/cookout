@@ -1,16 +1,4 @@
-import {
-  Array as Arr,
-  Context,
-  DateTime,
-  Effect,
-  Layer,
-  Option,
-  Predicate,
-  PubSub,
-  Semaphore,
-  String as Str,
-  pipe,
-} from "effect";
+import { Array as Arr, Context, DateTime, Effect, Option, Predicate, String as Str, pipe } from "effect";
 import type {
   Author,
   JsonValue,
@@ -18,17 +6,18 @@ import type {
   Message,
   MessageId,
   MessageResponse,
+  ReactionsResponse,
   ThreadResponse,
 } from "../../index.ts";
 import type { Harness, Identity } from "../../../identities/index.ts";
-import type { NewCommandCall, NewMessage, StorageUnavailable } from "../../../storage/server.ts";
-import { ReadReceipts, pageWithReceipts, threadWithReceipts } from "./read-receipts.ts";
+import type { NewCommandCall, NewMessage, Storage, StorageUnavailable } from "../../../storage/server.ts";
+import type { PubSub, Scope } from "effect";
 import { mentionPattern, pageSize } from "../../index.ts";
 import { messageNotFound, replyInOtherChannel, replyOutsideCommandThread } from "./refusals.ts";
+import { react, shownPage, shownThread, unreact } from "./reactions.ts";
 import type { ChannelName } from "../../../channels/index.ts";
+import type { Reactions } from "./reactions.ts";
 import type { Refusal } from "../../../http/index.ts";
-import type { Scope } from "effect";
-import { Storage } from "../../../storage/server.ts";
 import { channelNotFound } from "../../../channels/server.ts";
 import { isChannelName } from "../../../channels/index.ts";
 import { isIdentityName } from "../../../identities/index.ts";
@@ -146,7 +135,13 @@ function postWith(hub: Hub, append: Append): (author: Identity, message: PostMes
     });
 }
 
-function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
+interface MessagesOn {
+  readonly storage: Storage["Service"];
+  readonly hub: Hub;
+  readonly reactions: Reactions["Service"];
+}
+
+function messagesOn({ hub, reactions, storage }: MessagesOn): MessagesService {
   const post = postWith(hub, storage.appendMessage);
   return {
     latestId: storage.latestMessageId,
@@ -159,7 +154,7 @@ function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
         if (Predicate.isUndefined(page)) {
           return yield* Effect.fail(channelNotFound(channel));
         }
-        return yield* pageWithReceipts({ storage, stored: page });
+        return yield* shownPage({ shown: page, storage });
       }),
     post,
     postCommandCall: (author, message, call) =>
@@ -177,14 +172,16 @@ function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
         return yield* post(author, message);
       }),
     posted: hub.subscribe,
+    react: (caller, id, reaction) => react({ asked: { caller, id, reaction }, hub: reactions, storage }),
     thread: (id) =>
       Effect.gen(function* getThread() {
         const thread = yield* storage.getThread(id);
         if (Predicate.isUndefined(thread)) {
           return yield* Effect.fail(messageNotFound(String(id)));
         }
-        return yield* threadWithReceipts({ storage, stored: thread });
+        return yield* shownThread({ shown: thread, storage });
       }),
+    unreact: (caller, id, reaction) => unreact({ asked: { caller, id, reaction }, hub: reactions, storage }),
   };
 }
 
@@ -196,30 +193,12 @@ export interface MessagesService {
   readonly page: (channel: string, query: PageQuery) => Fails<ListMessagesResponse>;
   readonly posted: Effect.Effect<PubSub.Subscription<Message>, never, Scope.Scope>;
   readonly latestId: Effect.Effect<MessageId | undefined, StorageUnavailable>;
+  readonly react: (caller: Identity, id: MessageId, reaction: string) => Fails<ReactionsResponse>;
+  readonly unreact: (caller: Identity, id: MessageId, reaction: string) => Fails<ReactionsResponse>;
 }
 
 export class Messages extends Context.Service<Messages, MessagesService>()(
   "@ai-hero/cookout/messages/lib/server/service/Messages",
 ) {}
 
-export const messagesLayer: Layer.Layer<Messages, never, Storage | ReadReceipts> = Layer.effect(
-  Messages,
-  Effect.gen(function* messagesOnStorage() {
-    const storage = yield* Storage;
-    const readReceipts = yield* ReadReceipts;
-    const pubSub = yield* PubSub.unbounded<Message>();
-    const appending = yield* Semaphore.make(ONE_AT_A_TIME);
-    function publishIfAppended(result: Appended): Effect.Effect<void> {
-      if (result.status !== "appended") {
-        return Effect.void;
-      }
-      return Effect.andThen(PubSub.publish(pubSub, result.message), readReceipts.publish(result.receipts));
-    }
-    const hub: Hub = {
-      appendThenPublish: (append, message) =>
-        appending.withPermits(ONE_AT_A_TIME)(Effect.tap(append(message), publishIfAppended)),
-      subscribe: PubSub.subscribe(pubSub),
-    };
-    return messagesOn(storage, hub);
-  }),
-);
+export { type Appended, type Hub, ONE_AT_A_TIME, messagesOn };

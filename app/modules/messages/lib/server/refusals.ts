@@ -1,6 +1,8 @@
+import { Array as Arr } from "effect";
 import type { MessageId } from "../../index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { echoed } from "../../../http/index.ts";
+import { reactionNames } from "../../index.ts";
 
 interface MisplacedReply {
   readonly channel: string;
@@ -23,10 +25,18 @@ function replyInOtherChannel({ channel, replyTo }: MisplacedReply): Refusal {
   };
 }
 
+function reactionNotFound(asked: string): Refusal {
+  return {
+    code: "reaction_not_found",
+    message: `There is no reaction ${echoed(asked)}. Use ${Arr.join(reactionNames, " or ")}.`,
+    status: NOT_FOUND,
+  };
+}
+
 const replyOutsideCommandThread: Refusal = {
   code: "outside_command_thread",
   message: "A command token can only reply in its call's thread, in that thread's channel.",
   status: FORBIDDEN,
 };
 
-export { messageNotFound, replyInOtherChannel, replyOutsideCommandThread };
+export { messageNotFound, reactionNotFound, replyInOtherChannel, replyOutsideCommandThread };

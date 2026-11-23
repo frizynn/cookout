@@ -9,11 +9,13 @@ import type {
   InboxItemEvent,
   MessageEvent,
   PresenceEvent,
+  ReactionEvent,
   ReadPositionEvent,
   ReadPositionMovedBackEvent,
   ReadReceiptEvent,
   SubscriptionEvent,
 } from "../../index.ts";
+import { ChannelNameSchema, ChannelSchema } from "../../../channels/server.ts";
 import { IdentityNameSchema, IdentitySchema } from "../../../identities/server.ts";
 import {
   InboxItemSchema,
@@ -21,8 +23,7 @@ import {
   ReadPositionSchema,
   SubscriptionResponseSchema,
 } from "../../../inbox/server.ts";
-import { MessageIdSchema, MessageSchema, ReadReceiptSchema } from "../../../messages/server.ts";
-import { ChannelSchema } from "../../../channels/server.ts";
+import { MessageIdSchema, MessageSchema, ReactionCountSchema, ReadReceiptSchema } from "../../../messages/server.ts";
 import { CommandSchema } from "../../../commands/server.ts";
 import { PresenceSchema } from "../../../presence/server.ts";
 import { Schema } from "effect";
@@ -51,6 +52,15 @@ export const IdentityEventSchema = matchesWire<IdentityEvent>()(
 
 export const ReadReceiptEventSchema = matchesWire<ReadReceiptEvent>()(
   Schema.Struct({ receipt: ReadReceiptSchema, type: Schema.Literal("read-receipt") }),
+);
+
+export const ReactionEventSchema = matchesWire<ReactionEvent>()(
+  Schema.Struct({
+    channel: ChannelNameSchema,
+    messageId: MessageIdSchema,
+    reactions: Schema.Array(ReactionCountSchema),
+    type: Schema.Literal("reaction"),
+  }),
 );
 
 export const ChannelEventSchema = matchesWire<ChannelEvent>()(

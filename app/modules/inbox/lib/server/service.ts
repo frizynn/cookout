@@ -8,25 +8,23 @@ import type {
   InboxResponse,
   MarkUnreadResponse,
   MovedBackReadPosition,
-  ReadPosition,
   ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../index.ts";
-import type { AckedMessage, StorageUnavailable } from "../../../storage/server.ts";
-import { Array as Arr, Context, DateTime, Effect, Layer, Option, Predicate, PubSub } from "effect";
+import type { Acked, Fails, Hub } from "./acks.ts";
+import { Array as Arr, Context, Effect, Layer, Option, Predicate, PubSub } from "effect";
 import type { Channel, ChannelName } from "../../../channels/index.ts";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
 import { ReadReceipts, messageNotFound } from "../../../messages/server.ts";
+import { acksOn, orMessageNotFound } from "./acks.ts";
 import { isMessageId, pageSize } from "../../../messages/index.ts";
+import { itemsWithReactions, reactionItemFor, withReactionItems } from "./reaction-items.ts";
 import type { MessageId } from "../../../messages/index.ts";
-import type { Refusal } from "../../../http/index.ts";
 import type { Scope } from "effect";
 import { Storage } from "../../../storage/server.ts";
+import type { StorageUnavailable } from "../../../storage/server.ts";
 import { channelNotFound } from "../../../channels/server.ts";
 import { isChannelName } from "../../../channels/index.ts";
-import { isoTimeOf } from "../../../time/server.ts";
-
-type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
 
 type StoredItem = Omit<InboxItem, "channel">;
 
@@ -46,11 +44,6 @@ type FollowChange = (identity: IdentityName, id: MessageId) => Effect.Effect<Mes
 
 type SubscriptionChange = (identity: IdentityName, channel: ChannelName) => Effect.Effect<boolean, StorageUnavailable>;
 
-interface Acked {
-  readonly identity: IdentityName;
-  readonly readPosition: ReadPosition;
-}
-
 interface MovedBack {
   readonly identity: IdentityName;
   readonly readPosition: MovedBackReadPosition;
@@ -59,11 +52,6 @@ interface MovedBack {
 interface SubscriptionChanged {
   readonly identity: IdentityName;
   readonly subscription: SubscriptionResponse;
-}
-
-interface Hub<Value> {
-  readonly publish: (value: Value) => Effect.Effect<boolean>;
-  readonly subscribe: Effect.Effect<PubSub.Subscription<Value>, never, Scope.Scope>;
 }
 
 interface Hubs {
@@ -78,6 +66,7 @@ interface InboxService {
   readonly history: (caller: Identity, query: HistoryQuery) => Fails<InboxHistoryResponse>;
   readonly itemFor: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
   readonly itemsAfter: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
+  readonly reactionItemFor: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
   readonly ack: (caller: Identity, id: MessageId) => Fails<AckResponse>;
   readonly ackAll: (caller: Identity, upTo: MessageId) => Fails<AckAllResponse>;
   readonly readPositions: (caller: Identity) => Fails<ReadPositionsResponse>;
@@ -99,15 +88,6 @@ function withChannel<Item extends StoredItem>(
 ): readonly (Item & { readonly channel: Channel })[] {
   const channel = Arr.findFirst(channels, (listed) => listed.name === item.message.channel);
   return Option.toArray(Option.map(channel, (listed) => ({ ...item, channel: listed })));
-}
-
-function orMessageNotFound<Value>(asked: string): (value: Value | undefined) => Fails<Value> {
-  return (value) => {
-    if (Predicate.isUndefined(value)) {
-      return Effect.fail(messageNotFound(asked));
-    }
-    return Effect.succeed(value);
-  };
 }
 
 function messageIdOf(asked: string): Fails<MessageId> {
@@ -147,7 +127,9 @@ function withChannels<Item extends StoredItem>(
   storage: Storage["Service"],
   items: readonly Item[],
 ): Fails<readonly (Item & { readonly channel: Channel })[]> {
-  return Effect.map(storage.listChannels(), (channels) => Arr.flatMap(items, (item) => withChannel(channels, item)));
+  return Effect.zipWith(itemsWithReactions({ items, storage }), storage.listChannels(), (counted, channels) =>
+    Arr.flatMap(counted, (item) => withChannel(channels, item)),
+  );
 }
 
 function historyPage({ before, limit = pageSize.default }: HistoryQuery): HistoryPage {
@@ -165,40 +147,16 @@ function historyOf(storage: Storage["Service"], caller: Identity, query: History
 
 function inboxOf(storage: Storage["Service"], caller: Identity): Fails<InboxResponse> {
   return storage.listInbox(caller.name).pipe(
+    Effect.flatMap((items) => withReactionItems({ author: caller.name, items, storage })),
     Effect.flatMap((stored) => withChannels(storage, stored)),
     Effect.map((items) => ({ items })),
   );
 }
 
-function acksOn(storage: Storage["Service"], { acked: hub, readReceipts }: Hubs): Pick<InboxService, "ack" | "ackAll"> {
-  return {
-    ack: (caller, id) =>
-      Effect.gen(function* ackMessage() {
-        const now = yield* DateTime.now;
-        const acked = yield* storage.ackMessage(caller.name, id, isoTimeOf(now));
-        const { readPosition, receipts } = yield* orMessageNotFound<AckedMessage>(String(id))(acked);
-        yield* hub.publish({ identity: caller.name, readPosition });
-        yield* readReceipts.publish(receipts);
-        return { readPosition };
-      }),
-    ackAll: (caller, upTo) =>
-      Effect.gen(function* ackInbox() {
-        const now = yield* DateTime.now;
-        const { readPositions, receipts } = yield* storage.ackInbox(caller.name, upTo, isoTimeOf(now));
-        yield* Effect.forEach(readPositions, (readPosition) => hub.publish({ identity: caller.name, readPosition }), {
-          concurrency: 1,
-          discard: true,
-        });
-        yield* readReceipts.publish(receipts);
-        return { readPositions };
-      }),
-  };
-}
-
 function inboxOn(storage: Storage["Service"], hubs: Hubs): InboxService {
   const { acked: hub, movedBack, subscriptions } = hubs;
   return {
-    ...acksOn(storage, hubs),
+    ...acksOn({ hubs, storage }),
     acked: hub.subscribe,
     follow: following(storage.followThread, true),
     history: (caller, query) => historyOf(storage, caller, query),
@@ -217,6 +175,8 @@ function inboxOn(storage: Storage["Service"], hubs: Hubs): InboxService {
         return { readPosition };
       }),
     movedBack: movedBack.subscribe,
+    reactionItemFor: (caller, id) =>
+      Effect.flatMap(reactionItemFor({ author: caller.name, id, storage }), (stored) => withChannels(storage, stored)),
     readPositions: (caller) =>
       Effect.map(storage.listReadPositions(caller.name), (readPositions) => ({ readPositions })),
     subscribe: subscription(storage.subscribeChannel, true, subscriptions),
