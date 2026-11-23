@@ -431,7 +431,7 @@ The first snapshot shows the `Log in` card with a form named `Log in`: a `Token`
 
 ## Open a channel
 
-A channel's view lists its top-level messages, oldest first, newest at the bottom, each a link to its thread with its author, its text and its reply count. It loads the newest 50; when older ones remain, a `Load more` button above them loads the 50 before. Viewing a channel acks its newest top-level message as the logged-in human (no lease), so the channel's messages leave that human's inbox. Logged in as `grace` (the recipe above, same session), read her inbox, open `#deploys`, and read it again:
+A channel's view lists its top-level messages, oldest first, newest at the bottom, each a link to its thread with its author, its text and its reply count. It loads the newest 50; when older ones remain, a `Load more` button above them loads the 50 before. Viewing a channel acks its newest top-level message as the logged-in human (no lease), so the channel's messages leave that human's inbox; a top-level message that arrives live while the channel is open is acked as it arrives. Logged in as `grace` (the recipe above, same session), read her inbox, open `#deploys`, and read it again:
 
 ```sh
 env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
@@ -456,7 +456,7 @@ A channel's view has a `← Channels` link above its heading, back to the channe
 
 ## Open a thread and reply
 
-A thread's view shows its top-level message (an article named `Parent message`), then its replies, oldest first, in a list named `Replies`, then a reply box: a form named `Reply to the thread` with a `Reply` text box and a `Send reply` button. Opening a thread acks its latest message as the logged-in human (no lease), so the thread's replies leave that human's inbox. Posting a reply adds it to the end of the list and clears the box. A `← #<channel>` link above the heading goes back to the channel. On a fresh seed, log in as `grace` (the "Log in to the web UI" recipe, same session), read her inbox, open the thread in `#general`, read the inbox again, then reply:
+A thread's view shows its top-level message (an article named `Parent message`), then its replies, oldest first, in a list named `Replies`, then a reply box: a form named `Reply to the thread` with a `Reply` text box and a `Send reply` button. Opening a thread acks its latest message as the logged-in human (no lease), so the thread's replies leave that human's inbox; a reply that arrives live while the thread is open is acked as it arrives. Posting a reply adds it to the end of the list and clears the box. A `← #<channel>` link above the heading goes back to the channel. On a fresh seed, log in as `grace` (the "Log in to the web UI" recipe, same session), read her inbox, open the thread in `#general`, read the inbox again, then reply:
 
 ```sh
 env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
@@ -596,7 +596,7 @@ agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" 
 agent-browser --session cookout open "http://127.0.0.1:3000/#/" && agent-browser --session cookout wait 1000 && agent-browser --session cookout snapshot
 ```
 
-The first snapshot's `Channels` list has the links `#deploys 1 unread Release announcements.` and `#general 1 unread Anything and everything.` (her seeded inbox: `[6,["subscribed-channel"]]` and `[5,["followed-thread"]]`). Without a reload, the second has `#deploys 2 unread 1 mention …`, shown as `2` and `@1`. After opening `#deploys` its link is `#deploys Release announcements.` again, while `#general` keeps `1 unread`: the channel view acks top-level messages only. After opening the thread, `#general` has no count either. A message that arrives while its channel or thread is open still counts as unread until the view is opened again (board question #467).
+The first snapshot's `Channels` list has the links `#deploys 1 unread Release announcements.` and `#general 1 unread Anything and everything.` (her seeded inbox: `[6,["subscribed-channel"]]` and `[5,["followed-thread"]]`). Without a reload, the second has `#deploys 2 unread 1 mention …`, shown as `2` and `@1`. After opening `#deploys` its link is `#deploys Release announcements.` again, while `#general` keeps `1 unread`: the channel view acks top-level messages only. After opening the thread, `#general` has no count either. A message that arrives live while its channel or thread is open counts as read: the open view acks it as it arrives, so the counts in every tab stay clear (board question #467, decided 2026-11-23 in #87).
 
 ## Read the inbox in the web UI
 

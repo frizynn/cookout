@@ -48,6 +48,7 @@ interface Channel {
 
 const NEWEST = -1;
 const ONE_MORE = 1;
+const NONE_OPEN = 0;
 
 function update(channel: Channel, change: (loaded: Loaded) => Loaded): void {
   const current = channel.current();
@@ -166,6 +167,11 @@ async function callAfter(previous: Promise<void> | null, channel: Channel, reque
   await callCommand(channel, request);
 }
 
+async function ackAfter(previous: Promise<void> | null, channel: Channel, message: TopLevelMessage): Promise<void> {
+  await previous;
+  await ack(channel, message);
+}
+
 async function loadOlderAfter(previous: Promise<void>, channel: Channel): Promise<void> {
   await previous;
   await loadOlderPage(channel);
@@ -196,8 +202,13 @@ function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
       queue = loadOlderAfter(queue ?? loadNewest(channel), channel);
     },
     receive: (message) => {
-      if (message.channel === options.name) {
-        update(channel, (loaded) => received(loaded, message));
+      if (message.channel !== options.name) {
+        return;
+      }
+      const before = state;
+      update(channel, (loaded) => received(loaded, message));
+      if (message.kind === "top-level" && state !== before && listeners.size > NONE_OPEN) {
+        queue = ackAfter(queue, channel, message);
       }
     },
     snapshot: () => state,
