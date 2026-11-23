@@ -203,7 +203,9 @@ export type CookoutClient = {
    * a newer server, is skipped. `close` drops the connection. For an agent identity the stream carries the held
    * lease ID and keeps the lease alive while open; a stale one is refused with 409 `lease_lost`, and if another
    * session takes the lease over (`join --force`) the iteration throws `lease_lost` (status 200, the stream's) and
-   * the client drops the lease. A human identity watches with no lease.
+   * the client drops the lease. A human identity watches with no lease. To pick up after a dropped connection, pass
+   * the last message ID seen as `lastEventId`: the stream first replays the inbox items after it, then goes on live.
+   * The server sends a heartbeat every 15 s, which `onHeartbeat` hears while the stream is being iterated.
    */
   readonly watch: (options?: WatchOptions) => Promise<EventStream>;
   /**

@@ -6,7 +6,10 @@
  * the caller's new inbox items, which the `Messages` service's hub feeds; the
  * caller's new read positions, which the `Inbox` service's hub feeds on every
  * ack from any session; and, when the request asks with `?channels=all`,
- * every new message on every channel, for the web UI. An agent's lease
+ * every new message on every channel, for the web UI; and a comment
+ * heartbeat every 15 s, so proxies keep the connection open. On a reconnect
+ * with `Last-Event-ID`, the inbox items first replay what the caller missed.
+ * An agent's lease
  * renewals, which keep the lease alive while the stream is open, are one
  * more source, here because they need the request's lease ID. The stream
  * starts with a comment, so Node sends the headers at once and the caller
@@ -19,7 +22,7 @@ import type { Connected, EventSource } from "./lib/server/source.ts";
 import { Effect, Exit, Scope, Stream } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { InboxItemEventSchema, MessageEventSchema, ReadPositionEventSchema } from "./lib/server/wire.ts";
-import { isLast, refusalSseEvent, sseText } from "./lib/server/source.ts";
+import { isLast, lastEventIdIn, refusalSseEvent, sseText } from "./lib/server/source.ts";
 import { keepRenewingSentLease, requireLeaseWhileHeld } from "../leases/server.ts";
 import { Caller } from "../identities/server.ts";
 import type { Leases } from "../leases/server.ts";
@@ -48,9 +51,10 @@ const eventsRoute: Route<Needs> = {
     Effect.gen(function* openEventStream() {
       yield* requireLeaseWhileHeld;
       const caller = yield* Caller;
-      const { url } = yield* HttpServerRequest.HttpServerRequest;
+      const { headers, url } = yield* HttpServerRequest.HttpServerRequest;
+      const lastEventId = lastEventIdIn(headers["last-event-id"]);
       const connection = yield* Scope.make();
-      const streams = yield* Effect.forEach(allSources, (source) => source({ caller, url }), {
+      const streams = yield* Effect.forEach(allSources, (source) => source({ caller, lastEventId, url }), {
         concurrency: "unbounded",
       }).pipe(Scope.provide(connection));
       const body = Stream.mergeAll(streams, { concurrency: "unbounded" }).pipe(

@@ -47,6 +47,7 @@ const MessageIdColumn = Schema.Int.pipe(Schema.refine(isMessageId));
 const ReasonRow = Schema.Struct({ reason: Schema.Literals(inboxReasons) });
 const PositionRow = Schema.Struct({ message_id: MessageIdColumn });
 const FOUND = 1;
+const NOTHING_SEEN = 0;
 const isFoundRow = Schema.is(Schema.Struct({ found: Schema.Literal(FOUND) }));
 
 const MARKER = `coalesce(CASE WHEN messages.reply_to IS NULL
@@ -74,7 +75,7 @@ const MOVE_THREAD_POSITION = `INSERT INTO thread_read_positions (identity_name, 
 function inboxSql(columns: string): string {
   return `WITH reasons (id, reason) AS (${REASONS})
     SELECT ${columns}, reasons.reason AS reason FROM messages JOIN reasons USING (id)
-    WHERE messages.author_name <> ?1 AND messages.id > ${MARKER}
+    WHERE messages.author_name <> ?1 AND messages.id > ?2 AND messages.id > ${MARKER}
     ORDER BY messages.id, reasons.reason`;
 }
 
@@ -147,9 +148,13 @@ function withParent(reader: MessageReader, { message, reasons }: Reasoned): Fail
   );
 }
 
-function inboxOf(db: SqliteDatabase, reader: MessageReader, identity: IdentityName): Fails<readonly StoredInboxItem[]> {
+function inboxOf(
+  { db, reader }: InboxOn,
+  identity: IdentityName,
+  after: MessageId | typeof NOTHING_SEEN,
+): Fails<readonly StoredInboxItem[]> {
   return Effect.gen(function* readInbox() {
-    const rows = yield* db.all(inboxSql(reader.columns), identity);
+    const rows = yield* db.all(inboxSql(reader.columns), identity, after);
     const reasoned = yield* Effect.forEach(rows, (row) => reasonedRow(reader, row), ONE_AT_A_TIME);
     return yield* Effect.forEach(grouped(reasoned), (item) => withParent(reader, item), ONE_AT_A_TIME);
   });
@@ -192,7 +197,8 @@ function sqliteInbox({ db, reader }: InboxOn): InboxSection {
         }),
       ),
     followThread: changeFollow(db, reader, "INSERT OR IGNORE INTO follows (identity_name, thread_id) VALUES (?, ?)"),
-    listInbox: (identity) => inboxOf(db, reader, identity),
+    listInbox: (identity) => inboxOf({ db, reader }, identity, NOTHING_SEEN),
+    listInboxAfter: (identity, after) => inboxOf({ db, reader }, identity, after),
     subscribeChannel: changeSubscription(
       db,
       "INSERT OR IGNORE INTO subscriptions (identity_name, channel) VALUES (?, ?)",
