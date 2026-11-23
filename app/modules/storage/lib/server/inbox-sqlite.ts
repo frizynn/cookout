@@ -10,7 +10,7 @@ import type {
 } from "./inbox.ts";
 import type { InboxReason, ReadPosition } from "../../../inbox/index.ts";
 import type { Message, MessageId, TopLevelMessage } from "../../../messages/index.ts";
-import { followersOf, reasonsIn, scopeOf } from "./inbox.ts";
+import { followersOf, newestPerScope, reasonsIn, scopeOf } from "./inbox.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
@@ -247,6 +247,16 @@ const SUBSCRIBED_CHANNELS = `SELECT ${CHANNEL_COLUMNS} FROM channels
 
 function sqliteInbox({ db, reader }: InboxOn): InboxSection {
   return {
+    ackInbox: (identity, upTo) =>
+      db.transaction(
+        Effect.flatMap(inboxOf({ db, reader }, identity, NOTHING_SEEN), (items) =>
+          Effect.forEach(
+            newestPerScope({ items, upTo }),
+            (message) => moveReadPosition(db, identity, message),
+            ONE_AT_A_TIME,
+          ),
+        ),
+      ),
     ackMessage: (identity, id) =>
       db.transaction(
         Effect.flatMap(reader.findMessage(id), (message) => {

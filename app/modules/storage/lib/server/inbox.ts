@@ -38,6 +38,7 @@ interface InboxSection {
   readonly findInboxItem: (identity: IdentityName, id: MessageId) => Fails<StoredInboxItem | undefined>;
   readonly listInboxHistory: (identity: IdentityName, page: HistoryPageRequest) => Fails<StoredHistoryPage>;
   readonly ackMessage: (identity: IdentityName, id: MessageId) => Fails<ReadPosition | undefined>;
+  readonly ackInbox: (identity: IdentityName, upTo: MessageId) => Fails<readonly ReadPosition[]>;
   readonly listReadPositions: (identity: IdentityName) => Fails<readonly ReadPosition[]>;
   readonly followThread: (identity: IdentityName, id: MessageId) => Fails<MessageId | undefined>;
   readonly unfollowThread: (identity: IdentityName, id: MessageId) => Fails<MessageId | undefined>;
@@ -60,6 +61,28 @@ function movedTo({ current, message }: Moving): ReadPosition {
   return { ...scopeOf(message), messageId: message.id };
 }
 
+function scopeKeyOf({ channel, thread }: Scope): string {
+  return `${channel} ${String(thread)}`;
+}
+
+interface AckingUpTo {
+  readonly items: readonly StoredInboxItem[];
+  readonly upTo: MessageId;
+}
+
+function newestPerScope({ items, upTo }: AckingUpTo): readonly Message[] {
+  const newest = new Map<string, Message>();
+  for (const { message } of items) {
+    if (message.id <= upTo) {
+      newest.set(scopeKeyOf(scopeOf(message)), message);
+    }
+  }
+  return Arr.sort(
+    [...newest.values()],
+    Order.mapInput(Order.Number, (message: Message) => message.id),
+  );
+}
+
 function followersOf(message: Message): readonly IdentityName[] {
   return Arr.dedupe([message.author.name, ...message.mentions]);
 }
@@ -77,6 +100,7 @@ export {
   type StoredInboxItem,
   followersOf,
   movedTo,
+  newestPerScope,
   reasonsIn,
   scopeOf,
 };
