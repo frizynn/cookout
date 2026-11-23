@@ -56,8 +56,9 @@
  * `Feed` is a named, centred column that scrolls, such as the inbox, read
  * from the top: a `FeedHeading` heads a part of it, with its count, or, with
  * no count, as a divider line; a `FeedList` is a named list of `FeedRow`s,
- * each a link leading with why it is there (`why`), then a message with its
- * author's avatar and name, what they did (`action`) and in which channel, a
+ * each a link over the whole row (named by its text) leading with why it is
+ * there (`why`), then a message with its author's avatar and name (its own
+ * link, to `authorHref`, above the row's), what they did (`action`) and in which channel, a
  * short time and any `context` line (a reply's thread), then what it holds:
  * its `FeedText`, up to two lines. A `for-you` row has an accent dot and why,
  * a bold name and bright text; an `activity` row has a muted dot and why, a

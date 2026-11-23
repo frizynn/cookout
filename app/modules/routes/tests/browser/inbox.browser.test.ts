@@ -33,7 +33,7 @@ async function subscribedPerson(channel: string): Promise<Reading> {
 }
 
 function rows(page: Page, list: string): Locator {
-  return page.getByRole("list", { name: list }).getByRole("link");
+  return page.getByRole("list", { name: list }).getByRole("listitem");
 }
 
 async function postFrom(poster: Person, channel: string, build: number): Promise<MessageId> {
