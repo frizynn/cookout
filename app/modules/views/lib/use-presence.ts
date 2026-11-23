@@ -44,8 +44,18 @@ function offlineText(presence: Presence, between: string): string {
   return `${TEXT.offline}${between}${lastSeen}`;
 }
 
-function warnedOf(presence: Presence): boolean {
-  return !presence.online && presence.warning === true;
+interface Warned extends Presence {
+  readonly lastSeenAt: NonNullable<Presence["lastSeenAt"]>;
+  readonly offlineReason: NonNullable<Presence["offlineReason"]>;
+}
+
+function warnedOf(presence: Presence): presence is Warned {
+  return (
+    !presence.online &&
+    presence.warning === true &&
+    typeof presence.lastSeenAt === "string" &&
+    typeof presence.offlineReason === "string"
+  );
 }
 
 function labelOf(presence: Presence): string {
@@ -78,10 +88,8 @@ function offlineDetail(presence: Presence): string {
   return `${TEXT.offline}: ${reason}${text.slice(TEXT.offline.length)}`;
 }
 
-function warningDetail(presence: Presence): string {
-  const ago = [presence.lastSeenAt ?? []].flat().map((at) => timeAgo(at));
-  const reasons = [presence.offlineReason ?? []].flat().map((reason) => `: ${reason}`);
-  return `${[TEXT.wentOffline, ...ago].join(" ")}${reasons.join("")}`;
+function warningDetail(presence: Warned): string {
+  return `${TEXT.wentOffline} ${timeAgo(presence.lastSeenAt)}: ${presence.offlineReason}`;
 }
 
 function detailOf(presence: Presence): string {
