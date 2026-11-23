@@ -66,6 +66,15 @@ export interface ChannelDeletedEvent {
 }
 
 /**
+ * An identity an admin just deleted, as it was, sent only on the all-channels feed so every open web UI drops it from
+ * its directory at once. It has no SSE `id`.
+ */
+export interface IdentityDeletedEvent {
+  readonly type: "identity-deleted";
+  readonly identity: Identity;
+}
+
+/**
  * A command just registered, or whose secret was just rotated, sent only on the all-channels feed so every open web
  * UI suggests it at once. It has no SSE `id`.
  */
@@ -113,6 +122,7 @@ export type CookoutEvent =
   | IdentityEvent
   | ChannelEvent
   | ChannelDeletedEvent
+  | IdentityDeletedEvent
   | CommandEvent
   | AgentSessionEvent
   | SubscriptionEvent;

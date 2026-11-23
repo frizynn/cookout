@@ -14,6 +14,7 @@ const eventTypes = {
   "channel-deleted": true,
   command: true,
   identity: true,
+  "identity-deleted": true,
   "inbox-item": true,
   message: true,
   "read-position": true,

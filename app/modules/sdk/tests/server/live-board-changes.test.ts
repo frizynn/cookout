@@ -47,6 +47,19 @@ it.effect("deleting a channel reaches every all-channels watcher as a channel-de
   }).pipe(Effect.provide(testCookout())),
 );
 
+it.effect("an admin deleting an identity reaches every all-channels watcher as an identity-deleted event", () =>
+  Effect.gen(function* identityDeletionArrives() {
+    const cookout = yield* TestCookout;
+    const grace = yield* cookout.createIdentity("grace", { kind: "human" });
+    yield* cookout.createIdentity("e2e-run-1");
+    const events = yield* watchingAllChannels(grace.client);
+    const { identity } = yield* answer(() => cookout.client.deleteIdentity("e2e-run-1"));
+    const event = yield* answer(() => events.next());
+
+    expect(event).toStrictEqual({ done: false, value: { identity, type: "identity-deleted" } });
+  }).pipe(Effect.provide(testCookout())),
+);
+
 const sessionEvent = { done: false, value: { agent: "release-bot", type: "agent-session" } } as const;
 
 function heardAfter(events: AsyncIterator<CookoutEvent>, act: () => Promise<unknown>): Effect.Effect<unknown> {
