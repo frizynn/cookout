@@ -18,7 +18,7 @@ export type { CommandTokenGrant } from "./lib/server/command-tokens.ts";
 export type { DeliveryOutcome, StoredDelivery } from "./lib/server/deliveries.ts";
 export type { NewMessage } from "./lib/server/messages.ts";
 export type { NewCommandCall } from "./lib/server/command-calls.ts";
-export type { StoredAgentSession, UseAgentSessionResult } from "./lib/server/agent-sessions.ts";
+export type { UseAgentSessionResult } from "./lib/server/agent-sessions.ts";
 
 export class Storage extends Context.Service<Storage, StorageService>()("@ai-hero/cookout/storage/server/Storage") {}
 

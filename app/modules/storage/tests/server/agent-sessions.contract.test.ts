@@ -1,5 +1,5 @@
 import { DateTime, Effect, String as Str } from "effect";
-import type { Storage, StorageUnavailable, StoredAgentSession } from "../../server.ts";
+import type { Storage, StorageUnavailable } from "../../server.ts";
 import { expect, it } from "@effect/vitest";
 import {
   identityFixture as identity,
@@ -23,6 +23,9 @@ const FIRST = tokenHash(Str.repeat(HASH_LENGTH)("1"));
 const SECOND = tokenHash(Str.repeat(HASH_LENGTH)("2"));
 const STRANGER = tokenHash(Str.repeat(HASH_LENGTH)("9"));
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
+
+type IssueRequest = Parameters<Storage["Service"]["issueAgentSession"]> extends [infer Request] ? Request : never;
+type StoredAgentSession = IssueRequest["session"];
 
 function withAgent(
   layer: Layer.Layer<Storage, StorageUnavailable>,
