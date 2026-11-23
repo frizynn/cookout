@@ -1,7 +1,7 @@
 import type { CookoutClient, InboxResponse } from "../../sdk/index.ts";
-import { adminClient, alertSaying, newIdentity, openAt } from "./app.tsx";
+import { adminClient, alertSaying, messagesIn, newIdentity, openAt } from "./app.tsx";
 import { expect, it, vi } from "vitest";
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 
 const ONE_A_PAGE = 1;
 const NONE = 0;
@@ -29,12 +29,8 @@ async function channelWith(name: string, texts: readonly string[]): Promise<void
   await postInOrder(name, texts);
 }
 
-async function shownMessages(): Promise<readonly (string | null)[]> {
-  const list = await screen.findByRole("list", { name: "Messages" });
-  const shown: (string | null)[] = [];
-  for (const link of within(list).getAllByRole("link")) {
-    shown.push(link.textContent);
-  }
+async function shownMessages(): Promise<readonly string[]> {
+  const shown = await messagesIn("Messages");
   return shown;
 }
 
@@ -57,7 +53,7 @@ async function leaveForTheList(): Promise<void> {
 
 async function bothPagesLoaded(): Promise<void> {
   await shownMessages();
-  fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+  fireEvent.click(screen.getByRole("button", { name: "Load older messages" }));
   await screen.findByText("A");
 }
 
@@ -86,8 +82,8 @@ it("reopening a channel shows what was posted while it was closed, keeping the o
   globalThis.location.hash = "#/channels/web-channel-reopen";
   await screen.findByText("C");
 
-  expect([await shownMessages(), screen.queryByRole("button", { name: "Load more" })]).toStrictEqual([
-    ["@adminA0 replies", "@adminB0 replies", "@adminC0 replies"],
+  expect([await shownMessages(), screen.queryByRole("button", { name: "Load older messages" })]).toStrictEqual([
+    ["adminA", "B", "C"],
     null,
   ]);
 
@@ -109,7 +105,7 @@ it("reopening a channel that can no longer be read says so and keeps its message
 
   expect([alert.textContent, await shownMessages()]).toStrictEqual([
     expect.stringMatching(/^Couldn't mark the channel read \(token_revoked\)/u),
-    ["@adminHello0 replies"],
+    ["adminHello"],
   ]);
 
   close();
@@ -127,7 +123,7 @@ it("reopening a channel that failed to load loads it again and acks it", { timeo
   globalThis.location.hash = "#/channels/web-channel-reopen-missing";
 
   await expect(Promise.all([shownMessages(), inboxEmptied(reader.client)])).resolves.toStrictEqual([
-    ["@adminHere now0 replies"],
+    ["adminHere now"],
     expect.objectContaining({ items: [] }),
   ]);
 

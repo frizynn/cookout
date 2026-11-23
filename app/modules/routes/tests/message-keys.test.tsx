@@ -1,4 +1,4 @@
-import { adminClient, newIdentity, openAt } from "./app.tsx";
+import { adminClient, messagesIn, newIdentity, openAt } from "./app.tsx";
 import { expect, it } from "vitest";
 import { fireEvent, getDefaultNormalizer, screen, within } from "@testing-library/react";
 
@@ -35,12 +35,8 @@ function pressEach(keys: readonly string[]): void {
   }
 }
 
-async function shownMessages(): Promise<readonly (string | null)[]> {
-  const list = await screen.findByRole("list", { name: "Messages" });
-  const shown: (string | null)[] = [];
-  for (const link of within(list).queryAllByRole("link")) {
-    shown.push(link.textContent);
-  }
+async function shownMessages(): Promise<readonly string[]> {
+  const shown = await messagesIn("Messages");
   return shown;
 }
 
@@ -58,7 +54,7 @@ it("pressing Enter in the message box sends the message and empties the box", { 
   await within(screen.getByRole("list", { name: "Messages" })).findByText("Sent with Enter");
 
   expect([await shownMessages(), screen.queryByDisplayValue("Sent with Enter")]).toStrictEqual([
-    ["@adminSent with Enter0 replies"],
+    ["adminSent with Enter"],
     null,
   ]);
 

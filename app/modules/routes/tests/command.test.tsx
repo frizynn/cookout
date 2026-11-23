@@ -1,4 +1,4 @@
-import { adminClient, alertSaying, clientWith, newIdentity, openAt } from "./app.tsx";
+import { adminClient, alertSaying, clientWith, messagesIn, newIdentity, openAt } from "./app.tsx";
 import { expect, it } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
@@ -53,11 +53,11 @@ it("a command call and its result reply show their data in the thread", { timeou
   expect([
     within(parent).getByLabelText("Call to /web-show-call").textContent,
     within(reply).getByLabelText("Data").textContent,
-    reply.textContent,
+    await messagesIn("Replies"),
   ]).toStrictEqual([
-    pretty({ branch: "main" }),
+    JSON.stringify({ branch: "main" }),
     pretty({ status: "done" }),
-    `@web-show-callagentShipped main.${pretty({ status: "done" })}`,
+    [`web-show-callagentShipped main.▸ data▾ data${pretty({ status: "done" })}`],
   ]);
 
   close();
@@ -79,7 +79,7 @@ it("a person picks a command, enters data and calls it, and the call message app
     shown.textContent,
     messages.map(({ author, data = "no data", text }) => [author.name, text, data]),
   ]).toStrictEqual([
-    pretty({ branch: "main" }),
+    JSON.stringify({ branch: "main" }),
     [
       ["admin", "Ready to ship", "no data"],
       ["web-command-caller", "/web-call-form", { command: "web-call-form", data: { branch: "main" } }],

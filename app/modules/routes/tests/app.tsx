@@ -105,7 +105,7 @@ export async function alertSaying(start: string): Promise<HTMLElement> {
 export async function streamOf(label: string): Promise<readonly string[]> {
   const list = await screen.findByRole("list", { name: label });
   const shown: string[] = [];
-  for (const item of within(list).getAllByRole("listitem")) {
+  for (const item of within(list).queryAllByRole("listitem")) {
     for (const line of within(item).queryAllByRole("separator")) {
       shown.push(`[${String(line.getAttribute("aria-label"))}]`);
     }

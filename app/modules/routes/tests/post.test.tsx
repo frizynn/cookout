@@ -1,4 +1,4 @@
-import { adminClient, alertSaying, newIdentity, openAt } from "./app.tsx";
+import { adminClient, alertSaying, messagesIn, newIdentity, openAt } from "./app.tsx";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
@@ -13,12 +13,8 @@ async function channelWith(name: string, text: string): Promise<void> {
   await adminClient().createMessage({ channel: name, text });
 }
 
-async function shownMessages(): Promise<readonly (string | null)[]> {
-  const list = await screen.findByRole("list", { name: "Messages" });
-  const shown: (string | null)[] = [];
-  for (const item of within(list).getAllByRole("listitem")) {
-    shown.push(item.textContent);
-  }
+async function shownMessages(): Promise<readonly string[]> {
+  const shown = await messagesIn("Messages");
   return shown;
 }
 
@@ -77,7 +73,7 @@ it("a person posts a top-level message with an @ mention, it appears in the chan
     await inboxOnceFilled(mentioned.client),
     await inboxOf(poster.client),
   ]).toStrictEqual([
-    ["@adminEarlier0 replies", "@web-post-posterPlease look, @web-post-reviewer 0 replies"],
+    ["adminEarlier", "web-post-posterPlease look, @web-post-reviewer "],
     "",
     [["Please look, @web-post-reviewer ", ["mention"]]],
     [],
@@ -96,7 +92,7 @@ it("a refused post says so and keeps its text in the box", { timeout: 5000 }, as
 
   expect([alert.textContent, await shownMessages(), screen.queryByDisplayValue("Too late")]).toStrictEqual([
     expect.stringMatching(/^Couldn't post the message \(token_revoked\)/u),
-    ["@adminEarlier0 replies"],
+    ["adminEarlier"],
     screen.getByLabelText("Message"),
   ]);
 

@@ -1,4 +1,4 @@
-import { adminClient, openAt } from "./app.tsx";
+import { adminClient, messagesIn, openAt, parentShown } from "./app.tsx";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Message } from "../../sdk/index.ts";
@@ -53,14 +53,14 @@ it("following a message's reply count opens its thread in the panel, beside the 
   const parent = await threadIn("web-thread-opens");
   const close = openAt({ client: adminClient(), hash: `#/channels/${parent.channel}` });
 
-  fireEvent.click(await screen.findByRole("link", { name: /The parent/u }));
-  const parentMessage = await within(await threadPanel()).findByRole("article", { name: "Parent message" });
+  fireEvent.click(await screen.findByRole("link", { name: "2 replies" }));
+  await threadPanel();
 
-  expect([
-    globalThis.location.hash,
-    parentMessage.textContent,
-    screen.getByRole("list", { name: "Messages" }).textContent,
-  ]).toStrictEqual([hashOf(parent), "@adminThe parent", "@adminThe parent2 replies"]);
+  expect([globalThis.location.hash, await parentShown(), await messagesIn("Messages")]).toStrictEqual([
+    hashOf(parent),
+    "adminThe parent",
+    ["adminThe parent2 replies"],
+  ]);
 
   close();
 });

@@ -1,9 +1,9 @@
 import type { Message, ServerSentEvent } from "../../sdk/index.ts";
-import { adminClient, newIdentity, openAt } from "./app.tsx";
+import { adminClient, messagesIn, newIdentity, openAt } from "./app.tsx";
 import { expect, it } from "vitest";
-import { screen, within } from "@testing-library/react";
 import type { Live } from "../../live/index.ts";
 import { createLive } from "../../live/index.ts";
+import { screen } from "@testing-library/react";
 
 interface ScriptedView {
   readonly parent: Message;
@@ -55,12 +55,8 @@ async function replyTo(parent: Message, text: string): Promise<Message> {
   return message;
 }
 
-async function shownIn(name: string): Promise<readonly (string | null)[]> {
-  const list = await screen.findByRole("list", { name });
-  const shown: (string | null)[] = [];
-  for (const item of within(list).getAllByRole("listitem")) {
-    shown.push(item.textContent);
-  }
+async function shownIn(name: string): Promise<readonly string[]> {
+  const shown = await messagesIn(name);
   return shown;
 }
 
@@ -87,7 +83,7 @@ it("the channel view shows each new message once, and drops events that don't ma
 
   send(...garbage, sent(later), sent(later), sent(reply), sent(reply), sent(elsewhere));
 
-  await expect(shownIn("Messages")).resolves.toStrictEqual(["@adminThe parent1 reply", "@adminLater0 replies"]);
+  await expect(shownIn("Messages")).resolves.toStrictEqual(["adminThe parent1 reply", "adminLater"]);
 
   close();
 });
@@ -106,7 +102,7 @@ it("the thread view shows each new reply in it once, and nothing from elsewhere"
 
   send(sent(reply), sent(reply), sent(otherReply), sent(topLevel));
 
-  await expect(shownIn("Replies")).resolves.toStrictEqual(["@adminA reply"]);
+  await expect(shownIn("Replies")).resolves.toStrictEqual(["adminA reply"]);
 
   close();
 });

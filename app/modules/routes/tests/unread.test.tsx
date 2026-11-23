@@ -88,7 +88,7 @@ it("a channel's unread count rises live as messages arrive, and drops to zero on
   await postAs(poster, channel, "@web-unread-live-reader at noon?");
   await shownCounts(channel, ["1 unread", "1 mention"]);
 
-  await opened(`#/channels/${channel}`, "@web-unread-live-reader at noon?");
+  await opened(`#/channels/${channel}`, "Deploy at noon?");
 
   await shownCounts(channel, []);
 
