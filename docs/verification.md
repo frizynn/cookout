@@ -329,25 +329,55 @@ node dist/main.js serve --port 3000 --host 127.0.0.1 --db /tmp/cookout-built.db 
 
 Run the second command in the background (or its own terminal). `pnpm build` runs tsdown, then `vite build`, which writes the web UI to the web folder in dist (its `index.html` and its assets). `cookout serve` serves that `index.html` at `/` and each asset at `/assets/<file>`, without a token, so open `http://127.0.0.1:3000/`, or run `curl -fsS http://127.0.0.1:3000/`. Running `node app/main.ts serve` from the source has no built UI next to it, so there `/` is refused with 404 `not_found`. Stop it with `pkill -INT -f "[d]ist/main.js serve"`.
 
-## See the channel list
+## Log in to the web UI
 
-The web UI (`app/web.tsx`) draws `CookoutApp` from the `routes` module, which picks a view from the page's location hash: `#/` (or no hash) is the channel list, and `#/login`, `#/channels/<name>` and `#/channels/<name>/threads/<id>` have routes that say they aren't built yet; any other hash says "Nothing here". There is no login yet, so the page's SDK client has no token, and the channel list shows the server's refusal (`token_missing`). To see the channels, have the browser send a token itself. With the built server from "Open the web UI" up on port 3000, make some channels, then drive it with `agent-browser`:
+The web UI (`app/web.tsx`) draws `CookoutApp` from the `routes` module, which picks a view from the page's location hash: `#/` (or no hash) is the channel list, `#/channels/<name>` a channel, `#/login` the login view, and `#/channels/<name>/threads/<id>` says it isn't built yet; any other hash says "Nothing here". The page's SDK client sends no token: until the browser has a session cookie, every route shows the login view. Logging in swaps a human identity's token for the cookie (`POST /v1/session`), so the token is pasted once and a reload stays logged in. With the built server from "Open the web UI" up on port 3000, seed it, then drive it with `agent-browser` in its own session (`--session`, so other browser work doesn't share its cookies):
 
 ```sh
 grep '^{"adminToken' /tmp/cookout-built.log | jq -r '"COOKOUT_URL=http://127.0.0.1:3000 COOKOUT_TOKEN=\(.adminToken)"' > /tmp/cookout-built.env
-env $(cat /tmp/cookout-built.env) node app/main.ts channel create general --description "The general channel."
-env $(cat /tmp/cookout-built.env) node app/main.ts channel create deploys
-agent-browser open http://127.0.0.1:3000/ && agent-browser snapshot
-agent-browser close
-agent-browser open http://127.0.0.1:3000/ --headers "{\"Authorization\":\"Bearer $(grep '^{"adminToken' /tmp/cookout-built.log | jq -r .adminToken)\"}"
-agent-browser snapshot
-agent-browser find text "#general" click && agent-browser get url
-agent-browser close
+env $(cat /tmp/cookout-built.env) pnpm -s seed > /tmp/cookout-built-seed.json
+agent-browser --session cookout open http://127.0.0.1:3000/ && agent-browser --session cookout snapshot
+agent-browser --session cookout fill 'input[name=token]' "$(jq -r '.identities[] | select(.identity.name == "triage-agent") | .token' /tmp/cookout-built-seed.json)"
+agent-browser --session cookout find role button click --name "Log in" && agent-browser --session cookout snapshot
+agent-browser --session cookout fill 'input[name=token]' "$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json)"
+agent-browser --session cookout find role button click --name "Log in" && agent-browser --session cookout snapshot
 ```
 
-The first snapshot shows the `Channels` card with an alert: `Couldn't load the channels (token_missing): …`. With the header, the second shows a list named `Channels` with one link per channel, sorted by name, each `#<name>` with its description under it: `#deploys` and `#general`. Clicking `#general` moves to `http://127.0.0.1:3000/#/channels/general`, whose heading is `#general`. Take a picture of any of them with `agent-browser screenshot <file>.png`.
+The first snapshot shows the `Log in` card with a form named `Log in`: a `Token` field and a `Log in` button, and no alert. The agent's token is refused: the alert says `Couldn't log in (human_only): Only a human identity can log in to the web UI, and triage-agent is an agent.` and the form stays. With `grace`'s token the page shows a list named `Channels` with one link per channel, sorted by name, each `#<name>` with its description under it: `#deploys` and `#general`. `#/login` while logged in says `Logged in as @grace.` with a link back to the channels.
 
-The web tests (`app/modules/routes/tests/`, the `web` Vitest project) render `CookoutApp` in jsdom against one real `cookout serve` that `scripts/web-test-server.ts` starts for the run; run them alone with `node_modules/.bin/vitest run --project web`.
+## Open a channel
+
+A channel's view lists its top-level messages, oldest first, newest at the bottom, each a link to its thread with its author, its text and its reply count. It loads the newest 50; when older ones remain, a `Load more` button above them loads the 50 before. Viewing a channel acks its newest top-level message as the logged-in human (no lease), so the channel's messages leave that human's inbox. Logged in as `grace` (the recipe above, same session), read her inbox, open `#deploys`, and read it again:
+
+```sh
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
+agent-browser --session cookout find text "#deploys" click && agent-browser --session cookout get url
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
+agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" && agent-browser --session cookout snapshot
+```
+
+On a fresh seed the first inbox gives `[5,["followed-thread"]]` and `[6,["subscribed-channel"]]`. Clicking `#deploys` moves to `http://127.0.0.1:3000/#/channels/deploys`, and the second inbox gives only `[5,["followed-thread"]]`: the `deploys` message was acked by viewing it (the reply, 5, is in a thread, which the channel view doesn't ack). The `#general` snapshot, opened as a new page with the same cookie, shows a list named `Messages`: `@ada` with the thread's top-level message and `3 replies`, then `@grace` with `Lunch at 12:30.` and `0 replies`. To see `Load more`, post more than 50 top-level messages to a channel and open it:
+
+```sh
+env $(cat /tmp/cookout-built.env) node app/main.ts channel create busy
+env $(cat /tmp/cookout-built.env) node --input-type=module -e 'import { createCookoutClient } from "./app/modules/sdk/index.ts"; const client = createCookoutClient(); for (let i = 1; i <= 53; i++) await client.createMessage({ channel: "busy", text: `Message ${i}` });'
+agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/busy" && agent-browser --session cookout snapshot
+agent-browser --session cookout find role button click --name "Load more" && agent-browser --session cookout snapshot
+agent-browser --session cookout close
+```
+
+The first snapshot has the `Load more` button and 50 messages, `Message 4` to `Message 53`; after the click there are all 53 and no button. Take a picture of any of them with `agent-browser --session cookout screenshot <file>.png`.
+
+## Run the web tests
+
+The web tests (`app/modules/routes/tests/`, the `web` Vitest project) render `CookoutApp` in jsdom against one real `cookout serve` that `scripts/web-test-server.ts` starts for the run; run them alone with `node_modules/.bin/vitest run --project web`. jsdom keeps no cookies, so there the board sends the human's token itself.
+
+The browser tests (`app/modules/routes/tests/browser/*.browser.test.ts`) are Playwright in headless Chromium: `playwright.config.ts`'s global setup (`scripts/browser-test-server.ts`) runs `app/dev.ts start` (a fresh `cookout serve` behind the Vite dev server) and hands the tests its web URL and admin token as `COOKOUT_URL` and `COOKOUT_TOKEN`. They log in through the form with the real session cookie. Install the browser once, then run them (`pnpm check` runs them as its `browser` job):
+
+```sh
+pnpm exec playwright install --only-shell chromium
+pnpm -s browser
+```
 
 ## Other checks
 

@@ -1,37 +1,22 @@
-import { ChannelListView, NotBuiltView } from "../../views/index.tsx";
 import type { Board } from "../../board/index.ts";
+import { LoginView } from "../../views/index.tsx";
 import type { ReactNode } from "react";
 import type { Route } from "./route.ts";
+import type { Session } from "../../session/index.ts";
+import { SignedInView } from "./signed-in-view.tsx";
+import { useSyncExternalStore } from "react";
 
 interface RouteViewProps {
   readonly board: Board;
   readonly route: Route;
-}
-
-const NOT_BUILT = {
-  channel: "This channel's messages aren't shown yet.",
-  login: "Signing in isn't built yet.",
-  missing: "No page has this address.",
-  thread: "This thread's replies aren't shown yet.",
-} as const;
-
-function titleOf(route: Exclude<Route, { readonly name: "channels" }>): string {
-  if (route.name === "channel") {
-    return `#${route.channel}`;
-  }
-  if (route.name === "thread") {
-    return `Thread ${route.thread} in #${route.channel}`;
-  }
-  if (route.name === "login") {
-    return "Sign in";
-  }
-  return "Nothing here";
+  readonly session: Session;
 }
 
 export function RouteView(props: RouteViewProps): ReactNode {
-  const { board, route } = props;
-  if (route.name === "channels") {
-    return <ChannelListView board={board} />;
+  const { board, route, session } = props;
+  const { status } = useSyncExternalStore(session.subscribe, session.snapshot);
+  if (status !== "logged-in" || route.name === "login") {
+    return <LoginView session={session} />;
   }
-  return <NotBuiltView description={NOT_BUILT[route.name]} title={titleOf(route)} />;
+  return <SignedInView board={board} route={route} />;
 }

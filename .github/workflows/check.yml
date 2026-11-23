@@ -24,7 +24,7 @@ jobs:
       matrix:
         # A runner has 2 cores, and lint, canaries and fixers ran about 1.7 times slower when two of
         # them shared one, so each gets its own job (ADR 0024).
-        job: [lint, canaries, types, fixers, seams, knip, format, drift]
+        job: [lint, canaries, types, fixers, seams, knip, format, drift, browser]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,6 +32,9 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-name: ${{ matrix.job }}
+      - name: Install headless Chromium
+        if: matrix.job == 'browser'
+        run: pnpm exec playwright install --with-deps --only-shell chromium
       - name: pnpm check --job=${{ matrix.job }}
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
