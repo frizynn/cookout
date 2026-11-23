@@ -26,7 +26,8 @@
  * itself, rather than a refusal, is `cli_error`.
  *
  * `login` takes the board's URL from `--url`, else `COOKOUT_URL`, else asks for it on a terminal (`usage` with
- * none); a bare host means `https://`, and a URL that doesn't answer `/v1/health` is `not_a_cookout`.
+ * none); a bare host means `https://`. Login and logout go through `HTTPS_PROXY` as every other command does, so a
+ * board they can't reach is `unreachable`, and one that answers but not `/v1/health` is `not_a_cookout`.
  * `login --token` reads a human identity's token from stdin (never the command
  * line), checks it with the server, and keeps it as the Login for that board
  * in the credentials file, `$XDG_CONFIG_HOME/cookout/credentials` (default

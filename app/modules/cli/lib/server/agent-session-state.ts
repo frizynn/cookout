@@ -38,6 +38,7 @@ const KEY_LENGTH = 32;
 const PRETTY = 2;
 const PRIVATE_FOLDER = 0o700;
 const PRIVATE_FILE = 0o600;
+const AGENT_JOIN_REQUEST = "agent-join-request";
 const PERMISSIONS = 0o1000;
 
 const currentUser: Effect.Effect<Option.Option<number>> = Effect.sync(() =>
@@ -49,6 +50,7 @@ const AgentSessionStateSchema = Schema.Struct({
   expiresAt: IsoTimeSchema,
   identity: Schema.String.check(Schema.isPattern(identityNamePattern).abort()).pipe(Schema.refine(isIdentityName)),
   issuedAt: IsoTimeSchema,
+  joinedBy: Schema.optionalKey(Schema.Literal(AGENT_JOIN_REQUEST)),
   url: Schema.String,
 });
 
@@ -57,6 +59,7 @@ interface AgentSessionState {
   readonly expiresAt: IsoTime;
   readonly identity: IdentityName;
   readonly issuedAt: IsoTime;
+  readonly joinedBy?: typeof AGENT_JOIN_REQUEST;
   readonly url: string;
 }
 

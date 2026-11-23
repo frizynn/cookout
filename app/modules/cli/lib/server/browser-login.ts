@@ -8,6 +8,7 @@ import { createCookoutClient } from "../../../sdk/index.ts";
 import { machineName } from "./adapters/machine.ts";
 import { saveLogin } from "./logins.ts";
 import { toFailure } from "./adapters/sdk.ts";
+import { toFailureAt } from "./adapters/http.ts";
 
 type ApprovedLogin = Extract<LoginCollectedResponse, { readonly status: "approved" }>;
 
@@ -34,14 +35,18 @@ function isGone(failure: CallFailure): boolean {
   return failure.code === "login_request_not_found";
 }
 
-function approvalOf(
-  client: CookoutClient,
-  requestId: LoginRequestStartedResponse["requestId"],
-): Effect.Effect<ApprovedLogin, CallFailure> {
-  const collect = Effect.tryPromise({ catch: toFailure, try: () => client.collectLogin(requestId) }).pipe(
+interface Waiting {
+  readonly client: CookoutClient;
+  readonly requestId: LoginRequestStartedResponse["requestId"];
+  readonly url: string;
+}
+
+function approvalOf(waiting: Waiting): Effect.Effect<ApprovedLogin, CallFailure> {
+  const { client, requestId, url } = waiting;
+  const collect = Effect.tryPromise({ catch: toFailureAt(url), try: () => client.collectLogin(requestId) }).pipe(
     Effect.catchIf(isGone, failExpired),
   );
-  const again = Effect.suspend(() => approvalOf(client, requestId));
+  const again = Effect.suspend(() => approvalOf(waiting));
   const pollAgain = Effect.andThen(Effect.sleep(pollEvery), again);
   return Effect.filterOrElse(collect, isApproved, Function.constant(pollAgain));
 }
@@ -54,9 +59,9 @@ function logInByBrowser(url: string): Effect.Effect<LoggedIn, CallFailure, Agent
   return Effect.gen(function* approveInBrowser() {
     const client = yield* Effect.try({ catch: toFailure, try: () => createCookoutClient({ env: NOTHING, url }) });
     const host = yield* machineName;
-    const started = yield* Effect.tryPromise({ catch: toFailure, try: () => client.startLogin({ host }) });
+    const started = yield* Effect.tryPromise({ catch: toFailureAt(url), try: () => client.startLogin({ host }) });
     yield* Console.error(approvalPrompt(url, started));
-    const { identity, token } = yield* approvalOf(client, started.requestId);
+    const { identity, token } = yield* approvalOf({ client, requestId: started.requestId, url });
     yield* saveLogin({ token, url });
     return { identity, url };
   });

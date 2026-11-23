@@ -140,29 +140,31 @@ it.effect("with no URL given and no terminal to ask on, or nothing typed, login 
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("login refuses a URL where nothing answers, or that isn't a cookout server, and stores nothing", () =>
-  Effect.gen(function* notACookout() {
-    const { ada, env, file } = yield* setUp;
-    const fs = yield* FileSystem.FileSystem;
-    const notCookout = yield* serverAnswering({ status: 404, text: "Not Found" });
+it.effect(
+  "login refuses a URL where nothing answers as unreachable, and one that isn't a cookout server, and stores nothing",
+  () =>
+    Effect.gen(function* notACookout() {
+      const { ada, env, file } = yield* setUp;
+      const fs = yield* FileSystem.FileSystem;
+      const notCookout = yield* serverAnswering({ status: 404, text: "Not Found" });
 
-    const results = yield* Effect.all(
-      [
-        logIn(env, ada.token, "--url", NOTHING_LISTENS),
-        logIn(env, ada.token, "--url", notCookout),
-        run(env, "login", "--url", notCookout),
-      ],
-      ONE_AT_A_TIME,
-    );
-    const stored = yield* Effect.orDie(fs.exists(file));
+      const results = yield* Effect.all(
+        [
+          logIn(env, ada.token, "--url", NOTHING_LISTENS),
+          logIn(env, ada.token, "--url", notCookout),
+          run(env, "login", "--url", notCookout),
+        ],
+        ONE_AT_A_TIME,
+      );
+      const stored = yield* Effect.orDie(fs.exists(file));
 
-    expect(results).toMatchObject([
-      { exitCode: 1, stderrJson: { error: { code: "not_a_cookout" } } },
-      { exitCode: 1, stderrJson: { error: { code: "not_a_cookout" } } },
-      { exitCode: 1, stderrJson: { error: { code: "not_a_cookout" } } },
-    ]);
-    expect(stored).toBe(false);
-  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+      expect(results).toMatchObject([
+        { exitCode: 1, stderrJson: { error: { code: "unreachable" } } },
+        { exitCode: 1, stderrJson: { error: { code: "not_a_cookout" } } },
+        { exitCode: 1, stderrJson: { error: { code: "not_a_cookout" } } },
+      ]);
+      expect(stored).toBe(false);
+    }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
 it.effect("a bare host such as 127.0.0.1:1 means https://", () =>
@@ -171,8 +173,8 @@ it.effect("a bare host such as 127.0.0.1:1 means https://", () =>
 
     const login = yield* logIn(env, ada.token, "--url", "127.0.0.1:1");
 
-    expect(login).toMatchObject({ exitCode: 1, stderrJson: { error: { code: "not_a_cookout" } } });
-    expect(login.stderr).toContain("https://127.0.0.1:1");
+    expect(login).toMatchObject({ exitCode: 1, stderrJson: { error: { code: "unreachable" } } });
+    expect(login.stderr).toContain("cannot reach https://127.0.0.1:1: ");
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
