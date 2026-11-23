@@ -227,3 +227,14 @@ it.effect("an agent can't see or approve an agent join request", () =>
     ]);
   }).pipe(Effect.provide(testCookout())),
 );
+
+it.effect("an approved request collected after another session joined the agent is refused, not forced", () =>
+  Effect.gen(function* joinedMeanwhile() {
+    const on = yield* startedFor(asked);
+    yield* answer(() => on.ada.client.approveAgentJoin(on.started.userCode));
+    yield* answer(() => on.ada.client.join({ as: "triage-agent" }));
+    const refused = yield* refusal(() => on.cookout.clientFor().collectAgentJoin(on.started.requestId));
+
+    expect(refused).toMatchObject({ code: "agent_session_live", status: CONFLICT });
+  }).pipe(Effect.provide(testCookout())),
+);

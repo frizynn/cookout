@@ -151,10 +151,7 @@ function approver(on: On): JoinRequests["approveJoin"] {
       const found = yield* liveRequest(on)(approving.userCode);
       const { approval, terms } = yield* decided(on, approving, found);
       const at = yield* now;
-      const approved = yield* on.storage.approveAgentJoinRequest(approving.userCode, approval, at);
-      if (approved === "not_found") {
-        return yield* Effect.fail(agentJoinRequestNotFound);
-      }
+      yield* on.storage.approveAgentJoinRequest(approving.userCode, approval, at);
       const { created: creates, identity: joins } = approval;
       const shown = { ...found, approved: true };
       return viewOf({ creates, found: shown, idleExpiry: terms.idleExpiry, joins, live: Option.none() });
