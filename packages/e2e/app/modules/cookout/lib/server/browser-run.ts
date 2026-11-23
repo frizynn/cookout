@@ -3,6 +3,7 @@ import { Context, Effect, Layer, ManagedRuntime, String as Str } from "effect";
 import { CookoutUnderTest, cookoutUnderTest } from "./cookout-under-test.ts";
 import type { Fixtures, Page, PlaywrightTestArgs } from "@playwright/test";
 import type { CookoutUnderTestService } from "./cookout-under-test.ts";
+import { exampleCommandRegistered } from "./example-command.ts";
 
 interface BrowserRun {
   readonly url: string;
@@ -11,6 +12,7 @@ interface BrowserRun {
   readonly createHuman: (name: string) => Promise<IdentityWithTokenResponse>;
   readonly createChannel: (name: string) => Promise<ChannelResponse>;
   readonly logIn: (token: string) => Promise<void>;
+  readonly exampleCommandRegistered: () => Promise<boolean>;
 }
 
 interface BrowserFixtures {
@@ -38,6 +40,7 @@ function browserRun(cookout: CookoutUnderTestService, page: Page): BrowserRun {
     createAgent: (name) => bridge.runPromise(cookout.createAgent(name)),
     createChannel: (name) => bridge.runPromise(cookout.createChannel(name)),
     createHuman: (name) => bridge.runPromise(cookout.createHuman(name)),
+    exampleCommandRegistered: () => bridge.runPromise(exampleCommandRegistered),
     logIn: logIn(page, cookout.url),
     prefix: cookout.prefix,
     url: cookout.url,

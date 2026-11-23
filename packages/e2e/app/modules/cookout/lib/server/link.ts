@@ -12,6 +12,12 @@ import type { HttpClientError, HttpClientResponse, HttpServerError } from "effec
 import { NodeHttpClient, NodeHttpServer } from "@effect/platform-node";
 import type { Scope } from "effect";
 
+interface Answered {
+  readonly method: string;
+  readonly path: string;
+  readonly status: number;
+}
+
 interface Link {
   readonly url: string;
   readonly cut: Effect.Effect<void>;
@@ -19,6 +25,7 @@ interface Link {
   readonly bringUp: Effect.Effect<void>;
   readonly relayed: (text: string, times?: number) => Effect.Effect<void>;
   readonly lastEventIds: Effect.Effect<readonly (string | null)[]>;
+  readonly answered: Effect.Effect<readonly Answered[]>;
 }
 
 interface Relay {
@@ -27,6 +34,7 @@ interface Relay {
   readonly dropped: Effect.Effect<Effect.Effect<boolean>>;
   readonly record: (text: string) => Effect.Effect<void>;
   readonly opened: (request: HttpServerRequest.HttpServerRequest) => Effect.Effect<void>;
+  readonly answer: (answered: Answered) => Effect.Effect<void>;
   readonly execute: (
     request: HttpClientRequest.HttpClientRequest,
   ) => Effect.Effect<HttpClientResponse.HttpClientResponse, HttpClientError.HttpClientError>;
@@ -68,6 +76,7 @@ function relayed(
     yield* relay.opened(request);
     const dropped = yield* relay.dropped;
     const answer = yield* Effect.flatMap(forwardedTo(relay.target, method), relay.execute);
+    yield* relay.answer({ method, path: request.url, status: answer.status });
     const body = answer.stream.pipe(
       Stream.decodeText(),
       Stream.interruptWhen(dropped),
@@ -97,17 +106,18 @@ function lastEventIdOf(request: HttpServerRequest.HttpServerRequest): string | n
 function link(target: string): Effect.Effect<Link, never, Scope.Scope> {
   return Effect.gen(function* openLink() {
     const client = yield* Effect.map(Layer.build(NodeHttpClient.layerNodeHttp), Context.get(HttpClient.HttpClient));
-    const firstDrop = yield* Deferred.make<boolean>();
-    const drops = yield* Ref.make(firstDrop);
+    const drops = yield* Effect.flatMap(Deferred.make<boolean>(), Ref.make);
     const sent = yield* SubscriptionRef.make("");
     const down = yield* Ref.make(false);
     const opened = yield* Ref.make<readonly (string | null)[]>([]);
+    const answers = yield* Ref.make<readonly Answered[]>([]);
     const cut = Effect.gen(function* dropAll() {
       const next = yield* Deferred.make<boolean>();
       const current = yield* Ref.getAndSet(drops, next);
       yield* Deferred.succeed(current, true);
     });
     const relay: Relay = {
+      answer: (answered) => Ref.update(answers, (all) => [...all, answered]),
       dropped: Effect.map(Ref.get(drops), Deferred.await),
       execute: client.execute,
       isDown: Ref.get(down),
@@ -122,6 +132,7 @@ function link(target: string): Effect.Effect<Link, never, Scope.Scope> {
     };
     const url = yield* serving(relay);
     return {
+      answered: Ref.get(answers),
       bringUp: Ref.set(down, false),
       cut,
       lastEventIds: Ref.get(opened),
@@ -133,4 +144,4 @@ function link(target: string): Effect.Effect<Link, never, Scope.Scope> {
   }).pipe(Effect.orDie);
 }
 
-export { type Link, link };
+export { type Answered, type Link, link };
