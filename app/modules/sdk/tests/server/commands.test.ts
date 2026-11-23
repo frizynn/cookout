@@ -63,6 +63,17 @@ it.effect("an admin adds a command: its secret is shown once, it is listed, and 
   }).pipe(Effect.provide(testCookout())),
 );
 
+it.effect("a running cookout gives each command its own random secret", () =>
+  Effect.gen(function* liveSecrets() {
+    const cookout = yield* TestCookout;
+    const first = yield* answer(() => cookout.client.addCommand(deploy));
+    const second = yield* answer(() => cookout.client.addCommand({ ...deploy, name: "release" }));
+
+    expect(first.secret).toMatch(/^hmac_[A-Za-z0-9_-]{43}$/u);
+    expect(second.secret).not.toBe(first.secret);
+  }).pipe(Effect.provide(testCookout({ secrets: "live" }))),
+);
+
 it.effect("a command whose name is an agent's reuses that agent as its handler", () =>
   Effect.gen(function* reuseAgent() {
     const cookout = yield* TestCookout;
