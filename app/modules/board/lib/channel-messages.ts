@@ -158,7 +158,7 @@ interface ChannelOptions {
   readonly pageSize: number;
 }
 
-async function callAfter(previous: Promise<void>, channel: Channel, request: CallRequest): Promise<void> {
+async function callAfter(previous: Promise<void> | null, channel: Channel, request: CallRequest): Promise<void> {
   await previous;
   await callCommand(channel, request);
 }
@@ -184,7 +184,7 @@ function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
   };
   return {
     call: (command, data) => {
-      queue = callAfter(queue ?? loadNewest(channel), channel, { command, data });
+      queue = callAfter(queue, channel, { command, data });
     },
     loadOlder: () => {
       queue = loadOlderAfter(queue ?? loadNewest(channel), channel);

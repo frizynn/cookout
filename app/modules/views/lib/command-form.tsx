@@ -1,4 +1,4 @@
-import type { ChannelMessages, Commands } from "../../board/index.ts";
+import type { CallState, ChannelMessages, Commands } from "../../board/index.ts";
 import { Alert } from "../../design-system/index.tsx";
 import { CallForm } from "./call-form.tsx";
 import type { ReactNode } from "react";
@@ -7,6 +7,7 @@ import { useSyncExternalStore } from "react";
 const NONE = 0;
 
 interface CommandFormProps {
+  readonly call: CallState;
   readonly commands: Commands;
   readonly messages: ChannelMessages;
 }
@@ -20,5 +21,5 @@ export function CommandForm(props: CommandFormProps): ReactNode {
   if (listed.status === "loading" || listed.commands.length === NONE) {
     return null;
   }
-  return <CallForm commands={listed.commands} messages={props.messages} />;
+  return <CallForm call={props.call} commands={listed.commands} messages={props.messages} />;
 }

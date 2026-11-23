@@ -1,5 +1,6 @@
 import { Alert, CardBody, LinkList, Muted, Skeleton } from "../../design-system/index.tsx";
-import type { ChannelMessages } from "../../board/index.ts";
+import type { ChannelMessages, Commands } from "../../board/index.ts";
+import { CommandForm } from "./command-form.tsx";
 import { MessageRow } from "./message-row.tsx";
 import { Older } from "./older.tsx";
 import type { ReactNode } from "react";
@@ -12,6 +13,7 @@ const TEXT = { empty: "No messages yet.", messages: "Messages" } as const;
 
 interface MessageRowsProps {
   readonly channel: string;
+  readonly commands: Commands;
   readonly messages: ChannelMessages;
 }
 
@@ -48,6 +50,7 @@ export function MessageRows(props: MessageRowsProps): ReactNode {
         ))}
       </LinkList>
       <ReadRefusal read={state.read} />
+      <CommandForm call={state.call} commands={props.commands} messages={messages} />
     </>
   );
 }

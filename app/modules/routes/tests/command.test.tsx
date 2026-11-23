@@ -1,4 +1,4 @@
-import { adminClient, clientWith, newIdentity, openAt, sessionOf } from "./app.tsx";
+import { adminClient, clientWith, newIdentity, openAt } from "./app.tsx";
 import { expect, it } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
@@ -144,10 +144,10 @@ it("commands that can't be listed say so", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
   await adminClient().createChannel({ name: "web-command-unlisted" });
+  const revoked = clientWith("cookout_not-a-token");
   const close = openAt({
-    client: clientWith("cookout_not-a-token"),
+    client: { ...adminClient(), listCommands: revoked.listCommands },
     hash: "#/channels/web-command-unlisted",
-    session: sessionOf(adminClient()),
   });
 
   const refusal = await screen.findByText(/^Couldn't list the commands/u);
