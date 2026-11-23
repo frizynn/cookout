@@ -4,7 +4,8 @@
  * `#/people` the people and agents, `#/people/<name>` the same with that
  * identity's profile open, `#/settings` the settings page and
  * `#/settings/<section>` the same with the focus on that section (`profile`,
- * `theme` or `agents`), `#/channels/<name>`,
+ * `theme` or `agents`), `#/threads` the open threads involving the reader and
+ * `#/threads/all` every open thread, `#/channels/<name>`,
  * `#/channels/<name>/threads/<id>`, `#/approve/<user code>` the approval
  * page for a login request and `#/approve-join/<user code>` for an agent join request); a channel name
  * that isn't a `ChannelName`, an identity name that isn't an `IdentityName`,
@@ -36,6 +37,7 @@ type Route =
   | { readonly name: "people" }
   | { readonly name: "profile"; readonly identity: IdentityName }
   | { readonly name: "inbox" }
+  | { readonly name: "open-threads"; readonly all: boolean }
   | { readonly name: "channel"; readonly channel: ChannelName }
   | { readonly name: "thread"; readonly channel: ChannelName; readonly thread: MessageId }
   | { readonly name: "approve"; readonly userCode: string }
@@ -44,7 +46,7 @@ type Route =
 
 type LinkedRoute = Extract<
   Route,
-  { readonly name: "inbox" | "people" | "profile" | "settings" | "channel" | "thread" }
+  { readonly name: "inbox" | "open-threads" | "people" | "profile" | "settings" | "channel" | "thread" }
 >;
 
 type Matcher = (hash: string) => Route | false;
@@ -54,6 +56,7 @@ const LOGIN = /^#\/login$/u;
 const SETTINGS = /^#\/settings$/u;
 const SECTION = /^#\/settings\/(?<section>[^/]+)$/u;
 const PEOPLE = /^#\/people$/u;
+const OPEN_THREADS = /^#\/threads(?:\/all)?$/u;
 const PROFILE = /^#\/people\/(?<identity>[^/]+)$/u;
 const CHANNEL = /^#\/channels\/(?<channel>[^/]+)$/u;
 const THREAD = /^#\/channels\/(?<channel>[^/]+)\/threads\/(?<thread>[^/]+)$/u;
@@ -109,6 +112,7 @@ const matchers: readonly Matcher[] = [
   (hash) => SETTINGS.test(hash) && { name: "settings", section: null },
   (hash) => SECTION.test(hash) && sectionRoute(hash.replace(SECTION, "$<section>")),
   (hash) => PEOPLE.test(hash) && { name: "people" },
+  (hash) => OPEN_THREADS.test(hash) && { all: hash.endsWith("/all"), name: "open-threads" },
   (hash) => PROFILE.test(hash) && profileRoute(hash.replace(PROFILE, "$<identity>")),
   (hash) => APPROVE.test(hash) && approveRoute(hash.replace(APPROVE, "$<code>")),
   (hash) => APPROVE_JOIN.test(hash) && approveRoute(hash.replace(APPROVE_JOIN, "$<code>"), "approve-join"),
@@ -123,11 +127,30 @@ function settingsHref(section: SettingsSection | null): string {
   return `#/settings/${section}`;
 }
 
+function openThreadsHref(all: boolean): string {
+  if (all) {
+    return "#/threads/all";
+  }
+  return "#/threads";
+}
+
 function channelHref(route: Extract<Route, { readonly name: "channel" | "thread" }>): string {
   if (route.name === "channel") {
     return `#/channels/${route.channel}`;
   }
   return `#/channels/${route.channel}/threads/${String(route.thread)}`;
+}
+
+function pageHref(
+  route: Extract<Route, { readonly name: "open-threads" | "settings" | "channel" | "thread" }>,
+): string {
+  if (route.name === "open-threads") {
+    return openThreadsHref(route.all);
+  }
+  if (route.name === "settings") {
+    return settingsHref(route.section);
+  }
+  return channelHref(route);
 }
 
 interface ProfileLink {
@@ -189,10 +212,7 @@ export function hrefOf(route: LinkedRoute): string {
   if (route.name === "profile") {
     return `#/people/${route.identity}`;
   }
-  if (route.name === "settings") {
-    return settingsHref(route.section);
-  }
-  return channelHref(route);
+  return pageHref(route);
 }
 
 /**

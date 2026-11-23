@@ -1,6 +1,6 @@
+import { NotBuiltView, OpenThreadsView } from "../../views/index.tsx";
 import { ChannelPanes } from "./channel-panes.tsx";
 import type { IdentityName } from "../../sdk/index.ts";
-import { NotBuiltView } from "../../views/index.tsx";
 import { PagePanes } from "./page-panes.tsx";
 import { PeoplePanes } from "./people-panes.tsx";
 import type { ReactNode } from "react";
@@ -37,6 +37,9 @@ export function RoutePanes(props: RoutePanesProps): ReactNode {
   const { route, stores } = props;
   if (isPage(route)) {
     return <PagePanes me={props.me} route={route} stores={stores} />;
+  }
+  if (route.name === "open-threads") {
+    return <OpenThreadsView all={route.all} board={stores.board} />;
   }
   if (isPeople(route)) {
     return <PeoplePanes composer={stores.composer} layout={stores.layout} me={props.me} route={route} />;

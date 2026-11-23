@@ -82,6 +82,10 @@
  * name; an agent's owner also gets its agent actions. To an admin, a human's profile has "Make admin", or "Remove
  * admin" if it is one, and says why if the server refuses the change. The sidebar's footer links to the logged-in human's own profile.
  * `NotBuiltView` says a route has nothing to show.
+ * `OpenThreadsView` is the Open threads page (the board's `openThreads`): "Involving me" and "All" links, the one
+ * shown filled, then a row per open thread, stalest first, linking to it, with its channel, its starter's avatar and
+ * name, its first line, how long it has been quiet ("quiet for 4 days") and Close; Load more while there are more,
+ * and "No open threads." when there are none.
  * `LoginApprovalView` is the approval page for a login request: its user code
  * to check against the terminal, the host that asked, and an Approve button.
  * `AgentJoinApprovalView` is the same for an agent join request: the agent it
@@ -97,6 +101,7 @@ export { LoginApprovalView } from "./lib/login-approval.tsx";
 export { IdentityDeletedNotice } from "./lib/identity-deleted-notice.tsx";
 export { LoginView } from "./lib/login.tsx";
 export { NotBuiltView } from "./lib/not-built.tsx";
+export { OpenThreadsView } from "./lib/open-threads.tsx";
 export { PeopleView } from "./lib/people.tsx";
 export { ProfileLinks } from "./lib/profile-links.tsx";
 export { ProfileView } from "./lib/profile.tsx";
