@@ -94,6 +94,17 @@ const migrations: readonly string[] = [
      thread_id INTEGER NOT NULL REFERENCES messages (id),
      expires_at TEXT NOT NULL
    ) STRICT, WITHOUT ROWID;`,
+  `CREATE TABLE deliveries (
+     call_id TEXT PRIMARY KEY,
+     command TEXT NOT NULL REFERENCES commands (name),
+     channel TEXT NOT NULL,
+     thread_id INTEGER NOT NULL REFERENCES messages (id),
+     data TEXT NOT NULL,
+     attempts INTEGER NOT NULL CHECK (attempts >= 0),
+     next_attempt_at TEXT NOT NULL,
+     outcome TEXT NOT NULL CHECK (outcome IN ('pending', 'delivered', 'failed'))
+   ) STRICT;
+   CREATE INDEX deliveries_pending ON deliveries (outcome) WHERE outcome = 'pending';`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

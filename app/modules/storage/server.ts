@@ -14,6 +14,7 @@ export { StorageUnavailable };
 export type { TokenLookup } from "./lib/server/identities.ts";
 export type { StoredCommand } from "./lib/server/commands.ts";
 export type { CommandTokenGrant } from "./lib/server/command-tokens.ts";
+export type { DeliveryProgress, StoredDelivery } from "./lib/server/deliveries.ts";
 export type { NewMessage } from "./lib/server/messages.ts";
 export type { StoredLease } from "./lib/server/leases.ts";
 
