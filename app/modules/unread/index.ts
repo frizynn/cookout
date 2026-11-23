@@ -30,7 +30,8 @@
  * thread's "New" line goes: its read position when the view opened, so the
  * line sits above the first message after it, kept while the view is open.
  * A closed thread's items, by their `parent`'s `closedAt`, are
- * left out of `inbox`, what the Inbox lists and counts, and come back when it
+ * left out of `inbox`, what the Inbox lists and counts and the sidebar counts
+ * by channel, and come back when it
  * reopens, following `thread` events live; they stay in `items` and stay
  * unread on the server, where an agent's inbox still lists them.
  * `markAllRead` acks the whole inbox up to the newest item the store holds
@@ -93,7 +94,7 @@ export type UnreadState =
   | {
       readonly status: "loaded";
       readonly items: readonly InboxItem[];
-      /** What the Inbox shows and counts, oldest first: `items` but those of a closed thread. */
+      /** What the Inbox and the sidebar show and count, oldest first: `items` but those of a closed thread. */
       readonly inbox: readonly InboxItem[];
       readonly markAll: MarkAllState;
     }
