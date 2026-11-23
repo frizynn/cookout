@@ -1,5 +1,5 @@
 import type { AgentIdentity, Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
-import { Effect, Predicate, Schema } from "effect";
+import { Effect, Option, Predicate, Schema } from "effect";
 import { IdentityRow, toIdentity } from "./identity-row.ts";
 import type { FindIdentity } from "./identity-row.ts";
 import type { MemoryState } from "./memory-state.ts";
@@ -30,6 +30,7 @@ export type IdentitiesSection = {
   readonly setOnlyToken: (identity: Identity, hash: TokenHash) => Fails<SetOnlyTokenResult>;
   readonly listIdentities: () => Fails<readonly Identity[]>;
   readonly findIdentityByTokenHash: (hash: TokenHash) => Fails<TokenLookup>;
+  readonly findIdentityByName: (name: IdentityName) => Fails<Identity | undefined>;
   readonly replaceToken: (name: IdentityName, hash: TokenHash) => Fails<ReplaceTokenResult>;
   readonly deleteIdentity: (name: IdentityName) => Fails<DeleteIdentityResult>;
 };
@@ -129,6 +130,7 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
       open(() => (data.identities.has(identity.name) ? "name_taken" : (add(data, identity, hash), "created"))),
     deleteIdentity: (name) => open(() => remove(data, name)),
     findIdentity: (name) => data.identities.get(name),
+    findIdentityByName: (name) => open(() => data.identities.get(name)),
     findIdentityByTokenHash: (hash) => open(() => lookUp(data, hash)),
     listIdentities: () => open(() => [...data.identities.values()].sort(byName).map((found) => ({ ...found }))),
     placeHandler: placeHandlerIn(data),
@@ -234,6 +236,8 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
           return { identity: toIdentity(row), status: "deleted" } as const;
         }),
       ),
+    findIdentityByName: (name) =>
+      Effect.map(find(name), (row) => Option.getOrUndefined(Option.map(Option.fromUndefinedOr(row), toIdentity))),
     findIdentityByTokenHash: (hash) =>
       db
         .get(

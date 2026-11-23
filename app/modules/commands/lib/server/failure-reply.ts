@@ -2,8 +2,8 @@ import type { JsonValue, MessageId } from "../../../messages/index.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import { Effect } from "effect";
 import { Messages } from "../../../messages/server.ts";
+import { Storage } from "../../../storage/server.ts";
 import type { StoredCommand } from "../../../storage/server.ts";
-import { handlerOf } from "../../index.ts";
 
 interface Call {
   readonly stored: StoredCommand;
@@ -12,7 +12,7 @@ interface Call {
   readonly threadId: MessageId;
 }
 
-type FailureReplyNeeds = Messages;
+type FailureReplyNeeds = Messages | Storage;
 
 interface FailedDelivery {
   readonly call: Call;
@@ -23,7 +23,12 @@ function failureReply({ call, retries }: FailedDelivery): Effect.Effect<void, ne
   const { name } = call.stored.command;
   return Effect.gen(function* postFailureReply() {
     const messages = yield* Messages;
-    yield* messages.post(handlerOf(call.stored.command), {
+    const storage = yield* Storage;
+    const handler = yield* Effect.flatMap(
+      storage.findIdentityByName(call.stored.command.handler),
+      Effect.fromNullishOr,
+    );
+    yield* messages.post(handler, {
       channel: call.channel,
       replyTo: call.threadId,
       text: `The delivery of /${name} to its handler failed after ${retries} retries.`,
