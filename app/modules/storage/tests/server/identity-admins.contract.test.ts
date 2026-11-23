@@ -37,9 +37,9 @@ it.effect.each(storageLayers)(
 
 it.effect.each(storageLayers)(
   "storage contract ($adapter): clearing the admin flag works while another admin remains",
-  ({ layer }) =>
+  ({ emptyLayer }) =>
     Effect.gen(function* clearAdmin() {
-      const { storage } = yield* openStore(layer);
+      const { storage } = yield* openStore(emptyLayer);
       yield* storage.createIdentity(human("boss", true), hashA);
       yield* storage.createIdentity(human("grace", true), hashB);
       const result = yield* storage.setAdmin(nameOf("grace"), false);

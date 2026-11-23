@@ -26,7 +26,7 @@ const THIRD_TEXT = "@bob and one more";
 const THREE_LINES = 3;
 const RECONNECT_NOTE = 1;
 const verbs: readonly (readonly string[])[] = [
-  ["identity", "create", "bot", "--kind", "agent", "--owner", "matt"],
+  ["identity", "create", "bot", "--kind", "agent"],
   ["identity", "rotate", "bot"],
   ["channel", "create", "grill", "--description", "Grill it"],
   ["channel", "get", "grill"],
@@ -55,7 +55,7 @@ it.effect("every verb passes its arguments and flags to the server and prints th
     );
 
     expect(results).toMatchObject([
-      { ...succeeded, stdoutJson: { identity: { kind: "agent", name: "bot", owner: "matt" } } },
+      { ...succeeded, stdoutJson: { identity: { kind: "agent", name: "bot", owner: "admin" } } },
       { ...succeeded, stdoutJson: { identity: { name: "bot" } } },
       { ...succeeded, stdoutJson: { channel: { description: "Grill it", name: "grill" } } },
       { ...succeeded, stdoutJson: { channel: { name: "grill" } } },

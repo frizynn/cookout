@@ -2,7 +2,7 @@
  * Identities on the wire, shared by the server, the SDK and the web: the
  * `IdentityName`, `Owner`, `Token` and `TokenHash` brands, the two identity kinds and their
  * constructors, the identity as the server shows it, the routes, and the
- * error codes bearer auth and the admin check answer with.
+ * error codes bearer auth, the admin check and identity creation answer with.
  */
 import type { IsoTime } from "../time/index.ts";
 
@@ -17,11 +17,15 @@ type IdentityFields = {
   readonly createdAt: IsoTime;
 };
 
-/** An identity's name: 1–64 lowercase letters, digits or `-`, so `@name` mentions parse cleanly. Unique on a server. */
+/**
+ * An identity's name: 1–64 lowercase letters, digits or `-`, so `@name` mentions parse cleanly, or two such parts
+ * joined by one `/`, such as `matt/triage-agent`. The first part of a namespaced name is the name of the human who
+ * owns the agent. Unique on a server.
+ */
 export type IdentityName = Brand<"IdentityName">;
 
-/** The person an identity belongs to, such as `matt`: 1–100 characters. */
-export type Owner = Brand<"Owner">;
+/** The name of the human who owns an agent, such as `matt`. A human's name never contains `/`. */
+export type Owner = IdentityName;
 
 /** The secret an identity sends as `Authorization: Bearer <token>`. */
 export type Token = Brand<"Token">;
@@ -37,11 +41,11 @@ const as = <B extends Brand<string>>(value: string): B => value as B;
  */
 export type DisplayName = Brand<"DisplayName">;
 
-/** The rule every identity name follows, for the backend's Schemas. */
-export const identityNamePattern = /^[a-z0-9-]{1,64}$/u;
+/** The rule a name without a `/` follows: a human's name, an owner, a command's name, or a part of a namespaced name. */
+export const plainNamePattern = /^[a-z0-9-]{1,64}$/u;
 
-/** The owner rule, in UTF-16 code units as `String.length` counts them. */
-export const ownerLength = { maximum: 100, minimum: 1 } as const;
+/** The rule every identity name follows, for the backend's Schemas: a plain name, or `<owner>/<name>`. */
+export const identityNamePattern = /^[a-z0-9-]{1,64}(?:\/[a-z0-9-]{1,64})?$/u;
 
 /** The display-name rule, in UTF-16 code units as `String.length` counts them, after trimming. */
 export const displayNameLength = { maximum: 80, minimum: 1 } as const;
@@ -63,9 +67,9 @@ export function isIdentityName(value: string): value is IdentityName {
   return identityNamePattern.test(value);
 }
 
-/** Whether `value` is the length of an owner; if so, it is an `Owner`. */
+/** Whether `value` is a plain name, without a `/`, as an owner's is; if so, it is an `Owner`. */
 export function isOwner(value: string): value is Owner {
-  return value.length >= ownerLength.minimum && value.length <= ownerLength.maximum;
+  return plainNamePattern.test(value);
 }
 
 /** Marks a string as a token. Only `secrets` issues one, or `COOKOUT_ADMIN_TOKEN` sets the admin's; only bearer auth reads one from a request. */
@@ -87,21 +91,37 @@ export const identityKinds = ["human", "agent"] as const;
 /** Whether an identity is a person or an agent. Set when the identity is created, and never changed. */
 export type IdentityKind = (typeof identityKinds)[number];
 
-/** A person using the board as themself. A human is its own person, so it has no owner. An admin can create identities, rotate tokens and delete identities. */
+/**
+ * A person using the board as themself. A human is its own person, so it has no owner, and its name has no `/`. Any
+ * human can create agents it owns; an admin can also create humans and agents owned by any human, rotate tokens and
+ * delete identities.
+ */
 export type HumanIdentity = IdentityFields & {
   readonly kind: "human";
 };
 
-/** A program on the board, which may belong to a person (its owner). */
+/** A program on the board. It always has an owner: the human who created it, or the one an admin named. */
 export type AgentIdentity = IdentityFields & {
   readonly kind: "agent";
-  readonly owner?: Owner;
+  readonly owner: Owner;
   /** Present, and true, on a command's handler identity in `GET /v1/identities`. */
   readonly handler?: true;
 };
 
 /** An identity as the server shows it: a human or an agent, never both. Its token is never part of it. */
 export type Identity = HumanIdentity | AgentIdentity;
+
+/**
+ * Whether an identity's name fits its owner: a plain name always does, and `<owner>/<name>` only on an agent owned by
+ * `<owner>`.
+ *
+ * @param identity The identity to check.
+ * @returns Whether the name is allowed.
+ */
+export function nameFitsOwner(identity: Identity): boolean {
+  const [namespace] = identity.name.split("/");
+  return !identity.name.includes("/") || (identity.kind === "agent" && identity.owner === namespace);
+}
 
 /** The answer to `GET /v1/whoami` and `DELETE /v1/identities/<name>`. */
 export type IdentityResponse = {
@@ -119,11 +139,18 @@ export type ListIdentitiesResponse = {
   readonly identities: readonly Identity[];
 };
 
-/** The body of `POST /v1/identities`. The server checks the name and owner rules, and that a human has no owner. */
+/**
+ * The body of `POST /v1/identities`. Any human may create an agent it owns; only an admin may create a human, or an
+ * agent owned by another human (403 `admin_only`). An agent may create nothing (403 `human_only`).
+ */
 export type CreateIdentityRequest = {
+  /** A plain name, or `<owner>/<name>` for an agent whose owner is `<owner>` (400 `name_not_owned` otherwise). A human's name has no `/`. */
   readonly name: string;
   readonly kind: IdentityKind;
-  /** Only an agent can have an owner: a human with one is refused with 400. */
+  /**
+   * An agent's owner: the name of an existing human (400 `owner_not_human` otherwise). Left out, the caller owns the
+   * agent. A human with one is refused with 400.
+   */
   readonly owner?: string;
   /** Trimmed, then 1–80 characters (400 otherwise). */
   readonly displayName?: string;
@@ -137,10 +164,13 @@ export interface SetDisplayNameRequest {
 /** `GET /v1/whoami`: the identity behind the token. */
 export const whoamiPath = "/v1/whoami";
 
-/** `GET /v1/identities` (any identity) and `POST /v1/identities` (admin). */
+/** `GET /v1/identities` (any identity) and `POST /v1/identities` (any human; see `CreateIdentityRequest`). */
 export const identitiesPath = "/v1/identities";
 
-/** `DELETE /v1/identities/:name` (admin): removes the identity, and its token stops working. */
+/**
+ * `DELETE /v1/identities/:name` (admin): removes the identity, and its token stops working. A human who still owns
+ * agents is refused with 409 `owns_agents`, naming them.
+ */
 export const identityPath = "/v1/identities/:name";
 
 /** `POST /v1/identities/:name/token` (admin): issues a new token, and the old one stops working at once. */
@@ -219,4 +249,7 @@ export const identityErrorCodes = [
   "identity_not_found",
   "last_admin",
   "not_owner",
+  "owner_not_human",
+  "name_not_owned",
+  "owns_agents",
 ] as const;

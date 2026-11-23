@@ -57,14 +57,14 @@ it.effect("an identity posts a top-level message with JSON data, and sees its au
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("an author with no owner has no owner on its messages", () =>
+it.effect("a human author has no owner on its messages", () =>
   Effect.gen(function* noOwner() {
     const cookout = yield* TestCookout;
     yield* withChannel(cookout);
-    const bot = yield* cookout.createIdentity("company-bot");
-    const { message } = yield* answer(() => bot.client.createMessage({ channel: "grill", text: "hello" }));
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const { message } = yield* answer(() => ada.client.createMessage({ channel: "grill", text: "hello" }));
 
-    expect(message.author).toStrictEqual({ name: "company-bot" });
+    expect(message.author).toStrictEqual({ name: "ada" });
     expect(message).not.toHaveProperty("data");
   }).pipe(Effect.provide(testCookout())),
 );

@@ -158,11 +158,11 @@ export type CookoutClient = {
   readonly logout: () => Promise<IdentityResponse>;
   /** `GET /v1/identities`: every identity with its kind and owner, sorted by name. A command's handler has `handler: true`. */
   readonly listIdentities: () => Promise<ListIdentitiesResponse>;
-  /** Admin only. The token in the answer is shown this once. A name in use is 409 `identity_exists`. */
+  /** Any human creates agents it owns; see `CreateIdentityRequest`. The token is shown this once. A name in use is 409. */
   readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;
   /** Admin only. Issues a new token; the old one stops working at once. */
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
-  /** Admin only. Removes the identity; its token stops working. The last admin can't be deleted (409 `last_admin`). */
+  /** Admin only. Removes it; its token stops working. 409 for the last admin, or a human who still owns agents. */
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
   /** Admin only. Makes a human an admin and answers it; an admin stays one. An agent is 403 `human_only`. */
   readonly makeAdmin: (name: string) => Promise<IdentityResponse>;

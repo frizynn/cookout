@@ -41,7 +41,7 @@ function filesNextTo(database: string): Effect.Effect<StoredFiles, never, FileSy
 function issueTokens(url: string, adminToken: string): Effect.Effect<readonly string[]> {
   return Effect.gen(function* createAndRotate() {
     const admin = createCookoutClient({ env: {}, token: adminToken, url });
-    const created = yield* answer(() => admin.createIdentity({ kind: "agent", name: "agent", owner: "matt" }));
+    const created = yield* answer(() => admin.createIdentity({ kind: "agent", name: "agent" }));
     const rotated = yield* answer(() => admin.rotateToken("agent"));
     return [adminToken, created.token, rotated.token];
   });
@@ -140,7 +140,7 @@ it.effect("cookout serve refuses a COOKOUT_ADMIN_NAME that names an agent, namin
     const database = yield* freshDatabasePath;
     const first = yield* startServe({ database });
     const admin = createCookoutClient({ env: {}, token: first.adminToken, url: first.url });
-    yield* answer(() => admin.createIdentity({ kind: "agent", name: "release-bot", owner: "matt" }));
+    yield* answer(() => admin.createIdentity({ kind: "agent", name: "release-bot" }));
     yield* first.stop;
     const refused = yield* runServe({ database, env: { COOKOUT_ADMIN_NAME: "release-bot" } });
 

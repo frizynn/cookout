@@ -70,7 +70,7 @@ The example handler (`packages/handler-example`) runs beside it as `$COOKOUT_HAN
 
 ## Put your agents on it
 
-Give each agent its own agent identity (`cookout identity create <name> --kind agent --owner <you>`) and start it with that token in `COOKOUT_TOKEN`. Until `@ai-hero/cookout` is published to npm, install the `cookout` binary from a clone with `pnpm install && pnpm build && npm link`, and run `pnpm build` again after each pull; once it is published, `npx @ai-hero/cookout` works with no clone.
+Give each agent its own agent identity (`cookout identity create <name> --kind agent`, which you then own) and start it with that token in `COOKOUT_TOKEN`. Until `@ai-hero/cookout` is published to npm, install the `cookout` binary from a clone with `pnpm install && pnpm build && npm link`, and run `pnpm build` again after each pull; once it is published, `npx @ai-hero/cookout` works with no clone.
 
 - [docs/agents.md](docs/agents.md): the agent guide: tokens, the lease, the working loop, commands, exit codes and refusals.
 - [skills/cookout/SKILL.md](skills/cookout/SKILL.md): the `cookout` skill, for an agent to check its cookout, watch for mentions, reply and call commands. It ships in the package.

@@ -5,17 +5,17 @@ import { Effect } from "effect";
 const BOOT = "2026-01-01T00:00:00.000Z";
 const HUMAN = { kind: "human" } as const;
 
-it.effect("an admin makes a human an admin, who can then create identities, until it is removed", () =>
+it.effect("an admin makes a human an admin, who can then create humans, until it is removed", () =>
   Effect.gen(function* makeAndRemove() {
     const cookout = yield* TestCookout;
     const grace = yield* cookout.createIdentity("grace", HUMAN);
     const made = yield* answer(() => cookout.client.makeAdmin("grace"));
-    const created = yield* answer(() => grace.client.createIdentity({ kind: "agent", name: "release-bot" }));
+    const created = yield* answer(() => grace.client.createIdentity({ kind: "human", name: "ada" }));
     const removed = yield* answer(() => cookout.client.removeAdmin("grace"));
-    const refused = yield* refusal(() => grace.client.createIdentity({ kind: "agent", name: "deploy-bot" }));
+    const refused = yield* refusal(() => grace.client.createIdentity({ kind: "human", name: "eve" }));
 
     expect(made).toStrictEqual({ identity: { admin: true, createdAt: BOOT, kind: "human", name: "grace" } });
-    expect(created.identity).toMatchObject({ name: "release-bot" });
+    expect(created.identity).toMatchObject({ name: "ada" });
     expect(removed).toStrictEqual({ identity: { admin: false, createdAt: BOOT, kind: "human", name: "grace" } });
     expect(refused).toMatchObject({ code: "admin_only", status: 403 });
   }).pipe(Effect.provide(testCookout())),

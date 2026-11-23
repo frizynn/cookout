@@ -4,16 +4,16 @@
  * the server shows it, the request and answers of the command routes, their
  * paths, and the error codes they refuse with.
  */
-import type { AgentIdentity, IdentityName } from "../identities/index.ts";
+import type { AgentIdentity, IdentityName, Owner } from "../identities/index.ts";
 import type { JsonValue, MessageId } from "../messages/index.ts";
 import type { IsoTime } from "../time/index.ts";
-import { identityNamePattern } from "../identities/index.ts";
+import { plainNamePattern } from "../identities/index.ts";
 
 declare const brand: unique symbol;
 
 type Brand<Name extends string> = string & { readonly [brand]: Name };
 
-/** A command's name. It is also the name of the command's handler identity, so it follows the identity-name rule. */
+/** A command's name. It is also the name of the command's handler identity, so it follows the plain identity-name rule (no `/`). */
 export type CommandName = Brand<"CommandName">;
 
 /** The per-command secret the server signs webhook deliveries with (an HMAC of the body). Shown once, on add or rotate. */
@@ -22,8 +22,8 @@ export type CommandSecret = Brand<"CommandSecret">;
 /** A JSON Schema, the rule a command's call data must follow. */
 export type JsonSchema = Readonly<Record<string, JsonValue>>;
 
-/** The rule every command name follows: the identity-name rule, for the backend's Schemas. */
-export const commandNamePattern = identityNamePattern;
+/** The rule every command name follows: the plain identity-name rule, for the backend's Schemas. */
+export const commandNamePattern = plainNamePattern;
 
 /**
  * Whether `value` follows the command-name rule; if so, it is a `CommandName`.
@@ -126,10 +126,12 @@ export const commandSecretPath = "/v1/commands/:name/secret";
 export const commandErrorCodes = ["command_exists", "handler_not_agent", "command_not_found"] as const;
 
 /**
- * The command's handler identity: an agent with the command's name, as it is stored when the command is added.
- * @param command The command whose handler identity to make.
+ * The command's handler identity: an agent with the command's name, as it is stored when the command is added. A
+ * handler made by `command add` is owned by the admin who ran it; one it reuses keeps its owner.
+ * @param added The command whose handler identity to make, and the human who adds it.
  * @returns The handler identity, which posts the command's replies.
  */
-export function handlerOf(command: Command): AgentIdentity {
-  return { admin: false, createdAt: command.createdAt, kind: "agent", name: command.handler };
+export function handlerOf(added: { readonly command: Command; readonly owner: Owner }): AgentIdentity {
+  const { command, owner } = added;
+  return { admin: false, createdAt: command.createdAt, kind: "agent", name: command.handler, owner };
 }

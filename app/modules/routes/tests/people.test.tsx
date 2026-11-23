@@ -91,7 +91,7 @@ it("#/people lists every identity, with its kind, owner and tags, and you marked
       "web-people-list-bossadminHuman",
       "web-people-list-botagentAgent · owned by web-people-list-human",
       "web-people-list-human(you)Human",
-      "web-people-list-loneragentAgent",
+      "web-people-list-loneragentAgent · owned by admin",
     ],
     "page",
   ]);
@@ -116,7 +116,7 @@ it("the chips narrow the list to humans or agents, and count what the name filte
     ["All 4", "Humans 2", "Agents 2"],
     [
       "web-people-chips-botagentAgent · owned by web-people-chips-human",
-      "web-people-chips-loneragentAgent",
+      "web-people-chips-loneragentAgent · owned by admin",
       "false",
       "true",
     ],

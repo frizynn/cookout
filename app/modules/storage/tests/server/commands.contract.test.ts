@@ -63,16 +63,16 @@ it.effect.each(storageLayers)(
       const identities = yield* storage.listIdentities();
       const ownedToken = yield* storage.findIdentityByTokenHash(tokenHash("hash:owned"));
 
-      expect(identities).toStrictEqual([handler("fresh"), owned]);
+      expect(identities).toStrictEqual([handler("fresh"), identityFixture("matt", { kind: "human" }), owned]);
       expect(ownedToken).toStrictEqual({ identity: owned, status: "active" });
     }),
 );
 
 it.effect.each(storageLayers)(
   "storage contract ($adapter): a command name in use, or a human's name, adds nothing",
-  ({ layer }) =>
+  ({ emptyLayer }) =>
     Effect.gen(function* refused() {
-      const { storage } = yield* openStore(layer);
+      const { storage } = yield* openStore(emptyLayer);
       yield* storage.createIdentity(identityFixture("ada", { kind: "human" }), tokenHash("hash:ada"));
       yield* storage.addCommand(command("deploy"), handler("deploy"));
       const results = yield* Effect.forEach(

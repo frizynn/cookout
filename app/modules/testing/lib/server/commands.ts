@@ -1,10 +1,10 @@
 import type { CommandName, CommandSecret } from "../../../commands/index.ts";
+import { fixtureOwnerName, identityName } from "./identities.ts";
 import { isCommandName, isCommandSecret } from "../../../commands/index.ts";
 import type { AgentIdentity } from "../../../identities/index.ts";
 import { Option } from "effect";
 import type { StoredCommand } from "../../../storage/server.ts";
 import { fixtureTime } from "./time.ts";
-import { identityName } from "./identities.ts";
 
 interface CommandFixtureOptions {
   readonly description?: string;
@@ -20,7 +20,7 @@ function secretOf(value: string): CommandSecret {
 }
 
 function handlerFixture(name: string): AgentIdentity {
-  return { admin: false, createdAt: fixtureTime, kind: "agent", name: identityName(name) };
+  return { admin: false, createdAt: fixtureTime, kind: "agent", name: identityName(name), owner: fixtureOwnerName };
 }
 
 function commandFixture(name: string, ...options: readonly CommandFixtureOptions[]): StoredCommand {

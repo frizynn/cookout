@@ -12,7 +12,7 @@ import {
   isAgentTool,
   isIdentityName,
   isOwner,
-  ownerLength,
+  plainNamePattern,
 } from "../../../identities/index.ts";
 import { channelNamePattern, isChannelName } from "../../../channels/index.ts";
 import { isMessageId, messageTextLength, pageSize } from "../../index.ts";
@@ -33,7 +33,7 @@ const IdentityNameSchema = Schema.String.check(identityNameRule).pipe(
   Schema.refine(isIdentityName, { identifier: "IdentityName" }),
 );
 
-const ownerRule = Schema.isBetweenLength(ownerLength.minimum, ownerLength.maximum).abort();
+const ownerRule = Schema.isPattern(plainNamePattern).abort();
 const OwnerSchema = Schema.String.check(ownerRule).pipe(Schema.refine(isOwner, { identifier: "Owner" }));
 
 const positive = Schema.isGreaterThanOrEqualTo(LOWEST_ID).abort();

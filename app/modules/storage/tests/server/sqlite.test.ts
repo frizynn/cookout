@@ -29,7 +29,9 @@ const NEWER_VERSION = 1000;
 const NEGATIVE_VERSION = -1;
 const hashA = tokenHash(Str.repeat(HASH_LENGTH)("a"));
 const hashB = tokenHash(Str.repeat(HASH_LENGTH)("b"));
+const hashC = tokenHash(Str.repeat(HASH_LENGTH)("c"));
 const griller = identityFixture("auth-griller", { owner: "matt" });
+const matt = identityFixture("matt", { kind: "human" });
 
 function permissions(mode: number): string {
   return Str.slice(PERMISSION_DIGITS)(mode.toString(OCTAL));
@@ -46,6 +48,7 @@ function openAndClose(path: string): OnDisk<void> {
 function createThenRotate(path: string): OnDisk<void> {
   return Effect.gen(function* seedAndClose() {
     const { close, storage } = yield* openStore(sqliteStorage(path));
+    yield* storage.createIdentity(matt, hashC);
     yield* storage.createIdentity(griller, hashA);
     yield* storage.replaceToken(identityName("auth-griller"), hashB);
     yield* close;
@@ -234,7 +237,7 @@ it.effect("identities and token hashes are kept after the database is reopened",
     const oldHash = yield* storage.findIdentityByTokenHash(hashA);
     const newHash = yield* storage.findIdentityByTokenHash(hashB);
 
-    expect(identities).toStrictEqual([griller]);
+    expect(identities).toStrictEqual([griller, matt]);
     expect(oldHash).toStrictEqual({ status: "revoked" });
     expect(newHash).toStrictEqual({ identity: griller, status: "active" });
   }).pipe(Effect.provide(NodeServices.layer)),

@@ -1,45 +1,17 @@
-import { Array as Arr, DateTime, Effect, Predicate, Schema } from "effect";
+import { Array as Arr, Effect } from "effect";
+import { CreateIdentityRequestSchema, createIdentity, humanCaller } from "./create.ts";
+import type { DeleteIdentityResult, SetAdminResult } from "../../../storage/server.ts";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import type { Identity, IdentityKind, IdentityName, Owner } from "../../index.ts";
-import {
-  IdentityNameSchema,
-  IdentityResponseSchema,
-  IdentityWithTokenResponseSchema,
-  ListIdentitiesResponseSchema,
-  OwnerSchema,
-  SentDisplayNameSchema,
-} from "./wire.ts";
-import {
-  identitiesPath,
-  identityAdminPath,
-  identityKinds,
-  identityPath,
-  identityTokenPath,
-  isIdentityName,
-} from "../../index.ts";
+import type { Identity, IdentityName } from "../../index.ts";
+import { IdentityResponseSchema, IdentityWithTokenResponseSchema, ListIdentitiesResponseSchema } from "./wire.ts";
+import { identitiesPath, identityAdminPath, identityPath, identityTokenPath, isIdentityName } from "../../index.ts";
 import { issueToken, requireAdmin } from "./auth.ts";
 import type { Caller } from "./auth.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
 import type { Secrets } from "../../../secrets/server.ts";
-import type { SetAdminResult } from "../../../storage/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import { echoed } from "../../../http/index.ts";
-import { isoTimeOf } from "../../../time/server.ts";
-
-const humanHasNoOwner = Schema.makeFilter(
-  (body: { readonly kind: IdentityKind; readonly owner?: Owner }) =>
-    body.kind === "agent" || Predicate.isUndefined(body.owner) || { issue: "A human has no owner.", path: ["owner"] },
-);
-
-const CreateIdentityRequestSchema = Schema.Struct({
-  displayName: Schema.optionalKey(SentDisplayNameSchema),
-  kind: Schema.Literals(identityKinds),
-  name: IdentityNameSchema,
-  owner: Schema.optionalKey(OwnerSchema),
-}).check(humanHasNoOwner);
-
-type CreateIdentityBody = typeof CreateIdentityRequestSchema.Type;
 
 const CONFLICT = 409;
 const CREATED = 201;
@@ -50,8 +22,13 @@ function identityNotFound(name: string): Refusal {
   return { code: "identity_not_found", message: `There is no identity named ${echoed(name)}.`, status: NOT_FOUND };
 }
 
-function identityExists(name: string): Refusal {
-  return { code: "identity_exists", message: `The name ${name} is taken.`, status: CONFLICT };
+function ownsAgents(name: IdentityName, agents: readonly IdentityName[]): Refusal {
+  return {
+    code: "owns_agents",
+    details: { agents },
+    message: `${name} still owns ${Arr.join(agents, ", ")}. Delete those agents first.`,
+    status: CONFLICT,
+  };
 }
 
 function lastAdmin(name: string): Refusal {
@@ -70,23 +47,6 @@ function nameParam(params: Readonly<Record<string, string>>): Effect.Effect<Iden
   return Effect.fail(identityNotFound(name));
 }
 
-function newIdentity({ kind, name, owner }: CreateIdentityBody, createdAt: Identity["createdAt"]): Identity {
-  if (kind === "human") {
-    return { admin: false, createdAt, kind, name };
-  }
-  if (typeof owner === "string") {
-    return { admin: false, createdAt, kind, name, owner };
-  }
-  return { admin: false, createdAt, kind, name };
-}
-
-function withDisplayName(identity: Identity, { displayName }: CreateIdentityBody): Identity {
-  if (Predicate.isUndefined(displayName)) {
-    return identity;
-  }
-  return { ...identity, displayName };
-}
-
 function flaggedIfHandler(identity: Identity, handlers: ReadonlySet<IdentityName>): Identity {
   if (identity.kind === "agent" && handlers.has(identity.name)) {
     return { ...identity, handler: true };
@@ -94,22 +54,28 @@ function flaggedIfHandler(identity: Identity, handlers: ReadonlySet<IdentityName
   return identity;
 }
 
+function deletedIdentity(name: IdentityName, result: DeleteIdentityResult): Effect.Effect<Identity, Refusal> {
+  if (result.status === "deleted") {
+    return Effect.succeed(result.identity);
+  }
+  if (result.status === "last_admin") {
+    return Effect.fail(lastAdmin(name));
+  }
+  if (result.status === "owns_agents") {
+    return Effect.fail(ownsAgents(name, result.agents));
+  }
+  return Effect.fail(identityNotFound(name));
+}
+
 const withToken = HttpServerResponse.schemaJson(IdentityWithTokenResponseSchema);
 
 const createRoute: Route<Caller | Storage | Secrets> = {
   handle: () =>
     Effect.gen(function* createIdentityRoute() {
-      yield* requireAdmin;
+      const caller = yield* humanCaller;
       const body = yield* HttpServerRequest.schemaBodyJson(CreateIdentityRequestSchema);
-      const now = yield* DateTime.now;
-      const identity = withDisplayName(newIdentity(body, isoTimeOf(now)), body);
-      const { token, hash } = yield* issueToken;
-      const storage = yield* Storage;
-      const result = yield* storage.createIdentity(identity, hash);
-      if (result === "name_taken") {
-        return yield* Effect.fail(identityExists(identity.name));
-      }
-      return yield* withToken({ identity, token }, { status: CREATED });
+      const created = yield* createIdentity({ body, caller });
+      return yield* withToken(created, { status: CREATED });
     }),
   method: "POST",
   path: identitiesPath,
@@ -152,14 +118,8 @@ const deleteRoute: Route<Caller | Storage> = {
       yield* requireAdmin;
       const name = yield* nameParam(params);
       const storage = yield* Storage;
-      const result = yield* storage.deleteIdentity(name);
-      if (result.status === "not_found") {
-        return yield* Effect.fail(identityNotFound(name));
-      }
-      if (result.status === "last_admin") {
-        return yield* Effect.fail(lastAdmin(name));
-      }
-      return yield* HttpServerResponse.schemaJson(IdentityResponseSchema)({ identity: result.identity });
+      const identity = yield* Effect.flatMap(storage.deleteIdentity(name), (result) => deletedIdentity(name, result));
+      return yield* HttpServerResponse.schemaJson(IdentityResponseSchema)({ identity });
     }),
   method: "DELETE",
   path: identityPath,
@@ -206,15 +166,6 @@ function adminFlagRoute(method: "PUT" | "DELETE"): Route<Caller | Storage> {
   };
 }
 
-export function humanAdmin(name: IdentityName): Effect.Effect<Identity> {
-  return Effect.map(DateTime.now, (now) => ({
-    admin: true,
-    createdAt: isoTimeOf(now),
-    kind: "human",
-    name,
-  }));
-}
-
 export const responseSchemas = {
   IdentityResponse: IdentityResponseSchema,
   IdentityWithTokenResponse: IdentityWithTokenResponseSchema,
@@ -231,3 +182,4 @@ export const identityAdminRoutes: readonly Route<Caller | Storage | Secrets>[] =
 ];
 
 export { identityNotFound, nameParam };
+export { humanAdmin } from "./create.ts";

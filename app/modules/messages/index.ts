@@ -90,9 +90,10 @@ export interface MessageResponse {
 
 /**
  * The names `@`-mentioned in a message's text, matched all at once: a name follows an `@` that is not straight after a
- * letter, digit, `.`, `-` or `@` (so an email address mentions nobody). `@channel` and `@here` are names like any other.
+ * letter, digit, `.`, `-` or `@` (so an email address mentions nobody), and may be namespaced, as `@matt/triage-agent`.
+ * `@channel` and `@here` are names like any other.
  */
-export const mentionPattern = /(?<=(?<![\w.@-])@)[a-z0-9-]+/gu;
+export const mentionPattern = /(?<=(?<![\w.@-])@)[a-z0-9-]+(?:\/[a-z0-9-]+)?/gu;
 
 /** The query of a channel page. With no `before`, the page is the newest messages. */
 export interface ListMessagesQuery {

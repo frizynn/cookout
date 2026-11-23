@@ -53,7 +53,7 @@ it.effect("a reply joins the message's thread and updates its reply count and la
     const { messages } = yield* answer(() => agent.client.listMessages("grill"));
 
     expect(first).toStrictEqual({
-      author: { name: "other" },
+      author: { name: "other", owner: "admin" },
       channel: "grill",
       createdAt: BOOT,
       id: first.id,

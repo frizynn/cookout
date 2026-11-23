@@ -22,7 +22,9 @@ const identityCreateCommand = Command.make(
     name: identityName,
     owner: Flag.String("owner").pipe(
       Flag.optional,
-      Flag.withDescription("The person the agent belongs to. A human has no owner."),
+      Flag.withDescription(
+        "The human who owns the agent (admin only, unless it is you). Left out, you own it. A human has no owner.",
+      ),
     ),
   },
   ({ displayName, kind, name, owner }) => {
@@ -30,7 +32,11 @@ const identityCreateCommand = Command.make(
     const named = Option.match(displayName, { onNone: () => NOTHING, onSome: (value) => ({ displayName: value }) });
     return answer((client) => client.createIdentity({ kind, name, ...withOwner, ...named }));
   },
-).pipe(Command.withDescription("Create an identity (admin only). Its token is shown this once."));
+).pipe(
+  Command.withDescription(
+    "Create an identity. Any human creates agents it owns; only an admin creates humans. Its token is shown this once.",
+  ),
+);
 
 const identityListCommand = Command.make("list", {}, () => answer((client) => client.listIdentities())).pipe(
   Command.withDescription("List every identity with its kind and owner, sorted by name."),

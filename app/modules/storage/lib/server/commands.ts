@@ -145,7 +145,7 @@ function insertHandler(db: SqliteDatabase, handler: AgentIdentity): Fails<void> 
   return db.run(
     "INSERT INTO identities (name, kind, owner, admin, created_at) VALUES (?, 'agent', ?, 0, ?)",
     handler.name,
-    handler.owner ?? null,
+    handler.owner,
     handler.createdAt,
   );
 }
