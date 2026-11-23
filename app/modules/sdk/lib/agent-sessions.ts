@@ -1,12 +1,25 @@
-import type { AgentSessionResponse, JoinRequest, LeaveResponse } from "../../agent-sessions/index.ts";
-import { isAgentSessionResponse, isLeaveResponse } from "./generated/validators.js";
+import type {
+  AgentSessionResponse,
+  JoinRequest,
+  LeaveResponse,
+  ListAgentSessionsResponse,
+  RevokeAgentSessionResponse,
+} from "../../agent-sessions/index.ts";
+import { agentSessionPath, identityAgentSessionPath } from "../../agent-sessions/index.ts";
+import {
+  isAgentSessionResponse,
+  isLeaveResponse,
+  isListAgentSessionsResponse,
+  isRevokeAgentSessionResponse,
+} from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
-import { agentSessionPath } from "../../agent-sessions/index.ts";
 import { send } from "./request.ts";
 
 interface AgentSessionCalls {
   readonly join: (request: JoinRequest) => Promise<AgentSessionResponse>;
   readonly leave: () => Promise<LeaveResponse>;
+  readonly listAgentSessions: (agent: string) => Promise<ListAgentSessionsResponse>;
+  readonly revokeAgentSession: (agent: string) => Promise<RevokeAgentSessionResponse>;
 }
 
 function agentSessionCalls(server: ClientConnection): AgentSessionCalls {
@@ -24,8 +37,33 @@ function agentSessionCalls(server: ClientConnection): AgentSessionCalls {
       const left = await send(server, { isExpected: isLeaveResponse, method: "DELETE", path: agentSessionPath });
       return left;
     },
+    listAgentSessions: async (agent) => {
+      const listed = await send(server, {
+        isExpected: isListAgentSessionsResponse,
+        method: "GET",
+        params: { name: agent },
+        path: identityAgentSessionPath,
+      });
+      return listed;
+    },
+    revokeAgentSession: async (agent) => {
+      const revoked = await send(server, {
+        isExpected: isRevokeAgentSessionResponse,
+        method: "DELETE",
+        params: { name: agent },
+        path: identityAgentSessionPath,
+      });
+      return revoked;
+    },
   };
 }
 
-export type { AgentSessionResponse, JoinRequest, LeaveResponse } from "../../agent-sessions/index.ts";
-export { agentSessionCalls };
+export type {
+  AgentSessionResponse,
+  JoinRequest,
+  LeaveResponse,
+  ListAgentSessionsResponse,
+  ListedAgentSession,
+  RevokeAgentSessionResponse,
+} from "../../agent-sessions/index.ts";
+export { type AgentSessionCalls, agentSessionCalls };

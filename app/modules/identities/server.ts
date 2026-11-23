@@ -150,11 +150,23 @@ export function adminTokenSet(
  */
 export const identityRoutes: readonly Route<Caller | Storage | Secrets>[] = [...callerRoutes, ...identityAdminRoutes];
 
+/** `PUT /v1/identities/:name/owner`, an admin transferring an agent to another human. It needs `Caller`. */
+export { transferRoutes } from "./lib/server/transfer.ts";
+
 /** The response Schemas of the identity routes, for the SDK's generated validators. */
 export const identityResponseSchemas = { ...responseSchemas };
 
 /** Refuses with 403 `admin_only` unless `Caller` is an admin. */
 export { requireAdmin } from "./lib/server/auth.ts";
+
+/**
+ * Refuses with 403 `not_owner` unless `Caller` is an admin or the human who owns the named agent (Matt, 2026-11-23,
+ * mattpocock/cookout#118). A non-admin naming a missing identity gets 403 too, so a name's existence doesn't leak.
+ */
+export { requireOwnerOrAdmin } from "./lib/server/auth.ts";
+
+/** Reads the `:name` path parameter, refusing a name no identity could have with 404 `identity_not_found`. */
+export { identityNotFound, nameParam } from "./lib/server/routes.ts";
 
 /**
  * `PUT /v1/identities/:name/display-name` and the `DisplayNames` service behind it, whose `changed` hub the live

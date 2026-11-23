@@ -152,4 +152,4 @@ function humanAdmin(name: IdentityName): Effect.Effect<Identity> {
   }));
 }
 
-export { CreateIdentityRequestSchema, createIdentity, humanAdmin, humanCaller };
+export { CreateIdentityRequestSchema, createIdentity, humanAdmin, humanCaller, ownerNotHuman };

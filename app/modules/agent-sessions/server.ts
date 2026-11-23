@@ -5,7 +5,13 @@
  * each request sent with it moves its expiry on (Matt, 2026-11-23, mattpocock/cookout#114). Routes sit behind the
  * server's token gate, which authenticates agent session tokens like any other.
  */
-import { AgentSessionResponseSchema, JoinRequestSchema, LeaveResponseSchema } from "./lib/server/wire.ts";
+import {
+  AgentSessionResponseSchema,
+  JoinRequestSchema,
+  LeaveResponseSchema,
+  ListAgentSessionsResponseSchema,
+  RevokeAgentSessionResponseSchema,
+} from "./lib/server/wire.ts";
 import { AgentSessionSent, Caller } from "../identities/server.ts";
 import { Effect, Option } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
@@ -68,8 +74,16 @@ export { AgentSessions, agentSessionsLayer } from "./lib/server/service.ts";
  */
 export const agentSessionRoutes: readonly Route<Caller | AgentSessions>[] = [joinRoute, leaveRoute];
 
+/**
+ * The routes an agent's owner or an admin lists and revokes its agent session token with, for the server's route list.
+ * @internal
+ */
+export { ownerRoutes as agentSessionOwnerRoutes } from "./lib/server/owner-routes.ts";
+
 /** The response Schemas of the agent session routes, for the SDK's generated validators. */
 export const agentSessionResponseSchemas = {
   AgentSessionResponse: AgentSessionResponseSchema,
   LeaveResponse: LeaveResponseSchema,
+  ListAgentSessionsResponse: ListAgentSessionsResponseSchema,
+  RevokeAgentSessionResponse: RevokeAgentSessionResponseSchema,
 };

@@ -5,7 +5,7 @@ import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import type { Identity, IdentityName } from "../../index.ts";
 import { IdentityResponseSchema, IdentityWithTokenResponseSchema, ListIdentitiesResponseSchema } from "./wire.ts";
 import { identitiesPath, identityAdminPath, identityPath, identityTokenPath, isIdentityName } from "../../index.ts";
-import { issueToken, requireAdmin } from "./auth.ts";
+import { issueToken, requireAdmin, requireOwnerOrAdmin } from "./auth.ts";
 import type { Caller } from "./auth.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
@@ -98,8 +98,8 @@ const listRoute: Route<Storage> = {
 const rotateRoute: Route<Caller | Storage | Secrets> = {
   handle: (params) =>
     Effect.gen(function* rotateTokenRoute() {
-      yield* requireAdmin;
       const name = yield* nameParam(params);
+      yield* requireOwnerOrAdmin(name);
       const { token, hash } = yield* issueToken;
       const storage = yield* Storage;
       const result = yield* storage.replaceToken(name, hash);

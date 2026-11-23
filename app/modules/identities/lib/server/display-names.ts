@@ -1,9 +1,9 @@
-import { Context, Effect, Layer, Predicate, PubSub, Schema } from "effect";
+import { Caller, ownsAgent } from "./auth.ts";
+import { Context, Effect, Layer, PubSub, Schema } from "effect";
 import type { DisplayName, Identity, IdentityName } from "../../index.ts";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { IdentityResponseSchema, SentDisplayNameSchema } from "./wire.ts";
 import { identityNotFound, nameParam } from "./routes.ts";
-import { Caller } from "./auth.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
 import type { Scope } from "effect";
@@ -36,15 +36,8 @@ function notOwner(name: string): Refusal {
   };
 }
 
-function ownsAgent(caller: Identity, target: Identity | undefined): boolean {
-  if (Predicate.isUndefined(target) || caller.kind !== "human" || target.kind !== "agent") {
-    return false;
-  }
-  return target.owner === caller.name;
-}
-
 function maySet(caller: Identity, name: IdentityName, target: Identity | undefined): boolean {
-  return caller.admin || caller.name === name || ownsAgent(caller, target);
+  return caller.admin || caller.name === name || ownsAgent({ caller, target });
 }
 
 function requireMaySet(

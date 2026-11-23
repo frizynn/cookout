@@ -281,7 +281,11 @@ it.effect("an agent can't create, rotate or delete identities (403)", () =>
     const listed = yield* answer(cookout.client.listIdentities);
     const adminOnly = { code: "admin_only", status: 403 };
 
-    expect([created, rotated, deleted]).toMatchObject([{ code: "human_only", status: 403 }, adminOnly, adminOnly]);
+    expect([created, rotated, deleted]).toMatchObject([
+      { code: "human_only", status: 403 },
+      { code: "not_owner", status: 403 },
+      adminOnly,
+    ]);
     expect(listed.identities).toMatchObject([{ name: "admin" }, { name: "agent" }]);
   }).pipe(Effect.provide(testCookout())),
 );

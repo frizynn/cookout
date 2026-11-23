@@ -1,4 +1,10 @@
-import type { AgentSessionResponse, JoinRequest } from "../../index.ts";
+import type { AgentAt, StorageUnavailable } from "../../../storage/server.ts";
+import type {
+  AgentSessionResponse,
+  JoinRequest,
+  ListAgentSessionsResponse,
+  RevokeAgentSessionResponse,
+} from "../../index.ts";
 import { Context, DateTime, Duration, Effect, Layer, Option } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import { agentSessionExpired, agentSessionRevoked } from "../../index.ts";
@@ -8,7 +14,6 @@ import type { Config } from "effect";
 import type { Refusal } from "../../../http/index.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
-import type { StorageUnavailable } from "../../../storage/server.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 import { maxIdleExpiry } from "../../../config/server.ts";
 
@@ -22,6 +27,8 @@ interface AgentSessionsService {
   readonly join: (caller: Identity, request: Join) => Fails<AgentSessionResponse>;
   readonly leave: (hash: TokenHash) => Effect.Effect<void, StorageUnavailable>;
   readonly untilEnded: (hash: TokenHash) => Effect.Effect<Refusal, StorageUnavailable>;
+  readonly listFor: (identity: IdentityName) => Effect.Effect<ListAgentSessionsResponse, StorageUnavailable>;
+  readonly revokeFor: (identity: IdentityName) => Effect.Effect<RevokeAgentSessionResponse, StorageUnavailable>;
 }
 
 class AgentSessions extends Context.Service<AgentSessions, AgentSessionsService>()(
@@ -39,6 +46,7 @@ interface Issue {
   readonly caller: Identity;
   readonly force: boolean;
   readonly idleSeconds: number;
+  readonly host: Option.Option<string>;
 }
 
 const CHECK_SECONDS = 30;
@@ -83,13 +91,14 @@ function checkCaller(caller: Identity, request: Join): Effect.Effect<void, Refus
 }
 
 function issuer({ secrets, storage }: On) {
-  return ({ caller, force, idleSeconds }: Issue): Fails<AgentSessionResponse> =>
+  return ({ caller, force, host, idleSeconds }: Issue): Fails<AgentSessionResponse> =>
     Effect.gen(function* issueAgentSession() {
       const agentSessionToken = yield* secrets.newToken;
       const hash = yield* secrets.hashToken(agentSessionToken);
       const now = yield* DateTime.now;
       const times = { expiresAt: isoTimeOf(DateTime.add(now, { seconds: idleSeconds })), issuedAt: isoTimeOf(now) };
-      const session = { ...times, hash, identity: caller.name, idleSeconds };
+      const joined = { ...times, hash, identity: caller.name, idleSeconds };
+      const session = Option.match(host, { onNone: () => joined, onSome: (from) => ({ ...joined, host: from }) });
       const issued = yield* storage.issueAgentSession({ force, session });
       if (issued.status === "live") {
         return yield* Effect.fail(agentSessionLive({ expiresAt: issued.expiresAt, identity: caller.name }));
@@ -107,7 +116,8 @@ function joiner(on: On) {
         onNone: () => Effect.succeed(Math.min(defaultIdleSeconds, on.ceilingSeconds)),
         onSome: (asked) => idleSecondsFor(on, asked),
       });
-      return yield* issue({ caller, force: request.force === true, idleSeconds });
+      const host = Option.fromUndefinedOr(request.host);
+      return yield* issue({ caller, force: request.force === true, host, idleSeconds });
     });
 }
 
@@ -121,8 +131,27 @@ function watcher({ storage }: On) {
   };
 }
 
+function agentNow(identity: IdentityName): Effect.Effect<AgentAt> {
+  return Effect.map(DateTime.now, (now) => ({ identity, now: isoTimeOf(now) }));
+}
+
+function ownerViews({ storage }: On): Pick<AgentSessionsService, "listFor" | "revokeFor"> {
+  return {
+    listFor: (identity) =>
+      agentNow(identity).pipe(
+        Effect.flatMap(storage.findLiveAgentSession),
+        Effect.map((live) => ({ agentSessions: Option.toArray(live) })),
+      ),
+    revokeFor: (identity) =>
+      agentNow(identity).pipe(
+        Effect.flatMap(storage.revokeLiveAgentSession),
+        Effect.map((revoked) => ({ revoked })),
+      ),
+  };
+}
+
 function agentSessionsOn(on: On): AgentSessionsService {
-  return { join: joiner(on), leave: on.storage.revokeAgentSession, untilEnded: watcher(on) };
+  return { join: joiner(on), leave: on.storage.revokeAgentSession, untilEnded: watcher(on), ...ownerViews(on) };
 }
 
 const agentSessionsLayer: Layer.Layer<AgentSessions, Config.ConfigError, Storage | Secrets> = Layer.effect(

@@ -9,6 +9,7 @@ import {
   identitiesPath,
   identityAdminPath,
   identityDisplayNamePath,
+  identityOwnerPath,
   identityPath,
   identityTokenPath,
   sessionPath,
@@ -36,6 +37,7 @@ interface IdentityCalls {
   readonly makeAdmin: (name: string) => Promise<IdentityResponse>;
   readonly removeAdmin: (name: string) => Promise<IdentityResponse>;
   readonly setDisplayName: (name: string, displayName: string | null) => Promise<IdentityResponse>;
+  readonly transferAgent: (agent: string, owner: string) => Promise<IdentityResponse>;
 }
 
 function sessionCall(server: ClientConnection, method: "POST" | "DELETE") {
@@ -61,6 +63,19 @@ function setDisplayNameCall(server: ClientConnection): IdentityCalls["setDisplay
       method: "PUT",
       params: { name },
       path: identityDisplayNamePath,
+    });
+    return answer;
+  };
+}
+
+function transferAgentCall(server: ClientConnection): IdentityCalls["transferAgent"] {
+  return async (agent, owner) => {
+    const answer = await send(server, {
+      body: { owner },
+      isExpected: isIdentityResponse,
+      method: "PUT",
+      params: { name: agent },
+      path: identityOwnerPath,
     });
     return answer;
   };
@@ -109,6 +124,7 @@ function identityCalls(server: ClientConnection): IdentityCalls {
       return rotated;
     },
     setDisplayName: setDisplayNameCall(server),
+    transferAgent: transferAgentCall(server),
     whoami: async () => {
       const identity = await getJson(server, whoamiPath, isIdentityResponse);
       return identity;
