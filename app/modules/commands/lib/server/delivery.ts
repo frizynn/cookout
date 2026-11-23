@@ -1,7 +1,7 @@
 import type { Call, FailureReplyNeeds } from "./failure-reply.ts";
 import type { Config, Scope } from "effect";
 import { Context, DateTime, Duration, Effect, FiberSet, Layer, Ref, Schedule, Schema } from "effect";
-import type { DeliveryOutcome, StorageUnavailable, StoredDelivery } from "../../../storage/server.ts";
+import type { DeliveryOutcome, NewCommandCall, StorageUnavailable, StoredDelivery } from "../../../storage/server.ts";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { webhookRetryDelaySeconds, webhookRetryFactor, webhookTimeoutSeconds } from "../../../config/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
@@ -11,8 +11,19 @@ import { failureReply } from "./failure-reply.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 import { messagesLayer } from "../../../messages/server.ts";
 
+type Calling = Pick<Call, "stored" | "data">;
+
+type Placed = Pick<Call, "channel" | "threadId">;
+
+type CallParts = Omit<NewCommandCall, "message">;
+
+type PostCall<Failure> = (parts: CallParts) => Effect.Effect<Placed, Failure>;
+
 interface DeliveriesService {
-  readonly deliver: (call: Call) => Effect.Effect<void, StorageUnavailable>;
+  readonly deliver: <Failure>(
+    calling: Calling,
+    post: PostCall<Failure>,
+  ) => Effect.Effect<Placed, Failure | StorageUnavailable>;
 }
 
 interface Backoff {
@@ -128,31 +139,37 @@ function sendDelivery(backoff: Backoff, delivery: Delivery): Effect.Effect<void,
   });
 }
 
-const newCommandToken = Effect.fnUntraced(function* issueCommandToken(
-  call: Call,
-): Effect.fn.Return<Token, StorageUnavailable, Secrets | Storage> {
+interface IssuedToken {
+  readonly token: Token;
+  readonly stored: CallParts["token"];
+}
+
+const newCommandToken = Effect.fnUntraced(function* issueCommandToken({
+  stored,
+}: Calling): Effect.fn.Return<IssuedToken, never, Secrets> {
   const secrets = yield* Secrets;
-  const storage = yield* Storage;
   const token = yield* secrets.newCommandToken;
   const now = yield* DateTime.now;
   const hash = yield* secrets.hashToken(token);
   const expiresAt = isoTimeOf(DateTime.addDuration(now, COMMAND_TOKEN_LIFETIME));
-  yield* storage.addCommandToken({ expiresAt, handler: call.stored.command.handler, hash, threadId: call.threadId });
-  return token;
+  return { stored: { expiresAt, handler: stored.command.handler, hash }, token };
 });
 
-const storeDelivery = Effect.fnUntraced(function* addDelivery(
-  call: Call,
-): Effect.fn.Return<Progress, StorageUnavailable, Secrets | Storage> {
+const newDelivery = Effect.fnUntraced(function* startDelivery({
+  data,
+  stored,
+}: Calling): Effect.fn.Return<CallParts["delivery"], never, Secrets> {
   const secrets = yield* Secrets;
-  const storage = yield* Storage;
   const callId = yield* secrets.newCallId;
   const now = yield* DateTime.now;
-  const progress = { attempts: NONE, callId, nextAttemptAt: isoTimeOf(now) };
-  const { channel, data, threadId } = call;
-  const command = call.stored.command.name;
-  yield* storage.addDelivery({ ...progress, channel, command, data, outcome: "pending", threadId });
-  return progress;
+  return {
+    attempts: NONE,
+    callId,
+    command: stored.command.name,
+    data,
+    nextAttemptAt: isoTimeOf(now),
+    outcome: "pending",
+  };
 });
 
 const callOf = Effect.fnUntraced(function* findCall(
@@ -179,15 +196,22 @@ function deliveriesWith(
     function resume(pending: StoredDelivery): Effect.Effect<void, StorageUnavailable, Secrets | Storage> {
       return Effect.gen(function* resumeDelivery() {
         const call = yield* callOf(pending);
-        const token = yield* newCommandToken(call);
+        const { stored, token } = yield* newCommandToken(call);
+        const storage = yield* Storage;
+        yield* storage.addCommandToken({ ...stored, threadId: call.threadId });
         yield* sendInBackground({ call, progress: pending, token });
       });
     }
-    function deliver(call: Call): Effect.Effect<void, StorageUnavailable> {
-      return Effect.gen(function* startDelivery() {
-        const token = yield* newCommandToken(call);
-        const progress = yield* storeDelivery(call);
-        yield* sendInBackground({ call, progress, token });
+    function deliver<Failure>(
+      calling: Calling,
+      post: PostCall<Failure>,
+    ): Effect.Effect<Placed, Failure | StorageUnavailable> {
+      return Effect.gen(function* postAndSend() {
+        const { stored, token } = yield* newCommandToken(calling);
+        const delivery = yield* newDelivery(calling);
+        const placed = yield* post({ delivery, token: stored });
+        yield* sendInBackground({ call: { ...calling, ...placed }, progress: delivery, token });
+        return placed;
       }).pipe(Effect.provideContext(services));
     }
     const storage = yield* Storage;

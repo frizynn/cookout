@@ -101,14 +101,15 @@ function callCommand({
     const { command } = stored;
     yield* requireData(command, data);
     const messages = yield* Messages;
-    const { message } = yield* messages.post(caller, {
-      channel,
-      data: { command: command.name, data },
-      text: `/${command.name}`,
-    });
     const deliveries = yield* Deliveries;
-    yield* deliveries.deliver({ channel: message.channel, data, stored, threadId: message.id });
-    return { messageId: message.id, threadId: message.id };
+    const callMessage = { channel, data: { command: command.name, data }, text: `/${command.name}` };
+    const { threadId } = yield* deliveries.deliver({ data, stored }, (parts) =>
+      Effect.map(messages.postCommandCall(caller, callMessage, parts), ({ message }) => ({
+        channel: message.channel,
+        threadId: message.id,
+      })),
+    );
+    return { messageId: threadId, threadId };
   });
 }
 
