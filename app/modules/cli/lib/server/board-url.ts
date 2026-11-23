@@ -105,4 +105,4 @@ function boardToLogOutOf(
   });
 }
 
-export { type TypedOnTerminal, boardToLogOutOf, checked, firstLineOnTerminal, givenBoard, typedOnTerminal };
+export { boardToLogOutOf, checked, firstLineOnTerminal, givenBoard, typedOnTerminal };
