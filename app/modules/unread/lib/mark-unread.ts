@@ -72,4 +72,4 @@ function createMarkUnread({ client, dropRead, items, onChange }: MarkUnreadOptio
   };
 }
 
-export { type MarkUnread, createMarkUnread };
+export { createMarkUnread };
