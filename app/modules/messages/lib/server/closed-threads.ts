@@ -67,7 +67,12 @@ function closedThreadsOn({ hub, storage }: ClosedThreadsOn): ClosedThreadsServic
         const change = yield* hub.changeThenPublish(storage.closeThread(id, closing));
         return yield* answerFor(id)(change);
       }),
-    reopenThread: (id) => Effect.flatMap(hub.changeThenPublish(storage.reopenThread(id)), answerFor(id)),
+    reopenThread: (id) =>
+      Effect.gen(function* reopenThread() {
+        const now = yield* DateTime.now;
+        const change = yield* hub.changeThenPublish(storage.reopenThread(id, isoTimeOf(now)));
+        return yield* answerFor(id)(change);
+      }),
     threadChanged: hub.threadChanged,
   };
 }

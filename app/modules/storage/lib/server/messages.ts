@@ -13,6 +13,8 @@ import { isMessageId, withNewestReply } from "../../../messages/index.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { Effect } from "effect";
 import type { IdentityName } from "../../../identities/index.ts";
+import type { IsoTime } from "../../../time/index.ts";
+import type { OpenThreadsSection } from "./open-threads.ts";
 import type { StorageUnavailable } from "./errors.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
@@ -78,13 +80,13 @@ interface ThreadStateChange {
   readonly parent: TopLevelMessage;
 }
 
-interface MessagesSection {
+interface MessagesSection extends OpenThreadsSection {
   readonly appendMessage: (message: NewMessage) => Fails<AppendMessageResult>;
   readonly listChannelMessages: (channel: ChannelName, page: ChannelPageRequest) => Fails<StoredPage | undefined>;
   readonly getThread: (id: MessageId) => Fails<StoredThread | undefined>;
   readonly latestMessageId: Effect.Effect<MessageId | undefined, StorageUnavailable>;
   readonly closeThread: (id: MessageId, closing: Closing) => Fails<ThreadStateChange | undefined>;
-  readonly reopenThread: (id: MessageId) => Fails<ThreadStateChange | undefined>;
+  readonly reopenThread: (id: MessageId, reopenedAt: IsoTime) => Fails<ThreadStateChange | undefined>;
 }
 
 const NO_REPLIES = 0;

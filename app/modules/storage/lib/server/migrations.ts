@@ -184,6 +184,7 @@ const migrations: readonly string[] = [
    ) STRICT;`,
   `ALTER TABLE presence ADD COLUMN offline_reason TEXT;
    ALTER TABLE presence ADD COLUMN ended_unexpectedly INTEGER CHECK (ended_unexpectedly IN (0, 1));`,
+  "ALTER TABLE messages ADD COLUMN reopened_at TEXT;",
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

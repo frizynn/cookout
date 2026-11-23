@@ -17,6 +17,7 @@ const GRILL = channel("grill").name;
 const PAGE = { limit: 10 } as const;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const firstClosing = { closedAt: isoTime("2026-01-02T00:00:00.000Z"), closedBy: identityName("ada") };
+const reopenedAt = isoTime("2026-01-04T00:00:00.000Z");
 const laterClosing = { closedAt: isoTime("2026-01-03T00:00:00.000Z"), closedBy: identityName("grace") };
 
 function present<Value>(
@@ -54,8 +55,8 @@ it.effect.each(storageLayers)(
       yield* storage.createChannel(channel("grill"));
       const parent = yield* appendTo(storage)(newMessage("grill", "parent"));
       yield* storage.closeThread(parent.id, firstClosing);
-      const open = yield* present(storage.reopenThread(parent.id));
-      const openAgain = yield* storage.reopenThread(parent.id);
+      const open = yield* present(storage.reopenThread(parent.id, reopenedAt));
+      const openAgain = yield* storage.reopenThread(parent.id, reopenedAt);
       const thread = yield* present(storage.getThread(parent.id));
 
       expect(open).toStrictEqual({ changed: true, parent });
@@ -93,7 +94,7 @@ it.effect.each(storageLayers)(
     Effect.gen(function* missingThread() {
       const { storage } = yield* openStore(layer);
       const missing = yield* Effect.all(
-        [storage.closeThread(messageId(MISSING), firstClosing), storage.reopenThread(messageId(MISSING))],
+        [storage.closeThread(messageId(MISSING), firstClosing), storage.reopenThread(messageId(MISSING), reopenedAt)],
         ONE_AT_A_TIME,
       );
 
