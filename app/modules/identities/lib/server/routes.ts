@@ -151,6 +151,12 @@ export const firstAdmin: Effect.Effect<Identity> = Effect.map(DateTime.now, (now
   name: firstAdminName,
 }));
 
+export const responseSchemas = {
+  IdentityResponse: IdentityResponseSchema,
+  IdentityWithTokenResponse: IdentityWithTokenResponseSchema,
+  ListIdentitiesResponse: ListIdentitiesResponseSchema,
+};
+
 export const identityAdminRoutes: readonly Route<Caller | Storage | Secrets>[] = [
   createRoute,
   listRoute,
