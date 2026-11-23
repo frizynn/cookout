@@ -12,8 +12,8 @@ import {
   Scope,
 } from "effect";
 import type { Booted, LastEnd } from "./booted.ts";
-import type { CookoutClient, Identity, Token } from "../../../sdk/index.ts";
-import type { StorageUnavailable, StoredCommand, StoredDelivery } from "../../../storage/server.ts";
+import type { CookoutClient, Identity, Message, Token } from "../../../sdk/index.ts";
+import type { NewMessage, StorageUnavailable, StoredCommand, StoredDelivery } from "../../../storage/server.ts";
 import { backingServices, newToken, storageFor } from "./backing.ts";
 import { booted, lastEndOn, liveConnectionsClosedOn } from "./booted.ts";
 import { currentTime, startTestClock } from "./time.ts";
@@ -52,6 +52,8 @@ export type TestCookoutService = {
   readonly liveConnectionsClosed: (name: string) => Effect.Effect<void>;
   readonly lastEnd: (name: string) => Effect.Effect<LastEnd>;
   readonly restartServer: Effect.Effect<BootedServer>;
+  readonly restartServerAfter: (whileDown: Effect.Effect<void>) => Effect.Effect<BootedServer>;
+  readonly seedMessage: (message: NewMessage) => Effect.Effect<Message>;
   readonly seedCommand: (stored: StoredCommand) => Effect.Effect<void>;
   readonly pendingDeliveries: Effect.Effect<readonly StoredDelivery[]>;
   readonly webhook: WebhookFake["Service"];
@@ -170,6 +172,14 @@ function seedCommand(stored: StoredCommand): Effect.Effect<void, never, Storage>
   }).pipe(Effect.orDie);
 }
 
+function seedMessage(message: NewMessage): Effect.Effect<Message, never, Storage> {
+  return Effect.flatMap(Storage, (storage) => storage.appendMessage(message)).pipe(
+    Effect.filterOrFail((result) => result.status === "appended"),
+    Effect.map((result) => result.message),
+    Effect.orDie,
+  );
+}
+
 const pendingDeliveries: Effect.Effect<readonly StoredDelivery[], never, Storage> = Effect.gen(
   function* listTestPendingDeliveries() {
     const storage = yield* Storage;
@@ -221,15 +231,18 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
       const serverScope = yield* Ref.make(firstScope);
       const first = yield* Scope.provide(boot, firstScope);
       const running = yield* Ref.make(first.server);
-      const restartServer = Effect.gen(function* restartServer() {
-        const stopped = yield* Ref.get(serverScope);
-        yield* Scope.close(stopped, Exit.void);
-        const next = yield* Scope.fork(scope);
-        yield* Ref.set(serverScope, next);
-        const { server, url } = yield* Scope.provide(boot, next);
-        yield* Ref.set(running, server);
-        return { url };
-      });
+      function restartServerAfter(whileDown: Effect.Effect<void>): Effect.Effect<BootedServer> {
+        return Effect.gen(function* restartServer() {
+          const stopped = yield* Ref.get(serverScope);
+          yield* Scope.close(stopped, Exit.void);
+          yield* whileDown;
+          const next = yield* Scope.fork(scope);
+          yield* Ref.set(serverScope, next);
+          const { server, url } = yield* Scope.provide(boot, next);
+          yield* Ref.set(running, server);
+          return { url };
+        });
+      }
       const onFirst = Effect.provideContext(first.server);
       return TestCookout.of({
         adminToken,
@@ -240,9 +253,11 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
         liveConnectionsClosed: (name) =>
           Effect.flatMap(Ref.get(running), (server) => liveConnectionsClosedOn({ name, server })),
         pendingDeliveries: onFirst(pendingDeliveries),
-        restart: Effect.map(restartServer, ({ url }) => clientAt(url)(adminToken)),
-        restartServer,
+        restart: Effect.map(restartServerAfter(Effect.void), ({ url }) => clientAt(url)(adminToken)),
+        restartServer: restartServerAfter(Effect.void),
+        restartServerAfter,
         seedCommand: (stored) => onFirst(seedCommand(stored)),
+        seedMessage: (message) => onFirst(seedMessage(message)),
         startSecondServer: Effect.map(Scope.provide(boot, scope), ({ url }) => ({ url })),
         startSecondServerAs: (adminName) => Effect.map(Scope.provide(bootAs(adminName), scope), ({ url }) => ({ url })),
         url: first.url,

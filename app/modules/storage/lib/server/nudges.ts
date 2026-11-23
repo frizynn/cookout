@@ -101,7 +101,7 @@ function dueOf({ intervals, latest, since }: Dating): (thread: OpenThread) => re
     if (lastActivityAt < since) {
       return [];
     }
-    if (Predicate.isUndefined(newest) || newest.raisedAt < lastActivityAt) {
+    if (Predicate.isUndefined(newest) || newest.raisedAt <= lastActivityAt) {
       return [{ at: later(lastActivityAt, intervals.first), kind: "first", thread }];
     }
     if (newest.kind === "first") {
@@ -191,7 +191,7 @@ function raise({ due, now, on }: Raising): Fails<readonly StoredNudge[]> {
 
 function isUnread(open: Shown["open"], record: NudgeRecord): boolean {
   const thread = open.get(record.thread);
-  return !record.read && Predicate.isNotUndefined(thread) && thread.lastActivityAt <= record.raisedAt;
+  return !record.read && Predicate.isNotUndefined(thread) && thread.lastActivityAt < record.raisedAt;
 }
 
 function shownNudge({ on, open, recipient }: Shown): (record: NudgeRecord) => Fails<readonly StoredNudge[]> {

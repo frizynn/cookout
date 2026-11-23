@@ -1,11 +1,13 @@
 import type {
-  AckAllResponse,
+  AckAllRequest,
   AckResponse,
   FollowResponse,
   InboxHistoryQuery,
   InboxHistoryResponse,
   InboxResponse,
   MarkUnreadResponse,
+  NudgeId,
+  NudgeResponse,
   ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../inbox/index.ts";
@@ -16,6 +18,7 @@ import {
   inboxHistoryPath,
   inboxPath,
   markUnreadPath,
+  nudgeReadPath,
   readPositionsPath,
   subscriptionPath,
 } from "../../inbox/index.ts";
@@ -26,21 +29,22 @@ import {
   isInboxHistoryResponse,
   isInboxResponse,
   isMarkUnreadResponse,
+  isNudgeResponse,
   isReadPositionsResponse,
   isSubscriptionResponse,
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
+import type { InboxReadCalls } from "../../inbox/client.ts";
 import type { MessageId } from "../../messages/index.ts";
 import { send } from "./request.ts";
 
 type Change = "PUT" | "DELETE";
 
-interface InboxCalls {
+interface InboxCalls extends InboxReadCalls {
   readonly inbox: () => Promise<InboxResponse>;
   readonly inboxHistory: (query?: InboxHistoryQuery) => Promise<InboxHistoryResponse>;
   readonly readPositions: () => Promise<ReadPositionsResponse>;
   readonly ack: (messageId: MessageId) => Promise<AckResponse>;
-  readonly ackAll: (upTo: MessageId) => Promise<AckAllResponse>;
   readonly markUnread: (messageId: MessageId) => Promise<MarkUnreadResponse>;
   readonly follow: (messageId: MessageId) => Promise<FollowResponse>;
   readonly unfollow: (messageId: MessageId) => Promise<FollowResponse>;
@@ -64,6 +68,29 @@ function subscriptionCall(server: ClientConnection, method: Change) {
   };
 }
 
+function markNudgeReadCall(server: ClientConnection) {
+  return async (nudgeId: NudgeId): Promise<NudgeResponse> => {
+    const params = { id: String(nudgeId) };
+    const read = await send(server, { isExpected: isNudgeResponse, method: "PUT", params, path: nudgeReadPath });
+    return read;
+  };
+}
+
+function ackAllBody(upTo: MessageId | AckAllRequest): AckAllRequest {
+  if (typeof upTo === "number") {
+    return { upTo };
+  }
+  return upTo;
+}
+
+function ackAllCall(server: ClientConnection): InboxReadCalls["ackAll"] {
+  return async (upTo) => {
+    const body = ackAllBody(upTo);
+    const acked = await send(server, { body, isExpected: isAckAllResponse, method: "POST", path: ackAllPath });
+    return acked;
+  };
+}
+
 function inboxCalls(server: ClientConnection): InboxCalls {
   return {
     ack: async (messageId) => {
@@ -71,11 +98,7 @@ function inboxCalls(server: ClientConnection): InboxCalls {
       const acked = await send(server, { body, isExpected: isAckResponse, method: "POST", path: ackPath });
       return acked;
     },
-    ackAll: async (upTo) => {
-      const body = { upTo };
-      const acked = await send(server, { body, isExpected: isAckAllResponse, method: "POST", path: ackAllPath });
-      return acked;
-    },
+    ackAll: ackAllCall(server),
     follow: followCall(server, "PUT"),
     inbox: async () => {
       const answer = await send(server, { isExpected: isInboxResponse, method: "GET", path: inboxPath });
@@ -91,6 +114,7 @@ function inboxCalls(server: ClientConnection): InboxCalls {
       });
       return page;
     },
+    markNudgeRead: markNudgeReadCall(server),
     markUnread: async (messageId) => {
       const body = { messageId };
       const moved = await send(server, {
@@ -115,7 +139,9 @@ function inboxCalls(server: ClientConnection): InboxCalls {
   };
 }
 
+export type { InboxReadCalls } from "../../inbox/client.ts";
 export type {
+  AckAllRequest,
   AckAllResponse,
   AckResponse,
   FollowResponse,
@@ -123,6 +149,8 @@ export type {
   InboxHistoryResponse,
   InboxResponse,
   MarkUnreadResponse,
+  NudgeId,
+  NudgeResponse,
   ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../inbox/index.ts";

@@ -8,7 +8,7 @@
  * instead.
  */
 import type { Identity, IdentityName } from "../identities/index.ts";
-import type { InboxItem, MovedBackReadPosition, ReadPosition, SubscriptionResponse } from "../inbox/index.ts";
+import type { InboxItem, MovedBackReadPosition, Nudge, ReadPosition, SubscriptionResponse } from "../inbox/index.ts";
 import type { LiveConnectionId, Presence, presenceName } from "../presence/index.ts";
 import type { Message, MessageId, ReactionsResponse, ReadReceipt, TopLevelMessage } from "../messages/index.ts";
 import type { Channel } from "../channels/index.ts";
@@ -26,6 +26,16 @@ export type {
 export interface InboxItemEvent {
   readonly type: "inbox-item";
   readonly item: InboxItem;
+}
+
+/**
+ * A Nudge just raised for the caller: a thread it started has been quiet for a while. Sent on every stream of the
+ * caller the moment the server raises it, `cookout watch` included. It has no SSE `id`, so a caller that reconnects
+ * reads `GET /v1/inbox` again.
+ */
+export interface NudgeEvent {
+  readonly type: "nudge";
+  readonly nudge: Nudge;
 }
 
 /** The caller's new read position in a thread or channel, sent the moment any session of the caller acks. */
@@ -169,6 +179,7 @@ export interface PresenceEvent {
 /** Any event the stream sends. */
 export type CookoutEvent =
   | InboxItemEvent
+  | NudgeEvent
   | ReadPositionEvent
   | ReadPositionMovedBackEvent
   | MessageEvent
