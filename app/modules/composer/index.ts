@@ -19,7 +19,7 @@
  * display name set or cleared anywhere) takes its place in the list at once.
  * `displayName(name)` is that identity's display name as it is edited: its
  * text is `null` until edited, so the field shows the saved one; `save` sends
- * it trimmed (empty clears it), puts the answer in the identity list at once
+ * the field's text trimmed (empty clears it), puts the answer in the identity list at once
  * and forgets the text, or, if the server refuses, keeps the text and the
  * refusal. Until the identities load, or if the server refuses them, nobody
  * is suggested.

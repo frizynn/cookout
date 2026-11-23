@@ -94,11 +94,14 @@ it("the inbox lists each item with its reasons and where it is read, after each 
     `#/channels/${channel} #${channel}11 unread@11 mention`,
     `#/channels/${also} #${also}11 unread`,
   ]);
-  expect(rowsOf("Inbox")).toStrictEqual([
-    `#/channels/${also} #${also}Subscribed channel@${channel}-poster${first.text}`,
-    `#/channels/${channel}/threads/${String(parent.id)} #${channel}Followed thread, Mention@${channel}-poster${reply.text}`,
-    `#/channels/${channel} #${channel}Subscribed channel@${channel}-poster${other.text}`,
-  ]);
+
+  await waitFor(() => {
+    expect(rowsOf("Inbox")).toStrictEqual([
+      `#/channels/${also} #${also}Subscribed channel@${channel}-posteragent${first.text}`,
+      `#/channels/${channel}/threads/${String(parent.id)} #${channel}Followed thread, Mention@${channel}-posteragent${reply.text}`,
+      `#/channels/${channel} #${channel}Subscribed channel@${channel}-posteragent${other.text}`,
+    ]);
+  });
 
   unmount();
 });

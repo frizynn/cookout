@@ -17,22 +17,13 @@ interface DisplayNameDraft {
   readonly subscribe: (listener: () => void) => () => void;
   readonly snapshot: () => DisplayNameSnapshot;
   readonly edit: (text: string) => void;
-  readonly save: () => void;
+  readonly save: (text: string) => void;
 }
 
 interface DisplayNameOptions {
   readonly client: Pick<CookoutClient, "setDisplayName">;
   readonly list: IdentityList;
   readonly name: IdentityName;
-}
-
-function savedOf(list: IdentityList, name: IdentityName): string {
-  for (const identity of list.identities()) {
-    if (identity.name === name) {
-      return identity.displayName ?? "";
-    }
-  }
-  return "";
 }
 
 function sentOf(text: string): string | null {
@@ -54,9 +45,9 @@ function createDisplayName(options: DisplayNameOptions): DisplayNameDraft {
     listeners.notify();
   }
 
-  async function send(text: string | null): Promise<void> {
+  async function send(text: string): Promise<void> {
     try {
-      const { identity } = await client.setDisplayName(name, sentOf(text ?? savedOf(list, name)));
+      const { identity } = await client.setDisplayName(name, sentOf(text));
       list.put(identity);
       publish({ save: { status: "idle" }, text: null });
     } catch (error: unknown) {
@@ -64,7 +55,7 @@ function createDisplayName(options: DisplayNameOptions): DisplayNameDraft {
     }
   }
 
-  async function sendAfter(previous: Promise<void>, text: string | null): Promise<void> {
+  async function sendAfter(previous: Promise<void>, text: string): Promise<void> {
     await previous;
     await send(text);
   }
@@ -73,8 +64,7 @@ function createDisplayName(options: DisplayNameOptions): DisplayNameDraft {
     edit: (text) => {
       publish({ ...current, text });
     },
-    save: () => {
-      const { text } = current;
+    save: (text) => {
       publish({ save: { status: "saving" }, text });
       saving = sendAfter(saving, text);
     },
