@@ -2,7 +2,9 @@ import { Array as Arr, Context, Effect, Layer, Random, Redacted, String as Str }
 import type { BinNeeds, BinResult, BinRun } from "./bin.ts";
 import type { ChannelResponse, CookoutClient, IdentityWithTokenResponse } from "@ai-hero/cookout/sdk";
 import { e2eAdminToken, e2eUrl } from "../../../config/server.ts";
+import type { JoinAgent } from "./session.ts";
 import { createCookoutClient } from "@ai-hero/cookout/sdk";
+import { joinAgentWith } from "./session.ts";
 import { runBin } from "./bin.ts";
 
 interface CookoutUnderTestService {
@@ -13,6 +15,7 @@ interface CookoutUnderTestService {
   readonly createHuman: (name: string) => Effect.Effect<IdentityWithTokenResponse>;
   readonly createChannel: (name: string) => Effect.Effect<ChannelResponse>;
   readonly runCookout: (run: BinRun) => Effect.Effect<BinResult, never, BinNeeds>;
+  readonly joinAgent: JoinAgent;
 }
 
 const NO_DRAW = 0;
@@ -46,15 +49,19 @@ const cookoutUnderTest: Layer.Layer<CookoutUnderTest> = Layer.effect(
     const draw = yield* Random.nextIntBetween(NO_DRAW, PREFIX_SPACE);
     const prefix = prefixOf(draw);
     yield* Effect.addFinalizer(() => deleteRunIdentities(admin, prefix));
+    function createAgent(name: string): Effect.Effect<IdentityWithTokenResponse> {
+      return Effect.promise(() => admin.createIdentity({ kind: "agent", name: `${prefix}-${name}` }));
+    }
+    const runCookout = runBin(url);
     return {
       admin,
-      createAgent: (name: string) =>
-        Effect.promise(() => admin.createIdentity({ kind: "agent", name: `${prefix}-${name}` })),
+      createAgent,
       createChannel: (name: string) => Effect.promise(() => admin.createChannel({ name: `${prefix}-${name}` })),
       createHuman: (name: string) =>
         Effect.promise(() => admin.createIdentity({ kind: "human", name: `${prefix}-${name}` })),
+      joinAgent: joinAgentWith({ createAgent, runCookout, url }),
       prefix,
-      runCookout: runBin(url),
+      runCookout,
       url,
     };
   }).pipe(Effect.orDie),

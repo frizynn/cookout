@@ -1,37 +1,30 @@
-import { Array as Arr, Effect, Fiber, Schedule, String as Str } from "effect";
-import type { BinNeeds, BinResult, CookoutUnderTestService, Link } from "../../server.ts";
+import { Array as Arr, Effect, Fiber, Schedule } from "effect";
+import type { BinResult, CookoutUnderTestService, Relay, Session, SessionNeeds } from "../../server.ts";
 import {
   CookoutUnderTest,
   calledThreadId,
   cookoutUnderTest,
   exampleCommand,
-  freshStateFolder,
-  link,
+  openRelay,
   requireExampleCommand,
+  succeeded,
+  watchExitTokenRevoked,
+  watchLine,
+  watchOutput,
 } from "../../server.ts";
-import type { FileSystem, Scope } from "effect";
 import type { MessageId, Reply } from "@ai-hero/cookout/sdk";
 import { expect, it } from "@effect/vitest";
 import { NodeServices } from "@effect/platform-node";
-
-type Needs = BinNeeds | FileSystem.FileSystem;
-
-interface Session {
-  readonly name: string;
-  readonly cookout: (...args: readonly string[]) => Effect.Effect<BinResult, never, Needs>;
-}
+import type { Scope } from "effect";
 
 interface Watching {
   readonly cookout: CookoutUnderTestService;
   readonly channel: string;
   readonly caller: Session;
-  readonly relay: Link;
+  readonly relay: Relay;
   readonly stopWatching: Effect.Effect<BinResult>;
 }
 
-const succeeded = { exitCode: 0, stderr: "" };
-const EXIT_TOKEN = 3;
-const LAST = 1;
 const CONNECTED = "event: connected";
 const ITEM = "event: inbox-item";
 const ACCEPTED = 202;
@@ -42,35 +35,17 @@ const done = `/${exampleCommand} is done.`;
 
 const cookoutWithHandler: Effect.Effect<CookoutUnderTestService, never, CookoutUnderTest> = Effect.gen(
   function* checkTheHandler() {
-    yield* requireExampleCommand;
-    return yield* CookoutUnderTest;
+    const cookout = yield* CookoutUnderTest;
+    yield* requireExampleCommand(cookout);
+    return cookout;
   },
 );
 
-function joinedAgent(
-  cookout: CookoutUnderTestService,
-  name: string,
-  url = cookout.url,
-): Effect.Effect<Session, never, Needs> {
-  return Effect.gen(function* joinAsAgent() {
-    const { identity, token } = yield* cookout.createAgent(name);
-    const stateFolder = yield* freshStateFolder;
-    function run(...args: readonly string[]): Effect.Effect<BinResult, never, Needs> {
-      return cookout.runCookout({ args, stateFolder, token, url });
-    }
-    const joined = yield* run("join", "--as", identity.name);
-
-    expect(joined).toMatchObject(succeeded);
-
-    return { cookout: run, name: identity.name };
-  });
-}
-
-function callerWatching(cookout: CookoutUnderTestService): Effect.Effect<Watching, never, Needs | Scope.Scope> {
+function callerWatching(cookout: CookoutUnderTestService): Effect.Effect<Watching, never, SessionNeeds> {
   return Effect.gen(function* startWatching() {
     const { channel } = yield* cookout.createChannel("calls");
-    const relay = yield* link(cookout.url);
-    const caller = yield* joinedAgent(cookout, "caller", relay.url);
+    const relay = yield* openRelay(cookout.url);
+    const caller = yield* cookout.joinAgent("caller", relay.url);
     const watch = yield* Effect.forkScoped(caller.cookout("watch"));
     yield* relay.relayed(CONNECTED);
     const stopWatching = Effect.promise(() => cookout.admin.deleteIdentity(caller.name)).pipe(
@@ -81,7 +56,7 @@ function callerWatching(cookout: CookoutUnderTestService): Effect.Effect<Watchin
   });
 }
 
-function callExample(session: Session, channel: string, data: string): Effect.Effect<MessageId, never, Needs> {
+function callExample(session: Session, channel: string, data: string): Effect.Effect<MessageId, never, SessionNeeds> {
   return Effect.gen(function* callFromTheCli() {
     const called = yield* session.cookout("command", "call", exampleCommand, "--channel", channel, "--data", data);
 
@@ -91,7 +66,7 @@ function callExample(session: Session, channel: string, data: string): Effect.Ef
   });
 }
 
-function calledWhileWatching(watching: Watching): Effect.Effect<MessageId, never, Needs> {
+function calledWhileWatching(watching: Watching): Effect.Effect<MessageId, never, SessionNeeds> {
   return Effect.gen(function* callAndCheckTheAnswer() {
     const { caller, channel, cookout, relay } = watching;
     const thread = yield* callExample(caller, channel, '{"branch":"main"}');
@@ -116,12 +91,8 @@ function repliesOnceThere(cookout: CookoutUnderTestService, thread: MessageId): 
   );
 }
 
-function itemLines({ stdout }: BinResult): readonly string[] {
-  return Arr.dropRight(Str.split(Str.trimEnd(stdout), "\n"), LAST);
-}
-
 function lineFor(channel: string, thread: MessageId): (reply: Reply) => string {
-  return ({ author, id, text }) => `#${channel} thread:${String(thread)} @${author.name}: ${text} (msg ${String(id)})`;
+  return ({ author, id, text }) => watchLine({ author: author.name, channel, message: id, text, thread });
 }
 
 function callAndWatch(): Effect.Effect<void, never, Scope.Scope> {
@@ -136,8 +107,8 @@ function callAndWatch(): Effect.Effect<void, never, Scope.Scope> {
     expect(replies).toMatchObject([
       { author: { name: exampleCommand }, data: { received: { branch: "main" } }, text: done },
     ]);
-    expect(watched.exitCode).toBe(EXIT_TOKEN);
-    expect(itemLines(watched)).toStrictEqual(Arr.map(replies, lineFor(watching.channel, thread)));
+    expect(watched.exitCode).toBe(watchExitTokenRevoked);
+    expect(watchOutput(watched).items).toStrictEqual(Arr.map(replies, lineFor(watching.channel, thread)));
   }).pipe(Effect.provide([cookoutUnderTest, NodeServices.layer]));
 }
 
@@ -145,7 +116,7 @@ function callFailFirst(): Effect.Effect<void, never, Scope.Scope> {
   return Effect.gen(function* waitForTheRetry() {
     const cookout = yield* cookoutWithHandler;
     const { channel } = yield* cookout.createChannel("retried");
-    const caller = yield* joinedAgent(cookout, "caller");
+    const caller = yield* cookout.joinAgent("caller");
     const thread = yield* callExample(caller, channel.name, '{"branch":"main","failFirst":true}');
     const replies = yield* repliesOnceThere(cookout, thread);
 

@@ -18,7 +18,7 @@ interface Answered {
   readonly status: number;
 }
 
-interface Link {
+interface Relay {
   readonly url: string;
   readonly cut: Effect.Effect<void>;
   readonly takeDown: Effect.Effect<void>;
@@ -28,7 +28,7 @@ interface Link {
   readonly answered: Effect.Effect<readonly Answered[]>;
 }
 
-interface Relay {
+interface RelayParts {
   readonly target: string;
   readonly isDown: Effect.Effect<boolean>;
   readonly dropped: Effect.Effect<Effect.Effect<boolean>>;
@@ -66,7 +66,7 @@ function forwardedTo(
 }
 
 function relayed(
-  relay: Relay,
+  relay: RelayParts,
 ): Effect.Effect<HttpServerResponse.HttpServerResponse, never, HttpServerRequest.HttpServerRequest> {
   return Effect.gen(function* relayRequest() {
     const request = yield* HttpServerRequest.HttpServerRequest;
@@ -88,7 +88,7 @@ function relayed(
   }).pipe(Effect.orDie);
 }
 
-function serving(relay: Relay): Effect.Effect<string, never, Scope.Scope> {
+function serving(relay: RelayParts): Effect.Effect<string, never, Scope.Scope> {
   return Effect.gen(function* serveRelay() {
     const relaying = HttpServer.serve(relayed(relay)).pipe(Layer.provideMerge(NodeHttpServer.layerTest));
     const server = yield* Layer.build(relaying);
@@ -104,8 +104,8 @@ function lastEventIdOf(request: HttpServerRequest.HttpServerRequest): string | n
   return request.headers["last-event-id"] ?? null;
 }
 
-function link(target: string): Effect.Effect<Link, never, Scope.Scope> {
-  return Effect.gen(function* openLink() {
+function openRelay(target: string): Effect.Effect<Relay, never, Scope.Scope> {
+  return Effect.gen(function* startRelay() {
     const client = yield* Effect.map(Layer.build(NodeHttpClient.layerNodeHttp), Context.get(HttpClient.HttpClient));
     const drops = yield* Effect.flatMap(Deferred.make<boolean>(), Ref.make);
     const sent = yield* SubscriptionRef.make("");
@@ -117,7 +117,7 @@ function link(target: string): Effect.Effect<Link, never, Scope.Scope> {
       const current = yield* Ref.getAndSet(drops, next);
       yield* Deferred.succeed(current, true);
     });
-    const relay: Relay = {
+    const relay: RelayParts = {
       answer: (answered) => Ref.update(answers, (all) => [...all, answered]),
       dropped: Effect.map(Ref.get(drops), Deferred.await),
       execute: client.execute,
@@ -145,4 +145,4 @@ function link(target: string): Effect.Effect<Link, never, Scope.Scope> {
   }).pipe(Effect.orDie);
 }
 
-export { type Answered, type Link, link };
+export { type Answered, type Relay, openRelay };

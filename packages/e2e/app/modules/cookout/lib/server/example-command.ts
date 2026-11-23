@@ -1,6 +1,5 @@
-import { Array as Arr, Effect, Redacted } from "effect";
-import { e2eAdminToken, e2eUrl } from "../../../config/server.ts";
-import { createCookoutClient } from "@ai-hero/cookout/sdk";
+import { Array as Arr, Effect } from "effect";
+import type { CookoutUnderTestService } from "./cookout-under-test.ts";
 
 const exampleCommand = "example";
 
@@ -11,14 +10,13 @@ function noExampleCommand(url: string): string {
   );
 }
 
-const requireExampleCommand: Effect.Effect<void> = Effect.gen(function* listTheCommands() {
-  const url = yield* e2eUrl;
-  const adminToken = yield* e2eAdminToken;
-  const admin = createCookoutClient({ token: Redacted.value(adminToken), url });
-  const { commands } = yield* Effect.promise(() => admin.listCommands());
-  const missing = !Arr.some(commands, ({ name }) => name === exampleCommand);
-  const failure = new Error(noExampleCommand(url));
-  yield* Effect.when(Effect.die(failure), Effect.succeed(missing));
-}).pipe(Effect.orDie);
+function requireExampleCommand({ admin, url }: CookoutUnderTestService): Effect.Effect<void> {
+  return Effect.gen(function* listTheCommands() {
+    const { commands } = yield* Effect.promise(() => admin.listCommands());
+    const missing = !Arr.some(commands, ({ name }) => name === exampleCommand);
+    const failure = new Error(noExampleCommand(url));
+    yield* Effect.when(Effect.die(failure), Effect.succeed(missing));
+  });
+}
 
 export { exampleCommand, requireExampleCommand };
