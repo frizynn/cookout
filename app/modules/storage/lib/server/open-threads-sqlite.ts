@@ -1,4 +1,5 @@
-import { Array as Arr, Effect, Predicate, Result, Schema } from "effect";
+import { Array as Arr, Effect, Predicate, Schema } from "effect";
+import type { Message, OpenThread, TopLevelMessage } from "../../../messages/index.ts";
 import type {
   OpenThreadsCursor,
   OpenThreadsPageRequest,
@@ -9,7 +10,6 @@ import type { IdentityName } from "../../../identities/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { MESSAGE_COLUMNS } from "./message-rows-sqlite.ts";
 import type { MessageReader } from "./inbox-sqlite.ts";
-import type { OpenThread } from "../../../messages/index.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { unreadable } from "./errors.ts";
@@ -49,6 +49,10 @@ const OPEN_THREADS = `WITH open_threads AS (
   WHERE (last_activity_at, messages.id) > (?, ?)
   ORDER BY last_activity_at, messages.id LIMIT ?`;
 
+function isTopLevel(message: Message): message is TopLevelMessage {
+  return message.kind === "top-level";
+}
+
 function openThreadOf(reader: MessageReader): (row: unknown) => Fails<readonly OpenThread[]> {
   return (row) =>
     Effect.gen(function* readOpenThread() {
@@ -56,12 +60,7 @@ function openThreadOf(reader: MessageReader): (row: unknown) => Fails<readonly O
       const { last_activity_at: lastActivityAt } = yield* Schema.decodeUnknownEffect(ActivityRow)(row).pipe(
         Effect.mapError(unreadable),
       );
-      return Arr.filterMap([message], (parent) => {
-        if (parent.kind === "top-level") {
-          return Result.succeed({ lastActivityAt, message: parent });
-        }
-        return Result.failVoid;
-      });
+      return Arr.map(Arr.filter([message], isTopLevel), (parent) => ({ lastActivityAt, message: parent }));
     });
 }
 
