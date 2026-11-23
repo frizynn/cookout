@@ -21,24 +21,35 @@ const FIRST = 1;
 const TOKEN_REFUSED: ReadonlySet<string> = new Set(["token_missing", "token_unknown", "token_revoked"]);
 const exitCodes = { leaseLost: 4, timeout: 2, tokenRefused: 3, unreachable: 5 } as const;
 
-function unreadUpTo(opened: ClientWithLeaseState, latest: MessageId | null): Effect.Effect<number, CallFailure> {
-  if (latest === null) {
-    return Effect.succeed(NO_UNREAD);
-  }
-  return Effect.map(
-    callClient((client) => client.inbox())(opened),
-    ({ items }) => Arr.filter(items, ({ message }) => message.id <= latest).length,
-  );
+interface Unread {
+  readonly count: number;
+  readonly mentioned: boolean;
 }
 
-function sayUnread(format: Format, count: number): Effect.Effect<boolean> {
-  if (count === NO_UNREAD) {
-    return Effect.succeed(false);
+const NONE_UNREAD: Unread = { count: NO_UNREAD, mentioned: false };
+
+function unreadUpTo(opened: ClientWithLeaseState, latest: MessageId | null): Effect.Effect<Unread, CallFailure> {
+  if (latest === null) {
+    return Effect.succeed(NONE_UNREAD);
   }
-  return Effect.as(
-    printLine({ format, json: { count, type: "unread" }, text: `${String(count)} unread, run cookout inbox` }),
-    true,
-  );
+  return Effect.map(callClient((client) => client.inbox())(opened), ({ items }) => {
+    const unread = Arr.filter(items, ({ message }) => message.id <= latest);
+    return { count: unread.length, mentioned: Arr.some(unread, ({ reasons }) => reasons.includes("mention")) };
+  });
+}
+
+function sayUnread(format: Format, { count }: Unread): Effect.Effect<void> {
+  if (count === NO_UNREAD) {
+    return Effect.void;
+  }
+  return printLine({ format, json: { count, type: "unread" }, text: `${String(count)} unread, run cookout inbox` });
+}
+
+function stopsAtStartUp(stop: StopCondition, { count, mentioned }: Unread): boolean {
+  if (stop.untilMention) {
+    return mentioned;
+  }
+  return stop.once && count > NO_UNREAD;
 }
 
 function isNewerThan(counted: Option.Option<number>, { item }: InboxItemEvent): boolean {
@@ -65,12 +76,15 @@ function startUpLine({
             Option.filter(Option.some(latestMessageId), () => Option.isNone(already)),
             Option.orElseSome(already, () => latestMessageId ?? NOTHING_POSTED),
           ]);
-          const said = yield* Effect.forEach(
+          const stops = yield* Effect.forEach(
             Option.toArray(toCount),
-            (latest) => Effect.flatMap(unreadUpTo(opened, latest), (count) => sayUnread(format, count)),
+            (latest) =>
+              Effect.flatMap(unreadUpTo(opened, latest), (unread) =>
+                Effect.as(sayUnread(format, unread), stopsAtStartUp(stop, unread)),
+              ),
             { concurrency: 1 },
           );
-          return said.includes(true);
+          return stops.includes(true);
         });
         function isNewer(event: InboxItemEvent): Effect.Effect<boolean> {
           return Effect.map(Ref.get(counted), (latest) => isNewerThan(latest, event));
@@ -80,7 +94,7 @@ function startUpLine({
             if (isInboxItem(event)) {
               return Effect.succeed(false);
             }
-            return Effect.map(sayOnce(event), (said) => said && stop.once);
+            return sayOnce(event);
           }),
           Stream.filter(isInboxItem),
           Stream.filterEffect(isNewer),
