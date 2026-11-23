@@ -8,7 +8,7 @@ RUN corepack enable
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Every dependency, then the root build (tsdown, into dist/).
+# Every dependency, then the root build (tsdown and the Vite web build, into dist/).
 FROM base AS build
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --ignore-scripts
 COPY . .
