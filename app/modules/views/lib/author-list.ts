@@ -5,7 +5,7 @@ import { createContext } from "react";
 import { createCookoutClient } from "../../sdk/index.ts";
 
 const client = createCookoutClient({ env: {}, url: globalThis.location.origin });
-const pageIdentities = createComposer({ client, commands: createCommands(client) });
+const pageIdentities = createComposer({ client, commands: createCommands({ client }) });
 
 const AuthorList = createContext<Identities>(pageIdentities.identities);
 

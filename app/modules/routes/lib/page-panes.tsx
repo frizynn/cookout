@@ -13,7 +13,7 @@ interface PagePanesProps {
 export function PagePanes(props: PagePanesProps): ReactNode {
   const { route, stores } = props;
   if (route.name === "inbox") {
-    return <InboxView me={props.me} unread={stores.unread} />;
+    return <InboxView board={stores.board} me={props.me} unread={stores.unread} />;
   }
   if (route.name === "login") {
     return <LoginView session={stores.session} />;

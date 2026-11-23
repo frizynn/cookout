@@ -17,6 +17,7 @@ interface Join extends Omit<JoinRequest, "as"> {
 
 interface On {
   readonly publishIdentity: (identity: Identity) => Effect.Effect<void>;
+  readonly publishSession: (agent: IdentityName) => Effect.Effect<void, StorageUnavailable>;
   readonly maxIdle: string;
   readonly ceilingSeconds: number;
   readonly secrets: Secrets["Service"];
@@ -66,7 +67,8 @@ function joiner(on: On) {
         onSome: (asked) => idleSecondsFor(on, asked),
       });
       const host = Option.fromUndefinedOr(request.host);
-      return yield* issue({ agent, created, force: request.force === true, host, idleSeconds });
+      const issued = yield* issue({ agent, created, force: request.force === true, host, idleSeconds });
+      return yield* Effect.as(on.publishSession(agent.name), issued);
     });
 }
 

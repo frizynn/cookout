@@ -48,7 +48,8 @@ const leaveRoute: Route<Caller | AgentSessions> = {
       if (Option.isNone(sent)) {
         return yield* Effect.fail(agentSessionRequired);
       }
-      yield* agentSessions.leave(sent.value);
+      const caller = yield* Caller;
+      yield* agentSessions.leave(caller.name, sent.value);
       return yield* HttpServerResponse.schemaJson(LeaveResponseSchema)({ revoked: true });
     }),
   method: "DELETE",

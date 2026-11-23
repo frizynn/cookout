@@ -3,6 +3,7 @@ import type { AgentSessionResponse, ListAgentSessionsResponse, RevokeAgentSessio
 import { Context, DateTime, Duration, Effect, Option } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import type { Join, On } from "./join.ts";
+import type { PubSub, Scope } from "effect";
 import { agentSessionExpired, agentSessionRevoked } from "../../index.ts";
 import type { JoinRequests } from "./join-requests.ts";
 import type { Refusal } from "../../../http/index.ts";
@@ -14,10 +15,11 @@ type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
 
 interface AgentSessionsService extends JoinRequests {
   readonly join: (caller: Identity, request: Join) => Fails<AgentSessionResponse>;
-  readonly leave: (hash: TokenHash) => Effect.Effect<void, StorageUnavailable>;
+  readonly leave: (agent: IdentityName, hash: TokenHash) => Effect.Effect<void, StorageUnavailable>;
   readonly untilEnded: (hash: TokenHash) => Effect.Effect<Refusal, StorageUnavailable>;
   readonly listFor: (identity: IdentityName) => Effect.Effect<ListAgentSessionsResponse, StorageUnavailable>;
   readonly revokeFor: (identity: IdentityName) => Effect.Effect<RevokeAgentSessionResponse, StorageUnavailable>;
+  readonly sessionChanged: Effect.Effect<PubSub.Subscription<Identity>, never, Scope.Scope>;
 }
 
 class AgentSessions extends Context.Service<AgentSessions, AgentSessionsService>()(
@@ -69,7 +71,7 @@ function agentNow(identity: IdentityName): Effect.Effect<AgentAt> {
   return Effect.map(DateTime.now, (now) => ({ identity, now: isoTimeOf(now) }));
 }
 
-function ownerViews({ storage }: On): Pick<AgentSessionsService, "listFor" | "revokeFor"> {
+function ownerViews({ publishSession, storage }: On): Pick<AgentSessionsService, "listFor" | "revokeFor"> {
   return {
     listFor: (identity) =>
       agentNow(identity).pipe(
@@ -79,15 +81,16 @@ function ownerViews({ storage }: On): Pick<AgentSessionsService, "listFor" | "re
     revokeFor: (identity) =>
       agentNow(identity).pipe(
         Effect.flatMap(storage.revokeLiveAgentSession),
+        Effect.tap((revoked) => Effect.when(publishSession(identity), Effect.succeed(revoked))),
         Effect.map((revoked) => ({ revoked })),
       ),
   };
 }
 
-function agentSessionsOn(on: On): AgentSessionsService {
+function agentSessionsOn(on: On): Omit<AgentSessionsService, "sessionChanged"> {
   return {
     join: joiner(on),
-    leave: on.storage.revokeAgentSession,
+    leave: (agent, hash) => Effect.andThen(on.storage.revokeAgentSession(hash), on.publishSession(agent)),
     untilEnded: watcher(on),
     ...ownerViews(on),
     ...joinRequestsOn(on),

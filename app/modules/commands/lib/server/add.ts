@@ -3,16 +3,19 @@ import { DateTime, Effect, Option, Predicate } from "effect";
 import { commandNotFound, requireDataSchema } from "./call.ts";
 import { handlerOf, isCommandName } from "../../index.ts";
 import type { AddCommandRequestSchema } from "./wire.ts";
-import type { IsoTime } from "../../../time/index.ts";
+import type { CommandChanges } from "./changes.ts";
 import type { Owner } from "../../../identities/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import type { StorageUnavailable } from "../../../storage/server.ts";
+import { announced } from "./changes.ts";
 import { isIdentityName } from "../../../identities/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 
 type NewCommand = typeof AddCommandRequestSchema.Type;
+
+type AddNeeds = Storage | Secrets | CommandChanges;
 
 const CONFLICT = 409;
 
@@ -28,7 +31,7 @@ function handlerNotAgent(name: string): Refusal {
   };
 }
 
-function stamped(fields: NewCommand, createdAt: IsoTime): Command {
+function stamped(fields: NewCommand, createdAt: Command["createdAt"]): Command {
   const handler = Option.getOrThrow(Option.liftPredicate(fields.name, isIdentityName));
   const command = { createdAt, handler, name: fields.name, schema: fields.schema, url: fields.url };
   if (typeof fields.description === "string") {
@@ -43,7 +46,7 @@ function addCommand({
 }: {
   readonly fields: NewCommand;
   readonly owner: Owner;
-}): Effect.Effect<CommandWithSecretResponse, Refusal | StorageUnavailable, Storage | Secrets> {
+}): Effect.Effect<CommandWithSecretResponse, Refusal | StorageUnavailable, AddNeeds> {
   return Effect.gen(function* addStampedCommand() {
     const command = yield* Effect.andThen(
       requireDataSchema(fields.schema),
@@ -59,13 +62,13 @@ function addCommand({
     if (result === "handler_is_human") {
       return yield* Effect.fail(handlerNotAgent(command.name));
     }
-    return { command, secret };
+    return yield* announced({ command, secret });
   });
 }
 
 function rotateCommandSecret(
   name: string,
-): Effect.Effect<CommandWithSecretResponse, Refusal | StorageUnavailable, Storage | Secrets> {
+): Effect.Effect<CommandWithSecretResponse, Refusal | StorageUnavailable, AddNeeds> {
   return Effect.gen(function* rotateSecret() {
     if (!isCommandName(name)) {
       return yield* Effect.fail(commandNotFound(name));
@@ -77,8 +80,8 @@ function rotateCommandSecret(
     if (Predicate.isUndefined(rotated)) {
       return yield* Effect.fail(commandNotFound(name));
     }
-    return { command: rotated.command, secret };
+    return yield* announced({ command: rotated.command, secret });
   });
 }
 
-export { addCommand, rotateCommandSecret };
+export { type AddNeeds, addCommand, rotateCommandSecret };

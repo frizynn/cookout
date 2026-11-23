@@ -93,7 +93,15 @@ function collectionAnswer(
   return Effect.succeed({ agentSession, status: "approved" });
 }
 
-function collector({ secrets, storage }: On): JoinRequests["collectJoin"] {
+function announcedCollection(on: On, answer: AgentJoinCollectedResponse): Fails<AgentJoinCollectedResponse> {
+  if (answer.status === "approved") {
+    return Effect.as(on.publishSession(answer.agentSession.identity), answer);
+  }
+  return Effect.succeed(answer);
+}
+
+function collector(on: On): JoinRequests["collectJoin"] {
+  const { secrets, storage } = on;
   return (requestId) =>
     Effect.gen(function* collectAgentJoinRequest() {
       const requestHash = yield* secrets.hashToken(requestId);
@@ -101,7 +109,8 @@ function collector({ secrets, storage }: On): JoinRequests["collectJoin"] {
       const sessionHash = yield* secrets.hashToken(agentSessionToken);
       const at = yield* now;
       const collection = yield* storage.collectAgentJoinRequest({ now: at, requestHash, sessionHash });
-      return yield* collectionAnswer(collection, agentSessionToken);
+      const answer = yield* collectionAnswer(collection, agentSessionToken);
+      return yield* announcedCollection(on, answer);
     });
 }
 

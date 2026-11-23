@@ -1,5 +1,8 @@
 import type {
+  AgentSessionEvent,
+  ChannelDeletedEvent,
   ChannelEvent,
+  CommandEvent,
   ConnectedEvent,
   IdentityEvent,
   InboxItemEvent,
@@ -8,6 +11,7 @@ import type {
   ReadPositionMovedBackEvent,
   SubscriptionEvent,
 } from "../../index.ts";
+import { IdentityNameSchema, IdentitySchema } from "../../../identities/server.ts";
 import {
   InboxItemSchema,
   MovedBackReadPositionSchema,
@@ -16,7 +20,7 @@ import {
 } from "../../../inbox/server.ts";
 import { MessageIdSchema, MessageSchema } from "../../../messages/server.ts";
 import { ChannelSchema } from "../../../channels/server.ts";
-import { IdentitySchema } from "../../../identities/server.ts";
+import { CommandSchema } from "../../../commands/server.ts";
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
 
@@ -42,6 +46,18 @@ export const IdentityEventSchema = matchesWire<IdentityEvent>()(
 
 export const ChannelEventSchema = matchesWire<ChannelEvent>()(
   Schema.Struct({ channel: ChannelSchema, type: Schema.Literal("channel") }),
+);
+
+export const ChannelDeletedEventSchema = matchesWire<ChannelDeletedEvent>()(
+  Schema.Struct({ channel: ChannelSchema, type: Schema.Literal("channel-deleted") }),
+);
+
+export const CommandEventSchema = matchesWire<CommandEvent>()(
+  Schema.Struct({ command: CommandSchema, type: Schema.Literal("command") }),
+);
+
+export const AgentSessionEventSchema = matchesWire<AgentSessionEvent>()(
+  Schema.Struct({ agent: IdentityNameSchema, type: Schema.Literal("agent-session") }),
 );
 
 export const SubscriptionEventSchema = matchesWire<SubscriptionEvent>()(

@@ -43,7 +43,7 @@ const SecretSchema = Schema.String.check(Schema.isPattern(commandSecretPattern))
   Schema.refine(isCommandSecret, { identifier: "CommandSecret" }),
 );
 
-const CommandSchema = matchesWire<Command>()(
+export const CommandSchema = matchesWire<Command>()(
   Schema.Struct({
     createdAt: IsoTimeSchema,
     description: Schema.optionalKey(DescriptionSchema),

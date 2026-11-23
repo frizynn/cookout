@@ -1,5 +1,8 @@
 import type { CookoutClient, IdentityName, ListedAgentSession, Refusal, Token } from "../../sdk/index.ts";
 import type { IdentityList } from "./identity-list.ts";
+import type { Live } from "../../live/index.ts";
+import type { SessionFollower } from "./session-follower.ts";
+import { createSessionFollower } from "./session-follower.ts";
 import { listenersOf } from "./listeners.ts";
 import { refusalOf } from "../../sdk/index.ts";
 
@@ -48,6 +51,7 @@ interface IdentityActions {
 interface IdentityActionsOptions {
   readonly client: ActionsClient;
   readonly list: IdentityList;
+  readonly live: Live | null;
   readonly name: IdentityName;
 }
 
@@ -104,6 +108,8 @@ function sendsFor(options: IdentityActionsOptions, transferTo: () => string): Se
   };
 }
 
+type Sessions = IdentityActionsSnapshot["sessions"];
+
 type Publish = (next: Partial<IdentityActionsSnapshot>) => void;
 
 type Edits = Pick<IdentityActions, "askToDeactivate" | "cancel" | "editTransfer" | "forgetToken" | "showToken">;
@@ -135,20 +141,31 @@ async function copyAfter(previous: Promise<void>, token: Token | null): Promise<
   }
 }
 
-async function sessionsOf(options: IdentityActionsOptions, publish: Publish): Promise<void> {
+async function sessionsOf(options: IdentityActionsOptions, publish: Publish): Promise<Sessions> {
   try {
     const { agentSessions } = await options.client.listAgentSessions(options.name);
     publish({ sessions: agentSessions });
+    return agentSessions;
   } catch {
     publish({ sessions: null });
+    return null;
   }
+}
+
+function followerOf(options: IdentityActionsOptions, publish: Publish): SessionFollower {
+  return createSessionFollower({
+    ...options,
+    load: async () => {
+      const listed = await sessionsOf(options, publish);
+      return listed;
+    },
+  });
 }
 
 function createIdentityActions(options: IdentityActionsOptions): IdentityActions {
   const listeners = listenersOf(options.list.load);
   let current = START;
   let queue = Promise.resolve();
-  let loading: Promise<void> | null = null;
   let copying = Promise.resolve();
   const sends = sendsFor(options, () => current.transferTo);
 
@@ -156,6 +173,8 @@ function createIdentityActions(options: IdentityActionsOptions): IdentityActions
     current = { ...current, ...next };
     listeners.notify();
   }
+
+  const sessions = followerOf(options, publish);
 
   async function runAfter(previous: Promise<void>, action: IdentityAction): Promise<void> {
     await previous;
@@ -185,7 +204,7 @@ function createIdentityActions(options: IdentityActionsOptions): IdentityActions
     snapshot: () => current,
     subscribe: listeners.add,
     subscribeToSessions: (listener) => {
-      loading ??= sessionsOf(options, publish);
+      sessions.start();
       return listeners.add(listener);
     },
     transfer: run("transfer"),

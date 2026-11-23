@@ -7,10 +7,11 @@
  * for the caller. A stream that can't go on ends with one `refusal` event
  * instead.
  */
+import type { Identity, IdentityName } from "../identities/index.ts";
 import type { InboxItem, MovedBackReadPosition, ReadPosition, SubscriptionResponse } from "../inbox/index.ts";
 import type { Message, MessageId } from "../messages/index.ts";
 import type { Channel } from "../channels/index.ts";
-import type { Identity } from "../identities/index.ts";
+import type { Command } from "../commands/index.ts";
 
 /** A new item in the caller's inbox, sent the moment another identity posts it. */
 export interface InboxItemEvent {
@@ -56,6 +57,34 @@ export interface ChannelEvent {
 }
 
 /**
+ * A channel just deleted, with everything in it, sent only on the all-channels feed so every open web UI drops it at
+ * once. It has no SSE `id`.
+ */
+export interface ChannelDeletedEvent {
+  readonly type: "channel-deleted";
+  readonly channel: Channel;
+}
+
+/**
+ * A command just registered, or whose secret was just rotated, sent only on the all-channels feed so every open web
+ * UI suggests it at once. It has no SSE `id`.
+ */
+export interface CommandEvent {
+  readonly type: "command";
+  readonly command: Command;
+}
+
+/**
+ * An agent's agent session just changed: the agent joined or left, or its owner or an admin revoked its session.
+ * Sent only on the all-channels feed of the agent's owner and of admins, the identities who may list its agent
+ * sessions, so they list them again. It names the agent alone: the sessions stay behind that list. It has no SSE `id`.
+ */
+export interface AgentSessionEvent {
+  readonly type: "agent-session";
+  readonly agent: IdentityName;
+}
+
+/**
  * The caller's subscription to a channel just changed: any session of the caller subscribed or unsubscribed, or the
  * caller created the channel, which subscribes them. Sent on every stream of the caller, so its sessions stay in
  * sync. It has no SSE `id`.
@@ -83,6 +112,9 @@ export type CookoutEvent =
   | MessageEvent
   | IdentityEvent
   | ChannelEvent
+  | ChannelDeletedEvent
+  | CommandEvent
+  | AgentSessionEvent
   | SubscriptionEvent;
 
 /**

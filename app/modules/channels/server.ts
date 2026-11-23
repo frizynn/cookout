@@ -50,10 +50,12 @@ function stamped(fields: NewChannel, createdAt: IsoTime): Channel {
   return { createdAt, name: fields.name };
 }
 
-function channelsOn(
-  storage: Storage["Service"],
-  publish: (created: CreatedChannel) => Effect.Effect<boolean>,
-): Omit<ChannelsService, "created"> {
+interface Publishers {
+  readonly created: (created: CreatedChannel) => Effect.Effect<boolean>;
+  readonly deleted: (channel: Channel) => Effect.Effect<boolean>;
+}
+
+function channelsOn(storage: Storage["Service"], publish: Publishers): Omit<ChannelsService, "created" | "deleted"> {
   return {
     create: (creator, fields) =>
       Effect.gen(function* createChannel() {
@@ -63,7 +65,7 @@ function channelsOn(
         if (outcome === "name_taken") {
           return yield* Effect.fail(channelExists(channel.name));
         }
-        yield* publish({ channel, creator: creator.name });
+        yield* publish.created({ channel, creator: creator.name });
         return channel;
       }),
     get: (name) =>
@@ -86,7 +88,7 @@ function channelsOn(
         }
         const deleted = yield* storage.deleteChannel(name);
         if (typeof deleted === "object") {
-          return deleted;
+          return yield* Effect.as(publish.deleted(deleted), deleted);
         }
         return yield* Effect.fail(missingChannel(name));
       }),
@@ -113,6 +115,8 @@ export interface ChannelsService {
    * as a `channel` event, and as a `subscription` event to its creator.
    */
   readonly created: Effect.Effect<PubSub.Subscription<CreatedChannel>, never, Scope.Scope>;
+  /** Every channel deleted from now on, for as long as the scope lasts: the live stream sends each as a `channel-deleted` event. */
+  readonly deleted: Effect.Effect<PubSub.Subscription<Channel>, never, Scope.Scope>;
   /** Every channel, sorted by name. */
   readonly list: Effect.Effect<readonly Channel[], StorageUnavailable>;
   /** The channels `identity` subscribes to, sorted by name. */
@@ -136,11 +140,17 @@ export const channelsLayer: Layer.Layer<Channels, never, Storage> = Layer.effect
   Channels,
   Effect.gen(function* channelsOnStorage() {
     const storage = yield* Storage;
-    const hub = yield* PubSub.unbounded<CreatedChannel>();
-    function publish(created: CreatedChannel): Effect.Effect<boolean> {
-      return PubSub.publish(hub, created);
-    }
-    return { ...channelsOn(storage, publish), created: PubSub.subscribe(hub) };
+    const createdHub = yield* PubSub.unbounded<CreatedChannel>();
+    const deletedHub = yield* PubSub.unbounded<Channel>();
+    const publish: Publishers = {
+      created: (created) => PubSub.publish(createdHub, created),
+      deleted: (channel) => PubSub.publish(deletedHub, channel),
+    };
+    return {
+      ...channelsOn(storage, publish),
+      created: PubSub.subscribe(createdHub),
+      deleted: PubSub.subscribe(deletedHub),
+    };
   }),
 );
 

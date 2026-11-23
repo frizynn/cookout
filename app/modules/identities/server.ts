@@ -206,5 +206,8 @@ export { displayNameRoutes, displayNamesLayer } from "./lib/server/display-names
  */
 export { IdentityChanges, identityChangesLayer } from "./lib/server/changes.ts";
 
-/** The Schema of the identity as the server shows it, for the live stream's `identity` event. */
-export { IdentitySchema } from "./lib/server/wire.ts";
+/**
+ * The Schemas of the identity as the server shows it and of its name, for the live stream's `identity` and
+ * `agent-session` events.
+ */
+export { IdentityNameSchema, IdentitySchema } from "./lib/server/wire.ts";

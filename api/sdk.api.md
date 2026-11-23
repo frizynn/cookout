@@ -593,6 +593,31 @@ interface ChannelEvent {
   readonly channel: Channel;
 }
 /**
+ * A channel just deleted, with everything in it, sent only on the all-channels feed so every open web UI drops it at
+ * once. It has no SSE `id`.
+ */
+interface ChannelDeletedEvent {
+  readonly type: "channel-deleted";
+  readonly channel: Channel;
+}
+/**
+ * A command just registered, or whose secret was just rotated, sent only on the all-channels feed so every open web
+ * UI suggests it at once. It has no SSE `id`.
+ */
+interface CommandEvent {
+  readonly type: "command";
+  readonly command: Command;
+}
+/**
+ * An agent's agent session just changed: the agent joined or left, or its owner or an admin revoked its session.
+ * Sent only on the all-channels feed of the agent's owner and of admins, the identities who may list its agent
+ * sessions, so they list them again. It names the agent alone: the sessions stay behind that list. It has no SSE `id`.
+ */
+interface AgentSessionEvent {
+  readonly type: "agent-session";
+  readonly agent: IdentityName;
+}
+/**
  * The caller's subscription to a channel just changed: any session of the caller subscribed or unsubscribed, or the
  * caller created the channel, which subscribes them. Sent on every stream of the caller, so its sessions stay in
  * sync. It has no SSE `id`.
@@ -611,7 +636,7 @@ interface ConnectedEvent {
   readonly latestMessageId: MessageId | null;
 }
 /** Any event the stream sends. */
-type CookoutEvent = InboxItemEvent | ReadPositionEvent | ReadPositionMovedBackEvent | MessageEvent | IdentityEvent | ChannelEvent | SubscriptionEvent;
+type CookoutEvent = InboxItemEvent | ReadPositionEvent | ReadPositionMovedBackEvent | MessageEvent | IdentityEvent | ChannelEvent | ChannelDeletedEvent | CommandEvent | AgentSessionEvent | SubscriptionEvent;
 /**
  * `GET /v1/events`: the caller's Server-Sent Events stream, one per connection. With `allChannelsQuery` as its query
  * it is also the all-channels feed: every new message on every channel.
@@ -914,5 +939,5 @@ export type CookoutClient = ApprovalCalls & {
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelEvent, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DeactivateIdentityResponse, type DisplayName, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityEvent, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListedAgentSession, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type Refusal, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type refusalEvent, refusalOf };
+export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DeactivateIdentityResponse, type DisplayName, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityEvent, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListedAgentSession, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type Refusal, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type refusalEvent, refusalOf };
 ```

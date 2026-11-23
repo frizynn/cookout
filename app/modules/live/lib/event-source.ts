@@ -9,7 +9,10 @@ interface SentEvent {
 }
 
 const eventTypes = {
+  "agent-session": true,
   channel: true,
+  "channel-deleted": true,
+  command: true,
   identity: true,
   "inbox-item": true,
   message: true,

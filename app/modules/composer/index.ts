@@ -28,7 +28,7 @@
  * list at once and forgets the text, or, if the server refuses, keeps the
  * text and the refusal.
  * `identities.actions(name)` is what an agent's owner or an admin does to
- * that identity: rotate its token, list and revoke its agent session,
+ * that identity: rotate its token, list and revoke its agent session (listed again, with `live`, whenever it joins, leaves, is revoked or deactivated elsewhere, and once it expires),
  * deactivate it (after `askToDeactivate`), reactivate it and transfer it;
  * each answer goes in the identity list at once, a fresh token is in its
  * snapshot until `forgetToken` (`copyToken` puts it on the clipboard), and a
@@ -138,12 +138,12 @@ interface CommandList {
 }
 
 function ownerPowersOf(
-  client: ComposerOptions["client"],
+  { client, live }: ComposerOptions,
   list: IdentityList,
 ): Pick<Identities, "actions" | "creation"> {
   const stores = new Map<string, IdentityActions>();
   function actions(name: IdentityName): IdentityActions {
-    return storeIn(stores, name, () => createIdentityActions({ client, list, name }));
+    return storeIn(stores, name, () => createIdentityActions({ client, list, live: live ?? null, name }));
   }
   function created(name: IdentityName, token: Token): void {
     actions(name).showToken(token);
@@ -239,7 +239,7 @@ export function createComposer(options: ComposerOptions): Composer {
       ),
     identities: {
       ...createAdminChanges({ client, identities: list.identities, publish: list.publish }),
-      ...ownerPowersOf(client, list),
+      ...ownerPowersOf(options, list),
       snapshot: list.identities,
       subscribe: readers.add,
     },

@@ -7,7 +7,7 @@ import {
   openJoinRequestRoutes,
 } from "../../../agent-sessions/server.ts";
 import { channelRoutes, channelsLayer } from "../../../channels/server.ts";
-import { commandRoutes, commandsLayer } from "../../../commands/server.ts";
+import { commandChangesLayer, commandRoutes, commandsLayer } from "../../../commands/server.ts";
 import {
   deactivationRoutes,
   displayNameRoutes,
@@ -67,4 +67,4 @@ export const domainLayers = Layer.mergeAll(
   commandsLayer,
   limitsLayer,
   addressLimitLayer,
-).pipe(Layer.provideMerge(identityChangesLayer));
+).pipe(Layer.provideMerge(Layer.mergeAll(identityChangesLayer, commandChangesLayer)));
