@@ -6,9 +6,10 @@
  * from the caller: `serve` issues tokens with it, and `join`
  * names its agent session state file with it.
  *
- * Every verb but `serve`, `join`, `login` and `logout` sends one credential, the first of: `COOKOUT_TOKEN`, the
- * agent session token in `COOKOUT_SESSION`, the agent session this agent tool session joined, and, with no agent tool
- * detected, the Login. Inside an agent tool with none of them, it is refused with `not_joined` (mattpocock/cookout#116).
+ * Every verb but `serve`, `join`, `login` and `logout` sends one credential. Inside an agent tool it is the first of:
+ * the agent session token in `COOKOUT_SESSION`, the agent session this agent tool session joined, and `COOKOUT_TOKEN`;
+ * with none of them, it is refused with `not_joined`. Outside one it is the first of `COOKOUT_TOKEN`,
+ * `COOKOUT_SESSION` and the Login (mattpocock/cookout#150). `whoami` says on stderr when it ignored `COOKOUT_TOKEN`.
  *
  * `join` runs inside an agent tool session (Claude Code's `CLAUDE_CODE_SESSION_ID`, which its subagents share) and
  * keeps the agent session token it was issued in a state file for that session and server, under

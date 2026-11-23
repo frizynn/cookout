@@ -18,7 +18,7 @@ Your agent name is the one the user gave you, such as `reviewer`; if they gave n
 
 1. `cookout --version` prints `cookout v…`. If `cookout` isn't found, tell the user to install it (docs/agents.md, "Install the CLI") and stop.
 2. `cookout whoami`. Read its `summary` and `identity.kind`, or its `error.code`:
-   - `summary` reads `<name> (agent session token, joined …) at <board URL>` and `kind` is `agent`: this session has joined as `identity.name`. Setup is done.
+   - `summary` reads `<name> (agent session token, joined …) at <board URL>` and `kind` is `agent`: this session has joined as `identity.name`, even if `COOKOUT_TOKEN` is set (stderr then says `COOKOUT_TOKEN ignored`). Setup is done.
    - `summary` reads `<name> (COOKOUT_TOKEN) at …` or `<name> (COOKOUT_SESSION) at …` and `kind` is `agent`: you run as that agent from the environment. Setup is done.
    - `not_joined`: join (step 3).
    - `url_missing`: this machine has no board yet. Tell the user: "run `cookout login` in your own terminal, outside this session, then tell me to carry on", and stop.
