@@ -1,19 +1,13 @@
-import type { CookoutClient, EventStream, Message, MessageId } from "../../sdk/index.ts";
-import { adminClient, anonymousClient, newIdentity, openAt, sessionOf } from "./app.tsx";
+import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
+import { adminClient, anonymousClient, openAt, sessionOf } from "./app.tsx";
 import { expect, it, onTestFinished, vi } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { rowsOf, subscribedReader } from "./inbox-reader.ts";
 import { watched } from "./watched.ts";
 
-const NONE = 0;
-const TWO_A_PAGE = 2;
 const FIVE_MINUTES = 300_000;
 const TWO_HOURS = 7_200_000;
 const THREE_DAYS = 259_200_000;
-
-interface InboxReader {
-  readonly poster: CookoutClient;
-  readonly reader: CookoutClient;
-}
 
 interface Posted {
   readonly reader: CookoutClient;
@@ -29,54 +23,20 @@ interface OpenInbox {
   readonly close: () => Promise<void>;
 }
 
-async function subscribe(reader: CookoutClient, channel: string): Promise<void> {
-  await adminClient().createChannel({ name: channel });
-  await reader.subscribe(channel);
-}
-
-async function subscribedReader(channel: string, ...others: readonly string[]): Promise<InboxReader> {
-  const poster = await newIdentity({ kind: "agent", name: `${channel}-poster` });
-  const reader = await newIdentity({ kind: "human", name: `${channel}-reader` });
-  await Promise.all(
-    [channel, ...others].map(async (name) => {
-      await subscribe(reader.client, name);
-    }),
-  );
-  return { poster: poster.client, reader: reader.client };
-}
-
 async function postedIn(channel: string, also: string): Promise<Posted> {
   const { poster, reader } = await subscribedReader(channel, also);
   const { message: first } = await poster.createMessage({ channel: also, text: "Lunch?" });
-  const { message: parent } = await reader.createMessage({ channel, text: "Deploy at noon?" });
+  const { message: parent } = await reader.createMessage({
+    channel,
+    text: "Deploy at noon? The rollout notes are in the usual place and every dashboard is green.",
+  });
   const { message: reply } = await poster.createMessage({
     channel,
     replyTo: parent.id,
     text: `@${channel}-reader noon`,
   });
-  const { message: other } = await poster.createMessage({ channel, text: "Or at one?" });
+  const { message: other } = await poster.createMessage({ channel, text: `Or at one, @${channel}-poster?` });
   return { first, other, parent, reader, reply };
-}
-
-async function postAll(poster: CookoutClient, channel: string, texts: readonly string[]): Promise<MessageId> {
-  const [text, ...rest] = texts;
-  const { message } = await poster.createMessage({ channel, text: String(text) });
-  if (rest.length === NONE) {
-    return message.id;
-  }
-  const last = await postAll(poster, channel, rest);
-  return last;
-}
-
-async function readThenUnread(channel: string): Promise<CookoutClient> {
-  const { poster, reader } = await subscribedReader(channel);
-  await reader.ack(await postAll(poster, channel, ["One", "Two", "Three"]));
-  await postAll(poster, channel, ["Four", "Five", "Six"]);
-  return reader;
-}
-
-function postedRow(channel: string, text: string): string {
-  return `#/channels/${channel} ${channel}-posterposted in#${channel}just now${text}Channel`;
 }
 
 function clockAt(moment: string): void {
@@ -120,14 +80,6 @@ async function timeShown(reader: CookoutClient, later: number): Promise<string> 
   return shown;
 }
 
-function rowsOf(label: string): readonly string[] {
-  const rows: string[] = [];
-  for (const link of within(screen.getByRole("list", { name: label })).getAllByRole("link")) {
-    rows.push(`${link.getAttribute("href") ?? ""} ${link.textContent}`);
-  }
-  return rows;
-}
-
 it("the inbox lists unread items newest first, each with who posted it where, its thread and its reasons", {
   timeout: 5000,
 }, async () => {
@@ -143,48 +95,9 @@ it("the inbox lists unread items newest first, each with who posted it where, it
   expect(screen.getByRole("heading", { level: 2, name: "Unread 3" })).toBeDefined();
   expect(rowsOf("Unread")).toStrictEqual([
     `#/channels/${channel} ${channel}-posterposted in#${channel}just now${other.text}Channel`,
-    `#/channels/${channel}/threads/${String(parent.id)} ${channel}-posterreplied in a thread in#${channel}just nowre: ${parent.text}${reply.text}ThreadMention`,
+    `#/channels/${channel}/threads/${String(parent.id)} ${channel}-posterreplied in a thread in#${channel}just nowre: Deploy at noon? The rollout notes are in the usual place and every da…${reply.text}ThreadMention`,
     `#/channels/${also} ${channel}-posterposted in#${also}just now${first.text}Channel`,
   ]);
-
-  unmount();
-});
-
-it("earlier lists read items newest first, a page at a time, until there are no more", { timeout: 5000 }, async () => {
-  expect.hasAssertions();
-
-  const channel = "web-inbox-earlier";
-  const reader = await readThenUnread(channel);
-  const unmount = openAt({ client: reader, hash: "#/inbox", pageSize: TWO_A_PAGE });
-  await screen.findByRole("list", { name: "Earlier" });
-
-  expect([rowsOf("Earlier"), screen.queryByText("That's everything.")]).toStrictEqual([
-    [postedRow(channel, "Three")],
-    null,
-  ]);
-
-  fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-  await screen.findByText("That's everything.");
-
-  expect([rowsOf("Earlier"), rowsOf("Unread"), screen.queryByRole("button", { name: "Load more" })]).toStrictEqual([
-    ["Three", "Two", "One"].map((text) => postedRow(channel, text)),
-    ["Six", "Five", "Four"].map((text) => postedRow(channel, text)),
-    null,
-  ]);
-
-  unmount();
-});
-
-it("with nothing in it, the inbox says it is all caught up and nothing is read yet", { timeout: 5000 }, async () => {
-  expect.hasAssertions();
-
-  const { reader } = await subscribedReader("web-inbox-empty");
-  const unmount = openAt({ client: reader, hash: "#/inbox" });
-
-  await screen.findByText("Nothing read yet.");
-
-  expect(screen.getByText("You're all caught up.")).toBeDefined();
-  expect(screen.getByRole("heading", { level: 2, name: "Unread 0" })).toBeDefined();
 
   unmount();
 });
