@@ -165,6 +165,12 @@ export const cookoutUrl = Config.String("COOKOUT_URL").pipe(Config.withDefault("
 export const cookoutToken = Config.String("COOKOUT_TOKEN").pipe(Config.withDefault(""));
 
 /**
+ * `COOKOUT_SESSION`: an agent session token, such as one `cookout join --print-env` printed, that every CLI verb but
+ * `serve` sends when `COOKOUT_TOKEN` is unset (mattpocock/cookout#116). Empty counts as unset.
+ */
+export const cookoutSession = Config.String("COOKOUT_SESSION").pipe(Config.withDefault(""));
+
+/**
  * The variables that show which agent tool runs the CLI (such as `CLAUDECODE` for Claude Code, and `AI_AGENT`), and
  * `COOKOUT_ALLOW_HUMAN`, as one environment for `agentToolIn`. Each defaults to empty.
  */

@@ -22,6 +22,7 @@ const OCTAL = 8;
 const PERMISSION_DIGITS = -3;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const ONE_FILE = 1;
+const SESSION = { CLAUDECODE: "1", CLAUDE_CODE_SESSION_ID: "s1" } as const;
 const JOIN = ["join", "--as", "agent"];
 const DAMAGED = "is damaged. Delete it and join again.";
 const damaged = { exitCode: EXIT_FAILURE, stderrJson: { error: { code: "agent_session_state_damaged" } } };
@@ -81,11 +82,11 @@ it.effect(
       const [xdg, home] = yield* Effect.all([freshStateFolder, freshStateFolder], ONE_AT_A_TIME);
       yield* runCookout({
         args: JOIN,
-        env: { COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url, XDG_STATE_HOME: xdg },
+        env: { ...SESSION, COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url, XDG_STATE_HOME: xdg },
       });
       yield* runCookout({
         args: ["join", "--as", "other"],
-        env: { COOKOUT_TOKEN: other.token, COOKOUT_URL: cookout.url, HOME: home },
+        env: { ...SESSION, COOKOUT_TOKEN: other.token, COOKOUT_URL: cookout.url, HOME: home },
       });
       const found = yield* Effect.all(
         [agentSessionStateFiles(`${xdg}/cookout`), agentSessionStateFiles(`${home}/.local/state/cookout`)],
@@ -96,20 +97,25 @@ it.effect(
     }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("join writes its agent session state file readable by its owner only, even over a stale temporary file", () =>
-  Effect.gen(function* ownerOnlyState() {
-    const cookout = yield* TestCookout;
-    const agent = yield* cookout.createIdentity("agent");
-    const folder = yield* freshStateFolder;
-    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
-    yield* runCookout({ args: JOIN, env });
-    const file = yield* plantSharedTemporary(folder);
-    const again = yield* runCookout({ args: [...JOIN, "--force"], env });
-    const mode = yield* permissionsOf(file);
+it.effect(
+  "join writes its agent session state file readable by its owner only, even beside a stale temporary file",
+  () =>
+    Effect.gen(function* ownerOnlyState() {
+      const cookout = yield* TestCookout;
+      const agent = yield* cookout.createIdentity("agent");
+      const folder = yield* freshStateFolder;
+      const env = { ...SESSION, COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
+      yield* runCookout({ args: JOIN, env });
+      const file = yield* plantSharedTemporary(folder);
+      const [, again] = yield* Effect.all(
+        [runCookout({ args: ["leave"], env: { ...env, COOKOUT_TOKEN: "" } }), runCookout({ args: JOIN, env })],
+        ONE_AT_A_TIME,
+      );
+      const mode = yield* permissionsOf(file);
 
-    expect(again.exitCode).toBe(EXIT_SUCCESS);
-    expect(mode).toBe(OWNER_ONLY);
-  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+      expect(again.exitCode).toBe(EXIT_SUCCESS);
+      expect(mode).toBe(OWNER_ONLY);
+    }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
 it.effect("a state folder others can open, or an agent-sessions folder that is a symlink, is refused as unsafe", () =>
@@ -117,7 +123,7 @@ it.effect("a state folder others can open, or an agent-sessions folder that is a
     const cookout = yield* TestCookout;
     const agent = yield* cookout.createIdentity("agent");
     const { linked, open, target } = yield* unsafeStateFolders;
-    const session = { COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
+    const session = { ...SESSION, COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
     const results = yield* pipe(
       [open, linked],
       Effect.forEach(
@@ -136,7 +142,7 @@ it.effect("with none of HOME, XDG_STATE_HOME or COOKOUT_STATE_DIR set, join is r
   Effect.gen(function* noStateFolder() {
     const cookout = yield* TestCookout;
     const agent = yield* cookout.createIdentity("agent");
-    const env = { COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
+    const env = { ...SESSION, COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
     const joined = yield* runCookout({ args: JOIN, env });
     const listed = yield* runCookout({ args: ["channel", "list"], env });
 
@@ -152,7 +158,12 @@ it.effect("a state folder that can't be made fails join with cli_error", () =>
     const agent = yield* cookout.createIdentity("agent");
     const folder = yield* freshStateFolder;
     yield* Effect.orDie(fs.writeFileString(`${folder}/a-file`, ""));
-    const env = { COOKOUT_STATE_DIR: `${folder}/a-file/state`, COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
+    const env = {
+      ...SESSION,
+      COOKOUT_STATE_DIR: `${folder}/a-file/state`,
+      COOKOUT_TOKEN: agent.token,
+      COOKOUT_URL: cookout.url,
+    };
     const result = yield* runCookout({ args: JOIN, env });
 
     expect(result).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "cli_error" } } });
@@ -164,13 +175,16 @@ it.effect("an agent session state file that isn't JSON, or breaks the expiry or 
     const cookout = yield* TestCookout;
     const agent = yield* cookout.createIdentity("agent");
     const folder = yield* freshStateFolder;
-    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
+    const env = { ...SESSION, COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
     yield* runCookout({ args: JOIN, env });
     const results = yield* pipe(
       brokenStates,
       Effect.forEach(
         (text) =>
-          Effect.andThen(writeAgentSessionStates({ folder, text }), runCookout({ args: ["channel", "list"], env })),
+          Effect.andThen(
+            writeAgentSessionStates({ folder, text }),
+            runCookout({ args: ["channel", "list"], env: { ...env, COOKOUT_TOKEN: "" } }),
+          ),
         ONE_AT_A_TIME,
       ),
     );

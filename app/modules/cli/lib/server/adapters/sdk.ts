@@ -4,15 +4,15 @@ import type {
   AgentSessionStateFile,
   AgentSessionStateNeeds,
 } from "../agent-session-state.ts";
-import type { CookoutClient, CookoutClientOptions, CookoutErrorCode } from "../../../../sdk/index.ts";
+import type { AgentToolSession, CookoutConnection } from "../../../../config/index.ts";
+import type { CookoutClient, CookoutErrorCode } from "../../../../sdk/index.ts";
 import { CookoutError, createCookoutClient } from "../../../../sdk/index.ts";
 import { Effect, Option, Predicate } from "effect";
 import { agentSessionExpired, agentSessionRevoked } from "../../../../agent-sessions/index.ts";
-import { agentToolEnvironment, cookoutToken, cookoutUrl } from "../../../../config/server.ts";
-import type { CookoutConnection } from "../../../../config/index.ts";
+import { agentToolEnvironment, cookoutSession, cookoutToken, cookoutUrl } from "../../../../config/server.ts";
+import { agentToolIn, agentToolSessionIn } from "../../../../config/index.ts";
 import type { LoginFailure } from "../logins.ts";
 import { agentSessionStateFile } from "../agent-session-state.ts";
-import { agentToolIn } from "../../../../config/index.ts";
 import { baseUrlOf } from "../../../../http/client.ts";
 import { loginFor } from "../logins.ts";
 
@@ -20,6 +20,10 @@ type CallFailureCode =
   | CookoutErrorCode
   | AgentSessionStateFailure["code"]
   | LoginFailure["code"]
+  | "agent_tool_missing"
+  | "agent_tool_session_missing"
+  | "already_joined"
+  | "not_joined"
   | "usage"
   | "timeout"
   | "server_unreachable";
@@ -31,9 +35,15 @@ interface CallFailure {
   readonly details?: unknown;
 }
 
-type CredentialSource = "COOKOUT_TOKEN" | "login" | "none";
+type CredentialSource = "COOKOUT_TOKEN" | "COOKOUT_SESSION" | "agent session token" | "login" | "none";
+
+interface JoinedSession {
+  readonly file: AgentSessionStateFile;
+  readonly state: AgentSessionState;
+}
 
 interface Credential {
+  readonly joined: Option.Option<JoinedSession>;
   readonly source: CredentialSource;
   readonly token: string;
 }
@@ -41,15 +51,26 @@ interface Credential {
 interface ClientWithAgentSessionState {
   readonly client: CookoutClient;
   readonly connection: CookoutConnection;
-  readonly file: AgentSessionStateFile;
-  readonly saved: Option.Option<AgentSessionState>;
+  readonly joined: Option.Option<JoinedSession>;
   readonly source: CredentialSource;
+}
+
+interface CliEnvironment {
+  readonly markers: Readonly<Record<string, string>>;
+  readonly session: string;
+  readonly token: string;
+  readonly url: string;
 }
 
 type Call<Value> = (client: CookoutClient) => Promise<Value>;
 
 const NO_STATUS = 0;
 const NOTHING = {};
+
+const notJoined: CallFailure = {
+  code: "not_joined",
+  message: "join as an agent first: cookout join --as <name>",
+};
 
 function statusOf(status: number): { readonly status?: number } {
   if (status === NO_STATUS) {
@@ -70,43 +91,33 @@ function toFailure(error: unknown): CallFailure {
   return { ...withStatus, details };
 }
 
-type Sends = "agent-session" | "identity-token";
-
-interface ClientOptionsFor {
-  readonly connection: CookoutConnection;
-  readonly saved: Option.Option<AgentSessionState>;
-  readonly sends: Sends;
-}
-
-function clientOptions({ connection, saved, sends }: ClientOptionsFor): CookoutClientOptions {
-  const withConnection = { ...connection, env: NOTHING };
-  if (Option.isNone(saved) || sends === "identity-token") {
-    return withConnection;
-  }
-  return { ...withConnection, token: saved.value.agentSessionToken };
-}
-
 function isEnded(code: CallFailureCode): boolean {
   return code === agentSessionRevoked || code === agentSessionExpired;
 }
 
 function onAgentSessionEnded({
-  file,
-  saved,
+  joined,
 }: ClientWithAgentSessionState): (failure: CallFailure) => Effect.Effect<never, CallFailure> {
   return (failure) =>
     Effect.gen(function* forgetEndedAgentSession() {
-      if (!isEnded(failure.code) || Option.isNone(saved)) {
+      if (!isEnded(failure.code) || Option.isNone(joined)) {
         return yield* Effect.fail(failure);
       }
-      yield* file.remove;
-      const rejoin = `run \`cookout join --as ${saved.value.identity}\` to join again`;
+      yield* joined.value.file.remove;
+      const rejoin = `run \`cookout join --as ${joined.value.state.identity}\` to join again`;
       return yield* Effect.fail({
         ...failure,
         message: `${failure.message} The stored agent session token was deleted; ${rejoin}.`,
       });
     });
 }
+
+const cliEnvironment: Effect.Effect<CliEnvironment> = Effect.orDie(
+  Effect.all(
+    { markers: agentToolEnvironment, session: cookoutSession, token: cookoutToken, url: cookoutUrl },
+    { concurrency: 1 },
+  ),
+);
 
 function connectionFrom(url: string, token: string, agentTool: { readonly agentTool?: string }): CookoutConnection {
   if (token === "") {
@@ -115,73 +126,109 @@ function connectionFrom(url: string, token: string, agentTool: { readonly agentT
   return { ...agentTool, token, url: baseUrlOf(url) };
 }
 
-const NO_CREDENTIAL: Credential = { source: "none", token: "" };
+const NO_CREDENTIAL: Credential = { joined: Option.none(), source: "none", token: "" };
 
-function credentialFor(
+function given(source: CredentialSource, token: string): Credential {
+  return { joined: Option.none(), source, token };
+}
+
+function joinedSessionFile(
+  { agentTool = "", sessionId }: AgentToolSession,
   url: string,
-  token: string,
-  markers: Readonly<Record<string, string>>,
+): Effect.Effect<Option.Option<AgentSessionStateFile>, never, AgentSessionStateNeeds> {
+  if (agentTool === "" || Predicate.isUndefined(sessionId)) {
+    return Effect.succeedNone;
+  }
+  return Effect.asSome(agentSessionStateFile({ agentTool, sessionId, url: baseUrlOf(url) }));
+}
+
+function joinedCredential(
+  place: AgentToolSession,
+  url: string,
 ): Effect.Effect<Credential, CallFailure, AgentSessionStateNeeds> {
-  if (token !== "") {
-    return Effect.succeed({ source: "COOKOUT_TOKEN", token });
-  }
-  const { agentTool } = agentToolIn({ ...markers, COOKOUT_ALLOW_HUMAN: "" });
-  if (Predicate.isNotUndefined(agentTool) || url === "") {
-    return Effect.succeed(NO_CREDENTIAL);
-  }
+  return Effect.gen(function* findJoinedSession() {
+    const file = yield* joinedSessionFile(place, url);
+    if (Option.isNone(file)) {
+      return yield* Effect.fail(notJoined);
+    }
+    const saved = yield* file.value.read;
+    if (Option.isNone(saved)) {
+      return yield* Effect.fail(notJoined);
+    }
+    const joined = { file: file.value, state: saved.value };
+    return {
+      joined: Option.some(joined),
+      source: "agent session token" as const,
+      token: saved.value.agentSessionToken,
+    };
+  });
+}
+
+function loginCredential(url: string): Effect.Effect<Credential, CallFailure, AgentSessionStateNeeds> {
   return Effect.map(
     loginFor(baseUrlOf(url)),
-    Option.match({ onNone: () => NO_CREDENTIAL, onSome: (login) => ({ source: "login", token: login }) }),
+    Option.match({ onNone: () => NO_CREDENTIAL, onSome: (login) => given("login", login) }),
   );
 }
 
+function storedCredential({
+  markers,
+  url,
+}: CliEnvironment): Effect.Effect<Credential, CallFailure, AgentSessionStateNeeds> {
+  const place = agentToolSessionIn(markers);
+  if (url === "") {
+    return Effect.succeed(NO_CREDENTIAL);
+  }
+  if (Predicate.isNotUndefined(place.agentTool)) {
+    return joinedCredential(place, url);
+  }
+  return loginCredential(url);
+}
+
+function credentialFor(env: CliEnvironment): Effect.Effect<Credential, CallFailure, AgentSessionStateNeeds> {
+  if (env.token !== "") {
+    return Effect.succeed(given("COOKOUT_TOKEN", env.token));
+  }
+  if (env.session !== "") {
+    return Effect.succeed(given("COOKOUT_SESSION", env.session));
+  }
+  return storedCredential(env);
+}
+
 function clientFor(
-  connection: CookoutConnection,
-  source: CredentialSource,
-  sends: Sends,
-): Effect.Effect<ClientWithAgentSessionState, CallFailure, AgentSessionStateNeeds> {
-  return Effect.gen(function* openClient() {
-    const file = yield* agentSessionStateFile(connection);
-    const saved = yield* file.read;
-    const client = yield* Effect.try({
-      catch: toFailure,
-      try: () => createCookoutClient(clientOptions({ connection, saved, sends })),
-    });
-    return { client, connection, file, saved, source };
-  });
+  env: CliEnvironment,
+  { joined, source, token }: Credential,
+): Effect.Effect<ClientWithAgentSessionState, CallFailure> {
+  const connection = connectionFrom(env.url, token, agentToolIn(env.markers));
+  return Effect.map(
+    Effect.try({ catch: toFailure, try: () => createCookoutClient({ ...connection, env: NOTHING }) }),
+    (client) => ({ client, connection, joined, source }),
+  );
 }
 
 type Run<Value> = (client: ClientWithAgentSessionState) => Effect.Effect<Value, CallFailure>;
 
-interface Sending<Value> {
-  readonly run: Run<Value>;
-  readonly sends: Sends;
-}
-
-function withClientSending<Value>({
-  run,
-  sends,
-}: Sending<Value>): Effect.Effect<Value, CallFailure, AgentSessionStateNeeds> {
-  return Effect.gen(function* callWithClient() {
-    const url = yield* Effect.orDie(cookoutUrl);
-    const token = yield* Effect.orDie(cookoutToken);
-    const markers = yield* Effect.orDie(agentToolEnvironment);
-    const credential = yield* credentialFor(url, token, markers);
-    const opened = yield* clientFor(
-      connectionFrom(url, credential.token, agentToolIn(markers)),
-      credential.source,
-      sends,
-    );
+function runWith<Value>(
+  env: CliEnvironment,
+  credential: Credential,
+  run: Run<Value>,
+): Effect.Effect<Value, CallFailure, AgentSessionStateNeeds> {
+  return Effect.gen(function* runWithClient() {
+    const opened = yield* clientFor(env, credential);
     return yield* run(opened).pipe(Effect.catch(onAgentSessionEnded(opened)));
   });
 }
 
 function withClient<Value>(run: Run<Value>): Effect.Effect<Value, CallFailure, AgentSessionStateNeeds> {
-  return withClientSending({ run, sends: "agent-session" });
+  return Effect.gen(function* callWithClient() {
+    const env = yield* cliEnvironment;
+    const credential = yield* credentialFor(env);
+    return yield* runWith(env, credential, run);
+  });
 }
 
 function withIdentityTokenClient<Value>(run: Run<Value>): Effect.Effect<Value, CallFailure, AgentSessionStateNeeds> {
-  return withClientSending({ run, sends: "identity-token" });
+  return Effect.flatMap(cliEnvironment, (env) => runWith(env, given("COOKOUT_TOKEN", env.token), run));
 }
 
 function callClient<Value>(
@@ -194,13 +241,28 @@ function callServer<Value>(call: Call<Value>): Effect.Effect<Value, CallFailure,
   return withClient(callClient(call));
 }
 
+interface JoinPlace {
+  readonly file: Option.Option<AgentSessionStateFile>;
+  readonly place: AgentToolSession;
+  readonly url: string;
+}
+
+const joinPlace: Effect.Effect<JoinPlace, never, AgentSessionStateNeeds> = Effect.gen(function* findJoinPlace() {
+  const env = yield* cliEnvironment;
+  const place = agentToolSessionIn(env.markers);
+  const file = yield* joinedSessionFile(place, env.url);
+  return { file, place, url: baseUrlOf(env.url) };
+});
+
 export {
   type Call,
   type CallFailure,
   type ClientWithAgentSessionState,
   type CredentialSource,
+  type JoinPlace,
   callClient,
   callServer,
+  joinPlace,
   toFailure,
   withClient,
   withIdentityTokenClient,

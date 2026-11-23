@@ -32,6 +32,7 @@ type Needs = CommandLineNeeds | Scope.Scope;
 
 interface WatchUntilExit<During> {
   readonly args: readonly string[];
+  readonly env?: (watch: Watch) => Readonly<Record<string, string>>;
   readonly prepare?: (watch: Watch) => Effect.Effect<void, never, Needs>;
   readonly whileWatching: (watch: Watch) => Effect.Effect<During, never, Needs>;
 }
@@ -40,12 +41,6 @@ interface Exited<During> {
   readonly during: During;
   readonly result: CliResult;
   readonly stdoutLines: readonly string[];
-}
-
-interface Join {
-  readonly args: readonly string[];
-  readonly folder: string;
-  readonly watch: Watch;
 }
 
 const ONE_LINE = 1;
@@ -58,7 +53,6 @@ const EXIT_TIMEOUT = 2;
 const EXIT_TOKEN = 3;
 const EXIT_ENDED = 4;
 const EXIT_UNREACHABLE = 5;
-const JOIN = ["join", "--as", "bob"];
 
 const passTime = Effect.forever(Effect.andThen(TestClock.adjust(A_WHILE), Effect.yieldNow));
 
@@ -80,18 +74,20 @@ const board: Effect.Effect<Watch, never, TestCookout | Needs> = Effect.gen(funct
 });
 
 function envOf({ bob, link }: Watch, folder: string): Readonly<Record<string, string>> {
-  return { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bob.token, COOKOUT_URL: link.url };
+  const session = { CLAUDECODE: "1", CLAUDE_CODE_SESSION_ID: folder };
+  return { ...session, COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bob.token, COOKOUT_URL: link.url };
 }
 
 function watchUntilExit<During>({
   args,
+  env = (watch) => envOf(watch, watch.folder),
   prepare = () => Effect.void,
   whileWatching,
 }: WatchUntilExit<During>): Effect.Effect<Exited<During>, never, Needs> {
   return Effect.gen(function* watchAsBob() {
     const watch = yield* board;
     yield* prepare(watch);
-    const watching = yield* Effect.forkScoped(runCookout({ args, env: envOf(watch, watch.folder) }));
+    const watching = yield* Effect.forkScoped(runCookout({ args, env: env(watch) }));
     yield* watch.link.relayed("event: connected");
     const during = yield* whileWatching(watch);
     const result = yield* Effect.raceFirst(Fiber.join(watching), Effect.andThen(passTime, Effect.never));
@@ -103,8 +99,8 @@ function cutAfter(change: (watch: Watch) => Effect.Effect<unknown>): (watch: Wat
   return (watch) => Effect.andThen(change(watch), watch.link.cut);
 }
 
-function join({ args, folder, watch }: Join): Effect.Effect<void, never, CommandLineNeeds> {
-  return Effect.asVoid(runCookout({ args, env: envOf(watch, folder) }));
+function joinIn(watch: Watch, folder: string, flags: readonly string[] = []): Effect.Effect<void, never, Needs> {
+  return Effect.asVoid(runCookout({ args: ["join", "--as", "bob", ...flags], env: envOf(watch, folder) }));
 }
 
 it.effect("cookout watch prints one stdout line and exits 3 when its token is rotated", () =>
@@ -135,9 +131,9 @@ it.effect("cookout watch prints one stdout line and exits 4 when another session
   Effect.gen(function* watchTakenOver() {
     const { result, stdoutLines } = yield* watchUntilExit({
       args: ["watch", "--json"],
-      prepare: (watch) => join({ args: JOIN, folder: watch.folder, watch }),
-      whileWatching: (watch) =>
-        Effect.flatMap(freshStateFolder, (folder) => join({ args: [...JOIN, "--force"], folder, watch })),
+      env: (watch) => ({ ...envOf(watch, watch.folder), COOKOUT_TOKEN: "" }),
+      prepare: (watch) => joinIn(watch, watch.folder),
+      whileWatching: (watch) => Effect.flatMap(freshStateFolder, (folder) => joinIn(watch, folder, ["--force"])),
     });
 
     expect(result).toMatchObject({ exitCode: EXIT_ENDED, stdoutJson: { error: { code: "agent_session_revoked" } } });

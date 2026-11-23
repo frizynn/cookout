@@ -39,3 +39,23 @@ it.effect("an empty COOKOUT_TOKEN counts as no token", () =>
     expect(error).toMatchObject({ code: "token_missing", status: 401 });
   }).pipe(Effect.provide(testCookout())),
 );
+
+it.effect(
+  "the SDK sends COOKOUT_SESSION, an agent session token, when COOKOUT_TOKEN is unset, and COOKOUT_TOKEN wins",
+  () =>
+    Effect.gen(function* sessionDefault() {
+      const cookout = yield* TestCookout;
+      const bot = yield* cookout.createIdentity("release-bot");
+      const other = yield* cookout.createIdentity("other");
+      const { agentSessionToken } = yield* answer(() => bot.client.join({ as: "release-bot" }));
+      const fromSession = createCookoutClient({
+        env: { COOKOUT_SESSION: agentSessionToken, COOKOUT_URL: cookout.url },
+      });
+      const fromToken = createCookoutClient({
+        env: { COOKOUT_SESSION: agentSessionToken, COOKOUT_TOKEN: other.token, COOKOUT_URL: cookout.url },
+      });
+      const answers = yield* Effect.all([answer(fromSession.whoami), answer(fromToken.whoami)], { concurrency: 1 });
+
+      expect(answers).toMatchObject([{ identity: { name: "release-bot" } }, { identity: { name: "other" } }]);
+    }).pipe(Effect.provide(testCookout())),
+);

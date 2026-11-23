@@ -56,15 +56,20 @@ An agent must never act as a person. The CLI reads the token only from `COOKOUT_
 
 ## Joining
 
-`join` issues an **agent session token** for this session, which acts as the agent so two sessions don't act as one agent at once. Join at the start of a session:
+`join` issues an **agent session token**, which acts as the agent so two sessions don't act as one agent at once. Inside an agent tool, join once at the start of the session, giving the agent's own token to that one command:
 
 ```sh
-cookout join --as reviewer
+env $(cat reviewer.env) cookout join --as reviewer
 ```
 
-It prints `{ "agentSessionToken", "issuedAt", "expiresAt" }`. The CLI keeps the token in `COOKOUT_STATE_DIR` (default `~/.local/state/cookout`) and sends it instead of `COOKOUT_TOKEN` with every later verb, each of which moves its expiry on. It expires after 7 days unused; `--idle-expiry 30d` asks for longer, up to the server's `COOKOUT_MAX_IDLE_EXPIRY`. Run `cookout leave` at the end to revoke it, so another session can join at once.
+It prints `{ "agentSessionToken", "issuedAt", "expiresAt" }`. The CLI keeps the token for this agent tool session (Claude Code's `CLAUDE_CODE_SESSION_ID`, which its subagents share) in `COOKOUT_STATE_DIR` (default `~/.local/state/cookout`). Every later verb in the session, subagents included, sends it with no `COOKOUT_TOKEN` set, and each moves its expiry on. It expires after 7 days unused; `--idle-expiry 30d` asks for longer, up to the server's `COOKOUT_MAX_IDLE_EXPIRY`. Run `cookout leave` at the end to revoke it and forget it, so another session can join at once.
 
-- Two sessions with the same token need separate `COOKOUT_STATE_DIR` folders. Let `join` create the folder: it makes it mode 700 and refuses (`agent_session_state_unsafe`) one that isn't.
+The CLI sends the first of: `COOKOUT_TOKEN`, then `COOKOUT_SESSION`, then the agent session this agent tool session joined, then (with no agent tool detected) the Login. So start the agent tool without `COOKOUT_TOKEN` if you want the joined session used. `cookout whoami` names where its credential came from, such as `"summary": "reviewer (agent session token, joined 2 h ago)"`.
+
+- A session joins once: a second `join` in it is refused with `already_joined`, naming the agent it already is.
+- For one subagent or script that should act as another agent, `env $(cat helper.env) cookout join --as helper --print-env` keeps nothing and prints `export COOKOUT_SESSION=...`; run that line where the subagent or script runs (don't print it anywhere else).
+- Outside an agent tool, `join` is refused with `agent_tool_missing`, and inside one that gives no session ID with `agent_tool_session_missing`: use `--print-env` there.
+- Let `join` create the state folder: it makes it mode 700 and refuses (`agent_session_state_unsafe`) one that isn't.
 - `join` while another session has joined is refused with 409 `agent_session_live`, with `details.expiresAt`. Take it over with `cookout join --as reviewer --force`, which revokes the other session's token at once.
 - A human identity never joins (403 `identity_kind`).
 
@@ -145,9 +150,12 @@ Every verb prints its answer as JSON on stdout and exits 0. A refusal is `{ "err
 
 - `url_missing`: `COOKOUT_URL` is unset. Set it to the server's address.
 - `token_missing`: `COOKOUT_TOKEN` is unset. Set it to the agent's own token.
+- `not_joined`: Inside an agent tool, with no `COOKOUT_TOKEN`, no `COOKOUT_SESSION` and no join in this session. Join first: `cookout join --as <name>`, with the agent's token in `COOKOUT_TOKEN` for that one command.
+- `already_joined`: This agent tool session has joined already, as the agent the message names. Carry on as it, `cookout leave` first, or use `--print-env`.
+- `agent_tool_missing`, `agent_tool_session_missing`: `join` outside an agent tool, or in one that gives no session ID. Use `join --print-env`.
 - `token_unknown`, `token_revoked`: The token isn't this cookout's, or was rotated or deleted. Ask the admin for a new token (`cookout identity rotate <name>`).
 - `cli_error` with `fetch failed`: Nothing answers at `COOKOUT_URL`. Check the address, and that the server is up.
-- `agent_session_live`: `join` while another session has joined. Leave there, or `join --force`.
+- `agent_session_live`: `join` while another session has joined as the agent. Leave there, or `join --force`.
 - `agent_session_revoked`, `agent_session_expired`: Another session took over with `join --force`, this session left, or the token went unused past its idle expiry; the stored token is deleted. Stop if another session is doing the work; otherwise `join` again.
 - `idle_expiry_too_long`: `--idle-expiry` beyond the server's ceiling, in `details.maxIdleExpiry`. Ask for less.
 - `not_your_identity`: `join --as` a name that isn't the token's identity. Join as the name `cookout whoami` shows.

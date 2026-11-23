@@ -52,8 +52,9 @@ function joinAgentWith({ createAgent, runCookout, url: defaultUrl }: Joining): J
     Effect.gen(function* joinAsAgent() {
       const { identity, token } = yield* createAgent(name);
       const stateFolder = yield* freshStateFolder;
+      const inSession = { agentToolSession: stateFolder, stateFolder, url };
       function run(...args: readonly string[]): Effect.Effect<BinResult, never, SessionNeeds> {
-        return runCookout({ args, stateFolder, token, url });
+        return runCookout({ ...inSession, args });
       }
       function post(...args: readonly string[]): Effect.Effect<MessageId, never, SessionNeeds> {
         return run("message", "post", ...args).pipe(
@@ -61,7 +62,8 @@ function joinAgentWith({ createAgent, runCookout, url: defaultUrl }: Joining): J
           Effect.flatMap(postedMessageId),
         );
       }
-      yield* Effect.flatMap(run("join", "--as", identity.name), (joined) => requireSucceeded("join", joined));
+      const joining = runCookout({ ...inSession, args: ["join", "--as", identity.name], token });
+      yield* Effect.flatMap(joining, (joined) => requireSucceeded("join", joined));
       return { cookout: run, name: identity.name, post, token };
     });
 }

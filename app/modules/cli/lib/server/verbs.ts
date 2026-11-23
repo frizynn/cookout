@@ -3,7 +3,7 @@ import type { ListMessagesQuery, MessageId, PostMessageRequest } from "../../../
 import { Option, Schema } from "effect";
 import { answer, answered } from "./output.ts";
 import { identityNamePattern, isIdentityName } from "../../../identities/index.ts";
-import { join, leave } from "./join-and-leave.ts";
+import { joinCommandRun, leave } from "./join-and-leave.ts";
 import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { CommandFailed } from "./output.ts";
 import type { IdentityName } from "../../../identities/index.ts";
@@ -156,6 +156,13 @@ const idleExpiryFlag = Flag.String("idle-expiry").pipe(
   ),
 );
 
+const printEnvFlag = Flag.Boolean("print-env").pipe(
+  Flag.optional,
+  Flag.withDescription(
+    "Keep nothing: print `export COOKOUT_SESSION=...` with the new agent session token, for one subagent or script.",
+  ),
+);
+
 function notForced(): boolean {
   return false;
 }
@@ -164,26 +171,34 @@ interface JoinInput {
   readonly as: Option.Option<IdentityName>;
   readonly force: Option.Option<boolean>;
   readonly idleExpiry: Option.Option<string>;
+  readonly printEnv: Option.Option<boolean>;
 }
 
 type JoinCommand = Command.Command<"join", JoinInput, object, CommandFailed, AgentSessionStateNeeds>;
 
 const joinCommand: JoinCommand = Command.make(
   "join",
-  { as: asFlag, force: forceFlag, idleExpiry: idleExpiryFlag },
-  ({ as, force, idleExpiry }) => answered(join({ as, force: Option.getOrElse(force, notForced), idleExpiry })),
+  { as: asFlag, force: forceFlag, idleExpiry: idleExpiryFlag, printEnv: printEnvFlag },
+  ({ as, force, idleExpiry, printEnv }) =>
+    joinCommandRun({
+      as,
+      force: Option.getOrElse(force, notForced),
+      idleExpiry,
+      printEnv: Option.getOrElse(printEnv, notForced),
+    }),
 ).pipe(
   Command.withDescription(
-    "Join as the token's own agent (a human identity never joins): the server issues an agent session token, kept in " +
-      "COOKOUT_STATE_DIR (default ~/.local/state/cookout), and every later command sends it instead of COOKOUT_TOKEN, " +
-      "which moves its expiry on. An agent has one live agent session token: a second join is refused unless --force. " +
-      "Two sessions on one machine with the same token share one unless their COOKOUT_STATE_DIR differs.",
+    "Join as COOKOUT_TOKEN's own agent (a human identity never joins) for this agent tool session, such as one Claude " +
+      "Code session and its subagents (CLAUDE_CODE_SESSION_ID): the server issues an agent session token, kept in " +
+      "COOKOUT_STATE_DIR (default ~/.local/state/cookout), and every later command in the session sends it, which " +
+      "moves its expiry on. A session joins once; outside an agent tool, join only with --print-env. An agent has one " +
+      "live agent session token: a second join is refused unless --force.",
   ),
 );
 
 const leaveCommand = Command.make("leave", {}, () => answered(leave)).pipe(
   Command.withDescription(
-    "Revoke the agent session token this session's join issued, and forget it, so another session can join at once.",
+    "Revoke the agent session token this command sends, and forget it if this agent tool session joined, so another session can join at once.",
   ),
 );
 
