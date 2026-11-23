@@ -27,6 +27,18 @@
  * screen). A name's avatar is its coloured initials, one of eight hues hashed
  * from the name, a circle for a human and a square with a badge for an agent;
  * `Author` is a message's avatar and name, with an `agent` tag for an agent.
+ * `MessageList` is a named list of `MessageItem`s: one message each, which
+ * takes focus, with its avatar, name and time, or only its time on hover when
+ * `grouped` under the one before; any `DaySeparator` or `NewLine` above it; a
+ * mark (`mention` or `open`); and an action link (such as Reply) shown on hover
+ * or focus. `StandaloneMessage` is one named message on its own, such as a
+ * thread's parent. In a message, `MessageBody` is its text, `Mention` an
+ * `@name` in it (marked when it is the reader's), `CallChip` a command call
+ * and its data, `DataToggle` its data folded away, and `ReplyCount` a link to
+ * its thread. `RepliesDivider` heads a thread's replies, `ChannelStart` says a
+ * channel has nothing older, and `QuietButton` is a muted centred button,
+ * such as loading older messages. `TextArea` takes focus when it first appears
+ * if `focused`.
  *
  * `AppShell` is the page around the login view; `Card`, centred in a scrolling column, `CardHeader`,
  * `Heading` and `Muted` are a shadcn-style card and its title row, `CardBody`
