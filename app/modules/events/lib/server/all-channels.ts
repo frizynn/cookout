@@ -1,7 +1,7 @@
-import { ChannelEventSchema, MessageEventSchema, ReadReceiptEventSchema } from "./wire.ts";
+import { ChannelEventSchema, MessageEventSchema, ReactionEventSchema, ReadReceiptEventSchema } from "./wire.ts";
 import type { Connected, StreamRequest } from "./source.ts";
 import { Effect, Record, Stream } from "effect";
-import { Messages, ReadReceipts } from "../../../messages/server.ts";
+import { Messages, Reactions, ReadReceipts } from "../../../messages/server.ts";
 import { Channels } from "../../../channels/server.ts";
 import { allChannelsQuery } from "../../index.ts";
 import { sseEvent } from "./source.ts";
@@ -11,8 +11,9 @@ const PATH_BASE = "http://cookout.invalid";
 const messageEvent = sseEvent(MessageEventSchema);
 const channelEvent = sseEvent(ChannelEventSchema);
 const readReceiptEvent = sseEvent(ReadReceiptEventSchema);
+const reactionEvent = sseEvent(ReactionEventSchema);
 
-type AllChannelsNeeds = Messages | Channels | ReadReceipts;
+type AllChannelsNeeds = Messages | Channels | ReadReceipts | Reactions;
 
 function asksForAllChannels({ url }: StreamRequest): boolean {
   const search = new URL(url, PATH_BASE).searchParams;
@@ -58,4 +59,17 @@ function readReceipts(request: StreamRequest): Connected<ReadReceipts> {
   });
 }
 
-export { type AllChannelsNeeds, allChannels, asksForAllChannels, channels, readReceipts };
+function reactions(request: StreamRequest): Connected<Reactions> {
+  return Effect.gen(function* subscribeToReactions() {
+    if (!asksForAllChannels(request)) {
+      return Stream.empty;
+    }
+    const service = yield* Reactions;
+    const changed = yield* service.changed;
+    return Stream.fromSubscription(changed).pipe(
+      Stream.mapEffect((change) => reactionEvent({ ...change.reactions, type: "reaction" })),
+    );
+  });
+}
+
+export { type AllChannelsNeeds, allChannels, asksForAllChannels, channels, reactions, readReceipts };

@@ -15,9 +15,10 @@ import {
   ListMessagesResponseSchema,
   MessageResponseSchema,
   PostMessageRequestSchema,
+  ReactionsResponseSchema,
   ThreadResponseSchema,
 } from "./lib/server/wire.ts";
-import { channelMessagesPath, isMessageId, messagesPath, threadPath } from "./index.ts";
+import { channelMessagesPath, isMessageId, messagesPath, reactionPath, threadPath } from "./index.ts";
 import type { MessageId } from "./index.ts";
 import { Messages } from "./lib/server/service.ts";
 import type { Refusal } from "../http/index.ts";
@@ -68,6 +69,24 @@ const threadRoute: Route<Messages> = {
   segments: { id: (segment) => DIGITS.test(segment) },
 };
 
+type ReactionChange = (messages: Messages["Service"]) => Messages["Service"]["react"];
+
+function reactionRoute(method: "PUT" | "DELETE", change: ReactionChange): Route<Caller | Messages> {
+  return {
+    handle: (params) =>
+      Effect.gen(function* reactionChangeRoute() {
+        const id = yield* threadIdOf(String(params["id"]));
+        const caller = yield* Caller;
+        const messages = yield* Messages;
+        const answer = yield* change(messages)(caller, id, String(params["reaction"]));
+        return yield* HttpServerResponse.schemaJson(ReactionsResponseSchema)(answer);
+      }),
+    method,
+    path: reactionPath,
+    segments: { id: (segment) => DIGITS.test(segment) },
+  };
+}
+
 const pageRoute: Route<Messages> = {
   handle: (params) =>
     Effect.gen(function* channelPageRoute() {
@@ -84,12 +103,21 @@ const pageRoute: Route<Messages> = {
   path: channelMessagesPath,
 };
 
-export { Messages, messagesLayer } from "./lib/server/service.ts";
+export { Messages } from "./lib/server/service.ts";
+export { messagesLayer } from "./lib/server/layer.ts";
 export { ReadReceipts, readReceiptsLayer } from "./lib/server/read-receipts.ts";
+export { Reactions, reactionCounter, reactionsLayer } from "./lib/server/reactions.ts";
 export { messageNotFound } from "./lib/server/refusals.ts";
 
 /** The Schemas of a message and its ID, for other modules' answers that hold messages. */
-export { MessageIdSchema, MessageSchema, ReadReceiptSchema, TopLevelMessageSchema } from "./lib/server/wire.ts";
+export {
+  MessageIdSchema,
+  MessageSchema,
+  ReactionCountSchema,
+  ReactionSchema,
+  ReadReceiptSchema,
+  TopLevelMessageSchema,
+} from "./lib/server/wire.ts";
 
 /** The Schema of a page query (`before` and `limit`), for other pages that follow a channel page's rules. */
 export { ListMessagesQuerySchema as PageQuerySchema } from "./lib/server/wire.ts";
@@ -98,11 +126,18 @@ export { ListMessagesQuerySchema as PageQuerySchema } from "./lib/server/wire.ts
  * The message routes, for the server's route list. They need `Caller`, which the token gate provides, and `Messages`,
  * which `messagesLayer` provides.
  */
-export const messageRoutes: readonly Route<Caller | Messages>[] = [postRoute, threadRoute, pageRoute];
+export const messageRoutes: readonly Route<Caller | Messages>[] = [
+  postRoute,
+  threadRoute,
+  pageRoute,
+  reactionRoute("PUT", (messages) => messages.react),
+  reactionRoute("DELETE", (messages) => messages.unreact),
+];
 
 /** The response Schemas of the message routes, for the SDK's generated validators. */
 export const messageResponseSchemas = {
   ListMessagesResponse: ListMessagesResponseSchema,
   MessageResponse: MessageResponseSchema,
+  ReactionsResponse: ReactionsResponseSchema,
   ThreadResponse: ThreadResponseSchema,
 };

@@ -62,7 +62,7 @@ function stopsAtStartUp(stop: StopCondition, { count, mentioned }: Unread): bool
 }
 
 function isNewerThan(counted: Option.Option<number>, { item }: InboxItemEvent): boolean {
-  return !Option.exists(counted, (latest) => item.message.id <= latest);
+  return item.reasons.includes("reaction") || !Option.exists(counted, (latest) => item.message.id <= latest);
 }
 
 interface Counting {

@@ -40,6 +40,8 @@ import type {
   MessageId,
   MessageResponse,
   PostMessageRequest,
+  ReactionName,
+  ReactionsResponse,
   ThreadResponse,
 } from "./lib/messages.ts";
 import { eventCalls, eventOf } from "./lib/events.ts";
@@ -162,6 +164,17 @@ export type CookoutClient = CallGroups & {
   /** `GET /v1/messages/:id/thread`: the thread holding the message, its top-level message and every reply in order. */
   readonly getThread: (messageId: MessageId) => Promise<ThreadResponse>;
   /**
+   * `PUT /v1/messages/:id/reactions/:reaction`: leaves the caller's reaction, `thumbs_up` or `thumbs_down`, on a
+   * message; one already there stays as it is. The message's author gets an inbox item for it, unless the author is
+   * the caller or deactivated. Answers with the message's reactions. A missing message is 404 `message_not_found`.
+   */
+  readonly react: (messageId: MessageId, reaction: ReactionName) => Promise<ReactionsResponse>;
+  /**
+   * `DELETE /v1/messages/:id/reactions/:reaction`: removes the caller's reaction from a message, notifying no one.
+   * Answers with the message's reactions.
+   */
+  readonly unreact: (messageId: MessageId, reaction: ReactionName) => Promise<ReactionsResponse>;
+  /**
    * `POST /v1/agent-session`, with an agent's Identity token (`as` must be its name; a human's is 403
    * `identity_kind`): issues an agent session token, which expires once unused for `idleExpiry` (default `7d`, at
    * most the server's `COOKOUT_MAX_IDLE_EXPIRY`, else 400 `idle_expiry_too_long`); each request sent with it moves
@@ -228,7 +241,7 @@ export type CookoutClient = CallGroups & {
    * `GET /v1/events`: opens one Server-Sent Events stream, resolving once the server has accepted it. Iterate it for
    * each new inbox item (`inbox-item`) the moment another identity posts it (the caller's own posts never arrive), and
    * each new read position (`read-position`) the moment any session of the caller acks, and each read position moved
-   * back (`read-position-moved-back`) the moment one marks a message unread, so several sessions stay in sync. With `allChannels`, it also sends every new message on every channel (`message`), each newly recorded read receipt (`read-receipt`) and each change to anyone's presence (`presence`), as the web UI needs.
+   * back (`read-position-moved-back`) the moment one marks a message unread, so several sessions stay in sync. With `allChannels`, it also sends every new message on every channel (`message`), each newly recorded read receipt (`read-receipt`), each change to a message's reactions (`reaction`) and each change to anyone's presence (`presence`), as the web UI needs.
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
    * a newer server, is skipped. `close` drops the connection. Opened with an agent session token, the stream moves its
    * expiry on while open, and once the token is revoked (`leave`, or another session's `join --force`) the

@@ -4,10 +4,17 @@ import type {
   MessageId,
   MessageResponse,
   PostMessageRequest,
+  ReactionName,
+  ReactionsResponse,
   ThreadResponse,
 } from "../../messages/index.ts";
-import { channelMessagesPath, messagesPath, threadPath } from "../../messages/index.ts";
-import { isListMessagesResponse, isMessageResponse, isThreadResponse } from "./generated/validators.js";
+import { channelMessagesPath, messagesPath, reactionPath, threadPath } from "../../messages/index.ts";
+import {
+  isListMessagesResponse,
+  isMessageResponse,
+  isReactionsResponse,
+  isThreadResponse,
+} from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import { send } from "./request.ts";
 
@@ -15,6 +22,16 @@ interface MessageCalls {
   readonly createMessage: (request: PostMessageRequest) => Promise<MessageResponse>;
   readonly listMessages: (channel: string, query?: ListMessagesQuery) => Promise<ListMessagesResponse>;
   readonly getThread: (messageId: MessageId) => Promise<ThreadResponse>;
+  readonly react: (messageId: MessageId, reaction: ReactionName) => Promise<ReactionsResponse>;
+  readonly unreact: (messageId: MessageId, reaction: ReactionName) => Promise<ReactionsResponse>;
+}
+
+function reactionCall(server: ClientConnection, method: "PUT" | "DELETE") {
+  return async (messageId: MessageId, reaction: ReactionName): Promise<ReactionsResponse> => {
+    const params = { id: String(messageId), reaction };
+    const answer = await send(server, { isExpected: isReactionsResponse, method, params, path: reactionPath });
+    return answer;
+  };
 }
 
 function messageCalls(server: ClientConnection): MessageCalls {
@@ -38,6 +55,8 @@ function messageCalls(server: ClientConnection): MessageCalls {
       });
       return page;
     },
+    react: reactionCall(server, "PUT"),
+    unreact: reactionCall(server, "DELETE"),
   };
 }
 
@@ -47,6 +66,8 @@ export type {
   MessageId,
   MessageResponse,
   PostMessageRequest,
+  ReactionName,
+  ReactionsResponse,
   ThreadResponse,
 } from "../../messages/index.ts";
 export { messageCalls };

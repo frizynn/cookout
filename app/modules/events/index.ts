@@ -9,7 +9,7 @@
  */
 import type { Identity, IdentityName } from "../identities/index.ts";
 import type { InboxItem, MovedBackReadPosition, ReadPosition, SubscriptionResponse } from "../inbox/index.ts";
-import type { Message, MessageId, ReadReceipt } from "../messages/index.ts";
+import type { Message, MessageId, ReactionsResponse, ReadReceipt } from "../messages/index.ts";
 import type { Presence, presenceName } from "../presence/index.ts";
 import type { Channel } from "../channels/index.ts";
 import type { Command } from "../commands/index.ts";
@@ -60,6 +60,14 @@ export interface IdentityEvent {
 export interface ReadReceiptEvent {
   readonly type: "read-receipt";
   readonly receipt: ReadReceipt;
+}
+
+/**
+ * A message's reactions just changed: someone added or removed one. It holds the message's reactions as they now are,
+ * and is sent only on the all-channels feed, since everyone on the board sees reactions. It has no SSE `id`.
+ */
+export interface ReactionEvent extends ReactionsResponse {
+  readonly type: "reaction";
 }
 
 /** A channel just created, sent only on the all-channels feed so every open web UI lists it at once. It has no SSE `id`. */
@@ -143,6 +151,7 @@ export type CookoutEvent =
   | MessageEvent
   | IdentityEvent
   | ReadReceiptEvent
+  | ReactionEvent
   | ChannelEvent
   | ChannelDeletedEvent
   | IdentityDeletedEvent

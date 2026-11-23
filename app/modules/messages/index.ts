@@ -55,6 +55,11 @@ export interface MessageFields {
   /** The harness the message was posted from, such as `claude-code`. Absent when none was named. */
   readonly harness?: Harness;
   readonly createdAt: IsoTime;
+  /**
+   * The reactions on the message, one count for each reaction anyone has left, in `reactionNames` order, on the
+   * messages of channel pages, threads and the inbox. Absent while the message has none, and on live `message` events.
+   */
+  readonly reactions?: readonly ReactionCount[];
 }
 
 /** A message posted straight into a channel. It may have a thread of replies. */
@@ -191,6 +196,49 @@ export function receiptIdentitiesOf({ message, parentAuthor }: ReceiptIdentities
   return [...names];
 }
 
+/**
+ * A reaction an identity can leave on a message: thumbs up or thumbs down (Matt, 2026-11-23, mattpocock/cookout#199).
+ * The list is closed, and `reactionNames` owns it.
+ */
+export type ReactionName = "thumbs_up" | "thumbs_down";
+
+/** Every reaction, in the order a message lists them. */
+export const reactionNames: readonly ReactionName[] = ["thumbs_up", "thumbs_down"];
+
+/** How each reaction is shown. */
+export const reactionSymbols: Readonly<Record<ReactionName, string>> = { thumbs_down: "👎", thumbs_up: "👍" };
+
+/**
+ * Whether `value` names a reaction.
+ * @param value The text to check.
+ * @returns Whether `value` is a `ReactionName`.
+ */
+export function isReactionName(value: string): value is ReactionName {
+  return reactionNames.some((name) => name === value);
+}
+
+/** How many identities left one reaction on a message, and who, oldest reaction first. */
+export interface ReactionCount {
+  readonly reaction: ReactionName;
+  readonly count: number;
+  readonly by: readonly IdentityName[];
+}
+
+/** One identity's reaction on one message. An identity has at most one of each reaction on a message. */
+export interface Reaction {
+  readonly messageId: MessageId;
+  readonly identity: IdentityName;
+  readonly reaction: ReactionName;
+  readonly reactedAt: IsoTime;
+}
+
+/** The answer to adding or removing a reaction: the message's reactions as they now are. */
+export interface ReactionsResponse {
+  readonly messageId: MessageId;
+  readonly channel: ChannelName;
+  readonly reactions: readonly ReactionCount[];
+}
+
 /** The size of a channel page: 50 unless the query says otherwise, and never more than 200. */
 export const pageSize = { default: 50, maximum: 200, minimum: 1 } as const;
 
@@ -203,5 +251,14 @@ export const channelMessagesPath = "/v1/channels/:name/messages";
 /** `GET /v1/messages/:id/thread`: the thread holding the message. */
 export const threadPath = "/v1/messages/:id/thread";
 
-/** The codes the message routes refuse with: a missing message (404) and a reply in another channel (400). */
-export const messageErrorCodes = ["message_not_found", "reply_in_other_channel"] as const;
+/**
+ * `PUT` adds and `DELETE` removes the caller's reaction on a message, where `:reaction` is one of `reactionNames`.
+ * Adding one already there, or removing one that isn't, changes nothing.
+ */
+export const reactionPath = "/v1/messages/:id/reactions/:reaction";
+
+/**
+ * The codes the message routes refuse with: a missing message (404), a reply in another channel (400) and a reaction
+ * not in `reactionNames` (404).
+ */
+export const messageErrorCodes = ["message_not_found", "reply_in_other_channel", "reaction_not_found"] as const;

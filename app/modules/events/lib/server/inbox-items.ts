@@ -1,12 +1,26 @@
 import { Array as Arr, Effect, Option, Stream } from "effect";
 import type { Connected, StreamRequest } from "./source.ts";
+import { Messages, Reactions } from "../../../messages/server.ts";
 import { Inbox } from "../../../inbox/server.ts";
 import { InboxItemEventSchema } from "./wire.ts";
 import type { MessageId } from "../../../messages/index.ts";
-import { Messages } from "../../../messages/server.ts";
 import { sseEvent } from "./source.ts";
 
 const inboxItemEvent = sseEvent(InboxItemEventSchema);
+
+function reactionItems({ caller }: StreamRequest): Connected<Inbox | Reactions> {
+  return Effect.gen(function* subscribeToReactionItems() {
+    const inbox = yield* Inbox;
+    const reactions = yield* Reactions;
+    const changed = yield* reactions.changed;
+    return Stream.fromSubscription(changed).pipe(
+      Stream.filter(({ author, notified }) => notified && author === caller.name),
+      Stream.mapEffect(({ reactions: { messageId } }) => inbox.reactionItemFor(caller, messageId)),
+      Stream.flattenIterable,
+      Stream.mapEffect((item) => inboxItemEvent({ item, type: "inbox-item" })),
+    );
+  });
+}
 
 function inboxItems({ caller, lastEventId }: StreamRequest): Connected<Inbox | Messages> {
   return Effect.gen(function* subscribeToInboxItems() {
@@ -35,4 +49,4 @@ function inboxItems({ caller, lastEventId }: StreamRequest): Connected<Inbox | M
   });
 }
 
-export { inboxItems };
+export { inboxItems, reactionItems };
