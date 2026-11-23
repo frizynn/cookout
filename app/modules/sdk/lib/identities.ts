@@ -1,3 +1,4 @@
+import type { AgentJoinCalls, JoinCodeCalls } from "../../agent-sessions/index.ts";
 import type {
   CreateIdentityRequest,
   DeactivateIdentityResponse,
@@ -29,7 +30,6 @@ import {
   isIdentityWithTokenResponse,
   isListIdentitiesResponse,
 } from "./generated/validators.js";
-import type { AgentJoinCalls } from "../../agent-sessions/index.ts";
 import type { ClientConnection } from "./request.ts";
 import type { DescriptionCalls } from "../../identities/client.ts";
 import type { EventCalls } from "./events.ts";
@@ -224,7 +224,7 @@ function identityCalls(
   return { ...loginCalls(server), ...ownIdentityCalls(server), ...descriptionCalls(server) };
 }
 
-type ApprovalCalls = LoginCalls & AgentJoinCalls;
+type ApprovalCalls = LoginCalls & AgentJoinCalls & JoinCodeCalls;
 type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
 export type CallGroups = ApprovalCalls &
   IdentityDeletionCalls &

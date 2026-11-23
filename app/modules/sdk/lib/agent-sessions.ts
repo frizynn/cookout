@@ -1,6 +1,7 @@
 import type {
   AgentJoinCalls,
   AgentSessionResponse,
+  JoinCodeCalls,
   JoinRequest,
   LeaveResponse,
   ListAgentSessionsResponse,
@@ -13,12 +14,15 @@ import {
   agentSessionPath,
   collectAgentJoinRequestPath,
   identityAgentSessionPath,
+  joinCodesPath,
+  redeemJoinCodePath,
 } from "../../agent-sessions/index.ts";
 import {
   isAgentJoinCollectedResponse,
   isAgentJoinRequestResponse,
   isAgentJoinRequestStartedResponse,
   isAgentSessionResponse,
+  isJoinCodeResponse,
   isLeaveResponse,
   isListAgentSessionsResponse,
   isRevokeAgentSessionResponse,
@@ -26,7 +30,7 @@ import {
 import type { ClientConnection } from "./request.ts";
 import { send } from "./request.ts";
 
-interface AgentSessionCalls extends AgentJoinCalls {
+interface AgentSessionCalls extends AgentJoinCalls, JoinCodeCalls {
   readonly join: (request: JoinRequest) => Promise<AgentSessionResponse>;
   readonly leave: () => Promise<LeaveResponse>;
   readonly listAgentSessions: (agent: string) => Promise<ListAgentSessionsResponse>;
@@ -75,9 +79,33 @@ function agentJoinCalls(server: ClientConnection): AgentJoinCalls {
   };
 }
 
+function joinCodeCalls(server: ClientConnection): JoinCodeCalls {
+  return {
+    createJoinCode: async (body) => {
+      const created = await send(server, {
+        body,
+        isExpected: isJoinCodeResponse,
+        method: "POST",
+        path: joinCodesPath,
+      });
+      return created;
+    },
+    redeemJoinCode: async (body) => {
+      const issued = await send(server, {
+        body,
+        isExpected: isAgentSessionResponse,
+        method: "POST",
+        path: redeemJoinCodePath,
+      });
+      return issued;
+    },
+  };
+}
+
 function agentSessionCalls(server: ClientConnection): AgentSessionCalls {
   return {
     ...agentJoinCalls(server),
+    ...joinCodeCalls(server),
     join: async (body) => {
       const issued = await send(server, {
         body,

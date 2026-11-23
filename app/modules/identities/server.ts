@@ -225,3 +225,6 @@ export { IdentityChanges, identityChangesLayer } from "./lib/server/changes.ts";
  * `agent-session` and `presence` events.
  */
 export { IdentityNameSchema, IdentitySchema } from "./lib/server/wire.ts";
+
+/** The Schemas of an agent identity and of a description as sent, for a route that creates an agent. */
+export { AgentIdentitySchema, SentDescriptionSchema } from "./lib/server/wire.ts";

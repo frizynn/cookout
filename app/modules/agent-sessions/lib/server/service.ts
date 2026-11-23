@@ -5,15 +5,17 @@ import type { Identity, IdentityName, TokenHash } from "../../../identities/inde
 import type { Join, On } from "./join.ts";
 import type { PubSub, Scope } from "effect";
 import { agentSessionExpired, agentSessionRevoked } from "../../index.ts";
+import type { JoinCodes } from "./join-codes.ts";
 import type { JoinRequests } from "./join-requests.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
+import { joinCodesOn } from "./join-codes.ts";
 import { joinRequestsOn } from "./join-requests.ts";
 import { joiner } from "./join.ts";
 
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
 
-interface AgentSessionsService extends JoinRequests {
+interface AgentSessionsService extends JoinRequests, JoinCodes {
   readonly join: (caller: Identity, request: Join) => Fails<AgentSessionResponse>;
   readonly leave: (agent: IdentityName, hash: TokenHash) => Effect.Effect<void, StorageUnavailable>;
   readonly untilEnded: (hash: TokenHash) => Effect.Effect<Refusal, StorageUnavailable>;
@@ -94,6 +96,7 @@ function agentSessionsOn(on: On): Omit<AgentSessionsService, "sessionChanged"> {
     untilEnded: watcher(on),
     ...ownerViews(on),
     ...joinRequestsOn(on),
+    ...joinCodesOn(on),
   };
 }
 

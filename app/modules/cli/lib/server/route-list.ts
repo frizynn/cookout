@@ -3,7 +3,9 @@ import {
   agentSessionOwnerRoutes,
   agentSessionRoutes,
   agentSessionsLayer,
+  joinCodeRoutes,
   joinRequestRoutes,
+  openJoinCodeRoutes,
   openJoinRequestRoutes,
 } from "../../../agent-sessions/server.ts";
 import { channelRoutes, channelsLayer } from "../../../channels/server.ts";
@@ -54,12 +56,17 @@ export const routes: readonly Route<RouteNeeds>[] = [
   ...agentSessionRoutes,
   ...agentSessionOwnerRoutes,
   ...joinRequestRoutes,
+  ...joinCodeRoutes,
   ...inboxRoutes,
   ...liveRoutes,
   ...commandRoutes,
 ];
 
-export const openRoutes: readonly Route<OpenNeeds>[] = [...openIdentityRoutes, ...openJoinRequestRoutes];
+export const openRoutes: readonly Route<OpenNeeds>[] = [
+  ...openIdentityRoutes,
+  ...openJoinRequestRoutes,
+  ...openJoinCodeRoutes,
+];
 
 export const domainLayers = Layer.mergeAll(
   identitiesLayer,
