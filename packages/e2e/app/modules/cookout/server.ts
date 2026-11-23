@@ -4,6 +4,8 @@
  * bin run as its own process, never through the app's `testing` module. Each
  * `cookoutUnderTest` Layer is one run: it draws a fresh prefix for the names
  * it makes and deletes the run's identities and channels when it closes, passing or failing.
+ * `runPrefix` is that prefix: `e2e-` (`e2eNameStart`) then the run's own eight characters. Deploy's
+ * leftover checks count only names that start with `e2e-`, so a real identity made mid-run isn't one.
  * Vitest's `globalSetup` (`lib/server/leftover-channels.ts`) deletes every channel whose name starts
  * with `e2e-` before and after the suite, so a crashed run's leftovers go too.
  * `openRelay` opens a relay on 127.0.0.1 in front of any cookout URL, the deployed
@@ -42,6 +44,7 @@ export {
   freshStateFolder,
   postedMessageId,
 } from "./lib/server/bin.ts";
+export { e2eNameStart, runPrefix, runPrefixSpace } from "./lib/server/run-prefix.ts";
 export { exampleCommand, requireExampleCommand } from "./lib/server/example-command.ts";
 export { type BrowserFixtures, type BrowserRun, browserFixtures } from "./lib/server/browser-run.ts";
 export { type Answered, type Relay, openRelay } from "./lib/server/relay.ts";

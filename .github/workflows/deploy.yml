@@ -1,7 +1,7 @@
 # Deploy the cookout to Fly (app `cookout`, lhr) and the example handler (app
 # `cookout-handler-example`, lhr) on every push to main, after `pnpm e2e:docker` passes, then check
 # the deployed stream, that a command call gets the handler's reply, and that the full e2e suite
-# passes against the deployed URL and leaves none of its identities there. A failure in either e2e
+# passes against the deployed URL and leaves none of its e2e- identities there. A failure in either e2e
 # stage fails the run. A workflow_dispatch on any branch runs the same e2e and the deployed checks
 # without deploying the cookout; `restart: true`
 # also restarts its machine first, and `handler: true` deploys the example handler from that branch.
@@ -120,12 +120,15 @@ jobs:
           COOKOUT_E2E_URL: ${{ env.COOKOUT_URL }}
           COOKOUT_E2E_ADMIN_TOKEN: ${{ env.COOKOUT_TOKEN }}
       # Each test deletes its own identities when it ends, passing or failing, so this runs either way.
+      # Every identity the suite makes is named e2e-<run>-… (runPrefix in packages/e2e/app/modules/cookout),
+      # so only new e2e- names count: real people and agents join the deployed cookout mid-run too.
       - name: The e2e run left none of its identities
         if: ${{ !cancelled() }}
         run: |
           node app/main.ts identity list | jq -c '[.identities[].name]' > "$RUNNER_TEMP/identities-after.json"
           jq -e -n --slurpfile before "$RUNNER_TEMP/identities-before.json" --slurpfile after "$RUNNER_TEMP/identities-after.json" \
-            '($after[0] - $before[0]) as $left | if $left == [] then true else ("e2e left these identities on the deployed cookout: \($left)\n" | halt_error) end'
+            '[($after[0] - $before[0])[] | select(startswith("e2e-"))] as $left
+            | if $left == [] then true else ("e2e left these identities on the deployed cookout: \($left)\n" | halt_error) end'
       # Each test deletes its own channels when it ends, and the suite deletes every e2e- channel after it runs.
       - name: The e2e run left no e2e- channel
         if: ${{ !cancelled() }}
