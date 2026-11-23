@@ -38,6 +38,8 @@ interface Cast {
 }
 
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
+const rollbackSchema = { properties: { version: { type: "string" } }, required: ["version"], type: "object" } as const;
+const unreachableHandler = "http://127.0.0.1:9/rollback";
 const channelNames = ["deploys", "general"] as const;
 
 function failureOf(error: unknown): SeedFailure {
@@ -112,10 +114,35 @@ function postConversation(cast: Cast): Effect.Effect<MessageId, SeedFailure> {
   });
 }
 
+function callCommand({ token, url }: BoardConnection, cast: Cast): Effect.Effect<void, SeedFailure> {
+  return Effect.gen(function* rollback() {
+    const admin = clientAt(url, token);
+    const handler = yield* createIdentity(url, admin, { kind: "agent", name: "rollback", owner: "ada" });
+    yield* call(() =>
+      admin.addCommand({
+        description: "Roll back to a version",
+        name: "rollback",
+        schema: rollbackSchema,
+        url: unreachableHandler,
+      }),
+    );
+    const { threadId } = yield* call(() =>
+      cast.ada.client.callCommand("rollback", { channel: "deploys", data: { version: "1.4.1" } }),
+    );
+    yield* post(handler, {
+      channel: "deploys",
+      data: { status: "done", version: "1.4.1" },
+      replyTo: threadId,
+      text: "Rolled back to 1.4.1.",
+    });
+  });
+}
+
 function seedBoard(connection: BoardConnection): Effect.Effect<SeededBoard, SeedFailure> {
   return Effect.gen(function* seed() {
     const cast = yield* createCast(connection);
     const thread = yield* postConversation(cast);
+    yield* callCommand(connection, cast);
     const identities = Arr.map([cast.ada, cast.grace, cast.releaseBot, cast.triageAgent], ({ created }) => created);
     return { channels: channelNames, identities, thread };
   });

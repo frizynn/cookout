@@ -14,7 +14,10 @@
  * labelled box to write in, such as a reply, whose text and caret its owner
  * holds, and `SubmitButton` sends it; `Suggestions` is a named list of options
  * to pick from under a box, such as mentions, which leaves the box focused;
- * `Button` is any other button.
+ * `Button` is any other button. `FieldsForm` is a form of several fields,
+ * `Select` a labelled pick in it from its `SelectOption`s, `DataArea` a
+ * labelled box in it to write JSON in, and `DataBlock` a
+ * named block of JSON, such as a message's data.
  */
 export { Alert } from "./lib/alert.tsx";
 export { AppShell } from "./lib/app-shell.tsx";
@@ -24,6 +27,9 @@ export { Button } from "./lib/button.tsx";
 export { Card } from "./lib/card.tsx";
 export { CardBody } from "./lib/card-body.tsx";
 export { CardHeader } from "./lib/card-header.tsx";
+export { DataArea } from "./lib/data-area.tsx";
+export { DataBlock } from "./lib/data-block.tsx";
+export { FieldsForm } from "./lib/fields-form.tsx";
 export { Form } from "./lib/form.tsx";
 export { Heading } from "./lib/heading.tsx";
 export { ItemList } from "./lib/item-list.tsx";
@@ -31,6 +37,8 @@ export { ItemRow } from "./lib/item-row.tsx";
 export { LinkList } from "./lib/link-list.tsx";
 export { LinkRow } from "./lib/link-row.tsx";
 export { Muted } from "./lib/muted.tsx";
+export { Select } from "./lib/select.tsx";
+export { SelectOption } from "./lib/select-option.tsx";
 export { Skeleton } from "./lib/skeleton.tsx";
 export { Suggestions } from "./lib/suggestions.tsx";
 export { SubmitButton } from "./lib/submit-button.tsx";

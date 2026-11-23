@@ -41,9 +41,10 @@ env $(cat /tmp/cookout-dev.env) pnpm -s seed > /tmp/cookout-seed.json
 - channels `general` and `deploys`;
 - in `general`, a thread whose top-level message is from `ada`, with replies from `triage-agent` and `grace`, and a reply from `ada` to `grace`'s reply, which joins the same thread; then a second top-level message;
 - in `deploys`, a message from `release-bot` with JSON `data`;
+- a command `rollback` (schema: a string `version`, handler URL `http://127.0.0.1:9/rollback`, where nothing listens) whose handler is an agent `rollback` (owner `ada`); `ada` calls it in `deploys` with `{"version":"1.4.1"}`, and its handler replies in the call's thread with the result `Rolled back to 1.4.1.` and data `{"status":"done","version":"1.4.1"}`;
 - inbox state: `grace` subscribes to `deploys`, `release-bot` follows the thread before anyone replies, and `grace`'s reply mentions `triage-agent`.
 
-It prints `{ channels, identities: [{ identity, token }], thread }` as JSON, where `thread` is the top-level message's ID. Seed a board only once: a second run is refused with `identity_exists` and exit code 1. Message IDs count up from 1 across the whole board, so on a fresh seed the thread is message 1, its replies are 2, 3 and 5, the second top-level message in `general` is 4, and the `deploys` message is 6.
+It prints `{ channels, identities: [{ identity, token }], thread }` as JSON, where `thread` is the top-level message's ID. Seed a board only once: a second run is refused with `identity_exists` and exit code 1. Message IDs count up from 1 across the whole board, so on a fresh seed the thread is message 1, its replies are 2, 3 and 5, the second top-level message in `general` is 4, the `deploys` message is 6, the `/rollback` call message is 7 and its result reply is 8. The printed identities are the four above; the `rollback` agent's token isn't printed. The call's webhook delivery fails, so after its retries the server also posts a failure reply in the call's thread.
 
 To act as a seeded identity, put its token in `COOKOUT_TOKEN` after the env file's:
 
@@ -123,7 +124,7 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts 
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts unsubscribe deploys
 ```
 
-`follow` and `unfollow` take any message in the thread and print `{ "thread", "following" }`; an unfollow lasts until the identity next replies in the thread or is mentioned in it. `subscribe` and `unsubscribe` print `{ "channel", "subscribed" }`. After the subscribe, the `inbox` adds `[6,["subscribed-channel"]]`, the `deploys` message.
+`follow` and `unfollow` take any message in the thread and print `{ "thread", "following" }`; an unfollow lasts until the identity next replies in the thread or is mentioned in it. `subscribe` and `unsubscribe` print `{ "channel", "subscribed" }`. After the subscribe, the `inbox` adds `[6,["subscribed-channel"]]` and `[7,["subscribed-channel"]]`, the `deploys` messages.
 
 ## Watch the live stream
 
@@ -392,7 +393,7 @@ env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(
 agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" && agent-browser --session cookout snapshot
 ```
 
-On a fresh seed the first inbox gives `[5,["followed-thread"]]` and `[6,["subscribed-channel"]]`. Clicking `#deploys` moves to `http://127.0.0.1:3000/#/channels/deploys`, and the second inbox gives only `[5,["followed-thread"]]`: the `deploys` message was acked by viewing it (the reply, 5, is in a thread, which the channel view doesn't ack). The `#general` snapshot, opened as a new page with the same cookie, shows a list named `Messages`: `@ada` with the thread's top-level message and `3 replies`, then `@grace` with `Lunch at 12:30.` and `0 replies`. To see `Load more`, post more than 50 top-level messages to a channel and open it:
+On a fresh seed the first inbox gives `[5,["followed-thread"]]`, `[6,["subscribed-channel"]]` and `[7,["subscribed-channel"]]`. Clicking `#deploys` moves to `http://127.0.0.1:3000/#/channels/deploys`, and the second inbox gives only `[5,["followed-thread"]]`: the `deploys` messages were acked by viewing it (the reply, 5, is in a thread, which the channel view doesn't ack). The `#general` snapshot, opened as a new page with the same cookie, shows a list named `Messages`: `@ada` with the thread's top-level message and `3 replies`, then `@grace` with `Lunch at 12:30.` and `0 replies`. To see `Load more`, post more than 50 top-level messages to a channel and open it:
 
 ```sh
 env $(cat /tmp/cookout-built.env) node app/main.ts channel create busy
@@ -420,7 +421,7 @@ env $(cat /tmp/cookout-built.env) node app/main.ts thread get 1 | jq -c '[.repli
 agent-browser --session cookout find text "← #general" click && agent-browser --session cookout get url
 ```
 
-The first inbox gives `[5,["followed-thread"]]` and `[6,["subscribed-channel"]]` (only `[5,["followed-thread"]]` if you ran "Open a channel" first). Clicking `3 replies` moves to `http://127.0.0.1:3000/#/channels/general/threads/1`; the snapshot shows the heading `Thread in #general`, `@ada`'s top-level message, and the replies from `@triage-agent`, `@grace` and `@ada`. The second inbox no longer has `[5,["followed-thread"]]`: opening the thread acked its latest reply. After `Send reply` the list ends with `@grace` and `On it after lunch.`, the server's thread ends with `[7,"grace","On it after lunch."]` (a later ID if you posted to `busy` first), and the back link moves to `http://127.0.0.1:3000/#/channels/general`. A thread that doesn't exist (`#/channels/general/threads/999`) shows `Couldn't load the thread (message_not_found): There is no message 999.`
+The first inbox gives `[5,["followed-thread"]]`, `[6,["subscribed-channel"]]` and `[7,["subscribed-channel"]]` (only `[5,["followed-thread"]]` if you ran "Open a channel" first). Clicking `3 replies` moves to `http://127.0.0.1:3000/#/channels/general/threads/1`; the snapshot shows the heading `Thread in #general`, `@ada`'s top-level message, and the replies from `@triage-agent`, `@grace` and `@ada`. The second inbox no longer has `[5,["followed-thread"]]`: opening the thread acked its latest reply. After `Send reply` the list ends with `@grace` and `On it after lunch.`, the server's thread ends with `[9,"grace","On it after lunch."]` (a later ID if you posted to `busy` first), and the back link moves to `http://127.0.0.1:3000/#/channels/general`. A thread that doesn't exist (`#/channels/general/threads/999`) shows `Couldn't load the thread (message_not_found): There is no message 999.`
 
 ## Mention someone in a reply
 
@@ -433,6 +434,23 @@ agent-browser --session cookout find role button click --name "@triage-agent" &&
 ```
 
 The first snapshot shows a list named `Mention suggestions` under the box with one button, `@triage-agent`; a bare `@` lists every identity, humans and agents, sorted by name. After choosing it the list is gone, the box still has the focus, and it reads `Can @triage-agent post the run?`. An `@` straight after a letter (`me@admin`) suggests nobody. Each thread keeps its own draft.
+
+## See a command call and call a command in the web UI
+
+A message's data shows under its text as a block of JSON named `Data`. A command call message (text `/<command>`, data `{ command, data }`) shows only the data it called the command with, in a block named `Call to /<command>`, so a handler's result reply shows its `text` and its `Data`. Under a channel's messages, a form named `Call a command` has a `Command` pick of every registered command (`/<name>`), a `Data` box for JSON and a `Call` button: a good call adds the call message to the end of the channel; data the command's schema refuses shows an alert, `Couldn't call /<command> (invalid_request): …`, with a list named `Schema errors` of `<path>: <message>` rows, and posts nothing. With no commands registered there is no form. Logged in as `grace` (the "Log in to the web UI" recipe, same session), open the seeded call's thread, then call `rollback` with bad data and with good:
+
+```sh
+agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/deploys/threads/7" && agent-browser --session cookout wait --text "Rolled back to 1.4.1." && agent-browser --session cookout snapshot
+agent-browser --session cookout screenshot /tmp/cookout-command-thread.png
+agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/deploys" && agent-browser --session cookout wait 'textarea[name=data]'
+agent-browser --session cookout fill 'textarea[name=data]' '{"version":1}'
+agent-browser --session cookout find role button click --name "Call" && agent-browser --session cookout wait '[role=alert]' && agent-browser --session cookout get text '[role=alert]'
+agent-browser --session cookout screenshot --full /tmp/cookout-command-errors.png
+agent-browser --session cookout fill 'textarea[name=data]' '{"version":"1.4.0"}'
+agent-browser --session cookout find role button click --name "Call" && agent-browser --session cookout wait --text "0 replies" && agent-browser --session cookout snapshot
+```
+
+The thread shows `@ada`'s `/rollback` with `Call to /rollback` `{"version": "1.4.1"}` as its parent message, and the reply `@rollback` `Rolled back to 1.4.1.` with its `Data` `{"status": "done", "version": "1.4.1"}`. The bad call's alert is `Couldn't call /rollback (invalid_request): The data doesn't follow the schema of the command rollback.` with the row `data.version: must be string`. The good call ends the `Messages` list with `@grace` `/rollback`, `Call to /rollback` `{"version": "1.4.0"}` and `0 replies`. Data that isn't JSON is refused before it is sent: `Couldn't call /rollback (invalid_json): The data isn't JSON.`
 
 ## Run the web tests
 

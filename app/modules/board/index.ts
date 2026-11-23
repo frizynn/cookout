@@ -8,14 +8,19 @@
  * is the thread's parent and replies, its own store too: when its first reader
  * subscribes it loads the thread and acks its latest message, so opening a
  * thread counts as reading it; `reply` posts a reply in that channel and
- * reloads the replies. A refusal
+ * reloads the replies. `commands` is every registered command, loaded when its
+ * first reader subscribes; a channel's `call` calls a command with data typed
+ * as JSON, posting the call message in that channel, and keeps the schema
+ * errors of data the command refuses. A refusal
  * keeps the server's error code; a server that can't be reached is `unreachable`.
  */
 import type { Channel, CookoutClient, MessageId } from "../sdk/index.ts";
 import type { ChannelMessages, MessagesClient } from "./lib/channel-messages.ts";
+import type { Commands, CommandsClient } from "./lib/commands.ts";
 import type { ThreadClient, ThreadMessages } from "./lib/thread-messages.ts";
 import type { Failure } from "./lib/failure.ts";
 import { createChannelMessages } from "./lib/channel-messages.ts";
+import { createCommands } from "./lib/commands.ts";
 import { createThreadMessages } from "./lib/thread-messages.ts";
 import { failure } from "./lib/failure.ts";
 
@@ -41,10 +46,12 @@ export interface Board {
   readonly channel: (name: string) => ChannelMessages;
   /** The thread holding the message in the channel: the same store each time for one channel and ID. */
   readonly thread: (channel: string, id: MessageId) => ThreadMessages;
+  /** Every registered command, sorted by name: one store, loaded when its first reader subscribes. */
+  readonly commands: Commands;
 }
 
 /** What the board store needs of the SDK. */
-export type BoardClient = Pick<CookoutClient, "listChannels"> & MessagesClient & ThreadClient;
+export type BoardClient = Pick<CookoutClient, "listChannels"> & CommandsClient & MessagesClient & ThreadClient;
 
 /** What the board is made with: an SDK client with the token of whoever is looking, and `pageSize` top-level messages a page, 50 unless given. */
 export interface BoardOptions {
@@ -88,6 +95,7 @@ export function createBoard(options: BoardOptions): Board {
       channels.set(name, messages);
       return messages;
     },
+    commands: createCommands(client),
     snapshot: () => current,
     subscribe: (listener) => {
       listeners.add(listener);
@@ -106,4 +114,6 @@ export function createBoard(options: BoardOptions): Board {
 }
 
 export type { ChannelMessages, ChannelMessagesState } from "./lib/channel-messages.ts";
+export type { CallState, SchemaProblem } from "./lib/command-call.ts";
+export type { Commands } from "./lib/commands.ts";
 export type { ThreadMessages, ThreadMessagesState } from "./lib/thread-messages.ts";

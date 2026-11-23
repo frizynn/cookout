@@ -1,5 +1,6 @@
 import { BackLink, Card, CardHeader, Heading } from "../../design-system/index.tsx";
 import type { Board } from "../../board/index.ts";
+import { CommandForm } from "./command-form.tsx";
 import { MessageRows } from "./message-rows.tsx";
 import type { ReactNode } from "react";
 
@@ -18,6 +19,7 @@ export function ChannelView(props: ChannelProps): ReactNode {
         <Heading>{`#${props.channel}`}</Heading>
       </CardHeader>
       <MessageRows channel={props.channel} messages={props.board.channel(props.channel)} />
+      <CommandForm commands={props.board.commands} messages={props.board.channel(props.channel)} />
     </Card>
   );
 }

@@ -40,16 +40,40 @@ interface SuggestionsParts {
   readonly onChoose: (option: string) => void;
 }
 
+interface FieldsFormParts extends Parts {
+  readonly label: string;
+  readonly onSubmit: (field: (name: string) => string) => void;
+}
+
+interface SelectParts extends Parts {
+  readonly label: string;
+  readonly name: string;
+}
+
+interface SelectOptionParts {
+  readonly label: string;
+  readonly value: string;
+}
+
+interface DataBlockParts {
+  readonly label: string;
+  readonly value: unknown;
+}
+
 interface SkeletonParts {
   readonly width: "short" | "long";
 }
 
 export type {
   ButtonParts,
+  DataBlockParts,
+  FieldsFormParts,
   FormParts,
   LinkParts,
   ListParts,
   Parts,
+  SelectOptionParts,
+  SelectParts,
   SkeletonParts,
   SuggestionsParts,
   TextAreaParts,
