@@ -16,6 +16,7 @@ interface CommandPromptProps {
   readonly messages: ChannelMessages;
   readonly call: CallState;
   readonly callData: string;
+  readonly onBack: () => void;
 }
 
 export function CommandPrompt(props: CommandPromptProps): ReactNode {
@@ -46,6 +47,7 @@ export function CommandPrompt(props: CommandPromptProps): ReactNode {
       description={command.description ?? null}
       label={`Call /${command.name}`}
       onCancel={handleCancel}
+      onEscape={props.onBack}
       onSubmit={handleSubmit}
       title={`/${command.name}`}
     >

@@ -1,7 +1,8 @@
 import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
 import { adminClient, newIdentity } from "./identities.ts";
-import { expect, it, onTestFinished, vi } from "vitest";
+import { expect, it } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
+import { clockStoppedAt } from "./clock.ts";
 import { messagesIn } from "./messages.ts";
 import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";
@@ -22,14 +23,6 @@ async function closeBoth(unmount: () => void, stream: Promise<EventStream>): Pro
   unmount();
   const events = await stream;
   await events.close();
-}
-
-function clockStoppedAt(moment: string): void {
-  vi.useFakeTimers({ now: 0, toFake: ["Date"] });
-  vi.setSystemTime(moment);
-  onTestFinished(() => {
-    vi.useRealTimers();
-  });
 }
 
 async function openLive(name: string, at: (parent: Message) => string): Promise<LiveView> {

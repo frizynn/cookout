@@ -1,15 +1,22 @@
-import { timeAgo } from "../../format/index.ts";
+import { everySecond, timeAgo, timeOf } from "../../format/index.ts";
+import type { MessageTime } from "../../format/index.ts";
 import { useSyncExternalStore } from "react";
 
-function onTabShown(listener: () => void): () => void {
+function onTick(listener: () => void): () => void {
+  const stop = everySecond(listener);
   globalThis.addEventListener("visibilitychange", listener);
   return () => {
+    stop();
     globalThis.removeEventListener("visibilitychange", listener);
   };
 }
 
 function useTimeAgo(at: string): string {
-  return useSyncExternalStore(onTabShown, () => timeAgo(at));
+  return useSyncExternalStore(onTick, () => timeAgo(at));
 }
 
-export { useTimeAgo };
+function useMessageTime(at: string): MessageTime & { readonly ago: string } {
+  return { ...timeOf(at), ago: useTimeAgo(at) };
+}
+
+export { useMessageTime, useTimeAgo };

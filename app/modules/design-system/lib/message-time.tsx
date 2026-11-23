@@ -15,7 +15,7 @@ export function MessageTime(parts: ShownTimeParts): ReactNode {
       dateTime={parts.iso}
       title={parts.full}
     >
-      {parts.short}
+      {parts.shown}
     </time>
   );
 }

@@ -5,7 +5,7 @@ import { expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import { inPane } from "./regions.ts";
 import { messagesIn } from "./messages.ts";
-import { openAt } from "./render.tsx";
+import { openWithClockStopped } from "./clock.ts";
 
 const ONE_A_PAGE = 1;
 const TWO_A_PAGE = 2;
@@ -76,7 +76,7 @@ it("the channel view shows the channel's top-level messages, oldest first, with 
   await adminClient().createChannel({ name: "web-channel-shows" });
   const parent = await threadWithReplies("web-channel-shows", TWO_A_PAGE);
   await postInOrder("web-channel-shows", ["Second", "Third"]);
-  const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-shows" });
+  const close = openWithClockStopped({ client: adminClient(), hash: "#/channels/web-channel-shows" });
 
   const shown = await shownMessages();
 
@@ -98,7 +98,7 @@ it("a message with one reply says 1 reply", { timeout: 5000 }, async () => {
 
   await adminClient().createChannel({ name: "web-channel-one-reply" });
   await threadWithReplies("web-channel-one-reply", ONE_A_PAGE);
-  const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-one-reply" });
+  const close = openWithClockStopped({ client: adminClient(), hash: "#/channels/web-channel-one-reply" });
 
   await expect(shownMessages()).resolves.toStrictEqual(["adminFirst1 replyLast reply just nowView thread →"]);
 
@@ -109,7 +109,11 @@ it('"Load older messages" loads the older messages, until there are none', { tim
   expect.hasAssertions();
 
   await channelWith("web-channel-pages", ["One", "Two", "Three"]);
-  const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-pages", pageSize: TWO_A_PAGE });
+  const close = openWithClockStopped({
+    client: adminClient(),
+    hash: "#/channels/web-channel-pages",
+    pageSize: TWO_A_PAGE,
+  });
   const firstPage = await shownMessages();
 
   fireEvent.click(inPane().getByRole("button", { name: "Load older messages" }));
@@ -128,7 +132,11 @@ it('clicking "Load older messages" twice before it answers loads the older page 
   expect.hasAssertions();
 
   await channelWith("web-channel-double-click", ["One", "Two", "Three"]);
-  const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-double-click", pageSize: TWO_A_PAGE });
+  const close = openWithClockStopped({
+    client: adminClient(),
+    hash: "#/channels/web-channel-double-click",
+    pageSize: TWO_A_PAGE,
+  });
   await shownMessages();
 
   fireEvent.click(inPane().getByRole("button", { name: "Load older messages" }));
@@ -149,7 +157,7 @@ it("viewing a channel acks its newest top-level message, so its messages leave t
   await subscribedTo("web-channel-read", reader.client);
   await postInOrder("web-channel-read", ["Older", "Newest"]);
   const before = await reader.client.inbox();
-  const close = openAt({ client: reader.client, hash: "#/channels/web-channel-read" });
+  const close = openWithClockStopped({ client: reader.client, hash: "#/channels/web-channel-read" });
   await shownMessages();
 
   const after = await vi.waitUntil(async () => {
@@ -166,7 +174,7 @@ it("a channel with nothing older says it is the start of the channel", { timeout
   expect.hasAssertions();
 
   await channelWith("web-channel-empty", []);
-  const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-empty" });
+  const close = openWithClockStopped({ client: adminClient(), hash: "#/channels/web-channel-empty" });
 
   const start = await screen.findByRole("heading", { level: 2, name: "Welcome to #web-channel-empty" });
 
@@ -182,7 +190,7 @@ it("a channel with nothing older says it is the start of the channel", { timeout
 it("a channel that doesn't exist shows Nothing here", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-missing" });
+  const close = openWithClockStopped({ client: adminClient(), hash: "#/channels/web-channel-missing" });
 
   const heading = await screen.findByRole("heading", { level: 1, name: "Nothing here" });
 
@@ -196,7 +204,7 @@ it("a deleted channel shows Nothing here", { timeout: 5000 }, async () => {
 
   await channelWith("web-channel-deleted", ["Soon gone"]);
   await adminClient().deleteChannel("web-channel-deleted");
-  const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-deleted" });
+  const close = openWithClockStopped({ client: adminClient(), hash: "#/channels/web-channel-deleted" });
 
   const heading = await screen.findByRole("heading", { level: 1, name: "Nothing here" });
 
@@ -211,7 +219,7 @@ it("a refused ack says the channel couldn't be marked read", { timeout: 5000 }, 
   await channelWith("web-channel-ack-refused", ["Hello"]);
   const agent = await newIdentity({ kind: "agent", name: "web-channel-left" });
   const client = await ackingWithALeftSession(agent.token, "web-channel-left");
-  const close = openAt({ client, hash: "#/channels/web-channel-ack-refused" });
+  const close = openWithClockStopped({ client, hash: "#/channels/web-channel-ack-refused" });
 
   const alert = await alertSaying("Couldn't mark the channel read");
 
@@ -229,7 +237,11 @@ it("a refused older page says so and keeps the messages shown", { timeout: 5000 
     revoked: "web-channel-rotated",
     viewer: "web-channel-viewer",
   });
-  const close = openAt({ client: reader.client, hash: "#/channels/web-channel-older-refused", pageSize: ONE_A_PAGE });
+  const close = openWithClockStopped({
+    client: reader.client,
+    hash: "#/channels/web-channel-older-refused",
+    pageSize: ONE_A_PAGE,
+  });
   await shownMessages();
   await reader.rotateToken();
 

@@ -180,6 +180,7 @@ interface DataBlockParts {
 interface MessageTimeParts {
   readonly iso: string;
   readonly short: string;
+  readonly ago: string;
   readonly full: string;
 }
 
@@ -231,7 +232,10 @@ interface MessageHeaderParts {
   readonly time: MessageTimeParts;
 }
 
-interface ShownTimeParts extends MessageTimeParts {
+interface ShownTimeParts {
+  readonly iso: string;
+  readonly full: string;
+  readonly shown: string;
   readonly hidden: boolean;
 }
 

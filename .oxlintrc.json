@@ -1129,10 +1129,6 @@
             "message": "Use Effect's Clock and Schedule on the backend."
           },
           {
-            "name": "setInterval",
-            "message": "Use Effect's Clock and Schedule on the backend."
-          },
-          {
             "name": "setImmediate",
             "message": "Use Effect's Clock and Schedule on the backend."
           },

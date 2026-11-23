@@ -36,6 +36,7 @@ interface DraftSnapshot {
   readonly commands: readonly Command[];
   readonly command: Command | null;
   readonly highlighted: number;
+  readonly returned: boolean;
 }
 
 interface Sources {
@@ -43,7 +44,15 @@ interface Sources {
   readonly commands: () => readonly Command[];
 }
 
-const EMPTY = { caret: NOTHING, command: null, commands: [], highlighted: NOTHING, suggestions: [], text: "" };
+const EMPTY = {
+  caret: NOTHING,
+  command: null,
+  commands: [],
+  highlighted: NOTHING,
+  returned: false,
+  suggestions: [],
+  text: "",
+};
 
 type Typed = Pick<DraftSnapshot, "caret" | "text">;
 
@@ -51,7 +60,7 @@ function written(sources: Sources, previous: DraftSnapshot, typed: Typed): Draft
   const { caret, text } = typed;
   const commands = commandsFor(sources.commands(), text);
   const suggestions = suggestionsFor(sources.identities(), text, caret);
-  return { caret, command: previous.command, commands, highlighted: NOTHING, suggestions, text };
+  return { caret, command: previous.command, commands, highlighted: NOTHING, returned: false, suggestions, text };
 }
 
 function mentioned(sources: Sources, snapshot: DraftSnapshot, name: string): DraftSnapshot {
@@ -64,7 +73,7 @@ function mentioned(sources: Sources, snapshot: DraftSnapshot, name: string): Dra
 function picked(snapshot: DraftSnapshot, commands: readonly Command[]): DraftSnapshot {
   let result = snapshot;
   for (const command of commands) {
-    result = { ...EMPTY, command };
+    result = { ...EMPTY, caret: snapshot.caret, command, text: snapshot.text };
   }
   return result;
 }
@@ -87,6 +96,10 @@ function dismissed(snapshot: DraftSnapshot): DraftSnapshot {
   return { ...snapshot, commands: [], highlighted: NOTHING, suggestions: [] };
 }
 
+function unpicked(snapshot: DraftSnapshot): DraftSnapshot {
+  return { ...dismissed(snapshot), command: null, returned: true };
+}
+
 interface Changes {
   readonly written: (previous: DraftSnapshot, typed: Typed) => DraftSnapshot;
   readonly mentioned: (snapshot: DraftSnapshot, name: string) => DraftSnapshot;
@@ -94,6 +107,7 @@ interface Changes {
   readonly chosen: (snapshot: DraftSnapshot) => DraftSnapshot;
   readonly highlightMoved: (snapshot: DraftSnapshot, direction: "down" | "up") => DraftSnapshot;
   readonly dismissed: (snapshot: DraftSnapshot) => DraftSnapshot;
+  readonly unpicked: (snapshot: DraftSnapshot) => DraftSnapshot;
 }
 
 function changesFor(sources: Sources): Changes {
@@ -103,6 +117,7 @@ function changesFor(sources: Sources): Changes {
     highlightMoved,
     mentioned: (snapshot, name) => mentioned(sources, snapshot, name),
     picked,
+    unpicked,
     written: (previous, typed) => written(sources, previous, typed),
   };
 }

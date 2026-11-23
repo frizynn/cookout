@@ -95,7 +95,7 @@ it.effect("a message with replies ends its group, so the next one shows its auth
 
     expect(shown).toStrictEqual([
       "[Thursday, 1 January]",
-      expect.stringMatching(/^adaasked1 replyLast reply \d+d ago/u),
+      expect.stringMatching(/^adaasked1 replyLast reply \d{1,2} [A-Z][a-z]{2} \d\d:\d\d/u),
       "adaagain",
     ]);
   }).pipe(Effect.provide(testCookout())),

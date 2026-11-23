@@ -47,6 +47,7 @@ export function NewChannelForm(props: NewChannelFormProps): ReactNode {
       description={null}
       label={TEXT.title}
       onCancel={handleCancel}
+      onEscape={handleCancel}
       onSubmit={handleSubmit}
       title={TEXT.title}
     >

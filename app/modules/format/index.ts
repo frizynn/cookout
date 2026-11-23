@@ -5,24 +5,52 @@
  * day for a separator: `Today`, `Yesterday`, or the weekday and date
  * (`Monday, 23 November`). `dayOf(iso)` is the local day a time falls on, and
  * `millisOf(iso)` its milliseconds, to tell how far apart two times are.
- * `timeAgo(iso)` is how long ago a time was (`5m ago`), by the current time.
- * This is the web UI's one reader of `Date`.
+ * `timeAgo(iso)` is how long ago a time was (`5 minutes ago`), by the current
+ * time, and from a day on its date and time (`Yesterday 14:05`);
+ * `everySecond(listener)` ticks it live. This is the web UI's one reader of
+ * `Date` and its one clock.
  */
 const DAY = 1;
-const MINUTE = 60_000;
+const SECOND = 1000;
+const TEN_SECONDS = 10;
+const SECONDS_IN_MINUTE = 60;
 const MINUTES_IN_HOUR = 60;
 const MINUTES_IN_DAY = 1440;
-const NONE = 0;
+const ONE = 1;
 
 const clock = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" });
 const full = new Intl.DateTimeFormat("en-GB", { dateStyle: "full", timeStyle: "short" });
 const weekday = new Intl.DateTimeFormat("en-GB", { weekday: "long" });
 const date = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long" });
+const dayMonth = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" });
+const hourMinute = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", minute: "2-digit" });
 
-const TEXT = { today: "Today", yesterday: "Yesterday" } as const;
+const TEXT = { justNow: "just now", today: "Today", yesterday: "Yesterday" } as const;
 
-function minuteOf(milliseconds: number): number {
-  return Math.floor(milliseconds / MINUTE);
+function counted(count: number, unit: string): string {
+  if (count === ONE) {
+    return `1 ${unit} ago`;
+  }
+  return `${String(count)} ${unit}s ago`;
+}
+
+function dated(at: Date): string {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - DAY);
+  if (at.toDateString() === yesterday.toDateString()) {
+    return `${TEXT.yesterday} ${hourMinute.format(at)}`;
+  }
+  return `${dayMonth.format(at)} ${hourMinute.format(at)}`;
+}
+
+function minutesAgo(minutes: number, at: Date): string {
+  if (minutes < MINUTES_IN_HOUR) {
+    return counted(minutes, "minute");
+  }
+  if (minutes < MINUTES_IN_DAY) {
+    return counted(Math.floor(minutes / MINUTES_IN_HOUR), "hour");
+  }
+  return dated(at);
 }
 
 /** A message's time three ways: the ISO time, a short time to show, and the full date and time for a hover. */
@@ -79,20 +107,32 @@ export function dayLabel(iso: string): string {
 }
 
 /**
- * How long ago a time was, in whole minutes, hours or days, by the current time.
+ * How long ago a time was, by the current time: in tens of seconds, then
+ * whole minutes and hours, and from a day on as its date and time.
  * @param iso The ISO time.
- * @returns `just now`, `5m ago`, `2h ago` or `3d ago`.
+ * @returns `just now`, `10 seconds ago`, `1 minute ago`, `5 minutes ago`,
+ * `2 hours ago`, `Yesterday 14:05` or `21 Nov 14:05`.
  */
 export function timeAgo(iso: string): string {
-  const minutes = minuteOf(Date.now()) - minuteOf(Date.parse(iso));
-  if (minutes <= NONE) {
-    return "just now";
+  const at = new Date(iso);
+  const seconds = Math.floor((Date.now() - at.getTime()) / SECOND);
+  if (seconds < TEN_SECONDS) {
+    return TEXT.justNow;
   }
-  if (minutes < MINUTES_IN_HOUR) {
-    return `${String(minutes)}m ago`;
+  if (seconds < SECONDS_IN_MINUTE) {
+    return `${String(Math.floor(seconds / TEN_SECONDS) * TEN_SECONDS)} seconds ago`;
   }
-  if (minutes < MINUTES_IN_DAY) {
-    return `${String(Math.floor(minutes / MINUTES_IN_HOUR))}h ago`;
-  }
-  return `${String(Math.floor(minutes / MINUTES_IN_DAY))}d ago`;
+  return minutesAgo(Math.floor(seconds / SECONDS_IN_MINUTE), at);
+}
+
+/**
+ * Calls `listener` every second, so a time shown as how long ago ticks live.
+ * @param listener What to call.
+ * @returns The function that stops the calls.
+ */
+export function everySecond(listener: () => void): () => void {
+  const ticking = setInterval(listener, SECOND);
+  return () => {
+    clearInterval(ticking);
+  };
 }

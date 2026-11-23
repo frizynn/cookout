@@ -4,7 +4,7 @@ import { expect, it } from "vitest";
 import type { Live } from "../../live/index.ts";
 import { createLive } from "../../live/index.ts";
 import { messagesIn } from "./messages.ts";
-import { openAt } from "./render.tsx";
+import { openWithClockStopped } from "./clock.ts";
 import { screen } from "@testing-library/react";
 
 interface ScriptedView {
@@ -67,7 +67,7 @@ async function openScripted(channel: string, at: (parent: Message) => string): P
   await adminClient().createChannel({ name: channel });
   const parent = await post(channel, "The parent");
   const { live, send } = scripted();
-  const close = openAt({ client: reader.client, hash: at(parent), live });
+  const close = openWithClockStopped({ client: reader.client, hash: at(parent), live });
   await screen.findByText("The parent");
   return { close, parent, send };
 }

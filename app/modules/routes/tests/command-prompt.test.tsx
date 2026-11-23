@@ -107,6 +107,27 @@ it("cancelling a command's prompt brings back an empty message box", { timeout: 
   close();
 });
 
+it("escape in a command's prompt closes it and brings back the message box, focused, with its text kept", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await channelWithCommand({ channel: "web-command-escape", command: { name: "web-call-escape" } });
+  const close = await openChannel({ channel: "web-command-escape" });
+
+  const prompt = await pick("web-call-escape");
+  fireEvent.keyDown(prompt, { key: "Escape" });
+  const box = screen.getByLabelText<HTMLTextAreaElement>("Message");
+
+  expect([
+    screen.queryByRole("form", { name: "Call /web-call-escape" }),
+    box.value,
+    document.activeElement,
+  ]).toStrictEqual([null, "/web-call-escape", box]);
+
+  close();
+});
+
 it("text starting with / that names no registered command posts as a message", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 

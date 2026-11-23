@@ -1,10 +1,11 @@
-import { dayLabel, timeOf } from "../../format/index.ts";
 import type { Message } from "../../sdk/index.ts";
 import { MessageData } from "./message-data.tsx";
 import type { ReactNode } from "react";
 import { StandaloneMessage } from "../../design-system/index.tsx";
+import { dayLabel } from "../../format/index.ts";
 import { markOf } from "./message-marks.ts";
 import { useAuthor } from "./use-author.ts";
+import { useMessageTime } from "./use-time-ago.ts";
 
 const NO_ACTION = "";
 
@@ -29,7 +30,7 @@ export function StandaloneEntry(props: StandaloneEntryProps): ReactNode {
       mark={markOf({ me: props.me, message, open: null, parent: null })}
       name={message.author.name}
       note={note}
-      time={timeOf(message.createdAt)}
+      time={useMessageTime(message.createdAt)}
       unreadLine={false}
     >
       <MessageData me={props.me} message={message} />

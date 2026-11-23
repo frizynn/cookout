@@ -6,8 +6,8 @@ import type { ReactNode } from "react";
 import { ReplySummary } from "./reply-summary.tsx";
 import type { StreamRow } from "./stream-rows.ts";
 import type { ThreadNews } from "../../unread/index.ts";
-import { timeOf } from "../../format/index.ts";
 import { useAuthor } from "./use-author.ts";
+import { useMessageTime } from "./use-time-ago.ts";
 
 const REPLY = "Reply";
 
@@ -36,7 +36,7 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
       mark={markOf({ me: props.me, message, open: props.open, parent: props.parent })}
       name={message.author.name}
       note={note}
-      time={timeOf(message.createdAt)}
+      time={useMessageTime(message.createdAt)}
       unreadLine={props.row.unreadLine}
     >
       <MessageData me={props.me} message={message} />
