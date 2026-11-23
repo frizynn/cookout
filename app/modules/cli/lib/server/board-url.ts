@@ -6,6 +6,7 @@ import { boardUrl } from "./logins.ts";
 import { cookoutUrl } from "../../../config/server.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
 import { toFailure } from "./adapters/sdk.ts";
+import { toFailureAt } from "./adapters/http.ts";
 
 interface TypedOnTerminal {
   readonly rest: string;
@@ -79,6 +80,9 @@ const firstLineOnTerminal: Effect.Effect<string, CallFailure, Stdio.Stdio> = Eff
 });
 
 function notACookout(url: string, failure: CallFailure): CallFailure {
+  if (failure.code === "unreachable") {
+    return failure;
+  }
   return {
     code: "not_a_cookout",
     message: `${url} didn't answer as a cookout server (${failure.message}). Check the URL, and that the server is up.`,
@@ -88,7 +92,7 @@ function notACookout(url: string, failure: CallFailure): CallFailure {
 function checked(typed: string): Effect.Effect<string, CallFailure> {
   const url = boardUrlFrom(typed);
   return Effect.tryPromise({
-    catch: toFailure,
+    catch: toFailureAt(url),
     try: () => createCookoutClient({ env: NOTHING, url }).health(),
   }).pipe(
     Effect.mapError((failure) => notACookout(url, failure)),

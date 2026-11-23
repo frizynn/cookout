@@ -50,6 +50,7 @@ export { type IdentityFixtureOptions, identityFixture, identityName } from "./li
 export { type CuttableLink, cuttableLink } from "./lib/server/cuttable-link.ts";
 export { type SilentConnection, silentConnection } from "./lib/server/silent-connection.ts";
 export { type FixedAnswer, serverAnswering } from "./lib/server/fixed-answer.ts";
+export { type ForwardingProxy, forwardingProxy } from "./lib/server/forwarding-proxy.ts";
 export {
   type TwoSessions,
   freshStateFolder,

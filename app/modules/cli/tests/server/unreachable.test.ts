@@ -1,8 +1,10 @@
-import { Effect, Exit, Scope, String as Str } from "effect";
+import type { CliResult, CommandLineNeeds } from "../../../testing/server.ts";
+import { Effect, Exit, FileSystem, Scope, Stdio, String as Str, Stream } from "effect";
 import {
   TestCookout,
   answer,
   commandLineServices,
+  forwardingProxy,
   freshDatabasePath,
   runCookout,
   runCookoutWhile,
@@ -16,6 +18,8 @@ const TICK_SECONDS = 30;
 const EXIT_UNREACHABLE = 5;
 const UNKNOWN_HOST = "http://cookout.invalid";
 const CHECK_SETTINGS = "(check COOKOUT_URL, or HTTPS_PROXY if you are behind a proxy)";
+
+type Env = Readonly<Record<string, string>>;
 
 const closedPortUrl = Effect.scoped(serverAnswering({ text: "closed once the scope ends" }));
 
@@ -100,5 +104,50 @@ it.effect("with HTTPS_PROXY set, an https:// server is reached through it, and a
 
     expect(result).toMatchObject({ exitCode: 1, stderrJson: { error: { code: "unreachable" } } });
     expect(result.stderr).toMatch(/ECONNREFUSED/u);
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
+const encoder = new TextEncoder();
+
+function logIn(env: Env, token: string): Effect.Effect<CliResult, never, CommandLineNeeds> {
+  const stdin = Stdio.layerTest({ stdin: Stream.make(encoder.encode(`${token}\n`)) });
+  return runCookout({ args: ["login", "--token"], env }).pipe(Effect.provide(stdin));
+}
+
+const configFolder = Effect.flatMap(FileSystem.FileSystem, (fs) =>
+  Effect.orDie(fs.makeTempDirectoryScoped({ prefix: "cookout-config-" })),
+);
+
+it.effect("login --token goes through HTTP_PROXY, both to check the board and to check the token", () =>
+  Effect.gen(function* loginThroughProxy() {
+    const cookout = yield* TestCookout;
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const proxy = yield* forwardingProxy(cookout.url);
+    const folder = yield* configFolder;
+    const env = { COOKOUT_URL: UNKNOWN_HOST, HTTP_PROXY: proxy.url, XDG_CONFIG_HOME: folder };
+
+    const result = yield* logIn(env, ada.token);
+    const forwarded = yield* proxy.forwarded;
+
+    expect(result).toMatchObject({ exitCode: 0, stdoutJson: { identity: { name: "ada" } } });
+    expect(forwarded).toStrictEqual(["GET /v1/health", "GET /v1/whoami"]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("login through a dead HTTPS_PROXY gives unreachable, naming the board, with a token or by browser", () =>
+  Effect.gen(function* loginDeadProxy() {
+    const deadProxy = yield* closedPortUrl;
+    const folder = yield* configFolder;
+    const board = "https://cookout.invalid";
+    const env = { COOKOUT_URL: board, HTTPS_PROXY: deadProxy, XDG_CONFIG_HOME: folder };
+
+    const withToken = yield* logIn(env, "any");
+    const byBrowser = yield* runCookout({ args: ["login"], env });
+
+    expect([withToken, byBrowser]).toMatchObject([
+      { exitCode: 1, stderrJson: { error: { code: "unreachable" } } },
+      { exitCode: 1, stderrJson: { error: { code: "unreachable" } } },
+    ]);
+    expect(withToken.stderr).toContain(`cannot reach ${board}: `);
   }).pipe(Effect.provide(commandLineServices)),
 );

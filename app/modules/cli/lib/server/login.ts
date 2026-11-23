@@ -3,6 +3,7 @@ import { Effect, Option, Stdio, String as Str, Stream } from "effect";
 import { boardToLogOutOf, checked, firstLineOnTerminal, givenBoard, typedOnTerminal } from "./board-url.ts";
 import { logInByBrowser, revokedOnServer } from "./browser-login.ts";
 import { loginFor, removeLogin, saveLogin } from "./logins.ts";
+import { throughProxy, toFailureAt } from "./adapters/http.ts";
 import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
 import type { CommandFailed } from "./output.ts";
@@ -79,7 +80,7 @@ function logIn(flag: Option.Option<string>): Effect.Effect<LoggedIn, CallFailure
       catch: toFailure,
       try: () => createCookoutClient({ env: NOTHING, token, url }),
     });
-    const { identity } = yield* Effect.tryPromise({ catch: toFailure, try: () => client.whoami() });
+    const { identity } = yield* Effect.tryPromise({ catch: toFailureAt(url), try: () => client.whoami() });
     if (identity.kind !== "human") {
       return yield* Effect.fail(humanOnly(identity.name));
     }
@@ -114,6 +115,12 @@ function logInWith({ token, url }: LoginFlags): Effect.Effect<LoggedIn, CallFail
   return Effect.flatMap(boardForBrowser(url), logInByBrowser);
 }
 
+function proxied<Value>(
+  run: Effect.Effect<Value, CallFailure, LoginNeeds>,
+): Effect.Effect<Value, CallFailure, LoginNeeds> {
+  return Effect.scoped(Effect.andThen(throughProxy, run));
+}
+
 const tokenFlag = Flag.Boolean("token").pipe(
   Flag.withDefault(false),
   Flag.withDescription("Read a human identity's token from stdin, never from the command line."),
@@ -134,7 +141,7 @@ const loginUrlFlag = Flag.String("url").pipe(
 type LoginCommand = Command.Command<"login", LoginFlags, object, CommandFailed, LoginNeeds>;
 
 const loginCommand: LoginCommand = Command.make("login", { token: tokenFlag, url: loginUrlFlag }, (flags) =>
-  answered(logInWith(flags)),
+  logInWith(flags).pipe(proxied, answered),
 ).pipe(
   Command.withDescription(
     "Log this machine in to a board: check it answers as a cookout, print a link and a code, and wait while a person " +
@@ -151,7 +158,9 @@ const logoutUrlFlag = Flag.String("url").pipe(
   Flag.withDescription("The board to log out of. Default: COOKOUT_URL, else this machine's default board."),
 );
 
-const logoutCommand = Command.make("logout", { url: logoutUrlFlag }, ({ url }) => logOut(url).pipe(answered)).pipe(
+const logoutCommand = Command.make("logout", { url: logoutUrlFlag }, ({ url }) =>
+  logOut(url).pipe(proxied, answered),
+).pipe(
   Command.withDescription(
     "Remove this machine's Login for a board, and revoke it on the server if it came from a browser login.",
   ),
