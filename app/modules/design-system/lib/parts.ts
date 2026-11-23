@@ -40,16 +40,29 @@ interface SuggestionsParts {
   readonly onChoose: (option: string) => void;
 }
 
+interface CountParts {
+  readonly count: number;
+  readonly label: string;
+  readonly tone: "plain" | "mention";
+}
+
+interface RowTitleParts extends Parts {
+  readonly title: string;
+  readonly marked: boolean;
+}
+
 interface SkeletonParts {
   readonly width: "short" | "long";
 }
 
 export type {
   ButtonParts,
+  CountParts,
   FormParts,
   LinkParts,
   ListParts,
   Parts,
+  RowTitleParts,
   SkeletonParts,
   SuggestionsParts,
   TextAreaParts,

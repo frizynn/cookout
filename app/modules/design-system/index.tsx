@@ -14,7 +14,10 @@
  * labelled box to write in, such as a reply, whose text and caret its owner
  * holds, and `SubmitButton` sends it; `Suggestions` is a named list of options
  * to pick from under a box, such as mentions, which leaves the box focused;
- * `Button` is any other button.
+ * `Button` is any other button. `RowTitle` is a link row's title line, bold
+ * when it has something new (`marked`), with any `Count` after it: a small
+ * number badge read out by its label, such as a channel's unread messages
+ * (`plain`) or its mentions (`mention`, which stands out).
  */
 export { Alert } from "./lib/alert.tsx";
 export { AppShell } from "./lib/app-shell.tsx";
@@ -24,6 +27,7 @@ export { Button } from "./lib/button.tsx";
 export { Card } from "./lib/card.tsx";
 export { CardBody } from "./lib/card-body.tsx";
 export { CardHeader } from "./lib/card-header.tsx";
+export { Count } from "./lib/count.tsx";
 export { Form } from "./lib/form.tsx";
 export { Heading } from "./lib/heading.tsx";
 export { ItemList } from "./lib/item-list.tsx";
@@ -31,6 +35,7 @@ export { ItemRow } from "./lib/item-row.tsx";
 export { LinkList } from "./lib/link-list.tsx";
 export { LinkRow } from "./lib/link-row.tsx";
 export { Muted } from "./lib/muted.tsx";
+export { RowTitle } from "./lib/row-title.tsx";
 export { Skeleton } from "./lib/skeleton.tsx";
 export { Suggestions } from "./lib/suggestions.tsx";
 export { SubmitButton } from "./lib/submit-button.tsx";

@@ -1,13 +1,16 @@
-import { Alert, LinkList, LinkRow, Muted, Skeleton } from "../../design-system/index.tsx";
+import { Alert, LinkList, Skeleton } from "../../design-system/index.tsx";
+import { ChannelRow } from "./channel-row.tsx";
 import type { ChannelsState } from "../../board/index.ts";
 import type { ReactNode } from "react";
+import type { UnreadState } from "../../unread/index.ts";
 
 interface ChannelRowsProps {
   readonly channels: ChannelsState;
+  readonly unread: UnreadState;
 }
 
 export function ChannelRows(props: ChannelRowsProps): ReactNode {
-  const { channels } = props;
+  const { channels, unread } = props;
   if (channels.status === "loading") {
     return (
       <div className="flex flex-col gap-3 p-4">
@@ -22,10 +25,7 @@ export function ChannelRows(props: ChannelRowsProps): ReactNode {
   return (
     <LinkList label="Channels">
       {channels.channels.map((channel) => (
-        <LinkRow href={`#/channels/${channel.name}`} key={channel.name}>
-          <span className="text-sm">{`#${channel.name}`}</span>
-          {"description" in channel && <Muted>{channel.description}</Muted>}
-        </LinkRow>
+        <ChannelRow channel={channel} key={channel.name} unread={unread} />
       ))}
     </LinkList>
   );

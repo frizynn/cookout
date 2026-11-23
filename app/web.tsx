@@ -12,6 +12,7 @@ import { createComposer } from "./modules/composer/index.ts";
 import { createCookoutClient } from "./modules/sdk/index.ts";
 import { createRoot } from "react-dom/client";
 import { createSession } from "./modules/session/index.ts";
+import { createUnread } from "./modules/unread/index.ts";
 
 const root = document.querySelector("#root");
 
@@ -22,6 +23,10 @@ if (root !== null) {
     client,
     clientWithToken: (token) => createCookoutClient({ env: {}, token, url }),
   });
-  const board = createBoard({ client, live: createLive(eventSourceAdapter(url)) });
-  createRoot(root).render(<CookoutApp board={board} composer={createComposer({ client })} session={session} />);
+  const live = createLive(eventSourceAdapter(url));
+  const board = createBoard({ client, live });
+  const unread = createUnread({ client, live });
+  createRoot(root).render(
+    <CookoutApp board={board} composer={createComposer({ client })} session={session} unread={unread} />,
+  );
 }
