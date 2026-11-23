@@ -186,10 +186,4 @@ function createThreadMessages(options: ThreadOptions): LiveThreadMessages {
   };
 }
 
-export {
-  type LiveThreadMessages,
-  type ThreadClient,
-  type ThreadMessages,
-  type ThreadMessagesState,
-  createThreadMessages,
-};
+export { type LiveThreadMessages, type ThreadClient, type ThreadMessages, createThreadMessages };
