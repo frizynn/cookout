@@ -7,6 +7,9 @@
  * A `link` is a relay on 127.0.0.1 in front of any cookout URL, the deployed
  * one too, so a test can drop the connections of the `cookout` processes it
  * runs through it and refuse their reconnects with 502 for a while.
+ * `browserFixtures` is a `cookout` fixture for Playwright's `test.extend`: one
+ * run for each browser test, closed when it ends, and its page logged in by
+ * token on request.
  */
 export {
   CookoutUnderTest,
@@ -20,4 +23,5 @@ export {
   freshStateFolder,
   postedMessageId,
 } from "./lib/server/bin.ts";
+export { type BrowserFixtures, type BrowserRun, browserFixtures } from "./lib/server/browser-run.ts";
 export { type Link, link } from "./lib/server/link.ts";

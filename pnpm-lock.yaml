@@ -118,6 +118,9 @@ importers:
       '@effect/vitest':
         specifier: 4.1.5
         version: 4.1.5(effect@4.1.5)(vitest@5.1.1)
+      '@playwright/test':
+        specifier: ^1.65.1
+        version: 1.65.1
       effect:
         specifier: ^4.1.5
         version: 4.1.5

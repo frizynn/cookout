@@ -37,6 +37,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-name: e2e-docker
+      - run: pnpm exec playwright install --with-deps --only-shell chromium
       - run: pnpm e2e:docker
 
   deploy:
