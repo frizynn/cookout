@@ -13,3 +13,11 @@ Only hashes are stored. The request ID is kept as its hash, and the credential i
 The two routes that need no token sit outside the token gate, behind a request limit per client address of `COOKOUT_REQUESTS_PER_MINUTE`, the same rate as the per-identity limit (ADR 0033).
 
 Proposed terms, awaiting Matt: login request, user code, request ID, Login credential.
+
+## Agent join requests
+
+A box with no Login (a remote dev box, a container) joins as an agent the same way, and never holds a human's credential (Matt, 2026-11-23, [#120](https://github.com/mattpocock/cookout/issues/120)). With no `COOKOUT_TOKEN`, `COOKOUT_SESSION` or Login, `cookout join --as <name>` (inside an agent tool, or with `--print-env`) starts one with `POST /v1/agent-join-requests` (no token, behind the same per-address limit), sending the name, the host and any `--idle-expiry`. The server answers a user code, a secret request ID and the approval page's path, `/#/approve-join/<code>`, valid 10 minutes unapproved.
+
+The approval page shows the code, the host, the agent approving joins as for the person viewing it (`GET /v1/agent-join-requests/:code` resolves the name as a join with a Login does, without creating anything), and the asked idle expiry, which the approver may lower but never raise past what was asked or `COOKOUT_MAX_IDLE_EXPIRY`. `PUT /v1/agent-join-requests/:code/approval` joins or creates the agent owned by the approver; for an agent with a live agent session token it is 409 `agent_session_live` unless the approver sends `force`. The next `POST /v1/agent-join-requests/collect` answers only `{ status: "approved", agentSession }`: the agent session token is made and hashed inside the storage step that removes the request, once. A wrong, expired or collected request ID, the user code included, is 404 `agent_join_request_not_found`.
+
+Agent join requests are kept apart from login requests, in their own table, so a login request's collect can never answer an agent session token, nor the reverse. Proposed terms, awaiting Matt: the route names and the code `agent_join_request_not_found`.
