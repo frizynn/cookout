@@ -142,6 +142,12 @@ module.exports = {
       to: { path: "^(node:)?sqlite$" },
     },
     {
+      from: { pathNot: `^${R}/views/lib/markdown-text\\.tsx$` },
+      name: "markdown-only-in-markdown-text",
+      severity: "error",
+      to: { path: "(^|/)node_modules/(react-markdown|remark-[^/]+|unified|micromark[^/]*|mdast-[^/]+)/" },
+    },
+    {
       from: {},
       name: "no-undeclared-dependencies",
       severity: "error",

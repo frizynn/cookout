@@ -66,7 +66,7 @@
  * `grouped` under the one before; the day's separator and the "New" line above it when it starts them; a
  * mark (`mention` or `open`); and an action link (such as Reply) shown on hover
  * or focus. `StandaloneMessage` is one named message on its own, such as a
- * thread's parent. In a message, `MessageBody` is its text, `Mention` an
+ * thread's parent. In a message, `MessageBody` holds its rendered Markdown text, `Mention` an
  * `@name` in it, `CallChip` a command call
  * and its data, `DataToggle` its data folded away, and `ThreadSummary` a link to
  * its thread: its repliers' avatars, its reply count and when it was last replied to. `RepliesDivider` heads a thread's replies, `ChannelStart` says a
