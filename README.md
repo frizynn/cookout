@@ -31,7 +31,7 @@ What `cookout watch` prints:
 - One `<n> unread, run cookout inbox` line at start.
 - One text line per new inbox item, printed the moment it arrives: `#<channel> thread:<id> @<author>: <first 120 characters> (msg <id>)`. With `--json`, one JSON object per line instead: the event `{ "type": "inbox-item", "item" }`.
 - Debug output goes to stderr only.
-- Nothing when it reconnects: reconnects are silent.
+- Nothing on stdout when the connection drops: it reconnects on its own, with backoff, and picks up after the last item it printed, so no item is missed or printed twice. Each reconnect is one `{"reconnecting":"<why>"}` note on stderr.
 - On a fatal error, a single stdout line, then a non-zero exit.
 
 Monitor batches lines that arrive within 200 ms, stops a monitor that prints too much, and ends the watch after at most 30 minutes (`timeout_ms: 1800000`). When the watch ends, start the same Monitor again.

@@ -1,16 +1,19 @@
-import type { CommandLineNeeds, Watched } from "../../../testing/server.ts";
-import { Effect, String as Str } from "effect";
+import { Array as Arr, Effect, Fiber, String as Str } from "effect";
+import type { CliResult, CommandLineNeeds, CuttableLink, TestIdentity, Watched } from "../../../testing/server.ts";
 import type { Message, MessageId } from "../../../messages/index.ts";
 import {
   TestCookout,
   answer,
   commandLineServices,
+  cuttableLink,
   freshStateFolder,
+  runCookout,
   testCookout,
   watchCookout,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import type { Scope } from "effect";
+import { TestClock } from "effect/testing";
 
 interface Posted {
   readonly parent: MessageId;
@@ -18,6 +21,11 @@ interface Posted {
 }
 
 const ONE_LINE = 1;
+const TWO_LINES = 2;
+const A_WHILE = "5 seconds";
+const HEARTBEAT_INTERVAL = "15 seconds";
+const FIRST_HEARTBEAT = 1;
+const FOUR_HEARTBEATS = 4;
 const SHOWN = 120;
 const LONG = 150;
 const LONG_TEXT = `@bob look\n\nat  ${Str.repeat(LONG)("x")}`;
@@ -65,5 +73,125 @@ it.effect("cookout watch --json prints the whole event, text untouched", () =>
     expect(stdoutJson).toMatchObject([
       { item: { message: reply, reasons: ["followed-thread", "mention"] }, type: "inbox-item" },
     ]);
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
+const passTime = Effect.forever(Effect.andThen(TestClock.adjust(A_WHILE), Effect.yieldNow));
+
+function mention(ann: TestIdentity, text: string): Effect.Effect<MessageId> {
+  return Effect.map(
+    answer(() => ann.client.createMessage({ channel: "grill", text })),
+    ({ message }) => message.id,
+  );
+}
+
+function postIntoSilence(link: CuttableLink, ann: TestIdentity): Effect.Effect<readonly [MessageId, MessageId]> {
+  return Effect.gen(function* stallThenPost() {
+    const before = yield* mention(ann, "@bob first");
+    yield* link.relayed(`id: ${String(before)}\n`);
+    yield* link.stall;
+    const unheard = yield* mention(ann, "@bob second");
+    yield* Effect.raceFirst(link.relayed(`id: ${String(unheard)}\n`), passTime);
+    return [before, unheard] as const;
+  });
+}
+
+function watchThroughSilence(): Effect.Effect<
+  Watched<readonly [MessageId, MessageId]>,
+  never,
+  CommandLineNeeds | Scope.Scope
+> {
+  return Effect.gen(function* watchAsBob() {
+    const cookout = yield* TestCookout;
+    const link = yield* cuttableLink(cookout.url);
+    const ann = yield* cookout.createIdentity("ann");
+    const bob = yield* cookout.createIdentity("bob");
+    const folder = yield* freshStateFolder;
+    yield* answer(() => ann.client.createChannel({ name: "grill" }));
+    return yield* watchCookout({
+      args: ["watch", "--json"],
+      env: { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bob.token, COOKOUT_URL: link.url },
+      lines: TWO_LINES,
+      whileWatching: postIntoSilence(link, ann),
+    });
+  }).pipe(Effect.provide(testCookout()));
+}
+
+it.effect("cookout watch reconnects when the server goes silent, and picks up from the last item it printed", () =>
+  Effect.gen(function* watchSilence() {
+    const {
+      during: [before, unheard],
+      stderrLines,
+      stdoutJson,
+    } = yield* watchThroughSilence();
+
+    expect(stdoutJson).toMatchObject([{ item: { message: { id: before } } }, { item: { message: { id: unheard } } }]);
+    expect(stderrLines).toContain('{"reconnecting":"Heard nothing from the server for 45 s."}');
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
+function watchUntilRefused(): Effect.Effect<CliResult, never, CommandLineNeeds | Scope.Scope> {
+  return Effect.gen(function* watchAsBob() {
+    const cookout = yield* TestCookout;
+    const link = yield* cuttableLink(cookout.url);
+    const bob = yield* cookout.createIdentity("bob");
+    const folder = yield* freshStateFolder;
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bob.token, COOKOUT_URL: link.url };
+    const watching = yield* Effect.forkScoped(runCookout({ args: ["watch"], env }));
+    yield* Effect.andThen(link.relayed(": open"), link.cut);
+    yield* answer(() => cookout.client.rotateToken("bob"));
+    return yield* Effect.raceFirst(Fiber.join(watching), Effect.andThen(passTime, Effect.never));
+  }).pipe(Effect.provide(testCookout()));
+}
+
+it.effect("cookout watch stops at a refusal on reconnecting, instead of trying again", () =>
+  Effect.gen(function* watchRefused() {
+    const { exitCode, stderr, stdout } = yield* watchUntilRefused();
+
+    expect({ exitCode, stdout }).toStrictEqual({ exitCode: 1, stdout: "" });
+    expect(stderr).toContain('"reconnecting"');
+    expect(stderr).toContain('"token_revoked"');
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
+function heartbeatsAfter(link: CuttableLink, count: number): Effect.Effect<void> {
+  return Effect.andThen(TestClock.adjust(HEARTBEAT_INTERVAL), link.relayed(": heartbeat", count));
+}
+
+function postAfterHeartbeats(link: CuttableLink, ann: TestIdentity): Effect.Effect<MessageId> {
+  const heartbeats = Effect.forEach(
+    Arr.range(FIRST_HEARTBEAT, FOUR_HEARTBEATS),
+    (count) => heartbeatsAfter(link, count),
+    {
+      concurrency: 1,
+      discard: true,
+    },
+  );
+  return Effect.andThen(heartbeats, mention(ann, "@bob still here"));
+}
+
+function watchThroughHeartbeats(): Effect.Effect<Watched<MessageId>, never, CommandLineNeeds | Scope.Scope> {
+  return Effect.gen(function* watchAsBob() {
+    const cookout = yield* TestCookout;
+    const link = yield* cuttableLink(cookout.url);
+    const ann = yield* cookout.createIdentity("ann");
+    const bob = yield* cookout.createIdentity("bob");
+    const folder = yield* freshStateFolder;
+    yield* answer(() => ann.client.createChannel({ name: "grill" }));
+    return yield* watchCookout({
+      args: ["watch", "--json"],
+      env: { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bob.token, COOKOUT_URL: link.url },
+      lines: ONE_LINE,
+      whileWatching: postAfterHeartbeats(link, ann),
+    });
+  }).pipe(Effect.provide(testCookout()));
+}
+
+it.effect("cookout watch stays on its connection while heartbeats arrive, however long nothing else does", () =>
+  Effect.gen(function* watchHeartbeats() {
+    const { during: posted, stderrLines, stdoutJson } = yield* watchThroughHeartbeats();
+
+    expect(stdoutJson).toMatchObject([{ item: { message: { id: posted } } }]);
+    expect(stderrLines).toHaveLength(ONE_LINE);
   }).pipe(Effect.provide(commandLineServices)),
 );
