@@ -1,4 +1,4 @@
-import { adminClient, newIdentity } from "./identities.ts";
+import { adminClient, newIdentity, revocableView } from "./identities.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
@@ -50,7 +50,7 @@ async function postWithMention(): Promise<void> {
 }
 
 async function openedThenRevoked(name: string, channel: string): Promise<() => void> {
-  const poster = await newIdentity({ kind: "human", name });
+  const poster = await revocableView({ methods: ["createMessage"], revoked: name, viewer: `${name}-viewer` });
   await channelWith(channel, "Earlier");
   const close = openAt({ client: poster.client, hash: `#/channels/${channel}` });
   await shownMessages();

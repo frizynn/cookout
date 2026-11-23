@@ -1,5 +1,5 @@
 import type { CookoutClient, InboxResponse } from "../../sdk/index.ts";
-import { adminClient, newIdentity } from "./identities.ts";
+import { adminClient, newIdentity, revocableView } from "./identities.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import { alertSaying } from "./alerts.ts";
@@ -99,7 +99,11 @@ it("reopening a channel that can no longer be read says so and keeps its message
   expect.hasAssertions();
 
   await channelWith("web-channel-reopen-refused", ["Hello"]);
-  const reader = await newIdentity({ kind: "human", name: "web-channel-reopen-rotated" });
+  const reader = await revocableView({
+    methods: ["ack"],
+    revoked: "web-channel-reopen-rotated",
+    viewer: "web-channel-reopen-viewer",
+  });
   const close = await openedThenLeft(reader.client, "web-channel-reopen-refused", shownMessages);
   await reader.rotateToken();
 

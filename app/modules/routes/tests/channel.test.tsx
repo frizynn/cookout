@@ -1,15 +1,10 @@
 import type { CookoutClient, InboxResponse, Message } from "../../sdk/index.ts";
-import { adminClient, clientWith, newIdentity } from "./identities.ts";
+import { adminClient, clientWith, newIdentity, revocableView } from "./identities.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import { alertSaying } from "./alerts.ts";
 import { messagesIn } from "./messages.ts";
 import { openAt } from "./render.tsx";
-
-interface ReadingAsAnother {
-  readonly client: CookoutClient;
-  readonly reader: Awaited<ReturnType<typeof newIdentity>>;
-}
 
 const ONE_A_PAGE = 1;
 const TWO_A_PAGE = 2;
@@ -23,12 +18,6 @@ async function ackingWithALeftSession(token: string, name: string): Promise<Cook
   const session = clientWith(agentSessionToken);
   await session.leave();
   return { ...client, ack: session.ack };
-}
-
-async function readingAsAnother(viewer: string, reader: string): Promise<ReadingAsAnother> {
-  const viewing = await newIdentity({ kind: "human", name: viewer });
-  const reading = await newIdentity({ kind: "human", name: reader });
-  return { client: { ...viewing.client, listMessages: reading.client.listMessages }, reader: reading };
 }
 
 async function post(channel: string, text: string): Promise<Message> {
@@ -229,8 +218,12 @@ it("a refused older page says so and keeps the messages shown", { timeout: 5000 
   expect.hasAssertions();
 
   await channelWith("web-channel-older-refused", ["A", "B"]);
-  const { client, reader } = await readingAsAnother("web-channel-viewer", "web-channel-rotated");
-  const close = openAt({ client, hash: "#/channels/web-channel-older-refused", pageSize: ONE_A_PAGE });
+  const reader = await revocableView({
+    methods: ["listMessages"],
+    revoked: "web-channel-rotated",
+    viewer: "web-channel-viewer",
+  });
+  const close = openAt({ client: reader.client, hash: "#/channels/web-channel-older-refused", pageSize: ONE_A_PAGE });
   await shownMessages();
   await reader.rotateToken();
 

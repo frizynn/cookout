@@ -1,4 +1,4 @@
-import { adminClient, clientWith, newIdentity } from "./identities.ts";
+import { adminClient, clientWith, newIdentity, revocableView } from "./identities.ts";
 import { callWith, callWithFields, channelWithCommand, noProperties, openChannel, pretty } from "./commands.ts";
 import { expect, it } from "vitest";
 import { screen, within } from "@testing-library/react";
@@ -184,7 +184,11 @@ it("a refused call says so and keeps the channel shown", { timeout: 5000 }, asyn
   expect.hasAssertions();
 
   await channelWithCommand({ channel: "web-command-refused", command: { name: "web-call-refused" } });
-  const caller = await newIdentity({ kind: "human", name: "web-command-rotated" });
+  const caller = await revocableView({
+    methods: ["callCommand"],
+    revoked: "web-command-rotated",
+    viewer: "web-command-viewer",
+  });
   const close = await openChannel({ channel: "web-command-refused", client: caller.client });
   await caller.rotateToken();
 

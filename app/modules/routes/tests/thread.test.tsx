@@ -1,5 +1,5 @@
 import type { CookoutClient, InboxResponse, Message } from "../../sdk/index.ts";
-import { adminClient, clientWith, newIdentity } from "./identities.ts";
+import { adminClient, clientWith, newIdentity, revocableView } from "./identities.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import { messagesIn, parentShown } from "./messages.ts";
@@ -174,7 +174,11 @@ it("a refused reply says so and keeps the thread shown, and its text in the box"
   expect.hasAssertions();
 
   const parent = await threadIn("web-thread-reply-refused");
-  const writer = await newIdentity({ kind: "human", name: "web-thread-rotated" });
+  const writer = await revocableView({
+    methods: ["createMessage"],
+    revoked: "web-thread-rotated",
+    viewer: "web-thread-reply-viewer",
+  });
   const close = openAt({ client: writer.client, hash: hashOf(parent) });
   await shownReplies();
   await writer.rotateToken();
@@ -252,7 +256,11 @@ it("reopening a thread that can no longer be read says so and keeps its replies 
   expect.hasAssertions();
 
   const parent = await threadIn("web-thread-reopen-refused");
-  const reader = await newIdentity({ kind: "human", name: "web-thread-reopen-rotated" });
+  const reader = await revocableView({
+    methods: ["ack"],
+    revoked: "web-thread-reopen-rotated",
+    viewer: "web-thread-reopen-viewer",
+  });
   const close = await openedThenLeft(reader.client, parent);
   await reader.rotateToken();
 
