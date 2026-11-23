@@ -1,4 +1,4 @@
-import type { ChannelName, InboxItem, MessageId } from "../../sdk/index.ts";
+import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import type { ThreadNews, Unread, UnreadCounts, UnreadState } from "../../unread/index.ts";
 import { countsByChannel, countsOf, newsByThread } from "../../unread/index.ts";
 import { useMemo, useSyncExternalStore } from "react";
@@ -18,22 +18,24 @@ interface SidebarCounts {
   readonly inbox: UnreadCounts;
 }
 
-function itemsOf(state: UnreadState): readonly InboxItem[] {
+const NOTHING_LOADED = { inbox: [], items: [] } as const;
+
+function itemsOf(state: UnreadState): Pick<Extract<UnreadState, { status: "loaded" }>, "inbox" | "items"> {
   if (state.status !== "loaded") {
-    return [];
+    return NOTHING_LOADED;
   }
-  return state.items;
+  return state;
 }
 
 function useThreadNews({ me, unread }: Looking): ReadonlyMap<MessageId, ThreadNews> {
   const state = useSyncExternalStore(unread.subscribe, unread.snapshot);
-  return useMemo(() => newsByThread({ items: itemsOf(state), me }), [state, me]);
+  return useMemo(() => newsByThread({ items: itemsOf(state).items, me }), [state, me]);
 }
 
 function useSidebarCounts({ me, state }: Counting): SidebarCounts {
   return useMemo(() => {
-    const items = itemsOf(state);
-    return { channels: countsByChannel({ items, me }), inbox: countsOf({ items, me }) };
+    const { inbox, items } = itemsOf(state);
+    return { channels: countsByChannel({ items, me }), inbox: countsOf({ items: inbox, me }) };
   }, [state, me]);
 }
 

@@ -8,6 +8,7 @@ import type {
   MovedBackReadPosition,
   ReadPosition,
 } from "../../sdk/index.ts";
+import { openOnly, reparent } from "./closed-threads.ts";
 
 interface InboxItems {
   readonly addAll: (all: readonly InboxItem[]) => void;
@@ -17,6 +18,7 @@ interface InboxItems {
   readonly readPosition: (channel: ChannelName, thread: MessageId | null) => MessageId | null;
   readonly receive: (event: CookoutEvent, onRead: (item: InboxItem) => void) => boolean;
   readonly list: () => readonly InboxItem[];
+  readonly inbox: () => readonly InboxItem[];
   readonly has: (id: MessageId) => boolean;
   readonly isRead: (message: Message) => boolean;
 }
@@ -107,6 +109,25 @@ function readIn({ acked, all, items, onRead, positions }: ReadingIn): void {
   }
 }
 
+interface Receiving extends Pick<ReadingIn, "items" | "onRead" | "positions"> {
+  readonly addAll: (all: readonly InboxItem[]) => void;
+}
+
+function receiveIn({ addAll, items, onRead, positions }: Receiving, event: CookoutEvent): boolean {
+  if (event.type === "inbox-item") {
+    addAll([event.item]);
+    return true;
+  }
+  if (event.type === "read-position") {
+    readIn({ acked: [event.readPosition], all: [event.readPosition], items, onRead, positions });
+    return true;
+  }
+  if (event.type === "thread") {
+    return reparent({ items, parent: event.parent });
+  }
+  return false;
+}
+
 function createInboxItems(): InboxItems {
   const items = new Map<MessageId, InboxItem>();
   const positions: Positions = new Map();
@@ -131,6 +152,7 @@ function createInboxItems(): InboxItems {
   return {
     addAll,
     has: (id) => items.has(id),
+    inbox: () => openOnly(oldestFirst(items.values())),
     isRead,
     list: () => oldestFirst(items.values()),
     moveBack: (position) => {
@@ -139,17 +161,7 @@ function createInboxItems(): InboxItems {
     movesBack: (channel, thread) => moved.moves.get(scopeOf(channel, thread)) ?? NO_MOVES,
     readAll: read,
     readPosition: (channel, thread) => positions.get(scopeOf(channel, thread)) ?? null,
-    receive: (event, onRead) => {
-      if (event.type === "inbox-item") {
-        addAll([event.item]);
-        return true;
-      }
-      if (event.type === "read-position") {
-        readIn({ acked: [event.readPosition], all: [event.readPosition], items, onRead, positions });
-        return true;
-      }
-      return false;
-    },
+    receive: (event, onRead) => receiveIn({ addAll, items, onRead, positions }, event),
   };
 }
 
