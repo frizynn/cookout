@@ -9,7 +9,7 @@ interface BuiltWeb {
 }
 
 const INDEX_HTML =
-  '<!doctype html><html><body><div id="root"></div><script type="module" src="/assets/web-test.js"></script></body></html>';
+  '<!doctype html><html><head><meta property="og:url" content="/" /><meta property="og:image" content="/assets/og-card.png" /></head><body><div id="root"></div><script type="module" src="/assets/web-test.js"></script></body></html>';
 const SCRIPT_TEXT = 'console.log("the test web build");';
 
 const builtWebFolder: Effect.Effect<BuiltWeb, never, FileSystem.FileSystem | Path.Path | Scope.Scope> = Effect.gen(

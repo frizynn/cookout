@@ -6,7 +6,7 @@
  * a 500. Given a web folder, it also serves the built web UI: `index.html` at
  * `/` and the build's files under `/assets/`, with no token.
  */
-import { ByteSize, DateTime, Effect, Layer, Option, Path } from "effect";
+import { ByteSize, DateTime, Effect, FileSystem, Layer, Option, Path, String as Str } from "effect";
 import { ErrorResponseSchema, HealthResponseSchema, SchemaProblemsSchema, securityHeaders } from "./lib/server/wire.ts";
 import type { Gate, Route } from "./lib/server/router.ts";
 import { HttpIncomingMessage, HttpServer, HttpServerRequest, HttpServerResponse } from "effect/http";
@@ -53,7 +53,7 @@ const healthRoute: Route<Storage> = {
   path: healthPath,
 };
 
-type WebNeeds = HttpPlatform.HttpPlatform | Path.Path;
+type WebNeeds = FileSystem.FileSystem | HttpPlatform.HttpPlatform | Path.Path;
 
 const ASSET_NAME = /^[\w-][\w.-]*$/u;
 
@@ -72,9 +72,31 @@ function webFile(
   }).pipe(Effect.catchTag("PlatformError", () => Effect.fail(notFound("GET", urlPath))));
 }
 
-function webRoutesIn(webFolder: string): readonly Route<WebNeeds>[] {
+const LINK_PREVIEW_PATH = /(?<tag><meta\s+property="og:(?:image|url)"\s+content=")\//gu;
+
+function withAbsolutePreview(html: string, publicUrl: string): string {
+  const { origin } = new URL(publicUrl);
+  return Str.replaceAll(LINK_PREVIEW_PATH, `$<tag>${origin}/`)(html);
+}
+
+function indexPage(
+  webFolder: string,
+  publicUrl: string,
+): Effect.Effect<HttpServerResponse.HttpServerResponse, Refusal, WebNeeds> {
+  if (publicUrl === "") {
+    return webFile(webFolder, "/", ["index.html"]);
+  }
+  return Effect.gen(function* serveIndexPage() {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const html = yield* fs.readFileString(path.join(webFolder, "index.html"));
+    return HttpServerResponse.text(withAbsolutePreview(html, publicUrl), { contentType: "text/html" });
+  }).pipe(Effect.catchTag("PlatformError", () => Effect.fail(notFound("GET", "/"))));
+}
+
+function webRoutesIn(webFolder: string, publicUrl: string): readonly Route<WebNeeds>[] {
   return [
-    { handle: () => webFile(webFolder, "/", ["index.html"]), method: "GET", path: "/" },
+    { handle: () => indexPage(webFolder, publicUrl), method: "GET", path: "/" },
     {
       handle: ({ file = "" }) => webFile(webFolder, `/assets/${file}`, ["assets", file]),
       method: "GET",
@@ -84,8 +106,11 @@ function webRoutesIn(webFolder: string): readonly Route<WebNeeds>[] {
   ];
 }
 
-function webRoutes({ webFolder }: Serving): readonly Route<WebNeeds>[] {
-  return Option.match(Option.fromNullishOr(webFolder), { onNone: () => [], onSome: webRoutesIn });
+function webRoutes({ publicUrl = "", webFolder }: Serving): readonly Route<WebNeeds>[] {
+  return Option.match(Option.fromNullishOr(webFolder), {
+    onNone: () => [],
+    onSome: (folder) => webRoutesIn(folder, publicUrl),
+  });
 }
 
 function answerFailure(failure: unknown): Effect.Effect<HttpServerResponse.HttpServerResponse> {
@@ -145,7 +170,9 @@ export function nodeHttpServer(listen: Listen): NodeHttp {
  * unknown paths (404) never do. The `HttpServer` it provides says which
  * address it took: port 0 picks a free one. With a `webFolder`, `/` answers
  * with its `index.html` and `/assets/<file>` with its `assets/<file>`, also
- * without the gate; a file the folder lacks is 404 `not_found`. Every request
+ * without the gate; a file the folder lacks is 404 `not_found`. With a
+ * `publicUrl` too, the page's `og:image` and `og:url` paths are made absolute
+ * against it, since link-preview services can't follow a relative one. Every request
  * goes through the web guards first: a `Host` that isn't the server's own
  * (or the host of `publicUrl`) is refused with 421 `foreign_host`, a write from another site's `Origin` with
  * 403 `foreign_origin`, and every response carries a strict CSP and refuses framing.

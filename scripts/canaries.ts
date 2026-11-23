@@ -21,12 +21,12 @@ const localRuleFile = (rule: string) => {
   return `${MODULE}/lib/${rule}.ts`;
 };
 
-const testPluginRules: ReadonlySet<string> = new Set(["region-lookups"]);
+const otherPluginRules: ReadonlySet<string> = new Set(["page-title-owner", "region-lookups"]);
 
 const localRules = readdirSync("lint/rules")
   .filter((file) => file.endsWith(".js"))
   .map((file) => file.slice(0, -".js".length))
-  .filter((rule) => !testPluginRules.has(rule));
+  .filter((rule) => !otherPluginRules.has(rule));
 
 const nativeRules: readonly (readonly [string, string])[] = [
   ["typescript(no-explicit-any)", "no-explicit-any"],
@@ -43,6 +43,7 @@ const nativeRules: readonly (readonly [string, string])[] = [
   ["eslint(no-restricted-properties)", "no-restricted-properties"],
   ["eslint(no-restricted-imports)", "no-restricted-imports.effect"],
   ["eslint(no-restricted-imports)", "no-restricted-imports.sqlite"],
+  ["web-rules(page-title-owner)", "page-title-owner"],
 ];
 
 const testRules: readonly (readonly [string, string])[] = [
