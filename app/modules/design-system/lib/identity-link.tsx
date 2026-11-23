@@ -17,8 +17,12 @@ export function IdentityLink(parts: IdentityLinkParts): ReactNode {
       className="-mx-2 flex rounded-md px-2 py-1 hover:bg-hover"
       href={parts.href}
     >
-      {displayName === null && <Author agent={parts.agent} handle={null} name={name} shown={name} />}
-      {displayName !== null && <Author agent={parts.agent} handle={`@${name}`} name={name} shown={displayName} />}
+      {displayName === null && (
+        <Author agent={parts.agent} handle={null} presence={parts.presence} name={name} shown={name} />
+      )}
+      {displayName !== null && (
+        <Author agent={parts.agent} handle={`@${name}`} presence={parts.presence} name={name} shown={displayName} />
+      )}
     </a>
   );
 }

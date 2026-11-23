@@ -14,6 +14,7 @@ import { createBoard } from "./modules/board/index.ts";
 import { createComposer } from "./modules/composer/index.ts";
 import { createCookoutClient } from "./modules/sdk/index.ts";
 import { createLayout } from "./modules/layout/index.ts";
+import { createPresenceStore } from "./modules/presence-store/index.ts";
 import { createRoot } from "react-dom/client";
 import { createUnread } from "./modules/unread/index.ts";
 
@@ -38,6 +39,7 @@ if (root !== null) {
       layout={layout}
       live={live}
       loginApprovals={createLoginApprovals(client)}
+      presence={createPresenceStore({ client, live })}
       session={session}
       unread={unread}
     />,

@@ -32,7 +32,7 @@ interface MessageEntryProps {
 
 export function MessageEntry(props: MessageEntryProps): ReactNode {
   const { message } = props.row;
-  const { agent, displayName, note, profileHref } = useAuthor(message.author);
+  const { agent, displayName, note, presence, profileHref } = useAuthor(message.author);
   const href = threadHref({ channel: props.channel, message });
   const summary = threadSummaryOf(message);
   const menu = useMessageMenu({ menu: props.menu, messageId: message.id, place: "stream" });
@@ -50,6 +50,7 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
       name={message.author.name}
       nameHref={profileHref}
       note={note}
+      presence={presence}
       onAction={handleReply}
       time={useMessageTime(message.createdAt)}
       unreadLine={props.row.unreadLine}

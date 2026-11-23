@@ -4,6 +4,7 @@ import { IdentityTags } from "./identity-tags.tsx";
 import type { ReactNode } from "react";
 import { noteOf as deactivatedNote } from "./use-author.ts";
 import { kindOf } from "./kind-of.ts";
+import { usePresence } from "./use-presence.ts";
 import { useProfileHref } from "./profile-base.ts";
 
 const TEXT = { you: "(you)" } as const;
@@ -33,6 +34,7 @@ export function PersonRow(props: PersonRowProps): ReactNode {
       href={profileOf(identity.name)}
       name={identity.name}
       note={noteOf(identity, props.me)}
+      presence={usePresence(identity.name)}
     >
       <IdentityTags identity={identity} />
     </IdentityRow>

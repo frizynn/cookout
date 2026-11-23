@@ -33,6 +33,7 @@ export function MessageItem(parts: MessageItemParts): ReactNode {
           nameHref={parts.nameHref}
           note={parts.note}
           onAction={handleAction}
+          presence={parts.presence}
           time={parts.time}
         >
           {parts.children}

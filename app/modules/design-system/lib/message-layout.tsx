@@ -12,7 +12,7 @@ export function MessageLayout(parts: MessageLayoutParts): ReactNode {
     <>
       <div className="flex w-9 shrink-0 justify-center">
         {parts.grouped && <MessageTime full={time.full} hidden iso={time.iso} shown={time.short} />}
-        {!parts.grouped && <Avatar agent={parts.agent} name={parts.name} />}
+        {!parts.grouped && <Avatar agent={parts.agent} name={parts.name} presence={parts.presence} />}
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         {!parts.grouped && (

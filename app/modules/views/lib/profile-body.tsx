@@ -1,18 +1,18 @@
-import { CardBody, DateText, Muted, Profile, ProfileName, Skeleton } from "../../design-system/index.tsx";
-import { AdminToggle } from "./admin-toggle.tsx";
+import { CardBody, Muted, Profile, ProfileName, Skeleton } from "../../design-system/index.tsx";
+import { shownIn, usePresences } from "./use-presence.ts";
 import type { Composer } from "../../composer/index.ts";
 import type { IdentityName } from "../../sdk/index.ts";
 import { IdentityTags } from "./identity-tags.tsx";
-import { ProfileActions } from "./profile-actions.tsx";
+import { ProfileControls } from "./profile-controls.tsx";
+import { ProfileFacts } from "./profile-facts.tsx";
 import { ProfileTexts } from "./profile-texts.tsx";
 import type { ReactNode } from "react";
-import { kindOf } from "./kind-of.ts";
 import { noteOf } from "./use-author.ts";
 import { useSyncExternalStore } from "react";
 
 const NONE = 0;
 
-const TEXT = { joined: "joined ", unknown: "Unknown identity" } as const;
+const TEXT = { unknown: "Unknown identity" } as const;
 
 interface ProfileBodyProps {
   readonly composer: Composer;
@@ -24,6 +24,7 @@ export function ProfileBody(props: ProfileBodyProps): ReactNode {
   const { identities } = props.composer;
   const listed = useSyncExternalStore(identities.subscribe, identities.snapshot);
   const found = listed.filter((each) => each.name === props.name);
+  const presences = usePresences();
   if (listed.length === NONE) {
     return (
       <CardBody>
@@ -39,18 +40,18 @@ export function ProfileBody(props: ProfileBodyProps): ReactNode {
     );
   }
   return found.map((identity) => (
-    <Profile agent={identity.kind === "agent"} key={identity.name} name={identity.name}>
+    <Profile
+      agent={identity.kind === "agent"}
+      key={identity.name}
+      name={identity.name}
+      presence={shownIn({ name: identity.name, presences })}
+    >
       <ProfileName displayName={identity.displayName ?? null} name={identity.name} note={noteOf(identity)}>
         <IdentityTags identity={identity} />
       </ProfileName>
-      <Muted>{kindOf(identity)}</Muted>
-      <Muted>
-        {TEXT.joined}
-        <DateText time={identity.createdAt} />
-      </Muted>
+      <ProfileFacts identity={identity} />
       <ProfileTexts composer={props.composer} identity={identity} me={props.me} />
-      <AdminToggle identities={identities} identity={identity} me={props.me} />
-      <ProfileActions identities={identities} identity={identity} me={props.me} />
+      <ProfileControls identities={identities} identity={identity} me={props.me} />
     </Profile>
   ));
 }

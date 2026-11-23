@@ -1,3 +1,4 @@
+import type { AvatarParts, PresenceShown, SuggestionOptionParts } from "./avatar-parts.ts";
 import type { MessageMenuParts } from "./menu-parts.ts";
 import type { ReactNode } from "react";
 
@@ -48,15 +49,9 @@ interface TextAreaParts extends TextFieldParts {
 
 interface SuggestionsParts {
   readonly label: string;
-  readonly options: readonly { readonly option: string; readonly detail: string | null }[];
+  readonly options: readonly SuggestionOptionParts[];
   readonly highlighted: number;
   readonly onChoose: (option: string) => void;
-}
-
-interface AvatarParts {
-  readonly name: string;
-  readonly agent: boolean;
-  readonly size?: "large" | "small" | "tiny";
 }
 
 interface TagParts {
@@ -79,6 +74,7 @@ interface IdentityRowParts {
   readonly name: string;
   readonly displayName: string | null;
   readonly agent: boolean;
+  readonly presence: PresenceShown | null;
   readonly active: boolean;
   readonly detail: string;
   readonly note: string | null;
@@ -88,6 +84,7 @@ interface IdentityRowParts {
 interface ProfileParts extends Parts {
   readonly name: string;
   readonly agent: boolean;
+  readonly presence: PresenceShown | null;
 }
 
 interface ProfileNameParts {
@@ -106,6 +103,7 @@ interface IdentityLinkParts {
   readonly name: string;
   readonly displayName: string | null;
   readonly agent: boolean;
+  readonly presence: PresenceShown | null;
   readonly active: boolean;
 }
 
@@ -196,6 +194,7 @@ interface MessageLayoutParts extends Parts {
   readonly displayName: string | null;
   readonly note: string | null;
   readonly agent: boolean;
+  readonly presence: PresenceShown | null;
   readonly grouped: boolean;
   readonly time: MessageTimeParts;
   readonly actionHref: string | null;
@@ -264,7 +263,6 @@ export type {
   ProfileParts,
   TagParts,
   AuthorParts,
-  AvatarParts,
   CallChipParts,
   ChannelStartParts,
   MentionParts,

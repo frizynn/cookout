@@ -34,7 +34,11 @@
  * with its keyboard hint; `SidePanel` is a
  * named column on its right with a close link (the whole width on a narrow
  * screen). A name's avatar is its coloured initials, one of eight hues hashed
- * from the name, a circle for a human and a square with a badge for an agent;
+ * from the name, a circle for a human and a rounded square for an agent, with
+ * its `PresenceDot` in the corner once its presence is known: filled in the
+ * online colour while online, a hollow grey ring while offline, named for a
+ * screen reader and as a tooltip ("Offline, last seen 5 minutes ago"), as a
+ * `Suggestions` option shows it beside the name;
  * `Author` is a message's avatar and name (a display name, with the `@name`
  * muted beside it), with an `agent` tag for an agent;
  * `Tag` is one such small tag, such as `admin`. `IdentityLink` is the

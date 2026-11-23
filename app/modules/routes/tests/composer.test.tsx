@@ -102,7 +102,7 @@ it("choosing a suggestion puts the mention in the reply box in place of the pref
 
   const box = await typeInReply("Ping @chosen-l");
   await suggested();
-  fireEvent.click(inPane().getByRole("button", { name: "@chosen-linus" }));
+  fireEvent.click(inPane().getByRole("button", { name: /@chosen-linus$/u }));
 
   expect([
     screen.queryByDisplayValue("Ping @chosen-linus ", { normalizer: getDefaultNormalizer({ trim: false }) }),
