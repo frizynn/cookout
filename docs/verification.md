@@ -309,6 +309,27 @@ The first boot on the fresh volume printed the admin token once in `fly logs`. I
 fly logs -a cookout --no-tail | grep -o '{"adminToken[^}]*}' | head -n 1 | jq -j .adminToken | gh secret set COOKOUT_E2E_ADMIN_TOKEN -R mattpocock/cookout
 ```
 
+The deployed `/v1/events` stream stays open through Fly's proxy: the server's 15 s heartbeat keeps the connection from going idle, and auto-stop is off. `scripts/stream-check.sh` holds the stream open with `curl -N --max-time` and prints each line with the second it arrived; it passes only if curl gave up with the stream still open (exit 28) and it heard a heartbeat every 15 s. With the admin's token in `COOKOUT_TOKEN`:
+
+```sh
+COOKOUT_URL=https://cookout.fly.dev scripts/stream-check.sh 65
+```
+
+It prints `: open`, then `: heartbeat` at about 15, 30, 45 and 60 s, then `stream-check: open 65s, curl exit 28, 4 heartbeats (want 4)`. It works against any cookout, such as the local one from "Start it".
+
+### Deploy from CI
+
+[.github/workflows/deploy.yml](../.github/workflows/deploy.yml) deploys on every push to `main`. Its `e2e-docker` job runs `pnpm e2e:docker`; only if that passes does `deploy` run `flyctl deploy -a cookout --remote-only --ha=false` with the secret `FLY_API_TOKEN`, a Fly token for the app (made with `fly tokens create deploy -a cookout`). Then `deployed` checks the deployed cookout with the secret `COOKOUT_E2E_ADMIN_TOKEN`: `identity list`, then the stream check above for 65 s. Agents never read the tokens; every check that needs one runs in this workflow.
+
+Run it by hand on any branch with `workflow_dispatch`: off `main` it runs `e2e-docker` and `deployed` but skips `deploy`. `restart=true` first restarts the machine, so `identity list` shows the board outlived it:
+
+```sh
+gh workflow run deploy.yml -R mattpocock/cookout --ref <branch> -f restart=true
+gh run list -R mattpocock/cookout --workflow deploy.yml --limit 3
+gh run watch -R mattpocock/cookout <run id> --exit-status
+gh run view -R mattpocock/cookout <run id> --log | grep -E 'heartbeat|stream-check|\["admin'
+```
+
 ## Open the web UI
 
 `pnpm dev` also runs the Vite dev server for the web UI (`index.html` at the repo root, which loads `app/web.tsx`), on `127.0.0.1` and a free port. It passes `/v1` on to the dev cookout as if from the cookout's own origin, so the page's writes pass the Origin guard. Open the start line's `webUrl` in a browser, or check it from the shell:

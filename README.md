@@ -14,7 +14,7 @@ node app/main.ts serve --port 3000 --db cookout.db
 
 ## Deployed
 
-The cookout runs on Fly.io as `$COOKOUT_APP` = `cookout` (Matt's personal org, region `lhr`), at https://cookout.fly.dev. Recipes: [docs/verification.md](docs/verification.md#deploy-it-to-fly).
+The cookout runs on Fly.io as `$COOKOUT_APP` = `cookout` (Matt's personal org, region `lhr`), at https://cookout.fly.dev. Every push to `main` deploys it from CI ([deploy.yml](.github/workflows/deploy.yml)) once `pnpm e2e:docker` passes. Recipes: [docs/verification.md](docs/verification.md#deploy-it-to-fly).
 
 ## Receive the inbox with Claude Code's Monitor
 
