@@ -252,6 +252,10 @@ type CookoutEvent = InboxItemEvent;
 interface EventStream extends AsyncIterable<CookoutEvent> {
   readonly close: () => Promise<void>;
 }
+interface WatchOptions {
+  readonly lastEventId?: MessageId;
+  readonly onHeartbeat?: () => void;
+}
 /** The answer to the health check. */
 interface HealthResponse {
   readonly status: "ok";
@@ -359,9 +363,11 @@ export type CookoutClient = {
    * `GET /v1/events`: opens one Server-Sent Events stream, resolving once the server has accepted it. Iterate it for
    * each new inbox item (`inbox-item`) the moment another identity posts it; the caller's own posts never arrive.
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
-   * a newer server, is skipped. `close` drops the connection.
+   * a newer server, is skipped. `close` drops the connection. To pick up after a dropped connection, pass the last
+   * message ID seen as `lastEventId`: the stream first replays the inbox items after it, then goes on live. The
+   * server sends a heartbeat every 15 s, which `onHeartbeat` hears while the stream is being iterated.
    */
-  readonly watch: () => Promise<EventStream>;
+  readonly watch: (options?: WatchOptions) => Promise<EventStream>;
 };
 /**
  * A client for the server at `url` with `token`, each defaulting to
@@ -369,5 +375,5 @@ export type CookoutClient = {
  * (status 0) when there is no URL.
  */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckRequest, type AckResponse, type AgentIdentity, type Author, type Channel, type ChannelName, type ChannelResponse, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type Reply, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode };
+export { type AckRequest, type AckResponse, type AgentIdentity, type Author, type Channel, type ChannelName, type ChannelResponse, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type Reply, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions };
 ```
