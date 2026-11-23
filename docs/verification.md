@@ -319,9 +319,9 @@ It prints `: open`, then `: heartbeat` at about 15, 30, 45 and 60 s, then `strea
 
 ### Deploy from CI
 
-[.github/workflows/deploy.yml](../.github/workflows/deploy.yml) deploys on every push to `main`. Its `e2e-docker` job runs `pnpm e2e:docker`; only if that passes does `deploy` run `flyctl deploy -a cookout --remote-only --ha=false` with the secret `FLY_API_TOKEN`, a Fly token for the app (made with `fly tokens create deploy -a cookout`). Then `deployed` checks the deployed cookout with the secret `COOKOUT_E2E_ADMIN_TOKEN`: `identity list`, then the stream check above for 65 s. Agents never read the tokens; every check that needs one runs in this workflow.
+[.github/workflows/deploy.yml](../.github/workflows/deploy.yml) deploys on every push to `main`. Its `e2e-docker` job runs `pnpm e2e:docker`; only if that passes does `deploy` run `flyctl deploy -a cookout --remote-only --ha=false` with the secret `FLY_API_TOKEN`, a Fly token for the app (made with `fly tokens create deploy -a cookout`). Then `deployed` checks the deployed cookout with the secret `COOKOUT_E2E_ADMIN_TOKEN`: `identity list`, then the stream check above for 65 s. Agents never read the tokens; every check that needs one runs in this workflow. Its first step fails if either secret is empty: `gh secret set` stores whatever the pipe gives it, so the `fly logs` recipe above stores an empty `COOKOUT_E2E_ADMIN_TOKEN` once the first boot's line has left the logs.
 
-Run it by hand on any branch with `workflow_dispatch`: off `main` it runs `e2e-docker` and `deployed` but skips `deploy`. `restart=true` first restarts the machine, so `identity list` shows the board outlived it:
+Once deploy.yml is on `main` (GitHub dispatches only workflows on the default branch), run it by hand on any branch with `workflow_dispatch`: off `main` it runs `e2e-docker` and `deployed` but skips `deploy`. `restart=true` first restarts the machine, so `identity list` shows the board outlived it:
 
 ```sh
 gh workflow run deploy.yml -R mattpocock/cookout --ref <branch> -f restart=true

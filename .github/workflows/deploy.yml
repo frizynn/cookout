@@ -55,6 +55,11 @@ jobs:
       COOKOUT_TOKEN: ${{ secrets.COOKOUT_E2E_ADMIN_TOKEN }}
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
+      - name: The secrets are set
+        run: |
+          for name in COOKOUT_TOKEN FLY_API_TOKEN; do
+            if [ -z "${!name}" ]; then echo "::error::$name is empty: set its GitHub secret (docs/verification.md, \"Deploy it to Fly\")"; exit 1; fi
+          done
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
         with:
