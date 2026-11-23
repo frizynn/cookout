@@ -91,6 +91,7 @@ interface ProfileParts extends Parts {
 interface ProfileNameParts {
   readonly name: string;
   readonly displayName: string | null;
+  readonly note: string | null;
   readonly children?: ReactNode;
 }
 
@@ -188,6 +189,7 @@ interface MessageTimeParts {
 interface MessageLayoutParts extends Parts {
   readonly name: string;
   readonly displayName: string | null;
+  readonly note: string | null;
   readonly agent: boolean;
   readonly grouped: boolean;
   readonly time: MessageTimeParts;
@@ -227,6 +229,7 @@ interface SeparatorParts {
 interface MessageHeaderParts {
   readonly name: string;
   readonly displayName: string | null;
+  readonly note: string | null;
   readonly agent: boolean;
   readonly time: MessageTimeParts;
 }

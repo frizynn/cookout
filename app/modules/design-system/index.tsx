@@ -35,7 +35,10 @@
  * `ProfileName`, a `Suggestions` option's muted detail) it shows first and the
  * `@name` muted beside it. `LineForm` is a named form of one labelled line of
  * text, whose text its owner holds, with a Save button (disabled while
- * saving) and anything under it, such as an `Alert`.
+ * saving; `submit` names its button, `Save` unless given) and anything under
+ * it, such as an `Alert`. `ActionGroup` is a named group of what can be done
+ * to one thing, `ButtonRow` puts buttons side by side, and `TokenText` shows a
+ * secret, such as a fresh token, to copy.
  * `PaneHeader`'s title is mono, as a channel's name, unless `sans`. A
  * `Toolbar` under it holds a `FilterField` (a labelled box whose text its
  * owner holds) and `Chip`s, buttons pressed or not; a named `ListArea` scrolls
@@ -93,7 +96,10 @@
  * required, with its help text and any error under it, both read out as its
  * description.
  */
+export { ActionGroup } from "./lib/action-group.tsx";
 export { Alert } from "./lib/alert.tsx";
+export { ButtonRow } from "./lib/button-row.tsx";
+export { TokenText } from "./lib/token-text.tsx";
 export { CallChip } from "./lib/call-chip.tsx";
 export { ChannelStart } from "./lib/channel-start.tsx";
 export { DataToggle } from "./lib/data-toggle.tsx";

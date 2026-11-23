@@ -1,4 +1,4 @@
-import { FilterField, Pane, PaneHeader, Toolbar } from "../../design-system/index.tsx";
+import { Chip, FilterField, Pane, PaneHeader, Toolbar } from "../../design-system/index.tsx";
 import type { Identity, IdentityName } from "../../sdk/index.ts";
 import type { KindChoice, Layout } from "../../layout/index.ts";
 import type { Identities } from "../../composer/index.ts";
@@ -7,7 +7,7 @@ import { PeopleRows } from "./people-rows.tsx";
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
 
-const TEXT = { filter: "Filter by name", title: "People & agents" } as const;
+const TEXT = { deactivated: "Show deactivated", filter: "Filter by name", title: "People & agents" } as const;
 
 const KINDS = [
   { kind: "all", label: "All" },
@@ -26,6 +26,10 @@ function ofKind(listed: readonly Identity[], kind: KindChoice): readonly Identit
   return listed.filter((identity) => kind === "all" || identity.kind === kind);
 }
 
+function active(listed: readonly Identity[], showDeactivated: boolean): readonly Identity[] {
+  return listed.filter((identity) => showDeactivated || identity.deactivated !== true);
+}
+
 function named(listed: readonly Identity[], filter: string): readonly Identity[] {
   const text = filter.trim().toLowerCase();
   return listed.filter((identity) =>
@@ -35,11 +39,13 @@ function named(listed: readonly Identity[], filter: string): readonly Identity[]
 
 export function PeopleView(props: PeopleProps): ReactNode {
   const { layout } = props;
-  const listed = useSyncExternalStore(props.identities.subscribe, props.identities.snapshot);
+  const everyone = useSyncExternalStore(props.identities.subscribe, props.identities.snapshot);
   const state = useSyncExternalStore(layout.subscribe, layout.snapshot);
+  const listed = active(everyone, state.showDeactivated);
   const matching = named(listed, state.identityFilter);
   const shown = ofKind(matching, state.identityKind);
   const handleEdit = layout.filterIdentities;
+  const handleToggle = layout.toggleDeactivated;
   return (
     <Pane>
       <PaneHeader description={`${String(listed.length)} identities`} sans title={TEXT.title} />
@@ -55,8 +61,11 @@ export function PeopleView(props: PeopleProps): ReactNode {
             pressed={state.identityKind === each.kind}
           />
         ))}
+        <Chip onClick={handleToggle} pressed={state.showDeactivated}>
+          {TEXT.deactivated}
+        </Chip>
       </Toolbar>
-      <PeopleRows listed={listed} me={props.me} open={props.open} shown={shown} />
+      <PeopleRows listed={everyone} me={props.me} open={props.open} shown={shown} />
     </Pane>
   );
 }

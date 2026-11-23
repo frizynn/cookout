@@ -8,6 +8,7 @@ export function ProfileName(parts: ProfileNameParts): ReactNode {
       {parts.displayName !== null && (
         <span className="truncate text-sm font-normal text-muted-foreground">{`@${parts.name}`}</span>
       )}
+      {parts.note !== null && <span className="text-sm font-normal text-muted-foreground">{parts.note}</span>}
       {parts.children}
     </h3>
   );

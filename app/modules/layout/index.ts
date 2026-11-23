@@ -11,7 +11,9 @@
  * `toggleSidebar` flip them, and `closeSidebar` closes the sidebar, as after
  * following a link in it. `identityFilter` and `identityKind` narrow the
  * directory of identities: the text a name must contain, and `all`, `human`
- * or `agent`; `filterIdentities` and `showKind` set them.
+ * or `agent`; `filterIdentities` and `showKind` set them. `showDeactivated`
+ * is whether it lists Deactivated identities too, which `toggleDeactivated`
+ * flips.
  */
 import type { IdentityKind } from "../sdk/index.ts";
 
@@ -25,6 +27,7 @@ interface LayoutState {
   readonly sidebar: boolean;
   readonly identityFilter: string;
   readonly identityKind: KindChoice;
+  readonly showDeactivated: boolean;
 }
 
 interface LayoutOptions {
@@ -58,6 +61,25 @@ function keepTheme(options: LayoutOptions, theme: ThemeChoice): void {
   options.root.setAttribute(THEME_ATTRIBUTE, theme);
 }
 
+type DirectoryControls = Pick<Layout, "filterIdentities" | "showKind" | "toggleDeactivated">;
+
+function directoryControls(
+  publish: (next: Partial<LayoutState>) => void,
+  snapshot: () => LayoutState,
+): DirectoryControls {
+  return {
+    filterIdentities: (identityFilter) => {
+      publish({ identityFilter });
+    },
+    showKind: (identityKind) => {
+      publish({ identityKind });
+    },
+    toggleDeactivated: () => {
+      publish({ showDeactivated: !snapshot().showDeactivated });
+    },
+  };
+}
+
 /** The themes a person can choose: `system` follows the operating system's setting. */
 export { themeChoices };
 
@@ -85,6 +107,8 @@ export interface Layout {
   readonly filterIdentities: (text: string) => void;
   /** Shows only identities of this kind, or every identity. */
   readonly showKind: (kind: KindChoice) => void;
+  /** Lists Deactivated identities in the directory too, or stops. */
+  readonly toggleDeactivated: () => void;
 }
 
 /**
@@ -98,6 +122,7 @@ export function createLayout(options: LayoutOptions): Layout {
     identityFilter: "",
     identityKind: "all",
     settings: false,
+    showDeactivated: false,
     sidebar: false,
     theme: storedTheme(options.storage),
   };
@@ -120,12 +145,7 @@ export function createLayout(options: LayoutOptions): Layout {
         publish({ sidebar: false });
       }
     },
-    filterIdentities: (identityFilter) => {
-      publish({ identityFilter });
-    },
-    showKind: (identityKind) => {
-      publish({ identityKind });
-    },
+    ...directoryControls(publish, () => current),
     snapshot: () => current,
     subscribe: (listener) => {
       listeners.add(listener);

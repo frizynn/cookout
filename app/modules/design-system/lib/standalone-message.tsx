@@ -16,6 +16,7 @@ export function StandaloneMessage(parts: StandaloneMessageParts): ReactNode {
           displayName={parts.displayName}
           grouped={parts.grouped}
           name={parts.name}
+          note={parts.note}
           time={parts.time}
         >
           {parts.children}

@@ -20,8 +20,15 @@ const ONE = 1;
 type AppClient = BoardOptions["client"] &
   Pick<
     CookoutClient,
+    | "createIdentity"
+    | "deactivateIdentity"
     | "inbox"
     | "inboxHistory"
+    | "listAgentSessions"
+    | "reactivateIdentity"
+    | "revokeAgentSession"
+    | "rotateToken"
+    | "transferAgent"
     | "listIdentities"
     | "readPositions"
     | "makeAdmin"

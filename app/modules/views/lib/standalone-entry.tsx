@@ -16,7 +16,7 @@ interface StandaloneEntryProps {
 
 export function StandaloneEntry(props: StandaloneEntryProps): ReactNode {
   const { message } = props;
-  const { agent, displayName } = useAuthor(message.author);
+  const { agent, displayName, note } = useAuthor(message.author);
   return (
     <StandaloneMessage
       actionHref={null}
@@ -28,6 +28,7 @@ export function StandaloneEntry(props: StandaloneEntryProps): ReactNode {
       label={props.label}
       mark={markOf({ me: props.me, message, open: null })}
       name={message.author.name}
+      note={note}
       time={timeOf(message.createdAt)}
       unreadLine={false}
     >

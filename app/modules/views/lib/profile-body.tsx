@@ -3,8 +3,10 @@ import { AdminToggle } from "./admin-toggle.tsx";
 import type { Identities } from "../../composer/index.ts";
 import type { IdentityName } from "../../sdk/index.ts";
 import { IdentityTags } from "./identity-tags.tsx";
+import { ProfileActions } from "./profile-actions.tsx";
 import type { ReactNode } from "react";
 import { kindOf } from "./kind-of.ts";
+import { noteOf } from "./use-author.ts";
 import { useSyncExternalStore } from "react";
 
 const NONE = 0;
@@ -36,7 +38,7 @@ export function ProfileBody(props: ProfileBodyProps): ReactNode {
   }
   return found.map((identity) => (
     <Profile agent={identity.kind === "agent"} key={identity.name} name={identity.name}>
-      <ProfileName displayName={identity.displayName ?? null} name={identity.name}>
+      <ProfileName displayName={identity.displayName ?? null} name={identity.name} note={noteOf(identity)}>
         <IdentityTags identity={identity} />
       </ProfileName>
       <Muted>{kindOf(identity)}</Muted>
@@ -45,6 +47,7 @@ export function ProfileBody(props: ProfileBodyProps): ReactNode {
         <DateText time={identity.createdAt} />
       </Muted>
       <AdminToggle identities={props.identities} identity={identity} me={props.me} />
+      <ProfileActions identities={props.identities} identity={identity} me={props.me} />
     </Profile>
   ));
 }
