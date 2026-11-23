@@ -31,6 +31,26 @@ async function shownHrefs(): Promise<readonly (string | null)[]> {
   return hrefs;
 }
 
+interface Answering {
+  readonly answered: Promise<ListChannelsResponse>;
+  readonly client: CookoutClient;
+}
+
+function answering(client: CookoutClient): Answering {
+  const { promise, resolve } = Promise.withResolvers<ListChannelsResponse>();
+  return {
+    answered: promise,
+    client: {
+      ...client,
+      listChannels: async (): Promise<ListChannelsResponse> => {
+        const answer = await client.listChannels();
+        resolve(answer);
+        return answer;
+      },
+    },
+  };
+}
+
 function counting(client: CookoutClient): Counted {
   const calls: string[] = [];
   return {
@@ -65,11 +85,14 @@ function shownLink(name: string): readonly (string | null)[] {
 it("the sidebar lists the channels the server has, each linking to its channel", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const client = await adminWithChannels({ name: "web-list-general" }, { name: "web-list-deploys" });
-  const { channels } = await client.listChannels();
+  const { answered, client } = answering(
+    await adminWithChannels({ name: "web-list-general" }, { name: "web-list-deploys" }),
+  );
   const close = openAt({ client, hash: "" });
 
   const hrefs = await shownHrefs();
+
+  const { channels } = await answered;
 
   expect(hrefs).toStrictEqual(expect.arrayContaining(channels.map((channel) => `#/channels/${channel.name}`)));
   expect(shownLink("#web-list-general")).toStrictEqual(["#web-list-general", "#/channels/web-list-general"]);

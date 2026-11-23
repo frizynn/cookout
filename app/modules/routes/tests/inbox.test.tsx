@@ -92,12 +92,14 @@ it("the inbox lists unread items newest first, each with who posted it where, it
 
   await screen.findByRole("list", { name: "Unread" });
 
-  expect(screen.getByRole("heading", { level: 2, name: "Unread 3" })).toBeDefined();
-  expect(rowsOf("Unread")).toStrictEqual([
-    `#/channels/${channel} ${channel}-posterposted in#${channel}just now${other.text}Channel`,
-    `#/channels/${channel}/threads/${String(parent.id)} ${channel}-posterreplied in a thread in#${channel}just nowre: Deploy at noon? The rollout notes are in the usual place and every da…${reply.text}ThreadMention`,
-    `#/channels/${also} ${channel}-posterposted in#${also}just now${first.text}Channel`,
-  ]);
+  await waitFor(() => {
+    expect(screen.getByRole("heading", { level: 2, name: "Unread 3" })).toBeDefined();
+    expect(rowsOf("Unread")).toStrictEqual([
+      `#/channels/${channel} ${channel}-posterposted in#${channel}just now${other.text}Channel`,
+      `#/channels/${channel}/threads/${String(parent.id)} ${channel}-posterreplied in a thread in#${channel}just nowre: Deploy at noon? The rollout notes are in the usual place and every da…${reply.text}ThreadMention`,
+      `#/channels/${also} ${channel}-posterposted in#${also}just now${first.text}Channel`,
+    ]);
+  });
 
   unmount();
 });
