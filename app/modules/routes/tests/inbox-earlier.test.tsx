@@ -41,6 +41,25 @@ function historyRefusedAfter(reader: CookoutClient, pages: number): CookoutClien
   };
 }
 
+function answering<Answer>(answer: Answer): () => Promise<Answer> {
+  return async () => {
+    const answered = await Promise.resolve(answer);
+    return answered;
+  };
+}
+
+async function readElsewhere(channel: string): Promise<CookoutClient> {
+  const { poster, reader } = await subscribedReader(channel);
+  const last = await postAll(poster, channel, ["One"]);
+  const [inbox, positions] = await Promise.all([reader.inbox(), reader.readPositions()]);
+  await reader.ack(last);
+  return {
+    ...reader,
+    inbox: answering(inbox),
+    readPositions: answering(positions),
+  };
+}
+
 function postedRow(channel: string, text: string): string {
   return `#/channels/${channel} ${channel}-posterposted in#${channel}just now${text}Channel`;
 }
@@ -116,6 +135,20 @@ it("with nothing in it, the inbox says it is all caught up and nothing is read y
 
   expect(screen.getByText("You're all caught up.")).toBeDefined();
   expect(screen.getByRole("heading", { level: 2, name: "Unread 0" })).toBeDefined();
+
+  unmount();
+});
+
+it("an item read in another session after the inbox loaded stays in Unread, not Earlier, until it hears so", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-inbox-read-elsewhere";
+  const unmount = openAt({ client: await readElsewhere(channel), hash: "#/inbox" });
+  await screen.findByText("Nothing read yet.");
+
+  expect(rowsOf("Unread")).toStrictEqual([postedRow(channel, "One")]);
 
   unmount();
 });
