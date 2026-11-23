@@ -3,6 +3,11 @@ import { adminClient, alertSaying, clientWith, newIdentity, openAt } from "./app
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 
+interface ReadingAsAnother {
+  readonly client: CookoutClient;
+  readonly reader: Awaited<ReturnType<typeof newIdentity>>;
+}
+
 const ONE_A_PAGE = 1;
 const TWO_A_PAGE = 2;
 const NONE = 0;
@@ -15,6 +20,12 @@ async function ackingWithALeftSession(token: string, name: string): Promise<Cook
   const session = clientWith(agentSessionToken);
   await session.leave();
   return { ...client, ack: session.ack };
+}
+
+async function readingAsAnother(viewer: string, reader: string): Promise<ReadingAsAnother> {
+  const viewing = await newIdentity({ kind: "human", name: viewer });
+  const reading = await newIdentity({ kind: "human", name: reader });
+  return { client: { ...viewing.client, listMessages: reading.client.listMessages }, reader: reading };
 }
 
 async function post(channel: string, text: string): Promise<Message> {
@@ -219,8 +230,8 @@ it("a refused older page says so and keeps the messages shown", { timeout: 5000 
   expect.hasAssertions();
 
   await channelWith("web-channel-older-refused", ["A", "B"]);
-  const reader = await newIdentity({ kind: "human", name: "web-channel-rotated" });
-  const close = openAt({ client: reader.client, hash: "#/channels/web-channel-older-refused", pageSize: ONE_A_PAGE });
+  const { client, reader } = await readingAsAnother("web-channel-viewer", "web-channel-rotated");
+  const close = openAt({ client, hash: "#/channels/web-channel-older-refused", pageSize: ONE_A_PAGE });
   await shownMessages();
   await reader.rotateToken();
 
