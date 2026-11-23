@@ -33,7 +33,7 @@ import type {
   ListIdentitiesQuery,
   ListIdentitiesResponse,
 } from "../identities/index.ts";
-import type { EventStream, WatchOptions } from "./lib/events.ts";
+import type { EventCalls, EventStream, WatchOptions } from "./lib/events.ts";
 import type {
   ListMessagesQuery,
   ListMessagesResponse,
@@ -252,6 +252,8 @@ export type CookoutClient = ApprovalCalls & {
    * item sent live is newer, so resuming from it after a drop misses nothing.
    */
   readonly watch: (options?: WatchOptions) => Promise<EventStream>;
+  /** `GET /v1/presence`: every identity's presence, Deactivated ones included, sorted by name (see `Presence`). */
+  readonly presence: EventCalls["presence"];
   /**
    * `POST /v1/commands` (admin only): registers a webhook command. Its handler identity is an agent with the
    * command's name, made unless an agent of that name exists. The secret deliveries are signed with is in the answer

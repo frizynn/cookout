@@ -28,6 +28,7 @@ type Connected<Needs> = Effect.Effect<
 >;
 
 interface StreamRequest {
+  readonly authorization: string | undefined;
   readonly caller: Identity;
   readonly lastEventId: Option.Option<MessageId>;
   readonly url: string;

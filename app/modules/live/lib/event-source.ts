@@ -13,6 +13,7 @@ const eventTypes = {
   identity: true,
   "inbox-item": true,
   message: true,
+  presence: true,
   "read-position": true,
   "read-position-moved-back": true,
   subscription: true,

@@ -20,6 +20,8 @@ const SMALLEST_LIMIT = 1;
 const DEFAULT_REQUESTS_PER_MINUTE = 6000;
 const DEFAULT_COMMAND_CALLS_PER_MINUTE = 60;
 const DEFAULT_STREAMS_PER_IDENTITY = 20;
+const DEFAULT_PRESENCE_GRACE_SECONDS = 60;
+const SHORTEST_PRESENCE_GRACE_SECONDS = 0;
 
 const isPublicUrl = Schema.makeFilter(
   (url: string) =>
@@ -145,6 +147,15 @@ export const streamsPerIdentity = Config.schema(
   Schema.Int.check(Schema.isGreaterThanOrEqualTo(SMALLEST_LIMIT)),
   "COOKOUT_STREAMS_PER_IDENTITY",
 ).pipe(Config.withDefault(DEFAULT_STREAMS_PER_IDENTITY));
+
+/**
+ * `COOKOUT_PRESENCE_GRACE_SECONDS`: how long an identity stays online after its last live connection closes, so a
+ * `cookout watch` that Monitor restarts never shows offline (Matt, 2026-11-23, presence grilling Q8, mattpocock/cookout#177).
+ */
+export const presenceGraceSeconds = Config.schema(
+  Schema.Int.check(Schema.isGreaterThanOrEqualTo(SHORTEST_PRESENCE_GRACE_SECONDS)),
+  "COOKOUT_PRESENCE_GRACE_SECONDS",
+).pipe(Config.withDefault(DEFAULT_PRESENCE_GRACE_SECONDS));
 
 /** `COOKOUT_STATE_DIR`: where the CLI keeps the agent session token `join` issued. Empty counts as unset. */
 export const stateDirectory = Config.String("COOKOUT_STATE_DIR").pipe(Config.withDefault(""));

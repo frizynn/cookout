@@ -1,17 +1,21 @@
-import { ChannelEventSchema, MessageEventSchema } from "./wire.ts";
+import { ChannelEventSchema, MessageEventSchema, PresenceEventSchema } from "./wire.ts";
 import type { Connected, StreamRequest } from "./source.ts";
 import { Effect, Record, Stream } from "effect";
 import { Channels } from "../../../channels/server.ts";
 import { Messages } from "../../../messages/server.ts";
+import { PresenceRegistry } from "../../../presence/server.ts";
+import type { Storage } from "../../../storage/server.ts";
 import { allChannelsQuery } from "../../index.ts";
+import { presenceName } from "../../../presence/index.ts";
 import { sseEvent } from "./source.ts";
 
 const PATH_BASE = "http://cookout.invalid";
 
 const messageEvent = sseEvent(MessageEventSchema);
 const channelEvent = sseEvent(ChannelEventSchema);
+const presenceEvent = sseEvent(PresenceEventSchema);
 
-type AllChannelsNeeds = Messages | Channels;
+type AllChannelsNeeds = Messages | Channels | PresenceRegistry | Storage;
 
 function asksForAllChannels({ url }: StreamRequest): boolean {
   const search = new URL(url, PATH_BASE).searchParams;
@@ -44,4 +48,17 @@ function channels(request: StreamRequest): Connected<Channels> {
   });
 }
 
-export { type AllChannelsNeeds, allChannels, asksForAllChannels, channels };
+function presence(request: StreamRequest): Connected<PresenceRegistry> {
+  return Effect.gen(function* subscribeToPresence() {
+    if (!asksForAllChannels(request)) {
+      return Stream.empty;
+    }
+    const registry = yield* PresenceRegistry;
+    const changed = yield* registry.changed;
+    return Stream.fromSubscription(changed).pipe(
+      Stream.mapEffect((changedPresence) => presenceEvent({ presence: changedPresence, type: presenceName })),
+    );
+  });
+}
+
+export { type AllChannelsNeeds, allChannels, asksForAllChannels, channels, presence };

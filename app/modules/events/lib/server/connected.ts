@@ -1,12 +1,16 @@
+import type { Connected, StreamRequest } from "./source.ts";
 import { Effect, Schema, Stream } from "effect";
-import type { Connected } from "./source.ts";
 import { ConnectedEventSchema } from "./wire.ts";
 import { Messages } from "../../../messages/server.ts";
+import type { PresenceRegistry } from "../../../presence/server.ts";
+import type { Storage } from "../../../storage/server.ts";
+import { holdLiveConnection } from "../../../presence/server.ts";
 
 const encodeConnected = Schema.encodeEffect(Schema.fromJsonString(ConnectedEventSchema));
 
-function connected(): Connected<Messages> {
+function connected({ authorization, caller }: StreamRequest): Connected<Messages | PresenceRegistry | Storage> {
   return Effect.gen(function* readLatestOnRun() {
+    yield* holdLiveConnection({ authorization, caller });
     const messages = yield* Messages;
     return Stream.fromEffect(
       Effect.gen(function* sayConnected() {
