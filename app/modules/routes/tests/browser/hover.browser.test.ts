@@ -1,6 +1,7 @@
-import { adminClient, logIn, newIdentity } from "./people.ts";
+import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import { logIn } from "./login.ts";
 
 async function openChannel(page: Page, channel: string): Promise<void> {
   await adminClient().createChannel({ name: channel });

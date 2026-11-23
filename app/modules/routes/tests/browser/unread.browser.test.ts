@@ -1,7 +1,9 @@
 import type { Locator, Page } from "@playwright/test";
-import { adminClient, logInWithStream, newIdentity, sidebar } from "./people.ts";
+import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import type { Person } from "./people.ts";
+import { inSidebar } from "./regions.ts";
+import { logInWithStream } from "./login.ts";
 
 interface Watching {
   readonly poster: Person;
@@ -15,7 +17,7 @@ async function watchList(page: Page, channel: string): Promise<Watching> {
   const reader = await newIdentity({ kind: "human", name: `${channel}-reader` });
   await reader.client.subscribe(channel);
   await logInWithStream({ page, token: reader.token });
-  const row = sidebar(page).getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
+  const row = inSidebar(page).getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
 
   await expect(row).toBeVisible();
 
@@ -27,7 +29,7 @@ async function rowInSecondTab(page: Page, channel: string): Promise<Locator> {
   const streamOpen = other.waitForResponse((response) => response.url().includes("/v1/events"));
   await other.goto("/");
   await streamOpen;
-  return sidebar(other).getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
+  return inSidebar(other).getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
 }
 
 async function openChannel(page: Page, row: Locator, newest: string): Promise<void> {
@@ -38,7 +40,7 @@ async function openChannel(page: Page, row: Locator, newest: string): Promise<vo
 
 async function openAndGoBack(page: Page, row: Locator, newest: string): Promise<void> {
   await openChannel(page, row, newest);
-  await sidebar(page)
+  await inSidebar(page)
     .getByRole("link", { name: /^Inbox/u })
     .click();
 }

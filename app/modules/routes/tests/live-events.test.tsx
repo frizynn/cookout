@@ -1,8 +1,10 @@
 import type { Message, ServerSentEvent } from "../../sdk/index.ts";
-import { adminClient, messagesIn, newIdentity, openAt } from "./app.tsx";
+import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import type { Live } from "../../live/index.ts";
 import { createLive } from "../../live/index.ts";
+import { messagesIn } from "./messages.ts";
+import { openAt } from "./render.tsx";
 import { screen } from "@testing-library/react";
 
 interface ScriptedView {

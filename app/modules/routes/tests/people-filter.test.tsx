@@ -1,11 +1,13 @@
-import { adminClient, newIdentity, openAt } from "./app.tsx";
+import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { inPane } from "./regions.ts";
+import { openAt } from "./render.tsx";
 
 const ONE_ROW = 1;
 
 function chipText(label: string): string {
-  return screen.getByRole("button", { name: (name) => name.startsWith(`${label} `) }).textContent;
+  return inPane().getByRole("button", { name: (name) => name.startsWith(`${label} `) }).textContent;
 }
 
 async function filteredTo(text: string): Promise<readonly string[]> {

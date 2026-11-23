@@ -1,8 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { logIn, newIdentity } from "./people.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
 import { createCookoutClient } from "../../../sdk/index.ts";
+import { inPane } from "./regions.ts";
+import { logIn } from "./login.ts";
+import { newIdentity } from "./people.ts";
 
 interface Shot {
   readonly page: Page;
@@ -48,7 +50,7 @@ test("a human opens a login request's approval link, checks the code, and approv
 
   await screenshotIn({ page, theme: "dark" });
   await screenshotIn({ page, theme: "light" });
-  await page.getByRole("button", { name: "Approve" }).click();
+  await inPane(page).getByRole("button", { name: "Approve" }).click();
 
   await expect(page.getByText(/^Approved\./u)).toBeVisible();
   await expect(anonymous.collectLogin(started.requestId)).resolves.toMatchObject({

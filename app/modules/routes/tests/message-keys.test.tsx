@@ -1,6 +1,8 @@
-import { adminClient, messagesIn, newIdentity, openAt } from "./app.tsx";
+import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, getDefaultNormalizer, screen, within } from "@testing-library/react";
+import { messagesIn } from "./messages.ts";
+import { openAt } from "./render.tsx";
 
 const KEEP_SPACES = { normalizer: getDefaultNormalizer({ trim: false }) };
 

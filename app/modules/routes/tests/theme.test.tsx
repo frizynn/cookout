@@ -1,9 +1,11 @@
-import { adminClient, openAt } from "./app.tsx";
 import { expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
+import { adminClient } from "./identities.ts";
+import { inSidebar } from "./regions.ts";
+import { openAt } from "./render.tsx";
 
 async function openSettings(): Promise<void> {
-  fireEvent.click(await screen.findByRole("button", { name: "Settings" }));
+  fireEvent.click(await inSidebar().findByRole("button", { name: "Settings" }));
 }
 
 function chosenTheme(): readonly string[] {
@@ -58,7 +60,7 @@ it("the Settings button opens and closes its panel", { timeout: 5000 }, async ()
   const close = openAt({ client: adminClient(), hash: "#/" });
   await openSettings();
   const opened = screen.queryByRole("region", { name: "Settings" });
-  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  fireEvent.click(inSidebar().getByRole("button", { name: "Settings" }));
 
   expect([opened === null, screen.queryByRole("region", { name: "Settings" })]).toStrictEqual([false, null]);
 

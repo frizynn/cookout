@@ -1,9 +1,11 @@
 import type { Message, ServerSentEvent } from "../../sdk/index.ts";
-import { adminClient, newIdentity, openAt } from "./app.tsx";
+import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
-import { screen, within } from "@testing-library/react";
 import type { Live } from "../../live/index.ts";
 import { createLive } from "../../live/index.ts";
+import { inPane } from "./regions.ts";
+import { openAt } from "./render.tsx";
+import { within } from "@testing-library/react";
 
 interface Scripted {
   readonly live: Live;
@@ -44,7 +46,7 @@ function sent(message: Readonly<Message>): ServerSentEvent {
 }
 
 async function summaryShown(count: string): Promise<Summary> {
-  const link = await screen.findByRole("link", { name: (name) => name.startsWith(count) });
+  const link = await inPane().findByRole("link", { name: (name) => name.startsWith(count) });
   const repliers: (readonly [string | undefined, string | undefined])[] = [];
   for (const avatar of within(link).getAllByTestId("replier-avatar")) {
     repliers.push([avatar.dataset["initials"], avatar.dataset["agent"]]);

@@ -1,17 +1,19 @@
-import { adminClient, logInWithStream, newIdentity } from "./people.ts";
+import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
+import { inPane, inSidebar } from "./regions.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
+import { logInWithStream } from "./login.ts";
 
 async function postWithMention(page: Page): Promise<void> {
-  await page.getByRole("link", { name: "#browser-post" }).click();
+  await inSidebar(page).getByRole("link", { name: "#browser-post" }).click();
   await page.getByLabel("Message", { exact: true }).pressSequentially("Can @browser-post-r");
   await page
     .getByRole("list", { name: "Mention suggestions" })
     .getByRole("button", { name: "@browser-post-reviewer" })
     .click();
   await page.keyboard.type("look?");
-  await page.getByRole("button", { name: "Send message" }).click();
+  await inPane(page).getByRole("button", { name: "Send message" }).click();
 }
 
 async function inboxesOf(mentioned: CookoutClient, poster: CookoutClient): Promise<readonly unknown[]> {

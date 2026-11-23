@@ -1,0 +1,104 @@
+import type { CookoutClient, CreateIdentityRequest, Token } from "../../sdk/index.ts";
+import type { Session } from "../../session/index.ts";
+import { createCookoutClient } from "../../sdk/index.ts";
+import { createSession } from "../../session/index.ts";
+import { expect } from "vitest";
+import { waitFor } from "@testing-library/react";
+import { webTestCookout } from "../../../../scripts/web-test-server.ts";
+
+const NONE = 0;
+const ONE = 1;
+
+type ClientMethod = {
+  readonly [Key in keyof CookoutClient]: CookoutClient[Key] extends (...args: never) => unknown ? Key : never;
+}[keyof CookoutClient];
+
+interface Tracked {
+  readonly client: CookoutClient;
+  readonly settled: () => Promise<void>;
+}
+
+interface NewIdentity {
+  readonly client: CookoutClient;
+  readonly token: Token;
+  readonly rotateToken: () => Promise<void>;
+}
+
+interface Revocable {
+  readonly viewer: string;
+  readonly revoked: string;
+  readonly methods: readonly ClientMethod[];
+}
+
+interface RevocableView {
+  readonly client: CookoutClient;
+  readonly rotateToken: () => Promise<void>;
+}
+
+function tracked(client: CookoutClient): Tracked {
+  let pending = NONE;
+  const trackedClient = new Proxy(client, {
+    get: (target, key): unknown => {
+      const value: unknown = Reflect.get(target, key);
+      if (typeof value !== "function") {
+        return value;
+      }
+      return async (...args: readonly unknown[]): Promise<unknown> => {
+        pending += ONE;
+        try {
+          const answer: unknown = await Reflect.apply(value, target, args);
+          return answer;
+        } finally {
+          pending -= ONE;
+        }
+      };
+    },
+  });
+  return {
+    client: trackedClient,
+    settled: async () => {
+      await waitFor(() => {
+        expect(pending).toBe(NONE);
+      });
+    },
+  };
+}
+
+export function anonymousClient(): CookoutClient {
+  return createCookoutClient({ env: {}, url: webTestCookout().url });
+}
+
+export function clientWith(token: string): CookoutClient {
+  return createCookoutClient({ env: {}, token, url: webTestCookout().url });
+}
+
+export function adminClient(): CookoutClient {
+  return clientWith(webTestCookout().adminToken);
+}
+
+export function sessionOf(client: Pick<CookoutClient, "whoami">): Session {
+  return createSession({ client, clientWithToken: clientWith });
+}
+
+export async function newIdentity(request: CreateIdentityRequest): Promise<NewIdentity> {
+  const { token } = await adminClient().createIdentity(request);
+  const { client, settled } = tracked(clientWith(token));
+  return {
+    client,
+    rotateToken: async () => {
+      await settled();
+      await adminClient().rotateToken(request.name);
+    },
+    token,
+  };
+}
+
+export async function revocableView({ methods, revoked, viewer }: Revocable): Promise<RevocableView> {
+  const viewing = await newIdentity({ kind: "human", name: viewer });
+  const rotated = await newIdentity({ kind: "human", name: revoked });
+  const client: CookoutClient = { ...viewing.client };
+  for (const method of methods) {
+    Object.assign(client, { [method]: rotated.client[method] });
+  }
+  return { client, rotateToken: rotated.rotateToken };
+}

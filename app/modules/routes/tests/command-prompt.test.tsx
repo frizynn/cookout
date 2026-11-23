@@ -1,7 +1,9 @@
 import { addCommand, channelWithCommand, openChannel, pick, suggestedFor, type } from "./commands.ts";
-import { adminClient, openAt } from "./app.tsx";
 import { expect, it } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
+import { adminClient } from "./identities.ts";
+import { inPane } from "./regions.ts";
+import { openAt } from "./render.tsx";
 
 const fieldsSchema = {
   properties: {
@@ -112,7 +114,7 @@ it("text starting with / that names no registered command posts as a message", {
   const close = await openChannel({ channel: "web-command-not-one" });
 
   type("/shrug at the build");
-  fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Send message" }));
   await within(screen.getByRole("list", { name: "Messages" })).findByText("/shrug at the build");
   const { messages } = await adminClient().listMessages("web-command-not-one");
 

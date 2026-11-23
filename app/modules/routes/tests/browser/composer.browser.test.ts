@@ -1,6 +1,8 @@
-import { adminClient, logIn } from "./people.ts";
 import { expect, test } from "@playwright/test";
+import { inPane, inSidebar } from "./regions.ts";
 import type { Page } from "@playwright/test";
+import { adminClient } from "./people.ts";
+import { logIn } from "./login.ts";
 
 async function threadIn(channel: string): Promise<void> {
   const admin = adminClient();
@@ -10,9 +12,11 @@ async function threadIn(channel: string): Promise<void> {
 
 async function openThread(page: Page, token: string, channel: string): Promise<void> {
   await logIn({ page, token });
-  await page.getByRole("link", { name: `#${channel}` }).click();
+  await inSidebar(page)
+    .getByRole("link", { name: `#${channel}` })
+    .click();
   await page.getByRole("article").hover();
-  await page.getByRole("link", { name: "Reply" }).click();
+  await inPane(page).getByRole("link", { name: "Reply" }).click();
 }
 
 async function mentionerAndReviewers(): Promise<string> {

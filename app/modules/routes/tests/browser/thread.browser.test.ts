@@ -1,8 +1,10 @@
-import { adminClient, logIn, newIdentity, sidebar } from "./people.ts";
+import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
+import { inSidebar, inThread } from "./regions.ts";
 import type { Message } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
 import type { Person } from "./people.ts";
+import { logIn } from "./login.ts";
 
 async function followedThread(channel: string, reader: Person): Promise<Message> {
   const admin = adminClient();
@@ -14,12 +16,12 @@ async function followedThread(channel: string, reader: Person): Promise<Message>
 }
 
 async function replyInThread(page: Page, channel: string, text: string): Promise<void> {
-  await sidebar(page)
+  await inSidebar(page)
     .getByRole("link", { name: `#${channel}` })
     .click();
   await page.getByRole("article").filter({ hasText: "Who's on call?" }).getByRole("link", { name: "1 reply" }).click();
   await page.getByLabel("Reply", { exact: true }).fill(text);
-  await page.getByRole("button", { name: "Send reply" }).click();
+  await inThread(page).getByRole("button", { name: "Send reply" }).click();
 }
 
 test("a human opens a thread, replies, and the thread leaves their inbox", async ({ page }) => {

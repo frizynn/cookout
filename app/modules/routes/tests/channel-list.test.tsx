@@ -1,9 +1,11 @@
 import type { CookoutClient, CreateChannelRequest, ListChannelsResponse } from "../../sdk/index.ts";
-import { adminClient, clientWith, openAt, openBoard, sessionOf } from "./app.tsx";
+import { adminClient, clientWith, sessionOf } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
+import { openAt, openBoard } from "./render.tsx";
 import { createBoard } from "../../board/index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
+import { inSidebar } from "./regions.ts";
 import { watched } from "./watched.ts";
 
 async function adminWithChannels(...channels: readonly CreateChannelRequest[]): Promise<CookoutClient> {
@@ -69,7 +71,7 @@ function counting(client: CookoutClient): Counted {
 async function openLive(client: CookoutClient, shown: string): Promise<() => Promise<void>> {
   const { live, stream } = watched(client);
   const unmount = openAt({ client, hash: "#/", live });
-  await screen.findByRole("link", { name: shown });
+  await inSidebar().findByRole("link", { name: shown });
   const events = await stream;
   return async () => {
     unmount();
@@ -78,7 +80,7 @@ async function openLive(client: CookoutClient, shown: string): Promise<() => Pro
 }
 
 function shownLink(name: string): readonly (string | null)[] {
-  const link = screen.getByRole("link", { name });
+  const link = inSidebar().getByRole("link", { name });
   return [link.textContent, link.getAttribute("href")];
 }
 
@@ -139,7 +141,7 @@ it("following a channel's link opens that channel's route", { timeout: 5000 }, a
 
   const close = openAt({ client: await adminWithChannels({ name: "web-link-target" }), hash: "#/" });
 
-  fireEvent.click(await screen.findByRole("link", { name: "#web-link-target" }));
+  fireEvent.click(await inSidebar().findByRole("link", { name: "#web-link-target" }));
   const heading = await screen.findByRole("heading", { level: 1, name: "#web-link-target" });
 
   expect([globalThis.location.hash, heading.textContent]).toStrictEqual([
@@ -159,7 +161,7 @@ it("coming back to the channel list shows the channels already loaded, without a
   const counted = counting(client);
   const opening = { board: createBoard({ client: counted.client }), hash: "#/", session: sessionOf(client) };
   const closeFirst = openBoard(opening);
-  await screen.findByRole("link", { name: "#web-loaded-once" });
+  await inSidebar().findByRole("link", { name: "#web-loaded-once" });
   closeFirst();
 
   const close = openBoard(opening);
@@ -198,7 +200,7 @@ it("a message in a channel created after the list loaded adds that channel to th
   await client.createChannel({ name: "web-list-live-new" });
   await client.createMessage({ channel: "web-list-live-new", text: "Incident open" });
 
-  const added = await screen.findByRole("link", { name: "#web-list-live-new" });
+  const added = await inSidebar().findByRole("link", { name: "#web-list-live-new" });
 
   expect(added.getAttribute("href")).toBe("#/channels/web-list-live-new");
 

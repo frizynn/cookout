@@ -1,7 +1,9 @@
-import { adminClient, openAt, sessionOf, sidebar } from "./app.tsx";
+import { adminClient, sessionOf } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
+import { inSidebar, inTopBar } from "./regions.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
+import { openAt } from "./render.tsx";
 
 it("a channel's messages scroll in their own region, and a message sent after scrolling still joins the list", {
   timeout: 5000,
@@ -43,13 +45,13 @@ it("on a narrow screen the sidebar opens from its button and closes when a link 
   expect.hasAssertions();
 
   const close = openAt({ client: adminClient(), hash: "#/" });
-  fireEvent.click(await screen.findByRole("button", { name: "Open the sidebar" }));
-  const opened = screen.getByRole("button", { name: "Close the sidebar" }).getAttribute("aria-expanded");
-  fireEvent.click(within(sidebar()).getByRole("link", { name: "People & agents" }));
+  fireEvent.click(await inTopBar().findByRole("button", { name: "Open the sidebar" }));
+  const opened = inTopBar().getByRole("button", { name: "Close the sidebar" }).getAttribute("aria-expanded");
+  fireEvent.click(inSidebar().getByRole("link", { name: "People & agents" }));
 
   expect([
     opened,
-    screen.getByRole("button", { name: "Open the sidebar" }).getAttribute("aria-expanded"),
+    inTopBar().getByRole("button", { name: "Open the sidebar" }).getAttribute("aria-expanded"),
   ]).toStrictEqual(["true", "false"]);
 
   close();

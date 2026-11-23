@@ -1,7 +1,11 @@
-import { adminClient, alertSaying, messagesIn, newIdentity, openAt } from "./app.tsx";
+import { adminClient, newIdentity, revocableView } from "./identities.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
+import { alertSaying } from "./alerts.ts";
+import { inPane } from "./regions.ts";
+import { messagesIn } from "./messages.ts";
+import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";
 
 const NONE = 0;
@@ -36,18 +40,18 @@ function typeMessage(text: string): void {
 }
 
 function sendMessage(): void {
-  fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Send message" }));
 }
 
 async function postWithMention(): Promise<void> {
   typeMessage("Please look, @web-post-r");
-  fireEvent.click(await screen.findByRole("button", { name: "@web-post-reviewer" }));
+  fireEvent.click(await inPane().findByRole("button", { name: "@web-post-reviewer" }));
   sendMessage();
   await within(screen.getByRole("list", { name: "Messages" })).findByText(/Please look/u);
 }
 
 async function openedThenRevoked(name: string, channel: string): Promise<() => void> {
-  const poster = await newIdentity({ kind: "human", name });
+  const poster = await revocableView({ methods: ["createMessage"], revoked: name, viewer: `${name}-viewer` });
   await channelWith(channel, "Earlier");
   const close = openAt({ client: poster.client, hash: `#/channels/${channel}` });
   await shownMessages();

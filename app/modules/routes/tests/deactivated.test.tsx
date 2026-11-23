@@ -1,7 +1,9 @@
-import { adminClient, clientWith, newIdentity, openAt } from "./app.tsx";
+import { adminClient, clientWith, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { inPane, inProfile } from "./regions.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
+import { openAt } from "./render.tsx";
 
 const ONE = 1;
 
@@ -36,8 +38,8 @@ async function profileHeading(): Promise<string> {
 }
 
 async function deactivateFromProfile(name: string): Promise<void> {
-  fireEvent.click(await screen.findByRole("button", { name: "Deactivate" }));
-  fireEvent.click(await screen.findByRole("button", { name: `Deactivate @${name}` }));
+  fireEvent.click(await inProfile().findByRole("button", { name: "Deactivate" }));
+  fireEvent.click(await inProfile().findByRole("button", { name: `Deactivate @${name}` }));
   await waitFor(async () => {
     await expect(profileHeading()).resolves.toBe(`${name}(deactivated)`);
   });
@@ -75,7 +77,7 @@ it("people leaves deactivated identities out until Show deactivated is pressed",
     expect(rowNames()).toHaveLength(ONE);
   });
   const hidden = rowNames();
-  fireEvent.click(screen.getByRole("button", { name: "Show deactivated" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Show deactivated" }));
 
   expect([hidden, rowNames()]).toStrictEqual([
     ["web-off-people-humanHuman"],
@@ -97,7 +99,7 @@ it("an admin deactivates and reactivates from a profile, and the fresh token sho
   const close = openAt({ client: adminClient(), hash: "#/people/web-off-profile-human" });
   await deactivateFromProfile("web-off-profile-human");
   const { identities } = await adminClient().listIdentities({ include: "deactivated" });
-  fireEvent.click(screen.getByRole("button", { name: "Reactivate" }));
+  fireEvent.click(inProfile().getByRole("button", { name: "Reactivate" }));
   const token = await screen.findByLabelText("New Identity token");
   const { identity } = await clientWith(token.textContent).whoami();
 

@@ -1,8 +1,10 @@
 import type { Locator, Page } from "@playwright/test";
-import { adminClient, logInToChannels, newIdentity, sidebar } from "./people.ts";
+import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
+import { inPane, inSidebar } from "./regions.ts";
 import type { MessageId } from "../../../sdk/index.ts";
 import type { Person } from "./people.ts";
+import { logInToChannels } from "./login.ts";
 
 const ONE = 1;
 const A_PAGE_AND_ONE = 51;
@@ -56,7 +58,7 @@ test("the inbox lists the identity's unread items newest first, with their reaso
   await poster.client.createMessage({ channel, text: `@${channel}-reader can you check the rollout?` });
   await logInToChannels({ page, token: reader.token });
 
-  await sidebar(page)
+  await inSidebar(page)
     .getByRole("link", { name: /^Inbox/u })
     .click();
 
@@ -78,7 +80,7 @@ async function inboxInSecondTab(page: Page, channel: string): Promise<Page> {
 }
 
 async function openChannel(page: Page, channel: string, text: string): Promise<void> {
-  await sidebar(page)
+  await inSidebar(page)
     .getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") })
     .click();
 
@@ -103,10 +105,10 @@ test("Load more reads the next page of what was read, and the end says so", asyn
   await expect(rows(page, "Earlier")).toHaveCount(ONE_PAGE);
   await expect(page.getByText("That's everything.")).toBeHidden();
 
-  await page.getByRole("button", { name: "Load more" }).click();
+  await inPane(page).getByRole("button", { name: "Load more" }).click();
 
   await expect(rows(page, "Earlier")).toHaveCount(A_PAGE_AND_ONE);
   await expect(rows(page, "Earlier").last()).toContainText("Build 1 passed");
   await expect(page.getByText("That's everything.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Load more" })).toBeHidden();
+  await expect(inPane(page).getByRole("button", { name: "Load more" })).toBeHidden();
 });

@@ -1,18 +1,21 @@
-import { adminClient, anonymousClient, newIdentity, openAt, sessionOf } from "./app.tsx";
+import { adminClient, anonymousClient, newIdentity, sessionOf } from "./identities.ts";
+import { alertSaying, alertsShown } from "./alerts.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
+import { inPane, inSidebar } from "./regions.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
+import { openAt } from "./render.tsx";
 
 function logInWith(token: string): void {
   fireEvent.change(screen.getByLabelText("Token"), { target: { value: token } });
-  fireEvent.click(screen.getByRole("button", { name: "Log in" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Log in" }));
 }
 
 async function refusalShownFor(token: string): Promise<readonly unknown[]> {
   const close = openAt({ client: anonymousClient(), hash: "#/" });
   await screen.findByRole("form", { name: "Log in" });
   logInWith(token);
-  const alert = await screen.findByRole("alert");
+  const alert = await alertSaying("Couldn't log in");
   const shown = [alert.textContent, screen.queryByRole("list")];
   close();
   return shown;
@@ -25,7 +28,7 @@ it("with no session, every route shows the login form and no refusal", { timeout
 
   const form = await screen.findByRole("form", { name: "Log in" });
 
-  expect([form.textContent, screen.queryByRole("alert")]).toStrictEqual(["TokenLog in", null]);
+  expect([form.textContent, alertsShown()]).toStrictEqual(["TokenLog in", []]);
 
   close();
 });
@@ -39,7 +42,7 @@ it("a login started before the app is drawn still lands on the channel list", { 
   session.logIn(human.token);
   const close = openAt({ client: human.client, hash: "#/", session });
 
-  const link = await screen.findByRole("link", { name: "#web-login-early" });
+  const link = await inSidebar().findByRole("link", { name: "#web-login-early" });
 
   expect(link.getAttribute("href")).toBe("#/channels/web-login-early");
 
@@ -56,7 +59,7 @@ it("logging in with a human token shows the channel list", { timeout: 5000 }, as
   await screen.findByRole("form", { name: "Log in" });
 
   logInWith(human.token);
-  const link = await screen.findByRole("link", { name: "#web-login-lands-here" });
+  const link = await inSidebar().findByRole("link", { name: "#web-login-lands-here" });
 
   expect(link.getAttribute("href")).toBe("#/channels/web-login-lands-here");
 
@@ -92,7 +95,7 @@ it("the login route says who is logged in", { timeout: 5000 }, async () => {
   const { client } = await newIdentity({ kind: "human", name: "web-login-who" });
   const close = openAt({ client, hash: "#/login" });
 
-  const link = await screen.findByRole("link", { name: "Logged in as @web-login-who. See the inbox" });
+  const link = await inPane().findByRole("link", { name: "Logged in as @web-login-who. See the inbox" });
 
   expect(link.getAttribute("href")).toBe("#/inbox");
 
@@ -105,7 +108,7 @@ it("the login view says so when the server can't be reached", { timeout: 5000 },
   const client = createCookoutClient({ env: {}, url: "http://127.0.0.1:1" });
   const close = openAt({ client, hash: "#/" });
 
-  const alert = await screen.findByRole("alert");
+  const alert = await alertSaying("Couldn't log in");
 
   expect(alert.textContent).toMatch(/^Couldn't log in \(unreachable\)/u);
 

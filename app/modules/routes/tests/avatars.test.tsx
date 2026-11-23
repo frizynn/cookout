@@ -1,7 +1,8 @@
-import { adminClient, newIdentity, openAt } from "./app.tsx";
+import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { screen, within } from "@testing-library/react";
 import type { Message } from "../../sdk/index.ts";
+import { openAt } from "./render.tsx";
 
 interface Drawn {
   readonly agent: string | null;

@@ -1,7 +1,9 @@
-import { adminClient, clientWith, newIdentity, openAt } from "./app.tsx";
+import { adminClient, clientWith, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, getDefaultNormalizer, screen, within } from "@testing-library/react";
 import type { Message } from "../../sdk/index.ts";
+import { inPane } from "./regions.ts";
+import { openAt } from "./render.tsx";
 
 async function threadIn(channel: string): Promise<Message> {
   await adminClient().createChannel({ name: channel });
@@ -55,7 +57,7 @@ it("choosing a suggestion puts the mention in the reply box in place of the pref
 
   const box = await typeInReply("Ping @chosen-l");
   await suggested();
-  fireEvent.click(screen.getByRole("button", { name: "@chosen-linus" }));
+  fireEvent.click(inPane().getByRole("button", { name: "@chosen-linus" }));
 
   expect([
     screen.queryByDisplayValue("Ping @chosen-linus ", { normalizer: getDefaultNormalizer({ trim: false }) }),

@@ -1,7 +1,11 @@
 import type { CookoutClient, InboxResponse } from "../../sdk/index.ts";
-import { adminClient, alertSaying, messagesIn, newIdentity, openAt } from "./app.tsx";
+import { adminClient, newIdentity, revocableView } from "./identities.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
+import { alertSaying } from "./alerts.ts";
+import { inPane } from "./regions.ts";
+import { messagesIn } from "./messages.ts";
+import { openAt } from "./render.tsx";
 
 const ONE_A_PAGE = 1;
 const NONE = 0;
@@ -53,7 +57,7 @@ async function leaveForTheList(): Promise<void> {
 
 async function bothPagesLoaded(): Promise<void> {
   await shownMessages();
-  fireEvent.click(screen.getByRole("button", { name: "Load older messages" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Load older messages" }));
   await screen.findByText("A");
 }
 
@@ -82,7 +86,7 @@ it("reopening a channel shows what was posted while it was closed, keeping the o
   globalThis.location.hash = "#/channels/web-channel-reopen";
   await screen.findByText("C");
 
-  expect([await shownMessages(), screen.queryByRole("button", { name: "Load older messages" })]).toStrictEqual([
+  expect([await shownMessages(), inPane().queryByRole("button", { name: "Load older messages" })]).toStrictEqual([
     ["adminA", "B", "C"],
     null,
   ]);
@@ -96,7 +100,11 @@ it("reopening a channel that can no longer be read says so and keeps its message
   expect.hasAssertions();
 
   await channelWith("web-channel-reopen-refused", ["Hello"]);
-  const reader = await newIdentity({ kind: "human", name: "web-channel-reopen-rotated" });
+  const reader = await revocableView({
+    methods: ["ack"],
+    revoked: "web-channel-reopen-rotated",
+    viewer: "web-channel-reopen-viewer",
+  });
   const close = await openedThenLeft(reader.client, "web-channel-reopen-refused", shownMessages);
   await reader.rotateToken();
 

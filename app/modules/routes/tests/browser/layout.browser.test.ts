@@ -1,7 +1,9 @@
-import { adminClient, logInToChannels, newIdentity, sidebar } from "./people.ts";
+import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
+import { inSidebar, inTopBar } from "./regions.ts";
 import type { Message } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
+import { logInToChannels } from "./login.ts";
 
 const NARROW = { height: 900, width: 600 };
 const NONE = 0;
@@ -12,7 +14,7 @@ async function backgroundOf(page: Page): Promise<string> {
 }
 
 async function themeChosen(page: Page, theme: string): Promise<string> {
-  await page.getByRole("button", { name: "Settings" }).click();
+  await inSidebar(page).getByRole("button", { name: "Settings" }).click();
   await page.getByRole("region", { name: "Settings" }).getByText(theme, { exact: true }).click();
   const colour = await backgroundOf(page);
   return colour;
@@ -21,7 +23,7 @@ async function themeChosen(page: Page, theme: string): Promise<string> {
 async function reloaded(page: Page): Promise<string> {
   await page.reload();
 
-  await expect(sidebar(page)).toBeVisible();
+  await expect(inSidebar(page)).toBeVisible();
 
   const colour = await backgroundOf(page);
   return colour;
@@ -49,12 +51,12 @@ test("on a narrow screen the sidebar hides behind a button, and the thread panel
 }) => {
   const message = await narrowLogIn(page);
 
-  await expect(sidebar(page)).toBeHidden();
+  await expect(inSidebar(page)).toBeHidden();
 
-  await page.getByRole("button", { name: "Open the sidebar" }).click();
-  await sidebar(page).getByRole("link", { name: "#browser-narrow" }).click();
+  await inTopBar(page).getByRole("button", { name: "Open the sidebar" }).click();
+  await inSidebar(page).getByRole("link", { name: "#browser-narrow" }).click();
 
-  await expect(sidebar(page)).toBeHidden();
+  await expect(inSidebar(page)).toBeHidden();
 
   await page.goto(`/#/channels/browser-narrow/threads/${String(message.id)}`);
 

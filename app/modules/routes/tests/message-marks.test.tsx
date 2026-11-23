@@ -1,7 +1,9 @@
-import { adminClient, newIdentity, openAt, streamOf } from "./app.tsx";
+import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it, vi } from "vitest";
 import type { CookoutClient } from "../../sdk/index.ts";
+import { openAt } from "./render.tsx";
 import { screen } from "@testing-library/react";
+import { streamOf } from "./messages.ts";
 
 const NONE = 0;
 

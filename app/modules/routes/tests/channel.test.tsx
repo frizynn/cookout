@@ -1,12 +1,11 @@
 import type { CookoutClient, InboxResponse, Message } from "../../sdk/index.ts";
-import { adminClient, alertSaying, clientWith, messagesIn, newIdentity, openAt } from "./app.tsx";
+import { adminClient, clientWith, newIdentity, revocableView } from "./identities.ts";
+import { alertSaying, alertsShown } from "./alerts.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
-
-interface ReadingAsAnother {
-  readonly client: CookoutClient;
-  readonly reader: Awaited<ReturnType<typeof newIdentity>>;
-}
+import { inPane } from "./regions.ts";
+import { messagesIn } from "./messages.ts";
+import { openAt } from "./render.tsx";
 
 const ONE_A_PAGE = 1;
 const TWO_A_PAGE = 2;
@@ -20,12 +19,6 @@ async function ackingWithALeftSession(token: string, name: string): Promise<Cook
   const session = clientWith(agentSessionToken);
   await session.leave();
   return { ...client, ack: session.ack };
-}
-
-async function readingAsAnother(viewer: string, reader: string): Promise<ReadingAsAnother> {
-  const viewing = await newIdentity({ kind: "human", name: viewer });
-  const reading = await newIdentity({ kind: "human", name: reader });
-  return { client: { ...viewing.client, listMessages: reading.client.listMessages }, reader: reading };
 }
 
 async function post(channel: string, text: string): Promise<Message> {
@@ -87,7 +80,12 @@ it("the channel view shows the channel's top-level messages, oldest first, with 
 
   const shown = await shownMessages();
 
-  expect([shown, screen.getByRole("link", { name: /^2 replies/u }).getAttribute("href")]).toStrictEqual([
+  expect([
+    shown,
+    inPane()
+      .getByRole("link", { name: /^2 replies/u })
+      .getAttribute("href"),
+  ]).toStrictEqual([
     ["adminFirst2 repliesLast reply just nowView thread →", "adminSecond", "Third"],
     `#/channels/web-channel-shows/threads/${String(parent.id)}`,
   ]);
@@ -114,13 +112,13 @@ it('"Load older messages" loads the older messages, until there are none', { tim
   const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-pages", pageSize: TWO_A_PAGE });
   const firstPage = await shownMessages();
 
-  fireEvent.click(screen.getByRole("button", { name: "Load older messages" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Load older messages" }));
   await screen.findByText("One");
 
   expect([
     firstPage,
     await shownMessages(),
-    screen.queryByRole("button", { name: "Load older messages" }),
+    inPane().queryByRole("button", { name: "Load older messages" }),
   ]).toStrictEqual([["adminTwo", "Three"], ["adminOne", "Two", "Three"], null]);
 
   close();
@@ -133,8 +131,8 @@ it('clicking "Load older messages" twice before it answers loads the older page 
   const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-double-click", pageSize: TWO_A_PAGE });
   await shownMessages();
 
-  fireEvent.click(screen.getByRole("button", { name: "Load older messages" }));
-  fireEvent.click(screen.getByRole("button", { name: "Load older messages" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Load older messages" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Load older messages" }));
   await screen.findByText("One");
 
   await expect(shownMessages()).resolves.toStrictEqual(["adminOne", "Two", "Three"]);
@@ -175,8 +173,8 @@ it("a channel with nothing older says it is the start of the channel", { timeout
   expect([
     start.textContent,
     screen.getByText("This is the start of the channel.").tagName,
-    screen.queryByRole("alert"),
-  ]).toStrictEqual(["Welcome to #web-channel-empty", "P", null]);
+    alertsShown(),
+  ]).toStrictEqual(["Welcome to #web-channel-empty", "P", []]);
 
   close();
 });
@@ -188,7 +186,7 @@ it("a channel that doesn't exist shows Nothing here", { timeout: 5000 }, async (
 
   const heading = await screen.findByRole("heading", { level: 1, name: "Nothing here" });
 
-  expect([heading.textContent, screen.queryByRole("alert")]).toStrictEqual(["Nothing here", null]);
+  expect([heading.textContent, alertsShown()]).toStrictEqual(["Nothing here", []]);
 
   close();
 });
@@ -215,7 +213,7 @@ it("a refused ack says the channel couldn't be marked read", { timeout: 5000 }, 
   const client = await ackingWithALeftSession(agent.token, "web-channel-left");
   const close = openAt({ client, hash: "#/channels/web-channel-ack-refused" });
 
-  const alert = await screen.findByRole("alert");
+  const alert = await alertSaying("Couldn't mark the channel read");
 
   expect(alert.textContent).toMatch(/^Couldn't mark the channel read \(agent_session_revoked\)/u);
 
@@ -226,12 +224,16 @@ it("a refused older page says so and keeps the messages shown", { timeout: 5000 
   expect.hasAssertions();
 
   await channelWith("web-channel-older-refused", ["A", "B"]);
-  const { client, reader } = await readingAsAnother("web-channel-viewer", "web-channel-rotated");
-  const close = openAt({ client, hash: "#/channels/web-channel-older-refused", pageSize: ONE_A_PAGE });
+  const reader = await revocableView({
+    methods: ["listMessages"],
+    revoked: "web-channel-rotated",
+    viewer: "web-channel-viewer",
+  });
+  const close = openAt({ client: reader.client, hash: "#/channels/web-channel-older-refused", pageSize: ONE_A_PAGE });
   await shownMessages();
   await reader.rotateToken();
 
-  fireEvent.click(screen.getByRole("button", { name: "Load older messages" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Load older messages" }));
   const alert = await alertSaying("Couldn't load older messages");
 
   expect([alert.textContent, await shownMessages()]).toStrictEqual([

@@ -1,0 +1,103 @@
+import type { Board, BoardOptions } from "../../board/index.ts";
+import type { LoginApprovals, Session } from "../../session/index.ts";
+import { adminClient, anonymousClient, sessionOf } from "./identities.ts";
+import { cleanup, render } from "@testing-library/react";
+import type { Composer } from "../../composer/index.ts";
+import { CookoutApp } from "../index.tsx";
+import type { CookoutClient } from "../../sdk/index.ts";
+import type { Layout } from "../../layout/index.ts";
+import type { Unread } from "../../unread/index.ts";
+import { createBoard } from "../../board/index.ts";
+import { createComposer } from "../../composer/index.ts";
+import { createLayout } from "../../layout/index.ts";
+import { createLoginApprovals } from "../../session/index.ts";
+import { createUnread } from "../../unread/index.ts";
+import { onTestFinished } from "vitest";
+
+type AppClient = BoardOptions["client"] &
+  Pick<
+    CookoutClient,
+    | "createIdentity"
+    | "deactivateIdentity"
+    | "inbox"
+    | "inboxHistory"
+    | "listAgentSessions"
+    | "reactivateIdentity"
+    | "revokeAgentSession"
+    | "rotateToken"
+    | "transferAgent"
+    | "listIdentities"
+    | "readPositions"
+    | "makeAdmin"
+    | "removeAdmin"
+    | "setDisplayName"
+    | "whoami"
+  >;
+
+interface BoardOpening {
+  readonly hash: string;
+  readonly board: Board;
+  readonly composer?: Composer;
+  readonly layout?: Layout;
+  readonly loginApprovals?: LoginApprovals;
+  readonly session: Session;
+  readonly unread?: Unread;
+}
+
+interface Opening {
+  readonly hash: string;
+  readonly client: AppClient;
+  readonly loginApprovals?: LoginApprovals;
+  readonly pageSize?: number;
+  readonly session?: Session;
+  readonly live?: NonNullable<BoardOptions["live"]>;
+}
+
+function anonymousLoginRequests(): Pick<CookoutClient, "approveLogin" | "getLoginRequest"> {
+  return {
+    approveLogin: async (userCode) => {
+      const approved = await anonymousClient().approveLogin(userCode);
+      return approved;
+    },
+    getLoginRequest: async (userCode) => {
+      const found = await anonymousClient().getLoginRequest(userCode);
+      return found;
+    },
+  };
+}
+
+export function browserLayout(): Layout {
+  return createLayout({ root: globalThis.document.documentElement, storage: globalThis.localStorage });
+}
+
+export function openBoard(opening: BoardOpening): () => void {
+  globalThis.location.hash = opening.hash;
+  const composer = opening.composer ?? createComposer({ client: adminClient(), commands: opening.board.commands });
+  const unread = opening.unread ?? createUnread({ client: adminClient() });
+  const layout = opening.layout ?? browserLayout();
+  const loginApprovals = opening.loginApprovals ?? createLoginApprovals(anonymousLoginRequests());
+  onTestFinished(cleanup);
+  return render(
+    <CookoutApp
+      board={opening.board}
+      composer={composer}
+      layout={layout}
+      loginApprovals={loginApprovals}
+      session={opening.session}
+      unread={unread}
+    />,
+  ).unmount;
+}
+
+export function openAt(opening: Opening): () => void {
+  const session = opening.session ?? sessionOf(opening.client);
+  const board = createBoard(opening);
+  return openBoard({
+    board,
+    composer: createComposer({ ...opening, commands: board.commands }),
+    hash: opening.hash,
+    ...(opening.loginApprovals && { loginApprovals: opening.loginApprovals }),
+    session,
+    unread: createUnread(opening),
+  });
+}

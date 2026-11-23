@@ -20,9 +20,12 @@ const localRuleFile = (rule: string) => {
   return `${MODULE}/lib/${rule}.ts`;
 };
 
+const testPluginRules: ReadonlySet<string> = new Set(["region-lookups"]);
+
 const localRules = readdirSync("lint/rules")
   .filter((file) => file.endsWith(".js"))
-  .map((file) => file.slice(0, -".js".length));
+  .map((file) => file.slice(0, -".js".length))
+  .filter((rule) => !testPluginRules.has(rule));
 
 const nativeRules: readonly (readonly [string, string])[] = [
   ["typescript(no-explicit-any)", "no-explicit-any"],
@@ -49,6 +52,7 @@ const testRules: readonly (readonly [string, string])[] = [
   ["eslint(no-restricted-imports)", "server/no-restricted-imports.process"],
   ["eslint(no-restricted-imports)", "server/no-restricted-imports.binary"],
   ["eslint(no-restricted-imports)", "no-restricted-imports.effect"],
+  ["test-rules(region-lookups)", "region-lookups"],
 ];
 
 const backendRules: readonly (readonly [string, string])[] = [["effecttsgo(global-date)", "global-date"]];

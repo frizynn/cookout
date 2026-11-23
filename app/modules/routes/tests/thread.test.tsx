@@ -1,8 +1,12 @@
 import type { CookoutClient, InboxResponse, Message } from "../../sdk/index.ts";
-import { adminClient, clientWith, messagesIn, newIdentity, openAt, parentShown } from "./app.tsx";
+import { adminClient, clientWith, newIdentity, revocableView } from "./identities.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
+import { messagesIn, parentShown } from "./messages.ts";
+import { alertsShown } from "./alerts.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
+import { inThread } from "./regions.ts";
+import { openAt } from "./render.tsx";
 
 const NONE = 0;
 
@@ -45,12 +49,7 @@ async function followedThreadIn(channel: string, client: CookoutClient): Promise
 
 function sendReply(text: string): void {
   fireEvent.change(screen.getByLabelText("Reply"), { target: { value: text } });
-  fireEvent.click(screen.getByRole("button", { name: "Send reply" }));
-}
-
-async function threadPanel(): Promise<HTMLElement> {
-  const panel = await screen.findByRole("complementary", { name: "Thread" });
-  return panel;
+  fireEvent.click(inThread().getByRole("button", { name: "Send reply" }));
 }
 
 function hashOf(parent: Message): string {
@@ -136,7 +135,7 @@ it("a thread with no replies says so", { timeout: 5000 }, async () => {
 
   const empty = await screen.findByText("No replies yet.");
 
-  expect([empty.textContent, screen.queryByRole("alert")]).toStrictEqual(["No replies yet.", null]);
+  expect([empty.textContent, alertsShown()]).toStrictEqual(["No replies yet.", []]);
 
   close();
 });
@@ -146,7 +145,7 @@ it("a thread that doesn't exist shows the server's refusal", { timeout: 5000 }, 
 
   const close = openAt({ client: adminClient(), hash: "#/channels/general/threads/999999" });
 
-  const alert = await within(await threadPanel()).findByRole("alert");
+  const alert = await inThread().findByRole("alert");
 
   expect(alert.textContent).toMatch(/^Couldn't load the thread \(message_not_found\)/u);
 
@@ -161,7 +160,7 @@ it("a refused ack says the thread couldn't be marked read", { timeout: 5000 }, a
   const client = await ackingWithALeftSession(agent.token, "web-thread-left");
   const close = openAt({ client, hash: hashOf(parent) });
 
-  const alert = await within(await threadPanel()).findByRole("alert");
+  const alert = await inThread().findByRole("alert");
 
   expect(alert.textContent).toMatch(/^Couldn't mark the thread read \(agent_session_revoked\)/u);
 
@@ -172,13 +171,17 @@ it("a refused reply says so and keeps the thread shown, and its text in the box"
   expect.hasAssertions();
 
   const parent = await threadIn("web-thread-reply-refused");
-  const writer = await newIdentity({ kind: "human", name: "web-thread-rotated" });
+  const writer = await revocableView({
+    methods: ["createMessage"],
+    revoked: "web-thread-rotated",
+    viewer: "web-thread-reply-viewer",
+  });
   const close = openAt({ client: writer.client, hash: hashOf(parent) });
   await shownReplies();
   await writer.rotateToken();
 
   sendReply("Too late");
-  const alert = await within(await threadPanel()).findByRole("alert");
+  const alert = await inThread().findByRole("alert");
 
   expect([alert.textContent, await shownReplies(), screen.queryByDisplayValue("Too late")]).toStrictEqual([
     expect.stringMatching(/^Couldn't post the reply \(token_revoked\)/u),
@@ -198,7 +201,7 @@ async function inboxEmptied(client: CookoutClient): Promise<InboxResponse | fals
 }
 
 async function alerted(): Promise<void> {
-  await within(await threadPanel()).findByRole("alert");
+  await inThread().findByRole("alert");
 }
 
 async function leaveForTheList(): Promise<void> {
@@ -250,12 +253,16 @@ it("reopening a thread that can no longer be read says so and keeps its replies 
   expect.hasAssertions();
 
   const parent = await threadIn("web-thread-reopen-refused");
-  const reader = await newIdentity({ kind: "human", name: "web-thread-reopen-rotated" });
+  const reader = await revocableView({
+    methods: ["ack"],
+    revoked: "web-thread-reopen-rotated",
+    viewer: "web-thread-reopen-viewer",
+  });
   const close = await openedThenLeft(reader.client, parent);
   await reader.rotateToken();
 
   globalThis.location.hash = hashOf(parent);
-  const alert = await within(await threadPanel()).findByRole("alert");
+  const alert = await inThread().findByRole("alert");
 
   expect([alert.textContent, await shownReplies()]).toStrictEqual([
     expect.stringMatching(/^Couldn't mark the thread read \(token_revoked\)/u),
