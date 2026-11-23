@@ -12,6 +12,8 @@ const LiveConnectionDetailSchema = Schema.Union([
 
 const OfflineReasonSchema = Schema.Literals(offlineReasons);
 
+const WarningSchema = Schema.Literal(true);
+
 export const PresenceSchema = matchesWire<Presence>()(
   Schema.Struct({
     connection: Schema.optionalKey(LiveConnectionDetailSchema),
@@ -19,6 +21,7 @@ export const PresenceSchema = matchesWire<Presence>()(
     lastSeenAt: Schema.optionalKey(IsoTimeSchema),
     offlineReason: Schema.optionalKey(OfflineReasonSchema),
     online: Schema.Boolean,
+    warning: Schema.optionalKey(WarningSchema),
   }),
 );
 

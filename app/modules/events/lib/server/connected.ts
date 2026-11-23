@@ -5,6 +5,8 @@ import { PresenceRegistry, holdLiveConnection } from "../../../presence/server.t
 import { refusalSseEvent, sseEvent } from "./source.ts";
 import type { AgentSessions } from "../../../agent-sessions/server.ts";
 import { Messages } from "../../../messages/server.ts";
+import { OfflineAlerts } from "../../../inbox/server.ts";
+import type { Presence } from "../../../presence/index.ts";
 import type { Storage } from "../../../storage/server.ts";
 import { asksForAllChannels } from "./all-channels.ts";
 import { presenceName } from "../../../presence/index.ts";
@@ -35,15 +37,27 @@ function connected({ authorization, caller }: StreamRequest): Connected<LiveConn
   });
 }
 
-function presence(request: StreamRequest): Connected<PresenceRegistry> {
+function seenBy(
+  alerts: OfflineAlerts["Service"],
+  { caller }: StreamRequest,
+  changed: Presence,
+): Effect.Effect<{ readonly presence: Presence; readonly type: typeof presenceName }> {
+  if (changed.online) {
+    return Effect.succeed({ presence: changed, type: presenceName });
+  }
+  return Effect.map(alerts.warningsFor(caller.name), (warned) => ({ presence: warned(changed), type: presenceName }));
+}
+
+function presence(request: StreamRequest): Connected<PresenceRegistry | OfflineAlerts> {
   return Effect.gen(function* subscribeToPresence() {
     if (!asksForAllChannels(request)) {
       return Stream.empty;
     }
     const registry = yield* PresenceRegistry;
+    const alerts = yield* OfflineAlerts;
     const changed = yield* registry.changed;
     return Stream.fromSubscription(changed).pipe(
-      Stream.mapEffect((changedPresence) => presenceEvent({ presence: changedPresence, type: presenceName })),
+      Stream.mapEffect((changedPresence) => Effect.flatMap(seenBy(alerts, request, changedPresence), presenceEvent)),
     );
   });
 }

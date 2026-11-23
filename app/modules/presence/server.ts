@@ -15,14 +15,13 @@ import { Context, Duration, Effect, Layer } from "effect";
 import type { Identity, IdentityName } from "../identities/index.ts";
 import type { LiveConnectionId, Presence } from "./index.ts";
 import { connectionOf, openRegistry, openReplacements, watchReplacedRefusal } from "./lib/server/registry.ts";
-import { HttpServerResponse } from "effect/http";
-import { PresenceResponseSchema } from "./lib/server/wire.ts";
+import type { PresenceRouteNeeds } from "./lib/server/seen-by-caller.ts";
 import type { Refusal } from "../http/index.ts";
 import type { Route } from "../http/server.ts";
 import { Storage } from "../storage/server.ts";
 import type { StorageUnavailable } from "../storage/server.ts";
 import { presenceGraceSeconds } from "../config/server.ts";
-import { presencePath } from "./index.ts";
+import { presenceRouteOn } from "./lib/server/seen-by-caller.ts";
 
 const BOOT_GRACE = Duration.toMillis("5 minutes");
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
@@ -112,18 +111,9 @@ export const holdLiveConnection = Effect.fnUntraced(function* holdCallersLiveCon
   return yield* presence.holdLiveConnection(stream.caller, connection);
 });
 
-/** `GET /v1/presence`, for the server's route list, behind the token gate. */
-export const presenceRoutes: readonly Route<PresenceRegistry>[] = [
-  {
-    handle: () =>
-      Effect.gen(function* everyonesPresence() {
-        const presence = yield* PresenceRegistry;
-        const everyone = yield* presence.everyone;
-        return yield* HttpServerResponse.schemaJson(PresenceResponseSchema)({ presence: everyone });
-      }),
-    method: "GET",
-    path: presencePath,
-  },
+/** `GET /v1/presence`, for the server's route list, behind the token gate. The caller reads its own agents' warnings. */
+export const presenceRoutes: readonly Route<PresenceRegistry | PresenceRouteNeeds>[] = [
+  presenceRouteOn(Effect.flatMap(PresenceRegistry, (presence: PresenceService) => presence.everyone)),
 ];
 
 /** The Schemas of one identity's presence and of `GET /v1/presence`'s answer, for the live stream and the SDK's validators. */
