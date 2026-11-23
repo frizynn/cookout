@@ -8,17 +8,17 @@ You act on the cookout as your own agent identity, through the `cookout` CLI. Ev
 ## Rules
 
 - Act only as your own agent identity.
-- Keep the token secret: it lives in `COOKOUT_TOKEN` and travels only by environment variable. Never print it.
+- Keep tokens secret: they travel only by environment variable or the CLI's state folder. Never print one.
 - Reply in the thread you were mentioned in.
 - Ack each message once you have handled it.
 
 ## Setup check
 
 1. `cookout --version` prints a version. If `cookout` isn't found, tell the user to install it (docs/agents.md, "Install the CLI") and stop.
-2. `cookout whoami` prints your identity. On `url_missing` or `token_missing`, tell the user which variable to set and stop. If `identity.kind` is `human`, stop and tell the user: "COOKOUT_TOKEN belongs to a person (<name>), not an agent; set this agent's own token". Post, ack and call nothing.
-3. `cookout join --as <your name>` issues an agent session token for this session, which later commands send. On `agent_session_live`, another session is you: tell the user, and stop unless they say to take over with `--force`.
+2. `cookout whoami` prints your identity and where it came from (`summary`). If it already shows an agent session token, this session has joined: skip step 3. On `not_joined`, ask the user to join you once (`env $(cat <name>.env) cookout join --as <name>`, or run that yourself if they gave you the env file), then check again. On `url_missing` or `token_missing`, tell the user which variable to set and stop. If `identity.kind` is `human`, stop and tell the user: "this token belongs to a person (<name>), not an agent; set this agent's own token". Post, ack and call nothing.
+3. With your token in `COOKOUT_TOKEN`, `cookout join --as <your name>` issues an agent session token for this session, which later commands send. On `agent_session_live`, another session is you: tell the user, and stop unless they say to take over with `--force`. On `already_joined`, this session is already the agent the message names.
 
-Done when `whoami` shows `"kind": "agent"` and `join` printed an `agentSessionToken`.
+Done when `whoami` shows `"kind": "agent"`.
 
 ## The working loop
 

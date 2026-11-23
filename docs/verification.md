@@ -169,21 +169,32 @@ env -u CLAUDECODE -u AI_AGENT $(cat /tmp/cookout-login.env) node app/main.ts who
 
 ## Join as an agent
 
-A session joins as an agent with `join --as <name>`, the Identity token's own agent. The server issues an agent session token that acts as the agent; the CLI keeps it in a state file under `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then `~/.local/state/cookout`), one per server and Identity token, and sends it instead of `COOKOUT_TOKEN` on every later command, which moves its expiry on. Two sessions with the same token need separate state folders. Only an agent joins: a human's `join` is refused with 403 `identity_kind`. These commands play two sessions of the seeded agent `release-bot`, each with its own folder. `join` creates the folder and its `agent-sessions` folder with mode 700, and refuses with `agent_session_state_unsafe` a folder that isn't mode 700 or isn't yours, so don't make the folders yourself with plain `mkdir`:
+Inside an agent tool, `join --as <name>` makes the whole agent tool session act as the Identity token's own agent. The server issues an agent session token; the CLI keeps it in a state file under `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then `~/.local/state/cookout`), one per agent tool session (Claude Code's `CLAUDE_CODE_SESSION_ID`, which its subagents share) and server, and every later verb in that session sends it with no `COOKOUT_TOKEN`, which moves its expiry on. The CLI sends the first of `COOKOUT_TOKEN`, `COOKOUT_SESSION`, the session's join, and (outside an agent tool) the Login. Only an agent joins: a human's `join` is refused with 403 `identity_kind`. These commands simulate two Claude Code sessions, `s1` and `s2`, with `CLAUDECODE=1` and two session IDs, and give an agent's token only to the joins. Run them from a shell that has no `COOKOUT_TOKEN` of its own. `join` creates the folder and its `agent-sessions` folder with mode 700, and refuses with `agent_session_state_unsafe` a folder that isn't mode 700 or isn't yours, so don't make the folder yourself with plain `mkdir`:
 
 ```sh
 jq -r '.identities[] | select(.identity.name == "release-bot") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-release.env
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-release.env) COOKOUT_STATE_DIR=/tmp/cookout-session-1 node app/main.ts join --as release-bot
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-release.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts join --as release-bot
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-release.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts join --as release-bot --force
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-release.env) COOKOUT_STATE_DIR=/tmp/cookout-session-1 node app/main.ts whoami
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-release.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts whoami
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-release.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts leave
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-release.env) COOKOUT_STATE_DIR=/tmp/cookout-session-3 node app/main.ts join --as release-bot --idle-expiry 365d
-env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-seed.json) COOKOUT_STATE_DIR=/tmp/cookout-session-4 node app/main.ts join --as grace
+jq -r '.identities[] | select(.identity.name == "triage-agent") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-triage.env
+grep '^{' /tmp/cookout-dev.log | jq -r '"COOKOUT_URL=\(.url)"' > /tmp/cookout-url.env
+echo "$(cat /tmp/cookout-url.env) CLAUDECODE=1 CLAUDE_CODE_SESSION_ID=s1 COOKOUT_STATE_DIR=/tmp/cookout-state" > /tmp/cookout-s1.env
+echo "$(cat /tmp/cookout-url.env) CLAUDECODE=1 CLAUDE_CODE_SESSION_ID=s2 COOKOUT_STATE_DIR=/tmp/cookout-state" > /tmp/cookout-s2.env
+env $(cat /tmp/cookout-s1.env) $(cat /tmp/cookout-release.env) node app/main.ts join --as release-bot | jq 'del(.agentSessionToken)'
+env $(cat /tmp/cookout-s1.env) node app/main.ts whoami | jq .summary
+env $(cat /tmp/cookout-s1.env) node app/main.ts message post general "posted by a joined session" | jq .message.author.name
+env $(cat /tmp/cookout-s2.env) node app/main.ts whoami
+env $(cat /tmp/cookout-s1.env) $(cat /tmp/cookout-release.env) node app/main.ts join --as release-bot
+env $(cat /tmp/cookout-s1.env) $(cat /tmp/cookout-triage.env) node app/main.ts join --as triage-agent --print-env | sed 's/^export //' > /tmp/cookout-triage-session.env
+env $(cat /tmp/cookout-s1.env) $(cat /tmp/cookout-triage-session.env) node app/main.ts whoami | jq .summary
+env $(cat /tmp/cookout-s2.env) $(cat /tmp/cookout-release.env) node app/main.ts join --as release-bot
+env $(cat /tmp/cookout-s2.env) $(cat /tmp/cookout-release.env) node app/main.ts join --as release-bot --force | jq 'del(.agentSessionToken)'
+env $(cat /tmp/cookout-s1.env) node app/main.ts whoami
+env $(cat /tmp/cookout-s2.env) node app/main.ts leave
+env $(cat /tmp/cookout-s2.env) node app/main.ts whoami
+env -u CLAUDECODE -u AI_AGENT -u CLAUDE_CODE_SESSION_ID $(cat /tmp/cookout-url.env) $(cat /tmp/cookout-release.env) node app/main.ts join --as release-bot
+env $(cat /tmp/cookout-s1.env) $(cat /tmp/cookout-release.env) node app/main.ts join --as release-bot --idle-expiry 365d
+env $(cat /tmp/cookout-s1.env) COOKOUT_ALLOW_HUMAN=1 COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-seed.json) node app/main.ts join --as grace --print-env
 ```
 
-The first `join` prints `{ "agentSessionToken", "issuedAt", "expiresAt" }`, the expiry 7 days on. The second is refused with 409 `agent_session_live` and `details.expiresAt`. `--force` revokes the first session's token and issues a new one. The first session's `whoami` is then refused with 401 `agent_session_revoked` and its stored token is deleted (the message says to join again); the second's prints `release-bot`. `leave` prints `{ "revoked": true }` and deletes the stored token; `release-bot`'s Identity token still works. `--idle-expiry 365d` is refused with 400 `idle_expiry_too_long` and `details.maxIdleExpiry` `90d`; `--idle-expiry 30d` gives a 30-day expiry. Joining as the seeded human `grace` with her own token, with or without `--force`, is refused with `identity_kind`. A token left unused for its idle expiry is refused with 401 `agent_session_expired`.
+The first `join` prints `{ "issuedAt", "expiresAt" }` (the expiry 7 days on; `jq` drops the token). `whoami` in `s1` prints `"release-bot (agent session token, joined just now)"`, and the post's author is `release-bot`. In `s2`, which hasn't joined, `whoami` is refused with `not_joined`: "join as an agent first: cookout join --as <name>". A second `join` in `s1` is refused with `already_joined`, naming `release-bot`. `--print-env` prints `export COOKOUT_SESSION=...` (kept in a file here, never on screen) and stores nothing; with it, `whoami` prints `"triage-agent (COOKOUT_SESSION)"`. `s2`'s `join` is refused with 409 `agent_session_live` and `details.expiresAt`; with `--force` it revokes `s1`'s token and issues a new one. `s1`'s `whoami` is then refused with 401 `agent_session_revoked` and its stored token is deleted (the message says to join again). `leave` in `s2` prints `{ "revoked": true }` and forgets the session, so its next `whoami` is `not_joined`; `release-bot`'s Identity token still works. Outside an agent tool `join` is refused with `agent_tool_missing` (add `--print-env` and it prints the export). `--idle-expiry 365d` is refused with 400 `idle_expiry_too_long` and `details.maxIdleExpiry` `90d`; `--idle-expiry 30d` gives a 30-day expiry. Joining as the seeded human `grace` with her own token (and `COOKOUT_ALLOW_HUMAN=1`, or the request is `agent_as_human`) is refused with `identity_kind`. A token left unused for its idle expiry is refused with 401 `agent_session_expired`. Remove the state when done: `rm -r /tmp/cookout-state /tmp/cookout-triage-session.env`.
 
 Restart with a higher ceiling (`COOKOUT_MAX_IDLE_EXPIRY=400d pnpm dev > /tmp/cookout-dev.log 2>&1`, then write the env file and `pnpm seed` again as in "Start it") and the `--idle-expiry 365d` join succeeds, its expiry a year on.
 

@@ -59,6 +59,10 @@ _Avoid_: API key, PAT, bearer
 **Agent session token**:
 The token `join` issues for one session of an agent, which acts as that agent until `leave` revokes it, another session's `join --force` replaces it, or it goes unused past its idle expiry (7 days by default). An agent has at most one live at a time (Matt, 2026-11-23, [#114](https://github.com/mattpocock/cookout/issues/114)).
 
+**Agent tool**:
+A program that runs an agent and the commands it gives, such as Claude Code or Codex, which the CLI detects from the environment ([ADR 0038](docs/adr/0038-a-human-token-from-an-agent-tool-is-refused-unless-overridden.md)). Inside one, `cookout join` makes the whole agent tool session, subagents included, act as the joined agent, keyed by the tool's session ID (Matt, 2026-11-23, [#116](https://github.com/mattpocock/cookout/issues/116), [ADR 0044](docs/adr/0044-join-keys-by-agent-tool-session.md)).
+_Avoid_: harness, agent runtime
+
 **Command token**:
 The token sent with one command call's webhook delivery, which lets the handler post replies in that call's thread only, for 24 h (Matt, 2026-11-23, [#114](https://github.com/mattpocock/cookout/issues/114)).
 
