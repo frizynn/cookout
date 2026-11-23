@@ -196,6 +196,14 @@ it("a refused reply says so and keeps the thread shown, and its text in the box"
   close();
 });
 
+async function inboxEmptied(client: CookoutClient): Promise<InboxResponse | false> {
+  const inbox = await vi.waitUntil(async () => {
+    const answer = await inboxOnceEmpty(client);
+    return answer;
+  });
+  return inbox;
+}
+
 async function alerted(): Promise<void> {
   await screen.findByRole("alert");
 }
@@ -264,15 +272,19 @@ it("reopening a thread that can no longer be read says so and keeps its replies 
   close();
 });
 
-it("reopening a thread that failed to load loads it again", { timeout: 5000 }, async () => {
+it("reopening a thread that failed to load loads it again and acks it", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const parent = await threadIn("web-thread-reopen-failed");
-  const close = await openedThenLeft(failingOnce(adminClient()), parent, alerted);
+  const reader = await newIdentity({ kind: "human", name: "web-thread-reopen-failed-reader" });
+  const parent = await followedThreadIn("web-thread-reopen-failed", reader.client);
+  const close = await openedThenLeft(failingOnce(reader.client), parent, alerted);
 
   globalThis.location.hash = hashOf(parent);
 
-  await expect(shownReplies()).resolves.toStrictEqual(["@adminFirst reply", "@adminSecond reply"]);
+  await expect(Promise.all([shownReplies(), inboxEmptied(reader.client)])).resolves.toStrictEqual([
+    ["@adminFirst reply", "@adminSecond reply"],
+    expect.objectContaining({ items: [] }),
+  ]);
 
   close();
 });
