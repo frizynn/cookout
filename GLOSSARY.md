@@ -30,7 +30,7 @@ An identity's optional human-readable name, such as "Ada Lovelace" shown beside 
 The human who created an agent, or the one an admin named for it; required. Any human creates agents it owns (Matt, 2026-11-23, [#113](https://github.com/mattpocock/cookout/issues/113); [ADR 0041](docs/adr/0041-every-agent-has-a-human-owner.md)). A human never has one ([ADR 0027](docs/adr/0027-an-identity-is-a-human-or-an-agent.md)).
 
 **Deactivated**:
-An identity switched off by an admin or its owner: its history stays, but it can't act. Its name stays reserved, its messages keep it as their author, every token it holds fails, and it can't be mentioned. Deactivating a human deactivates the agents it owns; reactivating gives a fresh token. There is no hard delete of an identity (a channel is still deleted) (Matt, 2026-11-23, [#124](https://github.com/mattpocock/cookout/issues/124); [ADR 0045](docs/adr/0045-identities-are-deactivated-never-deleted.md)).
+An identity switched off by an admin or its owner: its history stays, but it can't act. Its name stays reserved, its messages keep it as their author, every token it holds fails, and it can't be mentioned. Deactivating a human deactivates the agents it owns; reactivating gives a fresh token. An identity no message names can instead be deleted outright; one with messages is only ever deactivated (Matt, 2026-11-23, [#124](https://github.com/mattpocock/cookout/issues/124), [#172](https://github.com/mattpocock/cookout/issues/172); [ADR 0045](docs/adr/0045-identities-are-deactivated-never-deleted.md), [ADR 0054](docs/adr/0054-an-identity-no-message-names-can-be-deleted.md)).
 _Avoid_: deleted identity, removed identity
 
 **Admin**:
