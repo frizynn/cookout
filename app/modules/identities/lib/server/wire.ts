@@ -8,8 +8,10 @@ import type {
 } from "../../index.ts";
 import { Schema, SchemaTransformation } from "effect";
 import {
+  descriptionLength,
   displayNameLength,
   identityNamePattern,
+  isDescription,
   isDisplayName,
   isIdentityName,
   isOwner,
@@ -39,6 +41,13 @@ const DisplayNameSchema = Schema.String.check(
 
 const SentDisplayNameSchema = Schema.String.pipe(Schema.decodeTo(DisplayNameSchema, SchemaTransformation.trim()));
 
+const DescriptionSchema = Schema.String.check(
+  Schema.isTrimmed({ message: "Use no space at either end." }),
+  Schema.isBetweenLength(descriptionLength.minimum, descriptionLength.maximum, { message: "Use 1-500 characters." }),
+).pipe(Schema.refine(isDescription, { identifier: "Description" }));
+
+const SentDescriptionSchema = Schema.String.pipe(Schema.decodeTo(DescriptionSchema, SchemaTransformation.trim()));
+
 const TokenSchema = Schema.String.check(Schema.isPattern(tokenPattern)).pipe(
   Schema.refine(isToken, { identifier: "Token" }),
 );
@@ -56,6 +65,7 @@ const AgentIdentitySchema = Schema.Struct({
   admin: Schema.Boolean,
   createdAt: IsoTimeSchema,
   deactivated: Schema.optionalKey(Schema.Literal(true)),
+  description: Schema.optionalKey(DescriptionSchema),
   displayName: Schema.optionalKey(DisplayNameSchema),
   handler: Schema.optionalKey(Schema.Literal(true)),
   kind: Schema.Literal("agent"),
@@ -83,4 +93,4 @@ export const ListIdentitiesQuerySchema = matchesWire<ListIdentitiesQuery>()(
   Schema.Struct({ include: IncludeDeactivatedSchema }),
 );
 
-export { SentDisplayNameSchema };
+export { SentDescriptionSchema, SentDisplayNameSchema };

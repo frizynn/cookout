@@ -1,13 +1,15 @@
 import type { DisplayName, Identity, IdentityName } from "../../../identities/index.ts";
 import { Effect, Predicate, Schema } from "effect";
 import { IdentityRow, toIdentity } from "./identity-row.ts";
+import { memoryDescriptions, sqliteDescriptions } from "./descriptions.ts";
+import type { DescriptionsSection } from "./descriptions.ts";
 import type { Fails } from "./errors.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { unreadable } from "./errors.ts";
 
 type SetDisplayNameResult = { readonly status: "set"; readonly identity: Identity } | { readonly status: "not_found" };
 
-interface DisplayNamesSection {
+interface DisplayNamesSection extends DescriptionsSection {
   readonly setDisplayName: (name: IdentityName, displayName: DisplayName | null) => Fails<SetDisplayNameResult>;
 }
 
@@ -28,6 +30,7 @@ function renamed(identity: Identity, displayName: DisplayName | null): Identity 
 
 function memoryDisplayNames({ identities, open }: MemoryIdentityMap): DisplayNamesSection {
   return {
+    ...memoryDescriptions({ identities, open }),
     setDisplayName: (name, displayName) =>
       open(() => {
         const identity = identities.get(name);
@@ -47,6 +50,7 @@ function decodeRow(row: unknown): Fails<typeof IdentityRow.Type> {
 
 function sqliteDisplayNames(db: SqliteDatabase): DisplayNamesSection {
   return {
+    ...sqliteDescriptions(db),
     setDisplayName: (name, displayName) =>
       db.transaction(
         Effect.gen(function* setDisplayNameRow() {

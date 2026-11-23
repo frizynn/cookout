@@ -93,7 +93,7 @@ function toGrant(row: unknown): Fails<CommandTokenGrant> {
   );
 }
 
-const FIND_GRANT = `SELECT i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name, i.deactivated, t.thread_id, t.expires_at
+const FIND_GRANT = `SELECT i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name, i.description, i.deactivated, t.thread_id, t.expires_at
   FROM command_tokens AS t JOIN identities AS i ON i.name = t.handler_name WHERE t.hash = ?`;
 
 function sqliteCommandTokens(db: SqliteDatabase): CommandTokensSection {

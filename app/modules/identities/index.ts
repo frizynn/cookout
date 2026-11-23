@@ -4,6 +4,7 @@
  * constructors, the identity as the server shows it, the routes, and the
  * error codes bearer auth, the admin check and identity creation answer with.
  */
+import type { Description } from "./lib/description.ts";
 import type { IsoTime } from "../time/index.ts";
 
 declare const brand: unique symbol;
@@ -105,6 +106,8 @@ export type HumanIdentity = IdentityFields & {
 export type AgentIdentity = IdentityFields & {
   readonly kind: "agent";
   readonly owner: Owner;
+  /** What the agent handles, for people and for routing (#189): 1–500 characters, trimmed. Every caller sees it. */
+  readonly description?: Description;
   /** Present, and true, on a command's handler identity in `GET /v1/identities`. */
   readonly handler?: true;
 };
@@ -292,3 +295,5 @@ export const identityErrorCodes = [
   "owner_deactivated",
   "login_request_not_found",
 ] as const;
+
+export { type Description, descriptionLength, identityPath, isDescription } from "./lib/description.ts";

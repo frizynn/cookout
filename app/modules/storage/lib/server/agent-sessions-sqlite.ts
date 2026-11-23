@@ -46,7 +46,7 @@ const FIND_LISTED = `SELECT issued_at, expires_at, last_used_at, host FROM agent
 const REVOKE_LIVE =
   "UPDATE agent_session_tokens SET revoked = 1 WHERE identity_name = ? AND revoked = 0 AND expires_at > ?";
 
-const FIND_SESSION = `SELECT i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name, i.deactivated,
+const FIND_SESSION = `SELECT i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name, i.description, i.deactivated,
   t.expires_at, t.idle_seconds, t.revoked
   FROM agent_session_tokens AS t JOIN identities AS i ON i.name = t.identity_name WHERE t.hash = ?`;
 
