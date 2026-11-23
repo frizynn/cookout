@@ -3,6 +3,8 @@ import { expect, it } from "vitest";
 import { inPane } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
+const LONG_LINE_WORDS = 60;
+
 interface Shown {
   readonly texts: (selector: string) => readonly string[];
   readonly attributes: (selector: string, names: readonly string[]) => readonly (string | null)[];
@@ -111,6 +113,28 @@ it("raw HTML in a message shows as text and a javascript: link does not link", {
     [],
     ["<script>alert(1)</script>", 'Look <img src="x" onerror="alert(2)"> click'],
     [""],
+  ]);
+
+  shown.close();
+});
+
+it("a long line in a plain-text code block wraps, and one in a ts block does not", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const long = Array.from({ length: LONG_LINE_WORDS }, () => "word").join(" ");
+  const fence = "```";
+  const text = [
+    "Code blocks:",
+    `${fence}\n${long}\n${fence}`,
+    `${fence}text\n${long}\n${fence}`,
+    `${fence}txt\n${long}\n${fence}`,
+    `${fence}ts\nconst value = "${long}";\n${fence}`,
+  ].join("\n\n");
+  const shown = await shownMessage("web-md-wrap", text, "Code blocks:");
+
+  expect([shown.texts("pre code[data-wrap]"), shown.texts("pre code:not([data-wrap])")]).toStrictEqual([
+    [`${long}\n`, `${long}\n`, `${long}\n`],
+    [`const value = "${long}";\n`],
   ]);
 
   shown.close();

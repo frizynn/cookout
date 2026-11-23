@@ -2,11 +2,13 @@ import { mentionPattern } from "../../messages/index.ts";
 
 const AT_SIGN = 1;
 const BLOCK_PARENTS = new Set(["blockquote", "footnoteDefinition", "listItem", "root"]);
+const PLAIN_TEXT_LANGUAGES = new Set(["text", "txt"]);
 const START = 0;
 
 interface MarkdownNode {
   readonly type: string;
   readonly value?: string;
+  readonly lang?: string | null;
   readonly children?: readonly MarkdownNode[];
   readonly data?: {
     readonly hName: string;
@@ -61,6 +63,20 @@ function htmlAsText(html: string, parent: string): MarkdownNode {
   return text;
 }
 
+function isPlainText(lang: string | null | undefined): boolean {
+  if (typeof lang !== "string") {
+    return true;
+  }
+  return PLAIN_TEXT_LANGUAGES.has(lang.toLowerCase());
+}
+
+function codeNode(node: MarkdownNode): MarkdownNode {
+  if (!isPlainText(node.lang)) {
+    return node;
+  }
+  return { ...node, data: { hName: "code", hProperties: { dataWrap: "" } } };
+}
+
 type ShowChild = (child: MarkdownNode, parent: string) => readonly MarkdownNode[];
 
 function withShownChildren(node: MarkdownNode, show: ShowChild): MarkdownNode {
@@ -80,6 +96,9 @@ function shownNode(node: MarkdownNode, parent: string, shown: MentionsShown): re
   }
   if (node.type === "text") {
     return splitMentions(node.value, shown);
+  }
+  if (node.type === "code") {
+    return [codeNode(node)];
   }
   return [node];
 }

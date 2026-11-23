@@ -7,6 +7,7 @@ The web UI renders a message's text as GitHub-flavoured Markdown with [react-mar
 - `app/modules/views/lib/markdown-text.tsx` is the one file that imports them; the seam rule `markdown-only-in-markdown-text` in `.dependency-cruiser.cjs` fails any other importer.
 - Raw HTML is shown as text: a small remark plugin (`markdown-tree.ts`) turns every `html` node into a text node, wrapped in a paragraph at block level. react-markdown's default URL transform drops `javascript:` and other unsafe links.
 - The same plugin marks the message's @-mentions (only names in `message.mentions`, as before) in text nodes, so a mention inside bold or a link is marked and one in code is not. `#channel` references had no rendering of their own and still don't.
+- A fenced code block of plain text (no language, or `text` or `txt`) word-wraps: the plugin marks its `<code>` with `data-wrap` and the stylesheet gives it `white-space: pre-wrap` (Matt, 2026-11-23, mattpocock/cookout#158). A block in a programming language keeps `pre` and scrolls sideways.
 - Headings render as bold lines. Links open in a new tab with `rel="noopener noreferrer"`.
 - Inbox rows keep their plain-text preview through `MentionText`.
 - The packages are `devDependencies`, like React: Vite bundles them into the web assets, and the server bundle (`app/main.ts`) and the SDK never import them.
