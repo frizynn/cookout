@@ -19,8 +19,8 @@
  * it has something new (`marked`), highlighted when it is the open item, with
  * an icon and any `Pill` after it: a count read out by its label, loud (the
  * unread colour), quiet, or unseen (read out only); `NavHeading` heads a
- * `NavList` of links, and a `NavButton` under them, with a plus, starts
- * something new, such as a channel; in the footer, `FooterLink` is a link
+ * `NavList` of links, with any `HeadingButton` on its line, a plus named by
+ * its label that starts something new, such as a channel; in the footer, `FooterLink` is a link
  * with a gear, such as Settings, highlighted when open. `Pane` is
  * the main column, with a `PaneHeader` (title, description and any action on
  * its right, such as a `PressButton`, a button that is on or off), a
@@ -143,7 +143,7 @@ export { LinkList } from "./lib/link-list.tsx";
 export { LinkRow } from "./lib/link-row.tsx";
 export { Mention } from "./lib/mention.tsx";
 export { Muted } from "./lib/muted.tsx";
-export { NavButton } from "./lib/nav-button.tsx";
+export { HeadingButton } from "./lib/heading-button.tsx";
 export { NavHeading } from "./lib/nav-heading.tsx";
 export { NavLink } from "./lib/nav-link.tsx";
 export { NavList } from "./lib/nav-list.tsx";

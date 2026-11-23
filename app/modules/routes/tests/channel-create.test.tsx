@@ -163,3 +163,24 @@ it("a server that can't be reached is refused beside the name field", { timeout:
 
   close();
 });
+
+it("the New channel button is a plus on the Channels heading's line, and says when its form is open", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const close = openAt({ client: adminClient(), hash: "#/" });
+  const button = await inSidebar().findByRole("button", { name: "New channel" });
+  const heading = inSidebar().getByRole("heading", { level: 2, name: "Channels" });
+  const closed = button.getAttribute("aria-expanded");
+  await openForm();
+
+  expect([
+    button.parentElement === heading.parentElement,
+    button.textContent,
+    closed,
+    button.getAttribute("aria-expanded"),
+  ]).toStrictEqual([true, "", "false", "true"]);
+
+  close();
+});
