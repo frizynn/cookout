@@ -1230,7 +1230,8 @@
         "app/modules/cli/lib/server/lease-state.ts",
         "app/modules/testing/lib/server/cli.ts",
         "packages/e2e/app/modules/cookout/lib/server/bin.ts",
-        "packages/handler-example/app/modules/handler/server.ts"
+        "packages/handler-example/app/modules/handler/server.ts",
+        "packages/handler-example/app/modules/handler/tests/server/cookout.test.ts"
       ],
       "rules": {
         "no-restricted-properties": [
