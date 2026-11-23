@@ -10,6 +10,7 @@ export default defineConfig({
         "app/modules/sdk/lib/generated/**",
         "app/main.ts",
         "app/dev.ts",
+        "app/web.tsx",
       ],
       include: ["app/**/*.{ts,tsx}", "packages/handler-example/app/**/*.ts"],
       provider: "v8",
@@ -21,7 +22,24 @@ export default defineConfig({
         statements: 99.76,
       },
     },
-    include: ["app/**/*.test.ts", "packages/handler-example/app/**/*.test.ts", "lint/**/*.test.js"],
-    isolate: false,
+    projects: [
+      {
+        extends: true,
+        test: {
+          include: ["app/**/*.test.ts", "packages/handler-example/app/**/*.test.ts", "lint/**/*.test.js"],
+          isolate: false,
+          name: "server",
+        },
+      },
+      {
+        extends: true,
+        test: {
+          environment: "jsdom",
+          globalSetup: ["scripts/web-test-server.ts"],
+          include: ["app/**/*.test.tsx"],
+          name: "web",
+        },
+      },
+    ],
   },
 });
