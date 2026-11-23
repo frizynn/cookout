@@ -5,17 +5,11 @@ import type {
   MessagesSection,
   NewMessage,
   Placement,
+  StoredPage,
+  StoredThread,
 } from "./messages.ts";
 import { Array as Arr, Effect, Option, Predicate, Ref, pipe } from "effect";
-import type {
-  Author,
-  ListMessagesResponse,
-  Message,
-  MessageId,
-  Reply,
-  ThreadResponse,
-  TopLevelMessage,
-} from "../../../messages/index.ts";
+import type { Author, Message, MessageId, Reply, TopLevelMessage } from "../../../messages/index.ts";
 import { EMPTY_INBOX, withoutChannel, withoutIdentity } from "./inbox-memory-state.ts";
 import { afterAppend, memoryInbox } from "./inbox-memory.ts";
 import { asMessageId, counted, isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
@@ -73,13 +67,15 @@ function append(data: MemoryMessages, appending: Mentioning): readonly [AppendMe
   const last = data.last + NEXT;
   const message = withKnownMentions(appending);
   const stored = placed({ id: asMessageId(last), message, placement });
+  const messages = [...data.messages, stored];
+  const [receipts, inbox] = afterAppend({ inbox: data.inbox, message: stored, messages });
   return [
-    { message: stored, status: "appended" },
-    { inbox: afterAppend({ inbox: data.inbox, message: stored }), last, messages: [...data.messages, stored] },
+    { message: stored, receipts, status: "appended" },
+    { inbox, last, messages },
   ];
 }
 
-function threadIn(messages: readonly Message[], id: MessageId): ThreadResponse | undefined {
+function threadIn(messages: readonly Message[], id: MessageId): StoredThread | undefined {
   return pipe(
     findMessage(messages, id),
     Option.flatMap((found) =>
@@ -93,7 +89,7 @@ function threadIn(messages: readonly Message[], id: MessageId): ThreadResponse |
   );
 }
 
-function pageIn(messages: readonly Message[], channel: ChannelName, page: ChannelPageRequest): ListMessagesResponse {
+function pageIn(messages: readonly Message[], channel: ChannelName, page: ChannelPageRequest): StoredPage {
   const { before = Number.MAX_SAFE_INTEGER, limit } = page;
   const older = Arr.filter(
     messages,

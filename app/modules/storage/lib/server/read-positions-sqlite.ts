@@ -1,13 +1,14 @@
-import { Effect, Option, Predicate, Schema } from "effect";
+import type { AckedInbox, AckedMessage, Scope } from "./inbox.ts";
+import { Array as Arr, Effect, Option, Predicate, Schema } from "effect";
 import type { Message, MessageId } from "../../../messages/index.ts";
 import type { MovedBackReadPosition, ReadPosition } from "../../../inbox/index.ts";
 import { movedBackTo, scopeOf } from "./inbox.ts";
 import type { IdentityName } from "../../../identities/index.ts";
-import type { Scope } from "./inbox.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isChannelName } from "../../../channels/index.ts";
 import { isMessageId } from "../../../messages/index.ts";
+import { recordReceiptsIn } from "./read-receipts-sqlite.ts";
 import { unreadable } from "./errors.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
@@ -113,4 +114,58 @@ function readPositionsIn({ db, identity }: Reading): Fails<readonly ReadPosition
     .pipe(Effect.flatMap((rows) => Effect.forEach(rows, readPositionRow, ONE_AT_A_TIME)));
 }
 
-export { moveReadPositionBackIn, readPositionsIn };
+const MOVE_CHANNEL_POSITION = `INSERT INTO channel_read_positions (identity_name, channel, message_id) VALUES (?, ?, ?)
+  ON CONFLICT (identity_name, channel) DO UPDATE SET message_id = max(message_id, excluded.message_id)
+  RETURNING message_id`;
+
+const MOVE_THREAD_POSITION = `INSERT INTO thread_read_positions (identity_name, thread_id, message_id) VALUES (?, ?, ?)
+  ON CONFLICT (identity_name, thread_id) DO UPDATE SET message_id = max(message_id, excluded.message_id)
+  RETURNING message_id`;
+
+const PositionRow = Schema.Struct({ message_id: MessageIdColumn });
+
+function positionRow(row: unknown): Fails<MessageId> {
+  return Schema.decodeUnknownEffect(PositionRow)(row).pipe(
+    Effect.mapBoth({ onFailure: unreadable, onSuccess: (decoded) => decoded.message_id }),
+  );
+}
+
+interface Acking extends Reading {
+  readonly at: Message["createdAt"];
+  readonly message: Message;
+}
+
+function movePosition({ db, identity, message }: Acking, scope: Scope): Fails<unknown> {
+  if (Predicate.isNull(scope.thread)) {
+    return db.get(MOVE_CHANNEL_POSITION, identity, scope.channel, message.id);
+  }
+  return db.get(MOVE_THREAD_POSITION, identity, scope.thread, message.id);
+}
+
+function ackIn(acking: Acking): Fails<AckedMessage> {
+  return Effect.gen(function* moveAndRecord() {
+    const scope = scopeOf(acking.message);
+    const messageId = yield* Effect.flatMap(movePosition(acking, scope), positionRow);
+    const readPosition = { ...scope, messageId };
+    const receipts = yield* recordReceiptsIn({ ...acking, position: readPosition });
+    return { readPosition, receipts };
+  });
+}
+
+interface AckingAll extends Reading {
+  readonly at: Message["createdAt"];
+  readonly messages: readonly Message[];
+}
+
+function ackAllIn({ messages, ...acking }: AckingAll): Fails<AckedInbox> {
+  return Effect.map(
+    Effect.forEach(messages, (message) => ackIn({ ...acking, message }), ONE_AT_A_TIME),
+    (acked: readonly AckedMessage[]) => ({
+      readPositions: Arr.map(acked, (one) => one.readPosition),
+      receipts: Arr.flatMap(acked, (one) => one.receipts),
+    }),
+  );
+}
+
+export { ackAllIn, ackIn, moveReadPositionBackIn, readPositionsIn };
+export { receiptsOf } from "./read-receipts-sqlite.ts";

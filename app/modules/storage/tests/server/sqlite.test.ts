@@ -1,5 +1,4 @@
 import { Array as Arr, Effect, Exit, FileSystem, Option, String as Str, pipe } from "effect";
-import type { MessageId, ThreadResponse } from "../../../messages/index.ts";
 import { StorageUnavailable, sqliteStorage } from "../../server.ts";
 import {
   appendTo,
@@ -13,7 +12,9 @@ import {
   openStore,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
+import type { MessageId } from "../../../messages/index.ts";
 import { NodeServices } from "@effect/platform-node";
+import type { StoredThread } from "../../server.ts";
 import { tokenHash } from "../../../identities/index.ts";
 
 type OnDisk<Value> = Effect.Effect<Value, StorageUnavailable, FileSystem.FileSystem>;
@@ -101,7 +102,7 @@ function upperCased(word: string): (file: string) => string {
   return (file) => Str.replaceAll(word, Str.toUpperCase(word))(file);
 }
 
-function postThread(path: string): OnDisk<ThreadResponse | undefined> {
+function postThread(path: string): OnDisk<StoredThread | undefined> {
   return Effect.gen(function* postAndClose() {
     const { close, storage } = yield* openStore(sqliteStorage(path));
     yield* storage.createChannel(channelFixture("grill", { description: "d" }));

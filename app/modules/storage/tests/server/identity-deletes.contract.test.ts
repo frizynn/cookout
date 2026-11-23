@@ -4,6 +4,7 @@ import {
   callId,
   channelFixture as channel,
   commandFixture as command,
+  fixtureTime,
   handlerFixture as handler,
   identityFixture as identity,
   isoTime,
@@ -64,7 +65,7 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
-  "storage contract ($adapter): deleting an identity drops its read positions, subscriptions, follows and mentions",
+  "storage contract ($adapter): deleting an identity drops its read positions, receipts, subscriptions, follows and mentions",
   ({ layer }) =>
     Effect.gen(function* forgetInbox() {
       const { storage } = yield* openStore(layer);
@@ -75,7 +76,7 @@ it.effect.each(storageLayers)(
         [
           storage.subscribeChannel(nameOf("e2e-reader"), channel("grill").name),
           storage.followThread(nameOf("e2e-reader"), top.id),
-          storage.ackMessage(nameOf("e2e-reader"), top.id),
+          storage.ackMessage(nameOf("e2e-reader"), top.id, fixtureTime),
           storage.deleteIdentity(nameOf("e2e-reader")),
         ],
         ONE_AT_A_TIME,
@@ -87,11 +88,12 @@ it.effect.each(storageLayers)(
           storage.listReadPositions(nameOf("e2e-reader")),
           storage.listSubscribedChannels(nameOf("e2e-reader")),
           storage.listInbox(nameOf("e2e-reader")),
+          storage.listReadReceipts([top.id]),
         ],
         ONE_AT_A_TIME,
       );
 
-      expect(fresh).toStrictEqual([[], [], []]);
+      expect(fresh).toStrictEqual([[], [], [], []]);
     }),
 );
 

@@ -7,6 +7,7 @@ import {
   channelName,
   commandFixture as command,
   commandName,
+  fixtureTime,
   handlerFixture as handler,
   identityFixture as identity,
   isoTime,
@@ -71,7 +72,7 @@ function fillGrill(storage: Storage["Service"]): Effect.Effect<Filled, StorageUn
     const mention = yield* appendTo(storage)(newMessage("grill", "@bob look", { ...ANN, mentions: ["bob"] }));
     yield* appendTo(storage)(newMessage("grill", "on it", { ...BOB, replyTo: mention.id }));
     yield* appendTo(storage)(newMessage("grill", "thanks", { ...ANN, replyTo: mention.id }));
-    yield* storage.ackMessage(nameOf("bob"), mention.id);
+    yield* storage.ackMessage(nameOf("bob"), mention.id, fixtureTime);
     yield* callDeploy(storage);
     const elsewhere = yield* appendTo(storage)(newMessage("lounge", "hello", ANN));
     return { elsewhere, mention };

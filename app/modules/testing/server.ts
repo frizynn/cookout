@@ -61,6 +61,9 @@ export {
 export { callId, secretsTest } from "./lib/server/secrets.ts";
 export { type NewMessageOptions, appendTo, messageId, newMessageFixture } from "./lib/server/messages.ts";
 export { freshDatabasePath, openStore, storageLayers } from "./lib/server/storage.ts";
+
+/** Forgets every read receipt in a SQLite file and runs the read receipts backfill again, for the backfill test. */
+export { backfillReadReceiptsAgain } from "../storage/server.ts";
 export {
   type BootedServer,
   type CreateTestIdentityOptions,
@@ -70,5 +73,5 @@ export {
   type TestIdentity,
   testCookout,
 } from "./lib/server/cookout.ts";
-export { isoTime, testStartTime } from "./lib/server/time.ts";
+export { fixtureTime, isoTime, testStartTime } from "./lib/server/time.ts";
 export { type BuiltWeb, builtWebFolder } from "./lib/server/web.ts";

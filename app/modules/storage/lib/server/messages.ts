@@ -3,6 +3,7 @@ import type {
   ListMessagesResponse,
   Message,
   MessageId,
+  ReadReceipt,
   Reply,
   ThreadResponse,
   TopLevelMessage,
@@ -25,7 +26,7 @@ type NewMessage = MessageContent & {
 };
 
 type AppendMessageResult =
-  | { readonly status: "appended"; readonly message: Message }
+  | { readonly status: "appended"; readonly message: Message; readonly receipts: readonly ReadReceipt[] }
   | { readonly status: "channel_not_found" }
   | { readonly status: "reply_to_not_found" }
   | { readonly status: "reply_in_other_channel" };
@@ -62,13 +63,14 @@ interface Counting {
   readonly replies: readonly Reply[];
 }
 
+type StoredPage = Omit<ListMessagesResponse, "receipts">;
+
+type StoredThread = Omit<ThreadResponse, "receipts">;
+
 interface MessagesSection {
   readonly appendMessage: (message: NewMessage) => Fails<AppendMessageResult>;
-  readonly listChannelMessages: (
-    channel: ChannelName,
-    page: ChannelPageRequest,
-  ) => Fails<ListMessagesResponse | undefined>;
-  readonly getThread: (id: MessageId) => Fails<ThreadResponse | undefined>;
+  readonly listChannelMessages: (channel: ChannelName, page: ChannelPageRequest) => Fails<StoredPage | undefined>;
+  readonly getThread: (id: MessageId) => Fails<StoredThread | undefined>;
   readonly latestMessageId: Effect.Effect<MessageId | undefined, StorageUnavailable>;
 }
 
@@ -132,6 +134,8 @@ export {
   type MessagesSection,
   type NewMessage,
   type Placement,
+  type StoredPage,
+  type StoredThread,
   asMessageId,
   counted,
   isPlaced,

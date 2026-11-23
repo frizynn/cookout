@@ -1,9 +1,10 @@
 import { Array as Arr, Option, Order, Predicate } from "effect";
 import type { Channel, ChannelName } from "../../../channels/index.ts";
 import type { InboxItem, InboxReason, MovedBackReadPosition, ReadPosition } from "../../../inbox/index.ts";
-import type { Message, MessageId } from "../../../messages/index.ts";
+import type { Message, MessageId, ReadReceipt } from "../../../messages/index.ts";
 import type { Effect } from "effect";
 import type { IdentityName } from "../../../identities/index.ts";
+import type { IsoTime } from "../../../time/index.ts";
 import type { StorageUnavailable } from "./errors.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
@@ -32,13 +33,24 @@ interface Moving {
   readonly current: MessageId | undefined;
 }
 
+interface AckedMessage {
+  readonly readPosition: ReadPosition;
+  readonly receipts: readonly ReadReceipt[];
+}
+
+interface AckedInbox {
+  readonly readPositions: readonly ReadPosition[];
+  readonly receipts: readonly ReadReceipt[];
+}
+
 interface InboxSection {
   readonly listInbox: (identity: IdentityName) => Fails<readonly StoredInboxItem[]>;
   readonly listInboxAfter: (identity: IdentityName, after: MessageId) => Fails<readonly StoredInboxItem[]>;
   readonly findInboxItem: (identity: IdentityName, id: MessageId) => Fails<StoredInboxItem | undefined>;
   readonly listInboxHistory: (identity: IdentityName, page: HistoryPageRequest) => Fails<StoredHistoryPage>;
-  readonly ackMessage: (identity: IdentityName, id: MessageId) => Fails<ReadPosition | undefined>;
-  readonly ackInbox: (identity: IdentityName, upTo: MessageId) => Fails<readonly ReadPosition[]>;
+  readonly ackMessage: (identity: IdentityName, id: MessageId, at: IsoTime) => Fails<AckedMessage | undefined>;
+  readonly ackInbox: (identity: IdentityName, upTo: MessageId, at: IsoTime) => Fails<AckedInbox>;
+  readonly listReadReceipts: (ids: readonly MessageId[]) => Fails<readonly ReadReceipt[]>;
   readonly moveReadPositionBack: (identity: IdentityName, id: MessageId) => Fails<MovedBackReadPosition | undefined>;
   readonly listReadPositions: (identity: IdentityName) => Fails<readonly ReadPosition[]>;
   readonly followThread: (identity: IdentityName, id: MessageId) => Fails<MessageId | undefined>;
@@ -110,6 +122,8 @@ function reasonsIn(reasons: readonly InboxReason[]): readonly InboxReason[] {
 }
 
 export {
+  type AckedInbox,
+  type AckedMessage,
   type HistoryPageRequest,
   type InboxSection,
   type Scope,
