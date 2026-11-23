@@ -1,6 +1,6 @@
 import { WebhookFake, webhookFake } from "../../../webhook-fake/server.ts";
 import { expect, it } from "@effect/vitest";
-import { leaseId, refusal, serverAnswering } from "../../../testing/server.ts";
+import { refusal, serverAnswering } from "../../../testing/server.ts";
 import { Effect } from "effect";
 import { createCookoutClient } from "../../index.ts";
 
@@ -32,11 +32,11 @@ it.effect("a refusal whose body isn't JSON fails with bad_response, with the bod
   }),
 );
 
-it.effect("the SDK doesn't follow a redirect, so the token and lease ID never reach another server", () =>
+it.effect("the SDK doesn't follow a redirect, so the token never reaches another server", () =>
   Effect.gen(function* noRedirects() {
     const fake = yield* WebhookFake;
     const url = yield* serverAnswering({ body: {}, headers: { location: fake.url }, status: TEMPORARY_REDIRECT });
-    const client = createCookoutClient({ env: {}, leaseId: leaseId("lease_redirected"), token: "cookout_x", url });
+    const client = createCookoutClient({ env: {}, token: "cookout_x", url });
     const refused = yield* refusal(client.whoami);
     const calls = yield* fake.calls;
 

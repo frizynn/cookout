@@ -1,9 +1,9 @@
 import { Argument, Command, Flag } from "effect/cli";
 import { Effect, Option, Schema } from "effect";
 import { printAnswer, refused } from "./output.ts";
+import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { Call } from "./adapters/sdk.ts";
 import type { CommandFailed } from "./output.ts";
-import type { LeaseStateNeeds } from "./lease-state.ts";
 import { callServer } from "./adapters/sdk.ts";
 
 const NOTHING = {};
@@ -12,7 +12,7 @@ const JsonSchemaFile = Schema.Record(Schema.String, Schema.Json);
 
 const JsonText = Schema.fromJsonString(Schema.Json);
 
-function answer<Value>(call: Call<Value>): Effect.Effect<void, CommandFailed, LeaseStateNeeds> {
+function answer<Value>(call: Call<Value>): Effect.Effect<void, CommandFailed, AgentSessionStateNeeds> {
   return Effect.matchEffect(callServer(call), { onFailure: refused, onSuccess: printAnswer });
 }
 

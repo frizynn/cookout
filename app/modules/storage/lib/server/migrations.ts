@@ -107,6 +107,16 @@ const migrations: readonly string[] = [
    CREATE INDEX deliveries_pending ON deliveries (outcome) WHERE outcome = 'pending';`,
   "ALTER TABLE messages ADD COLUMN agent_tool TEXT;",
   `ALTER TABLE identities ADD COLUMN display_name TEXT;`,
+  `DROP TABLE leases;
+   CREATE TABLE agent_session_tokens (
+     hash TEXT PRIMARY KEY,
+     identity_name TEXT NOT NULL REFERENCES identities (name) ON DELETE CASCADE,
+     issued_at TEXT NOT NULL,
+     expires_at TEXT NOT NULL,
+     idle_seconds INTEGER NOT NULL CHECK (idle_seconds > 0),
+     revoked INTEGER NOT NULL CHECK (revoked IN (0, 1))
+   ) STRICT;
+   CREATE INDEX agent_session_tokens_by_identity ON agent_session_tokens (identity_name);`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

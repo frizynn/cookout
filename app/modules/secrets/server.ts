@@ -1,6 +1,6 @@
 /**
  * The one source of randomness and hashing: bearer tokens, what the store
- * keeps instead of a token, lease IDs, command secrets, command tokens, call
+ * keeps instead of a token, command secrets, command tokens, call
  * IDs and the signature of a webhook delivery. The live Layer uses `node:crypto`;
  * tests count instead, with the Layer `testing` builds over this one.
  */
@@ -8,7 +8,6 @@ import type { CallId, CommandSecret } from "../commands/index.ts";
 import { Context, Layer } from "effect";
 import type { Token, TokenHash } from "../identities/index.ts";
 import type { Effect } from "effect";
-import type { LeaseId } from "../leases/index.ts";
 import { liveSecrets } from "./lib/server/live.ts";
 
 export interface SecretsService {
@@ -16,8 +15,6 @@ export interface SecretsService {
   readonly newToken: Effect.Effect<Token>;
   /** What the store keeps instead of the token. The same token always hashes the same. */
   readonly hashToken: (token: Token) => Effect.Effect<TokenHash>;
-  /** A new lease ID: `lease_` and 128 random bits. */
-  readonly newLeaseId: Effect.Effect<LeaseId>;
   /** A new command secret, for signing webhook deliveries: `hmac_` and 256 random bits. */
   readonly newCommandSecret: Effect.Effect<CommandSecret>;
   /**

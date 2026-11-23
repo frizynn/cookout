@@ -11,9 +11,7 @@ import {
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import type { CookoutEvent } from "../../events/index.ts";
-import type { HeldLease } from "./held-lease.ts";
 import type { MessageId } from "../../messages/index.ts";
-import { leaseLost } from "../../leases/index.ts";
 import { openEvents } from "./request.ts";
 
 type EventType = CookoutEvent["type"];
@@ -27,11 +25,6 @@ interface WatchOptions {
   readonly lastEventId?: MessageId;
   readonly onHeartbeat?: () => void;
   readonly onConnected?: (latestMessageId: MessageId | null) => void;
-}
-
-interface Reading {
-  readonly lease: HeldLease;
-  readonly options: WatchOptions;
 }
 
 interface EventCalls {
@@ -100,13 +93,10 @@ function eventOf(frame: ServerSentEvent): CookoutEvent | null {
   return null;
 }
 
-function refused(lease: HeldLease, data: string): CookoutError {
+function refused(data: string): CookoutError {
   const json = parsedData(data);
   if (!isErrorResponse(json) || !isServerErrorCode(json.error.code)) {
     return badEvent(refusalEvent, json);
-  }
-  if (json.error.code === leaseLost) {
-    lease.drop();
   }
   return new CookoutError({ ...json.error, code: json.error.code, status: OK });
 }
@@ -121,13 +111,13 @@ function connected(data: string, { onConnected }: WatchOptions): void {
   }
 }
 
-function eventsIn(frame: ServerSentFrame, { lease, options }: Reading): readonly CookoutEvent[] {
+function eventsIn(frame: ServerSentFrame, options: WatchOptions): readonly CookoutEvent[] {
   if ("comment" in frame) {
     heard(frame.comment, options);
     return [];
   }
   if (frame.event === refusalEvent) {
-    throw refused(lease, frame.data);
+    throw refused(frame.data);
   }
   if (frame.event === CONNECTED) {
     connected(frame.data, options);
@@ -137,10 +127,10 @@ function eventsIn(frame: ServerSentFrame, { lease, options }: Reading): readonly
 
 async function* cookoutEvents(
   frames: AsyncIterable<ServerSentFrame>,
-  reading: Reading,
+  options: WatchOptions,
 ): AsyncGenerator<CookoutEvent, void, undefined> {
   for await (const frame of frames) {
-    yield* eventsIn(frame, reading);
+    yield* eventsIn(frame, options);
   }
 }
 
@@ -160,7 +150,7 @@ function eventCalls(server: ClientConnection): EventCalls {
         path: eventsPath,
         query: queryFor(options.allChannels ?? false),
       });
-      return { [Symbol.asyncIterator]: () => cookoutEvents(events, { lease: server.lease, options }), close };
+      return { [Symbol.asyncIterator]: () => cookoutEvents(events, options), close };
     },
   };
 }

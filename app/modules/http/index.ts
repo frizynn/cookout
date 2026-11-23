@@ -4,10 +4,10 @@
  * the check that ties each backend Schema to its plain-TS wire type.
  */
 import type { IsoTime } from "../time/index.ts";
+import { agentSessionErrorCodes } from "../agent-sessions/index.ts";
 import { channelErrorCodes } from "../channels/index.ts";
 import { commandErrorCodes } from "../commands/index.ts";
 import { identityErrorCodes } from "../identities/index.ts";
-import { leaseErrorCodes } from "../leases/index.ts";
 import { limitErrorCodes } from "../limits/index.ts";
 import { messageErrorCodes } from "../messages/index.ts";
 
@@ -33,7 +33,7 @@ export const errorCodes = [
   ...identityErrorCodes,
   ...channelErrorCodes,
   ...messageErrorCodes,
-  ...leaseErrorCodes,
+  ...agentSessionErrorCodes,
   ...commandErrorCodes,
   ...limitErrorCodes,
   "not_found",

@@ -12,7 +12,7 @@
  * Tests run effects with `@effect/vitest`, which provides `TestClock`: a
  * test cookout starts at `testStartTime`, and a lease's expiry moves with it.
  * `twoSessions` gives an identity two separate SDK sessions, and
- * `freshStateFolder`, `leaseStateFiles` and `writeLeaseStates` make and
+ * `freshStateFolder`, `agentSessionStateFiles` and `writeAgentSessionStates` make and
  * read a CLI session's lease-state folder. `builtWebFolder` stands in for
  * the Vite build that `cookout serve` serves at `/`. A test cookout comes
  * with its own webhook fake, `webhook`, for a command to deliver its calls to.
@@ -48,11 +48,11 @@ export { type FixedAnswer, serverAnswering } from "./lib/server/fixed-answer.ts"
 export {
   type TwoSessions,
   freshStateFolder,
-  leaseStateFiles,
+  agentSessionStateFiles,
   twoSessions,
-  writeLeaseStates,
-} from "./lib/server/leases.ts";
-export { callId, leaseId, secretsTest } from "./lib/server/secrets.ts";
+  writeAgentSessionStates,
+} from "./lib/server/agent-sessions.ts";
+export { callId, secretsTest } from "./lib/server/secrets.ts";
 export { type NewMessageOptions, appendTo, messageId, newMessageFixture } from "./lib/server/messages.ts";
 export { freshDatabasePath, openStore, storageLayers } from "./lib/server/storage.ts";
 export {

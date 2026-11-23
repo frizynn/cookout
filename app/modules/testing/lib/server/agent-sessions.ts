@@ -9,7 +9,7 @@ interface TwoSessions {
   readonly second: CookoutClient;
 }
 
-interface LeaseStateText {
+interface AgentSessionStateText {
   readonly folder: string;
   readonly text: string;
 }
@@ -33,22 +33,22 @@ const freshStateFolder: Effect.Effect<string, never, FileSystem.FileSystem | Sco
   },
 ).pipe(Effect.orDie);
 
-function leaseStateFiles(stateFolder: string): Effect.Effect<readonly string[], never, Files> {
-  return Effect.gen(function* listLeaseStates() {
+function agentSessionStateFiles(stateFolder: string): Effect.Effect<readonly string[], never, Files> {
+  return Effect.gen(function* listAgentSessionStates() {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const folder = path.join(stateFolder, "leases");
+    const folder = path.join(stateFolder, "agent-sessions");
     const names = yield* fs.readDirectory(folder);
     return Arr.map(names, (name) => path.join(folder, name));
   }).pipe(Effect.orDie);
 }
 
-function writeLeaseStates({ folder, text }: LeaseStateText): Effect.Effect<void, never, Files> {
-  return Effect.gen(function* overwriteLeaseStates() {
+function writeAgentSessionStates({ folder, text }: AgentSessionStateText): Effect.Effect<void, never, Files> {
+  return Effect.gen(function* overwriteAgentSessionStates() {
     const fs = yield* FileSystem.FileSystem;
-    const files = yield* leaseStateFiles(folder);
+    const files = yield* agentSessionStateFiles(folder);
     yield* Effect.forEach(files, (file) => fs.writeFileString(file, text), ONE_AT_A_TIME);
   }).pipe(Effect.orDie);
 }
 
-export { type TwoSessions, freshStateFolder, leaseStateFiles, twoSessions, writeLeaseStates };
+export { type TwoSessions, freshStateFolder, agentSessionStateFiles, twoSessions, writeAgentSessionStates };

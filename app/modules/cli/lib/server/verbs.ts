@@ -4,9 +4,9 @@ import { Option, Schema } from "effect";
 import { answer, answered } from "./output.ts";
 import { identityNamePattern, isIdentityName } from "../../../identities/index.ts";
 import { join, leave } from "./join-and-leave.ts";
+import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { CommandFailed } from "./output.ts";
 import type { IdentityName } from "../../../identities/index.ts";
-import type { LeaseStateNeeds } from "./lease-state.ts";
 import { commandCommand } from "./command.ts";
 import { helpCommand } from "./help-monitor.ts";
 import { identityCommand } from "./identity.ts";
@@ -149,7 +149,15 @@ const asFlag = Flag.String("as").pipe(
 );
 const forceFlag = Flag.Boolean("force").pipe(
   Flag.optional,
-  Flag.withDescription("Take the lease even if another session holds it; that session loses it at once."),
+  Flag.withDescription(
+    "Join even while another session has joined as the agent; its agent session token is revoked at once.",
+  ),
+);
+const idleExpiryFlag = Flag.String("idle-expiry").pipe(
+  Flag.optional,
+  Flag.withDescription(
+    "How long the agent session token may go unused before it expires, such as 30d or 12h. Default 7d; at most the server's COOKOUT_MAX_IDLE_EXPIRY.",
+  ),
 );
 
 function notForced(): boolean {
@@ -159,22 +167,28 @@ function notForced(): boolean {
 interface JoinInput {
   readonly as: Option.Option<IdentityName>;
   readonly force: Option.Option<boolean>;
+  readonly idleExpiry: Option.Option<string>;
 }
 
-type JoinCommand = Command.Command<"join", JoinInput, object, CommandFailed, LeaseStateNeeds>;
+type JoinCommand = Command.Command<"join", JoinInput, object, CommandFailed, AgentSessionStateNeeds>;
 
-const joinCommand: JoinCommand = Command.make("join", { as: asFlag, force: forceFlag }, ({ as, force }) =>
-  answered(join({ as, force: Option.getOrElse(force, notForced) })),
+const joinCommand: JoinCommand = Command.make(
+  "join",
+  { as: asFlag, force: forceFlag, idleExpiry: idleExpiryFlag },
+  ({ as, force, idleExpiry }) => answered(join({ as, force: Option.getOrElse(force, notForced), idleExpiry })),
 ).pipe(
   Command.withDescription(
-    "Take the lease on the token's identity, which must be an agent: a human identity never joins. The lease ID is kept in COOKOUT_STATE_DIR (default " +
-      "~/.local/state/cookout), and every later command sends it, which keeps the lease alive. Two sessions on one " +
-      "machine with the same token share a lease unless their COOKOUT_STATE_DIR differs.",
+    "Join as the token's own agent (a human identity never joins): the server issues an agent session token, kept in " +
+      "COOKOUT_STATE_DIR (default ~/.local/state/cookout), and every later command sends it instead of COOKOUT_TOKEN, " +
+      "which moves its expiry on. An agent has one live agent session token: a second join is refused unless --force. " +
+      "Two sessions on one machine with the same token share one unless their COOKOUT_STATE_DIR differs.",
   ),
 );
 
 const leaveCommand = Command.make("leave", {}, () => answered(leave)).pipe(
-  Command.withDescription("Release the lease this session took with join, so another session can join at once."),
+  Command.withDescription(
+    "Revoke the agent session token this session's join issued, and forget it, so another session can join at once.",
+  ),
 );
 
 const historyFlag = Flag.Boolean("history").pipe(

@@ -1,15 +1,20 @@
+import type {
+  AgentSessionState,
+  AgentSessionStateFailure,
+  AgentSessionStateFile,
+  AgentSessionStateNeeds,
+} from "../agent-session-state.ts";
 import type { CookoutClient, CookoutClientOptions, CookoutErrorCode } from "../../../../sdk/index.ts";
 import { CookoutError, createCookoutClient } from "../../../../sdk/index.ts";
 import { Effect, Option, Predicate } from "effect";
-import type { LeaseState, LeaseStateFailure, LeaseStateFile, LeaseStateNeeds } from "../lease-state.ts";
+import { agentSessionExpired, agentSessionRevoked } from "../../../../agent-sessions/index.ts";
 import { agentToolEnvironment, cookoutToken, cookoutUrl } from "../../../../config/server.ts";
 import type { CookoutConnection } from "../../../../config/index.ts";
+import { agentSessionStateFile } from "../agent-session-state.ts";
 import { agentToolIn } from "../../../../config/index.ts";
 import { baseUrlOf } from "../../../../http/client.ts";
-import { leaseLost } from "../../../../leases/index.ts";
-import { leaseStateFile } from "../lease-state.ts";
 
-type CallFailureCode = CookoutErrorCode | LeaseStateFailure["code"] | "usage" | "timeout" | "server_unreachable";
+type CallFailureCode = CookoutErrorCode | AgentSessionStateFailure["code"] | "usage" | "timeout" | "server_unreachable";
 
 interface CallFailure {
   readonly code: CallFailureCode;
@@ -18,11 +23,11 @@ interface CallFailure {
   readonly details?: unknown;
 }
 
-interface ClientWithLeaseState {
+interface ClientWithAgentSessionState {
   readonly client: CookoutClient;
   readonly connection: CookoutConnection;
-  readonly file: LeaseStateFile;
-  readonly saved: Option.Option<LeaseState>;
+  readonly file: AgentSessionStateFile;
+  readonly saved: Option.Option<AgentSessionState>;
 }
 
 type Call<Value> = (client: CookoutClient) => Promise<Value>;
@@ -49,26 +54,41 @@ function toFailure(error: unknown): CallFailure {
   return { ...withStatus, details };
 }
 
-function clientOptions(connection: CookoutConnection, saved: Option.Option<LeaseState>): CookoutClientOptions {
-  const withConnection = { ...connection, env: NOTHING };
-  if (Option.isNone(saved)) {
-    return withConnection;
-  }
-  return { ...withConnection, leaseId: saved.value.leaseId };
+type Sends = "agent-session" | "identity-token";
+
+interface ClientOptionsFor {
+  readonly connection: CookoutConnection;
+  readonly saved: Option.Option<AgentSessionState>;
+  readonly sends: Sends;
 }
 
-function onLeaseLost({
+function clientOptions({ connection, saved, sends }: ClientOptionsFor): CookoutClientOptions {
+  const withConnection = { ...connection, env: NOTHING };
+  if (Option.isNone(saved) || sends === "identity-token") {
+    return withConnection;
+  }
+  return { ...withConnection, token: saved.value.agentSessionToken };
+}
+
+function isEnded(code: CallFailureCode): boolean {
+  return code === agentSessionRevoked || code === agentSessionExpired;
+}
+
+function onAgentSessionEnded({
   file,
   saved,
-}: ClientWithLeaseState): (failure: CallFailure) => Effect.Effect<never, CallFailure> {
+}: ClientWithAgentSessionState): (failure: CallFailure) => Effect.Effect<never, CallFailure> {
   return (failure) =>
-    Effect.gen(function* forgetLostLease() {
-      if (failure.code !== leaseLost || Option.isNone(saved)) {
+    Effect.gen(function* forgetEndedAgentSession() {
+      if (!isEnded(failure.code) || Option.isNone(saved)) {
         return yield* Effect.fail(failure);
       }
       yield* file.remove;
-      const rejoin = `run \`cookout join --as ${saved.value.identity}\` to take it again`;
-      return yield* Effect.fail({ ...failure, message: `${failure.message} The stored lease was deleted; ${rejoin}.` });
+      const rejoin = `run \`cookout join --as ${saved.value.identity}\` to join again`;
+      return yield* Effect.fail({
+        ...failure,
+        message: `${failure.message} The stored agent session token was deleted; ${rejoin}.`,
+      });
     });
 }
 
@@ -79,36 +99,66 @@ function connectionFrom(url: string, token: string, agentTool: { readonly agentT
   return { ...agentTool, token, url: baseUrlOf(url) };
 }
 
-function clientFor(connection: CookoutConnection): Effect.Effect<ClientWithLeaseState, CallFailure, LeaseStateNeeds> {
+function clientFor(
+  connection: CookoutConnection,
+  sends: Sends,
+): Effect.Effect<ClientWithAgentSessionState, CallFailure, AgentSessionStateNeeds> {
   return Effect.gen(function* openClient() {
-    const file = yield* leaseStateFile(connection);
+    const file = yield* agentSessionStateFile(connection);
     const saved = yield* file.read;
     const client = yield* Effect.try({
       catch: toFailure,
-      try: () => createCookoutClient(clientOptions(connection, saved)),
+      try: () => createCookoutClient(clientOptions({ connection, saved, sends })),
     });
     return { client, connection, file, saved };
   });
 }
 
-function withClient<Value>(
-  run: (client: ClientWithLeaseState) => Effect.Effect<Value, CallFailure>,
-): Effect.Effect<Value, CallFailure, LeaseStateNeeds> {
+type Run<Value> = (client: ClientWithAgentSessionState) => Effect.Effect<Value, CallFailure>;
+
+interface Sending<Value> {
+  readonly run: Run<Value>;
+  readonly sends: Sends;
+}
+
+function withClientSending<Value>({
+  run,
+  sends,
+}: Sending<Value>): Effect.Effect<Value, CallFailure, AgentSessionStateNeeds> {
   return Effect.gen(function* callWithClient() {
     const url = yield* Effect.orDie(cookoutUrl);
     const token = yield* Effect.orDie(cookoutToken);
     const markers = yield* Effect.orDie(agentToolEnvironment);
-    const opened = yield* clientFor(connectionFrom(url, token, agentToolIn(markers)));
-    return yield* run(opened).pipe(Effect.catch(onLeaseLost(opened)));
+    const opened = yield* clientFor(connectionFrom(url, token, agentToolIn(markers)), sends);
+    return yield* run(opened).pipe(Effect.catch(onAgentSessionEnded(opened)));
   });
 }
 
-function callClient<Value>(call: Call<Value>): (opened: ClientWithLeaseState) => Effect.Effect<Value, CallFailure> {
+function withClient<Value>(run: Run<Value>): Effect.Effect<Value, CallFailure, AgentSessionStateNeeds> {
+  return withClientSending({ run, sends: "agent-session" });
+}
+
+function withIdentityTokenClient<Value>(run: Run<Value>): Effect.Effect<Value, CallFailure, AgentSessionStateNeeds> {
+  return withClientSending({ run, sends: "identity-token" });
+}
+
+function callClient<Value>(
+  call: Call<Value>,
+): (opened: ClientWithAgentSessionState) => Effect.Effect<Value, CallFailure> {
   return ({ client }) => Effect.tryPromise({ catch: toFailure, try: () => call(client) });
 }
 
-function callServer<Value>(call: Call<Value>): Effect.Effect<Value, CallFailure, LeaseStateNeeds> {
+function callServer<Value>(call: Call<Value>): Effect.Effect<Value, CallFailure, AgentSessionStateNeeds> {
   return withClient(callClient(call));
 }
 
-export { type Call, type CallFailure, type ClientWithLeaseState, callClient, callServer, toFailure, withClient };
+export {
+  type Call,
+  type CallFailure,
+  type ClientWithAgentSessionState,
+  callClient,
+  callServer,
+  toFailure,
+  withClient,
+  withIdentityTokenClient,
+};

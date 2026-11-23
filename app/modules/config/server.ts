@@ -5,9 +5,8 @@
  */
 import { Array as Arr, Config, Record as Rec, Redacted, Schema } from "effect";
 import { agentToolVariables } from "./index.ts";
+import { idleExpiryPattern } from "../agent-sessions/index.ts";
 
-const SHORTEST_LEASE_SECONDS = 1;
-const DEFAULT_LEASE_SECONDS = 60;
 const SHORTEST_WEBHOOK_TIMEOUT_SECONDS = 1;
 const DEFAULT_WEBHOOK_TIMEOUT_SECONDS = 5;
 const SHORTEST_WEBHOOK_RETRY_DELAY_SECONDS = 0;
@@ -60,11 +59,18 @@ export const adminToken = Config.schema(Schema.String.check(isStrongEnoughToken)
 /** `COOKOUT_DB`: the SQLite file `cookout serve` keeps its data in. */
 export const databasePath = Config.String("COOKOUT_DB").pipe(Config.withDefault("cookout.db"));
 
-/** `COOKOUT_LEASE_SECONDS`: how long a lease lasts after the last request that carried it. */
-export const leaseSeconds = Config.schema(
-  Schema.Int.check(Schema.isGreaterThanOrEqualTo(SHORTEST_LEASE_SECONDS)),
-  "COOKOUT_LEASE_SECONDS",
-).pipe(Config.withDefault(DEFAULT_LEASE_SECONDS));
+/**
+ * `COOKOUT_MAX_IDLE_EXPIRY`: the longest idle expiry `join --idle-expiry` may ask for, such as `90d` (Matt,
+ * 2026-11-23, mattpocock/cookout#114). An agent session token expires once it goes that long unused.
+ */
+export const maxIdleExpiry = Config.schema(
+  Schema.String.check(
+    Schema.isPattern(idleExpiryPattern, {
+      message: "COOKOUT_MAX_IDLE_EXPIRY must be a whole number of seconds, minutes, hours or days, such as 90d.",
+    }),
+  ),
+  "COOKOUT_MAX_IDLE_EXPIRY",
+).pipe(Config.withDefault("90d"));
 
 /**
  * `COOKOUT_WEBHOOK_TIMEOUT_SECONDS`: how long the server waits for a command's handler to answer one webhook
@@ -118,7 +124,7 @@ export const streamsPerIdentity = Config.schema(
   "COOKOUT_STREAMS_PER_IDENTITY",
 ).pipe(Config.withDefault(DEFAULT_STREAMS_PER_IDENTITY));
 
-/** `COOKOUT_STATE_DIR`: where the CLI keeps the lease it took with `join`. Empty counts as unset. */
+/** `COOKOUT_STATE_DIR`: where the CLI keeps the agent session token `join` issued. Empty counts as unset. */
 export const stateDirectory = Config.String("COOKOUT_STATE_DIR").pipe(Config.withDefault(""));
 
 /** `XDG_STATE_HOME`: the CLI keeps its state in `cookout/` under it when `COOKOUT_STATE_DIR` is unset. */
@@ -126,7 +132,7 @@ export const xdgStateHome = Config.String("XDG_STATE_HOME").pipe(Config.withDefa
 
 /**
  * `HOME`: the CLI keeps its state in `~/.local/state/cookout` when neither of
- * the above is set. With none of the three, the CLI keeps no lease and `join`
+ * the above is set. With none of the three, the CLI keeps no agent session token and `join`
  * is refused with `state_folder_missing`.
  */
 export const home = Config.String("HOME").pipe(Config.withDefault(""));

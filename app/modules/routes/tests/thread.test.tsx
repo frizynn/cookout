@@ -6,6 +6,14 @@ import { createCookoutClient } from "../../sdk/index.ts";
 
 const NONE = 0;
 
+async function ackingWithALeftSession(token: string, name: string): Promise<CookoutClient> {
+  const client = clientWith(token);
+  const { agentSessionToken } = await client.join({ as: name });
+  const session = clientWith(agentSessionToken);
+  await session.leave();
+  return { ...client, ack: session.ack };
+}
+
 async function post(channel: string, text: string): Promise<Message> {
   const { message } = await adminClient().createMessage({ channel, text });
   return message;
@@ -164,13 +172,13 @@ it("a refused ack says the thread couldn't be marked read", { timeout: 5000 }, a
   expect.hasAssertions();
 
   const parent = await threadIn("web-thread-ack-refused");
-  const agent = await newIdentity({ kind: "agent", name: "web-thread-held" });
-  await agent.client.join({ as: "web-thread-held" });
-  const close = openAt({ client: clientWith(agent.token), hash: hashOf(parent) });
+  const agent = await newIdentity({ kind: "agent", name: "web-thread-left" });
+  const client = await ackingWithALeftSession(agent.token, "web-thread-left");
+  const close = openAt({ client, hash: hashOf(parent) });
 
   const alert = await screen.findByRole("alert");
 
-  expect(alert.textContent).toMatch(/^Couldn't mark the thread read \(lease_required\)/u);
+  expect(alert.textContent).toMatch(/^Couldn't mark the thread read \(agent_session_revoked\)/u);
 
   close();
 });

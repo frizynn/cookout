@@ -32,11 +32,11 @@ it.live("two agents each join through the cookout bin, and a second join on one 
 
     expect([first.identity.kind, second.identity.kind]).toStrictEqual(["agent", "agent"]);
     expect([firstJoin, secondJoin]).toMatchObject([joined, joined]);
-    expect(firstJoin.stdoutJson).toHaveProperty("leaseId");
-    expect(secondJoin.stdoutJson).toHaveProperty("leaseId");
+    expect(firstJoin.stdoutJson).toHaveProperty("agentSessionToken");
+    expect(secondJoin.stdoutJson).toHaveProperty("agentSessionToken");
     expect(again).toMatchObject({
       exitCode: EXIT_FAILURE,
-      stderrJson: { error: { code: "lease_held", status: 409 } },
+      stderrJson: { error: { code: "agent_session_live", status: 409 } },
       stdout: "",
     });
   }).pipe(Effect.provide([cookoutUnderTest, NodeServices.layer])),

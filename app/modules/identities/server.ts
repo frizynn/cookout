@@ -5,6 +5,7 @@
  * never stored: only its hash, made by `Secrets`, goes into `Storage`.
  */
 import {
+  AgentSessionSent,
   AgentToolSent,
   Caller,
   CommandThread,
@@ -28,6 +29,11 @@ import { callerRoutes } from "./lib/server/session.ts";
 
 export { Caller };
 /**
+ * The hash of the agent session token the request was sent with, and none for any other token: `leave` revokes it,
+ * and an open stream checks it is still live.
+ */
+export { AgentSessionSent } from "./lib/server/auth.ts";
+/**
  * The one thread a request may reply in when it carries a command token, and none for any other token. `Messages`
  * posts such a request only as a reply in this thread.
  */
@@ -41,8 +47,8 @@ export { sentAgentTool } from "./lib/server/auth.ts";
 export type IdentitiesService = {
   /**
    * The identity behind a request's `Authorization` header or, without one, its session cookie, and for a command
-   * token the thread of its call. Refuses with 401 `token_missing`, `token_unknown`, `token_revoked` or
-   * `token_expired`.
+   * token the thread of its call. An agent session token's use moves its expiry on. Refuses with 401 `token_missing`,
+   * `token_unknown`, `token_revoked`, `token_expired`, `agent_session_revoked` or `agent_session_expired`.
    */
   readonly authenticate: (credentials: Credentials) => Effect.Effect<Principal, Refusal | StorageUnavailable>;
   /** A new token and its hash. Creating an identity and rotating a token both issue one. */
@@ -82,7 +88,7 @@ export const requireToken: Gate<
   Effect.gen(function* () {
     const identities = yield* Identities;
     const request = yield* HttpServerRequest.HttpServerRequest;
-    const { commandThread, identity } = yield* identities.authenticate(credentialsOf(request));
+    const { agentSession, commandThread, identity } = yield* identities.authenticate(credentialsOf(request));
     const agentTool = yield* agentToolOf({ headers: request.headers, identity });
     if (Option.isSome(commandThread)) {
       yield* requireCommandRoute(request);
@@ -91,6 +97,7 @@ export const requireToken: Gate<
       Effect.provideService(Caller, identity),
       Effect.provideService(CommandThread, commandThread),
       Effect.provideService(AgentToolSent, agentTool),
+      Effect.provideService(AgentSessionSent, agentSession),
     );
   });
 

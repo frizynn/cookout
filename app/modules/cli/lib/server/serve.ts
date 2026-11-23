@@ -9,7 +9,7 @@ import type { FileSystem } from "effect";
 import type { Serving } from "../../../http/server.ts";
 import type { Token } from "../../../identities/index.ts";
 import { adminTokenSet } from "../../../identities/server.ts";
-import { requireTokenAndRenewLease } from "../../../leases/server.ts";
+import { requireTokenWithinLimit } from "./gate.ts";
 import { token } from "../../../identities/index.ts";
 
 export type ServeLayers = {
@@ -18,7 +18,7 @@ export type ServeLayers = {
 };
 
 export const cookoutServer = ({ adminToken: admin, ...serving }: Serving & { readonly adminToken: Token }) =>
-  httpServer(serving, routes, requireTokenAndRenewLease).pipe(
+  httpServer(serving, routes, requireTokenWithinLimit).pipe(
     Layer.provideMerge(adminTokenSet(admin)),
     Layer.provideMerge(domainLayers),
   );
