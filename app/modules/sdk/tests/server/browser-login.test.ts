@@ -161,3 +161,12 @@ it.effect("a login request names a host of 1-100 characters", () =>
     expect(refused).toMatchObject({ code: "invalid_request", status: 400 });
   }).pipe(Effect.provide(testCookout())),
 );
+
+it.effect("with live secrets, a user code is two groups of four consonants", () =>
+  Effect.gen(function* liveCode() {
+    const cookout = yield* TestCookout;
+    const { userCode } = yield* answer(() => cookout.clientFor().startLogin(host));
+
+    expect(userCode).toMatch(/^[B-DF-HJ-NP-TV-XZ]{4}-[B-DF-HJ-NP-TV-XZ]{4}$/u);
+  }).pipe(Effect.provide(testCookout({ secrets: "live" }))),
+);

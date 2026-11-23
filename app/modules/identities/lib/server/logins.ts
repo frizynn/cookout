@@ -32,9 +32,6 @@ type Answer = HttpServerResponse.HttpServerResponse;
 
 const CREATED = 201;
 const ACCEPTED = 202;
-const CODE_ATTEMPTS = 5;
-const LAST_ATTEMPT = 1;
-const ONE_ATTEMPT = 1;
 
 function withinAddressLimit<Value, Failure, Needs>(
   effect: Effect.Effect<Value, Failure, Needs>,
@@ -53,21 +50,21 @@ function withinAddressLimit<Value, Failure, Needs>(
 
 type UnnamedRequest = Omit<NewLoginRequest, "userCode">;
 
-function addWithFreeCode(attemptsLeft: number) {
-  return (request: UnnamedRequest): Effect.Effect<string, StorageUnavailable, Storage | Secrets> =>
-    Effect.gen(function* addRequest() {
-      const storage = yield* Storage;
-      const secrets = yield* Secrets;
-      const userCode = yield* secrets.newUserCode;
-      const added = yield* storage.addLoginRequest({ ...request, userCode }, request.createdAt);
-      if (added === "added") {
-        return userCode;
-      }
-      if (attemptsLeft <= LAST_ATTEMPT) {
-        return yield* Effect.die(new Error("Every user code tried was taken."));
-      }
-      return yield* addWithFreeCode(attemptsLeft - ONE_ATTEMPT)(request);
-    });
+const codeTaken = new Error("The new user code was taken: start again.");
+
+function addWithCode(request: UnnamedRequest): Effect.Effect<string, StorageUnavailable, Storage | Secrets> {
+  return Effect.gen(function* addRequest() {
+    const storage = yield* Storage;
+    const secrets = yield* Secrets;
+    const userCode = yield* secrets.newUserCode;
+    const added = storage.addLoginRequest({ ...request, userCode }, request.createdAt);
+    yield* Effect.filterOrElse(
+      added,
+      (result) => result === "added",
+      () => Effect.die(codeTaken),
+    );
+    return userCode;
+  });
 }
 
 const newRequest = Effect.gen(function* newLoginRequest() {
@@ -84,7 +81,7 @@ const startRoute: Route<Storage | Secrets | AddressLimit> = {
     withinAddressLimit(
       Effect.gen(function* startLoginRequest() {
         const { request, requestId } = yield* newRequest;
-        const userCode = yield* addWithFreeCode(CODE_ATTEMPTS)(request);
+        const userCode = yield* addWithCode(request);
         const { expiresAt } = request;
         const started: LoginRequestStartedResponse = {
           approvalPath: approvalPathOf(userCode),

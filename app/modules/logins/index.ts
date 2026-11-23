@@ -7,6 +7,17 @@
 import type { Identity, Token } from "../identities/index.ts";
 import type { IsoTime } from "../time/index.ts";
 
+interface StartLoginRequest {
+  readonly host: string;
+}
+
+interface LoginRequestView {
+  readonly userCode: string;
+  readonly host: string;
+  readonly expiresAt: IsoTime;
+  readonly approved: boolean;
+}
+
 /** A login request's user code, which a person checks on the approval page against the terminal: `WDJB-MJHT`. */
 export const userCodePattern = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/u;
 
@@ -25,11 +36,6 @@ export function isUserCode(value: string): boolean {
   return userCodePattern.test(value);
 }
 
-/** The body of `POST /v1/login-requests`: the machine asking, shown on the approval page. */
-export interface StartLoginRequest {
-  readonly host: string;
-}
-
 /** A started login request. Only `requestId` collects the Login, and it is shown this once. */
 export interface LoginRequestStartedResponse {
   readonly userCode: string;
@@ -38,23 +44,10 @@ export interface LoginRequestStartedResponse {
   readonly approvalPath: string;
 }
 
-/** The body of `POST /v1/login-requests/collect`. */
-export interface CollectLoginRequestBody {
-  readonly requestId: Token;
-}
-
 /** Pending until a human approves, then that human and a new Login credential for this machine, once. */
 export type LoginCollectedResponse =
   | { readonly status: "pending" }
   | { readonly status: "approved"; readonly identity: Identity; readonly token: Token };
-
-/** A live login request as its approval page shows it. */
-export interface LoginRequestView {
-  readonly userCode: string;
-  readonly host: string;
-  readonly expiresAt: IsoTime;
-  readonly approved: boolean;
-}
 
 /** The answer to showing or approving a login request. */
 export interface LoginRequestResponse {
