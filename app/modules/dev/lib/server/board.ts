@@ -24,9 +24,29 @@ interface SeededIdentity {
   readonly created: IdentityWithTokenResponse;
 }
 
+interface SeededMessages {
+  readonly adaReply: MessageId;
+  readonly deployed: MessageId;
+  readonly graceReply: MessageId;
+  readonly lunch: MessageId;
+  readonly mentionOfGrace: MessageId;
+  readonly oldBotPost: MessageId;
+  readonly releaseNotes: MessageId;
+  readonly rollbackCall: MessageId;
+  readonly rollbackResult: MessageId;
+  readonly threadStart: MessageId;
+  readonly triageReply: MessageId;
+}
+
+type Conversation = Pick<
+  SeededMessages,
+  "adaReply" | "deployed" | "graceReply" | "lunch" | "releaseNotes" | "threadStart" | "triageReply"
+>;
+
 interface SeededBoard {
   readonly channels: readonly string[];
   readonly identities: readonly IdentityWithTokenResponse[];
+  readonly messages: SeededMessages;
   readonly thread: MessageId;
 }
 
@@ -99,14 +119,15 @@ function createChannels(cast: Cast): Effect.Effect<void, SeedFailure> {
 const RELEASE_NOTES =
   "Notes for **1.4.2**:\n- the `login` test is _fixed_\n- ~~flaky~~ green\n\nDetails: https://github.com/mattpocock/cookout/issues/150";
 
-function postInGeneral(cast: Cast): Effect.Effect<void, SeedFailure> {
+function postInGeneral(cast: Cast): Effect.Effect<Pick<SeededMessages, "lunch" | "releaseNotes">, SeedFailure> {
   return Effect.gen(function* inGeneral() {
-    yield* post(cast.grace, { channel: "general", text: "Lunch at 12:30." });
-    yield* post(cast.ada, { channel: "general", text: RELEASE_NOTES });
+    const lunch = yield* post(cast.grace, { channel: "general", text: "Lunch at 12:30." });
+    const releaseNotes = yield* post(cast.ada, { channel: "general", text: RELEASE_NOTES });
+    return { lunch: lunch.id, releaseNotes: releaseNotes.id };
   });
 }
 
-function postConversation(cast: Cast): Effect.Effect<MessageId, SeedFailure> {
+function postConversation(cast: Cast): Effect.Effect<Conversation, SeedFailure> {
   return Effect.gen(function* conversation() {
     yield* createChannels(cast);
     const opening = yield* post(cast.ada, {
@@ -115,16 +136,33 @@ function postConversation(cast: Cast): Effect.Effect<MessageId, SeedFailure> {
     });
     const thread = { channel: "general", replyTo: opening.id } as const;
     yield* call(() => cast.releaseBot.client.follow(opening.id));
-    yield* post(cast.triageAgent, { ...thread, text: "I am. It fails about one run in ten on CI." });
+    const triageReply = yield* post(cast.triageAgent, {
+      ...thread,
+      text: "I am. It fails about one run in ten on CI.",
+    });
     const question = yield* post(cast.grace, { ...thread, text: "@triage-agent can you post the failing run?" });
-    yield* postInGeneral(cast);
-    yield* post(cast.ada, { channel: "general", replyTo: question.id, text: "Thanks, both of you." });
-    yield* post(cast.releaseBot, { channel: "deploys", data: { version: "1.4.2" }, text: "Deployed 1.4.2." });
-    return opening.id;
+    const inGeneral = yield* postInGeneral(cast);
+    const thanks = yield* post(cast.ada, { channel: "general", replyTo: question.id, text: "Thanks, both of you." });
+    const deployed = yield* post(cast.releaseBot, {
+      channel: "deploys",
+      data: { version: "1.4.2" },
+      text: "Deployed 1.4.2.",
+    });
+    return {
+      ...inGeneral,
+      adaReply: thanks.id,
+      deployed: deployed.id,
+      graceReply: question.id,
+      threadStart: opening.id,
+      triageReply: triageReply.id,
+    };
   });
 }
 
-function callCommand({ token, url }: BoardConnection, cast: Cast): Effect.Effect<void, SeedFailure> {
+function callCommand(
+  { token, url }: BoardConnection,
+  cast: Cast,
+): Effect.Effect<Pick<SeededMessages, "rollbackCall" | "rollbackResult">, SeedFailure> {
   return Effect.gen(function* rollback() {
     const admin = clientAt(url, token);
     const handler = yield* createIdentity(url, admin, { kind: "agent", name: "rollback", owner: "ada" });
@@ -139,33 +177,42 @@ function callCommand({ token, url }: BoardConnection, cast: Cast): Effect.Effect
     const { threadId } = yield* call(() =>
       cast.ada.client.callCommand("rollback", { channel: "deploys", data: { version: "1.4.1" } }),
     );
-    yield* post(handler, {
+    const result = yield* post(handler, {
       channel: "deploys",
       data: { status: "done", version: "1.4.1" },
       replyTo: threadId,
       text: "Rolled back to 1.4.1.",
     });
+    return { rollbackCall: threadId, rollbackResult: result.id };
   });
 }
 
-function postLast({ token, url }: BoardConnection, cast: Cast): Effect.Effect<void, SeedFailure> {
+function postLast(
+  { token, url }: BoardConnection,
+  cast: Cast,
+): Effect.Effect<Pick<SeededMessages, "mentionOfGrace" | "oldBotPost">, SeedFailure> {
   return Effect.gen(function* last() {
     const admin = clientAt(url, token);
     const oldBot = yield* createIdentity(url, admin, { kind: "agent", name: "old-deploy-bot", owner: "ada" });
-    yield* post(oldBot, { channel: "deploys", text: "Deployed 1.4.0." });
+    const oldBotPost = yield* post(oldBot, { channel: "deploys", text: "Deployed 1.4.0." });
     yield* call(() => admin.deactivateIdentity("old-deploy-bot"));
-    yield* post(cast.ada, { channel: "general", text: "@grace can you check the notes before we ship?" });
+    const mention = yield* post(cast.ada, {
+      channel: "general",
+      text: "@grace can you check the notes before we ship?",
+    });
+    return { mentionOfGrace: mention.id, oldBotPost: oldBotPost.id };
   });
 }
 
 function seedBoard(connection: BoardConnection): Effect.Effect<SeededBoard, SeedFailure> {
   return Effect.gen(function* seed() {
     const cast = yield* createCast(connection);
-    const thread = yield* postConversation(cast);
-    yield* callCommand(connection, cast);
-    yield* postLast(connection, cast);
+    const conversation = yield* postConversation(cast);
+    const command = yield* callCommand(connection, cast);
+    const last = yield* postLast(connection, cast);
     const identities = Arr.map([cast.ada, cast.grace, cast.releaseBot, cast.triageAgent], ({ created }) => created);
-    return { channels: channelNames, identities, thread };
+    const messages = { ...conversation, ...command, ...last };
+    return { channels: channelNames, identities, messages, thread: conversation.threadStart };
   });
 }
 
