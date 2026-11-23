@@ -90,6 +90,18 @@ it.effect(
     }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
+it.effect("inside an agent tool with no board's URL anywhere, COOKOUT_TOKEN alone is url_missing", () =>
+  Effect.gen(function* noBoard() {
+    const env = claudeCode("s1", {
+      COOKOUT_STATE_DIR: yield* freshStateFolder,
+      XDG_CONFIG_HOME: yield* freshStateFolder,
+    });
+    const result = yield* runCookout({ args: WHOAMI, env: withToken(env, "cookout_x") });
+
+    expect(result).toMatchObject({ exitCode: 1, stderrJson: { error: { code: "url_missing" } } });
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
 it.effect("a joined session with COOKOUT_TOKEN set posts as the joined agent", () =>
   Effect.gen(function* joinedBeatsToken() {
     const cookout = yield* TestCookout;
