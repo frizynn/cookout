@@ -2,7 +2,7 @@ import type { Author, Identity } from "../../sdk/index.ts";
 import { useContext, useSyncExternalStore } from "react";
 import { AuthorList } from "./author-list.ts";
 import type { PresenceShown } from "./use-presence.ts";
-import { usePresence } from "./use-presence.ts";
+import { useAuthorPresence } from "./use-presence.ts";
 import { useProfileHref } from "./profile-base.ts";
 
 const DEACTIVATED = "(deactivated)";
@@ -54,7 +54,7 @@ function useAuthor(author: Author): ShownAuthor {
   const profileOf = useProfileHref();
   return {
     ...shownFrom(useListed(author.name), author),
-    presence: usePresence(author.name),
+    presence: useAuthorPresence(author.name),
     profileHref: profileOf(author.name),
   };
 }

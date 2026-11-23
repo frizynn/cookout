@@ -14,6 +14,7 @@ export function Suggestions(parts: SuggestionsParts): ReactNode {
           onChoose={handleChoose}
           option={each.option}
           presence={each.presence}
+          spoken={each.spoken}
         />
       ))}
     </ul>

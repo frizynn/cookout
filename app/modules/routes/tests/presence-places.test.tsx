@@ -26,6 +26,23 @@ it("the @-suggestions show each identity's dot", { timeout: 5000 }, async () => 
   ).resolves.toStrictEqual([online(), offline()]);
 });
 
+it("an @-suggestion for an identity with a display name reads the display name, then the handle, then the presence", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await newIdentity({ displayName: "Grace Hopper", kind: "human", name: "web-presence-suggest-grace" });
+  await adminClient().createChannel({ name: "web-presence-suggest-named" });
+  await readerOn({ hash: "#/channels/web-presence-suggest-named", reader: "web-presence-suggest-named-reader" });
+
+  fireEvent.change(await screen.findByLabelText("Message"), { target: { value: "Hi @web-presence-suggest-gr" } });
+  const list = await screen.findByRole("list", { name: "Mention suggestions" });
+
+  await expect(
+    within(list).findByRole("button", { name: "Grace Hopper, @web-presence-suggest-grace, Offline" }),
+  ).resolves.toBeDefined();
+});
+
 it("the logged-in human's own avatar in the sidebar shows them online while their tab watches", {
   timeout: 5000,
 }, async () => {

@@ -17,6 +17,7 @@ const TEXT = {
 interface PresenceShown {
   readonly online: boolean;
   readonly label: string;
+  readonly spoken: string;
 }
 
 interface Among {
@@ -92,7 +93,8 @@ function shownIn({ name, presences }: Among): PresenceShown | null {
   if (presence === null) {
     return null;
   }
-  return { label: labelOf(presence), online: presence.online };
+  const label = labelOf(presence);
+  return { label, online: presence.online, spoken: label };
 }
 
 function useTicking(presence: Presence | null, text: (known: Presence) => string): string | null {
@@ -110,11 +112,26 @@ function usePresence(name: IdentityName): PresenceShown | null {
   if (presence === null || label === null) {
     return null;
   }
-  return { label, online: presence.online };
+  return { label, online: presence.online, spoken: label };
+}
+
+function briefOf(online: boolean): string {
+  if (online) {
+    return TEXT.online;
+  }
+  return TEXT.offline;
+}
+
+function useAuthorPresence(name: IdentityName): PresenceShown | null {
+  const presence = usePresence(name);
+  if (presence === null) {
+    return null;
+  }
+  return { ...presence, spoken: briefOf(presence.online) };
 }
 
 function usePresenceDetail(name: IdentityName): string | null {
   return useTicking(usePresenceOf(name), detailOf);
 }
 
-export { type PresenceShown, shownIn, usePresence, usePresenceDetail, usePresences };
+export { type PresenceShown, shownIn, useAuthorPresence, usePresence, usePresenceDetail, usePresences };

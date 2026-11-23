@@ -9,5 +9,5 @@ export function presenceNameOf({ name, presence }: Named): string {
   if (presence === null) {
     return name;
   }
-  return `${name}, ${presence.label}`;
+  return `${name}, ${presence.spoken}`;
 }
