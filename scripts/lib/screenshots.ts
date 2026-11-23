@@ -115,5 +115,5 @@ async function takeScreenshots({ screens, shoot }: TakeScreenshots): Promise<rea
   return failures;
 }
 
-export type { Screen, ScreenshotOptions, Shot, Theme };
-export { SCREENS, screenshotOptions, takeScreenshots };
+export type { Screen, Shot, Theme };
+export { screenshotOptions, takeScreenshots };
