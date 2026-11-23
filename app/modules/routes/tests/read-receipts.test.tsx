@@ -4,6 +4,7 @@ import { expect, it } from "vitest";
 import { messagesIn, parentShown } from "./messages.ts";
 import { screen, waitFor, within } from "@testing-library/react";
 import type { Live } from "../../live/index.ts";
+import { alertsShown } from "./alerts.ts";
 import { createLive } from "../../live/index.ts";
 import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";
@@ -12,13 +13,18 @@ type Link = ReturnType<Live["link"]>;
 
 interface Scripted {
   readonly live: Live;
-  readonly send: (event: ServerSentEvent) => void;
+  readonly send: (...events: readonly ServerSentEvent[]) => void;
   readonly report: (link: Link) => void;
 }
 
 interface Asked {
   readonly bob: CookoutClient;
   readonly asked: Message;
+}
+
+interface Refusing {
+  readonly client: CookoutClient;
+  readonly refuse: () => void;
 }
 
 interface Talk {
@@ -43,9 +49,11 @@ function scripted(): Scripted {
         onLink(link);
       }
     },
-    send: (event) => {
+    send: (...sent) => {
       for (const onEvent of events) {
-        onEvent(event);
+        for (const event of sent) {
+          onEvent(event);
+        }
       }
     },
   };
@@ -86,10 +94,10 @@ async function watchedChannel(channel: string): Promise<Asked> {
   return { asked, bob };
 }
 
-async function scriptedThread(channel: string): Promise<Scripted & { readonly reply: Message }> {
+async function scriptedThread(channel: string, text = "Noon"): Promise<Scripted & { readonly reply: Message }> {
   const { ann, bob, viewer } = await talkIn(channel);
   const parent = await post(ann, channel, "Deploy?");
-  const { message: reply } = await bob.createMessage({ channel, replyTo: parent.id, text: "Noon" });
+  const { message: reply } = await bob.createMessage({ channel, replyTo: parent.id, text });
   const opened = scripted();
   openAt({ client: viewer, hash: `#/channels/${channel}/threads/${String(parent.id)}`, live: opened.live });
   return { ...opened, reply };
@@ -108,6 +116,46 @@ function backfilled(identity: string, reply: Message): ServerSentEvent {
     data: JSON.stringify({ receipt: { identity, messageId: reply.id, seen: true }, type: "read-receipt" }),
     event: "read-receipt",
   };
+}
+
+async function refusedIf(refusing: boolean): Promise<void> {
+  await Promise.resolve();
+  if (refusing) {
+    throw new Error("down");
+  }
+}
+
+function refusingWhenAsked(client: CookoutClient): Refusing {
+  let refusing = false;
+  return {
+    client: {
+      ...client,
+      getThread: async (id) => {
+        await refusedIf(refusing);
+        const thread = await client.getThread(id);
+        return thread;
+      },
+      listMessages: async (name, query) => {
+        await refusedIf(refusing);
+        const page = await client.listMessages(name, query);
+        return page;
+      },
+    },
+    refuse: () => {
+      refusing = true;
+    },
+  };
+}
+
+async function refusedThread(channel: string): Promise<Scripted & Pick<Refusing, "refuse">> {
+  const { ann, bob, viewer } = await talkIn(channel);
+  const parent = await post(ann, channel, "Deploy?");
+  await bob.createMessage({ channel, replyTo: parent.id, text: "Noon" });
+  const { client, refuse } = refusingWhenAsked(viewer);
+  const opened = scripted();
+  openAt({ client, hash: `#/channels/${channel}/threads/${String(parent.id)}`, live: opened.live });
+  await receiptsShown("Replies", [`${channel}-bobNoonNot seen yet: @${channel}-ann`]);
+  return { ...opened, refuse };
 }
 
 function hrefsOf(name: string): readonly (string | null)[] {
@@ -174,4 +222,45 @@ it("receipts seen while the live link was down show once it is back", { timeout:
   report("up");
 
   await receiptsShown("Messages", [`${channel}-ann@${channel}-bob lookSeen by @${channel}-bob just now`]);
+});
+
+it("a line names everyone who has seen a message before everyone who hasn't, and an open thread fetches them again when the link is back", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-receipts-many";
+  const { reply, report, send } = await scriptedThread(channel, `@admin @${channel}-viewer Noon`);
+  await receiptsShown("Replies", [
+    `${channel}-bob@admin @${channel}-viewer NoonNot seen yet: @admin, @${channel}-viewer, @${channel}-ann`,
+  ]);
+  send(backfilled(`${channel}-viewer`, reply), backfilled(`${channel}-ann`, reply));
+
+  await receiptsShown("Replies", [
+    `${channel}-bob@admin @${channel}-viewer NoonSeen by @${channel}-viewer, @${channel}-ann · Not seen yet: @admin`,
+  ]);
+
+  report("down");
+  await adminClient().ack(reply.id);
+  report("up");
+
+  await receiptsShown("Replies", [
+    `${channel}-bob@admin @${channel}-viewer NoonSeen by @admin just now, @${channel}-viewer just now · Not seen yet: @${channel}-ann`,
+  ]);
+});
+
+it("a channel and thread that can't be fetched again when the link is back say so", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { refuse, report } = await refusedThread("web-receipts-refused");
+  report("down");
+  refuse();
+  report("up");
+
+  await waitFor(() => {
+    expect(alertsShown()).toStrictEqual([
+      "Couldn't mark the channel read (unreachable): Error: down",
+      "Couldn't mark the thread read (unreachable): Error: down",
+    ]);
+  });
 });
