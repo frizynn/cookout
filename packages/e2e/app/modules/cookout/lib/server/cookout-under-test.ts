@@ -2,6 +2,7 @@ import { Array as Arr, Context, Effect, Layer, Random, Redacted, String as Str }
 import type { BinNeeds, BinResult, BinRun } from "./bin.ts";
 import type { ChannelResponse, CookoutClient, IdentityWithTokenResponse } from "@ai-hero/cookout/sdk";
 import { e2eAdminToken, e2eUrl } from "../../../config/server.ts";
+import { e2eNameStart, runPrefix, runPrefixSpace } from "./run-prefix.ts";
 import type { Config } from "effect";
 import type { JoinAgent } from "./session.ts";
 import { createCookoutClient } from "@ai-hero/cookout/sdk";
@@ -20,18 +21,11 @@ interface CookoutUnderTestService {
 }
 
 const NO_DRAW = 0;
-const PREFIX_RADIX = 36;
-const PREFIX_LENGTH = 8;
-const PREFIX_SPACE = PREFIX_RADIX ** PREFIX_LENGTH;
 const ONE_AT_A_TIME = { concurrency: 1, discard: true } as const;
 
 class CookoutUnderTest extends Context.Service<CookoutUnderTest, CookoutUnderTestService>()(
   "@ai-hero/cookout-e2e/cookout/lib/server/cookout-under-test/CookoutUnderTest",
 ) {}
-
-function prefixOf(draw: number): string {
-  return `e2e-${Str.padStart(PREFIX_LENGTH, "0")(draw.toString(PREFIX_RADIX))}`;
-}
 
 function deactivateRunIdentities(admin: CookoutClient, prefix: string): Effect.Effect<void> {
   return Effect.gen(function* deactivateOwn() {
@@ -61,15 +55,15 @@ const adminClient: Effect.Effect<AdminConnection, Config.ConfigError> = Effect.g
 });
 
 const deleteE2eChannels: Effect.Effect<void> = Effect.flatMap(adminClient, ({ admin }) =>
-  deleteChannelsStartingWith(admin, "e2e-"),
+  deleteChannelsStartingWith(admin, e2eNameStart),
 ).pipe(Effect.orDie);
 
 const cookoutUnderTest: Layer.Layer<CookoutUnderTest> = Layer.effect(
   CookoutUnderTest,
   Effect.gen(function* startRun() {
     const { admin, url } = yield* adminClient;
-    const draw = yield* Random.nextIntBetween(NO_DRAW, PREFIX_SPACE);
-    const prefix = prefixOf(draw);
+    const draw = yield* Random.nextIntBetween(NO_DRAW, runPrefixSpace);
+    const prefix = runPrefix(draw);
     yield* Effect.addFinalizer(() =>
       Effect.andThen(deactivateRunIdentities(admin, prefix), deleteChannelsStartingWith(admin, `${prefix}-`)),
     );
