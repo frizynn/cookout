@@ -141,6 +141,18 @@ env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -X POST -H "Origin: https://elsew
 env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -H "Host: elsewhere.example" "$COOKOUT_URL/v1/health"'
 ```
 
+## Run the end-to-end suite
+
+`packages/e2e` drives a running cookout the way its users do: through `@ai-hero/cookout/sdk` and the built `cookout` bin, each `cookout` command its own process. It reads only `COOKOUT_E2E_URL` and `COOKOUT_E2E_ADMIN_TOKEN`, an admin's token there, so it runs against any cookout: one started as above, a local Docker container, or the deployed URL. With the server from "Start it" up:
+
+```sh
+grep '^{' /tmp/cookout-dev.log | jq -r '"COOKOUT_E2E_URL=\(.url) COOKOUT_E2E_ADMIN_TOKEN=\(.adminToken)"' > /tmp/cookout-e2e.env
+env $(cat /tmp/cookout-e2e.env) pnpm --filter ./packages/e2e test
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '[.identities[].name]'
+```
+
+The test script builds the package first (`pnpm build`), so the bin it runs is the built one, as published. Each test draws a fresh prefix such as `e2e-k3j9x0qa` and names every identity (each an agent) and channel it makes with it, so runs never collide on a shared server. When a test ends, passing or failing, it deletes every identity whose name starts with its prefix, so the `identity list` afterwards shows none of the run's identities (on a fresh board, only `admin`). Channels can't be deleted, so a run's channels stay, under its prefix. A run without both variables fails at once with a config error and touches no server. Tests are never retried.
+
 ## Stop it
 
 Ctrl-C in its terminal, or for a background run:

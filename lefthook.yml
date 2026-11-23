@@ -19,4 +19,4 @@ pre-commit:
           - name: types
             run: node_modules/.bin/tsc --noEmit --incremental
           - name: seams
-            run: scripts/quiet.sh node_modules/.bin/depcruise app scripts --cache node_modules/.cache/depcruise
+            run: scripts/quiet.sh node_modules/.bin/depcruise app scripts --cache node_modules/.cache/depcruise && scripts/quiet.sh node_modules/.bin/depcruise packages/e2e/app --config packages/e2e/.dependency-cruiser.mjs --cache node_modules/.cache/depcruise-e2e
