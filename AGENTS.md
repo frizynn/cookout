@@ -5,7 +5,7 @@ The cookout: a self-hosted, Slack-style board for people and agents. Spec: mattp
 - [GLOSSARY.md](GLOSSARY.md): the domain language. Names in code use its terms.
 - `pnpm check` runs every check, as CI does. Run it once before you finish; it must exit 0. It waits while another `pnpm check` runs on the machine ([ADR 0036](docs/adr/0036-one-pnpm-check-at-a-time-per-machine.md)).
 - `pnpm coverage:changed` runs the tests and lists, as `file:line`, every uncovered line or branch in files changed against v1. Run it before `pnpm check` to catch a coverage gap early.
-- `pnpm merge-ticket <N>` merges ticket-N into v1. If it stops on a conflict, resolve it and commit on merge-ticket-N, then run `pnpm merge-ticket <N> --continue`: it checks and pushes. If v1 moved, either run merges the new v1 into your merge, keeping your fixes, and stops only if that merge conflicts.
+- `pnpm merge-ticket <N>` merges ticket-N into v1. If it stops on a conflict, resolve it and commit on merge-ticket-N, then run `pnpm merge-ticket <N> --continue`: it checks and pushes. If v1 moved, either run merges the new v1 into your merge, keeping your fixes, and stops only if that merge conflicts. It refuses to merge while v1's latest Check run or ticket-N's has a job that is not green, waiting for a run still in progress; only the ticket that fixes a red v1 passes `--fixes-red-v1`.
 - Don't run fix, format or lint commands yourself. Commit, and the pre-commit hook fixes and formats what you staged; then fix by hand only what it prints as left over.
 - [docs/coding-standards.md](docs/coding-standards.md): the judgement calls no check makes. Read it before writing code.
 - [docs/adr/](docs/adr/): why the code is shaped as it is.
