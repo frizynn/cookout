@@ -1,7 +1,3 @@
----
-status: proposed
----
-
 # The hook applies one Oxlint suggestion: deterministic-keys
 
 2026-11-23 (mattpocock/cookout#93). A chief-of-staff choice, pending Matt's review.
