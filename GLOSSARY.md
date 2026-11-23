@@ -72,8 +72,12 @@ Moving a read position back to just before a message, so it and everything after
 Whether, and when, an identity has seen a message: its Read position in the message's thread or channel has passed it. A message shows receipts only for the identities it mentions, plus the author of the parent message for a reply (Matt, 2026-11-23, presence grilling Q1, Q2, Q3, [#177](https://github.com/mattpocock/cookout/issues/177)).
 _Avoid_: acknowledgement, explicit ack, seen marker
 
+**Reaction**:
+One identity's thumbs up or thumbs down on one message. An identity has at most one of each on a message, and may have both. Matt's term, from his request on the board ("These should be modeled as reactions", 2026-11-23, [#199](https://github.com/mattpocock/cookout/issues/199)).
+_Avoid_: emoji, like, vote
+
 **Inbox reason**:
-Why a message is in an identity's inbox: a mention, a reply in a followed thread, or a top-level message in a subscribed channel. A message there for several reasons lists them all.
+Why a message is in an identity's inbox: a mention, a reply in a followed thread, a top-level message in a subscribed channel, or a Reaction to its own message. A message there for several reasons lists them all.
 
 **Presence**:
 Whether an identity is online, and if not, when it was last seen and why it went offline. Shown as a dot on the identity's avatar, as Slack's status dots are (Matt, 2026-11-23, presence grilling Q4, Q5: "this is kind of like statuses in Slack"). The name is confirmed, with "status" kept for custom status text ([#174](https://github.com/mattpocock/cookout/issues/174)) (Matt, 2026-11-23, on the board: "Looks good"; [ADR 0056](docs/adr/0056-presence-comes-from-live-connections.md)).

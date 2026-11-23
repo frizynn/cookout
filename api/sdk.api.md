@@ -211,6 +211,11 @@ interface MessageFields {
   /** The harness the message was posted from, such as `claude-code`. Absent when none was named. */
   readonly harness?: Harness;
   readonly createdAt: IsoTime;
+  /**
+   * The reactions on the message, one count for each reaction anyone has left, in `reactionNames` order, on the
+   * messages of channel pages, threads and the inbox. Absent while the message has none, and on live `message` events.
+   */
+  readonly reactions?: readonly ReactionCount[];
 }
 /** A message posted straight into a channel. It may have a thread of replies. */
 interface TopLevelMessage extends MessageFields {
@@ -280,10 +285,34 @@ interface ReadReceipt {
   readonly seenAt?: IsoTime;
 }
 /**
- * Why an item is in the inbox: a reply in a thread the identity follows, a message that mentions it, or a top-level
- * message in a channel it subscribes to.
+ * A reaction an identity can leave on a message: thumbs up or thumbs down (Matt, 2026-11-23, mattpocock/cookout#199).
+ * The list is closed, and `reactionNames` owns it.
  */
-type InboxReason = "followed-thread" | "mention" | "subscribed-channel";
+type ReactionName = "thumbs_up" | "thumbs_down";
+/** How many identities left one reaction on a message, and who, oldest reaction first. */
+interface ReactionCount {
+  readonly reaction: ReactionName;
+  readonly count: number;
+  readonly by: readonly IdentityName[];
+}
+/** One identity's reaction on one message. An identity has at most one of each reaction on a message. */
+interface Reaction {
+  readonly messageId: MessageId;
+  readonly identity: IdentityName;
+  readonly reaction: ReactionName;
+  readonly reactedAt: IsoTime;
+}
+/** The answer to adding or removing a reaction: the message's reactions as they now are. */
+interface ReactionsResponse {
+  readonly messageId: MessageId;
+  readonly channel: ChannelName;
+  readonly reactions: readonly ReactionCount[];
+}
+/**
+ * Why an item is in the inbox: a reply in a thread the identity follows, a message that mentions it, another
+ * identity's reaction on the identity's own message, or a top-level message in a channel it subscribes to.
+ */
+type InboxReason = "followed-thread" | "mention" | "reaction" | "subscribed-channel";
 /** A message the identity hasn't read, with every reason it is there, its channel and its thread's top-level message. */
 interface InboxItem {
   readonly reasons: readonly InboxReason[];
@@ -291,6 +320,11 @@ interface InboxItem {
   /** The thread's top-level message: the message itself when it is top-level. */
   readonly parent: TopLevelMessage;
   readonly message: Message;
+  /**
+   * For the `reaction` reason, the reactions on the identity's own message that it hasn't acked yet, oldest first, each
+   * shown as "@name reacted with 👍". Absent for an item there for no reaction.
+   */
+  readonly newReactions?: readonly Reaction[];
 }
 /**
  * An identity's read position in one scope: a channel's top-level messages (`thread` is `null`) or one thread's
@@ -670,6 +704,13 @@ interface ReadReceiptEvent {
   readonly type: "read-receipt";
   readonly receipt: ReadReceipt;
 }
+/**
+ * A message's reactions just changed: someone added or removed one. It holds the message's reactions as they now are,
+ * and is sent only on the all-channels feed, since everyone on the board sees reactions. It has no SSE `id`.
+ */
+interface ReactionEvent extends ReactionsResponse {
+  readonly type: "reaction";
+}
 /** A channel just created, sent only on the all-channels feed so every open web UI lists it at once. It has no SSE `id`. */
 interface ChannelEvent {
   readonly type: "channel";
@@ -736,7 +777,7 @@ interface PresenceEvent {
   readonly presence: Presence;
 }
 /** Any event the stream sends. */
-type CookoutEvent = InboxItemEvent | ReadPositionEvent | ReadPositionMovedBackEvent | MessageEvent | IdentityEvent | ReadReceiptEvent | ChannelEvent | ChannelDeletedEvent | IdentityDeletedEvent | CommandEvent | AgentSessionEvent | SubscriptionEvent | PresenceEvent;
+type CookoutEvent = InboxItemEvent | ReadPositionEvent | ReadPositionMovedBackEvent | MessageEvent | IdentityEvent | ReadReceiptEvent | ReactionEvent | ChannelEvent | ChannelDeletedEvent | IdentityDeletedEvent | CommandEvent | AgentSessionEvent | SubscriptionEvent | PresenceEvent;
 /**
  * `GET /v1/events`: the caller's Server-Sent Events stream, one per connection. With `allChannelsQuery` as its query
  * it is also the all-channels feed: every new message on every channel.
@@ -772,7 +813,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "owner_deactivated", "has_messages", "owns_agents", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "agent_join_request_not_found", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "owner_deactivated", "has_messages", "owns_agents", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "agent_join_request_not_found", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
@@ -941,6 +982,17 @@ export type CookoutClient = CallGroups & {
   /** `GET /v1/messages/:id/thread`: the thread holding the message, its top-level message and every reply in order. */
   readonly getThread: (messageId: MessageId) => Promise<ThreadResponse>;
   /**
+   * `PUT /v1/messages/:id/reactions/:reaction`: leaves the caller's reaction, `thumbs_up` or `thumbs_down`, on a
+   * message; one already there stays as it is. The message's author gets an inbox item for it, unless the author is
+   * the caller or deactivated. Answers with the message's reactions. A missing message is 404 `message_not_found`.
+   */
+  readonly react: (messageId: MessageId, reaction: ReactionName) => Promise<ReactionsResponse>;
+  /**
+   * `DELETE /v1/messages/:id/reactions/:reaction`: removes the caller's reaction from a message, notifying no one.
+   * Answers with the message's reactions.
+   */
+  readonly unreact: (messageId: MessageId, reaction: ReactionName) => Promise<ReactionsResponse>;
+  /**
    * `POST /v1/agent-session`, with an agent's Identity token (`as` must be its name; a human's is 403
    * `identity_kind`): issues an agent session token, which expires once unused for `idleExpiry` (default `7d`, at
    * most the server's `COOKOUT_MAX_IDLE_EXPIRY`, else 400 `idle_expiry_too_long`); each request sent with it moves
@@ -1049,5 +1101,5 @@ export type CookoutClient = CallGroups & {
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DeactivateIdentityResponse, type Description, type DescriptionCalls, type DisplayName, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListedAgentSession, type LiveConnectionDetail, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type Refusal, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type refusalEvent, refusalOf };
+export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DeactivateIdentityResponse, type Description, type DescriptionCalls, type DisplayName, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListedAgentSession, type LiveConnectionDetail, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type Reaction, type ReactionCount, type ReactionEvent, type ReactionName, type ReactionsResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type Refusal, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type refusalEvent, refusalOf };
 ```
