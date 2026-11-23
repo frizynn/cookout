@@ -216,6 +216,11 @@ interface SubscriptionResponse {
   readonly channel: ChannelName;
   readonly subscribed: boolean;
 }
+/** One Server-Sent Event: its `event` name (`message` when it has none) and its `data`. */
+interface ServerSentEvent {
+  readonly event: string;
+  readonly data: string;
+}
 declare const brand$2: unique symbol;
 /** The value `join` returns and a session sends in `cookout-lease` to show it holds the identity. */
 type LeaseId = string & {
@@ -319,6 +324,14 @@ interface WatchOptions {
   readonly lastEventId?: MessageId;
   readonly onHeartbeat?: () => void;
 }
+/**
+ * Checks one Server-Sent Event from `GET /v1/events` against the protocol, for a reader that opens the stream itself
+ * (a browser's `EventSource`).
+ * @param frame The event's SSE `event` and `data`.
+ * @returns The event, or `null` for an event type this SDK doesn't know. Data that doesn't match fails with
+ *   `CookoutError` code `bad_response`.
+ */
+declare function parseEvent(frame: ServerSentEvent): CookoutEvent | null;
 /** The answer to the health check. */
 interface HealthResponse {
   readonly status: "ok";
@@ -467,5 +480,5 @@ export type CookoutClient = {
  * (status 0) when there is no URL.
  */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Reply, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions };
+export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Reply, type ServerSentEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, parseEvent };
 ```

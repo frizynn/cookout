@@ -1,9 +1,11 @@
 /**
  * The browser program: makes the stores on SDK clients for the page's own
- * cookout and draws the web UI in `#root`. It imports nothing from the backend.
+ * cookout, with the live stream on its `EventSource`, and draws the web UI in
+ * `#root`. It imports nothing from the backend.
  * The page's client sends no token: once the person logs in, the browser
  * sends the session cookie instead. Logging in uses a client with the token.
  */
+import { createLive, eventSourceAdapter } from "./modules/live/index.ts";
 import { CookoutApp } from "./modules/routes/index.tsx";
 import { createBoard } from "./modules/board/index.ts";
 import { createCookoutClient } from "./modules/sdk/index.ts";
@@ -19,5 +21,7 @@ if (root !== null) {
     client,
     clientWithToken: (token) => createCookoutClient({ env: {}, token, url }),
   });
-  createRoot(root).render(<CookoutApp board={createBoard({ client })} session={session} />);
+  createRoot(root).render(
+    <CookoutApp board={createBoard({ client, live: createLive(eventSourceAdapter(url)) })} session={session} />,
+  );
 }

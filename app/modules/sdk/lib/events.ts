@@ -83,6 +83,13 @@ function checked({ data, event }: ServerSentEvent & { readonly event: EventType 
   return json;
 }
 
+function eventOf(frame: ServerSentEvent): CookoutEvent | null {
+  if (isEventType(frame.event)) {
+    return checked({ ...frame, event: frame.event });
+  }
+  return null;
+}
+
 function refused(lease: HeldLease, data: string): CookoutError {
   const json = parsedData(data);
   if (!isErrorResponse(json) || !isServerErrorCode(json.error.code)) {
@@ -102,10 +109,11 @@ function eventsIn(frame: ServerSentFrame, { lease, options }: Reading): readonly
   if (frame.event === refusalEvent) {
     throw refused(lease, frame.data);
   }
-  if (isEventType(frame.event)) {
-    return [checked({ ...frame, event: frame.event })];
+  const event = eventOf(frame);
+  if (event === null) {
+    return [];
   }
-  return [];
+  return [event];
 }
 
 async function* cookoutEvents(
@@ -138,4 +146,4 @@ function eventCalls(server: ClientConnection): EventCalls {
   };
 }
 
-export { type EventStream, type WatchOptions, eventCalls };
+export { type EventStream, type WatchOptions, eventCalls, eventOf };

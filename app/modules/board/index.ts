@@ -8,14 +8,19 @@
  * is the thread's parent and replies, its own store too: when its first reader
  * subscribes it loads the thread and acks its latest message, so opening a
  * thread counts as reading it; `reply` posts a reply in that channel and
- * reloads the replies. A refusal
+ * reloads the replies. With `live`, the board opens the live stream when any of
+ * its stores is first read, and each new message on it joins the loaded
+ * channel or thread it belongs to (a reply also counts in its top-level
+ * message's replies), so messages from others appear without a reload. A refusal
  * keeps the server's error code; a server that can't be reached is `unreachable`.
  */
 import type { Channel, CookoutClient, MessageId } from "../sdk/index.ts";
-import type { ChannelMessages, MessagesClient } from "./lib/channel-messages.ts";
-import type { ThreadClient, ThreadMessages } from "./lib/thread-messages.ts";
+import type { ChannelMessages, LiveChannelMessages, MessagesClient } from "./lib/channel-messages.ts";
+import type { LiveThreadMessages, ThreadClient, ThreadMessages } from "./lib/thread-messages.ts";
 import type { Failure } from "./lib/failure.ts";
+import type { Live } from "../live/index.ts";
 import { createChannelMessages } from "./lib/channel-messages.ts";
+import { createLiveFeed } from "./lib/live-feed.ts";
 import { createThreadMessages } from "./lib/thread-messages.ts";
 import { failure } from "./lib/failure.ts";
 
@@ -23,6 +28,12 @@ const PAGE_SIZE = 50;
 
 interface Snapshot {
   readonly channels: ChannelsState;
+}
+
+function storeIn<Messages>(stores: Map<string, Messages>, key: string, make: () => Messages): Messages {
+  const messages = stores.get(key) ?? make();
+  stores.set(key, messages);
+  return messages;
 }
 
 /** The channel list, as far as it has loaded. */
@@ -46,24 +57,32 @@ export interface Board {
 /** What the board store needs of the SDK. */
 export type BoardClient = Pick<CookoutClient, "listChannels"> & MessagesClient & ThreadClient;
 
-/** What the board is made with: an SDK client with the token of whoever is looking, and `pageSize` top-level messages a page, 50 unless given. */
+/**
+ * What the board is made with: an SDK client with the token of whoever is looking, `pageSize` top-level messages a
+ * page (50 unless given), and the live stream to follow, if any.
+ */
 export interface BoardOptions {
   readonly client: BoardClient;
   readonly pageSize?: number;
+  readonly live?: Live;
 }
 
 /**
  * Makes a board store that talks to the server through `options.client`.
- * @param options The client and how it pages.
+ * @param options The client, how it pages, and the live stream.
  * @returns The store.
  */
 export function createBoard(options: BoardOptions): Board {
   const { client } = options;
   const listeners = new Set<() => void>();
-  const channels = new Map<string, ChannelMessages>();
-  const threads = new Map<string, ThreadMessages>();
+  const channels = new Map<string, LiveChannelMessages>();
+  const threads = new Map<string, LiveThreadMessages>();
   let current: Snapshot = { channels: { status: "loading" } };
   let loading: Promise<void> | null = null;
+  const { follow, followed } = createLiveFeed({
+    live: options.live ?? null,
+    receivers: () => [...channels.values(), ...threads.values()],
+  });
 
   function publish(state: ChannelsState): void {
     current = { ...current, channels: state };
@@ -82,26 +101,21 @@ export function createBoard(options: BoardOptions): Board {
   }
 
   return {
-    channel: (name) => {
-      const messages =
-        channels.get(name) ?? createChannelMessages({ client, name, pageSize: options.pageSize ?? PAGE_SIZE });
-      channels.set(name, messages);
-      return messages;
-    },
+    channel: (name) =>
+      storeIn(channels, name, () =>
+        followed(createChannelMessages({ client, name, pageSize: options.pageSize ?? PAGE_SIZE })),
+      ),
     snapshot: () => current,
     subscribe: (listener) => {
       listeners.add(listener);
+      follow();
       loading ??= loadChannels();
       return () => {
         listeners.delete(listener);
       };
     },
-    thread: (channel, id) => {
-      const key = `${channel}/${String(id)}`;
-      const messages = threads.get(key) ?? createThreadMessages({ channel, client, id });
-      threads.set(key, messages);
-      return messages;
-    },
+    thread: (channel, id) =>
+      storeIn(threads, `${channel}/${String(id)}`, () => followed(createThreadMessages({ channel, client, id }))),
   };
 }
 

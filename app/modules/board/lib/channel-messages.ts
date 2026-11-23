@@ -1,4 +1,4 @@
-import type { CookoutClient, ReadPosition, TopLevelMessage } from "../../sdk/index.ts";
+import type { CookoutClient, Message, ReadPosition, Reply, TopLevelMessage } from "../../sdk/index.ts";
 import type { Failure } from "./failure.ts";
 import { failure } from "./failure.ts";
 
@@ -26,6 +26,10 @@ interface ChannelMessages {
   readonly loadOlder: () => void;
 }
 
+interface LiveChannelMessages extends ChannelMessages {
+  readonly receive: (message: Message) => void;
+}
+
 type MessagesClient = Pick<CookoutClient, "ack" | "listMessages">;
 
 interface Channel {
@@ -37,6 +41,7 @@ interface Channel {
 }
 
 const NEWEST = -1;
+const ONE_MORE = 1;
 
 function update(channel: Channel, change: (loaded: Loaded) => Loaded): void {
   const current = channel.current();
@@ -89,6 +94,23 @@ async function loadOlderPage(channel: Channel): Promise<void> {
   }
 }
 
+function withReply(parent: TopLevelMessage, reply: Reply): TopLevelMessage {
+  if (parent.id !== reply.replyTo || (parent.latestReplyId !== null && parent.latestReplyId >= reply.id)) {
+    return parent;
+  }
+  return { ...parent, latestReplyId: reply.id, replyCount: parent.replyCount + ONE_MORE };
+}
+
+function received(loaded: Loaded, message: Message): Loaded {
+  if (message.kind === "reply") {
+    return { ...loaded, messages: loaded.messages.map((parent) => withReply(parent, message)) };
+  }
+  if (loaded.messages.some((shown) => shown.id === message.id)) {
+    return loaded;
+  }
+  return { ...loaded, messages: [...loaded.messages, message] };
+}
+
 interface ChannelOptions {
   readonly client: MessagesClient;
   readonly name: string;
@@ -100,7 +122,7 @@ async function loadOlderAfter(previous: Promise<void>, channel: Channel): Promis
   await loadOlderPage(channel);
 }
 
-function createChannelMessages(options: ChannelOptions): ChannelMessages {
+function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
   const listeners = new Set<() => void>();
   let state: ChannelMessagesState = { status: "loading" };
   let queue: Promise<void> | null = null;
@@ -118,6 +140,11 @@ function createChannelMessages(options: ChannelOptions): ChannelMessages {
     loadOlder: () => {
       queue = loadOlderAfter(queue ?? loadNewest(channel), channel);
     },
+    receive: (message) => {
+      if (message.channel === options.name) {
+        update(channel, (loaded) => received(loaded, message));
+      }
+    },
     snapshot: () => state,
     subscribe: (listener) => {
       listeners.add(listener);
@@ -129,4 +156,10 @@ function createChannelMessages(options: ChannelOptions): ChannelMessages {
   };
 }
 
-export { type ChannelMessages, type ChannelMessagesState, type MessagesClient, createChannelMessages };
+export {
+  type ChannelMessages,
+  type ChannelMessagesState,
+  type LiveChannelMessages,
+  type MessagesClient,
+  createChannelMessages,
+};

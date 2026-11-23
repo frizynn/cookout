@@ -1,4 +1,4 @@
-import type { CookoutClient, MessageId, ReadPosition, Reply, TopLevelMessage } from "../../sdk/index.ts";
+import type { CookoutClient, Message, MessageId, ReadPosition, Reply, TopLevelMessage } from "../../sdk/index.ts";
 import type { Failure } from "./failure.ts";
 import { failure } from "./failure.ts";
 
@@ -26,6 +26,10 @@ interface ThreadMessages {
   readonly reply: (text: string) => void;
 }
 
+interface LiveThreadMessages extends ThreadMessages {
+  readonly receive: (message: Message) => void;
+}
+
 type ThreadClient = Pick<CookoutClient, "ack" | "createMessage" | "getThread">;
 
 interface Thread {
@@ -49,6 +53,17 @@ function latestOf(loaded: Loaded): MessageId {
     latest = reply.id;
   }
   return latest;
+}
+
+function received(loaded: Loaded, message: Message): Loaded {
+  if (
+    message.kind !== "reply" ||
+    message.replyTo !== loaded.parent.id ||
+    loaded.replies.some((reply) => reply.id === message.id)
+  ) {
+    return loaded;
+  }
+  return { ...loaded, replies: [...loaded.replies, message] };
 }
 
 async function ack(thread: Thread, id: MessageId): Promise<void> {
@@ -94,7 +109,7 @@ interface ThreadOptions {
   readonly id: MessageId;
 }
 
-function createThreadMessages(options: ThreadOptions): ThreadMessages {
+function createThreadMessages(options: ThreadOptions): LiveThreadMessages {
   const listeners = new Set<() => void>();
   let state: ThreadMessagesState = { status: "loading" };
   let queue: Promise<void> | null = null;
@@ -109,6 +124,9 @@ function createThreadMessages(options: ThreadOptions): ThreadMessages {
     },
   };
   return {
+    receive: (message) => {
+      update(thread, (loaded) => received(loaded, message));
+    },
     reply: (text) => {
       queue = replyAfter(queue ?? load(thread), thread, text);
     },
@@ -123,4 +141,10 @@ function createThreadMessages(options: ThreadOptions): ThreadMessages {
   };
 }
 
-export { type ThreadClient, type ThreadMessages, type ThreadMessagesState, createThreadMessages };
+export {
+  type LiveThreadMessages,
+  type ThreadClient,
+  type ThreadMessages,
+  type ThreadMessagesState,
+  createThreadMessages,
+};

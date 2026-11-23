@@ -1,6 +1,7 @@
 import type { Board, BoardClient } from "../../board/index.ts";
 import type { CookoutClient, CreateIdentityRequest, Token } from "../../sdk/index.ts";
 import { CookoutApp } from "../index.tsx";
+import type { Live } from "../../live/index.ts";
 import type { Session } from "../../session/index.ts";
 import { createBoard } from "../../board/index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
@@ -21,6 +22,7 @@ interface Opening {
   readonly client: AppClient;
   readonly pageSize?: number;
   readonly session?: Session;
+  readonly live?: Live;
 }
 
 interface NewIdentity {

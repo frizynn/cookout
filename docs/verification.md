@@ -438,3 +438,19 @@ git branch -D changeset-dry-run
 `pnpm changeset status --verbose` lists only `@ai-hero/cookout -> 0.1.0`, from the dry-run changeset. `pnpm run version` consumes the changeset, bumps `package.json` to 0.1.0, and writes a CHANGELOG.md with a `## 0.1.0` section under `### Minor Changes`. `git status --short` shows only `package.json` and the new CHANGELOG.md, so `packages/e2e` and `packages/handler-example` stay at 0.0.0. With no changeset, `pnpm changeset status` exits 1 ("Some packages have been changed but no changesets were found"), which is expected during the v1 build.
 
 The release workflow, `.github/workflows/release.yml`, passes `actionlint` (for example `docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:latest`). Its publish step is guarded by `if: false`.
+
+## See messages from others arrive live
+
+The web UI keeps the all-channels feed open (`GET /v1/events?channels=all`, an `EventSource` that sends the session cookie) once a logged-in view first loads, so a message another identity posts joins the open channel or thread without a reload; a reply also bumps its top-level message's reply count in the channel. On a fresh seed of the built server ("Open the web UI" and "Log in to the web UI", logged in as `grace`), open `#general`, post as `ada` with the CLI, then open the thread and post a reply as `triage-agent`:
+
+```sh
+agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" && agent-browser --session cookout wait --text "Lunch at 12:30."
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "ada") | .token' /tmp/cookout-built-seed.json) node app/main.ts message post general "Standup moved to 10."
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "ada") | .token' /tmp/cookout-built-seed.json) node app/main.ts message post general "Fixed it." --reply-to 1
+agent-browser --session cookout wait --text "Standup moved to 10." && agent-browser --session cookout snapshot
+agent-browser --session cookout find text "4 replies" click && agent-browser --session cookout wait --text "Fixed it."
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "triage-agent") | .token' /tmp/cookout-built-seed.json) node app/main.ts message post general "Re-ran it: green." --reply-to 1
+agent-browser --session cookout wait --text "Re-ran it: green." && agent-browser --session cookout snapshot
+```
+
+Without a reload, the `#general` snapshot's `Messages` list ends with `@ada` and `Standup moved to 10.`, and the thread's first message now says `4 replies` (3 on the seed, plus `Fixed it.`). The thread's `Replies` list then ends with `@ada` `Fixed it.` and `@triage-agent` `Re-ran it: green.`. Stores read the stream through the `live` module (`app/modules/live/`), the one owner of `EventSource`, which checks each event with the SDK's `parseEvent` and drops one that doesn't match the protocol.
