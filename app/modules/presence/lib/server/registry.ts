@@ -151,7 +151,9 @@ function openRegistry(graces: Graces): Effect.Effect<Registry, StorageUnavailabl
       publish: (presence) => Effect.asVoid(PubSub.publish(hub, presence)),
       record: (presence) => Effect.ignore(storage.recordPresence(presence)),
     };
-    const kept = yield* storage.listPresence;
+    const kept = yield* Effect.flatMap(storage.listIdentities(), (all) =>
+      storage.listPresence(Arr.map(all, ({ name }) => name)),
+    );
     const book = yield* bookOf(announce, kept);
     const wereOnline = Arr.filter(kept, ({ online }) => online);
     yield* book.inBackground(Effect.andThen(Effect.sleep(graces.bootGraceMillis), bootGraceEnds(book, wereOnline)));
