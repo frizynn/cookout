@@ -1,6 +1,8 @@
-import { Layer } from "effect";
-import type { Secrets } from "../../../secrets/server.ts";
+import { Context, Layer } from "effect";
+import type { Effect } from "effect";
+import { Secrets } from "../../../secrets/server.ts";
 import type { Storage } from "../../../storage/server.ts";
+import type { Token } from "../../../identities/index.ts";
 import type { WebhookFake } from "../../../webhook-fake/server.ts";
 import { memoryStorage } from "../../../storage/server.ts";
 import { secretsOf } from "./secrets.ts";
@@ -23,4 +25,8 @@ function backingServices(options: BackingOptions): Layer.Layer<Storage | Secrets
   return Layer.mergeAll(storageOf(options.storage), secretsOf(options.secrets ?? "test"), webhookFake);
 }
 
-export { backingServices };
+function newToken(store: Context.Context<Secrets>): Effect.Effect<Token> {
+  return Context.get(store, Secrets).newToken;
+}
+
+export { backingServices, newToken };

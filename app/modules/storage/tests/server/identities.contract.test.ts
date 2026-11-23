@@ -137,38 +137,74 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
-  "storage contract ($adapter): the first identity is created only when there are none",
+  "storage contract ($adapter): setting the only token of a missing identity creates it with that token",
   ({ layer }) =>
-    Effect.gen(function* firstIdentity() {
+    Effect.gen(function* setOnlyTokenCreates() {
       const { storage } = yield* openStore(layer);
-      const first = yield* storage.createIdentityIfNoneExist(identity("admin", { admin: true }), hashA);
-      const second = yield* storage.createIdentityIfNoneExist(identity("admin-2", { admin: true }), hashB);
+      yield* storage.createIdentity(identity("other"), hashB);
+      const result = yield* storage.setOnlyToken(identity("admin", { admin: true }), hashA);
       const identities = yield* storage.listIdentities();
-      const secondHash = yield* storage.findIdentityByTokenHash(hashB);
+      const found = yield* storage.findIdentityByTokenHash(hashA);
 
-      expect([first, second]).toStrictEqual([true, false]);
-      expect(identities).toStrictEqual([identity("admin", { admin: true })]);
-      expect(secondHash).toStrictEqual({ status: "unknown" });
+      expect(result).toBe("created");
+      expect(identities).toStrictEqual([identity("admin", { admin: true }), identity("other")]);
+      expect(found).toStrictEqual({ identity: identity("admin", { admin: true }), status: "active" });
     }),
 );
 
 it.effect.each(storageLayers)(
-  "storage contract ($adapter): only one first identity is created when asked many times at once",
+  "storage contract ($adapter): setting a different only token revokes every other token of the identity",
   ({ layer }) =>
-    Effect.gen(function* firstIdentityAtOnce() {
+    Effect.gen(function* setOnlyTokenReplaces() {
+      const { storage } = yield* openStore(layer);
+      yield* storage.setOnlyToken(identity("admin", { admin: true }), hashA);
+      yield* storage.replaceToken(nameOf("admin"), hashB);
+      const back = yield* storage.setOnlyToken(identity("admin", { admin: true }), hashA);
+      const moved = yield* storage.setOnlyToken(identity("admin", { admin: true }), hashC);
+      const lookups = yield* Effect.forEach([hashA, hashB, hashC], storage.findIdentityByTokenHash, { concurrency: 1 });
+
+      expect([back, moved]).toStrictEqual(["replaced", "replaced"]);
+      expect(lookups).toStrictEqual([
+        { status: "revoked" },
+        { status: "revoked" },
+        { identity: identity("admin", { admin: true }), status: "active" },
+      ]);
+    }),
+);
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): setting the only token an identity already holds changes nothing",
+  ({ layer }) =>
+    Effect.gen(function* setOnlyTokenUnchanged() {
+      const { storage } = yield* openStore(layer);
+      yield* storage.setOnlyToken(identity("admin", { admin: true }), hashA);
+      const again = yield* storage.setOnlyToken(identity("admin", { admin: true }), hashA);
+      const identities = yield* storage.listIdentities();
+      const found = yield* storage.findIdentityByTokenHash(hashA);
+
+      expect(again).toBe("unchanged");
+      expect(identities).toStrictEqual([identity("admin", { admin: true })]);
+      expect(found).toStrictEqual({ identity: identity("admin", { admin: true }), status: "active" });
+    }),
+);
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): only one identity is created when its only token is set many times at once",
+  ({ layer }) =>
+    Effect.gen(function* setOnlyTokenAtOnce() {
       const { storage } = yield* openStore(layer);
       const results = yield* pipe(
         Arr.makeBy(AT_ONCE, String),
         Effect.forEach(
           (index) =>
-            storage.createIdentityIfNoneExist(identity(`admin-${index}`), tokenHash(Str.repeat(HASH_LENGTH)(index))),
+            storage.setOnlyToken(identity("admin", { admin: true }), tokenHash(Str.repeat(HASH_LENGTH)(index))),
           { concurrency: "unbounded" },
         ),
       );
       const identities = yield* storage.listIdentities();
 
-      expect(Arr.filter(results, (created) => created)).toStrictEqual([true]);
-      expect(identities).toMatchObject([{ admin: false }]);
+      expect(Arr.filter(results, (result) => result === "created")).toStrictEqual(["created"]);
+      expect(identities).toStrictEqual([identity("admin", { admin: true })]);
     }),
 );
 

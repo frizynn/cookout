@@ -1,6 +1,6 @@
 import { Effect, Schema } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
-import { builtWebFolder, freshDatabasePath, startServeWithWeb } from "../../../testing/server.ts";
+import { builtWebFolder, freshDatabasePath, startServe } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { NodeServices } from "@effect/platform-node";
 import { secretsLive } from "../../../secrets/server.ts";
@@ -37,7 +37,7 @@ it.effect("cookout serve serves the built web UI's index.html at / and its asset
   Effect.gen(function* servesTheWebUi() {
     const web = yield* builtWebFolder;
     const database = yield* freshDatabasePath;
-    const server = yield* startServeWithWeb({ database, webFolder: web.folder });
+    const server = yield* startServe({ database, webFolder: web.folder });
     const page = yield* fetched(`${server.url}/`);
     const script = yield* fetched(`${server.url}${web.scriptPath}`);
 
@@ -50,7 +50,7 @@ it.effect("an asset the build doesn't have, or a path out of the build's folder,
   Effect.gen(function* missingAssets() {
     const web = yield* builtWebFolder;
     const database = yield* freshDatabasePath;
-    const server = yield* startServeWithWeb({ database, webFolder: web.folder });
+    const server = yield* startServe({ database, webFolder: web.folder });
     const missing = yield* refusalCode(`${server.url}/assets/missing.js`);
     const escaping = yield* refusalCode(`${server.url}/assets/..%2Findex.html`);
 
@@ -62,7 +62,7 @@ it.effect("an asset the build doesn't have, or a path out of the build's folder,
 it.effect("a cookout whose web UI isn't built answers / with not_found", () =>
   Effect.gen(function* unbuiltWebUi() {
     const database = yield* freshDatabasePath;
-    const server = yield* startServeWithWeb({ database, webFolder: `${database}-no-web-build` });
+    const server = yield* startServe({ database, webFolder: `${database}-no-web-build` });
     const page = yield* refusalCode(`${server.url}/`);
 
     expect(page).toBe("404 not_found");

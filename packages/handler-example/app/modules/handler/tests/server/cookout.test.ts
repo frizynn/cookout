@@ -33,10 +33,14 @@ const ACCEPTED = 202;
 const UNAVAILABLE = 503;
 const DELIVERY_FAILED = "The delivery of /echo to its handler failed after 5 retries.";
 const WRONG_SECRET = "not-the-command-secret";
-const RETRY_AT_ONCE = { COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS: "0", COOKOUT_WEBHOOK_RETRY_FACTOR: "1" };
+const ADMIN_TOKEN = "handler-example-admin-token-0123456789abcdef";
+const SERVE_ENV = {
+  COOKOUT_ADMIN_TOKEN: ADMIN_TOKEN,
+  COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS: "0",
+  COOKOUT_WEBHOOK_RETRY_FACTOR: "1",
+};
 
 const isListening = Schema.is(Schema.Struct({ listening: Schema.String }));
-const isFirstBoot = Schema.is(Schema.Struct({ adminToken: Schema.String }));
 const jsonLineIn = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown));
 
 function serveArgs(bin: string, database: string): readonly string[] {
@@ -60,13 +64,12 @@ const startCookout: Effect.Effect<RunningCookout, never, Needs> = Effect.gen(fun
   const folder = yield* fs.makeTempDirectoryScoped({ prefix: "cookout-handler-example-" });
   const bin = yield* path.fromFileUrl(COOKOUT_BIN);
   const command = ChildProcess.make(process.execPath, serveArgs(bin, path.join(folder, "cookout.db")), {
-    env: RETRY_AT_ONCE,
+    env: SERVE_ENV,
     extendEnv: false,
   });
   const lines = yield* startupLines((yield* spawner.spawn(command)).stdout);
-  const { adminToken } = Option.getOrThrow(Arr.findFirst(lines, isFirstBoot));
   const { listening } = Option.getOrThrow(Arr.findFirst(lines, isListening));
-  return { admin: createCookoutClient({ token: adminToken, url: listening }), url: listening };
+  return { admin: createCookoutClient({ token: ADMIN_TOKEN, url: listening }), url: listening };
 }).pipe(Effect.orDie);
 
 function answer<Value>(send: () => Promise<Value>): Effect.Effect<Value> {

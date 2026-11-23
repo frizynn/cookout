@@ -2,7 +2,7 @@
  * The test composition root, importable only from tests. `runDev` and
  * `startDev` run the dev program's commands (ADR 0020) in process. It builds the test
  * Layers (a cookout on port 0 with memory storage and test secrets, its
- * first-boot admin and identities seeded through `Storage`, both storage
+ * admin on a token it makes and identities seeded through `Storage`, both storage
  * Layers on fresh stores, a store that is unusable). It runs `cookout`
  * command lines in the test's own process, `serve` included, with their
  * output captured, and runs the `cookout` binary as a process only where a
@@ -30,10 +30,9 @@ export {
   runCookout,
   runDev,
   type ServeProcess,
-  type ServeWithWeb,
+  type ServeOptions,
   startDev,
   startServe,
-  startServeWithWeb,
   type Watched,
   watchCookout,
 } from "./lib/server/cli.ts";

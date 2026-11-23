@@ -9,8 +9,8 @@ const UNAUTHORIZED = 401;
 const NOT_FOUND = 404;
 const METHOD_NOT_ALLOWED = 405;
 
-it.effect("the first boot makes an admin identity with a working token", () =>
-  Effect.gen(function* firstBootAdmin() {
+it.effect("a fresh board makes an admin identity that works with the admin token it booted with", () =>
+  Effect.gen(function* freshBoardAdmin() {
     const cookout = yield* TestCookout;
     const whoami = yield* answer(cookout.client.whoami);
 
@@ -75,10 +75,22 @@ it.effect("a server on a store that already has identities makes no new admin", 
       createCookoutClient({ env: {}, token: cookout.adminToken, url: second.url }).listIdentities,
     );
 
-    expect(second.adminToken).toBeUndefined();
     expect(identities).toStrictEqual([
       { admin: true, createdAt: "2026-01-01T00:00:00.000Z", kind: "human", name: "admin" },
     ]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("restarting with the admin token again revokes a token rotated since", () =>
+  Effect.gen(function* restartRevokesRotated() {
+    const cookout = yield* TestCookout;
+    const rotated = yield* answer(() => cookout.client.rotateToken("admin"));
+    const second = yield* cookout.startSecondServer;
+    const whoami = yield* answer(createCookoutClient({ env: {}, token: cookout.adminToken, url: second.url }).whoami);
+    const old = yield* refusal(createCookoutClient({ env: {}, token: rotated.token, url: second.url }).whoami);
+
+    expect(whoami.identity).toMatchObject({ admin: true, name: "admin" });
+    expect(old).toMatchObject({ code: "token_revoked", status: UNAUTHORIZED });
   }).pipe(Effect.provide(testCookout())),
 );
 
