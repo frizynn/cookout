@@ -15,7 +15,13 @@ export function MessageLayout(parts: MessageLayoutParts): ReactNode {
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         {!parts.grouped && (
-          <MessageHeader agent={parts.agent} displayName={parts.displayName} name={parts.name} time={time} />
+          <MessageHeader
+            agent={parts.agent}
+            displayName={parts.displayName}
+            name={parts.name}
+            note={parts.note}
+            time={time}
+          />
         )}
         {parts.children}
       </div>

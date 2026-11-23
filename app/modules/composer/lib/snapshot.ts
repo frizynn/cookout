@@ -16,7 +16,9 @@ function suggestionsFor(identities: readonly Identity[], text: string, caret: nu
   }
   const [mention] = found;
   const prefix = mention.slice(AT_SIGN);
-  return identities.filter((identity) => identity.name.startsWith(prefix)).slice(NOTHING, MOST_SUGGESTIONS);
+  return identities
+    .filter((identity) => identity.deactivated !== true && identity.name.startsWith(prefix))
+    .slice(NOTHING, MOST_SUGGESTIONS);
 }
 
 function commandsFor(commands: readonly Command[], text: string): readonly Command[] {

@@ -2,6 +2,7 @@ import type { Identity, IdentityName } from "../../sdk/index.ts";
 import { IdentityRow } from "../../design-system/index.tsx";
 import { IdentityTags } from "./identity-tags.tsx";
 import type { ReactNode } from "react";
+import { noteOf as deactivatedNote } from "./use-author.ts";
 import { hrefOf } from "../../paths/index.ts";
 import { kindOf } from "./kind-of.ts";
 
@@ -17,7 +18,7 @@ function noteOf(identity: Identity, me: IdentityName): string | null {
   if (identity.name === me) {
     return TEXT.you;
   }
-  return null;
+  return deactivatedNote(identity);
 }
 
 export function PersonRow(props: PersonRowProps): ReactNode {

@@ -43,7 +43,7 @@ function createIdentityList(options: IdentityListOptions): IdentityList {
 
   async function loadIdentities(): Promise<void> {
     try {
-      const listed = await options.client.listIdentities();
+      const listed = await options.client.listIdentities({ include: "deactivated" });
       publish(listed.identities);
     } catch {
       identities = [];

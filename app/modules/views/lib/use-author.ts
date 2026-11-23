@@ -2,9 +2,12 @@ import type { Author, Identity } from "../../sdk/index.ts";
 import { useContext, useSyncExternalStore } from "react";
 import { AuthorList } from "./author-list.ts";
 
+const DEACTIVATED = "(deactivated)";
+
 interface Shown {
   readonly agent: boolean;
   readonly displayName: string | null;
+  readonly note: string | null;
 }
 
 interface Drawn {
@@ -21,11 +24,18 @@ function listedIn(listed: readonly Identity[], name: string): Identity | null {
   return listed.find((identity) => identity.name === name) ?? null;
 }
 
+function noteOf(identity: Identity): string | null {
+  if (identity.deactivated === true) {
+    return DEACTIVATED;
+  }
+  return null;
+}
+
 function shownFrom(identity: Identity | null, author: Author): Shown {
   if (identity === null) {
-    return { agent: "owner" in author, displayName: null };
+    return { agent: "owner" in author, displayName: null, note: null };
   }
-  return { agent: identity.kind === "agent", displayName: identity.displayName ?? null };
+  return { agent: identity.kind === "agent", displayName: identity.displayName ?? null, note: noteOf(identity) };
 }
 
 function useListed(name: string): Identity | null {
@@ -44,4 +54,4 @@ function useDrawnAuthors(authors: readonly Author[]): readonly Drawn[] {
   }));
 }
 
-export { useAuthor, useDrawnAuthors, useListed };
+export { noteOf, useAuthor, useDrawnAuthors, useListed };
