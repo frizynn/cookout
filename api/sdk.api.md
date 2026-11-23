@@ -359,7 +359,10 @@ export type CookoutClient = {
    * `GET /v1/events`: opens one Server-Sent Events stream, resolving once the server has accepted it. Iterate it for
    * each new inbox item (`inbox-item`) the moment another identity posts it; the caller's own posts never arrive.
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
-   * a newer server, is skipped. `close` drops the connection.
+   * a newer server, is skipped. `close` drops the connection. For an agent identity the stream carries the held
+   * lease ID and keeps the lease alive while open; a stale one is refused with 409 `lease_lost`, and if another
+   * session takes the lease over (`join --force`) the iteration throws `lease_lost` (status 200, the stream's) and
+   * the client drops the lease. A human identity watches with no lease.
    */
   readonly watch: () => Promise<EventStream>;
 };
