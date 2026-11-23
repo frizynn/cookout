@@ -18,7 +18,8 @@
  * knows every source is listening. A source that sends a `refusal` event
  * (`lease_lost`) ends the stream with it. The route sits behind the server's
  * token gate, and opens only with the lease an agent's watch needs (ADR 0004,
- * ADR 0028).
+ * ADR 0028), and only while the caller holds fewer than `COOKOUT_STREAMS_PER_IDENTITY` streams (429
+ * `too_many_streams`, ADR 0033); closing the stream frees its place.
  */
 import type { Connected, EventSource } from "./lib/server/source.ts";
 import {
@@ -33,14 +34,16 @@ import { isLast, lastEventIdIn, refusalSseEvent, sseText } from "./lib/server/so
 import { keepRenewingSentLease, requireLeaseWhileHeld } from "../leases/server.ts";
 import { Caller } from "../identities/server.ts";
 import type { Leases } from "../leases/server.ts";
+import type { Limits } from "../limits/server.ts";
 import type { Route } from "../http/server.ts";
 import type { SourceNeeds } from "./lib/server/sources.ts";
 import { eventsPath } from "./index.ts";
+import { holdStreamPlace } from "../limits/server.ts";
 import { sources } from "./lib/server/sources.ts";
 
 type LeaseNeeds = Caller | Leases | HttpServerRequest.HttpServerRequest;
 
-type Needs = SourceNeeds | LeaseNeeds;
+type Needs = SourceNeeds | LeaseNeeds | Limits;
 
 function leaseRenewals(): Connected<LeaseNeeds> {
   return Effect.map(Effect.context<LeaseNeeds>(), (context) =>
@@ -61,9 +64,13 @@ const eventsRoute: Route<Needs> = {
       const { headers, url } = yield* HttpServerRequest.HttpServerRequest;
       const lastEventId = lastEventIdIn(headers["last-event-id"]);
       const connection = yield* Scope.make();
+      yield* holdStreamPlace.pipe(Scope.provide(connection));
       const streams = yield* Effect.forEach(allSources, (source) => source({ caller, lastEventId, url }), {
         concurrency: "unbounded",
-      }).pipe(Scope.provide(connection));
+      }).pipe(
+        Scope.provide(connection),
+        Effect.onError(() => Scope.close(connection, Exit.void)),
+      );
       const body = Stream.mergeAll(streams, { concurrency: "unbounded" }).pipe(
         Stream.takeUntil(isLast),
         Stream.map(sseText),

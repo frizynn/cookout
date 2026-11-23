@@ -8,6 +8,7 @@ import { channelErrorCodes } from "../channels/index.ts";
 import { commandErrorCodes } from "../commands/index.ts";
 import { identityErrorCodes } from "../identities/index.ts";
 import { leaseErrorCodes } from "../leases/index.ts";
+import { limitErrorCodes } from "../limits/index.ts";
 import { messageErrorCodes } from "../messages/index.ts";
 
 type Same<Left, Right> = [Left] extends [Right] ? ([Right] extends [Left] ? true : false) : false;
@@ -34,6 +35,7 @@ export const errorCodes = [
   ...messageErrorCodes,
   ...leaseErrorCodes,
   ...commandErrorCodes,
+  ...limitErrorCodes,
   "not_found",
   "method_not_allowed",
   "invalid_path",

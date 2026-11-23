@@ -14,6 +14,10 @@ const DEFAULT_WEBHOOK_RETRY_DELAY_SECONDS = 10;
 const SMALLEST_WEBHOOK_RETRY_FACTOR = 1;
 const DEFAULT_WEBHOOK_RETRY_FACTOR = 2.3;
 const SHORTEST_ADMIN_TOKEN = 32;
+const SMALLEST_LIMIT = 1;
+const DEFAULT_REQUESTS_PER_MINUTE = 6000;
+const DEFAULT_COMMAND_CALLS_PER_MINUTE = 60;
+const DEFAULT_STREAMS_PER_IDENTITY = 20;
 
 const isPublicUrl = Schema.makeFilter(
   (url: string) =>
@@ -87,6 +91,32 @@ export const webhookRetryFactor = Config.schema(
   Schema.Finite.check(Schema.isGreaterThanOrEqualTo(SMALLEST_WEBHOOK_RETRY_FACTOR)),
   "COOKOUT_WEBHOOK_RETRY_FACTOR",
 ).pipe(Config.withDefault(DEFAULT_WEBHOOK_RETRY_FACTOR));
+
+/**
+ * `COOKOUT_REQUESTS_PER_MINUTE`: how many requests one identity may make a minute, counted from a full bucket that
+ * holds as many and refills evenly (mattpocock/cookout#92, ADR 0033). The default of 6000 is far above any session's
+ * use and is not settled yet.
+ */
+export const requestsPerMinute = Config.schema(
+  Schema.Int.check(Schema.isGreaterThanOrEqualTo(SMALLEST_LIMIT)),
+  "COOKOUT_REQUESTS_PER_MINUTE",
+).pipe(Config.withDefault(DEFAULT_REQUESTS_PER_MINUTE));
+
+/**
+ * `COOKOUT_COMMAND_CALLS_PER_MINUTE`: how many command calls one identity may make a minute, in a bucket of its own
+ * on top of the request one, because each call fans out to the command's handler. The default of 60 is not settled
+ * yet.
+ */
+export const commandCallsPerMinute = Config.schema(
+  Schema.Int.check(Schema.isGreaterThanOrEqualTo(SMALLEST_LIMIT)),
+  "COOKOUT_COMMAND_CALLS_PER_MINUTE",
+).pipe(Config.withDefault(DEFAULT_COMMAND_CALLS_PER_MINUTE));
+
+/** `COOKOUT_STREAMS_PER_IDENTITY`: how many `/v1/events` streams one identity may hold open at once. */
+export const streamsPerIdentity = Config.schema(
+  Schema.Int.check(Schema.isGreaterThanOrEqualTo(SMALLEST_LIMIT)),
+  "COOKOUT_STREAMS_PER_IDENTITY",
+).pipe(Config.withDefault(DEFAULT_STREAMS_PER_IDENTITY));
 
 /** `COOKOUT_STATE_DIR`: where the CLI keeps the lease it took with `join`. Empty counts as unset. */
 export const stateDirectory = Config.String("COOKOUT_STATE_DIR").pipe(Config.withDefault(""));
