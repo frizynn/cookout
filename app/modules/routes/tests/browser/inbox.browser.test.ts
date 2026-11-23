@@ -1,7 +1,12 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, logInToChannels, newIdentity, sidebar } from "./people.ts";
 import { expect, test } from "@playwright/test";
+import type { MessageId } from "../../../sdk/index.ts";
 import type { Person } from "./people.ts";
+
+const ONE = 1;
+const A_PAGE_AND_ONE = 51;
+const ONE_PAGE = 50;
 
 interface Reading {
   readonly poster: Person;
@@ -25,15 +30,26 @@ async function subscribedPerson(channel: string): Promise<Reading> {
   return { poster, reader };
 }
 
-function countsRow(page: Page, channel: string): Locator {
-  return page
-    .getByRole("list", { name: "Unread by channel" })
-    .getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
+function rows(page: Page, list: string): Locator {
+  return page.getByRole("list", { name: list }).getByRole("link");
 }
 
-test("the inbox lists the identity's inbox items with their reasons, and each channel's unread counts", async ({
-  page,
-}) => {
+async function postFrom(poster: Person, channel: string, build: number): Promise<MessageId> {
+  const { message } = await poster.client.createMessage({ channel, text: `Build ${String(build)} passed` });
+  if (build === A_PAGE_AND_ONE) {
+    return message.id;
+  }
+  const last = await postFrom(poster, channel, build + ONE);
+  return last;
+}
+
+async function logInHavingRead(page: Page, channel: string): Promise<void> {
+  const { poster, reader } = await subscribedPerson(channel);
+  await reader.client.ack(await postFrom(poster, channel, ONE));
+  await logInToChannels({ page, token: reader.token });
+}
+
+test("the inbox lists the identity's unread items newest first, with their reasons", async ({ page }) => {
   const channel = "browser-inbox";
   const { poster, reader } = await subscribedPerson(channel);
   await poster.client.createMessage({ channel, text: "Deploy at noon?" });
@@ -44,11 +60,12 @@ test("the inbox lists the identity's inbox items with their reasons, and each ch
     .getByRole("link", { name: /^Inbox/u })
     .click();
 
-  await expect(page.getByRole("list", { name: "Inbox" }).getByRole("link")).toHaveText([
-    `#${channel}Subscribed channel@${channel}-posteragentDeploy at noon?`,
-    `#${channel}Mention, Subscribed channel@${channel}-posteragent@${channel}-reader can you check the rollout?`,
+  await expect(page.getByRole("heading", { level: 2, name: "Unread 2" })).toBeVisible();
+  await expect(rows(page, "Unread")).toHaveText([
+    `${channel}-posterposted in#${channel}just now@${channel}-reader can you check the rollout?MentionChannel`,
+    `${channel}-posterposted in#${channel}just nowDeploy at noon?Channel`,
   ]);
-  await expect(countsRow(page, channel)).toHaveAccessibleName(`#${channel} 1 unread 1 mention`);
+  await expect(page.getByText("Nothing read yet.")).toBeVisible();
 });
 
 async function inboxInSecondTab(page: Page, channel: string): Promise<Page> {
@@ -68,15 +85,28 @@ async function openChannel(page: Page, channel: string, text: string): Promise<v
   await expect(page.getByRole("list", { name: "Messages" })).toContainText(text);
 }
 
-test("acking in one tab clears the count in another", async ({ page }) => {
+test("acking in one tab moves the item from Unread to Earlier in another", async ({ page }) => {
   const channel = "browser-inbox-tabs";
   const second = await inboxInSecondTab(page, channel);
 
-  await expect(countsRow(second, channel)).toHaveAccessibleName(`#${channel} 1 unread`);
+  await expect(rows(second, "Unread")).toHaveCount(ONE);
 
   await openChannel(page, channel, "Deploy at noon?");
 
-  await expect(countsRow(second, channel)).toBeHidden();
-  await expect(second.getByRole("list", { name: "Inbox" })).toBeHidden();
-  await expect(second.getByText("Nothing unread.")).toBeVisible();
+  await expect(second.getByText("You're all caught up.")).toBeVisible();
+  await expect(rows(second, "Earlier")).toContainText(["Deploy at noon?"]);
+});
+
+test("Load more reads the next page of what was read, and the end says so", async ({ page }) => {
+  await logInHavingRead(page, "browser-inbox-more");
+
+  await expect(rows(page, "Earlier")).toHaveCount(ONE_PAGE);
+  await expect(page.getByText("That's everything.")).toBeHidden();
+
+  await page.getByRole("button", { name: "Load more" }).click();
+
+  await expect(rows(page, "Earlier")).toHaveCount(A_PAGE_AND_ONE);
+  await expect(rows(page, "Earlier").last()).toContainText("Build 1 passed");
+  await expect(page.getByText("That's everything.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Load more" })).toBeHidden();
 });

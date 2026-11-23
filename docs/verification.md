@@ -752,7 +752,7 @@ The first snapshot's `Channels` list has the links `#deploys 1 unread` and `#gen
 The look is Vercel-like and neutral with small pops of colour: sans text, mono only for times and channel names ([ADR 0040](adr/0040-the-web-ui-is-a-chat-workspace.md)). Its colours are design-system tokens in `app/modules/design-system/styles.css`: dark by default, light under `data-theme="light"` on the page's root, and light under `prefers-color-scheme: light` unless `data-theme="dark"`. The sidebar's `Settings` button opens a panel named `Settings` with a `Theme` group of radios, `System`, `Light` and `Dark`: a choice applies at once, is kept in the browser's local storage (`cookout-theme`), and is applied before the first paint by `public/assets/theme.js` (the CSP allows no inline script); `System` removes it, so the theme follows the operating system with no script. Each author has an avatar of their initials in one of eight hues hashed from the name, the same on every screen: a circle for a human, a rounded square with a badge and an `agent` tag for an agent (from `GET /v1/identities`; an author no longer listed is an agent if the message carries an owner). In a message box, Enter sends, Shift+Enter starts a new line, and while the `@` suggestions show, the arrow keys move the highlight and Enter picks it; a hint line under the box says so. Logged in as `grace` (the "Log in to the web UI" recipe, same session), take screenshots in both themes:
 
 ```sh
-agent-browser --session cookout open "http://127.0.0.1:3000/" && agent-browser --session cookout wait --text "Unread messages" && agent-browser --session cookout screenshot /tmp/cookout-inbox-dark.png
+agent-browser --session cookout open "http://127.0.0.1:3000/" && agent-browser --session cookout wait --text "Thanks, both of you." && agent-browser --session cookout screenshot /tmp/cookout-inbox-dark.png
 agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" && agent-browser --session cookout wait --text "Lunch at 12:30." && agent-browser --session cookout screenshot /tmp/cookout-channel-dark.png
 agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general/threads/1" && agent-browser --session cookout wait --text "Thanks, both of you." && agent-browser --session cookout screenshot /tmp/cookout-thread-dark.png
 agent-browser --session cookout find role button click --name "Settings" && agent-browser --session cookout screenshot /tmp/cookout-settings-dark.png
@@ -764,18 +764,32 @@ Each screenshot shows the sidebar on the left (on the narrow one, over the page 
 
 ## Read the inbox in the web UI
 
-The sidebar's `Inbox` link (`#/inbox`, also `#/`) opens the logged-in human's inbox from the same query as the API (`GET /v1/inbox`, through the `unread` store): a list named `Unread by channel`, one link per channel with anything unread, sorted by name, with the same counts as the channel list; then a list named `Inbox` of the items, oldest first, each a link with its channel, its reasons (`Followed thread`, `Mention`, `Subscribed channel`), its author and its text. A reply links to its thread and a top-level message to its channel, so opening it acks it. With nothing unread it says `Nothing unread.` The counts and items follow the live stream: a read position from any session of the same identity, such as another tab acking by opening a channel, drops what it covers in every open tab without a reload. On a fresh seed of the built server ("Open the web UI" and "Log in to the web UI", logged in as `grace`), open the inbox, then open `#deploys` in a second tab and go back to the first:
+The sidebar's `Inbox` link (`#/inbox`, also `#/`) opens the logged-in human's inbox, headed `Inbox` with the muted line `Mentions, threads you follow, and channels you subscribe to`. First `Unread` with its count (a level-2 heading), then a list named `Unread` of what they haven't read, newest first, from the same query as the API (`GET /v1/inbox`, through the `unread` store); with none it says `You're all caught up.` Then an `Earlier` divider and a list named `Earlier` of the items they have read, newest first, from the inbox history (`GET /v1/inbox/history`), a page of 50 at a time: `Load more` reads the next page while older ones remain, and `That's everything.` shows at the end; with none it says `Nothing read yet.` Each row is a link with the author's avatar and name, `posted in` or `replied in a thread in`, the channel in mono and a short time (`just now`, `5m ago`, `2h ago`, `3d ago`); for a reply a muted `re:` line with the start of its thread's top-level message; up to two lines of the text, each `@` mention styled (the reader's own in the mention colour); and its reasons as small tags (`Mention` in the mention colour, `Thread`, `Channel`). An unread row has a dot and a bold name; a read row is muted. A reply links to its thread and a top-level message to its channel, so opening it acks it and its row moves from Unread to Earlier. Both follow the live stream: a new inbox item appears at the top of Unread, and a read position from any session of the same identity, such as another tab acking by opening a channel, moves what it covers to Earlier in every open tab without a reload.
+
+On a fresh seed of the built server ("Open the web UI" and "Log in to the web UI"), post 52 mentions of `grace` from the CLI as `ada`, have `grace` ack the fiftieth (which reads every top-level message in `general` up to it), then post two more:
 
 ```sh
-agent-browser --session cookout open "http://127.0.0.1:3000/#/" && agent-browser --session cookout wait --text "#deploys" && agent-browser --session cookout click 'a[href="#/inbox"]' && agent-browser --session cookout wait --text "Unread messages" && agent-browser --session cookout snapshot
-agent-browser --session cookout screenshot --full /tmp/cookout-inbox.png
-agent-browser --session cookout tab new "http://127.0.0.1:3000/#/channels/deploys" && agent-browser --session cookout wait --text "Deployed 1.4.2."
-agent-browser --session cookout tab list
-agent-browser --session cookout tab t1 && agent-browser --session cookout wait 1000 && agent-browser --session cookout snapshot
-agent-browser --session cookout screenshot --full /tmp/cookout-inbox-after-ack.png
+jq -r '.identities[] | select(.identity.name == "ada") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-built-seed.json > /tmp/cookout-built-ada.env
+jq -r '.identities[] | select(.identity.name == "grace") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-built-seed.json > /tmp/cookout-built-grace.env
+for i in $(seq 1 52); do
+  id=$(env $(cat /tmp/cookout-built.env) COOKOUT_ALLOW_HUMAN=1 $(cat /tmp/cookout-built-ada.env) node app/main.ts message post general "@grace build $i is green" | jq .message.id)
+  if [ "$i" = 50 ]; then env $(cat /tmp/cookout-built.env) COOKOUT_ALLOW_HUMAN=1 $(cat /tmp/cookout-built-grace.env) node app/main.ts ack "$id"; fi
+done
+env $(cat /tmp/cookout-built.env) COOKOUT_ALLOW_HUMAN=1 $(cat /tmp/cookout-built-ada.env) node app/main.ts message post general "@grace can you review the rollout notes?"
+env $(cat /tmp/cookout-built.env) COOKOUT_ALLOW_HUMAN=1 $(cat /tmp/cookout-built-ada.env) node app/main.ts message post general "@grace standup moved to 10:30"
 ```
 
-The first snapshot's `Unread by channel` has `#deploys 2 unread` and `#general 1 unread`, and its `Inbox` has `#general Followed thread @ada Thanks, both of you.`, `#deploys Subscribed channel @release-bot Deployed 1.4.2.` and `#deploys Subscribed channel @ada /rollback`. `tab list` names the first tab (`t1` here; use the ID it prints). Back in it, without a reload, `#deploys` and both its items are gone, leaving `#general 1 unread` and the reply.
+Then, logged in as `grace` in the dark theme, screenshot the inbox, its foot before and after `Load more`, then the same in the light theme:
+
+```sh
+agent-browser --session cookout open "http://127.0.0.1:3000/#/inbox" && agent-browser --session cookout wait --text "standup moved to 10:30" && agent-browser --session cookout snapshot
+agent-browser --session cookout screenshot /tmp/cookout-inbox-dark.png
+agent-browser --session cookout eval '{ const a = document.querySelector("section[aria-label=Inbox]"); a.scrollTop = a.scrollHeight; }' && agent-browser --session cookout screenshot /tmp/cookout-inbox-more-dark.png
+agent-browser --session cookout find role button click --name "Load more" && agent-browser --session cookout wait --text "That's everything."
+agent-browser --session cookout eval '{ const a = document.querySelector("section[aria-label=Inbox]"); a.scrollTop = a.scrollHeight; }' && agent-browser --session cookout screenshot /tmp/cookout-inbox-end-dark.png
+```
+
+The snapshot's `Unread 7` list starts with `ada posted in #general … @grace standup moved to 10:30 Mention` and `… @grace can you review the rollout notes? Mention`, then builds 52 and 51, `#deploys`' `/rollback` and `Deployed 1.4.2.` (each `Channel`), and `ada replied in a thread in #general re: Morning! Who is looking at the flaky login test? Thanks, both of you. Thread`. The `Earlier` list starts at build 50 and ends at build 5 above `Load more`; after it, it runs down to build 1 and `triage-agent`'s reply in the thread, then `That's everything.`, and `Load more` is gone. Switch to `Light` in Settings and take the same screenshots. Open `#general` in a second tab (`tab new "http://127.0.0.1:3000/#/channels/general"`) and go back to the first: without a reload the four `#general` mentions have moved to the top of `Earlier`, leaving the thread's reply in `Unread`, and the sidebar's `#general` mention pill is gone.
 
 ## Browse people and agents
 

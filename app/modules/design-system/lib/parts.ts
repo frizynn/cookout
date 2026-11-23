@@ -188,17 +188,6 @@ interface DataBlockParts {
   readonly value: unknown;
 }
 
-interface CountParts {
-  readonly count: number;
-  readonly label: string;
-  readonly tone: "plain" | "mention";
-}
-
-interface RowTitleParts extends Parts {
-  readonly title: string;
-  readonly marked: boolean;
-}
-
 interface SkeletonParts {
   readonly width: "short" | "long";
 }
@@ -224,7 +213,6 @@ export type {
   SidePanelParts,
   ToggleButtonParts,
   WorkspaceParts,
-  CountParts,
   DataAreaParts,
   DataBlockParts,
   FieldsFormParts,
@@ -232,7 +220,6 @@ export type {
   LinkParts,
   ListParts,
   Parts,
-  RowTitleParts,
   SelectOptionParts,
   SelectParts,
   SkeletonParts,

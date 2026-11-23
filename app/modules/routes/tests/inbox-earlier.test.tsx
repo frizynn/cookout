@@ -1,0 +1,121 @@
+import type { CookoutClient, MessageId } from "../../sdk/index.ts";
+import { alertSaying, anonymousClient, openAt } from "./app.tsx";
+import { expect, it } from "vitest";
+import { fireEvent, screen } from "@testing-library/react";
+import { rowsOf, subscribedReader } from "./inbox-reader.ts";
+
+const NONE = 0;
+const ONE = 1;
+const TWO_A_PAGE = 2;
+
+async function postAll(poster: CookoutClient, channel: string, texts: readonly string[]): Promise<MessageId> {
+  const [text, ...rest] = texts;
+  const { message } = await poster.createMessage({ channel, text: String(text) });
+  if (rest.length === NONE) {
+    return message.id;
+  }
+  const last = await postAll(poster, channel, rest);
+  return last;
+}
+
+async function readThenUnread(channel: string): Promise<CookoutClient> {
+  const { poster, reader } = await subscribedReader(channel);
+  await reader.ack(await postAll(poster, channel, ["One", "Two", "Three"]));
+  await postAll(poster, channel, ["Four", "Five", "Six"]);
+  return reader;
+}
+
+function historyRefusedAfter(reader: CookoutClient, pages: number): CookoutClient {
+  let asked = NONE;
+  return {
+    ...reader,
+    inboxHistory: async (query) => {
+      asked += ONE;
+      if (asked > pages) {
+        const refused = await anonymousClient().inboxHistory(query);
+        return refused;
+      }
+      const page = await reader.inboxHistory(query);
+      return page;
+    },
+  };
+}
+
+function postedRow(channel: string, text: string): string {
+  return `#/channels/${channel} ${channel}-posterposted in#${channel}just now${text}Channel`;
+}
+
+it("earlier lists read items newest first, a page at a time, until there are no more", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-inbox-earlier";
+  const reader = await readThenUnread(channel);
+  const unmount = openAt({ client: reader, hash: "#/inbox", pageSize: TWO_A_PAGE });
+  await screen.findByRole("list", { name: "Earlier" });
+
+  expect([rowsOf("Earlier"), screen.queryByText("That's everything.")]).toStrictEqual([
+    [postedRow(channel, "Three")],
+    null,
+  ]);
+
+  fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+  await screen.findByText("That's everything.");
+
+  expect([rowsOf("Earlier"), rowsOf("Unread"), screen.queryByRole("button", { name: "Load more" })]).toStrictEqual([
+    ["Three", "Two", "One"].map((text) => postedRow(channel, text)),
+    ["Six", "Five", "Four"].map((text) => postedRow(channel, text)),
+    null,
+  ]);
+
+  unmount();
+});
+
+it("clicking Load more twice before it answers reads the next page once", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-inbox-double-click";
+  const reader = await readThenUnread(channel);
+  const unmount = openAt({ client: reader, hash: "#/inbox", pageSize: TWO_A_PAGE });
+  const more = await screen.findByRole("button", { name: "Load more" });
+
+  fireEvent.click(more);
+  fireEvent.click(more);
+  await screen.findByText("That's everything.");
+
+  expect(rowsOf("Earlier")).toStrictEqual(["Three", "Two", "One"].map((text) => postedRow(channel, text)));
+
+  unmount();
+});
+
+it("an Earlier page that can't be read says why, at first or on Load more", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const reader = await readThenUnread("web-inbox-earlier-refused");
+  const unmount = openAt({ client: historyRefusedAfter(reader, NONE), hash: "#/inbox" });
+  const first = await alertSaying("Couldn't load what you've read (");
+  unmount();
+  const reopened = openAt({ client: historyRefusedAfter(reader, TWO_A_PAGE), hash: "#/inbox", pageSize: TWO_A_PAGE });
+  fireEvent.click(await screen.findByRole("button", { name: "Load more" }));
+  const more = await alertSaying("Couldn't load more (");
+
+  expect([first.textContent, more.textContent]).toStrictEqual([
+    expect.stringMatching(/^Couldn't load what you've read \(token_missing\): /u),
+    expect.stringMatching(/^Couldn't load more \(token_missing\): /u),
+  ]);
+
+  reopened();
+});
+
+it("with nothing in it, the inbox says it is all caught up and nothing is read yet", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { reader } = await subscribedReader("web-inbox-empty");
+  const unmount = openAt({ client: reader, hash: "#/inbox" });
+
+  await screen.findByText("Nothing read yet.");
+
+  expect(screen.getByText("You're all caught up.")).toBeDefined();
+  expect(screen.getByRole("heading", { level: 2, name: "Unread 0" })).toBeDefined();
+
+  unmount();
+});
