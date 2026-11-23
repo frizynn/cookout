@@ -7,6 +7,7 @@ interface FeedRowParts {
   readonly why: string;
   readonly author: string;
   readonly displayName: string | null;
+  readonly note: string | null;
   readonly action: string;
   readonly channel: string;
   readonly time: string;
@@ -30,6 +31,7 @@ export function FeedRowBody(parts: FeedRowParts): ReactNode {
         bold={parts.level !== "read"}
         channel={parts.channel}
         displayName={parts.displayName}
+        note={parts.note}
         time={parts.time}
       />
       {parts.context !== null && (

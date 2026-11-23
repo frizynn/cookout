@@ -14,6 +14,8 @@ const onIt = "I am. It fails about one run in ten on CI.";
 const question = "@triage-agent can you post the failing run?";
 const thanks = "Thanks, both of you.";
 const deployed = "Deployed 1.4.2.";
+const retired = "Deployed 1.4.0.";
+const mention = "@grace can you check the notes before we ship?";
 const rolledBack = "Rolled back to 1.4.1.";
 const isSeedOutput = Schema.is(SeedOutput);
 
@@ -83,6 +85,7 @@ it.effect("the seed makes channels with top-level messages and a thread holding 
       "Morning! Who is looking at the flaky login test?",
       "Lunch at 12:30.",
       "Notes for **1.4.2**:\n- the `login` test is _fixed_\n- ~~flaky~~ green\n\nDetails: https://github.com/mattpocock/cookout/issues/150",
+      mention,
     ]);
     expect(thread.parent.text).toBe("Morning! Who is looking at the flaky login test?");
     expect(Arr.map(thread.replies, ({ author, replyTo, text }) => [author.name, replyTo, text])).toStrictEqual([
@@ -117,6 +120,8 @@ it.effect("the seed leaves a mention, a followed thread and a subscribed channel
           [thanks, ["followed-thread"]],
           [deployed, ["subscribed-channel"]],
           ["/rollback", ["subscribed-channel"]],
+          [retired, ["subscribed-channel"]],
+          [mention, ["mention"]],
         ],
       ],
       [
@@ -126,6 +131,7 @@ it.effect("the seed leaves a mention, a followed thread and a subscribed channel
           [question, ["followed-thread"]],
           [thanks, ["followed-thread"]],
           ["/rollback", ["subscribed-channel"]],
+          [retired, ["subscribed-channel"]],
         ],
       ],
       [
@@ -136,6 +142,26 @@ it.effect("the seed leaves a mention, a followed thread and a subscribed channel
         ],
       ],
     ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("the seed leaves a deactivated agent whose post is still in deploys", () =>
+  Effect.gen(function* seededRetiredAgent() {
+    const cookout = yield* TestCookout;
+    yield* seeded(cookout);
+    const { identities } = yield* answer(() => cookout.client.listIdentities({ include: "deactivated" }));
+    const deploys = yield* answer(() => cookout.client.listMessages("deploys"));
+
+    expect([
+      Arr.map(
+        Arr.filter(identities, ({ deactivated }) => deactivated === true),
+        ({ name }) => name,
+      ),
+      Arr.map(
+        Arr.filter(deploys.messages, ({ author }) => author.name === "old-deploy-bot"),
+        ({ text }) => text,
+      ),
+    ]).toStrictEqual([["old-deploy-bot"], [retired]]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 

@@ -29,6 +29,7 @@ export function FeedRow(parts: RowParts): ReactNode {
           context={parts.context}
           displayName={parts.displayName}
           level={parts.level}
+          note={parts.note}
           time={parts.time}
           why={parts.why}
         >

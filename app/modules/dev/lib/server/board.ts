@@ -148,11 +148,22 @@ function callCommand({ token, url }: BoardConnection, cast: Cast): Effect.Effect
   });
 }
 
+function postLast({ token, url }: BoardConnection, cast: Cast): Effect.Effect<void, SeedFailure> {
+  return Effect.gen(function* last() {
+    const admin = clientAt(url, token);
+    const oldBot = yield* createIdentity(url, admin, { kind: "agent", name: "old-deploy-bot", owner: "ada" });
+    yield* post(oldBot, { channel: "deploys", text: "Deployed 1.4.0." });
+    yield* call(() => admin.deactivateIdentity("old-deploy-bot"));
+    yield* post(cast.ada, { channel: "general", text: "@grace can you check the notes before we ship?" });
+  });
+}
+
 function seedBoard(connection: BoardConnection): Effect.Effect<SeededBoard, SeedFailure> {
   return Effect.gen(function* seed() {
     const cast = yield* createCast(connection);
     const thread = yield* postConversation(cast);
     yield* callCommand(connection, cast);
+    yield* postLast(connection, cast);
     const identities = Arr.map([cast.ada, cast.grace, cast.releaseBot, cast.triageAgent], ({ created }) => created);
     return { channels: channelNames, identities, thread };
   });

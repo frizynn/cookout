@@ -6,6 +6,7 @@ interface Screen {
   readonly click?: string;
   readonly text: string;
   readonly narrow?: boolean;
+  readonly admin?: boolean;
 }
 
 interface Shot {
@@ -36,6 +37,8 @@ const SCREENS: readonly Screen[] = [
   { hash: "#/channels/general/threads/1", name: "thread", text: "Thanks, both of you." },
   { hash: "#/people", name: "people", text: "release-bot" },
   { hash: "#/people/release-bot", name: "profile", text: "Agent · owned by ada" },
+  { admin: true, hash: "#/people/release-bot", name: "admin-profile", text: "Transfer to (a human's name)" },
+  { admin: true, hash: "#/people/old-deploy-bot", name: "admin-deactivated", text: "Reactivate" },
   { hash: "#/settings", name: "settings", text: "System" },
   { click: "New channel", hash: "#/channels/general", name: "new-channel", text: "Lowercase letters" },
   { click: "Open the sidebar", hash: "#/channels/general", name: "narrow", narrow: true, text: "#deploys" },
@@ -112,7 +115,7 @@ async function failuresOf(shoot: TakeScreenshots["shoot"], shots: readonly Shot[
 }
 
 async function takeScreenshots({ screens, shoot }: TakeScreenshots): Promise<readonly string[]> {
-  const shots = THEMES.flatMap((theme) => screens.map((screen) => ({ screen, theme })));
+  const shots = screens.flatMap((screen) => THEMES.map((theme) => ({ screen, theme })));
   const failures = await failuresOf(shoot, shots);
   return failures;
 }
