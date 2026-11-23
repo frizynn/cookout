@@ -106,20 +106,7 @@ export type {
   JoinRequest,
   LeaveResponse,
 } from "../agent-sessions/index.ts";
-export type {
-  AckRequest,
-  AckResponse,
-  FollowResponse,
-  InboxHistoryItem,
-  InboxHistoryQuery,
-  InboxHistoryResponse,
-  InboxItem,
-  InboxReason,
-  InboxResponse,
-  ReadPosition,
-  ReadPositionsResponse,
-  SubscriptionResponse,
-} from "../inbox/index.ts";
+export type * from "./lib/inbox-types.ts";
 export type {
   ConnectedEvent,
   CookoutEvent,
