@@ -56,13 +56,14 @@ function startUpLine({
       Effect.gen(function* countOnce() {
         const counted = yield* Ref.make(Option.none<number>());
         const sayOnce = Effect.fnUntraced(function* sayUnreadOnce({ latestMessageId }: ConnectedEvent) {
-          const already = yield* Ref.get(counted);
-          if (Option.isSome(already)) {
-            return;
+          const first = yield* Ref.modify(counted, (already) => [
+            Option.isNone(already),
+            Option.orElseSome(already, () => latestMessageId ?? NOTHING_POSTED),
+          ]);
+          if (first) {
+            const count = yield* unreadUpTo(opened, latestMessageId);
+            yield* sayUnread(format, count);
           }
-          yield* Ref.set(counted, Option.some(latestMessageId ?? NOTHING_POSTED));
-          const count = yield* unreadUpTo(opened, latestMessageId);
-          yield* sayUnread(format, count);
         });
         function isNewer(event: InboxItemEvent): Effect.Effect<boolean> {
           return Effect.map(Ref.get(counted), (latest) => isNewerThan(latest, event));
