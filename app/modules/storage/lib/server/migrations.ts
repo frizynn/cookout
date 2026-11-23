@@ -1,4 +1,5 @@
 import { Effect, FileSystem, Schema } from "effect";
+import { OFFLINE_ALERTS_MIGRATION } from "./offline-alerts.ts";
 import { REACTIONS_MIGRATION } from "./reactions-sqlite.ts";
 import { READ_RECEIPTS_MIGRATION } from "./read-receipts-sqlite.ts";
 import type { Scope } from "effect";
@@ -182,6 +183,7 @@ const migrations: readonly string[] = [
    ) STRICT;`,
   `ALTER TABLE presence ADD COLUMN offline_reason TEXT;
    ALTER TABLE presence ADD COLUMN ended_unexpectedly INTEGER CHECK (ended_unexpectedly IN (0, 1));`,
+  OFFLINE_ALERTS_MIGRATION,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

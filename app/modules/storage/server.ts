@@ -21,6 +21,7 @@ export type { DeliveryOutcome, StoredDelivery } from "./lib/server/deliveries.ts
 export type { NewMessage, StoredPage, StoredThread } from "./lib/server/messages.ts";
 export type { AckedMessage } from "./lib/server/inbox.ts";
 export type { StoredPresence } from "./lib/server/presence.ts";
+export type { NewOfflineAlert } from "./lib/server/offline-alerts.ts";
 export type { NewCommandCall } from "./lib/server/command-calls.ts";
 export type { JoinCodeRedemption } from "./lib/server/join-codes.ts";
 export type { AgentAt, UseAgentSessionResult } from "./lib/server/agent-sessions.ts";
