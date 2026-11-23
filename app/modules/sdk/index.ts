@@ -232,8 +232,10 @@ export type CookoutClient = CallGroups & {
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
    * a newer server, is skipped. `close` drops the connection. Opened with an agent session token, the stream moves its
    * expiry on while open, and once the token is revoked (`leave`, or another session's `join --force`) the
-   * iteration throws `agent_session_revoked` (status 200, the stream's). To pick up after a dropped connection, pass
-   * the last message ID seen as `lastEventId`: the stream first replays the inbox items after it, then goes on live.
+   * iteration throws `agent_session_revoked` (status 200, the stream's). An agent holds one stream at most: when
+   * another opens for it, with either token, this one's iteration throws `watch_replaced`. To pick up after a
+   * dropped connection, pass the last message ID seen as `lastEventId`: the stream first replays the inbox items
+   * after it, then goes on live.
    * The server sends a heartbeat every 15 s, which `onHeartbeat` hears while the stream is being iterated. The
    * stream starts by telling `onConnected` the board's latest message ID (null before the first message): every
    * item sent live is newer, so resuming from it after a drop misses nothing.

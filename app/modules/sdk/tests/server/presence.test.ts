@@ -265,3 +265,17 @@ it.effect("after a restart, an identity that reconnects within the boot grace ne
     ]);
   }).pipe(Effect.scoped, Effect.provide(testCookout({ storage: "sqlite" }))),
 );
+
+it.effect("a deleted identity's last seen is forgotten: a new identity with its name reads as never seen", () =>
+  Effect.gen(function* deletedForgotten() {
+    const cookout = yield* TestCookout;
+    const ann = yield* human(cookout, "ann");
+    yield* watchedFor(cookout, ann, "10 seconds");
+    yield* TestClock.adjust("60 seconds");
+    yield* answer(() => cookout.client.deleteIdentity("ann"));
+    yield* human(cookout, "ann");
+    const presence = yield* presenceOf(cookout.client, "ann");
+
+    expect(presence).toStrictEqual({ identity: "ann", online: false });
+  }).pipe(Effect.provide(testCookout())),
+);
