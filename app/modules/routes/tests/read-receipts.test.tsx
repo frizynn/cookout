@@ -2,7 +2,8 @@ import type { CookoutClient, Message, ServerSentEvent } from "../../sdk/index.ts
 import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { messagesIn, parentShown } from "./messages.ts";
-import { screen, waitFor, within } from "@testing-library/react";
+import { receiptsIn, timeTooltipOf } from "./time-tooltips.ts";
+import { screen, waitFor } from "@testing-library/react";
 import type { Live } from "../../live/index.ts";
 import { alertsShown } from "./alerts.ts";
 import { createLive } from "../../live/index.ts";
@@ -77,9 +78,9 @@ async function post(client: CookoutClient, channel: string, text: string): Promi
   return message;
 }
 
-async function receiptsShown(label: string, expected: readonly string[]): Promise<void> {
+async function receiptsShown(label: string, expected: readonly (string | null)[]): Promise<void> {
   await waitFor(async () => {
-    await expect(messagesIn(label)).resolves.toStrictEqual(expected);
+    await expect(receiptsIn(label)).resolves.toStrictEqual(expected);
   });
 }
 
@@ -154,21 +155,11 @@ async function refusedThread(channel: string): Promise<Scripted & Pick<Refusing,
   const { client, refuse } = refusingWhenAsked(viewer);
   const opened = scripted();
   openAt({ client, hash: `#/channels/${channel}/threads/${String(parent.id)}`, live: opened.live });
-  await receiptsShown("Replies", [`${channel}-bobNoonNot seen yet: @${channel}-ann`]);
+  await receiptsShown("Replies", [`Not seen yet: @${channel}-ann`]);
   return { ...opened, refuse };
 }
 
-function hrefsOf(name: string): readonly (string | null)[] {
-  const hrefs: (string | null)[] = [];
-  for (const link of within(screen.getByRole("list", { name: "Messages" })).getAllByRole("link", {
-    name: `@${name}`,
-  })) {
-    hrefs.push(link.getAttribute("href"));
-  }
-  return hrefs;
-}
-
-it("a message mentioning @bob shows that bob hasn't seen it, and a read-receipt event shows that bob has, with no reload", {
+it("a message mentioning @bob shows no receipt inline, its time's tooltip says bob hasn't seen it, and a read-receipt event changes the tooltip with no reload", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -176,24 +167,19 @@ it("a message mentioning @bob shows that bob hasn't seen it, and a read-receipt 
   const channel = "web-receipts-live";
   const { asked, bob } = await watchedChannel(channel);
 
-  await receiptsShown("Messages", [
-    `${channel}-ann@${channel}-bob earlierSeen by @${channel}-bob just now`,
-    `@${channel}-bob lookNot seen yet: @${channel}-bob`,
-  ]);
+  await receiptsShown("Messages", [`Seen by @${channel}-bob just now`, `Not seen yet: @${channel}-bob`]);
 
   await bob.ack(asked.id);
 
-  await receiptsShown("Messages", [
-    `${channel}-ann@${channel}-bob earlierSeen by @${channel}-bob just now`,
-    `@${channel}-bob lookSeen by @${channel}-bob just now`,
-  ]);
+  await receiptsShown("Messages", [`Seen by @${channel}-bob just now`, `Seen by @${channel}-bob just now`]);
 
-  expect(hrefsOf(`${channel}-bob`)).toStrictEqual(
-    Array.from({ length: 4 }, () => `#/channels/${channel}?profile=${channel}-bob`),
-  );
+  await expect(messagesIn("Messages")).resolves.toStrictEqual([
+    `${channel}-ann@${channel}-bob earlier`,
+    `@${channel}-bob look`,
+  ]);
 });
 
-it("a reply shows its parent author's receipt, a message that mentions nobody shows none, and a backfilled receipt shows no time", {
+it("a reply's tooltip shows its parent author's receipt, a message that mentions nobody has none in its tooltip, and a backfilled receipt shows no time", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -201,13 +187,16 @@ it("a reply shows its parent author's receipt, a message that mentions nobody sh
   const channel = "web-receipts-thread";
   const { reply, send } = await scriptedThread(channel);
 
-  await receiptsShown("Replies", [`${channel}-bobNoonNot seen yet: @${channel}-ann`]);
+  await receiptsShown("Replies", [`Not seen yet: @${channel}-ann`]);
 
   send(backfilled(`${channel}-ann`, reply));
 
-  await receiptsShown("Replies", [`${channel}-bobNoonSeen by @${channel}-ann`]);
+  await receiptsShown("Replies", [`Seen by @${channel}-ann`]);
 
   await expect(parentShown()).resolves.toBe(`${channel}-annDeploy?`);
+  expect(timeTooltipOf(() => screen.getByRole("article", { name: "Parent message" }))).toStrictEqual([
+    expect.any(String),
+  ]);
 });
 
 it("receipts seen while the live link was down show once it is back", { timeout: 5000 }, async () => {
@@ -215,37 +204,33 @@ it("receipts seen while the live link was down show once it is back", { timeout:
 
   const channel = "web-receipts-back";
   const { asked, bob, report } = await scriptedChannel(channel);
-  await receiptsShown("Messages", [`${channel}-ann@${channel}-bob lookNot seen yet: @${channel}-bob`]);
+  await receiptsShown("Messages", [`Not seen yet: @${channel}-bob`]);
 
   report("down");
   await bob.ack(asked.id);
   report("up");
 
-  await receiptsShown("Messages", [`${channel}-ann@${channel}-bob lookSeen by @${channel}-bob just now`]);
+  await receiptsShown("Messages", [`Seen by @${channel}-bob just now`]);
 });
 
-it("a line names everyone who has seen a message before everyone who hasn't, and an open thread fetches them again when the link is back", {
+it("a tooltip names everyone who has seen a message before everyone who hasn't, and an open thread fetches them again when the link is back", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
 
   const channel = "web-receipts-many";
   const { reply, report, send } = await scriptedThread(channel, `@admin @${channel}-viewer Noon`);
-  await receiptsShown("Replies", [
-    `${channel}-bob@admin @${channel}-viewer NoonNot seen yet: @admin, @${channel}-viewer, @${channel}-ann`,
-  ]);
+  await receiptsShown("Replies", [`Not seen yet: @admin, @${channel}-viewer, @${channel}-ann`]);
   send(backfilled(`${channel}-viewer`, reply), backfilled(`${channel}-ann`, reply));
 
-  await receiptsShown("Replies", [
-    `${channel}-bob@admin @${channel}-viewer NoonSeen by @${channel}-viewer, @${channel}-ann · Not seen yet: @admin`,
-  ]);
+  await receiptsShown("Replies", [`Seen by @${channel}-viewer, @${channel}-ann · Not seen yet: @admin`]);
 
   report("down");
   await adminClient().ack(reply.id);
   report("up");
 
   await receiptsShown("Replies", [
-    `${channel}-bob@admin @${channel}-viewer NoonSeen by @admin just now, @${channel}-viewer just now · Not seen yet: @${channel}-ann`,
+    `Seen by @admin just now, @${channel}-viewer just now · Not seen yet: @${channel}-ann`,
   ]);
 });
 

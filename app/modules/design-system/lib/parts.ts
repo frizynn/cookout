@@ -186,6 +186,7 @@ interface MessageTimeParts {
   readonly short: string;
   readonly ago: string;
   readonly full: string;
+  readonly receipt: string | null;
 }
 
 interface MessageLayoutParts extends Parts {
@@ -248,6 +249,7 @@ interface ShownTimeParts {
   readonly full: string;
   readonly shown: string;
   readonly hidden: boolean;
+  readonly receipt: string | null;
 }
 
 interface SkeletonParts {

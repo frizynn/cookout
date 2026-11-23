@@ -41,10 +41,10 @@ export function StandaloneEntry(props: StandaloneEntryProps): ReactNode {
       note={note}
       presence={presence}
       onAction={handleReply}
-      time={useMessageTime(message.createdAt)}
+      time={useMessageTime({ message, parent: null, receipts: props.receipts })}
       unreadLine={false}
     >
-      <MessageContent me={props.me} message={message} parent={null} receipts={props.receipts} />
+      <MessageContent me={props.me} message={message} />
     </StandaloneMessage>
   );
 }

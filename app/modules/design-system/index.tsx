@@ -97,8 +97,8 @@
  * thread's parent. In a message, `MessageBody` holds its rendered Markdown text, `Mention` an
  * `@name` in it, `CallChip` a command call
  * and its data, `DataToggle` its data folded away, and `ThreadSummary` a link to
- * its thread: its repliers' avatars, its reply count, how many replies are new (bold, after an accent dot and with how many are to the reader when any is) and when it was last replied to. `ReceiptLine` is a message's quiet line of
- * read receipts, and `ReceiptName` a name in it, linking to its profile. `ReactionChips` is a message's named row of
+ * its thread: its repliers' avatars, its reply count, how many replies are new (bold, after an accent dot and with how many are to the reader when any is) and when it was last replied to. A message's time
+ * takes focus, and hovering or focusing it opens a tooltip with the full date and time and, when the message has one, its read receipt. `ReactionChips` is a message's named row of
  * `ReactionChip`s, each a reaction and its count, pressed (in the accent) when one is the reader's own, with who
  * reacted as its tooltip. `RepliesDivider` heads a thread's replies, `ChannelStart` says a
  * channel has nothing older, and `QuietButton` is a muted centred button,
@@ -180,8 +180,6 @@ export { MutedLines } from "./lib/muted-lines.tsx";
 export { ReactionChip } from "./lib/reaction-chip.tsx";
 export { ReactionChips } from "./lib/reaction-chips.tsx";
 export type { ReactionChoice } from "./lib/menu-parts.ts";
-export { ReceiptLine } from "./lib/receipt-line.tsx";
-export { ReceiptName } from "./lib/receipt-name.tsx";
 export { Notice } from "./lib/notice.tsx";
 export { HeadingButton } from "./lib/heading-button.tsx";
 export { NavHeading } from "./lib/nav-heading.tsx";

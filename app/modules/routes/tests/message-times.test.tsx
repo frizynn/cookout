@@ -4,6 +4,7 @@ import type { Message } from "../../sdk/index.ts";
 import { adminClient } from "./identities.ts";
 import { clockStoppedAt } from "./clock.ts";
 import { openAt } from "./render.tsx";
+import { timeTooltipOf } from "./time-tooltips.ts";
 
 const JUST_UNDER_TEN_SECONDS = 9000;
 const TEN_SECONDS = 10_000;
@@ -96,11 +97,11 @@ it("a message's time ticks live from just now to 1 minute ago, and its hover sho
   vi.advanceTimersByTime(A_MINUTE);
   const after = await screen.findByText("1 minute ago");
 
-  expect([before, after.getAttribute("datetime"), after.getAttribute("title")]).toStrictEqual([
-    "just now",
-    message.createdAt,
-    expect.stringMatching(/\d{4} at \d\d:\d\d$/u),
-  ]);
+  expect([
+    before,
+    after.getAttribute("datetime"),
+    timeTooltipOf(() => within(screen.getByRole("list", { name: "Messages" })).getByRole("article")),
+  ]).toStrictEqual(["just now", message.createdAt, [expect.stringMatching(/\d{4} at \d\d:\d\d$/u)]]);
 
   unmount();
 });

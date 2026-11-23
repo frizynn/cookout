@@ -75,7 +75,7 @@ it('opening a thread with unread replies shows "New" above the first, and it sta
   expect(withoutDays(await streamOf("Replies"))).toStrictEqual([
     "web-new-line-thread-graceMe first",
     "[New]",
-    "web-new-line-thread-adaNoon worksNot seen yet: @web-new-line-thread-grace",
+    "web-new-line-thread-adaNoon works",
   ]);
 
   close();
@@ -114,7 +114,7 @@ it('in an unsubscribed channel, "New" sits above the first message after the rea
     "web-new-line-position-graceAlready read",
     "[New]",
     "web-new-line-position-adaPlain new",
-    "@web-new-line-position-grace can you take the rollback?Not seen yet: @web-new-line-position-grace",
+    "@web-new-line-position-grace can you take the rollback?",
   ]);
 
   close();
@@ -132,7 +132,7 @@ it("with no read position in a channel, there is no New line", { timeout: 5000 }
 
   expect(withoutDays(await streamOf("Messages"))).toStrictEqual([
     "web-new-line-unread-adaPlain new",
-    "@web-new-line-unread-grace a look?Not seen yet: @web-new-line-unread-grace",
+    "@web-new-line-unread-grace a look?",
   ]);
 
   close();

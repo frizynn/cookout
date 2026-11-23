@@ -1,5 +1,6 @@
 import type { IdentityName, Message, ReadReceipt } from "../../sdk/index.ts";
 import { receiptIdentitiesOf } from "../../messages/index.ts";
+import { timeAgo } from "../../format/index.ts";
 
 interface SeenBy {
   readonly name: IdentityName;
@@ -7,12 +8,10 @@ interface SeenBy {
 }
 
 const NONE = 0;
-
-interface ReceiptLine {
-  readonly between: boolean;
-  readonly seen: readonly SeenBy[];
-  readonly unseen: readonly IdentityName[];
-}
+const SEEN_BY = "Seen by ";
+const NOT_SEEN_YET = "Not seen yet: ";
+const NAMES_BETWEEN = ", ";
+const PARTS_BETWEEN = " · ";
 
 interface ReceiptLineOf {
   readonly message: Message;
@@ -35,14 +34,36 @@ function identitiesOf(message: Message, parent: Message | null): readonly Identi
   return receiptIdentitiesOf({ message, parentAuthor: parent.author.name });
 }
 
-function lineOf(seen: readonly SeenBy[], unseen: readonly IdentityName[]): ReceiptLine | null {
-  if (seen.length === NONE && unseen.length === NONE) {
-    return null;
+function seenOne(seen: SeenBy): string {
+  if (seen.seenAt === null) {
+    return `@${seen.name}`;
   }
-  return { between: seen.length > NONE && unseen.length > NONE, seen, unseen };
+  return `@${seen.name} ${timeAgo(seen.seenAt)}`;
 }
 
-function receiptLineOf({ message, parent, receipts }: ReceiptLineOf): ReceiptLine | null {
+function seenText(seen: readonly SeenBy[]): readonly string[] {
+  if (seen.length === NONE) {
+    return [];
+  }
+  return [`${SEEN_BY}${seen.map((each) => seenOne(each)).join(NAMES_BETWEEN)}`];
+}
+
+function unseenText(unseen: readonly IdentityName[]): readonly string[] {
+  if (unseen.length === NONE) {
+    return [];
+  }
+  return [`${NOT_SEEN_YET}${unseen.map((name) => `@${name}`).join(NAMES_BETWEEN)}`];
+}
+
+function lineOf(seen: readonly SeenBy[], unseen: readonly IdentityName[]): string | null {
+  const parts = [...seenText(seen), ...unseenText(unseen)];
+  if (parts.length === NONE) {
+    return null;
+  }
+  return parts.join(PARTS_BETWEEN);
+}
+
+function receiptLineOf({ message, parent, receipts }: ReceiptLineOf): string | null {
   const seen: SeenBy[] = [];
   const unseen: IdentityName[] = [];
   for (const name of identitiesOf(message, parent)) {
@@ -56,4 +77,4 @@ function receiptLineOf({ message, parent, receipts }: ReceiptLineOf): ReceiptLin
   return lineOf(seen, unseen);
 }
 
-export { type SeenBy, receiptLineOf };
+export { type ReceiptLineOf, receiptLineOf };

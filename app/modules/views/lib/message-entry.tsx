@@ -52,10 +52,10 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
       note={note}
       presence={presence}
       onAction={handleReply}
-      time={useMessageTime(message.createdAt)}
+      time={useMessageTime({ message, parent: props.parent, receipts: props.receipts })}
       unreadLine={props.row.unreadLine}
     >
-      <MessageContent me={props.me} message={message} parent={props.parent} receipts={props.receipts} />
+      <MessageContent me={props.me} message={message} />
       {href !== null && summary !== null && <ReplySummary href={href} news={props.news} summary={summary} />}
     </MessageItem>
   );

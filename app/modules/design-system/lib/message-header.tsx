@@ -18,7 +18,7 @@ export function MessageHeader(parts: MessageHeaderParts): ReactNode {
           {AGENT}
         </span>
       )}
-      <MessageTime full={time.full} hidden={false} iso={time.iso} shown={time.ago} />
+      <MessageTime full={time.full} hidden={false} iso={time.iso} receipt={time.receipt} shown={time.ago} />
     </header>
   );
 }
