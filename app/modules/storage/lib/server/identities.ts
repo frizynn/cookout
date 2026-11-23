@@ -9,8 +9,7 @@ import {
   sqliteDeleteIdentity,
 } from "./identity-owners.ts";
 import { memoryDisplayNames, sqliteDisplayNames } from "./display-names.ts";
-import { memorySetAdmin, sqliteSetAdmin } from "./identity-admins.ts";
-import type { DisplayNamesSection } from "./display-names.ts";
+import { memorySetAdmin, memoryTransfers, sqliteSetAdmin, sqliteTransfers } from "./identity-admins.ts";
 import type { Fails } from "./errors.ts";
 import type { FindIdentity } from "./identity-row.ts";
 import type { MemoryState } from "./memory-state.ts";
@@ -29,16 +28,17 @@ type ReplaceTokenResult =
 
 type SetOnlyTokenResult = "created" | "replaced" | "unchanged";
 
-export type IdentitiesSection = DisplayNamesSection & {
-  readonly createIdentity: (identity: Identity, hash: TokenHash) => Fails<"created" | CreateRefusal>;
-  readonly setOnlyToken: (identity: Identity, hash: TokenHash) => Fails<SetOnlyTokenResult>;
-  readonly listIdentities: () => Fails<readonly Identity[]>;
-  readonly findIdentityByTokenHash: (hash: TokenHash) => Fails<TokenLookup>;
-  readonly findIdentityByName: (name: IdentityName) => Fails<Identity | undefined>;
-  readonly replaceToken: (name: IdentityName, hash: TokenHash) => Fails<ReplaceTokenResult>;
-  readonly deleteIdentity: (name: IdentityName) => Fails<DeleteIdentityResult>;
-  readonly setAdmin: ReturnType<typeof sqliteSetAdmin>;
-};
+export type IdentitiesSection = ReturnType<typeof sqliteDisplayNames> &
+  ReturnType<typeof sqliteTransfers> & {
+    readonly createIdentity: (identity: Identity, hash: TokenHash) => Fails<"created" | CreateRefusal>;
+    readonly setOnlyToken: (identity: Identity, hash: TokenHash) => Fails<SetOnlyTokenResult>;
+    readonly listIdentities: () => Fails<readonly Identity[]>;
+    readonly findIdentityByTokenHash: (hash: TokenHash) => Fails<TokenLookup>;
+    readonly findIdentityByName: (name: IdentityName) => Fails<Identity | undefined>;
+    readonly replaceToken: (name: IdentityName, hash: TokenHash) => Fails<ReplaceTokenResult>;
+    readonly deleteIdentity: (name: IdentityName) => Fails<DeleteIdentityResult>;
+    readonly setAdmin: ReturnType<typeof sqliteSetAdmin>;
+  };
 
 type MemoryIdentities = {
   readonly identities: Map<IdentityName, Identity>;
@@ -135,6 +135,7 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
     findIdentityByTokenHash: (hash) => open(() => lookUp(data, hash)),
     listIdentities: () => open(() => [...data.identities.values()].sort(byName).map((found) => ({ ...found }))),
     ...memoryDisplayNames({ identities: data.identities, open }),
+    ...memoryTransfers({ identities: data.identities, open }),
     placeHandler: placeHandlerIn(data),
     replaceToken: (name, hash) =>
       open((): ReplaceTokenResult => {
@@ -273,5 +274,6 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
         }),
       ),
     ...sqliteDisplayNames(db),
+    ...sqliteTransfers(db),
   };
 };

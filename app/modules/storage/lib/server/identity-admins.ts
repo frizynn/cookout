@@ -1,8 +1,9 @@
-import { Array as Arr, Effect, Predicate, Schema } from "effect";
+import { Array as Arr, Effect, Option, Predicate, Schema } from "effect";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
 import { IdentityRow, toIdentity } from "./identity-row.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
+import { nameFitsOwner } from "../../../identities/index.ts";
 import { unreadable } from "./errors.ts";
 
 type SetAdminResult =
@@ -85,4 +86,101 @@ function sqliteSetAdmin(db: SqliteDatabase): SetAdmin {
     );
 }
 
-export { memorySetAdmin, type SetAdminResult, sqliteSetAdmin };
+type TransferAgentResult =
+  | { readonly status: "transferred"; readonly identity: Identity }
+  | { readonly status: "not_found" }
+  | { readonly status: "not_agent" }
+  | { readonly status: "owner_not_human" }
+  | { readonly status: "name_not_owned" };
+
+interface TransfersSection {
+  readonly transferAgent: (name: IdentityName, owner: IdentityName) => Fails<TransferAgentResult>;
+}
+
+interface MemoryTransferMap {
+  readonly identities: Map<IdentityName, Identity>;
+  readonly open: <Value>(work: () => Value) => Fails<Value>;
+}
+
+interface Parties {
+  readonly agent: Option.Option<Identity>;
+  readonly owner: Option.Option<Identity>;
+}
+
+function movedTo(agent: Identity, owner: Option.Option<Identity>): TransferAgentResult {
+  if (agent.kind !== "agent") {
+    return { status: "not_agent" };
+  }
+  if (Option.isNone(owner) || owner.value.kind !== "human") {
+    return { status: "owner_not_human" };
+  }
+  const moved: Identity = { ...agent, owner: owner.value.name };
+  if (!nameFitsOwner(moved)) {
+    return { status: "name_not_owned" };
+  }
+  return { identity: moved, status: "transferred" };
+}
+
+function transferred({ agent, owner }: Parties): TransferAgentResult {
+  return Option.match(agent, {
+    onNone: () => ({ status: "not_found" }),
+    onSome: (agentFound) => movedTo(agentFound, owner),
+  });
+}
+
+function memoryTransfers({ identities, open }: MemoryTransferMap): TransfersSection {
+  return {
+    transferAgent: (name, owner) =>
+      open((): TransferAgentResult => {
+        const result = transferred({
+          agent: Option.fromUndefinedOr(identities.get(name)),
+          owner: Option.fromUndefinedOr(identities.get(owner)),
+        });
+        if (result.status === "transferred") {
+          identities.set(name, { ...result.identity });
+        }
+        return result;
+      }),
+  };
+}
+
+function identityNamed(db: SqliteDatabase, name: IdentityName): Fails<Option.Option<Identity>> {
+  return db.get(SELECT_IDENTITY, name).pipe(
+    Effect.flatMap((row) => {
+      if (Predicate.isUndefined(row)) {
+        return Effect.succeedNone;
+      }
+      return Schema.decodeUnknownEffect(IdentityRow)(row).pipe(
+        Effect.mapBoth({ onFailure: unreadable, onSuccess: (decoded) => Option.some(toIdentity(decoded)) }),
+      );
+    }),
+  );
+}
+
+function sqliteTransfers(db: SqliteDatabase): TransfersSection {
+  return {
+    transferAgent: (name, owner) =>
+      db.transaction(
+        Effect.gen(function* transferAgentRow() {
+          const parties = yield* Effect.all(
+            { agent: identityNamed(db, name), owner: identityNamed(db, owner) },
+            { concurrency: 1 },
+          );
+          const result = transferred(parties);
+          if (result.status === "transferred") {
+            yield* db.run("UPDATE identities SET owner = ? WHERE name = ?", owner, name);
+          }
+          return result;
+        }),
+      ),
+  };
+}
+
+export {
+  memorySetAdmin,
+  memoryTransfers,
+  type SetAdminResult,
+  sqliteSetAdmin,
+  sqliteTransfers,
+  type TransferAgentResult,
+};

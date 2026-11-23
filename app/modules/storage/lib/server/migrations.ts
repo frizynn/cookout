@@ -132,6 +132,8 @@ const migrations: readonly string[] = [
      revoked INTEGER NOT NULL CHECK (revoked IN (0, 1))
    ) STRICT;
    CREATE INDEX agent_session_tokens_by_identity ON agent_session_tokens (identity_name);`,
+  `ALTER TABLE agent_session_tokens ADD COLUMN last_used_at TEXT;
+   ALTER TABLE agent_session_tokens ADD COLUMN host TEXT;`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

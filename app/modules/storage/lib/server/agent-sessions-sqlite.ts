@@ -1,13 +1,15 @@
-import { AgentRow, toIdentity } from "./identity-row.ts";
 import type {
+  AgentAt,
   AgentSessionsSection,
   IssueAgentSession,
   IssueAgentSessionResult,
+  LiveAgentSession,
   UseAgentSession,
   UseAgentSessionResult,
 } from "./agent-sessions.ts";
+import { AgentRow, toIdentity } from "./identity-row.ts";
 import { Effect, Option, Predicate, Schema } from "effect";
-import { isLive, renewedExpiry } from "./agent-sessions.ts";
+import { isLive, listedSession, renewedExpiry } from "./agent-sessions.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
@@ -20,6 +22,13 @@ const REVOKED = 1;
 
 const LiveRow = Schema.Struct({ expires_at: IsoTimeSchema });
 
+const ListedRow = Schema.Struct({
+  expires_at: IsoTimeSchema,
+  host: Schema.NullOr(Schema.String),
+  issued_at: IsoTimeSchema,
+  last_used_at: Schema.NullOr(IsoTimeSchema),
+});
+
 const SessionRow = Schema.Struct({
   ...AgentRow.fields,
   expires_at: IsoTimeSchema,
@@ -29,6 +38,12 @@ const SessionRow = Schema.Struct({
 
 const FIND_LIVE = `SELECT expires_at FROM agent_session_tokens
   WHERE identity_name = ? AND revoked = 0 AND expires_at > ? ORDER BY expires_at DESC LIMIT 1`;
+
+const FIND_LISTED = `SELECT issued_at, expires_at, last_used_at, host FROM agent_session_tokens
+  WHERE identity_name = ? AND revoked = 0 AND expires_at > ? ORDER BY expires_at DESC LIMIT 1`;
+
+const REVOKE_LIVE =
+  "UPDATE agent_session_tokens SET revoked = 1 WHERE identity_name = ? AND revoked = 0 AND expires_at > ?";
 
 const FIND_SESSION = `SELECT i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name,
   t.expires_at, t.idle_seconds, t.revoked
@@ -52,6 +67,41 @@ function sessionOf(row: unknown): Fails<Option.Option<typeof SessionRow.Type>> {
   );
 }
 
+function listed(row: typeof ListedRow.Type): LiveAgentSession {
+  return listedSession({
+    expiresAt: row.expires_at,
+    host: Option.fromNullOr(row.host),
+    issuedAt: row.issued_at,
+    lastUsedAt: Option.fromNullOr(row.last_used_at),
+  });
+}
+
+function findListed(db: SqliteDatabase, { identity, now }: AgentAt): Fails<Option.Option<LiveAgentSession>> {
+  return db.get(FIND_LISTED, identity, now).pipe(
+    Effect.flatMap((row) => {
+      if (!Predicate.isObject(row)) {
+        return Effect.succeedNone;
+      }
+      return Schema.decodeUnknownEffect(ListedRow)(row).pipe(
+        Effect.mapBoth({ onFailure: unreadable, onSuccess: (decoded) => Option.some(listed(decoded)) }),
+      );
+    }),
+  );
+}
+
+function revokeLive(db: SqliteDatabase, { identity, now }: AgentAt): Fails<boolean> {
+  return db.transaction(
+    Effect.gen(function* revokeLiveSession() {
+      const live = yield* Effect.flatMap(db.get(FIND_LIVE, identity, now), liveOf);
+      if (Option.isNone(live)) {
+        return false;
+      }
+      yield* db.run(REVOKE_LIVE, identity, now);
+      return true;
+    }),
+  );
+}
+
 function issue(db: SqliteDatabase, { force, session }: IssueAgentSession): Fails<IssueAgentSessionResult> {
   return Effect.gen(function* issueAgentSession() {
     const row = yield* db.get(FIND_LIVE, session.identity, session.issuedAt);
@@ -59,19 +109,16 @@ function issue(db: SqliteDatabase, { force, session }: IssueAgentSession): Fails
     if (Option.isSome(live) && !force) {
       return { expiresAt: live.value.expires_at, status: "live" } as const;
     }
+    yield* db.run(REVOKE_LIVE, session.identity, session.issuedAt);
     yield* db.run(
-      "UPDATE agent_session_tokens SET revoked = 1 WHERE identity_name = ? AND revoked = 0 AND expires_at > ?",
-      session.identity,
-      session.issuedAt,
-    );
-    yield* db.run(
-      `INSERT INTO agent_session_tokens (hash, identity_name, issued_at, expires_at, idle_seconds, revoked)
-        VALUES (?, ?, ?, ?, ?, 0)`,
+      `INSERT INTO agent_session_tokens (hash, identity_name, issued_at, expires_at, idle_seconds, revoked, host)
+        VALUES (?, ?, ?, ?, ?, 0, ?)`,
       session.hash,
       session.identity,
       session.issuedAt,
       session.expiresAt,
       session.idleSeconds,
+      session.host ?? null,
     );
     return { status: "issued" } as const;
   });
@@ -86,11 +133,14 @@ function useFound(db: SqliteDatabase, { hash, now }: UseAgentSession) {
       return Effect.succeed({ status: "expired" });
     }
     const expiresAt = renewedExpiry({ idleSeconds: session.idle_seconds, now });
-    return Effect.as(db.run("UPDATE agent_session_tokens SET expires_at = ? WHERE hash = ?", expiresAt, hash), {
-      expiresAt,
-      identity: toIdentity(session),
-      status: "active",
-    });
+    return Effect.as(
+      db.run("UPDATE agent_session_tokens SET expires_at = ?, last_used_at = ? WHERE hash = ?", expiresAt, now, hash),
+      {
+        expiresAt,
+        identity: toIdentity(session),
+        status: "active",
+      },
+    );
   };
 }
 
@@ -105,8 +155,10 @@ function use(db: SqliteDatabase, request: UseAgentSession): Fails<UseAgentSessio
 
 function sqliteAgentSessions(db: SqliteDatabase): AgentSessionsSection {
   return {
+    findLiveAgentSession: (at) => findListed(db, at),
     issueAgentSession: (request) => db.transaction(issue(db, request)),
     revokeAgentSession: (hash) => db.run("UPDATE agent_session_tokens SET revoked = 1 WHERE hash = ?", hash),
+    revokeLiveAgentSession: (at) => revokeLive(db, at),
     useAgentSession: (request) => db.transaction(use(db, request)),
   };
 }
