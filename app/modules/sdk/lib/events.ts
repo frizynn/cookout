@@ -1,7 +1,13 @@
 import { CookoutError, isServerErrorCode } from "./errors.ts";
 import type { ServerSentEvent, ServerSentFrame } from "../../http/client.ts";
 import { allChannelsQuery, eventsPath, refusalEvent } from "../../events/index.ts";
-import { isErrorResponse, isInboxItemEvent, isMessageEvent, isReadPositionEvent } from "./generated/validators.js";
+import {
+  isConnectedEvent,
+  isErrorResponse,
+  isInboxItemEvent,
+  isMessageEvent,
+  isReadPositionEvent,
+} from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import type { CookoutEvent } from "../../events/index.ts";
 import type { HeldLease } from "./held-lease.ts";
@@ -19,6 +25,7 @@ interface WatchOptions {
   readonly allChannels?: boolean;
   readonly lastEventId?: MessageId;
   readonly onHeartbeat?: () => void;
+  readonly onConnected?: (latestMessageId: MessageId | null) => void;
 }
 
 interface Reading {
@@ -32,6 +39,7 @@ interface EventCalls {
 
 const OK = 200;
 const HEARTBEAT = "heartbeat";
+const CONNECTED = "connected";
 const NO_OPTIONS: WatchOptions = {};
 
 function heard(comment: string, { onHeartbeat }: WatchOptions): void {
@@ -101,6 +109,16 @@ function refused(lease: HeldLease, data: string): CookoutError {
   return new CookoutError({ ...json.error, code: json.error.code, status: OK });
 }
 
+function connected(data: string, { onConnected }: WatchOptions): void {
+  const json = parsedData(data);
+  if (!isConnectedEvent(json)) {
+    throw badEvent(CONNECTED, json);
+  }
+  if (typeof onConnected === "function") {
+    onConnected(json.latestMessageId);
+  }
+}
+
 function eventsIn(frame: ServerSentFrame, { lease, options }: Reading): readonly CookoutEvent[] {
   if ("comment" in frame) {
     heard(frame.comment, options);
@@ -109,11 +127,10 @@ function eventsIn(frame: ServerSentFrame, { lease, options }: Reading): readonly
   if (frame.event === refusalEvent) {
     throw refused(lease, frame.data);
   }
-  const event = eventOf(frame);
-  if (event === null) {
-    return [];
+  if (frame.event === CONNECTED) {
+    connected(frame.data, options);
   }
-  return [event];
+  return [eventOf(frame)].filter((event) => event !== null);
 }
 
 async function* cookoutEvents(

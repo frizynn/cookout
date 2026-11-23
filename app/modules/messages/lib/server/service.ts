@@ -113,6 +113,7 @@ function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
     });
   }
   return {
+    latestId: storage.latestMessageId,
     page: (channel, query) =>
       Effect.gen(function* pageChannel() {
         if (!isChannelName(channel)) {
@@ -155,6 +156,7 @@ export interface MessagesService {
   readonly thread: (id: MessageId) => Fails<ThreadResponse>;
   readonly page: (channel: string, query: PageQuery) => Fails<ListMessagesResponse>;
   readonly posted: Effect.Effect<PubSub.Subscription<Message>, never, Scope.Scope>;
+  readonly latestId: Effect.Effect<MessageId | undefined, StorageUnavailable>;
 }
 
 export class Messages extends Context.Service<Messages, MessagesService>()(

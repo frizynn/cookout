@@ -2,11 +2,13 @@
  * Live updates on the wire, shared by the server, the SDK and the web: the
  * events one Server-Sent Events stream sends (ADR 0002) and the stream's
  * path. Each event's SSE `event` field is its `type`, its SSE `id` is the
- * message ID, and its SSE `data` is the event as JSON. A stream that can't
- * go on ends with one `refusal` event instead.
+ * message ID, and its SSE `data` is the event as JSON. The stream starts
+ * with one `connected` event, which isn't a `CookoutEvent`: the SDK reads it
+ * for the caller. A stream that can't go on ends with one `refusal` event
+ * instead.
  */
 import type { InboxItem, ReadPosition } from "../inbox/index.ts";
-import type { Message } from "../messages/index.ts";
+import type { Message, MessageId } from "../messages/index.ts";
 
 /** A new item in the caller's inbox, sent the moment another identity posts it. */
 export interface InboxItemEvent {
@@ -24,6 +26,16 @@ export interface ReadPositionEvent {
 export interface MessageEvent {
   readonly type: "message";
   readonly message: Message;
+}
+
+/**
+ * The stream's first word on connecting, before any item: the newest message ID on the board at that moment (null
+ * before the first message). Every item the stream then sends live is newer, so a caller that resumes from this ID
+ * after a drop misses nothing and repeats nothing. It has no SSE `id`.
+ */
+export interface ConnectedEvent {
+  readonly type: "connected";
+  readonly latestMessageId: MessageId | null;
 }
 
 /** Any event the stream sends. */

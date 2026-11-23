@@ -17,7 +17,7 @@
  * the Vite build that `cookout serve` serves at `/`. A test cookout comes
  * with its own webhook fake, `webhook`, for a command to deliver its calls to.
  * `cuttableLink` puts a link in front of a server that a test can cut, to
- * drop a client's connection.
+ * drop a client's connection, or take down, so every later request gets 502.
  */
 export { answer, refusal } from "./lib/server/calls.ts";
 export { type ChannelFixtureOptions, channelFixture, channelName } from "./lib/server/channels.ts";

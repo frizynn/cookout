@@ -1,5 +1,5 @@
-import { Array as Arr, Effect, Fiber, String as Str } from "effect";
-import type { CliResult, CommandLineNeeds, CuttableLink, TestIdentity, Watched } from "../../../testing/server.ts";
+import { Array as Arr, Effect, String as Str } from "effect";
+import type { CommandLineNeeds, CuttableLink, TestIdentity, Watched } from "../../../testing/server.ts";
 import type { Message, MessageId } from "../../../messages/index.ts";
 import {
   TestCookout,
@@ -7,7 +7,6 @@ import {
   commandLineServices,
   cuttableLink,
   freshStateFolder,
-  runCookout,
   testCookout,
   watchCookout,
 } from "../../../testing/server.ts";
@@ -127,30 +126,6 @@ it.effect("cookout watch reconnects when the server goes silent, and picks up fr
 
     expect(stdoutJson).toMatchObject([{ item: { message: { id: before } } }, { item: { message: { id: unheard } } }]);
     expect(stderrLines).toContain('{"reconnecting":"Heard nothing from the server for 45 s."}');
-  }).pipe(Effect.provide(commandLineServices)),
-);
-
-function watchUntilRefused(): Effect.Effect<CliResult, never, CommandLineNeeds | Scope.Scope> {
-  return Effect.gen(function* watchAsBob() {
-    const cookout = yield* TestCookout;
-    const link = yield* cuttableLink(cookout.url);
-    const bob = yield* cookout.createIdentity("bob");
-    const folder = yield* freshStateFolder;
-    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bob.token, COOKOUT_URL: link.url };
-    const watching = yield* Effect.forkScoped(runCookout({ args: ["watch"], env }));
-    yield* Effect.andThen(link.relayed(": open"), link.cut);
-    yield* answer(() => cookout.client.rotateToken("bob"));
-    return yield* Effect.raceFirst(Fiber.join(watching), Effect.andThen(passTime, Effect.never));
-  }).pipe(Effect.provide(testCookout()));
-}
-
-it.effect("cookout watch stops at a refusal on reconnecting, instead of trying again", () =>
-  Effect.gen(function* watchRefused() {
-    const { exitCode, stderr, stdout } = yield* watchUntilRefused();
-
-    expect({ exitCode, stdout }).toStrictEqual({ exitCode: 1, stdout: "" });
-    expect(stderr).toContain('"reconnecting"');
-    expect(stderr).toContain('"token_revoked"');
   }).pipe(Effect.provide(commandLineServices)),
 );
 

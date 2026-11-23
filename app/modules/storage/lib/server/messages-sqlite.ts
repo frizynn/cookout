@@ -131,6 +131,15 @@ function takeId(db: SqliteDatabase): Fails<MessageId> {
   );
 }
 
+const LatestRow = Schema.Struct({ last_id: Schema.Int });
+
+function latestOf(db: SqliteDatabase): Fails<MessageId | undefined> {
+  return db.get("SELECT last_id FROM message_id_sequence WHERE only_row = 1").pipe(
+    Effect.flatMap((row) => Schema.decodeUnknownEffect(LatestRow)(row).pipe(Effect.mapError(unreadable))),
+    Effect.map(({ last_id: last }) => Option.getOrUndefined(Option.liftPredicate(last, isMessageId))),
+  );
+}
+
 function placementOf(db: SqliteDatabase, { channel, replyTo }: NewMessage): Fails<Placement> {
   if (Predicate.isUndefined(replyTo)) {
     return Effect.succeed({ status: "top-level" });
@@ -229,6 +238,7 @@ function sqliteMessages(db: SqliteDatabase): MessagesSection & InboxSection {
     ...sqliteInbox({ db, reader: sqliteMessageReader(db) }),
     appendMessage: (message) => db.transaction(append(db, message)),
     getThread: (id) => threadOf(db, id),
+    latestMessageId: latestOf(db),
     listChannelMessages: (channel, page) =>
       Effect.flatMap(channelExists(db, channel), (exists) => {
         if (exists) {
