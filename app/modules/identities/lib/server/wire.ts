@@ -1,6 +1,7 @@
 import type {
   DeactivateIdentityResponse,
   Identity,
+  IdentityMessageCountResponse,
   IdentityResponse,
   IdentityWithTokenResponse,
   ListIdentitiesQuery,
@@ -21,6 +22,10 @@ import { IsoTimeSchema } from "../../../time/server.ts";
 import { matchesWire } from "../../../http/index.ts";
 
 const IncludeDeactivatedSchema = Schema.optionalKey(Schema.Literal("deactivated"));
+
+const NO_MESSAGES = 0;
+
+const MessageCountSchema = Schema.Int.check(Schema.isGreaterThanOrEqualTo(NO_MESSAGES));
 
 export const IdentityNameSchema = Schema.String.check(
   Schema.isPattern(identityNamePattern, {
@@ -77,6 +82,10 @@ export const ListIdentitiesResponseSchema = matchesWire<ListIdentitiesResponse>(
 
 export const DeactivateIdentityResponseSchema = matchesWire<DeactivateIdentityResponse>()(
   Schema.Struct({ agents: Schema.Array(IdentityNameSchema), identity: IdentitySchema }),
+);
+
+export const IdentityMessageCountResponseSchema = matchesWire<IdentityMessageCountResponse>()(
+  Schema.Struct({ messages: MessageCountSchema }),
 );
 
 export const ListIdentitiesQuerySchema = matchesWire<ListIdentitiesQuery>()(

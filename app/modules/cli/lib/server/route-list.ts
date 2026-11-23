@@ -10,6 +10,7 @@ import { channelRoutes, channelsLayer } from "../../../channels/server.ts";
 import { commandRoutes, commandsLayer } from "../../../commands/server.ts";
 import {
   deactivationRoutes,
+  deletionRoutes,
   displayNameRoutes,
   displayNamesLayer,
   identitiesLayer,
@@ -45,6 +46,7 @@ export const routes: readonly Route<RouteNeeds>[] = [
   ...displayNameRoutes,
   ...transferRoutes,
   ...deactivationRoutes,
+  ...deletionRoutes,
   ...channelRoutes,
   ...messageRoutes,
   ...agentSessionRoutes,

@@ -7,6 +7,7 @@ export type {
   HumanIdentity,
   Identity,
   IdentityKind,
+  IdentityMessageCountResponse,
   IdentityName,
   IdentityResponse,
   IdentityWithTokenResponse,

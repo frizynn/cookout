@@ -70,6 +70,14 @@ const identityDeactivateCommand = Command.make("deactivate", { name: identityNam
   ),
 );
 
+const identityDeleteCommand = Command.make("delete", { name: identityName }, ({ name }) =>
+  answer((client) => client.deleteIdentity(name)),
+).pipe(
+  Command.withDescription(
+    "Delete an identity that has no messages (admin only), with its tokens, read positions, subscriptions and follows. One with messages is refused: deactivate it instead.",
+  ),
+);
+
 const identityReactivateCommand = Command.make("reactivate", { name: identityName }, ({ name }) =>
   answer((client) => client.reactivateIdentity(name)),
 ).pipe(
@@ -153,7 +161,7 @@ const identityDisplayNameCommand = Command.make(
 
 const identityCommand = Command.make("identity").pipe(
   Command.withDescription(
-    "Create, list, rotate, deactivate and reactivate identities, make or remove admins, set display names, and manage agents' sessions and owners.",
+    "Create, list, rotate, deactivate, reactivate and delete identities, make or remove admins, set display names, and manage agents' sessions and owners.",
   ),
   Command.withSubcommands([
     identityCreateCommand,
@@ -161,6 +169,7 @@ const identityCommand = Command.make("identity").pipe(
     identityRotateCommand,
     identityDeactivateCommand,
     identityReactivateCommand,
+    identityDeleteCommand,
     identityAdminCommand,
     identityDisplayNameCommand,
     identitySessionsCommand,
