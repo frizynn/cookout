@@ -18,7 +18,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
         <BackLink href={`#/channels/${channel}`}>{`← #${channel}`}</BackLink>
         <Heading>{`Thread in #${channel}`}</Heading>
       </CardHeader>
-      <ThreadBody messages={props.board.thread(props.thread)} />
+      <ThreadBody messages={props.board.thread(channel, props.thread)} />
     </Card>
   );
 }

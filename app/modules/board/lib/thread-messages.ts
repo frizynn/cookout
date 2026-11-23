@@ -30,6 +30,7 @@ type ThreadClient = Pick<CookoutClient, "ack" | "createMessage" | "getThread">;
 
 interface Thread {
   readonly client: ThreadClient;
+  readonly channel: string;
   readonly id: MessageId;
   readonly current: () => ThreadMessagesState;
   readonly publish: (state: ThreadMessagesState) => void;
@@ -71,28 +72,12 @@ async function load(thread: Thread): Promise<void> {
   }
 }
 
-function appended(loaded: Loaded, reply: Reply): Loaded {
-  return { ...loaded, replies: [...loaded.replies, reply], reply: { status: "idle" } };
-}
-
 async function postReply(thread: Thread, text: string): Promise<void> {
-  const current = thread.current();
-  if (current.status !== "loaded" || current.reply.status === "posting") {
-    return;
-  }
   update(thread, (loaded) => ({ ...loaded, reply: { status: "posting" } }));
   try {
-    const { message } = await thread.client.createMessage({
-      channel: current.parent.channel,
-      replyTo: current.parent.id,
-      text,
-    });
-    update(thread, (loaded) => {
-      if (message.kind === "reply") {
-        return appended(loaded, message);
-      }
-      return { ...loaded, reply: { status: "idle" } };
-    });
+    await thread.client.createMessage({ channel: thread.channel, replyTo: thread.id, text });
+    const { replies } = await thread.client.getThread(thread.id);
+    update(thread, (loaded) => ({ ...loaded, replies, reply: { status: "idle" } }));
   } catch (error: unknown) {
     update(thread, (loaded) => ({ ...loaded, reply: failure(error) }));
   }
@@ -105,6 +90,7 @@ async function replyAfter(previous: Promise<void>, thread: Thread, text: string)
 
 interface ThreadOptions {
   readonly client: ThreadClient;
+  readonly channel: string;
   readonly id: MessageId;
 }
 
