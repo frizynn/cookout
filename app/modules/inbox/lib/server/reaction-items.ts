@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, Order, Predicate } from "effect";
+import { Array as Arr, Effect, Order } from "effect";
 import type { Message, MessageId, Reaction } from "../../../messages/index.ts";
 import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import type { IdentityName } from "../../../identities/index.ts";
@@ -36,16 +36,14 @@ function reactedMessages(reactions: readonly Reaction[]): readonly Reacted[] {
 }
 
 function itemOf(storage: Store, { id, reactions }: Reacted): Fails<readonly StoredItem[]> {
-  return Effect.map(storage.getThread(id), (thread): readonly StoredItem[] => {
-    if (Predicate.isUndefined(thread)) {
-      return [];
-    }
-    const { parent, replies } = thread;
-    return Arr.map(
-      Arr.filter([parent, ...replies], (message: Message) => message.id === id),
-      (message) => ({ message, newReactions: reactions, parent, reasons: ["reaction"] }),
-    );
-  });
+  return Effect.map(storage.getThread(id), (thread) =>
+    Arr.flatMap(Arr.fromNullishOr(thread), ({ parent, replies }) =>
+      Arr.map(
+        Arr.filter([parent, ...replies], (message: Message) => message.id === id),
+        (message): StoredItem => ({ message, newReactions: reactions, parent, reasons: ["reaction"] }),
+      ),
+    ),
+  );
 }
 
 function reactionItems({ author, storage }: ForAuthor): Fails<readonly StoredItem[]> {
