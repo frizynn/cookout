@@ -240,5 +240,4 @@ function ciGreen(options: CiGateOptions): Step {
   return poll(options, runNumber, NONE);
 }
 
-export type { CiGateOptions };
 export { ciGreen };
