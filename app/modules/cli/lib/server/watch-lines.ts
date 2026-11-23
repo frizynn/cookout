@@ -1,6 +1,6 @@
 import { Array as Arr, Console, Effect, Schema, String as Str, pipe } from "effect";
 import type { InboxItemEvent, Reaction } from "../../../sdk/index.ts";
-import { reactionEmoji } from "../../../messages/index.ts";
+import { reactionSymbols } from "../../../messages/index.ts";
 
 type Format = "json" | "text";
 
@@ -8,7 +8,7 @@ const SHOWN_CHARACTERS = 120;
 const toJsonLine = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown));
 
 function reactedLine({ identity, reaction }: Reaction): string {
-  return `@${identity} reacted with ${reactionEmoji[reaction]}`;
+  return `@${identity} reacted with ${reactionSymbols[reaction]}`;
 }
 
 function textLine({ item: { channel, message, newReactions = [], parent } }: InboxItemEvent): string {

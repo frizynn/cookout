@@ -206,7 +206,7 @@ export type ReactionName = "thumbs_up" | "thumbs_down";
 export const reactionNames: readonly ReactionName[] = ["thumbs_up", "thumbs_down"];
 
 /** How each reaction is shown. */
-export const reactionEmoji: Readonly<Record<ReactionName, string>> = { thumbs_down: "👎", thumbs_up: "👍" };
+export const reactionSymbols: Readonly<Record<ReactionName, string>> = { thumbs_down: "👎", thumbs_up: "👍" };
 
 /**
  * Whether `value` names a reaction.
