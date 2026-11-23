@@ -1,15 +1,16 @@
 import type { AgentIdentity, Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
+import type { CreateRefusal, DeleteIdentityResult, IdentityDeletesSection } from "./identity-owners.ts";
 import { Effect, Option, Predicate, Schema } from "effect";
 import { IDENTITY_COLUMNS, IdentityRow, toIdentity } from "./identity-row.ts";
 import {
   memoryCreateRefusal,
   memoryDeactivations,
+  memoryRemoveIdentity,
   sqliteCreateRefusal,
   sqliteDeactivations,
 } from "./identity-owners.ts";
 import { memoryDisplayNames, sqliteDisplayNames } from "./display-names.ts";
 import { memorySetAdmin, memoryTransfers, sqliteSetAdmin, sqliteTransfers } from "./identity-admins.ts";
-import type { CreateRefusal } from "./identity-owners.ts";
 import type { DisplayNamesSection } from "./display-names.ts";
 import type { Fails } from "./errors.ts";
 import type { FindIdentity } from "./identity-row.ts";
@@ -28,6 +29,7 @@ type ReplaceTokenResult =
   | { readonly status: "not_found" };
 
 export type IdentitiesSection = DisplayNamesSection &
+  IdentityDeletesSection &
   ReturnType<typeof sqliteTransfers> &
   ReturnType<typeof sqliteDeactivations> & {
     readonly createIdentity: (identity: Identity, hash: TokenHash) => Fails<"created" | CreateRefusal>;
@@ -98,9 +100,10 @@ function placeHandlerIn(data: MemoryIdentities): PlaceHandler {
   };
 }
 
-type MemoryIdentitiesSection = IdentitiesSection & {
+type MemoryIdentitiesSection = Omit<IdentitiesSection, keyof IdentityDeletesSection> & {
   readonly placeHandler: PlaceHandler;
   readonly findIdentity: FindIdentity;
+  readonly removeIdentity: (name: IdentityName, messages: number) => Fails<DeleteIdentityResult>;
 };
 
 export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection => {
@@ -115,6 +118,7 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
       revokeTokensOf(data, name);
     },
   });
+  const remove = memoryRemoveIdentity(data);
   return {
     createIdentity: (identity, hash) => open(() => createIn(data, identity, hash)),
     deactivateIdentity: (name) => open(() => deactivations.deactivate(name)),
@@ -126,6 +130,7 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
     ...memoryTransfers({ identities: data.identities, open }),
     placeHandler: placeHandlerIn(data),
     reactivateIdentity: (name, hash) => open(() => deactivations.reactivate(name, hash)),
+    removeIdentity: (name, messages) => open(() => remove(name, messages)),
     replaceToken: (name, hash) =>
       open((): ReplaceTokenResult => {
         const identity = data.identities.get(name);
@@ -167,7 +172,7 @@ const toLookup = (row: unknown): Fails<TokenLookup> =>
               })),
       );
 
-export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
+export const sqliteIdentities = (db: SqliteDatabase): Omit<IdentitiesSection, keyof IdentityDeletesSection> => {
   const count = (sql: string, ...params: readonly string[]) =>
     db.get(sql, ...params).pipe(
       Effect.flatMap(decode(CountRow)),

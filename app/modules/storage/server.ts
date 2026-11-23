@@ -14,6 +14,7 @@ export { StorageUnavailable };
 export type { TokenLookup } from "./lib/server/identities.ts";
 export type { SetAdminResult } from "./lib/server/identity-admins.ts";
 export type { DeactivateIdentityResult, ReactivateIdentityResult } from "./lib/server/identity-deactivations.ts";
+export type { DeleteIdentityResult } from "./lib/server/identity-deletes.ts";
 export type { StoredCommand } from "./lib/server/commands.ts";
 export type { CommandTokenGrant } from "./lib/server/command-tokens.ts";
 export type { DeliveryOutcome, StoredDelivery } from "./lib/server/deliveries.ts";

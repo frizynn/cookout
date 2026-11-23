@@ -42,7 +42,9 @@ interface MemoryCommandsOptions {
 
 type MemoryCommandsSection = CommandsSection &
   Pick<MemoryCommandTokensSection, "dropCommandTokens" | "dropCommandTokensOf"> &
-  Pick<MemoryDeliveriesSection, "dropDeliveries">;
+  Pick<MemoryDeliveriesSection, "dropDeliveries"> & {
+    readonly dropCommandsOf: (handler: IdentityName) => void;
+  };
 
 function memoryCommands({ findIdentity, state, placeHandler }: MemoryCommandsOptions): MemoryCommandsSection {
   const commands = new Map<CommandName, StoredCommand>();
@@ -68,10 +70,22 @@ function memoryCommands({ findIdentity, state, placeHandler }: MemoryCommandsOpt
     }
     return found;
   }
+  const tokens = memoryCommandTokens({ findIdentity, state });
+  const { dropDeliveriesOf, ...deliveries } = memoryDeliveries(state);
+  function dropCommandsOf(handler: IdentityName): void {
+    for (const [name, { command }] of commands) {
+      if (command.handler === handler) {
+        dropDeliveriesOf(name);
+        commands.delete(name);
+      }
+    }
+    tokens.dropCommandTokensOf(handler);
+  }
   return {
-    ...memoryCommandTokens({ findIdentity, state }),
-    ...memoryDeliveries(state),
+    ...tokens,
+    ...deliveries,
     addCommand: (stored, handler) => open(() => add(stored, handler)),
+    dropCommandsOf,
     findCommand: (name) => open(() => commands.get(name)),
     listCommands: Effect.suspend(() =>
       open(() => Arr.map(Arr.sort(commands.values(), byName), ({ command }) => command)),

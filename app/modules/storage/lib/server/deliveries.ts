@@ -35,6 +35,7 @@ interface DeliveriesSection {
 
 type MemoryDeliveriesSection = DeliveriesSection & {
   readonly dropDeliveries: (channel: ChannelName) => void;
+  readonly dropDeliveriesOf: (command: CommandName) => void;
 };
 
 function memoryDeliveries(state: MemoryState): MemoryDeliveriesSection {
@@ -50,6 +51,13 @@ function memoryDeliveries(state: MemoryState): MemoryDeliveriesSection {
     dropDeliveries: (channel) => {
       for (const [callId, delivery] of deliveries) {
         if (delivery.channel === channel) {
+          deliveries.delete(callId);
+        }
+      }
+    },
+    dropDeliveriesOf: (command) => {
+      for (const [callId, delivery] of deliveries) {
+        if (delivery.command === command) {
           deliveries.delete(callId);
         }
       }

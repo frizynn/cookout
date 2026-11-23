@@ -35,4 +35,21 @@ function withoutChannel({ channel, ids, inbox }: ForgettingChannel): MemoryInbox
   };
 }
 
-export { EMPTY_INBOX, type MemoryInbox, withoutChannel };
+interface ForgettingIdentity {
+  readonly inbox: MemoryInbox;
+  readonly identity: string;
+}
+
+function withoutIdentity({ identity, inbox }: ForgettingIdentity): MemoryInbox {
+  function kept(key: string): boolean {
+    return !Str.startsWith(`${identity} `)(key);
+  }
+  return {
+    follows: new Set(Arr.filter([...inbox.follows], kept)),
+    mentions: new Set(Arr.filter([...inbox.mentions], kept)),
+    positions: new Map(Arr.filter([...inbox.positions], ([key]: readonly [string, MessageId]) => kept(key))),
+    subscriptions: new Set(Arr.filter([...inbox.subscriptions], kept)),
+  };
+}
+
+export { EMPTY_INBOX, type MemoryInbox, withoutChannel, withoutIdentity };

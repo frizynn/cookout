@@ -1,4 +1,5 @@
 import { Effect, Predicate } from "effect";
+import { memoryIdentityLifecycle, memoryIdentitySections } from "./identity-sections.ts";
 import type { Scope } from "effect";
 import type { StorageService } from "./service.ts";
 import { memoryAgentSessionSections } from "./agent-join-requests-memory.ts";
@@ -6,7 +7,6 @@ import { memoryChannels } from "./channels.ts";
 import { memoryCommandCalls } from "./command-calls.ts";
 import { memoryCommands } from "./commands.ts";
 import { memoryHealth } from "./health.ts";
-import { memoryIdentitySections } from "./identity-sections.ts";
 import { memoryMessages } from "./messages-memory.ts";
 import { openMemoryState } from "./memory-state.ts";
 
@@ -27,10 +27,13 @@ export const openMemoryStorage: Effect.Effect<StorageService, never, Scope.Scope
   openMemoryState,
   (state) => {
     const { forgetChannel: dropChannel, ...channels } = memoryChannels(state);
-    const { findIdentity, placeHandler, ...identities } = memoryIdentitySections(state);
-    const { revokeAgentSessionsOf, ...agentSessions } = memoryAgentSessionSections({ findIdentity, state });
-    const { forgetChannel, ...messages } = memoryMessages({ channels, identities, state });
-    const { dropCommandTokens, dropCommandTokensOf, dropDeliveries, ...commands } = memoryCommands({
+    const { findIdentity, placeHandler, removeIdentity, ...identities } = memoryIdentitySections(state);
+    const { dropAgentSessionsOf, revokeAgentSessionsOf, ...agentSessions } = memoryAgentSessionSections({
+      findIdentity,
+      state,
+    });
+    const { forgetChannel, forgetIdentity, ...messages } = memoryMessages({ channels, identities, state });
+    const { dropCommandTokens, dropCommandTokensOf, dropCommandsOf, dropDeliveries, ...commands } = memoryCommands({
       findIdentity,
       placeHandler,
       state,
@@ -43,24 +46,17 @@ export const openMemoryStorage: Effect.Effect<StorageService, never, Scope.Scope
       ...agentSessions,
       ...commands,
       ...memoryCommandCalls({ ...commands, ...messages }),
+      ...memoryIdentityLifecycle({
+        countMessagesBy: messages.countMessagesBy,
+        deactivateIdentity: identities.deactivateIdentity,
+        dropAgentSessionsOf,
+        dropCommandTokensOf,
+        dropCommandsOf,
+        forgetIdentity,
+        removeIdentity,
+        revokeAgentSessionsOf,
+      }),
       createChannel: subscribingCreator(channels.createChannel, messages.subscribeChannel),
-      deactivateIdentity: (name) =>
-        Effect.tap(identities.deactivateIdentity(name), (result) => {
-          if (result.status !== "deactivated") {
-            return Effect.void;
-          }
-          return Effect.forEach(
-            [name, ...result.agents],
-            (each) =>
-              Effect.andThen(
-                revokeAgentSessionsOf(each),
-                Effect.sync(() => {
-                  dropCommandTokensOf(each);
-                }),
-              ),
-            { concurrency: 1, discard: true },
-          );
-        }),
       deleteChannel: (name) =>
         Effect.gen(function* deleteChannel() {
           const found = yield* channels.findChannel(name);
