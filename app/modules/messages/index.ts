@@ -11,6 +11,8 @@ import type { IsoTime } from "../time/index.ts";
 declare const brand: unique symbol;
 
 const LOWEST_ID = 1;
+const FIRST = 0;
+const ONE_MORE = 1;
 
 /**
  * A message's ID: a positive whole number. Message IDs are one increasing
@@ -61,6 +63,41 @@ export interface TopLevelMessage extends MessageFields {
   readonly replyCount: number;
   /** The newest reply in its thread, or `null` if it has none. */
   readonly latestReplyId: MessageId | null;
+  /** When the newest reply in its thread was posted, or `null` if it has none. */
+  readonly latestReplyAt: IsoTime | null;
+  /**
+   * The authors of its thread's replies, once each by name, the latest replier first: at most `shownRepliers`.
+   * Each is the author as stored on their latest reply, so a deleted replier still shows.
+   */
+  readonly repliers: readonly Author[];
+}
+
+/** A top-level message and the newest reply in its thread. */
+export interface Replying {
+  readonly parent: TopLevelMessage;
+  readonly reply: Reply;
+}
+
+/** How many repliers a top-level message names. */
+export const shownRepliers = 4;
+
+/**
+ * A top-level message as it is once `reply`, the newest reply in its thread, is posted: one more reply, `reply` as its
+ * latest, and `reply`'s author as its latest replier.
+ * @param replying The top-level message and its newest reply.
+ * @param replying.parent The top-level message.
+ * @param replying.reply The newest reply in its thread.
+ * @returns The top-level message counting `reply`.
+ */
+export function withNewestReply({ parent, reply }: Replying): TopLevelMessage {
+  const others = parent.repliers.filter((replier) => replier.name !== reply.author.name);
+  return {
+    ...parent,
+    latestReplyAt: reply.createdAt,
+    latestReplyId: reply.id,
+    repliers: [reply.author, ...others].slice(FIRST, shownRepliers),
+    replyCount: parent.replyCount + ONE_MORE,
+  };
 }
 
 /** A reply in a thread. `replyTo` is always the top-level message, even when the reply was posted to another reply. */

@@ -11,7 +11,15 @@ const base = {
   mentions: [],
   text: "hi",
 };
-const topLevel = { ...base, id: 1, kind: "top-level", latestReplyId: 2, replyCount: 1 };
+const topLevel = {
+  ...base,
+  id: 1,
+  kind: "top-level",
+  latestReplyAt: base.createdAt,
+  latestReplyId: 2,
+  repliers: [base.author],
+  replyCount: 1,
+};
 const reply = { ...base, id: 2, kind: "reply", replyTo: 1 };
 
 function threadAnswered(body: unknown): Effect.Effect<unknown> {

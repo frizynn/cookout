@@ -1,8 +1,9 @@
-import type { AgentTool, IdentityName } from "../../../identities/index.ts";
+import type { AgentTool, IdentityName, Owner } from "../../../identities/index.ts";
 import type { AppendMessageResult, ChannelPageRequest, MessagesSection, NewMessage, Placement } from "./messages.ts";
-import { Array as Arr, Effect, Option, Predicate, Schema, pipe } from "effect";
+import { Array as Arr, Effect, Option, Order, Predicate, Schema, pipe } from "effect";
 import type { Author, ListMessagesResponse, Message, MessageId, ThreadResponse } from "../../../messages/index.ts";
 import { isAgentTool, isIdentityName, isOwner } from "../../../identities/index.ts";
+import { isMessageId, shownRepliers } from "../../../messages/index.ts";
 import { isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
 import { recordAppended, sqliteInbox } from "./inbox-sqlite.ts";
 import type { ChannelName } from "../../../channels/index.ts";
@@ -12,7 +13,6 @@ import type { MessageReader } from "./inbox-sqlite.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isChannelName } from "../../../channels/index.ts";
-import { isMessageId } from "../../../messages/index.ts";
 import { sqliteCommandCalls } from "./command-calls.ts";
 import { unreadable } from "./errors.ts";
 
@@ -30,6 +30,9 @@ const OwnerColumn = Schema.String.pipe(Schema.refine(isOwner));
 const AgentToolColumn = Schema.String.pipe(Schema.refine(isAgentTool));
 const MentionsText = Schema.fromJsonString(Schema.Array(Schema.String));
 const JsonText = Schema.fromJsonString(Schema.Json);
+const ReplierCell = Schema.Struct({ last: Schema.Int, name: IdentityNameColumn, owner: Schema.NullOr(OwnerColumn) });
+const RepliersColumn = Schema.fromJsonString(Schema.Array(ReplierCell));
+const latestFirst = Order.flip(Order.mapInput(Order.Number, (cell: typeof ReplierCell.Type) => cell.last));
 
 const MessageRow = Schema.Struct({
   agent_tool: Schema.NullOr(AgentToolColumn),
@@ -39,8 +42,10 @@ const MessageRow = Schema.Struct({
   created_at: IsoTimeSchema,
   data: Schema.NullOr(Schema.String),
   id: MessageIdColumn,
+  latest_reply_at: Schema.NullOr(IsoTimeSchema),
   latest_reply_id: Schema.NullOr(MessageIdColumn),
   mentions: MentionsColumn,
+  repliers: RepliersColumn,
   reply_count: Schema.Int,
   reply_to: Schema.NullOr(MessageIdColumn),
   text: Schema.String,
@@ -61,17 +66,33 @@ const isFoundRow = Schema.is(Schema.Struct({ found: Schema.Literal(FOUND) }));
 
 const MESSAGE_COLUMNS = `id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, agent_tool,
   (SELECT count(*) FROM messages AS replies WHERE replies.reply_to = messages.id) AS reply_count,
-  (SELECT max(replies.id) FROM messages AS replies WHERE replies.reply_to = messages.id) AS latest_reply_id`;
+  (SELECT max(replies.id) FROM messages AS replies WHERE replies.reply_to = messages.id) AS latest_reply_id,
+  (SELECT replies.created_at FROM messages AS replies WHERE replies.reply_to = messages.id
+    ORDER BY replies.id DESC LIMIT 1) AS latest_reply_at,
+  (SELECT json_group_array(json_object('name', name, 'owner', owner, 'last', last)) FROM (
+    SELECT replies.author_name AS name, replies.author_owner AS owner, max(replies.id) AS last
+    FROM messages AS replies WHERE replies.reply_to = messages.id
+    GROUP BY replies.author_name ORDER BY last DESC LIMIT ${String(shownRepliers)}
+  )) AS repliers`;
 
 const INSERT_MESSAGE = `INSERT INTO messages
   (id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, agent_tool)
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-function authorOf(row: MessageRowType): Author {
-  if (Predicate.isNull(row.author_owner)) {
-    return { name: row.author_name };
+interface StoredAuthor {
+  readonly name: IdentityName;
+  readonly owner: Owner | null;
+}
+
+function authorOf({ name, owner }: StoredAuthor): Author {
+  if (Predicate.isNull(owner)) {
+    return { name };
   }
-  return { name: row.author_name, owner: row.author_owner };
+  return { name, owner };
+}
+
+function repliersOf(row: MessageRowType): readonly Author[] {
+  return Arr.map(Arr.sort(row.repliers, latestFirst), authorOf);
 }
 
 function agentToolOf(row: MessageRowType): { readonly agentTool?: AgentTool } {
@@ -82,10 +103,20 @@ function agentToolOf(row: MessageRowType): { readonly agentTool?: AgentTool } {
 }
 
 function messageOf(row: MessageRowType, data: DataField): Message {
-  const fields = { author: authorOf(row), channel: row.channel, createdAt: row.created_at, id: row.id };
+  const fields = {
+    author: authorOf({ name: row.author_name, owner: row.author_owner }),
+    channel: row.channel,
+    createdAt: row.created_at,
+    id: row.id,
+  };
   const content = { ...fields, ...agentToolOf(row), ...data, mentions: row.mentions, text: row.text };
   if (Predicate.isNull(row.reply_to)) {
-    return { ...content, kind: "top-level", latestReplyId: row.latest_reply_id, replyCount: row.reply_count };
+    const replies = {
+      latestReplyAt: row.latest_reply_at,
+      latestReplyId: row.latest_reply_id,
+      replyCount: row.reply_count,
+    };
+    return { ...content, ...replies, kind: "top-level", repliers: repliersOf(row) };
   }
   return { ...content, kind: "reply", replyTo: row.reply_to };
 }

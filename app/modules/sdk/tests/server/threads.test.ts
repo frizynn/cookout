@@ -1,6 +1,6 @@
 import { Array as Arr, Effect, Option, pipe } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
-import type { MessageId, Reply } from "../../index.ts";
+import type { MessageId, Reply, TopLevelMessage } from "../../index.ts";
 import { TestCookout, answer, messageId, refusal, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
@@ -13,6 +13,11 @@ const TWO_REPLIES = 2;
 const THREE_REPLIES = 3;
 const MIDDLE = 1;
 const BOOT = "2026-01-01T00:00:00.000Z";
+const FOUR_REPLIES = 4;
+const SUMMARY = {
+  latestReplyAt: "2026-01-01T00:04:00.000Z",
+  repliers: [{ name: "ada" }, { name: "grace" }, { name: "auth-griller", owner: "matt" }],
+};
 
 function withChannel(cookout: TestCookoutService): Effect.Effect<TestIdentity> {
   return Effect.gen(function* identityWithChannel() {
@@ -20,6 +25,11 @@ function withChannel(cookout: TestCookoutService): Effect.Effect<TestIdentity> {
     yield* answer(() => agent.client.createChannel({ name: "grill" }));
     return agent;
   });
+}
+
+function latestOf(replies: readonly Reply[]): Pick<TopLevelMessage, "latestReplyAt" | "latestReplyId" | "repliers"> {
+  const latest = Option.getOrThrow(Arr.last(replies));
+  return { latestReplyAt: latest.createdAt, latestReplyId: latest.id, repliers: [latest.author] };
 }
 
 function replyEachSecond(agent: TestIdentity, replyTo: MessageId): Effect.Effect<readonly Reply[]> {
@@ -63,7 +73,41 @@ it.effect("a reply joins the message's thread and updates its reply count and la
       text: "first",
     });
     expect(second.id).toBeGreaterThan(first.id);
-    expect(messages).toStrictEqual([{ ...parent, latestReplyId: second.id, replyCount: TWO_REPLIES }]);
+    expect(messages).toStrictEqual([
+      {
+        ...parent,
+        latestReplyAt: BOOT,
+        latestReplyId: second.id,
+        repliers: [second.author, first.author],
+        replyCount: TWO_REPLIES,
+      },
+    ]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a top-level message names who replied, latest first, and when, in its channel page and its thread", () =>
+  Effect.gen(function* repliersLatestFirst() {
+    const cookout = yield* TestCookout;
+    const agent = yield* withChannel(cookout);
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const grace = yield* cookout.createIdentity("grace", { kind: "human" });
+    const { message: parent } = yield* answer(() => agent.client.createMessage({ channel: "grill", text: "parent" }));
+    yield* pipe(
+      [ada, agent, grace, ada],
+      Effect.forEach(
+        (replier) =>
+          Effect.andThen(
+            TestClock.adjust("1 minute"),
+            answer(() => replier.client.createMessage({ channel: "grill", replyTo: parent.id, text: "reply" })),
+          ),
+        ONE_AT_A_TIME,
+      ),
+    );
+    const { messages } = yield* answer(() => agent.client.listMessages("grill"));
+    const thread = yield* answer(() => agent.client.getThread(parent.id));
+
+    expect(messages).toMatchObject([{ ...SUMMARY, id: parent.id, replyCount: FOUR_REPLIES }]);
+    expect(thread.parent).toMatchObject(SUMMARY);
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -101,7 +145,7 @@ it.effect("a thread is the parent plus its replies in order, and can be got from
     const fromReply = yield* answer(() => agent.client.getThread(Option.getOrThrow(Arr.get(replies, MIDDLE)).id));
 
     expect(fromParent).toStrictEqual({
-      parent: { ...parent, latestReplyId: Option.getOrThrow(Arr.last(replies)).id, replyCount: THREE_REPLIES },
+      parent: { ...parent, ...latestOf(replies), replyCount: THREE_REPLIES },
       replies,
     });
     expect(replies).toMatchObject([

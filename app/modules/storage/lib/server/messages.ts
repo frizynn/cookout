@@ -1,4 +1,4 @@
-import { Array as Arr, Option, Predicate, pipe } from "effect";
+import { Array as Arr, Option, Predicate } from "effect";
 import type {
   ListMessagesResponse,
   Message,
@@ -7,15 +7,18 @@ import type {
   ThreadResponse,
   TopLevelMessage,
 } from "../../../messages/index.ts";
+import { isMessageId, withNewestReply } from "../../../messages/index.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { Effect } from "effect";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { StorageUnavailable } from "./errors.ts";
-import { isMessageId } from "../../../messages/index.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
-type MessageContent = Omit<TopLevelMessage, "id" | "kind" | "latestReplyId" | "replyCount">;
+type MessageContent = Omit<
+  TopLevelMessage,
+  "id" | "kind" | "latestReplyAt" | "latestReplyId" | "replyCount" | "repliers"
+>;
 
 type NewMessage = MessageContent & {
   readonly replyTo?: MessageId;
@@ -51,6 +54,8 @@ interface Mentioning {
   readonly known: ReadonlySet<IdentityName>;
   readonly message: NewMessage;
 }
+
+type Unreplied = Pick<TopLevelMessage, "kind" | "latestReplyAt" | "latestReplyId" | "replyCount" | "repliers">;
 
 interface Counting {
   readonly parent: TopLevelMessage;
@@ -94,11 +99,22 @@ function isPlaced(placement: Placement): placement is Placed {
   return placement.status === "top-level" || placement.status === "reply";
 }
 
+function unreplied<Content extends MessageContent>(content: Content): Content & Unreplied {
+  return {
+    ...content,
+    kind: "top-level",
+    latestReplyAt: null,
+    latestReplyId: null,
+    repliers: [],
+    replyCount: NO_REPLIES,
+  };
+}
+
 function placed({ id, message, placement }: Placing): Message {
   if (placement.status === "reply") {
     return { ...message, id, kind: "reply", replyTo: placement.parent };
   }
-  return { ...message, id, kind: "top-level", latestReplyId: null, replyCount: NO_REPLIES };
+  return { ...unreplied(message), id };
 }
 
 function withKnownMentions({ known, message }: Mentioning): NewMessage {
@@ -106,12 +122,7 @@ function withKnownMentions({ known, message }: Mentioning): NewMessage {
 }
 
 function counted({ parent, replies }: Counting): TopLevelMessage {
-  const latestReplyId = pipe(
-    Arr.last(replies),
-    Option.map((reply) => reply.id),
-    Option.getOrNull,
-  );
-  return { ...parent, latestReplyId, replyCount: replies.length };
+  return Arr.reduce(replies, unreplied(parent), (counting, reply) => withNewestReply({ parent: counting, reply }));
 }
 
 export {

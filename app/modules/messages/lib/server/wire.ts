@@ -15,7 +15,7 @@ import {
   plainNamePattern,
 } from "../../../identities/index.ts";
 import { channelNamePattern, isChannelName } from "../../../channels/index.ts";
-import { isMessageId, messageTextLength, pageSize } from "../../index.ts";
+import { isMessageId, messageTextLength, pageSize, shownRepliers } from "../../index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
@@ -64,11 +64,15 @@ const messageFields = {
 
 const ReplyCountSchema = Schema.Int.check(Schema.isGreaterThanOrEqualTo(NO_REPLIES));
 
+const RepliersSchema = Schema.Array(AuthorSchema).check(Schema.isMaxLength(shownRepliers));
+
 const TopLevelMessageSchema = matchesWire<TopLevelMessage>()(
   Schema.Struct({
     ...messageFields,
     kind: Schema.Literal("top-level"),
+    latestReplyAt: Schema.NullOr(IsoTimeSchema),
     latestReplyId: Schema.NullOr(MessageIdSchema),
+    repliers: RepliersSchema,
     replyCount: ReplyCountSchema,
   }),
 );

@@ -48,8 +48,10 @@ it.effect("an identity posts a top-level message with JSON data, and sees its au
       data,
       id: message.id,
       kind: "top-level",
+      latestReplyAt: null,
       latestReplyId: null,
       mentions: [],
+      repliers: [],
       replyCount: NO_REPLIES,
       text: "Is the idle expiry 7 days?",
     });
