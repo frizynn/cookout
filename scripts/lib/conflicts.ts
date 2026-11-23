@@ -1,5 +1,13 @@
 type HunkResolve = "append" | "lower";
 
+type FirstSide = "ours" | "theirs";
+
+interface Resolving {
+  readonly first: FirstSide;
+  readonly resolve: HunkResolve;
+  readonly source: string;
+}
+
 interface Hunk {
   readonly base: string;
   readonly ours: string;
@@ -76,12 +84,19 @@ function lowered({ base, ours, theirs }: Hunk): Resolution {
 
 const resolvers = { append: appended, lower: lowered };
 
-function pieces(source: string, resolve: HunkResolve): { readonly all: number; readonly resolved: readonly Piece[] } {
+function ordered(hunk: Hunk, first: FirstSide): Hunk {
+  if (first === "ours") {
+    return hunk;
+  }
+  return { base: hunk.base, ours: hunk.theirs, theirs: hunk.ours };
+}
+
+function pieces({ first, resolve, source }: Resolving): { readonly all: number; readonly resolved: readonly Piece[] } {
   const resolved: Piece[] = [];
   let all = NONE;
   for (const match of source.matchAll(CONFLICT)) {
     all += FIRST;
-    const resolution = resolvers[resolve]({ base: "", ours: "", theirs: "", ...match.groups });
+    const resolution = resolvers[resolve](ordered({ base: "", ours: "", theirs: "", ...match.groups }, first));
     if (resolution.ok) {
       resolved.push({ end: match.index + match[NONE].length, start: match.index, text: resolution.text });
     }
@@ -89,8 +104,9 @@ function pieces(source: string, resolve: HunkResolve): { readonly all: number; r
   return { all, resolved };
 }
 
-function resolveHunks({ resolve, source }: { readonly resolve: HunkResolve; readonly source: string }): Resolution {
-  const { all, resolved } = pieces(source, resolve);
+function resolveHunks(resolving: Resolving): Resolution {
+  const { source } = resolving;
+  const { all, resolved } = pieces(resolving);
   if (resolved.length !== all || all === NONE) {
     return UNRESOLVED;
   }
@@ -103,5 +119,5 @@ function resolveHunks({ resolve, source }: { readonly resolve: HunkResolve; read
   return { ok: true, text: `${text}${source.slice(at)}` };
 }
 
-export type { HunkResolve };
+export type { FirstSide, HunkResolve };
 export { resolveHunks };

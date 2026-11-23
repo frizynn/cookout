@@ -25,6 +25,7 @@ const FLOOR = { base: ["90", "95"], merged: ["91", "94"], ticket: ["92", "94"], 
 
 const rules: MergeRules = {
   adrs: "docs/adr",
+  appendOnly: ["migrations.ts"],
   hunks: [
     { file: "migrations.ts", resolve: "append" },
     { file: "floor.ts", resolve: "lower" },

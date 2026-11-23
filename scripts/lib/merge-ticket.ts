@@ -1,8 +1,9 @@
 import type { Command, Ran, Step, Stopped } from "./merge-steps.ts";
 import { DONE, RERERE, firstStop, git, lines, run, stepOf, stop, tail } from "./merge-steps.ts";
+import type { FirstSide, HunkResolve } from "./conflicts.ts";
 import { asOneTicketMerge, cleanTree, messageOf } from "./merge-branch.ts";
 import { readFileSync, writeFileSync } from "node:fs";
-import type { HunkResolve } from "./conflicts.ts";
+import { appendOnlyMigrations } from "./merge-migrations.ts";
 import path from "node:path";
 import { renumberAdrs } from "./merge-adrs.ts";
 import { resolveHunks } from "./conflicts.ts";
@@ -19,6 +20,7 @@ interface RegenerateRule {
 
 interface MergeRules {
   readonly adrs: string;
+  readonly appendOnly: readonly string[];
   readonly hunks: readonly HunkRule[];
   readonly regenerate: readonly RegenerateRule[];
 }
@@ -53,11 +55,11 @@ function failed(command: Command, ran: Ran, after: string): Stopped {
   return stop(`${command.join(" ")} failed; nothing was pushed.${after}\n${tail(ran.output)}`);
 }
 
-function resolvedByHunks(options: MergeOptions, file: string): boolean {
+function resolvedByHunks(options: MergeOptions, file: string, first: FirstSide): boolean {
   const rules = options.rules.hunks.filter((candidate) => candidate.file === file);
   const filePath = path.join(options.cwd, file);
   return rules.some((rule) => {
-    const resolved = resolveHunks({ resolve: rule.resolve, source: readFileSync(filePath, "utf8") });
+    const resolved = resolveHunks({ first, resolve: rule.resolve, source: readFileSync(filePath, "utf8") });
     if (resolved.ok) {
       writeFileSync(filePath, resolved.text);
     }
@@ -94,9 +96,9 @@ function unresolvable(options: MergeOptions, left: readonly string[]): Stopped {
   );
 }
 
-function resolveConflicts(options: MergeOptions, conflicted: readonly string[]): Step {
+function resolveConflicts(options: MergeOptions, conflicted: readonly string[], first: FirstSide): Step {
   const generated = conflicted.filter((file) => isGenerated(options, file));
-  const left = conflicted.filter((file) => !generated.includes(file) && !resolvedByHunks(options, file));
+  const left = conflicted.filter((file) => !generated.includes(file) && !resolvedByHunks(options, file, first));
   if (left.length > NONE) {
     return unresolvable(options, left);
   }
@@ -111,7 +113,7 @@ function resolveConflicts(options: MergeOptions, conflicted: readonly string[]):
   return committed;
 }
 
-function merge(options: MergeOptions, into: string): Step {
+function merge(options: MergeOptions, into: string, first: FirstSide): Step {
   const merged = git(
     options,
     ...RERERE,
@@ -132,7 +134,7 @@ function merge(options: MergeOptions, into: string): Step {
     return stop(`git merge failed.\n${tail(merged.output)}`);
   }
   options.log(`Resolving conflicts in ${conflicted.join(", ")}`);
-  return resolveConflicts(options, conflicted);
+  return resolveConflicts(options, conflicted, first);
 }
 
 function install(options: MergeOptions): Step {
@@ -188,7 +190,8 @@ function attempt(options: MergeOptions): Attempt {
     return started;
   }
   const stepped = firstStop([
-    (): Step => merge(options, `ticket-${options.ticket}`),
+    (): Step => merge(options, `ticket-${options.ticket}`, "ours"),
+    (): Step => appendOnlyMigrations({ cwd: options.cwd, files: options.rules.appendOnly, ticket: options.ticket }),
     (): Step => renumberAdrs({ adrs: options.rules.adrs, cwd: options.cwd, log: options.log }),
     (): Step => install(options),
     (): Step => check(options),
@@ -224,6 +227,7 @@ function regenerateChanged(options: MergeOptions, base: string): Step {
 
 function checkAndPush(options: MergeOptions, base: string): Attempt {
   const stepped = firstStop([
+    (): Step => appendOnlyMigrations({ cwd: options.cwd, files: options.rules.appendOnly, ticket: options.ticket }),
     (): Step => renumberAdrs({ adrs: options.rules.adrs, cwd: options.cwd, log: options.log }),
     (): Step => regenerateChanged(options, base),
     (): Step => install(options),
@@ -237,7 +241,7 @@ function checkAndPush(options: MergeOptions, base: string): Attempt {
 
 function retry(options: MergeOptions): Attempt {
   const base = git(options, "rev-parse", "origin/v1").output;
-  const stepped = firstStop([(): Step => merge(options, "origin/v1"), (): Step => asOneTicketMerge(options)]);
+  const stepped = firstStop([(): Step => merge(options, "origin/v1", "theirs"), (): Step => asOneTicketMerge(options)]);
   if (stepped.kind === "stopped") {
     return stepped;
   }
