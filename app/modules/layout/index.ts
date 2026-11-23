@@ -6,9 +6,8 @@
  * storage and sets it on the page's root element as `data-theme` (`system`
  * removes it, so the stylesheet follows the operating system's
  * `prefers-color-scheme`); the store reads it back when made, so a reload
- * keeps it. `settings` is whether the Settings panel is open, and `sidebar`
- * whether the sidebar is open on a narrow screen; `toggleSettings` and
- * `toggleSidebar` flip them, and `closeSidebar` closes the sidebar, as after
+ * keeps it. `sidebar` is whether the sidebar is open on a narrow screen;
+ * `toggleSidebar` flips it, and `closeSidebar` closes the sidebar, as after
  * following a link in it. `collapsed` is whether the sidebar is collapsed to
  * a narrow rail on a wide screen; `toggleCollapsed` flips it and keeps it in
  * the browser's storage, so a reload keeps it. `identityFilter` and `identityKind` narrow the
@@ -25,7 +24,6 @@ type KindChoice = "all" | IdentityKind;
 
 interface LayoutState {
   readonly theme: ThemeChoice;
-  readonly settings: boolean;
   readonly sidebar: boolean;
   readonly collapsed: boolean;
   readonly identityFilter: string;
@@ -110,8 +108,6 @@ export interface Layout {
   readonly snapshot: () => LayoutState;
   /** Applies the theme at once and keeps it in the browser's storage. */
   readonly chooseTheme: (theme: ThemeChoice) => void;
-  /** Opens the Settings panel, or closes it if it is open. */
-  readonly toggleSettings: () => void;
   /** Opens the sidebar on a narrow screen, or closes it if it is open. */
   readonly toggleSidebar: () => void;
   /** Closes the sidebar on a narrow screen. */
@@ -137,7 +133,6 @@ export function createLayout(options: LayoutOptions): Layout {
     collapsed: options.storage.getItem(COLLAPSED_KEY) === COLLAPSED,
     identityFilter: "",
     identityKind: "all",
-    settings: false,
     showDeactivated: false,
     sidebar: false,
     theme: storedTheme(options.storage),
@@ -172,9 +167,6 @@ export function createLayout(options: LayoutOptions): Layout {
     toggleCollapsed: () => {
       keepCollapsed(options.storage, !current.collapsed);
       publish({ collapsed: !current.collapsed, sidebar: false });
-    },
-    toggleSettings: () => {
-      publish({ settings: !current.settings });
     },
     toggleSidebar: () => {
       publish({ sidebar: !current.sidebar });

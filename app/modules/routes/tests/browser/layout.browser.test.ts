@@ -14,7 +14,7 @@ async function backgroundOf(page: Page): Promise<string> {
 }
 
 async function themeChosen(page: Page, theme: string): Promise<string> {
-  await inSidebar(page).getByRole("button", { name: "Settings" }).click();
+  await inSidebar(page).getByRole("link", { name: "Settings" }).click();
   await page.getByRole("region", { name: "Settings" }).getByText(theme, { exact: true }).click();
   const colour = await backgroundOf(page);
   return colour;

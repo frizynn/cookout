@@ -167,11 +167,6 @@ interface ChoiceGroupParts {
   readonly onChoose: (value: string) => void;
 }
 
-interface ToggleButtonParts extends Parts {
-  readonly expanded: boolean;
-  readonly onClick: () => void;
-}
-
 interface AuthorParts extends AvatarParts {
   readonly shown: string;
   readonly handle: string | null;
@@ -272,7 +267,6 @@ export type {
   PillParts,
   SidebarParts,
   SidePanelParts,
-  ToggleButtonParts,
   WorkspaceParts,
   DataAreaParts,
   DataBlockParts,

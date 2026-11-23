@@ -19,11 +19,14 @@
  * it has something new (`marked`), highlighted when it is the open item, with
  * an icon and any `Pill` after it: a count read out by its label, loud (the
  * unread colour), quiet, or unseen (read out only); `NavHeading` heads a
- * `NavList` of links, and a `NavButton` under them, with a plus, starts
- * something new, such as a channel; `ToggleButton` opens and closes a `Panel` above it,
- * such as Settings, where `ChoiceGroup` picks one of a few choices. `Pane` is
+ * `NavList` of links, with any `HeadingButton` on its line, a plus named by
+ * its label that starts something new, such as a channel; in the footer, `FooterLink` is a link
+ * with a gear, such as Settings, highlighted when open. `Pane` is
  * the main column, with a `PaneHeader` (title, description and any action on
  * its right, such as a `PressButton`, a button that is on or off), a
+ * named `Page` that scrolls a centred column of `PageSection`s, each headed by
+ * a link to itself, its heading focused when `focused` (such as Settings,
+ * where `ChoiceGroup` picks one of a few choices), a
  * named `ScrollArea` that stays scrolled to the end as what it counts grows, unless
  * scrolled up, and anything under it, such as a message box in a `BoxFrame`
  * with its keyboard hint; `SidePanel` is a
@@ -140,14 +143,16 @@ export { LinkList } from "./lib/link-list.tsx";
 export { LinkRow } from "./lib/link-row.tsx";
 export { Mention } from "./lib/mention.tsx";
 export { Muted } from "./lib/muted.tsx";
-export { NavButton } from "./lib/nav-button.tsx";
+export { HeadingButton } from "./lib/heading-button.tsx";
 export { NavHeading } from "./lib/nav-heading.tsx";
 export { NavLink } from "./lib/nav-link.tsx";
 export { NavList } from "./lib/nav-list.tsx";
 export { Pane } from "./lib/pane.tsx";
 export { PaneHeader } from "./lib/pane-header.tsx";
+export { Page } from "./lib/page.tsx";
+export { PageSection } from "./lib/page-section.tsx";
+export { FooterLink } from "./lib/footer-link.tsx";
 export { PressButton } from "./lib/press-button.tsx";
-export { Panel } from "./lib/panel.tsx";
 export { PickField } from "./lib/pick-field.tsx";
 export { Pill } from "./lib/pill.tsx";
 export { PromptForm } from "./lib/prompt-form.tsx";
@@ -162,7 +167,6 @@ export { SubmitButton } from "./lib/submit-button.tsx";
 export { Tag } from "./lib/tag.tsx";
 export { TextArea } from "./lib/text-area.tsx";
 export { TextField } from "./lib/text-field.tsx";
-export { ToggleButton } from "./lib/toggle-button.tsx";
 export { Workspace } from "./lib/workspace.tsx";
 export { WorkspaceMain } from "./lib/workspace-main.tsx";
 export { IdentityLink } from "./lib/identity-link.tsx";
