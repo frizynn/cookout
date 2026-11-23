@@ -6,6 +6,7 @@ import { expect, it } from "@effect/vitest";
 import type { Scope } from "effect";
 import { TestClock } from "effect/testing";
 import { createCookoutClient } from "../../index.ts";
+import { request } from "../../../http/client.ts";
 
 const AGENT = "triage";
 const HUMAN = { kind: "human" } as const;
@@ -127,6 +128,18 @@ it.effect("Mark all as read marks every alert up to the newest seen, and the his
     expect(unread).toStrictEqual([]);
     expect(history).toMatchObject([{ read: true }, { read: true }]);
   }).pipe(Effect.scoped, Effect.provide(testCookout())),
+);
+
+it.effect("an alert ID that is no whole number is 404 to mark read", () =>
+  Effect.gen(function* notAnId() {
+    const { cookout, matt } = yield* board;
+    const headers = { authorization: `Bearer ${matt.token}` };
+    const answered = yield* answer(() =>
+      request({ baseUrl: cookout.url, headers, method: "POST", path: "/v1/inbox/alerts/nope/read" }),
+    );
+
+    expect(answered.status).toBe(NOT_FOUND);
+  }).pipe(Effect.provide(testCookout())),
 );
 
 it.effect("an alert someone else owns is 404 to mark read, for an admin too", () =>

@@ -1,69 +1,28 @@
-import type { CookoutClient, EventStream } from "../../sdk/index.ts";
-import { adminClient, clientWith, newIdentity } from "./identities.ts";
+import { alertRaised, inboxCounts, inboxOfOwnerWithWatchingAgent } from "./owned-agent.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { inPane, inSidebar } from "./regions.ts";
-import { openAt } from "./render.tsx";
-import { watched } from "./watched.ts";
+import type { CookoutClient } from "../../sdk/index.ts";
+import type { OwnedAgent } from "./owned-agent.ts";
+import { inPane } from "./regions.ts";
 
-const OWNER = "web-alert-owner";
-const AGENT = "web-alert-agent";
-const ROW = `@${AGENT} went offline: session revoked`;
 const ONE_ROW = 1;
+const TWO_ROWS = 2;
 
-interface Open {
-  readonly owner: CookoutClient;
-  readonly close: () => Promise<void>;
-}
-
-async function connectedWatch(client: CookoutClient): Promise<EventStream> {
-  const connected = Promise.withResolvers<null>();
-  const events = await client.watch({
-    onConnected: () => {
-      connected.resolve(null);
-    },
-  });
-  const reading = (async (): Promise<void> => {
-    try {
-      await events[Symbol.asyncIterator]().next();
-    } catch {
-      connected.resolve(null);
-    }
-  })();
-  await Promise.race([connected.promise, reading]);
-  return events;
-}
-
-async function inboxOfOwnerWithWatchingAgent(): Promise<Open> {
-  const owner = await newIdentity({ kind: "human", name: OWNER });
-  await owner.client.createIdentity({ kind: "agent", name: AGENT });
-  const { agentSessionToken } = await owner.client.join({ as: AGENT });
-  const agentWatch = await connectedWatch(clientWith(agentSessionToken));
-  const { live, stream } = watched(owner.client);
-  const unmount = openAt({ client: owner.client, hash: "#/inbox", live });
-  await screen.findByText("You're all caught up.");
-  const ownerWatch = await stream;
+function failingMarkRead(owner: CookoutClient): CookoutClient {
   return {
-    close: async () => {
-      unmount();
-      await Promise.all([agentWatch.close(), ownerWatch.close()]);
+    ...owner,
+    markOfflineAlertRead: async () => {
+      await Promise.resolve();
+      throw new Error("refused");
     },
-    owner: owner.client,
   };
 }
 
-async function alertRaised(): Promise<void> {
-  await adminClient().revokeAgentSession(AGENT);
-  await inPane().findByText(ROW);
-}
-
-function inboxCounts(): readonly (string | null)[] {
-  const link = inSidebar().getByRole("link", { name: /^Inbox/u });
-  const counts: (string | null)[] = [];
-  for (const count of within(link).queryAllByText(/^\d+ (?:unread|for you)$/u)) {
-    counts.push(count.textContent);
-  }
-  return counts;
+async function raisedTwiceAndBack(open: OwnedAgent): Promise<void> {
+  await alertRaised(open);
+  await open.watchAgain();
+  await alertRaised(open);
+  await open.watchAgain();
 }
 
 it("an offline-alert event adds an inbox row and raises the sidebar count, and marking it read clears both", {
@@ -71,14 +30,14 @@ it("an offline-alert event adds an inbox row and raises the sidebar count, and m
 }, async () => {
   expect.hasAssertions();
 
-  const open = await inboxOfOwnerWithWatchingAgent();
-  await alertRaised();
+  const open = await inboxOfOwnerWithWatchingAgent({ owner: "web-alert-owner" });
+  await alertRaised(open);
   const raised = inboxCounts();
   fireEvent.click(inPane().getByRole("button", { name: "Mark read" }));
   await screen.findByText("You're all caught up.");
   const earlier = await screen.findByRole("list", { name: "Earlier offline alerts" });
 
-  expect([raised, inboxCounts(), within(earlier).queryAllByText(ROW).length]).toStrictEqual([
+  expect([raised, inboxCounts(), within(earlier).queryAllByText(open.row).length]).toStrictEqual([
     ["1 for you"],
     [],
     ONE_ROW,
@@ -87,5 +46,38 @@ it("an offline-alert event adds an inbox row and raises the sidebar count, and m
   await waitFor(async () => {
     await expect(open.owner.inbox()).resolves.toMatchObject({ alerts: [] });
   });
+  await open.close();
+});
+
+it("an alert row says when its agent is back online, and Mark all as read marks every alert read", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const open = await inboxOfOwnerWithWatchingAgent({ owner: "web-alert-back" });
+  await raisedTwiceAndBack(open);
+  await waitFor(() => {
+    expect(within(inPane().element()).getAllByText(/Back online/u)).toHaveLength(TWO_ROWS);
+  });
+  fireEvent.click(inPane().getByRole("button", { name: "Mark all as read" }));
+  await screen.findByText("You're all caught up.");
+  await waitFor(async () => {
+    await expect(open.owner.inbox()).resolves.toMatchObject({ alerts: [] });
+  });
+  await open.close();
+});
+
+it("an alert stays unread in the inbox when marking it read is refused", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const open = await inboxOfOwnerWithWatchingAgent({ client: failingMarkRead, owner: "web-alert-refused" });
+  await alertRaised(open);
+  fireEvent.click(inPane().getByRole("button", { name: "Mark read" }));
+  await waitFor(async () => {
+    await expect(open.owner.inbox()).resolves.toMatchObject({ alerts: [{ read: false }] });
+  });
+
+  expect(inPane().getByText(open.row)).toBeDefined();
+
   await open.close();
 });

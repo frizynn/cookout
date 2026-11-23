@@ -1,4 +1,4 @@
-import type { AckAllRequest, CookoutClient, InboxItem, OfflineAlertId, Refusal } from "../../sdk/index.ts";
+import type { AckAllRequest, CookoutClient, InboxItem, Refusal } from "../../sdk/index.ts";
 import type { InboxItems } from "./inbox-items.ts";
 import type { LiveAlerts } from "./alerts.ts";
 import { refusalOf } from "../../sdk/index.ts";
@@ -23,23 +23,20 @@ interface MarkAllOptions {
   readonly onChange: (state: MarkAllState) => void;
 }
 
-function alertsOnly(alertsUpTo: OfflineAlertId | null): AckAllRequest | null {
-  if (alertsUpTo === null) {
-    return null;
+function upToOf(items: InboxItems): Pick<AckAllRequest, "upTo"> {
+  const [newest = null] = items.list().slice(LAST_ONE);
+  if (newest === null) {
+    return {};
   }
-  return { alertsUpTo };
+  return { upTo: newest.message.id };
 }
 
-function requestOf({ alerts, items }: Pick<MarkAllOptions, "alerts" | "items">): AckAllRequest | null {
-  const [newest = null] = items.list().slice(LAST_ONE);
+function alertsUpToOf(alerts: LiveAlerts): Pick<AckAllRequest, "alertsUpTo"> {
   const alertsUpTo = alerts.newestUnread();
-  if (newest === null) {
-    return alertsOnly(alertsUpTo);
-  }
   if (alertsUpTo === null) {
-    return { upTo: newest.message.id };
+    return {};
   }
-  return { alertsUpTo, upTo: newest.message.id };
+  return { alertsUpTo };
 }
 
 function createMarkAll({ alerts, client, items, onChange, onRead }: MarkAllOptions): MarkAll {
@@ -66,10 +63,7 @@ function createMarkAll({ alerts, client, items, onChange, onRead }: MarkAllOptio
 
   return {
     markAllRead: () => {
-      const request = requestOf({ alerts, items });
-      if (request !== null) {
-        queue = markAfter(queue, request);
-      }
+      queue = markAfter(queue, { ...upToOf(items), ...alertsUpToOf(alerts) });
     },
     state: () => state,
   };
