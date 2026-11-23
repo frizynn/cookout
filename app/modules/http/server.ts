@@ -1,0 +1,93 @@
+/**
+ * The cookout's HTTP server on Node's HTTP server: routing, `/v1/health`, the
+ * body size limit, and the one place a failure becomes an `{ error }` body. A
+ * handler fails with a `Refusal` to answer with it; storage, body and path
+ * failures are answered by kind, and anything else is a 500.
+ */
+import { ByteSize, DateTime, Effect, Layer } from "effect";
+import { ErrorResponseSchema, HealthResponseSchema } from "./lib/server/wire.ts";
+import type { Gate, Route } from "./lib/server/router.ts";
+import { HttpIncomingMessage, HttpServer, HttpServerResponse } from "effect/http";
+import { respond, toRefusal } from "./lib/server/refusals.ts";
+import { NodeHttpServer } from "@effect/platform-node";
+import { Storage } from "../storage/server.ts";
+import { createServer } from "node:http";
+import { dispatch } from "./lib/server/router.ts";
+import { healthPath } from "./index.ts";
+import { isoTimeOf } from "../time/server.ts";
+
+interface Listen {
+  readonly host: string;
+  readonly port: number;
+}
+
+type NodeHttp = ReturnType<typeof NodeHttpServer.layer>;
+
+const MEBIBYTE = 1_048_576;
+const maxBodySize = ByteSize.bytes(MEBIBYTE);
+
+const healthRoute: Route<Storage> = {
+  handle: () =>
+    Effect.gen(function* healthCheck() {
+      const storage = yield* Storage;
+      yield* storage.checkHealth();
+      const now = yield* DateTime.now;
+      const time = isoTimeOf(now);
+      return yield* HttpServerResponse.schemaJson(HealthResponseSchema)({ status: "ok", time });
+    }),
+  method: "GET",
+  path: healthPath,
+};
+
+function answerFailure(failure: unknown): Effect.Effect<HttpServerResponse.HttpServerResponse> {
+  return respond(toRefusal(failure));
+}
+
+export type { Gate, Route } from "./lib/server/router.ts";
+export type { Listen };
+
+/** The response Schemas of `/v1/health` and of every refusal, for the SDK's generated validators. */
+export const httpResponseSchemas = { ErrorResponse: ErrorResponseSchema, HealthResponse: HealthResponseSchema };
+
+/**
+ * Node's HTTP server on `listen`, for any `HttpServer.serve` app: the one
+ * place `node:http` is opened. Port 0 picks a free port; the server closes
+ * with the Layer's scope.
+ * @internal
+ * @param listen The port and host to listen on.
+ * @returns The `HttpServer` and Node's HTTP platform.
+ */
+export function nodeHttpServer(listen: Listen): NodeHttp {
+  return NodeHttpServer.layer(createServer, { ...listen, disablePreemptiveShutdown: true });
+}
+
+/**
+ * Serves `/v1/health` and the given routes on `listen` until the Layer is
+ * released. A route's `segments` give the pattern each named `:param`
+ * segment must match; a path that breaks one is no route's (404
+ * `not_found`). Every request to a path one of `routes` serves goes through
+ * `gate` first, before a wrong method is refused with 405; `/v1/health` and
+ * unknown paths (404) never do. The `HttpServer` it provides says which
+ * address it took: port 0 picks a free one.
+ * @param listen The port and host to listen on.
+ * @param routes Every route but `/v1/health`.
+ * @param gate What every request to one of `routes` goes through first.
+ * @returns The server, as a Layer.
+ */
+export function httpServer<Needs, Provides, Requires, Fails>(
+  listen: Listen,
+  routes: readonly Route<Needs>[],
+  gate: Gate<Provides, Requires, Fails>,
+) {
+  const app = dispatch({ gate, gated: routes, open: [healthRoute] }).pipe(
+    Effect.catch(answerFailure),
+    Effect.provideService(HttpIncomingMessage.MaxBodySize, maxBodySize),
+  );
+  return Layer.provideMerge(HttpServer.serve(app), nodeHttpServer(listen));
+}
+
+/** The base URL a running `httpServer` answers on, such as `http://127.0.0.1:54321`. */
+export const serverUrl: Effect.Effect<string, never, HttpServer.HttpServer> = Effect.map(
+  HttpServer.HttpServer,
+  (server) => HttpServer.formatAddress(server.address),
+);

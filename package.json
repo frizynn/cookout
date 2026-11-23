@@ -1,27 +1,80 @@
 {
-  "name": "cookout-workspace",
-  "private": true,
+  "name": "@ai-hero/cookout",
+  "version": "0.0.0",
+  "description": "A self-hosted, Slack-style board where people and agents share channels and threads.",
   "type": "module",
   "packageManager": "pnpm@9.12.3",
   "engines": {
-    "node": ">=22.13"
+    "node": ">=22.18"
+  },
+  "bin": {
+    "cookout": "./dist/main.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./sdk": "./app/modules/sdk/index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      "./sdk": {
+        "types": "./dist/sdk.d.ts",
+        "default": "./dist/sdk.js"
+      }
+    }
   },
   "scripts": {
-    "check": "pnpm typecheck && pnpm lint && pnpm lint:boundaries && pnpm test",
-    "typecheck": "tsc --build",
-    "lint": "eslint --max-warnings 0 .",
-    "lint:boundaries": "depcruise packages",
-    "test": "vitest run",
+    "dev": "node app/dev.ts start",
+    "seed": "node app/dev.ts seed",
+    "build": "tsdown --log-level warn",
+    "api": "node scripts/api-report.ts",
+    "api:write": "node scripts/api-report.ts --write",
+    "exports": "node scripts/check-exports.ts",
+    "pack:smoke": "node scripts/pack-smoke.ts",
+    "check": "node scripts/check.ts",
+    "fix": "knip --production --include exports,types,dependencies --fix > /dev/null; node scripts/lint-ratchet.ts --fix > /dev/null 2>&1; biome format --write . > /dev/null && node scripts/lint-ratchet.ts",
+    "typecheck": "tsc --noEmit --incremental",
+    "lint": "node scripts/lint-ratchet.ts",
+    "lint:baseline": "node scripts/lint-ratchet.ts --write",
+    "canaries": "node scripts/canaries.ts",
+    "fixers": "node scripts/check-fixers.ts",
+    "seams": "depcruise app scripts --cache node_modules/.cache/depcruise",
+    "format": "biome format --write .",
+    "format:check": "biome ci --linter-enabled=false .",
+    "knip": "knip --production --include exports,types,files,dependencies",
+    "docs": "node scripts/check-docs.ts",
+    "validators": "node scripts/generate-validators.ts",
+    "validators:check": "node scripts/generate-validators.ts --check",
+    "hygiene": "node scripts/hygiene.ts",
+    "test": "vitest run --coverage",
+    "test:shard": "vitest run --coverage --reporter=blob --coverage.thresholds.statements=0 --coverage.thresholds.branches=0 --coverage.thresholds.functions=0 --coverage.thresholds.lines=0",
+    "test:merge": "vitest run --merge-reports --coverage",
+    "coverage:raise": "vitest run --coverage --coverage.thresholds.autoUpdate=true",
     "test:watch": "vitest"
   },
+  "dependencies": {
+    "@effect/platform-node": "^4.1.5",
+    "effect": "^4.1.5"
+  },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/node": "^22.20.5",
+    "@biomejs/biome": "^2.6.8",
+    "@effect/tsgo": "0.73.2",
+    "@effect/vitest": "4.1.5",
+    "@swc/core": "^1.16.22",
+    "@types/node": "^22",
+    "@vitest/coverage-v8": "^5.1.1",
+    "@vitest/eslint-plugin": "1.6.28",
+    "ajv": "^8.20.0",
     "dependency-cruiser": "^18.8.0",
-    "eslint": "^10.15.0",
-    "globals": "^17.14.0",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8",
+    "eslint": "10.15.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "knip": "^6.47.0",
+    "lefthook": "^2.2.2",
+    "oxlint": "1.94.0",
+    "oxlint-tsgolint": "7.0.2007",
+    "tsdown": "0.23.7",
+    "typescript": "^7.0.2",
     "vitest": "^5.1.1"
   }
 }

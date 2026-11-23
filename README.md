@@ -8,7 +8,6 @@ Spec: #1
 
 ```
 pnpm install
-pnpm check   # typecheck + lint + boundary check + tests
+pnpm check
+node app/main.ts serve --port 3000 --db cookout.db
 ```
-
-See `CODING_STANDARDS.md` for how the code is laid out and written.

@@ -1,0 +1,1688 @@
+{
+  "$schema": "./node_modules/@effect/tsgo/oxlint-schema.json",
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "oxc",
+    "import",
+    "jsdoc",
+    "promise",
+    "node",
+    "react",
+    "react-perf",
+    "jsx-a11y",
+    "vitest",
+    "effecttsgo"
+  ],
+  "jsPlugins": [
+    "./lint/local.js",
+    {
+      "name": "react-hooks-js",
+      "specifier": "eslint-plugin-react-hooks"
+    },
+    {
+      "name": "vitest-js",
+      "specifier": "@vitest/eslint-plugin"
+    }
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "error",
+    "perf": "error",
+    "style": "error",
+    "restriction": "error",
+    "nursery": "error"
+  },
+  "options": {
+    "reportUnusedDisableDirectives": "error",
+    "typeAware": true
+  },
+  "ignorePatterns": [
+    "lint/canary/**",
+    "lint/fixers/**",
+    "lint/fixers-run/**",
+    "app/modules/sdk/lib/generated/**",
+    "coverage/**"
+  ],
+  "rules": {
+    "local/no-comments": "error",
+    "local/allowed-directives": [
+      "error",
+      {
+        "allowlist": "lint/allowed-directives.json"
+      }
+    ],
+    "local/branded-ids": "error",
+    "local/glossary-terms": [
+      "error",
+      {
+        "glossary": "GLOSSARY.md"
+      }
+    ],
+    "local/max-file-tokens": [
+      "error",
+      {
+        "max": 5000
+      }
+    ],
+    "local/no-unsafe-as": "error",
+    "local/no-overloads": "error",
+    "local/sort-imports": "error",
+    "sort-imports": "off",
+    "typescript/ban-ts-comment": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/no-unsafe-argument": "error",
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-call": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-return": "error",
+    "typescript/switch-exhaustiveness-check": "error",
+    "complexity": [
+      "error",
+      {
+        "max": 5
+      }
+    ],
+    "no-restricted-globals": [
+      "error",
+      {
+        "name": "fetch",
+        "message": "Use request() from app/modules/http/client.ts."
+      },
+      {
+        "name": "URLSearchParams",
+        "message": "Build URLs with request() from app/modules/http/client.ts."
+      },
+      {
+        "name": "Date",
+        "message": "Use Effect's Clock and DateTime on the backend."
+      },
+      {
+        "name": "setTimeout",
+        "message": "Use Effect's Clock and Schedule on the backend."
+      },
+      {
+        "name": "setInterval",
+        "message": "Use Effect's Clock and Schedule on the backend."
+      },
+      {
+        "name": "setImmediate",
+        "message": "Use Effect's Clock and Schedule on the backend."
+      },
+      {
+        "name": "console",
+        "message": "Print through Effect's Console in the cli module."
+      },
+      {
+        "name": "crypto",
+        "message": "Use the Secrets service from app/modules/secrets/server.ts."
+      },
+      {
+        "name": "localStorage",
+        "message": "Browser storage has no owner yet: ask Matt before adding one."
+      },
+      {
+        "name": "sessionStorage",
+        "message": "Browser storage has no owner yet: ask Matt before adding one."
+      }
+    ],
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "Math",
+        "property": "random",
+        "message": "Use the Secrets service from app/modules/secrets/server.ts."
+      },
+      {
+        "object": "process",
+        "property": "env",
+        "message": "Read configuration through app/modules/config/."
+      },
+      {
+        "object": "Effect",
+        "property": "runCallback",
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+      },
+      {
+        "object": "Effect",
+        "property": "runCallbackWith",
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+      },
+      {
+        "object": "Effect",
+        "property": "runFork",
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+      },
+      {
+        "object": "Effect",
+        "property": "runForkWith",
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+      },
+      {
+        "object": "Effect",
+        "property": "runPromise",
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+      },
+      {
+        "object": "Effect",
+        "property": "runPromiseExit",
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+      },
+      {
+        "object": "Effect",
+        "property": "runPromiseExitWith",
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+      },
+      {
+        "object": "Effect",
+        "property": "runPromiseWith",
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+      },
+      {
+        "object": "Effect",
+        "property": "runSync",
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+      },
+      {
+        "object": "Effect",
+        "property": "runSyncExit",
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+      },
+      {
+        "object": "Effect",
+        "property": "runSyncExitWith",
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+      },
+      {
+        "object": "Effect",
+        "property": "runSyncWith",
+        "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+      },
+      {
+        "object": "vi",
+        "property": "mock",
+        "message": "Substitute through a seam with a Layer from app/modules/testing/."
+      },
+      {
+        "object": "vi",
+        "property": "doMock",
+        "message": "Substitute through a seam with a Layer from app/modules/testing/."
+      },
+      {
+        "object": "Schema",
+        "property": "decode",
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+      },
+      {
+        "object": "Schema",
+        "property": "decodeEffect",
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+      },
+      {
+        "object": "Schema",
+        "property": "decodeExit",
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+      },
+      {
+        "object": "Schema",
+        "property": "decodeOption",
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+      },
+      {
+        "object": "Schema",
+        "property": "decodePromise",
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+      },
+      {
+        "object": "Schema",
+        "property": "decodeResult",
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+      },
+      {
+        "object": "Schema",
+        "property": "decodeSync",
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+      },
+      {
+        "object": "Schema",
+        "property": "decodeUnknownEffect",
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+      },
+      {
+        "object": "Schema",
+        "property": "decodeUnknownExit",
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+      },
+      {
+        "object": "Schema",
+        "property": "decodeUnknownOption",
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+      },
+      {
+        "object": "Schema",
+        "property": "decodeUnknownPromise",
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+      },
+      {
+        "object": "Schema",
+        "property": "decodeUnknownResult",
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+      },
+      {
+        "object": "Schema",
+        "property": "decodeUnknownSync",
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "node:sqlite",
+            "message": "Only the storage SQLite adapter opens SQLite: use the Storage service from app/modules/storage/server.ts."
+          },
+          {
+            "name": "node:crypto",
+            "message": "Use the Secrets service from app/modules/secrets/server.ts."
+          },
+          {
+            "name": "crypto",
+            "message": "Use the Secrets service from app/modules/secrets/server.ts."
+          },
+          {
+            "name": "node:fs",
+            "message": "Use Effect's FileSystem; the cli module owns file writes."
+          },
+          {
+            "name": "node:fs/promises",
+            "message": "Use Effect's FileSystem; the cli module owns file writes."
+          },
+          {
+            "name": "fs",
+            "message": "Use Effect's FileSystem; the cli module owns file writes."
+          },
+          {
+            "name": "fs/promises",
+            "message": "Use Effect's FileSystem; the cli module owns file writes."
+          },
+          {
+            "name": "node:http",
+            "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+          },
+          {
+            "name": "node:https",
+            "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+          },
+          {
+            "name": "http",
+            "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+          },
+          {
+            "name": "https",
+            "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+          },
+          {
+            "name": "node:child_process",
+            "message": "Run processes with Effect's ChildProcess (effect/process)."
+          },
+          {
+            "name": "child_process",
+            "message": "Run processes with Effect's ChildProcess (effect/process)."
+          },
+          {
+            "name": "zod",
+            "message": "Validate with Effect Schema, at the edge only."
+          }
+        ]
+      }
+    ],
+    "import/no-named-export": "off",
+    "import/prefer-default-export": "off",
+    "import/group-exports": "off",
+    "import/no-relative-parent-imports": "off",
+    "vitest/no-importing-vitest-globals": "off",
+    "react/react-in-jsx-scope": "off",
+    "unicorn/throw-new-error": "off",
+    "jsdoc/require-param-type": "off",
+    "jsdoc/require-property-type": "off",
+    "jsdoc/require-returns-type": "off",
+    "no-undef": "off",
+    "no-redeclare": "off",
+    "oxc/no-async-await": "off",
+    "oxc/no-rest-spread-properties": "off",
+    "vitest/prefer-to-be-falsy": "off",
+    "vitest/prefer-to-be-truthy": "off",
+    "unicorn/no-null": "off",
+    "func-style": ["error", "declaration"],
+    "one-var": ["error", "never"],
+    "no-duplicate-imports": [
+      "error",
+      {
+        "allowSeparateTypeImports": true
+      }
+    ],
+    "new-cap": [
+      "error",
+      {
+        "properties": false
+      }
+    ],
+    "react/jsx-filename-extension": [
+      "error",
+      {
+        "extensions": [".tsx"]
+      }
+    ],
+    "vitest/require-hook": [
+      "error",
+      {
+        "allowedFunctionCalls": ["ruleTester.run"]
+      }
+    ],
+    "vitest/no-standalone-expect": [
+      "error",
+      {
+        "additionalTestBlockFunctions": ["it.effect", "it.effect.each", "it.live", "it.prop"]
+      }
+    ],
+    "typescript/prefer-readonly-parameter-types": [
+      "error",
+      {
+        "allow": [
+          {
+            "from": "package",
+            "name": ["Methods", "MethodsNonLive"],
+            "package": "@effect/vitest"
+          },
+          {
+            "from": "package",
+            "name": [
+              "Constraint",
+              "DateTime",
+              "Effect",
+              "Exit",
+              "HttpClientRequest",
+              "HttpClientResponse",
+              "Layer",
+              "Option",
+              "Stream",
+              "Utc",
+              "Zoned"
+            ],
+            "package": "effect"
+          }
+        ],
+        "treatMethodsAsReadonly": true
+      }
+    ],
+    "react-hooks-js/config": "error",
+    "react-hooks-js/fbt": "error",
+    "react-hooks-js/gating": "error",
+    "react-hooks-js/memoized-effect-dependencies": "error",
+    "vitest-js/padding-around-all": "error",
+    "vitest-js/padding-around-expect-groups": "error",
+    "vitest-js/prefer-vi-mocked": "error",
+    "vitest/no-hooks": [
+      "error",
+      {
+        "allow": []
+      }
+    ],
+    "vitest/require-top-level-describe": "off",
+    "vitest/max-nested-describe": [
+      "error",
+      {
+        "max": 0
+      }
+    ],
+    "vitest/consistent-test-it": [
+      "error",
+      {
+        "fn": "it",
+        "withinDescribe": "it"
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["app/web.tsx", "app/modules/**/*.ts", "app/modules/**/*.tsx"],
+      "excludeFiles": ["app/modules/*/server.ts", "app/modules/*/lib/server/**", "app/modules/*/tests/server/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "node:sqlite",
+                "message": "Only the storage SQLite adapter opens SQLite: use the Storage service from app/modules/storage/server.ts."
+              },
+              {
+                "name": "node:crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "node:fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:http",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "node:https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "http",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "node:child_process",
+                "message": "Run processes with Effect's ChildProcess (effect/process)."
+              },
+              {
+                "name": "child_process",
+                "message": "Run processes with Effect's ChildProcess (effect/process)."
+              },
+              {
+                "name": "zod",
+                "message": "Validate with Effect Schema, at the edge only."
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["effect", "effect/*", "@effect/*"],
+                "message": "Effect is backend only: keep it in server.ts, lib/server/ and tests/server/."
+              },
+              {
+                "group": ["**/testing/server.ts"],
+                "importNames": ["runCookoutBinary"],
+                "message": "Tests run cookout in process: use runCookout or startServe. Only app/modules/cli/tests/server/cli.test.ts and app/modules/dev/tests/server/dev.test.ts spawn a program."
+              }
+            ]
+          }
+        ],
+        "effecttsgo/async-function": "off",
+        "effecttsgo/crypto-random-uuid": "off",
+        "effecttsgo/extends-native-error": "off",
+        "effecttsgo/global-console": "off",
+        "effecttsgo/global-date": "off",
+        "effecttsgo/global-fetch": "off",
+        "effecttsgo/global-json": "off",
+        "effecttsgo/global-random": "off",
+        "effecttsgo/global-timers": "off",
+        "effecttsgo/new-promise": "off",
+        "effecttsgo/node-builtin-import": "off",
+        "effecttsgo/prefer-effect-array": "off",
+        "effecttsgo/prefer-effect-record": "off",
+        "effecttsgo/prefer-effect-string": "off",
+        "effecttsgo/process-env": "off"
+      }
+    },
+    {
+      "files": ["app/web.tsx", "app/modules/**/*.tsx"],
+      "excludeFiles": ["app/modules/design-system/**", "app/modules/*/tests/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "node:sqlite",
+                "message": "Only the storage SQLite adapter opens SQLite: use the Storage service from app/modules/storage/server.ts."
+              },
+              {
+                "name": "node:crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "node:fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:http",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "node:https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "http",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "node:child_process",
+                "message": "Run processes with Effect's ChildProcess (effect/process)."
+              },
+              {
+                "name": "child_process",
+                "message": "Run processes with Effect's ChildProcess (effect/process)."
+              },
+              {
+                "name": "zod",
+                "message": "Validate with Effect Schema, at the edge only."
+              },
+              {
+                "name": "react",
+                "importNames": ["useState", "useReducer", "useEffect"],
+                "message": "State lives in an external store. Subscribe with useSyncExternalStore."
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["effect", "effect/*", "@effect/*"],
+                "message": "Effect is backend only: keep it in server.ts, lib/server/ and tests/server/."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["app/modules/*/tests/server/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["effect/process", "effect/process/*"],
+                "message": "Tests run cookout in process: use runCookout or startServe from app/modules/testing/server.ts."
+              },
+              {
+                "group": ["**/testing/server.ts"],
+                "importNames": ["runCookoutBinary", "interruptDevBinary"],
+                "message": "Tests run cookout in process: use runCookout or startServe. Only app/modules/cli/tests/server/cli.test.ts and app/modules/dev/tests/server/dev.test.ts spawn a program."
+              }
+            ],
+            "paths": [
+              {
+                "name": "node:sqlite",
+                "message": "Only the storage SQLite adapter opens SQLite: use the Storage service from app/modules/storage/server.ts."
+              },
+              {
+                "name": "node:crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "node:fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:http",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "node:https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "http",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "node:child_process",
+                "message": "Tests run cookout in process: use runCookout or startServe from app/modules/testing/server.ts."
+              },
+              {
+                "name": "child_process",
+                "message": "Tests run cookout in process: use runCookout or startServe from app/modules/testing/server.ts."
+              },
+              {
+                "name": "zod",
+                "message": "Validate with Effect Schema, at the edge only."
+              },
+              {
+                "name": "vitest",
+                "message": "Import it and expect from @effect/vitest in tests/server/."
+              }
+            ]
+          }
+        ],
+        "effecttsgo/strict-effect-provide": "off"
+      }
+    },
+    {
+      "files": ["app/modules/cli/tests/server/cli.test.ts", "app/modules/dev/tests/server/dev.test.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["effect/process", "effect/process/*"],
+                "message": "Run the binary with runCookoutBinary from app/modules/testing/server.ts."
+              }
+            ],
+            "paths": [
+              {
+                "name": "node:sqlite",
+                "message": "Only the storage SQLite adapter opens SQLite: use the Storage service from app/modules/storage/server.ts."
+              },
+              {
+                "name": "node:crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "node:fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:http",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "node:https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "http",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "node:child_process",
+                "message": "Run the binary with runCookoutBinary from app/modules/testing/server.ts."
+              },
+              {
+                "name": "child_process",
+                "message": "Run the binary with runCookoutBinary from app/modules/testing/server.ts."
+              },
+              {
+                "name": "zod",
+                "message": "Validate with Effect Schema, at the edge only."
+              },
+              {
+                "name": "vitest",
+                "message": "Import it and expect from @effect/vitest in tests/server/."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "app/main.ts",
+        "app/dev.ts",
+        "app/modules/*/server.ts",
+        "app/modules/*/lib/server/**",
+        "app/modules/*/tests/server/**"
+      ],
+      "rules": {
+        "typescript/promise-function-async": ["error", { "checkArrowFunctions": false }],
+        "unicorn/no-array-method-this-argument": "off"
+      }
+    },
+    {
+      "files": [
+        "app/modules/cli/server.ts",
+        "app/modules/cli/lib/server/**",
+        "app/modules/storage/server.ts",
+        "app/modules/storage/lib/server/**",
+        "app/modules/testing/server.ts",
+        "app/modules/testing/lib/server/**",
+        "app/modules/dev/server.ts",
+        "app/modules/dev/lib/server/**"
+      ],
+      "rules": {
+        "effecttsgo/api-stability-leak": "off"
+      }
+    },
+    {
+      "files": ["app/modules/*/server.ts", "app/modules/*/lib/server/**"],
+      "excludeFiles": ["app/modules/*/lib/server/adapters/**"],
+      "rules": {
+        "local/effect-errors": "error"
+      }
+    },
+    {
+      "files": ["app/main.ts", "app/dev.ts", "app/web.tsx", "app/modules/*/*.ts", "app/modules/*/*.tsx"],
+      "rules": {
+        "local/no-comments": [
+          "error",
+          {
+            "allowInterfaceJsDoc": true
+          }
+        ],
+        "local/no-pass-through": "error"
+      }
+    },
+    {
+      "files": ["app/main.ts", "app/dev.ts"],
+      "rules": {
+        "no-restricted-properties": [
+          "error",
+          {
+            "object": "Math",
+            "property": "random",
+            "message": "Use the Secrets service from app/modules/secrets/server.ts."
+          },
+          {
+            "object": "process",
+            "property": "env",
+            "message": "Read configuration through app/modules/config/."
+          },
+          {
+            "object": "vi",
+            "property": "mock",
+            "message": "Substitute through a seam with a Layer from app/modules/testing/."
+          },
+          {
+            "object": "vi",
+            "property": "doMock",
+            "message": "Substitute through a seam with a Layer from app/modules/testing/."
+          },
+          {
+            "object": "Schema",
+            "property": "decode",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeEffect",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeExit",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeOption",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodePromise",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeResult",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeSync",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeUnknownEffect",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeUnknownExit",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeUnknownOption",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeUnknownPromise",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeUnknownResult",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeUnknownSync",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          }
+        ],
+        "effecttsgo/strict-effect-provide": "off"
+      }
+    },
+    {
+      "files": ["app/modules/http/client.ts"],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "Date",
+            "message": "Use Effect's Clock and DateTime on the backend."
+          },
+          {
+            "name": "setTimeout",
+            "message": "Use Effect's Clock and Schedule on the backend."
+          },
+          {
+            "name": "setInterval",
+            "message": "Use Effect's Clock and Schedule on the backend."
+          },
+          {
+            "name": "setImmediate",
+            "message": "Use Effect's Clock and Schedule on the backend."
+          },
+          {
+            "name": "console",
+            "message": "Print through Effect's Console in the cli module."
+          },
+          {
+            "name": "crypto",
+            "message": "Use the Secrets service from app/modules/secrets/server.ts."
+          },
+          {
+            "name": "localStorage",
+            "message": "Browser storage has no owner yet: ask Matt before adding one."
+          },
+          {
+            "name": "sessionStorage",
+            "message": "Browser storage has no owner yet: ask Matt before adding one."
+          }
+        ]
+      }
+    },
+    {
+      "files": ["app/modules/http/server.ts", "app/modules/http/lib/server/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "node:sqlite",
+                "message": "Only the storage SQLite adapter opens SQLite: use the Storage service from app/modules/storage/server.ts."
+              },
+              {
+                "name": "node:crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "node:fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:child_process",
+                "message": "Run processes with Effect's ChildProcess (effect/process)."
+              },
+              {
+                "name": "child_process",
+                "message": "Run processes with Effect's ChildProcess (effect/process)."
+              },
+              {
+                "name": "zod",
+                "message": "Validate with Effect Schema, at the edge only."
+              }
+            ]
+          }
+        ],
+        "no-restricted-properties": [
+          "error",
+          {
+            "object": "Math",
+            "property": "random",
+            "message": "Use the Secrets service from app/modules/secrets/server.ts."
+          },
+          {
+            "object": "process",
+            "property": "env",
+            "message": "Read configuration through app/modules/config/."
+          },
+          {
+            "object": "Effect",
+            "property": "runCallback",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runCallbackWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runFork",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runForkWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runPromise",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runPromiseExit",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runPromiseExitWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runPromiseWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runSync",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runSyncExit",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runSyncExitWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runSyncWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "vi",
+            "property": "mock",
+            "message": "Substitute through a seam with a Layer from app/modules/testing/."
+          },
+          {
+            "object": "vi",
+            "property": "doMock",
+            "message": "Substitute through a seam with a Layer from app/modules/testing/."
+          }
+        ],
+        "effecttsgo/node-builtin-import": "off",
+        "import/no-nodejs-modules": "off"
+      }
+    },
+    {
+      "files": [
+        "app/modules/*/lib/server/routes.ts",
+        "app/modules/*/lib/server/routes/**",
+        "app/modules/storage/lib/server/**",
+        "app/modules/cli/lib/server/lease-state.ts",
+        "app/modules/testing/lib/server/cli.ts"
+      ],
+      "rules": {
+        "no-restricted-properties": [
+          "error",
+          {
+            "object": "Math",
+            "property": "random",
+            "message": "Use the Secrets service from app/modules/secrets/server.ts."
+          },
+          {
+            "object": "process",
+            "property": "env",
+            "message": "Read configuration through app/modules/config/."
+          },
+          {
+            "object": "Effect",
+            "property": "runCallback",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runCallbackWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runFork",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runForkWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runPromise",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runPromiseExit",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runPromiseExitWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runPromiseWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runSync",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runSyncExit",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runSyncExitWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runSyncWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "vi",
+            "property": "mock",
+            "message": "Substitute through a seam with a Layer from app/modules/testing/."
+          },
+          {
+            "object": "vi",
+            "property": "doMock",
+            "message": "Substitute through a seam with a Layer from app/modules/testing/."
+          }
+        ]
+      }
+    },
+    {
+      "files": ["app/modules/storage/lib/server/adapters/sqlite.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "node:crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "node:fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:http",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "node:https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "http",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "node:child_process",
+                "message": "Run processes with Effect's ChildProcess (effect/process)."
+              },
+              {
+                "name": "child_process",
+                "message": "Run processes with Effect's ChildProcess (effect/process)."
+              },
+              {
+                "name": "zod",
+                "message": "Validate with Effect Schema, at the edge only."
+              }
+            ]
+          }
+        ],
+        "effecttsgo/node-builtin-import": "off",
+        "import/no-nodejs-modules": "off"
+      }
+    },
+    {
+      "files": ["app/modules/secrets/lib/server/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "node:sqlite",
+                "message": "Only the storage SQLite adapter opens SQLite: use the Storage service from app/modules/storage/server.ts."
+              },
+              {
+                "name": "node:fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "fs/promises",
+                "message": "Use Effect's FileSystem; the cli module owns file writes."
+              },
+              {
+                "name": "node:http",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "node:https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "http",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "node:child_process",
+                "message": "Run processes with Effect's ChildProcess (effect/process)."
+              },
+              {
+                "name": "child_process",
+                "message": "Run processes with Effect's ChildProcess (effect/process)."
+              },
+              {
+                "name": "zod",
+                "message": "Validate with Effect Schema, at the edge only."
+              }
+            ]
+          }
+        ],
+        "no-restricted-properties": [
+          "error",
+          {
+            "object": "process",
+            "property": "env",
+            "message": "Read configuration through app/modules/config/."
+          },
+          {
+            "object": "Effect",
+            "property": "runCallback",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runCallbackWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runFork",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runForkWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runPromise",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runPromiseExit",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runPromiseExitWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runPromiseWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runSync",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runSyncExit",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runSyncExitWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runSyncWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "vi",
+            "property": "mock",
+            "message": "Substitute through a seam with a Layer from app/modules/testing/."
+          },
+          {
+            "object": "vi",
+            "property": "doMock",
+            "message": "Substitute through a seam with a Layer from app/modules/testing/."
+          },
+          {
+            "object": "Schema",
+            "property": "decode",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeEffect",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeExit",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeOption",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodePromise",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeResult",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeSync",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeUnknownEffect",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeUnknownExit",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeUnknownOption",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeUnknownPromise",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeUnknownResult",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "Schema",
+            "property": "decodeUnknownSync",
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          }
+        ],
+        "effecttsgo/node-builtin-import": "off",
+        "import/no-nodejs-modules": "off"
+      }
+    },
+    {
+      "files": ["app/modules/config/**"],
+      "excludeFiles": ["app/modules/*/tests/**"],
+      "rules": {
+        "no-restricted-properties": [
+          "error",
+          {
+            "object": "Math",
+            "property": "random",
+            "message": "Use the Secrets service from app/modules/secrets/server.ts."
+          },
+          {
+            "object": "Effect",
+            "property": "runCallback",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runCallbackWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runFork",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runForkWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runPromise",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runPromiseExit",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runPromiseExitWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runPromiseWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runSync",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runSyncExit",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runSyncExitWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "Effect",
+            "property": "runSyncWith",
+            "message": "Run effects only in the program entries, app/main.ts and app/dev.ts; tests run them with @effect/vitest's it.effect."
+          },
+          {
+            "object": "vi",
+            "property": "mock",
+            "message": "Substitute through a seam with a Layer from app/modules/testing/."
+          },
+          {
+            "object": "vi",
+            "property": "doMock",
+            "message": "Substitute through a seam with a Layer from app/modules/testing/."
+          }
+        ],
+        "effecttsgo/process-env": "off",
+        "node/no-process-env": "off"
+      }
+    },
+    {
+      "files": ["scripts/**", "lint/rules/**"],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "fetch",
+            "message": "Use request() from app/modules/http/client.ts."
+          },
+          {
+            "name": "URLSearchParams",
+            "message": "Build URLs with request() from app/modules/http/client.ts."
+          },
+          {
+            "name": "Date",
+            "message": "Use Effect's Clock and DateTime on the backend."
+          },
+          {
+            "name": "setTimeout",
+            "message": "Use Effect's Clock and Schedule on the backend."
+          },
+          {
+            "name": "setInterval",
+            "message": "Use Effect's Clock and Schedule on the backend."
+          },
+          {
+            "name": "setImmediate",
+            "message": "Use Effect's Clock and Schedule on the backend."
+          },
+          {
+            "name": "crypto",
+            "message": "Use the Secrets service from app/modules/secrets/server.ts."
+          },
+          {
+            "name": "localStorage",
+            "message": "Browser storage has no owner yet: ask Matt before adding one."
+          },
+          {
+            "name": "sessionStorage",
+            "message": "Browser storage has no owner yet: ask Matt before adding one."
+          }
+        ],
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "node:sqlite",
+                "message": "Only the storage SQLite adapter opens SQLite: use the Storage service from app/modules/storage/server.ts."
+              },
+              {
+                "name": "node:crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "crypto",
+                "message": "Use the Secrets service from app/modules/secrets/server.ts."
+              },
+              {
+                "name": "node:http",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "node:https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "http",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "https",
+                "message": "Use the http module: app/modules/http/server.ts serves, app/modules/http/client.ts fetches."
+              },
+              {
+                "name": "zod",
+                "message": "Validate with Effect Schema, at the edge only."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["lint/**/*.js", "*.cjs"],
+      "rules": {
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-return": "off"
+      }
+    },
+    {
+      "files": ["scripts/**", "lint/**", "*.cjs", "vitest.config.ts", "tsdown.config.ts"],
+      "rules": {
+        "effecttsgo/async-function": "off",
+        "effecttsgo/crypto-random-uuid": "off",
+        "effecttsgo/extends-native-error": "off",
+        "effecttsgo/global-console": "off",
+        "effecttsgo/global-date": "off",
+        "effecttsgo/global-fetch": "off",
+        "effecttsgo/global-json": "off",
+        "effecttsgo/global-random": "off",
+        "effecttsgo/global-timers": "off",
+        "effecttsgo/new-promise": "off",
+        "effecttsgo/node-builtin-import": "off",
+        "effecttsgo/prefer-effect-array": "off",
+        "effecttsgo/prefer-effect-record": "off",
+        "effecttsgo/prefer-effect-string": "off",
+        "effecttsgo/process-env": "off",
+        "import/no-nodejs-modules": "off",
+        "no-console": "off",
+        "node/no-sync": "off",
+        "node/no-top-level-await": "off"
+      }
+    },
+    {
+      "files": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.cjs"],
+      "excludeFiles": ["**/*.test.ts", "**/*.test.tsx", "**/*.test.js"],
+      "rules": {
+        "vitest/require-hook": "off"
+      }
+    },
+    {
+      "files": ["vitest.config.ts", "tsdown.config.ts"],
+      "rules": {
+        "import/no-default-export": "off"
+      }
+    }
+  ]
+}

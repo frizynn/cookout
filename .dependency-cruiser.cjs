@@ -1,130 +1,137 @@
-// @ts-check
-// Boundary rules for the cookout workspace, run by `pnpm lint:boundaries`
-// (part of `pnpm check`). tests/boundaries.test.ts proves each rule fires.
-//
-// Layout: packages/<name>/src/index.ts is a package's ONE entry point. Every
-// other file in a package is private. Other packages reach it only by its
-// package name (`@ai-hero/cookout-<name>`), which resolves to that entry point.
-// Tests live in packages/<name>/tests/ and use the entry point too.
-//
-// Why dependency-cruiser and not ESLint `no-restricted-imports`: these rules
-// are about where a file IS and what an import RESOLVES TO (a file in another
-// package, a cycle). ESLint only sees the import string, so it cannot tell a
-// relative path into another package's internals from a local one, and it
-// cannot find cycles.
+const R = "app/modules";
+const INTERNALS = `^${R}/[^/]+/[^/]+/`;
+const TESTS = `^${R}/[^/]+/tests/`;
+const BACKEND = `^${R}/[^/]+/(server\\.ts$|lib/server/)`;
+const ENTRIES = String.raw`^app/(main\.ts|dev\.ts|web\.tsx)$`;
+const DEV_ENTRY = String.raw`^app/dev\.ts$`;
+const WEB = `^app/web\\.tsx$|^${R}/(design-system|session|board|unread|composer|live|routes|format|views)/`;
+const PUBLISHED_ENTRIES = ["app/main.ts", `${R}/sdk/index.ts`];
+const PUBLISHED_SDK = `${R}/sdk/index.ts`;
+const TESTED_INTERFACES = ["sdk", "cli", "storage", "webhook-fake", "dev"];
+const exactly = (file) => `^${file.replaceAll(".", String.raw`\.`)}$`;
 
-const PKG = "^packages/([^/]+)/";
-const ENTRY = "^packages/[^/]+/src/index\\.ts$";
-const TEST_FILE = "^packages/[^/]+/tests/";
-
-/** Any SQLite driver, by module name (resolved or not) or node_modules path. */
-const SQLITE_DRIVERS = [
-  "^(node:)?sqlite$",
-  "^better-sqlite3$",
-  "^sqlite3$",
-  "^sqlite$",
-  "^@libsql/",
-  "^libsql$",
-  "^bun:sqlite$",
-  "^sql\\.js$",
-  "(^|/)node_modules/(better-sqlite3|sqlite3|sqlite|libsql|@libsql/[^/]+|sql\\.js)/",
-].join("|");
-
-/** @type {import('dependency-cruiser').IConfiguration} */
 module.exports = {
   forbidden: [
     {
-      name: "sqlite-only-in-storage-sqlite",
-      comment:
-        "Only packages/storage-sqlite may import a SQLite driver. Everything else talks to storage through the adapter interface in protocol.",
+      from: { path: PUBLISHED_ENTRIES.map(exactly) },
+      name: "published-entries-ship-no-test-code",
       severity: "error",
-      from: { pathNot: "^packages/storage-sqlite/" },
-      to: { path: SQLITE_DRIVERS },
+      to: { path: `^${R}/(testing|webhook-fake|dev)/`, reachable: true },
     },
     {
-      name: "no-storage-outside-start-up",
-      comment:
-        "server, client and web never import a concrete storage adapter; they receive one. Exceptions: test files, the server's start-up entry point (packages/server/src/start.ts) and the published cookout package (`cookout serve`).",
+      from: { path: exactly(PUBLISHED_SDK) },
+      name: "published-sdk-reaches-no-effect",
       severity: "error",
-      from: {
-        path: "^packages/(server|client|web)/",
-        pathNot: [TEST_FILE, "^packages/server/src/start\\.ts$"],
-      },
-      // The second pattern catches the import even before the package is a
-      // dependency (it then does not resolve to a path).
-      to: {
-        path: ["^packages/storage-(sqlite|memory)/", "^@ai-hero/cookout-storage-(sqlite|memory)(/|$)"],
-      },
+      to: { path: "(^|/)node_modules/(effect|@effect/[^/]+)/", reachable: true },
     },
     {
-      name: "no-server-in-client-or-web",
-      comment:
-        "client and web talk to the server over HTTP only. They never import it, not even in tests.",
+      from: { pathNot: `^${R}/` },
+      name: "entry-points-only-from-app",
       severity: "error",
-      from: { path: "^packages/(client|web)/" },
-      to: { path: ["^packages/server/", "^@ai-hero/cookout-server(/|$)"] },
+      to: { path: INTERNALS },
     },
     {
-      name: "only-through-entry-points",
-      comment:
-        "A package reaches another package only through its entry point (src/index.ts), never its internal files.",
+      from: { path: `^${R}/([^/]+)/`, pathNot: TESTS },
+      name: "entry-points-only-across-modules",
       severity: "error",
-      from: { path: PKG },
-      to: {
-        // Also a deep import by package name, e.g. `@ai-hero/cookout-protocol/src/x.ts`.
-        path: ["^packages/", "^@ai-hero/cookout[a-z-]*/."],
-        pathNot: ["^packages/$1/", ENTRY],
-      },
+      to: { path: INTERNALS, pathNot: `^${R}/$1/` },
     },
     {
-      name: "import-packages-by-name",
-      comment:
-        "Import another package by its name (`@ai-hero/cookout-<name>`), not by a relative path to its entry file, so package.json dependencies and tsconfig references stay true.",
-      severity: "error",
-      from: { path: PKG },
-      to: {
-        path: ENTRY,
-        pathNot: "^packages/$1/",
-        dependencyTypes: ["local"],
-      },
-    },
-    {
+      from: { path: `^${R}/([^/]+)/tests/` },
       name: "tests-through-entry-points",
-      comment:
-        "A package's tests use it the way a caller does: through its entry point (and their own tests/ helpers), never its internal files.",
       severity: "error",
-      from: { path: "^packages/([^/]+)/tests/" },
-      to: {
-        path: "^packages/$1/",
-        pathNot: ["^packages/$1/tests/", ENTRY],
+      to: { path: INTERNALS, pathNot: `^${R}/$1/tests/` },
+    },
+    {
+      from: {
+        path: String.raw`\.test\.tsx?$`,
+        pathNot: `^${R}/(${TESTED_INTERFACES.join("|")})/tests/`,
       },
+      name: "tests-only-at-tested-interfaces",
+      severity: "error",
+      to: {},
     },
     {
+      from: { pathNot: TESTS },
       name: "tests-folder-is-private",
-      comment: "Only tests import from a tests/ folder.",
       severity: "error",
-      from: { pathNot: TEST_FILE },
-      to: { path: TEST_FILE },
+      to: { path: TESTS },
     },
     {
-      name: "no-cycles",
-      comment: "No dependency cycles, inside a package or between packages.",
+      from: { pathNot: BACKEND },
+      name: "server-code-only-from-server",
       severity: "error",
+      to: { path: `^${R}/[^/]+/lib/server/` },
+    },
+    {
+      from: { pathNot: [TESTS, `^${R}/testing/`, `^${R}/dev/`, DEV_ENTRY] },
+      name: "testing-only-from-tests",
+      severity: "error",
+      to: { path: `^${R}/testing/` },
+    },
+    {
+      from: { pathNot: [TESTS, `^${R}/testing/`, `^${R}/webhook-fake/`, `^${R}/dev/`] },
+      name: "webhook-fake-only-from-tests-and-dev",
+      severity: "error",
+      to: { path: `^${R}/webhook-fake/` },
+    },
+    {
+      from: { pathNot: [TESTS, `^${R}/testing/`, `^${R}/dev/`, DEV_ENTRY] },
+      name: "dev-only-from-the-dev-entry",
+      severity: "error",
+      to: { path: `^${R}/dev/` },
+    },
+    {
+      from: { path: "^app/", pathNot: [BACKEND, ENTRIES, TESTS] },
+      name: "no-node-builtins-in-client",
+      severity: "error",
+      to: { dependencyTypes: ["core"] },
+    },
+    {
+      from: { path: "^app/", pathNot: [BACKEND, String.raw`^app/main\.ts$`, DEV_ENTRY, TESTS] },
+      name: "client-never-imports-server",
+      severity: "error",
+      to: { path: `^${R}/[^/]+/server\\.ts$` },
+    },
+    {
+      from: { path: `^${R}/sdk/`, pathNot: `^${R}/sdk/tests/` },
+      name: "sdk-imports-only-client-entry-points",
+      severity: "error",
+      to: { path: `^${R}/(?!sdk/)[^/]+/`, pathNot: `^${R}/[^/]+/(index|client)\\.ts$` },
+    },
+    {
+      from: { path: WEB },
+      name: "web-never-imports-backend-modules",
+      severity: "error",
+      to: { path: `^${R}/(cli|storage|secrets)/|^${R}/config/server\\.ts$` },
+    },
+    {
+      from: { pathNot: `^${R}/storage/lib/server/adapters/sqlite\\.ts$` },
+      name: "sqlite-only-in-storage-adapter",
+      severity: "error",
+      to: { path: "^(node:)?sqlite$" },
+    },
+    {
       from: {},
+      name: "no-undeclared-dependencies",
+      severity: "error",
+      to: { dependencyTypes: ["npm-no-pkg", "npm-unknown", "unknown", "undetermined"] },
+    },
+    {
+      from: {},
+      name: "no-circular",
+      severity: "error",
       to: { circular: true },
     },
   ],
   options: {
     doNotFollow: { path: "node_modules" },
-    exclude: { path: "(^|/)(dist|node_modules)/" },
-    tsConfig: { fileName: "tsconfig.base.json" },
-    // Count imports as TypeScript writes them, so a type-only import of an
-    // internal file is caught too.
-    tsPreCompilationDeps: true,
     enhancedResolveOptions: {
-      exportsFields: ["exports"],
       conditionNames: ["import", "require", "node", "default", "types"],
-      extensions: [".ts", ".tsx", ".js", ".mjs", ".cjs", ".json"],
+      exportsFields: ["exports"],
     },
+    exclude: { path: String.raw`^app/modules/sdk/lib/generated/validators\.d\.ts$` },
+    parser: "swc",
+    tsConfig: { fileName: "tsconfig.json" },
   },
 };

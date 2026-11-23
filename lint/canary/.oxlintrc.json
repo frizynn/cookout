@@ -1,0 +1,10 @@
+{
+  "extends": ["../../.oxlintrc.json"],
+  "ignorePatterns": [],
+  "overrides": [
+    {
+      "files": ["app/modules/canary/lib/max-file-tokens.ts"],
+      "rules": { "local/max-file-tokens": ["error", { "max": 1 }] }
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+import { Console, Effect, Schema } from "effect";
+import { CliOutput } from "effect/cli";
+
+class CommandFailed extends Schema.TaggedError<CommandFailed>()("CommandFailed", {
+  code: Schema.String,
+}) {}
+
+const PRETTY = 2;
+const toLine = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown));
+const toPretty = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown, { space: PRETTY }));
+
+function printLine(line: Readonly<Record<string, unknown>>): Effect.Effect<void> {
+  return toLine(line).pipe(Effect.orDie, Effect.flatMap(Console.log));
+}
+
+function printError(code: string, message: string): Effect.Effect<void> {
+  return toLine({ error: { code, message } }).pipe(Effect.orDie, Effect.flatMap(Console.error));
+}
+
+function presentInvalid(event: CliOutput.Presenter.InvalidInvocation): Effect.Effect<void> {
+  return Effect.gen(function* presentUsage() {
+    const formatter = yield* CliOutput.Formatter;
+    const errors = formatter.formatErrors(event.errors);
+    const help = formatter.formatHelpDoc(event.helpDoc);
+    yield* printError("usage", `${errors}\n\n${help}`);
+  });
+}
+
+const jsonPresenter: CliOutput.Presenter = {
+  present: (event) => {
+    if (event._tag === "InvalidInvocation") {
+      return presentInvalid(event);
+    }
+    return CliOutput.defaultPresenter.present(event);
+  },
+};
+
+function withJsonPresenter<Value, Failure, Needs>(
+  effect: Effect.Effect<Value, Failure, Needs>,
+): Effect.Effect<Value, Failure, Needs> {
+  return Effect.provideService(effect, CliOutput.Presenter, jsonPresenter);
+}
+
+const usageFailed = Effect.fail(CommandFailed.make({ code: "usage" }));
+
+function printAnswer(answer: unknown): Effect.Effect<void> {
+  return toPretty(answer).pipe(Effect.orDie, Effect.flatMap(Console.log));
+}
+
+function refused(error: { readonly code: string }): Effect.Effect<never, CommandFailed> {
+  return toLine({ error }).pipe(
+    Effect.orDie,
+    Effect.flatMap(Console.error),
+    Effect.andThen(Effect.fail(CommandFailed.make({ code: error.code }))),
+  );
+}
+
+export { type CommandFailed, printAnswer, printLine, refused, usageFailed, withJsonPresenter };

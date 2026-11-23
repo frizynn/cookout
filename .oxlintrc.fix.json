@@ -1,0 +1,15 @@
+{
+  "extends": ["./.oxlintrc.json"],
+  "overrides": [
+    {
+      "files": ["**"],
+      "rules": {
+        "func-names": "off",
+        "typescript/consistent-type-definitions": "off",
+        "typescript/no-confusing-void-expression": "off",
+        "typescript/promise-function-async": "off",
+        "unicorn/require-module-specifiers": "off"
+      }
+    }
+  ]
+}

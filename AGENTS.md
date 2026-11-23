@@ -1,22 +1,13 @@
 # AGENTS.md
 
-The cookout: a self-hosted, Slack-style board for people and agents. Spec:
-mattpocock/cookout#1. pnpm workspace, packages in `packages/`.
+The cookout: a self-hosted, Slack-style board for people and agents. Spec: mattpocock/cookout#1.
 
-- Before you finish any change, run `pnpm check` (typecheck, lint, boundary
-  check, tests). It must exit 0, and CI runs the same command.
-- Read `CODING_STANDARDS.md` before writing code. It holds the package
-  layout, the boundary rules and why they exist.
-- Import another package only by its name (`@ai-hero/cookout-<name>`), which
-  resolves to its one entry point, `src/index.ts`.
-- Never loosen `tsconfig.base.json`, `eslint.config.js` or
-  `.dependency-cruiser.cjs` to get the check green. Fix the code, or change
-  the rule in its own commit and say why.
-- Check new domain terms with Matt before using them in names. Only Matt
-  approves a domain term. You may mark a term approved (in
-  `CODING_STANDARDS.md` or anywhere else) only by citing a dated decision in
-  the wiki (`~/repos/matt/personal-wiki/chief-of-staff/cookout/`). Without
-  one, the term stays proposed.
-- In a git worktree, create files with the Write tool (not `cat > … <<EOF`
-  in a shell) and run every command from the worktree root, not after a `cd`
-  elsewhere.
+- [GLOSSARY.md](GLOSSARY.md): the domain language. Names in code use its terms.
+- `pnpm check` runs every check, as CI does. It must exit 0 before you finish.
+- Run `pnpm fix` before reading any diagnostic. It applies every deterministic fix and prints only what is left to fix by hand.
+- [docs/coding-standards.md](docs/coding-standards.md): the judgement calls no check makes. Read it before writing code.
+- [docs/adr/](docs/adr/): why the code is shaped as it is.
+- `node_modules/effect/AGENTS.md` and `node_modules/effect/ai-docs/src/`: Effect's docs for the installed version. Read them before guessing an Effect v4 API.
+- [docs/verification.md](docs/verification.md): how to run and drive the cookout to prove a change works.
+- Only Matt approves a domain term. A term counts as approved only with a dated decision of Matt's cited next to it, in an ADR under `docs/adr/` or a comment on a mattpocock/cookout issue; without one it stays proposed.
+- In a git worktree, create files with the Write tool (not `cat > … <<EOF`), run every command from the worktree root, and add root dependencies with `pnpm add -w`.

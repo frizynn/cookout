@@ -1,0 +1,3 @@
+# Memory and SQLite share one adapter test suite
+
+Protocol tests run fast on an in-memory store while the cookout ships on SQLite, and two stores can quietly drift apart, so on 2026-11-22 Matt approved SQLite and in-memory adapters sharing one adapter test suite (mattpocock/cookout#1, answers 10 and 14 of the spec's open questions, and its story 71). The suite runs against both `Storage` Layers with the same test names and never branches on which Layer is under test; only behaviour one Layer alone has, such as SQLite keeping data across a reopen, gets tests of its own. The fast store is then trustworthy, and a future Postgres Layer proves it behaves the same by passing the same suite.
