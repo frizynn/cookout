@@ -12,6 +12,7 @@ import type {
   InboxHistoryQuery,
   InboxHistoryResponse,
   InboxResponse,
+  MarkUnreadResponse,
   ReadPositionsResponse,
   SubscriptionResponse,
 } from "./lib/inbox.ts";
@@ -89,15 +90,7 @@ export type {
 } from "../messages/index.ts";
 export type * from "../agent-sessions/index.ts";
 export type * from "./lib/inbox-types.ts";
-export type {
-  ChannelEvent,
-  ConnectedEvent,
-  CookoutEvent,
-  IdentityEvent,
-  InboxItemEvent,
-  MessageEvent,
-  ReadPositionEvent,
-} from "../events/index.ts";
+export type * from "../events/index.ts";
 export type { EventStream, WatchOptions } from "./lib/events.ts";
 export type { ServerSentEvent } from "../http/client.ts";
 export { CookoutError, type CookoutErrorCode, type Refusal, type UnknownErrorCode, refusalOf } from "./lib/errors.ts";
@@ -216,9 +209,17 @@ export type CookoutClient = ApprovalCalls & {
   readonly readPositions: () => Promise<ReadPositionsResponse>;
   /**
    * `POST /v1/ack`: marks the message and everything before it in its thread (for a reply) or channel (for a
-   * top-level message) as read. A read position never moves backwards. A missing message is 404 `message_not_found`.
+   * top-level message) as read. An ack never moves a read position backwards. A missing message is 404
+   * `message_not_found`.
    */
   readonly ack: (messageId: MessageId) => Promise<AckResponse>;
+  /**
+   * `POST /v1/read-positions/unread`: marks the message unread, with everything after it in its thread or channel, by
+   * moving the read position there back to just before it, and answers where it is now (`messageId` `null` where
+   * nothing there is read). It never marks anything read; a later ack moves the position forward again. A missing
+   * message is 404 `message_not_found`.
+   */
+  readonly markUnread: (messageId: MessageId) => Promise<MarkUnreadResponse>;
   /**
    * `POST /v1/inbox/ack-all`: marks every inbox item up to `upTo`, the newest the caller has seen, as read, in every
    * thread and channel at once, and answers the read positions it moved. An item after `upTo`, such as a message that
@@ -239,8 +240,8 @@ export type CookoutClient = ApprovalCalls & {
   /**
    * `GET /v1/events`: opens one Server-Sent Events stream, resolving once the server has accepted it. Iterate it for
    * each new inbox item (`inbox-item`) the moment another identity posts it (the caller's own posts never arrive), and
-   * each new read position (`read-position`) the moment any session of the caller acks, so several sessions stay in
-   * sync. With `allChannels`, it also sends every new message on every channel (`message`), as the web UI needs.
+   * each new read position (`read-position`) the moment any session of the caller acks, and each read position moved
+   * back (`read-position-moved-back`) the moment one marks a message unread, so several sessions stay in sync. With `allChannels`, it also sends every new message on every channel (`message`), as the web UI needs.
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
    * a newer server, is skipped. `close` drops the connection. Opened with an agent session token, the stream moves its
    * expiry on while open, and once the token is revoked (`leave`, or another session's `join --force`) the

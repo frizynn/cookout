@@ -7,7 +7,7 @@
  * for the caller. A stream that can't go on ends with one `refusal` event
  * instead.
  */
-import type { InboxItem, ReadPosition, SubscriptionResponse } from "../inbox/index.ts";
+import type { InboxItem, MovedBackReadPosition, ReadPosition, SubscriptionResponse } from "../inbox/index.ts";
 import type { Message, MessageId } from "../messages/index.ts";
 import type { Channel } from "../channels/index.ts";
 import type { Identity } from "../identities/index.ts";
@@ -22,6 +22,15 @@ export interface InboxItemEvent {
 export interface ReadPositionEvent {
   readonly type: "read-position";
   readonly readPosition: ReadPosition;
+}
+
+/**
+ * The caller's read position in a thread or channel moved back, sent the moment any session of the caller marks a
+ * message there unread: unlike `read-position`, it replaces the one before, though that was newer.
+ */
+export interface ReadPositionMovedBackEvent {
+  readonly type: "read-position-moved-back";
+  readonly readPosition: MovedBackReadPosition;
 }
 
 /** A new message on any channel, the caller's own included, sent only on the all-channels feed. */
@@ -70,6 +79,7 @@ export interface ConnectedEvent {
 export type CookoutEvent =
   | InboxItemEvent
   | ReadPositionEvent
+  | ReadPositionMovedBackEvent
   | MessageEvent
   | IdentityEvent
   | ChannelEvent

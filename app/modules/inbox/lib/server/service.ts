@@ -6,6 +6,8 @@ import type {
   InboxHistoryResponse,
   InboxItem,
   InboxResponse,
+  MarkUnreadResponse,
+  MovedBackReadPosition,
   ReadPosition,
   ReadPositionsResponse,
   SubscriptionResponse,
@@ -48,6 +50,11 @@ interface Acked {
   readonly readPosition: ReadPosition;
 }
 
+interface MovedBack {
+  readonly identity: IdentityName;
+  readonly readPosition: MovedBackReadPosition;
+}
+
 interface SubscriptionChanged {
   readonly identity: IdentityName;
   readonly subscription: SubscriptionResponse;
@@ -60,6 +67,7 @@ interface Hub<Value> {
 
 interface Hubs {
   readonly acked: Hub<Acked>;
+  readonly movedBack: Hub<MovedBack>;
   readonly subscriptions: Hub<SubscriptionChanged>;
 }
 
@@ -72,6 +80,8 @@ interface InboxService {
   readonly ackAll: (caller: Identity, upTo: MessageId) => Fails<AckAllResponse>;
   readonly readPositions: (caller: Identity) => Fails<ReadPositionsResponse>;
   readonly acked: Effect.Effect<PubSub.Subscription<Acked>, never, Scope.Scope>;
+  readonly markUnread: (caller: Identity, id: MessageId) => Fails<MarkUnreadResponse>;
+  readonly movedBack: Effect.Effect<PubSub.Subscription<MovedBack>, never, Scope.Scope>;
   readonly subscriptionChanged: Effect.Effect<PubSub.Subscription<SubscriptionChanged>, never, Scope.Scope>;
   readonly follow: (caller: Identity, asked: string) => Fails<FollowResponse>;
   readonly unfollow: (caller: Identity, asked: string) => Fails<FollowResponse>;
@@ -158,7 +168,7 @@ function inboxOf(storage: Storage["Service"], caller: Identity): Fails<InboxResp
   );
 }
 
-function inboxOn(storage: Storage["Service"], { acked: hub, subscriptions }: Hubs): InboxService {
+function inboxOn(storage: Storage["Service"], { acked: hub, movedBack, subscriptions }: Hubs): InboxService {
   return {
     ack: (caller, id) =>
       Effect.gen(function* ackMessage() {
@@ -186,6 +196,14 @@ function inboxOn(storage: Storage["Service"], { acked: hub, subscriptions }: Hub
       ),
     itemsAfter: (caller, id) =>
       Effect.flatMap(storage.listInboxAfter(caller.name, id), (stored) => withChannels(storage, stored)),
+    markUnread: (caller, id) =>
+      Effect.gen(function* markUnread() {
+        const moved = yield* storage.moveReadPositionBack(caller.name, id);
+        const readPosition = yield* orMessageNotFound<MovedBackReadPosition>(String(id))(moved);
+        yield* movedBack.publish({ identity: caller.name, readPosition });
+        return { readPosition };
+      }),
+    movedBack: movedBack.subscribe,
     readPositions: (caller) =>
       Effect.map(storage.listReadPositions(caller.name), (readPositions) => ({ readPositions })),
     subscribe: subscription(storage.subscribeChannel, true, subscriptions),
@@ -207,8 +225,9 @@ const inboxLayer: Layer.Layer<Inbox, never, Storage> = Layer.effect(
   Effect.gen(function* inboxOnStorage() {
     const storage = yield* Storage;
     const acked = yield* hubOf<Acked>();
+    const movedBack = yield* hubOf<MovedBack>();
     const subscriptions = yield* hubOf<SubscriptionChanged>();
-    return inboxOn(storage, { acked, subscriptions });
+    return inboxOn(storage, { acked, movedBack, subscriptions });
   }),
 );
 

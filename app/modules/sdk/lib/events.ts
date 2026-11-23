@@ -9,6 +9,7 @@ import {
   isInboxItemEvent,
   isMessageEvent,
   isReadPositionEvent,
+  isReadPositionMovedBackEvent,
   isSubscriptionEvent,
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
@@ -57,6 +58,7 @@ const validators: { readonly [Type in EventType]: (data: unknown) => data is Ext
   "inbox-item": isInboxItemEvent,
   message: isMessageEvent,
   "read-position": isReadPositionEvent,
+  "read-position-moved-back": isReadPositionMovedBackEvent,
   subscription: isSubscriptionEvent,
 };
 
