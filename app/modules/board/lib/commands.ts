@@ -47,4 +47,4 @@ function createCommands(client: CommandsClient): Commands {
   };
 }
 
-export { type Commands, type CommandsClient, type CommandsState, createCommands };
+export { type Commands, type CommandsClient, createCommands };

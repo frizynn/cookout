@@ -1,12 +1,10 @@
-import { Alert, CardBody, Muted } from "../../design-system/index.tsx";
 import type { ChannelMessages, Commands } from "../../board/index.ts";
+import { Alert } from "../../design-system/index.tsx";
 import { CallForm } from "./call-form.tsx";
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
 
 const NONE = 0;
-
-const TEXT = { none: "No commands are registered." } as const;
 
 interface CommandFormProps {
   readonly commands: Commands;
@@ -19,15 +17,8 @@ export function CommandForm(props: CommandFormProps): ReactNode {
   if (listed.status === "failed") {
     return <Alert>{`Couldn't list the commands (${listed.code}): ${listed.message}`}</Alert>;
   }
-  if (listed.status === "loading") {
+  if (listed.status === "loading" || listed.commands.length === NONE) {
     return null;
-  }
-  if (listed.commands.length === NONE) {
-    return (
-      <CardBody>
-        <Muted>{TEXT.none}</Muted>
-      </CardBody>
-    );
   }
   return <CallForm commands={listed.commands} messages={props.messages} />;
 }

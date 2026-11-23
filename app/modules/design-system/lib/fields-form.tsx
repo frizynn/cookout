@@ -2,12 +2,15 @@ import type { FieldsFormParts } from "./parts.ts";
 import type { ReactNode } from "react";
 import { useCallback } from "react";
 
+function isText(value: unknown): value is string {
+  return typeof value === "string";
+}
+
 function textOf(values: Readonly<FormData>, field: string): string {
-  const value = values.get(field);
-  if (typeof value === "string") {
-    return value;
-  }
-  return "";
+  return values
+    .getAll(field)
+    .filter((value) => isText(value))
+    .join("");
 }
 
 export function FieldsForm(parts: FieldsFormParts): ReactNode {

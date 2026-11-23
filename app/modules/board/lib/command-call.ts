@@ -34,23 +34,29 @@ function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isJsonValue(value: unknown): value is JsonValue {
-  if (value === null || ["boolean", "number", "string"].includes(typeof value)) {
-    return true;
+function primitiveOf(value: unknown): string | number | boolean | null {
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return value;
   }
+  return null;
+}
+
+function toJson(value: unknown): JsonValue {
   if (Array.isArray(value)) {
-    return value.every((item: unknown) => isJsonValue(item));
+    return value.map((item: unknown) => toJson(item));
   }
-  return isRecord(value) && Object.values(value).every((item) => isJsonValue(item));
+  if (isRecord(value)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]: readonly [string, unknown]) => [key, toJson(item)]),
+    );
+  }
+  return primitiveOf(value);
 }
 
 function parseData(text: string): ParsedData {
   try {
     const json: unknown = JSON.parse(text);
-    if (isJsonValue(json)) {
-      return { data: json, status: "json" };
-    }
-    return NOT_JSON;
+    return { data: toJson(json), status: "json" };
   } catch {
     return NOT_JSON;
   }
@@ -85,4 +91,4 @@ function callFailure(refused: Refused): CallFailure {
   return { code, command: refused.command, message, problems: problemsIn(refused.error), status: "failed" };
 }
 
-export { type CallFailure, type CallState, type SchemaProblem, callFailure, notJson, parseData };
+export { type CallState, type SchemaProblem, callFailure, notJson, parseData };
