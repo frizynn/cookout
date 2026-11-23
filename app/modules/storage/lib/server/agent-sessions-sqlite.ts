@@ -167,4 +167,8 @@ function sqliteAgentSessions(db: SqliteDatabase): AgentSessionsSection {
   };
 }
 
-export { sqliteAgentSessions };
+function agentSessionIssuer(db: SqliteDatabase): (request: IssueAgentSession) => Fails<IssueAgentSessionResult> {
+  return (request) => issue(db, request);
+}
+
+export { agentSessionIssuer, sqliteAgentSessions };

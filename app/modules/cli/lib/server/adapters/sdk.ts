@@ -24,6 +24,7 @@ type CallFailureCode =
   | "agent_tool_session_missing"
   | "already_joined"
   | "login_missing"
+  | "agent_join_request_expired"
   | "not_joined"
   | "usage"
   | "login_request_expired"

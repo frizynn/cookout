@@ -6,6 +6,9 @@
  * server's token gate, which authenticates agent session tokens like any other.
  */
 import {
+  AgentJoinCollectedResponseSchema,
+  AgentJoinRequestResponseSchema,
+  AgentJoinRequestStartedResponseSchema,
   AgentSessionResponseSchema,
   JoinRequestSchema,
   LeaveResponseSchema,
@@ -76,6 +79,14 @@ export { agentSessionsLayer } from "./lib/server/layer.ts";
 export const agentSessionRoutes: readonly Route<Caller | AgentSessions>[] = [joinRoute, leaveRoute];
 
 /**
+ * The agent join request routes (mattpocock/cookout#120): `joinRequestRoutes`, a human showing and approving one,
+ * sit behind the token gate; `openJoinRequestRoutes`, a box starting and collecting one, need no token and sit
+ * behind the per-address request limit.
+ * @internal
+ */
+export { joinRequestRoutes, openJoinRequestRoutes } from "./lib/server/join-request-routes.ts";
+
+/**
  * The routes an agent's owner or an admin lists and revokes its agent session token with, for the server's route list.
  * @internal
  */
@@ -83,6 +94,9 @@ export { ownerRoutes as agentSessionOwnerRoutes } from "./lib/server/owner-route
 
 /** The response Schemas of the agent session routes, for the SDK's generated validators. */
 export const agentSessionResponseSchemas = {
+  AgentJoinCollectedResponse: AgentJoinCollectedResponseSchema,
+  AgentJoinRequestResponse: AgentJoinRequestResponseSchema,
+  AgentJoinRequestStartedResponse: AgentJoinRequestStartedResponseSchema,
   AgentSessionResponse: AgentSessionResponseSchema,
   LeaveResponse: LeaveResponseSchema,
   ListAgentSessionsResponse: ListAgentSessionsResponseSchema,

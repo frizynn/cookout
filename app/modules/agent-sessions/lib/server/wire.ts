@@ -1,4 +1,7 @@
 import type {
+  AgentJoinCollectedResponse,
+  AgentJoinRequestResponse,
+  AgentJoinRequestStartedResponse,
   AgentSessionResponse,
   LeaveResponse,
   ListAgentSessionsResponse,
@@ -10,6 +13,7 @@ import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
 import { idleExpiryPattern } from "../../index.ts";
 import { matchesWire } from "../../../http/index.ts";
+import { userCodePattern } from "../../../logins/index.ts";
 
 const identityNameRule = Schema.isPattern(identityNamePattern, {
   message: "Use 1-64 lowercase letters, digits or '-'.",
@@ -43,14 +47,14 @@ const TokenSchema = Schema.String.check(Schema.isPattern(tokenPattern).abort()).
   Schema.refine(isToken, { identifier: "Token" }),
 );
 
-export const JoinRequestSchema = Schema.Struct({
+const JoinRequestSchema = Schema.Struct({
   as: IdentityNameSchema,
   force: Schema.optionalKey(Schema.Boolean),
   host: Schema.optionalKey(HostSchema),
   idleExpiry: Schema.optionalKey(IdleExpirySchema),
 });
 
-export const AgentSessionResponseSchema = matchesWire<AgentSessionResponse>()(
+const AgentSessionResponseSchema = matchesWire<AgentSessionResponse>()(
   Schema.Struct({
     agentSessionToken: TokenSchema,
     created: Schema.Boolean,
@@ -60,12 +64,74 @@ export const AgentSessionResponseSchema = matchesWire<AgentSessionResponse>()(
   }),
 );
 
-export const ListAgentSessionsResponseSchema = matchesWire<ListAgentSessionsResponse>()(
+const ListAgentSessionsResponseSchema = matchesWire<ListAgentSessionsResponse>()(
   Schema.Struct({ agentSessions: Schema.Array(ListedAgentSessionSchema) }),
 );
 
-export const RevokeAgentSessionResponseSchema = matchesWire<RevokeAgentSessionResponse>()(
+const RevokeAgentSessionResponseSchema = matchesWire<RevokeAgentSessionResponse>()(
   Schema.Struct({ revoked: Schema.Boolean }),
 );
 
-export const LeaveResponseSchema = matchesWire<LeaveResponse>()(Schema.Struct({ revoked: Schema.Literal(true) }));
+const LeaveResponseSchema = matchesWire<LeaveResponse>()(Schema.Struct({ revoked: Schema.Literal(true) }));
+
+const StartAgentJoinRequestSchema = Schema.Struct({
+  as: IdentityNameSchema,
+  host: HostSchema,
+  idleExpiry: Schema.optionalKey(IdleExpirySchema),
+});
+
+const CollectAgentJoinRequestSchema = Schema.Struct({ requestId: Schema.String });
+
+const ApproveAgentJoinRequestSchema = Schema.Struct({
+  force: Schema.optionalKey(Schema.Boolean),
+  idleExpiry: Schema.optionalKey(IdleExpirySchema),
+});
+
+const UserCodeSchema = Schema.String.check(Schema.isPattern(userCodePattern));
+
+const AgentJoinRequestStartedResponseSchema = matchesWire<AgentJoinRequestStartedResponse>()(
+  Schema.Struct({
+    approvalPath: Schema.String,
+    expiresAt: IsoTimeSchema,
+    requestId: TokenSchema,
+    userCode: UserCodeSchema,
+  }),
+);
+
+const PendingSchema = Schema.Struct({ status: Schema.Literal("pending") });
+
+const ApprovedSchema = Schema.Struct({ agentSession: AgentSessionResponseSchema, status: Schema.Literal("approved") });
+
+const AgentJoinCollectedResponseSchema = matchesWire<AgentJoinCollectedResponse>()(
+  Schema.Union([PendingSchema, ApprovedSchema]),
+);
+
+const AgentJoinRequestViewSchema = Schema.Struct({
+  approved: Schema.Boolean,
+  as: Schema.String,
+  creates: Schema.Boolean,
+  expiresAt: IsoTimeSchema,
+  host: HostSchema,
+  idleExpiry: IdleExpirySchema,
+  joins: IdentityNameSchema,
+  liveSessionExpiresAt: Schema.optionalKey(IsoTimeSchema),
+  userCode: UserCodeSchema,
+});
+
+const AgentJoinRequestResponseSchema = matchesWire<AgentJoinRequestResponse>()(
+  Schema.Struct({ agentJoinRequest: AgentJoinRequestViewSchema }),
+);
+
+export {
+  AgentJoinCollectedResponseSchema,
+  AgentJoinRequestResponseSchema,
+  AgentJoinRequestStartedResponseSchema,
+  AgentSessionResponseSchema,
+  ApproveAgentJoinRequestSchema,
+  CollectAgentJoinRequestSchema,
+  JoinRequestSchema,
+  LeaveResponseSchema,
+  ListAgentSessionsResponseSchema,
+  RevokeAgentSessionResponseSchema,
+  StartAgentJoinRequestSchema,
+};

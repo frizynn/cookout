@@ -105,7 +105,8 @@ export const agentSessionExpired = "agent_session_expired";
  * the identity codes), the 409s
  * `agent_session_live` (join while the agent has a live agent session token) and `identity_deactivated` (join a
  * Deactivated agent), the 400s `idle_expiry_too_long` and `agent_session_required` (leave sent without an agent session token),
- * and the 401s any request sent with an ended agent session token gets.
+ * the 404 `agent_join_request_not_found` (an agent join request expired, was collected, or never existed), and the
+ * 401s any request sent with an ended agent session token gets.
  */
 export const agentSessionErrorCodes = [
   "not_your_identity",
@@ -114,6 +115,103 @@ export const agentSessionErrorCodes = [
   "identity_deactivated",
   "idle_expiry_too_long",
   "agent_session_required",
+  "agent_join_request_not_found",
   agentSessionRevoked,
   agentSessionExpired,
 ] as const;
+
+/**
+ * `POST /v1/agent-join-requests` (no token): a box with no Login asks to join as an agent (Matt, 2026-11-23,
+ * mattpocock/cookout#120). The server answers a user code and a secret request ID, valid 10 minutes unapproved.
+ */
+export const agentJoinRequestsPath = "/v1/agent-join-requests";
+
+/** `POST /v1/agent-join-requests/collect` (no token): 202 pending, then the agent session token once; 404 after. */
+export const collectAgentJoinRequestPath = "/v1/agent-join-requests/collect";
+
+/** `GET /v1/agent-join-requests/:code` (a human): the live request with that user code, as it would join for the caller. */
+export const agentJoinRequestPath = "/v1/agent-join-requests/:code";
+
+/** `PUT /v1/agent-join-requests/:code/approval` (a human; an agent is 403 `human_only`): approves it as the caller. */
+export const agentJoinRequestApprovalPath = "/v1/agent-join-requests/:code/approval";
+
+/**
+ * The approval page's path on the server for an agent join request's user code.
+ * @param userCode The request's user code.
+ * @returns The path, such as `/#/approve-join/WDJB-MJHT`.
+ */
+export function agentJoinApprovalPathOf(userCode: string): string {
+  return `/#/approve-join/${userCode}`;
+}
+
+/** The body of `POST /v1/agent-join-requests`: the agent to join as, the box's host and the idle expiry it asks for. */
+export interface StartAgentJoinRequest {
+  /** A name as `join` takes it: the approver's own agent, a free name, or else `<approver>/<name>`. */
+  readonly as: string;
+  /** The box's host name, shown on the approval page. 1–253 characters. */
+  readonly host: string;
+  /** The longest idle expiry the box asks for, such as `30d`; the approver may lower it. Default `7d`. */
+  readonly idleExpiry?: string;
+}
+
+/** A started agent join request. Only `requestId` collects the agent session token, and it is shown this once. */
+export interface AgentJoinRequestStartedResponse {
+  readonly userCode: string;
+  readonly requestId: Token;
+  readonly expiresAt: IsoTime;
+  readonly approvalPath: string;
+}
+
+/** Pending until a human approves, then the agent session token, once. Never a human's credential. */
+export type AgentJoinCollectedResponse =
+  | { readonly status: "pending" }
+  | { readonly status: "approved"; readonly agentSession: AgentSessionResponse };
+
+/** An agent join request as the human viewing it would approve it. */
+export interface AgentJoinRequestView {
+  readonly userCode: string;
+  readonly host: string;
+  readonly expiresAt: IsoTime;
+  readonly approved: boolean;
+  /** The name the box asked to join as. */
+  readonly as: string;
+  /** The agent approving joins, such as `ada/triage-agent` when `triage-agent` is someone else's. */
+  readonly joins: IdentityName;
+  /** Whether approving creates that agent, owned by the approver. */
+  readonly creates: boolean;
+  /** The idle expiry the box asked for (or the default); the approver may lower it, never raise it. */
+  readonly idleExpiry: string;
+  /** When the agent's live agent session token expires, if it has one: approving replaces it only with `force`. */
+  readonly liveSessionExpiresAt?: IsoTime;
+}
+
+/** The answer to showing or approving an agent join request. */
+export interface AgentJoinRequestResponse {
+  readonly agentJoinRequest: AgentJoinRequestView;
+}
+
+/** The body of approving an agent join request. */
+export interface ApproveAgentJoinRequest {
+  /** A shorter idle expiry than the box asked for; longer is 400 `idle_expiry_too_long`. */
+  readonly idleExpiry?: string;
+  /** Replaces the agent's live agent session token, as `join --force`; without it, 409 `agent_session_live`. */
+  readonly force?: boolean;
+}
+
+/** The SDK's calls for an agent join request: a box with no Login joins once a person approves in the browser. */
+export interface AgentJoinCalls {
+  /** `POST /v1/agent-join-requests` (no token): starts an agent join request, which lasts 10 minutes unapproved. */
+  readonly startAgentJoin: (request: StartAgentJoinRequest) => Promise<AgentJoinRequestStartedResponse>;
+  /**
+   * `POST /v1/agent-join-requests/collect` (no token): `pending` until a human approves, then, once, the agent
+   * session token. A wrong, expired or collected request ID is 404 `agent_join_request_not_found`.
+   */
+  readonly collectAgentJoin: (requestId: Token) => Promise<AgentJoinCollectedResponse>;
+  /** `GET /v1/agent-join-requests/:code` (a human): the request, and the agent approving it would join. */
+  readonly getAgentJoinRequest: (userCode: string) => Promise<AgentJoinRequestResponse>;
+  /** `PUT /v1/agent-join-requests/:code/approval` (a human): joins the agent as `join` with the caller's Login would. */
+  readonly approveAgentJoin: (
+    userCode: string,
+    approval?: ApproveAgentJoinRequest,
+  ) => Promise<AgentJoinRequestResponse>;
+}

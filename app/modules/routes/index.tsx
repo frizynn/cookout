@@ -10,7 +10,8 @@
  * panel open beside it. Any other hash, a channel name that isn't a channel
  * name, or a thread ID that isn't a message ID, says there is nothing here.
  * `#/approve/<user code>` is the approval page for a login request, a page of
- * its own outside the workspace (after the login view, if logged out). The
+ * its own outside the workspace (after the login view, if logged out), and
+ * `#/approve-join/<user code>` the same for an agent join request. The
  * `paths` module reads the hash and builds every link's.
  */
 import type { ReactNode } from "react";

@@ -42,8 +42,8 @@ import type {
   ThreadResponse,
 } from "./lib/messages.ts";
 import { eventCalls, eventOf } from "./lib/events.ts";
+import type { ApprovalCalls } from "./lib/identities.ts";
 import type { HealthResponse } from "../http/index.ts";
-import type { LoginCalls } from "./lib/identities.ts";
 import { agentSessionCalls } from "./lib/agent-sessions.ts";
 import { channelCalls } from "./lib/channels.ts";
 import { commandCalls } from "./lib/commands.ts";
@@ -117,7 +117,7 @@ export type CookoutClientOptions = {
   readonly agentTool?: string;
 };
 
-export type CookoutClient = LoginCalls & {
+export type CookoutClient = ApprovalCalls & {
   /** `GET /v1/health`. Resolves when the server and its storage are usable. */
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */

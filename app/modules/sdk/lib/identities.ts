@@ -25,6 +25,7 @@ import {
   isIdentityWithTokenResponse,
   isListIdentitiesResponse,
 } from "./generated/validators.js";
+import type { AgentJoinCalls } from "../../agent-sessions/index.ts";
 import type { ClientConnection } from "./request.ts";
 import type { HealthResponse } from "../../http/index.ts";
 import type { LoginCalls } from "../../logins/index.ts";
@@ -162,5 +163,5 @@ function identityCalls(server: ClientConnection): IdentityCalls & LoginCalls {
   return { ...loginCalls(server), ...ownIdentityCalls(server) };
 }
 
-export type { LoginCalls } from "../../logins/index.ts";
+export type ApprovalCalls = LoginCalls & AgentJoinCalls;
 export { identityCalls };

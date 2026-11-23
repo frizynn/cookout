@@ -36,6 +36,10 @@ _Avoid_: deleted identity, removed identity
 **Admin**:
 An identity allowed to create identities, rotate tokens and register commands. Admin is a flag on an identity.
 
+**Agent join request**:
+A request from a box with no Login, made by `cookout join --as <name>`, that a person approves in the web UI by its user code; the box then collects an agent session token for an agent that person owns, and never holds a human's credential. Decided by Matt on 2026-11-23, recorded in [#120](https://github.com/mattpocock/cookout/issues/120).
+_Avoid_: device code
+
 **Login**:
 A human identity's token kept on one machine by `cookout login`, one per server URL, which the CLI then sends for that person when no agent tool runs it. A Login is a person's: an agent's token is refused. Decided by Matt on 2026-11-23, recorded in [#115](https://github.com/mattpocock/cookout/issues/115).
 _Avoid_: account

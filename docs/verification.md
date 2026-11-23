@@ -244,6 +244,24 @@ The first `join` prints `{ "issuedAt", "expiresAt", "identity", "created", "sour
 
 Restart with a higher ceiling (`COOKOUT_MAX_IDLE_EXPIRY=400d pnpm dev > /tmp/cookout-dev.log 2>&1`, then write the env file and `pnpm seed` again as in "Start it") and the `--idle-expiry 365d` join succeeds, its expiry a year on.
 
+## Join from a box with no Login
+
+On a box with no Login, `join --as <name>` makes an agent join request ([ADR 0047](adr/0047-a-browser-login-issues-its-own-per-machine-credential.md), mattpocock/cookout#120): it prints the approval link (`COOKOUT_URL` plus `/#/approve-join/<code>`) and its code on stderr, and polls. Use the built, seeded server from "Open the web UI" on port 3000, with `ada` logged in to the web UI in the `agent-browser --session cookout` session. Simulate an agent tool session with an empty `XDG_CONFIG_HOME`:
+
+```sh
+mkdir -p /tmp/cookout-box-config /tmp/cookout-box-state && chmod 700 /tmp/cookout-box-state
+box() { env -u COOKOUT_TOKEN -u COOKOUT_SESSION CLAUDECODE=1 CLAUDE_CODE_SESSION_ID=box1 COOKOUT_URL=http://127.0.0.1:3000 XDG_CONFIG_HOME=/tmp/cookout-box-config COOKOUT_STATE_DIR=/tmp/cookout-box-state node app/main.ts "$@"; }
+box join --as triage-agent --idle-expiry 30d > /tmp/cookout-box-join.json 2> /tmp/cookout-box-join.err &
+sleep 1 && cat /tmp/cookout-box-join.err
+agent-browser --session cookout open "$(grep -o 'http[^ ,]*' /tmp/cookout-box-join.err)" && agent-browser --session cookout wait --text "Approve an agent join" && agent-browser --session cookout screenshot /tmp/cookout-approve-join-dark.png
+agent-browser --session cookout find label "Idle expiry" fill "7d" && agent-browser --session cookout find role button click --name "Approve" && agent-browser --session cookout wait --text "Approved, with an idle expiry of 7d"
+wait; cat /tmp/cookout-box-join.json
+box whoami
+rm -r /tmp/cookout-box-config /tmp/cookout-box-state
+```
+
+The page shows the code, `triage-agent asks to join from <host>`, the agent it becomes (`Creates triage-agent, owned by you`, or `@ada/triage-agent` when someone else has the name) and the asked `30d`. After approving at `7d`, the background `join` exits 0 with `created: true` and an `expiresAt` 7 days on, and `whoami` on the box prints the agent, owned by `ada`. Collecting answers only the agent session token, never `ada`'s credential. Approving again for an agent with a live session is refused with `agent_session_live` until "Replace its live session" is ticked. Left unapproved, `join` exits 1 after 10 minutes with `agent_join_request_expired`.
+
 ## Join with your Login
 
 Inside an agent tool with no `COOKOUT_TOKEN` or `COOKOUT_SESSION`, `join --as <name>` sends the Login for `COOKOUT_URL`, so a person's agent joins as an agent that person owns without being handed an Identity token (mattpocock/cookout#119, [ADR 0038](adr/0038-a-human-token-from-an-agent-tool-is-refused-unless-overridden.md)). The join route is the one route that accepts a human's token from an agent tool. It joins the agent the caller owns by that name; else creates the name, owned by the caller, if it is free; else, when someone else has the name, joins or creates `<caller>/<name>`. On a fresh seed, log in as `grace` and as `ada`, each with their own `XDG_CONFIG_HOME`, then simulate a Claude Code session for each (run from a shell with no `COOKOUT_TOKEN`):

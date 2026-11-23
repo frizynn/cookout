@@ -4,13 +4,15 @@ import { Context, DateTime, Duration, Effect, Option } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import type { Join, On } from "./join.ts";
 import { agentSessionExpired, agentSessionRevoked } from "../../index.ts";
+import type { JoinRequests } from "./join-requests.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
+import { joinRequestsOn } from "./join-requests.ts";
 import { joiner } from "./join.ts";
 
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
 
-interface AgentSessionsService {
+interface AgentSessionsService extends JoinRequests {
   readonly join: (caller: Identity, request: Join) => Fails<AgentSessionResponse>;
   readonly leave: (hash: TokenHash) => Effect.Effect<void, StorageUnavailable>;
   readonly untilEnded: (hash: TokenHash) => Effect.Effect<Refusal, StorageUnavailable>;
@@ -83,7 +85,13 @@ function ownerViews({ storage }: On): Pick<AgentSessionsService, "listFor" | "re
 }
 
 function agentSessionsOn(on: On): AgentSessionsService {
-  return { join: joiner(on), leave: on.storage.revokeAgentSession, untilEnded: watcher(on), ...ownerViews(on) };
+  return {
+    join: joiner(on),
+    leave: on.storage.revokeAgentSession,
+    untilEnded: watcher(on),
+    ...ownerViews(on),
+    ...joinRequestsOn(on),
+  };
 }
 
 export { AgentSessions, agentSessionsOn };

@@ -3,7 +3,7 @@ import type { Scope } from "effect";
 import type { StorageService } from "./service.ts";
 import { StorageUnavailable } from "./errors.ts";
 import { openMigrated } from "./migrations.ts";
-import { sqliteAgentSessions } from "./agent-sessions-sqlite.ts";
+import { sqliteAgentSessionSections } from "./agent-join-requests-sqlite.ts";
 import { sqliteChannels } from "./channels.ts";
 import { sqliteCommands } from "./commands.ts";
 import { sqliteHealth } from "./health.ts";
@@ -34,7 +34,7 @@ function openSqliteStorage(
       ...sqliteIdentitySections(db),
       ...sqliteChannels(db),
       ...sqliteMessages(db),
-      ...sqliteAgentSessions(db),
+      ...sqliteAgentSessionSections(db),
       ...sqliteCommands(db),
     };
   });
