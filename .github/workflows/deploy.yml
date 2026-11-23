@@ -5,6 +5,7 @@
 # stage fails the run. A workflow_dispatch on any branch runs the same e2e and the deployed checks
 # without deploying the cookout; `restart: true`
 # also restarts its machine first, and `handler: true` deploys the example handler from that branch.
+# If the cookout's deploy or the deployed checks fail on main, `rollback` redeploys the image it ran before.
 # Recipes: docs/verification.md ("Deploy it to Fly").
 name: Deploy
 
@@ -47,12 +48,25 @@ jobs:
     needs: e2e-docker
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    outputs:
+      previous-image: ${{ steps.previous.outputs.image }}
     steps:
       - uses: actions/checkout@v4
+      # Only for scripts/rollback-image.ts, which needs no installed dependencies.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
       - uses: superfly/flyctl-actions/setup-flyctl@master
+      # The image `rollback` redeploys if this deploy or `deployed` fails. Empty on the app's first deploy.
+      - name: Record the image the machine runs now
+        id: previous
+        run: |
+          image="$(flyctl machines list -a cookout --json | node scripts/rollback-image.ts)" || true
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "rollback-image: ${image:-none}"
       - run: flyctl deploy -a cookout --remote-only --ha=false
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
   # The example handler, after the cookout it posts to. A rerun of provision changes nothing.
   deploy-handler:
@@ -139,3 +153,35 @@ jobs:
         run: |
           node app/main.ts channel list | jq -e '[.channels[].name | select(startswith("e2e-"))] as $left
             | if $left == [] then true else ("e2e left these channels on the deployed cookout: \($left)\n" | halt_error) end'
+
+  # A release that fails to deploy, or fails the deployed checks, can leave the board down on it (#249), so
+  # redeploy the image the machine ran before, then fail the run naming both images.
+  rollback:
+    needs: [deploy, deployed]
+    if: >-
+      ${{ !cancelled() && github.ref == 'refs/heads/main'
+      && (needs.deploy.result == 'failure' || needs.deployed.result == 'failure') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      PREVIOUS_IMAGE: ${{ needs.deploy.outputs.previous-image }}
+      FAILED_JOB: ${{ needs.deploy.result == 'failure' && 'deploy' || 'deployed' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Redeploy the image the machine ran before
+        run: |
+          failed="$(flyctl machines list -a cookout --json | node scripts/rollback-image.ts)" || failed=unknown
+          if [ -z "$PREVIOUS_IMAGE" ]; then
+            echo "### Not rolled back: $FAILED_JOB failed on $failed, and no earlier image was recorded" >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::$FAILED_JOB failed on $failed, and there is no earlier image to roll back to"
+            exit 1
+          fi
+          if flyctl deploy -a cookout --image "$PREVIOUS_IMAGE" --ha=false; then outcome="rolled back"; else outcome="FAILED to roll back"; fi
+          echo "### $FAILED_JOB failed on $failed, and the run $outcome to $PREVIOUS_IMAGE" >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::$FAILED_JOB failed on $failed, and the run $outcome to $PREVIOUS_IMAGE"
+          exit 1
