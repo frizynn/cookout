@@ -170,6 +170,22 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '[.identi
 
 The test script builds the package first (`pnpm build`), so the bin it runs is the built one, as published. Each test draws a fresh prefix such as `e2e-k3j9x0qa` and names every identity (each an agent) and channel it makes with it, so runs never collide on a shared server. When a test ends, passing or failing, it deletes every identity whose name starts with its prefix, so the `identity list` afterwards shows none of the run's identities (on a fresh board, only `admin`). Channels can't be deleted, so a run's channels stay, under its prefix. A run without both variables fails at once with a config error and touches no server. Tests are never retried.
 
+## Log in as a human with a session cookie
+
+The web UI swaps a human identity's token for a session cookie with `POST /v1/session`, then sends the cookie instead of the bearer header. These commands log in as the seeded `grace`, use the cookie alone, try an agent's token and log out:
+
+```sh
+jq -r '.identities[] | select(.identity.name == "grace") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-grace.env
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -si -X POST -H "Authorization: Bearer $COOKOUT_TOKEN" "$COOKOUT_URL/v1/session" | grep -i set-cookie'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -s -H "Cookie: cookout_session=$COOKOUT_TOKEN" "$COOKOUT_URL/v1/whoami"'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -s -X POST -H "Cookie: cookout_session=$COOKOUT_TOKEN" -H "Content-Type: application/json" -d "{\"channel\":\"general\",\"text\":\"From the web\"}" "$COOKOUT_URL/v1/messages"'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) sh -c 'curl -s -X POST -H "Authorization: Bearer $COOKOUT_TOKEN" "$COOKOUT_URL/v1/session"'
+env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -X POST "$COOKOUT_URL/v1/session"'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -si -X DELETE -H "Cookie: cookout_session=$COOKOUT_TOKEN" "$COOKOUT_URL/v1/session" | grep -i set-cookie'
+```
+
+The login sets `cookout_session=…; Path=/; HttpOnly; SameSite=Strict`; the cookie's value is the token, so rotating the token ends the session. The cookie alone answers `whoami` as `grace` and posts as her with no lease. The agent's login is refused with 403 `human_only` and `details.kind` `agent`; no token is 401 `token_missing`. Logout sets the cookie again with `Max-Age=0`. The `triage-agent` env file comes from the inbox recipe above.
+
 ## Stop it
 
 Ctrl-C in its terminal, or for a background run:
