@@ -7,12 +7,17 @@
         "app/dev.ts!",
         "app/modules/sdk/index.ts!",
         "app/web.tsx!",
-        "app/modules/testing/server.ts!",
-        "app/modules/testing/web.ts!",
+        "app/modules/testing/lib/server/storage.ts!",
         "app/modules/webhook-fake/server.ts!",
         "scripts/*.{ts,mjs}!"
       ],
-      "project": ["app/**/*.{ts,tsx}!", "!app/modules/*/tests/**!", "scripts/**/*.{ts,mjs}!", "!scripts/tests/**!"],
+      "project": [
+        "app/**/*.{ts,tsx}!",
+        "!app/modules/*/tests/**!",
+        "!app/modules/testing/**!",
+        "scripts/**/*.{ts,mjs}!",
+        "!scripts/tests/**!"
+      ],
       "ignoreDependencies": ["@swc/core"]
     },
     "packages/e2e": {

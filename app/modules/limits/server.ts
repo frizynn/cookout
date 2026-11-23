@@ -116,7 +116,6 @@ export const limitsLayer: Layer.Layer<Limits, Config.ConfigError> = Layer.effect
  * limit too.
  * @param effect What the request does.
  * @returns `effect`, refused first with 429 `rate_limited` while the caller is over a rate.
- * @internal
  */
 export function withinRequestLimit<Value, Failure, Needs>(
   effect: Effect.Effect<Value, Failure, Needs>,

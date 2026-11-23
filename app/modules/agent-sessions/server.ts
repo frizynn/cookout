@@ -60,7 +60,6 @@ const leaveRoute: Route<Caller | AgentSessions> = {
  * Ends with the 401 refusal (`agent_session_revoked` or `agent_session_expired`) the request's agent session token
  * would now get, once it is no longer live, checking every 30 s and moving its expiry on while the stream is open.
  * For any other token it never ends.
- * @internal
  */
 export const sentAgentSessionEnded: Effect.Effect<Refusal, StorageUnavailable, AgentSessions> = Effect.gen(
   function* watchSentAgentSession() {
@@ -75,7 +74,6 @@ export { agentSessionsLayer } from "./lib/server/layer.ts";
 
 /**
  * The agent session routes, for the server's route list: join and leave.
- * @internal
  */
 export const agentSessionRoutes: readonly Route<Caller | AgentSessions>[] = [joinRoute, leaveRoute];
 
@@ -83,13 +81,11 @@ export const agentSessionRoutes: readonly Route<Caller | AgentSessions>[] = [joi
  * The agent join request routes (mattpocock/cookout#120): `joinRequestRoutes`, a human showing and approving one,
  * sit behind the token gate; `openJoinRequestRoutes`, a box starting and collecting one, need no token and sit
  * behind the per-address request limit.
- * @internal
  */
 export { joinRequestRoutes, openJoinRequestRoutes } from "./lib/server/join-request-routes.ts";
 
 /**
  * The routes an agent's owner or an admin lists and revokes its agent session token with, for the server's route list.
- * @internal
  */
 export { ownerRoutes as agentSessionOwnerRoutes } from "./lib/server/owner-routes.ts";
 

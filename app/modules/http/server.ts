@@ -137,7 +137,7 @@ function guardRequest(
  * in another process, such as a browser test. The relay forwards no `Origin`, so a page loaded through it can write.
  * It listens on a free loopback port and closes with the scope.
  */
-export { type CuttableRelay, cuttableRelay } from "./lib/server/cuttable-relay.ts";
+export { cuttableRelay } from "./lib/server/cuttable-relay.ts";
 export type { Gate, Route } from "./lib/server/router.ts";
 export type { Listen, Serving };
 
@@ -155,7 +155,6 @@ export const httpResponseSchemas = {
  * answered, but first drops every connection that has sent nothing: Node's
  * own close waits for such a connection as if a request were on its way, and Node's fetch leaves one open (opened for a request
  * that was then aborted) until its keep-alive time, about 3 s.
- * @internal
  * @param listen The port and host to listen on.
  * @returns The `HttpServer` and Node's HTTP platform.
  */

@@ -157,7 +157,6 @@ export const channelsLayer: Layer.Layer<Channels, never, Storage> = Layer.effect
 /**
  * The channel routes, for the server's route list. They need `Channels`, which `channelsLayer` provides, and
  * `Caller`, which the token gate provides.
- * @internal
  */
 export const channelRoutes: readonly Route<Caller | Channels>[] = [
   {

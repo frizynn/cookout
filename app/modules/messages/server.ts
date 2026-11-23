@@ -97,7 +97,6 @@ export { ListMessagesQuerySchema as PageQuerySchema } from "./lib/server/wire.ts
 /**
  * The message routes, for the server's route list. They need `Caller`, which the token gate provides, and `Messages`,
  * which `messagesLayer` provides.
- * @internal
  */
 export const messageRoutes: readonly Route<Caller | Messages>[] = [postRoute, threadRoute, pageRoute];
 

@@ -50,7 +50,7 @@ export {
 export { runCookoutWhile } from "./lib/server/cli-clock.ts";
 export { type IdentityFixtureOptions, identityFixture, identityName } from "./lib/server/identities.ts";
 export { type CuttableLink, cuttableLink } from "./lib/server/cuttable-link.ts";
-export { type CuttableRelay, cuttableRelay } from "../http/server.ts";
+export { cuttableRelay } from "../http/server.ts";
 export { type SilentConnection, silentConnection } from "./lib/server/silent-connection.ts";
 export { type FixedAnswer, serverAnswering } from "./lib/server/fixed-answer.ts";
 export { type ForwardingProxy, forwardingProxy } from "./lib/server/forwarding-proxy.ts";

@@ -48,7 +48,6 @@
   "app/modules/http/lib/server/router.ts effecttsgo(any-unknown-in-error-context)": 3,
   "app/modules/http/lib/server/router.ts effecttsgo(api-stability-leak)": 2,
   "app/modules/http/server.ts effecttsgo(any-unknown-in-error-context)": 1,
-  "app/modules/http/server.ts effecttsgo(api-stability-leak)": 1,
   "app/modules/http/server.ts effecttsgo(missing-pipeable-signature)": 1,
   "app/modules/http/server.ts promise(prefer-await-to-then)": 1,
   "app/modules/http/server.ts typescript(explicit-function-return-type)": 1,

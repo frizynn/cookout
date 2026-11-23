@@ -106,7 +106,6 @@ const eventsRoute: Route<Needs> = {
  * The events route, for the server's route list. It needs `Caller`, which the token gate provides, and what its
  * sources need: `Inbox`, which `inboxLayer` provides, `Messages`, which `messagesLayer` provides, and `AgentSessions`,
  * which `agentSessionsLayer` provides.
- * @internal
  */
 export const eventRoutes: readonly Route<Needs>[] = [eventsRoute];
 

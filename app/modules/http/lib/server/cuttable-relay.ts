@@ -101,4 +101,4 @@ function cuttableRelay(target: string): Effect.Effect<CuttableRelay, never, Scop
   }).pipe(Effect.orDie);
 }
 
-export { type CuttableRelay, cuttableRelay };
+export { cuttableRelay };
