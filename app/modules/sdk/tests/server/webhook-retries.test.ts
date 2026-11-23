@@ -40,6 +40,7 @@ it.effect("a handler that fails twice is retried with the same call ID and then 
     const { replies } = yield* answer(() => cookout.client.getThread(threadId));
     const body = {
       callId: "call_test_4",
+      channel: "grill",
       command: "deploy",
       data: { branch: "main" },
       threadId,

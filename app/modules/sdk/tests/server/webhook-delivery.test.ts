@@ -49,6 +49,7 @@ it.effect("after a good call the handler gets the call, signed with the command'
     expect(call).toMatchObject({
       body: {
         callId: "call_test_4",
+        channel: "grill",
         command: "deploy",
         data: { branch: "main" },
         threadId: called.threadId,
