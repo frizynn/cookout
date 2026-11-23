@@ -25,7 +25,8 @@
  * text is `null` until edited, so the field shows the saved one; `save` sends
  * the field's text trimmed (empty clears it), puts the answer in the identity
  * list at once and forgets the text, or, if the server refuses, keeps the
- * text and the refusal.
+ * text and the refusal. `description(name)` is an agent's description as it
+ * is edited, and saves the same way.
  * `identities.actions(name)` is what an agent's owner or an admin does to
  * that identity: rotate its token, list and revoke its agent session,
  * deactivate it (after `askToDeactivate`), reactivate it and transfer it;
@@ -189,6 +190,8 @@ export interface Composer {
   readonly channelDraft: (channel: string) => Draft;
   /** The display name being edited for this identity: the same store each time for one name. */
   readonly displayName: (name: IdentityName) => DisplayNameDraft;
+  /** The description being edited for this agent: the same store each time for one name. */
+  readonly description: (name: IdentityName) => DisplayNameDraft;
   /** The identity list the suggestions come from. */
   readonly identities: Identities;
 }
@@ -197,7 +200,7 @@ export interface Composer {
 export interface ComposerOptions {
   readonly client: ActionsClient &
     AdminClient &
-    Pick<CookoutClient, "createIdentity" | "listIdentities" | "setDisplayName">;
+    Pick<CookoutClient, "createIdentity" | "listIdentities" | "setDescription" | "setDisplayName">;
   readonly commands: CommandList;
   readonly live?: Live;
 }
@@ -211,6 +214,7 @@ export function createComposer(options: ComposerOptions): Composer {
   const { client } = options;
   const drafts = new Map<string, Draft>();
   const displayNames = new Map<string, DisplayNameDraft>();
+  const descriptions = new Map<string, DisplayNameDraft>();
   const list = createIdentityList({ client, live: options.live ?? null });
   const load = loaderOf(list, options.commands);
   const readers = listenersOf(load);
@@ -221,7 +225,10 @@ export function createComposer(options: ComposerOptions): Composer {
   return {
     channelDraft: (channel) =>
       storeIn(drafts, channel, () => createDraft(list, { commands: registered, identities: list.identities }, load)),
-    displayName: (name) => storeIn(displayNames, name, () => createDisplayName({ client, list, name })),
+    description: (name) =>
+      storeIn(descriptions, name, () => createDisplayName({ list, name, set: client.setDescription })),
+    displayName: (name) =>
+      storeIn(displayNames, name, () => createDisplayName({ list, name, set: client.setDisplayName })),
     draft: (key) =>
       storeIn(drafts, key, () => createDraft(list, { commands: () => NO_COMMANDS, identities: list.identities }, load)),
     identities: {

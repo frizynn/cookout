@@ -4,7 +4,7 @@ import type { Composer } from "../../composer/index.ts";
 import type { IdentityName } from "../../sdk/index.ts";
 import { IdentityTags } from "./identity-tags.tsx";
 import { ProfileActions } from "./profile-actions.tsx";
-import { ProfileDisplayName } from "./profile-display-name.tsx";
+import { ProfileTexts } from "./profile-texts.tsx";
 import type { ReactNode } from "react";
 import { kindOf } from "./kind-of.ts";
 import { noteOf } from "./use-author.ts";
@@ -48,7 +48,7 @@ export function ProfileBody(props: ProfileBodyProps): ReactNode {
         {TEXT.joined}
         <DateText time={identity.createdAt} />
       </Muted>
-      <ProfileDisplayName composer={props.composer} identity={identity} me={props.me} />
+      <ProfileTexts composer={props.composer} identity={identity} me={props.me} />
       <AdminToggle identities={identities} identity={identity} me={props.me} />
       <ProfileActions identities={identities} identity={identity} me={props.me} />
     </Profile>

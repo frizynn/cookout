@@ -32,6 +32,7 @@ type AppClient = BoardOptions["client"] &
     | "readPositions"
     | "makeAdmin"
     | "removeAdmin"
+    | "setDescription"
     | "setDisplayName"
     | "whoami"
   >;

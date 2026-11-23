@@ -1,4 +1,4 @@
-import type { CookoutClient, IdentityName, Refusal } from "../../sdk/index.ts";
+import type { IdentityName, IdentityResponse, Refusal } from "../../sdk/index.ts";
 import type { IdentityList } from "./identity-list.ts";
 import { listenersOf } from "./listeners.ts";
 import { refusalOf } from "../../sdk/index.ts";
@@ -21,7 +21,7 @@ interface DisplayNameDraft {
 }
 
 interface DisplayNameOptions {
-  readonly client: Pick<CookoutClient, "setDisplayName">;
+  readonly set: (name: IdentityName, text: string | null) => Promise<IdentityResponse>;
   readonly list: IdentityList;
   readonly name: IdentityName;
 }
@@ -35,7 +35,7 @@ function sentOf(text: string): string | null {
 }
 
 function createDisplayName(options: DisplayNameOptions): DisplayNameDraft {
-  const { client, list, name } = options;
+  const { list, name, set } = options;
   const listeners = listenersOf(list.load);
   let current: DisplayNameSnapshot = { save: { status: "idle" }, text: null };
   let saving = Promise.resolve();
@@ -47,7 +47,7 @@ function createDisplayName(options: DisplayNameOptions): DisplayNameDraft {
 
   async function send(text: string): Promise<void> {
     try {
-      const { identity } = await client.setDisplayName(name, sentOf(text));
+      const { identity } = await set(name, sentOf(text));
       list.put(identity);
       publish({ save: { status: "idle" }, text: null });
     } catch (error: unknown) {

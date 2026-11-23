@@ -8,6 +8,7 @@ interface DisplayNameFieldProps {
   readonly field: string;
   readonly label: string;
   readonly saved: string | null;
+  readonly subject?: string;
 }
 
 export function DisplayNameField(props: DisplayNameFieldProps): ReactNode {
@@ -28,7 +29,9 @@ export function DisplayNameField(props: DisplayNameFieldProps): ReactNode {
       saving={save.status === "saving"}
       value={value}
     >
-      {save.status === "failed" && <Alert>{`Couldn't save the display name (${save.code}): ${save.message}`}</Alert>}
+      {save.status === "failed" && (
+        <Alert>{`Couldn't save the ${props.subject ?? "display name"} (${save.code}): ${save.message}`}</Alert>
+      )}
     </LineForm>
   );
 }
