@@ -38,7 +38,7 @@
  * commands (from the `commands` store given, read once the identities load)
  * whose names start with what follows `/` when that is the whole text;
  * choosing one makes it the draft's `command`, whose data the box prompts
- * for, until `clear`; `dismiss` hides any suggestions until the next edit. A
+ * for, until `clear`, or `unpick`, which brings back the text as it was; `dismiss` hides any suggestions until the next edit. A
  * thread's reply box suggests no commands, since a call is a top-level message.
  */
 import type { ActionsClient, IdentityActions } from "./lib/identity-actions.ts";
@@ -101,6 +101,9 @@ function createDraft(list: IdentityList, sources: Sources, load: () => void): Dr
     },
     snapshot: () => current,
     subscribe: listeners.add,
+    unpick: () => {
+      change(changes.unpicked);
+    },
   };
 }
 
@@ -154,8 +157,10 @@ export interface Draft {
   readonly choose: (name: string) => void;
   /** Chooses the highlighted suggestion, if there are any: a mention to put in, or a command to pick. */
   readonly chooseHighlighted: () => void;
-  /** Picks the named command, if the box suggests it, emptying the text. */
+  /** Picks the named command, if the box suggests it, keeping the text for `unpick`. */
   readonly pick: (name: string) => void;
+  /** Drops the picked command and keeps the text, so the box comes back as it was, its suggestions hidden and `returned` true until the next edit. */
+  readonly unpick: () => void;
   /** Hides the suggestions until the next edit. */
   readonly dismiss: () => void;
   /** Moves the highlight one suggestion down or up, wrapping round. */

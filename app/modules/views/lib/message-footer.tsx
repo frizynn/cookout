@@ -23,14 +23,15 @@ interface MessageFooterProps {
 export function MessageFooter(props: MessageFooterProps): ReactNode {
   const { draft, messages, state } = props;
   const handlePost = messages.post;
-  const { command } = useSyncExternalStore(draft.subscribe, draft.snapshot);
+  const { command, returned } = useSyncExternalStore(draft.subscribe, draft.snapshot);
+  const handleBack = draft.unpick;
   if (state.status !== "loaded") {
     return null;
   }
   return (
     <>
       {command === null && (
-        <MessageBox draft={draft} focused={false} onPost={handlePost} post={state.post} text={MESSAGE_BOX} />
+        <MessageBox draft={draft} focused={returned} onPost={handlePost} post={state.post} text={MESSAGE_BOX} />
       )}
       {command !== null && (
         <CommandPrompt
@@ -39,6 +40,7 @@ export function MessageFooter(props: MessageFooterProps): ReactNode {
           command={command}
           draft={draft}
           messages={messages}
+          onBack={handleBack}
         />
       )}
       <CommandsRefusal commands={props.commands} />

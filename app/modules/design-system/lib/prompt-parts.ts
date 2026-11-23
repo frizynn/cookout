@@ -12,6 +12,7 @@ interface PromptFormParts extends Parts, PromptButtonsParts {
   readonly title: string;
   readonly description: string | null;
   readonly onSubmit: () => void;
+  readonly onEscape: () => void;
 }
 
 interface PromptFieldParts {

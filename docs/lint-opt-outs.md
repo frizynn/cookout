@@ -17,6 +17,7 @@ Every Oxlint category is `"error"` in `.oxlintrc.json`, and every Oxlint plugin 
 ## Off in some files
 
 - The 15 `effecttsgo` rules that name a global or a Node API (`async-function`, `crypto-random-uuid`, `extends-native-error`, `global-console`, `global-date`, `global-fetch`, `global-json`, `global-random`, `global-timers`, `new-promise`, `node-builtin-import`, `prefer-effect-array`, `prefer-effect-record`, `prefer-effect-string`, `process-env`), in every `app/` file outside backend code (`server.ts`, `lib/server/`, `tests/`) and in `app/web.tsx`. They point at Effect APIs, which those files may not import. The `no-restricted-globals` owners still apply there.
+- `no-restricted-globals` lets `app/modules/format/` use `Date` and `setInterval`: it is the web UI's one reader of the time and its one clock, which ticks a time shown as how long ago (mattpocock/cookout#153). Every other web module reads the time and ticks only through it.
 - `effecttsgo/node-builtin-import` and `import/no-nodejs-modules`, in the owner adapters of a Node API: `http`'s server (`node:http`), the storage SQLite adapter (`node:sqlite`) and the secrets Layer (`node:crypto`). Each one is the single owner of that API, and the other files stay banned from it by `no-restricted-imports`.
 - `effecttsgo/process-env` and `node/no-process-env`, in `config`: it is the one reader of `process.env`.
 - `effecttsgo/strict-effect-provide`, in `app/main.ts`, where the live Layers are provided. Also in tests: each test is its own application root and provides its own Layer.

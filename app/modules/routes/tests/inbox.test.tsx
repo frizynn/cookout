@@ -76,7 +76,7 @@ async function timeShown(reader: CookoutClient, later: number): Promise<string> 
   vi.advanceTimersByTime(later);
   const unmount = openAt({ client: reader, hash: "#/inbox" });
   const row = await within(await screen.findByRole("list", { name: "Unread" })).findByRole("link");
-  const shown = within(row).getByText(/ ago$/u).textContent;
+  const shown = within(row).getByText(/ ago$|\d\d:\d\d$/u).textContent;
   unmount();
   return shown;
 }
@@ -126,7 +126,9 @@ it("a live mention appears at the top of Unread, and opening it moves it to Earl
   await close();
 });
 
-it("each item's time is how long ago it was posted, in minutes, hours or days", { timeout: 5000 }, async () => {
+it("each item's time is how long ago it was posted, in minutes or hours, and after a day its date and time", {
+  timeout: 5000,
+}, async () => {
   expect.hasAssertions();
 
   const channel = "web-inbox-times";
@@ -137,7 +139,11 @@ it("each item's time is how long ago it was posted, in minutes, hours or days", 
   const hours = await timeShown(reader, TWO_HOURS);
   const days = await timeShown(reader, THREE_DAYS);
 
-  expect([minutes, hours, days]).toStrictEqual(["5m ago", "2h ago", "3d ago"]);
+  expect([minutes, hours, days]).toStrictEqual([
+    "5 minutes ago",
+    "2 hours ago",
+    expect.stringMatching(/^\d{1,2} [A-Z][a-z]{2} \d\d:\d\d$/u),
+  ]);
 });
 
 it("clicking a reply's row opens its thread", { timeout: 5000 }, async () => {

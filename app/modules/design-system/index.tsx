@@ -88,11 +88,13 @@
  * Escape closes the list;
  * `SubmitButton` sends it; `Suggestions` is a named list of options to pick
  * from under a box, such as mentions or commands (each with any muted detail
- * after it), one of them highlighted, which leaves the box focused.
+ * after it), one of them highlighted, which leaves the box focused; it sits
+ * in the overlay layer, above everything else in the pane.
  * `DataArea` is a labelled box to write JSON in, whose
  * text its owner holds. `PromptForm` is a named card in place of a message
  * box that asks for a command's data, titled, with a Cancel and a submit
- * button, its first field focused; in it `InputField` (text, a number or an
+ * button, its first field focused, and Escape anywhere in it calls
+ * `onEscape`; in it `InputField` (text, a number or an
  * integer), `PickField` (one of a list, or none) and `CheckField` (a checkbox)
  * are labelled fields whose value their owner holds, each marked when
  * required, with its help text and any error under it, both read out as its
