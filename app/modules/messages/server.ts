@@ -1,7 +1,9 @@
 /**
  * Messages on the backend: the `Messages` service over `Storage`, and the
  * routes that post a message, get a thread from any message in it and page
- * back through a channel. The author's name and owner are copied onto each
+ * back through a channel. `Messages` also publishes each message the moment
+ * it is stored to an in-process hub, which `posted` subscribes to, for live
+ * updates. The author's name and owner are copied onto each
  * message, so they survive the identity being deleted. Routes sit behind the
  * server's token gate.
  */

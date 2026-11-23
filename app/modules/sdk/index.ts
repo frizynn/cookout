@@ -13,7 +13,7 @@ import type {
   IdentityWithTokenResponse,
   ListIdentitiesResponse,
 } from "../identities/index.ts";
-import type { JoinRequest, LeaseId, LeaseResponse, LeaveResponse } from "../leases/index.ts";
+import type { JoinRequest, LeaseId, LeaseResponse, LeaveResponse } from "./lib/leases.ts";
 import type {
   ListMessagesQuery,
   ListMessagesResponse,
@@ -33,7 +33,9 @@ import {
   isListChannelsResponse,
   isListIdentitiesResponse,
 } from "./lib/generated/validators.js";
+import type { EventStream } from "./lib/events.ts";
 import type { HealthResponse } from "../http/index.ts";
+import { eventCalls } from "./lib/events.ts";
 import { healthPath } from "../http/index.ts";
 import { inboxCalls } from "./lib/inbox.ts";
 import { leaseCalls } from "./lib/leases.ts";
@@ -89,6 +91,8 @@ export type {
   ReadPosition,
   SubscriptionResponse,
 } from "../inbox/index.ts";
+export type { CookoutEvent, InboxItemEvent } from "../events/index.ts";
+export type { EventStream } from "./lib/events.ts";
 export { CookoutError, type CookoutErrorCode, type UnknownErrorCode } from "./lib/errors.ts";
 
 export type CookoutClientOptions = {
@@ -168,6 +172,13 @@ export type CookoutClient = {
   readonly subscribe: (channel: string) => Promise<SubscriptionResponse>;
   /** `DELETE /v1/channels/:name/subscription`: they stop reaching it. */
   readonly unsubscribe: (channel: string) => Promise<SubscriptionResponse>;
+  /**
+   * `GET /v1/events`: opens one Server-Sent Events stream, resolving once the server has accepted it. Iterate it for
+   * each new inbox item (`inbox-item`) the moment another identity posts it; the caller's own posts never arrive.
+   * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
+   * a newer server, is skipped. `close` drops the connection.
+   */
+  readonly watch: () => Promise<EventStream>;
 };
 
 /**
@@ -199,5 +210,6 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
     ...messageCalls(server),
     ...leaseCalls(server),
     ...inboxCalls(server),
+    ...eventCalls(server),
   };
 }

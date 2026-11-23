@@ -1,6 +1,7 @@
 /**
  * The one owner of `fetch` and of URL and query-string building, for the SDK
- * and the web. It speaks HTTP and JSON and knows nothing of what the bodies mean.
+ * and the web. It speaks HTTP, JSON and Server-Sent Events and knows nothing
+ * of what the bodies mean.
  */
 
 type QueryValue = string | number | undefined;
@@ -9,9 +10,29 @@ interface Parsed {
   readonly json?: unknown;
 }
 
+interface Field {
+  readonly name: string;
+  readonly value: string;
+}
+
+interface Fetched {
+  readonly response: Response;
+  readonly close: () => void;
+  readonly isClosed: () => boolean;
+}
+
+interface Frames {
+  readonly events: readonly ServerSentEvent[];
+  readonly rest: string;
+}
+
 const NO_PARAMS = 0;
 const TRAILING_SLASHES = /\/+$/u;
 const PARAM = /:(?<name>[A-Za-z]+)/gu;
+const EVENT_END = /\r\n\r\n|\n\n|\r\r/u;
+const LINE_END = /\r\n|\n|\r/u;
+const LEADING_SPACE = /^ /u;
+const DEFAULT_EVENT = "message";
 
 function queryString(query: Readonly<Record<string, QueryValue>>): string {
   const search = new URLSearchParams();
@@ -39,6 +60,84 @@ function fillParams(path: string, params: Readonly<Record<string, string>>): str
   return path.replaceAll(PARAM, (_match: string, name: string) => encodeURIComponent(params[name] ?? ""));
 }
 
+function fieldOf(line: string): Field {
+  const [name = "", ...rest] = line.split(":");
+  return { name, value: rest.join(":").replace(LEADING_SPACE, "") };
+}
+
+function isField(line: string): boolean {
+  return line !== "" && !line.startsWith(":");
+}
+
+function eventsIn(block: string): readonly ServerSentEvent[] {
+  const fields = block
+    .split(LINE_END)
+    .filter((line) => isField(line))
+    .map((line) => fieldOf(line));
+  const data = fields.filter(({ name }) => name === "data").map(({ value }) => value);
+  if (data.length === NO_PARAMS) {
+    return [];
+  }
+  const [event = DEFAULT_EVENT] = fields
+    .filter(({ name }) => name === "event")
+    .map(({ value }) => value)
+    .toReversed();
+  return [{ data: data.join("\n"), event }];
+}
+
+function framesOf(text: string): Frames {
+  const blocks = text.split(EVENT_END);
+  const rest = blocks.pop() ?? "";
+  return { events: blocks.flatMap((block) => eventsIn(block)), rest };
+}
+
+async function* eventsFrom(
+  body: ReadableStream<Uint8Array>,
+  isClosed: () => boolean,
+): AsyncGenerator<ServerSentEvent, void, undefined> {
+  const decoder = new TextDecoder();
+  let buffered = "";
+  try {
+    for await (const chunk of body) {
+      const { events, rest } = framesOf(buffered + decoder.decode(chunk, { stream: true }));
+      buffered = rest;
+      yield* events;
+    }
+  } catch (error) {
+    if (!isClosed()) {
+      throw error;
+    }
+  }
+}
+
+function trimmed(url: string): string {
+  return url.replace(TRAILING_SLASHES, "");
+}
+
+async function fetched(options: HttpRequest, accept: string): Promise<Fetched> {
+  const controller = new AbortController();
+  const headers = new Headers({ accept, ...options.headers });
+  const init: RequestInit = { headers, method: options.method, redirect: "manual", signal: controller.signal };
+  if ("body" in options) {
+    headers.set("content-type", "application/json");
+    init.body = JSON.stringify(options.body);
+  }
+  const path = fillParams(options.path, options.params ?? {});
+  const response = await fetch(`${trimmed(options.baseUrl)}${path}${queryString(options.query ?? {})}`, init);
+  return {
+    close: () => {
+      controller.abort();
+    },
+    isClosed: () => controller.signal.aborted,
+    response,
+  };
+}
+
+async function answerOf(response: Response): Promise<HttpResponse> {
+  const text = await response.text();
+  return { headers: response.headers, ok: response.ok, status: response.status, text, ...parsed(text) };
+}
+
 /** The HTTP methods the cookout's routes use. */
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -63,13 +162,33 @@ export interface HttpResponse {
   readonly json?: unknown;
 }
 
+/** One Server-Sent Event: its `event` name (`message` when it has none) and its `data`. */
+export interface ServerSentEvent {
+  readonly event: string;
+  readonly data: string;
+}
+
+/** An open Server-Sent Events stream: its events in order, until the server ends it or `close` is called. */
+export interface OpenEventStream {
+  readonly ok: true;
+  readonly events: AsyncIterable<ServerSentEvent>;
+  /** Drops the connection; the events then end. */
+  readonly close: () => void;
+}
+
+/** A stream the server refused, with its whole answer. */
+export interface RefusedEventStream {
+  readonly ok: false;
+  readonly response: HttpResponse;
+}
+
 /**
  * `url` without its trailing slashes, so the same server always has the same base URL.
  * @param url The server's URL as given.
  * @returns The base URL.
  */
 export function baseUrlOf(url: string): string {
-  return url.replace(TRAILING_SLASHES, "");
+  return trimmed(url);
 }
 
 /**
@@ -80,14 +199,22 @@ export function baseUrlOf(url: string): string {
  * @returns The answer.
  */
 export async function request(options: HttpRequest): Promise<HttpResponse> {
-  const headers = new Headers({ accept: "application/json", ...options.headers });
-  const init: RequestInit = { headers, method: options.method, redirect: "manual" };
-  if ("body" in options) {
-    headers.set("content-type", "application/json");
-    init.body = JSON.stringify(options.body);
+  const { response } = await fetched(options, "application/json");
+  return answerOf(response);
+}
+
+/**
+ * Opens a Server-Sent Events stream with one request, resolving once the
+ * server has answered with its headers. A redirect is never followed, as in
+ * `request`. An answer that isn't a 2xx is read whole and comes back refused.
+ * @param options The request.
+ * @returns The open stream, or the refusal.
+ */
+export async function openEventStream(options: HttpRequest): Promise<OpenEventStream | RefusedEventStream> {
+  const { close, isClosed, response } = await fetched(options, "text/event-stream");
+  if (!response.ok || response.body === null) {
+    const refused = await answerOf(response);
+    return { ok: false, response: refused };
   }
-  const path = fillParams(options.path, options.params ?? {});
-  const response = await fetch(`${baseUrlOf(options.baseUrl)}${path}${queryString(options.query ?? {})}`, init);
-  const text = await response.text();
-  return { headers: response.headers, ok: response.ok, status: response.status, text, ...parsed(text) };
+  return { close, events: eventsFrom(response.body, isClosed), ok: true };
 }
