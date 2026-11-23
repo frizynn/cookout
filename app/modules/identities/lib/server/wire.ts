@@ -26,6 +26,7 @@ const HumanIdentitySchema = Schema.Struct({
 const AgentIdentitySchema = Schema.Struct({
   admin: Schema.Boolean,
   createdAt: IsoTimeSchema,
+  handler: Schema.optionalKey(Schema.Literal(true)),
   kind: Schema.Literal("agent"),
   name: IdentityNameSchema,
   owner: Schema.optionalKey(OwnerSchema),

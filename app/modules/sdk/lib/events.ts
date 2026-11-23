@@ -1,10 +1,10 @@
 import type { ServerSentEvent, ServerSentFrame } from "../../http/client.ts";
+import { allChannelsQuery, eventsPath } from "../../events/index.ts";
+import { isInboxItemEvent, isMessageEvent, isReadPositionEvent } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import { CookoutError } from "./errors.ts";
 import type { CookoutEvent } from "../../events/index.ts";
 import type { MessageId } from "../../messages/index.ts";
-import { eventsPath } from "../../events/index.ts";
-import { isInboxItemEvent } from "./generated/validators.js";
 import { openEvents } from "./request.ts";
 
 type EventType = CookoutEvent["type"];
@@ -14,6 +14,7 @@ interface EventStream extends AsyncIterable<CookoutEvent> {
 }
 
 interface WatchOptions {
+  readonly allChannels?: boolean;
   readonly lastEventId?: MessageId;
   readonly onHeartbeat?: () => void;
 }
@@ -41,6 +42,8 @@ function resumeHeaders({ lastEventId }: WatchOptions): Readonly<Record<string, s
 
 const validators: { readonly [Type in EventType]: (data: unknown) => data is Extract<CookoutEvent, { type: Type }> } = {
   "inbox-item": isInboxItemEvent,
+  message: isMessageEvent,
+  "read-position": isReadPositionEvent,
 };
 
 function isEventType(event: string): event is EventType {
@@ -93,6 +96,13 @@ async function* cookoutEvents(
   }
 }
 
+function queryFor(allChannels: boolean): Readonly<Record<string, string>> {
+  if (allChannels) {
+    return allChannelsQuery;
+  }
+  return {};
+}
+
 function eventCalls(server: ClientConnection): EventCalls {
   return {
     watch: async (options = NO_OPTIONS) => {
@@ -100,6 +110,7 @@ function eventCalls(server: ClientConnection): EventCalls {
         connection: server,
         headers: resumeHeaders(options),
         path: eventsPath,
+        query: queryFor(options.allChannels ?? false),
       });
       return { [Symbol.asyncIterator]: () => cookoutEvents(events, options), close };
     },

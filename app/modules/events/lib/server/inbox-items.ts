@@ -1,19 +1,17 @@
 import { Array as Arr, Effect, Option, Stream } from "effect";
-import { LastEventId, sseEvent } from "./source.ts";
-import type { Connected } from "./source.ts";
-import type { Identity } from "../../../identities/index.ts";
+import type { Connected, StreamRequest } from "./source.ts";
 import { Inbox } from "../../../inbox/server.ts";
 import { InboxItemEventSchema } from "./wire.ts";
 import type { MessageId } from "../../../messages/index.ts";
 import { Messages } from "../../../messages/server.ts";
+import { sseEvent } from "./source.ts";
 
 const inboxItemEvent = sseEvent(InboxItemEventSchema);
 
-function inboxItems(caller: Identity): Connected<Inbox | Messages | LastEventId> {
+function inboxItems({ caller, lastEventId }: StreamRequest): Connected<Inbox | Messages> {
   return Effect.gen(function* subscribeToInboxItems() {
     const messages = yield* Messages;
     const inbox = yield* Inbox;
-    const lastEventId = yield* LastEventId;
     const posted = yield* messages.posted;
     const live = Stream.fromSubscription(posted).pipe(
       Stream.mapEffect(({ id }) => inbox.itemFor(caller, id)),

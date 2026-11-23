@@ -1,4 +1,4 @@
-import { DateTime, Effect, Predicate, Schema } from "effect";
+import { Array as Arr, DateTime, Effect, Predicate, Schema } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import type { Identity, IdentityKind, IdentityName, Owner } from "../../index.ts";
 import {
@@ -76,6 +76,13 @@ function newIdentity({ kind, name, owner }: CreateIdentityBody, createdAt: Ident
   return { admin: false, createdAt, kind, name };
 }
 
+function flaggedIfHandler(identity: Identity, handlers: ReadonlySet<IdentityName>): Identity {
+  if (identity.kind === "agent" && handlers.has(identity.name)) {
+    return { ...identity, handler: true };
+  }
+  return identity;
+}
+
 const withToken = HttpServerResponse.schemaJson(IdentityWithTokenResponseSchema);
 
 const createRoute: Route<Caller | Storage | Secrets> = {
@@ -101,7 +108,10 @@ const listRoute: Route<Storage> = {
   handle: () =>
     Effect.gen(function* listIdentitiesRoute() {
       const storage = yield* Storage;
-      const identities = yield* storage.listIdentities();
+      const commands = yield* storage.listCommands;
+      const stored = yield* storage.listIdentities();
+      const handlers = new Set(Arr.map(commands, ({ handler }) => handler));
+      const identities = Arr.map(stored, (identity) => flaggedIfHandler(identity, handlers));
       return yield* HttpServerResponse.schemaJson(ListIdentitiesResponseSchema)({ identities });
     }),
   method: "GET",
@@ -150,6 +160,12 @@ export const firstAdmin: Effect.Effect<Identity> = Effect.map(DateTime.now, (now
   kind: "human",
   name: firstAdminName,
 }));
+
+export const responseSchemas = {
+  IdentityResponse: IdentityResponseSchema,
+  IdentityWithTokenResponse: IdentityWithTokenResponseSchema,
+  ListIdentitiesResponse: ListIdentitiesResponseSchema,
+};
 
 export const identityAdminRoutes: readonly Route<Caller | Storage | Secrets>[] = [
   createRoute,

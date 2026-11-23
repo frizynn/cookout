@@ -2,6 +2,7 @@ import { Effect } from "effect";
 import type { Scope } from "effect";
 import type { StorageService } from "./service.ts";
 import { memoryChannels } from "./channels.ts";
+import { memoryCommands } from "./commands.ts";
 import { memoryHealth } from "./health.ts";
 import { memoryIdentities } from "./identities.ts";
 import { memoryLeases } from "./leases-memory.ts";
@@ -12,7 +13,7 @@ export const openMemoryStorage: Effect.Effect<StorageService, never, Scope.Scope
   openMemoryState,
   (state) => {
     const channels = memoryChannels(state);
-    const identities = memoryIdentities(state);
+    const { placeHandler, ...identities } = memoryIdentities(state);
     const { dropLease, ...leases } = memoryLeases(state);
     return {
       ...memoryHealth(state),
@@ -20,6 +21,7 @@ export const openMemoryStorage: Effect.Effect<StorageService, never, Scope.Scope
       ...channels,
       ...memoryMessages({ channels, identities, state }),
       ...leases,
+      ...memoryCommands({ placeHandler, state }),
       deleteIdentity: (name) =>
         Effect.tap(identities.deleteIdentity(name), (result) =>
           Effect.when(dropLease(name), Effect.succeed(result.status === "deleted")),

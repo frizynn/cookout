@@ -1,4 +1,4 @@
-import { Array as Arr, Context, Effect, Option, Queue, Schedule, Schema, String as Str, Stream, pipe } from "effect";
+import { Array as Arr, Effect, Option, Queue, Schedule, Schema, String as Str, Stream, pipe } from "effect";
 import type { CookoutEvent } from "../../index.ts";
 import type { Identity } from "../../../identities/index.ts";
 import type { MessageId } from "../../../messages/index.ts";
@@ -25,11 +25,13 @@ type Connected<Needs> = Effect.Effect<
   Needs | Scope.Scope
 >;
 
-type EventSource<Needs> = (caller: Identity) => Connected<Needs>;
+interface StreamRequest {
+  readonly caller: Identity;
+  readonly lastEventId: Option.Option<MessageId>;
+  readonly url: string;
+}
 
-class LastEventId extends Context.Service<LastEventId, Option.Option<MessageId>>()(
-  "@ai-hero/cookout/events/lib/server/source/LastEventId",
-) {}
+type EventSource<Needs> = (request: StreamRequest) => Connected<Needs>;
 
 const HEARTBEAT_EVERY = "15 seconds";
 const HEARTBEAT: SseComment = { comment: "heartbeat" };
@@ -69,4 +71,4 @@ function heartbeat(): Connected<never> {
   });
 }
 
-export { type Connected, type EventSource, LastEventId, heartbeat, lastEventIdIn, sseEvent, sseText };
+export { type Connected, type EventSource, type StreamRequest, heartbeat, lastEventIdIn, sseEvent, sseText };

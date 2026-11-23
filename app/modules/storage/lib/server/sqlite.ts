@@ -2,9 +2,9 @@ import { Effect, FileSystem } from "effect";
 import type { Scope } from "effect";
 import type { StorageService } from "./service.ts";
 import { StorageUnavailable } from "./errors.ts";
-import { migrate } from "./migrations.ts";
-import { openSqlite } from "./adapters/sqlite.ts";
+import { openMigrated } from "./migrations.ts";
 import { sqliteChannels } from "./channels.ts";
+import { sqliteCommands } from "./commands.ts";
 import { sqliteHealth } from "./health.ts";
 import { sqliteIdentities } from "./identities.ts";
 import { sqliteLeases } from "./leases-sqlite.ts";
@@ -28,14 +28,14 @@ function openSqliteStorage(
 ): Effect.Effect<StorageService, StorageUnavailable, FileSystem.FileSystem | Scope.Scope> {
   return Effect.gen(function* openStorage() {
     yield* createOwnerOnly(path);
-    const db = yield* openSqlite(path);
-    yield* migrate(db);
+    const db = yield* openMigrated(path);
     return {
       ...sqliteHealth(db),
       ...sqliteIdentities(db),
       ...sqliteChannels(db),
       ...sqliteMessages(db),
       ...sqliteLeases(db),
+      ...sqliteCommands(db),
     };
   });
 }

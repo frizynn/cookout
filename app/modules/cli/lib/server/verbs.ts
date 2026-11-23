@@ -1,15 +1,15 @@
 import { Argument, Command, Flag } from "effect/cli";
+import type { Call, CallFailure } from "./adapters/sdk.ts";
 import { Effect, Option, Schema } from "effect";
 import type { ListMessagesQuery, MessageId, PostMessageRequest } from "../../../messages/index.ts";
 import { identityKinds, identityNamePattern, isIdentityName } from "../../../identities/index.ts";
 import { join, leave } from "./join-and-leave.ts";
 import { printAnswer, refused } from "./output.ts";
-import type { CallFailure } from "./adapters/sdk.ts";
 import type { CommandFailed } from "./output.ts";
-import type { CookoutClient } from "../../../sdk/index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { LeaseStateNeeds } from "./lease-state.ts";
 import { callServer } from "./adapters/sdk.ts";
+import { commandCommand } from "./command.ts";
 import { helpCommand } from "./help-monitor.ts";
 import { isMessageId } from "../../../messages/index.ts";
 
@@ -19,7 +19,7 @@ function answered<Value>(
   return effect.pipe(Effect.flatMap(printAnswer), Effect.catch(refused));
 }
 
-const answer = <A>(call: (client: CookoutClient) => Promise<A>) => answered(callServer(call));
+const answer = <A>(call: Call<A>) => answered(callServer(call));
 
 const whoamiCommand = Command.make("whoami", {}, () => answer((client) => client.whoami())).pipe(
   Command.withDescription("Show the identity behind COOKOUT_TOKEN."),
@@ -247,5 +247,6 @@ export const verbCommands = [
   unfollowCommand,
   subscribeCommand,
   unsubscribeCommand,
+  commandCommand,
   helpCommand,
 ] as const;

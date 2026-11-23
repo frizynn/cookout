@@ -1,6 +1,8 @@
 import { Effect, Schema } from "effect";
+import type { Scope } from "effect";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { StorageUnavailable } from "./errors.ts";
+import { openSqlite } from "./adapters/sqlite.ts";
 
 const migrations: readonly string[] = [
   `CREATE TABLE message_id_sequence (
@@ -77,6 +79,15 @@ const migrations: readonly string[] = [
    BEGIN
      SELECT RAISE(ABORT, 'An identity keeps its kind.');
    END;`,
+  `CREATE TABLE commands (
+     name TEXT PRIMARY KEY,
+     url TEXT NOT NULL,
+     schema TEXT NOT NULL,
+     description TEXT,
+     handler_name TEXT NOT NULL,
+     secret TEXT NOT NULL,
+     created_at TEXT NOT NULL
+   ) STRICT;`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });
@@ -94,7 +105,7 @@ const tooNew = (current: number) =>
 const apply = (db: SqliteDatabase, sql: string, version: number) =>
   db.transaction(db.exec(`${sql}\nPRAGMA user_version = ${version};`));
 
-export const migrate = (db: SqliteDatabase): Effect.Effect<void, StorageUnavailable> =>
+const migrate = (db: SqliteDatabase): Effect.Effect<void, StorageUnavailable> =>
   Effect.gen(function* () {
     const { user_version: current } = yield* db.get("PRAGMA user_version").pipe(Effect.flatMap(decodeUserVersion));
     if (current > migrations.length) {
@@ -106,3 +117,7 @@ export const migrate = (db: SqliteDatabase): Effect.Effect<void, StorageUnavaila
       }
     }
   });
+
+export function openMigrated(path: string): Effect.Effect<SqliteDatabase, StorageUnavailable, Scope.Scope> {
+  return Effect.tap(openSqlite(path), migrate);
+}

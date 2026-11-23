@@ -1,8 +1,9 @@
-import { Effect, Schema } from "effect";
-import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
+import type { AgentIdentity, Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
+import { Effect, Predicate, Schema } from "effect";
 import { identityKinds, isIdentityName, isOwner } from "../../../identities/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { MemoryState } from "./memory-state.ts";
+import type { PlaceHandler } from "./commands.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { StorageUnavailable } from "./errors.ts";
 
@@ -78,7 +79,23 @@ const remove = (data: MemoryIdentities, name: IdentityName): DeleteIdentityResul
   return { identity: { ...identity }, status: "deleted" };
 };
 
-export const memoryIdentities = (state: MemoryState): IdentitiesSection => {
+function placeHandlerIn(data: MemoryIdentities): PlaceHandler {
+  return (handler: AgentIdentity) => {
+    const found = data.identities.get(handler.name);
+    if (Predicate.isUndefined(found)) {
+      data.identities.set(handler.name, { ...handler });
+      return "placed";
+    }
+    if (found.kind === "human") {
+      return "human";
+    }
+    return "placed";
+  };
+}
+
+type MemoryIdentitiesSection = IdentitiesSection & { readonly placeHandler: PlaceHandler };
+
+export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection => {
   const data: MemoryIdentities = { activeTokens: new Map(), identities: new Map(), revokedTokens: new Set() };
   const open = <A>(work: () => A): Fails<A> => Effect.andThen(state.ensureOpen, Effect.sync(work));
   return {
@@ -89,6 +106,7 @@ export const memoryIdentities = (state: MemoryState): IdentitiesSection => {
     deleteIdentity: (name) => open(() => remove(data, name)),
     findIdentityByTokenHash: (hash) => open(() => lookUp(data, hash)),
     listIdentities: () => open(() => [...data.identities.values()].sort(byName).map((found) => ({ ...found }))),
+    placeHandler: placeHandlerIn(data),
     replaceToken: (name, hash) =>
       open((): ReplaceTokenResult => {
         const identity = data.identities.get(name);

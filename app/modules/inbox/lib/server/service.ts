@@ -6,11 +6,12 @@ import type {
   ReadPosition,
   SubscriptionResponse,
 } from "../../index.ts";
-import { Array as Arr, Context, Effect, Layer, Option, Predicate } from "effect";
+import { Array as Arr, Context, Effect, Layer, Option, Predicate, PubSub } from "effect";
 import type { Channel, ChannelName } from "../../../channels/index.ts";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
 import type { MessageId } from "../../../messages/index.ts";
 import type { Refusal } from "../../../http/index.ts";
+import type { Scope } from "effect";
 import { Storage } from "../../../storage/server.ts";
 import type { StorageUnavailable } from "../../../storage/server.ts";
 import { channelNotFound } from "../../../channels/server.ts";
@@ -26,11 +27,22 @@ type FollowChange = (identity: IdentityName, id: MessageId) => Effect.Effect<Mes
 
 type SubscriptionChange = (identity: IdentityName, channel: ChannelName) => Effect.Effect<boolean, StorageUnavailable>;
 
+interface Acked {
+  readonly identity: IdentityName;
+  readonly readPosition: ReadPosition;
+}
+
+interface AckHub {
+  readonly publish: (acked: Acked) => Effect.Effect<boolean>;
+  readonly subscribe: Effect.Effect<PubSub.Subscription<Acked>, never, Scope.Scope>;
+}
+
 interface InboxService {
   readonly inbox: (caller: Identity) => Fails<InboxResponse>;
   readonly itemFor: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
   readonly itemsAfter: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
   readonly ack: (caller: Identity, id: MessageId) => Fails<AckResponse>;
+  readonly acked: Effect.Effect<PubSub.Subscription<Acked>, never, Scope.Scope>;
   readonly follow: (caller: Identity, asked: string) => Fails<FollowResponse>;
   readonly unfollow: (caller: Identity, asked: string) => Fails<FollowResponse>;
   readonly subscribe: (caller: Identity, channel: string) => Fails<SubscriptionResponse>;
@@ -95,14 +107,16 @@ function inboxOf(storage: Storage["Service"], caller: Identity): Fails<InboxResp
   );
 }
 
-function inboxOn(storage: Storage["Service"]): InboxService {
+function inboxOn(storage: Storage["Service"], hub: AckHub): InboxService {
   return {
     ack: (caller, id) =>
       Effect.gen(function* ackMessage() {
         const acked = yield* storage.ackMessage(caller.name, id);
         const readPosition = yield* orMessageNotFound<ReadPosition>(String(id))(acked);
+        yield* hub.publish({ identity: caller.name, readPosition });
         return { readPosition };
       }),
+    acked: hub.subscribe,
     follow: following(storage.followThread, true),
     inbox: (caller) => inboxOf(storage, caller),
     itemFor: (caller, id) =>
@@ -115,6 +129,14 @@ function inboxOn(storage: Storage["Service"]): InboxService {
   };
 }
 
-const inboxLayer: Layer.Layer<Inbox, never, Storage> = Layer.effect(Inbox, Effect.map(Storage, inboxOn));
+const inboxLayer: Layer.Layer<Inbox, never, Storage> = Layer.effect(
+  Inbox,
+  Effect.gen(function* inboxOnStorage() {
+    const storage = yield* Storage;
+    const pubSub = yield* PubSub.unbounded<Acked>();
+    const hub: AckHub = { publish: (acked) => PubSub.publish(pubSub, acked), subscribe: PubSub.subscribe(pubSub) };
+    return inboxOn(storage, hub);
+  }),
+);
 
 export { Inbox, inboxLayer };

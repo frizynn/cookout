@@ -6,6 +6,7 @@
  * that code, typed as `UnknownErrorCode`.
  */
 import type { AckResponse, FollowResponse, InboxResponse, SubscriptionResponse } from "./lib/inbox.ts";
+import type { AddCommandRequest, CommandWithSecretResponse, ListCommandsResponse } from "./lib/commands.ts";
 import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "../channels/index.ts";
 import type {
   CreateIdentityRequest,
@@ -22,10 +23,10 @@ import type {
   MessageResponse,
   PostMessageRequest,
   ThreadResponse,
-} from "../messages/index.ts";
+} from "./lib/messages.ts";
 import { channelPath, channelsPath } from "../channels/index.ts";
 import { connectionFor, getJson, send } from "./lib/request.ts";
-import { identitiesPath, identityPath, identityTokenPath, whoamiPath } from "../identities/index.ts";
+import { identitiesPath, identityPath, identityTokenPath, sessionPath, whoamiPath } from "../identities/index.ts";
 import {
   isChannelResponse,
   isHealthResponse,
@@ -35,6 +36,7 @@ import {
   isListIdentitiesResponse,
 } from "./lib/generated/validators.js";
 import type { HealthResponse } from "../http/index.ts";
+import { commandCalls } from "./lib/commands.ts";
 import { eventCalls } from "./lib/events.ts";
 import { healthPath } from "../http/index.ts";
 import { inboxCalls } from "./lib/inbox.ts";
@@ -48,6 +50,15 @@ export type {
   CreateChannelRequest,
   ListChannelsResponse,
 } from "../channels/index.ts";
+export type {
+  AddCommandRequest,
+  Command,
+  CommandName,
+  CommandSecret,
+  CommandWithSecretResponse,
+  JsonSchema,
+  ListCommandsResponse,
+} from "../commands/index.ts";
 export type { HealthResponse } from "../http/index.ts";
 export type { IsoTime } from "../time/index.ts";
 export type {
@@ -94,7 +105,7 @@ export type {
   ReadPosition,
   SubscriptionResponse,
 } from "../inbox/index.ts";
-export type { CookoutEvent, InboxItemEvent } from "../events/index.ts";
+export type { CookoutEvent, InboxItemEvent, MessageEvent, ReadPositionEvent } from "../events/index.ts";
 export type { EventStream, WatchOptions } from "./lib/events.ts";
 export { CookoutError, type CookoutErrorCode, type UnknownErrorCode } from "./lib/errors.ts";
 
@@ -114,7 +125,15 @@ export type CookoutClient = {
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */
   readonly whoami: () => Promise<IdentityResponse>;
-  /** `GET /v1/identities`: every identity with its kind and owner, sorted by name. */
+  /**
+   * `POST /v1/session`: logs a human identity in to the web UI. The server answers with the identity and sets an
+   * HttpOnly, SameSite=Strict session cookie, which a browser then sends instead of the token. An agent's token is
+   * refused with 403 `human_only` (`details.kind` names its kind); no token with 401 `token_missing`.
+   */
+  readonly login: () => Promise<IdentityResponse>;
+  /** `DELETE /v1/session`: clears the session cookie. */
+  readonly logout: () => Promise<IdentityResponse>;
+  /** `GET /v1/identities`: every identity with its kind and owner, sorted by name. A command's handler has `handler: true`. */
   readonly listIdentities: () => Promise<ListIdentitiesResponse>;
   /** Admin only. The token in the answer is shown this once. A name in use is 409 `identity_exists`. */
   readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;
@@ -177,13 +196,23 @@ export type CookoutClient = {
   readonly unsubscribe: (channel: string) => Promise<SubscriptionResponse>;
   /**
    * `GET /v1/events`: opens one Server-Sent Events stream, resolving once the server has accepted it. Iterate it for
-   * each new inbox item (`inbox-item`) the moment another identity posts it; the caller's own posts never arrive.
+   * each new inbox item (`inbox-item`) the moment another identity posts it (the caller's own posts never arrive), and
+   * each new read position (`read-position`) the moment any session of the caller acks, so several sessions stay in
+   * sync. With `allChannels`, it also sends every new message on every channel (`message`), as the web UI needs.
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
    * a newer server, is skipped. `close` drops the connection. To pick up after a dropped connection, pass the last
    * message ID seen as `lastEventId`: the stream first replays the inbox items after it, then goes on live. The
    * server sends a heartbeat every 15 s, which `onHeartbeat` hears while the stream is being iterated.
    */
   readonly watch: (options?: WatchOptions) => Promise<EventStream>;
+  /**
+   * `POST /v1/commands` (admin only): registers a webhook command. Its handler identity is an agent with the
+   * command's name, made unless an agent of that name exists. The secret deliveries are signed with is in the answer
+   * this once. A name in use is 409 `command_exists`; a human's name is 409 `handler_not_agent`.
+   */
+  readonly addCommand: (request: AddCommandRequest) => Promise<CommandWithSecretResponse>;
+  /** `GET /v1/commands`: every command, sorted by name, without its secret. */
+  readonly listCommands: () => Promise<ListCommandsResponse>;
 };
 
 /**
@@ -204,6 +233,14 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
     health: () => getJson(server, healthPath, isHealthResponse),
     listChannels: () => getJson(server, channelsPath, isListChannelsResponse),
     listIdentities: () => getJson(server, identitiesPath, isListIdentitiesResponse),
+    login: async () => {
+      const loggedIn = await send(server, { isExpected: isIdentityResponse, method: "POST", path: sessionPath });
+      return loggedIn;
+    },
+    logout: async () => {
+      const loggedOut = await send(server, { isExpected: isIdentityResponse, method: "DELETE", path: sessionPath });
+      return loggedOut;
+    },
     rotateToken: (name) =>
       send(server, {
         isExpected: isIdentityWithTokenResponse,
@@ -216,5 +253,6 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
     ...leaseCalls(server),
     ...inboxCalls(server),
     ...eventCalls(server),
+    ...commandCalls(server),
   };
 }

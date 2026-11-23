@@ -74,6 +74,8 @@ export type HumanIdentity = IdentityFields & {
 export type AgentIdentity = IdentityFields & {
   readonly kind: "agent";
   readonly owner?: Owner;
+  /** Present, and true, on a command's handler identity in `GET /v1/identities`. */
+  readonly handler?: true;
 };
 
 /** An identity as the server shows it: a human or an agent, never both. Its token is never part of it. */
@@ -115,6 +117,15 @@ export const identityPath = "/v1/identities/:name";
 /** `POST /v1/identities/:name/token` (admin): issues a new token, and the old one stops working at once. */
 export const identityTokenPath = "/v1/identities/:name/token";
 
+/**
+ * `POST /v1/session` (a human's bearer token): logs the web UI in, answering with the identity and a session
+ * cookie. An agent is refused with 403 `human_only`. `DELETE /v1/session` clears the cookie.
+ */
+export const sessionPath = "/v1/session";
+
+/** The HttpOnly, SameSite=Strict cookie the web UI's requests carry instead of the bearer header. */
+export const sessionCookieName = "cookout_session";
+
 /** The rule every token the server issues follows, for the backend's Schemas. */
 export const tokenPattern = /^cookout_[A-Za-z0-9_-]+$/u;
 
@@ -123,12 +134,13 @@ export function isToken(value: string): value is Token {
   return tokenPattern.test(value);
 }
 
-/** The codes bearer auth (401), the admin check (403) and identity admin refuse with. */
+/** The codes bearer auth (401), the admin check (403), login (403 `human_only`) and identity admin refuse with. */
 export const identityErrorCodes = [
   "token_missing",
   "token_unknown",
   "token_revoked",
   "admin_only",
+  "human_only",
   "identity_exists",
   "identity_not_found",
   "last_admin",

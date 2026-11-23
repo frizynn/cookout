@@ -14,7 +14,7 @@ import { matchesWire } from "../../../http/index.ts";
 
 const InboxReasonSchema = Schema.Literals(inboxReasons);
 
-const ReadPositionSchema = matchesWire<ReadPosition>()(
+export const ReadPositionSchema = matchesWire<ReadPosition>()(
   Schema.Struct({ channel: ChannelNameSchema, messageId: MessageIdSchema, thread: Schema.NullOr(MessageIdSchema) }),
 );
 

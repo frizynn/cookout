@@ -140,6 +140,21 @@ The first terminal prints the event as soon as the post returns. Through the SDK
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node --input-type=module -e 'import { createCookoutClient } from "./app/modules/sdk/index.ts"; const events = await createCookoutClient().watch(); for await (const event of events) { console.log(JSON.stringify(event)); await events.close(); }'
 ```
 
+## Register a command
+
+An admin registers a webhook command with a JSON Schema file; any identity lists them:
+
+```sh
+printf '{"type":"object","properties":{"branch":{"type":"string"}},"required":["branch"]}' > /tmp/cookout-deploy.schema.json
+env $(cat /tmp/cookout-dev.env) node app/main.ts command add deploy --url http://127.0.0.1:9/deploy --schema /tmp/cookout-deploy.schema.json --description "Ship a branch"
+env $(cat /tmp/cookout-dev.env) node app/main.ts command list
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '.identities[] | [.name, .kind, .handler]'
+env $(cat /tmp/cookout-dev.env) node app/main.ts command add ada --url http://127.0.0.1:9/x --schema /tmp/cookout-deploy.schema.json
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts command add other --url http://127.0.0.1:9/x --schema /tmp/cookout-deploy.schema.json
+```
+
+`command add` prints `{ command, secret }`: the `hmac_…` secret webhook deliveries will be signed with, shown this once (`command list` never shows it). The command's handler is an agent identity with the command's name ([ADR 0027](adr/0027-an-identity-is-a-human-or-an-agent.md)), made unless an agent of that name exists, so `identity list` gives `["deploy","agent",true]`. A second `add deploy` is 409 `command_exists`, a human's name (`ada`) is 409 `handler_not_agent`, and a non-admin (`grace`, from the lease recipe) is 403 `admin_only`; each exits 1.
+
 ## Drive it with the SDK
 
 The SDK is `@ai-hero/cookout/sdk`; from a checkout, import `app/modules/sdk/index.ts`. `createCookoutClient()` reads `COOKOUT_URL` and `COOKOUT_TOKEN`:
@@ -169,6 +184,22 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '[.identi
 ```
 
 The test script builds the package first (`pnpm build`), so the bin it runs is the built one, as published. Each test draws a fresh prefix such as `e2e-k3j9x0qa` and names every identity (each an agent) and channel it makes with it, so runs never collide on a shared server. When a test ends, passing or failing, it deletes every identity whose name starts with its prefix, so the `identity list` afterwards shows none of the run's identities (on a fresh board, only `admin`). Channels can't be deleted, so a run's channels stay, under its prefix. A run without both variables fails at once with a config error and touches no server. Tests are never retried.
+
+## Log in as a human with a session cookie
+
+The web UI swaps a human identity's token for a session cookie with `POST /v1/session`, then sends the cookie instead of the bearer header. These commands log in as the seeded `grace`, use the cookie alone, try an agent's token and log out:
+
+```sh
+jq -r '.identities[] | select(.identity.name == "grace") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-grace.env
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -si -X POST -H "Authorization: Bearer $COOKOUT_TOKEN" "$COOKOUT_URL/v1/session" | grep -i set-cookie'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -s -H "Cookie: cookout_session=$COOKOUT_TOKEN" "$COOKOUT_URL/v1/whoami"'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -s -X POST -H "Cookie: cookout_session=$COOKOUT_TOKEN" -H "Content-Type: application/json" -d "{\"channel\":\"general\",\"text\":\"From the web\"}" "$COOKOUT_URL/v1/messages"'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) sh -c 'curl -s -X POST -H "Authorization: Bearer $COOKOUT_TOKEN" "$COOKOUT_URL/v1/session"'
+env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -X POST "$COOKOUT_URL/v1/session"'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -si -X DELETE -H "Cookie: cookout_session=$COOKOUT_TOKEN" "$COOKOUT_URL/v1/session" | grep -i set-cookie'
+```
+
+The login sets `cookout_session=…; Path=/; HttpOnly; SameSite=Strict`; the cookie's value is the token, so rotating the token ends the session. The cookie alone answers `whoami` as `grace` and posts as her with no lease. The agent's login is refused with 403 `human_only` and `details.kind` `agent`; no token is 401 `token_missing`. Logout sets the cookie again with `Max-Age=0`. The `triage-agent` env file comes from the inbox recipe above.
 
 ## Stop it
 
@@ -240,6 +271,26 @@ node dist/main.js serve --port 3000 --host 127.0.0.1 --db /tmp/cookout-built.db 
 ```
 
 Run the second command in the background (or its own terminal). `pnpm build` runs tsdown, then `vite build`, which writes the web UI to the web folder in dist (its `index.html` and its assets). `cookout serve` serves that `index.html` at `/` and each asset at `/assets/<file>`, without a token, so open `http://127.0.0.1:3000/`, or run `curl -fsS http://127.0.0.1:3000/`. Running `node app/main.ts serve` from the source has no built UI next to it, so there `/` is refused with 404 `not_found`. Stop it with `pkill -INT -f "[d]ist/main.js serve"`.
+
+## See the channel list
+
+The web UI (`app/web.tsx`) draws `CookoutApp` from the `routes` module, which picks a view from the page's location hash: `#/` (or no hash) is the channel list, and `#/login`, `#/channels/<name>` and `#/channels/<name>/threads/<id>` have routes that say they aren't built yet; any other hash says "Nothing here". There is no login yet, so the page's SDK client has no token, and the channel list shows the server's refusal (`token_missing`). To see the channels, have the browser send a token itself. With the built server from "Open the web UI" up on port 3000, make some channels, then drive it with `agent-browser`:
+
+```sh
+grep '^{"adminToken' /tmp/cookout-built.log | jq -r '"COOKOUT_URL=http://127.0.0.1:3000 COOKOUT_TOKEN=\(.adminToken)"' > /tmp/cookout-built.env
+env $(cat /tmp/cookout-built.env) node app/main.ts channel create general --description "The general channel."
+env $(cat /tmp/cookout-built.env) node app/main.ts channel create deploys
+agent-browser open http://127.0.0.1:3000/ && agent-browser snapshot
+agent-browser close
+agent-browser open http://127.0.0.1:3000/ --headers "{\"Authorization\":\"Bearer $(grep '^{"adminToken' /tmp/cookout-built.log | jq -r .adminToken)\"}"
+agent-browser snapshot
+agent-browser find text "#general" click && agent-browser get url
+agent-browser close
+```
+
+The first snapshot shows the `Channels` card with an alert: `Couldn't load the channels (token_missing): …`. With the header, the second shows a list named `Channels` with one link per channel, sorted by name, each `#<name>` with its description under it: `#deploys` and `#general`. Clicking `#general` moves to `http://127.0.0.1:3000/#/channels/general`, whose heading is `#general`. Take a picture of any of them with `agent-browser screenshot <file>.png`.
+
+The web tests (`app/modules/routes/tests/`, the `web` Vitest project) render `CookoutApp` in jsdom against one real `cookout serve` that `scripts/web-test-server.ts` starts for the run; run them alone with `node_modules/.bin/vitest run --project web`.
 
 ## Other checks
 
