@@ -17,8 +17,8 @@ export function AgentButtons(props: AgentButtonsProps): ReactNode {
   const { actions } = props;
   const state = useSyncExternalStore(actions.subscribe, actions.snapshot);
   const sending = state.action.status === "sending";
-  const handleRotate = actions.rotate;
-  const handleRevoke = actions.revokeSession;
+  const handleRotate = actions.ask.rotate;
+  const handleRevoke = actions.ask.revoke;
   return (
     <>
       <Button disabled={sending} onClick={handleRotate}>

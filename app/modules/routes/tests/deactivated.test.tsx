@@ -1,7 +1,7 @@
 import { adminClient, clientWith, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { inPane, inProfile } from "./regions.ts";
+import { inDialog, inPane, inProfile } from "./regions.ts";
 import { rowsOf, subscribedReader } from "./inbox-reader.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
 import { openAt } from "./render.tsx";
@@ -40,10 +40,15 @@ async function profileHeading(): Promise<string> {
 
 async function deactivateFromProfile(name: string): Promise<void> {
   fireEvent.click(await inProfile().findByRole("button", { name: "Deactivate" }));
-  fireEvent.click(await inProfile().findByRole("button", { name: `Deactivate @${name}` }));
+  fireEvent.click(await inDialog().findByRole("button", { name: `Deactivate @${name}` }));
   await waitFor(async () => {
     await expect(profileHeading()).resolves.toBe(`${name}(deactivated)`);
   });
+}
+
+async function reactivateFromProfile(name: string): Promise<void> {
+  fireEvent.click(inProfile().getByRole("button", { name: "Reactivate" }));
+  fireEvent.click(await inDialog().findByRole("button", { name: `Reactivate @${name}` }));
 }
 
 it("a deactivated author keeps their display name on their messages, marked (deactivated)", {
@@ -117,7 +122,7 @@ it("an admin deactivates and reactivates from a profile, and the fresh token sho
   const close = openAt({ client: adminClient(), hash: "#/people/web-off-profile-human" });
   await deactivateFromProfile("web-off-profile-human");
   const { identities } = await adminClient().listIdentities({ include: "deactivated" });
-  fireEvent.click(inProfile().getByRole("button", { name: "Reactivate" }));
+  await reactivateFromProfile("web-off-profile-human");
   const token = await screen.findByLabelText("New Identity token");
   const { identity } = await clientWith(token.textContent).whoami();
 

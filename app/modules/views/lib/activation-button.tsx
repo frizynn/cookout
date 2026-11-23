@@ -14,11 +14,11 @@ export function ActivationButton(props: ActivationButtonProps): ReactNode {
   const { actions } = props;
   const state = useSyncExternalStore(actions.subscribe, actions.snapshot);
   const sending = state.action.status === "sending";
-  const handleDeactivate = actions.askToDeactivate;
-  const handleReactivate = actions.reactivate;
+  const handleDeactivate = actions.ask.deactivate;
+  const handleReactivate = actions.ask.reactivate;
   if (props.active) {
     return (
-      <Button disabled={sending || state.confirming} onClick={handleDeactivate}>
+      <Button disabled={sending} onClick={handleDeactivate}>
         {TEXT.deactivate}
       </Button>
     );

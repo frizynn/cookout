@@ -1,9 +1,9 @@
 import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { inDialog, inProfile } from "./regions.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
 import { addCommand } from "./commands.ts";
-import { inProfile } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
 const ONE = 1;
@@ -51,10 +51,10 @@ it("deactivating a handler identity warns that its command stops replying, and s
   await withMessage(await addCommand({ name: "web-handler-off" }), "web-handler-off");
   const close = openAt({ client: adminClient(), hash: "#/people/web-handler-off" });
   fireEvent.click(await inProfile().findByRole("button", { name: "Deactivate" }));
-  await inProfile().findByText(
-    "Deactivate @web-handler-off? Every token it holds stops working at once; its messages stay. /web-handler-off will stop replying until @web-handler-off is reactivated.",
+  await inDialog().findByText(
+    "Its tokens and sessions stop working at once and it can't post; its messages stay. You can reactivate it later. /web-handler-off will stop replying until @web-handler-off is reactivated.",
   );
-  fireEvent.click(inProfile().getByRole("button", { name: "Deactivate @web-handler-off" }));
+  fireEvent.click(inDialog().getByRole("button", { name: "Deactivate @web-handler-off" }));
 
   await waitFor(async () => {
     await expect(adminClient().getIdentity("web-handler-off")).resolves.toMatchObject({
@@ -73,8 +73,8 @@ it("deleting a handler identity warns that its command goes with it", { timeout:
   fireEvent.click(await inProfile().findByRole("button", { name: "Delete" }));
 
   await expect(
-    inProfile().findByText(
-      "Delete @web-handler-gone? It has no messages; its tokens stop working and its name is free again. /web-handler-gone is removed with it and stops replying.",
+    inDialog().findByText(
+      "It has no messages. Its tokens stop working and its name is free again. This can't be undone. /web-handler-gone is removed with it and stops replying.",
     ),
   ).resolves.toBeDefined();
 
@@ -90,8 +90,8 @@ it("deactivating an identity that handles no command gives no handler warning", 
   fireEvent.click(await inProfile().findByRole("button", { name: "Deactivate" }));
 
   await expect(
-    inProfile().findByText(
-      "Deactivate @web-handler-none? Every token it holds stops working at once; its messages stay.",
+    inDialog().findByText(
+      "Its tokens and sessions stop working at once and it can't post; its messages stay. You can reactivate it later.",
     ),
   ).resolves.toBeDefined();
 
