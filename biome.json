@@ -12,7 +12,8 @@
       "!pnpm-lock.yaml",
       "!api/sdk.api.md",
       "!lint/fixers-run/**",
-      "!skills/**/SKILL.md"
+      "!skills/**/SKILL.md",
+      "!.changeset/*.md"
     ]
   },
   "formatter": {
