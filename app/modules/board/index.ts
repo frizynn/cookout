@@ -111,4 +111,4 @@ export type { CallState } from "./lib/command-call.ts";
 export type { SchemaProblem } from "../sdk/index.ts";
 export type { Commands } from "./lib/commands.ts";
 export type { PostState } from "./lib/failure.ts";
-export type { ThreadMessages } from "./lib/thread-messages.ts";
+export type { ThreadMessages, ThreadMessagesState } from "./lib/thread-messages.ts";

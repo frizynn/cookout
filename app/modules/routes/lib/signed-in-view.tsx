@@ -1,32 +1,35 @@
-import { ChannelListView, ChannelView, InboxView, NotBuiltView, ThreadView } from "../../views/index.tsx";
-import type { Board } from "../../board/index.ts";
-import type { Composer } from "../../composer/index.ts";
+import { Workspace, WorkspaceMain } from "../../design-system/index.tsx";
+import type { Identity } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
-import type { Unread } from "../../unread/index.ts";
+import { RoutePanes } from "./route-panes.tsx";
+import { SidebarView } from "../../views/index.tsx";
+import type { Stores } from "./stores.ts";
+import { useSyncExternalStore } from "react";
 
 interface SignedInViewProps {
-  readonly board: Board;
-  readonly composer: Composer;
-  readonly unread: Unread;
-  readonly route: Exclude<Route, { readonly name: "login" }>;
+  readonly identity: Identity;
+  readonly route: Route;
+  readonly stores: Stores;
 }
 
 export function SignedInView(props: SignedInViewProps): ReactNode {
-  const { board, composer, route, unread } = props;
-  if (route.name === "channels") {
-    return <ChannelListView board={board} unread={unread} />;
-  }
-  if (route.name === "inbox") {
-    return <InboxView unread={unread} />;
-  }
-  if (route.name === "channel") {
-    return <ChannelView board={board} channel={route.channel} composer={composer} key={route.channel} />;
-  }
-  if (route.name === "thread") {
-    return (
-      <ThreadView board={board} channel={route.channel} composer={composer} key={route.thread} thread={route.thread} />
-    );
-  }
-  return <NotBuiltView description="No page has this address." title="Nothing here" />;
+  const { stores } = props;
+  const { layout } = stores;
+  const { sidebar } = useSyncExternalStore(layout.subscribe, layout.snapshot);
+  const handleToggle = layout.toggleSidebar;
+  return (
+    <Workspace onToggleSidebar={handleToggle} sidebarOpen={sidebar}>
+      <SidebarView
+        board={stores.board}
+        identity={props.identity}
+        layout={layout}
+        route={props.route}
+        unread={stores.unread}
+      />
+      <WorkspaceMain>
+        <RoutePanes route={props.route} stores={stores} />
+      </WorkspaceMain>
+    </Workspace>
+  );
 }

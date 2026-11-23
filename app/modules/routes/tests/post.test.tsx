@@ -1,7 +1,8 @@
-import { adminClient, newIdentity, openAt, watched } from "./app.tsx";
+import { adminClient, alertSaying, newIdentity, openAt } from "./app.tsx";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
+import { watched } from "./watched.ts";
 
 const NONE = 0;
 
@@ -91,7 +92,7 @@ it("a refused post says so and keeps its text in the box", { timeout: 5000 }, as
   const close = await openedThenRevoked("web-post-rotated", "web-post-refused");
   typeMessage("Too late");
   sendMessage();
-  const alert = await screen.findByRole("alert");
+  const alert = await alertSaying("Couldn't post the message");
 
   expect([alert.textContent, await shownMessages(), screen.queryByDisplayValue("Too late")]).toStrictEqual([
     expect.stringMatching(/^Couldn't post the message \(token_revoked\)/u),

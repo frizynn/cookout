@@ -6,8 +6,13 @@ export function Suggestions(parts: SuggestionsParts): ReactNode {
   const handleChoose = parts.onChoose;
   return (
     <ul aria-label={parts.label} className="flex flex-col rounded-md border bg-background py-1 text-sm">
-      {parts.options.map((option) => (
-        <SuggestionOption key={option} onChoose={handleChoose} option={option} />
+      {parts.options.map((option, index) => (
+        <SuggestionOption
+          highlighted={index === parts.highlighted}
+          key={option}
+          onChoose={handleChoose}
+          option={option}
+        />
       ))}
     </ul>
   );

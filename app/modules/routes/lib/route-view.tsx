@@ -1,26 +1,29 @@
-import type { Board } from "../../board/index.ts";
-import type { Composer } from "../../composer/index.ts";
-import { LoginView } from "../../views/index.tsx";
+import { Authors, LoginView } from "../../views/index.tsx";
+import { AppShell } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
-import type { Session } from "../../session/index.ts";
 import { SignedInView } from "./signed-in-view.tsx";
-import type { Unread } from "../../unread/index.ts";
+import type { Stores } from "./stores.ts";
 import { useSyncExternalStore } from "react";
 
 interface RouteViewProps {
-  readonly board: Board;
-  readonly composer: Composer;
   readonly route: Route;
-  readonly session: Session;
-  readonly unread: Unread;
+  readonly stores: Stores;
 }
 
 export function RouteView(props: RouteViewProps): ReactNode {
-  const { board, composer, route, session, unread } = props;
-  const { status } = useSyncExternalStore(session.subscribe, session.snapshot);
-  if (status !== "logged-in" || route.name === "login") {
-    return <LoginView session={session} />;
+  const { session } = props.stores;
+  const state = useSyncExternalStore(session.subscribe, session.snapshot);
+  if (state.status !== "logged-in") {
+    return (
+      <AppShell>
+        <LoginView session={session} />
+      </AppShell>
+    );
   }
-  return <SignedInView board={board} composer={composer} route={route} unread={unread} />;
+  return (
+    <Authors identities={props.stores.composer.identities}>
+      <SignedInView identity={state.identity} route={props.route} stores={props.stores} />
+    </Authors>
+  );
 }

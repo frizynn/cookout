@@ -92,9 +92,9 @@ it("the login route says who is logged in", { timeout: 5000 }, async () => {
   const { client } = await newIdentity({ kind: "human", name: "web-login-who" });
   const close = openAt({ client, hash: "#/login" });
 
-  const link = await screen.findByRole("link", { name: "Logged in as @web-login-who. See the channels" });
+  const link = await screen.findByRole("link", { name: "Logged in as @web-login-who. See the inbox" });
 
-  expect(link.getAttribute("href")).toBe("#/");
+  expect(link.getAttribute("href")).toBe("#/inbox");
 
   close();
 });

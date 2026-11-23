@@ -1,5 +1,5 @@
 import type { CookoutClient, InboxResponse } from "../../sdk/index.ts";
-import { adminClient, newIdentity, openAt } from "./app.tsx";
+import { adminClient, alertSaying, newIdentity, openAt } from "./app.tsx";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 
@@ -105,7 +105,7 @@ it("reopening a channel that can no longer be read says so and keeps its message
   await adminClient().rotateToken("web-channel-reopen-rotated");
 
   globalThis.location.hash = "#/channels/web-channel-reopen-refused";
-  const alert = await screen.findByRole("alert");
+  const alert = await alertSaying("Couldn't mark the channel read");
 
   expect([alert.textContent, await shownMessages()]).toStrictEqual([
     expect.stringMatching(/^Couldn't mark the channel read \(token_revoked\)/u),
