@@ -221,7 +221,7 @@ export { descriptionRoutes } from "./lib/server/descriptions.ts";
 export { IdentityChanges, identityChangesLayer } from "./lib/server/changes.ts";
 
 /**
- * The Schemas of the identity as the server shows it and of its name, for the live stream's `identity` and
- * `agent-session` events.
+ * The Schemas of the identity as the server shows it and of its name, for the live stream's `identity`,
+ * `agent-session` and `presence` events.
  */
 export { IdentityNameSchema, IdentitySchema } from "./lib/server/wire.ts";

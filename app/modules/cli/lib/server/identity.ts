@@ -1,8 +1,9 @@
 import { Argument, Command, Flag } from "effect/cli";
 import { Effect, Option } from "effect";
 import { answer, answered } from "./output.ts";
+import { callServer, withClient } from "./adapters/sdk.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
-import { callServer } from "./adapters/sdk.ts";
+import { identitiesWithPresence } from "./presence.ts";
 import { identityKinds } from "../../../identities/index.ts";
 
 const NOTHING = {};
@@ -48,11 +49,15 @@ const identityListCommand = Command.make(
   },
   ({ deactivated }) => {
     if (deactivated) {
-      return answer((client) => client.listIdentities({ include: "deactivated" }));
+      return answered(withClient(identitiesWithPresence({ include: "deactivated" })));
     }
-    return answer((client) => client.listIdentities());
+    return answered(withClient(identitiesWithPresence({})));
   },
-).pipe(Command.withDescription("List every active identity with its kind, owner and description, sorted by name."));
+).pipe(
+  Command.withDescription(
+    "List every active identity with its kind, owner, description and presence (online, or when it was last seen), sorted by name.",
+  ),
+);
 
 const identityRotateCommand = Command.make("rotate", { name: identityName }, ({ name }) =>
   answer((client) => client.rotateToken(name)),

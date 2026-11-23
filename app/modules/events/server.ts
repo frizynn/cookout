@@ -25,7 +25,10 @@
  * (`agent_session_revoked` once `leave` or another session's `join --force`
  * revokes the token) ends the stream with it. The route sits behind the
  * server's token gate, and opens only while the caller holds fewer than `COOKOUT_STREAMS_PER_IDENTITY` streams (429
- * `too_many_streams`, ADR 0033); closing the stream frees its place.
+ * `too_many_streams`, ADR 0033); closing the stream frees its place. Every stream, whatever its query, is a live
+ * connection of the caller's for as long as it is open, which keeps the caller online (`PresenceRegistry`), and the
+ * all-channels feed sends each identity's changed presence as a `presence` event; `PresenceResponse`, the answer to
+ * `GET /v1/presence`, is among the Schemas below so the SDK reads it with the event.
  */
 import {
   AgentSessionEventSchema,
@@ -37,6 +40,8 @@ import {
   IdentityEventSchema,
   InboxItemEventSchema,
   MessageEventSchema,
+  PresenceEventSchema,
+  PresenceResponseSchema,
   ReadPositionEventSchema,
   ReadPositionMovedBackEventSchema,
   ReadReceiptEventSchema,
@@ -77,9 +82,13 @@ const eventsRoute: Route<Needs> = {
       const lastEventId = lastEventIdIn(headers["last-event-id"]);
       const connection = yield* Scope.make();
       yield* holdStreamPlace.pipe(Scope.provide(connection));
-      const streams = yield* Effect.forEach(allSources, (source) => source({ caller, lastEventId, url }), {
-        concurrency: "unbounded",
-      }).pipe(Scope.provide(connection));
+      const streams = yield* Effect.forEach(
+        allSources,
+        (source) => source({ authorization: headers["authorization"], caller, lastEventId, url }),
+        {
+          concurrency: "unbounded",
+        },
+      ).pipe(Scope.provide(connection));
       const body = Stream.mergeAll(streams, { concurrency: "unbounded" }).pipe(
         Stream.takeUntil(isLast),
         Stream.map(sseText),
@@ -112,6 +121,8 @@ export const eventResponseSchemas = {
   IdentityEvent: IdentityEventSchema,
   InboxItemEvent: InboxItemEventSchema,
   MessageEvent: MessageEventSchema,
+  PresenceEvent: PresenceEventSchema,
+  PresenceResponse: PresenceResponseSchema,
   ReadPositionEvent: ReadPositionEventSchema,
   ReadPositionMovedBackEvent: ReadPositionMovedBackEventSchema,
   ReadReceiptEvent: ReadReceiptEventSchema,

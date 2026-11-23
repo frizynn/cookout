@@ -10,8 +10,11 @@
 import type { Identity, IdentityName } from "../identities/index.ts";
 import type { InboxItem, MovedBackReadPosition, ReadPosition, SubscriptionResponse } from "../inbox/index.ts";
 import type { Message, MessageId, ReadReceipt } from "../messages/index.ts";
+import type { Presence, presenceName } from "../presence/index.ts";
 import type { Channel } from "../channels/index.ts";
 import type { Command } from "../commands/index.ts";
+
+export type { LiveConnectionDetail, Presence, PresenceResponse } from "../presence/index.ts";
 
 /** A new item in the caller's inbox, sent the moment another identity posts it. */
 export interface InboxItemEvent {
@@ -122,6 +125,16 @@ export interface ConnectedEvent {
   readonly latestMessageId: MessageId | null;
 }
 
+/**
+ * One identity's presence just changed (it came online, went offline, or connects another way), sent only on the
+ * all-channels feed so every open web UI shows it at once. It has no SSE `id`, so a caller that reconnects reads
+ * `GET /v1/presence` again.
+ */
+export interface PresenceEvent {
+  readonly type: typeof presenceName;
+  readonly presence: Presence;
+}
+
 /** Any event the stream sends. */
 export type CookoutEvent =
   | InboxItemEvent
@@ -135,7 +148,8 @@ export type CookoutEvent =
   | IdentityDeletedEvent
   | CommandEvent
   | AgentSessionEvent
-  | SubscriptionEvent;
+  | SubscriptionEvent
+  | PresenceEvent;
 
 /**
  * `GET /v1/events`: the caller's Server-Sent Events stream, one per connection. With `allChannelsQuery` as its query

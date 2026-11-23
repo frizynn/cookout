@@ -7,13 +7,31 @@ import type { Scope } from "effect";
 const nowhere = "http://127.0.0.1:9/command";
 const schema = { type: "object" } as const;
 
-function watchingAllChannels(client: CookoutClient): Effect.Effect<AsyncIterator<CookoutEvent>, never, Scope.Scope> {
+function isPresence(next: Readonly<IteratorResult<CookoutEvent, unknown>>): boolean {
+  return next.done !== true && next.value.type === "presence";
+}
+
+function nextBesidesPresence(
+  all: AsyncIterator<CookoutEvent, unknown>,
+): Effect.Effect<IteratorResult<CookoutEvent, unknown>> {
+  return answer(() => all.next()).pipe(Effect.repeat({ while: isPresence }));
+}
+
+interface Feed {
+  readonly next: Effect.Effect<IteratorResult<CookoutEvent, unknown>>;
+}
+
+function withoutPresence(events: EventStream): Feed {
+  return { next: nextBesidesPresence(events[Symbol.asyncIterator]()) };
+}
+
+function watchingAllChannels(client: CookoutClient): Effect.Effect<Feed, never, Scope.Scope> {
   return Effect.map(
     Effect.acquireRelease(
       answer(() => client.watch({ allChannels: true })),
       (events: EventStream) => answer(() => events.close()),
     ),
-    (events) => events[Symbol.asyncIterator](),
+    withoutPresence,
   );
 }
 
@@ -23,9 +41,9 @@ it.effect("registering a command and rotating its secret each send it as a comma
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
     const events = yield* watchingAllChannels(grace.client);
     const { command } = yield* answer(() => cookout.client.addCommand({ name: "deploy", schema, url: nowhere }));
-    const afterAdding = yield* answer(() => events.next());
+    const afterAdding = yield* events.next;
     yield* answer(() => cookout.client.rotateCommandSecret("deploy"));
-    const afterRotating = yield* answer(() => events.next());
+    const afterRotating = yield* events.next;
 
     expect([afterAdding, afterRotating]).toStrictEqual([
       { done: false, value: { command, type: "command" } },
@@ -41,7 +59,7 @@ it.effect("deleting a channel reaches every all-channels watcher as a channel-de
     yield* answer(() => cookout.client.createChannel({ name: "grill" }));
     const events = yield* watchingAllChannels(grace.client);
     const { channel } = yield* answer(() => cookout.client.deleteChannel("grill"));
-    const event = yield* answer(() => events.next());
+    const event = yield* events.next;
 
     expect(event).toStrictEqual({ done: false, value: { channel, type: "channel-deleted" } });
   }).pipe(Effect.provide(testCookout())),
@@ -54,7 +72,7 @@ it.effect("an admin deleting an identity reaches every all-channels watcher as a
     yield* cookout.createIdentity("e2e-run-1");
     const events = yield* watchingAllChannels(grace.client);
     const { identity } = yield* answer(() => cookout.client.deleteIdentity("e2e-run-1"));
-    const event = yield* answer(() => events.next());
+    const event = yield* events.next;
 
     expect(event).toStrictEqual({ done: false, value: { identity, type: "identity-deleted" } });
   }).pipe(Effect.provide(testCookout())),
@@ -62,11 +80,8 @@ it.effect("an admin deleting an identity reaches every all-channels watcher as a
 
 const sessionEvent = { done: false, value: { agent: "release-bot", type: "agent-session" } } as const;
 
-function heardAfter(events: AsyncIterator<CookoutEvent>, act: () => Promise<unknown>): Effect.Effect<unknown> {
-  return Effect.andThen(
-    answer(act),
-    answer(() => events.next()),
-  );
+function heardAfter(events: Feed, act: () => Promise<unknown>): Effect.Effect<unknown> {
+  return Effect.andThen(answer(act), events.next);
 }
 
 it.effect("an agent's owner hears its agent joining and leaving", () =>
@@ -76,7 +91,7 @@ it.effect("an agent's owner hears its agent joining and leaving", () =>
     yield* cookout.createIdentity("release-bot", { owner: "ada" });
     const events = yield* watchingAllChannels(ada.client);
     const { agentSessionToken } = yield* answer(() => ada.client.join({ as: "release-bot" }));
-    const afterJoining = yield* answer(() => events.next());
+    const afterJoining = yield* events.next;
     const afterLeaving = yield* heardAfter(events, () => cookout.clientFor(agentSessionToken).leave());
 
     expect([afterJoining, afterLeaving]).toStrictEqual([sessionEvent, sessionEvent]);
@@ -108,7 +123,7 @@ it.effect("an admin hears an agent's join, and a human who neither owns it nor i
     );
     yield* answer(() => ada.client.join({ as: "release-bot" }));
     const { channel } = yield* answer(() => ada.client.createChannel({ name: "grill" }));
-    const heard = yield* Effect.all([answer(() => graceHears.next()), answer(() => adminHears.next())], {
+    const heard = yield* Effect.all([graceHears.next, adminHears.next], {
       concurrency: 1,
     });
 
@@ -125,7 +140,7 @@ it.effect("collecting an approved join request tells the agent's owner", () =>
     const started = yield* answer(() => cookout.clientFor().startAgentJoin({ as: "release-bot", host: "build-box" }));
     yield* answer(() => ada.client.approveAgentJoin(started.userCode));
     yield* answer(() => cookout.clientFor().collectAgentJoin(started.requestId));
-    const event = yield* answer(() => events.next());
+    const event = yield* events.next;
 
     expect(event).toStrictEqual(sessionEvent);
   }).pipe(Effect.provide(testCookout())),

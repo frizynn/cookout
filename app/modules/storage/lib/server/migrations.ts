@@ -167,6 +167,11 @@ const migrations: readonly string[] = [
   "ALTER TABLE messages RENAME COLUMN agent_tool TO harness;",
   "ALTER TABLE identities ADD COLUMN description TEXT;",
   READ_RECEIPTS_MIGRATION,
+  `CREATE TABLE presence (
+     identity_name TEXT PRIMARY KEY REFERENCES identities (name) ON DELETE CASCADE,
+     online INTEGER NOT NULL CHECK (online IN (0, 1)),
+     last_seen_at TEXT NOT NULL
+   ) STRICT;`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

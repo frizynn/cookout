@@ -32,6 +32,7 @@ import {
 import type { AgentJoinCalls } from "../../agent-sessions/index.ts";
 import type { ClientConnection } from "./request.ts";
 import type { DescriptionCalls } from "../../identities/client.ts";
+import type { EventCalls } from "./events.ts";
 import type { HealthResponse } from "../../http/index.ts";
 import type { LoginCalls } from "../../logins/index.ts";
 import { healthPath } from "../../http/index.ts";
@@ -223,7 +224,10 @@ function identityCalls(
   return { ...loginCalls(server), ...ownIdentityCalls(server), ...descriptionCalls(server) };
 }
 
-export type ApprovalCalls = LoginCalls & AgentJoinCalls;
-export type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
-export type { IdentityDeletionCalls };
+type ApprovalCalls = LoginCalls & AgentJoinCalls;
+type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
+export type CallGroups = ApprovalCalls &
+  IdentityDeletionCalls &
+  IdentityDescriptionCalls &
+  Pick<EventCalls, "presence">;
 export { identityCalls };

@@ -606,77 +606,30 @@ interface AgentSessionCalls extends AgentJoinCalls {
   readonly listAgentSessions: (agent: string) => Promise<ListAgentSessionsResponse>;
   readonly revokeAgentSession: (agent: string) => Promise<RevokeAgentSessionResponse>;
 }
-/** The answer to the health check. */
-interface HealthResponse {
-  readonly status: "ok";
-  readonly time: IsoTime;
-}
-/** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "owner_deactivated", "has_messages", "owns_agents", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "agent_join_request_not_found", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
-/** A code a cookout server refuses with. */
-type ErrorCode = (typeof errorCodes)[number];
-/** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
-interface SchemaProblem {
-  readonly message: string;
-  readonly path: readonly (string | number)[];
-}
-interface StartLoginRequest {
-  readonly host: string;
-}
-interface LoginRequestView {
-  readonly userCode: string;
-  readonly host: string;
-  readonly expiresAt: IsoTime;
-  readonly approved: boolean;
-}
-/** A started login request. Only `requestId` collects the Login, and it is shown this once. */
-interface LoginRequestStartedResponse {
-  readonly userCode: string;
-  readonly requestId: Token;
-  readonly expiresAt: IsoTime;
-  readonly approvalPath: string;
-}
-/** Pending until a human approves, then that human and a new Login credential for this machine, once. */
-type LoginCollectedResponse = {
-  readonly status: "pending";
+/** The wire's word for the feature: the CLI's field, the event's `type` and the last part of the path. */
+declare const presenceName = "presence";
+/** How an online identity is connected: a `cookout watch`, with the host its agent session was joined from when the joining client sent one, or a web tab. */
+type LiveConnectionDetail = {
+  readonly via: "watch";
+  readonly host?: string;
 } | {
-  readonly status: "approved";
-  readonly identity: Identity;
-  readonly token: Token;
+  readonly via: "web";
 };
-/** The answer to showing or approving a login request. */
-interface LoginRequestResponse {
-  readonly loginRequest: LoginRequestView;
+/**
+ * One identity's presence. An online identity carries the detail of its most recent live connection, unless it shows
+ * online only because the server just restarted (the boot grace). An offline one carries when it was last seen, unless
+ * it never was. A Deactivated identity is always offline.
+ */
+interface Presence {
+  readonly identity: IdentityName;
+  readonly online: boolean;
+  readonly connection?: LiveConnectionDetail;
+  readonly lastSeenAt?: IsoTime;
 }
-/** The answer to `DELETE /v1/login`: whether the token sent was a Login credential, now revoked. */
-interface LogoutResponse {
-  readonly revoked: boolean;
+/** The answer to `GET /v1/presence`: every identity's presence, Deactivated ones included, sorted by name. */
+interface PresenceResponse {
+  readonly presence: readonly Presence[];
 }
-/** The SDK's calls for logging a machine in by browser approval. */
-interface LoginCalls {
-  /**
-   * `POST /v1/login-requests` (no token): starts a login request, which lasts 10 minutes. The person checks
-   * `userCode` on the approval page at `approvalPath`; only `requestId`, shown this once, collects the Login.
-   */
-  readonly startLogin: (request: StartLoginRequest) => Promise<LoginRequestStartedResponse>;
-  /**
-   * `POST /v1/login-requests/collect` (no token): `pending` until a human approves, then, once, that human and a new
-   * Login credential for this machine. A wrong, expired or collected request ID is 404 `login_request_not_found`.
-   */
-  readonly collectLogin: (requestId: Token) => Promise<LoginCollectedResponse>;
-  /** `GET /v1/login-requests/:code` (a human): the live login request with that user code, for its approval page. */
-  readonly getLoginRequest: (userCode: string) => Promise<LoginRequestResponse>;
-  /** `PUT /v1/login-requests/:code/approval` (a human; an agent is 403 `human_only`): approves it as the caller. */
-  readonly approveLogin: (userCode: string) => Promise<LoginRequestResponse>;
-  /** `DELETE /v1/login`: revokes the Login credential this client sends, answering whether it was one. */
-  readonly revokeLogin: () => Promise<LogoutResponse>;
-}
-interface IdentityDeletionCalls {
-  readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
-  readonly countMessagesBy: (name: string) => Promise<IdentityMessageCountResponse>;
-}
-type ApprovalCalls = LoginCalls & AgentJoinCalls;
-type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
 /** A new item in the caller's inbox, sent the moment another identity posts it. */
 interface InboxItemEvent {
   readonly type: "inbox-item";
@@ -773,8 +726,17 @@ interface ConnectedEvent {
   readonly type: "connected";
   readonly latestMessageId: MessageId | null;
 }
+/**
+ * One identity's presence just changed (it came online, went offline, or connects another way), sent only on the
+ * all-channels feed so every open web UI shows it at once. It has no SSE `id`, so a caller that reconnects reads
+ * `GET /v1/presence` again.
+ */
+interface PresenceEvent {
+  readonly type: typeof presenceName;
+  readonly presence: Presence;
+}
 /** Any event the stream sends. */
-type CookoutEvent = InboxItemEvent | ReadPositionEvent | ReadPositionMovedBackEvent | MessageEvent | IdentityEvent | ReadReceiptEvent | ChannelEvent | ChannelDeletedEvent | IdentityDeletedEvent | CommandEvent | AgentSessionEvent | SubscriptionEvent;
+type CookoutEvent = InboxItemEvent | ReadPositionEvent | ReadPositionMovedBackEvent | MessageEvent | IdentityEvent | ReadReceiptEvent | ChannelEvent | ChannelDeletedEvent | IdentityDeletedEvent | CommandEvent | AgentSessionEvent | SubscriptionEvent | PresenceEvent;
 /**
  * `GET /v1/events`: the caller's Server-Sent Events stream, one per connection. With `allChannelsQuery` as its query
  * it is also the all-channels feed: every new message on every channel.
@@ -800,6 +762,82 @@ interface WatchOptions {
   readonly onConnected?: (latestMessageId: MessageId | null) => void;
 }
 declare function eventOf(frame: ServerSentEvent): CookoutEvent | null;
+interface EventCalls {
+  readonly watch: (options?: WatchOptions) => Promise<EventStream>;
+  readonly presence: () => Promise<PresenceResponse>;
+}
+/** The answer to the health check. */
+interface HealthResponse {
+  readonly status: "ok";
+  readonly time: IsoTime;
+}
+/** Every code a cookout server refuses with. */
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "owner_deactivated", "has_messages", "owns_agents", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "agent_join_request_not_found", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+/** A code a cookout server refuses with. */
+type ErrorCode = (typeof errorCodes)[number];
+/** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
+interface SchemaProblem {
+  readonly message: string;
+  readonly path: readonly (string | number)[];
+}
+interface StartLoginRequest {
+  readonly host: string;
+}
+interface LoginRequestView {
+  readonly userCode: string;
+  readonly host: string;
+  readonly expiresAt: IsoTime;
+  readonly approved: boolean;
+}
+/** A started login request. Only `requestId` collects the Login, and it is shown this once. */
+interface LoginRequestStartedResponse {
+  readonly userCode: string;
+  readonly requestId: Token;
+  readonly expiresAt: IsoTime;
+  readonly approvalPath: string;
+}
+/** Pending until a human approves, then that human and a new Login credential for this machine, once. */
+type LoginCollectedResponse = {
+  readonly status: "pending";
+} | {
+  readonly status: "approved";
+  readonly identity: Identity;
+  readonly token: Token;
+};
+/** The answer to showing or approving a login request. */
+interface LoginRequestResponse {
+  readonly loginRequest: LoginRequestView;
+}
+/** The answer to `DELETE /v1/login`: whether the token sent was a Login credential, now revoked. */
+interface LogoutResponse {
+  readonly revoked: boolean;
+}
+/** The SDK's calls for logging a machine in by browser approval. */
+interface LoginCalls {
+  /**
+   * `POST /v1/login-requests` (no token): starts a login request, which lasts 10 minutes. The person checks
+   * `userCode` on the approval page at `approvalPath`; only `requestId`, shown this once, collects the Login.
+   */
+  readonly startLogin: (request: StartLoginRequest) => Promise<LoginRequestStartedResponse>;
+  /**
+   * `POST /v1/login-requests/collect` (no token): `pending` until a human approves, then, once, that human and a new
+   * Login credential for this machine. A wrong, expired or collected request ID is 404 `login_request_not_found`.
+   */
+  readonly collectLogin: (requestId: Token) => Promise<LoginCollectedResponse>;
+  /** `GET /v1/login-requests/:code` (a human): the live login request with that user code, for its approval page. */
+  readonly getLoginRequest: (userCode: string) => Promise<LoginRequestResponse>;
+  /** `PUT /v1/login-requests/:code/approval` (a human; an agent is 403 `human_only`): approves it as the caller. */
+  readonly approveLogin: (userCode: string) => Promise<LoginRequestResponse>;
+  /** `DELETE /v1/login`: revokes the Login credential this client sends, answering whether it was one. */
+  readonly revokeLogin: () => Promise<LogoutResponse>;
+}
+interface IdentityDeletionCalls {
+  readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
+  readonly countMessagesBy: (name: string) => Promise<IdentityMessageCountResponse>;
+}
+type ApprovalCalls = LoginCalls & AgentJoinCalls;
+type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
+type CallGroups = ApprovalCalls & IdentityDeletionCalls & IdentityDescriptionCalls & Pick<EventCalls, "presence">;
 declare const brand: unique symbol;
 type UnknownErrorCode = string & {
   readonly [brand]: "UnknownErrorCode";
@@ -838,7 +876,7 @@ export type CookoutClientOptions = {
   /** The harness running this process, such as `claude-code`, sent on every request: a human's token with it is refused with 403 `agent_as_human`, and messages posted record it. Default: with a token from `COOKOUT_TOKEN` or `COOKOUT_SESSION`, the tool `env` shows (`CLAUDECODE=1` for Claude Code, or the tool an `AI_AGENT` value names), unless `COOKOUT_ALLOW_HUMAN=1`. */
   readonly harness?: string;
 };
-export type CookoutClient = ApprovalCalls & IdentityDeletionCalls & IdentityDescriptionCalls & {
+export type CookoutClient = CallGroups & {
   /** `GET /v1/health`. Resolves when the server and its storage are usable. */
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */
@@ -969,7 +1007,7 @@ export type CookoutClient = ApprovalCalls & IdentityDeletionCalls & IdentityDesc
    * `GET /v1/events`: opens one Server-Sent Events stream, resolving once the server has accepted it. Iterate it for
    * each new inbox item (`inbox-item`) the moment another identity posts it (the caller's own posts never arrive), and
    * each new read position (`read-position`) the moment any session of the caller acks, and each read position moved
-   * back (`read-position-moved-back`) the moment one marks a message unread, so several sessions stay in sync. With `allChannels`, it also sends every new message on every channel (`message`) and each newly recorded read receipt (`read-receipt`), as the web UI needs.
+   * back (`read-position-moved-back`) the moment one marks a message unread, so several sessions stay in sync. With `allChannels`, it also sends every new message on every channel (`message`), each newly recorded read receipt (`read-receipt`) and each change to anyone's presence (`presence`), as the web UI needs.
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
    * a newer server, is skipped. `close` drops the connection. Opened with an agent session token, the stream moves its
    * expiry on while open, and once the token is revoked (`leave`, or another session's `join --force`) the
@@ -1011,5 +1049,5 @@ export type CookoutClient = ApprovalCalls & IdentityDeletionCalls & IdentityDesc
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DeactivateIdentityResponse, type Description, type DescriptionCalls, type DisplayName, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListedAgentSession, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type Refusal, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type refusalEvent, refusalOf };
+export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DeactivateIdentityResponse, type Description, type DescriptionCalls, type DisplayName, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListedAgentSession, type LiveConnectionDetail, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type Refusal, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type refusalEvent, refusalOf };
 ```

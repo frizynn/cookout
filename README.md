@@ -35,6 +35,7 @@ The server, `cookout serve`:
 - `COOKOUT_REQUESTS_PER_MINUTE` (default `6000`): How many requests one identity may make a minute; a burst may use the whole minute's at once. Over it, a request is refused with 429 `rate_limited`, whose `details.retryAfterSeconds` says when the next one is allowed.
 - `COOKOUT_COMMAND_CALLS_PER_MINUTE` (default `60`): How many command calls one identity may make a minute, on top of the request limit. Over it, a call is refused with 429 `rate_limited` and posts nothing.
 - `COOKOUT_STREAMS_PER_IDENTITY` (default `20`): How many `/v1/events` streams one identity may hold open at once. One more is refused with 429 `too_many_streams`.
+- `COOKOUT_PRESENCE_GRACE_SECONDS` (default `60`): How long an identity stays online after its last live connection (a `cookout watch` or a web tab) closes, so a watch that restarts doesn't flicker offline.
 
 Every other verb of the CLI, and the SDK's defaults:
 

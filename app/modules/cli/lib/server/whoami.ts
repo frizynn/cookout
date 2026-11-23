@@ -7,6 +7,7 @@ import type { IdentityResponse } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { answered } from "./output.ts";
 import { cookoutToken } from "../../../config/server.ts";
+import { identityWithPresence } from "./presence.ts";
 
 interface WhoamiAnswer extends IdentityResponse {
   readonly joinedAt?: IsoTime;
@@ -73,14 +74,15 @@ function noteIgnoredToken({ joined }: ClientWithAgentSessionState): Effect.Effec
 }
 
 const whoami = withClient((opened) =>
-  Effect.flatMap(callClient((client) => client.whoami())(opened), (answer) =>
-    Effect.andThen(noteIgnoredToken(opened), whoamiAnswer(opened, answer)),
+  callClient((client) => client.whoami())(opened).pipe(
+    Effect.flatMap((answer) => identityWithPresence({ answer, opened })),
+    Effect.flatMap((answer) => Effect.andThen(noteIgnoredToken(opened), whoamiAnswer(opened, answer))),
   ),
 );
 
 const whoamiCommand = Command.make("whoami", {}, () => answered(whoami)).pipe(
   Command.withDescription(
-    "Show the identity behind the credential this CLI sends, the board's URL, and where the credential came from: " +
+    "Show the identity behind the credential this CLI sends, with its presence, the board's URL, and where the credential came from: " +
       "COOKOUT_TOKEN, COOKOUT_SESSION, the agent session token this harness session joined (and when), or login. " +
       "Inside a harness, COOKOUT_SESSION comes first, then the joined session, then COOKOUT_TOKEN; when a set " +
       "COOKOUT_TOKEN was ignored for the joined session, it says so on stderr.",

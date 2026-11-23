@@ -1,6 +1,8 @@
 import { CookoutError, isServerErrorCode } from "./errors.ts";
+import type { CookoutEvent, PresenceResponse } from "../../events/index.ts";
 import type { ServerSentEvent, ServerSentFrame } from "../../http/client.ts";
 import { allChannelsQuery, eventsPath, refusalEvent } from "../../events/index.ts";
+import { getJson, openEvents } from "./request.ts";
 import {
   isAgentSessionEvent,
   isChannelDeletedEvent,
@@ -12,15 +14,16 @@ import {
   isIdentityEvent,
   isInboxItemEvent,
   isMessageEvent,
+  isPresenceEvent,
+  isPresenceResponse,
   isReadPositionEvent,
   isReadPositionMovedBackEvent,
   isReadReceiptEvent,
   isSubscriptionEvent,
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
-import type { CookoutEvent } from "../../events/index.ts";
 import type { MessageId } from "../../messages/index.ts";
-import { openEvents } from "./request.ts";
+import { presencePath } from "../../presence/index.ts";
 
 type EventType = CookoutEvent["type"];
 
@@ -33,10 +36,6 @@ interface WatchOptions {
   readonly lastEventId?: MessageId;
   readonly onHeartbeat?: () => void;
   readonly onConnected?: (latestMessageId: MessageId | null) => void;
-}
-
-interface EventCalls {
-  readonly watch: (options?: WatchOptions) => Promise<EventStream>;
 }
 
 const OK = 200;
@@ -66,6 +65,7 @@ const validators: { readonly [Type in EventType]: (data: unknown) => data is Ext
   "identity-deleted": isIdentityDeletedEvent,
   "inbox-item": isInboxItemEvent,
   message: isMessageEvent,
+  presence: isPresenceEvent,
   "read-position": isReadPositionEvent,
   "read-position-moved-back": isReadPositionMovedBackEvent,
   "read-receipt": isReadReceiptEvent,
@@ -159,6 +159,10 @@ function queryFor(allChannels: boolean): Readonly<Record<string, string>> {
 
 function eventCalls(server: ClientConnection): EventCalls {
   return {
+    presence: async () => {
+      const everyone = await getJson(server, presencePath, isPresenceResponse);
+      return everyone;
+    },
     watch: async (options = NO_OPTIONS) => {
       const { close, events } = await openEvents({
         connection: server,
@@ -171,4 +175,9 @@ function eventCalls(server: ClientConnection): EventCalls {
   };
 }
 
-export { type EventStream, type WatchOptions, eventCalls, eventOf };
+interface EventCalls {
+  readonly watch: (options?: WatchOptions) => Promise<EventStream>;
+  readonly presence: () => Promise<PresenceResponse>;
+}
+
+export { type EventCalls, type EventStream, type WatchOptions, eventCalls, eventOf };
