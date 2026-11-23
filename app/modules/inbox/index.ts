@@ -1,7 +1,8 @@
 /**
  * The inbox on the wire, shared by the server, the SDK and the web: what an
  * identity hasn't read yet and why each item is there, the ack that marks a
- * message and everything before it in its thread or channel as read,
+ * message and everything before it in its thread or channel as read, the
+ * ack of the whole inbox up to the newest item the caller has seen,
  * the inbox history of read and unread items, following a thread and
  * subscribing to a channel, and their paths. They
  * refuse with the message, channel and agent session error codes.
@@ -79,6 +80,19 @@ export interface AckResponse {
   readonly readPosition: ReadPosition;
 }
 
+/** The body of an ack of the whole inbox: every inbox item up to `upTo`, the newest the caller has seen, is read. */
+export interface AckAllRequest {
+  readonly upTo: MessageId;
+}
+
+/**
+ * The answer to an ack of the whole inbox: the read positions it moved, oldest first. An item after `upTo` stays
+ * unread.
+ */
+export interface AckAllResponse {
+  readonly readPositions: readonly ReadPosition[];
+}
+
 /** The answer to following or unfollowing: the thread, by its top-level message's ID. */
 export interface FollowResponse {
   readonly thread: MessageId;
@@ -102,6 +116,9 @@ export const readPositionsPath = "/v1/read-positions";
 
 /** `POST /v1/ack`: acks a message and everything before it in its thread or channel. */
 export const ackPath = "/v1/ack";
+
+/** `POST /v1/inbox/ack-all`: acks, as one change, every inbox item up to a message, in every thread and channel. */
+export const ackAllPath = "/v1/inbox/ack-all";
 
 /** `PUT` follows and `DELETE` unfollows the thread holding the message. */
 export const followPath = "/v1/messages/:id/follow";

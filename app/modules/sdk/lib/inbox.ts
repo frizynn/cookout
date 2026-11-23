@@ -1,4 +1,5 @@
 import type {
+  AckAllResponse,
   AckResponse,
   FollowResponse,
   InboxHistoryQuery,
@@ -8,6 +9,7 @@ import type {
   SubscriptionResponse,
 } from "../../inbox/index.ts";
 import {
+  ackAllPath,
   ackPath,
   followPath,
   inboxHistoryPath,
@@ -16,6 +18,7 @@ import {
   subscriptionPath,
 } from "../../inbox/index.ts";
 import {
+  isAckAllResponse,
   isAckResponse,
   isFollowResponse,
   isInboxHistoryResponse,
@@ -34,6 +37,7 @@ interface InboxCalls {
   readonly inboxHistory: (query?: InboxHistoryQuery) => Promise<InboxHistoryResponse>;
   readonly readPositions: () => Promise<ReadPositionsResponse>;
   readonly ack: (messageId: MessageId) => Promise<AckResponse>;
+  readonly ackAll: (upTo: MessageId) => Promise<AckAllResponse>;
   readonly follow: (messageId: MessageId) => Promise<FollowResponse>;
   readonly unfollow: (messageId: MessageId) => Promise<FollowResponse>;
   readonly subscribe: (channel: string) => Promise<SubscriptionResponse>;
@@ -61,6 +65,11 @@ function inboxCalls(server: ClientConnection): InboxCalls {
     ack: async (messageId) => {
       const body = { messageId };
       const acked = await send(server, { body, isExpected: isAckResponse, method: "POST", path: ackPath });
+      return acked;
+    },
+    ackAll: async (upTo) => {
+      const body = { upTo };
+      const acked = await send(server, { body, isExpected: isAckAllResponse, method: "POST", path: ackAllPath });
       return acked;
     },
     follow: followCall(server, "PUT"),
@@ -93,6 +102,7 @@ function inboxCalls(server: ClientConnection): InboxCalls {
 }
 
 export type {
+  AckAllResponse,
   AckResponse,
   FollowResponse,
   InboxHistoryQuery,

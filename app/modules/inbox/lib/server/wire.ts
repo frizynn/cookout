@@ -1,4 +1,5 @@
 import type {
+  AckAllResponse,
   AckResponse,
   FollowResponse,
   InboxHistoryItem,
@@ -43,6 +44,12 @@ export const InboxHistoryResponseSchema = matchesWire<InboxHistoryResponse>()(
 );
 
 export const AckRequestSchema = Schema.Struct({ messageId: MessageIdSchema });
+
+export const AckAllRequestSchema = Schema.Struct({ upTo: MessageIdSchema });
+
+export const AckAllResponseSchema = matchesWire<AckAllResponse>()(
+  Schema.Struct({ readPositions: Schema.Array(ReadPositionSchema) }),
+);
 
 export const InboxResponseSchema = matchesWire<InboxResponse>()(
   Schema.Struct({ items: Schema.Array(InboxItemSchema) }),

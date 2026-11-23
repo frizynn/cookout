@@ -1,12 +1,15 @@
 /**
  * The inbox on the backend: the `Inbox` service over `Storage`, and the
- * routes that read the caller's inbox, a page of its inbox history and its read positions, ack a message, follow and unfollow a
- * thread, and subscribe to and unsubscribe from a channel. Each ack is also
+ * routes that read the caller's inbox, a page of its inbox history and its read positions, ack a message or the whole
+ * inbox, follow and unfollow a
+ * thread, and subscribe to and unsubscribe from a channel. Each read position an ack moves is also
  * published to an in-process hub, which `acked` subscribes to, for live
  * updates. Routes sit
  * behind the server's token gate.
  */
 import {
+  AckAllRequestSchema,
+  AckAllResponseSchema,
   AckRequestSchema,
   AckResponseSchema,
   FollowResponseSchema,
@@ -17,7 +20,15 @@ import {
   SubscriptionResponseSchema,
 } from "./lib/server/wire.ts";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import { ackPath, followPath, inboxHistoryPath, inboxPath, readPositionsPath, subscriptionPath } from "./index.ts";
+import {
+  ackAllPath,
+  ackPath,
+  followPath,
+  inboxHistoryPath,
+  inboxPath,
+  readPositionsPath,
+  subscriptionPath,
+} from "./index.ts";
 import { Caller } from "../identities/server.ts";
 import { Effect } from "effect";
 import { Inbox } from "./lib/server/service.ts";
@@ -85,6 +96,19 @@ const ackRoute: Route<Needs> = {
   path: ackPath,
 };
 
+const ackAllRoute: Route<Needs> = {
+  handle: () =>
+    Effect.gen(function* ackAllRouteHandler() {
+      const { upTo } = yield* HttpServerRequest.schemaBodyJson(AckAllRequestSchema, ALL_ERRORS);
+      const caller = yield* Caller;
+      const inbox = yield* Inbox;
+      const answer = yield* inbox.ackAll(caller, upTo);
+      return yield* HttpServerResponse.schemaJson(AckAllResponseSchema)(answer);
+    }),
+  method: "POST",
+  path: ackAllPath,
+};
+
 function followRoute(method: Change, change: "follow" | "unfollow"): Route<Needs> {
   return {
     handle: (params) =>
@@ -129,6 +153,7 @@ export const inboxRoutes: readonly Route<Needs>[] = [
   historyRoute,
   readPositionsRoute,
   ackRoute,
+  ackAllRoute,
   followRoute("PUT", "follow"),
   followRoute("DELETE", "unfollow"),
   subscriptionRoute("PUT", "subscribe"),
@@ -137,6 +162,7 @@ export const inboxRoutes: readonly Route<Needs>[] = [
 
 /** The response Schemas of the inbox routes, for the SDK's generated validators. */
 export const inboxResponseSchemas = {
+  AckAllResponse: AckAllResponseSchema,
   AckResponse: AckResponseSchema,
   FollowResponse: FollowResponseSchema,
   InboxHistoryResponse: InboxHistoryResponseSchema,

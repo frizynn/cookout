@@ -1,4 +1,6 @@
 export type {
+  AckAllRequest,
+  AckAllResponse,
   AckRequest,
   AckResponse,
   FollowResponse,
