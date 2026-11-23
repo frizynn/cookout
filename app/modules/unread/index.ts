@@ -11,19 +11,27 @@
  * other session's) drops the items it covers, so opening a channel or a thread
  * takes its messages out of the counts. It never acks anything itself: a
  * message is read only once some view acks it. A refusal keeps the server's
- * error code; a server that can't be reached is `unreachable`.
+ * error code; a server that can't be reached is `unreachable`. Alongside the
+ * counts it keeps the inbox items they count, oldest first, for the inbox view.
  */
-import type { CookoutClient, CookoutEvent } from "../sdk/index.ts";
+import type { CookoutClient, CookoutEvent, InboxItem } from "../sdk/index.ts";
 import type { Failure } from "./lib/failure.ts";
 import type { Live } from "../live/index.ts";
 import type { UnreadCounts } from "./lib/inbox-items.ts";
 import { createInboxItems } from "./lib/inbox-items.ts";
 import { failure } from "./lib/failure.ts";
 
-/** The counts by channel name, as far as they have loaded; a channel with nothing unread isn't in `channels`. */
+/**
+ * The counts by channel name, as far as they have loaded, and the inbox items they count, oldest first; a channel with
+ * nothing unread isn't in `channels`.
+ */
 export type UnreadState =
   | { readonly status: "loading" }
-  | { readonly status: "loaded"; readonly channels: ReadonlyMap<string, UnreadCounts> }
+  | {
+      readonly status: "loaded";
+      readonly channels: ReadonlyMap<string, UnreadCounts>;
+      readonly items: readonly InboxItem[];
+    }
   | Failure;
 
 /** The unread store. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
@@ -58,9 +66,13 @@ export function createUnread(options: UnreadOptions): Unread {
     }
   }
 
+  function loaded(): UnreadState {
+    return { channels: items.counts(), items: items.list(), status: "loaded" };
+  }
+
   function receive(event: CookoutEvent): void {
     if (items.receive(event) && current.status === "loaded") {
-      publish({ channels: items.counts(), status: "loaded" });
+      publish(loaded());
     }
   }
 
@@ -74,7 +86,7 @@ export function createUnread(options: UnreadOptions): Unread {
       for (const item of inbox.items) {
         items.add(item);
       }
-      publish({ channels: items.counts(), status: "loaded" });
+      publish(loaded());
     } catch (error: unknown) {
       publish(failure(error));
     }

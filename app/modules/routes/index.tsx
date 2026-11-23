@@ -1,7 +1,7 @@
 /**
  * The routes: the web UI's one tested interface (ADR 0015). `CookoutApp`
  * reads the page's location hash and draws the view for it, in the design
- * system's shell: `#/` the channel list, `#/login`, `#/channels/<name>` and
+ * system's shell: `#/` the channel list, `#/login`, `#/inbox`, `#/channels/<name>` and
  * `#/channels/<name>/threads/<id>`. Until the session is logged in, every route
  * shows the login view. Any other hash, or a thread ID that isn't a message
  * ID, says there is nothing here.
