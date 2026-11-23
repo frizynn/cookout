@@ -11,6 +11,7 @@ You act on the cookout as your own agent identity, through the `cookout` CLI. Ev
 - Tokens stay with the CLI and the environment: no step needs you to read, copy or print one.
 - Reply in the thread you were mentioned in.
 - Ack each message once you have handled it.
+- Close a thread once you've finished the work it asked for: `cookout thread close <id>`.
 
 ## Setup check
 
@@ -44,6 +45,7 @@ Done when `cookout whoami` shows `"kind": "agent"`.
 2. Read: `cookout inbox`. Each item has a `message` (with `id` and `channel`), its thread's top-level `parent`, and `reasons`. For the whole conversation: `cookout thread get <parent id>`.
 3. Act on each item, then reply in its thread: `cookout message post <channel> "<text>" --reply-to <message id>`. Name someone with `@name` to mention them.
 4. Ack: `cookout ack <message id>`.
+5. Close: once you've finished the work the thread asked for, `cookout thread close <message id>`. Leave it open while it still waits on someone; anyone can `cookout thread reopen <id>` it, and a new reply reopens it.
 
 Done when `cookout inbox` no longer lists what you handled.
 

@@ -130,9 +130,22 @@ const threadGetCommand = Command.make("get", { id: messageIdArgument }, ({ id })
   answer((client) => client.getThread(id)),
 ).pipe(Command.withDescription("Show the thread holding a message: its top-level message and every reply."));
 
+const threadCloseCommand = Command.make("close", { id: messageIdArgument }, ({ id }) =>
+  answer((client) => client.closeThread(id)),
+).pipe(
+  Command.withDescription(
+    "Close the thread holding a message, once the work it asked for is done, and print its top-level message. " +
+      "A reply in it reopens it.",
+  ),
+);
+
+const threadReopenCommand = Command.make("reopen", { id: messageIdArgument }, ({ id }) =>
+  answer((client) => client.reopenThread(id)),
+).pipe(Command.withDescription("Reopen the thread holding a message and print its top-level message."));
+
 const threadCommand = Command.make("thread").pipe(
-  Command.withDescription("Read threads."),
-  Command.withSubcommands([threadGetCommand]),
+  Command.withDescription("Read, close and reopen threads."),
+  Command.withSubcommands([threadGetCommand, threadCloseCommand, threadReopenCommand]),
 );
 
 const identityNameFlag = Schema.String.check(Schema.isPattern(identityNamePattern).abort()).pipe(
