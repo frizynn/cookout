@@ -113,7 +113,13 @@ export type {
   ReadPosition,
   SubscriptionResponse,
 } from "../inbox/index.ts";
-export type { CookoutEvent, InboxItemEvent, MessageEvent, ReadPositionEvent } from "../events/index.ts";
+export type {
+  ConnectedEvent,
+  CookoutEvent,
+  InboxItemEvent,
+  MessageEvent,
+  ReadPositionEvent,
+} from "../events/index.ts";
 export type { EventStream, WatchOptions } from "./lib/events.ts";
 export { CookoutError, type CookoutErrorCode, type UnknownErrorCode } from "./lib/errors.ts";
 

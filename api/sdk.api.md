@@ -309,6 +309,15 @@ interface MessageEvent {
   readonly type: "message";
   readonly message: Message;
 }
+/**
+ * The stream's first word on connecting, before any item: the newest message ID on the board at that moment (null
+ * before the first message). Every item the stream then sends live is newer, so a caller that resumes from this ID
+ * after a drop misses nothing and repeats nothing. It has no SSE `id`.
+ */
+interface ConnectedEvent {
+  readonly type: "connected";
+  readonly latestMessageId: MessageId | null;
+}
 /** Any event the stream sends. */
 type CookoutEvent = InboxItemEvent | ReadPositionEvent | MessageEvent;
 interface EventStream extends AsyncIterable<CookoutEvent> {
@@ -318,6 +327,7 @@ interface WatchOptions {
   readonly allChannels?: boolean;
   readonly lastEventId?: MessageId;
   readonly onHeartbeat?: () => void;
+  readonly onConnected?: (latestMessageId: MessageId | null) => void;
 }
 /** The answer to the health check. */
 interface HealthResponse {
@@ -441,7 +451,9 @@ export type CookoutClient = {
    * session takes the lease over (`join --force`) the iteration throws `lease_lost` (status 200, the stream's) and
    * the client drops the lease. A human identity watches with no lease. To pick up after a dropped connection, pass
    * the last message ID seen as `lastEventId`: the stream first replays the inbox items after it, then goes on live.
-   * The server sends a heartbeat every 15 s, which `onHeartbeat` hears while the stream is being iterated.
+   * The server sends a heartbeat every 15 s, which `onHeartbeat` hears while the stream is being iterated. The
+   * stream starts by telling `onConnected` the board's latest message ID (null before the first message): every
+   * item sent live is newer, so resuming from it after a drop misses nothing.
    */
   readonly watch: (options?: WatchOptions) => Promise<EventStream>;
   /**
@@ -467,5 +479,5 @@ export type CookoutClient = {
  * (status 0) when there is no URL.
  */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Reply, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions };
+export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Reply, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions };
 ```

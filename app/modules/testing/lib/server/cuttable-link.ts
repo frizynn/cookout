@@ -1,6 +1,14 @@
 import { Boolean as Bool, Context, Deferred, Effect, Layer, Ref, String as Str, Stream, SubscriptionRef } from "effect";
-import { Headers, HttpClient, HttpClientRequest, HttpServer, HttpServerRequest, HttpServerResponse } from "effect/http";
-import type { HttpClientError, HttpClientResponse } from "effect/http";
+import {
+  Headers,
+  HttpClient,
+  HttpClientRequest,
+  HttpMethod,
+  HttpServer,
+  HttpServerRequest,
+  HttpServerResponse,
+} from "effect/http";
+import type { HttpClientError, HttpClientResponse, HttpServerError } from "effect/http";
 import { nodeHttpServer, serverUrl } from "../../../http/server.ts";
 import { NodeHttpClient } from "@effect/platform-node";
 import type { Scope } from "effect";
@@ -9,6 +17,7 @@ interface CuttableLink {
   readonly url: string;
   readonly cut: Effect.Effect<void>;
   readonly stall: Effect.Effect<void>;
+  readonly takeDown: Effect.Effect<void>;
   readonly relayed: (text: string, times?: number) => Effect.Effect<void>;
 }
 
@@ -19,6 +28,7 @@ interface Signal {
 
 interface Relay {
   readonly target: string;
+  readonly isDown: Effect.Effect<boolean>;
   readonly dropped: Effect.Effect<Effect.Effect<boolean>>;
   readonly stalled: Effect.Effect<Effect.Effect<boolean>>;
   readonly record: (text: string) => Effect.Effect<void>;
@@ -29,6 +39,7 @@ interface Relay {
 
 const LISTEN = { host: "127.0.0.1", port: 0 } as const;
 const ONCE = 1;
+const BAD_GATEWAY = 502;
 const HOP_BY_HOP = ["connection", "content-length", "host", "transfer-encoding"] as const;
 const endToEnd = Headers.removeMany(HOP_BY_HOP);
 
@@ -43,17 +54,35 @@ const signal: Effect.Effect<Signal> = Effect.gen(function* makeSignal() {
   return { current: Ref.get(signals), fire };
 });
 
+function forwardedTo(
+  target: string,
+  method: HttpMethod.HttpMethod,
+): Effect.Effect<
+  HttpClientRequest.HttpClientRequest,
+  HttpServerError.HttpServerError,
+  HttpServerRequest.HttpServerRequest
+> {
+  return Effect.gen(function* forwardRequest() {
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const sent = yield* request.arrayBuffer;
+    return HttpClientRequest.make(method)(`${target}${request.url}`).pipe(
+      HttpClientRequest.setHeaders(endToEnd(request.headers)),
+      HttpClientRequest.bodyUint8Array(new Uint8Array(sent), request.headers["content-type"]),
+    );
+  });
+}
+
 function relayed(
   relay: Relay,
 ): Effect.Effect<HttpServerResponse.HttpServerResponse, never, HttpServerRequest.HttpServerRequest> {
   return Effect.gen(function* relayRequest() {
-    const { headers, url } = yield* HttpServerRequest.HttpServerRequest;
+    const { method } = yield* HttpServerRequest.HttpServerRequest;
+    if ((yield* relay.isDown) || !HttpMethod.isHttpMethod(method)) {
+      return HttpServerResponse.empty({ status: BAD_GATEWAY });
+    }
     const dropped = yield* relay.dropped;
     const stalled = yield* relay.stalled;
-    const forwarded = HttpClientRequest.get(`${relay.target}${url}`).pipe(
-      HttpClientRequest.setHeaders(endToEnd(headers)),
-    );
-    const answer = yield* relay.execute(forwarded);
+    const answer = yield* Effect.flatMap(forwardedTo(relay.target, method), relay.execute);
     const body = answer.stream.pipe(
       Stream.decodeText(),
       Stream.filterEffect(() => Effect.map(stalled, Bool.not)),
@@ -83,10 +112,12 @@ function cuttableLink(target: string): Effect.Effect<CuttableLink, never, Scope.
     const drops = yield* signal;
     const stalls = yield* signal;
     const sent = yield* SubscriptionRef.make("");
+    const down = yield* Ref.make(false);
     const changes = SubscriptionRef.changes(sent);
     const relay: Relay = {
       dropped: Effect.map(drops.current, Deferred.await),
       execute: client.execute,
+      isDown: Ref.get(down),
       record: (text) => SubscriptionRef.update(sent, Str.concat(text)),
       stalled: Effect.map(stalls.current, Deferred.isDone),
       target,
@@ -97,6 +128,7 @@ function cuttableLink(target: string): Effect.Effect<CuttableLink, never, Scope.
       relayed: (text: string, times = ONCE) =>
         changes.pipe(Stream.filter(sentAtLeast(text, times)), Stream.runHead, Effect.asVoid),
       stall: stalls.fire,
+      takeDown: Effect.andThen(Ref.set(down, true), drops.fire),
       url,
     };
   }).pipe(Effect.orDie);

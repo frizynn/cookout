@@ -178,6 +178,17 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts message post general "@triage-a
 
 The first terminal prints `#general thread:<id> @admin: @triage-agent are you there? (msg <id>)`, where both IDs are the new message's, since it is top-level. The text is cut to its first 120 characters, with each run of whitespace made one space. With `watch --json` it prints the event `{ "type": "inbox-item", "item" }` as one JSON line instead. Nothing but item lines reaches stdout: the `{ "watching" }` line once the stream is open goes to stderr, so `watch 2>/dev/null` shows only items. Ctrl-C stops it.
 
+Run the same watch again without acking: it starts with `1 unread, run cookout inbox` instead of repeating the item, then prints only newer ones. To block until something needs the agent, and check each exit code with `echo $?`:
+
+```sh
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts watch --once           # 0 after the next item
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts watch --until-mention  # 0 after the next mention only
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts watch --timeout 3      # 2 after 3 s with no item
+env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=cookout_nope node app/main.ts watch                      # 3: token invalid
+```
+
+`cookout identity rotate triage-agent` while a watch is open ends it with one `cookout watch stopped: … (token_revoked)` stdout line and exit 3 at its next reconnect; `join --force` from another session ends it with `lease_lost` and exit 4; with the server stopped for over 5 minutes it ends with `server_unreachable` and exit 5.
+
 ## Drive it with the SDK
 
 The SDK is `@ai-hero/cookout/sdk`; from a checkout, import `app/modules/sdk/index.ts`. `createCookoutClient()` reads `COOKOUT_URL` and `COOKOUT_TOKEN`:
