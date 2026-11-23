@@ -18,6 +18,7 @@
   "jsPlugins": [
     "./lint/local.js",
     "./lint/test-rules.js",
+    "./lint/web-rules.js",
     {
       "name": "react-hooks-js",
       "specifier": "eslint-plugin-react-hooks"
@@ -71,6 +72,7 @@
     "local/no-unsafe-as": "error",
     "local/no-overloads": "error",
     "local/sort-imports": "error",
+    "web-rules/page-title-owner": "error",
     "sort-imports": "off",
     "typescript/ban-ts-comment": "error",
     "typescript/no-explicit-any": "error",
@@ -482,6 +484,12 @@
       ],
       "rules": {
         "test-rules/region-lookups": ["error", { "pages": ["screen", "page", "other", "second"] }]
+      }
+    },
+    {
+      "files": ["app/modules/page-title/**"],
+      "rules": {
+        "web-rules/page-title-owner": "off"
       }
     },
     {
@@ -1952,6 +1960,7 @@
         "scripts/jsdom-server-environment.ts",
         "scripts/web-test-environment.ts",
         "lint/test-rules.js",
+        "lint/web-rules.js",
         "packages/e2e/vitest.config.ts",
         "packages/e2e/playwright.config.ts",
         "packages/e2e/.dependency-cruiser.mjs"
