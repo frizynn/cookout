@@ -127,6 +127,21 @@ it("an agent's session that expires leaves Settings without a reload", { timeout
   await close();
 });
 
+it("an agent deactivated elsewhere shows no live session in Settings without a reload", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const human = await ownerWithAgent("web-live-deactivated");
+  await human.join({ as: "web-live-deactivated-bot", host: "laptop" });
+  const close = await openLive(human, "#/settings/agents");
+  const card = await agentCard("web-live-deactivated-bot");
+  await within(card).findByText(/^Joined from laptop/u);
+  await adminClient().deactivateIdentity("web-live-deactivated-bot");
+
+  await expect(within(card).findByText("No live session")).resolves.toBeInstanceOf(HTMLElement);
+
+  await close();
+});
+
 it("a channel deleted elsewhere leaves the sidebar, and its open view goes to the Inbox with a notice", {
   timeout: 5000,
 }, async () => {
