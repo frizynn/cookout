@@ -6,6 +6,7 @@ import {
   refusal,
   runCookout,
   runServe,
+  silentConnection,
   startServe,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
@@ -71,6 +72,19 @@ it.effect("restarting a board with a different COOKOUT_ADMIN_TOKEN makes the new
     expect(whoami.identity).toMatchObject({ admin: true, name: "admin" });
     expect(old).toMatchObject({ status: UNAUTHORIZED });
     expect(second.stdout).not.toContain(NEW_ADMIN_TOKEN);
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
+);
+
+it.effect("a stopping board drops a connection that never sent a request instead of waiting for it", () =>
+  Effect.gen(function* stopWithASilentConnection() {
+    const database = yield* freshDatabasePath;
+    const server = yield* startServe({ database });
+    const silent = yield* silentConnection(server.url);
+    const whoami = yield* answer(createCookoutClient({ env: {}, token: server.adminToken, url: server.url }).whoami);
+    yield* server.stop;
+    yield* silent.dropped;
+
+    expect(whoami.identity).toMatchObject({ name: "admin" });
   }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );
 

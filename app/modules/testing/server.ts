@@ -18,6 +18,7 @@
  * with its own webhook fake, `webhook`, for a command to deliver its calls to.
  * `cuttableLink` puts a link in front of a server that a test can cut, to
  * drop a client's connection, or take down, so every later request gets 502.
+ * `silentConnection` connects to a server and sends nothing.
  */
 export { answer, refusal } from "./lib/server/calls.ts";
 export { type ChannelFixtureOptions, channelFixture, channelName } from "./lib/server/channels.ts";
@@ -45,6 +46,7 @@ export {
 } from "./lib/server/process.ts";
 export { type IdentityFixtureOptions, identityFixture, identityName } from "./lib/server/identities.ts";
 export { type CuttableLink, cuttableLink } from "./lib/server/cuttable-link.ts";
+export { type SilentConnection, silentConnection } from "./lib/server/silent-connection.ts";
 export { type FixedAnswer, serverAnswering } from "./lib/server/fixed-answer.ts";
 export {
   type TwoSessions,

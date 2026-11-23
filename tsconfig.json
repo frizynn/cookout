@@ -30,6 +30,7 @@
         "allowedUnstableApis": [
           "@effect/vitest",
           "@effect/platform-node",
+          "@effect/platform-node-shared/NodeSocket",
           "effect/cli",
           "effect/http",
           "effect/crypto",
