@@ -149,12 +149,9 @@ it("someone who doesn't own the agent sees its profile with no edit controls", {
 });
 
 function hrefOfRow(name: string): string | null {
-  for (const link of within(screen.getByRole("list", { name: "Identities" })).getAllByRole("link")) {
-    if (link.textContent.startsWith(name)) {
-      return link.getAttribute("href");
-    }
-  }
-  return null;
+  return within(screen.getByRole("list", { name: "Identities" }))
+    .getByRole("link", { name: (label) => label.startsWith(name) })
+    .getAttribute("href");
 }
 
 it("a profile asked for beside the people page opens as the people page's own profile", { timeout: 5000 }, async () => {

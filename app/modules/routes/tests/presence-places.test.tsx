@@ -20,8 +20,8 @@ it("the @-suggestions show each identity's dot", { timeout: 5000 }, async () => 
 
   await expect(
     Promise.all([
-      suggestionDot({ at: "suggest-on", label: "Online" }),
-      suggestionDot({ at: "suggest-off", label: "Offline" }),
+      suggestionDot({ label: "Online", who: "web-presence-suggest-on" }),
+      suggestionDot({ label: "Offline", who: "web-presence-suggest-off" }),
     ]),
   ).resolves.toStrictEqual([online(), offline()]);
 });
@@ -34,7 +34,7 @@ it("the logged-in human's own avatar in the sidebar shows them online while thei
   await readerOn({ hash: "#/people", reader: "web-presence-own-reader" });
   const sidebar = screen.getByRole("navigation", { name: "Sidebar" });
 
-  await expect(within(sidebar).findByRole("img", { name: "Online" })).resolves.toHaveProperty(
+  await expect(within(sidebar).findByRole("img", { name: "web-presence-own-reader, Online" })).resolves.toHaveProperty(
     "dataset.presence",
     "online",
   );

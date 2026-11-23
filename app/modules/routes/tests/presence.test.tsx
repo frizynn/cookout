@@ -45,11 +45,15 @@ it("an author who is watching shows an online dot, and going offline turns it in
   const events = await agent.watch();
   await readerOn({ hash: "#/channels/web-presence-author", reader: "web-presence-author-reader" });
 
-  await expect(authorDot({ at: "Beep from the bot", label: "Online" })).resolves.toStrictEqual(online());
+  await expect(
+    authorDot({ at: "Beep from the bot", label: "Online", who: "web-presence-author-bot" }),
+  ).resolves.toStrictEqual(online());
 
   await events.close();
 
-  await expect(authorDot({ at: "Beep from the bot", label: SEEN })).resolves.toStrictEqual(offline(SEEN));
+  await expect(
+    authorDot({ at: "Beep from the bot", label: SEEN, who: "web-presence-author-bot" }),
+  ).resolves.toStrictEqual(offline(SEEN));
 });
 
 it("a People row and the profile show an online agent's dot, and the profile how it is connected", {
@@ -64,8 +68,8 @@ it("a People row and the profile show an online agent's dot, and the profile how
 
   await expect(
     Promise.all([
-      rowDot({ at: "web-presence-host-bot", label: "Online" }),
-      profileDot("Online"),
+      rowDot({ label: "Online", who: "web-presence-host-bot" }),
+      profileDot({ label: "Online", who: "web-presence-host-bot" }),
       inProfile().findByText("Online · watching from laptop-1"),
     ]),
   ).resolves.toStrictEqual([online(), online(), expect.anything()]);
@@ -84,8 +88,8 @@ it("once an agent goes offline, its People row and profile show the ring and its
 
   await expect(
     Promise.all([
-      rowDot({ at: "web-presence-seen-bot", label: SEEN }),
-      profileDot(SEEN),
+      rowDot({ label: SEEN, who: "web-presence-seen-bot" }),
+      profileDot({ label: SEEN, who: "web-presence-seen-bot" }),
       inProfile().findByText("Offline · last seen just now"),
     ]),
   ).resolves.toStrictEqual([offline(SEEN), offline(SEEN), expect.anything()]);
@@ -99,7 +103,7 @@ it("an agent never seen shows only that it is offline, its avatar has no badge, 
   await agentNamed("web-presence-never-bot");
   await readerOn({ hash: "#/people/web-presence-never-bot", reader: "web-presence-never-reader" });
 
-  await expect(profileDot("Offline")).resolves.toStrictEqual(offline());
+  await expect(profileDot({ label: "Offline", who: "web-presence-never-bot" })).resolves.toStrictEqual(offline());
 
   const avatar = within(inProfile().element()).getByTestId("avatar");
 
@@ -118,11 +122,11 @@ it("a presence change made while the live link was down shows once it is back", 
   const reader = await newIdentity({ kind: "human", name: "web-presence-missed-reader" });
   const { live, report } = cuttable();
   openAt({ client: reader.client, hash: "#/people", live });
-  await rowDot({ at: "web-presence-missed-bot", label: "Offline" });
+  await rowDot({ label: "Offline", who: "web-presence-missed-bot" });
 
   report("down");
   await agent.watch();
   report("up");
 
-  await expect(rowDot({ at: "web-presence-missed-bot", label: "Online" })).resolves.toStrictEqual(online());
+  await expect(rowDot({ label: "Online", who: "web-presence-missed-bot" })).resolves.toStrictEqual(online());
 });

@@ -69,7 +69,7 @@ export function Avatar(parts: AvatarParts): ReactNode {
         data-initials={initialsOf(parts.name)}
         data-testid={size.testId}
       />
-      {presence !== null && <PresenceDot label={presence.label} online={presence.online} />}
+      {presence !== null && <PresenceDot label={presence.label} name={parts.name} online={presence.online} />}
     </span>
   );
 }

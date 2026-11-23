@@ -1,6 +1,7 @@
 import { Author } from "./author.tsx";
 import type { IdentityLinkParts } from "./parts.ts";
 import type { ReactNode } from "react";
+import { presenceNameOf } from "./presence-name.ts";
 
 function currentOf(active: boolean): "page" | false {
   if (active) {
@@ -14,6 +15,7 @@ export function IdentityLink(parts: IdentityLinkParts): ReactNode {
   return (
     <a
       aria-current={currentOf(parts.active)}
+      aria-label={presenceNameOf({ name: displayName ?? name, presence: parts.presence })}
       className="-mx-2 flex rounded-md px-2 py-1 hover:bg-hover"
       href={parts.href}
     >

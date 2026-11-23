@@ -226,12 +226,7 @@ async function adminOf(prefix: string): Promise<CookoutClient> {
 }
 
 function rowOf(name: string): HTMLElement {
-  for (const link of within(identityList()).getAllByRole("link")) {
-    if (link.textContent.startsWith(name)) {
-      return link;
-    }
-  }
-  return identityList();
+  return within(identityList()).getByRole("link", { name: (label) => label.startsWith(name) });
 }
 
 it("an admin makes a human an admin from their profile and removes it, the tag following on profile and row", {
