@@ -78,7 +78,7 @@ async function readTheMention(page: Page, cookout: BrowserRun, { channel, person
   const row = channelRow(page, channel);
   await cookout.logIn(person.token);
 
-  await expect(row).toHaveAccessibleName(`#${channel} 1 mention`);
+  await expect(row).toHaveAccessibleName(`#${channel} 1 for you`);
 
   await openQuestion(page, row);
 
