@@ -59,7 +59,7 @@ const AgentSessionSent = Context.Reference<Option.Option<TokenHash>>("cookout/id
   defaultValue: Option.none,
 });
 
-const HarnessSent = Context.Reference<Option.Option<Harness>>("cookout/identities/AgentToolSent", {
+const HarnessSent = Context.Reference<Option.Option<Harness>>("cookout/identities/HarnessSent", {
   defaultValue: Option.none,
 });
 

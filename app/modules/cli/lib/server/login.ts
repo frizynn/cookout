@@ -141,7 +141,7 @@ const loginCommand: LoginCommand = Command.make("login", { token: tokenFlag, url
       "approves it in the web UI. With --token, keep a human identity's token instead. The Login is kept in " +
       "$XDG_CONFIG_HOME/cookout/credentials (default ~/.config/cookout/credentials, mode 600), and its board becomes " +
       "this machine's default board, which every command uses when COOKOUT_URL is unset. With no COOKOUT_TOKEN and no " +
-      "agent tool, every command then acts as that person; inside an agent tool, join uses it to join an agent the " +
+      "harness, every command then acts as that person; inside a harness, join uses it to join an agent the " +
       "person owns. An agent's token is refused.",
   ),
 );

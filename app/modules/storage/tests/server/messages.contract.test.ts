@@ -58,7 +58,7 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
-  "storage contract ($adapter): a message posted from an agent tool keeps the tool's name",
+  "storage contract ($adapter): a message posted from a harness keeps the tool's name",
   ({ layer }) =>
     Effect.gen(function* storedHarness() {
       const { storage } = yield* openStore(layer);

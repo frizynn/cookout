@@ -47,7 +47,7 @@ const AuthorSchema = matchesWire<Author>()(
 );
 
 const harnessRule = Schema.isPattern(harnessPattern).abort();
-const HarnessSchema = Schema.String.check(harnessRule).pipe(Schema.refine(isHarness, { identifier: "AgentTool" }));
+const HarnessSchema = Schema.String.check(harnessRule).pipe(Schema.refine(isHarness, { identifier: "Harness" }));
 
 const messageFields = {
   author: AuthorSchema,

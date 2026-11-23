@@ -191,19 +191,19 @@ const joinCommand: JoinCommand = Command.make(
     }),
 ).pipe(
   Command.withDescription(
-    "Join as an agent for this agent tool session, such as one Claude Code session and its subagents " +
+    "Join as an agent for this harness session, such as one Claude Code session and its subagents " +
       "(CLAUDE_CODE_SESSION_ID). With your Login, --as name joins the agent you own by that name, or creates it, or " +
       "owner/name; with COOKOUT_TOKEN, --as is the token's own agent. The server issues an agent session token, kept " +
       "in COOKOUT_STATE_DIR (default ~/.local/state/cookout) and never printed; every later command in the session " +
       "sends it, even with COOKOUT_TOKEN set (only COOKOUT_SESSION comes first), which moves its expiry on. Prints the agent, whether it was created, the expiry and the credential " +
-      "used. A session joins once; outside an agent tool, join only with --print-env. An agent has one live agent " +
+      "used. A session joins once; outside a harness, join only with --print-env. An agent has one live agent " +
       "session token: a second join is refused unless --force.",
   ),
 );
 
 const leaveCommand = Command.make("leave", {}, () => answered(leave)).pipe(
   Command.withDescription(
-    "Revoke the agent session token this command sends, and forget it if this agent tool session joined, so another session can join at once.",
+    "Revoke the agent session token this command sends, and forget it if this harness session joined, so another session can join at once.",
   ),
 );
 

@@ -52,7 +52,7 @@ export interface MessageFields {
   readonly data?: JsonValue;
   /** Names of the identities the text mentions. */
   readonly mentions: readonly IdentityName[];
-  /** The agent tool the message was posted from, such as `claude-code`. Absent when none was named. */
+  /** The harness the message was posted from, such as `claude-code`. Absent when none was named. */
   readonly harness?: Harness;
   readonly createdAt: IsoTime;
 }

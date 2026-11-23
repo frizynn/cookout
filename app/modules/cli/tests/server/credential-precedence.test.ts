@@ -39,7 +39,7 @@ function withToken(env: Env, token: string): Env {
 }
 
 it.effect(
-  "inside an agent tool the credential is COOKOUT_SESSION, then the joined session, then COOKOUT_TOKEN; outside, COOKOUT_TOKEN wins",
+  "inside a harness the credential is COOKOUT_SESSION, then the joined session, then COOKOUT_TOKEN; outside, COOKOUT_TOKEN wins",
   () =>
     Effect.gen(function* precedence() {
       const cookout = yield* TestCookout;
@@ -90,22 +90,20 @@ it.effect(
     }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect(
-  "inside an agent tool with no board's URL anywhere, whoami is url_missing, with or without COOKOUT_TOKEN",
-  () =>
-    Effect.gen(function* noBoard() {
-      const env = claudeCode("s1", {
-        COOKOUT_STATE_DIR: yield* freshStateFolder,
-        XDG_CONFIG_HOME: yield* freshStateFolder,
-      });
-      const results = yield* runAll([
-        { args: WHOAMI, env: withToken(env, "cookout_x") },
-        { args: WHOAMI, env },
-      ]);
-      const urlMissing = { exitCode: 1, stderrJson: { error: { code: "url_missing" } } };
+it.effect("inside a harness with no board's URL anywhere, whoami is url_missing, with or without COOKOUT_TOKEN", () =>
+  Effect.gen(function* noBoard() {
+    const env = claudeCode("s1", {
+      COOKOUT_STATE_DIR: yield* freshStateFolder,
+      XDG_CONFIG_HOME: yield* freshStateFolder,
+    });
+    const results = yield* runAll([
+      { args: WHOAMI, env: withToken(env, "cookout_x") },
+      { args: WHOAMI, env },
+    ]);
+    const urlMissing = { exitCode: 1, stderrJson: { error: { code: "url_missing" } } };
 
-      expect(results).toMatchObject([urlMissing, urlMissing]);
-    }).pipe(Effect.provide(commandLineServices)),
+    expect(results).toMatchObject([urlMissing, urlMissing]);
+  }).pipe(Effect.provide(commandLineServices)),
 );
 
 it.effect("a joined session with COOKOUT_TOKEN set posts as the joined agent", () =>

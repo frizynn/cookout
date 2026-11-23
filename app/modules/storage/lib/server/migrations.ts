@@ -150,6 +150,7 @@ const migrations: readonly string[] = [
      created_at TEXT NOT NULL
    ) STRICT;
    CREATE INDEX login_credentials_by_identity ON login_credentials (identity_name);`,
+  "ALTER TABLE messages RENAME COLUMN agent_tool TO harness;",
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

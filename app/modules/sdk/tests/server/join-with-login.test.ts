@@ -120,7 +120,7 @@ it.effect("a deactivated agent the caller owns is refused until reactivated", ()
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("a human's token from an agent tool is accepted by the join route only", () =>
+it.effect("a human's token from a harness is accepted by the join route only", () =>
   Effect.gen(function* guardExemption() {
     const cookout = yield* TestCookout;
     const grace = yield* humanFromClaudeCode(cookout, "grace");

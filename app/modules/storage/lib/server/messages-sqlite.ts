@@ -64,7 +64,7 @@ const SequenceRow = Schema.Struct({ last_id: MessageIdColumn });
 
 const isFoundRow = Schema.is(Schema.Struct({ found: Schema.Literal(FOUND) }));
 
-const MESSAGE_COLUMNS = `id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, agent_tool,
+const MESSAGE_COLUMNS = `id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, harness,
   (SELECT count(*) FROM messages AS replies WHERE replies.reply_to = messages.id) AS reply_count,
   (SELECT max(replies.id) FROM messages AS replies WHERE replies.reply_to = messages.id) AS latest_reply_id,
   (SELECT replies.created_at FROM messages AS replies WHERE replies.reply_to = messages.id
@@ -76,7 +76,7 @@ const MESSAGE_COLUMNS = `id, channel, author_name, author_owner, text, data, rep
   )) AS repliers`;
 
 const INSERT_MESSAGE = `INSERT INTO messages
-  (id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, agent_tool)
+  (id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, harness)
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 interface StoredAuthor {

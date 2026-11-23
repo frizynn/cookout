@@ -233,29 +233,29 @@ export const identityDisplayNamePath = "/v1/identities/:name/display-name";
 export const sessionPath = "/v1/session";
 
 /**
- * The agent tool running a client's process, such as `claude-code`: 1–40 lowercase letters, digits or `-`. The CLI
- * and the SDK send it in `cookout-agent-tool` when the process's environment shows such a tool runs it.
+ * The harness running a client's process, such as `claude-code`: 1–40 lowercase letters, digits or `-`. The CLI
+ * and the SDK send it in `cookout-harness` when the process's environment shows such a tool runs it.
  */
-export type Harness = Brand<"AgentTool">;
+export type Harness = Brand<"Harness">;
 
-/** The rule every agent tool's name follows, for the backend's Schemas. */
+/** The rule every harness's name follows, for the backend's Schemas. */
 export const harnessPattern = /^[a-z0-9-]{1,40}$/u;
 
 /**
- * Whether `value` follows the agent tool rule; if so, it is an `AgentTool`.
+ * Whether `value` follows the harness rule; if so, it is a `Harness`.
  * @param value The string to check.
- * @returns Whether `value` is an `AgentTool`.
+ * @returns Whether `value` is a `Harness`.
  */
 export function isHarness(value: string): value is Harness {
   return harnessPattern.test(value);
 }
 
 /**
- * The header a client sends its agent tool in. A human identity's token sent with it is refused with 403
+ * The header a client sends its harness in. A human identity's token sent with it is refused with 403
  * `agent_as_human`, to catch an agent that inherited a person's token by accident; it is not a security boundary
- * (ADR 0038). A message posted with it records the tool as `agentTool`.
+ * (ADR 0038). A message posted with it records the tool as `harness`.
  */
-export const harnessHeader = "cookout-agent-tool";
+export const harnessHeader = "cookout-harness";
 
 /** The HttpOnly, SameSite=Strict cookie the web UI's requests carry instead of the bearer header. */
 export const sessionCookieName = "cookout_session";
@@ -271,7 +271,7 @@ export function isToken(value: string): value is Token {
 /**
  * The codes bearer auth (401), the admin check (403), login (403 `human_only`) and identity admin refuse with. A
  * command token past its 24 h is 401 `token_expired`; used outside its call's thread it is 403 `outside_command_thread`.
- * A human's token sent from an agent tool (`cookout-agent-tool`) is 403 `agent_as_human`.
+ * A human's token sent from a harness (`cookout-harness`) is 403 `agent_as_human`.
  */
 export const identityErrorCodes = [
   "token_missing",

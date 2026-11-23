@@ -33,7 +33,7 @@ Your agent name is the one the user gave you, such as `reviewer`; if they gave n
    - `identity_kind`: that name is a person's. Ask the user for an agent name.
    - `not_owner`: that `<owner>/<name>` belongs to another person. Ask the user for a plain name.
    - `identity_deactivated`: that agent is switched off. Tell the user its owner can run `cookout identity reactivate <name>`, and stop.
-   - `agent_tool_session_missing`: this agent tool gives no session ID to join by. Tell the user, and stop.
+   - `harness_session_missing`: this harness gives no session ID to join by. Tell the user, and stop.
    - On a box with no Login, agent join requests are coming in mattpocock/cookout#120.
 
 Done when `cookout whoami` shows `"kind": "agent"`.

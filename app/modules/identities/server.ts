@@ -39,7 +39,7 @@ export { AgentSessionSent } from "./lib/server/auth.ts";
  */
 export { CommandThread } from "./lib/server/auth.ts";
 /**
- * The agent tool the request named in `cookout-agent-tool`, as a field to spread into a message to post: only an
+ * The harness the request named in `cookout-harness`, as a field to spread into a message to post: only an
  * agent identity's request carries one (a human's is refused with 403 `agent_as_human`), and none without the header.
  */
 export { sentHarness } from "./lib/server/auth.ts";
@@ -78,8 +78,8 @@ export const identitiesLayer: Layer.Layer<Identities, never, Storage | Secrets> 
  * its identity as `Caller`. Refuses
  * with 401 `token_missing`, `token_unknown`, `token_revoked` or `token_expired`. A command token gets 403
  * `outside_command_thread` on every route but `POST /v1/messages`, and its thread as `CommandThread`. A human's
- * token sent with `cookout-agent-tool` gets 403 `agent_as_human` on every route but join (`POST /v1/agent-session`);
- * an agent's provides the tool as `AgentToolSent`.
+ * token sent with `cookout-harness` gets 403 `agent_as_human` on every route but join (`POST /v1/agent-session`);
+ * an agent's provides the tool as `HarnessSent`.
  */
 export const requireToken: Gate<
   Caller,

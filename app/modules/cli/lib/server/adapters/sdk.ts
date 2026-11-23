@@ -20,8 +20,8 @@ type CallFailureCode =
   | CookoutErrorCode
   | AgentSessionStateFailure["code"]
   | LoginFailure["code"]
-  | "agent_tool_missing"
-  | "agent_tool_session_missing"
+  | "harness_missing"
+  | "harness_session_missing"
   | "already_joined"
   | "login_missing"
   | "not_joined"

@@ -26,7 +26,7 @@ function agentAsHuman(identity: Identity, tool: Harness): Refusal {
   return {
     code: "agent_as_human",
     details: { harness: tool, identity: identity.name },
-    message: `${identity.name} is a human identity, and this request came from ${tool}, an agent tool. Give the agent its own agent identity and token, or set COOKOUT_ALLOW_HUMAN=1 if you mean to act as this human from it.`,
+    message: `${identity.name} is a human identity, and this request came from ${tool}, a harness. Give the agent its own agent identity and token, or set COOKOUT_ALLOW_HUMAN=1 if you mean to act as this human from it.`,
     status: 403,
   };
 }

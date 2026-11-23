@@ -39,7 +39,7 @@ it.effect("from Claude Code with COOKOUT_ALLOW_HUMAN=1, cookout posts with a hum
     const allowed = yield* postAs("human", { ...CLAUDE_CODE, COOKOUT_ALLOW_HUMAN: "1" });
 
     expect(allowed).toMatchObject({ exitCode: 0, stdoutJson: { message: { author: { name: "poster" } } } });
-    expect(allowed.stdoutJson).not.toHaveProperty("message.agentTool");
+    expect(allowed.stdoutJson).not.toHaveProperty("message.harness");
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
@@ -48,7 +48,7 @@ it.effect("with no agent markers, cookout posts with a human's token", () =>
     const byHand = yield* postAs("human", {});
 
     expect(byHand).toMatchObject({ exitCode: 0, stdoutJson: { message: { author: { name: "poster" } } } });
-    expect(byHand.stdoutJson).not.toHaveProperty("message.agentTool");
+    expect(byHand.stdoutJson).not.toHaveProperty("message.harness");
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 

@@ -107,13 +107,13 @@ export type CookoutClientOptions = {
   readonly url?: string;
   /**
    * The bearer token: an Identity token, or the agent session token `join` answered, to act as the agent for that
-   * session. Default: `COOKOUT_TOKEN`, else `COOKOUT_SESSION`; inside an agent tool, `COOKOUT_SESSION` first. Not
+   * session. Default: `COOKOUT_TOKEN`, else `COOKOUT_SESSION`; inside a harness, `COOKOUT_SESSION` first. Not
    * needed for the health check.
    */
   readonly token?: string;
   /** Where `COOKOUT_URL`, `COOKOUT_TOKEN` and `COOKOUT_SESSION` are read from. Default: the process's environment (none in a browser). */
   readonly env?: Readonly<Record<string, string | undefined>>;
-  /** The agent tool running this process, such as `claude-code`, sent on every request: a human's token with it is refused with 403 `agent_as_human`, and messages posted record it. Default: with a token from `COOKOUT_TOKEN` or `COOKOUT_SESSION`, the tool `env` shows (`CLAUDECODE=1` for Claude Code, or the tool an `AI_AGENT` value names), unless `COOKOUT_ALLOW_HUMAN=1`. */
+  /** The harness running this process, such as `claude-code`, sent on every request: a human's token with it is refused with 403 `agent_as_human`, and messages posted record it. Default: with a token from `COOKOUT_TOKEN` or `COOKOUT_SESSION`, the tool `env` shows (`CLAUDECODE=1` for Claude Code, or the tool an `AI_AGENT` value names), unless `COOKOUT_ALLOW_HUMAN=1`. */
   readonly harness?: string;
 };
 

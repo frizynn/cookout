@@ -61,7 +61,7 @@ it.effect(
 );
 
 it.effect(
-  "inside an agent tool, the SDK sends COOKOUT_SESSION over COOKOUT_TOKEN, and COOKOUT_TOKEN alone still works",
+  "inside a harness, the SDK sends COOKOUT_SESSION over COOKOUT_TOKEN, and COOKOUT_TOKEN alone still works",
   () =>
     Effect.gen(function* sessionInHarness() {
       const cookout = yield* TestCookout;

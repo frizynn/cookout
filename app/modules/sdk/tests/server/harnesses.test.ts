@@ -23,7 +23,7 @@ function whoamiWithTool(
 ): Effect.Effect<number, never, HttpClient.HttpClient> {
   return HttpClientRequest.get(`${cookout.url}${whoamiPath}`).pipe(
     HttpClientRequest.setHeader("authorization", `Bearer ${token}`),
-    HttpClientRequest.setHeader("cookout-agent-tool", tool),
+    HttpClientRequest.setHeader("cookout-harness", tool),
     HttpClient.execute,
     Effect.map((response) => response.status),
     Effect.orDie,
@@ -80,7 +80,7 @@ it.effect("with COOKOUT_ALLOW_HUMAN=1, a human's token goes through from Claude 
     const { message } = yield* answer(() => client.createMessage({ channel: "grill", text: "me, on purpose" }));
 
     expect(message.author).toStrictEqual({ name: "ada" });
-    expect(message).not.toHaveProperty("agentTool");
+    expect(message).not.toHaveProperty("harness");
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -141,7 +141,7 @@ it.effect("a human's token with an empty AI_AGENT and no other agent markers goe
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("a token given to the SDK, not read from COOKOUT_TOKEN, sends no agent tool unless it is given too", () =>
+it.effect("a token given to the SDK, not read from COOKOUT_TOKEN, sends no harness unless it is given too", () =>
   Effect.gen(function* givenToken() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
@@ -155,7 +155,7 @@ it.effect("a token given to the SDK, not read from COOKOUT_TOKEN, sends no agent
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("the server refuses the agent tool header with a human caller, takes it with an agent's, and checks it", () =>
+it.effect("the server refuses the harness header with a human caller, takes it with an agent's, and checks it", () =>
   Effect.gen(function* serverGuard() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });

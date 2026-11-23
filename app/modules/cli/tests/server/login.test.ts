@@ -182,7 +182,7 @@ it.effect("COOKOUT_TOKEN wins over the Login, and whoami says so", () =>
 
 const harnesses: readonly Env[] = [{ CLAUDECODE: "1" }, { CLAUDECODE: "1", COOKOUT_ALLOW_HUMAN: "1" }];
 
-it.effect.each(harnesses)("inside an agent tool (%o) the Login is never sent: the verb asks to join first", (markers) =>
+it.effect.each(harnesses)("inside a harness (%o) the Login is never sent: the verb asks to join first", (markers) =>
   Effect.gen(function* harnessWithLogin() {
     const { env } = yield* loggedIn;
 

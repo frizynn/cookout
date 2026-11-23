@@ -126,38 +126,36 @@ it.effect("a second join in a joined session is refused naming the agent; --prin
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect(
-  "outside an agent tool, or in one with no session ID, join is refused, and --print-env prints the export",
-  () =>
-    Effect.gen(function* joinOutsideHarness() {
-      const cookout = yield* TestCookout;
-      const bot = yield* cookout.createIdentity("release-bot");
-      const folder = yield* freshStateFolder;
-      const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bot.token, COOKOUT_URL: cookout.url };
-      const refusals = yield* runAll([
-        { args: ["join", "--as", "release-bot"], env },
-        { args: ["join", "--as", "release-bot"], env: { ...env, CLAUDECODE: "1" } },
-        { args: ["join", "--as", "release-bot"], env: { ...env, CURSOR_AGENT: "1" } },
-      ]);
-      const printed = yield* runCookout({ args: ["join", "--as", "release-bot", "--print-env"], env });
+it.effect("outside a harness, or in one with no session ID, join is refused, and --print-env prints the export", () =>
+  Effect.gen(function* joinOutsideHarness() {
+    const cookout = yield* TestCookout;
+    const bot = yield* cookout.createIdentity("release-bot");
+    const folder = yield* freshStateFolder;
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bot.token, COOKOUT_URL: cookout.url };
+    const refusals = yield* runAll([
+      { args: ["join", "--as", "release-bot"], env },
+      { args: ["join", "--as", "release-bot"], env: { ...env, CLAUDECODE: "1" } },
+      { args: ["join", "--as", "release-bot"], env: { ...env, CURSOR_AGENT: "1" } },
+    ]);
+    const printed = yield* runCookout({ args: ["join", "--as", "release-bot", "--print-env"], env });
 
-      expect(refusals).toMatchObject([
-        failedWith("agent_tool_missing"),
-        failedWith("agent_tool_session_missing"),
-        failedWith("agent_tool_session_missing"),
-      ]);
-      expect(
-        Arr.join(
-          Arr.map(refusals, ({ stderr }) => stderr),
-          "\n",
-        ),
-      ).toContain("cursor gives no session ID");
-      expect(printed).toMatchObject(succeeded);
-      expect(printed.stdout).toMatch(exportLine);
-    }).pipe(Effect.provide([testCookout(), commandLineServices])),
+    expect(refusals).toMatchObject([
+      failedWith("harness_missing"),
+      failedWith("harness_session_missing"),
+      failedWith("harness_session_missing"),
+    ]);
+    expect(
+      Arr.join(
+        Arr.map(refusals, ({ stderr }) => stderr),
+        "\n",
+      ),
+    ).toContain("cursor gives no session ID");
+    expect(printed).toMatchObject(succeeded);
+    expect(printed.stdout).toMatch(exportLine);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("whoami says how long ago this agent tool session joined", () =>
+it.effect("whoami says how long ago this harness session joined", () =>
   Effect.gen(function* joinedAgo() {
     const cookout = yield* TestCookout;
     const bot = yield* cookout.createIdentity("release-bot");

@@ -31,16 +31,16 @@ const asMissing: CallFailure = {
 
 function noHarness(as: IdentityName): CallFailure {
   return {
-    code: "agent_tool_missing",
+    code: "harness_missing",
     message:
-      "No agent tool runs this process, so there is no agent tool session to join in. Run " +
+      "No harness runs this process, so there is no harness session to join in. Run " +
       `\`cookout join --as ${as} --print-env\` and run the \`export COOKOUT_SESSION=...\` line it prints instead.`,
   };
 }
 
 function noSessionId(harness: string, as: IdentityName): CallFailure {
   return {
-    code: "agent_tool_session_missing",
+    code: "harness_session_missing",
     message:
       `${harness} gives no session ID to key a join by. Run \`cookout join --as ${as} --print-env\` and run ` +
       "the `export COOKOUT_SESSION=...` line it prints instead.",
@@ -51,7 +51,7 @@ function alreadyJoined(identity: IdentityName): CallFailure {
   return {
     code: "already_joined",
     message:
-      `This agent tool session has already joined as ${identity}. Run \`cookout leave\` first, or ` +
+      `This harness session has already joined as ${identity}. Run \`cookout leave\` first, or ` +
       "`cookout join --as <name> --print-env` to act as another agent from one subagent or script.",
   };
 }

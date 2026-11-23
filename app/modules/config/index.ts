@@ -1,10 +1,10 @@
 /**
  * The plain-TS reader of `COOKOUT_URL`, `COOKOUT_TOKEN` and `COOKOUT_SESSION`, for the SDK's
- * defaults, the one place that tells from the environment which agent tool runs
+ * defaults, the one place that tells from the environment which harness runs
  * the process, and the shape of a connection to a cookout server, which the SDK
  * and the CLI share. In a browser there is no environment, so it reads nothing.
- * Recognise another agent tool by adding its entry to `agentTools`, and its
- * variables to `agentToolVariables`.
+ * Recognise another harness by adding its entry to `harnesses`, and its
+ * variables to `harnessVariables`.
  */
 
 type Environment = Readonly<Record<string, string | undefined>>;
@@ -110,7 +110,7 @@ function tokenIn(env: Environment, inHarness: boolean): string {
   return firstSet([env["COOKOUT_TOKEN"], env["COOKOUT_SESSION"]]);
 }
 
-/** Every variable `agentToolIn` reads, for a reader of the environment that must name what it reads (the CLI). */
+/** Every variable `harnessIn` reads, for a reader of the environment that must name what it reads (the CLI). */
 export const harnessVariables: readonly string[] = [
   "CLAUDECODE",
   "CODEX_THREAD_ID",
@@ -125,7 +125,7 @@ export const harnessVariables: readonly string[] = [
 ];
 
 /**
- * The agent tool `env` shows runs the process, such as `claude-code` (Claude Code sets `CLAUDECODE=1` and
+ * The harness `env` shows runs the process, such as `claude-code` (Claude Code sets `CLAUDECODE=1` and
  * `AI_AGENT`), `codex`, `cursor`, `gemini-cli`, `cline` or `opencode`, or, with only `AI_AGENT` set, the tool its value
  * names: `claude-code` for `claude-code_<version>_agent`, `opencode`, or else the value lowercased, with each run of
  * other characters made `-` and cut to 40 characters (`unknown` if nothing is left), unless `COOKOUT_ALLOW_HUMAN=1` says a human's token is meant to be used from it. A guard against
@@ -145,21 +145,21 @@ export function harnessIn(env: Environment): { readonly harness?: string } {
   return aiHarnessIn(env);
 }
 
-/** The ID an agent tool gives its session, shared by the session's subagents, such as `CLAUDE_CODE_SESSION_ID`. */
-export type HarnessSessionId = string & { readonly [brand]: "AgentToolSessionId" };
+/** The ID a harness gives its session, shared by the session's subagents, such as `CLAUDE_CODE_SESSION_ID`. */
+export type HarnessSessionId = string & { readonly [brand]: "HarnessSessionId" };
 
-/** An agent tool session: the tool that runs the process, and its session ID if the tool gives one. */
+/** A harness session: the tool that runs the process, and its session ID if the tool gives one. */
 export interface HarnessSession {
   readonly harness?: string;
   readonly sessionId?: HarnessSessionId;
 }
 
 /**
- * The agent tool session `env` shows runs the process, whatever `COOKOUT_ALLOW_HUMAN` says: the tool `agentToolIn`
+ * The harness session `env` shows runs the process, whatever `COOKOUT_ALLOW_HUMAN` says: the tool `harnessIn`
  * names, and the session ID from the tool's own variable (`CLAUDE_CODE_SESSION_ID` for Claude Code, whose subagents
  * share their parent's), which `cookout join` keys its agent session by (mattpocock/cookout#116).
  * @param env Where the markers are read from.
- * @returns The tool and its session ID, or nothing outside an agent tool.
+ * @returns The tool and its session ID, or nothing outside a harness.
  */
 export function harnessSessionIn(env: Environment): HarnessSession {
   const { harness = "" } = harnessIn({ ...env, [ALLOW_HUMAN]: "" });
@@ -170,8 +170,8 @@ export function harnessSessionIn(env: Environment): HarnessSession {
 }
 
 /**
- * Where a client connects: the server's base URL, the bearer token if there is one, and the agent tool running the
- * process if one was found, which the client names in `cookout-agent-tool` on every request.
+ * Where a client connects: the server's base URL, the bearer token if there is one, and the harness running the
+ * process if one was found, which the client names in `cookout-harness` on every request.
  */
 export interface CookoutConnection {
   readonly url: string;
@@ -181,11 +181,11 @@ export interface CookoutConnection {
 
 /**
  * `COOKOUT_URL` and the token from `env` (by default the process's), as much of a connection as they give: the token
- * is `COOKOUT_TOKEN`, else the agent session token in `COOKOUT_SESSION`, the other way round inside an agent tool,
+ * is `COOKOUT_TOKEN`, else the agent session token in `COOKOUT_SESSION`, the other way round inside a harness,
  * whatever `COOKOUT_ALLOW_HUMAN` says (mattpocock/cookout#150). With a token read from `env`, it adds the
- * agent tool `env` shows runs the process. An empty variable counts as unset.
+ * harness `env` shows runs the process. An empty variable counts as unset.
  * @param env Where the variables are read from.
- * @returns The URL, the token and the agent tool, each only if set.
+ * @returns The URL, the token and the harness, each only if set.
  */
 export function readCookoutConnection(env: Environment = processEnvironment()): Partial<CookoutConnection> {
   const token = tokenIn(env, isSet(harnessSessionIn(env).harness));

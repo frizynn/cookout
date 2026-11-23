@@ -30,7 +30,7 @@ export const idleExpiryPattern = /^[1-9]\d{0,6}[smhd]$/u;
  * Sent with a human's token, `as` names an agent the human owns, or creates one (Matt, 2026-11-23,
  * mattpocock/cookout#119): an agent the caller owns by that name is joined; else a free name is created, owned by
  * the caller; else, when someone else has the name, `<caller>/<name>` is joined, or created. A human's name, or
- * `<other>/<name>`, is refused. This is the one route a human's token may use from an agent tool.
+ * `<other>/<name>`, is refused. This is the one route a human's token may use from a harness.
  */
 export interface JoinRequest {
   readonly as: string;
