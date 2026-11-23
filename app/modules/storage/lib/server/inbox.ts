@@ -1,7 +1,7 @@
 import { Array as Arr, Order, Predicate } from "effect";
+import type { Channel, ChannelName } from "../../../channels/index.ts";
 import type { InboxItem, InboxReason, ReadPosition } from "../../../inbox/index.ts";
 import type { Message, MessageId } from "../../../messages/index.ts";
-import type { ChannelName } from "../../../channels/index.ts";
 import type { Effect } from "effect";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { StorageUnavailable } from "./errors.ts";
@@ -28,6 +28,7 @@ interface InboxSection {
   readonly unfollowThread: (identity: IdentityName, id: MessageId) => Fails<MessageId | undefined>;
   readonly subscribeChannel: (identity: IdentityName, channel: ChannelName) => Fails<boolean>;
   readonly unsubscribeChannel: (identity: IdentityName, channel: ChannelName) => Fails<boolean>;
+  readonly listSubscribedChannels: (identity: IdentityName) => Fails<readonly Channel[]>;
 }
 
 function scopeOf(message: Message): Scope {

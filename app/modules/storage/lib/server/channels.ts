@@ -135,4 +135,4 @@ function sqliteChannels(db: SqliteDatabase): ChannelsSection {
   };
 }
 
-export { type ChannelsSection, type MemoryChannelsSection, memoryChannels, sqliteChannels };
+export { CHANNEL_COLUMNS, type ChannelsSection, type MemoryChannelsSection, memoryChannels, sqliteChannels, toChannel };

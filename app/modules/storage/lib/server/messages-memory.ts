@@ -32,7 +32,7 @@ interface MemoryMessages {
 }
 
 interface MemoryMessagesOptions {
-  readonly channels: Pick<MemoryChannelsSection, "findChannel">;
+  readonly channels: Pick<MemoryChannelsSection, "findChannel" | "listChannels">;
   readonly identities: IdentitiesSection;
   readonly state: MemoryState;
 }
@@ -142,6 +142,7 @@ function memoryMessages({ channels, identities, state }: MemoryMessagesOptions):
           return [value, { ...data, inbox }];
         }),
       channelExists,
+      listChannels: channels.listChannels,
       read: readBoard,
     }),
     appendMessage: (message) =>
