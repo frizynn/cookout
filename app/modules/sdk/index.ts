@@ -159,6 +159,8 @@ export type CookoutClient = {
   readonly createChannel: (request: CreateChannelRequest) => Promise<ChannelResponse>;
   /** `GET /v1/channels`: every channel, sorted by name. */
   readonly listChannels: () => Promise<ListChannelsResponse>;
+  /** `GET /v1/channels?subscribed=true`: the channels the caller subscribes to, sorted by name. */
+  readonly listSubscribedChannels: () => Promise<ListChannelsResponse>;
   /** `GET /v1/channels/:name`. A missing channel is 404 `channel_not_found`. */
   readonly getChannel: (name: string) => Promise<ChannelResponse>;
   /**
@@ -274,14 +276,8 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
       send(server, { isExpected: isIdentityResponse, method: "DELETE", params: { name }, path: identityPath }),
     health: () => getJson(server, healthPath, isHealthResponse),
     listIdentities: () => getJson(server, identitiesPath, isListIdentitiesResponse),
-    login: async () => {
-      const loggedIn = await send(server, { isExpected: isIdentityResponse, method: "POST", path: sessionPath });
-      return loggedIn;
-    },
-    logout: async () => {
-      const loggedOut = await send(server, { isExpected: isIdentityResponse, method: "DELETE", path: sessionPath });
-      return loggedOut;
-    },
+    login: () => send(server, { isExpected: isIdentityResponse, method: "POST", path: sessionPath }),
+    logout: () => send(server, { isExpected: isIdentityResponse, method: "DELETE", path: sessionPath }),
     rotateToken: (name) =>
       send(server, {
         isExpected: isIdentityWithTokenResponse,

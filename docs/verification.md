@@ -129,6 +129,19 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts 
 
 `follow` and `unfollow` take any message in the thread and print `{ "thread", "following" }`; an unfollow lasts until the identity next replies in the thread or is mentioned in it. `subscribe` and `unsubscribe` print `{ "channel", "subscribed" }`. After the subscribe, the `inbox` adds `[6,["subscribed-channel"]]` and `[7,["subscribed-channel"]]`, the `deploys` messages.
 
+`channel list --subscribed` lists only the caller's subscribed channels (`GET /v1/channels?subscribed=true`), sorted by name, in the `{ "channels" }` shape of `channel list`:
+
+```sh
+jq -r '.identities[] | select(.identity.name == "grace") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-grace.env
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts channel list --subscribed | jq -c '[.channels[].name]'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts subscribe general
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts channel list --subscribed | jq -c '[.channels[].name]'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts unsubscribe deploys
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts channel list --subscribed | jq -c '[.channels[].name]'
+```
+
+On a fresh seed they print `["deploys"]`, then `["deploys","general"]`, then `["general"]`. Plain `channel list` is unchanged.
+
 ## Watch the live stream
 
 `GET /v1/events` is one Server-Sent Events stream per connection, with the bearer token. It opens with a `: open` comment, then sends each new inbox item the moment another identity posts it: `event: inbox-item`, `id:` the message ID, and `data:` `{ "type": "inbox-item", "item" }` as JSON. The caller's own posts never arrive. Watch as `triage-agent` in one terminal (the `triage` env file is made in the inbox recipe above), and mention it as the admin in another:

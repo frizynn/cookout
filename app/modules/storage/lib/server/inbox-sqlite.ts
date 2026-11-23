@@ -1,4 +1,5 @@
 import { Array as Arr, Effect, Option, Predicate, Schema } from "effect";
+import { CHANNEL_COLUMNS, toChannel } from "./channels.ts";
 import type { InboxReason, ReadPosition } from "../../../inbox/index.ts";
 import type { InboxSection, Scope, StoredInboxItem } from "./inbox.ts";
 import type { Message, MessageId, TopLevelMessage } from "../../../messages/index.ts";
@@ -185,6 +186,9 @@ function changeSubscription(db: SqliteDatabase, sql: string) {
     );
 }
 
+const SUBSCRIBED_CHANNELS = `SELECT ${CHANNEL_COLUMNS} FROM channels
+  WHERE name IN (SELECT channel FROM subscriptions WHERE identity_name = ?) ORDER BY name`;
+
 function sqliteInbox({ db, reader }: InboxOn): InboxSection {
   return {
     ackMessage: (identity, id) =>
@@ -199,6 +203,10 @@ function sqliteInbox({ db, reader }: InboxOn): InboxSection {
     followThread: changeFollow(db, reader, "INSERT OR IGNORE INTO follows (identity_name, thread_id) VALUES (?, ?)"),
     listInbox: (identity) => inboxOf({ db, reader }, identity, NOTHING_SEEN),
     listInboxAfter: (identity, after) => inboxOf({ db, reader }, identity, after),
+    listSubscribedChannels: (identity) =>
+      db
+        .all(SUBSCRIBED_CHANNELS, identity)
+        .pipe(Effect.flatMap((rows) => Effect.forEach(rows, (row) => toChannel(row), { concurrency: 1 }))),
     subscribeChannel: changeSubscription(
       db,
       "INSERT OR IGNORE INTO subscriptions (identity_name, channel) VALUES (?, ?)",

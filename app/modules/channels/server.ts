@@ -3,11 +3,16 @@
  * routes that create, list, get and delete channels. Any identity can create a
  * channel; only an admin can delete one. The routes sit behind the server's token gate.
  */
-import { ChannelResponseSchema, CreateChannelRequestSchema, ListChannelsResponseSchema } from "./lib/server/wire.ts";
+import { Caller, requireAdmin } from "../identities/server.ts";
+import {
+  ChannelResponseSchema,
+  CreateChannelRequestSchema,
+  ListChannelsQuerySchema,
+  ListChannelsResponseSchema,
+} from "./lib/server/wire.ts";
 import { Context, DateTime, Effect, Layer } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { channelPath, channelsPath, isChannelName } from "./index.ts";
-import type { Caller } from "../identities/server.ts";
 import type { Channel } from "./index.ts";
 import type { IsoTime } from "../time/index.ts";
 import type { Refusal } from "../http/index.ts";
@@ -16,13 +21,13 @@ import { Storage } from "../storage/server.ts";
 import type { StorageUnavailable } from "../storage/server.ts";
 import { echoed } from "../http/index.ts";
 import { isoTimeOf } from "../time/server.ts";
-import { requireAdmin } from "../identities/server.ts";
 
 type NewChannel = typeof CreateChannelRequestSchema.Type;
 
 const CONFLICT = 409;
 const CREATED = 201;
 const NOT_FOUND = 404;
+const PATH_BASE = "http://cookout.invalid";
 
 function channelExists(name: string): Refusal {
   return { code: "channel_exists", message: `The channel ${name} already exists.`, status: CONFLICT };
@@ -63,6 +68,7 @@ function channelsOn(storage: Storage["Service"]): ChannelsService {
         return yield* Effect.fail(missingChannel(name));
       }),
     list: Effect.suspend(() => storage.listChannels()),
+    listSubscribed: (identity) => storage.listSubscribedChannels(identity.name),
     remove: (name) =>
       Effect.gen(function* deleteChannel() {
         if (!isChannelName(name)) {
@@ -88,6 +94,8 @@ export interface ChannelsService {
   readonly create: (channel: NewChannel) => Effect.Effect<Channel, Refusal | StorageUnavailable>;
   /** Every channel, sorted by name. */
   readonly list: Effect.Effect<readonly Channel[], StorageUnavailable>;
+  /** The channels `identity` subscribes to, sorted by name. */
+  readonly listSubscribed: (identity: Caller["Service"]) => Effect.Effect<readonly Channel[], StorageUnavailable>;
   /** The channel named `name`. Refuses with 404 `channel_not_found` when there is none. */
   readonly get: (name: string) => Effect.Effect<Channel, Refusal | StorageUnavailable>;
   /**
@@ -131,9 +139,18 @@ export const channelRoutes: readonly Route<Caller | Channels>[] = [
   {
     handle: () =>
       Effect.gen(function* listChannelsRoute() {
+        const request = yield* HttpServerRequest.HttpServerRequest;
+        const search = HttpServerRequest.searchParamsFromURL(new URL(request.url, PATH_BASE));
+        const query = yield* HttpServerRequest.schemaSearchParams(ListChannelsQuerySchema, { errors: "all" }).pipe(
+          Effect.provideService(HttpServerRequest.ParsedSearchParams, search),
+        );
         const service = yield* Channels;
-        const channels = yield* service.list;
-        return yield* HttpServerResponse.schemaJson(ListChannelsResponseSchema)({ channels });
+        const respond = HttpServerResponse.schemaJson(ListChannelsResponseSchema);
+        if (query.subscribed === "true") {
+          const caller = yield* Caller;
+          return yield* respond({ channels: yield* service.listSubscribed(caller) });
+        }
+        return yield* respond({ channels: yield* service.list });
       }),
     method: "GET",
     path: channelsPath,

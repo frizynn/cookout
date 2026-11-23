@@ -1,10 +1,10 @@
 import { Array as Arr, Effect, Option, Predicate, String as Str, pipe } from "effect";
+import type { Channel, ChannelName } from "../../../channels/index.ts";
 import type { InboxReason, ReadPosition } from "../../../inbox/index.ts";
 import type { InboxSection, Scope, StoredInboxItem } from "./inbox.ts";
 import type { Message, MessageId, Reply, TopLevelMessage } from "../../../messages/index.ts";
 import { counted, threadIdOf } from "./messages.ts";
 import { followersOf, movedTo, scopeOf } from "./inbox.ts";
-import type { ChannelName } from "../../../channels/index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { StorageUnavailable } from "./errors.ts";
 
@@ -26,6 +26,7 @@ interface BoardAccess {
   readonly read: <Value>(work: (board: MemoryBoard) => Value) => Fails<Value>;
   readonly changeInbox: <Value>(work: (board: MemoryBoard) => readonly [Value, MemoryInbox]) => Fails<Value>;
   readonly channelExists: (channel: ChannelName) => Fails<boolean>;
+  readonly listChannels: () => Fails<readonly Channel[]>;
 }
 
 interface Asking {
@@ -211,7 +212,7 @@ function withoutChannel({ channel, ids, inbox }: ForgettingChannel): MemoryInbox
   };
 }
 
-function memoryInbox({ changeInbox, channelExists, read }: BoardAccess): MemoryInboxSection {
+function memoryInbox({ changeInbox, channelExists, listChannels, read }: BoardAccess): MemoryInboxSection {
   function changeFound<Value>(work: (board: MemoryBoard) => Changed<Value>): Fails<Value | undefined> {
     return Effect.map(changeInbox(work), Option.getOrUndefined);
   }
@@ -236,6 +237,14 @@ function memoryInbox({ changeInbox, channelExists, read }: BoardAccess): MemoryI
     listInbox: (identity) => read((board) => inboxOf({ board, identity })),
     listInboxAfter: (identity, after) =>
       read((board) => Arr.filter(inboxOf({ board, identity }), (item) => item.message.id > after)),
+    listSubscribedChannels: (identity) =>
+      Effect.flatMap(listChannels(), (channels) =>
+        read((board) =>
+          Arr.filter(channels, (channel) =>
+            board.inbox.subscriptions.has(keyOf(identity, { channel: channel.name, thread: null })),
+          ),
+        ),
+      ),
     subscribeChannel: subscription(withKey),
     unfollowThread: (identity, id) => changeFound((board) => follow(withoutKey)({ board, id, identity })),
     unsubscribeChannel: subscription(withoutKey),
