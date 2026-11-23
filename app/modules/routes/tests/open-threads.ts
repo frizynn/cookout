@@ -27,6 +27,11 @@ interface Opening {
   readonly pageSize?: number;
 }
 
+interface Threads {
+  readonly channel: string;
+  readonly more?: readonly string[];
+}
+
 interface Expected {
   readonly channel: string;
   readonly texts: readonly string[];
@@ -65,10 +70,10 @@ async function involvedIn(channel: string): Promise<Starters> {
   return starters;
 }
 
-async function twoThreadsIn(channel: string): Promise<Starters & { readonly first: Message }> {
+async function twoThreadsIn({ channel, more = [] }: Threads): Promise<Starters & { readonly first: Message }> {
   const starters = await startersIn(channel);
   const first = await postedOne({ by: starters.reader, channel, text: "First." });
-  await posted({ by: starters.reader, channel, texts: ["Second."] });
+  await posted({ by: starters.reader, channel, texts: ["Second.", ...more] });
   return { ...starters, first };
 }
 

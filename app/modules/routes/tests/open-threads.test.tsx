@@ -65,7 +65,7 @@ it("a close by another identity drops a row live, and a reopen brings it back at
 }, async () => {
   expect.hasAssertions();
 
-  const { channel, first, poster, reader } = await twoThreadsIn("open-live");
+  const { channel, first, poster, reader } = await twoThreadsIn({ channel: "open-live" });
   const close = await openLive({ client: reader, hash: "#/threads" });
   await listShows({ channel, texts: ["First.", "Second."] });
   await poster.closeThread(first.id);
@@ -82,7 +82,7 @@ it("a close by another identity drops a row live, and a reopen brings it back at
 it("a reply by another identity moves its thread to the end of the list live", { timeout: 8000 }, async () => {
   expect.hasAssertions();
 
-  const { channel, first, poster, reader } = await twoThreadsIn("open-live-reply");
+  const { channel, first, poster, reader } = await twoThreadsIn({ channel: "open-live-reply" });
   const close = await openLive({ client: reader, hash: "#/threads" });
   await listShows({ channel, texts: ["First.", "Second."] });
   await poster.createMessage({ channel, replyTo: first.id, text: "Bump." });
