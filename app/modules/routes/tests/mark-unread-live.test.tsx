@@ -1,5 +1,5 @@
 import type { CookoutClient, MessageId } from "../../sdk/index.ts";
-import { expect, it, vi } from "vitest";
+import { expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import { rowsOf, subscribedReader } from "./inbox-reader.ts";
 import { messagesIn } from "./messages.ts";
@@ -70,14 +70,9 @@ it("messages another session marks unread leave this tab's Earlier list and are 
       await reader.markUnread(id);
     }),
   );
-  await vi.waitFor(() => {
-    expect(earlierTexts()).toStrictEqual(["re: Deploy?Noon"]);
-  });
+  await screen.findByRole("heading", { level: 2, name: "Activity 2" });
 
-  expect([before, screen.getByRole("heading", { level: 2, name: "Activity 2" }).tagName]).toStrictEqual([
-    ["Two", "One", "re: Deploy?Noon"],
-    "H2",
-  ]);
+  expect([before, earlierTexts()]).toStrictEqual([["Two", "One", "re: Deploy?Noon"], ["re: Deploy?Noon"]]);
 
   await close();
 });
