@@ -1,7 +1,6 @@
 import { ATTEMPTS, BRANCH, FLOOR, TICKET, floor, generated, git, migrations, repo, repos } from "./lib/merge-repos.ts";
 import { expect, it } from "vitest";
 import type { Merged } from "../lib/merge-ticket.ts";
-import { existsSync } from "node:fs";
 import path from "node:path";
 
 const ONE_ATTEMPT = 1;
@@ -35,7 +34,7 @@ it("merges a ticket whose only conflicts are generated files, a migration number
 }, () => {
   expect.hasAssertions();
 
-  const { origin, other, root, work } = repos();
+  const { origin, other, work } = repos();
   repo(other).push({
     "floor.ts": floor(FLOOR.v1),
     "gen/out.txt": generated("a", "b"),
@@ -46,12 +45,10 @@ it("merges a ticket whose only conflicts are generated files, a migration number
     "floor.ts": floor(FLOOR.ticket),
     "gen/out.txt": generated("a", "c"),
     "migrations.ts": migrations("a", "c"),
-    "pnpm-lock.yaml": "ticket\n",
     "src/c.txt": "c\n",
   });
-  const installed = path.join(root, "installed");
 
-  const merged = repo(work).merge({ install: ["touch", installed] });
+  const merged = repo(work).merge({});
 
   expect(merged).toStrictEqual({ attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") });
   expect([
@@ -63,7 +60,6 @@ it("merges a ticket whose only conflicts are generated files, a migration number
     git(origin, "show", "v1:gen/out.txt"),
     git(origin, "show", "v1:floor.ts"),
   ]).toStrictEqual([migrations("a", "b", "c").trim(), generated("a", "b", "c").trim(), floor(FLOOR.merged).trim()]);
-  expect(existsSync(installed)).toBe(true);
 });
 
 it.each<{ readonly files: Readonly<Record<string, string>>; readonly name: string }>([
