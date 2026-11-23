@@ -1,5 +1,6 @@
 import type { Call, FailureReplyNeeds } from "./failure-reply.ts";
-import type { Config, Scope } from "effect";
+import type { Cause, Config, Scope } from "effect";
+import type { CommandName, CommandSecret } from "../../index.ts";
 import { Context, DateTime, Duration, Effect, FiberSet, Layer, Ref, Schedule, Schema } from "effect";
 import type { DeliveryOutcome, StorageUnavailable, StoredDelivery } from "../../../storage/server.ts";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
@@ -74,16 +75,27 @@ function record({ attempts, callId, delaySeconds, outcome }: Settled): Effect.Ef
   }).pipe(Effect.ignore({ log: "Warn", message: `The progress of the webhook delivery ${callId} wasn't stored.` }));
 }
 
+function currentSecret(
+  name: CommandName,
+): Effect.Effect<CommandSecret, StorageUnavailable | Cause.NoSuchElementError, Storage> {
+  return Effect.gen(function* findSecret() {
+    const storage = yield* Storage;
+    const { secret } = yield* Effect.flatMap(storage.findCommand(name), Effect.fromNullishOr);
+    return secret;
+  });
+}
+
 function attempt(
   { call, token, progress: { callId } }: Delivery,
   timeoutSeconds: number,
-): Effect.Effect<boolean, never, Secrets | HttpClient.HttpClient> {
+): Effect.Effect<boolean, never, Secrets | Storage | HttpClient.HttpClient> {
   return Effect.gen(function* sendWebhook() {
     const { channel, data, threadId } = call;
     const fields = { callId, channel, command: call.stored.command.name, data, threadId, token };
     const body = yield* Effect.orDie(toJson(fields));
+    const secret = yield* currentSecret(call.stored.command.name);
     const secrets = yield* Secrets;
-    const signature = yield* secrets.signature(call.stored.secret, body);
+    const signature = yield* secrets.signature(secret, body);
     const request = HttpClientRequest.post(call.stored.command.url).pipe(
       HttpClientRequest.setHeader(SIGNATURE_HEADER, signature),
       HttpClientRequest.bodyText(body, "application/json"),

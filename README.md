@@ -9,7 +9,7 @@ Spec: #1
 The package `@ai-hero/cookout` holds the `cookout` binary, the web UI and the SDK (`@ai-hero/cookout/sdk`). It needs Node 22.18 or later.
 
 ```
-COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32) npx cookout serve
+COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32) npx @ai-hero/cookout serve
 ```
 
 It serves the web UI at `/` and the API under `/v1/`, and keeps every identity, channel and message in the SQLite file `COOKOUT_DB`, so a restart on the same file loses nothing. Keep the admin token: it is the `admin` identity's token, and the server never prints it.

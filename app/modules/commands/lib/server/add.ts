@@ -1,15 +1,15 @@
 import type { Command, CommandWithSecretResponse } from "../../index.ts";
-import { DateTime, Effect, Option } from "effect";
+import { DateTime, Effect, Option, Predicate } from "effect";
+import { commandNotFound, requireDataSchema } from "./call.ts";
+import { handlerOf, isCommandName } from "../../index.ts";
 import type { AddCommandRequestSchema } from "./wire.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import type { StorageUnavailable } from "../../../storage/server.ts";
-import { handlerOf } from "../../index.ts";
 import { isIdentityName } from "../../../identities/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
-import { requireDataSchema } from "./call.ts";
 
 type NewCommand = typeof AddCommandRequestSchema.Type;
 
@@ -58,4 +58,22 @@ function addCommand(
   });
 }
 
-export { addCommand };
+function rotateCommandSecret(
+  name: string,
+): Effect.Effect<CommandWithSecretResponse, Refusal | StorageUnavailable, Storage | Secrets> {
+  return Effect.gen(function* rotateSecret() {
+    if (!isCommandName(name)) {
+      return yield* Effect.fail(commandNotFound(name));
+    }
+    const secrets = yield* Secrets;
+    const secret = yield* secrets.newCommandSecret;
+    const storage = yield* Storage;
+    const rotated = yield* storage.replaceCommandSecret(name, secret);
+    if (Predicate.isUndefined(rotated)) {
+      return yield* Effect.fail(commandNotFound(name));
+    }
+    return { command: rotated.command, secret };
+  });
+}
+
+export { addCommand, rotateCommandSecret };

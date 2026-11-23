@@ -94,6 +94,25 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
+  "storage contract ($adapter): a command's secret is replaced, and a command that doesn't exist replaces nothing",
+  ({ layer }) =>
+    Effect.gen(function* replaceSecret() {
+      const { storage } = yield* openStore(layer);
+      yield* storage.addCommand(command("deploy"), handler("deploy"));
+      const { secret } = command("deploy", { secret: "hmac_new" });
+      const replaced = yield* storage.replaceCommandSecret(commandName("deploy"), secret);
+      const missing = yield* storage.replaceCommandSecret(commandName("nowhere"), secret);
+      const found = yield* storage.findCommand(commandName("deploy"));
+
+      expect({ found, replaced }).toStrictEqual({
+        found: command("deploy", { secret: "hmac_new" }),
+        replaced: command("deploy", { secret: "hmac_new" }),
+      });
+      expect(missing).toBeUndefined();
+    }),
+);
+
+it.effect.each(storageLayers)(
   "storage contract ($adapter): only one command is added when one name is asked for many times at once",
   ({ layer }) =>
     Effect.gen(function* addAtOnce() {
@@ -116,7 +135,8 @@ it.effect.each(storageLayers)("storage contract ($adapter): commands cannot be u
     const listed = yield* Effect.flip(storage.listCommands);
     const added = yield* Effect.flip(storage.addCommand(command("late"), handler("late")));
     const found = yield* Effect.flip(storage.findCommand(commandName("late")));
+    const replaced = yield* Effect.flip(storage.replaceCommandSecret(commandName("late"), command("late").secret));
 
-    expect([listed, added, found]).toMatchObject([unavailable, unavailable, unavailable]);
+    expect([listed, added, found, replaced]).toMatchObject([unavailable, unavailable, unavailable, unavailable]);
   }),
 );

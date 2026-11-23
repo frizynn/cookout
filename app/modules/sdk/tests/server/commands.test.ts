@@ -205,6 +205,26 @@ it.effect("a call to a command that doesn't exist, or into a channel that doesn'
   }).pipe(Effect.provide(testCookout())),
 );
 
+it.effect("a secret rotation by an identity that is not an admin is refused with 403, and of no command with 404", () =>
+  Effect.gen(function* rotateRefused() {
+    const cookout = yield* TestCookout;
+    const added = yield* answer(() => cookout.client.addCommand(deploy));
+    const ann = yield* cookout.createIdentity("ann");
+    const notAdmin = yield* refusal(() => ann.client.rotateCommandSecret("deploy"));
+    const noCommand = yield* refusal(() => cookout.client.rotateCommandSecret("release"));
+    const notAName = yield* refusal(() => cookout.client.rotateCommandSecret("Deploy"));
+    const rotated = yield* answer(() => cookout.client.rotateCommandSecret("deploy"));
+
+    expect([notAdmin, noCommand, notAName]).toMatchObject([
+      { code: "admin_only", status: 403 },
+      { code: "command_not_found", status: 404 },
+      { code: "command_not_found", status: 404 },
+    ]);
+    expect(rotated.command).toStrictEqual(added.command);
+    expect(rotated.secret).not.toBe(added.secret);
+  }).pipe(Effect.provide(testCookout())),
+);
+
 it.effect("a call to a stored command whose schema doesn't compile fails with 500 and posts nothing", () =>
   Effect.gen(function* storedBadSchema() {
     const cookout = yield* TestCookout;

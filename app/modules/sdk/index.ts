@@ -241,6 +241,12 @@ export type CookoutClient = {
    * `command_not_found`.
    */
   readonly callCommand: (name: string, request: CallCommandRequest) => Promise<CallCommandResponse>;
+  /**
+   * `POST /v1/commands/:name/secret` (admin only): issues the command a new secret in place of its old one, which
+   * signs no delivery from then on, retries of earlier calls included. The new secret is in the answer this once. An
+   * unknown command is 404 `command_not_found`.
+   */
+  readonly rotateCommandSecret: (name: string) => Promise<CommandWithSecretResponse>;
 };
 
 /**
