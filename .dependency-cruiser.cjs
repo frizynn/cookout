@@ -155,6 +155,12 @@ module.exports = {
       to: { path: "(^|/)node_modules/(react-markdown|remark-[^/]+|unified|micromark[^/]*|mdast-[^/]+)/" },
     },
     {
+      from: { pathNot: `^${R}/design-system/` },
+      name: "radix-only-in-design-system",
+      severity: "error",
+      to: { path: "(^|/)node_modules/@radix-ui/" },
+    },
+    {
       from: {},
       name: "no-undeclared-dependencies",
       severity: "error",

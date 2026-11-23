@@ -134,6 +134,10 @@
       {
         "name": "EventSource",
         "message": "Read the live stream through the live module: app/modules/live/index.ts."
+      },
+      {
+        "name": "confirm",
+        "message": "Ask with the design system's ConfirmDialog, never the browser's confirm()."
       }
     ],
     "no-restricted-properties": [
@@ -282,6 +286,16 @@
         "object": "Schema",
         "property": "decodeUnknownSync",
         "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+      },
+      {
+        "object": "window",
+        "property": "confirm",
+        "message": "Ask with the design system's ConfirmDialog, never the browser's confirm()."
+      },
+      {
+        "object": "globalThis",
+        "property": "confirm",
+        "message": "Ask with the design system's ConfirmDialog, never the browser's confirm()."
       }
     ],
     "no-restricted-imports": [
@@ -483,7 +497,12 @@
         "app/modules/routes/tests/browser/regions.ts"
       ],
       "rules": {
-        "test-rules/region-lookups": ["error", { "pages": ["screen", "page", "other", "second"] }]
+        "test-rules/region-lookups": [
+          "error",
+          {
+            "pages": ["screen", "page", "other", "second"]
+          }
+        ]
       }
     },
     {
@@ -1070,6 +1089,16 @@
             "object": "Schema",
             "property": "decodeUnknownSync",
             "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "window",
+            "property": "confirm",
+            "message": "Ask with the design system's ConfirmDialog, never the browser's confirm()."
+          },
+          {
+            "object": "globalThis",
+            "property": "confirm",
+            "message": "Ask with the design system's ConfirmDialog, never the browser's confirm()."
           }
         ],
         "effecttsgo/strict-effect-provide": "off"
@@ -1115,6 +1144,10 @@
           {
             "name": "EventSource",
             "message": "Read the live stream through the live module: app/modules/live/index.ts."
+          },
+          {
+            "name": "confirm",
+            "message": "Ask with the design system's ConfirmDialog, never the browser's confirm()."
           }
         ]
       }
@@ -1159,6 +1192,10 @@
           {
             "name": "EventSource",
             "message": "Read the live stream through the live module: app/modules/live/index.ts."
+          },
+          {
+            "name": "confirm",
+            "message": "Ask with the design system's ConfirmDialog, never the browser's confirm()."
           }
         ]
       }
@@ -1207,6 +1244,10 @@
           {
             "name": "sessionStorage",
             "message": "Browser storage has no owner yet: ask Matt before adding one."
+          },
+          {
+            "name": "confirm",
+            "message": "Ask with the design system's ConfirmDialog, never the browser's confirm()."
           }
         ]
       }
@@ -1346,6 +1387,16 @@
             "object": "vi",
             "property": "doMock",
             "message": "Substitute through a seam with a Layer from app/modules/testing/."
+          },
+          {
+            "object": "window",
+            "property": "confirm",
+            "message": "Ask with the design system's ConfirmDialog, never the browser's confirm()."
+          },
+          {
+            "object": "globalThis",
+            "property": "confirm",
+            "message": "Ask with the design system's ConfirmDialog, never the browser's confirm()."
           }
         ],
         "effecttsgo/node-builtin-import": "off",
@@ -1446,6 +1497,16 @@
             "object": "vi",
             "property": "doMock",
             "message": "Substitute through a seam with a Layer from app/modules/testing/."
+          },
+          {
+            "object": "window",
+            "property": "confirm",
+            "message": "Ask with the design system's ConfirmDialog, never the browser's confirm()."
+          },
+          {
+            "object": "globalThis",
+            "property": "confirm",
+            "message": "Ask with the design system's ConfirmDialog, never the browser's confirm()."
           }
         ]
       }
@@ -1722,6 +1783,16 @@
             "object": "Schema",
             "property": "decodeUnknownSync",
             "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+          },
+          {
+            "object": "window",
+            "property": "confirm",
+            "message": "Ask with the design system's ConfirmDialog, never the browser's confirm()."
+          },
+          {
+            "object": "globalThis",
+            "property": "confirm",
+            "message": "Ask with the design system's ConfirmDialog, never the browser's confirm()."
           }
         ],
         "effecttsgo/node-builtin-import": "off",
@@ -1808,6 +1879,16 @@
             "object": "vi",
             "property": "doMock",
             "message": "Substitute through a seam with a Layer from app/modules/testing/."
+          },
+          {
+            "object": "window",
+            "property": "confirm",
+            "message": "Ask with the design system's ConfirmDialog, never the browser's confirm()."
+          },
+          {
+            "object": "globalThis",
+            "property": "confirm",
+            "message": "Ask with the design system's ConfirmDialog, never the browser's confirm()."
           }
         ],
         "effecttsgo/process-env": "off",
@@ -1858,6 +1939,10 @@
           {
             "name": "EventSource",
             "message": "Read the live stream through the live module: app/modules/live/index.ts."
+          },
+          {
+            "name": "confirm",
+            "message": "Ask with the design system's ConfirmDialog, never the browser's confirm()."
           }
         ],
         "no-restricted-imports": [

@@ -40,6 +40,7 @@ const SCREENS: readonly Screen[] = [
   { hash: "#/people/release-bot", name: "profile", text: "Agent · owned by ada" },
   { admin: true, hash: "#/people/release-bot", name: "admin-profile", text: "Transfer to (a human's name)" },
   { admin: true, hash: "#/people/old-deploy-bot", name: "admin-deactivated", text: "Reactivate" },
+  { admin: true, click: "Deactivate", hash: "#/people/release-bot", name: "confirm", text: "reactivate it later" },
   { hash: "#/settings", name: "settings", text: "System" },
   { click: "New channel", hash: "#/channels/general", name: "new-channel", text: "Lowercase letters" },
   { click: "Open the sidebar", hash: "#/channels/general", name: "narrow", narrow: true, text: "#deploys" },
