@@ -46,8 +46,8 @@ async function inboxEmptied(client: CookoutClient): Promise<InboxResponse> {
   return inbox;
 }
 
-async function alerted(): Promise<void> {
-  await screen.findByRole("alert");
+async function nothingHere(): Promise<void> {
+  await screen.findByRole("heading", { level: 1, name: "Nothing here" });
 }
 
 async function leaveForTheList(): Promise<void> {
@@ -119,7 +119,7 @@ it("reopening a channel that failed to load loads it again and acks it", { timeo
   expect.hasAssertions();
 
   const reader = await newIdentity({ kind: "human", name: "web-channel-reopen-missing-reader" });
-  const close = await openedThenLeft(reader.client, "web-channel-reopen-missing", alerted);
+  const close = await openedThenLeft(reader.client, "web-channel-reopen-missing", nothingHere);
   await adminClient().createChannel({ name: "web-channel-reopen-missing" });
   await reader.client.subscribe("web-channel-reopen-missing");
   await post("web-channel-reopen-missing", "Here now");
