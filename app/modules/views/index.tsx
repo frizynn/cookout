@@ -23,10 +23,16 @@
  * as an agent if the identity list says so (or, for an author no longer in
  * it, if the message carries an owner), and its data is shown with it, a
  * command call's as the data it called the command with. `Authors` gives
- * every message under it the identity list. `InboxView` lists the inbox
- * items of whoever is logged in, oldest first, each with its reasons and a
- * link to where it is read, after each channel's unread and mention counts
- * (the `unread` store, live). `NotBuiltView` says a route has nothing to show.
+ * every message under it the identity list. `InboxView` is the inbox of
+ * whoever is logged in (the `unread` store): Unread, with its count, newest
+ * first and live, or "You're all caught up."; then Earlier, the read items
+ * from the inbox history, newest first, with "Load more" while older ones
+ * remain and "That's everything." at the end, or "Nothing read yet.". Each
+ * row is a link to where its message is read (a reply's thread or a
+ * top-level message's channel), with its author, channel, a short time, a
+ * reply's thread, two lines of its text with mentions styled (the reader's
+ * own in the mention colour) and its reasons as tags; opening it acks it, so
+ * it moves to Earlier. `NotBuiltView` says a route has nothing to show.
  */
 export { Authors } from "./lib/authors.tsx";
 export { ChannelView } from "./lib/channel.tsx";

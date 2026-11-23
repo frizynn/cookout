@@ -6,10 +6,12 @@ interface UnreadCounts {
 }
 
 interface InboxItems {
-  readonly add: (item: InboxItem) => void;
-  readonly receive: (event: CookoutEvent) => boolean;
+  readonly addAll: (all: readonly InboxItem[]) => void;
+  readonly receive: (event: CookoutEvent, onRead: (item: InboxItem) => void) => boolean;
   readonly counts: () => ReadonlyMap<ChannelName, UnreadCounts>;
   readonly list: () => readonly InboxItem[];
+  readonly has: (id: MessageId) => boolean;
+  readonly isRead: (message: Message) => boolean;
 }
 
 const ONE_MORE = 1;
@@ -57,13 +59,15 @@ function createInboxItems(): InboxItems {
     return position !== null && message.id <= position;
   }
 
-  function add(item: InboxItem): void {
-    if (!isRead(item.message)) {
-      items.set(item.message.id, item);
+  function addAll(all: readonly InboxItem[]): void {
+    for (const item of all) {
+      if (!isRead(item.message)) {
+        items.set(item.message.id, item);
+      }
     }
   }
 
-  function read(position: ReadPosition): void {
+  function read(position: ReadPosition, onRead: (item: InboxItem) => void): void {
     const scope = scopeOf(position.channel, position.thread);
     const before = positions.get(scope) ?? position.messageId;
     if (before <= position.messageId) {
@@ -72,21 +76,24 @@ function createInboxItems(): InboxItems {
     for (const [id, item] of items) {
       if (isRead(item.message)) {
         items.delete(id);
+        onRead(item);
       }
     }
   }
 
   return {
-    add,
+    addAll,
     counts: () => countsOf(items.values()),
+    has: (id) => items.has(id),
+    isRead,
     list: () => oldestFirst(items.values()),
-    receive: (event) => {
+    receive: (event, onRead) => {
       if (event.type === "inbox-item") {
-        add(event.item);
+        addAll([event.item]);
         return true;
       }
       if (event.type === "read-position") {
-        read(event.readPosition);
+        read(event.readPosition, onRead);
         return true;
       }
       return false;

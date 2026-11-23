@@ -83,6 +83,7 @@ interface PillParts {
 interface PaneHeaderParts {
   readonly title: string;
   readonly description: string | null;
+  readonly sans?: boolean;
 }
 
 interface SidePanelParts extends Parts {

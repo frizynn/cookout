@@ -28,7 +28,7 @@ export function SignedInView(props: SignedInViewProps): ReactNode {
         unread={stores.unread}
       />
       <WorkspaceMain>
-        <RoutePanes route={props.route} stores={stores} />
+        <RoutePanes me={props.identity.name} route={props.route} stores={stores} />
       </WorkspaceMain>
     </Workspace>
   );

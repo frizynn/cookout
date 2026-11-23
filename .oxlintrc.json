@@ -1056,7 +1056,7 @@
       }
     },
     {
-      "files": ["app/modules/views/lib/time-ago.ts"],
+      "files": ["app/modules/views/lib/use-time-ago.ts"],
       "rules": {
         "no-restricted-globals": [
           "error",

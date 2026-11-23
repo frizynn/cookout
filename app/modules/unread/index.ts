@@ -13,10 +13,18 @@
  * message is read only once some view acks it. A refusal keeps the server's
  * error code; a server that can't be reached is `unreachable`. Alongside the
  * counts it keeps the inbox items they count, oldest first, for the inbox view.
+ * `earlier` is the read part of the inbox, for the inbox view's Earlier list:
+ * when its first reader subscribes it loads the inbox history
+ * (`GET /v1/inbox/history`) a page of `pageSize` items at a time (50 unless
+ * given), keeping the read ones newest first and reading on until a page
+ * holds one, and `loadMore` reads the next page. An item a read position
+ * takes out of the counts joins it, so opening an item moves it there.
  */
 import type { ChannelName, CookoutClient, CookoutEvent, InboxItem, Refusal } from "../sdk/index.ts";
+import type { Earlier } from "./lib/earlier.ts";
 import type { Live } from "../live/index.ts";
 import type { UnreadCounts } from "./lib/inbox-items.ts";
+import { createEarlier } from "./lib/earlier.ts";
 import { createInboxItems } from "./lib/inbox-items.ts";
 import { refusalOf } from "../sdk/index.ts";
 
@@ -39,11 +47,17 @@ export interface Unread {
   readonly subscribe: (listener: () => void) => () => void;
   /** The current snapshot: a new object whenever a count changes, the same one until then. */
   readonly snapshot: () => UnreadState;
+  /** The read inbox items, newest first, a page at a time: an external store of its own. */
+  readonly earlier: Earlier;
 }
 
-/** What the unread store is made with: an SDK client with the token of whoever is looking, and the live stream. */
+/**
+ * What the unread store is made with: an SDK client with the token of whoever is looking, how many inbox history items
+ * a page (50 unless given), and the live stream.
+ */
 export interface UnreadOptions {
-  readonly client: Pick<CookoutClient, "inbox">;
+  readonly client: Pick<CookoutClient, "inbox" | "inboxHistory">;
+  readonly pageSize?: number;
   readonly live?: Live;
 }
 
@@ -55,6 +69,7 @@ export interface UnreadOptions {
 export function createUnread(options: UnreadOptions): Unread {
   const listeners = new Set<() => void>();
   const items = createInboxItems();
+  const earlier = createEarlier({ ...options, unread: items });
   let current: UnreadState = { status: "loading" };
   let loading: Promise<void> | null = null;
 
@@ -70,7 +85,7 @@ export function createUnread(options: UnreadOptions): Unread {
   }
 
   function receive(event: CookoutEvent): void {
-    if (items.receive(event) && current.status === "loaded") {
+    if (items.receive(event, earlier.add) && current.status === "loaded") {
       publish(loaded());
     }
   }
@@ -82,9 +97,7 @@ export function createUnread(options: UnreadOptions): Unread {
     }
     try {
       const inbox = await options.client.inbox();
-      for (const item of inbox.items) {
-        items.add(item);
-      }
+      items.addAll(inbox.items);
       publish(loaded());
     } catch (error: unknown) {
       publish({ ...refusalOf(error), status: "failed" });
@@ -92,6 +105,7 @@ export function createUnread(options: UnreadOptions): Unread {
   }
 
   return {
+    earlier,
     snapshot: () => current,
     subscribe: (listener) => {
       listeners.add(listener);
@@ -103,4 +117,5 @@ export function createUnread(options: UnreadOptions): Unread {
   };
 }
 
+export type { Earlier, EarlierState } from "./lib/earlier.ts";
 export type { UnreadCounts } from "./lib/inbox-items.ts";

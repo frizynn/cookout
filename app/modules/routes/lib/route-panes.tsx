@@ -7,6 +7,7 @@ import type { Stores } from "./stores.ts";
 const TEXT = { missing: "No page has this address.", nothing: "Nothing here" } as const;
 
 interface RoutePanesProps {
+  readonly me: string;
   readonly route: Route;
   readonly stores: Stores;
 }
@@ -14,7 +15,7 @@ interface RoutePanesProps {
 export function RoutePanes(props: RoutePanesProps): ReactNode {
   const { route, stores } = props;
   if (route.name === "inbox") {
-    return <InboxView unread={stores.unread} />;
+    return <InboxView me={props.me} unread={stores.unread} />;
   }
   if (route.name === "login") {
     return <LoginView session={stores.session} />;

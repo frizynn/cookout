@@ -27,6 +27,20 @@
  * screen). A name's avatar is its coloured initials, one of eight hues hashed
  * from the name, a circle for a human and a square with a badge for an agent;
  * `Author` is a message's avatar and name, with an `agent` tag for an agent.
+ * A `PaneHeader` title is mono, as a channel name is, unless `sans`.
+ *
+ * `Feed` is a named, centred column that scrolls, such as the inbox, read
+ * from the top: a `FeedHeading` heads a part of it, with its count, or, with
+ * no count, as a divider line; a `FeedList` is a named list of `FeedRow`s,
+ * each a link showing a message with its author's avatar and name, what they
+ * did (`action`) and in which channel, a short time and any `context` line
+ * (a reply's thread), then what it holds: its `FeedText`, up to two lines,
+ * and a `TagList` of its `Tag`s. An `unread` row has a dot and a bold name,
+ * and its text is bright; a read one is muted. `Mention` is
+ * an `@` mention in a message's text, in the mention colour when it is the
+ * reader's own (`mine`). `FeedNote` is a muted line in a feed: why a part is
+ * `empty`, or that it has reached the `end`. A `Tag` is a small label, in the
+ * mention colour (`mention`) or muted (`plain`).
  *
  * `AppShell` is the page around the login view; `Card`, centred in a scrolling column, `CardHeader`,
  * `Heading` and `Muted` are a shadcn-style card and its title row, `CardBody`
@@ -64,6 +78,12 @@ export { ChoiceGroup } from "./lib/choice-group.tsx";
 export { Count } from "./lib/count.tsx";
 export { DataArea } from "./lib/data-area.tsx";
 export { DataBlock } from "./lib/data-block.tsx";
+export { Feed } from "./lib/feed.tsx";
+export { FeedHeading } from "./lib/feed-heading.tsx";
+export { FeedList } from "./lib/feed-list.tsx";
+export { FeedNote } from "./lib/feed-note.tsx";
+export { FeedRow } from "./lib/feed-row.tsx";
+export { FeedText } from "./lib/feed-text.tsx";
 export { FieldsForm } from "./lib/fields-form.tsx";
 export { Form } from "./lib/form.tsx";
 export { Heading } from "./lib/heading.tsx";
@@ -71,6 +91,7 @@ export { ItemList } from "./lib/item-list.tsx";
 export { ItemRow } from "./lib/item-row.tsx";
 export { LinkList } from "./lib/link-list.tsx";
 export { LinkRow } from "./lib/link-row.tsx";
+export { Mention } from "./lib/mention.tsx";
 export { Muted } from "./lib/muted.tsx";
 export { NavHeading } from "./lib/nav-heading.tsx";
 export { NavLink } from "./lib/nav-link.tsx";
@@ -90,6 +111,8 @@ export { SidebarFooter } from "./lib/sidebar-footer.tsx";
 export { Skeleton } from "./lib/skeleton.tsx";
 export { Suggestions } from "./lib/suggestions.tsx";
 export { SubmitButton } from "./lib/submit-button.tsx";
+export { Tag } from "./lib/tag.tsx";
+export { TagList } from "./lib/tag-list.tsx";
 export { TextArea } from "./lib/text-area.tsx";
 export { TextField } from "./lib/text-field.tsx";
 export { ToggleButton } from "./lib/toggle-button.tsx";
