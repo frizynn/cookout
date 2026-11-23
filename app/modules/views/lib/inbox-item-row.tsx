@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import type { UnreadWhy } from "../../unread/index.ts";
 import { hrefOf } from "../../paths/index.ts";
 import { plainTextOf } from "./markdown-plain-text.ts";
+import { reactionSymbols } from "../../messages/index.ts";
 import { useAuthor } from "./use-author.ts";
 import { useTimeAgo } from "./use-time-ago.ts";
 import { whyOf } from "../../unread/index.ts";
@@ -39,24 +40,33 @@ function contextOf(item: InboxItem): string | null {
   return `${text.slice(START, CONTEXT_LENGTH - ELLIPSIS)}…`;
 }
 
+const WHY_TEXT = {
+  "followed-thread": "New reply in a thread you follow",
+  "mentioned-you": "Mentioned you",
+  "replied-to-you": "Replied to you",
+} as const;
+
+function reactedText(item: InboxItem): string {
+  return (item.newReactions ?? [])
+    .map((reaction) => `@${reaction.identity} reacted with ${reactionSymbols[reaction.reaction]}`)
+    .join(", ");
+}
+
 function whyText(why: UnreadWhy, item: InboxItem): string {
-  if (why === "mentioned-you") {
-    return "Mentioned you";
+  if (why === "reacted") {
+    return reactedText(item);
   }
-  if (why === "replied-to-you") {
-    return "Replied to you";
+  if (why === "subscribed-channel") {
+    return `New in #${item.channel.name}`;
   }
-  if (why === "followed-thread") {
-    return "New reply in a thread you follow";
-  }
-  return `New in #${item.channel.name}`;
+  return WHY_TEXT[why];
 }
 
 function levelOf(why: UnreadWhy, unread: boolean): "for-you" | "activity" | "read" {
   if (!unread) {
     return "read";
   }
-  if (why === "mentioned-you" || why === "replied-to-you") {
+  if (why === "mentioned-you" || why === "replied-to-you" || why === "reacted") {
     return "for-you";
   }
   return "activity";

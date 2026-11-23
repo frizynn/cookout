@@ -1,5 +1,6 @@
 import type { CookoutClient, Message } from "../../sdk/index.ts";
 import { adminClient, newIdentity } from "./identities.ts";
+import { alertSaying, alertsShown } from "./alerts.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { openAt } from "./render.tsx";
@@ -45,6 +46,10 @@ async function chipsBecome(expected: readonly ChipShown[]): Promise<void> {
   await waitFor(() => {
     expect(chipsShown()).toStrictEqual(expected);
   });
+}
+
+function reactWith(article: () => HTMLElement, symbol: string): void {
+  fireEvent.click(within(article()).getByRole("button", { name: `React with ${symbol}` }));
 }
 
 async function openedAs(client: CookoutClient, channel: string): Promise<void> {
@@ -135,4 +140,76 @@ it("a reaction left in another tab shows at once", { timeout: 5000 }, async () =
   await ann.react(message.id, "thumbs_up");
 
   await chipsBecome([{ name: "👍 1", pressed: false, tooltip: `${channel}-ann` }]);
+});
+
+interface RefusingOnce {
+  readonly client: CookoutClient;
+  readonly recover: () => void;
+}
+
+function refusingOnce(client: CookoutClient): RefusingOnce {
+  let refusing = true;
+  return {
+    client: {
+      ...client,
+      react: async (id, reaction) => {
+        if (refusing) {
+          throw new Error("down");
+        }
+        const answer = await client.react(id, reaction);
+        return answer;
+      },
+    },
+    recover: () => {
+      refusing = false;
+    },
+  };
+}
+
+async function openedRefusing(channel: string): Promise<() => void> {
+  const { bob } = await talkIn(channel);
+  const { client, recover } = refusingOnce(bob);
+  await openedAs(client, channel);
+  return recover;
+}
+
+it("a reaction the server refuses says why, and the next one that succeeds clears it", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-react-refused";
+  const recover = await openedRefusing(channel);
+  reactWith(messageArticle, "👍");
+  const said = await alertSaying("Couldn't react to the message");
+  recover();
+  reactWith(messageArticle, "👍");
+  await chipsBecome([{ name: "👍 1", pressed: true, tooltip: `${channel}-bob` }]);
+
+  expect([said.textContent, alertsShown()]).toStrictEqual([
+    "Couldn't react to the message (unreachable): Error: down",
+    [],
+  ]);
+});
+
+async function openThread(channel: string): Promise<CookoutClient> {
+  const { ann, bob, message } = await talkIn(channel);
+  await ann.createMessage({ channel, replyTo: message.id, text: "Tonight" });
+  openAt({ client: bob, hash: `#/channels/${channel}/threads/${String(message.id)}` });
+  return bob;
+}
+
+it("a thread's parent and replies take reactions too, and a key pressed on a message's button isn't one", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await openThread("web-react-thread");
+  const parent = await screen.findByRole("article", { name: "Parent message" });
+  reactWith(() => parent, "👎");
+  await within(parent).findByRole("button", { name: "👎 1", pressed: true });
+  const reply = within(await screen.findByRole("list", { name: "Replies" })).getByRole("article");
+  fireEvent.keyDown(within(reply).getByRole("button", { name: "React with 👎" }), { key: "-" });
+  fireEvent.keyDown(reply, { key: "+" });
+  await within(reply).findByRole("button", { name: "👍 1", pressed: true });
+
+  expect(within(reply).queryByRole("button", { name: "👎 1" })).toBeNull();
 });
