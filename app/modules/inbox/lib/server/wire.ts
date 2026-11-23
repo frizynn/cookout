@@ -8,17 +8,24 @@ import type {
   InboxResponse,
   MarkUnreadResponse,
   MovedBackReadPosition,
+  OfflineAlert,
+  OfflineAlertResponse,
   ReadPosition,
   ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../index.ts";
 import { ChannelNameSchema, ChannelSchema } from "../../../channels/server.ts";
 import { MessageIdSchema, MessageSchema, ReactionSchema, TopLevelMessageSchema } from "../../../messages/server.ts";
+import { isOfflineAlertId, offlineReasons } from "../../../presence/index.ts";
+import { IdentityNameSchema } from "../../../identities/server.ts";
+import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
 import { inboxReasons } from "../../index.ts";
 import { matchesWire } from "../../../http/index.ts";
 
 const InboxReasonSchema = Schema.Literals(inboxReasons);
+
+const OfflineAlertIdSchema = Schema.Int.pipe(Schema.refine(isOfflineAlertId, { identifier: "OfflineAlertId" }));
 
 const inboxItemFields = {
   channel: ChannelSchema,
@@ -30,6 +37,21 @@ const inboxItemFields = {
 
 const InboxHistoryItemSchema = matchesWire<InboxHistoryItem>()(
   Schema.Struct({ ...inboxItemFields, read: Schema.Boolean }),
+);
+
+export const OfflineAlertSchema = matchesWire<OfflineAlert>()(
+  Schema.Struct({
+    agent: IdentityNameSchema,
+    backOnlineAt: Schema.optionalKey(IsoTimeSchema),
+    id: OfflineAlertIdSchema,
+    offlineReason: Schema.Literals(offlineReasons),
+    raisedAt: IsoTimeSchema,
+    read: Schema.Boolean,
+  }),
+);
+
+export const OfflineAlertResponseSchema = matchesWire<OfflineAlertResponse>()(
+  Schema.Struct({ alert: OfflineAlertSchema }),
 );
 
 export const ReadPositionSchema = matchesWire<ReadPosition>()(
@@ -57,19 +79,26 @@ export const ReadPositionsResponseSchema = matchesWire<ReadPositionsResponse>()(
 export const InboxItemSchema = matchesWire<InboxItem>()(Schema.Struct(inboxItemFields));
 
 export const InboxHistoryResponseSchema = matchesWire<InboxHistoryResponse>()(
-  Schema.Struct({ hasMore: Schema.Boolean, items: Schema.Array(InboxHistoryItemSchema) }),
+  Schema.Struct({
+    alerts: Schema.Array(OfflineAlertSchema),
+    hasMore: Schema.Boolean,
+    items: Schema.Array(InboxHistoryItemSchema),
+  }),
 );
 
 export const AckRequestSchema = Schema.Struct({ messageId: MessageIdSchema });
 
-export const AckAllRequestSchema = Schema.Struct({ upTo: MessageIdSchema });
+export const AckAllRequestSchema = Schema.Struct({
+  alertsUpTo: Schema.optionalKey(OfflineAlertIdSchema),
+  upTo: Schema.optionalKey(MessageIdSchema),
+});
 
 export const AckAllResponseSchema = matchesWire<AckAllResponse>()(
-  Schema.Struct({ readPositions: Schema.Array(ReadPositionSchema) }),
+  Schema.Struct({ alerts: Schema.Array(OfflineAlertSchema), readPositions: Schema.Array(ReadPositionSchema) }),
 );
 
 export const InboxResponseSchema = matchesWire<InboxResponse>()(
-  Schema.Struct({ items: Schema.Array(InboxItemSchema) }),
+  Schema.Struct({ alerts: Schema.Array(OfflineAlertSchema), items: Schema.Array(InboxItemSchema) }),
 );
 
 export const AckResponseSchema = matchesWire<AckResponse>()(Schema.Struct({ readPosition: ReadPositionSchema }));

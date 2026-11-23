@@ -9,6 +9,7 @@ import type {
   IdentityEvent,
   InboxItemEvent,
   MessageEvent,
+  OfflineAlertEvent,
   PresenceEvent,
   ReactionEvent,
   ReadPositionEvent,
@@ -21,6 +22,7 @@ import { IdentityNameSchema, IdentitySchema } from "../../../identities/server.t
 import {
   InboxItemSchema,
   MovedBackReadPositionSchema,
+  OfflineAlertSchema,
   ReadPositionSchema,
   SubscriptionResponseSchema,
 } from "../../../inbox/server.ts";
@@ -104,6 +106,10 @@ export const CleanCloseResponseSchema = matchesWire<CleanCloseResponse>()(
 
 export const PresenceEventSchema = matchesWire<PresenceEvent>()(
   Schema.Struct({ presence: PresenceSchema, type: Schema.Literal(presenceName) }),
+);
+
+export const OfflineAlertEventSchema = matchesWire<OfflineAlertEvent>()(
+  Schema.Struct({ alert: OfflineAlertSchema, type: Schema.Literal("offline-alert") }),
 );
 
 export { PresenceResponseSchema } from "../../../presence/server.ts";

@@ -6,6 +6,7 @@
  * code and message (`unreachable` unless a `CookoutError`).
  */
 import type {
+  AckAllRequest,
   AckAllResponse,
   AckResponse,
   FollowResponse,
@@ -194,15 +195,14 @@ export type CookoutClient = CallGroups & {
   readonly revokeAgentSession: AgentSessionCalls["revokeAgentSession"];
   /**
    * `GET /v1/inbox`: what the caller hasn't read, oldest first, each message once with every reason it is there
-   * (`followed-thread`, `mention`, `subscribed-channel`), its channel and its thread's top-level message. The
-   * caller's own messages never appear. Reading it changes nothing.
+   * (`followed-thread`, `mention`, `subscribed-channel`), its channel and its thread's top-level message. The caller's own messages never appear. Beside them, `alerts` lists the caller's unread offline alerts, oldest first. Reading it changes nothing.
    */
   readonly inbox: () => Promise<InboxResponse>;
   /**
    * `GET /v1/inbox/history`: a page of the caller's inbox history, newest first: every message in its inbox for at
    * least one reason as things stand now (current follows and subscriptions), read or not, each once with every
    * reason and `read`. The newest `limit` (default 50, 1–200), or those before `before`; page back by passing the
-   * last item's message ID as `before` while `hasMore` is true. The caller's own messages never appear.
+   * last item's message ID as `before` while `hasMore` is true. The caller's own messages never appear. The first page also lists, as `alerts`, every offline alert raised for the caller, read or not, newest first.
    */
   readonly inboxHistory: (query?: InboxHistoryQuery) => Promise<InboxHistoryResponse>;
   /** `GET /v1/read-positions`: the caller's read positions, by channel name, each channel's own before its threads'. */
@@ -223,9 +223,9 @@ export type CookoutClient = CallGroups & {
   /**
    * `POST /v1/inbox/ack-all`: marks every inbox item up to `upTo`, the newest the caller has seen, as read, in every
    * thread and channel at once, and answers the read positions it moved. An item after `upTo`, such as a message that
-   * arrived since, stays unread.
+   * arrived since, stays unread. Passed `{ upTo, alertsUpTo }`, it also marks read every offline alert up to `alertsUpTo`, answering those as `alerts`; either may be left out.
    */
-  readonly ackAll: (upTo: MessageId) => Promise<AckAllResponse>;
+  readonly ackAll: (upTo: MessageId | AckAllRequest) => Promise<AckAllResponse>;
   /**
    * `PUT /v1/messages/:id/follow`: follows the thread holding the message, so its replies reach the inbox. Starting
    * a thread, replying in it and being mentioned in it follow it too.
@@ -241,7 +241,7 @@ export type CookoutClient = CallGroups & {
    * `GET /v1/events`: opens one Server-Sent Events stream, resolving once the server has accepted it. Iterate it for
    * each new inbox item (`inbox-item`) the moment another identity posts it (the caller's own posts never arrive), and
    * each new read position (`read-position`) the moment any session of the caller acks, and each read position moved
-   * back (`read-position-moved-back`) the moment one marks a message unread, so several sessions stay in sync. With `allChannels`, it also sends every new message on every channel (`message`), each newly recorded read receipt (`read-receipt`), each change to a message's reactions (`reaction`) and each change to anyone's presence (`presence`), as the web UI needs.
+   * back (`read-position-moved-back`) the moment one marks a message unread, so several sessions stay in sync. With `allChannels`, it also sends every new message on every channel (`message`), each newly recorded read receipt (`read-receipt`), each change to a message's reactions (`reaction`) and each change to anyone's presence (`presence`), as the web UI needs. Every stream of an agent's owner also sends each offline alert of the owner's as it is raised, back online or read (`offline-alert`).
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
    * a newer server, is skipped. `close` drops the connection, which the server counts as a drop ("connection lost" after the grace); `closeCleanly` first sends `DELETE /v1/events/:connection` with the `connected` event's connection ID, so the end is expected, as `cookout watch` exiting on purpose does.
    * Opened with an agent session token, the stream moves its expiry on while open, and once the token is revoked (`leave`, or another session's `join --force`) the

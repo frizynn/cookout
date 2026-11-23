@@ -5,11 +5,15 @@
  * ack of the whole inbox up to the newest item the caller has seen, the
  * mark unread that moves a read position back to just before a message,
  * the inbox history of read and unread items, following a thread and
- * subscribing to a channel, and their paths. They
+ * subscribing to a channel, the offline alerts an owner's inbox holds beside its items and marking one read, and
+ * their paths. They
  * refuse with the message, channel and agent session error codes.
  */
 import type { Channel, ChannelName } from "../channels/index.ts";
 import type { Message, MessageId, Reaction, TopLevelMessage } from "../messages/index.ts";
+import type { OfflineAlert, OfflineAlertId } from "../presence/index.ts";
+
+export type { OfflineAlert, OfflineAlertId } from "../presence/index.ts";
 
 /**
  * Why an item is in the inbox: a reply in a thread the identity follows, a message that mentions it, another
@@ -44,9 +48,13 @@ export interface ReadPosition {
   readonly messageId: MessageId;
 }
 
-/** The inbox, oldest first, each message once. Reading it changes nothing. */
+/**
+ * The inbox, oldest first, each message once, and beside it the caller's unread offline alerts, oldest first (always
+ * none for an agent, which owns no agent). Reading it changes nothing.
+ */
 export interface InboxResponse {
   readonly items: readonly InboxItem[];
+  readonly alerts: readonly OfflineAlert[];
 }
 
 /** An item in the inbox history: `read` says the identity's read position for its scope is at or after it. */
@@ -64,10 +72,13 @@ export interface InboxHistoryQuery {
 
 /**
  * A page of the inbox history: every message in the inbox for at least one reason as things stand now, read or not,
- * newest first, each message once. `hasMore` says older items remain after the last. Reading it changes nothing.
+ * newest first, each message once. `hasMore` says older items remain after the last. The first page (no `before`)
+ * also lists every offline alert raised for the caller, read or not, newest first; a later page lists none. Reading it
+ * changes nothing.
  */
 export interface InboxHistoryResponse {
   readonly items: readonly InboxHistoryItem[];
+  readonly alerts: readonly OfflineAlert[];
   readonly hasMore: boolean;
 }
 
@@ -86,17 +97,27 @@ export interface AckResponse {
   readonly readPosition: ReadPosition;
 }
 
-/** The body of an ack of the whole inbox: every inbox item up to `upTo`, the newest the caller has seen, is read. */
+/**
+ * The body of an ack of the whole inbox: every inbox item up to `upTo`, the newest the caller has seen, is read, and
+ * every offline alert up to `alertsUpTo`, the newest alert it has seen. Either may be left out.
+ */
 export interface AckAllRequest {
-  readonly upTo: MessageId;
+  readonly upTo?: MessageId;
+  readonly alertsUpTo?: OfflineAlertId;
 }
 
 /**
- * The answer to an ack of the whole inbox: the read positions it moved, oldest first. An item after `upTo` stays
- * unread.
+ * The answer to an ack of the whole inbox: the read positions it moved, oldest first, and the offline alerts it
+ * marked read, oldest first. An item after `upTo`, or an alert after `alertsUpTo`, stays unread.
  */
 export interface AckAllResponse {
   readonly readPositions: readonly ReadPosition[];
+  readonly alerts: readonly OfflineAlert[];
+}
+
+/** The answer to marking one offline alert read: the alert, now read. */
+export interface OfflineAlertResponse {
+  readonly alert: OfflineAlert;
 }
 
 /** The body of a mark unread: the message to make unread again, with everything after it in its thread or channel. */
@@ -136,6 +157,18 @@ export const inboxPath = "/v1/inbox";
 
 /** `GET /v1/inbox/history?before=<id>&limit=<n>`: a page of the caller's inbox history, read and unread. */
 export const inboxHistoryPath = "/v1/inbox/history";
+
+/** The SDK's call on an offline alert. */
+export interface OfflineAlertCalls {
+  /**
+   * `POST /v1/inbox/alerts/:id/read`: marks the caller's offline alert read, so it leaves the inbox and stays in its
+   * history. An alert the caller has none of is 404 `offline_alert_not_found`.
+   */
+  readonly markOfflineAlertRead: (id: OfflineAlertId) => Promise<OfflineAlertResponse>;
+}
+
+/** `POST /v1/inbox/alerts/:id/read`: marks the caller's offline alert `id` read (404 `offline_alert_not_found` otherwise). */
+export const offlineAlertReadPath = "/v1/inbox/alerts/:id/read";
 
 /** `GET /v1/read-positions`: the caller's read positions. */
 export const readPositionsPath = "/v1/read-positions";

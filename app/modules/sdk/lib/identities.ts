@@ -35,6 +35,7 @@ import type { DescriptionCalls } from "../../identities/client.ts";
 import type { EventCalls } from "./events.ts";
 import type { HealthResponse } from "../../http/index.ts";
 import type { LoginCalls } from "../../logins/index.ts";
+import type { OfflineAlertCalls } from "../../inbox/index.ts";
 import { healthPath } from "../../http/index.ts";
 import { loginCalls } from "./logins.ts";
 
@@ -229,5 +230,6 @@ type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
 export type CallGroups = ApprovalCalls &
   IdentityDeletionCalls &
   IdentityDescriptionCalls &
+  OfflineAlertCalls &
   Pick<EventCalls, "presence">;
 export { identityCalls };

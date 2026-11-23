@@ -1,4 +1,5 @@
 import type {
+  AckAllRequest,
   AckAllResponse,
   AckResponse,
   FollowResponse,
@@ -6,6 +7,7 @@ import type {
   InboxHistoryResponse,
   InboxResponse,
   MarkUnreadResponse,
+  OfflineAlertCalls,
   ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../inbox/index.ts";
@@ -31,6 +33,7 @@ import {
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import type { MessageId } from "../../messages/index.ts";
+import { offlineAlertCalls } from "./offline-alerts.ts";
 import { send } from "./request.ts";
 
 type Change = "PUT" | "DELETE";
@@ -40,7 +43,7 @@ interface InboxCalls {
   readonly inboxHistory: (query?: InboxHistoryQuery) => Promise<InboxHistoryResponse>;
   readonly readPositions: () => Promise<ReadPositionsResponse>;
   readonly ack: (messageId: MessageId) => Promise<AckResponse>;
-  readonly ackAll: (upTo: MessageId) => Promise<AckAllResponse>;
+  readonly ackAll: (upTo: MessageId | AckAllRequest) => Promise<AckAllResponse>;
   readonly markUnread: (messageId: MessageId) => Promise<MarkUnreadResponse>;
   readonly follow: (messageId: MessageId) => Promise<FollowResponse>;
   readonly unfollow: (messageId: MessageId) => Promise<FollowResponse>;
@@ -64,7 +67,14 @@ function subscriptionCall(server: ClientConnection, method: Change) {
   };
 }
 
-function inboxCalls(server: ClientConnection): InboxCalls {
+function ackAllBody(upTo: MessageId | AckAllRequest): AckAllRequest {
+  if (typeof upTo === "number") {
+    return { upTo };
+  }
+  return upTo;
+}
+
+function readingCalls(server: ClientConnection): InboxCalls {
   return {
     ack: async (messageId) => {
       const body = { messageId };
@@ -72,7 +82,7 @@ function inboxCalls(server: ClientConnection): InboxCalls {
       return acked;
     },
     ackAll: async (upTo) => {
-      const body = { upTo };
+      const body = ackAllBody(upTo);
       const acked = await send(server, { body, isExpected: isAckAllResponse, method: "POST", path: ackAllPath });
       return acked;
     },
@@ -115,7 +125,12 @@ function inboxCalls(server: ClientConnection): InboxCalls {
   };
 }
 
+function inboxCalls(server: ClientConnection): InboxCalls & OfflineAlertCalls {
+  return { ...readingCalls(server), ...offlineAlertCalls(server) };
+}
+
 export type {
+  AckAllRequest,
   AckAllResponse,
   AckResponse,
   FollowResponse,

@@ -18,6 +18,7 @@ import {
   InboxResponseSchema,
   MarkUnreadRequestSchema,
   MarkUnreadResponseSchema,
+  OfflineAlertResponseSchema,
   ReadPositionsResponseSchema,
   SubscriptionResponseSchema,
 } from "./lib/server/wire.ts";
@@ -29,6 +30,7 @@ import {
   inboxHistoryPath,
   inboxPath,
   markUnreadPath,
+  offlineAlertReadPath,
   readPositionsPath,
   subscriptionPath,
 } from "./index.ts";
@@ -102,10 +104,10 @@ const ackRoute: Route<Needs> = {
 const ackAllRoute: Route<Needs> = {
   handle: () =>
     Effect.gen(function* ackAllRouteHandler() {
-      const { upTo } = yield* HttpServerRequest.schemaBodyJson(AckAllRequestSchema, ALL_ERRORS);
+      const asked = yield* HttpServerRequest.schemaBodyJson(AckAllRequestSchema, ALL_ERRORS);
       const caller = yield* Caller;
       const inbox = yield* Inbox;
-      const answer = yield* inbox.ackAll(caller, upTo);
+      const answer = yield* inbox.ackAll(caller, asked);
       return yield* HttpServerResponse.schemaJson(AckAllResponseSchema)(answer);
     }),
   method: "POST",
@@ -123,6 +125,18 @@ const markUnreadRoute: Route<Needs> = {
     }),
   method: "POST",
   path: markUnreadPath,
+};
+
+const alertReadRoute: Route<Needs> = {
+  handle: (params) =>
+    Effect.gen(function* alertReadRouteHandler() {
+      const caller = yield* Caller;
+      const inbox = yield* Inbox;
+      const answer = yield* inbox.markAlertRead(caller, String(params["id"]));
+      return yield* HttpServerResponse.schemaJson(OfflineAlertResponseSchema)(answer);
+    }),
+  method: "POST",
+  path: offlineAlertReadPath,
 };
 
 function followRoute(method: Change, change: "follow" | "unfollow"): Route<Needs> {
@@ -156,10 +170,14 @@ function subscriptionRoute(method: Change, change: "subscribe" | "unsubscribe"):
 
 export { Inbox, inboxLayer } from "./lib/server/service.ts";
 
+/** Offline alerts: raised by presence, listed in the owner's inbox, sent to the owner's streams as they change. */
+export { type OwnedAlert, OfflineAlerts, offlineAlertsLayer } from "./lib/server/offline-alerts.ts";
+
 /** The Schemas of an inbox item, a read position, a moved-back one and a subscription, for the events that carry one. */
 export {
   InboxItemSchema,
   MovedBackReadPositionSchema,
+  OfflineAlertSchema,
   ReadPositionSchema,
   SubscriptionResponseSchema,
 } from "./lib/server/wire.ts";
@@ -175,6 +193,7 @@ export const inboxRoutes: readonly Route<Needs>[] = [
   ackRoute,
   ackAllRoute,
   markUnreadRoute,
+  alertReadRoute,
   followRoute("PUT", "follow"),
   followRoute("DELETE", "unfollow"),
   subscriptionRoute("PUT", "subscribe"),
@@ -189,6 +208,7 @@ export const inboxResponseSchemas = {
   InboxHistoryResponse: InboxHistoryResponseSchema,
   InboxResponse: InboxResponseSchema,
   MarkUnreadResponse: MarkUnreadResponseSchema,
+  OfflineAlertResponse: OfflineAlertResponseSchema,
   ReadPositionsResponse: ReadPositionsResponseSchema,
   SubscriptionResponse: SubscriptionResponseSchema,
 };

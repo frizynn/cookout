@@ -22,7 +22,7 @@ import {
   openIdentityRoutes,
   transferRoutes,
 } from "../../../identities/server.ts";
-import { inboxLayer, inboxRoutes } from "../../../inbox/server.ts";
+import { inboxLayer, inboxRoutes, offlineAlertsLayer } from "../../../inbox/server.ts";
 import { liveRoutes, presenceLayer } from "./live-routes.ts";
 import { messageRoutes, messagesLayer, reactionsLayer, readReceiptsLayer } from "../../../messages/server.ts";
 import { Layer } from "effect";
@@ -79,7 +79,9 @@ export const domainLayers = Layer.mergeAll(
   presenceLayer,
 ).pipe(
   Layer.provideMerge(Layer.mergeAll(messagesLayer, agentSessionsLayer)),
-  Layer.provideMerge(Layer.mergeAll(identityChangesLayer, commandChangesLayer, readReceiptsLayer, reactionsLayer)),
+  Layer.provideMerge(
+    Layer.mergeAll(identityChangesLayer, commandChangesLayer, readReceiptsLayer, reactionsLayer, offlineAlertsLayer),
+  ),
 );
 
 export { SpawnSettings } from "../../../commands/server.ts";
