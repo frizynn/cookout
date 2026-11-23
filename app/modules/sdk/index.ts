@@ -32,6 +32,7 @@ import type {
 } from "./lib/messages.ts";
 import { channelPath, channelsPath } from "../channels/index.ts";
 import { connectionFor, getJson, send } from "./lib/request.ts";
+import { eventCalls, eventOf } from "./lib/events.ts";
 import { identitiesPath, identityPath, identityTokenPath, sessionPath, whoamiPath } from "../identities/index.ts";
 import {
   isChannelResponse,
@@ -43,7 +44,6 @@ import {
 } from "./lib/generated/validators.js";
 import type { HealthResponse } from "../http/index.ts";
 import { commandCalls } from "./lib/commands.ts";
-import { eventCalls } from "./lib/events.ts";
 import { healthPath } from "../http/index.ts";
 import { inboxCalls } from "./lib/inbox.ts";
 import { leaseCalls } from "./lib/leases.ts";
@@ -121,6 +121,7 @@ export type {
   ReadPositionEvent,
 } from "../events/index.ts";
 export type { EventStream, WatchOptions } from "./lib/events.ts";
+export type { ServerSentEvent } from "../http/client.ts";
 export { CookoutError, type CookoutErrorCode, type UnknownErrorCode } from "./lib/errors.ts";
 
 export type CookoutClientOptions = {
@@ -241,6 +242,13 @@ export type CookoutClient = {
    */
   readonly callCommand: (name: string, request: CallCommandRequest) => Promise<CallCommandResponse>;
 };
+
+/**
+ * Checks one Server-Sent Event from `GET /v1/events` against the protocol, for a reader that opens the stream itself
+ * (a browser's `EventSource`). It answers the event, or `null` for an event type this SDK doesn't know; data that
+ * doesn't match fails with `CookoutError` code `bad_response`.
+ */
+export const parseEvent: typeof eventOf = eventOf;
 
 /**
  * A client for the server at `url` with `token`, each defaulting to

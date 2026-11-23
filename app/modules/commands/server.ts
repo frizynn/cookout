@@ -12,7 +12,8 @@
  * with the command's secret, and given up after `COOKOUT_WEBHOOK_TIMEOUT_SECONDS`. A delivery with no `2xx` is
  * retried 5 times with the same `callId`, with exponential backoff from `COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS` by
  * `COOKOUT_WEBHOOK_RETRY_FACTOR`; after the last failure the handler identity replies in the call's thread that the
- * delivery failed.
+ * delivery failed. Each delivery's attempts are stored, so a restarted server resumes the pending ones on the same
+ * backoff with the same `callId` (and a new command token).
  */
 import {
   AddCommandRequestSchema,
@@ -80,5 +81,8 @@ export const commandResponseSchemas = {
   ListCommandsResponse: ListCommandsResponseSchema,
 };
 
-/** The services the command routes need beyond storage: the background webhook delivery of each call. */
+/**
+ * The services the command routes need beyond storage: the background webhook delivery of each call. On start it
+ * resumes the deliveries a stopped server left pending, with the same call IDs.
+ */
 export { deliveriesLayer as commandsLayer } from "./lib/server/call.ts";

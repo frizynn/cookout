@@ -119,6 +119,11 @@ function trimmed(url: string): string {
   return url.replace(TRAILING_SLASHES, "");
 }
 
+function addressed(address: HttpAddress): string {
+  const path = fillParams(address.path, address.params ?? {});
+  return `${trimmed(address.baseUrl)}${path}${queryString(address.query ?? {})}`;
+}
+
 async function fetched(options: HttpRequest, accept: string): Promise<Response> {
   const headers = new Headers({ accept, ...options.headers });
   const init: RequestInit = { headers, method: options.method, redirect: "manual" };
@@ -126,8 +131,7 @@ async function fetched(options: HttpRequest, accept: string): Promise<Response> 
     headers.set("content-type", "application/json");
     init.body = JSON.stringify(options.body);
   }
-  const path = fillParams(options.path, options.params ?? {});
-  const response = await fetch(`${trimmed(options.baseUrl)}${path}${queryString(options.query ?? {})}`, init);
+  const response = await fetch(addressed(options), init);
   return response;
 }
 
@@ -182,6 +186,12 @@ export interface RefusedEventStream {
   readonly ok: false;
   readonly response: HttpResponse;
 }
+
+/** Where a request goes: everything in it that makes its URL. */
+export type HttpAddress = Pick<HttpRequest, "baseUrl" | "path" | "params" | "query">;
+
+/** The URL a request to `address` goes to, for a reader that opens it itself (a browser's `EventSource`). */
+export const urlOf: (address: HttpAddress) => string = addressed;
 
 /**
  * `url` without its trailing slashes, so the same server always has the same base URL.

@@ -216,6 +216,11 @@ interface SubscriptionResponse {
   readonly channel: ChannelName;
   readonly subscribed: boolean;
 }
+/** One Server-Sent Event: its `event` name (`message` when it has none) and its `data`. */
+interface ServerSentEvent {
+  readonly event: string;
+  readonly data: string;
+}
 declare const brand$2: unique symbol;
 /** The value `join` returns and a session sends in `cookout-lease` to show it holds the identity. */
 type LeaseId = string & {
@@ -329,6 +334,7 @@ interface WatchOptions {
   readonly onHeartbeat?: () => void;
   readonly onConnected?: (latestMessageId: MessageId | null) => void;
 }
+declare function eventOf(frame: ServerSentEvent): CookoutEvent | null;
 /** The answer to the health check. */
 interface HealthResponse {
   readonly status: "ok";
@@ -474,10 +480,16 @@ export type CookoutClient = {
   readonly callCommand: (name: string, request: CallCommandRequest) => Promise<CallCommandResponse>;
 };
 /**
+ * Checks one Server-Sent Event from `GET /v1/events` against the protocol, for a reader that opens the stream itself
+ * (a browser's `EventSource`). It answers the event, or `null` for an event type this SDK doesn't know; data that
+ * doesn't match fails with `CookoutError` code `bad_response`.
+ */
+export declare const parseEvent: typeof eventOf;
+/**
  * A client for the server at `url` with `token`, each defaulting to
  * `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing`
  * (status 0) when there is no URL.
  */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Reply, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions };
+export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Reply, type ServerSentEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions };
 ```
