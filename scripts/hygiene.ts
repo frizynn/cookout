@@ -65,8 +65,11 @@ function readmeSettings(): readonly string[] {
   }
   const readme = readFileSync("README.md", "utf8");
   return [...configReads()]
-    .filter((name) => !readme.includes(`| \`${name}\` |`))
-    .map((name) => `config reads ${name}, but the README's settings tables have no row for it.`);
+    .filter((name) => !readme.includes(`\n- \`${name}\` (`))
+    .map(
+      (name) =>
+        `config reads ${name}, but the README's Settings section has no line for it, such as "- \`${name}\` (default …): …".`,
+    );
 }
 
 const wikiCitations = () =>

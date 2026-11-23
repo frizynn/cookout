@@ -20,27 +20,23 @@ Every setting is an environment variable; [.env.example](.env.example) lists the
 
 The server, `cookout serve`:
 
-| Variable | Default | What it sets |
-| --- | --- | --- |
-| `COOKOUT_ADMIN_TOKEN` | none: required | The `admin` identity's token, at least 32 characters, such as one made by `openssl rand -hex 32`. Every boot makes it the admin's only token. Unset or shorter, `serve` refuses to start. |
-| `PORT` | `3000` | The port to listen on (`--port`). `0` picks a free port. |
-| `COOKOUT_HOST` | `0.0.0.0` | The address to listen on (`--host`). |
-| `COOKOUT_DB` | `cookout.db` | The SQLite file the data is kept in (`--db`). |
-| `COOKOUT_PUBLIC_URL` | empty | The address it is deployed at, such as `https://cookout.fly.dev`, whose host it also answers (`--public-url`). |
-| `COOKOUT_LEASE_SECONDS` | `60` | How long a lease lasts after the last request that carried it. |
-| `COOKOUT_WEBHOOK_TIMEOUT_SECONDS` | `5` | How long the server waits for a command's handler to answer one webhook delivery. |
-| `COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS` | `10` | How long the server waits before it first retries a webhook delivery that got no `2xx`. |
-| `COOKOUT_WEBHOOK_RETRY_FACTOR` | `2.3` | How many times longer each wait between the 5 webhook retries is than the one before. |
+- `COOKOUT_ADMIN_TOKEN` (required): The `admin` identity's token, at least 32 characters, such as one made by `openssl rand -hex 32`. Every boot makes it the admin's only token. Unset or shorter, `serve` refuses to start.
+- `PORT` (default `3000`): The port to listen on (`--port`). `0` picks a free port.
+- `COOKOUT_HOST` (default `0.0.0.0`): The address to listen on (`--host`).
+- `COOKOUT_DB` (default `cookout.db`): The SQLite file the data is kept in (`--db`).
+- `COOKOUT_PUBLIC_URL` (no default): The address it is deployed at, such as `https://cookout.fly.dev`, whose host it also answers (`--public-url`).
+- `COOKOUT_LEASE_SECONDS` (default `60`): How long a lease lasts after the last request that carried it.
+- `COOKOUT_WEBHOOK_TIMEOUT_SECONDS` (default `5`): How long the server waits for a command's handler to answer one webhook delivery.
+- `COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS` (default `10`): How long the server waits before it first retries a webhook delivery that got no `2xx`.
+- `COOKOUT_WEBHOOK_RETRY_FACTOR` (default `2.3`): How many times longer each wait between the 5 webhook retries is than the one before.
 
 Every other verb of the CLI, and the SDK's defaults:
 
-| Variable | Default | What it sets |
-| --- | --- | --- |
-| `COOKOUT_URL` | empty | The server to talk to, such as `http://localhost:3000`. |
-| `COOKOUT_TOKEN` | empty | The bearer token to send. |
-| `COOKOUT_STATE_DIR` | empty | Where the CLI keeps the lease it took with `cookout join`. |
-| `XDG_STATE_HOME` | empty | When `COOKOUT_STATE_DIR` is unset, the CLI keeps its state in `cookout/` under it. |
-| `HOME` | empty | When neither of the above is set, the CLI keeps its state in `~/.local/state/cookout`. With none of the three, `join` is refused with `state_folder_missing`. |
+- `COOKOUT_URL` (no default): The server to talk to, such as `http://localhost:3000`.
+- `COOKOUT_TOKEN` (no default): The bearer token to send.
+- `COOKOUT_STATE_DIR` (no default): Where the CLI keeps the lease it took with `cookout join`.
+- `XDG_STATE_HOME` (no default): When `COOKOUT_STATE_DIR` is unset, the CLI keeps its state in `cookout/` under it.
+- `HOME` (no default): When neither of the above is set, the CLI keeps its state in `~/.local/state/cookout`. With none of the three, `join` is refused with `state_folder_missing`.
 
 ## Develop
 
