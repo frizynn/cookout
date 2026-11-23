@@ -1,6 +1,8 @@
-# Deploy the cookout to Fly (app `cookout`, lhr) on every push to main, after `pnpm e2e:docker`
-# passes, then check the deployed stream. A workflow_dispatch on any branch runs the same e2e and
-# the deployed checks, without deploying; `restart: true` also restarts the machine first.
+# Deploy the cookout to Fly (app `cookout`, lhr) and the example handler (app
+# `cookout-handler-example`, lhr) on every push to main, after `pnpm e2e:docker` passes, then check
+# the deployed stream and that a command call gets the handler's reply. A workflow_dispatch on any
+# branch runs the same e2e and the deployed checks without deploying the cookout; `restart: true`
+# also restarts its machine first, and `handler: true` deploys the example handler from that branch.
 # Recipes: docs/verification.md ("Deploy it to Fly").
 name: Deploy
 
@@ -11,6 +13,10 @@ on:
     inputs:
       restart:
         description: Restart the Fly machine, then check the board outlived it
+        type: boolean
+        default: false
+      handler:
+        description: Provision and deploy the example handler from this branch (never the cookout)
         type: boolean
         default: false
 
@@ -45,9 +51,37 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-  deployed:
+  # The example handler, after the cookout it posts to. A rerun of provision changes nothing.
+  deploy-handler:
     needs: [e2e-docker, deploy]
-    if: ${{ !cancelled() && needs.e2e-docker.result == 'success' && needs.deploy.result != 'failure' }}
+    if: >-
+      ${{ !cancelled() && needs.e2e-docker.result == 'success' && needs.deploy.result != 'failure'
+      && (github.ref == 'refs/heads/main' || inputs.handler) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      COOKOUT_URL: https://cookout.fly.dev
+      COOKOUT_TOKEN: ${{ secrets.COOKOUT_E2E_ADMIN_TOKEN }}
+      FLY_API_TOKEN: ${{ secrets.FLY_HANDLER_API_TOKEN }}
+    steps:
+      - name: The secrets are set
+        run: |
+          for name in COOKOUT_TOKEN FLY_API_TOKEN; do
+            if [ -z "${!name}" ]; then echo "::error::$name is empty: set its GitHub secret (docs/verification.md, \"Deploy the example handler to Fly\")"; exit 1; fi
+          done
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: deploy-handler
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: scripts/handler-provision.sh
+      - run: >-
+          flyctl deploy . -c packages/handler-example/fly.toml --dockerfile packages/handler-example/Dockerfile
+          --remote-only --ha=false
+
+  deployed:
+    needs: [e2e-docker, deploy, deploy-handler]
+    if: ${{ !cancelled() && needs.e2e-docker.result == 'success' && needs.deploy.result != 'failure' && needs.deploy-handler.result != 'failure' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -74,3 +108,5 @@ jobs:
         run: node app/main.ts identity list | jq -c '[.identities[].name]'
       - name: The stream stays open for 65 s and hears heartbeats
         run: scripts/stream-check.sh 65
+      - name: A call to the example handler gets its reply within 30 s
+        run: scripts/handler-check.sh
