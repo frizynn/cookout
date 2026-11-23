@@ -120,29 +120,31 @@ function dueNudges({ messages, records }: NudgesOn, intervals: NudgeIntervals): 
   });
 }
 
-function isActive(identity: Identity | undefined): identity is Identity {
-  return Predicate.isNotUndefined(identity) && identity.deactivated !== true;
+function isActive(identity: Identity): boolean {
+  return identity.deactivated !== true;
 }
 
-function ownerOf(identities: NudgesOn["identities"], author: Identity): Fails<IdentityName | null> {
-  if (author.kind === "human") {
-    return Effect.succeed(null);
-  }
-  return Effect.map(identities.findIdentityByName(author.owner), (owner) => {
-    if (isActive(owner)) {
-      return owner.name;
-    }
-    return null;
+function isAgent(identity: Identity): identity is Extract<Identity, { readonly kind: "agent" }> {
+  return identity.kind === "agent";
+}
+
+function activeName(identity: Identity | undefined): IdentityName | null {
+  const active = Option.filter(Option.fromNullishOr(identity), isActive);
+  return Option.getOrNull(Option.map(active, ({ name }) => name));
+}
+
+function ownerOf(identities: NudgesOn["identities"], author: Identity | undefined): Fails<IdentityName | null> {
+  return Option.match(Option.filter(Option.fromNullishOr(author), isAgent), {
+    onNone: () => Effect.succeed(null),
+    onSome: (agent) => Effect.map(identities.findIdentityByName(agent.owner), activeName),
   });
 }
 
 function recipientOf(identities: NudgesOn["identities"], starter: IdentityName): Fails<IdentityName | null> {
   return Effect.flatMap(identities.findIdentityByName(starter), (author) => {
-    if (Predicate.isUndefined(author)) {
-      return Effect.succeed(null);
-    }
-    if (isActive(author)) {
-      return Effect.succeed(author.name);
+    const name = activeName(author);
+    if (name !== null) {
+      return Effect.succeed(name);
     }
     return ownerOf(identities, author);
   });

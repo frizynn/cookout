@@ -210,21 +210,30 @@ it.effect("closing a thread reads its unread nudge and raises no more, and a clo
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("a Deactivated agent's thread nudges its owner, and a Deactivated human's nudges nobody", () =>
-  Effect.gen(function* deactivated() {
-    const { ada, bob, cookout } = yield* board;
-    const helper = yield* cookout.createIdentity("ada/helper", { owner: "ada" });
-    const agentThread = yield* post(helper, "release notes drafted?");
-    yield* post(bob, "who owns the changelog?");
-    yield* answer(() => cookout.client.deactivateIdentity("ada/helper"));
-    yield* answer(() => cookout.client.deactivateIdentity("bob"));
-    yield* Effect.andThen(quietFor("3 days"), nudgesOnceThere(ada.client, ONE));
-    const nudges = yield* Effect.andThen(quietFor("1 days"), unreadNudges(ada.client));
+it.effect(
+  "a Deactivated agent's thread nudges its owner, and a Deactivated human's, or their Deactivated agent's, nudges nobody",
+  () =>
+    Effect.gen(function* deactivated() {
+      const { ada, bob, cookout } = yield* board;
+      const helper = yield* cookout.createIdentity("ada/helper", { owner: "ada" });
+      const agentThread = yield* post(helper, "release notes drafted?");
+      yield* post(bob, "who owns the changelog?");
+      const scout = yield* cookout.createIdentity("bob/scout", { owner: "bob" });
+      yield* post(scout, "who owns the roadmap?");
+      yield* Effect.forEach(
+        ["ada/helper", "bob/scout", "bob"],
+        (name) => answer(() => cookout.client.deactivateIdentity(name)),
+        {
+          concurrency: 1,
+        },
+      );
+      yield* Effect.andThen(quietFor("3 days"), nudgesOnceThere(ada.client, ONE));
+      const nudges = yield* Effect.andThen(quietFor("1 days"), unreadNudges(ada.client));
 
-    expect(Arr.map(nudges, ({ parent }) => ({ author: parent.author.name, thread: parent.id }))).toStrictEqual([
-      { author: "ada/helper", thread: agentThread.id },
-    ]);
-  }).pipe(Effect.provide(testCookout())),
+      expect(Arr.map(nudges, ({ parent }) => ({ author: parent.author.name, thread: parent.id }))).toStrictEqual([
+        { author: "ada/helper", thread: agentThread.id },
+      ]);
+    }).pipe(Effect.provide(testCookout())),
 );
 
 it.effect("marking a nudge read, or marking all as read, takes it out of the inbox and keeps it in the history", () =>
