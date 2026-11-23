@@ -88,10 +88,10 @@ export const watchCommand = Command.make(
       "<n> unread, run cookout inbox line when there are unread items. Exit codes: 0 after --once (at the " +
       "unread line, or else the first item) or " +
       "--until-mention, 1 refused, 2 --timeout passed, 3 token invalid or deleted, 4 agent session token " +
-      "revoked or expired (leave, or another session ran join --force), 5 server unreachable for 5 minutes, 6 replaced " +
-      "by another watch for the same agent; 3, 4, 5 and 6 print one stdout line first. A 5xx answer, a refused or " +
-      "reset connection and a dropped stream are retried after 1 s, doubling to at most 30 s, with one stderr note " +
-      "each; a 4xx exits at once. " +
+      "revoked or expired (leave, or another session ran join --force), 6 replaced by another watch for the same " +
+      "agent; 3, 4 and 6 print one stdout line first. A 5xx answer, a refused or reset connection and a dropped " +
+      "stream, on the start-up calls too, are retried for as long as they last, after 1 s, doubling to at most 30 s, " +
+      "with one stderr note each; a 4xx exits at once. " +
       "Run cookout help monitor.",
   ),
 );

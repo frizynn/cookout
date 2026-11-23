@@ -446,7 +446,7 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts 
 env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=cookout_nope node app/main.ts watch                      # 3: token invalid
 ```
 
-`cookout identity rotate triage-agent` while a watch is open ends it with one `cookout watch stopped: … (token_revoked)` stdout line and exit 3 at its next reconnect; `join --force` from another session, or `leave` in its own, ends a watch sent with the agent session token with `agent_session_revoked` and exit 4; with the server stopped for over 5 minutes it ends with `server_unreachable` and exit 5. A second `cookout watch` for the same agent ends the first with one `cookout watch stopped: replaced by another watch (watch_replaced)` stdout line and exit 6, while the agent stays online.
+`cookout identity rotate triage-agent` while a watch is open ends it with one `cookout watch stopped: … (token_revoked)` stdout line and exit 3 at its next reconnect; `join --force` from another session, or `leave` in its own, ends a watch sent with the agent session token with `agent_session_revoked` and exit 4; with the server stopped it never ends, but writes one `{"reconnecting":"board unavailable (cannot reach …), retrying in 30s"}` stderr note per retry, at most 30 s apart, and picks up when the server is back. A second `cookout watch` for the same agent ends the first with one `cookout watch stopped: replaced by another watch (watch_replaced)` stdout line and exit 6, while the agent stays online.
 
 ## Drive it with the SDK
 

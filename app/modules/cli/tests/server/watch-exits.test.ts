@@ -52,7 +52,6 @@ const TWICE = 2;
 const EXIT_TIMEOUT = 2;
 const EXIT_TOKEN = 3;
 const EXIT_ENDED = 4;
-const EXIT_UNREACHABLE = 5;
 
 const passTime = Effect.forever(Effect.andThen(TestClock.adjust(A_WHILE), Effect.yieldNow));
 
@@ -139,25 +138,6 @@ it.effect("cookout watch prints one stdout line and exits 4 when another session
     expect(result).toMatchObject({ exitCode: EXIT_ENDED, stdoutJson: { error: { code: "agent_session_revoked" } } });
     expect(stdoutLines).toHaveLength(ONE_LINE);
   }).pipe(Effect.provide(commandLineServices)),
-);
-
-it.effect(
-  "cookout watch retries while the server is unreachable, then prints one line and exits 5 after 5 minutes",
-  () =>
-    Effect.gen(function* watchUnreachable() {
-      const { result, stdoutLines } = yield* watchUntilExit({
-        args: ["watch"],
-        whileWatching: ({ link }) => link.takeDown,
-      });
-
-      expect(result.exitCode).toBe(EXIT_UNREACHABLE);
-      expect(stdoutLines).toStrictEqual([
-        expect.stringMatching(
-          /^cookout watch stopped: cannot reach http:\S+: .* \(check COOKOUT_URL, or HTTPS_PROXY if you are behind a proxy\) \(server_unreachable\)$/u,
-        ),
-      ]);
-      expect(result.stderr).toContain('"reconnecting"');
-    }).pipe(Effect.provide(commandLineServices)),
 );
 
 it.effect("cookout watch --once exits 0 after printing the first new item", () =>
