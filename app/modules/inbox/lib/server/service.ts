@@ -212,4 +212,4 @@ const inboxLayer: Layer.Layer<Inbox, never, Storage> = Layer.effect(
   }),
 );
 
-export { Inbox, type SubscriptionChanged, inboxLayer };
+export { Inbox, inboxLayer };

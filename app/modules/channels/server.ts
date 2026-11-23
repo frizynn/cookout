@@ -212,5 +212,3 @@ export const channelResponseSchemas = {
   ChannelResponse: ChannelResponseSchema,
   ListChannelsResponse: ListChannelsResponseSchema,
 };
-
-export type { CreatedChannel };
