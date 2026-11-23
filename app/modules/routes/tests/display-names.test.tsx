@@ -191,7 +191,7 @@ it("an inbox row shows its author's display name with the name beside it", { tim
   await adminClient().createChannel({ name: "web-names-inbox" });
   await bot.createMessage({ channel: "web-names-inbox", text: "Ping @web-names-inbox-human" });
   const close = openAt({ client: human, hash: "#/inbox" });
-  const unread = await screen.findByRole("list", { name: "Unread" });
+  const unread = await screen.findByRole("list", { name: "For you" });
 
   await expect(within(unread).findByText("@web-names-inbox-bot")).resolves.toHaveProperty(
     "previousSibling.textContent",

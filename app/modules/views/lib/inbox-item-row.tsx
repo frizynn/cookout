@@ -1,17 +1,13 @@
-import { Badge, BadgeList, FeedRow, FeedText } from "../../design-system/index.tsx";
-import type { InboxItem, InboxReason } from "../../sdk/index.ts";
+import { FeedRow, FeedText } from "../../design-system/index.tsx";
+import type { InboxItem } from "../../sdk/index.ts";
 import { MentionText } from "./mention-text.tsx";
 import type { ReactNode } from "react";
+import type { UnreadWhy } from "../../unread/index.ts";
 import { hrefOf } from "../../paths/index.ts";
 import { plainTextOf } from "./markdown-plain-text.ts";
 import { useAuthor } from "./use-author.ts";
 import { useTimeAgo } from "./use-time-ago.ts";
-
-const REASONS: Readonly<Record<InboxReason, { readonly label: string; readonly tone: "mention" | "plain" }>> = {
-  "followed-thread": { label: "Thread", tone: "plain" },
-  mention: { label: "Mention", tone: "mention" },
-  "subscribed-channel": { label: "Channel", tone: "plain" },
-};
+import { whyOf } from "../../unread/index.ts";
 
 const ACTIONS = { reply: "replied in a thread in", "top-level": "posted in" } as const;
 const CONTEXT_LENGTH = 70;
@@ -43,11 +39,35 @@ function contextOf(item: InboxItem): string | null {
   return `${text.slice(START, CONTEXT_LENGTH - ELLIPSIS)}…`;
 }
 
+function whyText(why: UnreadWhy, item: InboxItem): string {
+  if (why === "mentioned-you") {
+    return "Mentioned you";
+  }
+  if (why === "replied-to-you") {
+    return "Replied to you";
+  }
+  if (why === "followed-thread") {
+    return "New reply in a thread you follow";
+  }
+  return `New in #${item.channel.name}`;
+}
+
+function levelOf(why: UnreadWhy, unread: boolean): "for-you" | "activity" | "read" {
+  if (!unread) {
+    return "read";
+  }
+  if (why === "mentioned-you" || why === "replied-to-you") {
+    return "for-you";
+  }
+  return "activity";
+}
+
 export function InboxItemRow(props: InboxItemRowProps): ReactNode {
   const { item } = props;
   const { message } = item;
   const { agent, displayName } = useAuthor(message.author);
   const time = useTimeAgo(message.createdAt);
+  const why = whyOf({ item, me: props.me });
   return (
     <FeedRow
       action={ACTIONS[message.kind]}
@@ -57,19 +77,13 @@ export function InboxItemRow(props: InboxItemRowProps): ReactNode {
       channel={item.channel.name}
       context={contextOf(item)}
       href={linkOf(item)}
+      level={levelOf(why, props.unread)}
       time={time}
-      unread={props.unread}
+      why={whyText(why, item)}
     >
       <FeedText unread={props.unread}>
         <MentionText me={props.me} message={message} />
       </FeedText>
-      <BadgeList>
-        {item.reasons.map((reason) => (
-          <Badge key={reason} tone={REASONS[reason].tone}>
-            {REASONS[reason].label}
-          </Badge>
-        ))}
-      </BadgeList>
     </FeedRow>
   );
 }

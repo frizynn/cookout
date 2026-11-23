@@ -51,7 +51,7 @@ async function logInHavingRead(page: Page, channel: string): Promise<void> {
   await logInToChannels({ page, token: reader.token });
 }
 
-test("the inbox lists the identity's unread items newest first, with their reasons", async ({ page }) => {
+test("the inbox lists the identity's unread items for you, then activity, each leading with why", async ({ page }) => {
   const channel = "browser-inbox";
   const { poster, reader } = await subscribedPerson(channel);
   await poster.client.createMessage({ channel, text: "Deploy at noon?" });
@@ -62,10 +62,12 @@ test("the inbox lists the identity's unread items newest first, with their reaso
     .getByRole("link", { name: /^Inbox/u })
     .click();
 
-  await expect(page.getByRole("heading", { level: 2, name: "Unread 2" })).toBeVisible();
-  await expect(rows(page, "Unread")).toHaveText([
-    `${channel}-posterposted in#${channel}just now@${channel}-reader can you check the rollout?MentionChannel`,
-    `${channel}-posterposted in#${channel}just nowDeploy at noon?Channel`,
+  await expect(page.getByRole("heading", { level: 2, name: "For you 1" })).toBeVisible();
+  await expect(rows(page, "For you")).toHaveText([
+    `Mentioned you${channel}-posterposted in#${channel}just now@${channel}-reader can you check the rollout?`,
+  ]);
+  await expect(rows(page, "Activity")).toHaveText([
+    `New in #${channel}${channel}-posterposted in#${channel}just nowDeploy at noon?`,
   ]);
   await expect(page.getByText("Nothing read yet.")).toBeVisible();
 });
@@ -87,11 +89,11 @@ async function openChannel(page: Page, channel: string, text: string): Promise<v
   await expect(page.getByRole("list", { name: "Messages" })).toContainText(text);
 }
 
-test("acking in one tab moves the item from Unread to Earlier in another", async ({ page }) => {
+test("acking in one tab moves the item from Activity to Earlier in another", async ({ page }) => {
   const channel = "browser-inbox-tabs";
   const second = await inboxInSecondTab(page, channel);
 
-  await expect(rows(second, "Unread")).toHaveCount(ONE);
+  await expect(rows(second, "Activity")).toHaveCount(ONE);
 
   await openChannel(page, channel, "Deploy at noon?");
 

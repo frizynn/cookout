@@ -195,7 +195,7 @@ interface MessageLayoutParts extends Parts {
 }
 
 interface MessageItemParts extends MessageLayoutParts {
-  readonly mark: "mention" | "open" | "none";
+  readonly mark: "for-you" | "open" | "none";
   readonly day: string | null;
   readonly unreadLine: boolean;
 }

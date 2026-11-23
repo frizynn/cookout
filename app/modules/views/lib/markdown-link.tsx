@@ -7,7 +7,12 @@ interface MarkdownLinkProps {
 
 export function MarkdownLink(props: MarkdownLinkProps): ReactNode {
   return (
-    <a className="text-link underline underline-offset-2" href={props.href} rel="noopener noreferrer" target="_blank">
+    <a
+      className="text-foreground underline underline-offset-2"
+      href={props.href}
+      rel="noopener noreferrer"
+      target="_blank"
+    >
       {props.children}
     </a>
   );

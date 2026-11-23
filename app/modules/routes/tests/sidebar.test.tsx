@@ -53,18 +53,15 @@ it("a fresh login opens the inbox", { timeout: 5000 }, async () => {
   close();
 });
 
-const ONE = 1;
-const TWO = 2;
-
-async function postedAndCounted(poster: CookoutClient, text: string, count: number): Promise<boolean> {
+async function postedAndCounted(poster: CookoutClient, text: string, count: string): Promise<boolean> {
   await poster.createMessage({ channel: "web-sidebar-total", text });
   await waitFor(() => {
-    expect(inboxLink().textContent).toContain(`${String(count)} unread`);
+    expect(inboxLink().textContent).toContain(count);
   });
-  return inboxLink().querySelector(".bg-unread") !== null;
+  return inboxLink().querySelector(".bg-mention-bar") !== null;
 }
 
-it("the Inbox link counts every unread item, live, in the unread colour once one is a mention", {
+it("the Inbox link is bold for activity, and counts what is for you live, in the accent colour", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -73,15 +70,15 @@ it("the Inbox link counts every unread item, live, in the unread colour once one
   const { live, stream } = watched(reader);
   const close = openAt({ client: reader, hash: "#/", live });
   const events = await stream;
-  const plainIsLoud = await postedAndCounted(poster, "Plain news", ONE);
+  const plainIsLoud = await postedAndCounted(poster, "Plain news", "1 unread");
 
-  await expect(postedAndCounted(poster, "Over to @web-sidebar-total-reader", TWO)).resolves.toBe(!plainIsLoud);
+  await expect(postedAndCounted(poster, "Over to @web-sidebar-total-reader", "1 for you")).resolves.toBe(!plainIsLoud);
 
   close();
   await events.close();
 });
 
-it("a channel with unread messages is bold in the sidebar, with its mention count, and the open one is highlighted", {
+it("a channel with unread messages is bold in the sidebar, with its count for you, and the open one is highlighted", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -92,7 +89,7 @@ it("a channel with unread messages is bold in the sidebar, with its mention coun
   const close = openAt({ client: reader, hash: "#/channels/web-sidebar-quiet" });
 
   const bold = await within(await screen.findByRole("navigation", { name: "Sidebar" })).findByRole("link", {
-    name: /^#web-sidebar-bold\s*1 mention$/u,
+    name: /^#web-sidebar-bold\s*1 for you$/u,
   });
   const quiet = inSidebar().getByRole("link", { name: "#web-sidebar-quiet" });
 

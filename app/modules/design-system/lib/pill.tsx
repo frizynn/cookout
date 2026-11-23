@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 const SHAPE = "min-w-5 rounded-full px-1.5 py-px text-center text-[11px] font-semibold tabular-nums";
 
 const TONES = {
-  loud: `${SHAPE} bg-unread text-white`,
+  loud: `${SHAPE} bg-mention-bar text-mention-ink`,
   quiet: `${SHAPE} bg-muted text-muted-foreground`,
   unseen: "sr-only",
 } as const;

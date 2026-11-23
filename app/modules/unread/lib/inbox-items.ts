@@ -8,24 +8,15 @@ import type {
   ReadPosition,
 } from "../../sdk/index.ts";
 
-interface UnreadCounts {
-  readonly mentions: number;
-  readonly plain: number;
-}
-
 interface InboxItems {
   readonly addAll: (all: readonly InboxItem[]) => void;
   readonly readAll: (all: readonly ReadPosition[], onRead: (item: InboxItem) => void) => void;
   readonly readPosition: (channel: ChannelName, thread: MessageId | null) => MessageId | null;
   readonly receive: (event: CookoutEvent, onRead: (item: InboxItem) => void) => boolean;
-  readonly counts: () => ReadonlyMap<ChannelName, UnreadCounts>;
   readonly list: () => readonly InboxItem[];
   readonly has: (id: MessageId) => boolean;
   readonly isRead: (message: Message) => boolean;
 }
-
-const ONE_MORE = 1;
-const NONE: UnreadCounts = { mentions: 0, plain: 0 };
 
 function scopeOf(channel: string, thread: MessageId | null): string {
   if (thread === null) {
@@ -39,21 +30,6 @@ function scopeOfMessage(message: Message): string {
     return scopeOf(message.channel, message.replyTo);
   }
   return scopeOf(message.channel, null);
-}
-
-function counted(counts: UnreadCounts, item: InboxItem): UnreadCounts {
-  if (item.reasons.includes("mention")) {
-    return { ...counts, mentions: counts.mentions + ONE_MORE };
-  }
-  return { ...counts, plain: counts.plain + ONE_MORE };
-}
-
-function countsOf(items: Iterable<InboxItem>): ReadonlyMap<ChannelName, UnreadCounts> {
-  const counts = new Map<ChannelName, UnreadCounts>();
-  for (const item of items) {
-    counts.set(item.channel.name, counted(counts.get(item.channel.name) ?? NONE, item));
-  }
-  return counts;
 }
 
 function oldestFirst(items: Iterable<InboxItem>): readonly InboxItem[] {
@@ -105,7 +81,6 @@ function createInboxItems(): InboxItems {
 
   return {
     addAll,
-    counts: () => countsOf(items.values()),
     has: (id) => items.has(id),
     isRead,
     list: () => oldestFirst(items.values()),
@@ -137,4 +112,4 @@ async function readInto({ client, items, onRead }: Reading): Promise<void> {
   items.addAll(inbox.items);
 }
 
-export { type InboxItems, type UnreadCounts, createInboxItems, readInto };
+export { type InboxItems, createInboxItems, readInto };

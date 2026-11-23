@@ -1,11 +1,11 @@
-import { Alert, FeedHeading, FeedList, FeedNote, Skeleton } from "../../design-system/index.tsx";
-import { InboxItemRow } from "./inbox-item-row.tsx";
+import { Alert, FeedNote, Skeleton } from "../../design-system/index.tsx";
+import { InboxSection } from "./inbox-section.tsx";
 import type { ReactNode } from "react";
 import type { UnreadState } from "../../unread/index.ts";
 
 const NONE = 0;
 
-const TEXT = { empty: "You're all caught up.", title: "Unread" } as const;
+const TEXT = { activity: "Activity", empty: "You're all caught up.", forYou: "For you" } as const;
 
 interface InboxBodyProps {
   readonly unread: UnreadState;
@@ -13,7 +13,7 @@ interface InboxBodyProps {
 }
 
 export function InboxBody(props: InboxBodyProps): ReactNode {
-  const { unread } = props;
+  const { me, unread } = props;
   if (unread.status === "loading") {
     return (
       <>
@@ -25,18 +25,11 @@ export function InboxBody(props: InboxBodyProps): ReactNode {
   if (unread.status === "failed") {
     return <Alert>{`Couldn't load the inbox (${unread.code}): ${unread.message}`}</Alert>;
   }
-  const items = unread.items.toReversed();
   return (
     <>
-      <FeedHeading count={items.length} title={TEXT.title} />
-      {items.length === NONE && <FeedNote place="empty">{TEXT.empty}</FeedNote>}
-      {items.length > NONE && (
-        <FeedList label={TEXT.title}>
-          {items.map((item) => (
-            <InboxItemRow item={item} key={item.message.id} me={props.me} unread />
-          ))}
-        </FeedList>
-      )}
+      {unread.items.length === NONE && <FeedNote place="empty">{TEXT.empty}</FeedNote>}
+      <InboxSection forYou items={unread.items} me={me} title={TEXT.forYou} />
+      <InboxSection forYou={false} items={unread.items} me={me} title={TEXT.activity} />
     </>
   );
 }

@@ -1,5 +1,6 @@
 import { Avatar } from "./avatar.tsx";
 import type { ReactNode } from "react";
+import { ThreadNews } from "./thread-news.tsx";
 
 interface Replier {
   readonly name: string;
@@ -12,6 +13,7 @@ interface ThreadSummaryParts {
   readonly label: string;
   readonly count: string;
   readonly last: string;
+  readonly news: { readonly text: string; readonly forYou: boolean } | null;
 }
 
 const VIEW_THREAD = "View thread →";
@@ -28,7 +30,8 @@ export function ThreadSummary(parts: ThreadSummaryParts): ReactNode {
           <Avatar agent={replier.agent} key={replier.name} name={replier.name} size="tiny" />
         ))}
       </span>
-      <span className="font-semibold text-link">{parts.count}</span>
+      <span className="font-medium text-foreground">{parts.count}</span>
+      {parts.news !== null && <ThreadNews forYou={parts.news.forYou}>{parts.news.text}</ThreadNews>}
       <span className="text-muted-foreground group-hover/thread:hidden group-focus-visible/thread:hidden">
         {parts.last}
       </span>

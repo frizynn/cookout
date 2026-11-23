@@ -15,7 +15,7 @@ export function MessageItem(parts: MessageItemParts): ReactNode {
       <article
         aria-current={parts.mark === "open"}
         className={messageClass(parts)}
-        data-mentions-me={parts.mark === "mention"}
+        data-for-you={parts.mark === "for-you"}
         tabIndex={FOCUSABLE}
       >
         <MessageLayout

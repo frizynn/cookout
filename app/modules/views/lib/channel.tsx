@@ -4,6 +4,7 @@ import { Pane, PaneHeader, ScrollArea } from "../../design-system/index.tsx";
 import type { Composer } from "../../composer/index.ts";
 import { MessageFooter } from "./message-footer.tsx";
 import { MessageRows } from "./message-rows.tsx";
+import type { MessageRowsProps } from "./message-rows.tsx";
 import { NotBuiltView } from "./not-built.tsx";
 import type { ReactNode } from "react";
 import { SubscriptionRefusal } from "./subscription-refusal.tsx";
@@ -24,6 +25,7 @@ interface ChannelProps {
   };
   readonly me: string;
   readonly open: MessageId | null;
+  readonly unread: MessageRowsProps["unread"];
 }
 
 function useDescription(board: Board, name: ChannelName): string | null {
@@ -72,6 +74,7 @@ export function ChannelView(props: ChannelProps): ReactNode {
           open={props.open}
           state={state}
           readPosition={readPosition}
+          unread={props.unread}
         />
       </ScrollArea>
       <MessageFooter

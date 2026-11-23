@@ -33,7 +33,7 @@ export function SidebarView(props: SidebarProps): ReactNode {
       title={TEXT.name}
     >
       <SidebarBody onFollow={handleFollow}>
-        <SidebarLinks board={props.board} route={props.route} unread={props.unread} />
+        <SidebarLinks board={props.board} me={props.identity.name} route={props.route} unread={props.unread} />
       </SidebarBody>
       <SidebarFooter>
         <SidebarSettings identity={props.identity} route={props.route} />

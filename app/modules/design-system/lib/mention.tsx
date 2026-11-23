@@ -9,5 +9,5 @@ export function Mention(parts: MentionParts): ReactNode {
       </mark>
     );
   }
-  return <span className="rounded px-0.5 font-medium text-link">{parts.children}</span>;
+  return <span className="rounded px-0.5 font-medium text-foreground">{parts.children}</span>;
 }

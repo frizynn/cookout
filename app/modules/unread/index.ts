@@ -1,18 +1,19 @@
 /**
- * The `unread` store: how many unread messages each channel holds for whoever
- * is looking, with the ones that mention them counted apart from the rest
- * (`mentions` and `plain`), as Slack shows them. An external store, read by
- * components with `useSyncExternalStore`. The counts come from the same query
- * as the API's: when its first reader subscribes it loads the inbox
- * (`GET /v1/inbox`) and counts its items by channel, a message there for
- * several reasons counted once. With `live`, it follows the live stream from
- * then on: each new inbox item (`inbox-item`) raises its channel's count, and
- * each new read position (`read-position`, from this tab's ack on view or any
- * other session's) drops the items it covers, so opening a channel or a thread
- * takes its messages out of the counts. It never acks anything itself: a
- * message is read only once some view acks it. A refusal keeps the server's
- * error code; a server that can't be reached is `unreachable`. Alongside the
- * counts it keeps the inbox items they count, oldest first, for the inbox view.
+ * The `unread` store: the unread inbox items of whoever is looking, oldest
+ * first. An external store, read by components with `useSyncExternalStore`.
+ * The items come from the same query as the API's: when its first reader
+ * subscribes it loads the inbox (`GET /v1/inbox`), a message there for
+ * several reasons held once. With `live`, it follows the live stream from then
+ * on: each new inbox item (`inbox-item`) joins them, and each new read
+ * position (`read-position`, from this tab's ack on view or any other
+ * session's) drops the items it covers, so opening a channel or a thread takes
+ * its messages out. It never acks anything itself: a message is read only once
+ * some view acks it. A refusal keeps the server's error code; a server that
+ * can't be reached is `unreachable`. The items have two levels, as Slack
+ * shows them (Matt, #152, 2026-11-23): for you (a mention, or a reply in a
+ * thread you started) and activity (the rest). `whyOf` says why one is there,
+ * `countsByChannel` counts both levels by channel, and `newsByThread` counts a
+ * thread's unread replies and whether any is for you.
  * `earlier` is the read part of the inbox, for the inbox view's Earlier list:
  * when its first reader subscribes it loads the inbox history
  * (`GET /v1/inbox/history`) a page of `pageSize` items at a time (50 unless
@@ -28,10 +29,10 @@
  * cover, so a message that arrives meanwhile stays unread.
  */
 import type { ChannelName, CookoutClient, CookoutEvent, InboxItem, MessageId, Refusal } from "../sdk/index.ts";
-import type { InboxItems, UnreadCounts } from "./lib/inbox-items.ts";
 import type { MarkAll, MarkAllState } from "./lib/mark-all.ts";
 import { createInboxItems, readInto } from "./lib/inbox-items.ts";
 import type { Earlier } from "./lib/earlier.ts";
+import type { InboxItems } from "./lib/inbox-items.ts";
 import type { Live } from "../live/index.ts";
 import type { NewLine } from "./lib/new-lines.ts";
 import { createEarlier } from "./lib/earlier.ts";
@@ -40,7 +41,7 @@ import { refusalOf } from "../sdk/index.ts";
 import { withNewLines } from "./lib/new-lines.ts";
 
 function loadedOf(items: InboxItems, markAll: MarkAllState): UnreadState {
-  return { channels: items.counts(), items: items.list(), markAll, status: "loaded" };
+  return { items: items.list(), markAll, status: "loaded" };
 }
 
 interface Loading {
@@ -65,15 +66,11 @@ function follow(live: Live | null, onEvent: (event: CookoutEvent) => void): void
   }
 }
 
-/**
- * The counts by channel name, as far as they have loaded, and the inbox items they count, oldest first; a channel with
- * nothing unread isn't in `channels`.
- */
+/** The unread inbox items, oldest first, once they have loaded. */
 export type UnreadState =
   | { readonly status: "loading" }
   | {
       readonly status: "loaded";
-      readonly channels: ReadonlyMap<ChannelName, UnreadCounts>;
       readonly items: readonly InboxItem[];
       readonly markAll: MarkAllState;
     }
@@ -162,4 +159,5 @@ export function createUnread(options: UnreadOptions): Unread {
 
 export type { Earlier, EarlierState } from "./lib/earlier.ts";
 export type { MarkAllState } from "./lib/mark-all.ts";
-export type { UnreadCounts } from "./lib/inbox-items.ts";
+export type { ThreadNews, UnreadCounts, UnreadWhy } from "./lib/levels.ts";
+export { NO_COUNTS, countsByChannel, countsOf, isForYou, newsByThread, whyOf } from "./lib/levels.ts";

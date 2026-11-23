@@ -21,7 +21,7 @@ it("an Inbox row of a Markdown message shows its text as one plain line, with me
   });
   const unmount = openAt({ client: reader, hash: "#/inbox" });
 
-  const row = await within(await screen.findByRole("list", { name: "Unread" })).findByRole("link");
+  const row = await within(await screen.findByRole("list", { name: "For you" })).findByRole("link");
 
   expect([
     within(row).getByText("re: Plan Deploy per the notes").textContent,

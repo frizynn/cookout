@@ -154,9 +154,9 @@ it("a message mentioning the logged-in human is highlighted, and other mentions 
 
   expect([
     mine.tagName,
-    mine.closest('[data-mentions-me="true"]') === null,
+    mine.closest('[data-for-you="true"]') === null,
     other.tagName,
-    other.closest('[data-mentions-me="false"]') === null,
+    other.closest('[data-for-you="false"]') === null,
   ]).toStrictEqual(["MARK", false, "SPAN", false]);
 
   close();
