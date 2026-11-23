@@ -9,6 +9,7 @@ import {
   isInboxItemEvent,
   isMessageEvent,
   isReadPositionEvent,
+  isSubscriptionEvent,
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import type { CookoutEvent } from "../../events/index.ts";
@@ -56,6 +57,7 @@ const validators: { readonly [Type in EventType]: (data: unknown) => data is Ext
   "inbox-item": isInboxItemEvent,
   message: isMessageEvent,
   "read-position": isReadPositionEvent,
+  subscription: isSubscriptionEvent,
 };
 
 function isEventType(event: string): event is EventType {

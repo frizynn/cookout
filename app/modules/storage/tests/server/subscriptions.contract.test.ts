@@ -80,3 +80,19 @@ it.effect.each(storageLayers)("storage contract ($adapter): a deleted channel is
     expect(subscribed).toStrictEqual([channel("lounge")]);
   }),
 );
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): a channel created for a creator is subscribed by that creator alone",
+  ({ layer }) =>
+    Effect.gen(function* createdSubscribed() {
+      const { storage } = yield* openStore(layer);
+      yield* setUp(storage);
+      const created = yield* storage.createChannel(channel("bakery"), nameOf("ann"));
+      const taken = yield* storage.createChannel(channel("bakery"), nameOf("bob"));
+
+      const ann = yield* storage.listSubscribedChannels(nameOf("ann"));
+      const bob = yield* storage.listSubscribedChannels(nameOf("bob"));
+
+      expect([created, taken, ann, bob]).toStrictEqual(["created", "name_taken", [channel("bakery")], []]);
+    }),
+);

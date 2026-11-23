@@ -31,6 +31,7 @@ import {
   InboxItemEventSchema,
   MessageEventSchema,
   ReadPositionEventSchema,
+  SubscriptionEventSchema,
 } from "./lib/server/wire.ts";
 import type { Connected, EventSource } from "./lib/server/source.ts";
 import { Effect, Exit, Scope, Stream } from "effect";
@@ -99,4 +100,5 @@ export const eventResponseSchemas = {
   InboxItemEvent: InboxItemEventSchema,
   MessageEvent: MessageEventSchema,
   ReadPositionEvent: ReadPositionEventSchema,
+  SubscriptionEvent: SubscriptionEventSchema,
 };

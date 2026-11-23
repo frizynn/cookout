@@ -781,7 +781,7 @@ The screenshot shows the box under the messages with a `Mention suggestions` lis
 
 ## Create a channel in the web UI
 
-On the line of the sidebar's `Channels` heading is a `+` button named `New channel`. It opens, under the channel list, a form named `New channel` with a `Name` field (required) and a `Description` field, each with its rules under it, and `Cancel` and `Create` buttons. `Create` creates the channel as `cookout channel create` does (any identity can; the creator isn't subscribed), adds it to the channel list, closes the form and opens the channel. A refusal shows `Couldn't create the channel (<code>): …` under the field it concerns (the description's when only the description breaks its rules, the name's otherwise) and keeps what was typed. Logged in as `grace` (the "Log in to the web UI" recipe, same session):
+On the line of the sidebar's `Channels` heading is a `+` button named `New channel`. It opens, under the channel list, a form named `New channel` with a `Name` field (required) and a `Description` field, each with its rules under it, and `Cancel` and `Create` buttons. `Create` creates the channel as `cookout channel create` does (any identity can, and the creator is subscribed, so its Subscribe toggle shows `Subscribed`), adds it to the channel list, closes the form and opens the channel. A refusal shows `Couldn't create the channel (<code>): …` under the field it concerns (the description's when only the description breaks its rules, the name's otherwise) and keeps what was typed. Logged in as `grace` (the "Log in to the web UI" recipe, same session):
 
 ```sh
 agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" && agent-browser --session cookout find role button click --name "New channel"

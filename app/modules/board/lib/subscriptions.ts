@@ -1,5 +1,6 @@
-import type { ChannelName, CookoutClient, SubscriptionResponse } from "../../sdk/index.ts";
+import type { ChannelName, CookoutClient, CookoutEvent, SubscriptionResponse } from "../../sdk/index.ts";
 import type { Failure } from "./failure.ts";
+import type { Live } from "../../live/index.ts";
 import { failure } from "./failure.ts";
 
 type ChangeState =
@@ -22,7 +23,13 @@ type SubscriptionsClient = Pick<CookoutClient, "listSubscribedChannels" | "subsc
 
 interface Store {
   readonly client: SubscriptionsClient;
+  readonly current: () => SubscriptionsState;
   readonly publish: (next: SubscriptionsState) => void;
+}
+
+interface LiveSubscriptions {
+  readonly subscriptions: Subscriptions;
+  readonly heard: (change: SubscriptionResponse) => void;
 }
 
 interface Change {
@@ -78,13 +85,34 @@ async function changeAfter(
   }
 }
 
-function createSubscriptions(client: SubscriptionsClient): Subscriptions {
+async function heardAfter(
+  previous: Promise<readonly ChannelName[]>,
+  store: Store,
+  { channel, subscribed }: SubscriptionResponse,
+): Promise<readonly ChannelName[]> {
+  const channels = await previous;
+  const current = store.current();
+  if (current.status !== "loaded") {
+    return channels;
+  }
+  const next = withChannel(channels, channel, subscribed);
+  store.publish({ ...current, channels: next });
+  return next;
+}
+
+interface SubscriptionsOptions {
+  readonly client: SubscriptionsClient;
+  readonly live: Live | null;
+}
+
+function createSubscriptions({ client, live }: SubscriptionsOptions): LiveSubscriptions {
   const listeners = new Set<() => void>();
   let state: SubscriptionsState = { status: "loading" };
   let queue: Promise<readonly ChannelName[]> = Promise.resolve([]);
   let loading = false;
   const store: Store = {
     client,
+    current: () => state,
     publish: (next) => {
       state = next;
       for (const listener of listeners) {
@@ -92,7 +120,15 @@ function createSubscriptions(client: SubscriptionsClient): Subscriptions {
       }
     },
   };
-  return {
+  function heard(change: SubscriptionResponse): void {
+    queue = heardAfter(queue, store, change);
+  }
+  function receive(event: CookoutEvent): void {
+    if (event.type === "subscription") {
+      heard(event.subscription);
+    }
+  }
+  const subscriptions: Subscriptions = {
     setSubscribed: (channel, wanted) => {
       queue = changeAfter(queue, store, { channel, wanted });
     },
@@ -102,12 +138,16 @@ function createSubscriptions(client: SubscriptionsClient): Subscriptions {
       if (!loading) {
         loading = true;
         queue = load(store);
+        if (live !== null) {
+          live.subscribe(receive);
+        }
       }
       return () => {
         listeners.delete(listener);
       };
     },
   };
+  return { heard, subscriptions };
 }
 
 export { type Subscriptions, type SubscriptionsClient, type SubscriptionsState, createSubscriptions };

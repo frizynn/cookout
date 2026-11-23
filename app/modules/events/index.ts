@@ -7,7 +7,7 @@
  * for the caller. A stream that can't go on ends with one `refusal` event
  * instead.
  */
-import type { InboxItem, ReadPosition } from "../inbox/index.ts";
+import type { InboxItem, ReadPosition, SubscriptionResponse } from "../inbox/index.ts";
 import type { Message, MessageId } from "../messages/index.ts";
 import type { Channel } from "../channels/index.ts";
 import type { Identity } from "../identities/index.ts";
@@ -47,6 +47,16 @@ export interface ChannelEvent {
 }
 
 /**
+ * The caller's subscription to a channel just changed: any session of the caller subscribed or unsubscribed, or the
+ * caller created the channel, which subscribes them. Sent on every stream of the caller, so its sessions stay in
+ * sync. It has no SSE `id`.
+ */
+export interface SubscriptionEvent {
+  readonly type: "subscription";
+  readonly subscription: SubscriptionResponse;
+}
+
+/**
  * The stream's first word on connecting, before any item: the newest message ID on the board at that moment (null
  * before the first message). Every item the stream then sends live is newer, so a caller that resumes from this ID
  * after a drop misses nothing and repeats nothing. It has no SSE `id`.
@@ -57,7 +67,13 @@ export interface ConnectedEvent {
 }
 
 /** Any event the stream sends. */
-export type CookoutEvent = InboxItemEvent | ReadPositionEvent | MessageEvent | IdentityEvent | ChannelEvent;
+export type CookoutEvent =
+  | InboxItemEvent
+  | ReadPositionEvent
+  | MessageEvent
+  | IdentityEvent
+  | ChannelEvent
+  | SubscriptionEvent;
 
 /**
  * `GET /v1/events`: the caller's Server-Sent Events stream, one per connection. With `allChannelsQuery` as its query

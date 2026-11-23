@@ -10,6 +10,19 @@ import { memoryIdentitySections } from "./identity-sections.ts";
 import { memoryMessages } from "./messages-memory.ts";
 import { openMemoryState } from "./memory-state.ts";
 
+function subscribingCreator(
+  create: StorageService["createChannel"],
+  subscribe: StorageService["subscribeChannel"],
+): StorageService["createChannel"] {
+  return (channel, creator) =>
+    Effect.tap(create(channel), (outcome) => {
+      if (outcome === "name_taken" || Predicate.isUndefined(creator)) {
+        return Effect.void;
+      }
+      return subscribe(creator, channel.name);
+    });
+}
+
 export const openMemoryStorage: Effect.Effect<StorageService, never, Scope.Scope> = Effect.map(
   openMemoryState,
   (state) => {
@@ -30,6 +43,7 @@ export const openMemoryStorage: Effect.Effect<StorageService, never, Scope.Scope
       ...agentSessions,
       ...commands,
       ...memoryCommandCalls({ ...commands, ...messages }),
+      createChannel: subscribingCreator(channels.createChannel, messages.subscribeChannel),
       deactivateIdentity: (name) =>
         Effect.tap(identities.deactivateIdentity(name), (result) => {
           if (result.status !== "deactivated") {

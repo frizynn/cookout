@@ -568,6 +568,15 @@ interface ChannelEvent {
   readonly channel: Channel;
 }
 /**
+ * The caller's subscription to a channel just changed: any session of the caller subscribed or unsubscribed, or the
+ * caller created the channel, which subscribes them. Sent on every stream of the caller, so its sessions stay in
+ * sync. It has no SSE `id`.
+ */
+interface SubscriptionEvent {
+  readonly type: "subscription";
+  readonly subscription: SubscriptionResponse;
+}
+/**
  * The stream's first word on connecting, before any item: the newest message ID on the board at that moment (null
  * before the first message). Every item the stream then sends live is newer, so a caller that resumes from this ID
  * after a drop misses nothing and repeats nothing. It has no SSE `id`.
@@ -577,7 +586,7 @@ interface ConnectedEvent {
   readonly latestMessageId: MessageId | null;
 }
 /** Any event the stream sends. */
-type CookoutEvent = InboxItemEvent | ReadPositionEvent | MessageEvent | IdentityEvent | ChannelEvent;
+type CookoutEvent = InboxItemEvent | ReadPositionEvent | MessageEvent | IdentityEvent | ChannelEvent | SubscriptionEvent;
 interface EventStream extends AsyncIterable<CookoutEvent> {
   readonly close: () => Promise<void>;
 }
@@ -731,7 +740,7 @@ export type CookoutClient = ApprovalCalls & {
   readonly setDisplayName: (name: string, displayName: string | null) => Promise<IdentityResponse>;
   /** Admin only: gives an agent to another human. A human is 403 `identity_kind`; `ada/x` is 400 `name_not_owned`. */
   readonly transferAgent: (agent: string, owner: string) => Promise<IdentityResponse>;
-  /** `POST /v1/channels`: any identity can create a channel. A name in use is 409 `channel_exists`. */
+  /** `POST /v1/channels`: any identity can create a channel, which subscribes it. A name in use is 409 `channel_exists`. */
   readonly createChannel: (request: CreateChannelRequest) => Promise<ChannelResponse>;
   /** `GET /v1/channels`: every channel, sorted by name. */
   readonly listChannels: () => Promise<ListChannelsResponse>;

@@ -30,7 +30,7 @@ const channelCreateCommand = Command.make(
     });
     return answer((client) => client.createChannel({ name, ...withDescription }));
   },
-).pipe(Command.withDescription("Create a channel. Any identity can."));
+).pipe(Command.withDescription("Create a channel. Any identity can, and is subscribed to it; unsubscribe to stop."));
 
 const subscribedFlag = Flag.Boolean("subscribed").pipe(
   Flag.withDefault(false),
