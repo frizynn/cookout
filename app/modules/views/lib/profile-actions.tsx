@@ -21,5 +21,13 @@ export function ProfileActions(props: ProfileActionsProps): ReactNode {
   if (identity.name === me || !(admin || ownedByMe(identity, me))) {
     return null;
   }
-  return <IdentityActionsView identities={identities} identity={identity} transfer={admin} />;
+  const ownsAgents = listed.some((each) => each.kind === "agent" && each.owner === String(identity.name));
+  return (
+    <IdentityActionsView
+      deletable={admin && !ownsAgents}
+      identities={identities}
+      identity={identity}
+      transfer={admin}
+    />
+  );
 }

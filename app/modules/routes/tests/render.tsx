@@ -19,7 +19,9 @@ type AppClient = BoardOptions["client"] &
     CookoutClient,
     | "ackAll"
     | "createIdentity"
+    | "countMessagesBy"
     | "deactivateIdentity"
+    | "deleteIdentity"
     | "inbox"
     | "inboxHistory"
     | "markUnread"

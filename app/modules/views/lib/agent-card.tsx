@@ -15,7 +15,7 @@ export function AgentCard(props: AgentCardProps): ReactNode {
   return (
     <ActionGroup label={`@${identity.name}`}>
       <ProfileName displayName={identity.displayName ?? null} name={identity.name} note={noteOf(identity)} />
-      <IdentityActionsView identities={props.identities} identity={identity} transfer={false} />
+      <IdentityActionsView deletable={false} identities={props.identities} identity={identity} transfer={false} />
     </ActionGroup>
   );
 }
