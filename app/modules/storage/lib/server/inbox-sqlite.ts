@@ -11,13 +11,12 @@ import type {
 import type { InboxReason, ReadPosition } from "../../../inbox/index.ts";
 import type { Message, MessageId, TopLevelMessage } from "../../../messages/index.ts";
 import { followersOf, reasonsIn, scopeOf } from "./inbox.ts";
-import type { ChannelName } from "../../../channels/index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { inboxReasons } from "../../../inbox/index.ts";
-import { isChannelName } from "../../../channels/index.ts";
 import { isMessageId } from "../../../messages/index.ts";
+import { readPositionsIn } from "./read-positions-sqlite.ts";
 import { threadIdOf } from "./messages.ts";
 import { unreadable } from "./errors.ts";
 
@@ -85,31 +84,6 @@ const MOVE_CHANNEL_POSITION = `INSERT INTO channel_read_positions (identity_name
 const MOVE_THREAD_POSITION = `INSERT INTO thread_read_positions (identity_name, thread_id, message_id) VALUES (?, ?, ?)
   ON CONFLICT (identity_name, thread_id) DO UPDATE SET message_id = max(message_id, excluded.message_id)
   RETURNING message_id`;
-
-const READ_POSITIONS = `SELECT channel, NULL AS thread_id, message_id FROM channel_read_positions
-    WHERE identity_name = ?1
-  UNION ALL SELECT messages.channel, t.thread_id, t.message_id
-    FROM thread_read_positions AS t JOIN messages ON messages.id = t.thread_id WHERE t.identity_name = ?1
-  ORDER BY channel, thread_id`;
-
-const ReadPositionRow = Schema.Struct({
-  channel: Schema.String.pipe(Schema.refine(isChannelName)),
-  message_id: MessageIdColumn,
-  thread_id: Schema.NullOr(MessageIdColumn),
-});
-
-function readPositionRow(row: unknown): Fails<ReadPosition> {
-  return Schema.decodeUnknownEffect(ReadPositionRow)(row).pipe(
-    Effect.mapBoth({
-      onFailure: unreadable,
-      onSuccess: (decoded) => ({
-        channel: decoded.channel,
-        messageId: decoded.message_id,
-        thread: decoded.thread_id,
-      }),
-    }),
-  );
-}
 
 function inboxSql(columns: string): string {
   return `WITH reasons (id, reason) AS (${REASONS})
@@ -239,8 +213,8 @@ function changeFollow(db: SqliteDatabase, reader: MessageReader, sql: string) {
     );
 }
 
-function changeSubscription(db: SqliteDatabase, sql: string) {
-  return (identity: IdentityName, channel: ChannelName): Fails<boolean> =>
+function changeSubscription(db: SqliteDatabase, sql: string): InboxSection["subscribeChannel"] {
+  return (identity, channel) =>
     db.transaction(
       Effect.flatMap(db.get("SELECT 1 AS found FROM channels WHERE name = ?", channel), (row) => {
         if (!isFoundRow(row)) {
@@ -269,10 +243,7 @@ function sqliteInbox({ db, reader }: InboxOn): InboxSection {
     listInbox: (identity) => inboxOf({ db, reader }, identity, NOTHING_SEEN),
     listInboxAfter: (identity, after) => inboxOf({ db, reader }, identity, after),
     listInboxHistory: (identity, page) => historyOf({ db, reader }, identity, page),
-    listReadPositions: (identity) =>
-      db
-        .all(READ_POSITIONS, identity)
-        .pipe(Effect.flatMap((rows) => Effect.forEach(rows, readPositionRow, ONE_AT_A_TIME))),
+    listReadPositions: (identity) => readPositionsIn({ db, identity }),
     listSubscribedChannels: (identity) =>
       db
         .all(SUBSCRIBED_CHANNELS, identity)
