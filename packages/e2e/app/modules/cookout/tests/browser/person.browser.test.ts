@@ -1,8 +1,8 @@
 import type { CookoutClient, IdentityWithTokenResponse, Message } from "@ai-hero/cookout/sdk";
 import type { Locator, Page } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
+import { browserFixtures, shownMessage } from "../../server.ts";
 import type { BrowserRun } from "../../server.ts";
-import { browserFixtures } from "../../server.ts";
 import { createCookoutClient } from "@ai-hero/cookout/sdk";
 
 interface Member {
@@ -40,7 +40,12 @@ function channelRow(page: Page, channel: string): Locator {
 
 async function openQuestion(page: Page, row: Locator): Promise<void> {
   await row.click();
-  await page.getByRole("link", { name: /Can you review the deploy/u }).click();
+  const question = page
+    .getByRole("list", { name: "Messages" })
+    .getByRole("article")
+    .filter({ hasText: /Can you review the deploy/u });
+  await question.hover();
+  await question.getByRole("link", { name: "Reply" }).click();
 }
 
 async function leaveForTheInbox(page: Page): Promise<void> {
@@ -109,7 +114,7 @@ test("a person logs in, opens a mention's thread, replies with a picked @-mentio
   await agentAnswers(board, `Over to @${agent.name} for the review.`);
 
   await expect(page.getByRole("list", { name: "Replies" }).getByRole("listitem")).toHaveText([
-    `@${person.name}Over to @${agent.name} for the review.`,
-    `@${agent.name}agentLooking now.`,
+    shownMessage({ body: `Over to @${agent.name} for the review.`, header: person.name }),
+    shownMessage({ body: "Looking now.", header: `${agent.name}agent` }),
   ]);
 });
