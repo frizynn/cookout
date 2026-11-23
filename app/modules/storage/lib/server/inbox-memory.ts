@@ -180,6 +180,8 @@ function memoryInbox({ changeInbox, channelExists, read }: BoardAccess): InboxSe
     ackMessage: (identity, id) => changeFound((board) => ack({ board, id, identity })),
     followThread: (identity, id) => changeFound((board) => follow(withKey)({ board, id, identity })),
     listInbox: (identity) => read((board) => inboxOf({ board, identity })),
+    listInboxAfter: (identity, after) =>
+      read((board) => Arr.filter(inboxOf({ board, identity }), (item) => item.message.id > after)),
     subscribeChannel: subscription(withKey),
     unfollowThread: (identity, id) => changeFound((board) => follow(withoutKey)({ board, id, identity })),
     unsubscribeChannel: subscription(withoutKey),

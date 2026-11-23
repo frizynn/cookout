@@ -22,6 +22,7 @@ interface Moving {
 
 interface InboxSection {
   readonly listInbox: (identity: IdentityName) => Fails<readonly StoredInboxItem[]>;
+  readonly listInboxAfter: (identity: IdentityName, after: MessageId) => Fails<readonly StoredInboxItem[]>;
   readonly ackMessage: (identity: IdentityName, id: MessageId) => Fails<ReadPosition | undefined>;
   readonly followThread: (identity: IdentityName, id: MessageId) => Fails<MessageId | undefined>;
   readonly unfollowThread: (identity: IdentityName, id: MessageId) => Fails<MessageId | undefined>;
