@@ -4,6 +4,8 @@
  * and a line in the README's Settings section (`pnpm hygiene` checks both).
  */
 import { Array as Arr, Config, Record as Rec, Redacted, Schema } from "effect";
+import { firstAdminName, isIdentityName } from "../identities/index.ts";
+import type { IdentityName } from "../identities/index.ts";
 import { agentToolVariables } from "./index.ts";
 
 const SHORTEST_LEASE_SECONDS = 1;
@@ -31,6 +33,11 @@ const isStrongEnoughToken = Schema.makeFilter(
   (adminToken: string) => adminToken.length >= SHORTEST_ADMIN_TOKEN || adminTokenRule,
 );
 
+const adminNameRule =
+  "COOKOUT_ADMIN_NAME must be an identity name: 1 to 64 lowercase letters, digits or `-`, such as `matt`. It names the identity the admin token belongs to.";
+
+const AdminNameSchema = Schema.String.pipe(Schema.refine(isIdentityName));
+
 /** `PORT`: the port `cookout serve` listens on. 0 picks a free port. */
 export const port = Config.schema(Schema.Int.check(Schema.isBetween({ maximum: 65_535, minimum: 0 })), "PORT").pipe(
   Config.withDefault(3000),
@@ -55,6 +62,14 @@ export const publicUrl = Config.schema(Schema.String.check(isPublicUrl), "COOKOU
  */
 export const adminToken = Config.schema(Schema.String.check(isStrongEnoughToken), "COOKOUT_ADMIN_TOKEN").pipe(
   Config.map((value) => Redacted.make(value)),
+);
+
+/**
+ * `COOKOUT_ADMIN_NAME`: the name of the identity `COOKOUT_ADMIN_TOKEN` belongs to, `admin` unless set (Matt,
+ * 2026-11-23, mattpocock/cookout#107, ADR 0039). Empty counts as unset. Not an identity name, serve refuses to start.
+ */
+export const adminName: Config.Config<IdentityName> = Config.schema(AdminNameSchema, "COOKOUT_ADMIN_NAME").pipe(
+  Config.withDefault(firstAdminName),
 );
 
 /** `COOKOUT_DB`: the SQLite file `cookout serve` keeps its data in. */
@@ -147,3 +162,6 @@ export const agentToolEnvironment: Config.Config<Readonly<Record<string, string>
 
 /** Why `cookout serve` refused `COOKOUT_ADMIN_TOKEN`, and how to set it. It never includes the value. */
 export { adminTokenRule };
+
+/** Why `cookout serve` refused `COOKOUT_ADMIN_NAME`: the identity-name rule. */
+export { adminNameRule };

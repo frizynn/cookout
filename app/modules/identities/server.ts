@@ -14,16 +14,16 @@ import {
   issueToken,
   requireCommandRoute,
 } from "./lib/server/auth.ts";
-import { Context, Effect, Layer, Option } from "effect";
+import { Context, Effect, Layer, Option, Schema } from "effect";
 import type { Credentials, IssuedToken, Principal } from "./lib/server/auth.ts";
 import type { Gate, Route } from "../http/server.ts";
-import { firstAdmin, identityAdminRoutes, responseSchemas } from "./lib/server/routes.ts";
+import type { IdentityName, Token } from "./index.ts";
+import { humanAdmin, identityAdminRoutes, responseSchemas } from "./lib/server/routes.ts";
 import { HttpServerRequest } from "effect/http";
 import type { Refusal } from "../http/index.ts";
 import { Secrets } from "../secrets/server.ts";
 import { Storage } from "../storage/server.ts";
 import type { StorageUnavailable } from "../storage/server.ts";
-import type { Token } from "./index.ts";
 import { callerRoutes } from "./lib/server/session.ts";
 
 export { Caller };
@@ -94,24 +94,44 @@ export const requireToken: Gate<
     );
   });
 
+/** `COOKOUT_ADMIN_NAME` names an agent, and only a human can be an admin, so the server does not start. */
+export class AdminNameIsAgent extends Schema.TaggedError<AdminNameIsAgent, { readonly brand: unique symbol }>()(
+  "AdminNameIsAgent",
+  { adminName: Schema.String },
+) {}
+
+/** The admin token and the identity it belongs to, from `COOKOUT_ADMIN_TOKEN` and `COOKOUT_ADMIN_NAME`. */
+export interface AdminSettings {
+  readonly adminToken: Token;
+  readonly adminName: IdentityName;
+}
+
 /**
- * Makes `adminToken` the only token of the `admin` identity, creating the admin on a store without one and giving
- * it back its admin flag if another admin removed it. `cookout
- * serve` runs it at every boot with `COOKOUT_ADMIN_TOKEN` (Matt, 2026-11-23, mattpocock/cookout#85), so a token
- * rotated since, lost or leaked stops working once the setting changes and the server restarts.
+ * Makes `adminToken` the only token of the identity named `adminName`, and makes it an admin: it creates a human
+ * admin on a store without one, and gives it back its admin flag if another admin removed it. `cookout serve` runs
+ * it at every boot with `COOKOUT_ADMIN_TOKEN` and `COOKOUT_ADMIN_NAME` (Matt, 2026-11-23, mattpocock/cookout#85 and
+ * #107), so a token rotated since, lost or leaked stops working once the setting changes and the server restarts.
+ * A new name leaves the identity the token belonged to in place, still an admin, with no working token.
  *
- * @param adminToken The token from `COOKOUT_ADMIN_TOKEN`.
- * @returns A Layer that sets the token when it is built.
+ * @param settings The token from `COOKOUT_ADMIN_TOKEN` and the name from `COOKOUT_ADMIN_NAME`.
+ * @returns A Layer that sets the token when it is built, and fails with `AdminNameIsAgent` if the name is an agent's.
  */
-export function adminTokenSet(adminToken: Token): Layer.Layer<never, StorageUnavailable, Storage | Secrets> {
+export function adminTokenSet(
+  settings: AdminSettings,
+): Layer.Layer<never, StorageUnavailable | AdminNameIsAgent, Storage | Secrets> {
+  const { adminName, adminToken } = settings;
   return Layer.effectDiscard(
     Effect.gen(function* setAdminToken() {
       const secrets = yield* Secrets;
       const storage = yield* Storage;
+      const existing = yield* storage.findIdentityByName(adminName);
+      if (Option.exists(Option.fromNullishOr(existing), ({ kind }) => kind === "agent")) {
+        return yield* AdminNameIsAgent.make({ adminName });
+      }
       const hash = yield* secrets.hashToken(adminToken);
-      const admin = yield* firstAdmin;
+      const admin = yield* humanAdmin(adminName);
       yield* storage.setOnlyToken(admin, hash);
-      yield* storage.setAdmin(admin.name, true);
+      return yield* storage.setAdmin(admin.name, true);
     }),
   );
 }

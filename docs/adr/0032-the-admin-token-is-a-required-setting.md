@@ -15,4 +15,6 @@ The first boot made the `admin` identity with a generated token and printed it o
 
 ## Consequences
 
+[ADR 0039](0039-cookout-admin-name-names-the-admin-token-identity.md) lets `COOKOUT_ADMIN_NAME` name the identity the token belongs to instead of `admin`.
+
 A token made by `cookout identity rotate admin` lasts only until the next boot, which puts the setting's token back. The deployed app needs the Fly secret `COOKOUT_ADMIN_TOKEN` before it runs this code, or it won't start.

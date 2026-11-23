@@ -2,6 +2,8 @@ import { Array as Arr, ConfigProvider, Context, Effect, Exit, Layer, Record as R
 import type { CookoutClient, CookoutClientOptions, Identity, Token } from "../../../sdk/index.ts";
 import { backingServices, newToken, storageFor } from "./backing.ts";
 import { currentTime, startTestClock } from "./time.ts";
+import { identityFixture, identityName } from "./identities.ts";
+import type { AdminNameIsAgent } from "../../../identities/server.ts";
 import { Identities } from "../../../identities/server.ts";
 import type { IdentityFixtureOptions } from "./identities.ts";
 import { Storage } from "../../../storage/server.ts";
@@ -10,7 +12,6 @@ import type { StoredCommand } from "../../../storage/server.ts";
 import { WebhookFake } from "../../../webhook-fake/server.ts";
 import { cookoutServer } from "../../../cli/server.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
-import { identityFixture } from "./identities.ts";
 import { serverUrl } from "../../../http/server.ts";
 
 export type TestIdentity = {
@@ -32,6 +33,7 @@ export type TestCookoutService = {
   readonly clientFor: (token?: string, options?: Pick<CookoutClientOptions, "leaseId">) => CookoutClient;
   readonly createIdentity: (name: string, options?: CreateTestIdentityOptions) => Effect.Effect<TestIdentity>;
   readonly startSecondServer: Effect.Effect<BootedServer>;
+  readonly startSecondServerAs: (adminName: string) => Effect.Effect<BootedServer, AdminNameIsAgent>;
   readonly restart: Effect.Effect<CookoutClient>;
   readonly seedCommand: (stored: StoredCommand) => Effect.Effect<void>;
   readonly webhook: WebhookFake["Service"];
@@ -46,6 +48,7 @@ export type TestCookoutOptions = {
   readonly secrets?: "test" | "live";
   readonly leaseSeconds?: number;
   readonly publicUrl?: string;
+  readonly adminName?: string;
   readonly webhookTimeoutSeconds?: number;
   readonly requestsPerMinute?: number;
   readonly commandCallsPerMinute?: number;
@@ -116,6 +119,7 @@ interface Booted {
 interface Boot {
   readonly adminToken: Token;
   readonly boot: Effect.Effect<Booted, never, Scope.Scope>;
+  readonly bootAs: (adminName: string | undefined) => Effect.Effect<Booted, AdminNameIsAgent, Scope.Scope>;
 }
 
 function bootOn(options: TestCookoutOptions): Effect.Effect<Boot, never, Scope.Scope> {
@@ -123,14 +127,25 @@ function bootOn(options: TestCookoutOptions): Effect.Effect<Boot, never, Scope.S
     const services = yield* Layer.build(backingServices(options));
     const storage = yield* storageFor(options);
     const adminToken = yield* newToken(services);
-    const server = cookoutServer({ adminToken, host: "127.0.0.1", port: 0, publicUrl: options.publicUrl ?? "" });
-    const layer = server.pipe(Layer.provideMerge(storage), Layer.provideMerge(Layer.succeedContext(services)));
-    const boot = Effect.gen(function* bootServer() {
-      const booted = yield* Layer.build(layer);
-      const url = yield* serverUrl.pipe(Effect.provideContext(booted));
-      return { server: booted, url };
-    }).pipe(Effect.provideService(ConfigProvider.ConfigProvider, serverEnv(options)), Effect.orDie);
-    return { adminToken, boot };
+    const bootAs = (adminName: string | undefined) =>
+      Effect.gen(function* bootServer() {
+        const named = adminName === undefined ? {} : { adminName: identityName(adminName) };
+        const server = cookoutServer({
+          adminToken,
+          host: "127.0.0.1",
+          port: 0,
+          publicUrl: options.publicUrl ?? "",
+          ...named,
+        });
+        const layer = server.pipe(Layer.provideMerge(storage), Layer.provideMerge(Layer.succeedContext(services)));
+        const booted = yield* Layer.build(layer);
+        const url = yield* serverUrl.pipe(Effect.provideContext(booted));
+        return { server: booted, url };
+      }).pipe(
+        Effect.provideService(ConfigProvider.ConfigProvider, serverEnv(options)),
+        Effect.catchTags({ ConfigError: Effect.die, ServeError: Effect.die, StorageUnavailable: Effect.die }),
+      );
+    return { adminToken, boot: Effect.orDie(bootAs(options.adminName)), bootAs };
   });
 }
 
@@ -140,7 +155,7 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
     Effect.gen(function* startTestCookout() {
       yield* startTestClock;
       const scope = yield* Effect.scope;
-      const { adminToken, boot } = yield* bootOn(options);
+      const { adminToken, boot, bootAs } = yield* bootOn(options);
       const firstScope = yield* Scope.fork(scope);
       const serverScope = yield* Ref.make(firstScope);
       const first = yield* Scope.provide(boot, firstScope);
@@ -161,6 +176,7 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
         restart,
         seedCommand: (stored) => onFirst(seedCommand(stored)),
         startSecondServer: Effect.map(Scope.provide(boot, scope), ({ url }) => ({ url })),
+        startSecondServerAs: (adminName) => Effect.map(Scope.provide(bootAs(adminName), scope), ({ url }) => ({ url })),
         url: first.url,
         webhook: Context.get(first.server, WebhookFake),
       });

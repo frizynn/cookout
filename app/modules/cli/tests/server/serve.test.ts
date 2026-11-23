@@ -5,6 +5,7 @@ import {
   freshDatabasePath,
   refusal,
   runCookout,
+  runServe,
   startServe,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
@@ -109,4 +110,42 @@ it.effect("cookout serve refuses a COOKOUT_ADMIN_TOKEN too short to be a token w
     expect(refused.stderr).toContain("at least 32 characters");
     expect(refused.stderr).not.toContain(SHORT_ADMIN_TOKEN);
   }).pipe(Effect.provide(commandLineServices)),
+);
+
+it.effect("cookout serve gives the admin token to COOKOUT_ADMIN_NAME, and to admin when it is empty", () =>
+  Effect.gen(function* adminNameFromSetting() {
+    const named = yield* startServe({ database: yield* freshDatabasePath, env: { COOKOUT_ADMIN_NAME: "matt" } });
+    const empty = yield* startServe({ database: yield* freshDatabasePath, env: { COOKOUT_ADMIN_NAME: "" } });
+    const matt = yield* answer(createCookoutClient({ env: {}, token: named.adminToken, url: named.url }).whoami);
+    const admin = yield* answer(createCookoutClient({ env: {}, token: empty.adminToken, url: empty.url }).whoami);
+
+    expect(matt.identity).toMatchObject({ admin: true, kind: "human", name: "matt" });
+    expect(admin.identity).toMatchObject({ admin: true, kind: "human", name: "admin" });
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
+);
+
+it.effect("cookout serve refuses a COOKOUT_ADMIN_NAME that breaks the identity-name rule", () =>
+  Effect.gen(function* refusesBadAdminName() {
+    const database = yield* freshDatabasePath;
+    const refused = yield* runServe({ database, env: { COOKOUT_ADMIN_NAME: "Not_A_Name" } });
+
+    expect(refused).toMatchObject({ exitCode: EXIT_FAILURE, stdout: "" });
+    expect(refused.stderrJson).toMatchObject({ error: { code: "admin_name_invalid" } });
+    expect(refused.stderr).toContain("COOKOUT_ADMIN_NAME must be an identity name");
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
+);
+
+it.effect("cookout serve refuses a COOKOUT_ADMIN_NAME that names an agent, naming the clash", () =>
+  Effect.gen(function* refusesAgentAdminName() {
+    const database = yield* freshDatabasePath;
+    const first = yield* startServe({ database });
+    const admin = createCookoutClient({ env: {}, token: first.adminToken, url: first.url });
+    yield* answer(() => admin.createIdentity({ kind: "agent", name: "release-bot", owner: "matt" }));
+    yield* first.stop;
+    const refused = yield* runServe({ database, env: { COOKOUT_ADMIN_NAME: "release-bot" } });
+
+    expect(refused).toMatchObject({ exitCode: EXIT_FAILURE, stdout: "" });
+    expect(refused.stderrJson).toMatchObject({ error: { code: "admin_name_agent" } });
+    expect(refused.stderr).toContain("release-bot, an agent");
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );

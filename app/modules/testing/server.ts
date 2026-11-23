@@ -32,6 +32,7 @@ export {
   type ServeProcess,
   type ServeOptions,
   startDev,
+  runServe,
   startServe,
   type Watched,
   watchCookout,
