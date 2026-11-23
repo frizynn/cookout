@@ -8,7 +8,7 @@ The only package meant for npm is the root `@ai-hero/cookout`, at version 0.0.0.
 
 ## Decision
 
-- [Changesets](https://changesets.dev) owns the version and CHANGELOG.md of `@ai-hero/cookout`. `.changeset/config.json` ignores the two private packages and turns off `privatePackages` versioning and tagging, so they are never bumped or published. `access` is `public`, since a scoped package is restricted by default. The base branch is `main`.
+- [Changesets](https://changesets.dev) owns the version and CHANGELOG.md of `@ai-hero/cookout`. `.changeset/config.json` ignores the two private packages and turns off `privatePackages` versioning and tagging, so they are never bumped or published. `access` is `public`, since a scoped package is restricted by default. The base branch is `main`. `pnpm-workspace.yaml` lists the root (`.`), since Changesets only versions workspace packages and otherwise reports `@ai-hero/cookout` as "not in the workspace".
 - `pnpm changeset` adds a changeset, `pnpm run version` runs `changeset version`, and `pnpm release` builds and runs `changeset publish`. No ticket runs `release`, `changeset publish` or `npm publish`, locally or in CI.
 - `.github/workflows/release.yml` runs `changesets/action` on push to `main`. It opens or updates the "Version Packages" pull request. Its publish step is there but guarded by `if: false`, and the workflow has no `NPM_TOKEN`. Switching publishing on is one deliberate change of Matt's: drop the guard, add the `NPM_TOKEN` secret and `id-token: write`, and pass `publish: pnpm release` to the action.
 - Tickets do not add changesets during the v1 build. The first release gets one hand-written changeset when Matt decides its version.
