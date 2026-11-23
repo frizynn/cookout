@@ -67,8 +67,9 @@ it("the channel list counts a channel's mentions apart from its other unread mes
   await postAs(poster, channel, "Deploy at noon?");
   await postAs(poster, channel, "Or at one?");
   await postAs(poster, channel, "@web-unread-counts-reader can you check?");
+  await postAs(poster, channel, "@web-unread-counts-reader and the rollback?");
 
-  await shownCounts(channel, ["2 unread", "1 mention"]);
+  await shownCounts(channel, ["2 unread", "2 mentions"]);
 
   await close();
 });
