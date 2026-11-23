@@ -5,8 +5,8 @@
  * `0.0.0.0`) and `PORT` (default 8787), and serves until stopped.
  */
 import { Config, Console, Effect, Layer } from "effect";
+import { handlerServer, handlerUrl } from "./modules/handler/server.ts";
 import { NodeRuntime } from "@effect/platform-node";
-import { handlerServer } from "./modules/handler/server.ts";
 
 const DEFAULT_PORT = 8787;
 
@@ -18,12 +18,12 @@ const options = Config.all({
 
 const program = Effect.gen(function* serve() {
   const read = yield* options;
-  return yield* Layer.launch(
-    handlerServer({
-      ...read,
-      onCall: (call) => Console.log(`call ${call.callId} of ${call.command} on thread ${String(call.threadId)}`),
-    }),
-  );
+  const server = handlerServer({
+    ...read,
+    onCall: (call) => Console.log(`call ${call.callId} of ${call.command} on thread ${String(call.threadId)}`),
+  });
+  const listening = Effect.flatMap(handlerUrl, (url) => Console.log(`handler listening on ${url}`));
+  return yield* Layer.launch(Layer.effectDiscard(listening).pipe(Layer.provideMerge(server)));
 });
 
 NodeRuntime.runMain(program);

@@ -25,10 +25,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 const expected = createHmac("sha256", secret).update(rawBody).digest();
 const header = request.headers["cookout-signature"];
-const signed =
-  typeof header === "string" &&
-  /^[0-9a-f]{64}$/u.test(header) &&
-  timingSafeEqual(Buffer.from(header, "hex"), expected);
+const signed = typeof header === "string" && /^[0-9a-f]{64}$/u.test(header) && timingSafeEqual(Buffer.from(header, "hex"), expected);
 ```
 
 The cookout retries a call that gets no `2xx` with the same `callId`, so drop a `callId` you have already handled.

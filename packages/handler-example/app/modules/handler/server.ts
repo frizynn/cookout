@@ -89,7 +89,6 @@ function answer(options: HandlerOptions): Answer {
   });
 }
 
-export type { CommandCall } from "./lib/server/call.ts";
 export type { HandlerOptions };
 
 /**

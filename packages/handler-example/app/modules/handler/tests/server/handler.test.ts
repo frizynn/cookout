@@ -3,11 +3,10 @@ import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { Mac, SecureRandom } from "effect/crypto";
 import { expect, it } from "@effect/vitest";
 import { handlerServer, handlerUrl } from "../../server.ts";
-import type { CommandCall } from "../../server.ts";
 import { Hex } from "effect/encoding";
 
 interface Answer {
-  readonly calls: readonly CommandCall[];
+  readonly calls: readonly unknown[];
   readonly status: number;
 }
 
@@ -36,7 +35,7 @@ function signatureOf(body: string, secret: string): Effect.Effect<string> {
 
 function deliver(body: string, headers: Readonly<Record<string, string>>): Effect.Effect<Answer> {
   return Effect.gen(function* deliverWebhook() {
-    const received = yield* Ref.make<readonly CommandCall[]>([]);
+    const received = yield* Ref.make<readonly unknown[]>([]);
     const server = handlerServer({
       host: "127.0.0.1",
       onCall: (accepted) => Ref.update(received, (before) => [...before, accepted]),
