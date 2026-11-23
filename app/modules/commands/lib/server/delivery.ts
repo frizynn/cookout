@@ -50,6 +50,8 @@ interface Settled {
 
 type DeliveryNeeds = Secrets | Storage | FailureReplyNeeds | HttpClient.HttpClient;
 
+type Attempted = "delivered" | "failed" | "gone";
+
 const SIGNATURE_HEADER = "cookout-signature";
 const RETRIES = 5;
 const NONE = 0;
@@ -96,7 +98,15 @@ function currentSecret(
   });
 }
 
-function attempt(
+function threadExists(call: Call): Effect.Effect<boolean, never, Storage> {
+  return Effect.gen(function* findThread() {
+    const storage = yield* Storage;
+    const thread = yield* storage.getThread(call.threadId);
+    return typeof thread === "object";
+  }).pipe(Effect.orElseSucceed(() => true));
+}
+
+function send(
   { call, token, progress: { callId } }: Delivery,
   timeoutSeconds: number,
 ): Effect.Effect<boolean, never, Secrets | Storage | HttpClient.HttpClient> {
@@ -122,6 +132,40 @@ function attempt(
   );
 }
 
+function outcomeOf(succeeded: boolean): Attempted {
+  if (succeeded) {
+    return "delivered";
+  }
+  return "failed";
+}
+
+function attempt(delivery: Delivery, timeoutSeconds: number): Effect.Effect<Attempted, never, DeliveryNeeds> {
+  return Effect.flatMap(threadExists(delivery.call), (exists): Effect.Effect<Attempted, never, DeliveryNeeds> => {
+    if (!exists) {
+      return Effect.succeed("gone");
+    }
+    return Effect.map(send(delivery, timeoutSeconds), outcomeOf);
+  });
+}
+
+type Settle = (outcome: DeliveryOutcome, extra: number) => Effect.Effect<void, never, Storage>;
+
+interface Finishing {
+  readonly attempted: Attempted;
+  readonly call: Call;
+  readonly settle: Settle;
+}
+
+function finish({ attempted, call, settle }: Finishing): Effect.Effect<void, never, DeliveryNeeds> {
+  if (attempted === "gone") {
+    return Effect.void;
+  }
+  if (attempted === "delivered") {
+    return settle("delivered", ONE);
+  }
+  return Effect.andThen(failureReply({ call, retries: RETRIES }), settle("failed", NONE));
+}
+
 function sendDelivery(backoff: Backoff, delivery: Delivery): Effect.Effect<void, never, DeliveryNeeds> {
   const { call, progress } = delivery;
   const { attempts, callId } = progress;
@@ -139,15 +183,11 @@ function sendDelivery(backoff: Backoff, delivery: Delivery): Effect.Effect<void,
     );
     const schedule = Schedule.exponential(Duration.seconds(delaySecondsAfter(backoff, attempts + ONE)), backoff.factor);
     yield* untilDue(progress.nextAttemptAt);
-    const delivered = yield* attempt(delivery, backoff.timeoutSeconds).pipe(
-      Effect.tap((succeeded) => Effect.when(countFailure, Effect.succeed(!succeeded))),
-      Effect.repeat({ schedule, times: Math.max(RETRIES - attempts, NONE), until: (succeeded) => succeeded }),
+    const attempted = yield* attempt(delivery, backoff.timeoutSeconds).pipe(
+      Effect.tap((outcome) => Effect.when(countFailure, Effect.succeed(outcome === "failed"))),
+      Effect.repeat({ schedule, times: Math.max(RETRIES - attempts, NONE), until: (outcome) => outcome !== "failed" }),
     );
-    if (delivered) {
-      return yield* settle("delivered", ONE);
-    }
-    yield* failureReply({ call, retries: RETRIES });
-    return yield* settle("failed", NONE);
+    yield* finish({ attempted, call, settle });
   });
 }
 

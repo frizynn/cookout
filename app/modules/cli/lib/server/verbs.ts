@@ -90,9 +90,17 @@ const channelGetCommand = Command.make("get", { name: Argument.String("name") },
   answer((client) => client.getChannel(name)),
 ).pipe(Command.withDescription("Show one channel."));
 
+const channelDeleteCommand = Command.make("delete", { name: Argument.String("name") }, ({ name }) =>
+  answer((client) => client.deleteChannel(name)),
+).pipe(
+  Command.withDescription(
+    "Delete a channel and everything in it (admin only). Its name can be created again, as a new, empty channel.",
+  ),
+);
+
 const channelCommand = Command.make("channel").pipe(
-  Command.withDescription("Create, list and get channels."),
-  Command.withSubcommands([channelCreateCommand, channelListCommand, channelGetCommand]),
+  Command.withDescription("Create, list, get and delete channels."),
+  Command.withSubcommands([channelCreateCommand, channelListCommand, channelGetCommand, channelDeleteCommand]),
 );
 
 interface PostFlags {

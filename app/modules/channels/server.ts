@@ -1,12 +1,13 @@
 /**
  * Channels on the backend: the `Channels` service over `Storage`, and the
- * routes that create, list and get channels. Any identity can create a
- * channel; the routes sit behind the server's token gate.
+ * routes that create, list, get and delete channels. Any identity can create a
+ * channel; only an admin can delete one. The routes sit behind the server's token gate.
  */
 import { ChannelResponseSchema, CreateChannelRequestSchema, ListChannelsResponseSchema } from "./lib/server/wire.ts";
 import { Context, DateTime, Effect, Layer } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { channelPath, channelsPath, isChannelName } from "./index.ts";
+import type { Caller } from "../identities/server.ts";
 import type { Channel } from "./index.ts";
 import type { IsoTime } from "../time/index.ts";
 import type { Refusal } from "../http/index.ts";
@@ -15,6 +16,7 @@ import { Storage } from "../storage/server.ts";
 import type { StorageUnavailable } from "../storage/server.ts";
 import { echoed } from "../http/index.ts";
 import { isoTimeOf } from "../time/server.ts";
+import { requireAdmin } from "../identities/server.ts";
 
 type NewChannel = typeof CreateChannelRequestSchema.Type;
 
@@ -61,6 +63,17 @@ function channelsOn(storage: Storage["Service"]): ChannelsService {
         return yield* Effect.fail(missingChannel(name));
       }),
     list: Effect.suspend(() => storage.listChannels()),
+    remove: (name) =>
+      Effect.gen(function* deleteChannel() {
+        if (!isChannelName(name)) {
+          return yield* Effect.fail(missingChannel(name));
+        }
+        const deleted = yield* storage.deleteChannel(name);
+        if (typeof deleted === "object") {
+          return deleted;
+        }
+        return yield* Effect.fail(missingChannel(name));
+      }),
   };
 }
 
@@ -77,6 +90,12 @@ export interface ChannelsService {
   readonly list: Effect.Effect<readonly Channel[], StorageUnavailable>;
   /** The channel named `name`. Refuses with 404 `channel_not_found` when there is none. */
   readonly get: (name: string) => Effect.Effect<Channel, Refusal | StorageUnavailable>;
+  /**
+   * Deletes the channel named `name` and everything in it: its messages and threads, their mentions, follows,
+   * subscriptions, read positions, command calls and pending deliveries. Refuses with 404 `channel_not_found`
+   * when there is none. Answers the deleted channel.
+   */
+  readonly remove: (name: string) => Effect.Effect<Channel, Refusal | StorageUnavailable>;
 }
 
 export class Channels extends Context.Service<Channels, ChannelsService>()(
@@ -93,10 +112,11 @@ export const channelsLayer: Layer.Layer<Channels, never, Storage> = Layer.effect
 );
 
 /**
- * The channel routes, for the server's route list. They need `Channels`, which `channelsLayer` provides.
+ * The channel routes, for the server's route list. They need `Channels`, which `channelsLayer` provides, and
+ * `Caller`, which the token gate provides.
  * @internal
  */
-export const channelRoutes: readonly Route<Channels>[] = [
+export const channelRoutes: readonly Route<Caller | Channels>[] = [
   {
     handle: () =>
       Effect.gen(function* createChannelRoute() {
@@ -126,6 +146,17 @@ export const channelRoutes: readonly Route<Channels>[] = [
         return yield* HttpServerResponse.schemaJson(ChannelResponseSchema)({ channel });
       }),
     method: "GET",
+    path: channelPath,
+  },
+  {
+    handle: (params) =>
+      Effect.gen(function* deleteChannelRoute() {
+        yield* requireAdmin;
+        const channels = yield* Channels;
+        const channel = yield* channels.remove(params["name"] ?? "");
+        return yield* HttpServerResponse.schemaJson(ChannelResponseSchema)({ channel });
+      }),
+    method: "DELETE",
     path: channelPath,
   },
 ];

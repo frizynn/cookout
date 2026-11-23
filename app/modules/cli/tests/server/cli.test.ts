@@ -41,6 +41,7 @@ const verbs: readonly (readonly string[])[] = [
   ["message", "list", "grill"],
   ["identity", "create", "loner", "--kind", "human"],
   ["channel", "create", "plain"],
+  ["channel", "delete", "plain"],
 ];
 
 it.effect("every verb passes its arguments and flags to the server and prints the answer as JSON", () =>
@@ -67,6 +68,7 @@ it.effect("every verb passes its arguments and flags to the server and prints th
       { ...succeeded, stdoutJson: { channels: [{ name: "grill" }] } },
       { ...succeeded, stdoutJson: { messages: [{ id: 1 }] } },
       { ...succeeded, stdoutJson: { identity: { kind: "human", name: "loner" } } },
+      { ...succeeded, stdoutJson: { channel: { name: "plain" } } },
       { ...succeeded, stdoutJson: { channel: { name: "plain" } } },
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
