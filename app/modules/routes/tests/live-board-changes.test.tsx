@@ -1,8 +1,9 @@
-import type { CookoutClient, EventStream } from "../../sdk/index.ts";
+import type { CookoutClient, CookoutEvent, EventStream } from "../../sdk/index.ts";
+import { addCommand, suggestedFor } from "./commands.ts";
 import { adminClient, clientWith, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
-import { fireEvent, screen, within } from "@testing-library/react";
-import { addCommand } from "./commands.ts";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import type { Live } from "../../live/index.ts";
 import { inSidebar } from "./regions.ts";
 import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";
@@ -24,6 +25,47 @@ async function openChannelLive(client: CookoutClient, channel: string): Promise<
   return close;
 }
 
+interface HeldOpen {
+  readonly deletionHeard: Promise<boolean>;
+  readonly events: EventStream;
+  readonly release: () => void;
+}
+
+async function heard(live: Live, type: CookoutEvent["type"]): Promise<boolean> {
+  const { promise, resolve } = Promise.withResolvers<boolean>();
+  live.subscribe((event) => {
+    if (event.type === type) {
+      resolve(true);
+    }
+  });
+  const sent = await promise;
+  return sent;
+}
+
+async function openWithListHeld(channel: string): Promise<HeldOpen> {
+  const client = adminClient();
+  await client.createChannel({ name: channel });
+  const gate = Promise.withResolvers<boolean>();
+  const held: CookoutClient = {
+    ...client,
+    listChannels: async () => {
+      await gate.promise;
+      const listed = await client.listChannels();
+      return listed;
+    },
+  };
+  const { live, stream } = watched(held);
+  const deletionHeard = heard(live, "channel-deleted");
+  openAt({ client: held, hash: "#/inbox", live });
+  return {
+    deletionHeard,
+    events: await stream,
+    release: () => {
+      gate.resolve(true);
+    },
+  };
+}
+
 async function agentCard(name: string): Promise<HTMLElement> {
   const card = await screen.findByRole("group", { name: `@${name}` });
   return card;
@@ -38,14 +80,19 @@ async function ownerWithAgent(prefix: string): Promise<CookoutClient> {
 it("a command registered elsewhere shows in the / suggestions without a reload", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
+  await addCommand({ description: "Builds it", name: "web-live-command-build" });
   const close = await openChannelLive(adminClient(), "web-live-command");
-  await addCommand({ description: "Ships it", name: "web-live-command-ship" });
-  fireEvent.change(screen.getByLabelText("Message"), { target: { value: "/web-live-command-sh" } });
 
-  await expect(screen.findByRole("list", { name: "Command suggestions" })).resolves.toHaveProperty(
-    "textContent",
-    expect.stringContaining("/web-live-command-ship"),
-  );
+  await expect(suggestedFor("/web-live-command")).resolves.toStrictEqual(["/web-live-command-buildBuilds it"]);
+
+  await addCommand({ description: "Ships it", name: "web-live-command-ship" });
+
+  await waitFor(async () => {
+    await expect(suggestedFor("/web-live-command")).resolves.toStrictEqual([
+      "/web-live-command-buildBuilds it",
+      "/web-live-command-shipShips it",
+    ]);
+  });
 
   await close();
 });
@@ -54,7 +101,7 @@ it("an agent's join and leave elsewhere show in Settings without a reload", { ti
   expect.hasAssertions();
 
   const human = await ownerWithAgent("web-live-session");
-  const close = await openLive(human, "#/settings/agents");
+  const close = await openLive(human, "#/settings/agents?profile=web-live-session-bot");
   const card = await agentCard("web-live-session-bot");
   await within(card).findByText("No live session");
   const { agentSessionToken } = await human.join({ as: "web-live-session-bot", host: "laptop" });
@@ -101,4 +148,40 @@ it("a channel deleted elsewhere leaves the sidebar, and its open view goes to th
   expect(screen.queryByRole("status")).toBeNull();
 
   await close();
+});
+
+it("a channel deleted elsewhere leaves the sidebar of a page open on another, with no notice", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await adminClient().createChannel({ name: "web-live-gone" });
+  const close = await openChannelLive(adminClient(), "web-live-stays");
+  await inSidebar().findByRole("link", { name: /^#web-live-gone/u });
+  await adminClient().deleteChannel("web-live-gone");
+
+  await waitFor(() => {
+    expect([inSidebar().queryByRole("link", { name: /^#web-live-gone/u }), screen.queryByRole("status")]).toStrictEqual(
+      [null, null],
+    );
+  });
+
+  await close();
+});
+
+it("channels created and deleted while the list still loads leave it as the server has it", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const opened = await openWithListHeld("web-live-early-gone");
+  await adminClient().createChannel({ name: "web-live-early-new" });
+  await adminClient().deleteChannel("web-live-early-gone");
+  await opened.deletionHeard;
+  opened.release();
+
+  await expect(inSidebar().findByRole("link", { name: /^#web-live-early-new/u })).resolves.toBeInstanceOf(HTMLElement);
+  expect(inSidebar().queryByRole("link", { name: /^#web-live-early-gone/u })).toBeNull();
+
+  await opened.events.close();
 });
