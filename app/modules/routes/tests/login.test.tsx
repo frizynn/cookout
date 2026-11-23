@@ -30,6 +30,22 @@ it("with no session, every route shows the login form and no refusal", { timeout
   close();
 });
 
+it("a login started before the app is drawn still lands on the channel list", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  await adminClient().createChannel({ name: "web-login-early" });
+  const human = await newIdentity({ kind: "human", name: "web-login-early-human" });
+  const session = sessionOf(anonymousClient());
+  session.logIn(human.token);
+  const close = openAt({ client: human.client, hash: "#/", session });
+
+  const link = await screen.findByRole("link", { name: "#web-login-early" });
+
+  expect(link.getAttribute("href")).toBe("#/channels/web-login-early");
+
+  close();
+});
+
 it("logging in with a human token shows the channel list", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 

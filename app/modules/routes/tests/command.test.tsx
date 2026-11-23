@@ -2,6 +2,7 @@ import { adminClient, clientWith, newIdentity, openAt } from "./app.tsx";
 import { expect, it } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
+import { createCookoutClient } from "../../sdk/index.ts";
 
 const schema = { properties: { branch: { type: "string" } }, required: ["branch"], type: "object" };
 const nowhere = "http://127.0.0.1:9/command";
@@ -151,6 +152,27 @@ it("a refused call says so and keeps the channel shown", { timeout: 5000 }, asyn
 
   expect([alert.textContent, screen.queryByRole("list", { name: "Schema errors" })]).toStrictEqual([
     expect.stringMatching(/^Couldn't call \/web-call-refused \(token_revoked\)/u),
+    null,
+  ]);
+
+  close();
+});
+
+it("a call to a server that can't be reached says so, with no schema errors", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  await channelWithCommand("web-command-unreachable", "web-call-unreachable");
+  const nowhereClient = createCookoutClient({ env: {}, token: "cookout_any", url: "http://127.0.0.1:1" });
+  const close = openAt({
+    client: { ...adminClient(), callCommand: nowhereClient.callCommand },
+    hash: "#/channels/web-command-unreachable",
+  });
+
+  await callFromTheForm("web-call-unreachable", '{"branch":"main"}');
+  const alert = await screen.findByRole("alert");
+
+  expect([alert.textContent, screen.queryByRole("list", { name: "Schema errors" })]).toStrictEqual([
+    expect.stringMatching(/^Couldn't call \/web-call-unreachable \(unreachable\)/u),
     null,
   ]);
 
