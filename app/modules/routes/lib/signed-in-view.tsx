@@ -21,7 +21,7 @@ export function SignedInView(props: SignedInViewProps): ReactNode {
     return <InboxView unread={unread} />;
   }
   if (route.name === "channel") {
-    return <ChannelView board={board} channel={route.channel} key={route.channel} />;
+    return <ChannelView board={board} channel={route.channel} composer={composer} key={route.channel} />;
   }
   if (route.name === "thread") {
     return (

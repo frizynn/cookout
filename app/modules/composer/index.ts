@@ -1,10 +1,10 @@
 /**
- * The `composer` store: what is written in each thread's reply box, and the
- * identities it suggests for an `@` mention. It loads every identity, human
- * and agent, once, when the first reader of any draft subscribes.
- * `draft(thread)` is one reply box's draft, an external store read with
- * `useSyncExternalStore`, the same store each time for one thread, so a draft
- * is still there on coming back to its thread. `edit` takes the box's text
+ * The `composer` store: what is written in each message box (a thread's
+ * reply box or a channel's message box), and the identities it suggests for
+ * an `@` mention. It loads every identity, human and agent, once, when the
+ * first reader of any draft subscribes. `draft(key)` is one box's draft, an
+ * external store read with `useSyncExternalStore`, the same store each time
+ * for one key, so a draft is still there on coming back to its box. `edit` takes the box's text
  * and caret: when the caret sits just after `@` and the start of a name, as
  * `mentionPattern` reads a mention, the suggestions are the identities whose
  * names start with it. `choose` swaps that `@` and prefix for the whole
@@ -98,7 +98,7 @@ function createDraft(directory: Directory): Draft {
   };
 }
 
-/** One reply box's draft. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
+/** One message box's draft. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
 export interface Draft {
   /** Calls `listener` after every change, until the returned function is called. */
   readonly subscribe: (listener: () => void) => () => void;
@@ -108,14 +108,14 @@ export interface Draft {
   readonly edit: (text: string, caret: number) => void;
   /** Puts `@name ` in place of the mention being typed. */
   readonly choose: (name: string) => void;
-  /** Empties the box, as after sending a reply. */
+  /** Empties the box, as after sending its message. */
   readonly clear: () => void;
 }
 
-/** The composer store: a draft for each thread. */
+/** The composer store: a draft for each message box. */
 export interface Composer {
-  /** The draft for the thread with this key: the same store each time for one key. */
-  readonly draft: (thread: string) => Draft;
+  /** The draft for the box with this key (a channel's name, or `channel/id` for a thread): the same store each time for one key. */
+  readonly draft: (key: string) => Draft;
 }
 
 /** What the composer store needs of the SDK. */
@@ -155,9 +155,9 @@ export function createComposer(options: ComposerOptions): Composer {
     },
   };
   return {
-    draft: (thread) => {
-      const draft = drafts.get(thread) ?? createDraft(directory);
-      drafts.set(thread, draft);
+    draft: (key) => {
+      const draft = drafts.get(key) ?? createDraft(directory);
+      drafts.set(key, draft);
       return draft;
     },
   };
