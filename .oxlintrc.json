@@ -19,6 +19,7 @@
     "./lint/local.js",
     "./lint/test-rules.js",
     "./lint/web-rules.js",
+    "./lint/export-rules.js",
     {
       "name": "react-hooks-js",
       "specifier": "eslint-plugin-react-hooks"
@@ -73,6 +74,7 @@
     "local/no-overloads": "error",
     "local/sort-imports": "error",
     "web-rules/page-title-owner": "error",
+    "export-rules/no-internal-tag": "error",
     "sort-imports": "off",
     "typescript/ban-ts-comment": "error",
     "typescript/no-explicit-any": "error",
@@ -966,6 +968,8 @@
         "packages/handler-example/app/modules/handler/server.ts",
         "app/modules/dev/server.ts",
         "app/modules/dev/lib/server/**",
+        "app/modules/http/server.ts",
+        "app/modules/limits/server.ts",
         "packages/e2e/app/modules/**"
       ],
       "rules": {
@@ -2046,6 +2050,7 @@
         "scripts/web-test-environment.ts",
         "lint/test-rules.js",
         "lint/web-rules.js",
+        "lint/export-rules.js",
         "packages/e2e/vitest.config.ts",
         "packages/e2e/playwright.config.ts",
         "packages/e2e/.dependency-cruiser.mjs"

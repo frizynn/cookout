@@ -167,7 +167,6 @@ export {
 /**
  * The inbox routes, for the server's route list. They need `Caller`, which the token gate provides, `Inbox`, which
  * `inboxLayer` provides.
- * @internal
  */
 export const inboxRoutes: readonly Route<Needs>[] = [
   inboxRoute,
