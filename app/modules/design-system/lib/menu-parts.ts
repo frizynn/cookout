@@ -13,7 +13,7 @@ type MenuChoice =
   | { readonly label: string; readonly href: null; readonly onSelect: () => void };
 
 interface HoverActionsParts extends MessageActionParts {
-  readonly choices: readonly MenuChoice[] | null;
+  readonly choices: readonly MenuChoice[];
 }
 
 export type { HoverActionsParts, MenuChoice, MessageActionParts, MessageMenuParts };

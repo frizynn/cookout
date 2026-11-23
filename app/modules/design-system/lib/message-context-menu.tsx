@@ -4,20 +4,16 @@ import type { MenuChoice } from "./menu-parts.ts";
 import type { ReactNode } from "react";
 
 interface MessageContextMenuParts {
-  readonly choices: readonly MenuChoice[] | null;
+  readonly choices: readonly MenuChoice[];
   readonly children: ReactNode;
 }
 
 export function MessageContextMenu(parts: MessageContextMenuParts): ReactNode {
-  const { choices } = parts;
-  if (choices === null) {
-    return parts.children;
-  }
   return (
     <Root>
       <Trigger asChild>{parts.children}</Trigger>
       <Portal>
-        <ContextMenuContent choices={choices} />
+        <ContextMenuContent choices={parts.choices} />
       </Portal>
     </Root>
   );

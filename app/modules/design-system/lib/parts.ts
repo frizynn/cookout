@@ -200,11 +200,11 @@ interface MessageLayoutParts extends Parts {
   readonly actionHref: string | null;
   readonly actionLabel: string;
   readonly onAction: (() => void) | null;
-  readonly choices: readonly MenuChoice[] | null;
+  readonly choices: readonly MenuChoice[];
 }
 
 interface MessageItemParts extends Omit<MessageLayoutParts, "choices"> {
-  readonly menu: MessageMenuParts | null;
+  readonly menu: MessageMenuParts;
   readonly mark: "for-you" | "open" | "none";
   readonly day: string | null;
   readonly unreadLine: boolean;

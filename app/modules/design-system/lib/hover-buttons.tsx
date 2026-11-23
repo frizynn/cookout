@@ -9,7 +9,7 @@ export function HoverButtons(parts: HoverActionsParts): ReactNode {
   return (
     <div className="invisible absolute top-1 right-4 flex gap-1 group-focus-within:visible group-hover:visible">
       <MessageAction actionHref={actionHref} actionLabel={parts.actionLabel} onAction={handleAction} />
-      {choices !== null && <MoreActions choices={choices} />}
+      <MoreActions choices={choices} />
     </div>
   );
 }

@@ -4,32 +4,24 @@ import { useMemo } from "react";
 const TEXT = { markUnread: "Mark unread" } as const;
 
 interface ChoicesOf extends MessageActionParts {
-  readonly menu: MessageMenuParts | null;
+  readonly menu: MessageMenuParts;
 }
 
 function actionOf(parts: MessageActionParts): readonly MenuChoice[] {
   if (parts.actionHref !== null) {
     return [{ href: parts.actionHref, label: parts.actionLabel, onSelect: null }];
   }
-  if (parts.onAction !== null) {
-    return [{ href: null, label: parts.actionLabel, onSelect: parts.onAction }];
-  }
-  return [];
+  return [parts.onAction]
+    .filter((action) => action !== null)
+    .map((action) => ({ href: null, label: parts.actionLabel, onSelect: action }));
 }
 
-export function useMessageChoices({
-  actionHref,
-  actionLabel,
-  menu,
-  onAction,
-}: ChoicesOf): readonly MenuChoice[] | null {
-  return useMemo(() => {
-    if (menu === null) {
-      return null;
-    }
-    return [
+export function useMessageChoices({ actionHref, actionLabel, menu, onAction }: ChoicesOf): readonly MenuChoice[] {
+  return useMemo(
+    () => [
       ...actionOf({ actionHref, actionLabel, onAction }),
       { href: null, label: TEXT.markUnread, onSelect: menu.onMarkUnread },
-    ];
-  }, [actionHref, actionLabel, menu, onAction]);
+    ],
+    [actionHref, actionLabel, menu, onAction],
+  );
 }
