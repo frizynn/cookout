@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import type { SpawnSyncReturns } from "node:child_process";
+import { adrEdits } from "./lib/adr-append-only.ts";
 import { duplicateNumbers } from "./lib/adr-numbers.ts";
 import { spawnSync } from "node:child_process";
 
@@ -82,6 +83,46 @@ function adrNumbers(): readonly string[] {
   return duplicateNumbers(git(["ls-files", "docs/adr"]));
 }
 
+const BASE_FLAG = "--base=";
+
+function givenBase(): string {
+  const flag = process.argv.find((arg) => arg.startsWith(BASE_FLAG)) ?? BASE_FLAG;
+  return flag.slice(BASE_FLAG.length);
+}
+
+function adrBase(): string {
+  const given = givenBase();
+  if (given !== "") {
+    return given;
+  }
+  const [mergeBase = ""] = git(["merge-base", "HEAD", "origin/v1"]);
+  const [head = ""] = git(["rev-parse", "HEAD"]);
+  if (mergeBase === head) {
+    return "HEAD~";
+  }
+  return mergeBase;
+}
+
+const ADRS = "docs/adr/*.md";
+
+function originalLines(file: string): readonly string[] {
+  const [added = ""] = git(["log", "--reverse", "--diff-filter=A", "--format=%H", "--", file]);
+  if (added === "") {
+    return [];
+  }
+  return git(["show", `${added}:${file}`]);
+}
+
+function appendOnlyAdrs(): readonly string[] {
+  const base = adrBase();
+  const changed = git(["diff", "--name-only", "--no-renames", "--diff-filter=M", base, "--", ADRS]);
+  const diff = git(["diff", "--no-renames", "--unified=0", "--no-color", base, "--", ADRS]);
+  return adrEdits({
+    diff: diff.join("\n"),
+    originals: new Map(changed.map((file) => [file, originalLines(file)])),
+  });
+}
+
 const failures = [
   ...gitlinks(),
   ...workspaceFile(),
@@ -89,6 +130,7 @@ const failures = [
   ...readmeSettings(),
   ...wikiCitations(),
   ...adrNumbers(),
+  ...appendOnlyAdrs(),
 ];
 for (const failure of failures) {
   console.error(`hygiene: ${failure}`);

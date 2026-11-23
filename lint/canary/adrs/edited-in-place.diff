@@ -1,0 +1,7 @@
+diff --git a/docs/adr/0048-message-text-is-markdown-rendered-by-react-markdown.md b/docs/adr/0048-message-text-is-markdown-rendered-by-react-markdown.md
+index 73806291..6a8f3a34 100644
+--- a/docs/adr/0048-message-text-is-markdown-rendered-by-react-markdown.md
++++ b/docs/adr/0048-message-text-is-markdown-rendered-by-react-markdown.md
+@@ -13 +13 @@
+-- Inbox rows keep their plain-text preview through `MentionText`.
++- One-line previews (an Inbox row's text and its thread context) show a plain-text summary (mattpocock/cookout#158).

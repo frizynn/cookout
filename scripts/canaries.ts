@@ -1,8 +1,9 @@
 import { fail, oxlint, tool, unwrap } from "./lib/tools.ts";
 import { field, list, parseJson, text } from "./lib/json.ts";
+import { readFileSync, readdirSync } from "node:fs";
+import { adrEdits } from "./lib/adr-append-only.ts";
 import { canaryResponseSchemas } from "../lint/canary/validators/schemas.ts";
 import { generateValidators } from "./lib/validators.ts";
-import { readdirSync } from "node:fs";
 
 type Canary = { readonly check: string; readonly code: string; readonly file: string };
 
@@ -119,11 +120,22 @@ function validatorsCaught(): ReadonlySet<string> {
   return new Set(requires.map(() => key("require(", VALIDATOR_CANARY)));
 }
 
+const ADR_CANARY = `${ROOT}/adrs/edited-in-place.diff`;
+const ADR_CODE = "append-only";
+
+const adrCanaries: readonly Canary[] = [{ check: "hygiene", code: ADR_CODE, file: ADR_CANARY }];
+
+function adrsCaught(): ReadonlySet<string> {
+  const edits = adrEdits({ diff: readFileSync(ADR_CANARY, "utf8"), originals: new Map() });
+  return new Set(edits.map(() => key(ADR_CODE, ADR_CANARY)));
+}
+
 const escaped = [
   ...missing(lintCanaries, lintCaught()),
   ...missing(tscCanaries, tscCaught()),
   ...missing(seamCanaries, seamsCaught()),
   ...missing(validatorCanaries, validatorsCaught()),
+  ...missing(adrCanaries, adrsCaught()),
 ];
 for (const canary of escaped) {
   console.error(`${SCRIPT}: ${canary.check} did not report ${canary.code} for its planted violation in ${canary.file}`);
