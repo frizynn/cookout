@@ -12,6 +12,10 @@ function moveV1(other: string, marker: string): string {
   return `git -C ${other} commit -q --allow-empty -m moved && git -C ${other} push -q origin HEAD:v1 && touch ${marker}`;
 }
 
+function moveV1Changing(other: string, marker: string, file: string): string {
+  return `echo moved > ${other}/${file} && git -C ${other} add -A && ${moveV1(other, marker)}`;
+}
+
 function reason(merged: Merged): string {
   if (merged.ok) {
     return "merged";
@@ -166,4 +170,58 @@ it("refuses to continue when the branch holds no merge", { timeout: 10_000 }, ()
 
   expect(reason(merged)).toContain(`not on merge-ticket-${TICKET}`);
   expect(git(origin, "rev-parse", "v1")).toBe(before);
+});
+
+it("keeps the merge's own fixes when v1 moves before the push, merging the new v1 into it", {
+  timeout: 10_000,
+}, () => {
+  expect.hasAssertions();
+
+  const { origin, other, root, work } = repos();
+  repo(other).push({ "notes.txt": "v1\n" });
+  repo(work).commit("the ticket", { "notes.txt": "ticket\n" });
+  repo(work).merge({});
+  repo(work).resolveByHand("both\n", { "fix.txt": "fixed\n" });
+  const moved = path.join(root, "moved");
+
+  const merged = repo(work).continueMerge({
+    check: ["sh", "-c", `grep -q fixed fix.txt && { test -f ${moved} || { ${moveV1(other, moved)}; }; }`],
+  });
+
+  expect(merged).toStrictEqual({ attempts: TWO_ATTEMPTS, ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect([
+    git(origin, "show", "v1:notes.txt"),
+    git(origin, "show", "v1:fix.txt"),
+    git(origin, "log", "-1", "--format=%s", "v1"),
+    git(origin, "log", "-1", "--format=%s", "v1^1"),
+    git(origin, "rev-parse", "v1^2"),
+  ]).toStrictEqual([
+    "both",
+    "fixed",
+    `Merge ${BRANCH}: Add the c table (#${TICKET})`,
+    "moved",
+    git(work, "rev-parse", BRANCH),
+  ]);
+});
+
+it("stops when the new v1 conflicts with the merge, then continues onto the new v1", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const { origin, other, root, work } = repos();
+  repo(work).commit("the ticket", { "notes.txt": "ticket\n" });
+  const moved = path.join(root, "moved");
+
+  const stopped = repo(work).merge({
+    check: ["sh", "-c", `test -f ${moved} || { ${moveV1Changing(other, moved, "notes.txt")}; }`],
+  });
+  repo(work).resolveByHand("all\n");
+  const merged = repo(work).continueMerge({});
+
+  expect(filesOf(stopped)).toStrictEqual(["notes.txt"]);
+  expect(merged).toStrictEqual({ attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect([
+    git(origin, "show", "v1:notes.txt"),
+    git(origin, "log", "-1", "--format=%s", "v1^1"),
+    git(origin, "rev-parse", "v1^2"),
+  ]).toStrictEqual(["all", "moved", git(work, "rev-parse", BRANCH)]);
 });
