@@ -232,3 +232,17 @@ it.effect("an open stream moves its agent session token's expiry on", () =>
     expect(me).toMatchObject({ identity: { name: "auth-griller" } });
   }).pipe(Effect.provide(testCookout())),
 );
+
+it.effect("a stream whose agent session token expires between checks ends with agent_session_expired", () =>
+  Effect.gen(function* streamExpires() {
+    const cookout = yield* TestCookout;
+    const { first } = yield* twoSessions(cookout);
+    const session = yield* joined(cookout, first, { ...AS, idleExpiry: "10s" });
+    const events = yield* watching(session);
+    const next = yield* Effect.forkChild(refusal(() => events.next()));
+    yield* TestClock.adjust(Duration.seconds(PAST_A_CHECK));
+    const error = yield* Fiber.join(next);
+
+    expect(error).toMatchObject({ code: "agent_session_expired" });
+  }).pipe(Effect.provide(testCookout())),
+);

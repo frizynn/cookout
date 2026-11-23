@@ -1,7 +1,8 @@
-import { Duration, Option } from "effect";
+import { Duration, String as Str } from "effect";
 import { defaultIdleExpiry } from "../../index.ts";
 
-const IDLE_EXPIRY = /^(?<count>[1-9]\d{0,6})(?<unit>[smhd])$/u;
+const START = 0;
+const UNIT_LENGTH = 1;
 
 function durationIn(unit: string, count: number): Duration.Duration {
   switch (unit) {
@@ -20,14 +21,10 @@ function durationIn(unit: string, count: number): Duration.Duration {
   }
 }
 
-export function idleSecondsOf(text: string): Option.Option<number> {
-  const found = IDLE_EXPIRY.exec(text);
-  if (found === null) {
-    return Option.none();
-  }
-  const [, count = "", unit = ""] = found;
-  const duration = durationIn(unit, Number(count));
-  return Option.some(Duration.toSeconds(duration));
+export function idleSecondsOf(idleExpiry: string): number {
+  const count = Number(Str.slice(START, -UNIT_LENGTH)(idleExpiry));
+  const duration = durationIn(Str.slice(-UNIT_LENGTH)(idleExpiry), count);
+  return Duration.toSeconds(duration);
 }
 
-export const defaultIdleSeconds: number = Option.getOrThrow(idleSecondsOf(defaultIdleExpiry));
+export const defaultIdleSeconds: number = idleSecondsOf(defaultIdleExpiry);

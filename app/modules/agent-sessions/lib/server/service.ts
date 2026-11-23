@@ -65,7 +65,7 @@ function endedRefusal(status: string): Refusal {
 }
 
 function idleSecondsFor({ ceilingSeconds, maxIdle }: On, asked: string): Effect.Effect<number, Refusal> {
-  const idleSeconds = Option.getOrElse(idleSecondsOf(asked), () => defaultIdleSeconds);
+  const idleSeconds = idleSecondsOf(asked);
   if (idleSeconds > ceilingSeconds) {
     return Effect.fail(idleExpiryTooLong(maxIdle));
   }
@@ -131,7 +131,7 @@ const agentSessionsLayer: Layer.Layer<AgentSessions, Config.ConfigError, Storage
     const maxIdle = yield* maxIdleExpiry;
     const storage = yield* Storage;
     const secrets = yield* Secrets;
-    const ceilingSeconds = Option.getOrElse(idleSecondsOf(maxIdle), () => defaultIdleSeconds);
+    const ceilingSeconds = idleSecondsOf(maxIdle);
     return agentSessionsOn({ ceilingSeconds, maxIdle, secrets, storage });
   }),
 );
