@@ -125,7 +125,9 @@ it.effect("cookout watch reconnects when the server goes silent, and picks up fr
     } = yield* watchThroughSilence();
 
     expect(stdoutJson).toMatchObject([{ item: { message: { id: before } } }, { item: { message: { id: unheard } } }]);
-    expect(stderrLines).toContain('{"reconnecting":"Heard nothing from the server for 45 s."}');
+    expect(stderrLines).toContain(
+      '{"reconnecting":"board unavailable (Heard nothing from the server for 45 s.), retrying in 1s"}',
+    );
   }).pipe(Effect.provide(commandLineServices)),
 );
 

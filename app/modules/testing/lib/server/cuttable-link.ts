@@ -18,6 +18,7 @@ interface CuttableLink {
   readonly cut: Effect.Effect<void>;
   readonly stall: Effect.Effect<void>;
   readonly takeDown: Effect.Effect<void>;
+  readonly badGatewayFor: (requests: number) => Effect.Effect<void>;
   readonly relayed: (text: string, times?: number) => Effect.Effect<void>;
 }
 
@@ -29,6 +30,7 @@ interface Signal {
 interface Relay {
   readonly target: string;
   readonly isDown: Effect.Effect<boolean>;
+  readonly takesBadGateway: Effect.Effect<boolean>;
   readonly dropped: Effect.Effect<Effect.Effect<boolean>>;
   readonly stalled: Effect.Effect<Effect.Effect<boolean>>;
   readonly record: (text: string) => Effect.Effect<void>;
@@ -39,6 +41,7 @@ interface Relay {
 
 const LISTEN = { host: "127.0.0.1", port: 0 } as const;
 const ONCE = 1;
+const NONE_LEFT = 0;
 const BAD_GATEWAY = 502;
 const HOP_BY_HOP = ["connection", "content-length", "host", "transfer-encoding"] as const;
 const endToEnd = Headers.removeMany(HOP_BY_HOP);
@@ -77,7 +80,7 @@ function relayed(
 ): Effect.Effect<HttpServerResponse.HttpServerResponse, never, HttpServerRequest.HttpServerRequest> {
   return Effect.gen(function* relayRequest() {
     const { method } = yield* HttpServerRequest.HttpServerRequest;
-    if ((yield* relay.isDown) || !HttpMethod.isHttpMethod(method)) {
+    if ((yield* relay.isDown) || (yield* relay.takesBadGateway) || !HttpMethod.isHttpMethod(method)) {
       return HttpServerResponse.empty({ status: BAD_GATEWAY });
     }
     const dropped = yield* relay.dropped;
@@ -113,6 +116,7 @@ function cuttableLink(target: string): Effect.Effect<CuttableLink, never, Scope.
     const stalls = yield* signal;
     const sent = yield* SubscriptionRef.make("");
     const down = yield* Ref.make(false);
+    const badGatewaysLeft = yield* Ref.make(NONE_LEFT);
     const changes = SubscriptionRef.changes(sent);
     const relay: Relay = {
       dropped: Effect.map(drops.current, Deferred.await),
@@ -120,10 +124,12 @@ function cuttableLink(target: string): Effect.Effect<CuttableLink, never, Scope.
       isDown: Ref.get(down),
       record: (text) => SubscriptionRef.update(sent, Str.concat(text)),
       stalled: Effect.map(stalls.current, Deferred.isDone),
+      takesBadGateway: Ref.modify(badGatewaysLeft, (left) => [left > NONE_LEFT, Math.max(NONE_LEFT, left - ONCE)]),
       target,
     };
     const url = yield* serving(relay);
     return {
+      badGatewayFor: (requests: number) => Ref.set(badGatewaysLeft, requests),
       cut: drops.fire,
       relayed: (text: string, times = ONCE) =>
         changes.pipe(Stream.filter(sentAtLeast(text, times)), Stream.runHead, Effect.asVoid),
