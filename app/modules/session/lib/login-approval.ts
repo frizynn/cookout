@@ -82,11 +82,4 @@ function createLoginApprovals(client: LoginApprovalClient): LoginApprovals {
   };
 }
 
-export {
-  type LoginApproval,
-  type LoginApprovalClient,
-  type LoginApprovalState,
-  type LoginApprovals,
-  type LoginRequest,
-  createLoginApprovals,
-};
+export { type LoginApproval, type LoginApprovalState, type LoginApprovals, type LoginRequest, createLoginApprovals };

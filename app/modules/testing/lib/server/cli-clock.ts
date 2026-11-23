@@ -65,4 +65,4 @@ function runCookoutWhile<During, DuringNeeds>(
   });
 }
 
-export { type RanWhile, type RunWhile, runCookoutWhile };
+export { runCookoutWhile };

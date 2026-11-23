@@ -105,7 +105,6 @@ export function createSession(clients: SessionClients): Session {
 
 export {
   type LoginApproval,
-  type LoginApprovalClient,
   type LoginApprovalState,
   type LoginApprovals,
   type LoginRequest,
