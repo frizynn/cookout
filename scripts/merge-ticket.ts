@@ -1,8 +1,8 @@
 import type { MergeOptions, MergeRules, Merged } from "./lib/merge-ticket.ts";
 import { continueMerge, mergeTicket } from "./lib/merge-ticket.ts";
-import { ciGreen } from "./lib/ci-gate.ts";
 import { fail } from "./lib/tools.ts";
 import { spawnSync } from "node:child_process";
+import { waitForCi } from "./lib/ci-wait.ts";
 
 const SCRIPT = "merge-ticket";
 const ATTEMPTS = 5;
@@ -12,9 +12,6 @@ const ARGUMENT = 2;
 const argument = process.argv.at(ARGUMENT) ?? "";
 const resuming = process.argv.includes("--continue");
 const fixesRedV1 = process.argv.includes("--fixes-red-v1");
-const WAIT_MS = 30_000;
-const WAITS = 40;
-const SLEEP_SLOT = 0;
 
 function pnpm(...args: readonly string[]): readonly string[] {
   return ["pnpm", "run", "--silent", ...args];
@@ -59,10 +56,6 @@ function log(line: string): void {
   console.log(`${SCRIPT}: ${line}`);
 }
 
-function sleep(): void {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT)), SLEEP_SLOT, SLEEP_SLOT, WAIT_MS);
-}
-
 interface Gate {
   readonly advice: string;
   readonly args: readonly string[];
@@ -71,7 +64,7 @@ interface Gate {
 }
 
 function requireGreen({ advice, args, base, subject }: Gate): void {
-  const step = ciGreen({ args, base, cwd: process.cwd(), gh: ["gh"], log, polls: WAITS, sleep, subject });
+  const step = waitForCi({ args, base, log, subject });
   if (step.kind === "stopped") {
     fail(SCRIPT, `${step.reason}\nNothing was merged. ${advice}`);
   }
@@ -115,9 +108,21 @@ const merged: Merged = run({
   title: titleOf(ticket),
 });
 
-if (merged.ok) {
-  console.log(`${SCRIPT}: merged ticket-${ticket} into v1 at ${merged.sha}`);
-  console.log(merged.sha);
-} else {
-  fail(SCRIPT, merged.reason);
+function shaOf(outcome: Merged): string {
+  if (outcome.ok) {
+    return outcome.sha;
+  }
+  return fail(SCRIPT, outcome.reason);
 }
+
+const sha = shaOf(merged);
+log(`merged ticket-${ticket} into v1 at ${sha}; waiting for its v1 Check run.`);
+const watched = waitForCi({ args: ["--branch", "v1", "--commit", sha], base: [], log, subject: "v1's merge" });
+if (watched.kind === "stopped") {
+  fail(
+    SCRIPT,
+    `${watched.reason}\nticket-${ticket} is merged into v1 at ${sha}, but v1 is not green. Fix v1 before anything else merges.`,
+  );
+}
+console.log(`${SCRIPT}: merged ticket-${ticket} into v1 at ${sha}, and its v1 Check run is green.`);
+console.log(sha);

@@ -4,6 +4,8 @@ import { run } from "./merge-steps.ts";
 
 interface Job {
   readonly conclusion: string;
+  readonly failedSteps: readonly string[];
+  readonly jobArg: string;
   readonly name: string;
   readonly status: string;
 }
@@ -27,6 +29,26 @@ interface Gh {
   readonly gh: Command;
 }
 
+const FAILURE = "failure";
+
+function failedStepsOf(value: unknown): readonly string[] {
+  return (list(field(value, "steps")) ?? []).flatMap((step) => {
+    const name = text(field(step, "name"));
+    if (typeof name !== "string" || text(field(step, "conclusion")) !== FAILURE) {
+      return [];
+    }
+    return [name];
+  });
+}
+
+function jobArgOf(value: unknown): string {
+  const databaseId = field(value, "databaseId");
+  if (typeof databaseId !== "number") {
+    return "";
+  }
+  return String(databaseId);
+}
+
 function jobsOf(values: readonly unknown[]): readonly Job[] {
   return values.flatMap((value) => {
     const name = text(field(value, "name"));
@@ -34,7 +56,8 @@ function jobsOf(values: readonly unknown[]): readonly Job[] {
     if (typeof name !== "string" || typeof status !== "string") {
       return [];
     }
-    return [{ conclusion: text(field(value, "conclusion")) ?? "", name, status }];
+    const conclusion = text(field(value, "conclusion")) ?? "";
+    return [{ conclusion, failedSteps: failedStepsOf(value), jobArg: jobArgOf(value), name, status }];
   });
 }
 
