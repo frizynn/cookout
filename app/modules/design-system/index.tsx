@@ -77,7 +77,8 @@
  * thread's parent. In a message, `MessageBody` holds its rendered Markdown text, `Mention` an
  * `@name` in it, `CallChip` a command call
  * and its data, `DataToggle` its data folded away, and `ThreadSummary` a link to
- * its thread: its repliers' avatars, its reply count, how many replies are new (bold, after an accent dot and with why when one is for the reader) and when it was last replied to. `RepliesDivider` heads a thread's replies, `ChannelStart` says a
+ * its thread: its repliers' avatars, its reply count, how many replies are new (bold, after an accent dot and with why when one is for the reader) and when it was last replied to. `ReceiptLine` is a message's quiet line of
+ * read receipts, and `ReceiptName` a name in it, linking to its profile. `RepliesDivider` heads a thread's replies, `ChannelStart` says a
  * channel has nothing older, and `QuietButton` is a muted centred button,
  * such as loading older messages. `TextArea` takes focus when it first appears
  * if `focused`.
@@ -149,6 +150,8 @@ export { LinkList } from "./lib/link-list.tsx";
 export { LinkRow } from "./lib/link-row.tsx";
 export { Mention } from "./lib/mention.tsx";
 export { Muted } from "./lib/muted.tsx";
+export { ReceiptLine } from "./lib/receipt-line.tsx";
+export { ReceiptName } from "./lib/receipt-name.tsx";
 export { Notice } from "./lib/notice.tsx";
 export { HeadingButton } from "./lib/heading-button.tsx";
 export { NavHeading } from "./lib/nav-heading.tsx";

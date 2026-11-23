@@ -1,72 +1,34 @@
-import { Effect, String as Str } from "effect";
-import type { Message, MessageId } from "../../../messages/index.ts";
-import type { Storage, StorageUnavailable } from "../../server.ts";
-import {
-  appendTo,
-  backfillReadReceiptsAgain,
-  channelFixture,
-  fixtureTime,
-  freshDatabasePath,
-  identityFixture,
-  identityName,
-  newMessageFixture,
-  openStore,
-} from "../../../testing/server.ts";
+import { Effect, FileSystem, Path } from "effect";
 import { expect, it } from "@effect/vitest";
-import type { FileSystem } from "effect";
+import { freshDatabasePath, messageId, openStore } from "../../../testing/server.ts";
 import { NodeServices } from "@effect/platform-node";
 import { sqliteStorage } from "../../server.ts";
-import { tokenHash } from "../../../identities/index.ts";
 
-type OnDisk<Value> = Effect.Effect<Value, StorageUnavailable, FileSystem.FileSystem>;
+const BEFORE_READ_RECEIPTS = new URL("fixtures/before-read-receipts.db", import.meta.url);
+const FIRST_MESSAGE = 1;
+const SECOND_MESSAGE = 2;
+const MENTION = messageId(FIRST_MESSAGE);
+const REPLY = messageId(SECOND_MESSAGE);
 
-const HASH_LENGTH = 64;
-const FIRST = 0;
-const SECOND = 1;
-
-interface Posted {
-  readonly mention: Message;
-  readonly reply: Message;
-}
-
-function postMentionAndReply(storage: Storage["Service"]): Effect.Effect<Posted, StorageUnavailable> {
-  return Effect.gen(function* postBoth() {
-    yield* storage.createIdentity(identityFixture("ann", { kind: "human" }), tokenHash(Str.repeat(HASH_LENGTH)("a")));
-    yield* storage.createIdentity(identityFixture("bob", { kind: "human" }), tokenHash(Str.repeat(HASH_LENGTH)("b")));
-    yield* storage.createChannel(channelFixture("grill"));
-    const mention = yield* appendTo(storage)(
-      newMessageFixture("grill", "@bob look", { author: { name: "ann" }, mentions: ["bob"] }),
-    );
-    const reply = yield* appendTo(storage)(
-      newMessageFixture("grill", "an answer", { author: { name: "bob" }, replyTo: mention.id }),
-    );
-    return { mention, reply };
-  });
-}
-
-function ackedBeforeReceipts(path: string): OnDisk<readonly MessageId[]> {
-  return Effect.gen(function* postAckAndForget() {
-    const { close, storage } = yield* openStore(sqliteStorage(path));
-    const { mention, reply } = yield* postMentionAndReply(storage);
-    yield* storage.ackMessage(identityName("bob"), mention.id, fixtureTime);
-    yield* storage.ackMessage(identityName("ann"), reply.id, fixtureTime);
-    yield* close;
-    yield* backfillReadReceiptsAgain(path);
-    return [mention.id, reply.id];
-  });
-}
+const copiedDatabase = Effect.gen(function* copyFixture() {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const fixture = yield* path.fromFileUrl(BEFORE_READ_RECEIPTS);
+  const copy = yield* freshDatabasePath;
+  yield* fs.copyFile(fixture, copy);
+  return copy;
+}).pipe(Effect.orDie);
 
 it.effect("the read receipts backfill marks the messages read positions already passed as seen, with no time", () =>
   Effect.gen(function* backfill() {
-    const path = yield* freshDatabasePath;
-    const ids = yield* ackedBeforeReceipts(path);
+    const path = yield* copiedDatabase;
     const { storage } = yield* openStore(sqliteStorage(path));
 
-    const receipts = yield* storage.listReadReceipts(ids);
+    const receipts = yield* storage.listReadReceipts([MENTION, REPLY]);
 
     expect(receipts).toStrictEqual([
-      { identity: "bob", messageId: ids[FIRST], seen: true },
-      { identity: "ann", messageId: ids[SECOND], seen: true },
+      { identity: "bob", messageId: MENTION, seen: true },
+      { identity: "ann", messageId: REPLY, seen: true },
     ]);
   }).pipe(Effect.provide(NodeServices.layer)),
 );

@@ -75,7 +75,7 @@ it('opening a thread with unread replies shows "New" above the first, and it sta
   expect(withoutDays(await streamOf("Replies"))).toStrictEqual([
     "web-new-line-thread-graceMe first",
     "[New]",
-    "web-new-line-thread-adaNoon works",
+    "web-new-line-thread-adaNoon worksNot seen yet: @web-new-line-thread-grace",
   ]);
 
   close();
@@ -114,7 +114,7 @@ it('in an unsubscribed channel, "New" sits above the first message after the rea
     "web-new-line-position-graceAlready read",
     "[New]",
     "web-new-line-position-adaPlain new",
-    "@web-new-line-position-grace can you take the rollback?",
+    "@web-new-line-position-grace can you take the rollback?Not seen yet: @web-new-line-position-grace",
   ]);
 
   close();
@@ -132,7 +132,7 @@ it("with no read position in a channel, there is no New line", { timeout: 5000 }
 
   expect(withoutDays(await streamOf("Messages"))).toStrictEqual([
     "web-new-line-unread-adaPlain new",
-    "@web-new-line-unread-grace a look?",
+    "@web-new-line-unread-grace a look?Not seen yet: @web-new-line-unread-grace",
   ]);
 
   close();
@@ -149,8 +149,8 @@ it("a message mentioning the logged-in human is highlighted, and other mentions 
   await poster.createMessage({ channel, text: "Or @web-mention-marks-ada will" });
   const close = openAt({ client: reader, hash: `#/channels/${channel}` });
 
-  const other = await screen.findByText("@web-mention-marks-ada");
-  const mine = screen.getByText("@web-mention-marks-grace");
+  const other = await screen.findByText("@web-mention-marks-ada", { ignore: "a" });
+  const mine = screen.getByText("@web-mention-marks-grace", { ignore: "a" });
 
   expect([
     mine.tagName,

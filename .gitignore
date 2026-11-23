@@ -3,6 +3,7 @@ dist/
 coverage/
 *.tsbuildinfo
 *.db
+!app/modules/storage/tests/server/fixtures/*.db
 *.db-shm
 *.db-wal
 .DS_Store
