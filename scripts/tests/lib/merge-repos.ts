@@ -126,9 +126,11 @@ function runMerge(work: string, overrides: Overrides): Merged {
   return mergeTicket(optionsFor(work, overrides));
 }
 
-function resolveByHand(work: string, notes: string): void {
-  writeFileSync(path.join(work, "notes.txt"), notes);
-  git(work, "add", "notes.txt");
+function resolveByHand(work: string, notes: string, fixes: Readonly<Record<string, string>>): void {
+  for (const [file, content] of Object.entries({ ...fixes, "notes.txt": notes })) {
+    writeFileSync(path.join(work, file), content);
+  }
+  git(work, "add", "-A");
   git(work, "commit", "-q", "--no-edit");
 }
 
@@ -141,7 +143,7 @@ interface Repo {
   readonly continueMerge: (overrides: Overrides) => Merged;
   readonly merge: (overrides: Overrides) => Merged;
   readonly push: (files: Readonly<Record<string, string>>) => void;
-  readonly resolveByHand: (notes: string) => void;
+  readonly resolveByHand: (notes: string, fixes?: Readonly<Record<string, string>>) => void;
 }
 
 function repo(dir: string): Repo {
@@ -154,8 +156,8 @@ function repo(dir: string): Repo {
     push: (files): void => {
       pushToV1(dir, files);
     },
-    resolveByHand: (notes): void => {
-      resolveByHand(dir, notes);
+    resolveByHand: (notes, fixes = {}): void => {
+      resolveByHand(dir, notes, fixes);
     },
   };
 }
