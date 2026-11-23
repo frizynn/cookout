@@ -119,10 +119,10 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) sh -c 'curl -sN -
 env $(cat /tmp/cookout-dev.env) node app/main.ts message post general "@triage-agent are you there?"
 ```
 
-The first terminal prints the event as soon as the post returns. Through the SDK, `await client.watch()` resolves once the stream is open; iterate it with `for await`, and `close()` it to drop the connection:
+The first terminal prints the event as soon as the post returns. Through the SDK, `await client.watch()` resolves once the stream is open; iterate it with `for await`, and `await close()` to drop the connection, which ends the iteration:
 
 ```sh
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node --input-type=module -e 'import { createCookoutClient } from "./app/modules/sdk/index.ts"; const events = await createCookoutClient().watch(); for await (const event of events) { console.log(JSON.stringify(event)); events.close(); }'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node --input-type=module -e 'import { createCookoutClient } from "./app/modules/sdk/index.ts"; const events = await createCookoutClient().watch(); for await (const event of events) { console.log(JSON.stringify(event)); await events.close(); }'
 ```
 
 ## Drive it with the SDK

@@ -15,12 +15,6 @@ interface Field {
   readonly value: string;
 }
 
-interface Fetched {
-  readonly response: Response;
-  readonly close: () => void;
-  readonly isClosed: () => boolean;
-}
-
 interface Frames {
   readonly events: readonly ServerSentEvent[];
   readonly rest: string;
@@ -91,22 +85,24 @@ function framesOf(text: string): Frames {
   return { events: blocks.flatMap((block) => eventsIn(block)), rest };
 }
 
-async function* eventsFrom(
-  body: ReadableStream<Uint8Array>,
-  isClosed: () => boolean,
-): AsyncGenerator<ServerSentEvent, void, undefined> {
+function chunksOf(reader: ReadableStreamDefaultReader<Uint8Array>): AsyncIterable<Uint8Array> {
+  return {
+    [Symbol.asyncIterator]: () => ({
+      async next(): Promise<IteratorResult<Uint8Array, Uint8Array | undefined>> {
+        const read = await reader.read();
+        return read;
+      },
+    }),
+  };
+}
+
+async function* eventsFrom(reader: ReadableStreamDefaultReader<Uint8Array>): AsyncGenerator<ServerSentEvent, void> {
   const decoder = new TextDecoder();
   let buffered = "";
-  try {
-    for await (const chunk of body) {
-      const { events, rest } = framesOf(buffered + decoder.decode(chunk, { stream: true }));
-      buffered = rest;
-      yield* events;
-    }
-  } catch (error) {
-    if (!isClosed()) {
-      throw error;
-    }
+  for await (const chunk of chunksOf(reader)) {
+    const { events, rest } = framesOf(buffered + decoder.decode(chunk, { stream: true }));
+    buffered = rest;
+    yield* events;
   }
 }
 
@@ -114,23 +110,16 @@ function trimmed(url: string): string {
   return url.replace(TRAILING_SLASHES, "");
 }
 
-async function fetched(options: HttpRequest, accept: string): Promise<Fetched> {
-  const controller = new AbortController();
+async function fetched(options: HttpRequest, accept: string): Promise<Response> {
   const headers = new Headers({ accept, ...options.headers });
-  const init: RequestInit = { headers, method: options.method, redirect: "manual", signal: controller.signal };
+  const init: RequestInit = { headers, method: options.method, redirect: "manual" };
   if ("body" in options) {
     headers.set("content-type", "application/json");
     init.body = JSON.stringify(options.body);
   }
   const path = fillParams(options.path, options.params ?? {});
   const response = await fetch(`${trimmed(options.baseUrl)}${path}${queryString(options.query ?? {})}`, init);
-  return {
-    close: () => {
-      controller.abort();
-    },
-    isClosed: () => controller.signal.aborted,
-    response,
-  };
+  return response;
 }
 
 async function answerOf(response: Response): Promise<HttpResponse> {
@@ -173,7 +162,7 @@ export interface OpenEventStream {
   readonly ok: true;
   readonly events: AsyncIterable<ServerSentEvent>;
   /** Drops the connection; the events then end. */
-  readonly close: () => void;
+  readonly close: () => Promise<void>;
 }
 
 /** A stream the server refused, with its whole answer. */
@@ -199,7 +188,7 @@ export function baseUrlOf(url: string): string {
  * @returns The answer.
  */
 export async function request(options: HttpRequest): Promise<HttpResponse> {
-  const { response } = await fetched(options, "application/json");
+  const response = await fetched(options, "application/json");
   return answerOf(response);
 }
 
@@ -211,10 +200,17 @@ export async function request(options: HttpRequest): Promise<HttpResponse> {
  * @returns The open stream, or the refusal.
  */
 export async function openEventStream(options: HttpRequest): Promise<OpenEventStream | RefusedEventStream> {
-  const { close, isClosed, response } = await fetched(options, "text/event-stream");
+  const response = await fetched(options, "text/event-stream");
   if (!response.ok || response.body === null) {
     const refused = await answerOf(response);
     return { ok: false, response: refused };
   }
-  return { close, events: eventsFrom(response.body, isClosed), ok: true };
+  const reader = response.body.getReader();
+  return {
+    async close(): Promise<void> {
+      await reader.cancel();
+    },
+    events: eventsFrom(reader),
+    ok: true,
+  };
 }

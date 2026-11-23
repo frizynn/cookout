@@ -14,7 +14,7 @@ interface SseEvent {
 
 type Connected<Needs> = Effect.Effect<
   Stream.Stream<SseEvent, Refusal | StorageUnavailable>,
-  Refusal | StorageUnavailable,
+  never,
   Needs | Scope.Scope
 >;
 
@@ -36,4 +36,4 @@ function sseText({ data, event, id }: SseEvent): string {
   return `event: ${event}\nid: ${String(id)}\n${dataLines}\n`;
 }
 
-export { type Connected, type EventSource, type SseEvent, sseEvent, sseText };
+export { type Connected, type EventSource, sseEvent, sseText };

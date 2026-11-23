@@ -27,10 +27,7 @@ function watching(who: TestIdentity): Effect.Effect<AsyncIterator<CookoutEvent>,
   return Effect.map(
     Effect.acquireRelease(
       answer(() => who.client.watch()),
-      (events: EventStream) =>
-        Effect.sync(() => {
-          events.close();
-        }),
+      (events: EventStream) => answer(() => events.close()),
     ),
     (events) => events[Symbol.asyncIterator](),
   );
@@ -110,6 +107,30 @@ it.effect("an event that doesn't match its generated validator fails with bad_re
 
     expect(refused).toMatchObject({ code: "bad_response", details: { item: {}, type: "inbox-item" } });
   }),
+);
+
+it.effect("an event whose data isn't JSON fails with bad_response, with the data as its details", () =>
+  Effect.gen(function* notJsonEvent() {
+    const url = yield* serverAnswering({ headers: SSE, text: "event: inbox-item\ndata: not json\n\n" });
+    const client = createCookoutClient({ env: {}, token: "cookout_x", url });
+    const events = yield* answer(() => client.watch());
+    const refused = yield* refusal(() => events[Symbol.asyncIterator]().next());
+
+    expect(refused).toMatchObject({ code: "bad_response", details: "not json" });
+  }),
+);
+
+it.effect("closing the stream ends it", () =>
+  Effect.gen(function* closeEnds() {
+    const cookout = yield* TestCookout;
+    const { bob } = yield* board(cookout);
+    const events = yield* answer(() => bob.client.watch());
+    const next = events[Symbol.asyncIterator]().next();
+    yield* answer(() => events.close());
+    const result = yield* answer(() => next);
+
+    expect(result).toMatchObject({ done: true });
+  }).pipe(Effect.provide(testCookout())),
 );
 
 it.effect("an event type this SDK doesn't know, from a newer server, is skipped", () =>

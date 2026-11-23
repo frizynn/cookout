@@ -9,7 +9,7 @@ import { openEvents } from "./request.ts";
 type EventType = CookoutEvent["type"];
 
 interface EventStream extends AsyncIterable<CookoutEvent> {
-  readonly close: () => void;
+  readonly close: () => Promise<void>;
 }
 
 interface EventCalls {

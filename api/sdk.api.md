@@ -236,7 +236,7 @@ interface InboxItemEvent {
 /** Any event the stream sends. */
 type CookoutEvent = InboxItemEvent;
 interface EventStream extends AsyncIterable<CookoutEvent> {
-  readonly close: () => void;
+  readonly close: () => Promise<void>;
 }
 /** The answer to the health check. */
 interface HealthResponse {
