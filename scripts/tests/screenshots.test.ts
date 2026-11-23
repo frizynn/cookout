@@ -57,6 +57,8 @@ it("takes each standard screen in light and then in dark before the next screen"
       "settings",
       "new-channel",
       "narrow",
+      "closed-threads",
+      "closed-thread",
       "collapsed",
       "reconnecting",
     ],

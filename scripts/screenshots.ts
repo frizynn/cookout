@@ -16,6 +16,7 @@ interface Server {
 }
 
 interface Board {
+  readonly closed: readonly number[];
   readonly token: string;
   readonly url: string;
 }
@@ -33,6 +34,7 @@ const WIDE = { height: 800, width: 1280 };
 const NARROW = { height: 900, width: 600 };
 const ADMIN_TOKEN = "screenshots-admin-token-0123456789abcdef0123456789";
 const LOGGED_IN_AS = "grace";
+const CLOSED_IN_DEPLOYS = ["deployed", "rollbackCall"] as const;
 
 function withEnv(variables: Readonly<Record<string, string>>, args: readonly string[]): string[] {
   return [...Object.entries(variables).map(([name, value]: readonly [string, string]) => `${name}=${value}`), ...args];
@@ -108,8 +110,29 @@ function seed(url: string): Board {
   if (run.status !== EXIT_SUCCESS) {
     throw new Error(`pnpm seed failed:\n${run.stdout}${run.stderr}`);
   }
-  const identities = list(field(parseJson(run.stdout), "identities")) ?? [];
-  return { token: tokenOf(identities, LOGGED_IN_AS), url };
+  const seeded = parseJson(run.stdout);
+  const identities = list(field(seeded, "identities")) ?? [];
+  const closed = CLOSED_IN_DEPLOYS.map((name) => field(field(seeded, "messages"), name));
+  return { closed: closed.filter((id) => typeof id === "number"), token: tokenOf(identities, LOGGED_IN_AS), url };
+}
+
+function closeThreads({ closed, token, url }: Board): void {
+  for (const id of closed) {
+    const run = spawnSync(
+      "env",
+      withEnv({ COOKOUT_ALLOW_HUMAN: "1", COOKOUT_TOKEN: token, COOKOUT_URL: url }, [
+        process.execPath,
+        "dist/main.js",
+        "thread",
+        "close",
+        String(id),
+      ]),
+      { encoding: "utf8", maxBuffer: MAX_BUFFER },
+    );
+    if (run.status !== EXIT_SUCCESS) {
+      throw new Error(`cookout thread close ${String(id)} failed:\n${run.stdout}${run.stderr}`);
+    }
+  }
 }
 
 async function loggedIn(browser: Browser, { token, url }: Board, theme: Theme): Promise<BrowserContext> {
@@ -208,7 +231,7 @@ function shooter(contexts: ReadonlyMap<string, BrowserContext>, out: string): (s
 async function shootBoard(board: Board, screens: readonly Screen[], out: string): Promise<readonly string[]> {
   const browser = await chromium.launch();
   try {
-    const admin = { token: ADMIN_TOKEN, url: board.url };
+    const admin = { closed: board.closed, token: ADMIN_TOKEN, url: board.url };
     const contexts = new Map<string, BrowserContext>([
       ["member-light", await loggedIn(browser, board, "light")],
       ["member-dark", await loggedIn(browser, board, "dark")],
@@ -237,7 +260,9 @@ async function shootFreshBoard(screens: readonly Screen[], out: string): Promise
   try {
     const server = await startServer(path.join(folder, "cookout.db"));
     try {
-      const failures = await shootBoard(seed(server.url), screens, out);
+      const board = seed(server.url);
+      closeThreads(board);
+      const failures = await shootBoard(board, screens, out);
       return failures;
     } finally {
       await server.stop();
