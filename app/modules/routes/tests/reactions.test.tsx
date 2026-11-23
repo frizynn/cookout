@@ -112,14 +112,18 @@ it("the message menu, opened by right-clicking, offers 👍 and 👎", { timeout
   expect(screen.queryByRole("menu")).toBeNull();
 });
 
-it("pressing + on a focused message reacts 👍 and - reacts 👎", { timeout: 5000 }, async () => {
+it("pressing + on a focused message reacts 👍 and - reacts 👎, and other keys or Ctrl with them don't", {
+  timeout: 5000,
+}, async () => {
   expect.hasAssertions();
 
   const channel = "web-react-keys";
   const { bob } = await talkIn(channel);
   await openedAs(bob, channel);
+  fireEvent.keyDown(messageArticle(), { key: "a" });
   fireEvent.keyDown(messageArticle(), { key: "+" });
   await chipsBecome([{ name: "👍 1", pressed: true, tooltip: `${channel}-bob` }]);
+  fireEvent.keyDown(messageArticle(), { ctrlKey: true, key: "-" });
   fireEvent.keyDown(messageArticle(), { key: "-" });
 
   await chipsBecome([

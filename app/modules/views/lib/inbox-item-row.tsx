@@ -46,8 +46,8 @@ const WHY_TEXT = {
   "replied-to-you": "Replied to you",
 } as const;
 
-function reactedText(item: InboxItem): string {
-  return (item.newReactions ?? [])
+function reactedText({ newReactions = [] }: InboxItem): string {
+  return newReactions
     .map((reaction) => `@${reaction.identity} reacted with ${reactionSymbols[reaction.reaction]}`)
     .join(", ");
 }
