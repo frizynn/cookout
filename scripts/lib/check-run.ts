@@ -58,5 +58,5 @@ function readCheckRun({ cwd, gh, runNumber }: Gh & { readonly runNumber: number 
   return checkRunOf(args, ran.output);
 }
 
-export type { CheckRun, Gh, Job, Unreadable };
+export type { CheckRun, Job, Unreadable };
 export { readCheckRun };
