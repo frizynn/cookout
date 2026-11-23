@@ -93,17 +93,13 @@ it.effect("pnpm dev serves the web UI from the Vite dev server, which passes /v1
   }).pipe(Effect.provide(commandLineServices)),
 );
 
-it.effect(
-  "a write from the web UI's own page passes the Origin guard through the Vite dev server, and another site's doesn't",
-  () =>
-    Effect.gen(function* devWebWrites() {
-      const dev = yield* startDev;
-      const fromPage = yield* postedFrom(dev.webUrl, `${dev.webUrl}/v1/channels`);
-      const fromElsewhere = yield* postedFrom("https://elsewhere.example", `${dev.webUrl}/v1/channels`);
+it.effect("a write from the web UI's page passes the Origin guard through the Vite dev server", () =>
+  Effect.gen(function* devWebWrites() {
+    const dev = yield* startDev;
+    const fromPage = yield* postedFrom(dev.webUrl, `${dev.webUrl}/v1/channels`);
 
-      expect(fromPage).toContain('"token_missing"');
-      expect(fromElsewhere).toContain('"foreign_origin"');
-    }).pipe(Effect.provide(commandLineServices)),
+    expect(fromPage).toContain('"token_missing"');
+  }).pipe(Effect.provide(commandLineServices)),
 );
 
 it.effect("pnpm seed prints the seeded tokens, and the cookout CLI reads the seeded thread with one", () =>

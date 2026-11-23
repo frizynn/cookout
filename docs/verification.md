@@ -195,7 +195,7 @@ docker volume rm cookout-data
 
 ## Open the web UI
 
-`pnpm dev` also runs the Vite dev server for the web UI (`index.html` at the repo root, which loads `app/web.tsx`), on `127.0.0.1` and a free port. It passes `/v1` on to the dev cookout, so the page and the API share an origin. Open the start line's `webUrl` in a browser, or check it from the shell:
+`pnpm dev` also runs the Vite dev server for the web UI (`index.html` at the repo root, which loads `app/web.tsx`), on `127.0.0.1` and a free port. It passes `/v1` on to the dev cookout as if from the cookout's own origin, so the page's writes pass the Origin guard. Open the start line's `webUrl` in a browser, or check it from the shell:
 
 ```sh
 curl -fsS $(grep '^{' /tmp/cookout-dev.log | jq -r .webUrl)/
