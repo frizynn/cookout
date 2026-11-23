@@ -15,10 +15,10 @@ import type { HttpPlatform } from "effect/http";
 import { NodeHttpServer } from "@effect/platform-node";
 import type { Refusal } from "./index.ts";
 import { Storage } from "../storage/server.ts";
-import { createServer } from "node:http";
 import { dispatch } from "./lib/server/router.ts";
 import { healthPath } from "./index.ts";
 import { isoTimeOf } from "../time/server.ts";
+import { serverDroppingSilentConnections } from "./lib/server/node-http-server.ts";
 
 interface Listen {
   readonly host: string;
@@ -113,13 +113,23 @@ export const httpResponseSchemas = {
 /**
  * Node's HTTP server on `listen`, for any `HttpServer.serve` app: the one
  * place `node:http` is opened. Port 0 picks a free port; the server closes
- * with the Layer's scope.
+ * with the Layer's scope. Closing waits for the requests still being
+ * answered, but drops every connection that has sent nothing, and any that
+ * opens after: Node's own close waits for such a connection as if a request
+ * were on its way, and Node's fetch leaves one open (opened for a request
+ * that was then aborted) until its keep-alive time, about 3 s.
  * @internal
  * @param listen The port and host to listen on.
  * @returns The `HttpServer` and Node's HTTP platform.
  */
 export function nodeHttpServer(listen: Listen): NodeHttp {
-  return NodeHttpServer.layer(createServer, { ...listen, disablePreemptiveShutdown: true });
+  return Layer.unwrap(
+    Effect.sync(() => {
+      const { dropSilent, server } = serverDroppingSilentConnections();
+      const node = NodeHttpServer.layer(() => server, { ...listen, disablePreemptiveShutdown: true });
+      return Layer.provideMerge(Layer.effectDiscard(Effect.addFinalizer(() => dropSilent)), node);
+    }),
+  );
 }
 
 /**
