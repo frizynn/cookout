@@ -1,5 +1,6 @@
 import { Array as Arr, Effect, Order, Schema } from "effect";
 import type { Channel, ChannelName } from "../../../channels/index.ts";
+import type { IdentityName } from "../../../identities/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
@@ -10,7 +11,7 @@ import { unreadable } from "./errors.ts";
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
 interface ChannelsSection {
-  readonly createChannel: (channel: Channel) => Fails<"created" | "name_taken">;
+  readonly createChannel: (channel: Channel, creator?: IdentityName) => Fails<"created" | "name_taken">;
   readonly listChannels: () => Fails<readonly Channel[]>;
   readonly findChannel: (name: ChannelName) => Fails<Channel | undefined>;
   readonly deleteChannel: (name: ChannelName) => Fails<Channel | undefined>;
@@ -106,7 +107,7 @@ function sqliteChannels(db: SqliteDatabase): ChannelsSection {
     );
   }
   return {
-    createChannel: (channel) =>
+    createChannel: (channel, creator) =>
       db.transaction(
         Effect.gen(function* createChannel() {
           const existing = yield* find(channel.name);
@@ -114,6 +115,9 @@ function sqliteChannels(db: SqliteDatabase): ChannelsSection {
             return "name_taken" as const;
           }
           yield* insert(db, channel);
+          if (typeof creator === "string") {
+            yield* db.run("INSERT INTO subscriptions (identity_name, channel) VALUES (?, ?)", creator, channel.name);
+          }
           return "created" as const;
         }),
       ),
