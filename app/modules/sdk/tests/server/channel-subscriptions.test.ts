@@ -4,7 +4,7 @@ import { Effect } from "effect";
 
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 
-it.effect("an identity lists only its own subscribed channels, sorted by name; the channel list is unchanged", () =>
+it.effect("an identity lists only its own subscribed channels, sorted by name, created ones included", () =>
   Effect.gen(function* subscribedChannels() {
     const cookout = yield* TestCookout;
     const bob = yield* cookout.createIdentity("bob");
@@ -15,7 +15,6 @@ it.effect("an identity lists only its own subscribed channels, sorted by name; t
         answer(() => cookout.client.createChannel({ name: "lounge" })),
         answer(() => bob.client.subscribe("ops")),
         answer(() => bob.client.subscribe("grill")),
-        answer(() => cookout.client.subscribe("lounge")),
       ],
       ONE_AT_A_TIME,
     );
@@ -31,7 +30,7 @@ it.effect("an identity lists only its own subscribed channels, sorted by name; t
     expect(listed).toMatchObject({
       all: { channels: [{ name: "grill" }, { name: "lounge" }, { name: "ops" }] },
       bob: { channels: [{ name: "grill" }, { description: "Ops talk", name: "ops" }] },
-      own: { channels: [{ name: "lounge" }] },
+      own: { channels: [{ name: "grill" }, { name: "lounge" }, { name: "ops" }] },
     });
   }).pipe(Effect.provide(testCookout())),
 );

@@ -14,6 +14,7 @@ const eventTypes = {
   "inbox-item": true,
   message: true,
   "read-position": true,
+  subscription: true,
 } as const satisfies Readonly<Record<CookoutEvent["type"], true>>;
 
 function eventSourceAdapter(baseUrl: string): LiveAdapter {

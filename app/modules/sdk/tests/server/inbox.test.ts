@@ -19,7 +19,7 @@ function board(cookout: TestCookoutService): Effect.Effect<Board> {
   return Effect.gen(function* annAndBob() {
     const ann = yield* cookout.createIdentity("ann");
     const bob = yield* cookout.createIdentity("bob");
-    yield* answer(() => ann.client.createChannel({ name: "grill" }));
+    yield* answer(() => cookout.client.createChannel({ name: "grill" }));
     return { ann, bob };
   });
 }

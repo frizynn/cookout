@@ -1,7 +1,7 @@
 /**
  * Channels on the backend: the `Channels` service over `Storage`, and the
  * routes that create, list, get and delete channels. Any identity can create a
- * channel; only an admin can delete one. The routes sit behind the server's token gate.
+ * channel, which subscribes it; only an admin can delete one. The routes sit behind the server's token gate.
  */
 import { Caller, requireAdmin } from "../identities/server.ts";
 import {
@@ -25,6 +25,11 @@ import { isoTimeOf } from "../time/server.ts";
 
 type NewChannel = typeof CreateChannelRequestSchema.Type;
 
+interface CreatedChannel {
+  readonly channel: Channel;
+  readonly creator: Caller["Service"]["name"];
+}
+
 const CONFLICT = 409;
 const CREATED = 201;
 const NOT_FOUND = 404;
@@ -47,18 +52,18 @@ function stamped(fields: NewChannel, createdAt: IsoTime): Channel {
 
 function channelsOn(
   storage: Storage["Service"],
-  publish: (channel: Channel) => Effect.Effect<boolean>,
+  publish: (created: CreatedChannel) => Effect.Effect<boolean>,
 ): Omit<ChannelsService, "created"> {
   return {
-    create: (fields) =>
+    create: (creator, fields) =>
       Effect.gen(function* createChannel() {
         const now = yield* DateTime.now;
         const channel = stamped(fields, isoTimeOf(now));
-        const outcome = yield* storage.createChannel(channel);
+        const outcome = yield* storage.createChannel(channel, creator.name);
         if (outcome === "name_taken") {
           return yield* Effect.fail(channelExists(channel.name));
         }
-        yield* publish(channel);
+        yield* publish({ channel, creator: creator.name });
         return channel;
       }),
     get: (name) =>
@@ -95,10 +100,19 @@ function channelsOn(
 export const channelNotFound: (name: string) => Refusal = missingChannel;
 
 export interface ChannelsService {
-  /** Makes a channel, stamped with the current time. Refuses with 409 `channel_exists` when the name is in use. */
-  readonly create: (channel: NewChannel) => Effect.Effect<Channel, Refusal | StorageUnavailable>;
-  /** Every channel created from now on, for as long as the scope lasts: the live stream sends each as a `channel` event. */
-  readonly created: Effect.Effect<PubSub.Subscription<Channel>, never, Scope.Scope>;
+  /**
+   * Makes a channel, stamped with the current time, and subscribes `creator` to it in the same storage change.
+   * Refuses with 409 `channel_exists` when the name is in use.
+   */
+  readonly create: (
+    creator: Caller["Service"],
+    channel: NewChannel,
+  ) => Effect.Effect<Channel, Refusal | StorageUnavailable>;
+  /**
+   * Every channel created from now on, with its creator, for as long as the scope lasts: the live stream sends each
+   * as a `channel` event, and as a `subscription` event to its creator.
+   */
+  readonly created: Effect.Effect<PubSub.Subscription<CreatedChannel>, never, Scope.Scope>;
   /** Every channel, sorted by name. */
   readonly list: Effect.Effect<readonly Channel[], StorageUnavailable>;
   /** The channels `identity` subscribes to, sorted by name. */
@@ -122,9 +136,9 @@ export const channelsLayer: Layer.Layer<Channels, never, Storage> = Layer.effect
   Channels,
   Effect.gen(function* channelsOnStorage() {
     const storage = yield* Storage;
-    const hub = yield* PubSub.unbounded<Channel>();
-    function publish(channel: Channel): Effect.Effect<boolean> {
-      return PubSub.publish(hub, channel);
+    const hub = yield* PubSub.unbounded<CreatedChannel>();
+    function publish(created: CreatedChannel): Effect.Effect<boolean> {
+      return PubSub.publish(hub, created);
     }
     return { ...channelsOn(storage, publish), created: PubSub.subscribe(hub) };
   }),
@@ -140,8 +154,9 @@ export const channelRoutes: readonly Route<Caller | Channels>[] = [
     handle: () =>
       Effect.gen(function* createChannelRoute() {
         const fields = yield* HttpServerRequest.schemaBodyJson(CreateChannelRequestSchema, { errors: "all" });
+        const caller = yield* Caller;
         const channels = yield* Channels;
-        const channel = yield* channels.create(fields);
+        const channel = yield* channels.create(caller, fields);
         return yield* HttpServerResponse.schemaJson(ChannelResponseSchema)({ channel }, { status: CREATED });
       }),
     method: "POST",
@@ -197,3 +212,5 @@ export const channelResponseSchemas = {
   ChannelResponse: ChannelResponseSchema,
   ListChannelsResponse: ListChannelsResponseSchema,
 };
+
+export type { CreatedChannel };

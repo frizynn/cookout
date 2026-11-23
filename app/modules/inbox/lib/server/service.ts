@@ -48,9 +48,19 @@ interface Acked {
   readonly readPosition: ReadPosition;
 }
 
-interface AckHub {
-  readonly publish: (acked: Acked) => Effect.Effect<boolean>;
-  readonly subscribe: Effect.Effect<PubSub.Subscription<Acked>, never, Scope.Scope>;
+interface SubscriptionChanged {
+  readonly identity: IdentityName;
+  readonly subscription: SubscriptionResponse;
+}
+
+interface Hub<Value> {
+  readonly publish: (value: Value) => Effect.Effect<boolean>;
+  readonly subscribe: Effect.Effect<PubSub.Subscription<Value>, never, Scope.Scope>;
+}
+
+interface Hubs {
+  readonly acked: Hub<Acked>;
+  readonly subscriptions: Hub<SubscriptionChanged>;
 }
 
 interface InboxService {
@@ -62,6 +72,7 @@ interface InboxService {
   readonly ackAll: (caller: Identity, upTo: MessageId) => Fails<AckAllResponse>;
   readonly readPositions: (caller: Identity) => Fails<ReadPositionsResponse>;
   readonly acked: Effect.Effect<PubSub.Subscription<Acked>, never, Scope.Scope>;
+  readonly subscriptionChanged: Effect.Effect<PubSub.Subscription<SubscriptionChanged>, never, Scope.Scope>;
   readonly follow: (caller: Identity, asked: string) => Fails<FollowResponse>;
   readonly unfollow: (caller: Identity, asked: string) => Fails<FollowResponse>;
   readonly subscribe: (caller: Identity, channel: string) => Fails<SubscriptionResponse>;
@@ -104,7 +115,7 @@ function following(change: FollowChange, isFollowing: boolean) {
     });
 }
 
-function subscription(change: SubscriptionChange, subscribed: boolean) {
+function subscription(change: SubscriptionChange, subscribed: boolean, hub: Hub<SubscriptionChanged>) {
   return (caller: Identity, channel: string): Fails<SubscriptionResponse> =>
     Effect.gen(function* changeSubscription() {
       if (!isChannelName(channel)) {
@@ -114,7 +125,9 @@ function subscription(change: SubscriptionChange, subscribed: boolean) {
       if (!exists) {
         return yield* Effect.fail(channelNotFound(channel));
       }
-      return { channel, subscribed };
+      const answer = { channel, subscribed };
+      yield* hub.publish({ identity: caller.name, subscription: answer });
+      return answer;
     });
 }
 
@@ -145,7 +158,7 @@ function inboxOf(storage: Storage["Service"], caller: Identity): Fails<InboxResp
   );
 }
 
-function inboxOn(storage: Storage["Service"], hub: AckHub): InboxService {
+function inboxOn(storage: Storage["Service"], { acked: hub, subscriptions }: Hubs): InboxService {
   return {
     ack: (caller, id) =>
       Effect.gen(function* ackMessage() {
@@ -175,20 +188,28 @@ function inboxOn(storage: Storage["Service"], hub: AckHub): InboxService {
       Effect.flatMap(storage.listInboxAfter(caller.name, id), (stored) => withChannels(storage, stored)),
     readPositions: (caller) =>
       Effect.map(storage.listReadPositions(caller.name), (readPositions) => ({ readPositions })),
-    subscribe: subscription(storage.subscribeChannel, true),
+    subscribe: subscription(storage.subscribeChannel, true, subscriptions),
+    subscriptionChanged: subscriptions.subscribe,
     unfollow: following(storage.unfollowThread, false),
-    unsubscribe: subscription(storage.unsubscribeChannel, false),
+    unsubscribe: subscription(storage.unsubscribeChannel, false, subscriptions),
   };
+}
+
+function hubOf<Value>(): Effect.Effect<Hub<Value>> {
+  return Effect.gen(function* openHub() {
+    const pubSub = yield* PubSub.unbounded<Value>();
+    return { publish: (value: Value) => PubSub.publish(pubSub, value), subscribe: PubSub.subscribe(pubSub) };
+  });
 }
 
 const inboxLayer: Layer.Layer<Inbox, never, Storage> = Layer.effect(
   Inbox,
   Effect.gen(function* inboxOnStorage() {
     const storage = yield* Storage;
-    const pubSub = yield* PubSub.unbounded<Acked>();
-    const hub: AckHub = { publish: (acked) => PubSub.publish(pubSub, acked), subscribe: PubSub.subscribe(pubSub) };
-    return inboxOn(storage, hub);
+    const acked = yield* hubOf<Acked>();
+    const subscriptions = yield* hubOf<SubscriptionChanged>();
+    return inboxOn(storage, { acked, subscriptions });
   }),
 );
 
-export { Inbox, inboxLayer };
+export { Inbox, type SubscriptionChanged, inboxLayer };

@@ -39,7 +39,7 @@ function channels(request: StreamRequest): Connected<Channels> {
     const service = yield* Channels;
     const created = yield* service.created;
     return Stream.fromSubscription(created).pipe(
-      Stream.mapEffect((channel) => channelEvent({ channel, type: "channel" })),
+      Stream.mapEffect(({ channel }) => channelEvent({ channel, type: "channel" })),
     );
   });
 }

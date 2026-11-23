@@ -5,8 +5,9 @@ import type {
   InboxItemEvent,
   MessageEvent,
   ReadPositionEvent,
+  SubscriptionEvent,
 } from "../../index.ts";
-import { InboxItemSchema, ReadPositionSchema } from "../../../inbox/server.ts";
+import { InboxItemSchema, ReadPositionSchema, SubscriptionResponseSchema } from "../../../inbox/server.ts";
 import { MessageIdSchema, MessageSchema } from "../../../messages/server.ts";
 import { ChannelSchema } from "../../../channels/server.ts";
 import { IdentitySchema } from "../../../identities/server.ts";
@@ -31,6 +32,10 @@ export const IdentityEventSchema = matchesWire<IdentityEvent>()(
 
 export const ChannelEventSchema = matchesWire<ChannelEvent>()(
   Schema.Struct({ channel: ChannelSchema, type: Schema.Literal("channel") }),
+);
+
+export const SubscriptionEventSchema = matchesWire<SubscriptionEvent>()(
+  Schema.Struct({ subscription: SubscriptionResponseSchema, type: Schema.Literal("subscription") }),
 );
 
 export const ConnectedEventSchema = matchesWire<ConnectedEvent>()(
