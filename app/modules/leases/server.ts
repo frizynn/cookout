@@ -14,8 +14,10 @@ import { leaseHeader, leasePath } from "./index.ts";
 import type { Identities } from "../identities/server.ts";
 import type { LeaseRule } from "./lib/server/service.ts";
 import { Leases } from "./lib/server/service.ts";
+import type { Limits } from "../limits/server.ts";
 import type { Refusal } from "../http/index.ts";
 import type { StorageUnavailable } from "../storage/server.ts";
+import { withinRequestLimit } from "../limits/server.ts";
 
 type GateNeeds = Identities | Leases | HttpServerRequest.HttpServerRequest;
 
@@ -92,8 +94,8 @@ function renewingLease<Value, Failure, Needs>(
 
 function authenticateAndRenew<Value, Failure, Needs>(
   effect: Effect.Effect<Value, Failure, Needs>,
-): Effect.Effect<Value, Failure | Refusal | StorageUnavailable, Exclude<Needs, Caller> | GateNeeds> {
-  return renewingLease(effect).pipe(requireToken);
+): Effect.Effect<Value, Failure | Refusal | StorageUnavailable, Exclude<Needs, Caller> | GateNeeds | Limits> {
+  return effect.pipe(renewingLease, withinRequestLimit, requireToken);
 }
 
 /**
@@ -127,12 +129,13 @@ export const keepRenewingSentLease: Effect.Effect<
 });
 
 /**
- * The gate every route but `/v1/health` sits behind: `requireToken`, then the renewal of the caller's lease if the
- * request carries its live lease ID. A stale lease ID renews nothing and doesn't block the request: only the actions
+ * The gate every route but `/v1/health` sits behind: `requireToken`, then the caller's request limit (429
+ * `rate_limited`, ADR 0033), then the renewal of the caller's lease if the request carries its live lease ID. A stale lease ID renews nothing and doesn't block the request: only the actions
  * that call `requireLease` refuse it.
  * @internal
  */
-export const requireTokenAndRenewLease: Gate<Caller, GateNeeds, Refusal | StorageUnavailable> = authenticateAndRenew;
+export const requireTokenAndRenewLease: Gate<Caller, GateNeeds | Limits, Refusal | StorageUnavailable> =
+  authenticateAndRenew;
 
 export { Leases, leasesLayer } from "./lib/server/service.ts";
 

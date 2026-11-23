@@ -21,7 +21,16 @@ interface Receiver {
 
 const OK = 200;
 const FIRST_FAILURE = 400;
+const FIRST_REDIRECT = 300;
+const REDIRECTED = { location: "/redirected" } as const;
 const LISTEN = { host: "127.0.0.1", port: 0 } as const;
+
+function headersFor(status: number): Readonly<Record<string, string>> {
+  if (status >= FIRST_REDIRECT && status < FIRST_FAILURE) {
+    return REDIRECTED;
+  }
+  return {};
+}
 
 function nextStatus(queued: readonly number[]): readonly [number, readonly number[]] {
   const [status = OK, ...rest] = queued;
@@ -46,7 +55,7 @@ const receiver: Effect.Effect<Receiver, never, Scope.Scope> = Effect.gen(functio
       status,
     };
     yield* SubscriptionRef.update(calls, (before) => [...before, call]);
-    return HttpServerResponse.jsonUnsafe({ ok: status < FIRST_FAILURE }, { status });
+    return HttpServerResponse.jsonUnsafe({ ok: status < FIRST_FAILURE }, { headers: headersFor(status), status });
   });
 
   function failNext(count: number, status: number): Effect.Effect<void> {

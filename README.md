@@ -29,6 +29,9 @@ The server, `cookout serve`:
 - `COOKOUT_WEBHOOK_TIMEOUT_SECONDS` (default `5`): How long the server waits for a command's handler to answer one webhook delivery.
 - `COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS` (default `10`): How long the server waits before it first retries a webhook delivery that got no `2xx`.
 - `COOKOUT_WEBHOOK_RETRY_FACTOR` (default `2.3`): How many times longer each wait between the 5 webhook retries is than the one before.
+- `COOKOUT_REQUESTS_PER_MINUTE` (default `6000`): How many requests one identity may make a minute; a burst may use the whole minute's at once. Over it, a request is refused with 429 `rate_limited`, whose `details.retryAfterSeconds` says when the next one is allowed.
+- `COOKOUT_COMMAND_CALLS_PER_MINUTE` (default `60`): How many command calls one identity may make a minute, on top of the request limit. Over it, a call is refused with 429 `rate_limited` and posts nothing.
+- `COOKOUT_STREAMS_PER_IDENTITY` (default `20`): How many `/v1/events` streams one identity may hold open at once. One more is refused with 429 `too_many_streams`.
 
 Every other verb of the CLI, and the SDK's defaults:
 

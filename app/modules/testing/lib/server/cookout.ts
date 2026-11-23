@@ -1,4 +1,4 @@
-import { ConfigProvider, Context, Effect, Exit, Layer, Ref, Scope } from "effect";
+import { Array as Arr, ConfigProvider, Context, Effect, Exit, Layer, Record as Rec, Ref, Scope } from "effect";
 import type { CookoutClient, CookoutClientOptions, Identity, Token } from "../../../sdk/index.ts";
 import { backingServices, newToken, storageFor } from "./backing.ts";
 import { currentTime, startTestClock } from "./time.ts";
@@ -29,7 +29,7 @@ export type TestCookoutService = {
   readonly url: string;
   readonly adminToken: Token;
   readonly client: CookoutClient;
-  readonly clientFor: (token: string | undefined, options?: Pick<CookoutClientOptions, "leaseId">) => CookoutClient;
+  readonly clientFor: (token?: string, options?: Pick<CookoutClientOptions, "leaseId">) => CookoutClient;
   readonly createIdentity: (name: string, options?: CreateTestIdentityOptions) => Effect.Effect<TestIdentity>;
   readonly startSecondServer: Effect.Effect<BootedServer>;
   readonly restart: Effect.Effect<CookoutClient>;
@@ -47,17 +47,32 @@ export type TestCookoutOptions = {
   readonly leaseSeconds?: number;
   readonly publicUrl?: string;
   readonly webhookTimeoutSeconds?: number;
+  readonly requestsPerMinute?: number;
+  readonly commandCallsPerMinute?: number;
+  readonly streamsPerIdentity?: number;
 };
 
-function serverEnv({ leaseSeconds, webhookTimeoutSeconds }: TestCookoutOptions): ConfigProvider.ConfigProvider {
-  return ConfigProvider.fromEnv({
-    env: {
-      ...(leaseSeconds === undefined ? {} : { COOKOUT_LEASE_SECONDS: String(leaseSeconds) }),
-      ...(webhookTimeoutSeconds === undefined
-        ? {}
-        : { COOKOUT_WEBHOOK_TIMEOUT_SECONDS: String(webhookTimeoutSeconds) }),
-    },
+type NumberSetting =
+  | "commandCallsPerMinute"
+  | "leaseSeconds"
+  | "requestsPerMinute"
+  | "streamsPerIdentity"
+  | "webhookTimeoutSeconds";
+
+const settingNames: readonly (readonly [NumberSetting, string])[] = [
+  ["commandCallsPerMinute", "COOKOUT_COMMAND_CALLS_PER_MINUTE"],
+  ["leaseSeconds", "COOKOUT_LEASE_SECONDS"],
+  ["requestsPerMinute", "COOKOUT_REQUESTS_PER_MINUTE"],
+  ["streamsPerIdentity", "COOKOUT_STREAMS_PER_IDENTITY"],
+  ["webhookTimeoutSeconds", "COOKOUT_WEBHOOK_TIMEOUT_SECONDS"],
+];
+
+function serverEnv(options: TestCookoutOptions): ConfigProvider.ConfigProvider {
+  const set = Arr.flatMap(settingNames, ([option, name]) => {
+    const value = options[option];
+    return value === undefined ? [] : [[name, String(value)] as const];
   });
+  return ConfigProvider.fromEnv({ env: Rec.fromEntries(set) });
 }
 
 const clientAt =
