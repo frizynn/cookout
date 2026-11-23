@@ -761,6 +761,18 @@ env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(
 
 The screenshot shows the box under the messages with a `Mention suggestions` list holding `@triage-agent`. After `Send message` the `Messages` list ends with `@grace`, `Can @triage-agent take the flaky test?` and `0 replies`, and the box is empty. `triage-agent`'s inbox ends with that message and `["mention"]` (`[9,…]` on a fresh seed with nothing posted since); `grace`'s inbox doesn't have it.
 
+## Create a channel in the web UI
+
+Under the sidebar's channel list is a `New channel` button. It opens a form named `New channel` with a `Name` field (required) and a `Description` field, each with its rules under it, and `Cancel` and `Create` buttons. `Create` creates the channel as `cookout channel create` does (any identity can; the creator isn't subscribed), adds it to the channel list, closes the form and opens the channel. A refusal shows `Couldn't create the channel (<code>): …` under the field it concerns (the description's when only the description breaks its rules, the name's otherwise) and keeps what was typed. Logged in as `grace` (the "Log in to the web UI" recipe, same session):
+
+```sh
+agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" && agent-browser --session cookout find role button click --name "New channel"
+agent-browser --session cookout find label "Name" fill "general" && agent-browser --session cookout find role button click --name "Create" && agent-browser --session cookout wait --text "channel_exists" && agent-browser --session cookout screenshot /tmp/cookout-new-channel-taken.png
+agent-browser --session cookout find label "Name" fill "triage" && agent-browser --session cookout find role button click --name "Create" && agent-browser --session cookout wait --text "Welcome to #triage" && agent-browser --session cookout snapshot
+```
+
+The screenshot shows `Couldn't create the channel (channel_exists): The channel general already exists.` under `Name`, which still holds `general`. After the second `Create` the pane is `#triage` (`#/channels/triage`) and the `Channels` list is `#deploys`, `#general` and `#triage`. `pnpm screenshots --only new-channel` takes the open form in both themes.
+
 ## See a command call and call a command in the web UI
 
 A message's data shows under its text as a block of JSON named `Data`. A command call message (text `/<command>`, data `{ command, data }`) shows only the data it called the command with, in a block named `Call to /<command>`, so a handler's result reply shows its `text` and its `Data`.
@@ -889,7 +901,7 @@ The first snapshot's `Channels` list has the links `#deploys 1 unread` and `#gen
 pnpm screenshots
 ```
 
-It builds the package, starts the built cookout on a fresh SQLite file in a temporary folder on `127.0.0.1` and a free port, seeds it as "Seed it" does, logs in as `grace` in headless Chromium, and takes each standard screen in the light theme and then the dark one: `inbox`, `channel` (`#general`), `thread` (`general`'s thread 1), `people`, `profile` (`release-bot`), `settings` (the `Settings` panel open) and `narrow` (600 px wide with the sidebar open) and `collapsed` (`#general` with the sidebar collapsed to its rail; it comes last, as the collapse is kept for the rest of that theme's run). Each is a file `<screen>-<theme>.png`, such as `thread-dark.png`, in a new temporary folder whose path is the last line it prints; read the PNGs from there. Then it stops the server and deletes the database, leaving nothing running. `--only <screen>` (repeatable) takes only those screens, and `--out <dir>` writes to that folder instead:
+It builds the package, starts the built cookout on a fresh SQLite file in a temporary folder on `127.0.0.1` and a free port, seeds it as "Seed it" does, logs in as `grace` in headless Chromium, and takes each standard screen in the light theme and then the dark one: `inbox`, `channel` (`#general`), `thread` (`general`'s thread 1), `people`, `profile` (`release-bot`), `settings` (the `Settings` panel open), `new-channel` (`#general` with the sidebar's new channel form open) and `narrow` (600 px wide with the sidebar open) and `collapsed` (`#general` with the sidebar collapsed to its rail; it comes last, as the collapse is kept for the rest of that theme's run). Each is a file `<screen>-<theme>.png`, such as `thread-dark.png`, in a new temporary folder whose path is the last line it prints; read the PNGs from there. Then it stops the server and deletes the database, leaving nothing running. `--only <screen>` (repeatable) takes only those screens, and `--out <dir>` writes to that folder instead:
 
 ```sh
 pnpm -s screenshots --only thread --only narrow --out /tmp/cookout-shots

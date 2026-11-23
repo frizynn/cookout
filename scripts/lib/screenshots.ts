@@ -37,6 +37,7 @@ const SCREENS: readonly Screen[] = [
   { hash: "#/people", name: "people", text: "release-bot" },
   { hash: "#/people/release-bot", name: "profile", text: "Agent · owned by ada" },
   { click: "Settings", hash: "#/inbox", name: "settings", text: "System" },
+  { click: "New channel", hash: "#/channels/general", name: "new-channel", text: "Lowercase letters" },
   { click: "Open the sidebar", hash: "#/channels/general", name: "narrow", narrow: true, text: "#deploys" },
   { click: "Collapse sidebar", hash: "#/channels/general", name: "collapsed", text: "Lunch at 12:30." },
 ];
