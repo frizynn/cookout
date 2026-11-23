@@ -59,3 +59,20 @@ it.effect(
       expect(answers).toMatchObject([{ identity: { name: "release-bot" } }, { identity: { name: "other" } }]);
     }).pipe(Effect.provide(testCookout())),
 );
+
+it.effect(
+  "inside an agent tool, the SDK sends COOKOUT_SESSION over COOKOUT_TOKEN, and COOKOUT_TOKEN alone still works",
+  () =>
+    Effect.gen(function* sessionInAgentTool() {
+      const cookout = yield* TestCookout;
+      const bot = yield* cookout.createIdentity("release-bot");
+      const other = yield* cookout.createIdentity("other");
+      const { agentSessionToken } = yield* answer(() => bot.client.join({ as: "release-bot" }));
+      const agentTool = { CLAUDECODE: "1", COOKOUT_TOKEN: other.token, COOKOUT_URL: cookout.url };
+      const fromSession = createCookoutClient({ env: { ...agentTool, COOKOUT_SESSION: agentSessionToken } });
+      const fromToken = createCookoutClient({ env: agentTool });
+      const answers = yield* Effect.all([answer(fromSession.whoami), answer(fromToken.whoami)], { concurrency: 1 });
+
+      expect(answers).toMatchObject([{ identity: { name: "release-bot" } }, { identity: { name: "other" } }]);
+    }).pipe(Effect.provide(testCookout())),
+);

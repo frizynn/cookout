@@ -99,12 +99,15 @@ function sessionIdOf(tool: string, env: Environment): { readonly sessionId?: Age
   return NOTHING;
 }
 
-function tokenIn(env: Environment): string {
-  const token = env["COOKOUT_TOKEN"] ?? "";
-  if (token !== "") {
-    return token;
+function firstSet(values: readonly (string | undefined)[]): string {
+  return values.find((value) => isSet(value)) ?? "";
+}
+
+function tokenIn(env: Environment, inAgentTool: boolean): string {
+  if (inAgentTool) {
+    return firstSet([env["COOKOUT_SESSION"], env["COOKOUT_TOKEN"]]);
   }
-  return env["COOKOUT_SESSION"] ?? "";
+  return firstSet([env["COOKOUT_TOKEN"], env["COOKOUT_SESSION"]]);
 }
 
 /** Every variable `agentToolIn` reads, for a reader of the environment that must name what it reads (the CLI). */
@@ -178,13 +181,14 @@ export interface CookoutConnection {
 
 /**
  * `COOKOUT_URL` and the token from `env` (by default the process's), as much of a connection as they give: the token
- * is `COOKOUT_TOKEN`, else the agent session token in `COOKOUT_SESSION`. With a token read from `env`, it adds the
+ * is `COOKOUT_TOKEN`, else the agent session token in `COOKOUT_SESSION`, the other way round inside an agent tool,
+ * whatever `COOKOUT_ALLOW_HUMAN` says (mattpocock/cookout#150). With a token read from `env`, it adds the
  * agent tool `env` shows runs the process. An empty variable counts as unset.
  * @param env Where the variables are read from.
  * @returns The URL, the token and the agent tool, each only if set.
  */
 export function readCookoutConnection(env: Environment = processEnvironment()): Partial<CookoutConnection> {
-  const token = tokenIn(env);
+  const token = tokenIn(env, isSet(agentToolSessionIn(env).agentTool));
   if (token === "") {
     return urlIn(env);
   }
