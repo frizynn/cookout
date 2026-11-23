@@ -17,6 +17,7 @@ import { sqliteCommandCalls } from "./command-calls.ts";
 import { unreadable } from "./errors.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
+type Page = Omit<ListMessagesResponse, "receipts">;
 
 const FOUND = 1;
 const ONE_MORE = 1;
@@ -222,8 +223,8 @@ function appendInChannel(db: SqliteDatabase, message: NewMessage): Fails<AppendM
     const mentioning = withKnownMentions({ known, message });
     const id = yield* takeId(db);
     const stored = placed({ id, message: mentioning, placement });
-    yield* Effect.andThen(insert(db, stored, data), recordAppended({ db, message: stored }));
-    return { message: stored, status: "appended" } as const;
+    const receipts = yield* Effect.andThen(insert(db, stored, data), recordAppended({ db, message: stored }));
+    return { message: stored, receipts, status: "appended" } as const;
   });
 }
 
@@ -242,7 +243,7 @@ function threadMessages(db: SqliteDatabase, parentId: MessageId): Fails<readonly
   return db.all(sql, parentId, parentId).pipe(Effect.flatMap((rows) => Effect.forEach(rows, toMessage, ONE_AT_A_TIME)));
 }
 
-function threadOf(db: SqliteDatabase, id: MessageId): Fails<ThreadResponse | undefined> {
+function threadOf(db: SqliteDatabase, id: MessageId): Fails<Omit<ThreadResponse, "receipts"> | undefined> {
   return Effect.gen(function* getThread() {
     const found = yield* find(db, id);
     if (Predicate.isUndefined(found)) {
@@ -263,7 +264,7 @@ function newestRows(db: SqliteDatabase, channel: ChannelName, page: ChannelPageR
   return db.all(sql, channel, page.before ?? ALL_IDS, page.limit + ONE_MORE);
 }
 
-function pageOf(db: SqliteDatabase, channel: ChannelName, page: ChannelPageRequest): Fails<ListMessagesResponse> {
+function pageOf(db: SqliteDatabase, channel: ChannelName, page: ChannelPageRequest): Fails<Page> {
   return Effect.gen(function* readPage() {
     const rows = yield* newestRows(db, channel, page);
     const messages = yield* Effect.forEach(rows, toMessage, ONE_AT_A_TIME);

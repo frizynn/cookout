@@ -177,7 +177,7 @@ export { deactivationRoutes } from "./lib/server/deactivation.ts";
 
 /**
  * `DELETE /v1/identities/:name` (admin) and `GET /v1/identities/:name/message-count`: deleting an identity no message
- * names, with everything that refers to it. It needs `Caller`.
+ * names, with everything that refers to it. It needs `Caller`. A deletion is published on the `IdentityChanges` hub.
  */
 export { deletionRoutes } from "./lib/server/deletion.ts";
 
@@ -215,7 +215,8 @@ export { descriptionRoutes } from "./lib/server/descriptions.ts";
 /**
  * The `IdentityChanges` hub: every route that creates an identity or changes one (its display name, admin flag,
  * owner, deactivating and reactivating) publishes the identity as it now is, and the live stream sends each on as an
- * `identity` event.
+ * `identity` event. Deleting an identity publishes it on its own hub, which the live stream sends on as an
+ * `identity-deleted` event.
  */
 export { IdentityChanges, identityChangesLayer } from "./lib/server/changes.ts";
 

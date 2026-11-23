@@ -4,11 +4,13 @@ import type {
   ChannelEvent,
   CommandEvent,
   ConnectedEvent,
+  IdentityDeletedEvent,
   IdentityEvent,
   InboxItemEvent,
   MessageEvent,
   ReadPositionEvent,
   ReadPositionMovedBackEvent,
+  ReadReceiptEvent,
   SubscriptionEvent,
 } from "../../index.ts";
 import { IdentityNameSchema, IdentitySchema } from "../../../identities/server.ts";
@@ -18,7 +20,7 @@ import {
   ReadPositionSchema,
   SubscriptionResponseSchema,
 } from "../../../inbox/server.ts";
-import { MessageIdSchema, MessageSchema } from "../../../messages/server.ts";
+import { MessageIdSchema, MessageSchema, ReadReceiptSchema } from "../../../messages/server.ts";
 import { ChannelSchema } from "../../../channels/server.ts";
 import { CommandSchema } from "../../../commands/server.ts";
 import { Schema } from "effect";
@@ -44,12 +46,20 @@ export const IdentityEventSchema = matchesWire<IdentityEvent>()(
   Schema.Struct({ identity: IdentitySchema, type: Schema.Literal("identity") }),
 );
 
+export const ReadReceiptEventSchema = matchesWire<ReadReceiptEvent>()(
+  Schema.Struct({ receipt: ReadReceiptSchema, type: Schema.Literal("read-receipt") }),
+);
+
 export const ChannelEventSchema = matchesWire<ChannelEvent>()(
   Schema.Struct({ channel: ChannelSchema, type: Schema.Literal("channel") }),
 );
 
 export const ChannelDeletedEventSchema = matchesWire<ChannelDeletedEvent>()(
   Schema.Struct({ channel: ChannelSchema, type: Schema.Literal("channel-deleted") }),
+);
+
+export const IdentityDeletedEventSchema = matchesWire<IdentityDeletedEvent>()(
+  Schema.Struct({ identity: IdentitySchema, type: Schema.Literal("identity-deleted") }),
 );
 
 export const CommandEventSchema = matchesWire<CommandEvent>()(

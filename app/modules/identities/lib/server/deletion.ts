@@ -1,15 +1,15 @@
 import { Array as Arr, Effect, Predicate } from "effect";
+import type { Caller, IdentityChanges } from "./auth.ts";
 import type { Identity, IdentityName } from "../../index.ts";
 import { IdentityMessageCountResponseSchema, IdentityResponseSchema } from "./wire.ts";
+import { announcedDeleted, requireAdmin } from "./auth.ts";
 import { identityMessageCountPath, identityPath } from "../../index.ts";
 import { identityNotFound, nameParam } from "./routes.ts";
-import type { Caller } from "./auth.ts";
 import type { DeleteIdentityResult } from "../../../storage/server.ts";
 import { HttpServerResponse } from "effect/http";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
 import { Storage } from "../../../storage/server.ts";
-import { requireAdmin } from "./auth.ts";
 
 const CONFLICT = 409;
 
@@ -54,13 +54,14 @@ function deletedOrRefused(name: IdentityName, result: DeleteIdentityResult): Eff
   return Effect.fail(identityNotFound(name));
 }
 
-const deleteRoute: Route<Caller | Storage> = {
+const deleteRoute: Route<Caller | Storage | IdentityChanges> = {
   handle: (params) =>
     Effect.gen(function* deleteIdentityRoute() {
       yield* requireAdmin;
       const name = yield* nameParam(params);
       const storage = yield* Storage;
-      const identity = yield* Effect.flatMap(storage.deleteIdentity(name), (result) => deletedOrRefused(name, result));
+      const deleted = yield* Effect.flatMap(storage.deleteIdentity(name), (result) => deletedOrRefused(name, result));
+      const identity = yield* announcedDeleted(deleted);
       return yield* HttpServerResponse.schemaJson(IdentityResponseSchema)({ identity });
     }),
   method: "DELETE",
@@ -83,4 +84,4 @@ const messageCountRoute: Route<Caller | Storage> = {
   path: identityMessageCountPath,
 };
 
-export const deletionRoutes: readonly Route<Caller | Storage>[] = [deleteRoute, messageCountRoute];
+export const deletionRoutes: readonly Route<Caller | Storage | IdentityChanges>[] = [deleteRoute, messageCountRoute];

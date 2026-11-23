@@ -2,6 +2,7 @@ import type {
   Author,
   ListMessagesResponse,
   MessageResponse,
+  ReadReceipt,
   Reply,
   ThreadResponse,
   TopLevelMessage,
@@ -104,12 +105,29 @@ export const MessageResponseSchema = matchesWire<MessageResponse>()(
   Schema.Struct({ message: MessageSchema, unknownMentions: Schema.Array(Schema.String) }),
 );
 
+export const ReadReceiptSchema = matchesWire<ReadReceipt>()(
+  Schema.Struct({
+    identity: IdentityNameSchema,
+    messageId: MessageIdSchema,
+    seen: Schema.Boolean,
+    seenAt: Schema.optionalKey(IsoTimeSchema),
+  }),
+);
+
 export const ListMessagesResponseSchema = matchesWire<ListMessagesResponse>()(
-  Schema.Struct({ hasMore: Schema.Boolean, messages: Schema.Array(TopLevelMessageSchema) }),
+  Schema.Struct({
+    hasMore: Schema.Boolean,
+    messages: Schema.Array(TopLevelMessageSchema),
+    receipts: Schema.Array(ReadReceiptSchema),
+  }),
 );
 
 export const ThreadResponseSchema = matchesWire<ThreadResponse>()(
-  Schema.Struct({ parent: TopLevelMessageSchema, replies: Schema.Array(ReplySchema) }),
+  Schema.Struct({
+    parent: TopLevelMessageSchema,
+    receipts: Schema.Array(ReadReceiptSchema),
+    replies: Schema.Array(ReplySchema),
+  }),
 );
 
 export { MessageIdSchema, MessageSchema, TopLevelMessageSchema };

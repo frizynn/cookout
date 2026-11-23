@@ -4,6 +4,7 @@ import {
   appendTo,
   channelFixture as channel,
   channelName,
+  fixtureTime,
   identityFixture as identity,
   identityName as nameOf,
   newMessageFixture as newMessage,
@@ -71,11 +72,15 @@ it.effect.each(storageLayers)(
       const storage = yield* storeWithPeople(layer);
       const { later, mention, newest, parent, reply } = yield* inboxOfAnn(storage);
 
-      const moved = yield* storage.ackInbox(nameOf("ann"), newest.id);
+      const moved = yield* storage.ackInbox(nameOf("ann"), newest.id, fixtureTime);
       const left = yield* storage.listInbox(nameOf("ann"));
-      const again = yield* storage.ackInbox(nameOf("ann"), newest.id);
+      const again = yield* storage.ackInbox(nameOf("ann"), newest.id, fixtureTime);
 
-      expect({ again, left: Arr.map(left, (item) => item.message.id), moved }).toStrictEqual({
+      expect({
+        again: again.readPositions,
+        left: Arr.map(left, (item) => item.message.id),
+        moved: moved.readPositions,
+      }).toStrictEqual({
         again: [],
         left: [later.id],
         moved: [

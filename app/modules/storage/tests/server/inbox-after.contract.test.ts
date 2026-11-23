@@ -4,6 +4,7 @@ import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import {
   appendTo,
   channelFixture as channel,
+  fixtureTime,
   identityFixture as identity,
   identityName as nameOf,
   newMessageFixture as newMessage,
@@ -67,7 +68,7 @@ it.effect.each(storageLayers)(
       const storage = yield* storeWithPeople(layer);
       const append = appendTo(storage);
       const read = yield* append(newMessage("grill", "@bob read", ANN));
-      yield* storage.ackMessage(nameOf("bob"), read.id);
+      yield* storage.ackMessage(nameOf("bob"), read.id, fixtureTime);
       const unread = yield* append(newMessage("grill", "@bob unread", ANN));
       const unrelated = yield* append(newMessage("grill", "no mention", { author: { name: "ann" } }));
       const found = yield* Effect.forEach(

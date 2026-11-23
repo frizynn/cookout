@@ -4,6 +4,8 @@
  * identity's token for the session cookie, or shows who is logged in.
  * `ReconnectingView` is the "Reconnecting…" bar at the top of the workspace,
  * shown while the live stream's link to the server is down.
+ * `IdentityDeletedNotice` says an identity whose profile was open was deleted
+ * elsewhere, so its profile closed, until dismissed.
  * `SidebarView` is the workspace's sidebar: the Inbox link with the inbox's
  * total unread count (in the unread colour when any item is a mention), the
  * People & agents link, every channel sorted by name, bold when it has unread
@@ -77,6 +79,7 @@ export { Authors } from "./lib/authors.tsx";
 export { ChannelView } from "./lib/channel.tsx";
 export { InboxView } from "./lib/inbox.tsx";
 export { LoginApprovalView } from "./lib/login-approval.tsx";
+export { IdentityDeletedNotice } from "./lib/identity-deleted-notice.tsx";
 export { LoginView } from "./lib/login.tsx";
 export { NotBuiltView } from "./lib/not-built.tsx";
 export { PeopleView } from "./lib/people.tsx";

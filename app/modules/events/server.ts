@@ -8,8 +8,8 @@
  * caller's new inbox items, which the `Messages` service's hub feeds; the
  * caller's new read positions, which the `Inbox` service's hub feeds on every
  * ack from any session; and, when the request asks with `?channels=all`,
- * every new message on every channel, every identity created or changed (fed
- * by the `IdentityChanges` hub), every channel created or deleted (fed by the
+ * every new message on every channel, every identity created, changed or
+ * deleted (fed by the `IdentityChanges` hubs), every channel created or deleted (fed by the
  * `Channels` service's hubs), every command registered or rotated (fed by the
  * `CommandChanges` hub) and, to an agent's owner and to admins, every change
  * to the agent's agent session (fed by the `AgentSessions` service's hub), for
@@ -33,11 +33,13 @@ import {
   ChannelEventSchema,
   CommandEventSchema,
   ConnectedEventSchema,
+  IdentityDeletedEventSchema,
   IdentityEventSchema,
   InboxItemEventSchema,
   MessageEventSchema,
   ReadPositionEventSchema,
   ReadPositionMovedBackEventSchema,
+  ReadReceiptEventSchema,
   SubscriptionEventSchema,
 } from "./lib/server/wire.ts";
 import type { Connected, EventSource } from "./lib/server/source.ts";
@@ -106,10 +108,12 @@ export const eventResponseSchemas = {
   ChannelEvent: ChannelEventSchema,
   CommandEvent: CommandEventSchema,
   ConnectedEvent: ConnectedEventSchema,
+  IdentityDeletedEvent: IdentityDeletedEventSchema,
   IdentityEvent: IdentityEventSchema,
   InboxItemEvent: InboxItemEventSchema,
   MessageEvent: MessageEventSchema,
   ReadPositionEvent: ReadPositionEventSchema,
   ReadPositionMovedBackEvent: ReadPositionMovedBackEventSchema,
+  ReadReceiptEvent: ReadReceiptEventSchema,
   SubscriptionEvent: SubscriptionEventSchema,
 };

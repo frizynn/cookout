@@ -4,6 +4,7 @@ import {
   appendTo,
   channelFixture as channel,
   channelName,
+  fixtureTime,
   identityFixture as identity,
   identityName as nameOf,
   newMessageFixture as newMessage,
@@ -68,7 +69,7 @@ it.effect.each(storageLayers)(
       yield* append(newMessage("grill", "own", ANN));
       const mention = yield* append(newMessage("grill", "@ann look", { ...BOB, mentions: ["ann"] }));
       const before = yield* storage.listInboxHistory(nameOf("ann"), ALL);
-      yield* storage.ackMessage(nameOf("ann"), mention.id);
+      yield* storage.ackMessage(nameOf("ann"), mention.id, fixtureTime);
       const after = yield* storage.listInboxHistory(nameOf("ann"), ALL);
       const inbox = yield* storage.listInbox(nameOf("ann"));
 

@@ -1,4 +1,5 @@
-import { allChannels, channels } from "./all-channels.ts";
+import { allChannels, channels, readReceipts } from "./all-channels.ts";
+import { identities, identityDeletions } from "./identities.ts";
 import type { AllChannelsNeeds } from "./all-channels.ts";
 import type { BoardChangesNeeds } from "./board-changes.ts";
 import type { EventSource } from "./source.ts";
@@ -7,7 +8,6 @@ import type { Inbox } from "../../../inbox/server.ts";
 import { boardChanges } from "./board-changes.ts";
 import { connected } from "./connected.ts";
 import { heartbeat } from "./source.ts";
-import { identities } from "./identities.ts";
 import { inboxItems } from "./inbox-items.ts";
 import { readPositions } from "./read-positions.ts";
 import { subscriptions } from "./subscriptions.ts";
@@ -21,8 +21,10 @@ const sources: readonly EventSource<SourceNeeds>[] = [
   subscriptions,
   allChannels,
   identities,
+  identityDeletions,
   channels,
   ...boardChanges,
+  readReceipts,
   heartbeat,
 ];
 

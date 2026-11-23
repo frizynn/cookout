@@ -44,16 +44,25 @@ function threadRefused(body: unknown): Effect.Effect<unknown> {
 
 it.effect("a message is either top-level (with reply count) or a reply (with replyTo)", () =>
   Effect.gen(function* messageKinds() {
-    const thread = yield* threadAnswered({ parent: topLevel, replies: [reply] });
-    const untagged = yield* threadRefused({ parent: { ...base, id: 1, latestReplyId: 2, replyCount: 1 }, replies: [] });
+    const thread = yield* threadAnswered({ parent: topLevel, receipts: [], replies: [reply] });
+    const untagged = yield* threadRefused({
+      parent: { ...base, id: 1, latestReplyId: 2, replyCount: 1 },
+      receipts: [],
+      replies: [],
+    });
     const replyWithoutReplyTo = yield* threadRefused({
       parent: topLevel,
+      receipts: [],
       replies: [{ ...base, id: 2, kind: "reply" }],
     });
-    const topLevelWithoutCount = yield* threadRefused({ parent: { ...base, id: 1, kind: "top-level" }, replies: [] });
+    const topLevelWithoutCount = yield* threadRefused({
+      parent: { ...base, id: 1, kind: "top-level" },
+      receipts: [],
+      replies: [],
+    });
     const badResponse = { code: "bad_response", status: 200 };
 
-    expect(thread).toStrictEqual({ parent: topLevel, replies: [reply] });
+    expect(thread).toStrictEqual({ parent: topLevel, receipts: [], replies: [reply] });
     expect([untagged, replyWithoutReplyTo, topLevelWithoutCount]).toMatchObject([
       badResponse,
       badResponse,

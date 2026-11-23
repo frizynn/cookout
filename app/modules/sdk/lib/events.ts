@@ -8,11 +8,13 @@ import {
   isCommandEvent,
   isConnectedEvent,
   isErrorResponse,
+  isIdentityDeletedEvent,
   isIdentityEvent,
   isInboxItemEvent,
   isMessageEvent,
   isReadPositionEvent,
   isReadPositionMovedBackEvent,
+  isReadReceiptEvent,
   isSubscriptionEvent,
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
@@ -61,10 +63,12 @@ const validators: { readonly [Type in EventType]: (data: unknown) => data is Ext
   "channel-deleted": isChannelDeletedEvent,
   command: isCommandEvent,
   identity: isIdentityEvent,
+  "identity-deleted": isIdentityDeletedEvent,
   "inbox-item": isInboxItemEvent,
   message: isMessageEvent,
   "read-position": isReadPositionEvent,
   "read-position-moved-back": isReadPositionMovedBackEvent,
+  "read-receipt": isReadReceiptEvent,
   subscription: isSubscriptionEvent,
 };
 

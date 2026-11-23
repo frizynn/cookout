@@ -1,6 +1,6 @@
-import { Array as Arr, Effect, Option, Predicate, pipe } from "effect";
-import type { Channel, ChannelName } from "../../../channels/index.ts";
 import type {
+  AckedInbox,
+  AckedMessage,
   HistoryPageRequest,
   InboxSection,
   Scope,
@@ -8,11 +8,13 @@ import type {
   StoredHistoryPage,
   StoredInboxItem,
 } from "./inbox.ts";
-import type { InboxReason, MovedBackReadPosition, ReadPosition } from "../../../inbox/index.ts";
-import type { Message, MessageId, Reply, TopLevelMessage } from "../../../messages/index.ts";
+import { Array as Arr, Effect, Option, Predicate, pipe } from "effect";
+import type { Channel, ChannelName } from "../../../channels/index.ts";
+import type { InboxReason, MovedBackReadPosition } from "../../../inbox/index.ts";
+import type { Message, MessageId, ReadReceipt, Reply, TopLevelMessage } from "../../../messages/index.ts";
+import { ackAllIn, ackIn, moveBackIn, readPositionsIn, receiptsOf } from "./read-positions-memory.ts";
 import { counted, threadIdOf } from "./messages.ts";
-import { followersOf, movedTo, newestPerScope, scopeOf } from "./inbox.ts";
-import { moveBackIn, readPositionsIn } from "./read-positions-memory.ts";
+import { followersOf, newestPerScope, scopeOf } from "./inbox.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { MemoryInbox } from "./inbox-memory-state.ts";
 import type { StorageUnavailable } from "./errors.ts";
@@ -44,6 +46,7 @@ type KeysChange = (keys: ReadonlySet<string>, key: string) => ReadonlySet<string
 interface Appended {
   readonly inbox: MemoryInbox;
   readonly message: Message;
+  readonly messages: readonly Message[];
 }
 
 interface Reading {
@@ -76,17 +79,20 @@ function withoutKey(keys: ReadonlySet<string>, key: string): ReadonlySet<string>
   return new Set(Arr.filter([...keys], (kept) => kept !== key));
 }
 
-function afterAppend({ inbox, message }: Appended): MemoryInbox {
+function afterAppend({ inbox, message, messages }: Appended): readonly [readonly ReadReceipt[], MemoryInbox] {
   const followed = Arr.map(followersOf(message), (name) => keyOf(name, threadScopeOf(message)));
   const mentioned = Arr.map(message.mentions, (name) => mentionKeyOf(name, message.id));
-  const read = keyOf(message.author.name, scopeOf(message));
-  const position = movedTo({ current: inbox.positions.get(read), message });
-  return {
-    ...inbox,
-    follows: new Set([...inbox.follows, ...followed]),
-    mentions: new Set([...inbox.mentions, ...mentioned]),
-    positions: new Map([...inbox.positions, [read, position.messageId]]),
-  };
+  const author = message.author.name;
+  const key = keyOf(author, scopeOf(message));
+  const [{ receipts }, moved] = ackIn({ at: message.createdAt, identity: author, inbox, key, message, messages });
+  return [
+    receipts,
+    {
+      ...moved,
+      follows: new Set([...inbox.follows, ...followed]),
+      mentions: new Set([...inbox.mentions, ...mentioned]),
+    },
+  ];
 }
 
 function isRead({ board, identity }: Reading, message: Message): boolean {
@@ -189,30 +195,37 @@ function moving<Value>(move: PositionMove<Value>) {
     });
 }
 
-const ack = moving<ReadPosition>(({ board, key, message }) => {
-  const position = movedTo({ current: board.inbox.positions.get(key), message });
-  return [position, new Map([...board.inbox.positions, [key, position.messageId]])];
-});
+function ack({ at, board, id, identity }: Asking & { readonly at: Message["createdAt"] }): Changed<AckedMessage> {
+  return Option.match(findIn(board, id), {
+    onNone: () => [Option.none(), board.inbox],
+    onSome: (message) => {
+      const key = keyOf(identity, scopeOf(message));
+      const [acked, inbox] = ackIn({ at, identity, inbox: board.inbox, key, message, messages: board.messages });
+      return [Option.some(acked), inbox];
+    },
+  });
+}
 
 const moveBack = moving<MovedBackReadPosition>(({ board, key, message }) =>
   moveBackIn({ key, message, messages: board.messages, positions: board.inbox.positions }),
 );
 
 interface AckingInbox {
+  readonly at: Message["createdAt"];
   readonly board: MemoryBoard;
   readonly identity: IdentityName;
   readonly upTo: MessageId;
 }
 
-function ackInbox({ board, identity, upTo }: AckingInbox): readonly [readonly ReadPosition[], MemoryInbox] {
-  const positions = new Map(board.inbox.positions);
-  const moved = Arr.map(newestPerScope({ items: inboxOf({ board, identity }), upTo }), (message) => {
-    const key = keyOf(identity, scopeOf(message));
-    const position = movedTo({ current: positions.get(key), message });
-    positions.set(key, position.messageId);
-    return position;
+function ackInbox({ at, board, identity, upTo }: AckingInbox): readonly [AckedInbox, MemoryInbox] {
+  return ackAllIn({
+    at,
+    identity,
+    inbox: board.inbox,
+    keyFor: (message) => keyOf(identity, scopeOf(message)),
+    messages: board.messages,
+    newest: newestPerScope({ items: inboxOf({ board, identity }), upTo }),
   });
-  return [moved, { ...board.inbox, positions }];
 }
 
 function follow(change: KeysChange) {
@@ -248,8 +261,8 @@ function memoryInbox({ changeInbox, channelExists, listChannels, read }: BoardAc
       });
   }
   return {
-    ackInbox: (identity, upTo) => changeInbox((board) => ackInbox({ board, identity, upTo })),
-    ackMessage: (identity, id) => changeFound((board) => ack({ board, id, identity })),
+    ackInbox: (identity, upTo, at) => changeInbox((board) => ackInbox({ at, board, identity, upTo })),
+    ackMessage: (identity, id, at) => changeFound((board) => ack({ at, board, id, identity })),
     findInboxItem: (identity, id) => read((board) => inboxItemOf({ board, identity }, id)),
     followThread: (identity, id) => changeFound((board) => follow(withKey)({ board, id, identity })),
     listInbox: (identity) => read((board) => inboxOf({ board, identity })),
@@ -260,6 +273,7 @@ function memoryInbox({ changeInbox, channelExists, listChannels, read }: BoardAc
       read(({ inbox, messages }) =>
         readPositionsIn({ messages, positionOf: (scope) => inbox.positions.get(keyOf(identity, scope)) }),
       ),
+    listReadReceipts: (ids) => read(({ inbox }) => receiptsOf({ ids, receipts: inbox.receipts })),
     listSubscribedChannels: (identity) =>
       Effect.flatMap(listChannels(), (channels) =>
         read((board) =>

@@ -89,3 +89,27 @@ it.effect("cookout inbox --history prints a page of the inbox history, paged wit
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
+
+it.effect("cookout thread get prints the thread's read receipts, seen once the mentioned identity acks", () =>
+  Effect.gen(function* threadReceipts() {
+    const cookout = yield* TestCookout;
+    const ann = yield* cookout.createIdentity("ann");
+    const bob = yield* cookout.createIdentity("bob");
+    const folder = yield* freshStateFolder;
+    yield* answer(() => ann.client.createChannel({ name: "grill" }));
+    const { message } = yield* answer(() => ann.client.createMessage({ channel: "grill", text: "@bob have a look" }));
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bob.token, COOKOUT_URL: cookout.url };
+    const id = String(message.id);
+    const results = yield* runAll(env, [
+      ["thread", "get", id],
+      ["ack", id],
+      ["thread", "get", id],
+    ]);
+
+    expect(results).toMatchObject([
+      { exitCode: 0, stdoutJson: { receipts: [{ identity: "bob", messageId: message.id, seen: false }] } },
+      { exitCode: 0 },
+      { exitCode: 0, stdoutJson: { receipts: [{ identity: "bob", messageId: message.id, seen: true }] } },
+    ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);

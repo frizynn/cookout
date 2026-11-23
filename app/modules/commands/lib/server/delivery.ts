@@ -5,6 +5,7 @@ import { Context, DateTime, Duration, Effect, FiberSet, Layer, Ref, Schedule, Sc
 import type { DeliveryOutcome, NewCommandCall, StorageUnavailable, StoredDelivery } from "../../../storage/server.ts";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { webhookRetryDelaySeconds, webhookRetryFactor, webhookTimeoutSeconds } from "../../../config/server.ts";
+import type { ReadReceipts } from "../../../messages/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import type { Token } from "../../../identities/index.ts";
@@ -17,6 +18,8 @@ type Calling = Pick<Call, "stored" | "data">;
 type Placed = Pick<Call, "channel" | "threadId">;
 
 type CallParts = Omit<NewCommandCall, "message">;
+
+type DeliveriesNeeds = Secrets | Storage | ReadReceipts;
 
 type PostCall<Failure> = (parts: CallParts) => Effect.Effect<Placed, Failure>;
 
@@ -289,9 +292,9 @@ const neverRedirected = FetchHttpClient.layer.pipe(
   Layer.provide(Layer.succeed(FetchHttpClient.RequestInit, { redirect: "manual" })),
 );
 
-const deliveriesLayer: Layer.Layer<Deliveries, Config.ConfigError | StorageUnavailable, Secrets | Storage> =
-  Layer.effect(Deliveries, Effect.flatMap(readBackoff, deliveriesWith)).pipe(
-    Layer.provide(Layer.merge(neverRedirected, messagesLayer)),
-  );
+const deliveriesLayer: Layer.Layer<Deliveries, Config.ConfigError | StorageUnavailable, DeliveriesNeeds> = Layer.effect(
+  Deliveries,
+  Effect.flatMap(readBackoff, deliveriesWith),
+).pipe(Layer.provide(Layer.merge(neverRedirected, messagesLayer)));
 
 export { Deliveries, deliveriesLayer };

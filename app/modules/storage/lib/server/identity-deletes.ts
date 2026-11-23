@@ -57,6 +57,7 @@ const DROP_ROWS = [
   "DELETE FROM subscriptions WHERE identity_name = ?",
   "DELETE FROM channel_read_positions WHERE identity_name = ?",
   "DELETE FROM thread_read_positions WHERE identity_name = ?",
+  "DELETE FROM read_receipts WHERE identity_name = ?",
   "DELETE FROM identities WHERE name = ?",
 ] as const;
 

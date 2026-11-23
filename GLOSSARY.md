@@ -68,6 +68,10 @@ The newest message an identity has read in a thread or channel. Messages after i
 **Mark unread**:
 Moving a read position back to just before a message, so it and everything after it in its thread or channel are unread again. Matt's own term, from his request on the board (right-click → mark unread, 2026-11-23, [#154](https://github.com/mattpocock/cookout/issues/154)); confirmed ([#171](https://github.com/mattpocock/cookout/issues/171), 2026-11-23).
 
+**Read receipt**:
+Whether, and when, an identity has seen a message: its Read position in the message's thread or channel has passed it. A message shows receipts only for the identities it mentions, plus the author of the parent message for a reply (Matt, 2026-11-23, presence grilling Q1, Q2, Q3, [#177](https://github.com/mattpocock/cookout/issues/177)).
+_Avoid_: acknowledgement, explicit ack, seen marker
+
 **Inbox reason**:
 Why a message is in an identity's inbox: a mention, a reply in a followed thread, or a top-level message in a subscribed channel. A message there for several reasons lists them all.
 

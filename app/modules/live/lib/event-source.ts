@@ -14,10 +14,12 @@ const eventTypes = {
   "channel-deleted": true,
   command: true,
   identity: true,
+  "identity-deleted": true,
   "inbox-item": true,
   message: true,
   "read-position": true,
   "read-position-moved-back": true,
+  "read-receipt": true,
   subscription: true,
 } as const satisfies Readonly<Record<CookoutEvent["type"], true>>;
 
