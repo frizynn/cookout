@@ -3,6 +3,7 @@ import type { Message, MessageId } from "../../../messages/index.ts";
 import type { Storage, StorageUnavailable } from "../../server.ts";
 import {
   appendTo,
+  backfillReadReceiptsAgain,
   channelFixture,
   fixtureTime,
   freshDatabasePath,
@@ -11,10 +12,10 @@ import {
   newMessageFixture,
   openStore,
 } from "../../../testing/server.ts";
-import { backfillReadReceiptsAgain, sqliteStorage } from "../../server.ts";
 import { expect, it } from "@effect/vitest";
 import type { FileSystem } from "effect";
 import { NodeServices } from "@effect/platform-node";
+import { sqliteStorage } from "../../server.ts";
 import { tokenHash } from "../../../identities/index.ts";
 
 type OnDisk<Value> = Effect.Effect<Value, StorageUnavailable, FileSystem.FileSystem>;

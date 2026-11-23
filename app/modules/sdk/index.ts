@@ -84,6 +84,7 @@ export type {
   MessageId,
   MessageResponse,
   PostMessageRequest,
+  ReadReceipt,
   Reply,
   ThreadResponse,
   TopLevelMessage,
