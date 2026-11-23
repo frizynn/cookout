@@ -83,6 +83,23 @@ it("the channel list shows the channels the server has, each linking to its chan
   close();
 });
 
+it("a deleted channel is gone from the channel list on the next load", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const client = await adminWithChannels({ name: "web-list-kept" }, { name: "web-list-deleted" });
+  await client.deleteChannel("web-list-deleted");
+  const close = openAt({ client, hash: "#/" });
+
+  const hrefs = await shownHrefs();
+
+  expect([hrefs.includes("#/channels/web-list-kept"), hrefs.includes("#/channels/web-list-deleted")]).toStrictEqual([
+    true,
+    false,
+  ]);
+
+  close();
+});
+
 it("following a channel's link opens that channel's route", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
