@@ -156,6 +156,14 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts c
 
 `command add` prints `{ command, secret }`: the `hmac_…` secret webhook deliveries will be signed with, shown this once (`command list` never shows it). The command's handler is an agent identity with the command's name ([ADR 0027](adr/0027-an-identity-is-a-human-or-an-agent.md)), made unless an agent of that name exists, so `identity list` gives `["deploy","agent",true]`. A second `add deploy` is 409 `command_exists`, a human's name (`ada`) is 409 `handler_not_agent`, and a non-admin (`grace`, from the lease recipe) is 403 `admin_only`; each exits 1.
 
+A handler that lost its secret gets a new one by rotating it:
+
+```sh
+env $(cat /tmp/cookout-dev.env) node app/main.ts command rotate deploy
+```
+
+It prints `{ command, secret }` with a new `hmac_…` secret, shown this once. From then on every delivery, a retry of an earlier call included, is signed with the new secret and none with the old. A command that doesn't exist is 404 `command_not_found`, and a non-admin is 403 `admin_only`; each exits 1.
+
 ## Call a command
 
 Any identity calls a command with data, after "Register a command". `grace` calls `deploy` in the seeded `deploys` channel, once with bad data and once with good:
@@ -234,7 +242,7 @@ To run the suite against the Docker image instead, in one command:
 pnpm e2e:docker
 ```
 
-`scripts/e2e-docker.sh` builds the image, makes a `COOKOUT_ADMIN_TOKEN` for the run, runs the image with it on a fresh named volume with the `[env]` of [fly.toml](../fly.toml), checks that the container's logs don't show the token, runs the suite against it with that token and removes the container, the volume and the image again, also when a test fails or on Ctrl-C. It exits with the suite's code. The one `[env]` value it replaces is `COOKOUT_PUBLIC_URL`, with the local address (`http://127.0.0.1:<free port>`), because the `Host` the suite sends is that address's. It also builds the example handler's image and, once the cookout listens, adds the command `example` (URL `http://127.0.0.1:8787/webhook`, schema a string `branch`) with `node app/main.ts command add`, then runs the handler in the cookout container's network namespace (`--network container:<cookout>`) with the secret that add showed, posting its replies to `http://127.0.0.1:8080`, a host the cookout always answers. It removes the handler container and image with the rest. Passing it is required before any `fly deploy`.
+`scripts/e2e-docker.sh` builds the image, makes a `COOKOUT_ADMIN_TOKEN` for the run, runs the image with it on a fresh named volume with the `[env]` of [fly.toml](../fly.toml), checks that the container's logs don't show the token, runs the suite against it with that token and removes the container, the volume and the image again, also when a test fails or on Ctrl-C. It exits with the suite's code. The one `[env]` value it replaces is `COOKOUT_PUBLIC_URL`, with the local address (`http://127.0.0.1:<free port>`), because the `Host` the suite sends is that address's. It also builds the example handler's image and, once the cookout listens, adds the command `example` (URL `http://127.0.0.1:8787/webhook`, schema a string `branch` from [packages/handler-example/command.schema.json](../packages/handler-example/command.schema.json), which `scripts/handler-provision.sh` also reads) with `node app/main.ts command add`, then runs the handler in the cookout container's network namespace (`--network container:<cookout>`) with the secret that add showed, posting its replies to `http://127.0.0.1:8080`, a host the cookout always answers. It removes the handler container and image with the rest. Passing it is required before any `fly deploy`.
 
 ## Log in as a human with a session cookie
 
@@ -361,7 +369,7 @@ The example handler (`packages/handler-example`) runs as its own Fly app, `cooko
 docker build -f packages/handler-example/Dockerfile -t cookout-handler .
 ```
 
-The handler doesn't start without `COOKOUT_COMMAND_SECRET`, the secret `command add` shows once. `scripts/handler-provision.sh` makes the deployed cookout ready for it. With `COOKOUT_URL=https://cookout.fly.dev` and the admin's token in `COOKOUT_TOKEN`, it creates the channel `handler-example` and the command `example` (URL `https://cookout-handler-example.fly.dev/webhook`) if they are missing. It pipes the new command's secret straight into `flyctl secrets import --stage -a cookout-handler-example` and never prints it. A rerun finds both and changes nothing. Then deploy it and check it:
+The handler doesn't start without `COOKOUT_COMMAND_SECRET`, the secret `command add` shows once. `scripts/handler-provision.sh` makes the deployed cookout ready for it. With `COOKOUT_URL=https://cookout.fly.dev` and the admin's token in `COOKOUT_TOKEN`, it creates the channel `handler-example` and the command `example` (URL `https://cookout-handler-example.fly.dev/webhook`) if they are missing. It pipes the new command's secret straight into `flyctl secrets import --stage -a cookout-handler-example` and never prints it. If the command exists but `flyctl secrets list` shows no `COOKOUT_COMMAND_SECRET` on the app (staging failed after an earlier add), it runs `command rotate example` and stages the new secret the same way, so a rerun recovers. Once the app has the secret, a rerun changes nothing. Then deploy it and check it:
 
 ```sh
 scripts/handler-provision.sh
