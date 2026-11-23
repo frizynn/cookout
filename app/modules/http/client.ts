@@ -26,12 +26,13 @@ interface Frames {
 
 const NO_PARAMS = 0;
 const TRAILING_SLASHES = /\/+$/u;
-const PARAM = /:(?<name>[A-Za-z]+)/gu;
 const EVENT_END = /\r\n\r\n|\n\n|\r\r/u;
 const LINE_END = /\r\n|\n|\r/u;
 const LEADING_SPACE = /^ /u;
 const DEFAULT_EVENT = "message";
 const COMMENT_START = 1;
+const FIRST = 0;
+const LAST = -1;
 
 function queryString(query: Readonly<Record<string, QueryValue>>): string {
   const search = new URLSearchParams();
@@ -56,7 +57,11 @@ function parsed(text: string): Parsed {
 }
 
 function fillParams(path: string, params: Readonly<Record<string, string>>): string {
-  return path.replaceAll(PARAM, (_match: string, name: string) => encodeURIComponent(params[name] ?? ""));
+  let filled = path;
+  for (const [name, value] of Object.entries(params)) {
+    filled = filled.replaceAll(new RegExp(`:${name}\\b`, "gu"), () => encodeURIComponent(value));
+  }
+  return filled;
 }
 
 function fieldOf(line: string): Field {
@@ -90,8 +95,8 @@ function eventsIn(block: string): readonly ServerSentFrame[] {
 
 function framesOf(text: string): Frames {
   const blocks = text.split(EVENT_END);
-  const rest = blocks.pop() ?? "";
-  return { events: blocks.flatMap((block) => eventsIn(block)), rest };
+  const rest = blocks.slice(LAST).join("");
+  return { events: blocks.slice(FIRST, LAST).flatMap((block) => eventsIn(block)), rest };
 }
 
 function chunksOf(reader: ReadableStreamDefaultReader<Uint8Array>): AsyncIterable<Uint8Array> {
