@@ -1,23 +1,12 @@
-import { Array as Arr, Effect, Option, Path, Schema, Stream, pipe } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
-import { cliResult, parseLine } from "./cli.ts";
-import type { CliResult } from "./cli.ts";
+import type { CliResult, WatchRun, Watched } from "./cli.ts";
+import { Effect, Option, Path, Schema, Stream, pipe } from "effect";
+import { cliResult, parseLine, watched } from "./cli.ts";
 import type { Scope } from "effect";
 
 interface BinaryRun {
   readonly args: readonly string[];
   readonly env: Readonly<Record<string, string>>;
-}
-
-interface WatchRun<During, Needs> extends BinaryRun {
-  readonly lines: number;
-  readonly whileWatching: Effect.Effect<During, never, Needs>;
-}
-
-interface Watched<During> {
-  readonly during: During;
-  readonly stdoutJson: readonly unknown[];
-  readonly stdoutLines: readonly string[];
 }
 
 interface InterruptedDev {
@@ -72,8 +61,7 @@ function watchCookoutBinary<During, Needs>({
     const during = yield* whileWatching;
     const stdoutLines = yield* Stream.runCollect(Stream.take(linesOf(handle.stdout), lines));
     yield* handle.kill();
-    const stdoutJson = Arr.map(stdoutLines, (line) => parseLine(line));
-    return { during, stdoutJson, stdoutLines };
+    return watched({ during, lines: stdoutLines });
   }).pipe(Effect.orDie);
 }
 
@@ -98,4 +86,4 @@ function interruptDevBinary(): Effect.Effect<InterruptedDev, never, Spawns> {
   }).pipe(Effect.orDie);
 }
 
-export { type InterruptedDev, type Watched, interruptDevBinary, runCookoutBinary, watchCookoutBinary };
+export { type InterruptedDev, interruptDevBinary, runCookoutBinary, watchCookoutBinary };

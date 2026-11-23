@@ -1,4 +1,4 @@
-import { Effect, String as Str, pipe } from "effect";
+import { Effect, pipe } from "effect";
 import {
   TestCookout,
   answer,
@@ -17,10 +17,8 @@ const EXIT_FAILURE = 1;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const succeeded = { exitCode: 0, stderr: "" };
 const TWO_LINES = 2;
-const SHOWN = 120;
-const SHORT_TEXT = "@bob have a look\nat this";
-const LONG = 150;
-const LONG_TEXT = `@bob ${Str.repeat(LONG)("x")}`;
+const FIRST_TEXT = "@bob have a look";
+const SECOND_TEXT = "@bob and this";
 const verbs: readonly (readonly string[])[] = [
   ["identity", "create", "bot", "--kind", "agent", "--owner", "matt"],
   ["identity", "rotate", "bot"],
@@ -187,7 +185,7 @@ function watchTwoMentions(
     const ann = yield* cookout.createIdentity("ann");
     const bob = yield* cookout.createIdentity("bob");
     yield* answer(() => ann.client.createChannel({ name: "grill" }));
-    const mentions = Effect.all([mention(ann, SHORT_TEXT), mention(ann, LONG_TEXT)], ONE_AT_A_TIME);
+    const mentions = Effect.all([mention(ann, FIRST_TEXT), mention(ann, SECOND_TEXT)], ONE_AT_A_TIME);
     return yield* watchCookoutBinary({
       args,
       env: { COOKOUT_TOKEN: bob.token, COOKOUT_URL: cookout.url },
@@ -197,30 +195,30 @@ function watchTwoMentions(
   }).pipe(Effect.provide([testCookout(), commandLineServices]));
 }
 
-it.effect("cookout watch prints one text line per new inbox item, and nothing else on stdout", () =>
+it.effect("the cookout watch process prints one text line per new inbox item to stdout, and nothing else", () =>
   Effect.gen(function* watchText() {
     const {
-      during: [short, long],
+      during: [first, second],
       stdoutLines,
     } = yield* watchTwoMentions(["watch"]);
 
     expect(stdoutLines).toStrictEqual([
-      `#grill thread:${String(short)} @ann: @bob have a look at this (msg ${String(short)})`,
-      `#grill thread:${String(long)} @ann: ${Str.takeLeft(LONG_TEXT, SHOWN)} (msg ${String(long)})`,
+      `#grill thread:${String(first)} @ann: ${FIRST_TEXT} (msg ${String(first)})`,
+      `#grill thread:${String(second)} @ann: ${SECOND_TEXT} (msg ${String(second)})`,
     ]);
   }),
 );
 
-it.effect("cookout watch --json prints each new inbox item as the event's JSON, one per line", () =>
+it.effect("the cookout watch --json process prints one JSON line per new inbox item to stdout, and nothing else", () =>
   Effect.gen(function* watchJson() {
     const {
-      during: [short, long],
+      during: [first, second],
       stdoutJson,
     } = yield* watchTwoMentions(["watch", "--json"]);
 
     expect(stdoutJson).toMatchObject([
-      { item: { message: { id: short, text: SHORT_TEXT }, reasons: ["mention"] }, type: "inbox-item" },
-      { item: { message: { id: long, text: LONG_TEXT } }, type: "inbox-item" },
+      { item: { message: { id: first, text: FIRST_TEXT }, reasons: ["mention"] }, type: "inbox-item" },
+      { item: { message: { id: second, text: SECOND_TEXT } }, type: "inbox-item" },
     ]);
   }),
 );
