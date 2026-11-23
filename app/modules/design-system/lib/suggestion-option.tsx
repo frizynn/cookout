@@ -3,6 +3,7 @@ import { useCallback } from "react";
 
 interface OptionParts {
   readonly option: string;
+  readonly detail: string | null;
   readonly highlighted: boolean;
   readonly onChoose: (option: string) => void;
 }
@@ -28,6 +29,7 @@ export function SuggestionOption(parts: OptionParts): ReactNode {
         type="button"
       >
         {option}
+        {parts.detail !== null && <span className="ml-2 text-xs text-muted-foreground">{parts.detail}</span>}
       </button>
     </li>
   );

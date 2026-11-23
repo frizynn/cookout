@@ -40,13 +40,72 @@ interface TextAreaParts extends TextFieldParts {
   readonly choosing: boolean;
   readonly onPick: () => void;
   readonly onMove: (direction: "down" | "up") => void;
+  readonly onClose: () => void;
 }
 
 interface SuggestionsParts {
   readonly label: string;
   readonly options: readonly string[];
+  readonly details: Readonly<Partial<Record<string, string>>>;
   readonly highlighted: number;
   readonly onChoose: (option: string) => void;
+}
+
+interface PromptButtonsParts {
+  readonly busy: boolean;
+  readonly button: string;
+  readonly busyButton: string;
+  readonly onCancel: () => void;
+}
+
+interface PromptFormParts extends Parts, PromptButtonsParts {
+  readonly label: string;
+  readonly title: string;
+  readonly description: string | null;
+  readonly onSubmit: () => void;
+}
+
+interface PromptFieldParts {
+  readonly label: string;
+  readonly help: string | null;
+  readonly error: string | null;
+  readonly required: boolean;
+}
+
+interface FieldIds {
+  readonly control: string;
+  readonly help: string;
+  readonly error: string;
+  readonly describedBy: string;
+}
+
+interface FieldLabelParts {
+  readonly label: string;
+  readonly required: boolean;
+  readonly ids: FieldIds;
+}
+
+interface FieldNotesParts {
+  readonly help: string | null;
+  readonly error: string | null;
+  readonly ids: FieldIds;
+}
+
+interface InputFieldParts extends PromptFieldParts {
+  readonly kind: "text" | "number" | "integer";
+  readonly value: string;
+  readonly onEdit: (value: string) => void;
+}
+
+interface PickFieldParts extends PromptFieldParts {
+  readonly options: readonly string[];
+  readonly value: string;
+  readonly onEdit: (value: string) => void;
+}
+
+interface CheckFieldParts extends PromptFieldParts {
+  readonly checked: boolean;
+  readonly onEdit: (checked: boolean) => void;
 }
 
 interface AvatarParts {
@@ -113,21 +172,6 @@ interface AuthorParts extends AvatarParts {
   readonly shown: string;
 }
 
-interface FieldsFormParts extends Parts {
-  readonly label: string;
-  readonly onSubmit: (field: (name: string) => string) => void;
-}
-
-interface SelectParts extends Parts {
-  readonly label: string;
-  readonly name: string;
-}
-
-interface SelectOptionParts {
-  readonly label: string;
-  readonly value: string;
-}
-
 interface DataBlockParts {
   readonly label: string;
   readonly value: unknown;
@@ -150,6 +194,15 @@ interface SkeletonParts {
 
 export type {
   AuthorParts,
+  CheckFieldParts,
+  FieldIds,
+  FieldLabelParts,
+  FieldNotesParts,
+  InputFieldParts,
+  PickFieldParts,
+  PromptButtonsParts,
+  PromptFieldParts,
+  PromptFormParts,
   AvatarParts,
   ButtonParts,
   ChoiceGroupParts,
@@ -163,14 +216,11 @@ export type {
   CountParts,
   DataAreaParts,
   DataBlockParts,
-  FieldsFormParts,
   FormParts,
   LinkParts,
   ListParts,
   Parts,
   RowTitleParts,
-  SelectOptionParts,
-  SelectParts,
   SkeletonParts,
   SuggestionsParts,
   TextAreaParts,

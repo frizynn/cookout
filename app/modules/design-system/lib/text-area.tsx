@@ -6,7 +6,7 @@ import { useBoxKeys } from "./box-keys.ts";
 const ROWS = 3;
 
 export function TextArea(parts: TextAreaParts): ReactNode {
-  const { caret, choosing, onEdit, onMove, onPick, value } = parts;
+  const { caret, choosing, onClose, onEdit, onMove, onPick, value } = parts;
   const id = useId();
   const box = useRef<HTMLTextAreaElement>(null);
   const typed = useRef({ caret, value });
@@ -23,7 +23,7 @@ export function TextArea(parts: TextAreaParts): ReactNode {
       element.form.requestSubmit();
     }
   }, []);
-  const handleKeyDown = useBoxKeys({ choosing, onMove, onPick, onSend: handleSend });
+  const handleKeyDown = useBoxKeys({ choosing, onClose, onMove, onPick, onSend: handleSend });
   useLayoutEffect(() => {
     const element = box.current;
     if (element === null || (typed.current.value === value && typed.current.caret === caret)) {

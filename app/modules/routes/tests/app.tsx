@@ -127,7 +127,7 @@ export function browserLayout(): Layout {
 
 export function openBoard(opening: BoardOpening): () => void {
   globalThis.location.hash = opening.hash;
-  const composer = opening.composer ?? createComposer({ client: adminClient() });
+  const composer = opening.composer ?? createComposer({ client: adminClient(), commands: opening.board.commands });
   const unread = opening.unread ?? createUnread({ client: adminClient() });
   const layout = opening.layout ?? browserLayout();
   onTestFinished(cleanup);
@@ -138,9 +138,10 @@ export function openBoard(opening: BoardOpening): () => void {
 
 export function openAt(opening: Opening): () => void {
   const session = opening.session ?? sessionOf(opening.client);
+  const board = createBoard(opening);
   return openBoard({
-    board: createBoard(opening),
-    composer: createComposer(opening),
+    board,
+    composer: createComposer({ ...opening, commands: board.commands }),
     hash: opening.hash,
     session,
     unread: createUnread(opening),

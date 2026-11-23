@@ -1,40 +1,29 @@
 import { adminClient, alertSaying, clientWith, newIdentity, openAt } from "./app.tsx";
+import { callWith, callWithFields, channelWithCommand, noProperties, openChannel, pretty } from "./commands.ts";
 import { expect, it } from "vitest";
-import { fireEvent, screen, within } from "@testing-library/react";
-import type { CookoutClient } from "../../sdk/index.ts";
+import { screen, within } from "@testing-library/react";
 import { createCookoutClient } from "../../sdk/index.ts";
 
-const schema = { properties: { branch: { type: "string" } }, required: ["branch"], type: "object" };
-const nowhere = "http://127.0.0.1:9/command";
-const INDENT = 2;
+const LOW = 1;
+const HIGH = 2;
 
-function pretty(value: unknown): string {
-  return JSON.stringify(value, null, INDENT);
-}
-
-async function addCommand(name: string): Promise<CookoutClient> {
-  const handler = await newIdentity({ kind: "agent", name, owner: "admin" });
-  await adminClient().addCommand({ name, schema, url: nowhere });
-  return handler.client;
-}
-
-async function channelWithCommand(channel: string, command: string): Promise<CookoutClient> {
-  await adminClient().createChannel({ name: channel });
-  return addCommand(command);
-}
-
-async function callFromTheForm(command: string, data: string): Promise<void> {
-  const form = await screen.findByRole("form", { name: "Call a command" });
-  await within(form).findByRole("option", { name: `/${command}` });
-  fireEvent.change(within(form).getByLabelText("Command"), { target: { value: command } });
-  fireEvent.change(within(form).getByLabelText("Data"), { target: { value: data } });
-  fireEvent.click(within(form).getByRole("button", { name: "Call" }));
-}
+const everyKind = {
+  properties: {
+    branch: { type: "string" },
+    count: { type: "integer" },
+    dry: { type: "boolean" },
+    level: { enum: [LOW, HIGH] },
+    note: { type: "string" },
+    ratio: { type: "number" },
+  },
+  required: ["branch"],
+  type: "object",
+} as const;
 
 it("a command call and its result reply show their data in the thread", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const handler = await channelWithCommand("web-command-shows", "web-show-call");
+  const handler = await channelWithCommand({ channel: "web-command-shows", command: { name: "web-show-call" } });
   const { threadId } = await adminClient().callCommand("web-show-call", {
     channel: "web-command-shows",
     data: { branch: "main" },
@@ -63,63 +52,104 @@ it("a command call and its result reply show their data in the thread", { timeou
   close();
 });
 
-it("a person picks a command, enters data and calls it, and the call message appears", { timeout: 5000 }, async () => {
+it("a good call posts the call message in the channel and brings back an empty message box", {
+  timeout: 5000,
+}, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand("web-command-call", "web-call-form");
-  await adminClient().createMessage({ channel: "web-command-call", text: "Ready to ship" });
+  await channelWithCommand({ channel: "web-command-call", command: { name: "web-call-fields", schema: everyKind } });
   const caller = await newIdentity({ kind: "human", name: "web-command-caller" });
-  const close = openAt({ client: caller.client, hash: "#/channels/web-command-call" });
+  const close = await openChannel({ channel: "web-command-call", client: caller.client });
 
-  await callFromTheForm("web-call-form", '{"branch":"main"}');
-  const shown = await screen.findByLabelText("Call to /web-call-form");
+  await callWithFields({
+    checks: ["dry"],
+    command: "web-call-fields",
+    texts: { branch: "main", count: "3", level: String(HIGH) },
+  });
+  await screen.findByLabelText("Call to /web-call-fields");
   const { messages } = await adminClient().listMessages("web-command-call");
 
   expect([
-    shown.textContent,
-    messages.map(({ author, data = "no data", text }) => [author.name, text, data]),
+    messages.map(({ author, data, text }) => [author.name, text, data]),
+    screen.getByLabelText<HTMLTextAreaElement>("Message").value,
+    screen.queryByRole("form", { name: "Call /web-call-fields" }),
   ]).toStrictEqual([
-    pretty({ branch: "main" }),
     [
-      ["admin", "Ready to ship", "no data"],
-      ["web-command-caller", "/web-call-form", { command: "web-call-form", data: { branch: "main" } }],
+      [
+        "web-command-caller",
+        "/web-call-fields",
+        { command: "web-call-fields", data: { branch: "main", count: 3, dry: true, level: HIGH } },
+      ],
     ],
+    "",
+    null,
   ]);
 
   close();
 });
 
-it("a call whose data breaks the command's schema shows the schema errors", { timeout: 5000 }, async () => {
+it("a refused call shows the schema error next to its field and keeps what was typed", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand("web-command-bad", "web-call-bad");
-  const close = openAt({ client: adminClient(), hash: "#/channels/web-command-bad" });
+  await channelWithCommand({
+    channel: "web-command-short",
+    command: {
+      name: "web-call-short",
+      schema: { properties: { branch: { minLength: 3, type: "string" } }, required: ["branch"], type: "object" },
+    },
+  });
+  const close = await openChannel({ channel: "web-command-short" });
 
-  await callFromTheForm("web-call-bad", '{"branch":[1,true,null,"main",{}]}');
-  const alert = await screen.findByRole("alert");
-  const { messages } = await adminClient().listMessages("web-command-bad");
+  const prompt = await callWith({ command: "web-call-short", field: "branch", value: "x" });
+  const alert = await within(prompt).findByRole("alert");
+  const { messages } = await adminClient().listMessages("web-command-short");
 
-  expect([alert.textContent, messages]).toStrictEqual([
-    expect.stringMatching(/^Couldn't call \/web-call-bad \(invalid_request\).*data\.branch: must be string$/u),
+  expect([
+    alert.textContent,
+    within(prompt).getByRole("textbox", { description: "must NOT have fewer than 3 characters", name: "branch" }),
+    screen.queryByRole("list", { name: "Schema errors" }),
+    messages,
+  ]).toStrictEqual([
+    expect.stringMatching(/^Couldn't call \/web-call-short \(invalid_request\)/u),
+    within(prompt).getByDisplayValue("x"),
+    null,
     [],
   ]);
 
   close();
 });
 
-it("a schema error keeps the typed data in the box, and a good call empties it", { timeout: 5000 }, async () => {
+it("a schema with no properties falls back to a JSON data box", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand("web-command-keep", "web-call-keep");
-  const close = openAt({ client: adminClient(), hash: "#/channels/web-command-keep" });
+  await channelWithCommand({ channel: "web-command-json", command: { name: "web-call-json", schema: noProperties } });
+  const close = await openChannel({ channel: "web-command-json" });
 
-  await callFromTheForm("web-call-keep", '{"branch":1}');
-  await screen.findByRole("alert");
-  const kept = screen.queryByDisplayValue('{"branch":1}');
-  await callFromTheForm("web-call-keep", '{"branch":"main"}');
-  await screen.findByLabelText("Call to /web-call-keep");
+  await callWith({ command: "web-call-json", field: "Data", value: '{"branch":"main"}' });
+  const shown = await screen.findByLabelText("Call to /web-call-json");
 
-  expect([kept, screen.queryByDisplayValue('{"branch":"main"}')]).toStrictEqual([screen.getByLabelText("Data"), null]);
+  expect(shown.textContent).toBe(pretty({ branch: "main" }));
+
+  close();
+});
+
+it("schema errors no field names are listed, and the data box keeps what was typed", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  await channelWithCommand({ channel: "web-command-bad", command: { name: "web-call-bad", schema: noProperties } });
+  const close = await openChannel({ channel: "web-command-bad" });
+
+  const prompt = await callWith({ command: "web-call-bad", field: "Data", value: '{"other":1}' });
+  const alert = await within(prompt).findByRole("alert");
+  const { messages } = await adminClient().listMessages("web-command-bad");
+
+  expect([alert.textContent, within(prompt).getByLabelText("Data"), messages]).toStrictEqual([
+    expect.stringMatching(
+      /^Couldn't call \/web-call-bad \(invalid_request\).*data: must have required property 'branch'$/u,
+    ),
+    within(prompt).getByDisplayValue('{"other":1}'),
+    [],
+  ]);
 
   close();
 });
@@ -127,11 +157,14 @@ it("a schema error keeps the typed data in the box, and a good call empties it",
 it("data that isn't JSON is refused before it is sent", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand("web-command-not-json", "web-call-not-json");
-  const close = openAt({ client: adminClient(), hash: "#/channels/web-command-not-json" });
+  await channelWithCommand({
+    channel: "web-command-not-json",
+    command: { name: "web-call-not-json", schema: noProperties },
+  });
+  const close = await openChannel({ channel: "web-command-not-json" });
 
-  await callFromTheForm("web-call-not-json", "{branch");
-  const alert = await screen.findByRole("alert");
+  const prompt = await callWith({ command: "web-call-not-json", field: "Data", value: "{branch" });
+  const alert = await within(prompt).findByRole("alert");
 
   expect(alert.textContent).toBe("Couldn't call /web-call-not-json (invalid_json): The data isn't JSON.");
 
@@ -141,13 +174,12 @@ it("data that isn't JSON is refused before it is sent", { timeout: 5000 }, async
 it("a refused call says so and keeps the channel shown", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand("web-command-refused", "web-call-refused");
+  await channelWithCommand({ channel: "web-command-refused", command: { name: "web-call-refused" } });
   const caller = await newIdentity({ kind: "human", name: "web-command-rotated" });
-  const close = openAt({ client: caller.client, hash: "#/channels/web-command-refused" });
-  await screen.findByRole("form", { name: "Call a command" });
+  const close = await openChannel({ channel: "web-command-refused", client: caller.client });
   await caller.rotateToken();
 
-  await callFromTheForm("web-call-refused", '{"branch":"main"}');
+  await callWith({ command: "web-call-refused", field: "branch", value: "main" });
   const alert = await alertSaying("Couldn't call");
 
   expect([alert.textContent, screen.queryByRole("list", { name: "Schema errors" })]).toStrictEqual([
@@ -161,15 +193,18 @@ it("a refused call says so and keeps the channel shown", { timeout: 5000 }, asyn
 it("a call to a server that can't be reached says so, with no schema errors", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand("web-command-unreachable", "web-call-unreachable");
+  await channelWithCommand({ channel: "web-command-unreachable", command: { name: "web-call-unreachable" } });
   const nowhereClient = createCookoutClient({ env: {}, token: "cookout_any", url: "http://127.0.0.1:1" });
-  const close = openAt({
-    client: { ...adminClient(), callCommand: nowhereClient.callCommand },
-    hash: "#/channels/web-command-unreachable",
+  const close = await openChannel({
+    channel: "web-command-unreachable",
+    client: {
+      ...adminClient(),
+      callCommand: nowhereClient.callCommand,
+    },
   });
 
-  await callFromTheForm("web-call-unreachable", '{"branch":"main"}');
-  const alert = await screen.findByRole("alert");
+  const prompt = await callWith({ command: "web-call-unreachable", field: "branch", value: "main" });
+  const alert = await within(prompt).findByRole("alert");
 
   expect([alert.textContent, screen.queryByRole("list", { name: "Schema errors" })]).toStrictEqual([
     expect.stringMatching(/^Couldn't call \/web-call-unreachable \(unreachable\)/u),

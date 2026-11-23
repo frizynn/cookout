@@ -1,9 +1,15 @@
 import type { KeyboardEvent } from "react";
 import { useCallback } from "react";
 
-type Action = "down" | "up" | "pick" | "send";
+type Action = "down" | "up" | "pick" | "close" | "send";
 
-const WHILE_CHOOSING: Readonly<Partial<Record<string, Action>>> = { ArrowDown: "down", ArrowUp: "up", Enter: "pick" };
+const WHILE_CHOOSING: Readonly<Partial<Record<string, Action>>> = {
+  ArrowDown: "down",
+  ArrowUp: "up",
+  Enter: "pick",
+  Escape: "close",
+  Tab: "pick",
+};
 const WHILE_WRITING: Readonly<Partial<Record<string, Action>>> = { Enter: "send" };
 
 interface BoxKeys {
@@ -11,6 +17,7 @@ interface BoxKeys {
   readonly choosing: boolean;
   readonly onPick: () => void;
   readonly onMove: (direction: "down" | "up") => void;
+  readonly onClose: () => void;
 }
 
 function actionOf(key: string, choosing: boolean): Action | null {
@@ -21,7 +28,7 @@ function actionOf(key: string, choosing: boolean): Action | null {
 }
 
 function useBoxKeys(keys: BoxKeys): (event: KeyboardEvent<HTMLTextAreaElement>) => void {
-  const { choosing, onMove, onPick, onSend } = keys;
+  const { choosing, onClose, onMove, onPick, onSend } = keys;
   return useCallback(
     (event: KeyboardEvent<HTMLTextAreaElement>) => {
       const action = actionOf(event.key, choosing);
@@ -30,6 +37,7 @@ function useBoxKeys(keys: BoxKeys): (event: KeyboardEvent<HTMLTextAreaElement>) 
       }
       event.preventDefault();
       const perform: Readonly<Record<Action, () => void>> = {
+        close: onClose,
         down: () => {
           onMove("down");
         },
@@ -41,7 +49,7 @@ function useBoxKeys(keys: BoxKeys): (event: KeyboardEvent<HTMLTextAreaElement>) 
       };
       perform[action]();
     },
-    [choosing, onMove, onPick, onSend],
+    [choosing, onClose, onMove, onPick, onSend],
   );
 }
 

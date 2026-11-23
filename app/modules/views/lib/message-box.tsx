@@ -3,7 +3,7 @@ import { useCallback, useSyncExternalStore } from "react";
 import type { Draft } from "../../composer/index.ts";
 import type { PostState } from "../../board/index.ts";
 import type { ReactNode } from "react";
-import { useMentions } from "./use-mentions.ts";
+import { useSuggestions } from "./use-suggestions.ts";
 
 interface MessageBoxText {
   readonly button: string;
@@ -13,7 +13,7 @@ interface MessageBoxText {
 }
 
 const POSTING = "Sending…";
-const SUGGESTIONS = "Mention suggestions";
+const NONE = 0;
 
 interface MessageBoxProps {
   readonly draft: Draft;
@@ -24,7 +24,7 @@ interface MessageBoxProps {
 
 export function MessageBox(props: MessageBoxProps): ReactNode {
   const { draft, onPost, post, text } = props;
-  const handleEdit = draft.edit;
+  const { chooseHighlighted: handlePick, dismiss: handleClose, edit: handleEdit, highlight: handleMove } = draft;
   const written = useSyncExternalStore(draft.subscribe, draft.snapshot);
   const posting = post.status === "posting";
   const handleSend = useCallback(
@@ -33,9 +33,9 @@ export function MessageBox(props: MessageBoxProps): ReactNode {
     },
     [draft, onPost],
   );
-  const { choosing, handleChoose, mentions } = useMentions({ draft, suggestions: written.suggestions });
-  const handleMove = draft.highlight;
-  const handlePick = draft.chooseHighlighted;
+  const shown = useSuggestions({ commands: written.commands, draft, suggestions: written.suggestions });
+  const choosing = shown.options.length > NONE;
+  const handleChoose = shown.onChoose;
   return (
     <BoxFrame>
       <Form field="text" label={text.form} onSubmit={handleSend}>
@@ -44,6 +44,7 @@ export function MessageBox(props: MessageBoxProps): ReactNode {
           choosing={choosing}
           label={text.field}
           name="text"
+          onClose={handleClose}
           onEdit={handleEdit}
           onMove={handleMove}
           onPick={handlePick}
@@ -51,10 +52,11 @@ export function MessageBox(props: MessageBoxProps): ReactNode {
         />
         {choosing && (
           <Suggestions
+            details={shown.details}
             highlighted={written.highlighted}
-            label={SUGGESTIONS}
+            label={shown.label}
             onChoose={handleChoose}
-            options={mentions}
+            options={shown.options}
           />
         )}
         <SubmitButton disabled={posting}>
