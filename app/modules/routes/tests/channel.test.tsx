@@ -102,7 +102,7 @@ it('"Load more" loads the older messages, until there are none', { timeout: 5000
   fireEvent.click(screen.getByRole("button", { name: "Load more" }));
   await screen.findByRole("link", { name: /One/u });
 
-  expect([firstPage, await shownMessages(), screen.queryByRole("button")]).toStrictEqual([
+  expect([firstPage, await shownMessages(), screen.queryByRole("button", { name: "Load more" })]).toStrictEqual([
     ["@adminTwo0 replies", "@adminThree0 replies"],
     ["@adminOne0 replies", "@adminTwo0 replies", "@adminThree0 replies"],
     null,

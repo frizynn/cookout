@@ -5,9 +5,11 @@
  * `ChannelListView` lists every channel on the server, each linking to its
  * channel, or says why it can't; `ChannelView` shows a channel's top-level
  * messages with their reply counts, newest last, with "Load more" for older
- * ones, and viewing it marks the channel read; `ThreadView` shows a thread's
+ * ones, and viewing it marks the channel read, with a form to call a command
+ * there that shows the schema errors of data the command refuses; `ThreadView` shows a thread's
  * parent message and its replies, oldest first, with a reply box, and opening
- * it marks the thread read; each links back up a level. `NotBuiltView` says
+ * it marks the thread read; each links back up a level. A message's data is
+ * shown with it, a command call's as the data it called the command with. `NotBuiltView` says
  * a route has nothing to show.
  */
 export { ChannelListView } from "./lib/channel-list.tsx";
