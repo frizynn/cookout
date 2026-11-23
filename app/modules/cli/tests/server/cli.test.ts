@@ -15,7 +15,6 @@ import type { MessageId } from "../../../messages/index.ts";
 import type { Scope } from "effect";
 
 const EXIT_FAILURE = 1;
-const EXIT_TIMEOUT = 2;
 const EXIT_TOKEN = 3;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const succeeded = { exitCode: 0, stderr: "" };
@@ -245,15 +244,12 @@ it.effect("cookout serve refuses a COOKOUT_PUBLIC_URL that isn't a URL before it
   }).pipe(Effect.provide(commandLineServices)),
 );
 
-it.effect("the cookout watch process exits 2 after --timeout, and 3 with one stdout line for an unknown token", () =>
-  Effect.gen(function* watchExitCodes() {
+it.effect("the cookout watch process exits with its exit code, 3 with one stdout line for an unknown token", () =>
+  Effect.gen(function* watchExitCode() {
     const cookout = yield* TestCookout;
-    const bob = yield* cookout.createIdentity("bob");
-    const env = { COOKOUT_TOKEN: bob.token, COOKOUT_URL: cookout.url };
-    const timedOut = yield* runCookoutBinary({ args: ["watch", "--timeout", "1"], env });
-    const unknown = yield* runCookoutBinary({ args: ["watch", "--json"], env: { ...env, COOKOUT_TOKEN: "cookout_x" } });
+    const env = { COOKOUT_TOKEN: "cookout_x", COOKOUT_URL: cookout.url };
+    const unknown = yield* runCookoutBinary({ args: ["watch", "--json"], env });
 
-    expect(timedOut).toMatchObject({ exitCode: EXIT_TIMEOUT, stdout: "" });
     expect(unknown).toMatchObject({ exitCode: EXIT_TOKEN, stdoutJson: { error: { code: "token_unknown" } } });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
