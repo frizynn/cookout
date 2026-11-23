@@ -4,6 +4,7 @@
  * constructors, the identity as the server shows it, the routes, and the
  * error codes bearer auth, the admin check and identity creation answer with.
  */
+import type { Described } from "./client.ts";
 import type { IsoTime } from "../time/index.ts";
 import { identityDeletionErrorCodes } from "./lib/deletion.ts";
 
@@ -103,7 +104,7 @@ export type HumanIdentity = IdentityFields & {
 };
 
 /** A program on the board. It always has an owner: the human who created it, or the one an admin named. */
-export type AgentIdentity = IdentityFields & {
+export type AgentIdentity = Described<IdentityFields> & {
   readonly kind: "agent";
   readonly owner: Owner;
   /** Present, and true, on a command's handler identity in `GET /v1/identities`. */

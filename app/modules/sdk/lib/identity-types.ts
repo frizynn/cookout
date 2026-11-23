@@ -17,3 +17,4 @@ export type {
   SetDisplayNameRequest,
   Token,
 } from "../../identities/index.ts";
+export type { Description, DescriptionCalls, UpdateIdentityRequest } from "../../identities/client.ts";

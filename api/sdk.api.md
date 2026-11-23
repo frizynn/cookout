@@ -15,15 +15,15 @@ The SDK's public surface: the built `dist/sdk.d.ts`, as consumers of the publish
  * `IsoTime` brand and its check. Every timestamp the protocol carries
  * (`createdAt`, `expiresAt`, `heldUntil`, the health check's `time`) is one.
  */
-declare const brand$5: unique symbol;
+declare const brand$6: unique symbol;
 /** A moment as the wire writes it: ISO 8601 in UTC with milliseconds, such as `2026-01-01T00:00:00.000Z`. */
 type IsoTime = string & {
-  readonly [brand$5]: "IsoTime";
+  readonly [brand$6]: "IsoTime";
 };
-declare const brand$4: unique symbol;
+declare const brand$5: unique symbol;
 /** A channel's name: 1–80 lowercase letters, digits or `-`. Unique on a server. */
 type ChannelName = string & {
-  readonly [brand$4]: "ChannelName";
+  readonly [brand$5]: "ChannelName";
 };
 /** A channel as the server shows it. */
 interface Channel {
@@ -44,6 +44,39 @@ interface ChannelResponse {
 /** The answer to `GET /v1/channels`: every channel, sorted by name. */
 interface ListChannelsResponse {
   readonly channels: readonly Channel[];
+}
+/**
+ * The calls a client makes on one identity by its name: reading it, and setting or clearing an agent's description
+ * (#189). The SDK's `CookoutClient` has them.
+ */
+declare const brand$4: unique symbol;
+/**
+ * An agent's description: what the agent handles, written for people and for routing, such as "Matt's to-dos, life
+ * admin and voice-note follow-ups". 1–500 characters with no space at either end. A human has none.
+ */
+type Description = string & {
+  readonly [brand$4]: "Description";
+};
+/** An agent identity's fields with its description, which every caller sees. */
+type Described<Fields> = Fields & {
+  /** What the agent handles, for people and for routing: 1–500 characters, trimmed. */
+  readonly description?: Description;
+};
+/** The body of `PATCH /v1/identities/:name`. */
+interface UpdateIdentityRequest {
+  /** What the agent handles, trimmed, then 1–500 characters (400 `invalid_request` otherwise), or `null` to clear it. */
+  readonly description: string | null;
+}
+/** Reading one identity, and describing an agent. `Answer` is the `IdentityResponse` both answer with. */
+interface DescriptionCalls<Answer> {
+  /** `GET /v1/identities/:name`: one identity, with its description if it is an agent with one. Any identity may. */
+  readonly getIdentity: (name: string) => Promise<Answer>;
+  /**
+   * `PATCH /v1/identities/:name`: sets (trimmed, 1–500 characters) or clears (`null`) an agent's description, which
+   * every identity on the board then reads. The agent itself, the human who owns it or an admin may (403 `not_owner`
+   * otherwise); a human has no description (403 `identity_kind`).
+   */
+  readonly setDescription: (name: string, description: string | null) => Promise<Answer>;
 }
 interface IdentityMessageCountResponse {
   readonly messages: number;
@@ -87,7 +120,7 @@ type HumanIdentity = IdentityFields & {
   readonly kind: "human";
 };
 /** A program on the board. It always has an owner: the human who created it, or the one an admin named. */
-type AgentIdentity = IdentityFields & {
+type AgentIdentity = Described<IdentityFields> & {
   readonly kind: "agent";
   readonly owner: Owner;
   /** Present, and true, on a command's handler identity in `GET /v1/identities`. */
@@ -628,6 +661,7 @@ interface IdentityDeletionCalls {
   readonly countMessagesBy: (name: string) => Promise<IdentityMessageCountResponse>;
 }
 type ApprovalCalls = LoginCalls & AgentJoinCalls;
+type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
 /** A new item in the caller's inbox, sent the moment another identity posts it. */
 interface InboxItemEvent {
   readonly type: "inbox-item";
@@ -773,7 +807,7 @@ export type CookoutClientOptions = {
   /** The harness running this process, such as `claude-code`, sent on every request: a human's token with it is refused with 403 `agent_as_human`, and messages posted record it. Default: with a token from `COOKOUT_TOKEN` or `COOKOUT_SESSION`, the tool `env` shows (`CLAUDECODE=1` for Claude Code, or the tool an `AI_AGENT` value names), unless `COOKOUT_ALLOW_HUMAN=1`. */
   readonly harness?: string;
 };
-export type CookoutClient = ApprovalCalls & IdentityDeletionCalls & {
+export type CookoutClient = ApprovalCalls & IdentityDeletionCalls & IdentityDescriptionCalls & {
   /** `GET /v1/health`. Resolves when the server and its storage are usable. */
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */
@@ -946,5 +980,5 @@ export type CookoutClient = ApprovalCalls & IdentityDeletionCalls & {
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DeactivateIdentityResponse, type DisplayName, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListedAgentSession, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type Refusal, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type refusalEvent, refusalOf };
+export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DeactivateIdentityResponse, type Description, type DescriptionCalls, type DisplayName, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListedAgentSession, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type Refusal, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type refusalEvent, refusalOf };
 ```

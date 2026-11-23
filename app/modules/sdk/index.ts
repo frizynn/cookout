@@ -24,7 +24,7 @@ import type {
   ListCommandsResponse,
 } from "./lib/commands.ts";
 import type { AgentSessionCalls, AgentSessionResponse, JoinRequest, LeaveResponse } from "./lib/agent-sessions.ts";
-import type { ApprovalCalls, IdentityDeletionCalls } from "./lib/identities.ts";
+import type { ApprovalCalls, IdentityDeletionCalls, IdentityDescriptionCalls } from "./lib/identities.ts";
 import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "./lib/channels.ts";
 import type {
   CreateIdentityRequest,
@@ -111,7 +111,8 @@ export type CookoutClientOptions = {
 };
 
 export type CookoutClient = ApprovalCalls &
-  IdentityDeletionCalls & {
+  IdentityDeletionCalls &
+  IdentityDescriptionCalls & {
     /** `GET /v1/health`. Resolves when the server and its storage are usable. */
     readonly health: () => Promise<HealthResponse>;
     /** `GET /v1/whoami`: the identity behind this client's token. */

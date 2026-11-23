@@ -11,6 +11,7 @@ import { commandChangesLayer, commandRoutes, commandsLayer } from "../../../comm
 import {
   deactivationRoutes,
   deletionRoutes,
+  descriptionRoutes,
   displayNameRoutes,
   displayNamesLayer,
   identitiesLayer,
@@ -30,7 +31,7 @@ type NeedsOf<Routes> = Routes extends readonly Route<infer Needs>[] ? Needs : ne
 type RouteNeeds =
   | NeedsOf<typeof identityRoutes>
   | NeedsOf<typeof displayNameRoutes>
-  | NeedsOf<typeof transferRoutes>
+  | NeedsOf<typeof descriptionRoutes>
   | NeedsOf<typeof agentSessionOwnerRoutes>
   | NeedsOf<typeof channelRoutes>
   | NeedsOf<typeof messageRoutes>
@@ -44,6 +45,7 @@ type OpenNeeds = NeedsOf<typeof openIdentityRoutes> | NeedsOf<typeof openJoinReq
 export const routes: readonly Route<RouteNeeds>[] = [
   ...identityRoutes,
   ...displayNameRoutes,
+  ...descriptionRoutes,
   ...transferRoutes,
   ...deactivationRoutes,
   ...deletionRoutes,

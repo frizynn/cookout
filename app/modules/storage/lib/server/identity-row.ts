@@ -1,7 +1,9 @@
 import type { DisplayName, Identity, IdentityName } from "../../../identities/index.ts";
 import { isDisplayName, isIdentityName, isOwner } from "../../../identities/index.ts";
+import type { Description } from "../../../identities/client.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
+import { isDescription } from "../../../identities/client.ts";
 
 type FindIdentity = (name: IdentityName) => Identity | undefined;
 
@@ -10,11 +12,13 @@ const ADMIN = 1;
 const ACTIVE = 0;
 const DEACTIVATED = 1;
 
-const IDENTITY_COLUMNS = "name, kind, owner, admin, created_at, display_name, deactivated";
+const IDENTITY_COLUMNS = "name, kind, owner, admin, created_at, display_name, description, deactivated";
 
 const OwnerColumn = Schema.String.pipe(Schema.refine(isOwner));
 
 const DisplayNameColumn = Schema.String.pipe(Schema.refine(isDisplayName));
+
+const DescriptionColumn = Schema.String.pipe(Schema.refine(isDescription));
 
 const sharedColumns = {
   admin: Schema.Literals([NOT_ADMIN, ADMIN]),
@@ -24,9 +28,19 @@ const sharedColumns = {
   name: Schema.String.pipe(Schema.refine(isIdentityName)),
 };
 
-const HumanRow = Schema.Struct({ ...sharedColumns, kind: Schema.Literal("human"), owner: Schema.Null });
+const HumanRow = Schema.Struct({
+  ...sharedColumns,
+  description: Schema.optionalKey(Schema.Null),
+  kind: Schema.Literal("human"),
+  owner: Schema.Null,
+});
 
-const AgentRow = Schema.Struct({ ...sharedColumns, kind: Schema.Literal("agent"), owner: OwnerColumn });
+const AgentRow = Schema.Struct({
+  ...sharedColumns,
+  description: Schema.NullOr(DescriptionColumn),
+  kind: Schema.Literal("agent"),
+  owner: OwnerColumn,
+});
 
 const IdentityRow = Schema.Union([HumanRow, AgentRow]);
 
@@ -35,6 +49,13 @@ function displayNameOf(row: typeof IdentityRow.Type): { readonly displayName?: D
     return {};
   }
   return { displayName: row.display_name };
+}
+
+function descriptionOf(description: Description | null): { readonly description?: Description } {
+  if (description === null) {
+    return {};
+  }
+  return { description };
 }
 
 function deactivatedOf(row: typeof IdentityRow.Type): { readonly deactivated?: true } {
@@ -55,7 +76,7 @@ function toIdentity(row: typeof IdentityRow.Type): Identity {
   if (row.kind === "human") {
     return { ...fields, kind: "human" };
   }
-  return { ...fields, kind: "agent", owner: row.owner };
+  return { ...fields, ...descriptionOf(row.description), kind: "agent", owner: row.owner };
 }
 
 export { AgentRow, type FindIdentity, IDENTITY_COLUMNS, IdentityRow, toIdentity };

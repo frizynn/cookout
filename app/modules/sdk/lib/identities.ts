@@ -31,6 +31,7 @@ import {
 } from "./generated/validators.js";
 import type { AgentJoinCalls } from "../../agent-sessions/index.ts";
 import type { ClientConnection } from "./request.ts";
+import type { DescriptionCalls } from "../../identities/client.ts";
 import type { HealthResponse } from "../../http/index.ts";
 import type { LoginCalls } from "../../logins/index.ts";
 import { healthPath } from "../../http/index.ts";
@@ -77,6 +78,30 @@ function setDisplayNameCall(server: ClientConnection): IdentityCalls["setDisplay
       path: identityDisplayNamePath,
     });
     return answer;
+  };
+}
+
+function descriptionCalls(server: ClientConnection): DescriptionCalls<IdentityResponse> {
+  return {
+    getIdentity: async (name) => {
+      const answer = await send(server, {
+        isExpected: isIdentityResponse,
+        method: "GET",
+        params: { name },
+        path: identityPath,
+      });
+      return answer;
+    },
+    setDescription: async (name, description) => {
+      const answer = await send(server, {
+        body: { description },
+        isExpected: isIdentityResponse,
+        method: "PATCH",
+        params: { name },
+        path: identityPath,
+      });
+      return answer;
+    },
   };
 }
 
@@ -192,10 +217,13 @@ function ownIdentityCalls(server: ClientConnection): IdentityCalls & IdentityDel
   };
 }
 
-function identityCalls(server: ClientConnection): IdentityCalls & IdentityDeletionCalls & LoginCalls {
-  return { ...loginCalls(server), ...ownIdentityCalls(server) };
+function identityCalls(
+  server: ClientConnection,
+): IdentityCalls & IdentityDeletionCalls & IdentityDescriptionCalls & LoginCalls {
+  return { ...loginCalls(server), ...ownIdentityCalls(server), ...descriptionCalls(server) };
 }
 
 export type ApprovalCalls = LoginCalls & AgentJoinCalls;
+export type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
 export type { IdentityDeletionCalls };
 export { identityCalls };

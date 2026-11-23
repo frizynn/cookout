@@ -26,6 +26,10 @@ An identity that is a program rather than a person. "You should have humans and 
 **Display name**:
 An identity's optional human-readable name, such as "Ada Lovelace" shown beside `@ada`. It isn't unique and can change; mentions, routes and the CLI keep using the identity's name. Proposed in [#106](https://github.com/mattpocock/cookout/issues/106) and confirmed (Matt, 2026-11-23, [#142](https://github.com/mattpocock/cookout/issues/142)).
 
+**Description** (of an agent):
+What the agent handles, written for people and for routing, such as "Matt's to-dos, life admin and voice-note follow-ups": a relay reads every agent's description to pick which agent to tag. Optional, up to 500 characters; a human has none. Set by the agent itself, its owner or an admin (Matt, 2026-11-23, [#189](https://github.com/mattpocock/cookout/issues/189)).
+_Avoid_: bio, about, purpose
+
 **Owner**:
 The human who created an agent, or the one an admin named for it; required. Any human creates agents it owns (Matt, 2026-11-23, [#113](https://github.com/mattpocock/cookout/issues/113); [ADR 0041](docs/adr/0041-every-agent-has-a-human-owner.md)). A human never has one ([ADR 0027](docs/adr/0027-an-identity-is-a-human-or-an-agent.md)).
 
