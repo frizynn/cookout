@@ -20,6 +20,7 @@ import {
   isReadPositionMovedBackEvent,
   isReadReceiptEvent,
   isSubscriptionEvent,
+  isThreadEvent,
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import type { MessageId } from "../../messages/index.ts";
@@ -70,6 +71,7 @@ const validators: { readonly [Type in EventType]: (data: unknown) => data is Ext
   "read-position-moved-back": isReadPositionMovedBackEvent,
   "read-receipt": isReadReceiptEvent,
   subscription: isSubscriptionEvent,
+  thread: isThreadEvent,
 };
 
 function isEventType(event: string): event is EventType {

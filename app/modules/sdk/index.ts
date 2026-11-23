@@ -41,6 +41,7 @@ import type {
   MessageResponse,
   PostMessageRequest,
   ThreadResponse,
+  TopLevelMessageResponse,
 } from "./lib/messages.ts";
 import { eventCalls, eventOf } from "./lib/events.ts";
 import type { CallGroups } from "./lib/identities.ts";
@@ -161,6 +162,13 @@ export type CookoutClient = CallGroups & {
   readonly listMessages: (channel: string, query?: ListMessagesQuery) => Promise<ListMessagesResponse>;
   /** `GET /v1/messages/:id/thread`: the thread holding the message, its top-level message and every reply in order. */
   readonly getThread: (messageId: MessageId) => Promise<ThreadResponse>;
+  /**
+   * `PUT /v1/messages/:id/closed`: anyone closes the thread holding the message and gets its top-level message, now
+   * with `closedAt` and `closedBy` (a second close keeps the first). The inbox and `watch` still list it. 404 if missing.
+   */
+  readonly closeThread: (messageId: MessageId) => Promise<TopLevelMessageResponse>;
+  /** `DELETE /v1/messages/:id/closed`: reopens it (as a reply in it does), answering the top-level message. */
+  readonly reopenThread: (messageId: MessageId) => Promise<TopLevelMessageResponse>;
   /**
    * `POST /v1/agent-session`, with an agent's Identity token (`as` must be its name; a human's is 403
    * `identity_kind`): issues an agent session token, which expires once unused for `idleExpiry` (default `7d`, at

@@ -57,30 +57,35 @@ it.effect("the command token posts replies in its call's thread as the command's
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("the command token gets 403 on another thread, another channel, a top-level message or another route", () =>
-  Effect.gen(function* outsideThread() {
-    const cookout = yield* TestCookout;
-    const { handler, threadId } = yield* deliveredCall(cookout);
-    yield* answer(() => cookout.client.createChannel({ name: "smoke" }));
-    const other = yield* answer(() => cookout.client.createMessage({ channel: "grill", text: "another thread" }));
-    const elsewhere = yield* answer(() => cookout.client.createMessage({ channel: "smoke", text: "elsewhere" }));
-    const refused = yield* Effect.all(
-      [
-        refusal(() => handler.createMessage({ channel: "grill", replyTo: other.message.id, text: "wrong thread" })),
-        refusal(() =>
-          handler.createMessage({ channel: "smoke", replyTo: elsewhere.message.id, text: "wrong channel" }),
-        ),
-        refusal(() => handler.createMessage({ channel: "smoke", replyTo: threadId, text: "thread, wrong channel" })),
-        refusal(() => handler.createMessage({ channel: "grill", text: "top-level" })),
-        refusal(() => handler.listChannels()),
-      ],
-      { concurrency: 1 },
-    );
-    const thread = yield* answer(() => cookout.client.getThread(threadId));
+it.effect(
+  "the command token gets 403 on another thread, another channel, a top-level message, a close or another route",
+  () =>
+    Effect.gen(function* outsideThread() {
+      const cookout = yield* TestCookout;
+      const { handler, threadId } = yield* deliveredCall(cookout);
+      yield* answer(() => cookout.client.createChannel({ name: "smoke" }));
+      const other = yield* answer(() => cookout.client.createMessage({ channel: "grill", text: "another thread" }));
+      const elsewhere = yield* answer(() => cookout.client.createMessage({ channel: "smoke", text: "elsewhere" }));
+      const refused = yield* Effect.all(
+        [
+          refusal(() => handler.createMessage({ channel: "grill", replyTo: other.message.id, text: "wrong thread" })),
+          refusal(() =>
+            handler.createMessage({ channel: "smoke", replyTo: elsewhere.message.id, text: "wrong channel" }),
+          ),
+          refusal(() => handler.createMessage({ channel: "smoke", replyTo: threadId, text: "thread, wrong channel" })),
+          refusal(() => handler.createMessage({ channel: "grill", text: "top-level" })),
+          refusal(() => handler.listChannels()),
+          refusal(() => handler.closeThread(threadId)),
+        ],
+        { concurrency: 1 },
+      );
+      const thread = yield* answer(() => cookout.client.getThread(threadId));
 
-    expect(refused).toMatchObject(Arr.replicate({ code: "outside_command_thread", status: FORBIDDEN }, refused.length));
-    expect(thread.replies).toStrictEqual([]);
-  }).pipe(Effect.provide(testCookout())),
+      expect(refused).toMatchObject(
+        Arr.replicate({ code: "outside_command_thread", status: FORBIDDEN }, refused.length),
+      );
+      expect(thread.replies).toStrictEqual([]);
+    }).pipe(Effect.provide(testCookout())),
 );
 
 it.effect("the command token works until 24 h after the call, then gets 401", () =>

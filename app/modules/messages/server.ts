@@ -16,8 +16,9 @@ import {
   MessageResponseSchema,
   PostMessageRequestSchema,
   ThreadResponseSchema,
+  TopLevelMessageResponseSchema,
 } from "./lib/server/wire.ts";
-import { channelMessagesPath, isMessageId, messagesPath, threadPath } from "./index.ts";
+import { channelMessagesPath, closedPath, isMessageId, messagesPath, threadPath } from "./index.ts";
 import type { MessageId } from "./index.ts";
 import { Messages } from "./lib/server/service.ts";
 import type { Refusal } from "../http/index.ts";
@@ -84,6 +85,33 @@ const pageRoute: Route<Messages> = {
   path: channelMessagesPath,
 };
 
+const closeRoute: Route<Caller | Messages> = {
+  handle: (params) =>
+    Effect.gen(function* closeThreadRoute() {
+      const id = yield* threadIdOf(String(params["id"]));
+      const caller = yield* Caller;
+      const messages = yield* Messages;
+      const answer = yield* messages.closeThread(caller, id);
+      return yield* HttpServerResponse.schemaJson(TopLevelMessageResponseSchema)(answer);
+    }),
+  method: "PUT",
+  path: closedPath,
+  segments: { id: (segment) => DIGITS.test(segment) },
+};
+
+const reopenRoute: Route<Messages> = {
+  handle: (params) =>
+    Effect.gen(function* reopenThreadRoute() {
+      const id = yield* threadIdOf(String(params["id"]));
+      const messages = yield* Messages;
+      const answer = yield* messages.reopenThread(id);
+      return yield* HttpServerResponse.schemaJson(TopLevelMessageResponseSchema)(answer);
+    }),
+  method: "DELETE",
+  path: closedPath,
+  segments: { id: (segment) => DIGITS.test(segment) },
+};
+
 export { Messages, messagesLayer } from "./lib/server/service.ts";
 export { ReadReceipts, readReceiptsLayer } from "./lib/server/read-receipts.ts";
 export { messageNotFound } from "./lib/server/refusals.ts";
@@ -99,11 +127,18 @@ export { ListMessagesQuerySchema as PageQuerySchema } from "./lib/server/wire.ts
  * which `messagesLayer` provides.
  * @internal
  */
-export const messageRoutes: readonly Route<Caller | Messages>[] = [postRoute, threadRoute, pageRoute];
+export const messageRoutes: readonly Route<Caller | Messages>[] = [
+  postRoute,
+  threadRoute,
+  pageRoute,
+  closeRoute,
+  reopenRoute,
+];
 
 /** The response Schemas of the message routes, for the SDK's generated validators. */
 export const messageResponseSchemas = {
   ListMessagesResponse: ListMessagesResponseSchema,
   MessageResponse: MessageResponseSchema,
   ThreadResponse: ThreadResponseSchema,
+  TopLevelMessageResponse: TopLevelMessageResponseSchema,
 };

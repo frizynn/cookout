@@ -5,9 +5,15 @@ import type {
   MessageResponse,
   PostMessageRequest,
   ThreadResponse,
+  TopLevelMessageResponse,
 } from "../../messages/index.ts";
-import { channelMessagesPath, messagesPath, threadPath } from "../../messages/index.ts";
-import { isListMessagesResponse, isMessageResponse, isThreadResponse } from "./generated/validators.js";
+import { channelMessagesPath, closedPath, messagesPath, threadPath } from "../../messages/index.ts";
+import {
+  isListMessagesResponse,
+  isMessageResponse,
+  isThreadResponse,
+  isTopLevelMessageResponse,
+} from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import { send } from "./request.ts";
 
@@ -15,10 +21,21 @@ interface MessageCalls {
   readonly createMessage: (request: PostMessageRequest) => Promise<MessageResponse>;
   readonly listMessages: (channel: string, query?: ListMessagesQuery) => Promise<ListMessagesResponse>;
   readonly getThread: (messageId: MessageId) => Promise<ThreadResponse>;
+  readonly closeThread: (messageId: MessageId) => Promise<TopLevelMessageResponse>;
+  readonly reopenThread: (messageId: MessageId) => Promise<TopLevelMessageResponse>;
+}
+
+function closedCall(server: ClientConnection, method: "PUT" | "DELETE") {
+  return async (messageId: MessageId): Promise<TopLevelMessageResponse> => {
+    const params = { id: String(messageId) };
+    const answer = await send(server, { isExpected: isTopLevelMessageResponse, method, params, path: closedPath });
+    return answer;
+  };
 }
 
 function messageCalls(server: ClientConnection): MessageCalls {
   return {
+    closeThread: closedCall(server, "PUT"),
     createMessage: async (body) => {
       const posted = await send(server, { body, isExpected: isMessageResponse, method: "POST", path: messagesPath });
       return posted;
@@ -38,6 +55,7 @@ function messageCalls(server: ClientConnection): MessageCalls {
       });
       return page;
     },
+    reopenThread: closedCall(server, "DELETE"),
   };
 }
 
@@ -48,5 +66,6 @@ export type {
   MessageResponse,
   PostMessageRequest,
   ThreadResponse,
+  TopLevelMessageResponse,
 } from "../../messages/index.ts";
 export { messageCalls };

@@ -22,6 +22,7 @@ const eventTypes = {
   "read-position-moved-back": true,
   "read-receipt": true,
   subscription: true,
+  thread: true,
 } as const satisfies Readonly<Record<CookoutEvent["type"], true>>;
 
 function eventSourceAdapter(baseUrl: string): LiveAdapter {

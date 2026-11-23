@@ -19,6 +19,8 @@ import type {
   MessageId,
   MessageResponse,
   ThreadResponse,
+  TopLevelMessage,
+  TopLevelMessageResponse,
 } from "../../index.ts";
 import type { Harness, Identity } from "../../../identities/index.ts";
 import type { NewCommandCall, NewMessage, StorageUnavailable } from "../../../storage/server.ts";
@@ -58,9 +60,13 @@ type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
 
 type CallParts = Omit<NewCommandCall, "message">;
 
+type ThreadChange = Effect.Success<ReturnType<Storage["Service"]["reopenThread"]>>;
+
 interface Hub {
   readonly appendThenPublish: (append: Append, message: NewMessage) => Fails<Appended>;
+  readonly changeThenPublish: (change: Effect.Effect<ThreadChange, StorageUnavailable>) => Fails<ThreadChange>;
   readonly subscribe: Effect.Effect<PubSub.Subscription<Message>, never, Scope.Scope>;
+  readonly threadChanged: Effect.Effect<PubSub.Subscription<TopLevelMessage>, never, Scope.Scope>;
 }
 
 function authorOf(identity: Identity): Author {
@@ -146,9 +152,32 @@ function postWith(hub: Hub, append: Append): (author: Identity, message: PostMes
     });
 }
 
+function changedParents(change: ThreadChange): readonly TopLevelMessage[] {
+  if (Predicate.isUndefined(change) || !change.changed) {
+    return [];
+  }
+  return [change.parent];
+}
+
+function answerFor(asked: MessageId): (change: ThreadChange) => Fails<TopLevelMessageResponse> {
+  return (change) => {
+    if (Predicate.isUndefined(change)) {
+      return Effect.fail(messageNotFound(String(asked)));
+    }
+    return Effect.succeed({ message: change.parent });
+  };
+}
+
 function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
   const post = postWith(hub, storage.appendMessage);
   return {
+    closeThread: (caller, id) =>
+      Effect.gen(function* closeThread() {
+        const now = yield* DateTime.now;
+        const closing = { closedAt: isoTimeOf(now), closedBy: caller.name };
+        const change = yield* hub.changeThenPublish(storage.closeThread(id, closing));
+        return yield* answerFor(id)(change);
+      }),
     latestId: storage.latestMessageId,
     page: (channel, query) =>
       Effect.gen(function* pageChannel() {
@@ -177,6 +206,7 @@ function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
         return yield* post(author, message);
       }),
     posted: hub.subscribe,
+    reopenThread: (id) => Effect.flatMap(hub.changeThenPublish(storage.reopenThread(id)), answerFor(id)),
     thread: (id) =>
       Effect.gen(function* getThread() {
         const thread = yield* storage.getThread(id);
@@ -185,6 +215,7 @@ function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
         }
         return yield* threadWithReceipts({ storage, stored: thread });
       }),
+    threadChanged: hub.threadChanged,
   };
 }
 
@@ -196,6 +227,9 @@ export interface MessagesService {
   readonly page: (channel: string, query: PageQuery) => Fails<ListMessagesResponse>;
   readonly posted: Effect.Effect<PubSub.Subscription<Message>, never, Scope.Scope>;
   readonly latestId: Effect.Effect<MessageId | undefined, StorageUnavailable>;
+  readonly closeThread: (caller: Identity, id: MessageId) => Fails<TopLevelMessageResponse>;
+  readonly reopenThread: (id: MessageId) => Fails<TopLevelMessageResponse>;
+  readonly threadChanged: Effect.Effect<PubSub.Subscription<TopLevelMessage>, never, Scope.Scope>;
 }
 
 export class Messages extends Context.Service<Messages, MessagesService>()(
@@ -208,17 +242,29 @@ export const messagesLayer: Layer.Layer<Messages, never, Storage | ReadReceipts>
     const storage = yield* Storage;
     const readReceipts = yield* ReadReceipts;
     const pubSub = yield* PubSub.unbounded<Message>();
+    const threads = yield* PubSub.unbounded<TopLevelMessage>();
     const appending = yield* Semaphore.make(ONE_AT_A_TIME);
+    function publishThreads(parents: readonly TopLevelMessage[]): Effect.Effect<void> {
+      return Effect.asVoid(PubSub.publishAll(threads, parents));
+    }
     function publishIfAppended(result: Appended): Effect.Effect<void> {
       if (result.status !== "appended") {
         return Effect.void;
       }
-      return Effect.andThen(PubSub.publish(pubSub, result.message), readReceipts.publish(result.receipts));
+      return Effect.andThen(
+        Effect.andThen(PubSub.publish(pubSub, result.message), readReceipts.publish(result.receipts)),
+        publishThreads(Arr.filter([result.reopened], Predicate.isNotUndefined)),
+      );
+    }
+    function publishIfChanged(change: ThreadChange): Effect.Effect<void> {
+      return publishThreads(changedParents(change));
     }
     const hub: Hub = {
       appendThenPublish: (append, message) =>
         appending.withPermits(ONE_AT_A_TIME)(Effect.tap(append(message), publishIfAppended)),
+      changeThenPublish: (change) => appending.withPermits(ONE_AT_A_TIME)(Effect.tap(change, publishIfChanged)),
       subscribe: PubSub.subscribe(pubSub),
+      threadChanged: PubSub.subscribe(threads),
     };
     return messagesOn(storage, hub);
   }),
