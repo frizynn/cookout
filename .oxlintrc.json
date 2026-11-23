@@ -568,6 +568,16 @@
       }
     },
     {
+      "files": ["packages/e2e/app/modules/*/tests/browser/**"],
+      "rules": {
+        "effecttsgo/async-function": "off",
+        "effecttsgo/global-json": "off",
+        "effecttsgo/prefer-effect-array": "off",
+        "effecttsgo/prefer-effect-record": "off",
+        "effecttsgo/prefer-effect-string": "off"
+      }
+    },
+    {
       "files": ["app/web.tsx", "app/modules/**/*.tsx"],
       "excludeFiles": ["app/modules/design-system/**", "app/modules/*/tests/**"],
       "rules": {
@@ -1876,6 +1886,7 @@
         "playwright.config.ts",
         "scripts/browser-test-server.ts",
         "packages/e2e/vitest.config.ts",
+        "packages/e2e/playwright.config.ts",
         "packages/e2e/.dependency-cruiser.mjs"
       ],
       "rules": {
