@@ -36,9 +36,9 @@ it.effect("an identity posts a top-level message with JSON data, and sees its au
     const cookout = yield* TestCookout;
     const agent = yield* withChannel(cookout);
     yield* TestClock.adjust("5 seconds");
-    const data = { note: null, open: true, question: 1, tags: ["lease"] };
+    const data = { note: null, open: true, question: 1, tags: ["idle-expiry"] };
     const { message } = yield* answer(() =>
-      agent.client.createMessage({ channel: "grill", data, text: "Is the lease 60 s?" }),
+      agent.client.createMessage({ channel: "grill", data, text: "Is the idle expiry 7 days?" }),
     );
 
     expect(message).toStrictEqual({
@@ -51,7 +51,7 @@ it.effect("an identity posts a top-level message with JSON data, and sees its au
       latestReplyId: null,
       mentions: [],
       replyCount: NO_REPLIES,
-      text: "Is the lease 60 s?",
+      text: "Is the idle expiry 7 days?",
     });
     expect(isMessageId(message.id)).toBe(true);
   }).pipe(Effect.provide(testCookout())),
@@ -116,7 +116,7 @@ it.effect("a bad message body is refused with 400 and the schema errors", () =>
       Effect.forEach(
         (body) =>
           HttpClientRequest.post(`${cookout.url}${messagesPath}`).pipe(
-            HttpClientRequest.bearerToken(agent.token),
+            HttpClientRequest.setHeader("authorization", `Bearer ${agent.token}`),
             HttpClientRequest.bodyJsonUnsafe(body),
             HttpClient.execute,
             Effect.flatMap((response) => Effect.map(response.json, (json) => ({ json, status: response.status }))),

@@ -15,7 +15,7 @@ import { Secrets } from "../../../secrets/server.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 import { messagesPath } from "../../../messages/index.ts";
 
-const bearer = /^Bearer +(\S+)\s*$/iu;
+const authorizationHeader = /^Bearer +(\S+)\s*$/iu;
 
 const tokenMissing: Refusal = {
   code: "token_missing",
@@ -136,14 +136,14 @@ interface Credentials {
   readonly sessionCookie: string | undefined;
 }
 
-function bearerToken(authorization: string): Effect.Effect<Token, Refusal> {
-  const sent = bearer.exec(authorization)?.[1];
+function tokenInHeader(authorization: string): Effect.Effect<Token, Refusal> {
+  const sent = authorizationHeader.exec(authorization)?.[1];
   return sent === undefined ? Effect.fail(tokenMissing) : Effect.succeed(token(sent));
 }
 
 function sentToken({ authorization, sessionCookie }: Credentials): Effect.Effect<Token, Refusal> {
   if (authorization !== undefined) {
-    return bearerToken(authorization);
+    return tokenInHeader(authorization);
   }
   if (sessionCookie === undefined || sessionCookie === "") {
     return Effect.fail(tokenMissing);

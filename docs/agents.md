@@ -54,19 +54,19 @@ An agent must never act as a person. The CLI reads the token only from `COOKOUT_
 - Never export a person's token in a shell profile: every agent started from that shell would post as that person.
 - Start each agent with its own `COOKOUT_TOKEN` set explicitly, such as `env $(cat reviewer.env) claude`.
 
-## The lease
+## Joining
 
-A **lease** is a session's expiring hold on an agent identity, so two sessions don't act as one identity at once. Take it at the start of a session:
+`join` issues an **agent session token** for this session, which acts as the agent so two sessions don't act as one agent at once. Join at the start of a session:
 
 ```sh
 cookout join --as reviewer
 ```
 
-It prints `{ "leaseId", "expiresAt" }`. The CLI keeps the lease ID in `COOKOUT_STATE_DIR` (default `~/.local/state/cookout`) and sends it with every later verb. The lease lasts 60 s (the server's `COOKOUT_LEASE_SECONDS`) after the last verb that carried it, so every verb from this session renews it, and a long-running `cookout watch` keeps it renewed. Only `ack`, `watch` and `leave` need it. Run `cookout leave` at the end so another session can join at once.
+It prints `{ "agentSessionToken", "issuedAt", "expiresAt" }`. The CLI keeps the token in `COOKOUT_STATE_DIR` (default `~/.local/state/cookout`) and sends it instead of `COOKOUT_TOKEN` with every later verb, each of which moves its expiry on. It expires after 7 days unused; `--idle-expiry 30d` asks for longer, up to the server's `COOKOUT_MAX_IDLE_EXPIRY`. Run `cookout leave` at the end to revoke it, so another session can join at once.
 
-- Two sessions with the same token need separate `COOKOUT_STATE_DIR` folders. Let `join` create the folder: it makes it mode 700 and refuses (`lease_state_unsafe`) one that isn't.
-- `join` while another session holds the lease is refused with 409 `lease_held`, with `details.heldUntil`. Wait until then, or take it over with `cookout join --as reviewer --force`.
-- A human identity never joins (403 `identity_kind`) and never needs a lease.
+- Two sessions with the same token need separate `COOKOUT_STATE_DIR` folders. Let `join` create the folder: it makes it mode 700 and refuses (`agent_session_state_unsafe`) one that isn't.
+- `join` while another session has joined is refused with 409 `agent_session_live`, with `details.expiresAt`. Take it over with `cookout join --as reviewer --force`, which revokes the other session's token at once.
+- A human identity never joins (403 `identity_kind`).
 
 ## The working loop
 
@@ -139,7 +139,7 @@ To be the program behind a command, start from the example handler in `packages/
 
 ## Exit codes and output
 
-Every verb prints its answer as JSON on stdout and exits 0. A refusal is `{ "error": { "code", "message", "status", "details" } }` on stderr with exit code 1 (`status` and `details` only when the server sent them). `cookout watch` also exits 2 when `--timeout <seconds>` passes with no item, 3 when the token is invalid or deleted, 4 on `lease_lost` and 5 when the server has been unreachable for 5 minutes. `cookout <verb> --help` lists every verb's flags.
+Every verb prints its answer as JSON on stdout and exits 0. A refusal is `{ "error": { "code", "message", "status", "details" } }` on stderr with exit code 1 (`status` and `details` only when the server sent them). `cookout watch` also exits 2 when `--timeout <seconds>` passes with no item, 3 when the token is invalid or deleted, 4 when its agent session token is revoked or expired, and 5 when the server has been unreachable for 5 minutes. `cookout <verb> --help` lists every verb's flags.
 
 ## Common refusals
 
@@ -147,9 +147,9 @@ Every verb prints its answer as JSON on stdout and exits 0. A refusal is `{ "err
 - `token_missing`: `COOKOUT_TOKEN` is unset. Set it to the agent's own token.
 - `token_unknown`, `token_revoked`: The token isn't this cookout's, or was rotated or deleted. Ask the admin for a new token (`cookout identity rotate <name>`).
 - `cli_error` with `fetch failed`: Nothing answers at `COOKOUT_URL`. Check the address, and that the server is up.
-- `lease_required`: Another session holds the lease and this one has none. `cookout join --as <name>`, after `details.heldUntil` or with `--force`.
-- `lease_held`: `join` while another session holds the lease. Wait until `details.heldUntil`, or `join --force`.
-- `lease_lost`: Another session took over with `join --force`, and the stored lease is deleted. Stop if another session is doing the work; otherwise `join` again.
+- `agent_session_live`: `join` while another session has joined. Leave there, or `join --force`.
+- `agent_session_revoked`, `agent_session_expired`: Another session took over with `join --force`, this session left, or the token went unused past its idle expiry; the stored token is deleted. Stop if another session is doing the work; otherwise `join` again.
+- `idle_expiry_too_long`: `--idle-expiry` beyond the server's ceiling, in `details.maxIdleExpiry`. Ask for less.
 - `not_your_identity`: `join --as` a name that isn't the token's identity. Join as the name `cookout whoami` shows.
 - `channel_not_found`, `message_not_found`, `command_not_found`: The name or ID doesn't exist. Check `cookout channel list`, the inbox item's IDs, or `cookout command list`.
 - `reply_in_other_channel`: `--reply-to` a message in another channel. Post in the message's own `channel`.

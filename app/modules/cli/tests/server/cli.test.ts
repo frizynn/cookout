@@ -30,7 +30,7 @@ const verbs: readonly (readonly string[])[] = [
   ["identity", "rotate", "bot"],
   ["channel", "create", "grill", "--description", "Grill it"],
   ["channel", "get", "grill"],
-  ["message", "post", "grill", "Is the lease 60 s?", "--data", '{"question":1}'],
+  ["message", "post", "grill", "Is the idle expiry 7 days?", "--data", '{"question":1}'],
   ["message", "post", "grill", "Yes.", "--reply-to", "1"],
   ["message", "list", "grill", "--limit", "1", "--before", "2"],
   ["thread", "get", "2"],

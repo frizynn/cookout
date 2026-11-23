@@ -4,7 +4,7 @@
  * message and everything before it in its thread or channel as read,
  * the inbox history of read and unread items, following a thread and
  * subscribing to a channel, and their paths. They
- * refuse with the message, channel and lease error codes.
+ * refuse with the message, channel and agent session error codes.
  */
 import type { Channel, ChannelName } from "../channels/index.ts";
 import type { Message, MessageId, TopLevelMessage } from "../messages/index.ts";

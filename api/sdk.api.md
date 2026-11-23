@@ -16,15 +16,15 @@ The SDK's public surface: the built `dist/sdk.d.ts`, as consumers of the publish
  * `IsoTime` brand and its check. Every timestamp the protocol carries
  * (`createdAt`, `expiresAt`, `heldUntil`, the health check's `time`) is one.
  */
-declare const brand$6: unique symbol;
+declare const brand$5: unique symbol;
 /** A moment as the wire writes it: ISO 8601 in UTC with milliseconds, such as `2026-01-01T00:00:00.000Z`. */
 type IsoTime = string & {
-  readonly [brand$6]: "IsoTime";
+  readonly [brand$5]: "IsoTime";
 };
-declare const brand$5: unique symbol;
+declare const brand$4: unique symbol;
 /** A channel's name: 1–80 lowercase letters, digits or `-`. Unique on a server. */
 type ChannelName = string & {
-  readonly [brand$5]: "ChannelName";
+  readonly [brand$4]: "ChannelName";
 };
 /** A channel as the server shows it. */
 interface Channel {
@@ -46,9 +46,9 @@ interface ChannelResponse {
 interface ListChannelsResponse {
   readonly channels: readonly Channel[];
 }
-declare const brand$4: unique symbol;
+declare const brand$3: unique symbol;
 type Brand$1<Name extends string> = string & {
-  readonly [brand$4]: Name;
+  readonly [brand$3]: Name;
 };
 type IdentityFields = {
   readonly name: IdentityName;
@@ -115,13 +115,13 @@ interface SetDisplayNameRequest {
  * and the SDK send it in `cookout-agent-tool` when the process's environment shows such a tool runs it.
  */
 type AgentTool = Brand$1<"AgentTool">;
-declare const brand$3: unique symbol;
+declare const brand$2: unique symbol;
 /**
  * A message's ID: a positive whole number. Message IDs are one increasing
  * sequence across the whole server, so they order messages.
  */
 type MessageId = number & {
-  readonly [brand$3]: "MessageId";
+  readonly [brand$2]: "MessageId";
 };
 /** Any JSON value. */
 type JsonValue = null | boolean | number | string | readonly JsonValue[] | {
@@ -260,34 +260,6 @@ interface ServerSentEvent {
   readonly event: string;
   readonly data: string;
 }
-declare const brand$2: unique symbol;
-/** The value `join` returns and a session sends in `cookout-lease` to show it holds the identity. */
-type LeaseId = string & {
-  readonly [brand$2]: "LeaseId";
-};
-/** The body of `POST /v1/lease`. `as` must be the token's own identity: a check, not a switch. */
-interface JoinRequest {
-  readonly as: string;
-  /** Takes the lease even if another session holds it; that session's lease ID stops working at once. */
-  readonly force?: boolean;
-}
-/** The answer to `join`. */
-interface LeaseResponse {
-  readonly leaseId: LeaseId;
-  /** Each request carrying the lease ID moves it forward. */
-  readonly expiresAt: IsoTime;
-}
-/** The answer to `leave`. */
-interface LeaveResponse {
-  readonly released: true;
-}
-/**
- * The `details` of the 409 lease refusals: when the current holder's lease
- * ends, or `null` if nobody holds the identity.
- */
-interface LeaseConflictDetails {
-  readonly heldUntil: IsoTime | null;
-}
 declare const brand$1: unique symbol;
 type Brand<Name extends string> = string & {
   readonly [brand$1]: Name;
@@ -337,6 +309,34 @@ interface CallCommandRequest {
 interface CallCommandResponse {
   readonly messageId: MessageId;
   readonly threadId: MessageId;
+}
+/** The body of `POST /v1/agent-session`. `as` must be the token's own agent: a check, not a switch. */
+interface JoinRequest {
+  readonly as: string;
+  /** Joins even while the agent has a live agent session token, which is revoked at once. */
+  readonly force?: boolean;
+  /** How long the token may go unused before it expires, such as `30d`. Default `7d`; at most `COOKOUT_MAX_IDLE_EXPIRY`. */
+  readonly idleExpiry?: string;
+}
+/** The answer to `join`. */
+interface AgentSessionResponse {
+  /** Send it as the bearer token to act as the agent for this session. Shown this once. */
+  readonly agentSessionToken: Token;
+  readonly issuedAt: IsoTime;
+  /** Each request sent with the token moves it forward by the idle expiry. */
+  readonly expiresAt: IsoTime;
+}
+/** The answer to `leave`. */
+interface LeaveResponse {
+  readonly revoked: true;
+}
+/** The `details` of the 409 `agent_session_live` refusal: when the agent's live agent session token expires if unused. */
+interface AgentSessionLiveDetails {
+  readonly expiresAt: IsoTime;
+}
+/** The `details` of the 400 `idle_expiry_too_long` refusal: the longest idle expiry this cookout allows. */
+interface IdleExpiryTooLongDetails {
+  readonly maxIdleExpiry: string;
 }
 /** A new item in the caller's inbox, sent the moment another identity posts it. */
 interface InboxItemEvent {
@@ -388,7 +388,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "lease_held", "lease_required", "lease_lost", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "agent_session_live", "idle_expiry_too_long", "agent_session_required", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
@@ -423,14 +423,15 @@ declare function refusalOf(error: unknown): Refusal;
 export type CookoutClientOptions = {
   /** The server's base URL, such as `https://cookout.example.com`. Default: `COOKOUT_URL`. */
   readonly url?: string;
-  /** The bearer token. Default: `COOKOUT_TOKEN`. Not needed for the health check. */
+  /**
+   * The bearer token: an Identity token, or the agent session token `join` answered, to act as the agent for that
+   * session. Default: `COOKOUT_TOKEN`. Not needed for the health check.
+   */
   readonly token?: string;
   /** Where `COOKOUT_URL` and `COOKOUT_TOKEN` are read from. Default: the process's environment (none in a browser). */
   readonly env?: Readonly<Record<string, string | undefined>>;
   /** The agent tool running this process, such as `claude-code`, sent on every request: a human's token with it is refused with 403 `agent_as_human`, and messages posted record it. Default: with a token from `COOKOUT_TOKEN`, the tool `env` shows (`CLAUDECODE=1` or `AI_AGENT` for Claude Code), unless `COOKOUT_ALLOW_HUMAN=1`. */
   readonly agentTool?: string;
-  /** A lease ID from an earlier `join` (the CLI keeps it in its lease-state file). The client sends it on every request, which renews the lease. */
-  readonly leaseId?: LeaseId;
 };
 export type CookoutClient = {
   /** `GET /v1/health`. Resolves when the server and its storage are usable. */
@@ -485,14 +486,17 @@ export type CookoutClient = {
   /** `GET /v1/messages/:id/thread`: the thread holding the message, its top-level message and every reply in order. */
   readonly getThread: (messageId: MessageId) => Promise<ThreadResponse>;
   /**
-   * `POST /v1/lease`: takes the lease on the token's identity (`as` must be its name). From then on this client sends
-   * the lease ID on every request, renewing it. 409 `lease_held` (with `details.heldUntil`) if another session holds
-   * it, unless `force`, which takes it over.
+   * `POST /v1/agent-session`, with an agent's Identity token (`as` must be its name; a human's is 403
+   * `identity_kind`): issues an agent session token, which expires once unused for `idleExpiry` (default `7d`, at
+   * most the server's `COOKOUT_MAX_IDLE_EXPIRY`, else 400 `idle_expiry_too_long`); each request sent with it moves
+   * its expiry on. Make a client with it as `token` to act as the agent for this session. 409 `agent_session_live`
+   * (with `details.expiresAt`) while the agent has a live one, unless `force`, which revokes that one at once.
    */
-  readonly join: (request: JoinRequest) => Promise<LeaseResponse>;
+  readonly join: (request: JoinRequest) => Promise<AgentSessionResponse>;
   /**
-   * `DELETE /v1/lease`: releases this client's lease, so another session can join at once. Needs the lease: 409
-   * `lease_required` without one, `lease_lost` if it is no longer live. After a `lease_lost` the client stops sending it.
+   * `DELETE /v1/agent-session`: revokes the agent session token this client's token is, so another session can join
+   * at once. With any other token, 400 `agent_session_required`. A revoked or expired agent session token gets 401
+   * `agent_session_revoked` or `agent_session_expired` on every request.
    */
   readonly leave: () => Promise<LeaveResponse>;
   /**
@@ -510,9 +514,7 @@ export type CookoutClient = {
   readonly inboxHistory: (query?: InboxHistoryQuery) => Promise<InboxHistoryResponse>;
   /**
    * `POST /v1/ack`: marks the message and everything before it in its thread (for a reply) or channel (for a
-   * top-level message) as read. A read position never moves backwards. Sent without a lease ID, it is allowed only
-   * while nobody holds the lease on the caller's identity (409 `lease_required` otherwise); a stale lease ID is 409
-   * `lease_lost`. A missing message is 404 `message_not_found`.
+   * top-level message) as read. A read position never moves backwards. A missing message is 404 `message_not_found`.
    */
   readonly ack: (messageId: MessageId) => Promise<AckResponse>;
   /**
@@ -532,10 +534,9 @@ export type CookoutClient = {
    * each new read position (`read-position`) the moment any session of the caller acks, so several sessions stay in
    * sync. With `allChannels`, it also sends every new message on every channel (`message`), as the web UI needs.
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
-   * a newer server, is skipped. `close` drops the connection. For an agent identity the stream carries the held
-   * lease ID and keeps the lease alive while open; a stale one is refused with 409 `lease_lost`, and if another
-   * session takes the lease over (`join --force`) the iteration throws `lease_lost` (status 200, the stream's) and
-   * the client drops the lease. A human identity watches with no lease. To pick up after a dropped connection, pass
+   * a newer server, is skipped. `close` drops the connection. Opened with an agent session token, the stream moves its
+   * expiry on while open, and once the token is revoked (`leave`, or another session's `join --force`) the
+   * iteration throws `agent_session_revoked` (status 200, the stream's). To pick up after a dropped connection, pass
    * the last message ID seen as `lastEventId`: the stream first replays the inbox items after it, then goes on live.
    * The server sends a heartbeat every 15 s, which `onHeartbeat` hears while the stream is being iterated. The
    * stream starts by telling `onConnected` the board's latest message ID (null before the first message): every
@@ -573,5 +574,5 @@ export type CookoutClient = {
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentTool, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DisplayName, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityEvent, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Refusal, type Reply, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, refusalOf };
+export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentSessionLiveDetails, type AgentSessionResponse, type AgentTool, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DisplayName, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityEvent, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Refusal, type Reply, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, refusalOf };
 ```

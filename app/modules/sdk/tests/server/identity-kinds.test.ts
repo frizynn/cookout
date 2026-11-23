@@ -19,7 +19,7 @@ function postRawIdentity(
   body: string,
 ): Effect.Effect<RawAnswer, never, HttpClient.HttpClient> {
   return HttpClientRequest.post(`${cookout.url}${identitiesPath}`).pipe(
-    HttpClientRequest.bearerToken(cookout.adminToken),
+    HttpClientRequest.setHeader("authorization", `Bearer ${cookout.adminToken}`),
     HttpClientRequest.bodyText(body, "application/json"),
     HttpClient.execute,
     Effect.flatMap((response) => Effect.map(response.json, (json) => ({ json, status: response.status }))),

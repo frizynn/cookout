@@ -10,10 +10,10 @@
  * `watchCookout` and `watchCookoutBinary` read a long-running command's
  * stdout line by line.
  * Tests run effects with `@effect/vitest`, which provides `TestClock`: a
- * test cookout starts at `testStartTime`, and a lease's expiry moves with it.
+ * test cookout starts at `testStartTime`, and an agent session token's expiry moves with it.
  * `twoSessions` gives an identity two separate SDK sessions, and
  * `freshStateFolder`, `agentSessionStateFiles` and `writeAgentSessionStates` make and
- * read a CLI session's lease-state folder. `builtWebFolder` stands in for
+ * read a CLI session's agent session state folder. `builtWebFolder` stands in for
  * the Vite build that `cookout serve` serves at `/`. A test cookout comes
  * with its own webhook fake, `webhook`, for a command to deliver its calls to.
  * `cuttableLink` puts a link in front of a server that a test can cut, to
