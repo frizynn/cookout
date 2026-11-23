@@ -26,15 +26,15 @@ test("a message posted by another identity appears in the open channel and threa
   const { parent, poster } = await openChannel(page, channel);
 
   await expect(page.getByRole("list", { name: "Messages" }).getByRole("link")).toHaveText([
-    "@browser-live-posterDeploy at noon?0 replies",
+    "@browser-live-posteragentDeploy at noon?0 replies",
   ]);
 
   await poster.client.createMessage({ channel, text: "Or at one?" });
   await poster.client.createMessage({ channel, replyTo: parent.id, text: "Noon works" });
 
   await expect(page.getByRole("list", { name: "Messages" }).getByRole("link")).toHaveText([
-    "@browser-live-posterDeploy at noon?1 reply",
-    "@browser-live-posterOr at one?0 replies",
+    "@browser-live-posteragentDeploy at noon?1 reply",
+    "@browser-live-posteragentOr at one?0 replies",
   ]);
 
   await page.getByRole("link", { name: /Deploy at noon\?/u }).click();
@@ -44,7 +44,7 @@ test("a message posted by another identity appears in the open channel and threa
   await poster.client.createMessage({ channel, replyTo: parent.id, text: "Then noon it is" });
 
   await expect(page.getByRole("list", { name: "Replies" }).getByRole("listitem")).toHaveText([
-    "@browser-live-posterNoon works",
-    "@browser-live-posterThen noon it is",
+    "@browser-live-posteragentNoon works",
+    "@browser-live-posteragentThen noon it is",
   ]);
 });

@@ -1,4 +1,4 @@
-import { adminClient, logIn, newIdentity } from "./people.ts";
+import { adminClient, logIn, newIdentity, sidebar } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import type { Message } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
@@ -14,7 +14,9 @@ async function followedThread(channel: string, reader: Person): Promise<Message>
 }
 
 async function replyInThread(page: Page, channel: string, text: string): Promise<void> {
-  await page.getByRole("link", { name: `#${channel}` }).click();
+  await sidebar(page)
+    .getByRole("link", { name: `#${channel}` })
+    .click();
   await page.getByRole("link", { name: /Who's on call\?/u }).click();
   await page.getByLabel("Reply", { exact: true }).fill(text);
   await page.getByRole("button", { name: "Send reply" }).click();

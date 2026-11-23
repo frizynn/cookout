@@ -1,5 +1,5 @@
 import type { CookoutClient, CreateIdentityRequest } from "../../../sdk/index.ts";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { createCookoutClient } from "../../../sdk/index.ts";
 import { expect } from "@playwright/test";
 
@@ -20,6 +20,10 @@ export function adminClient(): CookoutClient {
 export async function newIdentity(request: CreateIdentityRequest): Promise<Person> {
   const { token } = await adminClient().createIdentity(request);
   return { client: createCookoutClient({ token }), token };
+}
+
+export function sidebar(page: Page): Locator {
+  return page.getByRole("navigation", { name: "Sidebar" });
 }
 
 export async function logIn({ page, token }: LogIn): Promise<void> {

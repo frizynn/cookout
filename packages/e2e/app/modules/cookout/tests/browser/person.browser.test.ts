@@ -33,7 +33,9 @@ async function boardWithAMention(cookout: BrowserRun): Promise<Board> {
 }
 
 function channelRow(page: Page, channel: string): Locator {
-  return page.getByRole("link", { name: new RegExp(`^#${channel}(?![a-z0-9-])`, "u") });
+  return page
+    .getByRole("navigation", { name: "Sidebar" })
+    .getByRole("link", { name: new RegExp(`^#${channel}(?![a-z0-9-])`, "u") });
 }
 
 async function openQuestion(page: Page, row: Locator): Promise<void> {
@@ -41,9 +43,11 @@ async function openQuestion(page: Page, row: Locator): Promise<void> {
   await page.getByRole("link", { name: /Can you review the deploy/u }).click();
 }
 
-async function backToChannels(page: Page, channel: string): Promise<void> {
-  await page.getByRole("link", { name: `← #${channel}` }).click();
-  await page.getByRole("link", { name: "← Channels" }).click();
+async function leaveForTheInbox(page: Page): Promise<void> {
+  await page
+    .getByRole("navigation", { name: "Sidebar" })
+    .getByRole("link", { name: /^Inbox/u })
+    .click();
 }
 
 async function replyMentioning(page: Page, cookout: BrowserRun, { agent, channel }: Board): Promise<void> {
@@ -75,7 +79,7 @@ async function readTheMention(page: Page, cookout: BrowserRun, { channel, person
 
   await expect.poll(inboxOf(person)).toStrictEqual([]);
 
-  await backToChannels(page, channel);
+  await leaveForTheInbox(page);
 }
 
 async function agentAnswers({ agent, channel, question }: Board, mentionReply: string): Promise<void> {
@@ -106,6 +110,6 @@ test("a person logs in, opens a mention's thread, replies with a picked @-mentio
 
   await expect(page.getByRole("list", { name: "Replies" }).getByRole("listitem")).toHaveText([
     `@${person.name}Over to @${agent.name} for the review.`,
-    `@${agent.name}Looking now.`,
+    `@${agent.name}agentLooking now.`,
   ]);
 });

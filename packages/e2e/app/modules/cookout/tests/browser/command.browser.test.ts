@@ -28,7 +28,7 @@ test("a person sees a call to the example command and the handler's result reply
     page.getByRole("article", { name: "Parent message" }).getByLabel(`Call to /${exampleCommand}`),
   ).toHaveText(pretty({ branch: "main" }));
   await expect(page.getByRole("list", { name: "Replies" }).getByRole("listitem")).toHaveText(
-    [`@${exampleCommand}/${exampleCommand} is done.${pretty({ received: { branch: "main" } })}`],
+    [`@${exampleCommand}agent/${exampleCommand} is done.${pretty({ received: { branch: "main" } })}`],
     { timeout: REPLY_WITHIN },
   );
 });
