@@ -92,7 +92,10 @@ export interface CommandWithSecretResponse {
   readonly secret: CommandSecret;
 }
 
-/** The answer to `GET /v1/commands`: every command, sorted by name. */
+/**
+ * The answer to `GET /v1/commands`: every command, sorted by name, the registered ones and those the server handles
+ * itself (`/spawn-agent`), so every client discovers both the same way. A command the server handles has an empty `url`.
+ */
 export interface ListCommandsResponse {
   readonly commands: readonly Command[];
 }

@@ -36,7 +36,7 @@ it.effect("a command add by an identity that is not an admin is refused with 403
     const { commands } = yield* answer(cookout.client.listCommands);
 
     expect(error).toMatchObject({ code: "admin_only", status: 403 });
-    expect(commands).toStrictEqual([]);
+    expect(Arr.map(commands, ({ name }) => name)).toStrictEqual(["spawn-agent"]);
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -59,7 +59,7 @@ it.effect(
       };
 
       expect(added).toStrictEqual({ command, secret: "hmac_test_3" });
-      expect(listed).toStrictEqual({ commands: [command] });
+      expect(Arr.filter(listed.commands, ({ name }) => name !== "spawn-agent")).toStrictEqual([command]);
       expect(Arr.filter(identities, (identity) => "handler" in identity)).toStrictEqual([
         { admin: false, createdAt: BOOT, handler: true, kind: "agent", name: "deploy", owner: "admin" },
       ]);
@@ -104,7 +104,7 @@ it.effect("a command name in use, or a human's name, is refused with 409", () =>
       { code: "command_exists", status: 409 },
       { code: "handler_not_agent", status: 409 },
     ]);
-    expect(Arr.map(commands, ({ name }) => name)).toStrictEqual(["deploy"]);
+    expect(Arr.map(commands, ({ name }) => name)).toStrictEqual(["deploy", "spawn-agent"]);
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -253,7 +253,7 @@ it.effect("a command whose schema is not a JSON Schema is refused with 400 when 
     const { commands } = yield* answer(cookout.client.listCommands);
 
     expect(error).toMatchObject({ code: "invalid_request", details: [{ path: ["schema"] }], status: 400 });
-    expect(commands).toStrictEqual([]);
+    expect(Arr.map(commands, ({ name }) => name)).toStrictEqual(["spawn-agent"]);
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -281,7 +281,7 @@ it.effect(
       );
       const { commands } = yield* answer(cookout.client.listCommands);
 
-      expect(Arr.map(commands, ({ name }) => name)).toStrictEqual(["deploy", "release", "tag"]);
+      expect(Arr.map(commands, ({ name }) => name)).toStrictEqual(["deploy", "release", "spawn-agent", "tag"]);
       expect(badDate).toMatchObject({ code: "invalid_request", details: [{ path: ["data", "at"] }], status: 400 });
     }).pipe(Effect.provide(testCookout())),
 );

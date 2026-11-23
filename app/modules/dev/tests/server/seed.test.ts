@@ -195,7 +195,10 @@ it.effect("the seed calls a command in deploys and its handler replies with a re
     const call = Option.getOrThrow(Arr.findFirst(deploys.messages, ({ author }) => author.name === "ada"));
     const thread = yield* answer(() => cookout.client.getThread(call.id));
 
-    expect(Arr.map(commands, ({ handler, name }) => [name, handler])).toStrictEqual([["rollback", "rollback"]]);
+    expect(Arr.map(commands, ({ handler, name }) => [name, handler])).toStrictEqual([
+      ["rollback", "rollback"],
+      ["spawn-agent", "spawn-agent"],
+    ]);
     expect([thread.parent.text, thread.parent.data]).toStrictEqual([
       "/rollback",
       { command: "rollback", data: { version: "1.4.1" } },

@@ -134,3 +134,4 @@ const spawningLayer: Layer.Layer<Spawning, Config.ConfigError, SpawnSettings | E
   Layer.effect(Spawning, Effect.flatMap(readSetup, spawnerOn)).pipe(Layer.provide(routineFireLayer));
 
 export { SpawnSettings, spawningLayer };
+export { withBuiltInCommands } from "./spawn-agent.ts";

@@ -1,6 +1,6 @@
 /**
- * The test composition root, importable only from tests. `runDev` and
- * `startDev` run the dev program's commands (ADR 0020) in process. It builds the test
+ * The test composition root, importable only from tests. `runDev`,
+ * `startDev` and `startFakeRoutine` run the dev program's commands (ADR 0020) in process. It builds the test
  * Layers (a cookout on port 0 with memory storage and test secrets, its
  * admin on a token it makes and identities seeded through `Storage`, both storage
  * Layers on fresh stores, a store that is unusable). It runs `cookout`
@@ -29,18 +29,17 @@ export { type CommandFixtureOptions, commandFixture, commandName, handlerFixture
 export {
   type CliResult,
   type CommandLineNeeds,
-  type DevProcess,
   commandLineServices,
   runCookout,
   runDev,
   type ServeProcess,
   type ServeOptions,
-  startDev,
   runServe,
   startServe,
   type Watched,
   watchCookout,
 } from "./lib/server/cli.ts";
+export { type DevProcess, startDev, startFakeRoutine } from "./lib/server/dev.ts";
 export {
   type InterruptedDev,
   interruptDevBinary,

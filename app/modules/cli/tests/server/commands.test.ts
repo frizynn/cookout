@@ -61,7 +61,10 @@ it.effect("cookout command add reads the schema file and prints the secret once;
     const release = { handler: "release", name: "release", schema, url };
 
     expect(added).toMatchObject({ exitCode: 0, stdoutJson: { command, secret: "hmac_test_2" } });
-    expect(listed).toMatchObject({ exitCode: 0, stdoutJson: { commands: [command, release] } });
+    expect(listed).toMatchObject({
+      exitCode: 0,
+      stdoutJson: { commands: [command, release, { name: "spawn-agent" }] },
+    });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 

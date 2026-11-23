@@ -7,6 +7,7 @@ import {
   runCookout,
   runDev,
   startDev,
+  startFakeRoutine,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { relayCutPath, relayRestorePath } from "../../../http/index.ts";
@@ -25,6 +26,9 @@ const THREE_REPLIES = 3;
 const SeededToken = Schema.Struct({ token: Schema.String });
 const SeedOutput = Schema.Struct({ identities: Schema.NonEmptyArray(SeededToken), thread: Schema.Finite });
 const ThreadParent = Schema.Struct({ text: Schema.String });
+const FireAnswer = Schema.fromJsonString(
+  Schema.Struct({ claude_code_session_url: Schema.String, type: Schema.String }),
+);
 const ThreadOutput = Schema.Struct({ parent: ThreadParent, replies: Schema.Array(Schema.Unknown) });
 
 function shaped<Shape>(value: unknown, isShape: (input: unknown) => input is Shape, otherwise: string): Shape {
@@ -60,6 +64,14 @@ function fetchedText(url: string): Effect.Effect<Fetched> {
 function postedFrom(origin: string, url: string): Effect.Effect<string> {
   return HttpClient.execute(HttpClientRequest.post(url).pipe(HttpClientRequest.setHeader("origin", origin))).pipe(
     Effect.flatMap((response) => response.text),
+    Effect.provide(FetchHttpClient.layer),
+    Effect.orDie,
+  );
+}
+
+function postedJson(url: string): Effect.Effect<unknown> {
+  return HttpClient.execute(HttpClientRequest.post(url)).pipe(
+    Effect.flatMap((response) => response.json),
     Effect.provide(FetchHttpClient.layer),
     Effect.orDie,
   );
@@ -189,5 +201,16 @@ it.effect("the dev program refuses a command it doesn't have", () =>
     const result = yield* runDev({ args: ["deploy"], env: {} });
 
     expect(result.exitCode).toBe(EXIT_FAILURE);
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
+it.effect("the dev program's fake routine answers a fire as a routine does, naming its session", () =>
+  Effect.gen(function* fakeRoutineFires() {
+    const routine = yield* startFakeRoutine;
+    const fired = yield* postedJson(routine.fireUrl);
+    const answered = shaped(fired, Schema.is(FireAnswer), "The fake routine named no session.");
+
+    expect(routine.fireUrl).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/v1\/claude_code\/routines\/.+\/fire$/u);
+    expect(answered).toMatchObject({ claude_code_session_url: routine.sessionUrl, type: "routine_fire" });
   }).pipe(Effect.provide(commandLineServices)),
 );

@@ -207,3 +207,39 @@ it.effect("only a human can spawn an agent", () =>
     expect(calls).toStrictEqual([]);
   }).pipe(Effect.provide(spawningCookout)),
 );
+
+it.effect("GET /v1/commands lists /spawn-agent with its name and task fields, beside the registered commands", () =>
+  Effect.gen(function* listed() {
+    const cookout = yield* TestCookout;
+    yield* answer(() =>
+      cookout.client.addCommand({ name: "zip", schema: { type: "object" }, url: "https://hooks.example.com/zip" }),
+    );
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const { commands } = yield* answer(ada.client.listCommands);
+
+    expect(Arr.map(commands, ({ name }) => name)).toStrictEqual(["spawn-agent", "zip"]);
+    expect(Arr.head(commands)).toMatchObject(
+      Option.some({
+        description: "Start a remote Claude Code session that works on this board as a new agent you own.",
+        handler: "spawn-agent",
+        schema: {
+          properties: { name: { type: "string" }, task: { type: "string" } },
+          required: ["name", "task"],
+          type: "object",
+        },
+      }),
+    );
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a registered command named spawn-agent is listed once, as the one the server handles", () =>
+  Effect.gen(function* shadowed() {
+    const cookout = yield* TestCookout;
+    yield* answer(() =>
+      cookout.client.addCommand({ name: "spawn-agent", schema: { type: "object" }, url: "https://hooks.example.com" }),
+    );
+    const { commands } = yield* answer(cookout.client.listCommands);
+
+    expect(Arr.map(commands, ({ name, url }) => [name, url])).toStrictEqual([["spawn-agent", ""]]);
+  }).pipe(Effect.provide(testCookout())),
+);

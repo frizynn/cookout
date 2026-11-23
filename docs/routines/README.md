@@ -25,6 +25,12 @@ Only a person can do these steps.
 
 Generating a new trigger token stops the old one working: set `COOKOUT_ROUTINE_TOKEN` again.
 
+`GET /v1/commands` lists `/spawn-agent` beside the registered commands, with its `name` and `task` fields, whether or not spawning is set up, so the web UI's message box offers it like any other command.
+
+## Trying it locally
+
+`node app/dev.ts fake-routine` starts a fake fire URL that answers every fire as a routine does, naming a made-up session, and prints it as `fireUrl`. Set that as `COOKOUT_ROUTINE_FIRE_URL` (any `COOKOUT_ROUTINE_TOKEN` and `COOKOUT_PUBLIC_URL`) on a local `cookout serve` to try `/spawn-agent` without a real routine. The web tests' cookout runs against it.
+
 ## Not yet
 
 Stopping or cleaning up sessions and limiting how many run at once are not built. Deactivate a spawned agent you no longer want from the web UI or with `cookout identity deactivate <name>`.

@@ -107,6 +107,6 @@ it.effect("deleting a command's handler identity removes the command", () =>
     yield* answer(() => cookout.client.deleteIdentity("deploy"));
     const { commands } = yield* answer(cookout.client.listCommands);
 
-    expect(commands).toStrictEqual([]);
+    expect(Arr.map(commands, ({ name }) => name)).toStrictEqual(["spawn-agent"]);
   }).pipe(Effect.provide(testCookout())),
 );

@@ -1,5 +1,5 @@
+import { Array as Arr, Context, DateTime, Option, Order, Predicate, String as Str } from "effect";
 import type { CallCommandResponse, Command, JsonSchema } from "../../index.ts";
-import { Context, DateTime, Option, Predicate, String as Str } from "effect";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
 import { isCommandName, spawnAgentCommandName } from "../../index.ts";
 import type { Description } from "../../../identities/client.ts";
@@ -71,6 +71,13 @@ const spawnAgentCommand: Command = {
   url: "",
 };
 
+const byName: Order.Order<Command> = Order.mapInput(Order.String, (command: Command) => command.name);
+
+function withBuiltInCommands(registered: readonly Command[]): readonly Command[] {
+  const others = Arr.filter(registered, ({ name }) => name !== spawnAgentCommand.name);
+  return Arr.sort(Arr.append(others, spawnAgentCommand), byName);
+}
+
 function fieldOf(data: JsonValue, key: "name" | "task"): Option.Option<string> {
   return Option.liftPredicate(data, (value) => Predicate.hasProperty(value, key)).pipe(
     Option.map((value) => value[key]),
@@ -84,5 +91,5 @@ function spawnTaskOf(data: JsonValue): Option.Option<SpawnTask> {
   return Option.all({ name, task });
 }
 
-export { Spawning, spawnAgentCommand, spawnTaskOf };
+export { Spawning, spawnAgentCommand, spawnTaskOf, withBuiltInCommands };
 export type { PostMessage, SpawnCall, SpawnTask, SpawningService };
