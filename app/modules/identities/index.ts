@@ -144,7 +144,7 @@ export function isAgentTool(value: string): value is AgentTool {
 /**
  * The header a client sends its agent tool in. A human identity's token sent with it is refused with 403
  * `agent_as_human`, to catch an agent that inherited a person's token by accident; it is not a security boundary
- * (ADR 0037). A message posted with it records the tool as `agentTool`.
+ * (ADR 0038). A message posted with it records the tool as `agentTool`.
  */
 export const agentToolHeader = "cookout-agent-tool";
 

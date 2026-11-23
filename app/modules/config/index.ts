@@ -46,7 +46,7 @@ export const agentToolVariables: readonly string[] = ["CLAUDECODE", "AI_AGENT", 
 /**
  * The agent tool `env` shows runs the process, such as `claude-code` (Claude Code sets `CLAUDECODE=1` and
  * `AI_AGENT`), unless `COOKOUT_ALLOW_HUMAN=1` says a human's token is meant to be used from it. A guard against
- * accidents, not a security boundary (ADR 0037).
+ * accidents, not a security boundary (ADR 0038).
  * @param env Where the markers are read from.
  * @returns The tool's name, if one is found and not overridden.
  */
