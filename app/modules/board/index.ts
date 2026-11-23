@@ -46,6 +46,8 @@ function storeIn<Messages>(stores: Map<string, Messages>, key: string, make: () 
   return messages;
 }
 
+type BoardClient = Pick<CookoutClient, "listChannels"> & CommandsClient & MessagesClient & ThreadClient;
+
 /** The board store. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
 export interface Board {
   /** Calls `listener` after every change, until the returned function is called. */
@@ -59,9 +61,6 @@ export interface Board {
   /** Every registered command, sorted by name: one store, loaded when its first reader subscribes. */
   readonly commands: Commands;
 }
-
-/** What the board store needs of the SDK. */
-export type BoardClient = Pick<CookoutClient, "listChannels"> & CommandsClient & MessagesClient & ThreadClient;
 
 /**
  * What the board is made with: an SDK client with the token of whoever is looking, `pageSize` top-level messages a
