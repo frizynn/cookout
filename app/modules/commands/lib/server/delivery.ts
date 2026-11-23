@@ -98,54 +98,54 @@ function currentSecret(
   });
 }
 
-function threadExists(call: Call): Effect.Effect<boolean, never, Storage> {
-  return Effect.gen(function* findThread() {
-    const storage = yield* Storage;
-    const thread = yield* storage.getThread(call.threadId);
-    return typeof thread === "object";
-  }).pipe(Effect.orElseSucceed(() => true));
-}
-
-function send(
-  { call, token, progress: { callId } }: Delivery,
-  timeoutSeconds: number,
-): Effect.Effect<boolean, never, Secrets | Storage | HttpClient.HttpClient> {
-  return Effect.gen(function* sendWebhook() {
+function webhookRequest({
+  call,
+  token,
+  progress: { callId },
+}: Delivery): Effect.Effect<
+  HttpClientRequest.HttpClientRequest,
+  StorageUnavailable | Cause.NoSuchElementError,
+  Secrets | Storage
+> {
+  return Effect.gen(function* signRequest() {
     const { channel, data, threadId } = call;
     const fields = { callId, channel, command: call.stored.command.name, data, threadId, token };
     const body = yield* Effect.orDie(toJson(fields));
     const secret = yield* currentSecret(call.stored.command.name);
     const secrets = yield* Secrets;
     const signature = yield* secrets.signature(secret, body);
-    const request = HttpClientRequest.post(call.stored.command.url).pipe(
+    return HttpClientRequest.post(call.stored.command.url).pipe(
       HttpClientRequest.setHeader(SIGNATURE_HEADER, signature),
       HttpClientRequest.bodyText(body, "application/json"),
     );
+  });
+}
+
+function attempt(
+  delivery: Delivery,
+  timeoutSeconds: number,
+): Effect.Effect<Attempted, never, Secrets | Storage | HttpClient.HttpClient> {
+  return Effect.gen(function* sendWebhook() {
+    const storage = yield* Storage;
+    const thread = yield* storage.getThread(delivery.call.threadId);
+    if (typeof thread !== "object") {
+      return "gone" as const;
+    }
+    const request = yield* webhookRequest(delivery);
     const anyStatus = yield* HttpClient.HttpClient;
     const client = HttpClient.filterStatusOk(anyStatus);
     yield* client.execute(request).pipe(Effect.timeout(Duration.seconds(timeoutSeconds)));
+    return "delivered" as const;
   }).pipe(
     Effect.matchEffect({
-      onFailure: () => Effect.as(Effect.logWarning(`An attempt at the webhook delivery ${callId} failed.`), false),
-      onSuccess: () => Effect.succeed(true),
+      onFailure: () =>
+        Effect.as(
+          Effect.logWarning(`An attempt at the webhook delivery ${delivery.progress.callId} failed.`),
+          "failed" as const,
+        ),
+      onSuccess: (outcome) => Effect.succeed(outcome),
     }),
   );
-}
-
-function outcomeOf(succeeded: boolean): Attempted {
-  if (succeeded) {
-    return "delivered";
-  }
-  return "failed";
-}
-
-function attempt(delivery: Delivery, timeoutSeconds: number): Effect.Effect<Attempted, never, DeliveryNeeds> {
-  return Effect.flatMap(threadExists(delivery.call), (exists): Effect.Effect<Attempted, never, DeliveryNeeds> => {
-    if (!exists) {
-      return Effect.succeed("gone");
-    }
-    return Effect.map(send(delivery, timeoutSeconds), outcomeOf);
-  });
 }
 
 type Settle = (outcome: DeliveryOutcome, extra: number) => Effect.Effect<void, never, Storage>;

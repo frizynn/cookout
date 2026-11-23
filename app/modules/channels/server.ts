@@ -142,7 +142,7 @@ export const channelRoutes: readonly Route<Caller | Channels>[] = [
     handle: (params) =>
       Effect.gen(function* getChannelRoute() {
         const channels = yield* Channels;
-        const channel = yield* channels.get(params["name"] ?? "");
+        const channel = yield* channels.get(String(params["name"]));
         return yield* HttpServerResponse.schemaJson(ChannelResponseSchema)({ channel });
       }),
     method: "GET",
@@ -153,7 +153,7 @@ export const channelRoutes: readonly Route<Caller | Channels>[] = [
       Effect.gen(function* deleteChannelRoute() {
         yield* requireAdmin;
         const channels = yield* Channels;
-        const channel = yield* channels.remove(params["name"] ?? "");
+        const channel = yield* channels.remove(String(params["name"]));
         return yield* HttpServerResponse.schemaJson(ChannelResponseSchema)({ channel });
       }),
     method: "DELETE",
