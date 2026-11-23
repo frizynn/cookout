@@ -171,7 +171,7 @@ function subscriptionRoute(method: Change, change: "subscribe" | "unsubscribe"):
 export { Inbox, inboxLayer } from "./lib/server/service.ts";
 
 /** Offline alerts: raised by presence, listed in the owner's inbox, sent to the owner's streams as they change. */
-export { type OwnedAlert, OfflineAlerts, offlineAlertsLayer } from "./lib/server/offline-alerts.ts";
+export { OfflineAlerts, offlineAlertsLayer } from "./lib/server/offline-alerts.ts";
 
 /** The Schemas of an inbox item, a read position, a moved-back one and a subscription, for the events that carry one. */
 export {

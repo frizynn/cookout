@@ -1,6 +1,6 @@
 import { Array as Arr, Effect, String as Str } from "effect";
-import type { NewOfflineAlert, Storage, StorageUnavailable } from "../../server.ts";
 import type { OfflineAlert, OfflineAlertId } from "../../../presence/index.ts";
+import type { Storage, StorageUnavailable } from "../../server.ts";
 import { expect, it } from "@effect/vitest";
 import {
   identityFixture as identity,
@@ -11,6 +11,8 @@ import {
 } from "../../../testing/server.ts";
 import { isOfflineAlertId } from "../../../presence/index.ts";
 import { tokenHash } from "../../../identities/index.ts";
+
+type NewOfflineAlert = Parameters<Storage["Service"]["recordOfflineAlert"]>["0"];
 
 const HASH_LENGTH = 64;
 const ONE_AT_A_TIME = { concurrency: 1, discard: true } as const;

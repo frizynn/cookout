@@ -120,4 +120,4 @@ function unread(alerts: readonly OfflineAlert[]): readonly OfflineAlert[] {
   return Arr.filter(alerts, ({ read }) => !read);
 }
 
-export { type OwnedAlert, OfflineAlerts, offlineAlertsLayer, unread };
+export { OfflineAlerts, offlineAlertsLayer, unread };

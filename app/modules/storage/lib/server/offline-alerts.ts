@@ -206,10 +206,4 @@ const OFFLINE_ALERTS_MIGRATION = `CREATE TABLE offline_alerts (
    ) STRICT;
    CREATE INDEX offline_alerts_by_owner ON offline_alerts (owner_name, id);`;
 
-export {
-  type NewOfflineAlert,
-  type OfflineAlertsSection,
-  OFFLINE_ALERTS_MIGRATION,
-  memoryOfflineAlerts,
-  sqliteOfflineAlerts,
-};
+export { type OfflineAlertsSection, OFFLINE_ALERTS_MIGRATION, memoryOfflineAlerts, sqliteOfflineAlerts };
