@@ -159,14 +159,16 @@ it.effect("COOKOUT_TOKEN wins over the Login, and whoami says so", () =>
 
 const agentTools: readonly Env[] = [{ CLAUDECODE: "1" }, { CLAUDECODE: "1", COOKOUT_ALLOW_HUMAN: "1" }];
 
-it.effect.each(agentTools)("inside an agent tool (%o) the Login is never sent", (markers) =>
-  Effect.gen(function* agentToolWithLogin() {
-    const { env } = yield* loggedIn;
+it.effect.each(agentTools)(
+  "inside an agent tool (%o) the Login is never sent: the verb asks to join first",
+  (markers) =>
+    Effect.gen(function* agentToolWithLogin() {
+      const { env } = yield* loggedIn;
 
-    const whoami = yield* run({ ...env, ...markers }, "whoami");
+      const whoami = yield* run({ ...env, ...markers }, "whoami");
 
-    expect(whoami).toMatchObject({ exitCode: 1, stderrJson: { error: { code: "token_missing" } } });
-  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+      expect(whoami).toMatchObject({ exitCode: 1, stderrJson: { error: { code: "not_joined" } } });
+    }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
 it.effect("the CLI refuses a credentials file others can read with credentials_unsafe", () =>

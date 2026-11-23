@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, pipe } from "effect";
+import { Array as Arr, Effect, String as Str, pipe } from "effect";
 import type { CliResult, CommandLineNeeds } from "../../../testing/server.ts";
 import {
   TestCookout,
@@ -8,11 +8,14 @@ import {
   testCookout,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
+import { TestClock } from "effect/testing";
 
 interface Step {
   readonly args: readonly string[];
   readonly env: Readonly<Record<string, string>>;
 }
+
+type Env = Readonly<Record<string, string>>;
 
 const EXIT_FAILURE = 1;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
@@ -23,7 +26,12 @@ const issued = {
   expiresAt: "2026-01-08T00:00:00.000Z",
   issuedAt: "2026-01-01T00:00:00.000Z",
 };
-const asAgent = { ...succeeded, stdoutJson: { identity: { name: "agent" } } };
+const asAgent = { ...succeeded, stdoutJson: { identity: { name: "agent" }, source: "agent session token" } };
+const notJoined = {
+  exitCode: EXIT_FAILURE,
+  stderrJson: { error: { code: "not_joined", message: "join as an agent first: cookout join --as <name>" } },
+};
+const exportLine = /^export COOKOUT_SESSION=(?<token>\S+)$/u;
 
 function failedWith(code: string): object {
   return { exitCode: EXIT_FAILURE, stderrJson: { error: { code } } };
@@ -33,24 +41,160 @@ function runAll(steps: readonly Step[]): Effect.Effect<readonly CliResult[], nev
   return pipe(steps, Effect.forEach(runCookout, ONE_AT_A_TIME));
 }
 
-it.effect("a CLI session keeps its agent session token in its state folder, and forgets it once revoked or left", () =>
-  Effect.gen(function* twoCliSessions() {
+function claudeCode(session: string, shared: Env): Env {
+  return { ...shared, CLAUDECODE: "1", CLAUDE_CODE_SESSION_ID: session };
+}
+
+function exportedToken({ stdout }: CliResult): string {
+  return Str.replace(exportLine, "$<token>")(stdout);
+}
+
+function withToken(env: Env, token: string): Env {
+  return { ...env, COOKOUT_TOKEN: token };
+}
+
+it.effect("a join in one Claude Code session acts as the agent in that session only, until leave forgets it", () =>
+  Effect.gen(function* joinInOneSession() {
+    const cookout = yield* TestCookout;
+    const bot = yield* cookout.createIdentity("release-bot");
+    const folder = yield* freshStateFolder;
+    const shared = { COOKOUT_STATE_DIR: folder, COOKOUT_URL: cookout.url };
+    const [first, second] = [claudeCode("s1", shared), claudeCode("s2", shared)];
+    const results = yield* runAll([
+      { args: ["join", "--as", "release-bot"], env: { ...first, COOKOUT_TOKEN: bot.token } },
+      { args: ["channel", "create", "grill"], env: first },
+      { args: WHOAMI, env: second },
+      { args: ["channel", "list"], env: second },
+      { args: ["leave"], env: first },
+      { args: WHOAMI, env: first },
+    ]);
+
+    expect(results).toMatchObject([
+      { ...succeeded, stdoutJson: issued },
+      { ...succeeded, stdoutJson: { channel: { name: "grill" } } },
+      notJoined,
+      notJoined,
+      { ...succeeded, stdoutJson: { revoked: true } },
+      notJoined,
+    ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("a second join in a joined session is refused naming the agent; --print-env issues one for another", () =>
+  Effect.gen(function* secondJoin() {
+    const cookout = yield* TestCookout;
+    const [bot, other] = yield* Effect.all(
+      [cookout.createIdentity("release-bot"), cookout.createIdentity("other")],
+      ONE_AT_A_TIME,
+    );
+    const first = claudeCode("s1", { COOKOUT_STATE_DIR: yield* freshStateFolder, COOKOUT_URL: cookout.url });
+    const joinAsBot = { args: ["join", "--as", "release-bot"], env: withToken(first, bot.token) };
+    const [, again, printed] = yield* Effect.all(
+      [
+        runCookout(joinAsBot),
+        runCookout(joinAsBot),
+        runCookout({ args: ["join", "--as", "other", "--print-env"], env: withToken(first, other.token) }),
+      ],
+      ONE_AT_A_TIME,
+    );
+    const fromExport = yield* runCookout({ args: WHOAMI, env: { ...first, COOKOUT_SESSION: exportedToken(printed) } });
+
+    expect(again.stderr).toContain("already joined as release-bot");
+    expect(printed.stdout).toMatch(exportLine);
+    expect([again, printed, fromExport]).toMatchObject([
+      failedWith("already_joined"),
+      succeeded,
+      {
+        ...succeeded,
+        stdoutJson: { identity: { name: "other" }, source: "COOKOUT_SESSION", summary: "other (COOKOUT_SESSION)" },
+      },
+    ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect(
+  "outside an agent tool, or in one with no session ID, join is refused, and --print-env prints the export",
+  () =>
+    Effect.gen(function* joinOutsideAgentTool() {
+      const cookout = yield* TestCookout;
+      const bot = yield* cookout.createIdentity("release-bot");
+      const folder = yield* freshStateFolder;
+      const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bot.token, COOKOUT_URL: cookout.url };
+      const refusals = yield* runAll([
+        { args: ["join", "--as", "release-bot"], env },
+        { args: ["join", "--as", "release-bot"], env: { ...env, CLAUDECODE: "1" } },
+        { args: ["join", "--as", "release-bot"], env: { ...env, CURSOR_AGENT: "1" } },
+      ]);
+      const printed = yield* runCookout({ args: ["join", "--as", "release-bot", "--print-env"], env });
+
+      expect(refusals).toMatchObject([
+        failedWith("agent_tool_missing"),
+        failedWith("agent_tool_session_missing"),
+        failedWith("agent_tool_session_missing"),
+      ]);
+      expect(
+        Arr.join(
+          Arr.map(refusals, ({ stderr }) => stderr),
+          "\n",
+        ),
+      ).toContain("cursor gives no session ID");
+      expect(printed).toMatchObject(succeeded);
+      expect(printed.stdout).toMatch(exportLine);
+    }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("the credential is COOKOUT_TOKEN, then COOKOUT_SESSION, then the joined session, and whoami names it", () =>
+  Effect.gen(function* precedence() {
+    const cookout = yield* TestCookout;
+    const [bot, other, third] = yield* Effect.all(
+      [cookout.createIdentity("release-bot"), cookout.createIdentity("other"), cookout.createIdentity("third")],
+      ONE_AT_A_TIME,
+    );
+    const folder = yield* freshStateFolder;
+    const first = claudeCode("s1", { COOKOUT_STATE_DIR: folder, COOKOUT_URL: cookout.url });
+    yield* runCookout({ args: ["join", "--as", "release-bot"], env: { ...first, COOKOUT_TOKEN: bot.token } });
+    const printed = yield* runCookout({
+      args: ["join", "--as", "other", "--print-env"],
+      env: { ...first, COOKOUT_TOKEN: other.token },
+    });
+    const session = exportedToken(printed);
+    yield* TestClock.adjust("2 hours");
+    const results = yield* runAll([
+      { args: WHOAMI, env: { ...first, COOKOUT_SESSION: session, COOKOUT_TOKEN: third.token } },
+      { args: WHOAMI, env: { ...first, COOKOUT_SESSION: session } },
+      { args: WHOAMI, env: first },
+    ]);
+
+    expect(Arr.map(results, ({ stdoutJson }) => stdoutJson)).toMatchObject([
+      { identity: { name: "third" }, source: "COOKOUT_TOKEN", summary: "third (COOKOUT_TOKEN)" },
+      { identity: { name: "other" }, source: "COOKOUT_SESSION" },
+      {
+        identity: { name: "release-bot" },
+        joinedAt: "2026-01-01T00:00:00.000Z",
+        source: "agent session token",
+        summary: "release-bot (agent session token, joined 2 h ago)",
+      },
+    ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("a session's agent session token revoked by another session's join --force is forgotten", () =>
+  Effect.gen(function* twoAgentToolSessions() {
     const cookout = yield* TestCookout;
     const agent = yield* cookout.createIdentity("agent");
-    const [firstFolder, secondFolder] = yield* Effect.all([freshStateFolder, freshStateFolder], ONE_AT_A_TIME);
-    const session = { COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
-    const first = { ...session, COOKOUT_STATE_DIR: firstFolder };
-    const second = { ...session, COOKOUT_STATE_DIR: secondFolder };
+    const folder = yield* freshStateFolder;
+    const shared = { COOKOUT_STATE_DIR: folder, COOKOUT_URL: cookout.url };
+    const [first, second] = [claudeCode("s1", shared), claudeCode("s2", shared)];
     const results = yield* runAll([
-      { args: JOIN, env: first },
+      { args: JOIN, env: withToken(first, agent.token) },
       { args: WHOAMI, env: first },
-      { args: JOIN, env: second },
-      { args: [...JOIN, "--force"], env: second },
+      { args: JOIN, env: withToken(second, agent.token) },
+      { args: [...JOIN, "--force"], env: withToken(second, agent.token) },
       { args: WHOAMI, env: first },
       { args: WHOAMI, env: first },
       { args: ["leave"], env: second },
-      { args: ["leave"], env: second },
-      { args: [...JOIN, "--idle-expiry", "30d"], env: first },
+      { args: ["leave"], env: withToken(second, agent.token) },
+      { args: [...JOIN, "--idle-expiry", "30d"], env: withToken(first, agent.token) },
     ]);
 
     expect(results).toMatchObject([
@@ -59,7 +203,7 @@ it.effect("a CLI session keeps its agent session token in its state folder, and 
       failedWith("agent_session_live"),
       succeeded,
       failedWith("agent_session_revoked"),
-      asAgent,
+      notJoined,
       { ...succeeded, stdoutJson: { revoked: true } },
       failedWith("agent_session_required"),
       { ...succeeded, stdoutJson: { expiresAt: "2026-01-31T00:00:00.000Z" } },
@@ -75,11 +219,16 @@ it.effect("a CLI session keeps its agent session token in its state folder, and 
 
 it.effect("cookout join without --as, or with a name that breaks the naming rule, is a usage error", () =>
   Effect.gen(function* joinWithoutAs() {
-    const env = { COOKOUT_TOKEN: "cookout_x", COOKOUT_URL: "http://127.0.0.1:1" };
+    const env = claudeCode("s1", { COOKOUT_TOKEN: "cookout_x", COOKOUT_URL: "http://127.0.0.1:1" });
     const withoutAs = yield* runCookout({ args: ["join"], env });
+    const withoutAsForEnv = yield* runCookout({ args: ["join", "--print-env"], env });
     const badName = yield* runCookout({ args: ["join", "--as", "Not A Name"], env });
 
-    expect([withoutAs, badName]).toMatchObject([failedWith("usage"), failedWith("usage")]);
+    expect([withoutAs, withoutAsForEnv, badName]).toMatchObject([
+      failedWith("usage"),
+      failedWith("usage"),
+      failedWith("usage"),
+    ]);
   }).pipe(Effect.provide(commandLineServices)),
 );
 
@@ -90,8 +239,8 @@ it.effect("cookout join as a human identity, with or without --force, is refused
     const folder = yield* freshStateFolder;
     const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: human.token, COOKOUT_URL: cookout.url };
     const results = yield* runAll([
-      { args: ["join", "--as", "ada"], env },
-      { args: ["join", "--as", "ada", "--force"], env },
+      { args: ["join", "--as", "ada", "--print-env"], env },
+      { args: ["join", "--as", "ada", "--force", "--print-env"], env },
     ]);
     const refused = {
       exitCode: EXIT_FAILURE,

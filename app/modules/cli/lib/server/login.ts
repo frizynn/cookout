@@ -1,15 +1,15 @@
-import type { CallFailure, CredentialSource } from "./adapters/sdk.ts";
 import { Command, Flag } from "effect/cli";
 import { Effect, Stdio, String as Str, Stream } from "effect";
-import { callClient, toFailure, withClient } from "./adapters/sdk.ts";
 import { removeLogin, saveLogin } from "./logins.ts";
 import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
+import type { CallFailure } from "./adapters/sdk.ts";
 import type { CommandFailed } from "./output.ts";
 import type { IdentityResponse } from "../../../identities/index.ts";
 import { answered } from "./output.ts";
 import { baseUrlOf } from "../../../http/client.ts";
 import { cookoutUrl } from "../../../config/server.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
+import { toFailure } from "./adapters/sdk.ts";
 
 type LoginNeeds = AgentSessionStateNeeds | Stdio.Stdio;
 
@@ -21,10 +21,6 @@ interface LoggedOut {
   readonly loggedOut: boolean;
   readonly message?: string;
   readonly url: string;
-}
-
-interface WhoamiAnswer extends IdentityResponse {
-  readonly source: CredentialSource;
 }
 
 const NOTHING = {};
@@ -107,17 +103,4 @@ const logoutCommand = Command.make("logout", {}, () => answered(logOut)).pipe(
   Command.withDescription("Remove the Login for COOKOUT_URL from this machine."),
 );
 
-const whoami = withClient((opened) =>
-  Effect.map(
-    callClient((client) => client.whoami())(opened),
-    (answer): WhoamiAnswer => ({ ...answer, source: opened.source }),
-  ),
-);
-
-const whoamiCommand = Command.make("whoami", {}, () => answered(whoami)).pipe(
-  Command.withDescription(
-    "Show the identity behind the token this CLI sends, and where the token came from: COOKOUT_TOKEN or login.",
-  ),
-);
-
-export { loginCommand, logoutCommand, whoamiCommand };
+export { loginCommand, logoutCommand };

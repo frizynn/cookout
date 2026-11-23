@@ -6,10 +6,16 @@
  * from the caller: `serve` issues tokens with it, and `join`
  * names its agent session state file with it.
  *
- * `join` keeps the agent session token it was issued in a state file for one server and token, so one
- * identity, under `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then
- * `~/.local/state/cookout`). Every later command sends that token from it instead of
- * `COOKOUT_TOKEN`. The file's name is a hash, so the Identity token is never written to disk. On
+ * Every verb but `serve`, `join`, `login` and `logout` sends one credential, the first of: `COOKOUT_TOKEN`, the
+ * agent session token in `COOKOUT_SESSION`, the agent session this agent tool session joined, and, with no agent tool
+ * detected, the Login. Inside an agent tool with none of them, it is refused with `not_joined` (mattpocock/cookout#116).
+ *
+ * `join` runs inside an agent tool session (Claude Code's `CLAUDE_CODE_SESSION_ID`, which its subagents share) and
+ * keeps the agent session token it was issued in a state file for that session and server, under
+ * `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then `~/.local/state/cookout`); the file's name is a hash.
+ * Outside an agent tool it is `agent_tool_missing`, in a tool that gives no session ID `agent_tool_session_missing`,
+ * and in a session that has joined `already_joined`, unless `--print-env`, which keeps nothing and prints
+ * `export COOKOUT_SESSION=...`. `leave` revokes the token it sends and forgets a joined session's. On
  * `agent_session_revoked` or `agent_session_expired` the stored token is deleted and the message says to run
  * `cookout join` again. The state folder and its `agent-sessions/` folder must be folders only the user
  * can open (mode 700, not symlinks), or the command fails with
@@ -21,22 +27,21 @@
  * line), checks it with the server, and keeps it as the Login for `COOKOUT_URL`
  * in the credentials file, `$XDG_CONFIG_HOME/cookout/credentials` (default
  * `~/.config/cookout/credentials`), one entry per server URL, mode 600. An
- * agent's token is `human_only`. `logout` removes this server's Login. With
- * no `COOKOUT_TOKEN` and no agent tool detected (even with
- * `COOKOUT_ALLOW_HUMAN=1`), every verb sends the Login; `whoami` adds
- * `source`, `COOKOUT_TOKEN` or `login`. A credentials file that isn't mode
+ * agent's token is `human_only`. `logout` removes this server's Login. `whoami` adds the credential's `source` and
+ * a `summary` such as `ada (login)`. A credentials file that isn't mode
  * 600 and yours, or is a symlink, is `credentials_unsafe`; one that can't be
  * read as one is `credentials_damaged`.
  */
 import { CliError, Command } from "effect/cli";
 import { cookoutServer, serveCommand } from "./lib/server/serve.ts";
-import { loginCommand, logoutCommand, whoamiCommand } from "./lib/server/login.ts";
-
+import { loginCommand, logoutCommand } from "./lib/server/login.ts";
 import { usageFailed, withJsonPresenter } from "./lib/server/output.ts";
+
 import { Effect } from "effect";
 import type { ServeLayers } from "./lib/server/serve.ts";
 import { verbCommands } from "./lib/server/verbs.ts";
 import { watchCommand } from "./lib/server/watch.ts";
+import { whoamiCommand } from "./lib/server/whoami.ts";
 
 export { cookoutServer, type ServeLayers };
 

@@ -2,7 +2,7 @@ import { Effect, Equal, FileSystem, Option, Path, Random, Schema, String as Str,
 import type { IdentityName, Token } from "../../../identities/index.ts";
 import { home, stateDirectory, xdgStateHome } from "../../../config/server.ts";
 import { identityNamePattern, isIdentityName, isToken, tokenPattern } from "../../../identities/index.ts";
-import type { CookoutConnection } from "../../../config/index.ts";
+import type { AgentToolSessionId } from "../../../config/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
@@ -18,6 +18,12 @@ interface AgentSessionStateFile {
   readonly read: Effect.Effect<Option.Option<AgentSessionState>, AgentSessionStateFailure>;
   readonly write: (state: AgentSessionState) => Effect.Effect<void, AgentSessionStateFailure>;
   readonly remove: Effect.Effect<void, AgentSessionStateFailure>;
+}
+
+interface JoinedSessionKey {
+  readonly agentTool: string;
+  readonly sessionId: AgentToolSessionId;
+  readonly url: string;
 }
 
 interface AgentSessionStateLocation {
@@ -159,15 +165,16 @@ function writeTo(
 }
 
 function locationOf({
-  token = "",
+  agentTool,
+  sessionId,
   url,
-}: CookoutConnection): Effect.Effect<Option.Option<AgentSessionStateLocation>, never, Needs> {
+}: JoinedSessionKey): Effect.Effect<Option.Option<AgentSessionStateLocation>, never, Needs> {
   return Effect.gen(function* findAgentSessionState() {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const secrets = yield* Secrets;
     const found = yield* stateFolder(path);
-    const digest = yield* secrets.digest(`${url}\n${token}`);
+    const digest = yield* secrets.digest(`${agentTool}\n${sessionId}\n${url}`);
     const name = `${Str.slice(KEY_START, KEY_LENGTH)(digest)}.json`;
     return Option.map(found, (base) => {
       const folder = path.join(base, "agent-sessions");
@@ -194,14 +201,15 @@ const noStateFolder: AgentSessionStateFile = {
     }),
 };
 
-function agentSessionStateFile(connection: CookoutConnection): Effect.Effect<AgentSessionStateFile, never, Needs> {
-  return Effect.map(locationOf(connection), Option.match({ onNone: () => noStateFolder, onSome: fileAt }));
+function agentSessionStateFile(key: JoinedSessionKey): Effect.Effect<AgentSessionStateFile, never, Needs> {
+  return Effect.map(locationOf(key), Option.match({ onNone: () => noStateFolder, onSome: fileAt }));
 }
 
 export {
   type AgentSessionState,
   type AgentSessionStateFailure,
   type AgentSessionStateFile,
+  type JoinedSessionKey,
   type Needs as AgentSessionStateNeeds,
   agentSessionStateFile,
 };
