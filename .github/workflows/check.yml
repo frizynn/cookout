@@ -43,6 +43,14 @@ jobs:
         run: |
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then BASE=HEAD^; fi
           node scripts/check.ts --job=${{ matrix.job }} --base="$BASE" --ci
+      - name: Upload the per-file test timings
+        if: always() && matrix.job == 'browser'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-timings-browser
+          path: .timings/*.txt
+          include-hidden-files: true
+          if-no-files-found: ignore
 
   tests:
     name: tests ${{ matrix.shard }}/2
@@ -64,6 +72,14 @@ jobs:
           path: .vitest/blob
           include-hidden-files: true
           retention-days: 1
+      - name: Upload the per-file test timings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-timings-tests-${{ matrix.shard }}
+          path: .timings/*.txt
+          include-hidden-files: true
+          if-no-files-found: ignore
 
   # The image and the example handler in Docker, driven by packages/e2e, as Deploy runs it before
   # deploying main, so a ticket or v1 push that breaks it fails here instead of blocking a deploy.
@@ -77,6 +93,14 @@ jobs:
           cache-name: e2e-docker
       - run: pnpm exec playwright install --with-deps --only-shell chromium
       - run: pnpm e2e:docker
+      - name: Upload the per-file test timings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-timings-e2e-docker
+          path: .timings/*.txt
+          include-hidden-files: true
+          if-no-files-found: ignore
 
   pack:
     name: pack smoke
@@ -104,3 +128,11 @@ jobs:
           path: .vitest/blob
           merge-multiple: true
       - run: node scripts/check.ts --job=tests --merge --ci
+      - name: Upload the per-file test timings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-timings-tests-merged
+          path: .timings/*.txt
+          include-hidden-files: true
+          if-no-files-found: ignore

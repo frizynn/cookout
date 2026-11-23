@@ -102,7 +102,14 @@ fi
 echo "e2e:docker: added the command example; its handler is listening beside the cookout"
 
 echo "e2e:docker: running packages/e2e against $url"
-COOKOUT_E2E_URL="$url" COOKOUT_E2E_ADMIN_TOKEN="$admin_token" pnpm --filter ./packages/e2e test
+rm -f .timings/e2e-tests.json .timings/e2e-browser.json
+suite=0
+COOKOUT_E2E_URL="$url" COOKOUT_E2E_ADMIN_TOKEN="$admin_token" pnpm --filter ./packages/e2e test || suite=$?
+node scripts/slowest-files.ts e2e-tests vitest .timings/e2e-tests.json "$PWD/packages/e2e"
+node scripts/slowest-files.ts e2e-browser playwright .timings/e2e-browser.json packages/e2e/app/modules/cookout/tests/browser
+if [ "$suite" -ne 0 ]; then
+  exit "$suite"
+fi
 
 COOKOUT_URL="$url" COOKOUT_TOKEN="$admin_token" COOKOUT_STATE_DIR="$scratch/state" COOKOUT_ALLOW_HUMAN=1 \
   node app/main.ts channel list > "$scratch/channels.json"
