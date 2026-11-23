@@ -9,7 +9,7 @@ primary_region = "lhr"
 
 [env]
   PORT = "8080"
-  COOKOUT_HOST = "0.0.0.0"
+  COOKOUT_HOST = "::"
   COOKOUT_DB = "/data/cookout.db"
   COOKOUT_PUBLIC_URL = "https://cookout.fly.dev"
 
@@ -32,3 +32,5 @@ primary_region = "lhr"
     interval = "15s"
     timeout = "3s"
     grace_period = "10s"
+    [http_service.checks.headers]
+      Host = "cookout.fly.dev"
