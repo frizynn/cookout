@@ -1,9 +1,11 @@
-import type { Link, Live } from "../../live/index.ts";
 import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
+import type { Live } from "../../live/index.ts";
 import { createLive } from "../../live/index.ts";
 import { openAt } from "./render.tsx";
+
+type Link = ReturnType<Live["link"]>;
 
 interface Cuttable {
   readonly live: Live;
