@@ -3,17 +3,21 @@ import { IdentityNameSchema } from "../../../identities/server.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
+import { offlineReasons } from "../../index.ts";
 
 const LiveConnectionDetailSchema = Schema.Union([
   Schema.Struct({ host: Schema.optionalKey(Schema.String), via: Schema.Literal("watch") }),
   Schema.Struct({ via: Schema.Literal("web") }),
 ]);
 
+const OfflineReasonSchema = Schema.Literals(offlineReasons);
+
 export const PresenceSchema = matchesWire<Presence>()(
   Schema.Struct({
     connection: Schema.optionalKey(LiveConnectionDetailSchema),
     identity: IdentityNameSchema,
     lastSeenAt: Schema.optionalKey(IsoTimeSchema),
+    offlineReason: Schema.optionalKey(OfflineReasonSchema),
     online: Schema.Boolean,
   }),
 );

@@ -43,3 +43,46 @@ it.effect.each(storageLayers)(
       expect(onlyAda).toStrictEqual([{ identity: "ada", lastSeenAt: "2026-01-01T00:02:00.000Z", online: false }]);
     }),
 );
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): an offline identity's reason and whether its end was unexpected are kept, and going online again clears them",
+  ({ layer }) =>
+    Effect.gen(function* endKept() {
+      const { storage } = yield* openStore(layer);
+      yield* storage.createIdentity(identity("ada", { kind: "human" }), hashA);
+      yield* storage.createIdentity(identity("release-bot"), hashB);
+      yield* Effect.forEach(
+        [
+          {
+            endedUnexpectedly: true,
+            identity: nameOf("release-bot"),
+            lastSeenAt: isoTime("2026-01-01T00:00:00.000Z"),
+            offlineReason: "connection lost",
+            online: false,
+          },
+          {
+            endedUnexpectedly: false,
+            identity: nameOf("ada"),
+            lastSeenAt: isoTime("2026-01-01T00:01:00.000Z"),
+            offlineReason: "left",
+            online: false,
+          },
+          { identity: nameOf("ada"), lastSeenAt: isoTime("2026-01-01T00:02:00.000Z"), online: true },
+        ] as const,
+        storage.recordPresence,
+        ONE_AT_A_TIME,
+      );
+      const after = yield* storage.listPresence(named);
+
+      expect(after).toStrictEqual([
+        { identity: "ada", lastSeenAt: "2026-01-01T00:02:00.000Z", online: true },
+        {
+          endedUnexpectedly: true,
+          identity: "release-bot",
+          lastSeenAt: "2026-01-01T00:00:00.000Z",
+          offlineReason: "connection lost",
+          online: false,
+        },
+      ]);
+    }),
+);

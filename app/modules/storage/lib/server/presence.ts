@@ -1,17 +1,21 @@
-import { Array as Arr, Effect, Option, Order, Schema, String as Str } from "effect";
+import { Array as Arr, Effect, Option, Order, Predicate, Schema, String as Str } from "effect";
 import type { Fails } from "./errors.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { MemoryState } from "./memory-state.ts";
+import type { OfflineReason } from "../../../presence/index.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { isIdentityName } from "../../../identities/index.ts";
+import { offlineReasons } from "../../../presence/index.ts";
 import { unreadable } from "./errors.ts";
 
 interface StoredPresence {
   readonly identity: IdentityName;
   readonly online: boolean;
   readonly lastSeenAt: IsoTime;
+  readonly offlineReason?: OfflineReason;
+  readonly endedUnexpectedly?: boolean;
 }
 
 interface PresenceSection {
@@ -21,10 +25,14 @@ interface PresenceSection {
 
 const ONLINE = 1;
 const OFFLINE = 0;
+const NO = 0;
+const YES = 1;
 
 const PresenceRow = Schema.Struct({
+  ended_unexpectedly: Schema.NullOr(Schema.Literals([NO, YES])),
   identity_name: Schema.String.pipe(Schema.refine(isIdentityName)),
   last_seen_at: IsoTimeSchema,
+  offline_reason: Schema.NullOr(Schema.Literals(offlineReasons)),
   online: Schema.Literals([OFFLINE, ONLINE]),
 });
 
@@ -72,8 +80,27 @@ function decodeRows(rows: readonly unknown[]): Fails<readonly (typeof PresenceRo
   return Schema.decodeUnknownEffect(Schema.Array(PresenceRow))(rows).pipe(Effect.mapError(unreadable));
 }
 
+function yesOrNo(value: boolean | undefined): number | null {
+  if (Predicate.isUndefined(value)) {
+    return null;
+  }
+  if (value) {
+    return YES;
+  }
+  return NO;
+}
+
+function endOf(row: typeof PresenceRow.Type): Pick<StoredPresence, "endedUnexpectedly" | "offlineReason"> {
+  const reason = Option.fromNullishOr(row.offline_reason);
+  const unexpected = Option.fromNullishOr(row.ended_unexpectedly);
+  return {
+    ...Option.match(reason, { onNone: () => ({}), onSome: (offlineReason) => ({ offlineReason }) }),
+    ...Option.match(unexpected, { onNone: () => ({}), onSome: (flag) => ({ endedUnexpectedly: flag === YES }) }),
+  };
+}
+
 function storedPresenceOf(row: typeof PresenceRow.Type): StoredPresence {
-  return { identity: row.identity_name, lastSeenAt: row.last_seen_at, online: row.online === ONLINE };
+  return { identity: row.identity_name, lastSeenAt: row.last_seen_at, online: row.online === ONLINE, ...endOf(row) };
 }
 
 function sqlitePresence(db: SqliteDatabase): PresenceSection {
@@ -88,13 +115,17 @@ function sqlitePresence(db: SqliteDatabase): PresenceSection {
           ...identities,
         )
         .pipe(Effect.flatMap(decodeRows), Effect.map(Arr.map(storedPresenceOf))),
-    recordPresence: ({ identity, lastSeenAt, online }) =>
+    recordPresence: ({ endedUnexpectedly, identity, lastSeenAt, offlineReason, online }) =>
       db.run(
-        `INSERT INTO presence (identity_name, online, last_seen_at) VALUES (?, ?, ?)
-         ON CONFLICT (identity_name) DO UPDATE SET online = excluded.online, last_seen_at = excluded.last_seen_at`,
+        `INSERT INTO presence (identity_name, online, last_seen_at, offline_reason, ended_unexpectedly)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT (identity_name) DO UPDATE SET online = excluded.online, last_seen_at = excluded.last_seen_at,
+           offline_reason = excluded.offline_reason, ended_unexpectedly = excluded.ended_unexpectedly`,
         identity,
         onlineColumn(online),
         lastSeenAt,
+        offlineReason ?? null,
+        yesOrNo(endedUnexpectedly),
       ),
   };
 }
