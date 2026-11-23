@@ -46,6 +46,7 @@ export function MessageRows(props: MessageRowsProps): ReactNode {
         channel={channel}
         label={TEXT.messages}
         me={props.me}
+        menu={props.unread.menu}
         messages={state.messages}
         open={props.open}
         readPosition={props.readPosition}

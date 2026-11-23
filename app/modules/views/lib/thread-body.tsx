@@ -1,10 +1,10 @@
 import { Alert, CardBody, Muted, RepliesDivider, Skeleton } from "../../design-system/index.tsx";
+import type { MessageMenu, ThreadNews } from "../../unread/index.ts";
 import type { MessageId } from "../../sdk/index.ts";
 import { MessageStream } from "./message-stream.tsx";
 import type { ReactNode } from "react";
 import { StandaloneEntry } from "./standalone-entry.tsx";
 import type { ThreadMessagesState } from "../../board/index.ts";
-import type { ThreadNews } from "../../unread/index.ts";
 import { replies } from "./message-marks.ts";
 
 const NONE = 0;
@@ -16,6 +16,7 @@ interface ThreadBodyProps {
   readonly state: ThreadMessagesState;
   readonly me: string;
   readonly readPosition: MessageId | null;
+  readonly menu: MessageMenu;
 }
 
 export function ThreadBody(props: ThreadBodyProps): ReactNode {
@@ -45,6 +46,7 @@ export function ThreadBody(props: ThreadBodyProps): ReactNode {
         channel={null}
         label={TEXT.replies}
         me={props.me}
+        menu={props.menu}
         messages={state.replies}
         open={null}
         readPosition={props.readPosition}

@@ -28,6 +28,7 @@ export function StandaloneEntry(props: StandaloneEntryProps): ReactNode {
       grouped={false}
       label={props.label}
       mark={markOf({ me: props.me, message, open: null, parent: null })}
+      menu={null}
       name={message.author.name}
       note={note}
       time={useMessageTime(message.createdAt)}

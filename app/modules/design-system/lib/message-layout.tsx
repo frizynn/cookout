@@ -1,5 +1,5 @@
 import { Avatar } from "./avatar.tsx";
-import { HoverAction } from "./hover-action.tsx";
+import { HoverActions } from "./hover-actions.tsx";
 import { MessageHeader } from "./message-header.tsx";
 import type { MessageLayoutParts } from "./parts.ts";
 import { MessageTime } from "./message-time.tsx";
@@ -25,11 +25,7 @@ export function MessageLayout(parts: MessageLayoutParts): ReactNode {
         )}
         {parts.children}
       </div>
-      {parts.actionHref !== null && (
-        <div className="invisible absolute top-1 right-4 group-focus-within:visible group-hover:visible">
-          <HoverAction href={parts.actionHref}>{parts.actionLabel}</HoverAction>
-        </div>
-      )}
+      <HoverActions actionHref={parts.actionHref} actionLabel={parts.actionLabel} menu={parts.menu} />
     </>
   );
 }
