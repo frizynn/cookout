@@ -13,4 +13,4 @@ Any identity's token, including a leaked agent token, could post, call commands 
 
 - Webhook delivery no longer follows redirects. A 3xx counts as a failed attempt, so the command token and the signature never reach a server other than the command's URL, as the SDK already ensures for its own requests.
 - The example handler refuses a body over 2 MiB with 413 before reading it whole or checking its signature: twice the cookout's 1 MiB cap on a call, so a real delivery always fits.
-- *Assumption:* `http:` handler URLs stay allowed for local development, and replay protection for signed deliveries (a signed timestamp) is left for after v1.
+- _Assumption:_ `http:` handler URLs stay allowed for local development, and replay protection for signed deliveries (a signed timestamp) is left for after v1.
