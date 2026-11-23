@@ -64,6 +64,7 @@ interface MessagesSection {
     page: ChannelPageRequest,
   ) => Fails<ListMessagesResponse | undefined>;
   readonly getThread: (id: MessageId) => Fails<ThreadResponse | undefined>;
+  readonly latestMessageId: Effect.Effect<MessageId | undefined, StorageUnavailable>;
 }
 
 const NO_REPLIES = 0;

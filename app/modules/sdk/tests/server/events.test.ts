@@ -154,3 +154,35 @@ it.effect("a refusal event that isn't an error body fails with bad_response", ()
     expect(refused).toMatchObject({ code: "bad_response", details: { error: {} } });
   }),
 );
+
+it.effect("the stream first tells onConnected the board's latest message ID, and every item after it is newer", () =>
+  Effect.gen(function* connectedFirst() {
+    const cookout = yield* TestCookout;
+    const { ann, bob } = yield* board(cookout);
+    const { message: before } = yield* answer(() => ann.client.createMessage({ channel: "grill", text: "@bob old" }));
+    const heard: unknown[] = [];
+    const events = yield* answer(() =>
+      bob.client.watch({
+        onConnected: (latest) => {
+          heard.push(latest);
+        },
+      }),
+    );
+    const { message: after } = yield* answer(() => ann.client.createMessage({ channel: "grill", text: "@bob new" }));
+    const event = yield* answer(() => events[Symbol.asyncIterator]().next());
+    yield* answer(() => events.close());
+
+    expect({ event, heard }).toMatchObject({ event: { value: { item: { message: after } } }, heard: [before.id] });
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a connected event that doesn't match the protocol fails with bad_response", () =>
+  Effect.gen(function* badConnected() {
+    const url = yield* serverAnswering({ headers: SSE, text: 'event: connected\ndata: {"type":"connected"}\n\n' });
+    const client = createCookoutClient({ env: {}, token: "cookout_x", url });
+    const events = yield* answer(() => client.watch());
+    const refused = yield* refusal(() => events[Symbol.asyncIterator]().next());
+
+    expect(refused).toMatchObject({ code: "bad_response", details: { type: "connected" } });
+  }),
+);

@@ -1,9 +1,21 @@
-import { Console, Effect, Schema } from "effect";
+import { Console, Effect, Predicate, Schema } from "effect";
 import { CliOutput } from "effect/cli";
 
 class CommandFailed extends Schema.TaggedError<CommandFailed>()("CommandFailed", {
   code: Schema.String,
+  exitCode: Schema.optional(Schema.Int),
 }) {}
+
+const EXIT_FAILURE = 1;
+
+const isCommandFailed = Schema.is(CommandFailed);
+
+function exitCodeFor(failure: unknown): number {
+  if (isCommandFailed(failure) && Predicate.isNumber(failure.exitCode)) {
+    return failure.exitCode;
+  }
+  return EXIT_FAILURE;
+}
 
 const PRETTY = 2;
 const toLine = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown));
@@ -55,4 +67,4 @@ function refused(error: { readonly code: string }): Effect.Effect<never, Command
   );
 }
 
-export { type CommandFailed, printAnswer, printLine, refused, usageFailed, withJsonPresenter };
+export { CommandFailed, exitCodeFor, printAnswer, printLine, refused, usageFailed, withJsonPresenter };
