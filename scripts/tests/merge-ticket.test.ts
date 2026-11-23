@@ -1,8 +1,8 @@
-import type { MergeRules, Merged } from "../lib/merge-ticket.ts";
+import type { MergeOptions, MergeRules, Merged } from "../lib/merge-ticket.ts";
+import { continueMerge, mergeTicket } from "../lib/merge-ticket.ts";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { expect, it, onTestFinished } from "vitest";
 import { execFileSync } from "node:child_process";
-import { mergeTicket } from "../lib/merge-ticket.ts";
 import path from "node:path";
 import { tmpdir } from "node:os";
 
@@ -106,9 +106,9 @@ function moveV1(other: string, marker: string): string {
   return `git -C ${other} commit -q --allow-empty -m moved && git -C ${other} push -q origin HEAD:v1 && touch ${marker}`;
 }
 
-function runMerge(work: string, overrides: Overrides): Merged {
+function optionsFor(work: string, overrides: Overrides): MergeOptions {
   const logged: string[] = [];
-  return mergeTicket({
+  return {
     attempts: ATTEMPTS,
     check: overrides.check ?? ["true"],
     cwd: work,
@@ -119,7 +119,11 @@ function runMerge(work: string, overrides: Overrides): Merged {
     rules,
     ticket: TICKET,
     title: "Add the c table",
-  });
+  };
+}
+
+function runMerge(work: string, overrides: Overrides): Merged {
+  return mergeTicket(optionsFor(work, overrides));
 }
 
 function reason(merged: Merged): string {
@@ -225,5 +229,65 @@ it("pushes nothing when the check fails", { timeout: 10_000 }, () => {
   const merged = runMerge(work, { check: ["false"] });
 
   expect(reason(merged)).toContain("false failed; nothing was pushed");
+  expect(git(origin, "rev-parse", "v1")).toBe(before);
+});
+
+function resolveByHand(work: string, notes: string): void {
+  writeFileSync(path.join(work, "notes.txt"), notes);
+  git(work, "add", "notes.txt");
+  git(work, "commit", "-q", "--no-edit");
+}
+
+function runContinue(work: string, overrides: Overrides): Merged {
+  return continueMerge(optionsFor(work, overrides));
+}
+
+it("continues a merge resolved by hand: checks it and pushes it to v1", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const { origin, other, work } = repos();
+  pushToV1(other, { "notes.txt": "v1\n" });
+  commit(work, "the ticket", { "notes.txt": "ticket\n" });
+  runMerge(work, {});
+  resolveByHand(work, "both\n");
+
+  const merged = runContinue(work, {});
+
+  expect(merged).toStrictEqual({ attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect([git(origin, "show", "v1:notes.txt"), git(origin, "log", "-1", "--format=%s", "v1")]).toStrictEqual([
+    "both",
+    `Merge ${BRANCH}: Add the c table (#${TICKET})`,
+  ]);
+});
+
+it("continues a merge resolved by hand when v1 moved, reusing the resolution", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const { origin, other, root, work } = repos();
+  pushToV1(other, { "notes.txt": "v1\n" });
+  commit(work, "the ticket", { "notes.txt": "ticket\n" });
+  runMerge(work, {});
+  resolveByHand(work, "both\n");
+  const moved = path.join(root, "moved");
+
+  const merged = runContinue(work, { check: ["sh", "-c", `test -f ${moved} || { ${moveV1(other, moved)}; }`] });
+
+  expect(merged).toStrictEqual({ attempts: TWO_ATTEMPTS, ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect([git(origin, "show", "v1:notes.txt"), git(origin, "log", "--format=%s", "v1")]).toStrictEqual([
+    "both",
+    expect.stringContaining("moved"),
+  ]);
+});
+
+it("refuses to continue when the branch holds no merge", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const { origin, work } = repos();
+  const before = git(origin, "rev-parse", "v1");
+  commit(work, "the ticket", { "notes.txt": "ticket\n" });
+
+  const merged = runContinue(work, {});
+
+  expect(reason(merged)).toContain(`not on merge-ticket-${TICKET}`);
   expect(git(origin, "rev-parse", "v1")).toBe(before);
 });
