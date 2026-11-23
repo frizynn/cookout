@@ -1,11 +1,13 @@
 import type { AgentSessionResponse, JoinRequest, LeaveResponse } from "../../../agent-sessions/index.ts";
 import type { AgentSessionStateFile, AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { CallFailure, ClientWithAgentSessionState, JoinPlace } from "./adapters/sdk.ts";
-import { Console, Effect, Option } from "effect";
+import { Console, Effect, Function, Option } from "effect";
 import { answered, refused } from "./output.ts";
 import { callClient, joinPlace, withClient, withJoinClient } from "./adapters/sdk.ts";
 import type { CommandFailed } from "./output.ts";
 import type { IdentityName } from "../../../identities/index.ts";
+import { cookoutUrl } from "../../../config/server.ts";
+import { joinByBrowser } from "./agent-join.ts";
 
 interface JoinFlags {
   readonly as: IdentityName;
@@ -57,8 +59,17 @@ function joinRequest({ as, force, idleExpiry }: JoinFlags): JoinRequest {
   return asked;
 }
 
+function isLoginMissing(failure: CallFailure): boolean {
+  return failure.code === "login_missing";
+}
+
 function issue(flags: JoinFlags): Effect.Effect<AgentSessionResponse, CallFailure, AgentSessionStateNeeds> {
-  return withJoinClient(callClient((client) => client.join(joinRequest(flags))));
+  const byBrowser = Effect.flatMap(Effect.orDie(cookoutUrl), (url) =>
+    joinByBrowser({ as: flags.as, idleExpiry: flags.idleExpiry, url }),
+  );
+  return withJoinClient(callClient((client) => client.join(joinRequest(flags)))).pipe(
+    Effect.catchIf(isLoginMissing, Function.constant(byBrowser)),
+  );
 }
 
 function issueAndKeep(
