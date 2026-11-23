@@ -1,4 +1,4 @@
-import { Effect, Layer, Redacted, Ref } from "effect";
+import { Effect, Layer, Redacted, Ref, String as Str } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { Mac, SecureRandom } from "effect/crypto";
 import { expect, it } from "@effect/vitest";
@@ -16,6 +16,8 @@ const ACCEPTED = 202;
 const BAD_REQUEST = 400;
 const UNAUTHORIZED = 401;
 const NOT_FOUND = 404;
+const TOO_LARGE = 413;
+const OVER_TWO_MEBIBYTES = 2_097_153;
 
 const call = {
   callId: "call-1",
@@ -145,5 +147,15 @@ it.effect("a signed webhook that is not a command call gets 400 and is not hande
     const answer = yield* deliver(body, { "cookout-signature": signature });
 
     expect(answer).toStrictEqual({ calls: [], status: BAD_REQUEST });
+  }),
+);
+
+it.effect("a webhook body over 2 MiB gets 413 before its signature is checked, and is not handed on", () =>
+  Effect.gen(function* tooLarge() {
+    const body = `{"padding":"${Str.repeat(OVER_TWO_MEBIBYTES)("x")}"}`;
+    const signature = yield* signatureOf(body, SECRET);
+    const answer = yield* deliver(body, { "cookout-signature": signature });
+
+    expect(answer).toStrictEqual({ calls: [], status: TOO_LARGE });
   }),
 );

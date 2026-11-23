@@ -5,14 +5,21 @@
  * body, keyed with the command's secret, gets 401 and goes no further; a
  * signed body that is not a command call gets 400. A signed command call is
  * answered 202 at once, and then the handler posts its result reply in the
- * call's thread with the call's command token, through the SDK. A call
+ * call's thread with the call's command token, through the SDK. A body over 2 MiB gets 413 before it is read
+ * whole or its signature checked: twice the cookout's own 1 MiB cap on a call, so a delivery always fits. A call
  * whose data has `failFirst: true` gets 503 on its first delivery, so the
  * cookout retries it with the same `callId`; a `callId` already handled is
  * answered 202 again and not handled twice. Each signed command call and its
  * status are handed to `onCall`. Anything else gets 404.
  */
-import { Effect, FiberSet, Layer, Option, Redacted, Ref, Result, Schema } from "effect";
-import { HttpServer, HttpServerRequest, HttpServerResponse } from "effect/http";
+import { ByteSize, Effect, FiberSet, Layer, Option, Redacted, Ref, Result, Schema } from "effect";
+import {
+  HttpIncomingMessage,
+  HttpServer,
+  HttpServerRequest,
+  HttpServerRespondable,
+  HttpServerResponse,
+} from "effect/http";
 import { Mac, SecureRandom } from "effect/crypto";
 import type { CommandCall } from "./lib/server/call.ts";
 import { CommandCallSchema } from "./lib/server/call.ts";
@@ -49,6 +56,8 @@ const UNAUTHORIZED = 401;
 const NOT_FOUND = 404;
 const UNAVAILABLE = 503;
 const SIGNATURE_HEADER = "cookout-signature";
+const TWO_MEBIBYTES = 2_097_152;
+const maxBodySize = ByteSize.bytes(TWO_MEBIBYTES);
 const utf8 = new TextEncoder();
 const commandCallIn = Schema.decodeUnknownOption(Schema.fromJsonString(CommandCallSchema));
 const isFailFirst = Schema.is(Schema.Struct({ failFirst: Schema.Literal(true) }));
@@ -105,7 +114,7 @@ function postResult(cookoutUrl: string, call: CommandCall): Effect.Effect<void> 
 function webhook(options: HandlerOptions, receive: Receive): Answer {
   return Effect.gen(function* receiveWebhook() {
     const request = yield* HttpServerRequest.HttpServerRequest;
-    const rawBody = yield* Effect.orDie(request.text);
+    const rawBody = yield* request.text;
     const signed = yield* isSignedBy(rawBody, request.headers[SIGNATURE_HEADER] ?? "", options.secret);
     if (!signed) {
       return status(UNAUTHORIZED);
@@ -116,7 +125,10 @@ function webhook(options: HandlerOptions, receive: Receive): Answer {
     }
     const answered = yield* receive(call.value);
     return status(answered);
-  });
+  }).pipe(
+    Effect.catchTag("HttpServerError", HttpServerRespondable.toResponse),
+    Effect.provideService(HttpIncomingMessage.MaxBodySize, maxBodySize),
+  );
 }
 
 function answer(options: HandlerOptions, receive: Receive): Answer {
