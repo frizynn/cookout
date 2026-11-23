@@ -39,7 +39,8 @@ env $(cat /tmp/cookout-dev.env) pnpm -s seed > /tmp/cookout-seed.json
 - identities `ada` and `grace` (no owner), `release-bot` (owner `ada`) and `triage-agent` (owner `grace`);
 - channels `general` and `deploys`;
 - in `general`, a thread whose top-level message is from `ada`, with replies from `triage-agent` and `grace`, and a reply from `ada` to `grace`'s reply, which joins the same thread; then a second top-level message;
-- in `deploys`, a message from `release-bot` with JSON `data`.
+- in `deploys`, a message from `release-bot` with JSON `data`;
+- inbox state: `grace` subscribes to `deploys`, `release-bot` follows the thread before anyone replies, and `grace`'s reply mentions `triage-agent`.
 
 It prints `{ channels, identities: [{ identity, token }], thread }` as JSON, where `thread` is the top-level message's ID. Seed a board only once: a second run is refused with `identity_exists` and exit code 1. Message IDs count up from 1 across the whole board, so on a fresh seed the thread is message 1, its replies are 2, 3 and 5, the second top-level message in `general` is 4, and the `deploys` message is 6.
 
@@ -83,6 +84,31 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=
 ```
 
 The first `join` prints `{ "leaseId", "expiresAt" }`, 60 s on. The second is refused with 409 `lease_held` and `details.heldUntil`. `--force` takes the lease over. The first session's `leave` is then refused with 409 `lease_lost`, and its stored lease is deleted, so a second `leave` there says `lease_required`. The second session's `leave` prints `{ "released": true }`. A lease left idle for `COOKOUT_LEASE_SECONDS` (default 60) expires.
+
+## Read the inbox
+
+`inbox` lists what the token's identity hasn't read, oldest first, each message once with every reason it is there (`followed-thread`, `mention`, `subscribed-channel`), plus its channel and its thread's top-level message. Reading it changes nothing. These commands play the seeded `triage-agent`, who replied in the thread and is mentioned in it:
+
+```sh
+jq -r '.identities[] | select(.identity.name == "triage-agent") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-triage.env
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts ack 3
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
+```
+
+On a fresh seed the first `inbox` gives `[3,["followed-thread","mention"]]` and `[5,["followed-thread"]]`. `ack 3` prints `{ "readPosition": { "channel": "general", "thread": 1, "messageId": 3 } }`: a reply's ack moves the thread's read position, a top-level message's ack moves the channel's (`thread: null`). The second `inbox` gives only `[5,["followed-thread"]]`. An ack older than the read position changes nothing. Without a lease ID, ack is allowed only while no session holds the identity's lease; run it from a joined session's state folder otherwise (see the lease recipe above).
+
+## Follow and subscribe
+
+```sh
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts unfollow 1
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts follow 1
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts subscribe deploys
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts unsubscribe deploys
+```
+
+`follow` and `unfollow` take any message in the thread and print `{ "thread", "following" }`; an unfollow lasts until the identity next replies in the thread or is mentioned in it. `subscribe` and `unsubscribe` print `{ "channel", "subscribed" }`. After the subscribe, the `inbox` adds `[6,["subscribed-channel"]]`, the `deploys` message.
 
 ## Drive it with the SDK
 
