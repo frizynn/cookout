@@ -62,6 +62,6 @@ it.effect("COOKOUT_ADMIN_NAME naming an agent stops the server from starting", (
     yield* cookout.createIdentity("release-bot", { owner: "matt" });
     const failure = yield* Effect.flip(cookout.startSecondServerAs("release-bot"));
 
-    expect(failure).toMatchObject({ _tag: "AdminNameIsAgent", name: "release-bot" });
+    expect(failure).toMatchObject({ _tag: "AdminNameIsAgent", adminName: "release-bot" });
   }).pipe(Effect.provide(testCookout())),
 );

@@ -3,7 +3,7 @@
  * reads the environment, and every variable here has a line in `.env.example`
  * and a line in the README's Settings section (`pnpm hygiene` checks both).
  */
-import { Config, Redacted, Schema } from "effect";
+import { Config, Option, Redacted, Schema } from "effect";
 import { firstAdminName, isIdentityName } from "../identities/index.ts";
 import type { IdentityName } from "../identities/index.ts";
 
@@ -35,6 +35,8 @@ const isStrongEnoughToken = Schema.makeFilter(
 const adminNameRule =
   "COOKOUT_ADMIN_NAME must be an identity name: 1 to 64 lowercase letters, digits or `-`, such as `matt`. It names the identity the admin token belongs to.";
 
+const AdminNameSchema = Schema.String.pipe(Schema.refine(isIdentityName));
+
 /** `PORT`: the port `cookout serve` listens on. 0 picks a free port. */
 export const port = Config.schema(Schema.Int.check(Schema.isBetween({ maximum: 65_535, minimum: 0 })), "PORT").pipe(
   Config.withDefault(3000),
@@ -63,12 +65,15 @@ export const adminToken = Config.schema(Schema.String.check(isStrongEnoughToken)
 
 /**
  * `COOKOUT_ADMIN_NAME`: the name of the identity `COOKOUT_ADMIN_TOKEN` belongs to, `admin` unless set (Matt,
- * 2026-11-23, mattpocock/cookout#107, ADR 0038). Not an identity name, serve refuses to start.
+ * 2026-11-23, mattpocock/cookout#107, ADR 0038). Empty counts as unset. Not an identity name, serve refuses to start.
  */
 export const adminName: Config.Config<IdentityName> = Config.schema(
-  Schema.String.pipe(Schema.refine(isIdentityName)),
+  Schema.Union([Schema.Literal(""), AdminNameSchema]),
   "COOKOUT_ADMIN_NAME",
-).pipe(Config.withDefault(firstAdminName));
+).pipe(
+  Config.map((name) => Option.getOrElse(Option.liftPredicate(name, isIdentityName), () => firstAdminName)),
+  Config.withDefault(firstAdminName),
+);
 
 /** `COOKOUT_DB`: the SQLite file `cookout serve` keeps its data in. */
 export const databasePath = Config.String("COOKOUT_DB").pipe(Config.withDefault("cookout.db"));

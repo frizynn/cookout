@@ -112,6 +112,18 @@ it.effect("cookout serve refuses a COOKOUT_ADMIN_TOKEN too short to be a token w
   }).pipe(Effect.provide(commandLineServices)),
 );
 
+it.effect("cookout serve gives the admin token to COOKOUT_ADMIN_NAME, and to admin when it is empty", () =>
+  Effect.gen(function* adminNameFromSetting() {
+    const named = yield* startServe({ database: yield* freshDatabasePath, env: { COOKOUT_ADMIN_NAME: "matt" } });
+    const empty = yield* startServe({ database: yield* freshDatabasePath, env: { COOKOUT_ADMIN_NAME: "" } });
+    const matt = yield* answer(createCookoutClient({ env: {}, token: named.adminToken, url: named.url }).whoami);
+    const admin = yield* answer(createCookoutClient({ env: {}, token: empty.adminToken, url: empty.url }).whoami);
+
+    expect(matt.identity).toMatchObject({ admin: true, kind: "human", name: "matt" });
+    expect(admin.identity).toMatchObject({ admin: true, kind: "human", name: "admin" });
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
+);
+
 it.effect("cookout serve refuses a COOKOUT_ADMIN_NAME that breaks the identity-name rule", () =>
   Effect.gen(function* refusesBadAdminName() {
     const database = yield* freshDatabasePath;

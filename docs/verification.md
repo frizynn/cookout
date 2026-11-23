@@ -317,7 +317,7 @@ The brackets stop the pattern matching the shell that runs `pkill` itself. It st
 
 ## Run it in Docker
 
-The [Dockerfile](../Dockerfile) builds the cookout with `pnpm build` and runs `node dist/main.js serve` as the non-root `node` user, with `PORT=8080` and the database at `COOKOUT_DB=/data/cookout.db`, on a volume. `COOKOUT_ADMIN_TOKEN` is required: without it, or with one shorter than 32 characters, the container exits 1 with `admin_token_invalid` and never shows the value. Every boot makes it the `admin` identity's only token. Set any other variable from `.env.example` with `-e`. Make a token into an env file, build the image and start it on the named volume `cookout-data`:
+The [Dockerfile](../Dockerfile) builds the cookout with `pnpm build` and runs `node dist/main.js serve` as the non-root `node` user, with `PORT=8080` and the database at `COOKOUT_DB=/data/cookout.db`, on a volume. `COOKOUT_ADMIN_TOKEN` is required: without it, or with one shorter than 32 characters, the container exits 1 with `admin_token_invalid` and never shows the value. Every boot makes it the `admin` identity's only token, or that of the human named by `COOKOUT_ADMIN_NAME` if set. Set any other variable from `.env.example` with `-e`. Make a token into an env file, build the image and start it on the named volume `cookout-data`:
 
 ```sh
 echo "COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32)" > /tmp/cookout-docker-admin.env
@@ -383,7 +383,7 @@ The admin's token is the Fly secret `COOKOUT_ADMIN_TOKEN` (`fly secrets list -a 
 openssl rand -hex 32 | tr -d '\n' | tee >(gh secret set COOKOUT_E2E_ADMIN_TOKEN -R mattpocock/cookout) | sed 's/^/COOKOUT_ADMIN_TOKEN=/' | fly secrets import -a cookout
 ```
 
-`fly secrets set` takes only `NAME=VALUE` arguments, which would put the token on the command line; `fly secrets import` reads `NAME=VALUE` pairs from stdin, and `gh secret set` reads the value from stdin when there is no `--body`. Setting the secret restarts the machine, and the boot makes it the admin's only token. To replace a lost or leaked token, run the same command again: the old token gets 401 once the machine has restarted. A token made by `cookout identity rotate admin` lasts only until the next boot.
+`fly secrets set` takes only `NAME=VALUE` arguments, which would put the token on the command line; `fly secrets import` reads `NAME=VALUE` pairs from stdin, and `gh secret set` reads the value from stdin when there is no `--body`. Setting the secret restarts the machine, and the boot makes it the admin's only token. To replace a lost or leaked token, run the same command again: the old token gets 401 once the machine has restarted. A token made by `cookout identity rotate admin` lasts only until the next boot. To have the token belong to a human named other than `admin`, also import `COOKOUT_ADMIN_NAME=<name>` the same way; the old `admin` stays, still an admin, with no working token.
 
 The deployed `/v1/events` stream stays open through Fly's proxy: the server's 15 s heartbeat keeps the connection from going idle, and auto-stop is off. `scripts/stream-check.sh` holds the stream open with `curl -N --max-time` and prints each line with the second it arrived; it passes only if curl gave up with the stream still open (exit 28) and it heard a heartbeat every 15 s. With the admin's token in `COOKOUT_TOKEN`:
 
@@ -465,6 +465,8 @@ pnpm build
 echo "COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32)" > /tmp/cookout-built-admin.env
 env $(cat /tmp/cookout-built-admin.env) node dist/main.js serve --port 3000 --host 127.0.0.1 --db /tmp/cookout-built.db > /tmp/cookout-built.log 2>&1
 ```
+
+To have the admin token belong to a human named `matt`, add `COOKOUT_ADMIN_NAME=matt` to that command's `env`. Then `COOKOUT_URL=http://127.0.0.1:3000 COOKOUT_TOKEN=$(cut -d= -f2 /tmp/cookout-built-admin.env) node app/main.ts whoami` prints `matt`, a human admin, and there is no `admin` identity on a fresh database. Restart on the same database without it and `identity list` shows both, each an admin; the token now belongs to `admin` again and `matt` has no working token. `COOKOUT_ADMIN_NAME=Not_A_Name` exits 1 with `admin_name_invalid`, and the name of an agent on the board exits 1 with `admin_name_agent`.
 
 Run the last command in the background (or its own terminal). `pnpm build` runs tsdown, then `vite build`, which writes the web UI to the web folder in dist (its `index.html` and its assets). `cookout serve` serves that `index.html` at `/` and each asset at `/assets/<file>`, without a token, so open `http://127.0.0.1:3000/`, or run `curl -fsS http://127.0.0.1:3000/`. Running `node app/main.ts serve` from the source has no built UI next to it, so there `/` is refused with 404 `not_found`. Stop it with `pkill -INT -f "[d]ist/main.js serve"`.
 
