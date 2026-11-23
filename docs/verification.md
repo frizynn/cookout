@@ -345,6 +345,46 @@ gh run watch -R mattpocock/cookout <run id> --exit-status
 gh run view -R mattpocock/cookout <run id> --log | grep -E 'heartbeat|stream-check|\["admin'
 ```
 
+### Deploy the example handler to Fly
+
+The example handler (`packages/handler-example`) runs as its own Fly app, `cookout-handler-example` (`$COOKOUT_HANDLER_APP` in the README): one machine in `lhr`, at https://cookout-handler-example.fly.dev. [Its fly.toml](../packages/handler-example/fly.toml) sets `COOKOUT_URL = "https://cookout.fly.dev"` and `HOST = "::"`. Its HTTP check polls `/health`, and auto-stop is off. [Its Dockerfile](../packages/handler-example/Dockerfile) installs only the handler's runtime dependencies and runs `node app/main.ts` as `node`, with the SDK from the workspace source, so build it from the repo root:
+
+```sh
+docker build -f packages/handler-example/Dockerfile -t cookout-handler .
+```
+
+The handler doesn't start without `COOKOUT_COMMAND_SECRET`, the secret `command add` shows once. `scripts/handler-provision.sh` makes the deployed cookout ready for it. With `COOKOUT_URL=https://cookout.fly.dev` and the admin's token in `COOKOUT_TOKEN`, it creates the channel `handler-example` and the command `example` (URL `https://cookout-handler-example.fly.dev/webhook`) if they are missing. It pipes the new command's secret straight into `flyctl secrets import --stage -a cookout-handler-example` and never prints it. A rerun finds both and changes nothing. Then deploy it and check it:
+
+```sh
+scripts/handler-provision.sh
+fly deploy . -c packages/handler-example/fly.toml --dockerfile packages/handler-example/Dockerfile --ha=false
+fly status -a cookout-handler-example
+curl -fsS https://cookout-handler-example.fly.dev/health
+```
+
+`fly status` shows one machine in `lhr`, started, with its check passing. `scripts/handler-check.sh` checks the handler's `/health`, makes one `command call example` in `handler-example` on `$COOKOUT_URL`, and passes only if the `example` handler identity replies in that thread within 30 s:
+
+```sh
+COOKOUT_URL=https://cookout.fly.dev scripts/handler-check.sh
+```
+
+It prints `handler-check: thread <id> got ["/example is done.",{"received":{"branch":"main"}}] after <n>s`. Try it locally with the handler image, against a server that answers the host the container posts to (`COOKOUT_HANDLER_URL` is the handler's address):
+
+```sh
+node app/main.ts serve --host 0.0.0.0 --port 48775 --db /tmp/cookout-handler.db --public-url http://host.docker.internal:48775 > /tmp/cookout-handler-serve.log 2>&1
+grep -o '{"adminToken[^}]*}' /tmp/cookout-handler-serve.log | jq -r '"COOKOUT_URL=http://127.0.0.1:48775 COOKOUT_TOKEN=\(.adminToken)"' > /tmp/cookout-handler.env
+printf '{"type":"object"}' > /tmp/cookout-handler.schema.json
+env $(cat /tmp/cookout-handler.env) node app/main.ts command add example --url http://127.0.0.1:48776/webhook --schema /tmp/cookout-handler.schema.json | jq -r '"COOKOUT_COMMAND_SECRET=\(.secret)"' > /tmp/cookout-handler-secret.env
+env $(cat /tmp/cookout-handler.env) node app/main.ts channel create handler-example
+docker run -d --rm --name cookout-handler -p 48776:8787 --add-host host.docker.internal:host-gateway --env-file /tmp/cookout-handler-secret.env -e COOKOUT_URL=http://host.docker.internal:48775 cookout-handler
+env $(cat /tmp/cookout-handler.env) COOKOUT_HANDLER_URL=http://127.0.0.1:48776 scripts/handler-check.sh
+docker rm -f cookout-handler
+```
+
+Run the first line as a background command. Without `--public-url` the server refuses the handler's reply for its `Host`, and the handler logs `The result reply for call call_… could not be posted.`
+
+In CI, deploy.yml's `deploy-handler` job runs on every push to `main` after `deploy`: provision, then `flyctl deploy` with the secret `FLY_HANDLER_API_TOKEN` (made with `fly tokens create deploy -a cookout-handler-example | gh secret set FLY_HANDLER_API_TOKEN -R mattpocock/cookout`) and `COOKOUT_E2E_ADMIN_TOKEN`. The `deployed` job then runs `scripts/handler-check.sh`. On any branch, `gh workflow run deploy.yml -R mattpocock/cookout --ref <branch> -f handler=true` provisions and deploys the handler from that branch, and never deploys the cookout.
+
 ## Open the web UI
 
 `pnpm dev` also runs the Vite dev server for the web UI (`index.html` at the repo root, which loads `app/web.tsx`), on `127.0.0.1` and a free port. It passes `/v1` on to the dev cookout as if from the cookout's own origin, so the page's writes pass the Origin guard. Open the start line's `webUrl` in a browser, or check it from the shell:

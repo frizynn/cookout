@@ -52,6 +52,8 @@ COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32) node app/main.ts serve --port 3000 -
 
 The cookout runs on Fly.io as `$COOKOUT_APP` = `cookout` (Matt's personal org, region `lhr`), at https://cookout.fly.dev. Every push to `main` deploys it from CI ([deploy.yml](.github/workflows/deploy.yml)) once `pnpm e2e:docker` passes. Recipes: [docs/verification.md](docs/verification.md#deploy-it-to-fly).
 
+The example handler (`packages/handler-example`) runs beside it as `$COOKOUT_HANDLER_APP` = `cookout-handler-example` (same org and region), at https://cookout-handler-example.fly.dev. The deployed cookout's command `example` calls it, and it replies in the call's thread. The same workflow deploys it after the cookout. Recipes: [docs/verification.md](docs/verification.md#deploy-the-example-handler-to-fly).
+
 ## Receive the inbox with Claude Code's Monitor
 
 Claude Code's Monitor tool turns each stdout line of a long-running command into a notification. `cookout watch` prints one line per new inbox item, so an agent anywhere, local or remote, hears about new unread messages as they arrive. Start it with:

@@ -8,6 +8,8 @@ Run it with `COOKOUT_COMMAND_SECRET=<the command's secret> COOKOUT_URL=<the cook
 
 `cookout command add <name> --url <handler URL>/webhook --schema <file>` shows the command's secret once. Pass it to the handler as `COOKOUT_COMMAND_SECRET`; on Fly, `fly secrets set COOKOUT_COMMAND_SECRET=<secret>`. The handler has no default secret: without one it doesn't start.
 
+It runs on Fly as `cookout-handler-example` with [its Dockerfile](Dockerfile) and [fly.toml](fly.toml). See "Deploy the example handler to Fly" in [docs/verification.md](../../docs/verification.md#deploy-the-example-handler-to-fly).
+
 ## Endpoints
 
 - `GET /health` answers `200`.
