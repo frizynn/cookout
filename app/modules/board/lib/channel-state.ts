@@ -2,6 +2,7 @@ import type {
   ChannelName,
   CookoutClient,
   Message,
+  MessageId,
   ReadPosition,
   ReadReceipt,
   TopLevelMessage,
@@ -27,6 +28,7 @@ interface Loaded {
   readonly call: CallState;
   readonly callData: string;
   readonly post: PostState;
+  readonly expanded: ReadonlyMap<MessageId, number>;
 }
 
 type ChannelMessagesState = { readonly status: "loading" } | Failure | Loaded;
@@ -38,11 +40,13 @@ interface ChannelMessages {
   readonly call: (command: string, data: string, called: () => void) => void;
   readonly editCallData: (data: string) => void;
   readonly post: (text: string, posted: () => void) => void;
+  readonly showClosed: (run: readonly MessageId[], count: number) => void;
 }
 
 interface LiveChannelMessages extends ChannelMessages {
   readonly receive: (message: Message) => void;
   readonly receiveReceipt: (receipt: ReadReceipt) => void;
+  readonly receiveThread: (parent: TopLevelMessage) => void;
   readonly refetch: () => void;
 }
 

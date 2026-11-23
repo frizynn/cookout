@@ -1,4 +1,4 @@
-import type { Channel, CookoutEvent, Message, ReadReceipt } from "../../sdk/index.ts";
+import type { Channel, CookoutEvent, Message, ReadReceipt, TopLevelMessage } from "../../sdk/index.ts";
 import type { Live } from "../../live/index.ts";
 
 interface Receiver {
@@ -7,6 +7,7 @@ interface Receiver {
 
 interface ReceiptReceiver {
   readonly receiveReceipt: (receipt: ReadReceipt) => void;
+  readonly receiveThread: (parent: TopLevelMessage) => void;
   readonly refetch: () => void;
 }
 
@@ -57,6 +58,16 @@ function receiving({ added, deleted, receiptReceivers, receivers }: LiveFeedOpti
   };
 }
 
+function closings({ receiptReceivers }: LiveFeedOptions): (event: CookoutEvent) => void {
+  return (event) => {
+    if (event.type === "thread") {
+      for (const receiver of receiptReceivers()) {
+        receiver.receiveThread(event.parent);
+      }
+    }
+  };
+}
+
 function backAgain({ back, receiptReceivers }: LiveFeedOptions): () => void {
   return () => {
     back();
@@ -74,6 +85,7 @@ function createLiveFeed(options: LiveFeedOptions): LiveFeed {
     if (!following && live !== null) {
       following = true;
       live.subscribe(receiving(options));
+      live.subscribe(closings(options));
       live.onBack(backAgain(options));
     }
   }

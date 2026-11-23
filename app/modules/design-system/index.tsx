@@ -91,7 +91,7 @@
  * mark (`for-you`, the filled accent block, when it mentions or answers the reader, or `open`); and an action (such as Reply: a link, or a button with `onAction`) and
  * a More actions button shown on hover or focus, after a button for each of its `menu`'s `reactions`; a reaction's
  * `key`, pressed while the message itself has focus, leaves it too. Its `menu` gives it one actions menu (the action,
- * then each reaction, then Mark unread), drawn two ways on Radix: right-clicking the message opens it as a context menu at the pointer, and the
+ * then each reaction, then Mark unread, then the thread choice, such as Close, if any), drawn two ways on Radix: right-clicking the message opens it as a context menu at the pointer, and the
  * More actions button opens it as a dropdown. Radix gives both their keyboard and focus behaviour; a chosen item's
  * action runs once the menu has closed. `StandaloneMessage` is one named message on its own, such as a
  * thread's parent. In a message, `MessageBody` holds its rendered Markdown text, `Mention` an
@@ -102,7 +102,10 @@
  * `ReactionChip`s, each a reaction and its count, pressed (in the accent) when one is the reader's own, with who
  * reacted as its tooltip. `RepliesDivider` heads a thread's replies, `ChannelStart` says a
  * channel has nothing older, and `QuietButton` is a muted centred button,
- * such as loading older messages. `TextArea` takes focus when it first appears
+ * such as loading older messages. `ClosedFold` is a row of a message list standing for closed threads folded away,
+ * a button on a dashed line that unfolds them. `ThreadBar` is a muted bar across the top of a thread: a line of text
+ * and one button, such as who closed it and Reopen; `QuietLink` is a muted link in such a line, such as a name
+ * linking to its profile. `TextArea` takes focus when it first appears
  * if `focused`.
  *
  * `AppShell` is the page around the login view; `Card`, centred in a scrolling column, `CardHeader`,
@@ -146,6 +149,8 @@ export { MessageBody } from "./lib/message-body.tsx";
 export { MessageItem } from "./lib/message-item.tsx";
 export { MessageList } from "./lib/message-list.tsx";
 export { QuietButton } from "./lib/quiet-button.tsx";
+export { ClosedFold } from "./lib/closed-fold.tsx";
+export { ThreadBar } from "./lib/thread-bar.tsx";
 export { MoreButton } from "./lib/more-button.tsx";
 export { RepliesDivider } from "./lib/replies-divider.tsx";
 export { ThreadSummary } from "./lib/thread-summary.tsx";
@@ -179,7 +184,8 @@ export { Muted } from "./lib/muted.tsx";
 export { MutedLines } from "./lib/muted-lines.tsx";
 export { ReactionChip } from "./lib/reaction-chip.tsx";
 export { ReactionChips } from "./lib/reaction-chips.tsx";
-export type { ReactionChoice } from "./lib/menu-parts.ts";
+export type { ReactionChoice, ThreadChoice } from "./lib/menu-parts.ts";
+export { QuietLink } from "./lib/quiet-link.tsx";
 export { Notice } from "./lib/notice.tsx";
 export { HeadingButton } from "./lib/heading-button.tsx";
 export { NavHeading } from "./lib/nav-heading.tsx";

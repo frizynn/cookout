@@ -29,10 +29,15 @@
  * top-level message there and a form to call a command there that shows the
  * schema errors of data the command refuses. Each message shows its reply
  * count as a link to its thread and, on hover or focus, a "Reply" link to it;
- * the open thread's parent is highlighted. `ThreadView` is the thread panel
- * beside it: the thread's parent message, its reply count, and its replies,
+ * the open thread's parent is highlighted. Each run of consecutive closed threads
+ * folds into one divider, "N closed threads", which shows the 10 nearest the run's
+ * newest end, then "K more" for the next 10; a top-level message's menu ends with
+ * Close, or Reopen while its thread is closed. `ThreadView` is the thread panel
+ * beside it: a bar with Close or, while the thread is closed, "Closed by @name
+ * 5m ago" and Reopen, then the thread's parent message, its reply count, and its replies,
  * oldest first, with a reply box that takes focus when the panel opens and a
- * link that closes it, and opening it marks the thread read. In both,
+ * link that closes it, and opening it marks the thread read. A refused close or
+ * reopen says why. In both,
  * consecutive messages from one author within 5 minutes sit under one name
  * (a new day, the "New" line or a message with replies starts a new group),
  * each day starts with a separator naming it, the "New" line sits above the

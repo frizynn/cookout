@@ -5,6 +5,7 @@ import type { Composer } from "../../composer/index.ts";
 import type { ReactNode } from "react";
 import { ReplyFooter } from "./reply-footer.tsx";
 import { ThreadBody } from "./thread-body.tsx";
+import { ThreadClosingBar } from "./thread-closing-bar.tsx";
 import type { Unread } from "../../unread/index.ts";
 import { hrefOf } from "../../paths/index.ts";
 import { useSyncExternalStore } from "react";
@@ -56,8 +57,10 @@ export function ThreadView(props: ThreadProps): ReactNode {
       detail={`#${channel}`}
       label={TEXT.thread}
     >
+      {state.status === "loaded" && <ThreadClosingBar closing={props.board.closing} parent={state.parent} />}
       <ScrollArea count={countOf(state)} label={TEXT.replies}>
         <ThreadBody
+          closing={props.board.closing}
           me={props.me}
           menu={props.unread.menu}
           readPosition={readPosition}

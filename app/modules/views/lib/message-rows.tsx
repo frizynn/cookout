@@ -1,7 +1,7 @@
 import { Alert, CardBody, ChannelStart, Skeleton } from "../../design-system/index.tsx";
-import type { ChannelMessages, ChannelMessagesState } from "../../board/index.ts";
+import type { ChannelMessages, ChannelMessagesState, ThreadClosing } from "../../board/index.ts";
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
-import { MessageStream } from "./message-stream.tsx";
+import { FeedStream } from "./feed-stream.tsx";
 import { Older } from "./older.tsx";
 import type { ReactNode } from "react";
 import { ReadRefusal } from "./read-refusal.tsx";
@@ -18,6 +18,7 @@ interface MessageRowsProps {
   readonly open: MessageId | null;
   readonly readPosition: number | null;
   readonly unread: Unread;
+  readonly closing: ThreadClosing;
 }
 
 export type { MessageRowsProps };
@@ -41,17 +42,16 @@ export function MessageRows(props: MessageRowsProps): ReactNode {
     <>
       {state.hasMore && <Older older={state.older} onLoad={handleLoad} />}
       {!state.hasMore && <ChannelStart description={TEXT.start} title={`Welcome to #${channel}`} />}
-      <MessageStream
-        after={null}
+      <FeedStream
+        closing={props.closing}
         channel={channel}
         label={TEXT.messages}
         me={props.me}
         menu={props.unread.menu}
-        messages={state.messages}
+        messages={messages}
         open={props.open}
         readPosition={props.readPosition}
-        receipts={state.receipts}
-        reply={null}
+        state={state}
         threads={threads}
       />
       <ReadRefusal read={state.read} />

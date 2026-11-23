@@ -3,6 +3,7 @@ import type { ChannelName, Message, MessageId, ReadReceipt, Reply, TopLevelMessa
 import { callFailure, notJson, parseData } from "./command-call.ts";
 import { withHeard, withReceipts } from "./receipts.ts";
 import type { CallRequest } from "./command-call.ts";
+import { closedAs } from "./thread-closing.ts";
 import { failure } from "./failure.ts";
 import { withNewestReply } from "../../messages/index.ts";
 
@@ -35,6 +36,7 @@ async function loadNewest(channel: Channel): Promise<void> {
     channel.publish({
       call: { status: "idle" },
       callData: "",
+      expanded: new Map(),
       hasMore,
       messages,
       older: { status: "idle" },
@@ -177,6 +179,19 @@ async function postMessage(channel: Channel, { posted, text }: PostRequest): Pro
   }
 }
 
+interface ShownClosed {
+  readonly run: readonly MessageId[];
+  readonly count: number;
+}
+
+function withShown(loaded: Loaded, { count, run }: ShownClosed): Loaded {
+  const expanded = new Map(loaded.expanded);
+  for (const id of run) {
+    expanded.set(id, count);
+  }
+  return { ...loaded, expanded };
+}
+
 interface ChannelOptions {
   readonly client: MessagesClient;
   readonly name: ChannelName;
@@ -190,7 +205,7 @@ async function after(previous: Promise<void> | null, step: () => Promise<void>):
 
 type Enqueue = <Request>(step: (channel: Channel, request: Request) => Promise<void>, request: Request) => void;
 
-type LiveMethods = Pick<LiveChannelMessages, "receive" | "receiveReceipt" | "refetch">;
+type LiveMethods = Pick<LiveChannelMessages, "receive" | "receiveReceipt" | "receiveThread" | "refetch">;
 
 function liveMethods(channel: Channel, enqueue: Enqueue): LiveMethods {
   return {
@@ -208,6 +223,12 @@ function liveMethods(channel: Channel, enqueue: Enqueue): LiveMethods {
       update(channel, (loaded) => ({
         ...loaded,
         receipts: withHeard({ holds: (id) => holds(loaded, id), receipt, receipts: loaded.receipts }),
+      }));
+    },
+    receiveThread: (parent) => {
+      update(channel, (loaded) => ({
+        ...loaded,
+        messages: loaded.messages.map((message) => closedAs({ message, parent })),
       }));
     },
     refetch: () => {
@@ -251,6 +272,9 @@ function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
     },
     post: (text, posted) => {
       enqueue(postMessage, { posted, text });
+    },
+    showClosed: (run, count) => {
+      update(channel, (loaded) => withShown(loaded, { count, run }));
     },
     snapshot: () => state,
     subscribe: (listener) => {
