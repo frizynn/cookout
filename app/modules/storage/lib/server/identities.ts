@@ -173,6 +173,14 @@ const toLookup = (row: unknown): Fails<TokenLookup> =>
 
 const identityColumns = "name, kind, owner, admin, created_at";
 
+const INBOX_TABLES = [
+  "message_mentions",
+  "follows",
+  "subscriptions",
+  "channel_read_positions",
+  "thread_read_positions",
+] as const;
+
 export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
   const count = (sql: string, ...params: readonly string[]) =>
     db.get(sql, ...params).pipe(
@@ -219,6 +227,9 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
             return { status: "last_admin" } as const;
           }
           yield* revokeTokensOfName(name);
+          yield* Effect.forEach(INBOX_TABLES, (table) => db.run(`DELETE FROM ${table} WHERE identity_name = ?`, name), {
+            concurrency: 1,
+          });
           yield* db.run("DELETE FROM identities WHERE name = ?", name);
           return { identity: toIdentity(row), status: "deleted" } as const;
         }),

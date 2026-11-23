@@ -15,16 +15,20 @@ export const openMemoryStorage: Effect.Effect<StorageService, never, Scope.Scope
     const channels = memoryChannels(state);
     const { findIdentity, placeHandler, ...identities } = memoryIdentities(state);
     const { dropLease, ...leases } = memoryLeases(state);
+    const { forgetIdentity, ...messages } = memoryMessages({ channels, identities, state });
     return {
       ...memoryHealth(state),
       ...identities,
       ...channels,
-      ...memoryMessages({ channels, identities, state }),
+      ...messages,
       ...leases,
       ...memoryCommands({ findIdentity, placeHandler, state }),
       deleteIdentity: (name) =>
         Effect.tap(identities.deleteIdentity(name), (result) =>
-          Effect.when(dropLease(name), Effect.succeed(result.status === "deleted")),
+          Effect.when(
+            Effect.andThen(dropLease(name), forgetIdentity(name)),
+            Effect.succeed(result.status === "deleted"),
+          ),
         ),
     };
   },

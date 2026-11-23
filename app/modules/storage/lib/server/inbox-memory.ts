@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, Option, Predicate, pipe } from "effect";
+import { Array as Arr, Effect, Option, Predicate, String as Str, pipe } from "effect";
 import type { InboxReason, ReadPosition } from "../../../inbox/index.ts";
 import type { InboxSection, Scope, StoredInboxItem } from "./inbox.ts";
 import type { Message, MessageId, Reply, TopLevelMessage } from "../../../messages/index.ts";
@@ -11,6 +11,7 @@ import type { StorageUnavailable } from "./errors.ts";
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
 interface MemoryInbox {
+  readonly mentions: ReadonlySet<string>;
   readonly follows: ReadonlySet<string>;
   readonly subscriptions: ReadonlySet<string>;
   readonly positions: ReadonlyMap<string, MessageId>;
@@ -49,13 +50,22 @@ interface Reading {
 
 const NOTHING_READ = 0;
 
-const EMPTY_INBOX: MemoryInbox = { follows: new Set(), positions: new Map(), subscriptions: new Set() };
+const EMPTY_INBOX: MemoryInbox = {
+  follows: new Set(),
+  mentions: new Set(),
+  positions: new Map(),
+  subscriptions: new Set(),
+};
 
 function keyOf(identity: IdentityName, { channel, thread }: Scope): string {
   if (Predicate.isNull(thread)) {
     return `${identity} channel ${channel}`;
   }
   return `${identity} thread ${String(thread)}`;
+}
+
+function mentionKeyOf(identity: IdentityName, id: MessageId): string {
+  return `${identity} message ${String(id)}`;
 }
 
 function threadScopeOf(message: Message): Scope {
@@ -72,11 +82,13 @@ function withoutKey(keys: ReadonlySet<string>, key: string): ReadonlySet<string>
 
 function afterAppend({ inbox, message }: Appended): MemoryInbox {
   const followed = Arr.map(followersOf(message), (name) => keyOf(name, threadScopeOf(message)));
+  const mentioned = Arr.map(message.mentions, (name) => mentionKeyOf(name, message.id));
   const read = keyOf(message.author.name, scopeOf(message));
   const position = movedTo({ current: inbox.positions.get(read), message });
   return {
     ...inbox,
     follows: new Set([...inbox.follows, ...followed]),
+    mentions: new Set([...inbox.mentions, ...mentioned]),
     positions: new Map([...inbox.positions, [read, position.messageId]]),
   };
 }
@@ -87,10 +99,10 @@ function isUnread({ board, identity }: Reading, message: Message): boolean {
 }
 
 function reasonsFor(reading: Reading, message: Message): readonly InboxReason[] {
-  const { follows, subscriptions } = reading.board.inbox;
+  const { follows, mentions, subscriptions } = reading.board.inbox;
   const key = keyOf(reading.identity, scopeOf(message));
   const followed = message.kind === "reply" && follows.has(key);
-  const mentioned = Arr.some(message.mentions, (name) => name === reading.identity);
+  const mentioned = mentions.has(mentionKeyOf(reading.identity, message.id));
   const subscribed = message.kind === "top-level" && subscriptions.has(key);
   const reasons: readonly (readonly [InboxReason, boolean])[] = [
     ["followed-thread", followed],
@@ -159,7 +171,28 @@ function follow(change: KeysChange) {
   };
 }
 
-function memoryInbox({ changeInbox, channelExists, read }: BoardAccess): InboxSection {
+interface Forgetting {
+  readonly inbox: MemoryInbox;
+  readonly identity: IdentityName;
+}
+
+type MemoryInboxSection = InboxSection & {
+  readonly forgetIdentity: (identity: IdentityName) => Fails<void>;
+};
+
+function withoutIdentity({ identity, inbox }: Forgetting): MemoryInbox {
+  function kept(key: string): boolean {
+    return !Str.startsWith(`${identity} `)(key);
+  }
+  return {
+    follows: new Set(Arr.filter([...inbox.follows], kept)),
+    mentions: new Set(Arr.filter([...inbox.mentions], kept)),
+    positions: new Map(Arr.filter([...inbox.positions], ([key]: readonly [string, MessageId]) => kept(key))),
+    subscriptions: new Set(Arr.filter([...inbox.subscriptions], kept)),
+  };
+}
+
+function memoryInbox({ changeInbox, channelExists, read }: BoardAccess): MemoryInboxSection {
   function changeFound<Value>(work: (board: MemoryBoard) => Changed<Value>): Fails<Value | undefined> {
     return Effect.map(changeInbox(work), Option.getOrUndefined);
   }
@@ -179,6 +212,8 @@ function memoryInbox({ changeInbox, channelExists, read }: BoardAccess): InboxSe
   return {
     ackMessage: (identity, id) => changeFound((board) => ack({ board, id, identity })),
     followThread: (identity, id) => changeFound((board) => follow(withKey)({ board, id, identity })),
+    forgetIdentity: (identity) =>
+      Effect.asVoid(changeInbox((board) => [true, withoutIdentity({ identity, inbox: board.inbox })])),
     listInbox: (identity) => read((board) => inboxOf({ board, identity })),
     listInboxAfter: (identity, after) =>
       read((board) => Arr.filter(inboxOf({ board, identity }), (item) => item.message.id > after)),
@@ -188,4 +223,4 @@ function memoryInbox({ changeInbox, channelExists, read }: BoardAccess): InboxSe
   };
 }
 
-export { EMPTY_INBOX, type MemoryInbox, afterAppend, memoryInbox };
+export { EMPTY_INBOX, type MemoryInbox, type MemoryInboxSection, afterAppend, memoryInbox };
