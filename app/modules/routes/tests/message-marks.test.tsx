@@ -118,3 +118,18 @@ it("a message mentioning the logged-in human is highlighted, and other mentions 
 
   close();
 });
+
+it("a command call without data shows the command and null", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-call-no-data";
+  const { poster, reader } = await readerOf(channel);
+  await poster.createMessage({ channel, data: { command: "deploy" }, text: "/deploy" });
+  const close = openAt({ client: reader, hash: `#/channels/${channel}` });
+
+  const call = await screen.findByLabelText("Call to /deploy");
+
+  expect(call.textContent).toBe("null");
+
+  close();
+});

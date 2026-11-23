@@ -1,4 +1,4 @@
-import { Effect, pipe } from "effect";
+import { DateTime, Effect, pipe } from "effect";
 import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
@@ -49,6 +49,7 @@ function threadOf(parent: Message): string {
 }
 
 const minuteLater = TestClock.adjust("1 minute");
+const ONE_DAY = 86_400_000;
 
 it.effect(
   "messages from one author within 5 minutes sit under one name, and another author or a gap starts a group",
@@ -107,5 +108,19 @@ it.effect("the thread panel doesn't repeat the parent's day for replies on it, a
     const shown = yield* shownTo(grace, threadOf(parent), "Replies");
 
     expect(shown).toStrictEqual(["alanfirst", "second", "[Friday, 2 January]", "alanlater"]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("messages from yesterday and today are split by Yesterday and Today", () =>
+  Effect.gen(function* yesterdayAndToday() {
+    const cookout = yield* TestCookout;
+    const { ada, grace } = yield* people(cookout, "recent");
+    const now = DateTime.toEpochMillis(DateTime.nowUnsafe());
+    yield* Effect.andThen(TestClock.setTime(now - ONE_DAY), post(ada, "recent", "before"));
+    yield* Effect.andThen(TestClock.setTime(now), post(ada, "recent", "after"));
+
+    const shown = yield* shownTo(grace, "#/channels/recent", "Messages");
+
+    expect(shown).toStrictEqual(["[Yesterday]", "adabefore", "[Today]", "adaafter"]);
   }).pipe(Effect.provide(testCookout())),
 );
