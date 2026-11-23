@@ -1,7 +1,7 @@
-import type { Command, CommandWithSecretResponse } from "../../index.ts";
-import { DateTime, Effect, Option, Predicate } from "effect";
+import { Array as Arr, DateTime, Effect, Option, Predicate } from "effect";
+import type { CommandWithSecretResponse, RegisteredCommand } from "../../index.ts";
+import { builtInCommandNames, handlerOf, isCommandName } from "../../index.ts";
 import { commandNotFound, requireDataSchema } from "./call.ts";
-import { handlerOf, isCommandName } from "../../index.ts";
 import type { AddCommandRequestSchema } from "./wire.ts";
 import type { CommandChanges } from "./changes.ts";
 import type { Owner } from "../../../identities/index.ts";
@@ -23,6 +23,13 @@ function commandExists(name: string): Refusal {
   return { code: "command_exists", message: `The command ${name} already exists.`, status: CONFLICT };
 }
 
+function requireNotBuiltIn(name: string): Effect.Effect<void, Refusal> {
+  if (Arr.contains(builtInCommandNames, name)) {
+    return Effect.fail(commandExists(name));
+  }
+  return Effect.void;
+}
+
 function handlerNotAgent(name: string): Refusal {
   return {
     code: "handler_not_agent",
@@ -31,7 +38,7 @@ function handlerNotAgent(name: string): Refusal {
   };
 }
 
-function stamped(fields: NewCommand, createdAt: Command["createdAt"]): Command {
+function stamped(fields: NewCommand, createdAt: RegisteredCommand["createdAt"]): RegisteredCommand {
   const handler = Option.getOrThrow(Option.liftPredicate(fields.name, isIdentityName));
   const command = { createdAt, handler, name: fields.name, schema: fields.schema, url: fields.url };
   if (typeof fields.description === "string") {
@@ -48,9 +55,9 @@ function addCommand({
   readonly owner: Owner;
 }): Effect.Effect<CommandWithSecretResponse, Refusal | StorageUnavailable, AddNeeds> {
   return Effect.gen(function* addStampedCommand() {
-    const command = yield* Effect.andThen(
-      requireDataSchema(fields.schema),
-      Effect.map(DateTime.now, (now) => stamped(fields, isoTimeOf(now))),
+    const command = yield* requireNotBuiltIn(fields.name).pipe(
+      Effect.andThen(requireDataSchema(fields.schema)),
+      Effect.andThen(Effect.map(DateTime.now, (now) => stamped(fields, isoTimeOf(now)))),
     );
     const secrets = yield* Secrets;
     const secret = yield* secrets.newCommandSecret;

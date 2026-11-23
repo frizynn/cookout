@@ -218,8 +218,13 @@ it.effect("GET /v1/commands lists /spawn-agent with its name and task fields, be
     const { commands } = yield* answer(ada.client.listCommands);
 
     expect(Arr.map(commands, ({ name }) => name)).toStrictEqual(["spawn-agent", "zip"]);
+    expect(Arr.map(commands, (command) => [command.name, "builtIn" in command, "url" in command])).toStrictEqual([
+      ["spawn-agent", true, false],
+      ["zip", false, true],
+    ]);
     expect(Arr.head(commands)).toMatchObject(
       Option.some({
+        builtIn: true,
         description: "Start a remote Claude Code session that works on this board as a new agent you own.",
         handler: "spawn-agent",
         schema: {
@@ -232,14 +237,15 @@ it.effect("GET /v1/commands lists /spawn-agent with its name and task fields, be
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("a registered command named spawn-agent is listed once, as the one the server handles", () =>
-  Effect.gen(function* shadowed() {
+it.effect("a command named spawn-agent can't be registered, since the server handles that name itself", () =>
+  Effect.gen(function* builtInNameTaken() {
     const cookout = yield* TestCookout;
-    yield* answer(() =>
+    const taken = yield* refusal(() =>
       cookout.client.addCommand({ name: "spawn-agent", schema: { type: "object" }, url: "https://hooks.example.com" }),
     );
     const { commands } = yield* answer(cookout.client.listCommands);
 
-    expect(Arr.map(commands, ({ name, url }) => [name, url])).toStrictEqual([["spawn-agent", ""]]);
+    expect(taken).toMatchObject({ code: "command_exists", status: 409 });
+    expect(commands).toMatchObject([{ builtIn: true, name: "spawn-agent" }]);
   }).pipe(Effect.provide(testCookout())),
 );

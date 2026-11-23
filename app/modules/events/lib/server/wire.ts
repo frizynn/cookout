@@ -35,8 +35,8 @@ import {
   TopLevelMessageSchema,
 } from "../../../messages/server.ts";
 import { isLiveConnectionId, presenceName } from "../../../presence/index.ts";
-import { CommandSchema } from "../../../commands/server.ts";
 import { PresenceSchema } from "../../../presence/server.ts";
+import { RegisteredCommandSchema } from "../../../commands/server.ts";
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
 
@@ -92,7 +92,7 @@ export const IdentityDeletedEventSchema = matchesWire<IdentityDeletedEvent>()(
 );
 
 export const CommandEventSchema = matchesWire<CommandEvent>()(
-  Schema.Struct({ command: CommandSchema, type: Schema.Literal("command") }),
+  Schema.Struct({ command: RegisteredCommandSchema, type: Schema.Literal("command") }),
 );
 
 export const AgentSessionEventSchema = matchesWire<AgentSessionEvent>()(

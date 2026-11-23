@@ -1,7 +1,7 @@
 import { Array as Arr, Context, DateTime, Option, Order, Predicate, String as Str } from "effect";
-import type { CallCommandResponse, Command, JsonSchema } from "../../index.ts";
+import type { BuiltInCommand, CallCommandResponse, Command, JsonSchema, RegisteredCommand } from "../../index.ts";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
-import { isCommandName, spawnAgentCommandName } from "../../index.ts";
+import { builtInCommandNames, isCommandName, spawnAgentCommandName } from "../../index.ts";
 import type { Description } from "../../../identities/client.ts";
 import type { Effect } from "effect";
 import type { JsonValue } from "../../../messages/index.ts";
@@ -62,20 +62,21 @@ const handlerName = Option.getOrThrow(Option.liftPredicate(spawnAgentCommandName
 
 const commandName = Option.getOrThrow(Option.liftPredicate(spawnAgentCommandName, isCommandName));
 
-const spawnAgentCommand: Command = {
+const spawnAgentCommand: BuiltInCommand = {
+  builtIn: true,
   createdAt: isoTimeOf(DateTime.makeUnsafe(EPOCH_MILLIS)),
   description: "Start a remote Claude Code session that works on this board as a new agent you own.",
   handler: handlerName,
   name: commandName,
   schema: spawnAgentSchema,
-  url: "",
 };
 
 const byName: Order.Order<Command> = Order.mapInput(Order.String, (command: Command) => command.name);
 
-function withBuiltInCommands(registered: readonly Command[]): readonly Command[] {
-  const others = Arr.filter(registered, ({ name }) => name !== spawnAgentCommand.name);
-  return Arr.sort(Arr.append(others, spawnAgentCommand), byName);
+function withBuiltInCommands(registered: readonly RegisteredCommand[]): readonly Command[] {
+  const others = Arr.filter(registered, ({ name }) => !Arr.contains(builtInCommandNames, name));
+  const listed: readonly Command[] = others;
+  return Arr.sort(Arr.append(listed, spawnAgentCommand), byName);
 }
 
 function fieldOf(data: JsonValue, key: "name" | "task"): Option.Option<string> {

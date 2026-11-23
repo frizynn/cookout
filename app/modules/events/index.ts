@@ -18,7 +18,7 @@ import type {
 import type { LiveConnectionId, Presence, presenceName } from "../presence/index.ts";
 import type { Message, MessageId, ReactionsResponse, ReadReceipt, TopLevelMessage } from "../messages/index.ts";
 import type { Channel } from "../channels/index.ts";
-import type { Command } from "../commands/index.ts";
+import type { RegisteredCommand } from "../commands/index.ts";
 
 export type {
   LiveConnectionDetail,
@@ -121,7 +121,7 @@ export interface IdentityDeletedEvent {
  */
 export interface CommandEvent {
   readonly type: "command";
-  readonly command: Command;
+  readonly command: RegisteredCommand;
 }
 
 /**

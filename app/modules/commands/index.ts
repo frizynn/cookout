@@ -64,8 +64,8 @@ export const commandDescriptionLength = { maximum: 500, minimum: 1 } as const;
 /** The longest webhook URL the server takes. */
 export const commandUrlMaximumLength = 2000;
 
-/** A registered command as the server shows it. Its secret is never part of it. */
-export interface Command {
+/** A registered command as the server shows it: one an admin added, which the server calls by webhook. Its secret is never part of it. */
+export interface RegisteredCommand {
   readonly name: CommandName;
   /** The `http` or `https` URL the server posts calls to. */
   readonly url: string;
@@ -78,6 +78,14 @@ export interface Command {
   readonly createdAt: IsoTime;
 }
 
+/** A built-in command (mattpocock/cookout#250, 2026-11-23): one the server handles itself, so it has no `url`. */
+export interface BuiltInCommand extends Omit<RegisteredCommand, "url"> {
+  readonly builtIn: true;
+}
+
+/** A command as `GET /v1/commands` lists it: registered (with a `url`) or built in (with `builtIn: true`). */
+export type Command = RegisteredCommand | BuiltInCommand;
+
 /** The body of `POST /v1/commands`. The server checks the name, URL, schema and description. */
 export interface AddCommandRequest {
   readonly name: string;
@@ -88,13 +96,14 @@ export interface AddCommandRequest {
 
 /** The answer to adding a command or rotating its secret. The secret is shown this once only. */
 export interface CommandWithSecretResponse {
-  readonly command: Command;
+  readonly command: RegisteredCommand;
   readonly secret: CommandSecret;
 }
 
 /**
- * The answer to `GET /v1/commands`: every command, sorted by name, the registered ones and those the server handles
- * itself (`/spawn-agent`), so every client discovers both the same way. A command the server handles has an empty `url`.
+ * The answer to `GET /v1/commands`: every command, sorted by name, the registered ones and the built-in ones the server
+ * handles itself (`/spawn-agent`), so every client discovers both the same way. A built-in command carries
+ * `builtIn: true` and no `url`.
  */
 export interface ListCommandsResponse {
   readonly commands: readonly Command[];
@@ -120,6 +129,9 @@ export interface CallCommandResponse {
  */
 export const spawnAgentCommandName = "spawn-agent";
 
+/** The names of the built-in commands. No registered command can take one. */
+export const builtInCommandNames: readonly string[] = [spawnAgentCommandName];
+
 /** `GET /v1/commands` (any identity) and `POST /v1/commands` (admin). */
 export const commandsPath = "/v1/commands";
 
@@ -130,7 +142,7 @@ export const commandCallsPath = "/v1/commands/:name/calls";
 export const commandSecretPath = "/v1/commands/:name/secret";
 
 /**
- * The codes the command routes refuse with: a name in use (409), a name that is a human's (409), and a call to, or a
+ * The codes the command routes refuse with: a name in use, by a registered or a built-in command (409), a name that is a human's (409), and a call to, or a
  * secret rotation of, a command that doesn't exist (404).
  */
 export const commandErrorCodes = ["command_exists", "handler_not_agent", "command_not_found"] as const;
@@ -141,7 +153,7 @@ export const commandErrorCodes = ["command_exists", "handler_not_agent", "comman
  * @param added The command whose handler identity to make, and the human who adds it.
  * @returns The handler identity, which posts the command's replies.
  */
-export function handlerOf(added: { readonly command: Command; readonly owner: Owner }): AgentIdentity {
+export function handlerOf(added: { readonly command: RegisteredCommand; readonly owner: Owner }): AgentIdentity {
   const { command, owner } = added;
   return { admin: false, createdAt: command.createdAt, kind: "agent", name: command.handler, owner };
 }
