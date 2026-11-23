@@ -2,6 +2,9 @@ import type { AgentIdentity, IdentityName } from "../../../identities/index.ts";
 import { Array as Arr, Effect, Order, Predicate, Schema } from "effect";
 import type { Command, CommandName, CommandSecret } from "../../../commands/index.ts";
 import { isCommandName, isCommandSecret } from "../../../commands/index.ts";
+import { memoryCommandTokens, sqliteCommandTokens } from "./command-tokens.ts";
+import type { CommandTokensSection } from "./command-tokens.ts";
+import type { FindIdentity } from "./identity-row.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
@@ -18,7 +21,7 @@ interface StoredCommand {
 
 type AddCommandResult = "added" | "name_taken" | "handler_is_human";
 
-interface CommandsSection {
+interface CommandsSection extends CommandTokensSection {
   readonly addCommand: (stored: StoredCommand, handler: AgentIdentity) => Fails<AddCommandResult>;
   readonly listCommands: Effect.Effect<readonly Command[], StorageUnavailable>;
   readonly findCommand: (name: CommandName) => Fails<StoredCommand | undefined>;
@@ -31,9 +34,10 @@ const byName: Order.Order<StoredCommand> = Order.mapInput(Order.String, (stored:
 interface MemoryCommandsOptions {
   readonly state: MemoryState;
   readonly placeHandler: PlaceHandler;
+  readonly findIdentity: FindIdentity;
 }
 
-function memoryCommands({ state, placeHandler }: MemoryCommandsOptions): CommandsSection {
+function memoryCommands({ findIdentity, state, placeHandler }: MemoryCommandsOptions): CommandsSection {
   const commands = new Map<CommandName, StoredCommand>();
   function open<Value>(work: () => Value): Fails<Value> {
     return Effect.andThen(state.ensureOpen, Effect.sync(work));
@@ -49,6 +53,7 @@ function memoryCommands({ state, placeHandler }: MemoryCommandsOptions): Command
     return "added";
   }
   return {
+    ...memoryCommandTokens({ findIdentity, state }),
     addCommand: (stored, handler) => open(() => add(stored, handler)),
     findCommand: (name) => open(() => commands.get(name)),
     listCommands: Effect.suspend(() =>
@@ -139,6 +144,7 @@ function sqliteCommands(db: SqliteDatabase): CommandsSection {
     );
   }
   return {
+    ...sqliteCommandTokens(db),
     addCommand: (stored, handler) =>
       db.transaction(
         Effect.gen(function* addCommand() {

@@ -134,11 +134,16 @@ export function isToken(value: string): value is Token {
   return tokenPattern.test(value);
 }
 
-/** The codes bearer auth (401), the admin check (403), login (403 `human_only`) and identity admin refuse with. */
+/**
+ * The codes bearer auth (401), the admin check (403), login (403 `human_only`) and identity admin refuse with. A
+ * command token past its 24 h is 401 `token_expired`; used outside its call's thread it is 403 `outside_command_thread`.
+ */
 export const identityErrorCodes = [
   "token_missing",
   "token_unknown",
   "token_revoked",
+  "token_expired",
+  "outside_command_thread",
   "admin_only",
   "human_only",
   "identity_exists",

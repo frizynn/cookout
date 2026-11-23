@@ -438,3 +438,16 @@ git branch -D changeset-dry-run
 `pnpm changeset status --verbose` lists only `@ai-hero/cookout -> 0.1.0`, from the dry-run changeset. `pnpm run version` consumes the changeset, bumps `package.json` to 0.1.0, and writes a CHANGELOG.md with a `## 0.1.0` section under `### Minor Changes`. `git status --short` shows only `package.json` and the new CHANGELOG.md, so `packages/e2e` and `packages/handler-example` stay at 0.0.0. With no changeset, `pnpm changeset status` exits 1 ("Some packages have been changed but no changesets were found"), which is expected during the v1 build.
 
 The release workflow, `.github/workflows/release.yml`, passes `actionlint` (for example `docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:latest`). Its publish step is guarded by `if: false`.
+
+## Reply as the handler with the command token
+
+Each delivery's `token` is a command token: it posts as the command's handler identity (an agent named after the command), only replies in that call's thread, for 24 h after the call. After "Deliver a call to the example handler", point a command at any receiver that prints the body it gets, call it, and post with the token it was sent (`TOKEN` and `THREAD` from the printed body):
+
+```sh
+curl -s -X POST "$COOKOUT_URL/v1/messages" -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' -d "{\"channel\":\"ships\",\"replyTo\":$THREAD,\"text\":\"shipped main\"}"
+curl -s -X POST "$COOKOUT_URL/v1/messages" -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' -d '{"channel":"ships","text":"top-level"}'
+curl -s "$COOKOUT_URL/v1/channels" -H "Authorization: Bearer $TOKEN"
+env $(cat /tmp/cookout-dev.env) node app/main.ts inbox
+```
+
+The reply is 201 with `author.name` the command's name. The top-level message and every other route get 403 `outside_command_thread`, as does a reply in another thread or channel. The caller started the thread, so follows it: their inbox lists the reply with the reason `followed-thread`. After 24 h the token gets 401 `token_expired` (the SDK test `command-token.test.ts` moves the test clock to show it).

@@ -8,6 +8,7 @@ interface MisplacedReply {
 }
 
 const BAD_REQUEST = 400;
+const FORBIDDEN = 403;
 const NOT_FOUND = 404;
 
 function messageNotFound(asked: string): Refusal {
@@ -22,4 +23,10 @@ function replyInOtherChannel({ channel, replyTo }: MisplacedReply): Refusal {
   };
 }
 
-export { messageNotFound, replyInOtherChannel };
+const replyOutsideCommandThread: Refusal = {
+  code: "outside_command_thread",
+  message: "A command token can only reply in its call's thread, in that thread's channel.",
+  status: FORBIDDEN,
+};
+
+export { messageNotFound, replyInOtherChannel, replyOutsideCommandThread };

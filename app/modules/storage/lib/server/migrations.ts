@@ -88,6 +88,12 @@ const migrations: readonly string[] = [
      secret TEXT NOT NULL,
      created_at TEXT NOT NULL
    ) STRICT;`,
+  `CREATE TABLE command_tokens (
+     hash TEXT PRIMARY KEY,
+     handler_name TEXT NOT NULL,
+     thread_id INTEGER NOT NULL REFERENCES messages (id),
+     expires_at TEXT NOT NULL
+   ) STRICT, WITHOUT ROWID;`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

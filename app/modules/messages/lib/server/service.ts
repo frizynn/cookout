@@ -10,7 +10,7 @@ import type {
 } from "../../index.ts";
 import type { NewMessage, StorageUnavailable } from "../../../storage/server.ts";
 import { mentionPattern, pageSize } from "../../index.ts";
-import { messageNotFound, replyInOtherChannel } from "./refusals.ts";
+import { messageNotFound, replyInOtherChannel, replyOutsideCommandThread } from "./refusals.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { Identity } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
@@ -96,7 +96,22 @@ function pageRequest({ before, limit = pageSize.default }: PageQuery): PageReque
   return { before, limit };
 }
 
+function inThread(found: ThreadResponse | undefined, threadId: MessageId, channel: ChannelName): boolean {
+  return Predicate.isNotUndefined(found) && found.parent.id === threadId && found.parent.channel === channel;
+}
+
 function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
+  function post(author: Identity, message: PostMessage): Fails<MessageResponse> {
+    return Effect.gen(function* postMessage() {
+      const now = yield* DateTime.now;
+      const result = yield* storage.appendMessage(newMessage(author, message, isoTimeOf(now)));
+      if (result.status === "appended") {
+        yield* hub.publish(result.message);
+        return { message: result.message, unknownMentions: unknownMentionsIn(result.message) };
+      }
+      return yield* Effect.fail(refusalOf(result.status, message));
+    });
+  }
   return {
     page: (channel, query) =>
       Effect.gen(function* pageChannel() {
@@ -109,15 +124,18 @@ function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
         }
         return page;
       }),
-    post: (author, message) =>
-      Effect.gen(function* postMessage() {
-        const now = yield* DateTime.now;
-        const result = yield* storage.appendMessage(newMessage(author, message, isoTimeOf(now)));
-        if (result.status === "appended") {
-          yield* hub.publish(result.message);
-          return { message: result.message, unknownMentions: unknownMentionsIn(result.message) };
+    post,
+    postInThread: (author, message, threadId) =>
+      Effect.gen(function* postInCommandThread() {
+        const { channel, replyTo } = message;
+        if (Predicate.isUndefined(replyTo)) {
+          return yield* Effect.fail(replyOutsideCommandThread);
         }
-        return yield* Effect.fail(refusalOf(result.status, message));
+        const found = yield* storage.getThread(replyTo);
+        if (!inThread(found, threadId, channel)) {
+          return yield* Effect.fail(replyOutsideCommandThread);
+        }
+        return yield* post(author, message);
       }),
     posted: hub.subscribe,
     thread: (id) =>
@@ -133,6 +151,7 @@ function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
 
 export interface MessagesService {
   readonly post: (author: Identity, message: PostMessage) => Fails<MessageResponse>;
+  readonly postInThread: (author: Identity, message: PostMessage, threadId: MessageId) => Fails<MessageResponse>;
   readonly thread: (id: MessageId) => Fails<ThreadResponse>;
   readonly page: (channel: string, query: PageQuery) => Fails<ListMessagesResponse>;
   readonly posted: Effect.Effect<PubSub.Subscription<Message>, never, Scope.Scope>;

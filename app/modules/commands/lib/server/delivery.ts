@@ -1,11 +1,14 @@
 import type { Call, FailureReplyNeeds } from "./failure-reply.ts";
 import type { CallId, CommandName } from "../../index.ts";
-import { Config, Context, Duration, Effect, FiberSet, Layer, Schedule, Schema } from "effect";
+import { Config, Context, DateTime, Duration, Effect, FiberSet, Layer, Schedule, Schema } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { webhookRetryDelaySeconds, webhookRetryFactor, webhookTimeoutSeconds } from "../../../config/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
+import { Storage } from "../../../storage/server.ts";
+import type { StorageUnavailable } from "../../../storage/server.ts";
 import type { Token } from "../../../identities/index.ts";
 import { failureReply } from "./failure-reply.ts";
+import { isoTimeOf } from "../../../time/server.ts";
 
 interface WebhookBody {
   readonly command: CommandName;
@@ -16,11 +19,12 @@ interface WebhookBody {
 }
 
 interface DeliveriesService {
-  readonly deliver: (call: Call) => Effect.Effect<void, never, FailureReplyNeeds>;
+  readonly deliver: (call: Call) => Effect.Effect<void, StorageUnavailable, FailureReplyNeeds>;
 }
 
 const SIGNATURE_HEADER = "cookout-signature";
 const RETRIES = 5;
+const COMMAND_TOKEN_LIFETIME: Duration.Input = "24 hours";
 const toJson = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown));
 
 const backoff: Effect.Effect<Schedule.Schedule<Duration.Duration>, Config.ConfigError> = Effect.gen(
@@ -39,12 +43,12 @@ function webhookBody(call: Call, token: Token, callId: CallId): WebhookBody {
   return { callId, command: call.stored.command.name, data: call.data, threadId: call.threadId, token };
 }
 
-const deliveriesLayer: Layer.Layer<Deliveries, Config.ConfigError, Secrets> = Layer.effect(
+const deliveriesLayer: Layer.Layer<Deliveries, Config.ConfigError, Secrets | Storage> = Layer.effect(
   Deliveries,
   Effect.gen(function* startDeliveries() {
     const timeout = yield* Config.map(webhookTimeoutSeconds, Duration.seconds);
     const schedule = yield* backoff;
-    const secrets = yield* Secrets;
+    const { secrets, storage } = yield* Effect.all({ secrets: Secrets, storage: Storage }, { concurrency: 1 });
     const anyStatus = yield* HttpClient.HttpClient;
     const client = HttpClient.filterStatusOk(anyStatus);
     const running = yield* FiberSet.make();
@@ -71,10 +75,17 @@ const deliveriesLayer: Layer.Layer<Deliveries, Config.ConfigError, Secrets> = La
       );
     }
 
-    function deliver(call: Call): Effect.Effect<void, never, FailureReplyNeeds> {
+    function deliver(call: Call): Effect.Effect<void, StorageUnavailable, FailureReplyNeeds> {
       return Effect.gen(function* startDelivery() {
         const needs = yield* Effect.context<FailureReplyNeeds>();
         const token = yield* secrets.newCommandToken;
+        const now = yield* DateTime.now;
+        yield* storage.addCommandToken({
+          expiresAt: isoTimeOf(DateTime.addDuration(now, COMMAND_TOKEN_LIFETIME)),
+          handler: call.stored.command.handler,
+          hash: yield* secrets.hashToken(token),
+          threadId: call.threadId,
+        });
         const callId = yield* secrets.newCallId;
         yield* FiberSet.run(running, Effect.provideContext(send(call, token, callId), needs));
       });
