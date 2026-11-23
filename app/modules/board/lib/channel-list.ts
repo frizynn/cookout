@@ -15,12 +15,18 @@ interface ChannelList {
   readonly subscribe: (listener: () => void) => () => void;
   readonly snapshot: () => Snapshot;
   readonly receive: (message: Message) => void;
+  readonly add: (channel: Channel) => void;
 }
 
 type ListClient = Pick<CookoutClient, "listChannels">;
 
 function isMissing(state: ChannelsState, message: Message): boolean {
   return state.status === "loaded" && !state.channels.some((channel) => channel.name === message.channel);
+}
+
+function withChannel(channels: readonly Channel[], added: Channel): readonly Channel[] {
+  const others = channels.filter((channel) => channel.name !== added.name);
+  return [...others, added].toSorted((first, second) => first.name.localeCompare(second.name));
 }
 
 function createChannelList(client: ListClient): ChannelList {
@@ -50,6 +56,11 @@ function createChannelList(client: ListClient): ChannelList {
   }
 
   return {
+    add: (channel) => {
+      if (current.channels.status === "loaded") {
+        publish({ channels: withChannel(current.channels.channels, channel), status: "loaded" });
+      }
+    },
     receive: (message) => {
       if (isMissing(current.channels, message)) {
         loading = reloadAfter(loading);

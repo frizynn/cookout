@@ -1,4 +1,4 @@
-import { Caller, issueToken, requireAdmin } from "./auth.ts";
+import { Caller, announced, issueToken, requireAdmin } from "./auth.ts";
 import type { DeactivateIdentityResponse, Identity, IdentityName, Owner } from "../../index.ts";
 import { DeactivateIdentityResponseSchema, IdentityWithTokenResponseSchema } from "./wire.ts";
 import type {
@@ -10,6 +10,7 @@ import { Effect, Predicate } from "effect";
 import { identityDeactivatePath, identityReactivatePath } from "../../index.ts";
 import { identityNotFound, nameParam } from "./routes.ts";
 import { HttpServerResponse } from "effect/http";
+import type { IdentityChanges } from "./auth.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
 import type { Secrets } from "../../../secrets/server.ts";
@@ -90,7 +91,22 @@ function reactivatedOrRefused(name: IdentityName, result: ReactivateIdentityResu
   return Effect.fail(identityNotFound(name));
 }
 
-const deactivateRoute: Route<Caller | Storage> = {
+function announceDeactivated(
+  answer: DeactivateIdentityResponse,
+): Effect.Effect<void, StorageUnavailable, Storage | IdentityChanges> {
+  return Effect.gen(function* announceEach() {
+    const storage = yield* Storage;
+    yield* announced(answer.identity);
+    for (const agent of answer.agents) {
+      const found = yield* storage.findIdentityByName(agent);
+      if (Predicate.isNotUndefined(found)) {
+        yield* announced(found);
+      }
+    }
+  });
+}
+
+const deactivateRoute: Route<Caller | Storage | IdentityChanges> = {
   handle: (params) =>
     Effect.gen(function* deactivateIdentityRoute() {
       const name = yield* nameParam(params);
@@ -99,6 +115,7 @@ const deactivateRoute: Route<Caller | Storage> = {
       const answer = yield* Effect.flatMap(storage.deactivateIdentity(name), (result) =>
         deactivatedOrRefused(name, result),
       );
+      yield* announceDeactivated(answer);
       return yield* HttpServerResponse.schemaJson(DeactivateIdentityResponseSchema)(answer);
     }),
   method: "POST",
@@ -116,7 +133,7 @@ function requireMayReactivate(name: IdentityName): Effect.Effect<void, Refusal |
   });
 }
 
-const reactivateRoute: Route<Caller | Storage | Secrets> = {
+const reactivateRoute: Route<Caller | Storage | Secrets | IdentityChanges> = {
   handle: (params) =>
     Effect.gen(function* reactivateIdentityRoute() {
       const name = yield* nameParam(params);
@@ -125,11 +142,14 @@ const reactivateRoute: Route<Caller | Storage | Secrets> = {
       const storage = yield* Storage;
       const identity = yield* Effect.flatMap(storage.reactivateIdentity(name, hash), (result) =>
         reactivatedOrRefused(name, result),
-      );
+      ).pipe(Effect.flatMap(announced));
       return yield* HttpServerResponse.schemaJson(IdentityWithTokenResponseSchema)({ identity, token });
     }),
   method: "POST",
   path: identityReactivatePath,
 };
 
-export const deactivationRoutes: readonly Route<Caller | Storage | Secrets>[] = [deactivateRoute, reactivateRoute];
+export const deactivationRoutes: readonly Route<Caller | Storage | Secrets | IdentityChanges>[] = [
+  deactivateRoute,
+  reactivateRoute,
+];

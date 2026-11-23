@@ -9,6 +9,7 @@
  */
 import type { InboxItem, ReadPosition } from "../inbox/index.ts";
 import type { Message, MessageId } from "../messages/index.ts";
+import type { Channel } from "../channels/index.ts";
 import type { Identity } from "../identities/index.ts";
 
 /** A new item in the caller's inbox, sent the moment another identity posts it. */
@@ -30,12 +31,19 @@ export interface MessageEvent {
 }
 
 /**
- * An identity whose display name has just changed, as the server now shows it, sent only on the all-channels feed so
- * every open web UI shows the new display name at once. It has no SSE `id`.
+ * An identity just created or changed (its display name, admin flag or owner, deactivating or reactivating it), as
+ * the server now shows it, sent only on the all-channels feed so every open web UI shows it at once. Deactivating a
+ * human sends one for it and one for each of its agents. It has no SSE `id`.
  */
 export interface IdentityEvent {
   readonly type: "identity";
   readonly identity: Identity;
+}
+
+/** A channel just created, sent only on the all-channels feed so every open web UI lists it at once. It has no SSE `id`. */
+export interface ChannelEvent {
+  readonly type: "channel";
+  readonly channel: Channel;
 }
 
 /**
@@ -49,7 +57,7 @@ export interface ConnectedEvent {
 }
 
 /** Any event the stream sends. */
-export type CookoutEvent = InboxItemEvent | ReadPositionEvent | MessageEvent | IdentityEvent;
+export type CookoutEvent = InboxItemEvent | ReadPositionEvent | MessageEvent | IdentityEvent | ChannelEvent;
 
 /**
  * `GET /v1/events`: the caller's Server-Sent Events stream, one per connection. With `allChannelsQuery` as its query

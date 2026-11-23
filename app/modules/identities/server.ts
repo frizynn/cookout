@@ -16,7 +16,7 @@ import {
   requireCommandRoute,
 } from "./lib/server/auth.ts";
 import { Context, Effect, Layer, Option, Schema } from "effect";
-import type { Credentials, IssuedToken, Principal } from "./lib/server/auth.ts";
+import type { Credentials, IdentityChanges, IssuedToken, Principal } from "./lib/server/auth.ts";
 import type { Gate, Route } from "../http/server.ts";
 import type { IdentityName, Token } from "./index.ts";
 import { humanAdmin, identityAdminRoutes, loginRoutes, openLoginRoutes, responseSchemas } from "./lib/server/routes.ts";
@@ -149,7 +149,7 @@ export function adminTokenSet(
  * UI in and out, create, list and rotate, and making and removing admins. They need `Caller`, which
  * `requireToken` provides.
  */
-export const identityRoutes: readonly Route<Caller | Storage | Secrets>[] = [
+export const identityRoutes: readonly Route<Caller | Storage | Secrets | IdentityChanges>[] = [
   ...callerRoutes,
   ...identityAdminRoutes,
   ...loginRoutes,
@@ -194,10 +194,17 @@ export { requireOwnerOrAdmin } from "./lib/server/auth.ts";
 export { identityNotFound, nameParam } from "./lib/server/routes.ts";
 
 /**
- * `PUT /v1/identities/:name/display-name` and the `DisplayNames` service behind it, whose `changed` hub the live
- * stream sends on as `identity` events. The route needs `Caller`, which `requireToken` provides.
+ * `PUT /v1/identities/:name/display-name` and the layer of the service behind it. The route needs `Caller`, which
+ * `requireToken` provides.
  */
-export { DisplayNames, displayNameRoutes, displayNamesLayer } from "./lib/server/display-names.ts";
+export { displayNameRoutes, displayNamesLayer } from "./lib/server/display-names.ts";
+
+/**
+ * The `IdentityChanges` hub: every route that creates an identity or changes one (its display name, admin flag,
+ * owner, deactivating and reactivating) publishes the identity as it now is, and the live stream sends each on as an
+ * `identity` event.
+ */
+export { IdentityChanges, identityChangesLayer } from "./lib/server/changes.ts";
 
 /** The Schema of the identity as the server shows it, for the live stream's `identity` event. */
 export { IdentitySchema } from "./lib/server/wire.ts";

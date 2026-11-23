@@ -1,15 +1,15 @@
-import type { DisplayNames } from "../../../identities/server.ts";
+import { allChannels, channels } from "./all-channels.ts";
+import type { AllChannelsNeeds } from "./all-channels.ts";
 import type { EventSource } from "./source.ts";
+import type { IdentityChanges } from "../../../identities/server.ts";
 import type { Inbox } from "../../../inbox/server.ts";
-import type { Messages } from "../../../messages/server.ts";
-import { allChannels } from "./all-channels.ts";
 import { connected } from "./connected.ts";
 import { heartbeat } from "./source.ts";
 import { identities } from "./identities.ts";
 import { inboxItems } from "./inbox-items.ts";
 import { readPositions } from "./read-positions.ts";
 
-type SourceNeeds = Inbox | Messages | DisplayNames;
+type SourceNeeds = Inbox | AllChannelsNeeds | IdentityChanges;
 
 const sources: readonly EventSource<SourceNeeds>[] = [
   connected,
@@ -17,6 +17,7 @@ const sources: readonly EventSource<SourceNeeds>[] = [
   readPositions,
   allChannels,
   identities,
+  channels,
   heartbeat,
 ];
 

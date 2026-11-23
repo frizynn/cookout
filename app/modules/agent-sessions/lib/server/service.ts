@@ -1,17 +1,12 @@
 import type { AgentAt, StorageUnavailable } from "../../../storage/server.ts";
 import type { AgentSessionResponse, ListAgentSessionsResponse, RevokeAgentSessionResponse } from "../../index.ts";
-import { Context, DateTime, Duration, Effect, Layer, Option } from "effect";
+import { Context, DateTime, Duration, Effect, Option } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import type { Join, On } from "./join.ts";
 import { agentSessionExpired, agentSessionRevoked } from "../../index.ts";
-import type { Config } from "effect";
 import type { Refusal } from "../../../http/index.ts";
-import { Secrets } from "../../../secrets/server.ts";
-import { Storage } from "../../../storage/server.ts";
-import { idleSecondsOf } from "./idle-expiry.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 import { joiner } from "./join.ts";
-import { maxIdleExpiry } from "../../../config/server.ts";
 
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
 
@@ -91,15 +86,4 @@ function agentSessionsOn(on: On): AgentSessionsService {
   return { join: joiner(on), leave: on.storage.revokeAgentSession, untilEnded: watcher(on), ...ownerViews(on) };
 }
 
-const agentSessionsLayer: Layer.Layer<AgentSessions, Config.ConfigError, Storage | Secrets> = Layer.effect(
-  AgentSessions,
-  Effect.gen(function* agentSessionsOnStorage() {
-    const maxIdle = yield* maxIdleExpiry;
-    const storage = yield* Storage;
-    const secrets = yield* Secrets;
-    const ceilingSeconds = idleSecondsOf(maxIdle);
-    return agentSessionsOn({ ceilingSeconds, maxIdle, secrets, storage });
-  }),
-);
-
-export { AgentSessions, agentSessionsLayer };
+export { AgentSessions, agentSessionsOn };

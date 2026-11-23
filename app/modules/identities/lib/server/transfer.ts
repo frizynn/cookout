@@ -1,16 +1,16 @@
+import type { Caller, IdentityChanges } from "./auth.ts";
 import { Effect, Schema } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import type { Identity, IdentityName } from "../../index.ts";
 import { IdentityResponseSchema, OwnerSchema } from "./wire.ts";
+import { announced, requireAdmin } from "./auth.ts";
 import { identityNotFound, nameParam } from "./routes.ts";
-import type { Caller } from "./auth.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import type { TransferAgentResult } from "../../../storage/server.ts";
 import { identityOwnerPath } from "../../index.ts";
 import { ownerNotHuman } from "./create.ts";
-import { requireAdmin } from "./auth.ts";
 
 const BAD_REQUEST = 400;
 const FORBIDDEN = 403;
@@ -55,7 +55,7 @@ function transferredIdentity(transfer: Transfer, result: TransferAgentResult): E
   return Effect.fail(transferRefusal(transfer, result.status));
 }
 
-const transferRoute: Route<Caller | Storage> = {
+const transferRoute: Route<Caller | Storage | IdentityChanges> = {
   handle: (params) =>
     Effect.gen(function* transferAgentRoute() {
       yield* requireAdmin;
@@ -63,11 +63,11 @@ const transferRoute: Route<Caller | Storage> = {
       const { owner } = yield* HttpServerRequest.schemaBodyJson(TransferAgentRequestSchema);
       const storage = yield* Storage;
       const result = yield* storage.transferAgent(name, owner);
-      const identity = yield* transferredIdentity({ name, owner }, result);
+      const identity = yield* Effect.flatMap(transferredIdentity({ name, owner }, result), announced);
       return yield* HttpServerResponse.schemaJson(IdentityResponseSchema)({ identity });
     }),
   method: "PUT",
   path: identityOwnerPath,
 };
 
-export const transferRoutes: readonly Route<Caller | Storage>[] = [transferRoute];
+export const transferRoutes: readonly Route<Caller | Storage | IdentityChanges>[] = [transferRoute];

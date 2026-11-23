@@ -460,12 +460,18 @@ interface MessageEvent {
   readonly message: Message;
 }
 /**
- * An identity whose display name has just changed, as the server now shows it, sent only on the all-channels feed so
- * every open web UI shows the new display name at once. It has no SSE `id`.
+ * An identity just created or changed (its display name, admin flag or owner, deactivating or reactivating it), as
+ * the server now shows it, sent only on the all-channels feed so every open web UI shows it at once. Deactivating a
+ * human sends one for it and one for each of its agents. It has no SSE `id`.
  */
 interface IdentityEvent {
   readonly type: "identity";
   readonly identity: Identity;
+}
+/** A channel just created, sent only on the all-channels feed so every open web UI lists it at once. It has no SSE `id`. */
+interface ChannelEvent {
+  readonly type: "channel";
+  readonly channel: Channel;
 }
 /**
  * The stream's first word on connecting, before any item: the newest message ID on the board at that moment (null
@@ -477,7 +483,7 @@ interface ConnectedEvent {
   readonly latestMessageId: MessageId | null;
 }
 /** Any event the stream sends. */
-type CookoutEvent = InboxItemEvent | ReadPositionEvent | MessageEvent | IdentityEvent;
+type CookoutEvent = InboxItemEvent | ReadPositionEvent | MessageEvent | IdentityEvent | ChannelEvent;
 interface EventStream extends AsyncIterable<CookoutEvent> {
   readonly close: () => Promise<void>;
 }
@@ -749,5 +755,5 @@ export type CookoutClient = LoginCalls & {
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentSessionLiveDetails, type AgentSessionResponse, type AgentTool, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DeactivateIdentityResponse, type DisplayName, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityEvent, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListedAgentSession, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type ReadPositionsResponse, type Refusal, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type defaultIdleExpiry, type identityAgentSessionPath, type idleExpiryPattern, refusalOf };
+export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentSessionLiveDetails, type AgentSessionResponse, type AgentTool, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelEvent, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DeactivateIdentityResponse, type DisplayName, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityEvent, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListedAgentSession, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type ReadPositionsResponse, type Refusal, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type defaultIdleExpiry, type identityAgentSessionPath, type idleExpiryPattern, refusalOf };
 ```

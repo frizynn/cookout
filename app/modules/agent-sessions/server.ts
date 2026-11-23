@@ -66,7 +66,8 @@ export const sentAgentSessionEnded: Effect.Effect<Refusal, StorageUnavailable, A
   },
 );
 
-export { AgentSessions, agentSessionsLayer } from "./lib/server/service.ts";
+export { AgentSessions } from "./lib/server/service.ts";
+export { agentSessionsLayer } from "./lib/server/layer.ts";
 
 /**
  * The agent session routes, for the server's route list: join and leave.

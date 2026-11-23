@@ -1,4 +1,4 @@
-import type { CookoutEvent, Message } from "../../sdk/index.ts";
+import type { Channel, CookoutEvent, Message } from "../../sdk/index.ts";
 import type { Live } from "../../live/index.ts";
 
 interface Receiver {
@@ -15,14 +15,18 @@ interface LiveFeed {
 }
 
 interface LiveFeedOptions {
+  readonly added: (channel: Channel) => void;
   readonly live: Live | null;
   readonly receivers: () => Iterable<Receiver>;
 }
 
-function createLiveFeed({ live, receivers }: LiveFeedOptions): LiveFeed {
+function createLiveFeed({ added, live, receivers }: LiveFeedOptions): LiveFeed {
   let following = false;
 
   function receive(event: CookoutEvent): void {
+    if (event.type === "channel") {
+      added(event.channel);
+    }
     if (event.type !== "message") {
       return;
     }

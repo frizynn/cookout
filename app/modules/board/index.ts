@@ -26,8 +26,8 @@
  * its stores is first read, and each new message on it joins the loaded
  * channel or thread it belongs to (a reply also counts in its top-level
  * message's replies), so messages from others appear without a reload; a message
- * in a channel the loaded list doesn't have reloads the list, so a channel
- * created since it loaded joins it. `subscriptions` is the names of the channels
+ * in a channel the loaded list doesn't have reloads the list, and each channel
+ * created elsewhere joins the loaded list at once, as the stream announces it. `subscriptions` is the names of the channels
  * the logged-in identity subscribes to, sorted, loaded when its first reader
  * subscribes; `setSubscribed` subscribes to a channel or unsubscribes from it,
  * keeping the refusal, with the channel, if the server refuses. A refusal
@@ -98,6 +98,7 @@ export function createBoard(options: BoardOptions): Board {
   const threads = new Map<string, LiveThreadMessages>();
   const list = createChannelList(client);
   const { follow, followed } = createLiveFeed({
+    added: list.add,
     live: options.live ?? null,
     receivers: () => [list, ...channels.values(), ...threads.values()],
   });
