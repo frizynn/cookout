@@ -10,6 +10,7 @@ import type { CookoutClient } from "../../../sdk/index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { LeaseStateNeeds } from "./lease-state.ts";
 import { callServer } from "./adapters/sdk.ts";
+import { helpCommand } from "./help-monitor.ts";
 import { isMessageId } from "../../../messages/index.ts";
 
 function answered<Value>(
@@ -240,4 +241,5 @@ export const verbCommands = [
   unfollowCommand,
   subscribeCommand,
   unsubscribeCommand,
+  helpCommand,
 ] as const;
