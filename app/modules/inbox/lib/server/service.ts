@@ -29,6 +29,7 @@ type SubscriptionChange = (identity: IdentityName, channel: ChannelName) => Effe
 interface InboxService {
   readonly inbox: (caller: Identity) => Fails<InboxResponse>;
   readonly itemFor: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
+  readonly itemsAfter: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
   readonly ack: (caller: Identity, id: MessageId) => Fails<AckResponse>;
   readonly follow: (caller: Identity, asked: string) => Fails<FollowResponse>;
   readonly unfollow: (caller: Identity, asked: string) => Fails<FollowResponse>;
@@ -83,12 +84,15 @@ function subscription(change: SubscriptionChange, subscribed: boolean) {
     });
 }
 
+function withChannels(storage: Storage["Service"], items: readonly StoredItem[]): Fails<readonly InboxItem[]> {
+  return Effect.map(storage.listChannels(), (channels) => Arr.flatMap(items, (item) => withChannel(channels, item)));
+}
+
 function inboxOf(storage: Storage["Service"], caller: Identity): Fails<InboxResponse> {
-  return Effect.gen(function* readInbox() {
-    const items = yield* storage.listInbox(caller.name);
-    const channels = yield* storage.listChannels();
-    return { items: Arr.flatMap(items, (item) => withChannel(channels, item)) };
-  });
+  return storage.listInbox(caller.name).pipe(
+    Effect.flatMap((stored) => withChannels(storage, stored)),
+    Effect.map((items) => ({ items })),
+  );
 }
 
 function inboxOn(storage: Storage["Service"]): InboxService {
@@ -103,6 +107,8 @@ function inboxOn(storage: Storage["Service"]): InboxService {
     inbox: (caller) => inboxOf(storage, caller),
     itemFor: (caller, id) =>
       Effect.map(inboxOf(storage, caller), ({ items }) => Arr.filter(items, (item) => item.message.id === id)),
+    itemsAfter: (caller, id) =>
+      Effect.flatMap(storage.listInboxAfter(caller.name, id), (stored) => withChannels(storage, stored)),
     subscribe: subscription(storage.subscribeChannel, true),
     unfollow: following(storage.unfollowThread, false),
     unsubscribe: subscription(storage.unsubscribeChannel, false),

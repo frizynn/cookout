@@ -1,23 +1,37 @@
-import { Effect, Stream } from "effect";
+import { Array as Arr, Effect, Option, Stream } from "effect";
+import { LastEventId, sseEvent } from "./source.ts";
 import type { Connected } from "./source.ts";
 import type { Identity } from "../../../identities/index.ts";
 import { Inbox } from "../../../inbox/server.ts";
 import { InboxItemEventSchema } from "./wire.ts";
+import type { MessageId } from "../../../messages/index.ts";
 import { Messages } from "../../../messages/server.ts";
-import { sseEvent } from "./source.ts";
 
 const inboxItemEvent = sseEvent(InboxItemEventSchema);
 
-function inboxItems(caller: Identity): Connected<Inbox | Messages> {
+function inboxItems(caller: Identity): Connected<Inbox | Messages | LastEventId> {
   return Effect.gen(function* subscribeToInboxItems() {
     const messages = yield* Messages;
     const inbox = yield* Inbox;
+    const lastEventId = yield* LastEventId;
     const posted = yield* messages.posted;
-    return Stream.fromSubscription(posted).pipe(
+    const live = Stream.fromSubscription(posted).pipe(
       Stream.mapEffect(({ id }) => inbox.itemFor(caller, id)),
       Stream.flattenIterable,
-      Stream.mapEffect((item) => inboxItemEvent({ item, type: "inbox-item" }, item.message.id)),
     );
+    function missedThenLive(after: MessageId): typeof live {
+      return Stream.unwrap(
+        Effect.map(inbox.itemsAfter(caller, after), (missed) => {
+          const seen = Option.match(Arr.last(missed), { onNone: () => after, onSome: (item) => item.message.id });
+          return Stream.concat(
+            Stream.fromIterable(missed),
+            Stream.filter(live, (item) => item.message.id > seen),
+          );
+        }),
+      );
+    }
+    const items = Option.match(lastEventId, { onNone: () => live, onSome: missedThenLive });
+    return Stream.mapEffect(items, (item) => inboxItemEvent({ item, type: "inbox-item" }, item.message.id));
   });
 }
 

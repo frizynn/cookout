@@ -13,6 +13,7 @@ import type {
   IdentityWithTokenResponse,
   ListIdentitiesResponse,
 } from "../identities/index.ts";
+import type { EventStream, WatchOptions } from "./lib/events.ts";
 import type { JoinRequest, LeaseId, LeaseResponse, LeaveResponse } from "./lib/leases.ts";
 import type {
   ListMessagesQuery,
@@ -33,7 +34,6 @@ import {
   isListChannelsResponse,
   isListIdentitiesResponse,
 } from "./lib/generated/validators.js";
-import type { EventStream } from "./lib/events.ts";
 import type { HealthResponse } from "../http/index.ts";
 import { eventCalls } from "./lib/events.ts";
 import { healthPath } from "../http/index.ts";
@@ -95,7 +95,7 @@ export type {
   SubscriptionResponse,
 } from "../inbox/index.ts";
 export type { CookoutEvent, InboxItemEvent } from "../events/index.ts";
-export type { EventStream } from "./lib/events.ts";
+export type { EventStream, WatchOptions } from "./lib/events.ts";
 export { CookoutError, type CookoutErrorCode, type UnknownErrorCode } from "./lib/errors.ts";
 
 export type CookoutClientOptions = {
@@ -179,9 +179,11 @@ export type CookoutClient = {
    * `GET /v1/events`: opens one Server-Sent Events stream, resolving once the server has accepted it. Iterate it for
    * each new inbox item (`inbox-item`) the moment another identity posts it; the caller's own posts never arrive.
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
-   * a newer server, is skipped. `close` drops the connection.
+   * a newer server, is skipped. `close` drops the connection. To pick up after a dropped connection, pass the last
+   * message ID seen as `lastEventId`: the stream first replays the inbox items after it, then goes on live. The
+   * server sends a heartbeat every 15 s, which `onHeartbeat` hears while the stream is being iterated.
    */
-  readonly watch: () => Promise<EventStream>;
+  readonly watch: (options?: WatchOptions) => Promise<EventStream>;
 };
 
 /**
