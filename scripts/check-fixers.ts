@@ -1,7 +1,7 @@
+import type { Diagnostic, Outcome } from "./lib/tools.ts";
 import { cpSync, readdirSync, rmSync } from "node:fs";
 import { fail, tool, unwrap } from "./lib/tools.ts";
 import { lint, lintFixed } from "./lib/fix-until-stable.ts";
-import type { Diagnostic } from "./lib/tools.ts";
 import path from "node:path";
 
 const SCRIPT = "check-fixers";
@@ -31,6 +31,15 @@ function total(counts: ReadonlyMap<string, number>): number {
   return [...counts.values()].reduce((sum, count) => sum + count, NONE);
 }
 
+async function fixThenSuggest(): Promise<Outcome<readonly Diagnostic[]>> {
+  const fixedOnce = await lint(["--fix", ...fix]);
+  if (!fixedOnce.ok) {
+    return fixedOnce;
+  }
+  const suggested = await lint([...suggest, TREE]);
+  return suggested;
+}
+
 function removeRun(): void {
   rmSync(RUN, { force: true, recursive: true });
 }
@@ -43,7 +52,7 @@ const paths = readdirSync(TREE, { encoding: "utf8", recursive: true })
   .filter((name) => SOURCE.test(name))
   .map((name) => path.join(TREE, name));
 
-const [found, firstFix] = await Promise.all([lint(pristine), lint(["--fix", ...fix])]);
+const [found, firstFix] = await Promise.all([lint(pristine), fixThenSuggest()]);
 unwrap(SCRIPT, firstFix);
 const before = tally(unwrap(SCRIPT, found), FIXTURE);
 const fixed = await lintFixed({ check, fix, passesLeft: MAX_FIX_PASSES - ONE, paths, suggest });
