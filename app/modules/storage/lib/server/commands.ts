@@ -20,7 +20,7 @@ type AddCommandResult = "added" | "name_taken" | "handler_is_human";
 
 interface CommandsSection {
   readonly addCommand: (stored: StoredCommand, handler: AgentIdentity) => Fails<AddCommandResult>;
-  readonly listCommands: Fails<readonly Command[]>;
+  readonly listCommands: Effect.Effect<readonly Command[], StorageUnavailable>;
   readonly findCommand: (name: CommandName) => Fails<StoredCommand | undefined>;
 }
 
@@ -169,11 +169,4 @@ function sqliteCommands(db: SqliteDatabase): CommandsSection {
   };
 }
 
-export {
-  type AddCommandResult,
-  type CommandsSection,
-  type PlaceHandler,
-  type StoredCommand,
-  memoryCommands,
-  sqliteCommands,
-};
+export { type CommandsSection, type PlaceHandler, type StoredCommand, memoryCommands, sqliteCommands };
