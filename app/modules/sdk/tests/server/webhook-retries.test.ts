@@ -14,6 +14,7 @@ const THREE_CALLS = 3;
 const SIX_CALLS = 6;
 const UNAVAILABLE = 503;
 const OK = 200;
+const SEE_OTHER = 303;
 const schema = { properties: { branch: { type: "string" } }, required: ["branch"], type: "object" };
 const patientCookout = testCookout({ webhookTimeoutSeconds: 86_400 });
 
@@ -53,6 +54,21 @@ it.effect("a handler that fails twice is retried with the same call ID and then 
     expect(Arr.map(calls, ({ status }) => status)).toStrictEqual([UNAVAILABLE, UNAVAILABLE, OK]);
     expect(Arr.map(calls, (call) => call.body)).toStrictEqual(Arr.replicate(body, THREE_CALLS));
     expect(replies).toStrictEqual([]);
+  }).pipe(Effect.provide(patientCookout)),
+);
+
+it.effect("a redirect from the handler is never followed: it counts as a failed attempt and is retried", () =>
+  Effect.gen(function* redirected() {
+    const cookout = yield* TestCookout;
+    yield* cookout.webhook.failNext(ONE_FAILURE, SEE_OTHER);
+    yield* calledDeploy(cookout);
+    yield* advanceUntilCalls(cookout, TWO_CALLS);
+    const calls = yield* Effect.andThen(TestClock.adjust("1 hour"), cookout.webhook.calls);
+
+    expect(Arr.map(calls, ({ path, status }) => ({ path, status }))).toStrictEqual([
+      { path: "/deploy", status: SEE_OTHER },
+      { path: "/deploy", status: OK },
+    ]);
   }).pipe(Effect.provide(patientCookout)),
 );
 

@@ -197,9 +197,13 @@ function deliveriesWith(
   });
 }
 
+const neverRedirected = FetchHttpClient.layer.pipe(
+  Layer.provide(Layer.succeed(FetchHttpClient.RequestInit, { redirect: "manual" })),
+);
+
 const deliveriesLayer: Layer.Layer<Deliveries, Config.ConfigError | StorageUnavailable, Secrets | Storage> =
   Layer.effect(Deliveries, Effect.flatMap(readBackoff, deliveriesWith)).pipe(
-    Layer.provide(Layer.merge(FetchHttpClient.layer, messagesLayer)),
+    Layer.provide(Layer.merge(neverRedirected, messagesLayer)),
   );
 
 export { Deliveries, deliveriesLayer };

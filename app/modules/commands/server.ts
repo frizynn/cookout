@@ -9,8 +9,8 @@
  * `commandsLayer` sends each call to the command's URL in the background:
  * `{ command, data, channel, threadId, token, callId }` as JSON, signed in the
  * `cookout-signature` header with the hex HMAC-SHA256 of the raw body keyed
- * with the command's secret, and given up after `COOKOUT_WEBHOOK_TIMEOUT_SECONDS`. A delivery with no `2xx` is
- * retried 5 times with the same `callId`, with exponential backoff from `COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS` by
+ * with the command's secret, and given up after `COOKOUT_WEBHOOK_TIMEOUT_SECONDS`. A delivery with no `2xx` (a redirect is never followed, so it
+ * counts as one) is retried 5 times with the same `callId`, with exponential backoff from `COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS` by
  * `COOKOUT_WEBHOOK_RETRY_FACTOR`; after the last failure the handler identity replies in the call's thread that the
  * delivery failed. Each delivery's attempts are stored, so a restarted server resumes the pending ones on the same
  * backoff with the same `callId` (and a new command token).

@@ -3,7 +3,7 @@
  * that stands in for the webhook a command calls. `WebhookFake` gives its base
  * URL (any path is accepted) and every call so far, oldest first, with the
  * status it answered. `failNext(count, status)` answers the next `count` calls
- * with `status` (default 500), then 200 again, and `waitForCalls(count)`
+ * with `status` (default 500), then 200 again; a `3xx` one names `/redirected` on the fake as its `Location`. And `waitForCalls(count)`
  * waits until at least `count` calls have arrived. `webhookFake` is a scoped
  * Layer: the server stops, dropping open connections, when its scope closes.
  * Reachable only from tests and `testing`, which the dev program runs it from.
