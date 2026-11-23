@@ -13,10 +13,12 @@ type ActionState =
   | { readonly status: "sending"; readonly action: IdentityAction }
   | (Refusal & { readonly status: "failed"; readonly action: IdentityAction });
 
+type MessageCount = number | "loading" | "unknown";
+
 interface IdentityActionsSnapshot {
   readonly action: ActionState;
   readonly confirming: IdentityAction | null;
-  readonly messages: number | null;
+  readonly messages: MessageCount;
   readonly sessions: readonly ListedAgentSession[] | null;
   readonly token: Token | null;
   readonly transferTo: string;
@@ -64,7 +66,7 @@ const IDLE = { status: "idle" } as const;
 const START: IdentityActionsSnapshot = {
   action: IDLE,
   confirming: null,
-  messages: null,
+  messages: "loading",
   sessions: null,
   token: null,
   transferTo: "",
@@ -161,7 +163,7 @@ async function messagesOf(options: IdentityActionsOptions, publish: Publish): Pr
     const { messages } = await options.client.countMessagesBy(options.name);
     publish({ messages });
   } catch {
-    publish({ messages: null });
+    publish({ messages: "unknown" });
   }
 }
 
@@ -249,4 +251,4 @@ function createIdentityActions(options: IdentityActionsOptions): IdentityActions
   };
 }
 
-export { type ActionsClient, type IdentityAction, type IdentityActions, createIdentityActions };
+export { type ActionsClient, type IdentityAction, type IdentityActions, type MessageCount, createIdentityActions };

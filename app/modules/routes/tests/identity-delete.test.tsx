@@ -61,3 +61,62 @@ it("an admin sees Deactivate when the message count can't be read", { timeout: 5
 
   close();
 });
+
+const NO_MESSAGES = 0;
+const SOME_MESSAGES = 3;
+
+function deferredCount(): {
+  readonly countMessagesBy: CookoutClient["countMessagesBy"];
+  readonly resolve: (messages: number) => void;
+} {
+  const { promise, resolve } = Promise.withResolvers<{ readonly messages: number }>();
+  return {
+    countMessagesBy: vi.fn<CookoutClient["countMessagesBy"]>().mockReturnValue(promise),
+    resolve: (messages) => {
+      resolve({ messages });
+    },
+  };
+}
+
+function expectNothingClickable(): void {
+  expect(inProfile().queryByRole("button", { name: "Delete" })).toBeNull();
+  expect(inProfile().getByRole("button", { name: "Deactivate" })).toHaveProperty("disabled", true);
+}
+
+it("an admin can click neither Deactivate nor Delete while the message count loads, then sees Delete for 0", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await newIdentity({ kind: "agent", name: "web-delete-pending-none" });
+  const count = deferredCount();
+  const close = openAt({ client: { ...adminClient(), ...count }, hash: "#/people/web-delete-pending-none" });
+  await inProfile().findByRole("button", { name: "Deactivate" });
+  expectNothingClickable();
+  count.resolve(NO_MESSAGES);
+  await inProfile().findByRole("button", { name: "Delete" });
+
+  expect(inProfile().queryByRole("button", { name: "Deactivate" })).toBeNull();
+
+  close();
+});
+
+it("an admin can click neither Deactivate nor Delete while the message count loads, then sees Deactivate for more", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await newIdentity({ kind: "agent", name: "web-delete-pending-some" });
+  const count = deferredCount();
+  const close = openAt({ client: { ...adminClient(), ...count }, hash: "#/people/web-delete-pending-some" });
+  await inProfile().findByRole("button", { name: "Deactivate" });
+  expectNothingClickable();
+  count.resolve(SOME_MESSAGES);
+  await waitFor(() => {
+    expect(inProfile().getByRole("button", { name: "Deactivate" })).toHaveProperty("disabled", false);
+  });
+
+  expect(inProfile().queryByRole("button", { name: "Delete" })).toBeNull();
+
+  close();
+});

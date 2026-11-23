@@ -291,4 +291,4 @@ export function createComposer(options: ComposerOptions): Composer {
 
 export type { DisplayNameDraft } from "./lib/display-name.ts";
 export type { AgentCreation } from "./lib/agent-creation.ts";
-export type { IdentityAction, IdentityActions } from "./lib/identity-actions.ts";
+export type { IdentityAction, IdentityActions, MessageCount } from "./lib/identity-actions.ts";
