@@ -48,7 +48,7 @@ export function ChannelView(props: ChannelProps): ReactNode {
   return (
     <Pane>
       <PaneHeader description={description} title={`#${props.channel}`} />
-      <ScrollArea count={countOf(state)}>
+      <ScrollArea count={countOf(state)} label={`Messages in #${props.channel}`}>
         <MessageRows channel={props.channel} messages={messages} state={state} />
       </ScrollArea>
       <MessageFooter

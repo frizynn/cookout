@@ -20,7 +20,7 @@
  * `NavList` of links; `ToggleButton` opens and closes a `Panel` above it,
  * such as Settings, where `ChoiceGroup` picks one of a few choices. `Pane` is
  * the main column, with a `PaneHeader` (title and description), a
- * `ScrollArea` that stays scrolled to the end as what it counts grows, unless
+ * named `ScrollArea` that stays scrolled to the end as what it counts grows, unless
  * scrolled up, and anything under it, such as a message box in a `BoxFrame`
  * with its keyboard hint; `SidePanel` is a
  * named column on its right with a close link (the whole width on a narrow

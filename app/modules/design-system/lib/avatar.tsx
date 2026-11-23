@@ -17,17 +17,19 @@ const LARGEST = 2_147_483_647;
 const MULTIPLIER = 31;
 const FIRST = 0;
 const BOTH = 2;
+const ONE = 1;
 
 function hashOf(name: string): number {
   let value = 0;
   for (const character of name) {
-    value = (value * MULTIPLIER + (character.codePointAt(FIRST) ?? FIRST)) % LARGEST;
+    value = (value * MULTIPLIER + Number(character.codePointAt(FIRST))) % LARGEST;
   }
   return value;
 }
 
 function hueOf(name: string): string {
-  return HUES[hashOf(name) % HUES.length] ?? HUES[FIRST];
+  const hue = hashOf(name) % HUES.length;
+  return HUES.slice(hue, hue + ONE).join("");
 }
 
 function initialsOf(name: string): string {

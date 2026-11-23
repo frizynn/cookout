@@ -70,6 +70,7 @@ it("pressing Shift+Enter sends nothing and leaves the key to start a new line", 
 
   const close = await openChannel("web-keys-shift-enter");
   type("First line");
+  press("a");
   const notPrevented = press("Enter", true);
 
   expect([notPrevented, await shownMessages(), screen.queryByDisplayValue("First line")]).toStrictEqual([
@@ -90,7 +91,7 @@ it("while suggestions show, the arrows move the highlight and Enter picks it ins
   const close = await openChannel("web-keys-pick");
   await suggest("Ping @keys-");
   const first = highlighted();
-  pressEach(["ArrowDown", "ArrowDown", "ArrowUp"]);
+  pressEach(["ArrowDown", "ArrowDown", "Shift", "ArrowUp"]);
   const moved = highlighted();
   press("Enter");
 

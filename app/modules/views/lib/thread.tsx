@@ -8,7 +8,7 @@ import { ThreadBody } from "./thread-body.tsx";
 import { hrefOf } from "../../paths/index.ts";
 import { useSyncExternalStore } from "react";
 
-const TEXT = { close: "Close thread", thread: "Thread" } as const;
+const TEXT = { close: "Close thread", replies: "The thread's messages", thread: "Thread" } as const;
 
 const NONE = 0;
 
@@ -37,7 +37,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
       detail={`#${channel}`}
       label={TEXT.thread}
     >
-      <ScrollArea count={countOf(state)}>
+      <ScrollArea count={countOf(state)} label={TEXT.replies}>
         <ThreadBody state={state} />
       </ScrollArea>
       <ReplyFooter
