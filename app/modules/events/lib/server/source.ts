@@ -40,9 +40,9 @@ const HEARTBEAT: SseComment = { comment: "heartbeat" };
 
 function sseEvent<Event extends CookoutEvent>(
   schema: Schema.Codec<Event, unknown>,
-): (event: Event, id: MessageId) => Effect.Effect<SseEvent> {
+): (event: Event) => Effect.Effect<SseEvent> {
   const encode = Schema.encodeEffect(Schema.fromJsonString(schema));
-  return (event, id) => Effect.map(Effect.orDie(encode(event)), (data) => ({ data, event: event.type, id }));
+  return (event) => Effect.map(Effect.orDie(encode(event)), (data) => ({ data, event: event.type }));
 }
 
 const encodeErrorResponse = Schema.encodeEffect(Schema.fromJsonString(httpResponseSchemas.ErrorResponse));

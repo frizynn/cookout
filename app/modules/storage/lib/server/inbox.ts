@@ -35,6 +35,7 @@ interface Moving {
 interface InboxSection {
   readonly listInbox: (identity: IdentityName) => Fails<readonly StoredInboxItem[]>;
   readonly listInboxAfter: (identity: IdentityName, after: MessageId) => Fails<readonly StoredInboxItem[]>;
+  readonly findInboxItem: (identity: IdentityName, id: MessageId) => Fails<StoredInboxItem | undefined>;
   readonly listInboxHistory: (identity: IdentityName, page: HistoryPageRequest) => Fails<StoredHistoryPage>;
   readonly ackMessage: (identity: IdentityName, id: MessageId) => Fails<ReadPosition | undefined>;
   readonly followThread: (identity: IdentityName, id: MessageId) => Fails<MessageId | undefined>;

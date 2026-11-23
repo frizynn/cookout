@@ -196,15 +196,25 @@ interface IssuedToken {
   readonly stored: CallParts["token"];
 }
 
-const newCommandToken = Effect.fnUntraced(function* issueCommandToken({
-  stored,
-}: Calling): Effect.fn.Return<IssuedToken, never, Secrets> {
+const newCommandToken = Effect.fnUntraced(function* issueCommandToken(
+  { stored }: Calling,
+  calledAt: DateTime.Utc,
+): Effect.fn.Return<IssuedToken, never, Secrets> {
   const secrets = yield* Secrets;
   const token = yield* secrets.newCommandToken;
-  const now = yield* DateTime.now;
   const hash = yield* secrets.hashToken(token);
-  const expiresAt = isoTimeOf(DateTime.addDuration(now, COMMAND_TOKEN_LIFETIME));
+  const expiresAt = isoTimeOf(DateTime.addDuration(calledAt, COMMAND_TOKEN_LIFETIME));
   return { stored: { expiresAt, handler: stored.command.handler, hash }, token };
+});
+
+const calledAtOf = Effect.fnUntraced(function* findCallTime(
+  call: Call,
+): Effect.fn.Return<DateTime.Utc, StorageUnavailable, Storage> {
+  const storage = yield* Storage;
+  const thread = yield* Effect.flatMap(storage.getThread(call.threadId), (found) =>
+    Effect.orDie(Effect.fromNullishOr(found)),
+  );
+  return DateTime.makeUnsafe(thread.parent.createdAt);
 });
 
 const newDelivery = Effect.fnUntraced(function* startDelivery({
@@ -248,7 +258,8 @@ function deliveriesWith(
     function resume(pending: StoredDelivery): Effect.Effect<void, StorageUnavailable, Secrets | Storage> {
       return Effect.gen(function* resumeDelivery() {
         const call = yield* callOf(pending);
-        const { stored, token } = yield* newCommandToken(call);
+        const calledAt = yield* calledAtOf(call);
+        const { stored, token } = yield* newCommandToken(call, calledAt);
         const storage = yield* Storage;
         yield* storage.addCommandToken({ ...stored, threadId: call.threadId });
         yield* sendInBackground({ call, progress: pending, token });
@@ -259,7 +270,8 @@ function deliveriesWith(
       post: PostCall<Failure>,
     ): Effect.Effect<Placed, Failure | StorageUnavailable> {
       return Effect.gen(function* postAndSend() {
-        const { stored, token } = yield* newCommandToken(calling);
+        const now = yield* DateTime.now;
+        const { stored, token } = yield* newCommandToken(calling, now);
         const delivery = yield* newDelivery(calling);
         const placed = yield* post({ delivery, token: stored });
         yield* sendInBackground({ call: { ...calling, ...placed }, progress: delivery, token });

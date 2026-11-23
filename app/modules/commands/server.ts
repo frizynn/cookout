@@ -13,8 +13,9 @@
  * with the command's secret, and given up after `COOKOUT_WEBHOOK_TIMEOUT_SECONDS`. A delivery with no `2xx` (a redirect is never followed, so it
  * counts as one) is retried 5 times with the same `callId`, with exponential backoff from `COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS` by
  * `COOKOUT_WEBHOOK_RETRY_FACTOR`; after the last failure the handler identity replies in the call's thread that the
- * delivery failed. Each delivery's attempts are stored, so a restarted server resumes the pending ones on the same
- * backoff with the same `callId` (and a new command token).
+ * delivery failed. Each delivery's `attempts` is stored: the attempts made at it so far, the first included (6 at
+ * most). So a restarted server resumes the pending ones on the same backoff with the same `callId`, making only the
+ * attempts left, and with a new command token that still expires 24 h after the call.
  */
 import {
   AddCommandRequestSchema,

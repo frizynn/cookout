@@ -47,6 +47,7 @@ export type TestCookoutService = {
   readonly startSecondServer: Effect.Effect<BootedServer>;
   readonly startSecondServerAs: (adminName: string) => Effect.Effect<BootedServer, AdminNameIsAgent>;
   readonly restart: Effect.Effect<CookoutClient>;
+  readonly restartServer: Effect.Effect<BootedServer>;
   readonly seedCommand: (stored: StoredCommand) => Effect.Effect<void>;
   readonly webhook: WebhookFake["Service"];
 };
@@ -190,13 +191,13 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
       const firstScope = yield* Scope.fork(scope);
       const serverScope = yield* Ref.make(firstScope);
       const first = yield* Scope.provide(boot, firstScope);
-      const restart = Effect.gen(function* restartServer() {
+      const restartServer = Effect.gen(function* restartServer() {
         const stopped = yield* Ref.get(serverScope);
         yield* Scope.close(stopped, Exit.void);
         const next = yield* Scope.fork(scope);
         yield* Ref.set(serverScope, next);
         const { url } = yield* Scope.provide(boot, next);
-        return clientAt(url)(adminToken);
+        return { url };
       });
       const onFirst = Effect.provideContext(first.server);
       return TestCookout.of({
@@ -204,7 +205,8 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
         client: clientAt(first.url)(adminToken),
         clientFor: clientAt(first.url),
         createIdentity: (name, identityOptions = {}) => onFirst(seedIdentity(first.url)(name, identityOptions)),
-        restart,
+        restart: Effect.map(restartServer, ({ url }) => clientAt(url)(adminToken)),
+        restartServer,
         seedCommand: (stored) => onFirst(seedCommand(stored)),
         startSecondServer: Effect.map(Scope.provide(boot, scope), ({ url }) => ({ url })),
         startSecondServerAs: (adminName) => Effect.map(Scope.provide(bootAs(adminName), scope), ({ url }) => ({ url })),

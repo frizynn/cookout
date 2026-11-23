@@ -172,6 +172,16 @@ function findIn(board: MemoryBoard, id: MessageId): Option.Option<Message> {
   return Arr.findFirst(board.messages, (message) => message.id === id);
 }
 
+function inboxItemOf(reading: Reading, id: MessageId): StoredInboxItem | undefined {
+  return pipe(
+    findIn(reading.board, id),
+    Option.flatMap((message) => Arr.head(historyItemFor(reading, message))),
+    Option.filter(({ read }) => !read),
+    Option.map(({ message, parent, reasons }): StoredInboxItem => ({ message, parent, reasons })),
+    Option.getOrUndefined,
+  );
+}
+
 function ack({ board, id, identity }: Asking): Changed<ReadPosition> {
   const { inbox } = board;
   return Option.match(findIn(board, id), {
@@ -256,6 +266,7 @@ function memoryInbox({ changeInbox, channelExists, listChannels, read }: BoardAc
   }
   return {
     ackMessage: (identity, id) => changeFound((board) => ack({ board, id, identity })),
+    findInboxItem: (identity, id) => read((board) => inboxItemOf({ board, identity }, id)),
     followThread: (identity, id) => changeFound((board) => follow(withKey)({ board, id, identity })),
     forgetIdentity: (identity) =>
       Effect.asVoid(changeInbox((board) => [true, withoutIdentity({ identity, inbox: board.inbox })])),

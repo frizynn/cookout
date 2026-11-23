@@ -1,5 +1,17 @@
 import type { AgentTool, Identity } from "../../../identities/index.ts";
-import { Array as Arr, Context, DateTime, Effect, Layer, Option, Predicate, PubSub, String as Str, pipe } from "effect";
+import {
+  Array as Arr,
+  Context,
+  DateTime,
+  Effect,
+  Layer,
+  Option,
+  Predicate,
+  PubSub,
+  Semaphore,
+  String as Str,
+  pipe,
+} from "effect";
 import type {
   Author,
   JsonValue,
@@ -47,7 +59,7 @@ type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
 type CallParts = Omit<NewCommandCall, "message">;
 
 interface Hub {
-  readonly publish: (message: Message) => Effect.Effect<boolean>;
+  readonly appendThenPublish: (append: Append, message: NewMessage) => Fails<Appended>;
   readonly subscribe: Effect.Effect<PubSub.Subscription<Message>, never, Scope.Scope>;
 }
 
@@ -113,13 +125,17 @@ function inThread(found: ThreadResponse | undefined, threadId: MessageId, channe
 
 type Append = Storage["Service"]["appendMessage"];
 
+type Appended = Effect.Success<ReturnType<Append>>;
+
+const ONE_AT_A_TIME = 1;
+
 function postWith(hub: Hub, append: Append): (author: Identity, message: PostMessage) => Fails<MessageResponse> {
   return (author, message) =>
     Effect.gen(function* postMessage() {
       const now = yield* DateTime.now;
-      const result = yield* append(newMessage(author, message, isoTimeOf(now)));
+      const stored = newMessage(author, message, isoTimeOf(now));
+      const result = yield* hub.appendThenPublish(append, stored);
       if (result.status === "appended") {
-        yield* hub.publish(result.message);
         return { message: result.message, unknownMentions: unknownMentionsIn(result.message) };
       }
       return yield* Effect.fail(refusalOf(result.status, message));
@@ -187,7 +203,18 @@ export const messagesLayer: Layer.Layer<Messages, never, Storage> = Layer.effect
   Effect.gen(function* messagesOnStorage() {
     const storage = yield* Storage;
     const pubSub = yield* PubSub.unbounded<Message>();
-    const hub: Hub = { publish: (message) => PubSub.publish(pubSub, message), subscribe: PubSub.subscribe(pubSub) };
+    const appending = yield* Semaphore.make(ONE_AT_A_TIME);
+    function publishIfAppended(result: Appended): Effect.Effect<void> {
+      if (result.status !== "appended") {
+        return Effect.void;
+      }
+      return Effect.asVoid(PubSub.publish(pubSub, result.message));
+    }
+    const hub: Hub = {
+      appendThenPublish: (append, message) =>
+        appending.withPermits(ONE_AT_A_TIME)(Effect.tap(append(message), publishIfAppended)),
+      subscribe: PubSub.subscribe(pubSub),
+    };
     return messagesOn(storage, hub);
   }),
 );

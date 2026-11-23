@@ -29,7 +29,9 @@ function inboxItems({ caller, lastEventId }: StreamRequest): Connected<Inbox | M
       );
     }
     const items = Option.match(lastEventId, { onNone: () => live, onSome: missedThenLive });
-    return Stream.mapEffect(items, (item) => inboxItemEvent({ item, type: "inbox-item" }, item.message.id));
+    return Stream.mapEffect(items, (item) =>
+      Effect.map(inboxItemEvent({ item, type: "inbox-item" }), (event) => ({ ...event, id: item.message.id })),
+    );
   });
 }
 

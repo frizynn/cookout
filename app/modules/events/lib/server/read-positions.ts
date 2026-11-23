@@ -12,9 +12,7 @@ function readPositions({ caller }: StreamRequest): Connected<Inbox> {
     const acked = yield* inbox.acked;
     return Stream.fromSubscription(acked).pipe(
       Stream.filter(({ identity }) => identity === caller.name),
-      Stream.mapEffect(({ readPosition }) =>
-        readPositionEvent({ readPosition, type: "read-position" }, readPosition.messageId),
-      ),
+      Stream.mapEffect(({ readPosition }) => readPositionEvent({ readPosition, type: "read-position" })),
     );
   });
 }

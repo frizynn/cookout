@@ -85,10 +85,10 @@ const MOVE_THREAD_POSITION = `INSERT INTO thread_read_positions (identity_name, 
   ON CONFLICT (identity_name, thread_id) DO UPDATE SET message_id = max(message_id, excluded.message_id)
   RETURNING message_id`;
 
-function inboxSql(columns: string): string {
+function inboxSql(columns: string, ids: "messages.id > ?2" | "messages.id = ?2"): string {
   return `WITH reasons (id, reason) AS (${REASONS})
     SELECT ${columns}, reasons.reason AS reason, ${UNREAD} AS read FROM messages JOIN reasons USING (id)
-    WHERE messages.author_name <> ?1 AND messages.id > ?2 AND messages.id > ${MARKER}
+    WHERE messages.author_name <> ?1 AND ${ids} AND messages.id > ${MARKER}
     ORDER BY messages.id, reasons.reason`;
 }
 
@@ -177,14 +177,31 @@ function itemsOf(reader: MessageReader, rows: readonly unknown[]): Fails<readonl
   });
 }
 
+function inboxItemsOf(reader: MessageReader, rows: readonly unknown[]): Fails<readonly StoredInboxItem[]> {
+  return Effect.map(
+    itemsOf(reader, rows),
+    Arr.map(({ message, parent, reasons }): StoredInboxItem => ({ message, parent, reasons })),
+  );
+}
+
 function inboxOf(
   { db, reader }: InboxOn,
   identity: IdentityName,
   after: MessageId | typeof NOTHING_SEEN,
 ): Fails<readonly StoredInboxItem[]> {
-  return db.all(inboxSql(reader.columns), identity, after).pipe(
-    Effect.flatMap((rows) => itemsOf(reader, rows)),
-    Effect.map(Arr.map(({ message, parent, reasons }): StoredInboxItem => ({ message, parent, reasons }))),
+  return Effect.flatMap(db.all(inboxSql(reader.columns, "messages.id > ?2"), identity, after), (rows) =>
+    inboxItemsOf(reader, rows),
+  );
+}
+
+function inboxItemOf(
+  { db, reader }: InboxOn,
+  identity: IdentityName,
+  id: MessageId,
+): Fails<StoredInboxItem | undefined> {
+  return db.all(inboxSql(reader.columns, "messages.id = ?2"), identity, id).pipe(
+    Effect.flatMap((rows) => inboxItemsOf(reader, rows)),
+    Effect.map((items) => Option.getOrUndefined(Arr.head(items))),
   );
 }
 
@@ -239,6 +256,7 @@ function sqliteInbox({ db, reader }: InboxOn): InboxSection {
           return moveReadPosition(db, identity, message);
         }),
       ),
+    findInboxItem: (identity, id) => inboxItemOf({ db, reader }, identity, id),
     followThread: changeFollow(db, reader, "INSERT OR IGNORE INTO follows (identity_name, thread_id) VALUES (?, ?)"),
     listInbox: (identity) => inboxOf({ db, reader }, identity, NOTHING_SEEN),
     listInboxAfter: (identity, after) => inboxOf({ db, reader }, identity, after),

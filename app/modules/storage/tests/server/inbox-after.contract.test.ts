@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, String as Str, pipe } from "effect";
+import { Array as Arr, Effect, Option, String as Str, pipe } from "effect";
 import type { Message, MessageId } from "../../../messages/index.ts";
 import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import {
@@ -57,5 +57,31 @@ it.effect.each(storageLayers)(
 
       expect(idsIn(after)).toStrictEqual([second.id, third.id]);
       expect(afterAll).toStrictEqual([]);
+    }),
+);
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): the inbox item of one message ID is that message's unread item, if it has one",
+  ({ layer }) =>
+    Effect.gen(function* inboxItemOfOne() {
+      const storage = yield* storeWithPeople(layer);
+      const append = appendTo(storage);
+      const read = yield* append(newMessage("grill", "@bob read", ANN));
+      yield* storage.ackMessage(nameOf("bob"), read.id);
+      const unread = yield* append(newMessage("grill", "@bob unread", ANN));
+      const unrelated = yield* append(newMessage("grill", "no mention", { author: { name: "ann" } }));
+      const found = yield* Effect.forEach(
+        [read.id, unread.id, unrelated.id],
+        (id) => storage.findInboxItem(nameOf("bob"), id),
+        ONE_AT_A_TIME,
+      );
+      const own = yield* storage.findInboxItem(nameOf("ann"), unread.id);
+
+      expect(Arr.map([...found, own], Option.fromUndefinedOr)).toStrictEqual([
+        Option.none(),
+        Option.some({ message: unread, parent: unread, reasons: ["mention"] }),
+        Option.none(),
+        Option.none(),
+      ]);
     }),
 );

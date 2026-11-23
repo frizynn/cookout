@@ -22,7 +22,7 @@ function allChannels(request: StreamRequest): Connected<Messages> {
     const messages = yield* Messages;
     const posted = yield* messages.posted;
     return Stream.fromSubscription(posted).pipe(
-      Stream.mapEffect((message) => messageEvent({ message, type: "message" }, message.id)),
+      Stream.mapEffect((message) => messageEvent({ message, type: "message" })),
     );
   });
 }
