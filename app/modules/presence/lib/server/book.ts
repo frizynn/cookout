@@ -60,16 +60,12 @@ interface Released extends Closing {
 
 const NONE = 0;
 const STEP = 1;
-const FIRST = 1;
 const NOT_HELD: Held = { connections: new Map(), grace: Option.none(), latest: Option.none() };
 const CONNECTION_LOST: End = { offlineReason: "connection lost", unexpected: true };
 const CLEAN_CLOSE: End = { unexpected: false };
 
 function minted(count: number): LiveConnectionId {
-  if (isLiveConnectionId(count)) {
-    return count;
-  }
-  return minted(FIRST);
+  return Option.getOrThrow(Option.liftPredicate(count, isLiveConnectionId));
 }
 
 function heldBy({ identity, state }: At): Held {
@@ -163,13 +159,11 @@ function presenceIn(at: At): Presence {
 }
 
 function endIn(at: At): Pick<StoredPresence, "endedUnexpectedly" | "offlineReason"> {
-  if (presenceIn(at).online) {
+  const end = at.state.ends.get(at.identity);
+  if (presenceIn(at).online || Predicate.isUndefined(end)) {
     return {};
   }
-  return Option.match(endOf(at), {
-    onNone: () => ({}),
-    onSome: (end) => ({ ...reasonOf(end), endedUnexpectedly: end.unexpected }),
-  });
+  return { ...reasonOf(end), endedUnexpectedly: end.unexpected };
 }
 
 function withoutEnd(at: At): ReadonlyMap<IdentityName, End> {

@@ -186,3 +186,18 @@ it.effect("a connected event that doesn't match the protocol fails with bad_resp
     expect(refused).toMatchObject({ code: "bad_response", details: { type: "connected" } });
   }),
 );
+
+it.effect.each([
+  { connected: '{"latestMessageId":null,"type":"connected"}', server: "a server that names no connection" },
+  { connected: '{"connectionId":1,"latestMessageId":null,"type":"connected"}', server: "a server that can't hear it" },
+] as const)("closeCleanly still closes the stream on $server", ({ connected }) =>
+  Effect.gen(function* closesAnyway() {
+    const url = yield* serverAnswering({ headers: SSE, text: `event: connected\ndata: ${connected}\n\n` });
+    const client = createCookoutClient({ env: {}, token: "cookout_x", url });
+    const events = yield* answer(() => client.watch());
+    const next = yield* answer(() => events[Symbol.asyncIterator]().next());
+    yield* answer(() => events.closeCleanly());
+
+    expect(next).toMatchObject({ done: true });
+  }),
+);

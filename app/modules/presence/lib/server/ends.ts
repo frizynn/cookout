@@ -1,7 +1,7 @@
 import type { Connection, End, SentWith } from "./book.ts";
 import type { EndedTokens, TokensEnded } from "../../../identities/server.ts";
+import type { Identity, TokenHash } from "../../../identities/index.ts";
 import { agentSessionExpired, agentSessionRevoked } from "../../../agent-sessions/index.ts";
-import type { Identity } from "../../../identities/index.ts";
 import type { OfflineReason } from "../../index.ts";
 import { Option } from "effect";
 import type { Refusal } from "../../../http/index.ts";
@@ -41,12 +41,6 @@ const reasons: Readonly<Record<Cause, OfflineReason>> = {
   rotated: "token rotated",
 };
 
-const refusedReasons: ReadonlyMap<string, OfflineReason> = new Map([
-  [agentSessionExpired, "session expired"],
-  [agentSessionRevoked, "session revoked"],
-  ["token_revoked", "deactivated"],
-]);
-
 function refusalFor(cause: Cause): Refusal {
   return refusals[cause];
 }
@@ -64,17 +58,17 @@ function endOfTokens({ ended, found }: { readonly ended: TokensEnded; readonly f
 }
 
 function refusedEnd({ code }: Refusal): End {
-  return { offlineReason: refusedReasons.get(code) ?? "session revoked", unexpected: true };
+  if (code === agentSessionExpired) {
+    return { offlineReason: "session expired", unexpected: true };
+  }
+  return { offlineReason: "session revoked", unexpected: true };
 }
 
-function sentWithSession(tokens: EndedTokens, sentWith: SentWith): boolean {
-  if (sentWith.kind !== "agent session") {
-    return false;
+function hashOf(sentWith: SentWith): TokenHash | null {
+  if (sentWith.kind === "agent session") {
+    return sentWith.hash;
   }
-  if (tokens.kind === "agent session") {
-    return sentWith.hash === tokens.hash;
-  }
-  return tokens.kind === "agent sessions";
+  return null;
 }
 
 function sentWithEnded(tokens: EndedTokens): (connection: Connection) => boolean {
@@ -82,10 +76,13 @@ function sentWithEnded(tokens: EndedTokens): (connection: Connection) => boolean
     if (tokens.kind === "all") {
       return true;
     }
-    if (sentWith.kind === "identity token") {
-      return tokens.kind === "identity tokens";
+    if (tokens.kind === "agent session") {
+      return hashOf(sentWith) === tokens.hash;
     }
-    return sentWithSession(tokens, sentWith);
+    if (tokens.kind === "agent sessions") {
+      return sentWith.kind === "agent session";
+    }
+    return sentWith.kind === "identity token";
   };
 }
 

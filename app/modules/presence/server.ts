@@ -27,19 +27,8 @@ import { presencePath } from "./index.ts";
 const BOOT_GRACE = Duration.toMillis("5 minutes");
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 
-function shownFor(identity: Identity, presence: Presence): Presence {
-  if (identity.deactivated !== true || !presence.online) {
-    return presence;
-  }
-  return { identity: identity.name, offlineReason: "deactivated", online: false };
-}
-
 function presenceOfEach(registry: Registry, identities: readonly Identity[]): Effect.Effect<readonly Presence[]> {
-  return Effect.forEach(
-    identities,
-    (identity) => Effect.map(registry.presenceOf(identity.name), (presence) => shownFor(identity, presence)),
-    ONE_AT_A_TIME,
-  );
+  return Effect.forEach(identities, (identity) => registry.presenceOf(identity.name), ONE_AT_A_TIME);
 }
 
 /** A live connection the stream holds (ADR "how a live connection ends"). */
@@ -139,6 +128,3 @@ export const presenceRoutes: readonly Route<PresenceRegistry>[] = [
 
 /** The Schemas of one identity's presence and of `GET /v1/presence`'s answer, for the live stream and the SDK's validators. */
 export { PresenceResponseSchema, PresenceSchema } from "./lib/server/wire.ts";
-
-/** The refusal that ends an agent's live connection when a newer one opens: `cookout watch` exits 6 on it. */
-export { watchReplacedRefusal } from "./lib/server/registry.ts";

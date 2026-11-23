@@ -1,5 +1,5 @@
 import type { BookState, Connection } from "./book.ts";
-import { DateTime, Effect, Option, PubSub, Stream } from "effect";
+import { DateTime, Effect, Option, PubSub } from "effect";
 import { endOfTokens, refusalFor, refusedEnd, sentWithEnded } from "./ends.ts";
 import type { Ending } from "./ending.ts";
 import { IdentityChanges } from "../../../identities/server.ts";
@@ -65,12 +65,9 @@ function heldEnding({
         identity,
       };
       return {
-        ended: Stream.fromSubscription(heard).pipe(
-          Stream.filter((each) => each.connections.includes(connection)),
-          Stream.runHead,
-          Effect.flatMap(
-            Option.match({ onNone: () => Effect.never, onSome: ({ refusal }) => Effect.succeed(refusal) }),
-          ),
+        ended: PubSub.take(heard).pipe(
+          Effect.repeat({ until: (each) => each.connections.includes(connection) }),
+          Effect.map(({ refusal }) => refusal),
         ),
         refused: (refusal) => Effect.as(endNow(ends, { ...own, end: refusedEnd(refusal), refusal }), refusal),
       };

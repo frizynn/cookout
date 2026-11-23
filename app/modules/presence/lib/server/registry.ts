@@ -211,7 +211,7 @@ function openRegistry(graces: Graces): Effect.Effect<Registry, StorageUnavailabl
   });
 }
 
-export { type HeldConnection, type Registry, type RegistryNeeds, openRegistry };
-export { type LiveConnection, openReplacements, watchReplacedRefusal } from "./replacement.ts";
+export { type Registry, type RegistryNeeds, openRegistry };
+export { openReplacements, watchReplacedRefusal } from "./replacement.ts";
 export { connectionOf } from "./connection.ts";
 export type { Connection } from "./book.ts";

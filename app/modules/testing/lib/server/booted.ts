@@ -1,4 +1,4 @@
-import { Context, Effect, Layer, Predicate, Schedule } from "effect";
+import { Array as Arr, Context, Effect, Layer, Schedule } from "effect";
 import type { HttpServer } from "effect/http";
 import type { Identities } from "../../../identities/server.ts";
 import { PresenceRegistry } from "../../../presence/server.ts";
@@ -49,10 +49,7 @@ function liveConnectionsClosedOn({
 
 type LastEnd = Pick<StoredPresence, "endedUnexpectedly" | "offlineReason">;
 
-function endIn(kept: StoredPresence | undefined): LastEnd {
-  if (Predicate.isUndefined(kept)) {
-    return {};
-  }
+function endIn(kept: StoredPresence): LastEnd {
   const { identity: _identity, lastSeenAt: _lastSeenAt, online: _online, ...end } = kept;
   return end;
 }
@@ -66,7 +63,7 @@ function lastEndOn({
 }): Effect.Effect<LastEnd> {
   const storage = Context.get(server, Storage);
   return storage.listPresence([identityName(name)]).pipe(
-    Effect.map(([kept]) => endIn(kept)),
+    Effect.map((kept) => Arr.reduce(kept, {}, (_none: LastEnd, each) => endIn(each))),
     Effect.orDie,
   );
 }

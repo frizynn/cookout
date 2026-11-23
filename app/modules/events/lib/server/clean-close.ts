@@ -23,7 +23,7 @@ const cleanClose: Route<Caller | PresenceRegistry> = {
     Effect.gen(function* closeLiveConnectionCleanly() {
       const caller = yield* Caller;
       const presence = yield* PresenceRegistry;
-      const connection = params["connection"] ?? "";
+      const connection = String(params["connection"]);
       const id = Number(connection);
       const closed = isLiveConnectionId(id) && (yield* presence.closeCleanly(caller.name, id));
       if (!closed) {

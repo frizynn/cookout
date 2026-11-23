@@ -15,15 +15,15 @@ The SDK's public surface: the built `dist/sdk.d.ts`, as consumers of the publish
  * `IsoTime` brand and its check. Every timestamp the protocol carries
  * (`createdAt`, `expiresAt`, `heldUntil`, the health check's `time`) is one.
  */
-declare const brand$6: unique symbol;
+declare const brand$7: unique symbol;
 /** A moment as the wire writes it: ISO 8601 in UTC with milliseconds, such as `2026-01-01T00:00:00.000Z`. */
 type IsoTime = string & {
-  readonly [brand$6]: "IsoTime";
+  readonly [brand$7]: "IsoTime";
 };
-declare const brand$5: unique symbol;
+declare const brand$6: unique symbol;
 /** A channel's name: 1–80 lowercase letters, digits or `-`. Unique on a server. */
 type ChannelName = string & {
-  readonly [brand$5]: "ChannelName";
+  readonly [brand$6]: "ChannelName";
 };
 /** A channel as the server shows it. */
 interface Channel {
@@ -49,13 +49,13 @@ interface ListChannelsResponse {
  * The calls a client makes on one identity by its name: reading it, and setting or clearing an agent's description
  * (#189). The SDK's `CookoutClient` has them.
  */
-declare const brand$4: unique symbol;
+declare const brand$5: unique symbol;
 /**
  * An agent's description: what the agent handles, written for people and for routing, such as "Matt's to-dos, life
  * admin and voice-note follow-ups". 1–500 characters with no space at either end. A human has none.
  */
 type Description = string & {
-  readonly [brand$4]: "Description";
+  readonly [brand$5]: "Description";
 };
 /** An agent identity's fields with its description, which every caller sees. */
 type Described<Fields> = Fields & {
@@ -81,9 +81,9 @@ interface DescriptionCalls<Answer> {
 interface IdentityMessageCountResponse {
   readonly messages: number;
 }
-declare const brand$3: unique symbol;
+declare const brand$4: unique symbol;
 type Brand$1<Name extends string> = string & {
-  readonly [brand$3]: Name;
+  readonly [brand$4]: Name;
 };
 type IdentityFields = {
   readonly name: IdentityName;
@@ -180,13 +180,13 @@ interface SetDisplayNameRequest {
  * and the SDK send it in `cookout-harness` when the process's environment shows such a tool runs it.
  */
 type Harness = Brand$1<"Harness">;
-declare const brand$2: unique symbol;
+declare const brand$3: unique symbol;
 /**
  * A message's ID: a positive whole number. Message IDs are one increasing
  * sequence across the whole server, so they order messages.
  */
 type MessageId = number & {
-  readonly [brand$2]: "MessageId";
+  readonly [brand$3]: "MessageId";
 };
 /** Any JSON value. */
 type JsonValue = null | boolean | number | string | readonly JsonValue[] | {
@@ -379,9 +379,9 @@ interface ServerSentEvent {
   readonly event: string;
   readonly data: string;
 }
-declare const brand$1: unique symbol;
+declare const brand$2: unique symbol;
 type Brand<Name extends string> = string & {
-  readonly [brand$1]: Name;
+  readonly [brand$2]: Name;
 };
 /** A command's name. It is also the name of the command's handler identity, so it follows the plain identity-name rule (no `/`). */
 type CommandName = Brand<"CommandName">;
@@ -606,6 +606,14 @@ interface AgentSessionCalls extends AgentJoinCalls {
   readonly listAgentSessions: (agent: string) => Promise<ListAgentSessionsResponse>;
   readonly revokeAgentSession: (agent: string) => Promise<RevokeAgentSessionResponse>;
 }
+declare const brand$1: unique symbol;
+/**
+ * The ID of one live connection, which the stream's `connected` event carries: a positive whole number, unique
+ * while the server runs. A `cookout watch` exiting on purpose names it in its clean close.
+ */
+type LiveConnectionId = number & {
+  readonly [brand$1]: "LiveConnectionId";
+};
 /** The wire's word for the feature: the CLI's field, the event's `type` and the last part of the path. */
 declare const presenceName = "presence";
 /** How an online identity is connected: a `cookout watch`, with the host its agent session was joined from when the joining client sent one, or a web tab. */
@@ -616,15 +624,24 @@ type LiveConnectionDetail = {
   readonly via: "web";
 };
 /**
+ * Why an offline identity went offline, as its profile shows it ("offline: session revoked"): it ran `cookout leave`,
+ * its token was refused (an agent session revoked or expired, an Identity token rotated, the identity deactivated), or
+ * its connection dropped and nothing reconnected within the grace (ADR "how a live connection ends").
+ */
+declare const offlineReasons: readonly ["left", "session revoked", "session expired", "token rotated", "deactivated", "connection lost"];
+/** One of `offlineReasons`. */
+type OfflineReason = (typeof offlineReasons)[number];
+/**
  * One identity's presence. An online identity carries the detail of its most recent live connection, unless it shows
  * online only because the server just restarted (the boot grace). An offline one carries when it was last seen, unless
- * it never was. A Deactivated identity is always offline.
+ * it never was, and why it went offline when the server knows. A Deactivated identity is always offline.
  */
 interface Presence {
   readonly identity: IdentityName;
   readonly online: boolean;
   readonly connection?: LiveConnectionDetail;
   readonly lastSeenAt?: IsoTime;
+  readonly offlineReason?: OfflineReason;
 }
 /** The answer to `GET /v1/presence`: every identity's presence, Deactivated ones included, sorted by name. */
 interface PresenceResponse {
@@ -720,11 +737,18 @@ interface SubscriptionEvent {
 /**
  * The stream's first word on connecting, before any item: the newest message ID on the board at that moment (null
  * before the first message). Every item the stream then sends live is newer, so a caller that resumes from this ID
- * after a drop misses nothing and repeats nothing. It has no SSE `id`.
+ * after a drop misses nothing and repeats nothing. It has no SSE `id`. `connectionId` names this live connection, so
+ * a `cookout watch` exiting on purpose can say so first with `DELETE /v1/events/:connection` (a clean close, ADR "how
+ * a live connection ends"); a server from before clean closes sends none.
  */
 interface ConnectedEvent {
   readonly type: "connected";
   readonly latestMessageId: MessageId | null;
+  readonly connectionId?: LiveConnectionId;
+}
+/** The answer to a clean close, `DELETE /v1/events/:connection`. */
+interface CleanCloseResponse {
+  readonly closed: true;
 }
 /**
  * One identity's presence just changed (it came online, went offline, or connects another way), sent only on the
@@ -742,6 +766,8 @@ type CookoutEvent = InboxItemEvent | ReadPositionEvent | ReadPositionMovedBackEv
  * it is also the all-channels feed: every new message on every channel.
  */
 declare const eventsPath = "/v1/events";
+/** `DELETE /v1/events/:connection`: the clean close of the caller's live connection `connection`, answering `CleanCloseResponse`. */
+declare const liveConnectionPath = "/v1/events/:connection";
 /** The query that asks the stream for the all-channels feed: `?channels=all`. */
 declare const allChannelsQuery: {
   readonly channels: "all";
@@ -754,6 +780,7 @@ declare const allChannelsQuery: {
 declare const refusalEvent = "refusal";
 interface EventStream extends AsyncIterable<CookoutEvent> {
   readonly close: () => Promise<void>;
+  readonly closeCleanly: () => Promise<void>;
 }
 interface WatchOptions {
   readonly allChannels?: boolean;
@@ -1009,7 +1036,10 @@ export type CookoutClient = CallGroups & {
    * each new read position (`read-position`) the moment any session of the caller acks, and each read position moved
    * back (`read-position-moved-back`) the moment one marks a message unread, so several sessions stay in sync. With `allChannels`, it also sends every new message on every channel (`message`), each newly recorded read receipt (`read-receipt`) and each change to anyone's presence (`presence`), as the web UI needs.
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
-   * a newer server, is skipped. `close` drops the connection. Opened with an agent session token, the stream moves its
+   * a newer server, is skipped. `close` drops the connection, which the server counts as a drop: presence keeps the
+   * identity online for the grace, then offline with "connection lost". `closeCleanly` first tells the server the
+   * stream is ending on purpose (`DELETE /v1/events/:connection`, naming the connection ID the `connected` event
+   * carried), so its end is expected, then closes; `cookout watch` exiting on purpose does this. Opened with an agent session token, the stream moves its
    * expiry on while open, and once the token is revoked (`leave`, or another session's `join --force`) the
    * iteration throws `agent_session_revoked` (status 200, the stream's). An agent holds one stream at most: when
    * another opens for it, with either token, this one's iteration throws `watch_replaced`. To pick up after a
@@ -1051,5 +1081,5 @@ export type CookoutClient = CallGroups & {
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DeactivateIdentityResponse, type Description, type DescriptionCalls, type DisplayName, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListedAgentSession, type LiveConnectionDetail, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type Refusal, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type refusalEvent, refusalOf };
+export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type CleanCloseResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DeactivateIdentityResponse, type Description, type DescriptionCalls, type DisplayName, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListedAgentSession, type LiveConnectionDetail, type LiveConnectionId, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type OfflineReason, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type Refusal, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type liveConnectionPath, type refusalEvent, refusalOf };
 ```

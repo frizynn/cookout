@@ -224,7 +224,7 @@ export { IdentityChanges, identityChangesLayer } from "./lib/server/changes.ts";
  * Tokens a request just ended (`leave`, a revoke, a rotation, a deactivation), told through `IdentityChanges` so the
  * presence registry ends the live connections sent with them at once (ADR "how a live connection ends").
  */
-export { type EndedTokens, type TokensEnded, tokensEnded } from "./lib/server/changes.ts";
+export type { EndedTokens, TokensEnded } from "./lib/server/changes.ts";
 
 /**
  * The Schemas of the identity as the server shows it and of its name, for the live stream's `identity`,
