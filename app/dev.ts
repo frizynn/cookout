@@ -4,8 +4,9 @@
  * (ADRs 0017 and 0020). It is never built or published.
  */
 import { Cause, Effect, Exit, Runtime } from "effect";
-import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import { devCommandLine } from "./modules/dev/server.ts";
+import { layer as nodeServices } from "@effect/platform-node/NodeServices";
+import { runMain } from "@effect/platform-node/NodeRuntime";
 
 const ARGUMENTS_FROM = 2;
 const EXIT_SUCCESS = 0;
@@ -18,7 +19,7 @@ function stopIsSuccess(exit: Exit.Exit<unknown, unknown>, onExit: (code: number)
   Runtime.defaultTeardown(exit, onExit);
 }
 
-NodeRuntime.runMain(devCommandLine(process.argv.slice(ARGUMENTS_FROM)).pipe(Effect.provide(NodeServices.layer)), {
+runMain(devCommandLine(process.argv.slice(ARGUMENTS_FROM)).pipe(Effect.provide(nodeServices)), {
   disableErrorReporting: true,
   teardown: stopIsSuccess,
 });
