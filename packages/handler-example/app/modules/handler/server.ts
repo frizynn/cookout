@@ -5,7 +5,8 @@
  * body, keyed with the command's secret, gets 401 and goes no further; a
  * signed body that is not a command call gets 400. A signed command call is
  * answered 202 at once, and then the handler posts its result reply in the
- * call's thread with the call's command token, through the SDK. A body over 2 MiB gets 413 before it is read
+ * call's thread with the call's command token, through the SDK; a reply the
+ * cookout refuses is logged as a warning with the refusal's code and message. A body over 2 MiB gets 413 before it is read
  * whole or its signature checked: twice the cookout's own 1 MiB cap on a call, so a delivery always fits. A call
  * whose data has `failFirst: true` gets 503 on its first delivery, so the
  * cookout retries it with the same `callId`; a `callId` already handled is
@@ -21,12 +22,12 @@ import {
   HttpServerResponse,
 } from "effect/http";
 import { Mac, SecureRandom } from "effect/crypto";
+import { createCookoutClient, refusalOf } from "@ai-hero/cookout/sdk";
 import type { CommandCall } from "./lib/server/call.ts";
 import { CommandCallSchema } from "./lib/server/call.ts";
 import { Hex } from "effect/encoding";
 import { NodeHttpServer } from "@effect/platform-node";
 import type { ServeError } from "effect/http/HttpServerError";
-import { createCookoutClient } from "@ai-hero/cookout/sdk";
 import { createServer } from "node:http";
 
 interface HandlerOptions {
@@ -103,9 +104,10 @@ function postResult(cookoutUrl: string, call: CommandCall): Effect.Effect<void> 
     replyTo: call.threadId,
     text: `/${call.command} is done.`,
   };
-  return Effect.tryPromise({ catch: () => call.callId, try: () => cookout.createMessage(reply) }).pipe(
+  return Effect.tryPromise({ catch: refusalOf, try: () => cookout.createMessage(reply) }).pipe(
     Effect.matchEffect({
-      onFailure: () => Effect.logWarning(`The result reply for call ${call.callId} could not be posted.`),
+      onFailure: ({ code, message }) =>
+        Effect.logWarning(`The result reply for call ${call.callId} could not be posted: ${code}: ${message}`),
       onSuccess: () => Effect.void,
     }),
   );

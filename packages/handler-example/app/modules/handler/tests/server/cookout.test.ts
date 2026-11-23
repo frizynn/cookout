@@ -1,4 +1,17 @@
-import { Array as Arr, Effect, FileSystem, Option, Path, Redacted, Ref, Schedule, Schema, Stream } from "effect";
+import {
+  Array as Arr,
+  Effect,
+  FileSystem,
+  Logger,
+  MutableRef,
+  Option,
+  Path,
+  Redacted,
+  Ref,
+  Schedule,
+  Schema,
+  Stream,
+} from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import type { CookoutClient, JsonValue, Message, MessageId } from "@ai-hero/cookout/sdk";
 import { expect, it } from "@effect/vitest";
@@ -39,6 +52,8 @@ const SERVE_ENV = {
   COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS: "0",
   COOKOUT_WEBHOOK_RETRY_FACTOR: "1",
 };
+
+const REFUSED_WARNING = /The result reply for call call_\S+ could not be posted: [a-z_]+: ./u;
 
 const isListening = Schema.is(Schema.Struct({ listening: Schema.String }));
 const jsonLineIn = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown));
@@ -185,5 +200,30 @@ it.live("in fail-first mode the first delivery of a call fails and the retry pos
       { author: { name: "echo" }, data: { received: { failFirst: true, text: "hello" } }, text: "/echo is done." },
     ]);
     expect(statuses).toStrictEqual([UNAVAILABLE, ACCEPTED]);
+  }).pipe(Effect.provide(NodeServices.layer), Effect.scoped),
+);
+
+it.live("a result reply the cookout refuses is logged with the refusal's code", () =>
+  Effect.gen(function* refusedReply() {
+    const cookout = yield* startCookout;
+    const handler = yield* addEcho(cookout);
+    const warnings = MutableRef.make<readonly string[]>([]);
+    const collect = Logger.map(Logger.formatSimple, (line) =>
+      MutableRef.update(warnings, (before) => [...before, line]),
+    );
+    const elsewhere = { ...cookout, url: `${cookout.url}/elsewhere` };
+    yield* runHandler(elsewhere, { port: portOf(handler.url), secret: handler.secret }, () =>
+      Effect.flatMap(callEcho(cookout, { text: "hello" }), () =>
+        Effect.sync(() => MutableRef.get(warnings)).pipe(
+          Effect.repeat({
+            schedule: Schedule.spaced(WAIT_STEP),
+            times: WAIT_STEPS,
+            until: Arr.isReadonlyArrayNonEmpty,
+          }),
+        ),
+      ),
+    ).pipe(Effect.provide(Logger.layer([collect])));
+
+    expect(MutableRef.get(warnings)).toStrictEqual([expect.stringMatching(REFUSED_WARNING)]);
   }).pipe(Effect.provide(NodeServices.layer), Effect.scoped),
 );
