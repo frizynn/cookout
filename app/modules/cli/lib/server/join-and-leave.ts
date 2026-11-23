@@ -3,7 +3,7 @@ import type { AgentSessionStateFile, AgentSessionStateNeeds } from "./agent-sess
 import type { CallFailure, ClientWithAgentSessionState, JoinPlace } from "./adapters/sdk.ts";
 import { Console, Effect, Option } from "effect";
 import { answered, refused } from "./output.ts";
-import { callClient, joinPlace, withClient, withIdentityTokenClient } from "./adapters/sdk.ts";
+import { callClient, joinPlace, withClient, withJoinClient } from "./adapters/sdk.ts";
 import type { CommandFailed } from "./output.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 
@@ -58,7 +58,7 @@ function joinRequest({ as, force, idleExpiry }: JoinFlags): JoinRequest {
 }
 
 function issue(flags: JoinFlags): Effect.Effect<AgentSessionResponse, CallFailure, AgentSessionStateNeeds> {
-  return withIdentityTokenClient(callClient((client) => client.join(joinRequest(flags))));
+  return withJoinClient(callClient((client) => client.join(joinRequest(flags))));
 }
 
 function issueAndKeep(
@@ -71,7 +71,7 @@ function issueAndKeep(
       return yield* Effect.fail(alreadyJoined(stored.value.identity));
     }
     const issued = yield* issue(flags);
-    yield* file.write({ ...issued, identity: flags.as, url });
+    yield* file.write({ ...issued, url });
     return issued;
   });
 }

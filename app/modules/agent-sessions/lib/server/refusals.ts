@@ -32,6 +32,22 @@ function onlyAgentsJoin(identity: IdentityName): Refusal {
   };
 }
 
+function joinNotOwned(name: IdentityName): Refusal {
+  return {
+    code: "not_owner",
+    message: `${name} belongs to another human. Join an agent you own, or a free name to create one.`,
+    status: FORBIDDEN,
+  };
+}
+
+function identityDeactivated(name: IdentityName): Refusal {
+  return {
+    code: "identity_deactivated",
+    message: `${name} is deactivated. Reactivate it (cookout identity reactivate ${name}) to join it again.`,
+    status: CONFLICT,
+  };
+}
+
 function agentSessionLive({ expiresAt, identity }: Live): Refusal {
   return {
     code: "agent_session_live",
@@ -56,4 +72,12 @@ const agentSessionRequired: Refusal = {
   status: BAD_REQUEST,
 };
 
-export { agentSessionLive, agentSessionRequired, idleExpiryTooLong, notYourIdentity, onlyAgentsJoin };
+export {
+  agentSessionLive,
+  agentSessionRequired,
+  identityDeactivated,
+  idleExpiryTooLong,
+  joinNotOwned,
+  notYourIdentity,
+  onlyAgentsJoin,
+};
