@@ -56,7 +56,7 @@ const EXIT_REFUSED = 1;
 const TWICE = 2;
 const EXIT_TIMEOUT = 2;
 const EXIT_TOKEN = 3;
-const EXIT_LEASE_LOST = 4;
+const EXIT_ENDED = 4;
 const EXIT_UNREACHABLE = 5;
 const JOIN = ["join", "--as", "bob"];
 
@@ -140,7 +140,7 @@ it.effect("cookout watch prints one stdout line and exits 4 when another session
         Effect.flatMap(freshStateFolder, (folder) => join({ args: [...JOIN, "--force"], folder, watch })),
     });
 
-    expect(result).toMatchObject({ exitCode: EXIT_LEASE_LOST, stdoutJson: { error: { code: "lease_lost" } } });
+    expect(result).toMatchObject({ exitCode: EXIT_ENDED, stdoutJson: { error: { code: "agent_session_revoked" } } });
     expect(stdoutLines).toHaveLength(ONE_LINE);
   }).pipe(Effect.provide(commandLineServices)),
 );
@@ -284,16 +284,16 @@ it.effect("cookout watch prints the unread line once, not again after a reconnec
   }).pipe(Effect.provide(commandLineServices)),
 );
 
-it.effect("cookout watch stops with exit 1 and its refusal on stderr only, when another session holds the lease", () =>
-  Effect.gen(function* watchWithoutLease() {
+it.effect("cookout watch stops with exit 1 and its refusal on stderr only, when the server refuses to open it", () =>
+  Effect.gen(function* watchRefused() {
     const watch = yield* board;
-    const other = yield* freshStateFolder;
-    yield* join({ args: JOIN, folder: other, watch });
-    const result = yield* runCookout({ args: ["watch"], env: envOf(watch, watch.folder) });
+    const human = yield* watch.cookout.createIdentity("cy", { kind: "human" });
+    const env = { ...envOf(watch, watch.folder), CLAUDECODE: "1", COOKOUT_TOKEN: human.token };
+    const result = yield* runCookout({ args: ["watch"], env });
 
     expect(result).toMatchObject({
       exitCode: EXIT_REFUSED,
-      stderrJson: { error: { code: "lease_required" } },
+      stderrJson: { error: { code: "agent_as_human" } },
       stdout: "",
     });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),

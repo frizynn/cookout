@@ -22,7 +22,7 @@ import type { CommandFailed } from "./output.ts";
 import type { FileSystem } from "effect";
 import type { Serving } from "../../../http/server.ts";
 import { adminTokenSet } from "../../../identities/server.ts";
-import { requireTokenAndRenewLease } from "../../../leases/server.ts";
+import { requireTokenWithinLimit } from "./gate.ts";
 
 export type ServeLayers = {
   readonly storage: (path: string) => Layer.Layer<Storage, StorageUnavailable, FileSystem.FileSystem>;
@@ -34,7 +34,7 @@ export const cookoutServer = ({
   adminToken: admin,
   ...serving
 }: Serving & { readonly adminToken: Token; readonly adminName?: IdentityName }) =>
-  httpServer(serving, routes, requireTokenAndRenewLease).pipe(
+  httpServer(serving, routes, requireTokenWithinLimit).pipe(
     Layer.provideMerge(adminTokenSet({ adminName: name, adminToken: admin })),
     Layer.provideMerge(domainLayers),
   );

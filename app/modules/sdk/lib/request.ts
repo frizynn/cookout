@@ -1,23 +1,15 @@
 import { CookoutError, isServerErrorCode } from "./errors.ts";
 import type { HttpMethod, HttpRequest, HttpResponse, OpenEventStream } from "../../http/client.ts";
-import { leaseHeader, leaseLost } from "../../leases/index.ts";
 import { openEventStream, request } from "../../http/client.ts";
 import type { CookoutConnection } from "../../config/index.ts";
-import type { CookoutErrorCode } from "./errors.ts";
-import type { HeldLease } from "./held-lease.ts";
-import type { LeaseId } from "../../leases/index.ts";
 import { agentToolHeader } from "../../identities/index.ts";
-import { heldLease } from "./held-lease.ts";
 import { isErrorResponse } from "./generated/validators.js";
 import { readCookoutConnection } from "../../config/index.ts";
 
-interface ClientConnection extends CookoutConnection {
-  readonly lease: HeldLease;
-}
+type ClientConnection = CookoutConnection;
 
 interface ConnectionOptions extends Partial<CookoutConnection> {
   readonly env?: Readonly<Record<string, string | undefined>>;
-  readonly leaseId?: LeaseId;
 }
 
 interface Call<Answer> {
@@ -53,13 +45,8 @@ function agentToolHeaders(agentTool: string | undefined): Readonly<Record<string
   return NO_HEADERS;
 }
 
-function headersFor({ agentTool, lease, token }: ClientConnection): Readonly<Record<string, string>> {
-  const sent = { ...tokenHeaders(token), ...agentToolHeaders(agentTool) };
-  const leaseId = lease.current();
-  if (typeof leaseId === "string") {
-    return { ...sent, [leaseHeader]: leaseId };
-  }
-  return sent;
+function headersFor({ agentTool, token }: ClientConnection): Readonly<Record<string, string>> {
+  return { ...tokenHeaders(token), ...agentToolHeaders(agentTool) };
 }
 
 function fromEnvironment(env: ConnectionOptions["env"], given: Partial<CookoutConnection>): Partial<CookoutConnection> {
@@ -68,12 +55,6 @@ function fromEnvironment(env: ConnectionOptions["env"], given: Partial<CookoutCo
     return { ...read, agentTool };
   }
   return read;
-}
-
-function forgetLostLease(lease: HeldLease, code: CookoutErrorCode): void {
-  if (code === leaseLost) {
-    lease.drop();
-  }
 }
 
 function refusal(method: HttpMethod, path: string, response: HttpResponse): CookoutError {
@@ -102,9 +83,7 @@ export async function send<Answer>(connection: ClientConnection, call: Call<Answ
   const { isExpected, method, path, ...rest } = call;
   const response = await request({ ...rest, baseUrl: connection.url, headers: headersFor(connection), method, path });
   if (!response.ok) {
-    const error = refusal(method, path, response);
-    forgetLostLease(connection.lease, error.code);
-    throw error;
+    throw refusal(method, path, response);
   }
   if (!isExpected(response.json)) {
     throw badBody(method, path, response);
@@ -117,14 +96,12 @@ export async function openEvents({ connection, headers, path, query = {} }: Even
   const sent = { ...headers, ...headersFor(connection) };
   const opened = await openEventStream({ baseUrl: connection.url, headers: sent, method, path, query });
   if (!opened.ok) {
-    const error = refusal(method, path, opened.response);
-    forgetLostLease(connection.lease, error.code);
-    throw error;
+    throw refusal(method, path, opened.response);
   }
   return opened;
 }
 
-export function connectionFor({ env, leaseId, ...given }: ConnectionOptions): ClientConnection {
+export function connectionFor({ env, ...given }: ConnectionOptions): ClientConnection {
   const connection = { ...fromEnvironment(env, given), ...given };
   const { url = "" } = connection;
   if (url === "") {
@@ -134,7 +111,7 @@ export function connectionFor({ env, leaseId, ...given }: ConnectionOptions): Cl
       status: NO_STATUS,
     });
   }
-  return { ...connection, lease: heldLease(leaseId), url };
+  return { ...connection, url };
 }
 
 export async function getJson<Answer>(

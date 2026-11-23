@@ -3,7 +3,7 @@
  * routes that read the caller's inbox and a page of its inbox history, ack a message, follow and unfollow a
  * thread, and subscribe to and unsubscribe from a channel. Each ack is also
  * published to an in-process hub, which `acked` subscribes to, for live
- * updates. Ack needs the lease while one is held (ADR 0004). Routes sit
+ * updates. Routes sit
  * behind the server's token gate.
  */
 import {
@@ -20,11 +20,9 @@ import { ackPath, followPath, inboxHistoryPath, inboxPath, subscriptionPath } fr
 import { Caller } from "../identities/server.ts";
 import { Effect } from "effect";
 import { Inbox } from "./lib/server/service.ts";
-import type { Leases } from "../leases/server.ts";
 import type { Route } from "../http/server.ts";
-import { requireLeaseWhileHeld } from "../leases/server.ts";
 
-type Needs = Caller | Inbox | Leases;
+type Needs = Caller | Inbox;
 
 type Change = "PUT" | "DELETE";
 
@@ -65,7 +63,6 @@ const ackRoute: Route<Needs> = {
   handle: () =>
     Effect.gen(function* ackRouteHandler() {
       const { messageId } = yield* HttpServerRequest.schemaBodyJson(AckRequestSchema, ALL_ERRORS);
-      yield* requireLeaseWhileHeld;
       const caller = yield* Caller;
       const inbox = yield* Inbox;
       const answer = yield* inbox.ack(caller, messageId);
@@ -111,7 +108,7 @@ export { InboxItemSchema, ReadPositionSchema } from "./lib/server/wire.ts";
 
 /**
  * The inbox routes, for the server's route list. They need `Caller`, which the token gate provides, `Inbox`, which
- * `inboxLayer` provides, and `Leases`, for ack.
+ * `inboxLayer` provides.
  * @internal
  */
 export const inboxRoutes: readonly Route<Needs>[] = [

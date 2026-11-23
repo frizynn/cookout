@@ -66,15 +66,15 @@ it.effect(
       const ada = yield* cookout.createIdentity("ada", { kind: "human" });
       const cookie = yield* sessionCookie(cookout.url, ada.token);
       const byCookie = yield* withCookie(cookout.url, cookie)({ method: "GET", path: whoamiPath });
-      const byBearer = yield* answer(ada.client.whoami);
+      const byHeader = yield* answer(ada.client.whoami);
 
       expect(byCookie.json).toStrictEqual({ identity: ada.identity });
-      expect(byBearer).toStrictEqual({ identity: ada.identity });
+      expect(byHeader).toStrictEqual({ identity: ada.identity });
     }).pipe(Effect.provide(testCookout())),
 );
 
 it.effect("the bearer header wins over a session cookie for another identity", () =>
-  Effect.gen(function* bearerWins() {
+  Effect.gen(function* headerWins() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     const bot = yield* cookout.createIdentity("bot", { owner: "ada" });
@@ -129,7 +129,7 @@ it.effect("a session cookie stops working when the human's token is rotated", ()
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("a human cookie session posts and acks with no lease", () =>
+it.effect("a human cookie session posts and acks", () =>
   Effect.gen(function* cookiePostsAndAcks() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });

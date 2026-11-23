@@ -17,13 +17,13 @@ interface Step {
 const EXIT_FAILURE = 1;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const JOIN = ["join", "--as", "agent"];
-const LEASE_END = "2026-01-01T00:01:00.000Z";
+const WHOAMI = ["whoami"];
 const succeeded = { exitCode: 0, stderr: "" };
-const lease = { expiresAt: LEASE_END, leaseId: "lease_test_3" };
-const held = {
-  exitCode: EXIT_FAILURE,
-  stderrJson: { error: { code: "lease_held", details: { heldUntil: LEASE_END } } },
+const issued = {
+  expiresAt: "2026-01-08T00:00:00.000Z",
+  issuedAt: "2026-01-01T00:00:00.000Z",
 };
+const asAgent = { ...succeeded, stdoutJson: { identity: { name: "agent" } } };
 
 function failedWith(code: string): object {
   return { exitCode: EXIT_FAILURE, stderrJson: { error: { code } } };
@@ -33,46 +33,44 @@ function runAll(steps: readonly Step[]): Effect.Effect<readonly CliResult[], nev
   return pipe(steps, Effect.forEach(runCookout, ONE_AT_A_TIME));
 }
 
-it.effect(
-  "two CLI sessions with the same token: the second join is refused with heldUntil, join --force takes over",
-  () =>
-    Effect.gen(function* twoCliSessions() {
-      const cookout = yield* TestCookout;
-      const agent = yield* cookout.createIdentity("agent");
-      const [firstFolder, secondFolder] = yield* Effect.all([freshStateFolder, freshStateFolder], ONE_AT_A_TIME);
-      const session = { COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
-      const first = { ...session, COOKOUT_STATE_DIR: firstFolder };
-      const second = { ...session, COOKOUT_STATE_DIR: secondFolder };
-      const results = yield* runAll([
-        { args: JOIN, env: first },
-        { args: JOIN, env: first },
-        { args: JOIN, env: second },
-        { args: [...JOIN, "--force"], env: second },
-        { args: ["channel", "list"], env: first },
-        { args: ["leave"], env: first },
-        { args: ["leave"], env: first },
-        { args: ["leave"], env: second },
-        { args: JOIN, env: first },
-      ]);
+it.effect("a CLI session keeps its agent session token in its state folder, and forgets it once revoked or left", () =>
+  Effect.gen(function* twoCliSessions() {
+    const cookout = yield* TestCookout;
+    const agent = yield* cookout.createIdentity("agent");
+    const [firstFolder, secondFolder] = yield* Effect.all([freshStateFolder, freshStateFolder], ONE_AT_A_TIME);
+    const session = { COOKOUT_TOKEN: agent.token, COOKOUT_URL: cookout.url };
+    const first = { ...session, COOKOUT_STATE_DIR: firstFolder };
+    const second = { ...session, COOKOUT_STATE_DIR: secondFolder };
+    const results = yield* runAll([
+      { args: JOIN, env: first },
+      { args: WHOAMI, env: first },
+      { args: JOIN, env: second },
+      { args: [...JOIN, "--force"], env: second },
+      { args: WHOAMI, env: first },
+      { args: WHOAMI, env: first },
+      { args: ["leave"], env: second },
+      { args: ["leave"], env: second },
+      { args: [...JOIN, "--idle-expiry", "30d"], env: first },
+    ]);
 
-      expect(results).toMatchObject([
-        { ...succeeded, stdoutJson: lease },
-        { ...succeeded, stdoutJson: lease },
-        held,
-        succeeded,
-        succeeded,
-        failedWith("lease_lost"),
-        failedWith("lease_required"),
-        succeeded,
-        succeeded,
-      ]);
-      expect(
-        Arr.join(
-          Arr.map(results, (result) => result.stderr),
-          "\n",
-        ),
-      ).toContain("The stored lease was deleted; run `cookout join --as agent` to take it again.");
-    }).pipe(Effect.provide([testCookout(), commandLineServices])),
+    expect(results).toMatchObject([
+      { ...succeeded, stdoutJson: issued },
+      asAgent,
+      failedWith("agent_session_live"),
+      succeeded,
+      failedWith("agent_session_revoked"),
+      asAgent,
+      { ...succeeded, stdoutJson: { revoked: true } },
+      failedWith("agent_session_required"),
+      { ...succeeded, stdoutJson: { expiresAt: "2026-01-31T00:00:00.000Z" } },
+    ]);
+    expect(
+      Arr.join(
+        Arr.map(results, (result) => result.stderr),
+        "\n",
+      ),
+    ).toContain("The stored agent session token was deleted; run `cookout join --as agent` to join again.");
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
 it.effect("cookout join without --as, or with a name that breaks the naming rule, is a usage error", () =>

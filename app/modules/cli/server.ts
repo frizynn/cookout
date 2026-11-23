@@ -3,18 +3,18 @@
  * calls the server through the SDK. `watch` prints one stdout line per new
  * inbox item, and everything else on stderr. Answers are JSON on stdout; refusals are
  * `{ error: { code, message } }` on stderr with exit code 1. `Secrets` comes
- * from the caller: `serve` issues tokens and lease IDs with it, and `join`
- * names its lease-state file with it.
+ * from the caller: `serve` issues tokens with it, and `join`
+ * names its agent session state file with it.
  *
- * `join` keeps its lease in a lease-state file for one server and token, so one
+ * `join` keeps the agent session token it was issued in a state file for one server and token, so one
  * identity, under `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then
- * `~/.local/state/cookout`). Every later command sends the lease ID from it. The
- * file's name is a hash, so the token is never written to disk. On `lease_lost`
- * the stored lease is deleted and the message says to run `cookout join` again.
- * The state folder and its `leases/` folder must be folders only the user
+ * `~/.local/state/cookout`). Every later command sends that token from it instead of
+ * `COOKOUT_TOKEN`. The file's name is a hash, so the Identity token is never written to disk. On
+ * `agent_session_revoked` or `agent_session_expired` the stored token is deleted and the message says to run
+ * `cookout join` again. The state folder and its `agent-sessions/` folder must be folders only the user
  * can open (mode 700, not symlinks), or the command fails with
- * `lease_state_unsafe`; `join` makes them so. A lease-state file that can't
- * be read as one is `lease_state_damaged`; any other failure of the CLI
+ * `agent_session_state_unsafe`; `join` makes them so. A state file that can't
+ * be read as one is `agent_session_state_damaged`; any other failure of the CLI
  * itself, rather than a refusal, is `cli_error`.
  *
  * `login --token` reads a human identity's token from stdin (never the command

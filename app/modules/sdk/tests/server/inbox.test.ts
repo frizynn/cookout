@@ -177,7 +177,7 @@ it.effect("following message 0, which no message has, is 404 message_not_found",
     const cookout = yield* TestCookout;
     const { ann } = yield* board(cookout);
     const response = yield* HttpClientRequest.put(`${cookout.url}/v1/messages/0/follow`).pipe(
-      HttpClientRequest.bearerToken(ann.token),
+      HttpClientRequest.setHeader("authorization", `Bearer ${ann.token}`),
       HttpClient.execute,
     );
     const json = yield* response.json;

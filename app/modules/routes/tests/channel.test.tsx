@@ -9,6 +9,14 @@ const NONE = 0;
 const FIRST = 0;
 const REST = 1;
 
+async function ackingWithALeftSession(token: string, name: string): Promise<CookoutClient> {
+  const client = clientWith(token);
+  const { agentSessionToken } = await client.join({ as: name });
+  const session = clientWith(agentSessionToken);
+  await session.leave();
+  return { ...client, ack: session.ack };
+}
+
 async function post(channel: string, text: string): Promise<Message> {
   const { message } = await adminClient().createMessage({ channel, text });
   return message;
@@ -196,13 +204,13 @@ it("a refused ack says the channel couldn't be marked read", { timeout: 5000 }, 
   expect.hasAssertions();
 
   await channelWith("web-channel-ack-refused", ["Hello"]);
-  const agent = await newIdentity({ kind: "agent", name: "web-channel-held" });
-  await agent.client.join({ as: "web-channel-held" });
-  const close = openAt({ client: clientWith(agent.token), hash: "#/channels/web-channel-ack-refused" });
+  const agent = await newIdentity({ kind: "agent", name: "web-channel-left" });
+  const client = await ackingWithALeftSession(agent.token, "web-channel-left");
+  const close = openAt({ client, hash: "#/channels/web-channel-ack-refused" });
 
   const alert = await screen.findByRole("alert");
 
-  expect(alert.textContent).toMatch(/^Couldn't mark the channel read \(lease_required\)/u);
+  expect(alert.textContent).toMatch(/^Couldn't mark the channel read \(agent_session_revoked\)/u);
 
   close();
 });

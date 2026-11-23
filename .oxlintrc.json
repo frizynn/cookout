@@ -1293,7 +1293,7 @@
         "app/modules/*/lib/server/routes.ts",
         "app/modules/*/lib/server/routes/**",
         "app/modules/storage/lib/server/**",
-        "app/modules/cli/lib/server/lease-state.ts",
+        "app/modules/cli/lib/server/agent-session-state.ts",
         "app/modules/cli/lib/server/logins.ts",
         "app/modules/testing/lib/server/cli.ts",
         "packages/e2e/app/modules/cookout/lib/server/bin.ts",

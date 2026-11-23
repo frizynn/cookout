@@ -1,7 +1,7 @@
 import type { Call, CallFailure } from "./adapters/sdk.ts";
 import { Console, Effect, Predicate, Schema } from "effect";
+import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import { CliOutput } from "effect/cli";
-import type { LeaseStateNeeds } from "./lease-state.ts";
 import { callServer } from "./adapters/sdk.ts";
 
 class CommandFailed extends Schema.TaggedError<CommandFailed>()("CommandFailed", {
@@ -70,13 +70,13 @@ function refused(error: { readonly code: string }): Effect.Effect<never, Command
   );
 }
 
-function answered<Value, Needs = LeaseStateNeeds>(
+function answered<Value, Needs = AgentSessionStateNeeds>(
   effect: Effect.Effect<Value, CallFailure, Needs>,
 ): Effect.Effect<void, CommandFailed, Needs> {
   return Effect.matchEffect(effect, { onFailure: refused, onSuccess: printAnswer });
 }
 
-function answer<Value>(call: Call<Value>): Effect.Effect<void, CommandFailed, LeaseStateNeeds> {
+function answer<Value>(call: Call<Value>): Effect.Effect<void, CommandFailed, AgentSessionStateNeeds> {
   return answered(callServer(call));
 }
 

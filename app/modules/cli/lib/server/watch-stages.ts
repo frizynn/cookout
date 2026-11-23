@@ -1,13 +1,13 @@
 import { Array as Arr, Duration, Effect, Option, Ref, Stream } from "effect";
-import type { CallFailure, ClientWithLeaseState } from "./adapters/sdk.ts";
+import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import { CommandFailed, refused } from "./output.ts";
 import type { ConnectedEvent, InboxItemEvent, MessageId } from "../../../sdk/index.ts";
+import { agentSessionExpired, agentSessionRevoked } from "../../../agent-sessions/index.ts";
 import { note, printLine } from "./watch-lines.ts";
 import type { Format } from "./watch-lines.ts";
 import type { Heard } from "./watch-connection.ts";
 import { callClient } from "./adapters/sdk.ts";
 import { isInboxItem } from "./watch-connection.ts";
-import { leaseLost } from "../../../leases/index.ts";
 
 interface StopCondition {
   readonly once: boolean;
@@ -19,7 +19,7 @@ const NO_UNREAD = 0;
 const NOTHING_POSTED = 0;
 const FIRST = 1;
 const TOKEN_REFUSED: ReadonlySet<string> = new Set(["token_missing", "token_unknown", "token_revoked"]);
-const exitCodes = { leaseLost: 4, timeout: 2, tokenRefused: 3, unreachable: 5 } as const;
+const exitCodes = { agentSessionEnded: 4, timeout: 2, tokenRefused: 3, unreachable: 5 } as const;
 
 interface Unread {
   readonly count: number;
@@ -28,7 +28,7 @@ interface Unread {
 
 const NONE_UNREAD: Unread = { count: NO_UNREAD, mentioned: false };
 
-function unreadUpTo(opened: ClientWithLeaseState, latest: MessageId | null): Effect.Effect<Unread, CallFailure> {
+function unreadUpTo(opened: ClientWithAgentSessionState, latest: MessageId | null): Effect.Effect<Unread, CallFailure> {
   if (latest === null) {
     return Effect.succeed(NONE_UNREAD);
   }
@@ -57,7 +57,7 @@ function isNewerThan(counted: Option.Option<number>, { item }: InboxItemEvent): 
 }
 
 interface Counting {
-  readonly opened: ClientWithLeaseState;
+  readonly opened: ClientWithAgentSessionState;
   readonly format: Format;
   readonly stop: StopCondition;
 }
@@ -138,8 +138,8 @@ function fatalExitCode(code: string): Option.Option<number> {
   if (TOKEN_REFUSED.has(code)) {
     return Option.some(exitCodes.tokenRefused);
   }
-  if (code === leaseLost) {
-    return Option.some(exitCodes.leaseLost);
+  if (code === agentSessionRevoked || code === agentSessionExpired) {
+    return Option.some(exitCodes.agentSessionEnded);
   }
   if (code === "server_unreachable") {
     return Option.some(exitCodes.unreachable);

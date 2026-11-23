@@ -1,14 +1,14 @@
-import type { CallFailure, ClientWithLeaseState } from "./adapters/sdk.ts";
+import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import { Command, Flag } from "effect/cli";
 import { Effect, Option, Stream } from "effect";
 import { printLine, textLine } from "./watch-lines.ts";
 import { source, start } from "./watch-connection.ts";
 import { startUpLine, stopped, untilStopped } from "./watch-stages.ts";
+import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { CommandFailed } from "./output.ts";
 import type { Format } from "./watch-lines.ts";
 import type { Heard } from "./watch-connection.ts";
 import type { InboxItemEvent } from "../../../sdk/index.ts";
-import type { LeaseStateNeeds } from "./lease-state.ts";
 import type { StopCondition } from "./watch-stages.ts";
 import { withClient } from "./adapters/sdk.ts";
 
@@ -21,7 +21,10 @@ function printEach(format: Format): (event: InboxItemEvent) => Effect.Effect<voi
   return (event) => printLine({ format, json: event, text: textLine(event) });
 }
 
-function printItems({ format, stop }: Watching): (opened: ClientWithLeaseState) => Effect.Effect<void, CallFailure> {
+function printItems({
+  format,
+  stop,
+}: Watching): (opened: ClientWithAgentSessionState) => Effect.Effect<void, CallFailure> {
   return (opened) =>
     Effect.scoped(
       Effect.flatMap(start(opened), (first: Stream.Stream<readonly Heard[], CallFailure>) =>
@@ -34,7 +37,7 @@ function printItems({ format, stop }: Watching): (opened: ClientWithLeaseState) 
     );
 }
 
-function watch(watching: Watching): Effect.Effect<void, CommandFailed, LeaseStateNeeds> {
+function watch(watching: Watching): Effect.Effect<void, CommandFailed, AgentSessionStateNeeds> {
   return Effect.matchEffect(withClient(printItems(watching)), {
     onFailure: stopped(watching.format),
     onSuccess: () => Effect.void,
@@ -84,8 +87,8 @@ export const watchCommand = Command.make(
       "#<channel> thread:<id> @<author>: <first 120 characters> (msg <id>), after one " +
       "<n> unread, run cookout inbox line when there are unread items. Exit codes: 0 after --once (at the " +
       "unread line, or else the first item) or " +
-      "--until-mention, 1 refused, 2 --timeout passed, 3 token invalid or deleted, 4 lease_lost (another " +
-      "session ran join --force), 5 server unreachable for 5 minutes; 3, 4 and 5 print one stdout line first. " +
+      "--until-mention, 1 refused, 2 --timeout passed, 3 token invalid or deleted, 4 agent session token " +
+      "revoked or expired (leave, or another session ran join --force), 5 server unreachable for 5 minutes; 3, 4 and 5 print one stdout line first. " +
       "Run cookout help monitor.",
   ),
 );

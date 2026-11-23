@@ -4,11 +4,11 @@
 
 A test pins in place the structure behind the interface it drives, so only the interfaces in `TESTED_INTERFACES` in `.dependency-cruiser.cjs` may have tests, and `tests-only-at-tested-interfaces` fails a test file anywhere else. The SDK is the one tested interface: it drives the whole server headlessly, over HTTP against a real server, and fast. The other entries each have a reason and a way off the list:
 
-- `cli`: the binary's own wiring, which the SDK can't reach (argv to the right call, JSON on stdout, a refusal as JSON on stderr with exit code 1, `url_missing`, usage errors, `serve`'s first-boot token, a database file holding no token, the lease kept between commands in its lease-state file). Its tests check only that, and only one spawns the binary; `no-restricted-imports` bans `node:child_process`, `effect/process` and `runCookoutBinary` in every other test. Off the list if the CLI, run in process, becomes the single interface and the SDK's tests fold into it, which is Matt's call.
+- `cli`: the binary's own wiring, which the SDK can't reach (argv to the right call, JSON on stdout, a refusal as JSON on stderr with exit code 1, `url_missing`, usage errors, `serve`'s first-boot token, a database file holding no token, the agent session token kept between commands in its state file). Its tests check only that, and only one spawns the binary; `no-restricted-imports` bans `node:child_process`, `effect/process` and `runCookoutBinary` in every other test. Off the list if the CLI, run in process, becomes the single interface and the SDK's tests fold into it, which is Matt's call.
 - `storage`: ADR 0007's one contract suite for every `Storage` Layer, kept for a future adapter (mattpocock/cookout#1 story 71). Off the list only if the SDK's suite runs on both Layers, which reverses ADR 0007.
 - `webhook-fake`: a fake with its own tests, which a fake earns. Off the list once the command tests use it through the SDK and its own tests go.
 
-`secrets` was on the list for its lease-ID test until mattpocock/cookout#28, when join came to cover the lease ID through the SDK.
+`secrets` was on the list for the ID `join` issued until mattpocock/cookout#28, when join came to cover it through the SDK.
 
 The web UI will add one entry for its external stores, which no headless interface reaches.
 

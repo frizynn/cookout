@@ -21,6 +21,7 @@ import type {
   CommandWithSecretResponse,
   ListCommandsResponse,
 } from "./lib/commands.ts";
+import type { AgentSessionResponse, JoinRequest, LeaveResponse } from "./lib/agent-sessions.ts";
 import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "./lib/channels.ts";
 import type {
   CreateIdentityRequest,
@@ -29,7 +30,6 @@ import type {
   ListIdentitiesResponse,
 } from "../identities/index.ts";
 import type { EventStream, WatchOptions } from "./lib/events.ts";
-import type { JoinRequest, LeaseId, LeaseResponse, LeaveResponse } from "./lib/leases.ts";
 import type {
   ListMessagesQuery,
   ListMessagesResponse,
@@ -40,12 +40,12 @@ import type {
 } from "./lib/messages.ts";
 import { eventCalls, eventOf } from "./lib/events.ts";
 import type { HealthResponse } from "../http/index.ts";
+import { agentSessionCalls } from "./lib/agent-sessions.ts";
 import { channelCalls } from "./lib/channels.ts";
 import { commandCalls } from "./lib/commands.ts";
 import { connectionFor } from "./lib/request.ts";
 import { identityCalls } from "./lib/identities.ts";
 import { inboxCalls } from "./lib/inbox.ts";
-import { leaseCalls } from "./lib/leases.ts";
 import { messageCalls } from "./lib/messages.ts";
 
 export type {
@@ -99,12 +99,12 @@ export type {
   TopLevelMessage,
 } from "../messages/index.ts";
 export type {
+  AgentSessionLiveDetails,
+  AgentSessionResponse,
+  IdleExpiryTooLongDetails,
   JoinRequest,
-  LeaseConflictDetails,
-  LeaseId,
-  LeaseResponse,
   LeaveResponse,
-} from "../leases/index.ts";
+} from "../agent-sessions/index.ts";
 export type {
   AckRequest,
   AckResponse,
@@ -133,14 +133,15 @@ export { CookoutError, type CookoutErrorCode, type Refusal, type UnknownErrorCod
 export type CookoutClientOptions = {
   /** The server's base URL, such as `https://cookout.example.com`. Default: `COOKOUT_URL`. */
   readonly url?: string;
-  /** The bearer token. Default: `COOKOUT_TOKEN`. Not needed for the health check. */
+  /**
+   * The bearer token: an Identity token, or the agent session token `join` answered, to act as the agent for that
+   * session. Default: `COOKOUT_TOKEN`. Not needed for the health check.
+   */
   readonly token?: string;
   /** Where `COOKOUT_URL` and `COOKOUT_TOKEN` are read from. Default: the process's environment (none in a browser). */
   readonly env?: Readonly<Record<string, string | undefined>>;
   /** The agent tool running this process, such as `claude-code`, sent on every request: a human's token with it is refused with 403 `agent_as_human`, and messages posted record it. Default: with a token from `COOKOUT_TOKEN`, the tool `env` shows (`CLAUDECODE=1` for Claude Code, or the tool an `AI_AGENT` value names), unless `COOKOUT_ALLOW_HUMAN=1`. */
   readonly agentTool?: string;
-  /** A lease ID from an earlier `join` (the CLI keeps it in its lease-state file). The client sends it on every request, which renews the lease. */
-  readonly leaseId?: LeaseId;
 };
 
 export type CookoutClient = {
@@ -196,14 +197,17 @@ export type CookoutClient = {
   /** `GET /v1/messages/:id/thread`: the thread holding the message, its top-level message and every reply in order. */
   readonly getThread: (messageId: MessageId) => Promise<ThreadResponse>;
   /**
-   * `POST /v1/lease`: takes the lease on the token's identity (`as` must be its name). From then on this client sends
-   * the lease ID on every request, renewing it. 409 `lease_held` (with `details.heldUntil`) if another session holds
-   * it, unless `force`, which takes it over.
+   * `POST /v1/agent-session`, with an agent's Identity token (`as` must be its name; a human's is 403
+   * `identity_kind`): issues an agent session token, which expires once unused for `idleExpiry` (default `7d`, at
+   * most the server's `COOKOUT_MAX_IDLE_EXPIRY`, else 400 `idle_expiry_too_long`); each request sent with it moves
+   * its expiry on. Make a client with it as `token` to act as the agent for this session. 409 `agent_session_live`
+   * (with `details.expiresAt`) while the agent has a live one, unless `force`, which revokes that one at once.
    */
-  readonly join: (request: JoinRequest) => Promise<LeaseResponse>;
+  readonly join: (request: JoinRequest) => Promise<AgentSessionResponse>;
   /**
-   * `DELETE /v1/lease`: releases this client's lease, so another session can join at once. Needs the lease: 409
-   * `lease_required` without one, `lease_lost` if it is no longer live. After a `lease_lost` the client stops sending it.
+   * `DELETE /v1/agent-session`: revokes the agent session token this client's token is, so another session can join
+   * at once. With any other token, 400 `agent_session_required`. A revoked or expired agent session token gets 401
+   * `agent_session_revoked` or `agent_session_expired` on every request.
    */
   readonly leave: () => Promise<LeaveResponse>;
   /**
@@ -221,9 +225,7 @@ export type CookoutClient = {
   readonly inboxHistory: (query?: InboxHistoryQuery) => Promise<InboxHistoryResponse>;
   /**
    * `POST /v1/ack`: marks the message and everything before it in its thread (for a reply) or channel (for a
-   * top-level message) as read. A read position never moves backwards. Sent without a lease ID, it is allowed only
-   * while nobody holds the lease on the caller's identity (409 `lease_required` otherwise); a stale lease ID is 409
-   * `lease_lost`. A missing message is 404 `message_not_found`.
+   * top-level message) as read. A read position never moves backwards. A missing message is 404 `message_not_found`.
    */
   readonly ack: (messageId: MessageId) => Promise<AckResponse>;
   /**
@@ -243,10 +245,9 @@ export type CookoutClient = {
    * each new read position (`read-position`) the moment any session of the caller acks, so several sessions stay in
    * sync. With `allChannels`, it also sends every new message on every channel (`message`), as the web UI needs.
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
-   * a newer server, is skipped. `close` drops the connection. For an agent identity the stream carries the held
-   * lease ID and keeps the lease alive while open; a stale one is refused with 409 `lease_lost`, and if another
-   * session takes the lease over (`join --force`) the iteration throws `lease_lost` (status 200, the stream's) and
-   * the client drops the lease. A human identity watches with no lease. To pick up after a dropped connection, pass
+   * a newer server, is skipped. `close` drops the connection. Opened with an agent session token, the stream moves its
+   * expiry on while open, and once the token is revoked (`leave`, or another session's `join --force`) the
+   * iteration throws `agent_session_revoked` (status 200, the stream's). To pick up after a dropped connection, pass
    * the last message ID seen as `lastEventId`: the stream first replays the inbox items after it, then goes on live.
    * The server sends a heartbeat every 15 s, which `onHeartbeat` hears while the stream is being iterated. The
    * stream starts by telling `onConnected` the board's latest message ID (null before the first message): every
@@ -291,7 +292,7 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
     ...identityCalls(server),
     ...channelCalls(server),
     ...messageCalls(server),
-    ...leaseCalls(server),
+    ...agentSessionCalls(server),
     ...inboxCalls(server),
     ...eventCalls(server),
     ...commandCalls(server),

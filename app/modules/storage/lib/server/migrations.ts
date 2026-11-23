@@ -122,6 +122,16 @@ const migrations: readonly string[] = [
    BEGIN
      SELECT RAISE(ABORT, 'An agent has an owner.');
    END;`,
+  `DROP TABLE leases;
+   CREATE TABLE agent_session_tokens (
+     hash TEXT PRIMARY KEY,
+     identity_name TEXT NOT NULL REFERENCES identities (name) ON DELETE CASCADE,
+     issued_at TEXT NOT NULL,
+     expires_at TEXT NOT NULL,
+     idle_seconds INTEGER NOT NULL CHECK (idle_seconds > 0),
+     revoked INTEGER NOT NULL CHECK (revoked IN (0, 1))
+   ) STRICT;
+   CREATE INDEX agent_session_tokens_by_identity ON agent_session_tokens (identity_name);`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

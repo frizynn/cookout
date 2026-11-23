@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { agentSessionResponseSchemas } from "../app/modules/agent-sessions/server.ts";
 import { channelResponseSchemas } from "../app/modules/channels/server.ts";
 import { commandResponseSchemas } from "../app/modules/commands/server.ts";
 import { eventResponseSchemas } from "../app/modules/events/server.ts";
@@ -6,7 +7,6 @@ import { generateValidators } from "./lib/validators.ts";
 import { httpResponseSchemas } from "../app/modules/http/server.ts";
 import { identityResponseSchemas } from "../app/modules/identities/server.ts";
 import { inboxResponseSchemas } from "../app/modules/inbox/server.ts";
-import { leaseResponseSchemas } from "../app/modules/leases/server.ts";
 import { messageResponseSchemas } from "../app/modules/messages/server.ts";
 
 interface GeneratedFile {
@@ -20,13 +20,13 @@ const EXIT_SUCCESS = 0;
 const NONE = 0;
 const OUT_DIR = "app/modules/sdk/lib/generated";
 const generated = generateValidators({
+  "agent-sessions": agentSessionResponseSchemas,
   channels: channelResponseSchemas,
   commands: commandResponseSchemas,
   events: eventResponseSchemas,
   http: httpResponseSchemas,
   identities: identityResponseSchemas,
   inbox: inboxResponseSchemas,
-  leases: leaseResponseSchemas,
   messages: messageResponseSchemas,
 });
 const files: readonly GeneratedFile[] = [

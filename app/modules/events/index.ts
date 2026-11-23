@@ -61,7 +61,8 @@ export const eventsPath = "/v1/events";
 export const allChannelsQuery = { channels: "all" } as const;
 
 /**
- * The SSE `event` of the stream's last event when it can't go on, such as `lease_lost` once another session takes
- * over the lease: it has no `id`, and its `data` is the refusal's `ErrorResponse` as JSON.
+ * The SSE `event` of the stream's last event when it can't go on, such as `agent_session_revoked` once `leave` or
+ * another session's `join --force` revokes the agent session token it was opened with: it has no `id`, and its
+ * `data` is the refusal's `ErrorResponse` as JSON.
  */
 export const refusalEvent = "refusal";

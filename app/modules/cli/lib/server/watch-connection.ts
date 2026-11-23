@@ -1,5 +1,5 @@
 import { Array as Arr, Duration, Effect, Option, Queue, Ref, Schedule, Stream } from "effect";
-import type { CallFailure, ClientWithLeaseState } from "./adapters/sdk.ts";
+import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import type {
   ConnectedEvent,
   CookoutEvent,
@@ -49,7 +49,7 @@ function heardOn(
 }
 
 function connect(
-  opened: ClientWithLeaseState,
+  opened: ClientWithAgentSessionState,
   lastSeen: Option.Option<MessageId>,
 ): Effect.Effect<Stream.Stream<readonly Heard[], CallFailure>, CallFailure, Scope.Scope> {
   return Effect.gen(function* openConnection() {
@@ -68,7 +68,7 @@ function connect(
 }
 
 function start(
-  opened: ClientWithLeaseState,
+  opened: ClientWithAgentSessionState,
 ): Effect.Effect<Stream.Stream<readonly Heard[], CallFailure>, CallFailure, Scope.Scope> {
   return Effect.tap(connect(opened, Option.none()), () => note({ watching: `${opened.connection.url}${eventsPath}` }));
 }
@@ -108,7 +108,7 @@ function lastSeenAfter(event: Heard): (seen: Option.Option<MessageId>) => Option
 }
 
 interface Resuming {
-  readonly opened: ClientWithLeaseState;
+  readonly opened: ClientWithAgentSessionState;
   readonly first: Stream.Stream<readonly Heard[], CallFailure>;
 }
 

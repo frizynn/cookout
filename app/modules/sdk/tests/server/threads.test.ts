@@ -130,7 +130,9 @@ it.effect("getting the thread of a missing message is a 404", () =>
     const agent = yield* withChannel(cookout);
     const error = yield* refusal(() => agent.client.getThread(messageId(MISSING)));
     const zero = HttpClientRequest.get(`${cookout.url}/v1/messages/0/thread`);
-    const zeroAnswer = yield* HttpClient.execute(HttpClientRequest.bearerToken(zero, agent.token));
+    const zeroAnswer = yield* HttpClient.execute(
+      HttpClientRequest.setHeader(zero, "authorization", `Bearer ${agent.token}`),
+    );
     const zeroBody = yield* zeroAnswer.json;
 
     expect(error).toMatchObject({ code: "message_not_found", status: 404 });
@@ -143,7 +145,9 @@ it.effect("a thread path whose message ID isn't digits is no route: 404 not_foun
     const cookout = yield* TestCookout;
     const agent = yield* withChannel(cookout);
     const thread = HttpClientRequest.get(`${cookout.url}/v1/messages/one/thread`);
-    const withToken = yield* HttpClient.execute(HttpClientRequest.bearerToken(thread, agent.token));
+    const withToken = yield* HttpClient.execute(
+      HttpClientRequest.setHeader(thread, "authorization", `Bearer ${agent.token}`),
+    );
     const withoutToken = yield* HttpClient.execute(thread);
     const bodies = yield* Effect.all([withToken.json, withoutToken.json], ONE_AT_A_TIME);
 

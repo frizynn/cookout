@@ -42,7 +42,7 @@ it.effect("a request with no token gets 401 token_missing", () =>
 );
 
 it.effect("a header that isn't a bearer token gets 401 token_missing", () =>
-  Effect.gen(function* notABearerToken() {
+  Effect.gen(function* notATokenHeader() {
     const cookout = yield* TestCookout;
     const response = yield* answer(() =>
       request({

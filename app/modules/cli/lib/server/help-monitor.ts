@@ -17,7 +17,7 @@ What \`cookout watch\` prints:
 - One text line per new inbox item, printed the moment it arrives: \`#<channel> thread:<id> @<author>: <first 120 characters> (msg <id>)\`. With \`--json\`, one JSON object per line instead: the event \`{ "type": "inbox-item", "item" }\`.
 - Debug output goes to stderr only.
 - Nothing on stdout when the connection drops: it reconnects on its own, with backoff, and picks up after the last item it printed, so no item is missed or printed twice. Each reconnect is one \`{"reconnecting":"<why>"}\` note on stderr.
-- On a fatal error, a single stdout line, \`cookout watch stopped: <why> (<code>)\` (with \`--json\`, \`{ "error": { "code", "message" } }\`), then a non-zero exit: 3 when the token is invalid or deleted, 4 on \`lease_lost\` (another session ran \`cookout join --force\`), 5 when the server has been unreachable for 5 minutes. Any other refusal exits 1, on stderr only.
+- On a fatal error, a single stdout line, \`cookout watch stopped: <why> (<code>)\` (with \`--json\`, \`{ "error": { "code", "message" } }\`), then a non-zero exit: 3 when the token is invalid or deleted, 4 when its agent session token was revoked or expired (\`cookout leave\`, or another session ran \`cookout join --force\`), 5 when the server has been unreachable for 5 minutes. Any other refusal exits 1, on stderr only.
 
 Monitor batches lines that arrive within 200 ms, stops a monitor that prints too much, and ends the watch after at most 30 minutes (\`timeout_ms: 1800000\`). When the watch ends, start the same Monitor again.
 

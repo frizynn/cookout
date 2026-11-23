@@ -168,7 +168,7 @@ it.effect("a body that isn't JSON is refused with 400", () =>
   Effect.gen(function* notJson() {
     const cookout = yield* TestCookout;
     const response = yield* HttpClientRequest.post(`${cookout.url}${identitiesPath}`).pipe(
-      HttpClientRequest.bearerToken(cookout.adminToken),
+      HttpClientRequest.setHeader("authorization", `Bearer ${cookout.adminToken}`),
       HttpClientRequest.bodyText("{nope", "application/json"),
       HttpClient.execute,
     );

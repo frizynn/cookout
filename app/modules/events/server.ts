@@ -12,14 +12,14 @@
  * changes (fed by the `DisplayNames` hub), for the web UI; and a comment
  * heartbeat every 15 s, so proxies keep the connection open. On a reconnect
  * with `Last-Event-ID`, the inbox items first replay what the caller missed.
- * An agent's lease
- * renewals, which keep the lease alive while the stream is open, are one
- * more source, here because they need the request's lease ID. The stream
+ * For a stream opened with an agent session token, one more source checks
+ * every 30 s that the token is still live, moving its expiry on, here because
+ * it needs the request's token. The stream
  * starts with a comment, so Node sends the headers at once and the caller
  * knows every source is listening. A source that sends a `refusal` event
- * (`lease_lost`) ends the stream with it. The route sits behind the server's
- * token gate, and opens only with the lease an agent's watch needs (ADR 0004,
- * ADR 0028), and only while the caller holds fewer than `COOKOUT_STREAMS_PER_IDENTITY` streams (429
+ * (`agent_session_revoked` once `leave` or another session's `join --force`
+ * revokes the token) ends the stream with it. The route sits behind the
+ * server's token gate, and opens only while the caller holds fewer than `COOKOUT_STREAMS_PER_IDENTITY` streams (429
  * `too_many_streams`, ADR 0033); closing the stream frees its place.
  */
 import type { Connected, EventSource } from "./lib/server/source.ts";
@@ -33,27 +33,25 @@ import {
 import { Effect, Exit, Scope, Stream } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { isLast, lastEventIdIn, refusalSseEvent, sseText } from "./lib/server/source.ts";
-import { keepRenewingSentLease, requireLeaseWhileHeld } from "../leases/server.ts";
+import type { AgentSessions } from "../agent-sessions/server.ts";
 import { Caller } from "../identities/server.ts";
-import type { Leases } from "../leases/server.ts";
 import type { Limits } from "../limits/server.ts";
 import type { Route } from "../http/server.ts";
 import type { SourceNeeds } from "./lib/server/sources.ts";
 import { eventsPath } from "./index.ts";
 import { holdStreamPlace } from "../limits/server.ts";
+import { sentAgentSessionEnded } from "../agent-sessions/server.ts";
 import { sources } from "./lib/server/sources.ts";
 
-type LeaseNeeds = Caller | Leases | HttpServerRequest.HttpServerRequest;
+type Needs = SourceNeeds | Caller | AgentSessions | Limits;
 
-type Needs = SourceNeeds | LeaseNeeds | Limits;
-
-function leaseRenewals(): Connected<LeaseNeeds> {
-  return Effect.map(Effect.context<LeaseNeeds>(), (context) =>
-    Stream.fromEffect(Effect.flatMap(Effect.provideContext(keepRenewingSentLease, context), refusalSseEvent)),
+function agentSessionEnd(): Connected<AgentSessions> {
+  return Effect.map(Effect.context<AgentSessions>(), (context) =>
+    Stream.fromEffect(Effect.flatMap(Effect.provideContext(sentAgentSessionEnded, context), refusalSseEvent)),
   );
 }
 
-const allSources: readonly EventSource<Needs>[] = [...sources, leaseRenewals];
+const allSources: readonly EventSource<Needs>[] = [...sources, agentSessionEnd];
 
 const SSE_HEADERS = { "cache-control": "no-cache" } as const;
 const OPENED = ": open\n\n";
@@ -61,7 +59,6 @@ const OPENED = ": open\n\n";
 const eventsRoute: Route<Needs> = {
   handle: () =>
     Effect.gen(function* openEventStream() {
-      yield* requireLeaseWhileHeld;
       const caller = yield* Caller;
       const { headers, url } = yield* HttpServerRequest.HttpServerRequest;
       const lastEventId = lastEventIdIn(headers["last-event-id"]);
@@ -85,8 +82,8 @@ const eventsRoute: Route<Needs> = {
 
 /**
  * The events route, for the server's route list. It needs `Caller`, which the token gate provides, and what its
- * sources need: `Inbox`, which `inboxLayer` provides, `Messages`, which `messagesLayer` provides, and `Leases`, which
- * `leasesLayer` provides.
+ * sources need: `Inbox`, which `inboxLayer` provides, `Messages`, which `messagesLayer` provides, and `AgentSessions`,
+ * which `agentSessionsLayer` provides.
  * @internal
  */
 export const eventRoutes: readonly Route<Needs>[] = [eventsRoute];

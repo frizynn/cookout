@@ -11,7 +11,7 @@ import {
   Ref,
   Scope,
 } from "effect";
-import type { CookoutClient, CookoutClientOptions, Identity, Token } from "../../../sdk/index.ts";
+import type { CookoutClient, Identity, Token } from "../../../sdk/index.ts";
 import type { StorageUnavailable, StoredCommand } from "../../../storage/server.ts";
 import { backingServices, newToken, storageFor } from "./backing.ts";
 import { currentTime, startTestClock } from "./time.ts";
@@ -42,7 +42,7 @@ export type TestCookoutService = {
   readonly url: string;
   readonly adminToken: Token;
   readonly client: CookoutClient;
-  readonly clientFor: (token?: string, options?: Pick<CookoutClientOptions, "leaseId">) => CookoutClient;
+  readonly clientFor: (token?: string) => CookoutClient;
   readonly createIdentity: (name: string, options?: CreateTestIdentityOptions) => Effect.Effect<TestIdentity>;
   readonly startSecondServer: Effect.Effect<BootedServer>;
   readonly startSecondServerAs: (adminName: string) => Effect.Effect<BootedServer, AdminNameIsAgent>;
@@ -58,7 +58,7 @@ export class TestCookout extends Context.Service<TestCookout, TestCookoutService
 export type TestCookoutOptions = {
   readonly storage?: StorageKind;
   readonly secrets?: "test" | "live";
-  readonly leaseSeconds?: number;
+  readonly maxIdleExpiry?: string;
   readonly publicUrl?: string;
   readonly adminName?: string;
   readonly webhookTimeoutSeconds?: number;
@@ -67,16 +67,16 @@ export type TestCookoutOptions = {
   readonly streamsPerIdentity?: number;
 };
 
-type NumberSetting =
+type Setting =
   | "commandCallsPerMinute"
-  | "leaseSeconds"
+  | "maxIdleExpiry"
   | "requestsPerMinute"
   | "streamsPerIdentity"
   | "webhookTimeoutSeconds";
 
-const settingNames: readonly (readonly [NumberSetting, string])[] = [
+const settingNames: readonly (readonly [Setting, string])[] = [
   ["commandCallsPerMinute", "COOKOUT_COMMAND_CALLS_PER_MINUTE"],
-  ["leaseSeconds", "COOKOUT_LEASE_SECONDS"],
+  ["maxIdleExpiry", "COOKOUT_MAX_IDLE_EXPIRY"],
   ["requestsPerMinute", "COOKOUT_REQUESTS_PER_MINUTE"],
   ["streamsPerIdentity", "COOKOUT_STREAMS_PER_IDENTITY"],
   ["webhookTimeoutSeconds", "COOKOUT_WEBHOOK_TIMEOUT_SECONDS"],
@@ -92,8 +92,8 @@ function serverEnv(options: TestCookoutOptions): ConfigProvider.ConfigProvider {
 
 const clientAt =
   (url: string) =>
-  (token: string | undefined, options: Pick<CookoutClientOptions, "leaseId"> = {}): CookoutClient =>
-    createCookoutClient({ env: {}, url, ...(token === undefined ? {} : { token }), ...options });
+  (token: string | undefined): CookoutClient =>
+    createCookoutClient({ env: {}, url, ...(token === undefined ? {} : { token }) });
 
 function seedMissingOwner(identity: Identity): Effect.Effect<void, StorageUnavailable, Storage | Identities> {
   return Effect.gen(function* seedOwner() {

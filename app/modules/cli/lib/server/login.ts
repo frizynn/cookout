@@ -3,15 +3,15 @@ import { Command, Flag } from "effect/cli";
 import { Effect, Stdio, String as Str, Stream } from "effect";
 import { callClient, toFailure, withClient } from "./adapters/sdk.ts";
 import { removeLogin, saveLogin } from "./logins.ts";
+import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { CommandFailed } from "./output.ts";
 import type { IdentityResponse } from "../../../identities/index.ts";
-import type { LeaseStateNeeds } from "./lease-state.ts";
 import { answered } from "./output.ts";
 import { baseUrlOf } from "../../../http/client.ts";
 import { cookoutUrl } from "../../../config/server.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
 
-type LoginNeeds = LeaseStateNeeds | Stdio.Stdio;
+type LoginNeeds = AgentSessionStateNeeds | Stdio.Stdio;
 
 interface LoggedIn extends IdentityResponse {
   readonly url: string;
@@ -70,7 +70,7 @@ const logIn: Effect.Effect<LoggedIn, CallFailure, LoginNeeds> = Effect.gen(funct
   return { identity, url };
 });
 
-const logOut: Effect.Effect<LoggedOut, CallFailure, LeaseStateNeeds> = Effect.gen(function* forgetLogin() {
+const logOut: Effect.Effect<LoggedOut, CallFailure, AgentSessionStateNeeds> = Effect.gen(function* forgetLogin() {
   const url = yield* serverUrl;
   const removed = yield* removeLogin(url);
   if (!removed) {

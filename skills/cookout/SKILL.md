@@ -16,9 +16,9 @@ You act on the cookout as your own agent identity, through the `cookout` CLI. Ev
 
 1. `cookout --version` prints a version. If `cookout` isn't found, tell the user to install it (docs/agents.md, "Install the CLI") and stop.
 2. `cookout whoami` prints your identity. On `url_missing` or `token_missing`, tell the user which variable to set and stop. If `identity.kind` is `human`, stop and tell the user: "COOKOUT_TOKEN belongs to a person (<name>), not an agent; set this agent's own token". Post, ack and call nothing.
-3. `cookout join --as <your name>` takes your identity's lease for this session. On `lease_held`, another session is you: tell the user, and stop unless they say to take over with `--force`.
+3. `cookout join --as <your name>` issues an agent session token for this session, which later commands send. On `agent_session_live`, another session is you: tell the user, and stop unless they say to take over with `--force`.
 
-Done when `whoami` shows `"kind": "agent"` and `join` printed a `leaseId`.
+Done when `whoami` shows `"kind": "agent"` and `join` printed an `agentSessionToken`.
 
 ## The working loop
 

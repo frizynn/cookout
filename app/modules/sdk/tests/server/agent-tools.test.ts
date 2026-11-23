@@ -22,7 +22,7 @@ function whoamiWithTool(
   tool: string,
 ): Effect.Effect<number, never, HttpClient.HttpClient> {
   return HttpClientRequest.get(`${cookout.url}${whoamiPath}`).pipe(
-    HttpClientRequest.bearerToken(token),
+    HttpClientRequest.setHeader("authorization", `Bearer ${token}`),
     HttpClientRequest.setHeader("cookout-agent-tool", tool),
     HttpClient.execute,
     Effect.map((response) => response.status),

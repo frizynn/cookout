@@ -1,28 +1,26 @@
 import { Effect, Equal, FileSystem, Option, Path, Random, Schema, String as Str, pipe } from "effect";
+import type { IdentityName, Token } from "../../../identities/index.ts";
 import { home, stateDirectory, xdgStateHome } from "../../../config/server.ts";
-import { identityNamePattern, isIdentityName } from "../../../identities/index.ts";
-import { isLeaseId, leaseIdPattern } from "../../../leases/index.ts";
+import { identityNamePattern, isIdentityName, isToken, tokenPattern } from "../../../identities/index.ts";
 import type { CookoutConnection } from "../../../config/index.ts";
-import type { IdentityName } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
-import type { LeaseId } from "../../../leases/index.ts";
 import { Secrets } from "../../../secrets/server.ts";
 
-interface LeaseStateFailure {
-  readonly code: "cli_error" | "lease_state_damaged" | "lease_state_unsafe" | "state_folder_missing";
+interface AgentSessionStateFailure {
+  readonly code: "cli_error" | "agent_session_state_damaged" | "agent_session_state_unsafe" | "state_folder_missing";
   readonly message: string;
 }
 
 type Needs = FileSystem.FileSystem | Path.Path | Secrets;
 
-interface LeaseStateFile {
-  readonly read: Effect.Effect<Option.Option<LeaseState>, LeaseStateFailure>;
-  readonly write: (state: LeaseState) => Effect.Effect<void, LeaseStateFailure>;
-  readonly remove: Effect.Effect<void, LeaseStateFailure>;
+interface AgentSessionStateFile {
+  readonly read: Effect.Effect<Option.Option<AgentSessionState>, AgentSessionStateFailure>;
+  readonly write: (state: AgentSessionState) => Effect.Effect<void, AgentSessionStateFailure>;
+  readonly remove: Effect.Effect<void, AgentSessionStateFailure>;
 }
 
-interface LeaseStateLocation {
+interface AgentSessionStateLocation {
   readonly base: string;
   readonly file: string;
   readonly folder: string;
@@ -40,29 +38,34 @@ const currentUser: Effect.Effect<Option.Option<number>> = Effect.sync(() =>
   Option.map(Option.fromNullishOr(process.getuid), (getuid) => getuid()),
 );
 
-const LeaseStateSchema = Schema.Struct({
+const AgentSessionStateSchema = Schema.Struct({
+  agentSessionToken: Schema.String.check(Schema.isPattern(tokenPattern).abort()).pipe(Schema.refine(isToken)),
   expiresAt: IsoTimeSchema,
   identity: Schema.String.check(Schema.isPattern(identityNamePattern).abort()).pipe(Schema.refine(isIdentityName)),
-  leaseId: Schema.String.check(Schema.isPattern(leaseIdPattern).abort()).pipe(Schema.refine(isLeaseId)),
+  issuedAt: IsoTimeSchema,
   url: Schema.String,
 });
 
-interface LeaseState {
+interface AgentSessionState {
+  readonly agentSessionToken: Token;
   readonly expiresAt: IsoTime;
   readonly identity: IdentityName;
-  readonly leaseId: LeaseId;
+  readonly issuedAt: IsoTime;
   readonly url: string;
 }
 
-const decodeLeaseState = Schema.decodeEffect(Schema.fromJsonString(LeaseStateSchema));
-const encodeLeaseState = Schema.encodeEffect(Schema.fromJsonString(LeaseStateSchema, { space: PRETTY }));
+const decodeAgentSessionState = Schema.decodeEffect(Schema.fromJsonString(AgentSessionStateSchema));
+const encodeAgentSessionState = Schema.encodeEffect(Schema.fromJsonString(AgentSessionStateSchema, { space: PRETTY }));
 
-function failure(error: { readonly message: string }): LeaseStateFailure {
+function failure(error: { readonly message: string }): AgentSessionStateFailure {
   return { code: "cli_error", message: error.message };
 }
 
-function damaged(file: string): LeaseStateFailure {
-  return { code: "lease_state_damaged", message: `The lease state file ${file} is damaged. Delete it and join again.` };
+function damaged(file: string): AgentSessionStateFailure {
+  return {
+    code: "agent_session_state_damaged",
+    message: `The agent session state file ${file} is damaged. Delete it and join again.`,
+  };
 }
 
 function setTo(value: string): Option.Option<string> {
@@ -82,9 +85,9 @@ function stateFolder(path: Path.Path): Effect.Effect<Option.Option<string>> {
   }).pipe(Effect.orDie);
 }
 
-function unsafeFolder(folder: string): LeaseStateFailure {
+function unsafeFolder(folder: string): AgentSessionStateFailure {
   return {
-    code: "lease_state_unsafe",
+    code: "agent_session_state_unsafe",
     message: `The state folder ${folder} must be a folder only you can open (mode 700), not a symlink. Run chmod 700 on it, or set COOKOUT_STATE_DIR to a private folder.`,
   };
 }
@@ -94,7 +97,7 @@ function isPrivateFolder({ mode, type, uid }: FileSystem.File.Info, user: Option
   return type === "Directory" && mode % PERMISSIONS === PRIVATE_FOLDER && ownedByUser;
 }
 
-function checkFolder(fs: FileSystem.FileSystem, folder: string): Effect.Effect<boolean, LeaseStateFailure> {
+function checkFolder(fs: FileSystem.FileSystem, folder: string): Effect.Effect<boolean, AgentSessionStateFailure> {
   return Effect.gen(function* checkStateFolder() {
     const exists = yield* Effect.mapError(fs.exists(folder), failure);
     if (!exists) {
@@ -109,7 +112,11 @@ function checkFolder(fs: FileSystem.FileSystem, folder: string): Effect.Effect<b
   });
 }
 
-function checkFolders({ base, folder, fs }: LeaseStateLocation): Effect.Effect<boolean, LeaseStateFailure> {
+function checkFolders({
+  base,
+  folder,
+  fs,
+}: AgentSessionStateLocation): Effect.Effect<boolean, AgentSessionStateFailure> {
   return Effect.flatMap(checkFolder(fs, base), (baseExists) => {
     if (!baseExists) {
       return Effect.succeed(false);
@@ -118,25 +125,29 @@ function checkFolders({ base, folder, fs }: LeaseStateLocation): Effect.Effect<b
   });
 }
 
-function readFrom(location: LeaseStateLocation): Effect.Effect<Option.Option<LeaseState>, LeaseStateFailure> {
+function readFrom(
+  location: AgentSessionStateLocation,
+): Effect.Effect<Option.Option<AgentSessionState>, AgentSessionStateFailure> {
   const { file, fs } = location;
-  return Effect.gen(function* readLeaseState() {
+  return Effect.gen(function* readAgentSessionState() {
     const folderExists = yield* checkFolders(location);
     const exists = yield* Effect.mapError(fs.exists(file), failure);
     if (!folderExists || !exists) {
       return Option.none();
     }
     const text = yield* Effect.mapError(fs.readFileString(file), failure);
-    const state = yield* Effect.mapError(decodeLeaseState(text), () => damaged(file));
+    const state = yield* Effect.mapError(decodeAgentSessionState(text), () => damaged(file));
     return Option.some(state);
   });
 }
 
-function writeTo(location: LeaseStateLocation): (state: LeaseState) => Effect.Effect<void, LeaseStateFailure> {
+function writeTo(
+  location: AgentSessionStateLocation,
+): (state: AgentSessionState) => Effect.Effect<void, AgentSessionStateFailure> {
   const { file, folder, fs } = location;
   return (state) =>
-    Effect.gen(function* writeLeaseState() {
-      const text = yield* Effect.orDie(encodeLeaseState(state));
+    Effect.gen(function* writeAgentSessionState() {
+      const text = yield* Effect.orDie(encodeAgentSessionState(state));
       const suffix = yield* Random.nextInt;
       const temporary = `${file}.${String(suffix)}.tmp`;
       yield* Effect.mapError(fs.makeDirectory(folder, { mode: PRIVATE_FOLDER, recursive: true }), failure);
@@ -150,8 +161,8 @@ function writeTo(location: LeaseStateLocation): (state: LeaseState) => Effect.Ef
 function locationOf({
   token = "",
   url,
-}: CookoutConnection): Effect.Effect<Option.Option<LeaseStateLocation>, never, Needs> {
-  return Effect.gen(function* findLeaseState() {
+}: CookoutConnection): Effect.Effect<Option.Option<AgentSessionStateLocation>, never, Needs> {
+  return Effect.gen(function* findAgentSessionState() {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const secrets = yield* Secrets;
@@ -159,13 +170,13 @@ function locationOf({
     const digest = yield* secrets.digest(`${url}\n${token}`);
     const name = `${Str.slice(KEY_START, KEY_LENGTH)(digest)}.json`;
     return Option.map(found, (base) => {
-      const folder = path.join(base, "leases");
+      const folder = path.join(base, "agent-sessions");
       return { base, file: path.join(folder, name), folder, fs };
     });
   });
 }
 
-function fileAt(location: LeaseStateLocation): LeaseStateFile {
+function fileAt(location: AgentSessionStateLocation): AgentSessionStateFile {
   return {
     read: readFrom(location),
     remove: Effect.mapError(location.fs.remove(location.file, { force: true }), failure),
@@ -173,18 +184,24 @@ function fileAt(location: LeaseStateLocation): LeaseStateFile {
   };
 }
 
-const noStateFolder: LeaseStateFile = {
+const noStateFolder: AgentSessionStateFile = {
   read: Effect.succeedNone,
   remove: Effect.void,
   write: () =>
     Effect.fail({
       code: "state_folder_missing",
-      message: "Set HOME, XDG_STATE_HOME or COOKOUT_STATE_DIR so join has a folder to keep its lease in.",
+      message: "Set HOME, XDG_STATE_HOME or COOKOUT_STATE_DIR so join has a folder to keep its agent session token in.",
     }),
 };
 
-function leaseStateFile(connection: CookoutConnection): Effect.Effect<LeaseStateFile, never, Needs> {
+function agentSessionStateFile(connection: CookoutConnection): Effect.Effect<AgentSessionStateFile, never, Needs> {
   return Effect.map(locationOf(connection), Option.match({ onNone: () => noStateFolder, onSome: fileAt }));
 }
 
-export { type LeaseState, type LeaseStateFailure, type LeaseStateFile, type Needs as LeaseStateNeeds, leaseStateFile };
+export {
+  type AgentSessionState,
+  type AgentSessionStateFailure,
+  type AgentSessionStateFile,
+  type Needs as AgentSessionStateNeeds,
+  agentSessionStateFile,
+};
