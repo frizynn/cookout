@@ -14,7 +14,8 @@
  * `twoSessions` gives an identity two separate SDK sessions, and
  * `freshStateFolder`, `leaseStateFiles` and `writeLeaseStates` make and
  * read a CLI session's lease-state folder. `builtWebFolder` stands in for
- * the Vite build that `cookout serve` serves at `/`.
+ * the Vite build that `cookout serve` serves at `/`. `cuttableLink` puts a
+ * link in front of a server that a test can cut, to drop a client's connection.
  */
 export { answer, refusal } from "./lib/server/calls.ts";
 export { type ChannelFixtureOptions, channelFixture, channelName } from "./lib/server/channels.ts";
@@ -41,6 +42,7 @@ export {
   watchCookoutBinary,
 } from "./lib/server/process.ts";
 export { type IdentityFixtureOptions, identityFixture, identityName } from "./lib/server/identities.ts";
+export { type CuttableLink, cuttableLink } from "./lib/server/cuttable-link.ts";
 export { type FixedAnswer, serverAnswering } from "./lib/server/fixed-answer.ts";
 export {
   type TwoSessions,

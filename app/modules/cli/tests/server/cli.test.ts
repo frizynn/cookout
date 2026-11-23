@@ -3,6 +3,7 @@ import {
   TestCookout,
   answer,
   commandLineServices,
+  cuttableLink,
   runCookout,
   runCookoutBinary,
   testCookout,
@@ -19,6 +20,9 @@ const succeeded = { exitCode: 0, stderr: "" };
 const TWO_LINES = 2;
 const FIRST_TEXT = "@bob have a look";
 const SECOND_TEXT = "@bob and this";
+const THIRD_TEXT = "@bob and one more";
+const THREE_LINES = 3;
+const RECONNECT_NOTE = 1;
 const verbs: readonly (readonly string[])[] = [
   ["identity", "create", "bot", "--kind", "agent", "--owner", "matt"],
   ["identity", "rotate", "bot"],
@@ -220,5 +224,47 @@ it.effect("the cookout watch --json process prints one JSON line per new inbox i
       { item: { message: { id: first, text: FIRST_TEXT }, reasons: ["mention"] }, type: "inbox-item" },
       { item: { message: { id: second, text: SECOND_TEXT } }, type: "inbox-item" },
     ]);
+  }),
+);
+
+function watchThroughADrop(): Effect.Effect<Watched<readonly [MessageId, MessageId, MessageId]>, never, Scope.Scope> {
+  return Effect.gen(function* watchAsBob() {
+    const cookout = yield* TestCookout;
+    const link = yield* cuttableLink(cookout.url);
+    const ann = yield* cookout.createIdentity("ann");
+    const bob = yield* cookout.createIdentity("bob");
+    yield* answer(() => ann.client.createChannel({ name: "grill" }));
+    const throughADrop = Effect.gen(function* postAcrossADrop() {
+      const before = yield* mention(ann, FIRST_TEXT);
+      yield* link.relayed(`id: ${String(before)}\n`);
+      yield* link.cut;
+      const whileCut = yield* mention(ann, SECOND_TEXT);
+      yield* link.restore;
+      const after = yield* mention(ann, THIRD_TEXT);
+      return [before, whileCut, after] as const;
+    });
+    return yield* watchCookoutBinary({
+      args: ["watch"],
+      env: { COOKOUT_TOKEN: bob.token, COOKOUT_URL: link.url },
+      lines: THREE_LINES,
+      whileWatching: throughADrop,
+    });
+  }).pipe(Effect.provide([testCookout(), commandLineServices]));
+}
+
+it.effect("the cookout watch process reconnects after a drop with each item once on stdout, noting it on stderr", () =>
+  Effect.gen(function* watchAcrossADrop() {
+    const {
+      during: [before, whileCut, after],
+      stderrLines,
+      stdoutLines,
+    } = yield* watchThroughADrop();
+
+    expect(stdoutLines).toStrictEqual([
+      `#grill thread:${String(before)} @ann: ${FIRST_TEXT} (msg ${String(before)})`,
+      `#grill thread:${String(whileCut)} @ann: ${SECOND_TEXT} (msg ${String(whileCut)})`,
+      `#grill thread:${String(after)} @ann: ${THIRD_TEXT} (msg ${String(after)})`,
+    ]);
+    expect(stderrLines[RECONNECT_NOTE]).toMatch(/^\{"reconnecting":/u);
   }),
 );

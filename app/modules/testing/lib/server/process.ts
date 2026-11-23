@@ -1,6 +1,6 @@
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import type { CliResult, WatchRun, Watched } from "./cli.ts";
-import { Effect, Option, Path, Schema, Stream, pipe } from "effect";
+import { Deferred, Effect, Fiber, Option, Path, Schema, Stream, pipe } from "effect";
 import { cliResult, parseLine, watched } from "./cli.ts";
 import type { Scope } from "effect";
 
@@ -44,6 +44,22 @@ function linesOf<Failure>(stream: Stream.Stream<Uint8Array, Failure>): Stream.St
   return stream.pipe(Stream.decodeText(), Stream.splitLines);
 }
 
+interface AllLines<Failure> {
+  readonly started: Effect.Effect<void>;
+  readonly lines: Effect.Effect<readonly string[], Failure>;
+}
+
+function allLines<Failure>(
+  stream: Stream.Stream<Uint8Array, Failure>,
+): Effect.Effect<AllLines<Failure>, never, Scope.Scope> {
+  return Effect.gen(function* readAllLines() {
+    const started = yield* Deferred.make<boolean>();
+    const signalled = Stream.tap(linesOf(stream), () => Deferred.succeed(started, true));
+    const reading = yield* Effect.forkScoped(Stream.runCollect(signalled));
+    return { lines: Fiber.join(reading), started: Effect.asVoid(Deferred.await(started)) };
+  });
+}
+
 function watchCookoutBinary<During, Needs>({
   args,
   env,
@@ -57,11 +73,12 @@ function watchCookoutBinary<During, Needs>({
     const handle = yield* spawner.spawn(
       ChildProcess.make(process.execPath, [main, ...args], { env: { ...env }, extendEnv: false }),
     );
-    yield* Stream.runHead(linesOf(handle.stderr));
+    const stderr = yield* allLines(handle.stderr);
+    yield* stderr.started;
     const during = yield* whileWatching;
     const stdoutLines = yield* Stream.runCollect(Stream.take(linesOf(handle.stdout), lines));
-    yield* handle.kill();
-    return watched({ during, lines: stdoutLines });
+    const errors = yield* Effect.andThen(handle.kill(), stderr.lines);
+    return watched({ during, errors, lines: stdoutLines });
   }).pipe(Effect.orDie);
 }
 

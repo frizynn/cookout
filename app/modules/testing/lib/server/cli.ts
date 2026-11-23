@@ -52,6 +52,7 @@ interface WatchRun<During, WatchNeeds> extends Invocation {
 
 interface Watched<During> {
   readonly during: During;
+  readonly stderrLines: readonly string[];
   readonly stdoutJson: readonly unknown[];
   readonly stdoutLines: readonly string[];
 }
@@ -192,19 +193,23 @@ function startServeWithWeb({
 
 interface SignallingConsole {
   readonly console: Console.Console;
+  readonly errors: Effect.Effect<readonly string[]>;
   readonly printed: Effect.Effect<readonly unknown[]>;
   readonly watching: Effect.Effect<string>;
 }
 
 function watched<During>({
   during,
+  errors,
   lines,
 }: {
   readonly during: During;
+  readonly errors: readonly unknown[];
   readonly lines: readonly unknown[];
 }): Watched<During> {
   const stdoutLines = Arr.map(lines, String);
-  return { during, stdoutJson: Arr.map(stdoutLines, (line) => parseLine(line)), stdoutLines };
+  const stderrLines = Arr.map(errors, String);
+  return { during, stderrLines, stdoutJson: Arr.map(stdoutLines, (line) => parseLine(line)), stdoutLines };
 }
 
 function signallingConsole(lines: number): Effect.Effect<SignallingConsole> {
@@ -213,10 +218,12 @@ function signallingConsole(lines: number): Effect.Effect<SignallingConsole> {
     const watching = yield* Deferred.make<string>();
     const printed = yield* Deferred.make<readonly unknown[]>();
     const logged: unknown[] = [];
+    const errored: string[] = [];
     const console: Console.Console = {
       ...output,
       error: (...line: readonly unknown[]): void => {
         output.error(...line);
+        errored.push(textOf(line));
         Deferred.doneUnsafe(watching, Effect.succeed(textOf(line)));
       },
       log: (...line: readonly unknown[]): void => {
@@ -227,7 +234,12 @@ function signallingConsole(lines: number): Effect.Effect<SignallingConsole> {
         }
       },
     };
-    return { console, printed: Deferred.await(printed), watching: Deferred.await(watching) };
+    return {
+      console,
+      errors: Effect.sync(() => [...errored]),
+      printed: Deferred.await(printed),
+      watching: Deferred.await(watching),
+    };
   });
 }
 
@@ -238,14 +250,14 @@ function watchCookout<During, WatchNeeds>({
   whileWatching,
 }: WatchRun<During, WatchNeeds>): Effect.Effect<Watched<During>, never, Needs | WatchNeeds | Scope.Scope> {
   return Effect.gen(function* watchInProcess() {
-    const { console, printed, watching } = yield* signallingConsole(lines);
+    const { console, errors, printed, watching } = yield* signallingConsole(lines);
     const program = exitCodeAfter(runCommandLine(args, verbLayers));
     const command = yield* Effect.forkScoped(exitCodeOf({ console, env, program }));
     yield* watching;
     const during = yield* whileWatching;
     const stdout = yield* printed;
     yield* Fiber.interrupt(command);
-    return watched({ during, lines: stdout });
+    return watched({ during, errors: yield* errors, lines: stdout });
   });
 }
 
