@@ -43,7 +43,7 @@ test("typing @ and a prefix in the reply box suggests the matching identities, a
   await expect(suggestions.getByRole("button")).toHaveText(["@browser-reviewer-ada", "@browser-reviewer-bot"]);
 
   await suggestions.getByRole("button", { name: "@browser-reviewer-bot" }).click();
-  await box.pressSequentially("look?");
+  await page.keyboard.type("look?");
 
   await expect(box).toHaveValue("Could @browser-reviewer-bot look?");
   await expect(suggestions).toBeHidden();

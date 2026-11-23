@@ -386,6 +386,18 @@ agent-browser --session cookout find text "← #general" click && agent-browser 
 
 The first inbox gives `[5,["followed-thread"]]` and `[6,["subscribed-channel"]]` (only `[5,["followed-thread"]]` if you ran "Open a channel" first). Clicking `3 replies` moves to `http://127.0.0.1:3000/#/channels/general/threads/1`; the snapshot shows the heading `Thread in #general`, `@ada`'s top-level message, and the replies from `@triage-agent`, `@grace` and `@ada`. The second inbox no longer has `[5,["followed-thread"]]`: opening the thread acked its latest reply. After `Send reply` the list ends with `@grace` and `On it after lunch.`, the server's thread ends with `[7,"grace","On it after lunch."]` (a later ID if you posted to `busy` first), and the back link moves to `http://127.0.0.1:3000/#/channels/general`. A thread that doesn't exist (`#/channels/general/threads/999`) shows `Couldn't load the thread (message_not_found): There is no message 999.`
 
+## Mention someone in a reply
+
+In the same thread, type `@` and the start of a name into the reply box (with `keyboard type`, so the caret moves as a person's would), then pick a suggestion:
+
+```sh
+agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general/threads/1" && agent-browser --session cookout click 'textarea[name=text]'
+agent-browser --session cookout keyboard type "Can @tr" && agent-browser --session cookout snapshot
+agent-browser --session cookout find role button click --name "@triage-agent" && agent-browser --session cookout keyboard type "post the run?" && agent-browser --session cookout snapshot
+```
+
+The first snapshot shows a list named `Mention suggestions` under the box with one button, `@triage-agent`; a bare `@` lists every identity, humans and agents, sorted by name. After choosing it the list is gone, the box still has the focus, and it reads `Can @triage-agent post the run?`. An `@` straight after a letter (`me@admin`) suggests nobody. Each thread keeps its own draft.
+
 ## Run the web tests
 
 The web tests (`app/modules/routes/tests/`, the `web` Vitest project) render `CookoutApp` in jsdom against one real `cookout serve` that `scripts/web-test-server.ts` starts for the run; run them alone with `node_modules/.bin/vitest run --project web`. jsdom keeps no cookies, so there the board sends the human's token itself.

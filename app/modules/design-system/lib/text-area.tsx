@@ -8,21 +8,22 @@ export function TextArea(parts: TextAreaParts): ReactNode {
   const { caret, onEdit, value } = parts;
   const id = useId();
   const box = useRef<HTMLTextAreaElement>(null);
+  const typed = useRef({ caret, value });
   const handleEdit = useCallback(() => {
     const element = box.current;
     if (element !== null) {
+      typed.current = { caret: element.selectionStart, value: element.value };
       onEdit(element.value, element.selectionStart);
     }
   }, [onEdit]);
   useLayoutEffect(() => {
     const element = box.current;
-    if (element === null) {
+    if (element === null || (typed.current.value === value && typed.current.caret === caret)) {
       return;
     }
-    if (element.value === value && element.selectionStart !== caret) {
-      element.focus();
-      element.setSelectionRange(caret, caret);
-    }
+    typed.current = { caret, value };
+    element.focus();
+    element.setSelectionRange(caret, caret);
   }, [caret, value]);
   return (
     <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
