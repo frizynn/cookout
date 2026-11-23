@@ -4,32 +4,47 @@
  * session cookie. A token is
  * never stored: only its hash, made by `Secrets`, goes into `Storage`.
  */
-import { Caller, authenticate, credentialsOf, issueToken } from "./lib/server/auth.ts";
-import { Context, Effect, Layer } from "effect";
-import type { Credentials, IssuedToken } from "./lib/server/auth.ts";
+import {
+  Caller,
+  CommandThread,
+  authenticate,
+  credentialsOf,
+  issueToken,
+  requireCommandRoute,
+} from "./lib/server/auth.ts";
+import { Context, Effect, Layer, Option } from "effect";
+import type { Credentials, IssuedToken, Principal } from "./lib/server/auth.ts";
 import type { Gate, Route } from "../http/server.ts";
-import type { Identity, Token } from "./index.ts";
 import { firstAdmin, identityAdminRoutes, responseSchemas } from "./lib/server/routes.ts";
 import { HttpServerRequest } from "effect/http";
 import type { Refusal } from "../http/index.ts";
 import { Secrets } from "../secrets/server.ts";
 import { Storage } from "../storage/server.ts";
 import type { StorageUnavailable } from "../storage/server.ts";
+import type { Token } from "./index.ts";
 import { callerRoutes } from "./lib/server/session.ts";
 
+/**
+ * `CommandThread` is the one thread a request may reply in when it carries a command token, and none for any other
+ * token. The command token reaches only `POST /v1/messages`; `outsideCommandThread` is its 403 anywhere else.
+ */
 export { Caller };
+export { CommandThread, outsideCommandThread } from "./lib/server/auth.ts";
 
 export type IdentitiesService = {
   /**
-   * The identity behind a request's `Authorization` header or, without one, its session cookie. Refuses with 401
-   * `token_missing`, `token_unknown` or `token_revoked`.
+   * The identity behind a request's `Authorization` header or, without one, its session cookie, and for a command
+   * token the thread of its call. Refuses with 401 `token_missing`, `token_unknown`, `token_revoked` or
+   * `token_expired`.
    */
-  readonly authenticate: (credentials: Credentials) => Effect.Effect<Identity, Refusal | StorageUnavailable>;
+  readonly authenticate: (credentials: Credentials) => Effect.Effect<Principal, Refusal | StorageUnavailable>;
   /** A new token and its hash. Creating an identity, rotating a token and the first boot all issue one. */
   readonly issueToken: Effect.Effect<IssuedToken>;
 };
 
-export class Identities extends Context.Service<Identities, IdentitiesService>()("cookout/identities/Identities") {}
+export class Identities extends Context.Service<Identities, IdentitiesService>()(
+  "@ai-hero/cookout/identities/server/Identities",
+) {}
 
 /** `Identities` on the running `Storage` and `Secrets`. */
 export const identitiesLayer: Layer.Layer<Identities, never, Storage | Secrets> = Layer.effect(
@@ -48,7 +63,8 @@ export const identitiesLayer: Layer.Layer<Identities, never, Storage | Secrets> 
  * The gate every route but `/v1/health` sits behind: authenticates the
  * request's bearer token or, without one, its session cookie, and provides
  * its identity as `Caller`. Refuses
- * with 401 `token_missing`, `token_unknown` or `token_revoked`.
+ * with 401 `token_missing`, `token_unknown`, `token_revoked` or `token_expired`. A command token gets 403
+ * `outside_command_thread` on every route but `POST /v1/messages`, and its thread as `CommandThread`.
  */
 export const requireToken: Gate<
   Caller,
@@ -58,8 +74,14 @@ export const requireToken: Gate<
   Effect.gen(function* () {
     const identities = yield* Identities;
     const request = yield* HttpServerRequest.HttpServerRequest;
-    const identity = yield* identities.authenticate(credentialsOf(request));
-    return yield* Effect.provideService(effect, Caller, identity);
+    const { commandThread, identity } = yield* identities.authenticate(credentialsOf(request));
+    if (Option.isSome(commandThread)) {
+      yield* requireCommandRoute(request);
+    }
+    return yield* effect.pipe(
+      Effect.provideService(Caller, identity),
+      Effect.provideService(CommandThread, commandThread),
+    );
   });
 
 export type FirstBootService = {
@@ -67,7 +89,9 @@ export type FirstBootService = {
   readonly adminToken: Token | undefined;
 };
 
-export class FirstBoot extends Context.Service<FirstBoot, FirstBootService>()("cookout/identities/FirstBoot") {}
+export class FirstBoot extends Context.Service<FirstBoot, FirstBootService>()(
+  "@ai-hero/cookout/identities/server/FirstBoot",
+) {}
 
 /** On a store with no identities, makes the `admin` identity and keeps its token in `FirstBoot`. */
 export const firstBoot: Layer.Layer<FirstBoot, StorageUnavailable, Identities | Storage> = Layer.effect(

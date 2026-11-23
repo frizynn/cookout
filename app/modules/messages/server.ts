@@ -7,6 +7,8 @@
  * message, so they survive the identity being deleted. Routes sit behind the
  * server's token gate.
  */
+import { Caller, CommandThread } from "../identities/server.ts";
+import { Effect, Option } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import {
   ListMessagesQuerySchema,
@@ -16,8 +18,6 @@ import {
   ThreadResponseSchema,
 } from "./lib/server/wire.ts";
 import { channelMessagesPath, isMessageId, messagesPath, threadPath } from "./index.ts";
-import { Caller } from "../identities/server.ts";
-import { Effect } from "effect";
 import type { MessageId } from "./index.ts";
 import { Messages } from "./lib/server/service.ts";
 import type { Refusal } from "../http/index.ts";
@@ -43,7 +43,11 @@ const postRoute: Route<Caller | Messages> = {
       const body = yield* HttpServerRequest.schemaBodyJson(PostMessageRequestSchema, ALL_ERRORS);
       const caller = yield* Caller;
       const messages = yield* Messages;
-      const posted = yield* messages.post(caller, body);
+      const thread = yield* CommandThread;
+      const posted = yield* Option.match(thread, {
+        onNone: () => messages.post(caller, body),
+        onSome: (threadId) => messages.postInThread(caller, body, threadId),
+      });
       return yield* HttpServerResponse.schemaJson(MessageResponseSchema)(posted, { status: CREATED });
     }),
   method: "POST",

@@ -399,3 +399,16 @@ cat /tmp/cookout-handler.log
 ```
 
 The call prints `{ messageId, threadId }` at once. In the background the server POSTs `{ command, data, threadId, token, callId }` to the URL, signed in the `cookout-signature` header with the lowercase hex HMAC-SHA256 of the raw body, keyed with the command's secret (the scheme in `packages/handler-example/README.md`). The handler logs `call call_… of ship on thread …` only for a signed call; a bad signature gets 401 and no line. With the handler stopped, a call still answers 202 and the dev log gets a `WARN` line `The webhook delivery call_… failed.` (no retries yet). `COOKOUT_WEBHOOK_TIMEOUT_SECONDS` (default 5) bounds each delivery.
+
+## Reply as the handler with the command token
+
+Each delivery's `token` is a command token: it posts as the command's handler identity (an agent named after the command), only replies in that call's thread, for 24 h after the call. After "Deliver a call to the example handler", point a command at any receiver that prints the body it gets, call it, and post with the token it was sent (`TOKEN` and `THREAD` from the printed body):
+
+```sh
+curl -s -X POST "$COOKOUT_URL/v1/messages" -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' -d "{\"channel\":\"ships\",\"replyTo\":$THREAD,\"text\":\"shipped main\"}"
+curl -s -X POST "$COOKOUT_URL/v1/messages" -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' -d '{"channel":"ships","text":"top-level"}'
+curl -s "$COOKOUT_URL/v1/channels" -H "Authorization: Bearer $TOKEN"
+env $(cat /tmp/cookout-dev.env) node app/main.ts inbox
+```
+
+The reply is 201 with `author.name` the command's name. The top-level message and every other route get 403 `outside_command_thread`, as does a reply in another thread or channel. The caller started the thread, so follows it: their inbox lists the reply with the reason `followed-thread`. After 24 h the token gets 401 `token_expired` (the SDK test `command-token.test.ts` moves the test clock to show it).

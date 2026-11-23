@@ -1,11 +1,13 @@
 import type { CallId, CommandName } from "../../index.ts";
-import { Context, Duration, Effect, FiberSet, Layer, Schema } from "effect";
+import { Context, DateTime, Duration, Effect, FiberSet, Layer, Schema } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import type { JsonValue, MessageId } from "../../../messages/index.ts";
+import type { StorageUnavailable, StoredCommand } from "../../../storage/server.ts";
 import type { Config } from "effect";
 import { Secrets } from "../../../secrets/server.ts";
-import type { StoredCommand } from "../../../storage/server.ts";
+import { Storage } from "../../../storage/server.ts";
 import type { Token } from "../../../identities/index.ts";
+import { isoTimeOf } from "../../../time/server.ts";
 import { webhookTimeoutSeconds } from "../../../config/server.ts";
 
 interface WebhookBody {
@@ -23,10 +25,11 @@ interface Call {
 }
 
 interface DeliveriesService {
-  readonly deliver: (call: Call) => Effect.Effect<void>;
+  readonly deliver: (call: Call) => Effect.Effect<void, StorageUnavailable>;
 }
 
 const SIGNATURE_HEADER = "cookout-signature";
+const COMMAND_TOKEN_LIFETIME: Duration.Input = "24 hours";
 const toJson = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown));
 
 class Deliveries extends Context.Service<Deliveries, DeliveriesService>()(
@@ -37,12 +40,13 @@ function webhookBody(call: Call, token: Token, callId: CallId): WebhookBody {
   return { callId, command: call.stored.command.name, data: call.data, threadId: call.threadId, token };
 }
 
-const deliveriesLayer: Layer.Layer<Deliveries, Config.ConfigError, Secrets> = Layer.effect(
+const deliveriesLayer: Layer.Layer<Deliveries, Config.ConfigError, Secrets | Storage> = Layer.effect(
   Deliveries,
   Effect.gen(function* startDeliveries() {
     const seconds = yield* webhookTimeoutSeconds;
     const timeout = Duration.seconds(seconds);
     const secrets = yield* Secrets;
+    const storage = yield* Storage;
     const anyStatus = yield* HttpClient.HttpClient;
     const client = HttpClient.filterStatusOk(anyStatus);
     const running = yield* FiberSet.make();
@@ -64,9 +68,16 @@ const deliveriesLayer: Layer.Layer<Deliveries, Config.ConfigError, Secrets> = La
       });
     }
 
-    function deliver(call: Call): Effect.Effect<void> {
+    function deliver(call: Call): Effect.Effect<void, StorageUnavailable> {
       return Effect.gen(function* startDelivery() {
         const token = yield* secrets.newCommandToken;
+        const now = yield* DateTime.now;
+        yield* storage.addCommandToken({
+          expiresAt: isoTimeOf(DateTime.addDuration(now, COMMAND_TOKEN_LIFETIME)),
+          handler: call.stored.command.handler,
+          hash: yield* secrets.hashToken(token),
+          threadId: call.threadId,
+        });
         const callId = yield* secrets.newCallId;
         yield* FiberSet.run(running, send(call, token, callId));
       });
