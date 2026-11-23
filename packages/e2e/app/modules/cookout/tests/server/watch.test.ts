@@ -136,7 +136,7 @@ it.live(
 );
 
 it.live("deactivating the watcher's identity ends cookout watch with one fatal stdout line and exit 3", () =>
-  Effect.gen(function* watchDeleted() {
+  Effect.gen(function* watchDeactivated() {
     const { deactivateTheWatcher } = yield* secondWatching;
     const exited = yield* deactivateTheWatcher;
 

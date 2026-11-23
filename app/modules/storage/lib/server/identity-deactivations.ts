@@ -232,10 +232,4 @@ function sqliteDeactivations(db: SqliteDatabase): DeactivationsSection {
   };
 }
 
-export {
-  type DeactivateIdentityResult,
-  type DeactivationsSection,
-  type ReactivateIdentityResult,
-  memoryDeactivations,
-  sqliteDeactivations,
-};
+export { type DeactivateIdentityResult, type ReactivateIdentityResult, memoryDeactivations, sqliteDeactivations };
