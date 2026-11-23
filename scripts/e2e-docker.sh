@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # pnpm e2e:docker: build the image, run it on a fresh named volume with fly.toml's [env] and a
-# COOKOUT_ADMIN_TOKEN made for this run, run packages/e2e against it with that token, then remove
-# the container, volume and image, also on failure or Ctrl-C. Exits with the suite's code.
+# COOKOUT_ADMIN_TOKEN made for this run, run packages/e2e against it with that token, fail if any
+# e2e- channel remains, then remove the container, volume and image, also on failure or Ctrl-C.
+# Exits with the suite's code, or 1 when the suite passed but left an e2e- channel.
 # COOKOUT_PUBLIC_URL is the one [env] value replaced: Docker maps a free local port to the
 # container's 8080, so the Host the suite sends is the local address's, not the deployed one's.
 # The example handler (packages/handler-example) runs as a second container in the cookout's
@@ -102,3 +103,12 @@ echo "e2e:docker: added the command example; its handler is listening beside the
 
 echo "e2e:docker: running packages/e2e against $url"
 COOKOUT_E2E_URL="$url" COOKOUT_E2E_ADMIN_TOKEN="$admin_token" pnpm --filter ./packages/e2e test
+
+COOKOUT_URL="$url" COOKOUT_TOKEN="$admin_token" COOKOUT_STATE_DIR="$scratch/state" \
+  node app/main.ts channel list > "$scratch/channels.json"
+left=$(node -e 'const { channels } = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")); console.log(channels.map(({ name }) => name).filter((name) => name.startsWith("e2e-")).join(" "))' "$scratch/channels.json")
+if [ -n "$left" ]; then
+  echo "e2e:docker: e2e left these channels on the cookout: $left" >&2
+  exit 1
+fi
+echo "e2e:docker: the run left no e2e- channel"
