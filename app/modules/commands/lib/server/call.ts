@@ -1,30 +1,32 @@
 import { Array as Arr, Effect, Predicate, Result } from "effect";
 import type { CallCommandResponse, Command, CommandName, JsonSchema } from "../../index.ts";
 import type { DataCheck, DataError } from "./data-schema.ts";
+import { Spawning, spawnAgentCommand } from "./spawn-agent.ts";
 import type { StorageUnavailable, StoredCommand } from "../../../storage/server.ts";
 import type { CallCommandRequestSchema } from "./wire.ts";
 import { Deliveries } from "./delivery.ts";
-import type { Identity } from "../../../identities/index.ts";
 import { Messages } from "../../../messages/server.ts";
 import type { Refusal } from "../../../http/index.ts";
+import type { SpawnCall } from "./spawn-agent.ts";
 import { Storage } from "../../../storage/server.ts";
 import { compileDataSchema } from "./data-schema.ts";
 import { echoed } from "../../../http/index.ts";
 import { isCommandName } from "../../index.ts";
 import { sentHarness } from "../../../identities/server.ts";
 
-type CallNeeds = Storage | Messages | Deliveries;
+type CallNeeds = Storage | Messages | Deliveries | Spawning;
 
 type Refused = Refusal | StorageUnavailable;
 
 interface CommandCall extends Readonly<typeof CallCommandRequestSchema.Type> {
-  readonly caller: Identity;
+  readonly caller: SpawnCall["caller"];
   readonly name: string;
 }
 
 const BAD_REQUEST = 400;
 const NOT_FOUND = 404;
 const INTERNAL_ERROR = 500;
+const MESSAGE = 1;
 
 function commandNotFound(name: string): Refusal {
   return { code: "command_not_found", message: `There is no command ${echoed(name)}.`, status: NOT_FOUND };
@@ -91,20 +93,36 @@ function requireData(command: Command, data: CommandCall["data"]): Effect.Effect
   });
 }
 
-function callCommand({
-  caller,
-  channel,
-  data,
-  name,
-}: CommandCall): Effect.Effect<CallCommandResponse, Refused, CallNeeds> {
+type CallMessage = Parameters<Messages["Service"]["postCommandCall"]>[typeof MESSAGE];
+
+function callMessageOf(
+  name: CommandName,
+  { channel, data }: Pick<CommandCall, "channel" | "data">,
+): Effect.Effect<CallMessage> {
+  return Effect.map(sentHarness, (tool) => ({ ...tool, channel, data: { command: name, data }, text: `/${name}` }));
+}
+
+function spawnCall({ caller, channel, data }: CommandCall): Effect.Effect<CallCommandResponse, Refused, Spawning> {
+  return Effect.gen(function* spawnAgent() {
+    yield* requireData(spawnAgentCommand, data);
+    const spawning = yield* Spawning;
+    const message = yield* callMessageOf(spawnAgentCommand.name, { channel, data });
+    return yield* spawning.spawn({ caller, data, message });
+  });
+}
+
+function callCommand(call: CommandCall): Effect.Effect<CallCommandResponse, Refused, CallNeeds> {
+  const { caller, channel, data, name } = call;
+  if (name === spawnAgentCommand.name) {
+    return spawnCall(call);
+  }
   return Effect.gen(function* postCall() {
     const stored = yield* storedCommand(name);
     const { command } = stored;
     yield* requireData(command, data);
     const messages = yield* Messages;
     const deliveries = yield* Deliveries;
-    const tool = yield* sentHarness;
-    const callMessage = { ...tool, channel, data: { command: command.name, data }, text: `/${command.name}` };
+    const callMessage = yield* callMessageOf(command.name, { channel, data });
     const { threadId } = yield* deliveries.deliver({ data, stored }, (parts) =>
       Effect.map(messages.postCommandCall(caller, callMessage, parts), ({ message }) => ({
         channel: message.channel,

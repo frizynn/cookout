@@ -72,11 +72,14 @@ export const domainLayers = Layer.mergeAll(
   identitiesLayer,
   displayNamesLayer,
   channelsLayer,
-  messagesLayer,
-  agentSessionsLayer,
   inboxLayer,
   commandsLayer,
   limitsLayer,
   addressLimitLayer,
   presenceLayer,
-).pipe(Layer.provideMerge(Layer.mergeAll(identityChangesLayer, commandChangesLayer, readReceiptsLayer)));
+).pipe(
+  Layer.provideMerge(Layer.mergeAll(messagesLayer, agentSessionsLayer)),
+  Layer.provideMerge(Layer.mergeAll(identityChangesLayer, commandChangesLayer, readReceiptsLayer)),
+);
+
+export { SpawnSettings } from "../../../commands/server.ts";

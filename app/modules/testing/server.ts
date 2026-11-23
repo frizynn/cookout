@@ -73,6 +73,8 @@ export {
   type TestCookoutService,
   type TestIdentity,
   testCookout,
+  testRoutineFirePath,
+  testRoutineToken,
 } from "./lib/server/cookout.ts";
 export { fixtureTime, isoTime, testStartTime } from "./lib/server/time.ts";
 export { type BuiltWeb, builtWebFolder } from "./lib/server/web.ts";

@@ -25,15 +25,16 @@ import {
   ListCommandsResponseSchema,
 } from "./lib/server/wire.ts";
 import { Caller, requireAdmin } from "../identities/server.ts";
+import { Effect, Layer } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { addCommand, rotateCommandSecret } from "./lib/server/add.ts";
+import { callCommand, deliveriesLayer } from "./lib/server/call.ts";
 import { commandCallsPath, commandSecretPath, commandsPath } from "./index.ts";
 import type { AddNeeds } from "./lib/server/add.ts";
 import type { CallNeeds } from "./lib/server/call.ts";
-import { Effect } from "effect";
 import type { Route } from "../http/server.ts";
 import { Storage } from "../storage/server.ts";
-import { callCommand } from "./lib/server/call.ts";
+import { spawningLayer } from "./lib/server/spawning.ts";
 
 const CREATED = 201;
 const ACCEPTED = 202;
@@ -101,10 +102,19 @@ export const commandResponseSchemas = {
 };
 
 /**
- * The services the command routes need beyond storage: the background webhook delivery of each call. On start it
- * resumes the deliveries a stopped server left pending, with the same call IDs.
+ * The services the command routes need beyond storage: the background webhook delivery of each call, and
+ * `/spawn-agent`, the one command the server handles itself (mattpocock/cookout#231). On start it resumes the
+ * deliveries a stopped server left pending, with the same call IDs. `/spawn-agent` posts its call message, then in the
+ * background creates the agent with a join code (`AgentSessions`), fires the routine and replies in the thread as
+ * `spawn-agent`, an agent owned by the admin, made when first needed; a failed fire deactivates the new agent.
  */
-export { deliveriesLayer as commandsLayer } from "./lib/server/call.ts";
+export const commandsLayer = Layer.merge(deliveriesLayer, spawningLayer);
+
+/**
+ * How the server was started, for `/spawn-agent`: the board's public URL, which a spawned session joins, and the
+ * admin who owns its handler identity, `spawn-agent`.
+ */
+export { SpawnSettings } from "./lib/server/spawning.ts";
 
 /**
  * The `CommandChanges` hub: registering a command and rotating its secret each publish the command, and the live

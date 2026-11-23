@@ -110,6 +110,13 @@ export interface CallCommandResponse {
   readonly threadId: MessageId;
 }
 
+/**
+ * The command the server handles itself (mattpocock/cookout#231, provisional name): `/spawn-agent` with
+ * `{ name, task }` creates an agent the caller owns, described by the task, and starts a remote Claude Code session
+ * that joins as it, through the routine `COOKOUT_ROUTINE_FIRE_URL` names. Its replies post as the agent `spawn-agent`.
+ */
+export const spawnAgentCommandName = "spawn-agent";
+
 /** `GET /v1/commands` (any identity) and `POST /v1/commands` (admin). */
 export const commandsPath = "/v1/commands";
 
