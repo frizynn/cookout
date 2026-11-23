@@ -204,10 +204,19 @@ function postLast(
   });
 }
 
+function react(cast: Cast, conversation: Conversation): Effect.Effect<void, SeedFailure> {
+  return Effect.gen(function* reactions() {
+    yield* call(() => cast.ada.client.react(conversation.lunch, "thumbs_up"));
+    yield* call(() => cast.releaseBot.client.react(conversation.lunch, "thumbs_up"));
+    yield* call(() => cast.grace.client.react(conversation.adaReply, "thumbs_up"));
+  });
+}
+
 function seedBoard(connection: BoardConnection): Effect.Effect<SeededBoard, SeedFailure> {
   return Effect.gen(function* seed() {
     const cast = yield* createCast(connection);
     const conversation = yield* postConversation(cast);
+    yield* react(cast, conversation);
     const command = yield* callCommand(connection, cast);
     const last = yield* postLast(connection, cast);
     const identities = Arr.map([cast.ada, cast.grace, cast.releaseBot, cast.triageAgent], ({ created }) => created);

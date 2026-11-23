@@ -101,7 +101,7 @@ it.effect("the seed makes channels with top-level messages and a thread holding 
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("the seed leaves a mention, a followed thread and a subscribed channel in the inboxes", () =>
+it.effect("the seed leaves a mention, a followed thread, a subscribed channel and reactions in the inboxes", () =>
   Effect.gen(function* seededInboxes() {
     const cookout = yield* TestCookout;
     const board = yield* seeded(cookout);
@@ -118,10 +118,17 @@ it.effect("the seed leaves a mention, a followed thread and a subscribed channel
     );
 
     expect(inboxes).toStrictEqual([
-      ["ada", [[rolledBack, ["followed-thread"]]]],
+      [
+        "ada",
+        [
+          [thanks, ["reaction"]],
+          [rolledBack, ["followed-thread"]],
+        ],
+      ],
       [
         "grace",
         [
+          ["Lunch at 12:30.", ["reaction"]],
           [thanks, ["followed-thread"]],
           [deployed, ["subscribed-channel"]],
           ["/rollback", ["subscribed-channel"]],
