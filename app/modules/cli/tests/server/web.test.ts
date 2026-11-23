@@ -78,9 +78,17 @@ it.effect("an asset the build doesn't have, or a path out of the build's folder,
 it.effect("a cookout whose web UI isn't built answers / with not_found", () =>
   Effect.gen(function* unbuiltWebUi() {
     const database = yield* freshDatabasePath;
-    const server = yield* startServe({ database, webFolder: `${database}-no-web-build` });
+    const webFolder = `${database}-no-web-build`;
+    const server = yield* startServe({ database, webFolder });
+    const deployed = yield* startServe({
+      database,
+      env: { COOKOUT_PUBLIC_URL: "https://cookout.example.com" },
+      webFolder,
+    });
     const page = yield* refusalCode(`${server.url}/`);
+    const deployedPage = yield* refusalCode(`${deployed.url}/`);
 
     expect(page).toBe("404 not_found");
+    expect(deployedPage).toBe("404 not_found");
   }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );
