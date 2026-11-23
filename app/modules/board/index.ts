@@ -5,12 +5,16 @@
  * channel's messages, its own store: when its first reader subscribes it loads
  * the newest page of top-level messages and acks the newest one, so viewing a
  * channel counts as reading it, and while a reader is subscribed it acks each
- * new top-level message that arrives live; `loadOlder` pages further back. `thread(channel, id)`
+ * new top-level message that arrives live; each time it is opened again (a
+ * first reader after none) it reloads the newest page, keeping older pages
+ * loaded, and acks its newest message; `loadOlder` pages further back. `thread(channel, id)`
  * is the thread's parent and replies, its own store too: when its first reader
  * subscribes it loads the thread and acks its latest message, so opening a
  * thread counts as reading it, and while a reader is subscribed it acks each
- * new reply that arrives live; `reply` posts a reply in that channel and
- * reloads the replies. `commands` is every registered command, loaded when its
+ * new reply that arrives live; each time it is opened again it reloads the
+ * thread and acks its latest message; `reply` posts a reply in that channel,
+ * reloads the replies and only then calls `posted`, so a refused reply keeps
+ * its text. `commands` is every registered command, loaded when its
  * first reader subscribes; a channel's `call` calls a command with data typed
  * as JSON, posting the call message in that channel, and keeps the schema
  * errors of data the command refuses; `editCallData` holds the data being

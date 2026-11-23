@@ -212,3 +212,85 @@ it("a refused older page says so and keeps the messages shown", { timeout: 5000 
 
   close();
 });
+
+async function alerted(): Promise<void> {
+  await screen.findByRole("alert");
+}
+
+async function leaveForTheList(): Promise<void> {
+  globalThis.location.hash = "#/";
+  await screen.findByRole("list", { name: "Channels" });
+}
+
+async function bothPagesLoaded(): Promise<void> {
+  await shownMessages();
+  fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+  await screen.findByText("A");
+}
+
+async function openedThenLeft(
+  client: CookoutClient,
+  channel: string,
+  settled: () => Promise<unknown>,
+): Promise<() => void> {
+  const close = openAt({ client, hash: `#/channels/${channel}` });
+  await settled();
+  await leaveForTheList();
+  return close;
+}
+
+it("reopening a channel shows what was posted while it was closed, keeping the older pages loaded", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await channelWith("web-channel-reopen", ["A", "B"]);
+  const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-reopen", pageSize: ONE_A_PAGE });
+  await bothPagesLoaded();
+  await leaveForTheList();
+  await post("web-channel-reopen", "C");
+
+  globalThis.location.hash = "#/channels/web-channel-reopen";
+  await screen.findByText("C");
+
+  expect([await shownMessages(), screen.queryByRole("button", { name: "Load more" })]).toStrictEqual([
+    ["@adminA0 replies", "@adminB0 replies", "@adminC0 replies"],
+    null,
+  ]);
+
+  close();
+});
+
+it("reopening a channel that can no longer be read says so and keeps its messages shown", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await channelWith("web-channel-reopen-refused", ["Hello"]);
+  const reader = await newIdentity({ kind: "human", name: "web-channel-reopen-rotated" });
+  const close = await openedThenLeft(reader.client, "web-channel-reopen-refused", shownMessages);
+  await adminClient().rotateToken("web-channel-reopen-rotated");
+
+  globalThis.location.hash = "#/channels/web-channel-reopen-refused";
+  const alert = await screen.findByRole("alert");
+
+  expect([alert.textContent, await shownMessages()]).toStrictEqual([
+    expect.stringMatching(/^Couldn't mark the channel read \(token_revoked\)/u),
+    ["@adminHello0 replies"],
+  ]);
+
+  close();
+});
+
+it("reopening a channel that failed to load loads it again", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const close = await openedThenLeft(adminClient(), "web-channel-reopen-missing", alerted);
+  await channelWith("web-channel-reopen-missing", ["Here now"]);
+
+  globalThis.location.hash = "#/channels/web-channel-reopen-missing";
+
+  await expect(shownMessages()).resolves.toStrictEqual(["@adminHere now0 replies"]);
+
+  close();
+});

@@ -49,6 +49,7 @@ interface Channel {
 const NEWEST = -1;
 const ONE_MORE = 1;
 const NONE_OPEN = 0;
+const NONE_KEPT = 0;
 
 function update(channel: Channel, change: (loaded: Loaded) => Loaded): void {
   const current = channel.current();
@@ -86,6 +87,38 @@ async function loadNewest(channel: Channel): Promise<void> {
     );
   } catch (error: unknown) {
     channel.publish(failure(error));
+  }
+}
+
+interface Page {
+  readonly hasMore: boolean;
+  readonly messages: readonly TopLevelMessage[];
+}
+
+function withNewest(loaded: Loaded, page: Page): Loaded {
+  const oldest = Math.min(...page.messages.map((message) => message.id));
+  const kept = loaded.messages.filter((message) => message.id < oldest);
+  if (kept.length === NONE_KEPT) {
+    return { ...loaded, hasMore: page.hasMore, messages: page.messages };
+  }
+  return { ...loaded, messages: [...kept, ...page.messages] };
+}
+
+async function reloadNewest(channel: Channel): Promise<void> {
+  if (channel.current().status !== "loaded") {
+    await loadNewest(channel);
+    return;
+  }
+  try {
+    const page = await channel.client.listMessages(channel.name, { limit: channel.pageSize });
+    update(channel, (loaded) => withNewest(loaded, page));
+    await Promise.all(
+      page.messages.slice(NEWEST).map(async (newest) => {
+        await ack(channel, newest);
+      }),
+    );
+  } catch (error: unknown) {
+    update(channel, (loaded) => ({ ...loaded, read: failure(error) }));
   }
 }
 
@@ -172,6 +205,11 @@ async function ackAfter(previous: Promise<void> | null, channel: Channel, messag
   await ack(channel, message);
 }
 
+async function reloadAfter(previous: Promise<void> | null, channel: Channel): Promise<void> {
+  await previous;
+  await reloadNewest(channel);
+}
+
 async function loadOlderAfter(previous: Promise<void> | null, channel: Channel): Promise<void> {
   await previous;
   await loadOlderPage(channel);
@@ -213,6 +251,9 @@ function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
     },
     snapshot: () => state,
     subscribe: (listener) => {
+      if (listeners.size === NONE_OPEN && queue !== null) {
+        queue = reloadAfter(queue, channel);
+      }
       listeners.add(listener);
       queue ??= loadNewest(channel);
       return () => {
