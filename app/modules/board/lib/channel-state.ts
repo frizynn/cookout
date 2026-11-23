@@ -46,6 +46,7 @@ interface ChannelMessages {
 interface LiveChannelMessages extends ChannelMessages {
   readonly receive: (message: Message) => void;
   readonly receiveReceipt: (receipt: ReadReceipt) => void;
+  readonly receiveThread: (parent: TopLevelMessage) => void;
   readonly refetch: () => void;
 }
 

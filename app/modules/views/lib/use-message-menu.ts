@@ -1,18 +1,23 @@
+import type { ReactionChoice, ThreadChoice } from "../../design-system/index.tsx";
 import type { Message } from "../../sdk/index.ts";
 import type { MessageMenu } from "../../unread/index.ts";
-import type { ReactionChoice } from "../../design-system/index.tsx";
+import type { ThreadClosing } from "../../board/index.ts";
 import { useMemo } from "react";
 import { useReactionChoices } from "./use-reactions.ts";
+
+const TEXT = { close: "Close", reopen: "Reopen" } as const;
 
 interface MenuParts {
   readonly onMarkUnread: () => void;
   readonly reactions: readonly ReactionChoice[];
+  readonly thread: ThreadChoice | null;
 }
 
 interface MenuOf {
   readonly menu: MessageMenu;
   readonly me: string;
   readonly message: Message;
+  readonly closing: ThreadClosing | null;
 }
 
 type Reply = (name: string | null) => void;
@@ -23,7 +28,28 @@ interface ReplyOf {
   readonly me: string;
 }
 
-function useMessageMenu({ me, menu, message }: MenuOf): MenuParts {
+function threadChoice(closing: ThreadClosing | null, message: Message): ThreadChoice | null {
+  if (closing === null || message.kind !== "top-level") {
+    return null;
+  }
+  const { id } = message;
+  if ("closedAt" in message) {
+    return {
+      label: TEXT.reopen,
+      onSelect: () => {
+        closing.reopen(id);
+      },
+    };
+  }
+  return {
+    label: TEXT.close,
+    onSelect: () => {
+      closing.close(id);
+    },
+  };
+}
+
+function useMessageMenu({ closing, me, menu, message }: MenuOf): MenuParts {
   const messageId = message.id;
   const reactions = useReactionChoices({ me, message });
   return useMemo(
@@ -32,8 +58,9 @@ function useMessageMenu({ me, menu, message }: MenuOf): MenuParts {
         menu.markUnread(messageId);
       },
       reactions,
+      thread: threadChoice(closing, message),
     }),
-    [menu, messageId, reactions],
+    [closing, menu, message, messageId, reactions],
   );
 }
 
@@ -55,4 +82,6 @@ function useReplyAction({ me, message, reply }: ReplyOf): (() => void) | null {
   }, [me, message, reply]);
 }
 
-export { type Reply, useMessageMenu, useReplyAction };
+type MenuClosing = ThreadClosing | null;
+
+export { type MenuClosing, type Reply, useMessageMenu, useReplyAction };

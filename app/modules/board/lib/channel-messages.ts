@@ -3,6 +3,7 @@ import type { ChannelName, Message, MessageId, ReadReceipt, Reply, TopLevelMessa
 import { callFailure, notJson, parseData } from "./command-call.ts";
 import { withHeard, withReceipts } from "./receipts.ts";
 import type { CallRequest } from "./command-call.ts";
+import { closedAs } from "./thread-closing.ts";
 import { failure } from "./failure.ts";
 import { withNewestReply } from "../../messages/index.ts";
 
@@ -204,7 +205,7 @@ async function after(previous: Promise<void> | null, step: () => Promise<void>):
 
 type Enqueue = <Request>(step: (channel: Channel, request: Request) => Promise<void>, request: Request) => void;
 
-type LiveMethods = Pick<LiveChannelMessages, "receive" | "receiveReceipt" | "refetch">;
+type LiveMethods = Pick<LiveChannelMessages, "receive" | "receiveReceipt" | "receiveThread" | "refetch">;
 
 function liveMethods(channel: Channel, enqueue: Enqueue): LiveMethods {
   return {
@@ -222,6 +223,12 @@ function liveMethods(channel: Channel, enqueue: Enqueue): LiveMethods {
       update(channel, (loaded) => ({
         ...loaded,
         receipts: withHeard({ holds: (id) => holds(loaded, id), receipt, receipts: loaded.receipts }),
+      }));
+    },
+    receiveThread: (parent) => {
+      update(channel, (loaded) => ({
+        ...loaded,
+        messages: loaded.messages.map((message) => closedAs({ message, parent })),
       }));
     },
     refetch: () => {

@@ -26,6 +26,9 @@ export function useMessageChoices({ actionHref, actionLabel, menu, onAction }: C
         onSelect: choice.onReact,
       })),
       { href: null, label: TEXT.markUnread, onSelect: menu.onMarkUnread },
+      ...[menu.thread]
+        .filter((choice) => choice !== null)
+        .map((choice) => ({ href: null, label: choice.label, onSelect: choice.onSelect })),
     ],
     [actionHref, actionLabel, menu, onAction],
   );

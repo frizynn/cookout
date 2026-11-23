@@ -1,12 +1,11 @@
-import type { ChannelMessages, ChannelMessagesState } from "../../board/index.ts";
+import type { ChannelMessages, ChannelMessagesState, ThreadClosing } from "../../board/index.ts";
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import type { MessageMenu, ThreadNews } from "../../unread/index.ts";
 import { FoldEntry } from "./fold-entry.tsx";
-import { MarkUnreadRefusal } from "./mark-unread-refusal.tsx";
 import { MessageEntry } from "./message-entry.tsx";
 import { MessageList } from "../../design-system/index.tsx";
+import { MessageRefusals } from "./message-refusals.tsx";
 import type { ReactNode } from "react";
-import { ReactionRefusal } from "./reaction-refusal.tsx";
 import { feedRows } from "./feed-rows.ts";
 
 type Loaded = Extract<ChannelMessagesState, { readonly status: "loaded" }>;
@@ -21,6 +20,7 @@ interface FeedStreamProps {
   readonly open: MessageId | null;
   readonly threads: ReadonlyMap<MessageId, ThreadNews>;
   readonly menu: MessageMenu;
+  readonly closing: ThreadClosing;
 }
 
 export function FeedStream(props: FeedStreamProps): ReactNode {
@@ -47,6 +47,7 @@ export function FeedStream(props: FeedStreamProps): ReactNode {
           }
           return (
             <MessageEntry
+              closing={props.closing}
               channel={props.channel}
               key={row.row.message.id}
               me={props.me}
@@ -61,8 +62,7 @@ export function FeedStream(props: FeedStreamProps): ReactNode {
           );
         })}
       </MessageList>
-      <MarkUnreadRefusal menu={props.menu} />
-      <ReactionRefusal />
+      <MessageRefusals closing={props.closing} menu={props.menu} />
     </>
   );
 }

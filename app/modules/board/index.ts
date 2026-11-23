@@ -45,11 +45,17 @@
  * concerns (the description's own schema errors; anything else, the name). A refusal
  * keeps the server's error code; a server that can't be reached is `unreachable`. `reactions` is the reaction store
  * (the `reaction-store` module) on the board's client and live stream.
+ *
+ * Each top-level message keeps its thread's `closedAt` and `closedBy` as the server sends them. `closing` closes or
+ * reopens the thread holding a message, one at a time in the order asked, and puts the server's answer into every
+ * loaded channel and thread, or keeps its `refusal`, with which it was, until the next one. With `live`, each `thread`
+ * event does the same, and a live reply opens its thread through the shared newest-reply rule, so a thread closed,
+ * reopened or replied to elsewhere changes with no reload. A channel's `showClosed` keeps how many threads of a run
+ * of closed threads its feed shows (`expanded`, by each ID in the run) for as long as the page stays open.
  */
-import type { ChannelMessages, LiveChannelMessages, MessagesClient } from "./lib/channel-messages.ts";
+import type { ChannelMessages, MessageStoresClient, ThreadClosing, ThreadMessages } from "./lib/message-stores.ts";
 import type { ChannelName, CookoutClient, MessageId } from "../sdk/index.ts";
 import type { Commands, CommandsClient } from "./lib/commands.ts";
-import type { LiveThreadMessages, ThreadClient, ThreadMessages } from "./lib/thread-messages.ts";
 import type { ReactionStore, ReactionStoreOptions } from "../reaction-store/index.ts";
 import type { Subscriptions, SubscriptionsClient } from "./lib/subscriptions.ts";
 import type { ChannelCreation } from "./lib/channel-creation.ts";
@@ -57,27 +63,19 @@ import type { Live } from "../live/index.ts";
 import type { Snapshot } from "./lib/channel-list.ts";
 import { createChannelCreation } from "./lib/channel-creation.ts";
 import { createChannelList } from "./lib/channel-list.ts";
-import { createChannelMessages } from "./lib/channel-messages.ts";
 import { createCommands } from "./lib/commands.ts";
 import { createLiveFeed } from "./lib/live-feed.ts";
+import { createMessageStores } from "./lib/message-stores.ts";
 import { createReactionStore } from "../reaction-store/index.ts";
 import { createSubscriptions } from "./lib/subscriptions.ts";
-import { createThreadMessages } from "./lib/thread-messages.ts";
 
 const PAGE_SIZE = 50;
 
-function storeIn<Messages>(stores: Map<string, Messages>, key: string, make: () => Messages): Messages {
-  const messages = stores.get(key) ?? make();
-  stores.set(key, messages);
-  return messages;
-}
-
 type BoardClient = Pick<CookoutClient, "createChannel" | "listChannels"> &
   CommandsClient &
-  MessagesClient &
+  MessageStoresClient &
   ReactionStoreOptions["client"] &
-  SubscriptionsClient &
-  ThreadClient;
+  SubscriptionsClient;
 
 /** The board store. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
 export interface Board {
@@ -97,6 +95,8 @@ export interface Board {
   readonly creation: ChannelCreation;
   /** The reactions on messages: one store, following the live stream, which toggles the reader's own. */
   readonly reactions: ReactionStore;
+  /** Closing and reopening threads: one store, whose answers change the loaded channels and threads. */
+  readonly closing: ThreadClosing;
   /** Empties the snapshot's `notice`. */
   readonly dismissNotice: () => void;
 }
@@ -118,8 +118,7 @@ export interface BoardOptions {
  */
 export function createBoard(options: BoardOptions): Board {
   const { client } = options;
-  const channels = new Map<ChannelName, LiveChannelMessages>();
-  const threads = new Map<string, LiveThreadMessages>();
+  const stores = createMessageStores({ client, pageSize: options.pageSize ?? PAGE_SIZE });
   const list = createChannelList(client);
   const { heard, subscriptions } = createSubscriptions({ client, live: options.live ?? null });
   const { follow, followed } = createLiveFeed({
@@ -127,14 +126,12 @@ export function createBoard(options: BoardOptions): Board {
     back: list.reload,
     deleted: list.remove,
     live: options.live ?? null,
-    receiptReceivers: () => [...channels.values(), ...threads.values()],
-    receivers: () => [list, ...channels.values(), ...threads.values()],
+    receiptReceivers: stores.loaded,
+    receivers: () => [list, ...stores.loaded()],
   });
   return {
-    channel: (name) =>
-      storeIn(channels, name, () =>
-        followed(createChannelMessages({ client, name, pageSize: options.pageSize ?? PAGE_SIZE })),
-      ),
+    channel: (name) => stores.channel(name, followed),
+    closing: stores.closing,
     commands: createCommands(options),
     creation: createChannelCreation({
       client,
@@ -151,8 +148,7 @@ export function createBoard(options: BoardOptions): Board {
       return list.subscribe(listener);
     },
     subscriptions,
-    thread: (channel, id) =>
-      storeIn(threads, `${channel}/${String(id)}`, () => followed(createThreadMessages({ channel, client, id }))),
+    thread: (channel, id) => stores.thread({ channel, id }, followed),
   };
 }
 
@@ -166,3 +162,4 @@ export { createCommands } from "./lib/commands.ts";
 export type { PostState } from "./lib/failure.ts";
 export type { Subscriptions, SubscriptionsState } from "./lib/subscriptions.ts";
 export type { ThreadMessages, ThreadMessagesState } from "./lib/thread-messages.ts";
+export type { ClosingRefusal, ThreadClosing } from "./lib/thread-closing.ts";

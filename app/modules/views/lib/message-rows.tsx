@@ -1,5 +1,5 @@
 import { Alert, CardBody, ChannelStart, Skeleton } from "../../design-system/index.tsx";
-import type { ChannelMessages, ChannelMessagesState } from "../../board/index.ts";
+import type { ChannelMessages, ChannelMessagesState, ThreadClosing } from "../../board/index.ts";
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import { FeedStream } from "./feed-stream.tsx";
 import { Older } from "./older.tsx";
@@ -18,6 +18,7 @@ interface MessageRowsProps {
   readonly open: MessageId | null;
   readonly readPosition: number | null;
   readonly unread: Unread;
+  readonly closing: ThreadClosing;
 }
 
 export type { MessageRowsProps };
@@ -42,6 +43,7 @@ export function MessageRows(props: MessageRowsProps): ReactNode {
       {state.hasMore && <Older older={state.older} onLoad={handleLoad} />}
       {!state.hasMore && <ChannelStart description={TEXT.start} title={`Welcome to #${channel}`} />}
       <FeedStream
+        closing={props.closing}
         channel={channel}
         label={TEXT.messages}
         me={props.me}

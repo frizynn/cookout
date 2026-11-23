@@ -1,10 +1,9 @@
 import type { ChannelName, Message, MessageId, ReadReceipt } from "../../sdk/index.ts";
 import type { MessageMenu, ThreadNews } from "../../unread/index.ts";
-import { MarkUnreadRefusal } from "./mark-unread-refusal.tsx";
 import { MessageEntry } from "./message-entry.tsx";
 import { MessageList } from "../../design-system/index.tsx";
+import { MessageRefusals } from "./message-refusals.tsx";
 import type { ReactNode } from "react";
-import { ReactionRefusal } from "./reaction-refusal.tsx";
 import type { Reply } from "./use-message-menu.ts";
 import { streamRows } from "./stream-rows.ts";
 
@@ -34,6 +33,7 @@ export function MessageStream(props: MessageStreamProps): ReactNode {
       <MessageList label={props.label}>
         {rows.map((row) => (
           <MessageEntry
+            closing={null}
             channel={props.channel}
             key={row.message.id}
             me={props.me}
@@ -47,8 +47,7 @@ export function MessageStream(props: MessageStreamProps): ReactNode {
           />
         ))}
       </MessageList>
-      <MarkUnreadRefusal menu={props.menu} />
-      <ReactionRefusal />
+      <MessageRefusals closing={null} menu={props.menu} />
     </>
   );
 }

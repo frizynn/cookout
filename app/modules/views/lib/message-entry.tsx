@@ -2,6 +2,7 @@ import type { ChannelName, Message, MessageId, ReadReceipt } from "../../sdk/ind
 import type { MessageMenu, ThreadNews } from "../../unread/index.ts";
 import { markOf, threadHref, threadSummaryOf } from "./message-marks.ts";
 import { useMessageMenu, useReplyAction } from "./use-message-menu.ts";
+import type { MenuClosing } from "./use-message-menu.ts";
 import { MessageContent } from "./message-content.tsx";
 import { MessageItem } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
@@ -27,6 +28,7 @@ interface MessageEntryProps {
   readonly news: ThreadNews | null;
   readonly receipts: readonly ReadReceipt[];
   readonly menu: MessageMenu;
+  readonly closing: MenuClosing;
   readonly reply: ((name: string | null) => void) | null;
 }
 
@@ -35,7 +37,7 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
   const { agent, displayName, note, presence, profileHref } = useAuthor(message.author);
   const href = threadHref({ channel: props.channel, message });
   const summary = threadSummaryOf(message);
-  const menu = useMessageMenu({ me: props.me, menu: props.menu, message });
+  const menu = useMessageMenu({ closing: props.closing, me: props.me, menu: props.menu, message });
   const handleReply = useReplyAction({ me: props.me, message, reply: props.reply });
   return (
     <MessageItem

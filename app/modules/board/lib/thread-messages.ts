@@ -10,7 +10,9 @@ import type {
 } from "../../sdk/index.ts";
 import type { Failure, PostState } from "./failure.ts";
 import { withHeard, withReceipts } from "./receipts.ts";
+import { closedAs } from "./thread-closing.ts";
 import { failure } from "./failure.ts";
+import { withNewestReply } from "../../messages/index.ts";
 
 type ReadState =
   | { readonly status: "none" }
@@ -38,6 +40,7 @@ interface ThreadMessages {
 interface LiveThreadMessages extends ThreadMessages {
   readonly receive: (message: Message) => void;
   readonly receiveReceipt: (receipt: ReadReceipt) => void;
+  readonly receiveThread: (parent: TopLevelMessage) => void;
   readonly refetch: () => void;
 }
 
@@ -76,7 +79,11 @@ function received(loaded: Loaded, message: Message): Loaded {
   ) {
     return loaded;
   }
-  return { ...loaded, replies: [...loaded.replies, message] };
+  return {
+    ...loaded,
+    parent: withNewestReply({ parent: loaded.parent, reply: message }),
+    replies: [...loaded.replies, message],
+  };
 }
 
 async function ack(thread: Thread, id: MessageId): Promise<void> {
@@ -135,9 +142,10 @@ async function postReply(thread: Thread, { posted, text }: ReplyRequest): Promis
   update(thread, (loaded) => ({ ...loaded, reply: { status: "posting" } }));
   try {
     await thread.client.createMessage({ channel: thread.channel, replyTo: thread.id, text });
-    const { receipts, replies } = await thread.client.getThread(thread.id);
+    const { parent, receipts, replies } = await thread.client.getThread(thread.id);
     update(thread, (loaded) => ({
       ...loaded,
+      parent,
       receipts: withReceipts({ fresh: receipts, receipts: loaded.receipts }),
       replies,
       reply: { status: "idle" },
@@ -167,6 +175,20 @@ async function replyAfter(previous: Promise<void> | null, thread: Thread, reques
   await postReply(thread, request);
 }
 
+function heardMethods(thread: Thread): Pick<LiveThreadMessages, "receiveReceipt" | "receiveThread"> {
+  return {
+    receiveReceipt: (receipt) => {
+      update(thread, (loaded) => ({
+        ...loaded,
+        receipts: withHeard({ holds: (id) => holds(loaded, id), receipt, receipts: loaded.receipts }),
+      }));
+    },
+    receiveThread: (parent) => {
+      update(thread, (loaded) => ({ ...loaded, parent: closedAs({ message: loaded.parent, parent }) }));
+    },
+  };
+}
+
 interface ThreadOptions {
   readonly client: ThreadClient;
   readonly channel: ChannelName;
@@ -188,18 +210,13 @@ function createThreadMessages(options: ThreadOptions): LiveThreadMessages {
     },
   };
   return {
+    ...heardMethods(thread),
     receive: (message) => {
       const before = state;
       update(thread, (loaded) => received(loaded, message));
       if (state !== before && listeners.size > NONE_OPEN) {
         queue = ackAfter(queue, thread, message.id);
       }
-    },
-    receiveReceipt: (receipt) => {
-      update(thread, (loaded) => ({
-        ...loaded,
-        receipts: withHeard({ holds: (id) => holds(loaded, id), receipt, receipts: loaded.receipts }),
-      }));
     },
     refetch: () => {
       if (listeners.size > NONE_OPEN) {

@@ -68,6 +68,7 @@ export function ChannelView(props: ChannelProps): ReactNode {
       <SubscriptionRefusal channel={props.channel} state={subscribed} />
       <ScrollArea count={countOf(state)} label={`Messages in #${props.channel}`}>
         <MessageRows
+          closing={props.board.closing}
           channel={props.channel}
           me={props.me}
           messages={messages}

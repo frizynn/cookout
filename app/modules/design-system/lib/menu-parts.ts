@@ -4,9 +4,15 @@ interface ReactionChoice {
   readonly onReact: () => void;
 }
 
+interface ThreadChoice {
+  readonly label: string;
+  readonly onSelect: () => void;
+}
+
 interface MessageMenuParts {
   readonly onMarkUnread: () => void;
   readonly reactions: readonly ReactionChoice[];
+  readonly thread: ThreadChoice | null;
 }
 
 interface MessageActionParts {
@@ -24,4 +30,4 @@ interface HoverActionsParts extends MessageActionParts {
   readonly reactions: readonly ReactionChoice[];
 }
 
-export type { HoverActionsParts, MenuChoice, MessageActionParts, MessageMenuParts, ReactionChoice };
+export type { HoverActionsParts, MenuChoice, MessageActionParts, MessageMenuParts, ReactionChoice, ThreadChoice };
