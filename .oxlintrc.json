@@ -421,7 +421,7 @@
           },
           {
             "from": "package",
-            "name": ["ReactNode"],
+            "name": ["KeyboardEvent", "ReactNode"],
             "package": "react"
           },
           {
@@ -1891,6 +1891,12 @@
       ],
       "rules": {
         "import/no-default-export": "off"
+      }
+    },
+    {
+      "files": ["public/assets/*.js"],
+      "rules": {
+        "import/unambiguous": "off"
       }
     }
   ]
