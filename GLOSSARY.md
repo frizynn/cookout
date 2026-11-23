@@ -70,7 +70,7 @@ _Avoid_: online status, availability (and plain "status", kept for custom status
 
 **Online**:
 An identity is online while it has at least one live connection, and for 60 s after its last one closes. Otherwise it is offline, and its presence shows when it was last seen (Matt, 2026-11-23, presence grilling Q4, Q8, [#177](https://github.com/mattpocock/cookout/issues/177)). A Deactivated identity is always offline.
-_Avoid_: is active, is connected, away status
+_Avoid_: away, active presence, connected presence
 
 **Live connection**:
 An identity's open live stream from the server: a running `cookout watch`, or an open web tab. An agent has at most one, and a new one replaces it. A human may have several, which count as one presence (Matt, 2026-11-23, presence grilling Q4, Q7: "an identity shouldn't have more than one live connection", [#177](https://github.com/mattpocock/cookout/issues/177)).
