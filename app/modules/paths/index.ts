@@ -1,6 +1,6 @@
 /**
- * The web UI's paths: the one owner of its location hashes. `routeOf(hash)`
- * reads a hash as a `Route` (`#/`, no hash, and `#/inbox` the inbox, `#/login`,
+ * The web UI's paths: the one owner of its location hashes. A hash names a
+ * `Route` (`#/`, no hash, and `#/inbox` the inbox, `#/login`,
  * `#/people` the people and agents, `#/people/<name>` the same with that
  * identity's profile open, `#/settings` the settings page and
  * `#/settings/<section>` the same with the focus on that section (`profile`,
@@ -16,8 +16,9 @@
  * identity's profile panel open beside it. `locationOf(hash)` reads both as a
  * `Place`; a profile opened over a thread replaces the thread's panel, so the
  * place is the channel, and one opened over the people page is the people
- * page's own `profile` route. `profileHref(route, name)` builds the link that
- * opens a profile beside `route`.
+ * page's own `profile` route. `profileHref({ identity, route })` builds the
+ * link that opens a profile beside `route`, and `closedHref(route)` the one
+ * that closes it.
  */
 import type { ChannelName, IdentityName, MessageId } from "../sdk/index.ts";
 import { isChannelName } from "../channels/index.ts";
@@ -163,12 +164,7 @@ function isLinked(route: Route): route is LinkedRoute {
   );
 }
 
-/**
- * Reads a location hash as the route it names.
- * @param hash The location hash, `#` included (or empty).
- * @returns The route, or `missing`.
- */
-export function routeOf(hash: string): Route {
+function routeOf(hash: string): Route {
   for (const matcher of matchers) {
     const route = matcher(hash);
     if (route !== false) {
