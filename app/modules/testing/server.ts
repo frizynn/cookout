@@ -11,7 +11,8 @@
  * test cookout starts at `testStartTime`, and a lease's expiry moves with it.
  * `twoSessions` gives an identity two separate SDK sessions, and
  * `freshStateFolder`, `leaseStateFiles` and `writeLeaseStates` make and
- * read a CLI session's lease-state folder.
+ * read a CLI session's lease-state folder. `builtWebFolder` stands in for
+ * the Vite build that `cookout serve` serves at `/`.
  */
 export { answer, refusal } from "./lib/server/calls.ts";
 export { type ChannelFixtureOptions, channelFixture, channelName } from "./lib/server/channels.ts";
@@ -23,8 +24,10 @@ export {
   runCookout,
   runDev,
   type ServeProcess,
+  type ServeWithWeb,
   startDev,
   startServe,
+  startServeWithWeb,
 } from "./lib/server/cli.ts";
 export { type InterruptedDev, interruptDevBinary, runCookoutBinary } from "./lib/server/process.ts";
 export { type IdentityFixtureOptions, identityFixture, identityName } from "./lib/server/identities.ts";
@@ -49,3 +52,4 @@ export {
   testCookout,
 } from "./lib/server/cookout.ts";
 export { isoTime, testStartTime } from "./lib/server/time.ts";
+export { type BuiltWeb, builtWebFolder } from "./lib/server/web.ts";
