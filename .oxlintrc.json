@@ -424,6 +424,16 @@
             "from": "package",
             "name": ["TestProject"],
             "package": "vitest"
+          },
+          {
+            "from": "package",
+            "name": ["Page"],
+            "package": "playwright-core"
+          },
+          {
+            "from": "package",
+            "name": ["PlaywrightTestArgs", "PlaywrightTestOptions", "PlaywrightWorkerArgs", "PlaywrightWorkerOptions"],
+            "package": "playwright"
           }
         ],
         "treatMethodsAsReadonly": true
@@ -1508,7 +1518,7 @@
       }
     },
     {
-      "files": ["app/modules/config/**"],
+      "files": ["app/modules/config/**", "playwright.config.ts", "scripts/browser-test-server.ts"],
       "excludeFiles": ["app/modules/*/tests/**"],
       "rules": {
         "no-restricted-properties": [
@@ -1730,6 +1740,8 @@
         "vitest.config.ts",
         "tsdown.config.ts",
         "vite.config.ts",
+        "playwright.config.ts",
+        "scripts/browser-test-server.ts",
         "packages/e2e/vitest.config.ts",
         "packages/e2e/.dependency-cruiser.mjs"
       ],
