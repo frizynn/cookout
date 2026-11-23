@@ -1,7 +1,7 @@
+import type { CallRequest, CallState } from "./command-call.ts";
 import type { ChannelName, CookoutClient, Message, ReadPosition, Reply, TopLevelMessage } from "../../sdk/index.ts";
 import type { Failure, PostState } from "./failure.ts";
 import { callFailure, notJson, parseData } from "./command-call.ts";
-import type { CallState } from "./command-call.ts";
 import { failure } from "./failure.ts";
 import { withNewestReply } from "../../messages/index.ts";
 
@@ -30,7 +30,7 @@ interface ChannelMessages {
   readonly subscribe: (listener: () => void) => () => void;
   readonly snapshot: () => ChannelMessagesState;
   readonly loadOlder: () => void;
-  readonly call: (command: string, data: string) => void;
+  readonly call: (command: string, data: string, called: () => void) => void;
   readonly editCallData: (data: string) => void;
   readonly post: (text: string, posted: () => void) => void;
 }
@@ -145,18 +145,14 @@ async function loadOlderPage(channel: Channel): Promise<void> {
   }
 }
 
-async function addNewest(channel: Channel, command: string): Promise<void> {
+async function addNewest(channel: Channel, { called, command }: CallRequest): Promise<void> {
   const page = await channel.client.listMessages(channel.name, { limit: channel.pageSize });
   update(channel, (loaded) => {
     const newest = Math.max(...loaded.messages.map((message) => message.id));
     const added = page.messages.filter((message) => message.id > newest);
     return { ...loaded, call: { command, status: "called" }, callData: "", messages: [...loaded.messages, ...added] };
   });
-}
-
-interface CallRequest {
-  readonly command: string;
-  readonly data: string;
+  called();
 }
 
 async function callCommand(channel: Channel, request: CallRequest): Promise<void> {
@@ -169,7 +165,7 @@ async function callCommand(channel: Channel, request: CallRequest): Promise<void
   update(channel, (loaded) => ({ ...loaded, call: { command, status: "calling" } }));
   try {
     await channel.client.callCommand(command, { channel: channel.name, data: parsed.data });
-    await addNewest(channel, command);
+    await addNewest(channel, request);
   } catch (error: unknown) {
     update(channel, (loaded) => ({ ...loaded, call: callFailure({ command, error }) }));
   }
@@ -254,8 +250,8 @@ function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
     },
   };
   return {
-    call: (command, data) => {
-      queue = callAfter(queue, channel, { command, data });
+    call: (command, data, called) => {
+      queue = callAfter(queue, channel, { called, command, data });
     },
     editCallData: (data) => {
       update(channel, (loaded) => ({ ...loaded, callData: data }));

@@ -79,13 +79,19 @@
  * input in it, such as a token, `TextArea` a labelled box to write in, such
  * as a reply, whose text and caret its owner holds, where Enter sends the form
  * and Shift+Enter starts a new line, and, while its owner is `choosing` from
- * suggestions, the arrow keys move the highlight and Enter picks it;
+ * suggestions, the arrow keys move the highlight, Enter or Tab picks it and
+ * Escape closes the list;
  * `SubmitButton` sends it; `Suggestions` is a named list of options to pick
- * from under a box, such as mentions, one of them highlighted, which leaves
- * the box focused; `Button` is any other button. `FieldsForm` is a form of
- * several fields, `Select` a labelled pick in it from its `SelectOption`s,
- * `DataArea` a labelled box in it to write JSON in, whose text its owner
- * holds.
+ * from under a box, such as mentions or commands (each with any muted detail
+ * after it), one of them highlighted, which leaves the box focused.
+ * `DataArea` is a labelled box to write JSON in, whose
+ * text its owner holds. `PromptForm` is a named card in place of a message
+ * box that asks for a command's data, titled, with a Cancel and a submit
+ * button, its first field focused; in it `InputField` (text, a number or an
+ * integer), `PickField` (one of a list, or none) and `CheckField` (a checkbox)
+ * are labelled fields whose value their owner holds, each marked when
+ * required, with its help text and any error under it, both read out as its
+ * description.
  */
 export { Alert } from "./lib/alert.tsx";
 export { CallChip } from "./lib/call-chip.tsx";
@@ -104,6 +110,7 @@ export { BadgeList } from "./lib/badge-list.tsx";
 export { BoxFrame } from "./lib/box-frame.tsx";
 export { Button } from "./lib/button.tsx";
 export { Card } from "./lib/card.tsx";
+export { CheckField } from "./lib/check-field.tsx";
 export { CardBody } from "./lib/card-body.tsx";
 export { CardHeader } from "./lib/card-header.tsx";
 export { ChoiceGroup } from "./lib/choice-group.tsx";
@@ -114,10 +121,10 @@ export { FeedList } from "./lib/feed-list.tsx";
 export { FeedNote } from "./lib/feed-note.tsx";
 export { FeedRow } from "./lib/feed-row.tsx";
 export { FeedText } from "./lib/feed-text.tsx";
-export { FieldsForm } from "./lib/fields-form.tsx";
 export { Form } from "./lib/form.tsx";
 export { LineForm } from "./lib/line-form.tsx";
 export { Heading } from "./lib/heading.tsx";
+export { InputField } from "./lib/input-field.tsx";
 export { ItemList } from "./lib/item-list.tsx";
 export { ItemRow } from "./lib/item-row.tsx";
 export { LinkList } from "./lib/link-list.tsx";
@@ -131,9 +138,9 @@ export { Pane } from "./lib/pane.tsx";
 export { PaneHeader } from "./lib/pane-header.tsx";
 export { PressButton } from "./lib/press-button.tsx";
 export { Panel } from "./lib/panel.tsx";
+export { PickField } from "./lib/pick-field.tsx";
 export { Pill } from "./lib/pill.tsx";
-export { Select } from "./lib/select.tsx";
-export { SelectOption } from "./lib/select-option.tsx";
+export { PromptForm } from "./lib/prompt-form.tsx";
 export { SidePanel } from "./lib/side-panel.tsx";
 export { ScrollArea } from "./lib/scroll-area.tsx";
 export { Sidebar } from "./lib/sidebar.tsx";

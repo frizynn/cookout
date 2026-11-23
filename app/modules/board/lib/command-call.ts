@@ -18,6 +18,12 @@ type CallState =
 
 type ParsedData = { readonly status: "json"; readonly data: JsonValue } | { readonly status: "not-json" };
 
+interface CallRequest {
+  readonly command: string;
+  readonly data: string;
+  readonly called: () => void;
+}
+
 interface Refused {
   readonly command: string;
   readonly error: unknown;
@@ -73,4 +79,4 @@ function callFailure(refused: Refused): CallFailure {
   return { code, command: refused.command, message, problems: problemsIn(refused.error), status: "failed" };
 }
 
-export { type CallState, callFailure, notJson, parseData };
+export { type CallRequest, type CallState, callFailure, notJson, parseData };

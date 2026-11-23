@@ -15,10 +15,11 @@
  * thread and acks its latest message; `reply` posts a reply in that channel,
  * reloads the replies and only then calls `posted`, so a refused reply keeps
  * its text. `commands` is every registered command, loaded when its
- * first reader subscribes; a channel's `call` calls a command with data typed
+ * first reader subscribes (`createCommands` makes such a store alone); a channel's `call` calls a command with data typed
  * as JSON, posting the call message in that channel, and keeps the schema
  * errors of data the command refuses; `editCallData` holds the data being
- * typed (`callData`), which only a successful call empties. A channel's `post`
+ * typed (`callData`), which only a successful call empties, and only then
+ * is `called` called, so a refused call keeps everything typed. A channel's `post`
  * posts a top-level message there, adds it to the loaded messages and only
  * then calls `posted`, so a refused post keeps its text; the server counts it
  * read for its poster. With `live`, the board opens the live stream when any of
@@ -122,6 +123,7 @@ export type { ChannelMessages, ChannelMessagesState } from "./lib/channel-messag
 export type { CallState } from "./lib/command-call.ts";
 export type { SchemaProblem } from "../sdk/index.ts";
 export type { Commands } from "./lib/commands.ts";
+export { createCommands } from "./lib/commands.ts";
 export type { PostState } from "./lib/failure.ts";
 export type { Subscriptions, SubscriptionsState } from "./lib/subscriptions.ts";
 export type { ThreadMessages, ThreadMessagesState } from "./lib/thread-messages.ts";

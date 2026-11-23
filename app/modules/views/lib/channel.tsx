@@ -76,7 +76,7 @@ export function ChannelView(props: ChannelProps): ReactNode {
       </ScrollArea>
       <MessageFooter
         commands={props.board.commands}
-        draft={props.composer.draft(props.channel)}
+        draft={props.composer.channelDraft(props.channel)}
         messages={messages}
         state={state}
       />

@@ -41,6 +41,7 @@ interface TextAreaParts extends TextFieldParts {
   readonly onPick: () => void;
   readonly onMove: (direction: "down" | "up") => void;
   readonly focused: boolean;
+  readonly onClose: () => void;
 }
 
 interface SuggestionsParts {
@@ -173,21 +174,6 @@ interface AuthorParts extends AvatarParts {
   readonly handle: string | null;
 }
 
-interface FieldsFormParts extends Parts {
-  readonly label: string;
-  readonly onSubmit: (field: (name: string) => string) => void;
-}
-
-interface SelectParts extends Parts {
-  readonly label: string;
-  readonly name: string;
-}
-
-interface SelectOptionParts {
-  readonly label: string;
-  readonly value: string;
-}
-
 interface DataBlockParts {
   readonly label: string;
   readonly value: unknown;
@@ -285,13 +271,10 @@ export type {
   WorkspaceParts,
   DataAreaParts,
   DataBlockParts,
-  FieldsFormParts,
   FormParts,
   LinkParts,
   ListParts,
   Parts,
-  SelectOptionParts,
-  SelectParts,
   SkeletonParts,
   SuggestionsParts,
   TextAreaParts,

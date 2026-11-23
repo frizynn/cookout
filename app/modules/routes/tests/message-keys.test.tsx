@@ -101,3 +101,78 @@ it("while suggestions show, the arrows move the highlight and Enter picks it ins
 
   close();
 });
+
+async function twoCommands(prefix: string): Promise<void> {
+  const schema = { properties: { branch: { type: "string" } }, type: "object" } as const;
+  await Promise.all(
+    [`${prefix}-first`, `${prefix}-second`].map(async (name) => {
+      await newIdentity({ kind: "agent", name, owner: "admin" });
+      await adminClient().addCommand({ name, schema, url: "http://127.0.0.1:9/command" });
+    }),
+  );
+}
+
+async function suggestCommands(text: string): Promise<void> {
+  type(text);
+  await screen.findByRole("list", { name: "Command suggestions" });
+}
+
+function highlightedCommand(): string | null {
+  const list = screen.getByRole("list", { name: "Command suggestions" });
+  return within(list).getByRole("button", { current: true }).textContent;
+}
+
+it("while command suggestions show, the arrows move the highlight and Tab picks it", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  await twoCommands("keys-tab");
+  const close = await openChannel("web-keys-command-tab");
+  await suggestCommands("/keys-tab-");
+  const first = highlightedCommand();
+  press("ArrowUp");
+  const moved = highlightedCommand();
+  const prevented = !press("Tab");
+
+  expect([first, moved, prevented, screen.queryByRole("form", { name: "Call /keys-tab-second" })]).toStrictEqual([
+    "/keys-tab-first",
+    "/keys-tab-second",
+    true,
+    screen.getByRole("form", { name: "Call /keys-tab-second" }),
+  ]);
+
+  close();
+});
+
+it("while command suggestions show, Enter picks the highlighted command and sends nothing", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await twoCommands("keys-enter");
+  const close = await openChannel("web-keys-command-enter");
+  await suggestCommands("/keys-enter-");
+  press("Enter");
+
+  expect([await shownMessages(), screen.queryByRole("form", { name: "Call /keys-enter-first" })]).toStrictEqual([
+    [],
+    screen.getByRole("form", { name: "Call /keys-enter-first" }),
+  ]);
+
+  close();
+});
+
+it("escape closes the command suggestions, so Enter sends the text as a message", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  await twoCommands("keys-escape");
+  const close = await openChannel("web-keys-command-escape");
+  await suggestCommands("/keys-escape-f");
+  press("Escape");
+  const closed = screen.queryByRole("list", { name: "Command suggestions" });
+  press("Enter");
+  await within(screen.getByRole("list", { name: "Messages" })).findByText("/keys-escape-f");
+
+  expect([closed, await shownMessages()]).toStrictEqual([null, ["admin/keys-escape-f"]]);
+
+  close();
+});

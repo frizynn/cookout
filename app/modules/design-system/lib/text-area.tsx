@@ -7,7 +7,7 @@ import { useFocusOnOpen } from "./focus-on-open.ts";
 const ROWS = 3;
 
 export function TextArea(parts: TextAreaParts): ReactNode {
-  const { caret, choosing, focused, onEdit, onMove, onPick, value } = parts;
+  const { caret, choosing, focused, onClose, onEdit, onMove, onPick, value } = parts;
   const id = useId();
   const box = useFocusOnOpen(focused);
   const typed = useRef({ caret, value });
@@ -24,7 +24,7 @@ export function TextArea(parts: TextAreaParts): ReactNode {
       element.form.requestSubmit();
     }
   }, [box]);
-  const handleKeyDown = useBoxKeys({ choosing, onMove, onPick, onSend: handleSend });
+  const handleKeyDown = useBoxKeys({ choosing, onClose, onMove, onPick, onSend: handleSend });
   useLayoutEffect(() => {
     const element = box.current;
     if (element === null || (typed.current.value === value && typed.current.caret === caret)) {

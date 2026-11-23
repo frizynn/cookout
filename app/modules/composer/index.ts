@@ -26,9 +26,17 @@
  * the field's text trimmed (empty clears it), puts the answer in the identity
  * list at once and forgets the text, or, if the server refuses, keeps the
  * text and the refusal.
+ * `channelDraft(channel)`, a channel's box, also suggests the registered
+ * commands (from the `commands` store given, read once the identities load)
+ * whose names start with what follows `/` when that is the whole text;
+ * choosing one makes it the draft's `command`, whose data the box prompts
+ * for, until `clear`; `dismiss` hides any suggestions until the next edit. A
+ * thread's reply box suggests no commands, since a call is a top-level message.
  */
 import type { AdminChanges, AdminClient } from "./lib/admin-change.ts";
-import type { CookoutClient, Identity, IdentityName } from "../sdk/index.ts";
+import type { Command, CookoutClient, Identity, IdentityName } from "../sdk/index.ts";
+import type { DraftSnapshot, Sources } from "./lib/snapshot.ts";
+import { EMPTY, changesFor } from "./lib/snapshot.ts";
 import type { DisplayNameDraft } from "./lib/display-name.ts";
 import type { IdentityList } from "./lib/identity-list.ts";
 import type { Live } from "../live/index.ts";
@@ -37,73 +45,47 @@ import { createDisplayName } from "./lib/display-name.ts";
 import { createIdentityList } from "./lib/identity-list.ts";
 import { listenersOf } from "./lib/listeners.ts";
 
-const MOST_SUGGESTIONS = 8;
-const NOTHING = 0;
-const AT_SIGN = 1;
-const ONE = 1;
-const STEPS = { down: ONE, up: -ONE } as const;
+const NO_COMMANDS: readonly Command[] = [];
 
-const typedMention = /(?<![\w.@-])@[a-z0-9-]*$/u;
+function createDraft(list: IdentityList, sources: Sources, load: () => void): Draft {
+  const listeners = listenersOf(load);
+  const changes = changesFor(sources);
+  let current: DraftSnapshot = EMPTY;
 
-function suggestionsFor(identities: readonly Identity[], text: string, caret: number): readonly Identity[] {
-  const found = typedMention.exec(text.slice(NOTHING, caret));
-  if (found === null) {
-    return [];
-  }
-  const [mention] = found;
-  const prefix = mention.slice(AT_SIGN);
-  return identities.filter((identity) => identity.name.startsWith(prefix)).slice(NOTHING, MOST_SUGGESTIONS);
-}
-
-interface DraftSnapshot {
-  readonly text: string;
-  readonly caret: number;
-  readonly suggestions: readonly Identity[];
-  readonly highlighted: number;
-}
-
-function withMention(snapshot: DraftSnapshot, name: string): Pick<DraftSnapshot, "caret" | "text"> {
-  const before = snapshot.text.slice(NOTHING, snapshot.caret).replace(typedMention, "");
-  const mention = `@${name} `;
-  return { caret: before.length + mention.length, text: before + mention + snapshot.text.slice(snapshot.caret) };
-}
-
-function createDraft(directory: IdentityList): Draft {
-  const listeners = listenersOf(directory.load);
-  let current: DraftSnapshot = { caret: NOTHING, highlighted: NOTHING, suggestions: [], text: "" };
-
-  function publish(text: string, caret: number): void {
-    const suggestions = suggestionsFor(directory.identities(), text, caret);
-    current = { caret, highlighted: NOTHING, suggestions, text };
+  function change(update: (snapshot: DraftSnapshot) => DraftSnapshot): void {
+    current = update(current);
     listeners.notify();
   }
 
-  function choose(name: string): void {
-    const written = withMention(current, name);
-    publish(written.text, written.caret);
-  }
-
-  directory.onChange(() => {
-    publish(current.text, current.caret);
+  list.onChange(() => {
+    change((snapshot) => changes.written(snapshot, snapshot));
   });
   return {
-    choose,
+    choose: (name) => {
+      change((snapshot) => changes.mentioned(snapshot, name));
+    },
     chooseHighlighted: () => {
-      for (const identity of current.suggestions.slice(current.highlighted, current.highlighted + ONE)) {
-        choose(identity.name);
-      }
+      change((snapshot) => changes.chosen(snapshot));
     },
     clear: () => {
-      publish("", NOTHING);
+      change(() => changes.written(EMPTY, EMPTY));
     },
-    edit: publish,
+    dismiss: () => {
+      change(changes.dismissed);
+    },
+    edit: (text, caret) => {
+      change((snapshot) => changes.written(snapshot, { caret, text }));
+    },
     highlight: (direction) => {
-      const step = STEPS[direction];
-      const count = current.suggestions.length;
-      if (count > NOTHING) {
-        current = { ...current, highlighted: (current.highlighted + step + count) % count };
-        listeners.notify();
-      }
+      change((snapshot) => changes.highlightMoved(snapshot, direction));
+    },
+    pick: (name) => {
+      change((snapshot) =>
+        changes.picked(
+          snapshot,
+          snapshot.commands.filter((command) => command.name === name),
+        ),
+      );
     },
     snapshot: () => current,
     subscribe: listeners.add,
@@ -116,6 +98,24 @@ function storeIn<Store>(stores: Map<string, Store>, key: string, make: () => Sto
   return store;
 }
 
+function loaderOf(list: IdentityList, commands: CommandList): () => void {
+  let watching = false;
+  return () => {
+    list.load();
+    if (!watching) {
+      watching = true;
+      commands.subscribe(() => {
+        list.publish(list.identities());
+      });
+    }
+  };
+}
+
+interface CommandList {
+  readonly subscribe: (listener: () => void) => () => void;
+  readonly snapshot: () => { readonly status: string; readonly commands?: readonly Command[] };
+}
+
 /** One message box's draft. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
 export interface Draft {
   /** Calls `listener` after every change, until the returned function is called. */
@@ -126,11 +126,15 @@ export interface Draft {
   readonly edit: (text: string, caret: number) => void;
   /** Puts `@name ` in place of the mention being typed. */
   readonly choose: (name: string) => void;
-  /** Chooses the highlighted suggestion, if there are any. */
+  /** Chooses the highlighted suggestion, if there are any: a mention to put in, or a command to pick. */
   readonly chooseHighlighted: () => void;
+  /** Picks the named command, if the box suggests it, emptying the text. */
+  readonly pick: (name: string) => void;
+  /** Hides the suggestions until the next edit. */
+  readonly dismiss: () => void;
   /** Moves the highlight one suggestion down or up, wrapping round. */
   readonly highlight: (direction: "down" | "up") => void;
-  /** Empties the box, as after sending its message. */
+  /** Empties the box and drops the picked command, as after sending its message or call. */
   readonly clear: () => void;
 }
 
@@ -144,23 +148,26 @@ export interface Identities extends AdminChanges {
 
 /** The composer store: a draft for each message box, and for each display name being edited. */
 export interface Composer {
-  /** The draft for the box with this key (a channel's name, or `channel/id` for a thread): the same store each time for one key. */
+  /** The draft for the box with this key (`channel/id` for a thread's reply box): the same store each time for one key. It suggests no commands. */
   readonly draft: (key: string) => Draft;
+  /** The draft for a channel's message box, which also suggests commands: the same store each time for one channel. */
+  readonly channelDraft: (channel: string) => Draft;
   /** The display name being edited for this identity: the same store each time for one name. */
   readonly displayName: (name: IdentityName) => DisplayNameDraft;
   /** The identity list the suggestions come from. */
   readonly identities: Identities;
 }
 
-/** What the composer store needs of the SDK, and the live stream that keeps the identity list up to date, if any. */
+/** What the composer store needs: the SDK, the commands a channel's box suggests, and the live stream that keeps the identity list up to date, if any. */
 export interface ComposerOptions {
   readonly client: AdminClient & Pick<CookoutClient, "listIdentities" | "setDisplayName">;
+  readonly commands: CommandList;
   readonly live?: Live;
 }
 
 /**
  * Makes a composer store that loads identities through `options.client`.
- * @param options The client and the live stream.
+ * @param options The client, the commands and the live stream.
  * @returns The store.
  */
 export function createComposer(options: ComposerOptions): Composer {
@@ -168,11 +175,18 @@ export function createComposer(options: ComposerOptions): Composer {
   const drafts = new Map<string, Draft>();
   const displayNames = new Map<string, DisplayNameDraft>();
   const list = createIdentityList({ client, live: options.live ?? null });
-  const readers = listenersOf(list.load);
+  const load = loaderOf(list, options.commands);
+  const readers = listenersOf(load);
+  function registered(): readonly Command[] {
+    return options.commands.snapshot().commands ?? NO_COMMANDS;
+  }
   list.onChange(readers.notify);
   return {
+    channelDraft: (channel) =>
+      storeIn(drafts, channel, () => createDraft(list, { commands: registered, identities: list.identities }, load)),
     displayName: (name) => storeIn(displayNames, name, () => createDisplayName({ client, list, name })),
-    draft: (key) => storeIn(drafts, key, () => createDraft(list)),
+    draft: (key) =>
+      storeIn(drafts, key, () => createDraft(list, { commands: () => NO_COMMANDS, identities: list.identities }, load)),
     identities: {
       ...createAdminChanges({ client, identities: list.identities, publish: list.publish }),
       snapshot: list.identities,
