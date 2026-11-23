@@ -41,6 +41,7 @@ export type TestCookoutOptions = {
   readonly storage?: "memory" | "unusable";
   readonly secrets?: "test" | "live";
   readonly leaseSeconds?: number;
+  readonly publicUrl?: string;
 };
 
 const storageFor = (options: TestCookoutOptions) => (options.storage === "unusable" ? unusableStorage : memoryStorage);
@@ -91,7 +92,9 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
       const config = serverEnv(options);
       const boot = Effect.gen(function* () {
         const server = yield* Layer.buildWithScope(
-          cookoutServer({ host: "127.0.0.1", port: 0 }).pipe(Layer.provide(Layer.succeedContext(store))),
+          cookoutServer({ host: "127.0.0.1", port: 0, publicUrl: options.publicUrl ?? "" }).pipe(
+            Layer.provide(Layer.succeedContext(store)),
+          ),
           scope,
         );
         const url = yield* serverUrl.pipe(Effect.provideContext(server));
