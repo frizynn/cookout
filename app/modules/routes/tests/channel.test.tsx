@@ -214,7 +214,7 @@ it("a refused older page says so and keeps the messages shown", { timeout: 5000 
   const reader = await newIdentity({ kind: "human", name: "web-channel-rotated" });
   const close = openAt({ client: reader.client, hash: "#/channels/web-channel-older-refused", pageSize: ONE_A_PAGE });
   await shownMessages();
-  await adminClient().rotateToken("web-channel-rotated");
+  await reader.rotateToken();
 
   fireEvent.click(screen.getByRole("button", { name: "Load more" }));
   const alert = await screen.findByRole("alert");

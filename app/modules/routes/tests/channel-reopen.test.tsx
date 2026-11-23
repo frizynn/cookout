@@ -102,7 +102,7 @@ it("reopening a channel that can no longer be read says so and keeps its message
   await channelWith("web-channel-reopen-refused", ["Hello"]);
   const reader = await newIdentity({ kind: "human", name: "web-channel-reopen-rotated" });
   const close = await openedThenLeft(reader.client, "web-channel-reopen-refused", shownMessages);
-  await adminClient().rotateToken("web-channel-reopen-rotated");
+  await reader.rotateToken();
 
   globalThis.location.hash = "#/channels/web-channel-reopen-refused";
   const alert = await screen.findByRole("alert");

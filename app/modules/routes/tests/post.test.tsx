@@ -54,7 +54,7 @@ async function openedThenRevoked(name: string, channel: string): Promise<() => v
   await channelWith(channel, "Earlier");
   const close = openAt({ client: poster.client, hash: `#/channels/${channel}` });
   await shownMessages();
-  await adminClient().rotateToken(name);
+  await poster.rotateToken();
   return close;
 }
 
