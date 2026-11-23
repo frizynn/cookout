@@ -19,6 +19,7 @@ export type { DeliveryOutcome, StoredDelivery } from "./lib/server/deliveries.ts
 export type { NewMessage } from "./lib/server/messages.ts";
 export type { NewCommandCall } from "./lib/server/command-calls.ts";
 export type { StoredLease } from "./lib/server/leases.ts";
+export type { LoginCollection, LoginRequest, NewLoginRequest } from "./lib/server/login-requests.ts";
 
 export class Storage extends Context.Service<Storage, StorageService>()("@ai-hero/cookout/storage/server/Storage") {}
 

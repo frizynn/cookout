@@ -229,6 +229,7 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
           yield* Effect.forEach(INBOX_TABLES, (table) => db.run(`DELETE FROM ${table} WHERE identity_name = ?`, name), {
             concurrency: 1,
           });
+          yield* db.run("DELETE FROM login_credentials WHERE identity_name = ?", name);
           yield* db.run("DELETE FROM identities WHERE name = ?", name);
           return { identity: toIdentity(row), status: "deleted" } as const;
         }),

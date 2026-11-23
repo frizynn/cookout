@@ -6,7 +6,7 @@ import { openMigrated } from "./migrations.ts";
 import { sqliteChannels } from "./channels.ts";
 import { sqliteCommands } from "./commands.ts";
 import { sqliteHealth } from "./health.ts";
-import { sqliteIdentities } from "./identities.ts";
+import { sqliteIdentitySections } from "./identity-sections.ts";
 import { sqliteLeases } from "./leases-sqlite.ts";
 import { sqliteMessages } from "./messages-sqlite.ts";
 
@@ -31,7 +31,7 @@ function openSqliteStorage(
     const db = yield* openMigrated(path);
     return {
       ...sqliteHealth(db),
-      ...sqliteIdentities(db),
+      ...sqliteIdentitySections(db),
       ...sqliteChannels(db),
       ...sqliteMessages(db),
       ...sqliteLeases(db),
