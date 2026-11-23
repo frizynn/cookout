@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# pnpm e2e:docker: build the image, run it on a fresh named volume with fly.toml's [env], run
-# packages/e2e against it with the admin token from its first boot, then remove the container,
-# volume and image, also on failure or Ctrl-C. Exits with the suite's code.
+# pnpm e2e:docker: build the image, run it on a fresh named volume with fly.toml's [env] and a
+# COOKOUT_ADMIN_TOKEN made for this run, run packages/e2e against it with that token, then remove
+# the container, volume and image, also on failure or Ctrl-C. Exits with the suite's code.
 # COOKOUT_PUBLIC_URL is the one [env] value replaced: Docker maps a free local port to the
 # container's 8080, so the Host the suite sends is the local address's, not the deployed one's.
 set -euo pipefail
@@ -20,6 +20,7 @@ trap 'exit 130' INT TERM
 
 port=$(node -e 'const s = require("node:net").createServer().listen(0, "127.0.0.1", () => { console.log(s.address().port); s.close(); });')
 url="http://127.0.0.1:$port"
+admin_token=$(node -e 'console.log(require("node:crypto").randomBytes(32).toString("hex"))')
 
 env_flags=()
 while IFS= read -r pair; do
@@ -31,13 +32,14 @@ done < <(awk '/^\[/ { in_env = ($0 == "[env]"); next } in_env && /=/ { sub(/^[ \
 
 echo "e2e:docker: docker build -t $image ."
 docker build --quiet -t "$image" . > /dev/null
-docker run --detach --name "$run" --publish "127.0.0.1:$port:8080" --volume "$run:/data" "${env_flags[@]}" "$image" > /dev/null
+COOKOUT_ADMIN_TOKEN="$admin_token" docker run --detach --name "$run" --publish "127.0.0.1:$port:8080" \
+  --volume "$run:/data" --env COOKOUT_ADMIN_TOKEN "${env_flags[@]}" "$image" > /dev/null
 
-admin_token=""
+listening=""
 for _ in $(seq 120); do
   logs=$(docker logs "$run" 2>/dev/null)
   if grep -q '"listening"' <<< "$logs"; then
-    admin_token=$(grep '^{"adminToken' <<< "$logs" | head -n 1 | node -e 'let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () => console.log(s.trim() === "" ? "" : JSON.parse(s).adminToken));')
+    listening=yes
     break
   fi
   if [ "$(docker inspect --format '{{.State.Running}}' "$run")" != "true" ]; then
@@ -47,8 +49,13 @@ for _ in $(seq 120); do
   fi
   sleep 0.5
 done
-if [ -z "$admin_token" ]; then
-  echo "e2e:docker: the container's first boot printed no admin token, or it wasn't listening after 60 s." >&2
+if [ -z "$listening" ]; then
+  echo "e2e:docker: the container wasn't listening after 60 s." >&2
+  exit 1
+fi
+logs=$(docker logs "$run" 2>&1)
+if grep -qF "$admin_token" <<< "$logs"; then
+  echo "e2e:docker: the container's logs show COOKOUT_ADMIN_TOKEN." >&2
   exit 1
 fi
 

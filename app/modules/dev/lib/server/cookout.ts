@@ -1,9 +1,8 @@
 import { Context, Effect, FileSystem, Layer, Path } from "effect";
+import { Secrets, secretsLive } from "../../../secrets/server.ts";
 import { WebhookFake, webhookFake } from "../../../webhook-fake/server.ts";
-import { FirstBoot } from "../../../identities/server.ts";
 import type { Scope } from "effect";
 import { cookoutServer } from "../../../cli/server.ts";
-import { secretsLive } from "../../../secrets/server.ts";
 import { serverUrl } from "../../../http/server.ts";
 import { sqliteStorage } from "../../../storage/server.ts";
 import { viteDevServer } from "./web.ts";
@@ -32,12 +31,13 @@ function databaseInTempFolder(): Effect.Effect<string, never, Needs> {
 function devCookout(port: number): Effect.Effect<DevCookout, never, Needs> {
   return Effect.gen(function* startDevCookout() {
     const database = yield* databaseInTempFolder();
-    const live = Layer.mergeAll(sqliteStorage(database), secretsLive);
-    const server = yield* Layer.build(cookoutServer({ host: LOCAL, port }).pipe(Layer.provide(live)));
+    const live = yield* Layer.build(Layer.mergeAll(sqliteStorage(database), secretsLive));
+    const adminToken = yield* Context.get(live, Secrets).newToken;
+    const backing = Layer.succeedContext(live);
+    const server = yield* Layer.build(cookoutServer({ adminToken, host: LOCAL, port }).pipe(Layer.provide(backing)));
     const fake = yield* Layer.build(webhookFake);
     const url = yield* Effect.provideContext(serverUrl, server);
     const webUrl = yield* viteDevServer(url);
-    const { adminToken = "" } = Context.get(server, FirstBoot);
     return { adminToken, database, url, webUrl, webhookFakeUrl: Context.get(fake, WebhookFake).url };
   }).pipe(Effect.orDie);
 }

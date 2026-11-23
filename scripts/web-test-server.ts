@@ -26,29 +26,38 @@ function fieldsOf(line: string): Readonly<Record<string, unknown>> {
   }
 }
 
-async function startLines(lines: AsyncIterable<string>): Promise<TestCookout> {
-  const found = new Map<string, unknown>();
+async function listeningUrl(lines: AsyncIterable<string>): Promise<string> {
   for await (const line of lines) {
-    for (const [name, value] of Object.entries(fieldsOf(line))) {
-      found.set(name, value);
-    }
-    const adminToken = found.get("adminToken");
-    const url = found.get("listening");
-    if (typeof adminToken === "string" && typeof url === "string") {
-      return { adminToken, url };
+    const url = fieldsOf(line)["listening"];
+    if (typeof url === "string") {
+      return url;
     }
   }
-  throw new Error("cookout serve stopped before printing its admin token and address");
+  throw new Error("cookout serve stopped before printing its address");
 }
 
 export async function setup(project: TestProject): Promise<() => Promise<void>> {
   const folder = mkdtempSync(path.join(os.tmpdir(), "cookout-web-test-"));
+  const adminToken = "web-test-admin-token-0123456789abcdef0123456789";
+  const database = path.join(folder, "cookout.db");
   const server = spawn(
-    process.execPath,
-    ["app/main.ts", "serve", "--port", "0", "--host", "127.0.0.1", "--db", path.join(folder, "cookout.db")],
+    "env",
+    [
+      `COOKOUT_ADMIN_TOKEN=${adminToken}`,
+      process.execPath,
+      "app/main.ts",
+      "serve",
+      "--port",
+      "0",
+      "--host",
+      "127.0.0.1",
+      "--db",
+      database,
+    ],
     { stdio: ["ignore", "pipe", "ignore"] },
   );
-  project.provide("cookout", await startLines(createInterface({ input: server.stdout })));
+  const url = await listeningUrl(createInterface({ input: server.stdout }));
+  project.provide("cookout", { adminToken, url });
   return async () => {
     server.kill("SIGINT");
     await once(server, "exit");

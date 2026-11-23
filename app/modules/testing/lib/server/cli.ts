@@ -30,6 +30,7 @@ interface CliResult {
 }
 
 interface ServeProcess {
+  readonly adminToken: string;
   readonly lines: readonly unknown[];
   readonly stdout: string;
   readonly stop: Effect.Effect<void>;
@@ -45,9 +46,10 @@ interface DevProcess {
   readonly webUrl: string;
 }
 
-interface ServeWithWeb {
+interface ServeOptions {
+  readonly adminToken?: string;
   readonly database: string;
-  readonly webFolder: string;
+  readonly webFolder?: string;
 }
 
 interface Invocation {
@@ -82,6 +84,7 @@ interface Started<Line> {
   readonly stop: Effect.Effect<void>;
 }
 
+const serveAdminToken = "test-admin-token-0123456789abcdef0123456789";
 const EXIT_SUCCESS = 0;
 const verbLayers: ServeLayers = { storage: () => memoryStorage };
 const isListening = Schema.is(Schema.Struct({ listening: Schema.String }));
@@ -146,6 +149,7 @@ function runDev({ args, env }: Invocation): Effect.Effect<CliResult, never, Need
 function startUntil<Line>(
   program: Effect.Effect<number, never, Needs>,
   isReady: (line: unknown) => line is Line,
+  env: Readonly<Record<string, string>> = {},
 ): Effect.Effect<Started<Line>, never, Needs | Scope.Scope> {
   return Effect.gen(function* startInProcess() {
     const output = yield* TestConsole.make;
@@ -160,7 +164,7 @@ function startUntil<Line>(
         }
       },
     };
-    const server = yield* Effect.forkScoped(exitCodeOf({ console, env: {}, program }));
+    const server = yield* Effect.forkScoped(exitCodeOf({ console, env, program }));
     const stopped = Effect.andThen(
       Fiber.join(server),
       Effect.die(new Error("The command stopped before it was ready.")),
@@ -176,26 +180,21 @@ function startUntil<Line>(
   });
 }
 
-function startServeOn(database: string, layers: ServeLayers): Effect.Effect<ServeProcess, never, Needs | Scope.Scope> {
+function startServe({
+  adminToken = serveAdminToken,
+  database,
+  ...web
+}: ServeOptions): Effect.Effect<ServeProcess, never, Needs | Scope.Scope> {
   const args = ["serve", "--port", "0", "--host", "127.0.0.1", "--db", database];
-  const serve = exitCodeAfter(runCommandLine(args, layers));
-  return Effect.map(startUntil(serve, isListening), ({ line, lines, stdout, stop }) => ({
+  const serve = exitCodeAfter(runCommandLine(args, { storage: sqliteStorage, ...web }));
+  const env = { COOKOUT_ADMIN_TOKEN: adminToken };
+  return Effect.map(startUntil(serve, isListening, env), ({ line, lines, stdout, stop }) => ({
+    adminToken,
     lines,
     stdout,
     stop,
     url: line.listening,
   }));
-}
-
-function startServe(database: string): Effect.Effect<ServeProcess, never, Needs | Scope.Scope> {
-  return startServeOn(database, { storage: sqliteStorage });
-}
-
-function startServeWithWeb({
-  database,
-  webFolder,
-}: ServeWithWeb): Effect.Effect<ServeProcess, never, Needs | Scope.Scope> {
-  return startServeOn(database, { storage: sqliteStorage, webFolder });
 }
 
 interface SignallingConsole {
@@ -280,7 +279,7 @@ export {
   type DevProcess,
   type Needs as CommandLineNeeds,
   type ServeProcess,
-  type ServeWithWeb,
+  type ServeOptions,
   type WatchRun,
   type Watched,
   cliResult,
@@ -290,7 +289,6 @@ export {
   runDev,
   startDev,
   startServe,
-  startServeWithWeb,
   watchCookout,
   watched,
 };

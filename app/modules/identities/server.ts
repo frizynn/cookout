@@ -1,6 +1,6 @@
 /**
  * Identities on the backend: bearer auth, issuing tokens,
- * the admin identity made on first boot, `GET /v1/whoami` and the web UI's
+ * the admin identity's token from the setting, `GET /v1/whoami` and the web UI's
  * session cookie. A token is
  * never stored: only its hash, made by `Secrets`, goes into `Storage`.
  */
@@ -38,7 +38,7 @@ export type IdentitiesService = {
    * `token_expired`.
    */
   readonly authenticate: (credentials: Credentials) => Effect.Effect<Principal, Refusal | StorageUnavailable>;
-  /** A new token and its hash. Creating an identity, rotating a token and the first boot all issue one. */
+  /** A new token and its hash. Creating an identity and rotating a token both issue one. */
   readonly issueToken: Effect.Effect<IssuedToken>;
 };
 
@@ -84,26 +84,25 @@ export const requireToken: Gate<
     );
   });
 
-export type FirstBootService = {
-  /** The token of the `admin` identity, if this boot made it. Shown this once; later boots have none. */
-  readonly adminToken: Token | undefined;
-};
-
-export class FirstBoot extends Context.Service<FirstBoot, FirstBootService>()(
-  "@ai-hero/cookout/identities/server/FirstBoot",
-) {}
-
-/** On a store with no identities, makes the `admin` identity and keeps its token in `FirstBoot`. */
-export const firstBoot: Layer.Layer<FirstBoot, StorageUnavailable, Identities | Storage> = Layer.effect(
-  FirstBoot,
-  Effect.gen(function* () {
-    const storage = yield* Storage;
-    const { token, hash } = yield* (yield* Identities).issueToken;
-    const admin = yield* firstAdmin;
-    const made = yield* storage.createIdentityIfNoneExist(admin, hash);
-    return { adminToken: made ? token : undefined };
-  }),
-);
+/**
+ * Makes `adminToken` the only token of the `admin` identity, creating the admin on a store without one. `cookout
+ * serve` runs it at every boot with `COOKOUT_ADMIN_TOKEN` (Matt, 2026-11-23, mattpocock/cookout#85), so a token
+ * rotated since, lost or leaked stops working once the setting changes and the server restarts.
+ *
+ * @param adminToken The token from `COOKOUT_ADMIN_TOKEN`.
+ * @returns A Layer that sets the token when it is built.
+ */
+export function adminTokenSet(adminToken: Token): Layer.Layer<never, StorageUnavailable, Storage | Secrets> {
+  return Layer.effectDiscard(
+    Effect.gen(function* setAdminToken() {
+      const secrets = yield* Secrets;
+      const storage = yield* Storage;
+      const hash = yield* secrets.hashToken(adminToken);
+      const admin = yield* firstAdmin;
+      yield* storage.setOnlyToken(admin, hash);
+    }),
+  );
+}
 
 /**
  * The identity routes, for the server's route list: whoami, logging the web

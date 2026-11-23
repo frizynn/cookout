@@ -1,23 +1,25 @@
 import { Command, Flag } from "effect/cli";
-import { Effect, Layer, Option } from "effect";
-import { FirstBoot, firstBoot } from "../../../identities/server.ts";
+import { Effect, Layer, Option, Redacted } from "effect";
 import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
-import { databasePath, host, port, publicUrl } from "../../../config/server.ts";
+import { adminToken, adminTokenRule, databasePath, host, port, publicUrl } from "../../../config/server.ts";
 import { domainLayers, routes } from "./route-list.ts";
 import { httpServer, serverUrl } from "../../../http/server.ts";
+import { printLine, refused } from "./output.ts";
 import type { FileSystem } from "effect";
 import type { Serving } from "../../../http/server.ts";
-import { printLine } from "./output.ts";
+import type { Token } from "../../../identities/index.ts";
+import { adminTokenSet } from "../../../identities/server.ts";
 import { requireTokenAndRenewLease } from "../../../leases/server.ts";
+import { token } from "../../../identities/index.ts";
 
 export type ServeLayers = {
   readonly storage: (path: string) => Layer.Layer<Storage, StorageUnavailable, FileSystem.FileSystem>;
   readonly webFolder?: string;
 };
 
-export const cookoutServer = (serving: Serving) =>
+export const cookoutServer = ({ adminToken: admin, ...serving }: Serving & { readonly adminToken: Token }) =>
   httpServer(serving, routes, requireTokenAndRenewLease).pipe(
-    Layer.provideMerge(firstBoot),
+    Layer.provideMerge(adminTokenSet(admin)),
     Layer.provideMerge(domainLayers),
   );
 
@@ -28,24 +30,21 @@ function webFolderOf({ webFolder }: ServeLayers): Pick<Serving, "webFolder"> {
   });
 }
 
-const printAdminToken = Effect.gen(function* () {
-  const { adminToken } = yield* FirstBoot;
-  if (adminToken === undefined) {
-    return;
-  }
-  yield* printLine({
-    adminToken,
-    identity: "admin",
-    message: "First boot: this is the admin token. It is shown only this once; keep it safe.",
-  });
-});
+const invalidAdminToken = { code: "admin_token_invalid", message: adminTokenRule };
+
+const adminTokenOrRefuse = Effect.gen(function* readAdminToken() {
+  const value = yield* adminToken;
+  return token(Redacted.value(value));
+}).pipe(Effect.catchTag("ConfigError", () => refused(invalidAdminToken)));
 
 const runServer = (layers: ServeLayers, listen: Omit<Serving, "webFolder">, database: string) =>
   Effect.gen(function* () {
+    const admin = yield* adminTokenOrRefuse;
     const services = yield* Layer.build(
-      cookoutServer({ ...listen, ...webFolderOf(layers) }).pipe(Layer.provide(layers.storage(database))),
+      cookoutServer({ ...listen, ...webFolderOf(layers), adminToken: admin }).pipe(
+        Layer.provide(layers.storage(database)),
+      ),
     );
-    yield* printAdminToken.pipe(Effect.provideContext(services));
     const url = yield* serverUrl.pipe(Effect.provideContext(services));
     yield* printLine({ database, listening: url });
     return yield* Effect.never;
