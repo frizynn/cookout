@@ -1,5 +1,5 @@
 import type { AvatarParts, PresenceShown, SuggestionOptionParts } from "./avatar-parts.ts";
-import type { MenuChoice, MessageMenuParts } from "./menu-parts.ts";
+import type { MenuChoice, MessageMenuParts, ReactionChoice } from "./menu-parts.ts";
 import type { ReactNode } from "react";
 
 interface Parts {
@@ -201,9 +201,10 @@ interface MessageLayoutParts extends Parts {
   readonly actionLabel: string;
   readonly onAction: (() => void) | null;
   readonly choices: readonly MenuChoice[];
+  readonly reactions: readonly ReactionChoice[];
 }
 
-interface MessageItemParts extends Omit<MessageLayoutParts, "choices"> {
+interface MessageItemParts extends Omit<MessageLayoutParts, "choices" | "reactions"> {
   readonly menu: MessageMenuParts;
   readonly mark: "for-you" | "open" | "none";
   readonly day: string | null;

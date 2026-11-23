@@ -11,6 +11,7 @@ function articleText(article: () => HTMLElement): string {
   for (const action of [
     ...within(copy).queryAllByRole("link", { name: "Reply" }),
     ...within(copy).queryAllByRole("button", { name: "Reply" }),
+    ...within(copy).queryAllByRole("button", { name: /^React with /u }),
   ]) {
     action.remove();
   }

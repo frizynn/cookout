@@ -32,6 +32,7 @@ export function MessageLayout(parts: MessageLayoutParts): ReactNode {
         actionLabel={parts.actionLabel}
         choices={parts.choices}
         onAction={handleAction}
+        reactions={parts.reactions}
       />
     </>
   );

@@ -43,12 +43,14 @@
  * the creator, adds it to the loaded list and the subscriptions, empties and closes the form and only then calls `created`,
  * so a refused name keeps what was typed, with the refusal on the field it
  * concerns (the description's own schema errors; anything else, the name). A refusal
- * keeps the server's error code; a server that can't be reached is `unreachable`.
+ * keeps the server's error code; a server that can't be reached is `unreachable`. `reactions` is the reaction store
+ * (the `reaction-store` module) on the board's client and live stream.
  */
-import type { ChannelMessages, LiveChannelMessages, MessagesClient } from "./lib/channel-state.ts";
+import type { ChannelMessages, LiveChannelMessages, MessagesClient } from "./lib/channel-messages.ts";
 import type { ChannelName, CookoutClient, MessageId } from "../sdk/index.ts";
 import type { Commands, CommandsClient } from "./lib/commands.ts";
 import type { LiveThreadMessages, ThreadClient, ThreadMessages } from "./lib/thread-messages.ts";
+import type { ReactionStore, ReactionStoreOptions } from "../reaction-store/index.ts";
 import type { Subscriptions, SubscriptionsClient } from "./lib/subscriptions.ts";
 import type { ChannelCreation } from "./lib/channel-creation.ts";
 import type { Live } from "../live/index.ts";
@@ -58,6 +60,7 @@ import { createChannelList } from "./lib/channel-list.ts";
 import { createChannelMessages } from "./lib/channel-messages.ts";
 import { createCommands } from "./lib/commands.ts";
 import { createLiveFeed } from "./lib/live-feed.ts";
+import { createReactionStore } from "../reaction-store/index.ts";
 import { createSubscriptions } from "./lib/subscriptions.ts";
 import { createThreadMessages } from "./lib/thread-messages.ts";
 
@@ -72,6 +75,7 @@ function storeIn<Messages>(stores: Map<string, Messages>, key: string, make: () 
 type BoardClient = Pick<CookoutClient, "createChannel" | "listChannels"> &
   CommandsClient &
   MessagesClient &
+  ReactionStoreOptions["client"] &
   SubscriptionsClient &
   ThreadClient;
 
@@ -91,6 +95,8 @@ export interface Board {
   readonly subscriptions: Subscriptions;
   /** The new channel form: one store, whose channels join the loaded list. */
   readonly creation: ChannelCreation;
+  /** The reactions on messages: one store, following the live stream, which toggles the reader's own. */
+  readonly reactions: ReactionStore;
   /** Empties the snapshot's `notice`. */
   readonly dismissNotice: () => void;
 }
@@ -138,6 +144,7 @@ export function createBoard(options: BoardOptions): Board {
       },
     }),
     dismissNotice: list.dismissNotice,
+    reactions: createReactionStore({ client, live: options.live ?? null }),
     snapshot: list.snapshot,
     subscribe: (listener) => {
       follow();
@@ -151,7 +158,7 @@ export function createBoard(options: BoardOptions): Board {
 
 export type { ChannelCreation, ChannelCreationSnapshot, CreationState } from "./lib/channel-creation.ts";
 export type { ChannelsState } from "./lib/channel-list.ts";
-export type { ChannelMessages, ChannelMessagesState } from "./lib/channel-state.ts";
+export type { ChannelMessages, ChannelMessagesState } from "./lib/channel-messages.ts";
 export type { CallState } from "./lib/command-call.ts";
 export type { SchemaProblem } from "../sdk/index.ts";
 export type { Commands } from "./lib/commands.ts";

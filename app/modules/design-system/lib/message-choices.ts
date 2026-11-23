@@ -20,6 +20,11 @@ export function useMessageChoices({ actionHref, actionLabel, menu, onAction }: C
   return useMemo(
     () => [
       ...actionOf({ actionHref, actionLabel, onAction }),
+      ...menu.reactions.map((choice) => ({
+        href: null,
+        label: `React with ${choice.symbol}`,
+        onSelect: choice.onReact,
+      })),
       { href: null, label: TEXT.markUnread, onSelect: menu.onMarkUnread },
     ],
     [actionHref, actionLabel, menu, onAction],
