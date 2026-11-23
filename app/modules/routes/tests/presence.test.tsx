@@ -34,7 +34,7 @@ function cuttable(): Cuttable {
   };
 }
 
-it("an author who is watching shows an online dot, and going offline turns it into an offline ring with no reload", {
+it('an author who is watching shows an online dot, and going offline turns it into an offline ring read as "ada, Offline" (no last seen) with no reload', {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -52,7 +52,7 @@ it("an author who is watching shows an online dot, and going offline turns it in
   await events.close();
 
   await expect(
-    authorDot({ at: "Beep from the bot", label: SEEN, who: "web-presence-author-bot" }),
+    authorDot({ at: "Beep from the bot", label: "Offline", tooltip: SEEN, who: "web-presence-author-bot" }),
   ).resolves.toStrictEqual(offline(SEEN));
 });
 

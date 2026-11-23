@@ -1,6 +1,7 @@
 interface PresenceShown {
   readonly online: boolean;
   readonly label: string;
+  readonly spoken: string;
 }
 
 interface PresenceDotParts extends PresenceShown {
@@ -18,6 +19,7 @@ interface AvatarParts {
 interface SuggestionOptionParts {
   readonly option: string;
   readonly detail: string | null;
+  readonly spoken: string;
   readonly presence: PresenceShown | null;
 }
 

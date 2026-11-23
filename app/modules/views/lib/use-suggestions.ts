@@ -19,6 +19,7 @@ interface SuggestionsOf {
 interface Suggestion {
   readonly option: string;
   readonly detail: string | null;
+  readonly spoken: string;
   readonly presence: PresenceShown | null;
 }
 
@@ -33,12 +34,21 @@ interface Handlers {
   readonly command: (option: string) => void;
 }
 
+function spokenMention(identity: Identity): string {
+  const displayName = identity.displayName ?? null;
+  if (displayName === null) {
+    return `@${identity.name}`;
+  }
+  return `${displayName}, @${identity.name}`;
+}
+
 function shownFor({ commands, suggestions }: SuggestionsOf, handlers: Handlers, presences: Presences): Shown {
   if (commands.length > NONE) {
     const options = commands.map((command) => ({
       detail: command.description ?? null,
       option: `/${command.name}`,
       presence: null,
+      spoken: `/${command.name}`,
     }));
     return { label: COMMANDS, onChoose: handlers.command, options };
   }
@@ -46,6 +56,7 @@ function shownFor({ commands, suggestions }: SuggestionsOf, handlers: Handlers, 
     detail: identity.displayName ?? null,
     option: `@${identity.name}`,
     presence: shownIn({ name: identity.name, presences }),
+    spoken: spokenMention(identity),
   }));
   return { label: MENTIONS, onChoose: handlers.mention, options };
 }

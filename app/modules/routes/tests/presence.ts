@@ -27,12 +27,16 @@ interface Named {
 
 interface Looking extends Named {
   readonly at: string;
+  readonly tooltip?: string;
 }
 
 async function dotWithin(region: (looking: Looking) => Promise<HTMLElement>, looking: Looking): Promise<Dot> {
   const found = await region(looking);
   const dot = await within(found).findByRole("img", { name: `${looking.who}, ${looking.label}` });
-  return { presence: dot.dataset["presence"], tooltip: within(found).getByTitle(looking.label).title };
+  return {
+    presence: dot.dataset["presence"],
+    tooltip: within(found).getByTitle(looking.tooltip ?? looking.label).title,
+  };
 }
 
 async function articleWith({ at }: Looking): Promise<HTMLElement> {
