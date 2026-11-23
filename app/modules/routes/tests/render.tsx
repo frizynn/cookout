@@ -22,6 +22,7 @@ type AppClient = BoardOptions["client"] &
     | "deactivateIdentity"
     | "inbox"
     | "inboxHistory"
+    | "markUnread"
     | "listAgentSessions"
     | "reactivateIdentity"
     | "revokeAgentSession"

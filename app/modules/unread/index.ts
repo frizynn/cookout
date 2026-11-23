@@ -26,7 +26,13 @@
  * line sits above the first message after it, kept while the view is open.
  * `markAllRead` acks the whole inbox up to the newest item the store holds
  * (`POST /v1/inbox/ack-all`) and drops the items the read positions it moved
- * cover, so a message that arrives meanwhile stays unread.
+ * cover, so a message that arrives meanwhile stays unread. `markUnread` marks
+ * a message unread (`POST /v1/read-positions/unread`): it and each read
+ * position moved back (`read-position-moved-back`, from any session) replace
+ * the read position there, though it was newer, take the items after it out of
+ * `earlier`, read the inbox again to bring them back, and move the "New" line
+ * of a view open there above the first of them. `menu` is which message's
+ * actions menu is open, if any, whose Mark unread calls `markUnread`.
  */
 import type { ChannelName, CookoutClient, CookoutEvent, InboxItem, MessageId, Refusal } from "../sdk/index.ts";
 import type { MarkAll, MarkAllState } from "./lib/mark-all.ts";
@@ -34,9 +40,13 @@ import { createInboxItems, readInto } from "./lib/inbox-items.ts";
 import type { Earlier } from "./lib/earlier.ts";
 import type { InboxItems } from "./lib/inbox-items.ts";
 import type { Live } from "../live/index.ts";
+import type { MessageMenu } from "./lib/message-menu.ts";
 import type { NewLine } from "./lib/new-lines.ts";
 import { createEarlier } from "./lib/earlier.ts";
 import { createMarkAll } from "./lib/mark-all.ts";
+import { createMarkUnread } from "./lib/mark-unread.ts";
+import { createMessageMenu } from "./lib/message-menu.ts";
+import { createNotifier } from "./lib/notifier.ts";
 import { refusalOf } from "../sdk/index.ts";
 import { withNewLines } from "./lib/new-lines.ts";
 
@@ -93,6 +103,10 @@ export interface Unread {
   readonly newLine: (channel: ChannelName, thread: MessageId | null) => NewLine;
   /** Marks every inbox item the store holds as read, in every channel and thread, leaving any newer one unread. */
   readonly markAllRead: () => void;
+  /** Marks a message, and everything after it in its thread or channel, unread again. */
+  readonly markUnread: (messageId: MessageId) => void;
+  /** Which message's actions menu is open, if any: an external store of its own. */
+  readonly menu: MessageMenu;
 }
 
 /**
@@ -100,7 +114,7 @@ export interface Unread {
  * a page (50 unless given), and the live stream.
  */
 export interface UnreadOptions {
-  readonly client: Pick<CookoutClient, "ackAll" | "inbox" | "inboxHistory" | "readPositions">;
+  readonly client: Pick<CookoutClient, "ackAll" | "inbox" | "inboxHistory" | "markUnread" | "readPositions">;
   readonly pageSize?: number;
   readonly live?: Live;
 }
@@ -111,53 +125,53 @@ export interface UnreadOptions {
  * @returns The store.
  */
 export function createUnread(options: UnreadOptions): Unread {
-  const listeners = new Set<() => void>();
   const items = createInboxItems();
   const earlier = createEarlier({ ...options, unread: items });
-  let current: UnreadState = { status: "loading" };
+  const shown = createNotifier<UnreadState>({ status: "loading" });
   let loading: Promise<void> | null = null;
-
-  function publish(state: UnreadState): void {
-    current = state;
-    for (const listener of listeners) {
-      listener();
-    }
-  }
 
   const markAll = createMarkAll({
     ...options,
     items,
     onChange: (state) => {
-      publish(loadedOf(items, state));
+      shown.publish(loadedOf(items, state));
     },
     onRead: earlier.add,
   });
 
+  function republish(): void {
+    if (shown.current().status === "loaded") {
+      shown.publish(loadedOf(items, markAll.state()));
+    }
+  }
+  const markUnread = createMarkUnread({ client: options.client, dropRead: earlier.drop, items, onChange: republish });
+
   async function load(): Promise<void> {
     follow(options.live ?? null, (event) => {
-      if (items.receive(event, earlier.add) && current.status === "loaded") {
-        publish(loadedOf(items, markAll.state()));
+      if (markUnread.receive(event) || items.receive(event, earlier.add)) {
+        republish();
       }
     });
-    publish(await loadedOrFailed({ client: options.client, items, markAll, onRead: earlier.add }));
+    shown.publish(await loadedOrFailed({ client: options.client, items, markAll, onRead: earlier.add }));
   }
 
-  return withNewLines<Pick<Unread, "earlier" | "markAllRead" | "snapshot" | "subscribe">>({
+  return withNewLines<Pick<Unread, "earlier" | "markAllRead" | "markUnread" | "menu" | "snapshot" | "subscribe">>({
     earlier,
     markAllRead: markAll.markAllRead,
+    markUnread: markUnread.markUnread,
+    menu: createMessageMenu(markUnread.markUnread),
+    movesBack: items.movesBack,
     readPosition: items.readPosition,
-    snapshot: () => current,
+    snapshot: shown.current,
     subscribe: (listener) => {
-      listeners.add(listener);
       loading ??= load();
-      return () => {
-        listeners.delete(listener);
-      };
+      return shown.subscribe(listener);
     },
   });
 }
 
 export type { Earlier, EarlierState } from "./lib/earlier.ts";
 export type { MarkAllState } from "./lib/mark-all.ts";
+export type { MessageMenu } from "./lib/message-menu.ts";
 export type { ThreadNews, UnreadCounts, UnreadWhy } from "./lib/levels.ts";
 export { NO_COUNTS, countsByChannel, countsOf, isForYou, newsByThread, whyOf } from "./lib/levels.ts";
