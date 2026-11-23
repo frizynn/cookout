@@ -117,6 +117,37 @@ function headings(): readonly string[] {
   return texts;
 }
 
+const DOT = '[aria-hidden="true"].rounded-full.bg-mention-bar';
+const PLAIN = "for you: false, dot: false, filled: false";
+const DOTTED = "for you: true, dot: true, filled: false";
+
+function accentsOf(found: () => readonly Element[]): readonly string[] {
+  const accents: string[] = [];
+  for (const element of found()) {
+    const dotted = element.querySelector(DOT) !== null;
+    const filled = /\bbg-mention-(?:bar|bg)\b/u.test(element.className);
+    const forYou = element.matches('[data-for-you="true"]');
+    accents.push(`for you: ${String(forYou)}, dot: ${String(dotted)}, filled: ${String(filled)}`);
+  }
+  return accents;
+}
+
+it("a For you row in the Inbox has an accent dot, not a filled block", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-attention-row";
+  const { poster, reader } = await people(channel);
+  await post({ by: poster, channel, text: `@${channel}-reader one for you` });
+  const close = openAt({ client: reader, hash: "#/inbox" });
+  const list = await screen.findByRole("list", { name: "For you" });
+
+  expect(accentsOf(() => within(list).getAllByRole("listitem"))).toStrictEqual([
+    "for you: false, dot: true, filled: false",
+  ]);
+
+  close();
+});
+
 async function ownThreadAnswered(channel: string): Promise<CookoutClient> {
   const { poster, reader } = await people(channel);
   await reader.subscribe(channel);
@@ -146,13 +177,9 @@ it("the Inbox lists For you before Activity, and a reply in your own thread is R
   close();
 });
 
-function repliesShown(): readonly boolean[] {
+function repliesShown(): readonly string[] {
   const panel = screen.getByRole("complementary", { name: "Thread" });
-  const shown: boolean[] = [];
-  for (const reply of within(within(panel).getByRole("list", { name: "Replies" })).getAllByRole("article")) {
-    shown.push(reply.matches('[data-for-you="true"]'));
-  }
-  return shown;
+  return accentsOf(() => within(within(panel).getByRole("list", { name: "Replies" })).getAllByRole("article"));
 }
 
 interface Threads {
@@ -171,7 +198,7 @@ async function mixedThreads(channel: string): Promise<Threads> {
   return { mine, reader, theirs };
 }
 
-it("in a thread, a reply that mentions you or answers your message is highlighted, and other replies look normal", {
+it("in a thread, a reply that mentions you or answers your message has an accent dot, not a filled block, and other replies look normal", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -184,7 +211,23 @@ it("in a thread, a reply that mentions you or answers your message is highlighte
   globalThis.location.hash = `#/channels/${channel}/threads/${String(mine.id)}`;
   await screen.findByText("It's in the doc");
 
-  expect([inTheirs, repliesShown()]).toStrictEqual([[false, true], [true]]);
+  expect([inTheirs, repliesShown()]).toStrictEqual([[PLAIN, DOTTED], [DOTTED]]);
+
+  close();
+});
+
+it("a thread's parent message that mentions you has an accent dot, not a filled block", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-attention-parent";
+  const { poster, reader } = await people(channel);
+  const parent = await post({ by: poster, channel, text: `@${channel}-reader a thread for you` });
+  await post({ by: poster, channel, replyTo: parent, text: "First reply" });
+  const close = openAt({ client: reader, hash: `#/channels/${channel}/threads/${String(parent.id)}` });
+  await screen.findByText("First reply");
+  const panel = screen.getByRole("complementary", { name: "Thread" });
+
+  expect(accentsOf(() => [within(panel).getByRole("article", { name: "Parent message" })])).toStrictEqual([DOTTED]);
 
   close();
 });
@@ -201,10 +244,13 @@ async function followedThreads(channel: string): Promise<CookoutClient> {
 }
 
 function lookOf(summary: string, news: string): string {
-  return within(inPane().getByRole("link", { name: new RegExp(`^${summary}`, "u") })).getByText(news).className;
+  const link = inPane().getByRole("link", { name: new RegExp(`^${summary}`, "u") });
+  const text = within(link).getByText(news);
+  const dot = text.matches(`${DOT} + *`);
+  return `bold: ${String(text.className.includes("font-semibold"))}, accent text: ${String(text.className.includes("mention"))}, dot: ${String(dot)}`;
 }
 
-it("in a channel, a thread's summary says how many replies are new, and whether one mentions you", {
+it("in a channel, a thread's summary says how many replies are new, and one that mentions you has an accent dot before it", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -216,11 +262,10 @@ it("in a channel, a thread's summary says how many replies are new, and whether 
   const quiet = lookOf("2 replies, 2 new replies", "2 new replies");
   const loud = lookOf("1 reply, 1 new reply · mentions you", "1 new reply · mentions you");
 
-  expect([
-    quiet.includes("font-semibold"),
-    quiet.includes("bg-mention-bar"),
-    loud.includes("bg-mention-bar"),
-  ]).toStrictEqual([true, false, true]);
+  expect([quiet, loud]).toStrictEqual([
+    "bold: true, accent text: false, dot: false",
+    "bold: true, accent text: false, dot: true",
+  ]);
 
   close();
 });
