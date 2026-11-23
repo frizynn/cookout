@@ -25,8 +25,15 @@ export function SidebarView(props: SidebarProps): ReactNode {
   const { layout } = props;
   const state = useSyncExternalStore(layout.subscribe, layout.snapshot);
   const handleFollow = layout.closeSidebar;
+  const handleToggleCollapsed = layout.toggleCollapsed;
   return (
-    <Sidebar label={TEXT.sidebar} open={state.sidebar} title={TEXT.name}>
+    <Sidebar
+      collapsed={state.collapsed}
+      label={TEXT.sidebar}
+      onToggleCollapsed={handleToggleCollapsed}
+      open={state.sidebar}
+      title={TEXT.name}
+    >
       <SidebarBody onFollow={handleFollow}>
         <SidebarLinks board={props.board} route={props.route} unread={props.unread} />
       </SidebarBody>
