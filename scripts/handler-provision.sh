@@ -7,8 +7,11 @@
 # with the schema in packages/handler-example/command.schema.json. It pipes the secret, shown this
 # once, straight into `flyctl secrets import --stage` on the app (with $FLY_API_TOKEN, or the flyctl
 # login). If the command exists but the app has no COOKOUT_COMMAND_SECRET (staging failed after an
-# earlier add), it rotates the command's secret and stages the new one the same way. It never prints
-# the secret, and changes nothing on a rerun once the app has the secret and the channel is gone.
+# earlier add), it rotates the command's secret and stages the new one the same way. If the handler
+# identity (the agent named after the command) is deactivated, it reactivates it, because a deactivated
+# handler's result replies are refused with token_revoked (#191); it discards the fresh token that shows.
+# It never prints a secret or token, and changes nothing on a rerun once the app has the secret, the
+# handler identity is active and the channel is gone.
 set -euo pipefail
 
 command="${1:-example}"
@@ -23,6 +26,12 @@ stage_secret() {
 if node app/main.ts channel list | jq -e --arg name "$retired_channel" 'any(.channels[]; .name == $name)' > /dev/null; then
   node app/main.ts channel delete "$retired_channel" > /dev/null
   echo "handler-provision: deleted channel $retired_channel"
+fi
+
+if node app/main.ts identity list --deactivated \
+  | jq -e --arg name "$command" 'any(.identities[]; .name == $name and .deactivated == true)' > /dev/null; then
+  node app/main.ts identity reactivate "$command" > /dev/null
+  echo "handler-provision: reactivated the deactivated handler identity $command"
 fi
 
 if ! node app/main.ts command list | jq -e --arg name "$command" 'any(.commands[]; .name == $name)' > /dev/null; then
