@@ -56,4 +56,4 @@ function receiptLineOf({ message, parent, receipts }: ReceiptLineOf): ReceiptLin
   return lineOf(seen, unseen);
 }
 
-export { type ReceiptLine, type SeenBy, receiptLineOf };
+export { type SeenBy, receiptLineOf };
