@@ -1,0 +1,12 @@
+import type { EventSource } from "./source.ts";
+import type { Inbox } from "../../../inbox/server.ts";
+import type { Messages } from "../../../messages/server.ts";
+import { allChannels } from "./all-channels.ts";
+import { inboxItems } from "./inbox-items.ts";
+import { readPositions } from "./read-positions.ts";
+
+type SourceNeeds = Inbox | Messages;
+
+const sources: readonly EventSource<SourceNeeds>[] = [inboxItems, readPositions, allChannels];
+
+export { type SourceNeeds, sources };

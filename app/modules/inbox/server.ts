@@ -1,9 +1,10 @@
 /**
  * The inbox on the backend: the `Inbox` service over `Storage`, and the
  * routes that read the caller's inbox, ack a message, follow and unfollow a
- * thread, and subscribe to and unsubscribe from a channel. Ack needs the
- * lease while one is held (ADR 0004). Routes sit behind the server's token
- * gate.
+ * thread, and subscribe to and unsubscribe from a channel. Each ack is also
+ * published to an in-process hub, which `acked` subscribes to, for live
+ * updates. Ack needs the lease while one is held (ADR 0004). Routes sit
+ * behind the server's token gate.
  */
 import {
   AckRequestSchema,
@@ -85,8 +86,8 @@ function subscriptionRoute(method: Change, change: "subscribe" | "unsubscribe"):
 
 export { Inbox, inboxLayer } from "./lib/server/service.ts";
 
-/** The Schema of an inbox item, for the events that carry one. */
-export { InboxItemSchema } from "./lib/server/wire.ts";
+/** The Schemas of an inbox item and a read position, for the events that carry one. */
+export { InboxItemSchema, ReadPositionSchema } from "./lib/server/wire.ts";
 
 /**
  * The inbox routes, for the server's route list. They need `Caller`, which the token gate provides, `Inbox`, which

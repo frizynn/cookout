@@ -31,6 +31,7 @@ interface Call<Answer> {
 interface EventsCall {
   readonly connection: ClientConnection;
   readonly path: string;
+  readonly query?: Readonly<Record<string, string>>;
 }
 
 const NO_STATUS = 0;
@@ -93,9 +94,10 @@ export async function send<Answer>(connection: ClientConnection, call: Call<Answ
   return response.json;
 }
 
-export async function openEvents({ connection, path }: EventsCall): Promise<OpenEventStream> {
+export async function openEvents({ connection, path, query = {} }: EventsCall): Promise<OpenEventStream> {
   const method = "GET";
-  const opened = await openEventStream({ baseUrl: connection.url, headers: headersFor(connection), method, path });
+  const headers = headersFor(connection);
+  const opened = await openEventStream({ baseUrl: connection.url, headers, method, path, query });
   if (!opened.ok) {
     const error = refusal(method, path, opened.response);
     forgetLostLease(connection.lease, error.code);

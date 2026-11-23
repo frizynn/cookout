@@ -288,10 +288,23 @@ interface InboxItemEvent {
   readonly type: "inbox-item";
   readonly item: InboxItem;
 }
+/** The caller's new read position in a thread or channel, sent the moment any session of the caller acks. */
+interface ReadPositionEvent {
+  readonly type: "read-position";
+  readonly readPosition: ReadPosition;
+}
+/** A new message on any channel, the caller's own included, sent only on the all-channels feed. */
+interface MessageEvent {
+  readonly type: "message";
+  readonly message: Message;
+}
 /** Any event the stream sends. */
-type CookoutEvent = InboxItemEvent;
+type CookoutEvent = InboxItemEvent | ReadPositionEvent | MessageEvent;
 interface EventStream extends AsyncIterable<CookoutEvent> {
   readonly close: () => Promise<void>;
+}
+interface WatchOptions {
+  readonly allChannels?: boolean;
 }
 /** The answer to the health check. */
 interface HealthResponse {
@@ -406,11 +419,13 @@ export type CookoutClient = {
   readonly unsubscribe: (channel: string) => Promise<SubscriptionResponse>;
   /**
    * `GET /v1/events`: opens one Server-Sent Events stream, resolving once the server has accepted it. Iterate it for
-   * each new inbox item (`inbox-item`) the moment another identity posts it; the caller's own posts never arrive.
+   * each new inbox item (`inbox-item`) the moment another identity posts it (the caller's own posts never arrive), and
+   * each new read position (`read-position`) the moment any session of the caller acks, so several sessions stay in
+   * sync. With `allChannels`, it also sends every new message on every channel (`message`), as the web UI needs.
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
    * a newer server, is skipped. `close` drops the connection.
    */
-  readonly watch: () => Promise<EventStream>;
+  readonly watch: (options?: WatchOptions) => Promise<EventStream>;
   /**
    * `POST /v1/commands` (admin only): registers a webhook command. Its handler identity is an agent with the
    * command's name, made unless an agent of that name exists. The secret deliveries are signed with is in the answer
@@ -426,5 +441,5 @@ export type CookoutClient = {
  * (status 0) when there is no URL.
  */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type Author, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type Reply, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode };
+export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type Author, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Reply, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions };
 ```
