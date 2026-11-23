@@ -1,0 +1,34 @@
+# The cookout on Fly.io: one machine in lhr, with the SQLite file on the `cookout_data` volume.
+# Recipes: docs/verification.md ("Deploy it to Fly"). `pnpm e2e:docker` runs the image with this [env].
+
+app = "cookout"
+primary_region = "lhr"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  COOKOUT_HOST = "0.0.0.0"
+  COOKOUT_DB = "/data/cookout.db"
+  COOKOUT_PUBLIC_URL = "https://cookout.fly.dev"
+
+[mounts]
+  source = "cookout_data"
+  destination = "/data"
+
+# No auto-stop: a stopped machine would drop every open /v1/events stream, and
+# SQLite on one volume means exactly one machine, always running.
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/v1/health"
+    interval = "15s"
+    timeout = "3s"
+    grace_period = "10s"

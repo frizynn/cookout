@@ -32,6 +32,7 @@
     "api:write": "node scripts/api-report.ts --write",
     "exports": "node scripts/check-exports.ts",
     "pack:smoke": "node scripts/pack-smoke.ts",
+    "e2e:docker": "scripts/e2e-docker.sh",
     "check": "node scripts/check.ts",
     "fix": "knip --production --include exports,types,dependencies --fix > /dev/null; node scripts/lint-ratchet.ts --fix > /dev/null 2>&1; biome format --write . > /dev/null && node scripts/lint-ratchet.ts",
     "typecheck": "tsc --noEmit --incremental",
