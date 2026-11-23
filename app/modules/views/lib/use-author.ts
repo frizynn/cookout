@@ -1,6 +1,7 @@
 import type { Author, Identity } from "../../sdk/index.ts";
 import { useContext, useSyncExternalStore } from "react";
 import { AuthorList } from "./author-list.ts";
+import { useProfileHref } from "./profile-base.ts";
 
 const DEACTIVATED = "(deactivated)";
 
@@ -8,6 +9,10 @@ interface Shown {
   readonly agent: boolean;
   readonly displayName: string | null;
   readonly note: string | null;
+}
+
+interface ShownAuthor extends Shown {
+  readonly profileHref: string;
 }
 
 interface Drawn {
@@ -42,8 +47,9 @@ function useListed(name: string): Identity | null {
   return listedIn(useEveryListed(), name);
 }
 
-function useAuthor(author: Author): Shown {
-  return shownFrom(useListed(author.name), author);
+function useAuthor(author: Author): ShownAuthor {
+  const profileOf = useProfileHref();
+  return { ...shownFrom(useListed(author.name), author), profileHref: profileOf(author.name) };
 }
 
 function useDrawnAuthors(authors: readonly Author[]): readonly Drawn[] {

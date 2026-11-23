@@ -186,6 +186,7 @@ interface MessageTimeParts {
 
 interface MessageLayoutParts extends Parts {
   readonly name: string;
+  readonly nameHref: string;
   readonly displayName: string | null;
   readonly note: string | null;
   readonly agent: boolean;
@@ -226,6 +227,7 @@ interface SeparatorParts {
 
 interface MessageHeaderParts {
   readonly name: string;
+  readonly nameHref: string;
   readonly displayName: string | null;
   readonly note: string | null;
   readonly agent: boolean;

@@ -35,13 +35,15 @@ function hrefsOf(name: string): readonly (string | null)[] {
   return hrefs;
 }
 
-it("clicking a mention in a message opens that identity's profile, deactivated or not", { timeout: 5000 }, async () => {
+it("clicking a mention in a message opens that identity's profile panel, deactivated or not", {
+  timeout: 5000,
+}, async () => {
   expect.hasAssertions();
 
   const close = await openMentions();
 
   expect([hrefsOf(`@${CHANNEL}-reader`), document.querySelectorAll("a a").length]).toStrictEqual([
-    [`#/people/${CHANNEL}-reader`, "https://example.com"],
+    [`#/channels/${CHANNEL}?profile=${CHANNEL}-reader`, "https://example.com"],
     NONE,
   ]);
 

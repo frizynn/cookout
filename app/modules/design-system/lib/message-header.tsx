@@ -8,7 +8,9 @@ export function MessageHeader(parts: MessageHeaderParts): ReactNode {
   const { time } = parts;
   return (
     <header className="flex items-baseline gap-2">
-      <span className="text-sm font-semibold">{parts.displayName ?? parts.name}</span>
+      <a className="text-sm font-semibold hover:underline" href={parts.nameHref}>
+        {parts.displayName ?? parts.name}
+      </a>
       {parts.displayName !== null && <span className="text-xs text-muted-foreground">{`@${parts.name}`}</span>}
       {parts.note !== null && <span className="text-xs text-muted-foreground">{parts.note}</span>}
       {parts.agent && (

@@ -57,7 +57,10 @@
  * "Nobody matches." when the filters leave none. `ProfileView` is the panel
  * beside it for one identity: its large avatar, name and tags, display name,
  * kind and owner, and when it joined, or "Unknown identity", with a link that
- * closes it. To an admin, a human's profile has "Make admin", or "Remove
+ * closes it (as Escape does). The panel opens beside any page: a message's
+ * author and an `@name` link to it, beside the page `ProfileLinks` names. On
+ * your own profile, and on an agent's to its owner, a form saves its display
+ * name; an agent's owner also gets its agent actions. To an admin, a human's profile has "Make admin", or "Remove
  * admin" if it is one, and says why if the server refuses the change. The sidebar's footer links to the logged-in human's own profile.
  * `NotBuiltView` says a route has nothing to show.
  * `LoginApprovalView` is the approval page for a login request: its user code
@@ -74,6 +77,7 @@ export { LoginApprovalView } from "./lib/login-approval.tsx";
 export { LoginView } from "./lib/login.tsx";
 export { NotBuiltView } from "./lib/not-built.tsx";
 export { PeopleView } from "./lib/people.tsx";
+export { ProfileLinks } from "./lib/profile-links.tsx";
 export { ProfileView } from "./lib/profile.tsx";
 export { SettingsView } from "./lib/settings.tsx";
 export { SidebarView } from "./lib/sidebar.tsx";

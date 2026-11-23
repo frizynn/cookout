@@ -8,8 +8,6 @@ import { alertSaying } from "./alerts.ts";
 import { openAt } from "./render.tsx";
 import { refusalOf } from "../../sdk/index.ts";
 
-const NONE = 0;
-
 interface Crew {
   readonly human: CookoutClient;
   readonly bot: CookoutClient;
@@ -201,13 +199,13 @@ it("on a profile, the owner gets the agent's actions without Transfer, and other
   const other = await newIdentity({ kind: "human", name: "web-mine-who-other" });
   const ownerPanel = await profileAs(human, "web-mine-who-bot");
   await within(ownerPanel).findByRole("button", { name: "Rotate token" });
-  const ownerForms = within(ownerPanel).queryAllByRole("form").length;
+  const ownerForms = within(ownerPanel).queryAllByRole("form", { name: /^Transfer/u });
   cleanup();
   const otherPanel = await profileAs(other.client, "web-mine-who-bot");
   await within(otherPanel).findByText(/owned by web-mine-who-human/u);
 
   await waitFor(() => {
-    expect([ownerForms, within(otherPanel).queryAllByRole("button")]).toStrictEqual([NONE, []]);
+    expect([ownerForms, within(otherPanel).queryAllByRole("button")]).toStrictEqual([[], []]);
   });
 });
 

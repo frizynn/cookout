@@ -1,6 +1,6 @@
 /**
- * The web UI's paths: the one owner of its location hashes. `routeOf(hash)`
- * reads a hash as a `Route` (`#/`, no hash, and `#/inbox` the inbox, `#/login`,
+ * The web UI's paths: the one owner of its location hashes. A hash names a
+ * `Route` (`#/`, no hash, and `#/inbox` the inbox, `#/login`,
  * `#/people` the people and agents, `#/people/<name>` the same with that
  * identity's profile open, `#/settings` the settings page and
  * `#/settings/<section>` the same with the focus on that section (`profile`,
@@ -11,6 +11,14 @@
  * a thread ID that isn't a message ID, a section the settings page doesn't
  * have, or any other hash is `missing`. `hrefOf(route)` builds the hash a link to a route
  * goes to, so no view writes a path by hand.
+ *
+ * Any of those hashes can end in `?profile=<name>`: the same page with that
+ * identity's profile panel open beside it. `locationOf(hash)` reads both as a
+ * `Place`; a profile opened over a thread replaces the thread's panel, so the
+ * place is the channel, and one opened over the people page is the people
+ * page's own `profile` route. `profileHref({ identity, route })` builds the
+ * link that opens a profile beside `route`, and `closedHref(route)` the one
+ * that closes it.
  */
 import type { ChannelName, IdentityName, MessageId } from "../sdk/index.ts";
 import { isChannelName } from "../channels/index.ts";
@@ -50,6 +58,8 @@ const PROFILE = /^#\/people\/(?<identity>[^/]+)$/u;
 const CHANNEL = /^#\/channels\/(?<channel>[^/]+)$/u;
 const THREAD = /^#\/channels\/(?<channel>[^/]+)\/threads\/(?<thread>[^/]+)$/u;
 
+const PROFILE_QUERY = /\?profile=(?<profile>[^/?]*)$/u;
+const WITH_PROFILE = /^.*\?profile=(?<profile>[^/?]*)$/u;
 const APPROVE = /^#\/approve\/(?<code>[^/]+)$/u;
 const APPROVE_JOIN = /^#\/approve-join\/(?<code>[^/]+)$/u;
 const DIGITS = /^\d+$/u;
@@ -120,12 +130,41 @@ function channelHref(route: Extract<Route, { readonly name: "channel" | "thread"
   return `#/channels/${route.channel}/threads/${String(route.thread)}`;
 }
 
-/**
- * Reads a location hash as the route it names.
- * @param hash The location hash, `#` included (or empty).
- * @returns The route, or `missing`.
- */
-export function routeOf(hash: string): Route {
+interface ProfileLink {
+  readonly route: Route;
+  readonly identity: IdentityName;
+}
+
+interface Place {
+  readonly route: Route;
+  readonly profile: IdentityName | null;
+}
+
+function profileIn(hash: string): IdentityName | null {
+  const found = hash.replace(WITH_PROFILE, "$<profile>");
+  if (!PROFILE_QUERY.test(hash) || !isIdentityName(found)) {
+    return null;
+  }
+  return found;
+}
+
+function besideProfile(route: Route, profile: IdentityName): Place {
+  if (route.name === "thread") {
+    return { profile, route: { channel: route.channel, name: "channel" } };
+  }
+  if (route.name === "people" || route.name === "profile") {
+    return { profile: null, route: { identity: profile, name: "profile" } };
+  }
+  return { profile, route };
+}
+
+function isLinked(route: Route): route is LinkedRoute {
+  return (
+    route.name !== "login" && route.name !== "approve" && route.name !== "approve-join" && route.name !== "missing"
+  );
+}
+
+function routeOf(hash: string): Route {
   for (const matcher of matchers) {
     const route = matcher(hash);
     if (route !== false) {
@@ -156,4 +195,44 @@ export function hrefOf(route: LinkedRoute): string {
   return channelHref(route);
 }
 
-export type { LinkedRoute, Route, SettingsSection };
+/**
+ * Reads a location hash as the place it names.
+ * @param hash The location hash, `#` included (or empty).
+ * @returns The route, and the profile open beside it.
+ */
+export function locationOf(hash: string): Place {
+  const route = routeOf(hash.replace(PROFILE_QUERY, ""));
+  const profile = profileIn(hash);
+  if (profile === null || route.name === "missing") {
+    return { profile: null, route };
+  }
+  return besideProfile(route, profile);
+}
+
+/**
+ * Builds the location hash that opens `identity`'s profile panel beside `route`.
+ * @param link The page the panel opens on (`route`) and whose profile it is (`identity`).
+ * @returns The hash, such as `#/channels/general?profile=alice`.
+ */
+export function profileHref(link: ProfileLink): string {
+  const { identity } = link;
+  const { route: shown } = besideProfile(link.route, identity);
+  if (!isLinked(shown) || shown.name === "profile") {
+    return hrefOf({ identity, name: "profile" });
+  }
+  return `${hrefOf(shown)}?profile=${identity}`;
+}
+
+/**
+ * Builds the location hash that closes a profile panel open beside `route`.
+ * @param route The page the panel is open on.
+ * @returns The page's own hash, or the people page's for a page links don't go to.
+ */
+export function closedHref(route: Route): string {
+  if (!isLinked(route)) {
+    return hrefOf({ name: "people" });
+  }
+  return hrefOf(route);
+}
+
+export type { LinkedRoute, Place, Route, SettingsSection };
