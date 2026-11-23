@@ -7,8 +7,12 @@
  * People & agents link, every channel sorted by name, bold when it has unread
  * messages, with its mention count as a pill (its unread count read out only),
  * or why the channels can't load, the open item highlighted, and the
- * logged-in human with a Settings button, whose panel holds the theme switch
- * (the `layout` store). `ChannelView` is a channel's pane: its name and
+ * logged-in human with a Settings button, whose panel holds a form for the
+ * human's own display name and one for each agent they own (the `composer`
+ * store: saving shows at once, a refusal shows in that form and keeps the
+ * text) and the theme switch (the `layout` store). Wherever an identity
+ * shows, its display name, read live from the identity list `Authors` gives,
+ * comes first with the `@name` muted beside it. `ChannelView` is a channel's pane: its name and
  * description, its top-level messages, newest last, with "Load older
  * messages" for older ones or, when there are none, the start of the channel,
  * and viewing it marks the channel read; under them a message box that posts a

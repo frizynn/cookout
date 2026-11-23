@@ -18,7 +18,10 @@ const NONE = 0;
 const ONE = 1;
 
 type AppClient = BoardOptions["client"] &
-  Pick<CookoutClient, "inbox" | "inboxHistory" | "listIdentities" | "makeAdmin" | "removeAdmin" | "whoami">;
+  Pick<
+    CookoutClient,
+    "inbox" | "inboxHistory" | "listIdentities" | "makeAdmin" | "removeAdmin" | "setDisplayName" | "whoami"
+  >;
 
 interface BoardOpening {
   readonly hash: string;

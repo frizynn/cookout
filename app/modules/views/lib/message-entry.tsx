@@ -5,7 +5,7 @@ import { MessageData } from "./message-data.tsx";
 import type { ReactNode } from "react";
 import type { StreamRow } from "./stream-rows.ts";
 import { timeOf } from "../../format/index.ts";
-import { useIsAgent } from "./use-is-agent.ts";
+import { useAuthor } from "./use-author.ts";
 
 const NONE = 0;
 const REPLY = "Reply";
@@ -19,7 +19,7 @@ interface MessageEntryProps {
 
 export function MessageEntry(props: MessageEntryProps): ReactNode {
   const { message } = props.row;
-  const agent = useIsAgent(message.author);
+  const { agent, displayName } = useAuthor(message.author);
   const href = threadHref({ channel: props.channel, message });
   const count = replyCountOf(message);
   return (
@@ -27,6 +27,7 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
       actionHref={href}
       actionLabel={REPLY}
       agent={agent}
+      displayName={displayName}
       day={props.row.day}
       grouped={props.row.grouped}
       mark={markOf({ me: props.me, message, open: props.open })}

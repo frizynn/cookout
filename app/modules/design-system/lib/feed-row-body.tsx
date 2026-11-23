@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 interface FeedRowParts {
   readonly unread: boolean;
   readonly author: string;
+  readonly displayName: string | null;
   readonly action: string;
   readonly channel: string;
   readonly time: string;
@@ -22,6 +23,7 @@ export function FeedRowBody(parts: FeedRowParts): ReactNode {
         author={parts.author}
         bold={parts.unread}
         channel={parts.channel}
+        displayName={parts.displayName}
         time={parts.time}
       />
       {parts.context !== null && (

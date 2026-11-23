@@ -27,9 +27,15 @@
  * named column on its right with a close link (the whole width on a narrow
  * screen). A name's avatar is its coloured initials, one of eight hues hashed
  * from the name, a circle for a human and a square with a badge for an agent;
- * `Author` is a message's avatar and name, with an `agent` tag for an agent;
+ * `Author` is a message's avatar and name (a display name, with the `@name`
+ * muted beside it), with an `agent` tag for an agent;
  * `Tag` is one such small tag, such as `admin`. `IdentityLink` is the
  * logged-in identity's avatar and name as a link, highlighted when open.
+ * Wherever an identity has a display name (`IdentityLink`, `IdentityRow`,
+ * `ProfileName`, a `Suggestions` option's muted detail) it shows first and the
+ * `@name` muted beside it. `LineForm` is a named form of one labelled line of
+ * text, whose text its owner holds, with a Save button (disabled while
+ * saving) and anything under it, such as an `Alert`.
  * `PaneHeader`'s title is mono, as a channel's name, unless `sans`. A
  * `Toolbar` under it holds a `FilterField` (a labelled box whose text its
  * owner holds) and `Chip`s, buttons pressed or not; a named `ListArea` scrolls
@@ -110,6 +116,7 @@ export { FeedRow } from "./lib/feed-row.tsx";
 export { FeedText } from "./lib/feed-text.tsx";
 export { FieldsForm } from "./lib/fields-form.tsx";
 export { Form } from "./lib/form.tsx";
+export { LineForm } from "./lib/line-form.tsx";
 export { Heading } from "./lib/heading.tsx";
 export { ItemList } from "./lib/item-list.tsx";
 export { ItemRow } from "./lib/item-row.tsx";

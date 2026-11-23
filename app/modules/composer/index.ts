@@ -1,8 +1,9 @@
 /**
  * The `composer` store: what is written in each message box (a thread's
- * reply box or a channel's message box), and the identities it suggests for
- * an `@` mention. It loads every identity, human and agent, once, when the
- * first reader of any draft subscribes. `draft(key)` is one box's draft, an
+ * reply box or a channel's message box) and in each display name field of
+ * the Settings panel, and the identities it suggests for an `@` mention. It
+ * loads every identity, human and agent, once, when the first reader of any
+ * draft subscribes. `draft(key)` is one box's draft, an
  * external store read with `useSyncExternalStore`, the same store each time
  * for one key, so a draft is still there on coming back to its box. `edit` takes the box's text
  * and caret: when the caret sits just after `@` and the start of a name, as
@@ -13,15 +14,28 @@
  * suggestions, one is `highlighted` (the first, after each edit): `highlight`
  * moves it down or up, wrapping round, and `chooseHighlighted` chooses it.
  * `identities` is the identity list itself, an external store too, loaded
- * when its first reader subscribes, so a view can tell a human from an agent.
+ * when its first reader subscribes, so a view can tell a human from an agent
+ * and show each display name. With `live`, an identity that changes (its
+ * display name set or cleared anywhere) takes its place in the list at once.
  * Until the identities load, or if the server refuses them, nobody is
  * suggested. `setAdmin` makes an identity an admin or removes admin from it,
  * putting the identity the server answers in the list, and `adminChange` is
  * that change's state: being sent, or why the server refused it.
+ * `displayName(name)` is that identity's display name as it is edited: its
+ * text is `null` until edited, so the field shows the saved one; `save` sends
+ * the field's text trimmed (empty clears it), puts the answer in the identity
+ * list at once and forgets the text, or, if the server refuses, keeps the
+ * text and the refusal.
  */
 import type { AdminChanges, AdminClient } from "./lib/admin-change.ts";
-import type { CookoutClient, Identity } from "../sdk/index.ts";
+import type { CookoutClient, Identity, IdentityName } from "../sdk/index.ts";
+import type { DisplayNameDraft } from "./lib/display-name.ts";
+import type { IdentityList } from "./lib/identity-list.ts";
+import type { Live } from "../live/index.ts";
 import { createAdminChanges } from "./lib/admin-change.ts";
+import { createDisplayName } from "./lib/display-name.ts";
+import { createIdentityList } from "./lib/identity-list.ts";
+import { listenersOf } from "./lib/listeners.ts";
 
 const MOST_SUGGESTIONS = 8;
 const NOTHING = 0;
@@ -41,40 +55,11 @@ function suggestionsFor(identities: readonly Identity[], text: string, caret: nu
   return identities.filter((identity) => identity.name.startsWith(prefix)).slice(NOTHING, MOST_SUGGESTIONS);
 }
 
-interface Listeners {
-  readonly add: (listener: () => void) => () => void;
-  readonly notify: () => void;
-}
-
-function listenersOf(onFirst: () => void): Listeners {
-  const listeners = new Set<() => void>();
-  return {
-    add: (listener) => {
-      listeners.add(listener);
-      onFirst();
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-    notify: () => {
-      for (const listener of listeners) {
-        listener();
-      }
-    },
-  };
-}
-
 interface DraftSnapshot {
   readonly text: string;
   readonly caret: number;
   readonly suggestions: readonly Identity[];
   readonly highlighted: number;
-}
-
-interface Directory {
-  readonly identities: () => readonly Identity[];
-  readonly load: () => void;
-  readonly onLoad: (refresh: () => void) => void;
 }
 
 function withMention(snapshot: DraftSnapshot, name: string): Pick<DraftSnapshot, "caret" | "text"> {
@@ -83,7 +68,7 @@ function withMention(snapshot: DraftSnapshot, name: string): Pick<DraftSnapshot,
   return { caret: before.length + mention.length, text: before + mention + snapshot.text.slice(snapshot.caret) };
 }
 
-function createDraft(directory: Directory): Draft {
+function createDraft(directory: IdentityList): Draft {
   const listeners = listenersOf(directory.load);
   let current: DraftSnapshot = { caret: NOTHING, highlighted: NOTHING, suggestions: [], text: "" };
 
@@ -98,7 +83,7 @@ function createDraft(directory: Directory): Draft {
     publish(written.text, written.caret);
   }
 
-  directory.onLoad(() => {
+  directory.onChange(() => {
     publish(current.text, current.caret);
   });
   return {
@@ -125,6 +110,12 @@ function createDraft(directory: Directory): Draft {
   };
 }
 
+function storeIn<Store>(stores: Map<string, Store>, key: string, make: () => Store): Store {
+  const store = stores.get(key) ?? make();
+  stores.set(key, store);
+  return store;
+}
+
 /** One message box's draft. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
 export interface Draft {
   /** Calls `listener` after every change, until the returned function is called. */
@@ -145,73 +136,49 @@ export interface Draft {
 
 /** The identity list. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
 export interface Identities extends AdminChanges {
-  /** Calls `listener` once the list loads, until the returned function is called. */
+  /** Calls `listener` once the list loads and whenever an identity in it changes, until the returned function is called. */
   readonly subscribe: (listener: () => void) => () => void;
   /** Every identity, sorted by name: empty until it loads, or if the server refuses it. */
   readonly snapshot: () => readonly Identity[];
 }
 
-/** The composer store: a draft for each message box. */
+/** The composer store: a draft for each message box, and for each display name being edited. */
 export interface Composer {
   /** The draft for the box with this key (a channel's name, or `channel/id` for a thread): the same store each time for one key. */
   readonly draft: (key: string) => Draft;
+  /** The display name being edited for this identity: the same store each time for one name. */
+  readonly displayName: (name: IdentityName) => DisplayNameDraft;
   /** The identity list the suggestions come from. */
   readonly identities: Identities;
 }
 
-/** What the composer store needs of the SDK. */
+/** What the composer store needs of the SDK, and the live stream that keeps the identity list up to date, if any. */
 export interface ComposerOptions {
-  readonly client: AdminClient & Pick<CookoutClient, "listIdentities">;
+  readonly client: AdminClient & Pick<CookoutClient, "listIdentities" | "setDisplayName">;
+  readonly live?: Live;
 }
 
 /**
  * Makes a composer store that loads identities through `options.client`.
- * @param options The client.
+ * @param options The client and the live stream.
  * @returns The store.
  */
 export function createComposer(options: ComposerOptions): Composer {
+  const { client } = options;
   const drafts = new Map<string, Draft>();
-  const refreshes = new Set<() => void>();
-  let identities: readonly Identity[] = [];
-  let loading: Promise<void> | null = null;
-
-  function publish(next: readonly Identity[]): void {
-    identities = next;
-    for (const refresh of refreshes) {
-      refresh();
-    }
-  }
-
-  async function loadIdentities(): Promise<void> {
-    try {
-      const listed = await options.client.listIdentities();
-      publish(listed.identities);
-    } catch {
-      identities = [];
-    }
-  }
-
-  const directory: Directory = {
-    identities: () => identities,
-    load: () => {
-      loading ??= loadIdentities();
-    },
-    onLoad: (refresh) => {
-      refreshes.add(refresh);
-    },
-  };
-  const readers = listenersOf(directory.load);
-  refreshes.add(readers.notify);
+  const displayNames = new Map<string, DisplayNameDraft>();
+  const list = createIdentityList({ client, live: options.live ?? null });
+  const readers = listenersOf(list.load);
+  list.onChange(readers.notify);
   return {
-    draft: (key) => {
-      const draft = drafts.get(key) ?? createDraft(directory);
-      drafts.set(key, draft);
-      return draft;
-    },
+    displayName: (name) => storeIn(displayNames, name, () => createDisplayName({ client, list, name })),
+    draft: (key) => storeIn(drafts, key, () => createDraft(list)),
     identities: {
-      ...createAdminChanges({ client: options.client, identities: () => identities, publish }),
-      snapshot: () => identities,
+      ...createAdminChanges({ client, identities: list.identities, publish: list.publish }),
+      snapshot: list.identities,
       subscribe: readers.add,
     },
   };
 }
+
+export type { DisplayNameDraft } from "./lib/display-name.ts";

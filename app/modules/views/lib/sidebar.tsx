@@ -1,5 +1,6 @@
 import { Sidebar, SidebarBody, SidebarFooter } from "../../design-system/index.tsx";
 import type { Board } from "../../board/index.ts";
+import type { Composer } from "../../composer/index.ts";
 import type { Identity } from "../../sdk/index.ts";
 import type { Layout } from "../../layout/index.ts";
 import type { ReactNode } from "react";
@@ -13,6 +14,7 @@ const TEXT = { name: "cookout", sidebar: "Sidebar" } as const;
 
 interface SidebarProps {
   readonly board: Board;
+  readonly composer: Composer;
   readonly identity: Identity;
   readonly layout: Layout;
   readonly route: Route;
@@ -30,6 +32,7 @@ export function SidebarView(props: SidebarProps): ReactNode {
       </SidebarBody>
       <SidebarFooter>
         <SidebarSettings
+          composer={props.composer}
           identity={props.identity}
           layout={layout}
           open={props.route.name === "profile" && props.route.identity === props.identity.name}

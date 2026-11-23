@@ -14,7 +14,9 @@ export function MessageLayout(parts: MessageLayoutParts): ReactNode {
         {!parts.grouped && <Avatar agent={parts.agent} name={parts.name} />}
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        {!parts.grouped && <MessageHeader agent={parts.agent} name={parts.name} time={time} />}
+        {!parts.grouped && (
+          <MessageHeader agent={parts.agent} displayName={parts.displayName} name={parts.name} time={time} />
+        )}
         {parts.children}
       </div>
       {parts.actionHref !== null && (

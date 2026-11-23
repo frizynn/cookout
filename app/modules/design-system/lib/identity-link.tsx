@@ -10,13 +10,15 @@ function currentOf(active: boolean): "page" | false {
 }
 
 export function IdentityLink(parts: IdentityLinkParts): ReactNode {
+  const { displayName, name } = parts;
   return (
     <a
       aria-current={currentOf(parts.active)}
       className="-mx-2 flex rounded-md px-2 py-1 hover:bg-hover"
       href={parts.href}
     >
-      <Author agent={parts.agent} name={parts.name} shown={parts.name} />
+      {displayName === null && <Author agent={parts.agent} handle={null} name={name} shown={name} />}
+      {displayName !== null && <Author agent={parts.agent} handle={`@${name}`} name={name} shown={displayName} />}
     </a>
   );
 }

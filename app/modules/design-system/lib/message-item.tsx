@@ -22,6 +22,7 @@ export function MessageItem(parts: MessageItemParts): ReactNode {
           actionHref={parts.actionHref}
           actionLabel={parts.actionLabel}
           agent={parts.agent}
+          displayName={parts.displayName}
           grouped={parts.grouped}
           name={parts.name}
           time={parts.time}

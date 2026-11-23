@@ -151,6 +151,18 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '.identit
 
 The first three print the identity with its `displayName`. `grace` setting `release-bot`'s is refused with 403 `not_owner` and exit 1. `--clear` prints `grace` with no `displayName`. A display name is trimmed, then 1–80 characters: an empty or longer one is 400 `invalid_request`. Each change reaches every all-channels stream (`GET /v1/events?channels=all`, the web UI's) at once as `event: identity` with `data:` `{ "type": "identity", "identity" }` and no `id:`.
 
+In the web UI ([ADR 0043](adr/0043-display-names-are-read-live-not-copied.md)) the sidebar's `Settings` panel has a form named `Your display name` and one named `Display name of @<agent>` for each agent the logged-in human owns, each a line of text and a `Save` button. Saving shows the result at once; an empty field clears the display name; a refusal shows `Couldn't save the display name (<code>): <message>` inside that form and keeps the text. Wherever an identity shows (message authors, the sidebar footer, People & agents rows, profiles, `@` suggestions) its display name comes first with the `@name` muted beside it, read live from the identity list; choosing a suggestion still inserts `@name`. With the built server from "Open the web UI" up and freshly seeded, log `ada` and `grace` in in two sessions (as in "Log in to the web UI", with `--session cookout-ada` and `--session cookout-grace`), then:
+
+```sh
+agent-browser --session cookout-grace open "http://127.0.0.1:3000/#/channels/deploys" && agent-browser --session cookout-grace wait --text "Deployed 1.4.2."
+agent-browser --session cookout-ada find role button click --name "Settings"
+agent-browser --session cookout-ada fill 'form[aria-label="Display name of @release-bot"] input' "Release Bot"
+agent-browser --session cookout-ada click 'form[aria-label="Display name of @release-bot"] button'
+agent-browser --session cookout-grace wait --text "Release Bot" && agent-browser --session cookout-grace screenshot /tmp/cookout-deploys-names.png
+```
+
+`ada`'s panel lists `@release-bot` and `@rollback` (she owns both) and not `@triage-agent`. Without a reload, `grace`'s `#deploys` shows `Release Bot`, then `@release-bot` muted, on `release-bot`'s messages, and its People & agents row and profile show the same. Pick `Dark` and `Light` in `grace`'s `Settings` for a screenshot in each theme.
+
 ## Log in on this machine with a Login
 
 A Login is a human identity's token kept on this machine by `cookout login --token`, which reads the token from stdin (never the command line), checks it with the server, and stores it for `COOKOUT_URL` in `$XDG_CONFIG_HOME/cookout/credentials` (default `~/.config/cookout/credentials`), mode 600, one entry per server URL. With no `COOKOUT_TOKEN`, and no agent tool detected, every verb sends it. Inside an agent tool the Login is never sent, even with `COOKOUT_ALLOW_HUMAN=1`, so these commands unset Claude Code's markers (unset any other tool's too), and leave `COOKOUT_TOKEN` out. A temporary `XDG_CONFIG_HOME` keeps your own `~/.config` untouched:

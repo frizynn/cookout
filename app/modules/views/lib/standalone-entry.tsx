@@ -4,7 +4,7 @@ import { MessageData } from "./message-data.tsx";
 import type { ReactNode } from "react";
 import { StandaloneMessage } from "../../design-system/index.tsx";
 import { markOf } from "./message-marks.ts";
-import { useIsAgent } from "./use-is-agent.ts";
+import { useAuthor } from "./use-author.ts";
 
 const NO_ACTION = "";
 
@@ -16,12 +16,13 @@ interface StandaloneEntryProps {
 
 export function StandaloneEntry(props: StandaloneEntryProps): ReactNode {
   const { message } = props;
-  const agent = useIsAgent(message.author);
+  const { agent, displayName } = useAuthor(message.author);
   return (
     <StandaloneMessage
       actionHref={null}
       actionLabel={NO_ACTION}
       agent={agent}
+      displayName={displayName}
       day={dayLabel(message.createdAt)}
       grouped={false}
       label={props.label}

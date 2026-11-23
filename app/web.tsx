@@ -33,7 +33,7 @@ if (root !== null) {
   createRoot(root).render(
     <CookoutApp
       board={board}
-      composer={createComposer({ client })}
+      composer={createComposer({ client, live })}
       layout={layout}
       session={session}
       unread={unread}

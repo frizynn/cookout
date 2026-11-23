@@ -45,7 +45,7 @@ interface TextAreaParts extends TextFieldParts {
 
 interface SuggestionsParts {
   readonly label: string;
-  readonly options: readonly string[];
+  readonly options: readonly { readonly option: string; readonly detail: string | null }[];
   readonly highlighted: number;
   readonly onChoose: (option: string) => void;
 }
@@ -74,6 +74,7 @@ interface FilterFieldParts {
 interface IdentityRowParts {
   readonly href: string;
   readonly name: string;
+  readonly displayName: string | null;
   readonly agent: boolean;
   readonly active: boolean;
   readonly detail: string;
@@ -88,6 +89,7 @@ interface ProfileParts extends Parts {
 
 interface ProfileNameParts {
   readonly name: string;
+  readonly displayName: string | null;
   readonly children?: ReactNode;
 }
 
@@ -98,6 +100,7 @@ interface DateTextParts {
 interface IdentityLinkParts {
   readonly href: string;
   readonly name: string;
+  readonly displayName: string | null;
   readonly agent: boolean;
   readonly active: boolean;
 }
@@ -167,6 +170,7 @@ interface ToggleButtonParts extends Parts {
 
 interface AuthorParts extends AvatarParts {
   readonly shown: string;
+  readonly handle: string | null;
 }
 
 interface FieldsFormParts extends Parts {
@@ -197,6 +201,7 @@ interface MessageTimeParts {
 
 interface MessageLayoutParts extends Parts {
   readonly name: string;
+  readonly displayName: string | null;
   readonly agent: boolean;
   readonly grouped: boolean;
   readonly time: MessageTimeParts;
@@ -235,6 +240,7 @@ interface SeparatorParts {
 
 interface MessageHeaderParts {
   readonly name: string;
+  readonly displayName: string | null;
   readonly agent: boolean;
   readonly time: MessageTimeParts;
 }

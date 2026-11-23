@@ -28,6 +28,7 @@ export function FeedRow(parts: RowParts): ReactNode {
           author={parts.author}
           channel={parts.channel}
           context={parts.context}
+          displayName={parts.displayName}
           time={parts.time}
           unread={parts.unread}
         >

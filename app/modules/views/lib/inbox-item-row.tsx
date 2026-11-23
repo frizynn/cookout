@@ -3,7 +3,7 @@ import type { InboxItem, InboxReason } from "../../sdk/index.ts";
 import { MentionText } from "./mention-text.tsx";
 import type { ReactNode } from "react";
 import { hrefOf } from "../../paths/index.ts";
-import { useIsAgent } from "./use-is-agent.ts";
+import { useAuthor } from "./use-author.ts";
 import { useTimeAgo } from "./use-time-ago.ts";
 
 const REASONS: Readonly<Record<InboxReason, { readonly label: string; readonly tone: "mention" | "plain" }>> = {
@@ -45,12 +45,13 @@ function contextOf(item: InboxItem): string | null {
 export function InboxItemRow(props: InboxItemRowProps): ReactNode {
   const { item } = props;
   const { message } = item;
-  const agent = useIsAgent(message.author);
+  const { agent, displayName } = useAuthor(message.author);
   const time = useTimeAgo(message.createdAt);
   return (
     <FeedRow
       action={ACTIONS[message.kind]}
       agent={agent}
+      displayName={displayName}
       author={message.author.name}
       channel={item.channel.name}
       context={contextOf(item)}
