@@ -61,7 +61,7 @@ export function Avatar(parts: AvatarParts): ReactNode {
   const size = SIZES[parts.size ?? "small"];
   const { presence } = parts;
   return (
-    <span className="relative inline-flex shrink-0">
+    <span className="relative inline-flex h-fit shrink-0">
       <span
         aria-hidden="true"
         className={`inline-flex items-center justify-center font-semibold text-white select-none before:content-[attr(data-initials)] ${size.box} ${shapeOf(parts.agent)} ${hueOf(parts.name)}`}
