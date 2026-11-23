@@ -1,0 +1,19 @@
+{
+  "$schema": "../node_modules/@effect/tsgo/oxlint-schema.json",
+  "plugins": ["effecttsgo"],
+  "categories": {
+    "correctness": "off",
+    "suspicious": "off",
+    "pedantic": "off",
+    "perf": "off",
+    "style": "off",
+    "restriction": "off",
+    "nursery": "off"
+  },
+  "options": {
+    "typeAware": true
+  },
+  "rules": {
+    "effecttsgo/deterministic-keys": "error"
+  }
+}

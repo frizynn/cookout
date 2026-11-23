@@ -10,6 +10,7 @@ interface FixRun {
   readonly fix: readonly string[];
   readonly passesLeft: number;
   readonly paths: readonly string[];
+  readonly suggest: readonly string[];
 }
 
 interface Scope {
@@ -18,6 +19,8 @@ interface Scope {
 }
 
 const FIX_CONFIG = ".oxlintrc.fix.json";
+const SUGGEST_CONFIG = "lint/suggest.oxlintrc.json";
+const SUGGESTED = new Set(["effecttsgo(deterministic-keys)"]);
 const MAX_FIX_PASSES = 10;
 const NONE = 0;
 const ONE_PASS = 1;
@@ -50,7 +53,7 @@ function statusOf(closed: readonly unknown[]): number {
   return FAILED;
 }
 
-export async function lint(args: readonly string[]): Promise<Outcome<readonly Diagnostic[]>> {
+async function lint(args: readonly string[]): Promise<Outcome<readonly Diagnostic[]>> {
   const child = spawn("node_modules/.bin/effect-tsgo", ["oxlint", "--type-aware", "-f", "json", ...args]);
   const stdout: string[] = [];
   const stderr: string[] = [];
@@ -68,13 +71,39 @@ export async function lint(args: readonly string[]): Promise<Outcome<readonly Di
   }
 }
 
+function suggestedIn(checked: Outcome<readonly Diagnostic[]>): readonly string[] {
+  if (!checked.ok) {
+    return [];
+  }
+  const files = checked.value.filter(({ code }) => SUGGESTED.has(code)).map(({ filename }) => filename);
+  return [...new Set(files)];
+}
+
+async function suggestAfterFix(
+  run: FixRun,
+  fixed: Outcome<unknown>,
+  checked: Outcome<readonly Diagnostic[]>,
+): Promise<Outcome<unknown>> {
+  if (!fixed.ok) {
+    return fixed;
+  }
+  const files = suggestedIn(checked);
+  if (files.length === NONE) {
+    return checked;
+  }
+  const suggested = await lint([...run.suggest, ...files]);
+  return suggested;
+}
+
 export function repoFixRun(scope: Scope): FixRun {
   const check = ["--disable-nested-config", ...scope.files];
+  const suggest = ["--fix-suggestions", "-c", SUGGEST_CONFIG, "--disable-nested-config"];
   if (scope.files.length > NONE) {
-    return { check, fix: ["-c", FIX_CONFIG, ...check], passesLeft: MAX_FIX_PASSES, paths: scope.files };
+    return { check, fix: ["-c", FIX_CONFIG, ...check], passesLeft: MAX_FIX_PASSES, paths: scope.files, suggest };
   }
   const paths = wholeRepo(scope.ignored);
-  return { check, fix: ["-c", FIX_CONFIG, "--disable-nested-config", ...paths], passesLeft: MAX_FIX_PASSES, paths };
+  const fix = ["-c", FIX_CONFIG, "--disable-nested-config", ...paths];
+  return { check, fix, passesLeft: MAX_FIX_PASSES, paths, suggest };
 }
 
 export async function lintFixed(run: FixRun): Promise<Outcome<readonly Diagnostic[]>> {
@@ -83,11 +112,14 @@ export async function lintFixed(run: FixRun): Promise<Outcome<readonly Diagnosti
   }
   const before = snapshot(run.paths);
   const [fixed, checked] = await Promise.all([lint(["--fix", ...run.fix]), lint(run.check)]);
-  if (!fixed.ok) {
-    return fixed;
+  const settled = await suggestAfterFix(run, fixed, checked);
+  if (!settled.ok) {
+    return settled;
   }
   if (snapshot(run.paths) === before) {
     return checked;
   }
   return lintFixed({ ...run, passesLeft: run.passesLeft - ONE_PASS });
 }
+
+export { lint };
