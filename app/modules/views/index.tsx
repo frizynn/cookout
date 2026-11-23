@@ -26,12 +26,24 @@
  * every message under it the identity list. `InboxView` lists the inbox
  * items of whoever is logged in, oldest first, each with its reasons and a
  * link to where it is read, after each channel's unread and mention counts
- * (the `unread` store, live). `NotBuiltView` says a route has nothing to show.
+ * (the `unread` store, live). `PeopleView` is the directory of every
+ * identity (the identity list, which any identity may read): how many there
+ * are, a name filter and All / Humans / Agents chips, each counting what the
+ * name filter leaves (both kept in the `layout` store), and a row per
+ * identity shown, with its avatar, name, "(you)" on the logged-in human, its
+ * `agent` and `admin` tags and its kind and owner, the open one highlighted;
+ * "Nobody matches." when the filters leave none. `ProfileView` is the panel
+ * beside it for one identity: its large avatar, name and tags, display name,
+ * kind and owner, and when it joined, or "Unknown identity", with a link that
+ * closes it. The sidebar's footer links to the logged-in human's own profile.
+ * `NotBuiltView` says a route has nothing to show.
  */
 export { Authors } from "./lib/authors.tsx";
 export { ChannelView } from "./lib/channel.tsx";
 export { InboxView } from "./lib/inbox.tsx";
 export { LoginView } from "./lib/login.tsx";
 export { NotBuiltView } from "./lib/not-built.tsx";
+export { PeopleView } from "./lib/people.tsx";
+export { ProfileView } from "./lib/profile.tsx";
 export { SidebarView } from "./lib/sidebar.tsx";
 export { ThreadView } from "./lib/thread.tsx";

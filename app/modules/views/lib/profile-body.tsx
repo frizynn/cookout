@@ -1,0 +1,55 @@
+import { CardBody, DateText, Muted, Profile, ProfileName, Skeleton } from "../../design-system/index.tsx";
+import type { Identity, IdentityName } from "../../sdk/index.ts";
+import type { Identities } from "../../composer/index.ts";
+import { IdentityTags } from "./identity-tags.tsx";
+import type { ReactNode } from "react";
+import { kindOf } from "./kind-of.ts";
+import { useSyncExternalStore } from "react";
+
+const NONE = 0;
+
+const TEXT = { joined: "joined ", unknown: "Unknown identity" } as const;
+
+interface ProfileBodyProps {
+  readonly identities: Identities;
+  readonly name: IdentityName;
+}
+
+function displayNameOf(identity: Identity): string | null {
+  if ("displayName" in identity) {
+    return identity.displayName;
+  }
+  return null;
+}
+
+export function ProfileBody(props: ProfileBodyProps): ReactNode {
+  const listed = useSyncExternalStore(props.identities.subscribe, props.identities.snapshot);
+  const found = listed.filter((each) => each.name === props.name);
+  if (listed.length === NONE) {
+    return (
+      <CardBody>
+        <Skeleton width="short" />
+      </CardBody>
+    );
+  }
+  if (found.length === NONE) {
+    return (
+      <CardBody>
+        <Muted>{TEXT.unknown}</Muted>
+      </CardBody>
+    );
+  }
+  return found.map((identity) => (
+    <Profile agent={identity.kind === "agent"} key={identity.name} name={identity.name}>
+      <ProfileName name={identity.name}>
+        <IdentityTags identity={identity} />
+      </ProfileName>
+      {displayNameOf(identity) !== null && <Muted>{displayNameOf(identity)}</Muted>}
+      <Muted>{kindOf(identity)}</Muted>
+      <Muted>
+        {TEXT.joined}
+        <DateText time={identity.createdAt} />
+      </Muted>
+    </Profile>
+  ));
+}

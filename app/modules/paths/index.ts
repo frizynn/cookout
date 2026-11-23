@@ -1,31 +1,35 @@
 /**
  * The web UI's paths: the one owner of its location hashes. `routeOf(hash)`
  * reads a hash as a `Route` (`#/`, no hash, and `#/inbox` the inbox, `#/login`,
- * `#/people` the people and agents, `#/channels/<name>` and
+ * `#/people` the people and agents, `#/people/<name>` the same with that
+ * identity's profile open, `#/channels/<name>` and
  * `#/channels/<name>/threads/<id>`); a channel name
- * that isn't a `ChannelName`, a thread ID that isn't a message ID, or any
- * other hash is `missing`. `hrefOf(route)` builds the hash a link to a route
+ * that isn't a `ChannelName`, an identity name that isn't an `IdentityName`,
+ * a thread ID that isn't a message ID, or any other hash is `missing`. `hrefOf(route)` builds the hash a link to a route
  * goes to, so no view writes a path by hand.
  */
-import type { ChannelName, MessageId } from "../sdk/index.ts";
+import type { ChannelName, IdentityName, MessageId } from "../sdk/index.ts";
 import { isChannelName } from "../channels/index.ts";
+import { isIdentityName } from "../identities/index.ts";
 import { isMessageId } from "../messages/index.ts";
 
 type Route =
   | { readonly name: "login" }
   | { readonly name: "people" }
+  | { readonly name: "profile"; readonly identity: IdentityName }
   | { readonly name: "inbox" }
   | { readonly name: "channel"; readonly channel: ChannelName }
   | { readonly name: "thread"; readonly channel: ChannelName; readonly thread: MessageId }
   | { readonly name: "missing" };
 
-type LinkedRoute = Extract<Route, { readonly name: "inbox" | "people" | "channel" | "thread" }>;
+type LinkedRoute = Extract<Route, { readonly name: "inbox" | "people" | "profile" | "channel" | "thread" }>;
 
 type Matcher = (hash: string) => Route | false;
 
 const INBOX = /^(?:#\/?|#\/inbox)?$/u;
 const LOGIN = /^#\/login$/u;
 const PEOPLE = /^#\/people$/u;
+const PROFILE = /^#\/people\/(?<identity>[^/]+)$/u;
 const CHANNEL = /^#\/channels\/(?<channel>[^/]+)$/u;
 const THREAD = /^#\/channels\/(?<channel>[^/]+)\/threads\/(?<thread>[^/]+)$/u;
 
@@ -37,6 +41,13 @@ function channelRoute(channel: string): Route {
     return MISSING;
   }
   return { channel, name: "channel" };
+}
+
+function profileRoute(identity: string): Route {
+  if (!isIdentityName(identity)) {
+    return MISSING;
+  }
+  return { identity, name: "profile" };
 }
 
 function threadRoute(channel: string, thread: string): Route {
@@ -51,6 +62,7 @@ const matchers: readonly Matcher[] = [
   (hash) => INBOX.test(hash) && { name: "inbox" },
   (hash) => LOGIN.test(hash) && { name: "login" },
   (hash) => PEOPLE.test(hash) && { name: "people" },
+  (hash) => PROFILE.test(hash) && profileRoute(hash.replace(PROFILE, "$<identity>")),
   (hash) => CHANNEL.test(hash) && channelRoute(hash.replace(CHANNEL, "$<channel>")),
   (hash) => THREAD.test(hash) && threadRoute(hash.replace(THREAD, "$<channel>"), hash.replace(THREAD, "$<thread>")),
 ];
@@ -81,6 +93,9 @@ export function hrefOf(route: LinkedRoute): string {
   }
   if (route.name === "people") {
     return "#/people";
+  }
+  if (route.name === "profile") {
+    return `#/people/${route.identity}`;
   }
   if (route.name === "channel") {
     return `#/channels/${route.channel}`;

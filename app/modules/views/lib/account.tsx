@@ -1,8 +1,9 @@
-import { Author, ChoiceGroup, Panel, ToggleButton } from "../../design-system/index.tsx";
+import { AccountLink, ChoiceGroup, Panel, ToggleButton } from "../../design-system/index.tsx";
 import type { Layout, ThemeChoice } from "../../layout/index.ts";
 import { useCallback, useSyncExternalStore } from "react";
 import type { Identity } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
+import { hrefOf } from "../../paths/index.ts";
 import { themeChoices } from "../../layout/index.ts";
 
 const TEXT = { settings: "Settings", theme: "Theme" } as const;
@@ -16,6 +17,7 @@ const THEMES = [
 interface AccountProps {
   readonly identity: Identity;
   readonly layout: Layout;
+  readonly open: boolean;
 }
 
 function themesOf(value: string): readonly ThemeChoice[] {
@@ -41,7 +43,12 @@ export function Account(props: AccountProps): ReactNode {
           <ChoiceGroup choices={THEMES} label={TEXT.theme} onChoose={handleChoose} value={state.theme} />
         </Panel>
       )}
-      <Author agent={identity.kind === "agent"} name={identity.name} shown={identity.name} />
+      <AccountLink
+        active={props.open}
+        agent={identity.kind === "agent"}
+        href={hrefOf({ identity: identity.name, name: "profile" })}
+        name={identity.name}
+      />
       <ToggleButton expanded={state.settings} onClick={handleToggle}>
         {TEXT.settings}
       </ToggleButton>

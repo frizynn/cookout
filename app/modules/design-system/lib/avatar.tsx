@@ -44,6 +44,8 @@ function initialsOf(name: string): string {
     .toUpperCase();
 }
 
+const SIZES = { large: "h-14 w-14 text-lg", small: "h-8 w-8 text-xs" } as const;
+
 function shapeOf(agent: boolean): string {
   if (agent) {
     return "rounded-[28%]";
@@ -55,7 +57,7 @@ export function Avatar(parts: AvatarParts): ReactNode {
   return (
     <span
       aria-hidden="true"
-      className={`relative inline-flex h-8 w-8 shrink-0 items-center justify-center text-xs font-semibold text-white select-none before:content-[attr(data-initials)] ${shapeOf(parts.agent)} ${hueOf(parts.name)}`}
+      className={`relative inline-flex shrink-0 items-center justify-center font-semibold text-white select-none before:content-[attr(data-initials)] ${SIZES[parts.size ?? "small"]} ${shapeOf(parts.agent)} ${hueOf(parts.name)}`}
       data-agent={parts.agent}
       data-initials={initialsOf(parts.name)}
       data-testid="avatar"

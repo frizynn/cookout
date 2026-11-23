@@ -1,0 +1,217 @@
+import { adminClient, newIdentity, openAt, sidebar } from "./app.tsx";
+import { expect, it } from "vitest";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import type { CookoutClient } from "../../sdk/index.ts";
+
+const DATE_LENGTH = 10;
+const START = 0;
+const CREW = 4;
+
+async function crewOf(prefix: string): Promise<CookoutClient> {
+  const human = await newIdentity({ kind: "human", name: `${prefix}-human` });
+  await newIdentity({ kind: "human", name: `${prefix}-boss` });
+  await newIdentity({ kind: "agent", name: `${prefix}-bot`, owner: `${prefix}-human` });
+  await newIdentity({ kind: "agent", name: `${prefix}-loner` });
+  await adminClient().makeAdmin(`${prefix}-boss`);
+  return human.client;
+}
+
+function identityList(): HTMLElement {
+  return screen.getByRole("list", { name: "Identities" });
+}
+
+function rowTexts(): readonly string[] {
+  const texts: string[] = [];
+  for (const row of within(identityList()).queryAllByRole("link")) {
+    texts.push(row.textContent);
+  }
+  return texts;
+}
+
+function filterBy(text: string): void {
+  fireEvent.change(screen.getByRole("textbox", { name: "Filter by name" }), { target: { value: text } });
+}
+
+function chip(label: string): HTMLElement {
+  return screen.getByRole("button", { name: (name) => name.startsWith(`${label} `) });
+}
+
+async function openFiltered(client: CookoutClient, hash: string, filter: string): Promise<() => void> {
+  const close = openAt({ client, hash });
+  await screen.findByRole("list", { name: "Identities" });
+  filterBy(filter);
+  await waitFor(() => {
+    expect(rowTexts()).toHaveLength(CREW);
+  });
+  return close;
+}
+
+async function profile(): Promise<HTMLElement> {
+  const panel = await screen.findByRole("complementary", { name: "Profile" });
+  return panel;
+}
+
+async function profileName(): Promise<string> {
+  const heading = await within(await profile()).findByRole("heading", { level: 3 });
+  return heading.textContent;
+}
+
+async function joinedOf(name: string): Promise<string> {
+  const { identities } = await adminClient().listIdentities();
+  for (const identity of identities) {
+    if (identity.name === name) {
+      return `joined ${identity.createdAt.slice(START, DATE_LENGTH)}`;
+    }
+  }
+  return "never joined";
+}
+
+it("#/people lists every identity, with its kind, owner and tags, and you marked", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const human = await crewOf("web-people-list");
+  const close = openAt({ client: human, hash: "#/people" });
+  await within(await screen.findByRole("list", { name: "Identities" })).findAllByRole("link");
+  const everyone = rowTexts().length;
+  filterBy("web-people-list");
+
+  await waitFor(() => {
+    expect(rowTexts()).toHaveLength(CREW);
+  });
+
+  expect([
+    screen.getByRole("heading", { level: 1 }).textContent,
+    screen.getByText(/^\d+ identities$/u).textContent,
+    rowTexts(),
+    within(sidebar()).getByRole("link", { name: "People & agents" }).getAttribute("aria-current"),
+  ]).toStrictEqual([
+    "People & agents",
+    `${String(everyone)} identities`,
+    [
+      "web-people-list-bossadminHuman",
+      "web-people-list-botagentAgent · owned by web-people-list-human",
+      "web-people-list-human(you)Human",
+      "web-people-list-loneragentAgent",
+    ],
+    "page",
+  ]);
+
+  close();
+});
+
+it("the chips narrow the list to humans or agents, and count what the name filter leaves", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const close = await openFiltered(await crewOf("web-people-chips"), "#/people", "web-people-chips");
+  const counts = [chip("All").textContent, chip("Humans").textContent, chip("Agents").textContent];
+  fireEvent.click(chip("Agents"));
+  const agents = [...rowTexts(), chip("All").getAttribute("aria-pressed"), chip("Agents").getAttribute("aria-pressed")];
+  fireEvent.click(chip("Humans"));
+  const humans = rowTexts();
+  filterBy("web-people-chips-nobody");
+
+  expect([counts, agents, humans, screen.getByText("Nobody matches.").textContent]).toStrictEqual([
+    ["All 4", "Humans 2", "Agents 2"],
+    [
+      "web-people-chips-botagentAgent · owned by web-people-chips-human",
+      "web-people-chips-loneragentAgent",
+      "false",
+      "true",
+    ],
+    ["web-people-chips-bossadminHuman", "web-people-chips-human(you)Human"],
+    "Nobody matches.",
+  ]);
+
+  close();
+});
+
+it("following a row opens its profile beside the list, highlighted, and closing it goes back to #/people", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const close = await openFiltered(await crewOf("web-people-open"), "#/people", "web-people-open");
+  fireEvent.click(within(identityList()).getByRole("link", { name: /web-people-open-bot/u }));
+  const panel = await profile();
+  const opened = [
+    globalThis.location.hash,
+    within(panel).getByRole("heading", { level: 3 }).textContent,
+    within(panel).getByText(/^Agent · owned by/u).textContent,
+    within(panel).getByText(/^joined/u).textContent,
+    within(identityList())
+      .getByRole("link", { name: /web-people-open-bot/u })
+      .getAttribute("aria-current"),
+  ];
+  fireEvent.click(within(panel).getByRole("link", { name: "Close profile" }));
+  await waitFor(() => {
+    expect(screen.queryByRole("complementary", { name: "Profile" })).toBeNull();
+  });
+
+  expect([opened, globalThis.location.hash]).toStrictEqual([
+    [
+      "#/people/web-people-open-bot",
+      "web-people-open-botagent",
+      "Agent · owned by web-people-open-human",
+      await joinedOf("web-people-open-bot"),
+      "page",
+    ],
+    "#/people",
+  ]);
+
+  close();
+});
+
+it("a profile's address opens it, with the admin tag and display name, and an unknown name says so", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const human = await crewOf("web-people-link");
+  await adminClient().setDisplayName("web-people-link-boss", "The Boss");
+  const close = openAt({ client: human, hash: "#/people/web-people-link-boss" });
+  const panel = await profile();
+  const shown = [
+    await profileName(),
+    within(panel).getByText("The Boss").textContent,
+    within(panel).getByText("Human").textContent,
+  ];
+  globalThis.location.hash = "#/people/web-people-link-nobody";
+  const unknown = await within(await profile()).findByText("Unknown identity");
+
+  expect([shown, unknown.textContent]).toStrictEqual([
+    ["web-people-link-bossadmin", "The Boss", "Human"],
+    "Unknown identity",
+  ]);
+
+  close();
+});
+
+it("the sidebar's footer opens your own profile", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const close = openAt({ client: await crewOf("web-people-self"), hash: "#/" });
+  const nav = await screen.findByRole("navigation", { name: "Sidebar" });
+  fireEvent.click(await within(nav).findByRole("link", { name: "web-people-self-human" }));
+  const name = await within(await profile()).findByRole("heading", { level: 3 });
+
+  expect([globalThis.location.hash, name.textContent]).toStrictEqual([
+    "#/people/web-people-self-human",
+    "web-people-self-human",
+  ]);
+
+  close();
+});
+
+it("a profile address with a name no identity could have says there is nothing here", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const close = openAt({ client: adminClient(), hash: "#/people/Not_A_Name" });
+
+  const heading = await screen.findByRole("heading", { level: 1, name: "Nothing here" });
+
+  expect(heading.textContent).toBe("Nothing here");
+
+  close();
+});

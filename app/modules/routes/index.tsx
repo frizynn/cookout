@@ -4,9 +4,9 @@
  * is logged in, every route shows the login view, alone on the page. Once it
  * is, every route is drawn in the workspace, with the sidebar beside it:
  * `#/` (or no hash) and `#/inbox` the inbox, so the app opens on it, also
- * right after logging in; `#/login` who is logged in; `#/people` the people
- * and agents (not built yet, so "Nothing here"); `#/channels/<name>` the
- * channel; and `#/channels/<name>/threads/<id>` the channel with the thread's
+ * right after logging in; `#/login` who is logged in; `#/people` the
+ * directory of every identity, and `#/people/<name>` the same with that
+ * identity's profile open beside it; `#/channels/<name>` the channel; and `#/channels/<name>/threads/<id>` the channel with the thread's
  * panel open beside it. Any other hash, a channel name that isn't a channel
  * name, or a thread ID that isn't a message ID, says there is nothing here.
  * The `paths` module reads the hash and builds every link's.

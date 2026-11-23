@@ -104,7 +104,7 @@ it("a channel with unread messages is bold in the sidebar, with its mention coun
   close();
 });
 
-it("the People & agents link goes to a route that has nothing yet", { timeout: 5000 }, async () => {
+it("the People & agents link goes to the directory of identities", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
   const close = openAt({ client: adminClient(), hash: "#/" });
@@ -114,9 +114,9 @@ it("the People & agents link goes to a route that has nothing yet", { timeout: 5
     }),
   );
 
-  const heading = await screen.findByRole("heading", { level: 1, name: "Nothing here" });
+  const heading = await screen.findByRole("heading", { level: 1, name: "People & agents" });
 
-  expect([globalThis.location.hash, heading.textContent]).toStrictEqual(["#/people", "Nothing here"]);
+  expect([globalThis.location.hash, heading.textContent]).toStrictEqual(["#/people", "People & agents"]);
 
   close();
 });

@@ -9,15 +9,22 @@
  * keeps it. `settings` is whether the Settings panel is open, and `sidebar`
  * whether the sidebar is open on a narrow screen; `toggleSettings` and
  * `toggleSidebar` flip them, and `closeSidebar` closes the sidebar, as after
- * following a link in it.
+ * following a link in it. `identityFilter` and `identityKind` narrow the
+ * directory of identities: the text a name must contain, and `all`, `human`
+ * or `agent`; `filterIdentities` and `showKind` set them.
  */
+import type { IdentityKind } from "../sdk/index.ts";
 
 const themeChoices = ["system", "light", "dark"] as const;
+
+type KindChoice = "all" | IdentityKind;
 
 interface LayoutState {
   readonly theme: ThemeChoice;
   readonly settings: boolean;
   readonly sidebar: boolean;
+  readonly identityFilter: string;
+  readonly identityKind: KindChoice;
 }
 
 interface LayoutOptions {
@@ -57,6 +64,9 @@ export { themeChoices };
 /** One of the theme choices. */
 export type ThemeChoice = (typeof themeChoices)[number];
 
+/** Which kind of identity the directory shows: every identity, or one kind. */
+export type { KindChoice };
+
 /** The layout store. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
 export interface Layout {
   /** Calls `listener` after every change, until the returned function is called. */
@@ -71,6 +81,10 @@ export interface Layout {
   readonly toggleSidebar: () => void;
   /** Closes the sidebar on a narrow screen. */
   readonly closeSidebar: () => void;
+  /** Sets the text the directory filters identity names by. */
+  readonly filterIdentities: (text: string) => void;
+  /** Shows only identities of this kind, or every identity. */
+  readonly showKind: (kind: KindChoice) => void;
 }
 
 /**
@@ -80,7 +94,13 @@ export interface Layout {
  */
 export function createLayout(options: LayoutOptions): Layout {
   const listeners = new Set<() => void>();
-  let current: LayoutState = { settings: false, sidebar: false, theme: storedTheme(options.storage) };
+  let current: LayoutState = {
+    identityFilter: "",
+    identityKind: "all",
+    settings: false,
+    sidebar: false,
+    theme: storedTheme(options.storage),
+  };
   keepTheme(options, current.theme);
 
   function publish(next: Partial<LayoutState>): void {
@@ -99,6 +119,12 @@ export function createLayout(options: LayoutOptions): Layout {
       if (current.sidebar) {
         publish({ sidebar: false });
       }
+    },
+    filterIdentities: (identityFilter) => {
+      publish({ identityFilter });
+    },
+    showKind: (identityKind) => {
+      publish({ identityKind });
     },
     snapshot: () => current,
     subscribe: (listener) => {

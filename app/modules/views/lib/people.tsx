@@ -1,0 +1,60 @@
+import { FilterField, Pane, PaneHeader, Toolbar } from "../../design-system/index.tsx";
+import type { Identity, IdentityName } from "../../sdk/index.ts";
+import type { KindChoice, Layout } from "../../layout/index.ts";
+import type { Identities } from "../../composer/index.ts";
+import { KindChip } from "./kind-chip.tsx";
+import { PeopleRows } from "./people-rows.tsx";
+import type { ReactNode } from "react";
+import { useSyncExternalStore } from "react";
+
+const TEXT = { filter: "Filter by name", title: "People & agents" } as const;
+
+const KINDS = [
+  { kind: "all", label: "All" },
+  { kind: "human", label: "Humans" },
+  { kind: "agent", label: "Agents" },
+] as const;
+
+interface PeopleProps {
+  readonly identities: Identities;
+  readonly layout: Layout;
+  readonly me: IdentityName;
+  readonly open: IdentityName | null;
+}
+
+function ofKind(listed: readonly Identity[], kind: KindChoice): readonly Identity[] {
+  return listed.filter((identity) => kind === "all" || identity.kind === kind);
+}
+
+function named(listed: readonly Identity[], filter: string): readonly Identity[] {
+  const text = filter.trim().toLowerCase();
+  return listed.filter((identity) => identity.name.includes(text));
+}
+
+export function PeopleView(props: PeopleProps): ReactNode {
+  const { layout } = props;
+  const listed = useSyncExternalStore(props.identities.subscribe, props.identities.snapshot);
+  const state = useSyncExternalStore(layout.subscribe, layout.snapshot);
+  const matching = named(listed, state.identityFilter);
+  const shown = ofKind(matching, state.identityKind);
+  const handleEdit = layout.filterIdentities;
+  return (
+    <Pane>
+      <PaneHeader description={`${String(listed.length)} identities`} sans title={TEXT.title} />
+      <Toolbar>
+        <FilterField label={TEXT.filter} onEdit={handleEdit} value={state.identityFilter} />
+        {KINDS.map((each) => (
+          <KindChip
+            count={ofKind(matching, each.kind).length}
+            key={each.kind}
+            kind={each.kind}
+            label={each.label}
+            layout={layout}
+            pressed={state.identityKind === each.kind}
+          />
+        ))}
+      </Toolbar>
+      <PeopleRows listed={listed} me={props.me} open={props.open} shown={shown} />
+    </Pane>
+  );
+}
