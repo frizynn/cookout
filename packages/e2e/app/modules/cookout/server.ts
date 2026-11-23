@@ -3,7 +3,9 @@
  * caller drives it, through `@ai-hero/cookout/sdk` and the built `cookout`
  * bin run as its own process, never through the app's `testing` module. Each
  * `cookoutUnderTest` Layer is one run: it draws a fresh prefix for the names
- * it makes and deletes the run's identities when it closes, passing or failing.
+ * it makes and deletes the run's identities and channels when it closes, passing or failing.
+ * Vitest's `globalSetup` (`lib/server/leftover-channels.ts`) deletes every channel whose name starts
+ * with `e2e-` before and after the suite, so a crashed run's leftovers go too.
  * `openRelay` opens a relay on 127.0.0.1 in front of any cookout URL, the deployed
  * one too, so a test can drop the connections of the `cookout` processes it
  * runs through it and refuse their reconnects with 502 for a while, and see

@@ -2,6 +2,7 @@ import { Array as Arr, Context, Effect, Layer, Random, Redacted, String as Str }
 import type { BinNeeds, BinResult, BinRun } from "./bin.ts";
 import type { ChannelResponse, CookoutClient, IdentityWithTokenResponse } from "@ai-hero/cookout/sdk";
 import { e2eAdminToken, e2eUrl } from "../../../config/server.ts";
+import type { Config } from "effect";
 import type { JoinAgent } from "./session.ts";
 import { createCookoutClient } from "@ai-hero/cookout/sdk";
 import { joinAgentWith } from "./session.ts";
@@ -40,15 +41,38 @@ function deleteRunIdentities(admin: CookoutClient, prefix: string): Effect.Effec
   });
 }
 
+function deleteChannelsStartingWith(admin: CookoutClient, start: string): Effect.Effect<void> {
+  return Effect.gen(function* deleteChannels() {
+    const { channels } = yield* Effect.promise(() => admin.listChannels());
+    const own = Arr.filter(channels, ({ name }) => Str.startsWith(start)(name));
+    yield* Effect.forEach(own, ({ name }) => Effect.promise(() => admin.deleteChannel(name)), ONE_AT_A_TIME);
+  });
+}
+
+interface AdminConnection {
+  readonly admin: CookoutClient;
+  readonly url: string;
+}
+
+const adminClient: Effect.Effect<AdminConnection, Config.ConfigError> = Effect.gen(function* connectAdmin() {
+  const url = yield* e2eUrl;
+  const adminToken = yield* e2eAdminToken;
+  return { admin: createCookoutClient({ token: Redacted.value(adminToken), url }), url };
+});
+
+const deleteE2eChannels: Effect.Effect<void> = Effect.flatMap(adminClient, ({ admin }) =>
+  deleteChannelsStartingWith(admin, "e2e-"),
+).pipe(Effect.orDie);
+
 const cookoutUnderTest: Layer.Layer<CookoutUnderTest> = Layer.effect(
   CookoutUnderTest,
   Effect.gen(function* startRun() {
-    const url = yield* e2eUrl;
-    const adminToken = yield* e2eAdminToken;
-    const admin = createCookoutClient({ token: Redacted.value(adminToken), url });
+    const { admin, url } = yield* adminClient;
     const draw = yield* Random.nextIntBetween(NO_DRAW, PREFIX_SPACE);
     const prefix = prefixOf(draw);
-    yield* Effect.addFinalizer(() => deleteRunIdentities(admin, prefix));
+    yield* Effect.addFinalizer(() =>
+      Effect.andThen(deleteRunIdentities(admin, prefix), deleteChannelsStartingWith(admin, `${prefix}-`)),
+    );
     function createAgent(name: string): Effect.Effect<IdentityWithTokenResponse> {
       return Effect.promise(() => admin.createIdentity({ kind: "agent", name: `${prefix}-${name}` }));
     }
@@ -67,4 +91,4 @@ const cookoutUnderTest: Layer.Layer<CookoutUnderTest> = Layer.effect(
   }).pipe(Effect.orDie),
 );
 
-export { CookoutUnderTest, type CookoutUnderTestService, cookoutUnderTest };
+export { CookoutUnderTest, type CookoutUnderTestService, cookoutUnderTest, deleteE2eChannels };

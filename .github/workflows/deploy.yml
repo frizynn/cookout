@@ -126,7 +126,9 @@ jobs:
           node app/main.ts identity list | jq -c '[.identities[].name]' > "$RUNNER_TEMP/identities-after.json"
           jq -e -n --slurpfile before "$RUNNER_TEMP/identities-before.json" --slurpfile after "$RUNNER_TEMP/identities-after.json" \
             '($after[0] - $before[0]) as $left | if $left == [] then true else ("e2e left these identities on the deployed cookout: \($left)\n" | halt_error) end'
-      # v1 has no channel deletion, so every run's channels stay (11 a run, under prefix e2e-).
-      - name: e2e channels on the deployed cookout
+      # Each test deletes its own channels when it ends, and the suite deletes every e2e- channel after it runs.
+      - name: The e2e run left no e2e- channel
         if: ${{ !cancelled() }}
-        run: node app/main.ts channel list | jq '[.channels[].name | select(startswith("e2e-"))] | length'
+        run: |
+          node app/main.ts channel list | jq -e '[.channels[].name | select(startswith("e2e-"))] as $left
+            | if $left == [] then true else ("e2e left these channels on the deployed cookout: \($left)\n" | halt_error) end'
