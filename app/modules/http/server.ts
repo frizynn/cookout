@@ -12,12 +12,12 @@ import type { Gate, Route } from "./lib/server/router.ts";
 import { HttpIncomingMessage, HttpServer, HttpServerRequest, HttpServerResponse } from "effect/http";
 import { guardRefusal, notFound, respond, toRefusal } from "./lib/server/refusals.ts";
 import type { HttpPlatform } from "effect/http";
-import { NodeHttpServer } from "@effect/platform-node";
 import type { Refusal } from "./index.ts";
 import { Storage } from "../storage/server.ts";
 import { dispatch } from "./lib/server/router.ts";
 import { healthPath } from "./index.ts";
 import { isoTimeOf } from "../time/server.ts";
+import { layer as nodeHttpLayer } from "@effect/platform-node/NodeHttpServer";
 import { serverDroppingSilentConnections } from "./lib/server/node-http-server.ts";
 
 interface Listen {
@@ -30,7 +30,7 @@ interface Serving extends Listen {
   readonly publicUrl?: string;
 }
 
-type NodeHttp = ReturnType<typeof NodeHttpServer.layer>;
+type NodeHttp = ReturnType<typeof nodeHttpLayer>;
 
 const MEBIBYTE = 1_048_576;
 const maxBodySize = ByteSize.bytes(MEBIBYTE);
@@ -125,7 +125,7 @@ export function nodeHttpServer(listen: Listen): NodeHttp {
   return Layer.unwrap(
     Effect.sync(() => {
       const { dropSilent, server } = serverDroppingSilentConnections();
-      const node = NodeHttpServer.layer(() => server, { ...listen, disablePreemptiveShutdown: true });
+      const node = nodeHttpLayer(() => server, { ...listen, disablePreemptiveShutdown: true });
       return Layer.provideMerge(Layer.effectDiscard(Effect.addFinalizer(() => dropSilent)), node);
     }),
   );

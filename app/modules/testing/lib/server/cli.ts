@@ -14,12 +14,13 @@ import {
 } from "effect";
 import { exitCodeFor, runCookout as runCommandLine } from "../../../cli/server.ts";
 import { memoryStorage, sqliteStorage } from "../../../storage/server.ts";
-import { NodeServices } from "@effect/platform-node";
+import type { NodeServices } from "@effect/platform-node/NodeServices";
 import type { Scope } from "effect";
 import type { Secrets } from "../../../secrets/server.ts";
 import type { ServeLayers } from "../../../cli/server.ts";
 import { TestConsole } from "effect/testing";
 import { devCommandLine } from "../../../dev/server.ts";
+import { layer as nodeServices } from "@effect/platform-node/NodeServices";
 import { secretsTest } from "./secrets.ts";
 
 interface CliResult {
@@ -59,7 +60,7 @@ interface Invocation {
   readonly env: Readonly<Record<string, string>>;
 }
 
-type Needs = NodeServices.NodeServices | Secrets;
+type Needs = NodeServices | Secrets;
 
 interface WatchRun<During, WatchNeeds> extends Invocation {
   readonly lines: number;
@@ -101,7 +102,7 @@ const isDevRunning = Schema.is(
 );
 const parseJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown));
 
-const commandLineServices: Layer.Layer<Needs> = Layer.merge(NodeServices.layer, secretsTest);
+const commandLineServices: Layer.Layer<Needs> = Layer.merge(nodeServices, secretsTest);
 
 function parseLine(line: unknown): unknown {
   return Option.getOrElse(parseJson(String(line)), () => line);
