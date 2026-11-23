@@ -1,4 +1,5 @@
 import type { AgentJoinCalls, JoinCodeCalls } from "../../agent-sessions/index.ts";
+import type { ClosedThreadCalls, OpenThreadCalls } from "../../messages/client.ts";
 import type {
   CreateIdentityRequest,
   DeactivateIdentityResponse,
@@ -31,7 +32,6 @@ import {
   isListIdentitiesResponse,
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
-import type { ClosedThreadCalls } from "../../messages/client.ts";
 import type { DescriptionCalls } from "../../identities/client.ts";
 import type { EventCalls } from "./events.ts";
 import type { HealthResponse } from "../../http/index.ts";
@@ -231,5 +231,6 @@ export type CallGroups = ApprovalCalls &
   IdentityDeletionCalls &
   IdentityDescriptionCalls &
   ClosedThreadCalls &
+  OpenThreadCalls &
   Pick<EventCalls, "presence">;
 export { identityCalls };

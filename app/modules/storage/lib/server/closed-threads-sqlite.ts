@@ -4,11 +4,12 @@ import type { MessagesSection, ThreadStateChange } from "./messages.ts";
 import type { MessageReader } from "./inbox-sqlite.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
+import { sqliteOpenThreads } from "./open-threads-sqlite.ts";
 import { threadIdOf } from "./messages.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
-type ClosedThreadsSection = Pick<MessagesSection, "closeThread" | "reopenThread">;
+type ClosedThreadsSection = Pick<MessagesSection, "closeThread" | "reopenThread" | "listOpenThreads">;
 
 interface ClosedThreadsOptions {
   readonly db: SqliteDatabase;
@@ -22,6 +23,8 @@ interface Reopening extends ClosedThreadsOptions {
 const CLOSE = "UPDATE messages SET closed_at = ?, closed_by = ? WHERE id = ? AND closed_at IS NULL RETURNING id";
 const REOPEN =
   "UPDATE messages SET closed_at = NULL, closed_by = NULL WHERE id = ? AND closed_at IS NOT NULL RETURNING id";
+const REOPEN_AT = `UPDATE messages SET closed_at = NULL, closed_by = NULL, reopened_at = ?
+  WHERE id = ? AND closed_at IS NOT NULL RETURNING id`;
 
 function isTopLevel(message: Message): message is TopLevelMessage {
   return message.kind === "top-level";
@@ -64,9 +67,10 @@ function reopenedBy({ db, message, reader }: Reopening): Fails<TopLevelMessage |
 function sqliteClosedThreads(options: ClosedThreadsOptions): ClosedThreadsSection {
   const { db } = options;
   return {
+    ...sqliteOpenThreads(options),
     closeThread: (id, { closedAt, closedBy }) =>
       changeThread(options, id, (parent) => db.get(CLOSE, closedAt, closedBy, parent)),
-    reopenThread: (id) => changeThread(options, id, (parent) => db.get(REOPEN, parent)),
+    reopenThread: (id, reopenedAt) => changeThread(options, id, (parent) => db.get(REOPEN_AT, reopenedAt, parent)),
   };
 }
 

@@ -1,3 +1,4 @@
+import type { ClosedThreadCalls, OpenThreadCalls } from "../../messages/client.ts";
 import type {
   ListMessagesQuery,
   ListMessagesResponse,
@@ -12,16 +13,17 @@ import type {
 import { channelMessagesPath, closedPath, messagesPath, reactionPath, threadPath } from "../../messages/index.ts";
 import {
   isListMessagesResponse,
+  isListOpenThreadsResponse,
   isMessageResponse,
   isReactionsResponse,
   isThreadResponse,
   isTopLevelMessageResponse,
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
-import type { ClosedThreadCalls } from "../../messages/client.ts";
+import { openThreadsPath } from "../../messages/client.ts";
 import { send } from "./request.ts";
 
-interface MessageCalls extends ClosedThreadCalls {
+interface MessageCalls extends ClosedThreadCalls, OpenThreadCalls {
   readonly createMessage: (request: PostMessageRequest) => Promise<MessageResponse>;
   readonly listMessages: (channel: string, query?: ListMessagesQuery) => Promise<ListMessagesResponse>;
   readonly getThread: (messageId: MessageId) => Promise<ThreadResponse>;
@@ -45,6 +47,15 @@ function reactionCall(server: ClientConnection, method: "PUT" | "DELETE") {
   };
 }
 
+const NOT_ALL = {};
+
+function allQuery(all: boolean | undefined): { readonly all?: "true" } {
+  if (all === true) {
+    return { all: "true" };
+  }
+  return NOT_ALL;
+}
+
 function messageCalls(server: ClientConnection): MessageCalls {
   return {
     closeThread: closedCall(server, "PUT"),
@@ -64,6 +75,15 @@ function messageCalls(server: ClientConnection): MessageCalls {
         params: { name: channel },
         path: channelMessagesPath,
         query: { before, limit },
+      });
+      return page;
+    },
+    listOpenThreads: async ({ all, cursor, limit } = {}) => {
+      const page = await send(server, {
+        isExpected: isListOpenThreadsResponse,
+        method: "GET",
+        path: openThreadsPath,
+        query: { ...allQuery(all), cursor, limit },
       });
       return page;
     },

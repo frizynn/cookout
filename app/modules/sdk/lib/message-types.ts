@@ -3,10 +3,12 @@ export type {
   JsonValue,
   ListMessagesQuery,
   ListMessagesResponse,
+  ListOpenThreadsResponse,
   Message,
   MessageFields,
   MessageId,
   MessageResponse,
+  OpenThread,
   PostMessageRequest,
   Reaction,
   ReactionCount,
@@ -18,3 +20,4 @@ export type {
   TopLevelMessage,
   TopLevelMessageResponse,
 } from "../../messages/index.ts";
+export type { ListOpenThreadsQuery } from "../../messages/client.ts";

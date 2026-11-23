@@ -1,7 +1,8 @@
 /**
- * The calls a client makes to close and reopen a thread (#216). The SDK's `CookoutClient` has them.
+ * The calls a client makes to close and reopen a thread (#216) and to list open threads (#219), and the answers they
+ * share. The SDK's `CookoutClient` has them.
  */
-import type { MessageId, TopLevelMessageResponse } from "./index.ts";
+import type { ListOpenThreadsResponse, MessageId, TopLevelMessageResponse } from "./index.ts";
 
 /** Closing and reopening the thread holding a message. */
 export interface ClosedThreadCalls {
@@ -18,4 +19,29 @@ export interface ClosedThreadCalls {
    * too. A missing message is 404 `message_not_found`.
    */
   readonly reopenThread: (messageId: MessageId) => Promise<TopLevelMessageResponse>;
+}
+
+/** The query of an Open threads page. With no `cursor`, the page starts at the stalest open thread. */
+export interface ListOpenThreadsQuery {
+  /** Every open thread on the board, not only the ones involving the caller. */
+  readonly all?: boolean;
+  /** Only threads after this point: pass the previous page's `cursor` to read on. */
+  readonly cursor?: string;
+  /** 1–200 threads. Default 50. */
+  readonly limit?: number;
+}
+
+/**
+ * `GET /v1/threads/open?all=true&cursor=<cursor>&limit=<n>`: a page of open threads. Without `all=true`, only the
+ * threads involving the caller: it wrote the top-level message or a reply, or is mentioned in either.
+ */
+export const openThreadsPath = "/v1/threads/open";
+
+/** Listing open threads. */
+export interface OpenThreadCalls {
+  /**
+   * `GET /v1/threads/open`: a page of open threads, stalest first by last activity, ties by ID. Without `all`, only
+   * the threads involving the caller; pass the answer's `cursor` to read the next page.
+   */
+  readonly listOpenThreads: (query?: ListOpenThreadsQuery) => Promise<ListOpenThreadsResponse>;
 }
