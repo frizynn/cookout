@@ -32,11 +32,13 @@ type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
 
 type Sent = string | undefined;
 
+type LeaseRule = "while-held" | "none";
+
 interface LeasesService {
   readonly join: (caller: Identity, request: Join, sent: Sent) => Fails<LeaseResponse>;
   readonly leave: (caller: Identity, sent: Sent) => Fails<void>;
   readonly renew: (caller: Identity, sent: Sent) => Effect.Effect<void, StorageUnavailable>;
-  readonly requireLease: (caller: Identity, sent: Sent) => Fails<LeaseId>;
+  readonly requireLease: (caller: Identity, sent: Sent, rule: LeaseRule) => Fails<void>;
 }
 
 class Leases extends Context.Service<Leases, LeasesService>()("@ai-hero/cookout/leases/lib/server/service/Leases") {}
@@ -103,6 +105,24 @@ function requirer({ seconds, storage }: LeasesOn) {
     });
 }
 
+function ruleRequirer(on: LeasesOn) {
+  const requireLive = requirer(on);
+  return (caller: Identity, sent: Sent, rule: LeaseRule): Fails<void> =>
+    Effect.gen(function* requireByRule() {
+      if (rule === "none") {
+        return;
+      }
+      if (Predicate.isUndefined(sent)) {
+        const { now } = yield* timesFor(on.seconds);
+        const current = yield* on.storage.findLease(caller.name, now);
+        if (Predicate.isUndefined(current)) {
+          return;
+        }
+      }
+      yield* requireLive(caller, sent);
+    });
+}
+
 function joiner(on: LeasesOn) {
   const renew = renewer(on);
   const take = taker(on);
@@ -139,7 +159,7 @@ function leasesOn(on: LeasesOn): LeasesService {
     join: joiner(on),
     leave: leaver(on),
     renew: (caller, sent) => Effect.asVoid(renew(caller, sent)),
-    requireLease: requirer(on),
+    requireLease: ruleRequirer(on),
   };
 }
 
@@ -153,4 +173,4 @@ const leasesLayer: Layer.Layer<Leases, Config.ConfigError, Storage | Secrets> = 
   }),
 );
 
-export { Leases, leasesLayer };
+export { type LeaseRule, Leases, leasesLayer };
