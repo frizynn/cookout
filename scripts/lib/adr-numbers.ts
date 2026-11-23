@@ -1,0 +1,89 @@
+import path from "node:path";
+
+interface Numbered {
+  readonly file: string;
+  readonly number: number;
+}
+
+interface Rename {
+  readonly from: Numbered;
+  readonly to: Numbered;
+}
+
+interface Renumbering {
+  readonly added: readonly string[];
+  readonly v1: readonly string[];
+}
+
+interface References {
+  readonly renames: readonly Rename[];
+  readonly text: string;
+}
+
+const WIDTH = 4;
+const START = 0;
+const NONE = 0;
+const ONE = 1;
+const NUMBERED = new RegExp(String.raw`^\d{${WIDTH}}-.+\.md$`, "u");
+
+function byNumber(left: Numbered, right: Numbered): number {
+  return left.number - right.number;
+}
+
+function numbered(files: readonly string[]): readonly Numbered[] {
+  return files
+    .filter((file) => NUMBERED.test(path.basename(file)))
+    .map((file): Numbered => ({ file, number: Number(path.basename(file).slice(START, WIDTH)) }))
+    .toSorted(byNumber);
+}
+
+function padded(number: number): string {
+  return String(number).padStart(WIDTH, "0");
+}
+
+function duplicateNumbers(files: readonly string[]): readonly string[] {
+  const adrs = numbered(files);
+  const numbers = [...new Set(adrs.map((adr) => adr.number))];
+  return numbers.flatMap((number) => {
+    const group = adrs.filter((adr) => adr.number === number).map((adr) => adr.file);
+    if (group.length === ONE) {
+      return [];
+    }
+    return [`${group.join(" and ")} share ADR number ${padded(number)}. Renumber one past the highest.`];
+  });
+}
+
+function renumbering({ added, v1 }: Renumbering): readonly Rename[] {
+  const highest = Math.max(NONE, ...numbered(v1).map((adr) => adr.number));
+  const ours = numbered(added);
+  if (ours.every((adr) => adr.number > highest)) {
+    return [];
+  }
+  return ours.map((adr, index) => {
+    const number = highest + index + ONE;
+    const file = path.join(path.dirname(adr.file), `${padded(number)}${path.basename(adr.file).slice(WIDTH)}`);
+    return { from: adr, to: { file, number } };
+  });
+}
+
+function escaped(text: string): string {
+  return text.replaceAll(/[$()*+.?[\\\]^{|}]/gu, String.raw`\$&`);
+}
+
+function rewriteReferences({ renames, text }: References): string {
+  const replacements = new Map(
+    renames.flatMap((rename) => [
+      [path.basename(rename.from.file), path.basename(rename.to.file)],
+      [`ADR ${padded(rename.from.number)}`, `ADR ${padded(rename.to.number)}`],
+    ]),
+  );
+  if (replacements.size === NONE) {
+    return text;
+  }
+  const keys = [...replacements.keys()].map((key) => escaped(key));
+  const pattern = new RegExp(`(?:${keys.join("|")})(?!\\d)`, "gu");
+  return text.replaceAll(pattern, (found) => replacements.get(found) ?? found);
+}
+
+export type { Rename };
+export { duplicateNumbers, renumbering, rewriteReferences };

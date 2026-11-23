@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import type { SpawnSyncReturns } from "node:child_process";
+import { duplicateNumbers } from "./lib/adr-numbers.ts";
 import { spawnSync } from "node:child_process";
 
 const SELF = "scripts/hygiene.ts";
@@ -77,7 +78,18 @@ const wikiCitations = () =>
     (file) => `${file} names the ${WIKI}. Cite a GitHub issue or PR instead.`,
   );
 
-const failures = [...gitlinks(), ...workspaceFile(), ...envExample(), ...readmeSettings(), ...wikiCitations()];
+function adrNumbers(): readonly string[] {
+  return duplicateNumbers(git(["ls-files", "docs/adr"]));
+}
+
+const failures = [
+  ...gitlinks(),
+  ...workspaceFile(),
+  ...envExample(),
+  ...readmeSettings(),
+  ...wikiCitations(),
+  ...adrNumbers(),
+];
 for (const failure of failures) {
   console.error(`hygiene: ${failure}`);
 }
