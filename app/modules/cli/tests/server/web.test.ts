@@ -46,6 +46,22 @@ it.effect("cookout serve serves the built web UI's index.html at / and its asset
   }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );
 
+it.effect("with a public URL, the served page's link preview points at that URL", () =>
+  Effect.gen(function* absolutePreview() {
+    const web = yield* builtWebFolder;
+    const database = yield* freshDatabasePath;
+    const env = { COOKOUT_PUBLIC_URL: "https://cookout.example.com" };
+    const server = yield* startServe({ database, env, webFolder: web.folder });
+    const page = yield* fetched(`${server.url}/`);
+
+    expect(page.body).toContain('<meta property="og:url" content="https://cookout.example.com/" />');
+    expect(page.body).toContain(
+      '<meta property="og:image" content="https://cookout.example.com/assets/og-card.png" />',
+    );
+    expect(page.contentType).toBe("text/html");
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
+);
+
 it.effect("an asset the build doesn't have, or a path out of the build's folder, is not found", () =>
   Effect.gen(function* missingAssets() {
     const web = yield* builtWebFolder;
