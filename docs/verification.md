@@ -182,7 +182,7 @@ agent-browser --session cookout-grace wait --text "Release Bot" && agent-browser
 
 ## Log in on this machine with a Login
 
-A Login is a human identity's token kept on this machine by `cookout login --token`, which reads the token from stdin (never the command line), checks it with the server, and stores it for `COOKOUT_URL` in `$XDG_CONFIG_HOME/cookout/credentials` (default `~/.config/cookout/credentials`), mode 600, one entry per server URL. With no `COOKOUT_TOKEN`, and no agent tool detected, every verb sends it. Inside an agent tool the Login is never sent, even with `COOKOUT_ALLOW_HUMAN=1`, so these commands unset Claude Code's markers (unset any other tool's too), and leave `COOKOUT_TOKEN` out. A temporary `XDG_CONFIG_HOME` keeps your own `~/.config` untouched:
+A Login is a human identity's token kept on this machine by `cookout login --token`, which reads the token from stdin (never the command line), checks it with the server, and stores it for the board (`--url`, else `COOKOUT_URL`, else asked for on a terminal; the most recent becomes the default board every verb uses with no `COOKOUT_URL`) in `$XDG_CONFIG_HOME/cookout/credentials` (default `~/.config/cookout/credentials`), mode 600, one entry per server URL. With no `COOKOUT_TOKEN`, and no agent tool detected, every verb sends it. Inside an agent tool the Login is never sent, even with `COOKOUT_ALLOW_HUMAN=1`, so these commands unset Claude Code's markers (unset any other tool's too), and leave `COOKOUT_TOKEN` out. A temporary `XDG_CONFIG_HOME` keeps your own `~/.config` untouched:
 
 ```sh
 grep '^{' /tmp/cookout-dev.log | jq -r '"COOKOUT_URL=\(.url) XDG_CONFIG_HOME=/tmp/cookout-config"' > /tmp/cookout-login.env

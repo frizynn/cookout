@@ -23,12 +23,16 @@
  * be read as one is `agent_session_state_damaged`; any other failure of the CLI
  * itself, rather than a refusal, is `cli_error`.
  *
+ * `login` takes the board's URL from `--url`, else `COOKOUT_URL`, else asks for it on a terminal (`usage` with
+ * none); a bare host means `https://`, and a URL that doesn't answer `/v1/health` is `not_a_cookout`.
  * `login --token` reads a human identity's token from stdin (never the command
- * line), checks it with the server, and keeps it as the Login for `COOKOUT_URL`
+ * line), checks it with the server, and keeps it as the Login for that board
  * in the credentials file, `$XDG_CONFIG_HOME/cookout/credentials` (default
- * `~/.config/cookout/credentials`), one entry per server URL, mode 600. An
- * agent's token is `human_only`. `logout` removes this server's Login. `whoami` adds the credential's `source` and
- * a `summary` such as `ada (login)`. A credentials file that isn't mode
+ * `~/.config/cookout/credentials`), one entry per server URL, mode 600. The most recent login's board is the
+ * default board, which every verb uses when `COOKOUT_URL` is unset (mattpocock/cookout#126). An
+ * agent's token is `human_only`. `logout` removes the Login for `--url`, else `COOKOUT_URL`, else the default
+ * board. `whoami` adds the credential's `source`, the board's `url` and
+ * a `summary` such as `ada (login) at https://cookout.fly.dev`. A credentials file that isn't mode
  * 600 and yours, or is a symlink, is `credentials_unsafe`; one that can't be
  * read as one is `credentials_damaged`.
  */
