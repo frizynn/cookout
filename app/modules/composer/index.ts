@@ -15,9 +15,13 @@
  * `identities` is the identity list itself, an external store too, loaded
  * when its first reader subscribes, so a view can tell a human from an agent.
  * Until the identities load, or if the server refuses them, nobody is
- * suggested.
+ * suggested. `setAdmin` makes an identity an admin or removes admin from it,
+ * putting the identity the server answers in the list, and `adminChange` is
+ * that change's state: being sent, or why the server refused it.
  */
+import type { AdminChanges, AdminClient } from "./lib/admin-change.ts";
 import type { CookoutClient, Identity } from "../sdk/index.ts";
+import { createAdminChanges } from "./lib/admin-change.ts";
 
 const MOST_SUGGESTIONS = 8;
 const NOTHING = 0;
@@ -140,7 +144,7 @@ export interface Draft {
 }
 
 /** The identity list. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
-export interface Identities {
+export interface Identities extends AdminChanges {
   /** Calls `listener` once the list loads, until the returned function is called. */
   readonly subscribe: (listener: () => void) => () => void;
   /** Every identity, sorted by name: empty until it loads, or if the server refuses it. */
@@ -157,7 +161,7 @@ export interface Composer {
 
 /** What the composer store needs of the SDK. */
 export interface ComposerOptions {
-  readonly client: Pick<CookoutClient, "listIdentities">;
+  readonly client: AdminClient & Pick<CookoutClient, "listIdentities">;
 }
 
 /**
@@ -171,12 +175,17 @@ export function createComposer(options: ComposerOptions): Composer {
   let identities: readonly Identity[] = [];
   let loading: Promise<void> | null = null;
 
+  function publish(next: readonly Identity[]): void {
+    identities = next;
+    for (const refresh of refreshes) {
+      refresh();
+    }
+  }
+
   async function loadIdentities(): Promise<void> {
     try {
-      ({ identities } = await options.client.listIdentities());
-      for (const refresh of refreshes) {
-        refresh();
-      }
+      const listed = await options.client.listIdentities();
+      publish(listed.identities);
     } catch {
       identities = [];
     }
@@ -199,6 +208,10 @@ export function createComposer(options: ComposerOptions): Composer {
       drafts.set(key, draft);
       return draft;
     },
-    identities: { snapshot: () => identities, subscribe: readers.add },
+    identities: {
+      ...createAdminChanges({ client: options.client, identities: () => identities, publish }),
+      snapshot: () => identities,
+      subscribe: readers.add,
+    },
   };
 }

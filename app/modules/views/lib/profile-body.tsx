@@ -1,5 +1,6 @@
 import { CardBody, DateText, Muted, Profile, ProfileName, Skeleton } from "../../design-system/index.tsx";
 import type { Identity, IdentityName } from "../../sdk/index.ts";
+import { AdminToggle } from "./admin-toggle.tsx";
 import type { Identities } from "../../composer/index.ts";
 import { IdentityTags } from "./identity-tags.tsx";
 import type { ReactNode } from "react";
@@ -12,6 +13,7 @@ const TEXT = { joined: "joined ", unknown: "Unknown identity" } as const;
 
 interface ProfileBodyProps {
   readonly identities: Identities;
+  readonly me: IdentityName;
   readonly name: IdentityName;
 }
 
@@ -50,6 +52,7 @@ export function ProfileBody(props: ProfileBodyProps): ReactNode {
         {TEXT.joined}
         <DateText time={identity.createdAt} />
       </Muted>
+      <AdminToggle identities={props.identities} identity={identity} me={props.me} />
     </Profile>
   ));
 }

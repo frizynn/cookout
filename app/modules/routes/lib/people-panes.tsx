@@ -25,7 +25,7 @@ export function PeoplePanes(props: PeoplePanesProps): ReactNode {
   return (
     <>
       <PeopleView identities={identities} layout={props.layout} me={props.me} open={open} />
-      {open !== null && <ProfileView identities={identities} name={open} />}
+      {open !== null && <ProfileView identities={identities} me={props.me} name={open} />}
     </>
   );
 }
