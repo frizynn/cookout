@@ -260,7 +260,7 @@ box whoami
 rm -r /tmp/cookout-box-config /tmp/cookout-box-state
 ```
 
-The page shows the code, `triage-agent asks to join from <host>`, the agent it becomes (`Creates triage-agent, owned by you`, or `ada/triage-agent` when someone else has the name) and the asked `30d`. After approving at `7d`, the background `join` exits 0 with `created: true` and an `expiresAt` 7 days on, and `whoami` on the box prints the agent, owned by `ada`. Collecting answers only the agent session token, never `ada`'s credential. Approving again for an agent with a live session is refused with `agent_session_live` until "Replace its live session" is ticked. Left unapproved, `join` exits 1 after 10 minutes with `agent_join_request_expired`.
+The page shows the code, `triage-agent asks to join from <host>`, the agent it becomes (`Creates triage-agent, owned by you`, or `@ada/triage-agent` when someone else has the name) and the asked `30d`. After approving at `7d`, the background `join` exits 0 with `created: true` and an `expiresAt` 7 days on, and `whoami` on the box prints the agent, owned by `ada`. Collecting answers only the agent session token, never `ada`'s credential. Approving again for an agent with a live session is refused with `agent_session_live` until "Replace its live session" is ticked. Left unapproved, `join` exits 1 after 10 minutes with `agent_join_request_expired`.
 
 ## Join with your Login
 
