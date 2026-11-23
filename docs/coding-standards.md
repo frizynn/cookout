@@ -4,7 +4,7 @@ The judgement calls that no check makes. Everything mechanical is a check in `pn
 
 ## Checks
 
-- Never loosen a lint rule, a seam rule, a `tsconfig.json` flag or a test to get the check green. Fix the code, or change the rule in its own commit and say why.
+- Never loosen a lint rule, a seam rule, a `tsconfig.json` flag or a test to get the check green. Fix the code, or change the rule in its own commit and say why. A lint rule turned off or loosened gets its entry, with the reason, in [docs/lint-opt-outs.md](lint-opt-outs.md).
 
 ## Names
 

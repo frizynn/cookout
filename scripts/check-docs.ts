@@ -45,11 +45,20 @@ const codeFailure = (doc: string, code: string): string | undefined => {
   return isSymbol(code) && !source.includes(code) ? `${doc}: missing symbol ${code}` : undefined;
 };
 
+const NAMES_LINT_RULES = "docs/lint-opt-outs.md";
+
+function codeFailures(doc: string, text: string): readonly (string | undefined)[] {
+  if (doc === NAMES_LINT_RULES) {
+    return [];
+  }
+  return [...text.matchAll(/`([^`\s]+)`/gu)].map((match) => codeFailure(doc, match[1] ?? ""));
+}
+
 const failuresIn = (doc: string): readonly (string | undefined)[] => {
   const text = readFileSync(doc, "utf8");
   return [
     ...[...text.matchAll(/\]\(([^)\s]+)\)/gu)].map((match) => linkFailure(doc, match[1] ?? "")),
-    ...[...text.matchAll(/`([^`\s]+)`/gu)].map((match) => codeFailure(doc, match[1] ?? "")),
+    ...codeFailures(doc, text),
   ];
 };
 
