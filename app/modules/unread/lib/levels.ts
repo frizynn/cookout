@@ -9,7 +9,7 @@ interface UnreadCounts {
 
 interface ThreadNews {
   readonly count: number;
-  readonly forYou: Extract<UnreadWhy, "mentioned-you" | "replied-to-you"> | null;
+  readonly forYou: number;
 }
 
 interface Reading {
@@ -24,7 +24,7 @@ interface ReadingAll {
 
 const ONE_MORE = 1;
 const NO_COUNTS: UnreadCounts = { activity: 0, forYou: 0 };
-const NO_NEWS: ThreadNews = { count: 0, forYou: null };
+const NO_NEWS: ThreadNews = { count: 0, forYou: 0 };
 
 function whyOf({ item, me }: Reading): UnreadWhy {
   if (item.reasons.includes("mention")) {
@@ -68,14 +68,11 @@ function countsByChannel({ items, me }: ReadingAll): ReadonlyMap<ChannelName, Un
   return counts;
 }
 
-function strongest(news: ThreadNews, why: UnreadWhy): ThreadNews["forYou"] {
-  if (why === "mentioned-you" || news.forYou === "mentioned-you") {
-    return "mentioned-you";
+function withReply(news: ThreadNews, forYou: boolean): ThreadNews {
+  if (forYou) {
+    return { count: news.count + ONE_MORE, forYou: news.forYou + ONE_MORE };
   }
-  if (why === "replied-to-you") {
-    return why;
-  }
-  return news.forYou;
+  return { ...news, count: news.count + ONE_MORE };
 }
 
 function newsByThread({ items, me }: ReadingAll): ReadonlyMap<MessageId, ThreadNews> {
@@ -83,7 +80,7 @@ function newsByThread({ items, me }: ReadingAll): ReadonlyMap<MessageId, ThreadN
   for (const item of items) {
     if (item.message.kind === "reply") {
       const before = news.get(item.parent.id) ?? NO_NEWS;
-      news.set(item.parent.id, { count: before.count + ONE_MORE, forYou: strongest(before, whyOf({ item, me })) });
+      news.set(item.parent.id, withReply(before, isForYou({ item, me })));
     }
   }
   return news;

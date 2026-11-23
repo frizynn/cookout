@@ -78,7 +78,7 @@ it("a message with replies shows who replied, how many, how many are new and whe
       ["BS", "true"],
       ["AS", "false"],
     ],
-    text: "2 replies2 new replies · replies to youLast reply just nowView thread →",
+    text: "2 replies2 new replies to youLast reply just nowView thread →",
   });
 
   const { message: reply } = await ada.client.createMessage({ channel: CHANNEL, replyTo: parent.id, text: "Third" });

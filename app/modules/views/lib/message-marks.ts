@@ -18,8 +18,6 @@ function replies(count: number): string {
   return `${String(count)} ${REPLIES[plural.select(count)]}`;
 }
 
-const FOR_YOU = { "mentioned-you": "mentions you", "replied-to-you": "replies to you" } as const;
-
 interface NewsText {
   readonly text: string;
   readonly forYou: boolean;
@@ -30,10 +28,13 @@ function newsText(news: ThreadNews | null): NewsText | null {
     return null;
   }
   const text = `${String(news.count)} new ${REPLIES[plural.select(news.count)]}`;
-  if (news.forYou === null) {
+  if (news.forYou === NONE) {
     return { forYou: false, text };
   }
-  return { forYou: true, text: `${text} · ${FOR_YOU[news.forYou]}` };
+  if (news.forYou === news.count) {
+    return { forYou: true, text: `${text} to you` };
+  }
+  return { forYou: true, text: `${text} · ${String(news.forYou)} to you` };
 }
 
 interface Marking {

@@ -1,10 +1,9 @@
-import { dotPlace, messageClass } from "./message-class.ts";
-import { AccentDot } from "./accent-dot.tsx";
 import { DaySeparator } from "./day-separator.tsx";
 import type { MessageItemParts } from "./parts.ts";
 import { MessageLayout } from "./message-layout.tsx";
 import { NewLine } from "./new-line.tsx";
 import type { ReactNode } from "react";
+import { messageClass } from "./message-class.ts";
 import { useRightClick } from "./use-right-click.ts";
 
 const FOCUSABLE = 0;
@@ -23,7 +22,6 @@ export function MessageItem(parts: MessageItemParts): ReactNode {
         ref={article}
         tabIndex={FOCUSABLE}
       >
-        {parts.mark === "for-you" && <AccentDot place={dotPlace(parts.grouped)} />}
         <MessageLayout
           actionHref={parts.actionHref}
           actionLabel={parts.actionLabel}
