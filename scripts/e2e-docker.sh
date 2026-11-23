@@ -70,9 +70,9 @@ if grep -qF "$admin_token" <<< "$logs"; then
   exit 1
 fi
 
-printf '{"type":"object","properties":{"branch":{"type":"string"}},"required":["branch"]}' > "$scratch/schema.json"
 COOKOUT_URL="$url" COOKOUT_TOKEN="$admin_token" COOKOUT_STATE_DIR="$scratch/state" \
-  node app/main.ts command add example --url http://127.0.0.1:8787/webhook --schema "$scratch/schema.json" \
+  node app/main.ts command add example --url http://127.0.0.1:8787/webhook \
+  --schema packages/handler-example/command.schema.json \
   --description "The example handler (packages/handler-example) in its own container" > "$scratch/added.json"
 COOKOUT_COMMAND_SECRET=$(node -e 'console.log(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")).secret)' "$scratch/added.json")
 rm "$scratch/added.json"

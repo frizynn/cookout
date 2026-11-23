@@ -42,7 +42,7 @@ function browserRun(cookout: CookoutUnderTestService, page: Page): BrowserRun {
     createHuman: (name) => bridge.runPromise(cookout.createHuman(name)),
     logIn: logIn(page, cookout.url),
     prefix: cookout.prefix,
-    requireExampleCommand: () => bridge.runPromise(requireExampleCommand),
+    requireExampleCommand: () => bridge.runPromise(requireExampleCommand(cookout)),
     url: cookout.url,
   };
 }

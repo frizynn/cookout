@@ -45,6 +45,17 @@ const commandAddCommand = Command.make(
   ),
 );
 
+const commandRotateCommand = Command.make(
+  "rotate",
+  { name: Argument.String("name").pipe(Argument.withDescription("The command whose secret to rotate.")) },
+  ({ name }) => answer((client) => client.rotateCommandSecret(name)),
+).pipe(
+  Command.withDescription(
+    "Rotate a command's secret (admin only). The new secret is shown this once, and the old one signs no delivery " +
+      "from then on, so give the new one to the command's handler.",
+  ),
+);
+
 const commandListCommand = Command.make("list", {}, () => answer((client) => client.listCommands())).pipe(
   Command.withDescription("List every command, by name, without its secret."),
 );
@@ -69,6 +80,6 @@ const commandCallCommand = Command.make(
 );
 
 export const commandCommand = Command.make("command").pipe(
-  Command.withDescription("Register, list and call webhook commands."),
-  Command.withSubcommands([commandAddCommand, commandListCommand, commandCallCommand]),
+  Command.withDescription("Register, rotate the secret of, list and call webhook commands."),
+  Command.withSubcommands([commandAddCommand, commandRotateCommand, commandListCommand, commandCallCommand]),
 );

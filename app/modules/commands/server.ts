@@ -1,9 +1,10 @@
 /**
- * Commands on the backend: the routes that register a command (admin only),
- * list them and call one (any identity). Adding a command checks its schema
+ * Commands on the backend: the routes that register a command and rotate its
+ * secret (admin only), list them and call one (any identity). Adding a command checks its schema
  * compiles, makes its handler identity, an agent with the command's name
  * (ADR 0027), or reuses an agent of that name, and issues the command's
- * secret from `Secrets`, shown once. A call's data is checked against the
+ * secret from `Secrets`, shown once. Rotating issues a new secret the same way,
+ * and the old one signs no delivery from then on. A call's data is checked against the
  * command's JSON Schema, then posted as a top-level message by the caller,
  * and the answer comes without waiting for any delivery to the webhook.
  * `commandsLayer` sends each call to the command's URL in the background:
@@ -24,13 +25,13 @@ import {
 } from "./lib/server/wire.ts";
 import { Caller, requireAdmin } from "../identities/server.ts";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import { commandCallsPath, commandsPath } from "./index.ts";
+import { addCommand, rotateCommandSecret } from "./lib/server/add.ts";
+import { commandCallsPath, commandSecretPath, commandsPath } from "./index.ts";
 import type { CallNeeds } from "./lib/server/call.ts";
 import { Effect } from "effect";
 import type { Route } from "../http/server.ts";
 import type { Secrets } from "../secrets/server.ts";
 import { Storage } from "../storage/server.ts";
-import { addCommand } from "./lib/server/add.ts";
 import { callCommand } from "./lib/server/call.ts";
 
 const CREATED = 201;
@@ -46,6 +47,17 @@ const addRoute: Route<Caller | Storage | Secrets> = {
     }),
   method: "POST",
   path: commandsPath,
+};
+
+const rotateRoute: Route<Caller | Storage | Secrets> = {
+  handle: (params) =>
+    Effect.gen(function* rotateSecretRoute() {
+      yield* requireAdmin;
+      const rotated = yield* rotateCommandSecret(String(params["name"]));
+      return yield* HttpServerResponse.schemaJson(CommandWithSecretResponseSchema)(rotated);
+    }),
+  method: "POST",
+  path: commandSecretPath,
 };
 
 const listRoute: Route<Storage> = {
@@ -72,7 +84,12 @@ const callRoute: Route<Caller | CallNeeds> = {
 };
 
 /** The command routes, for the server's route list. They need `Caller`, which `requireToken` provides. */
-export const commandRoutes: readonly Route<Caller | Secrets | CallNeeds>[] = [addRoute, listRoute, callRoute];
+export const commandRoutes: readonly Route<Caller | Secrets | CallNeeds>[] = [
+  addRoute,
+  rotateRoute,
+  listRoute,
+  callRoute,
+];
 
 /** The response Schemas of the command routes, for the SDK's generated validators. */
 export const commandResponseSchemas = {

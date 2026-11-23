@@ -3,6 +3,7 @@ import { Mac, SecureRandom } from "effect/crypto";
 import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { Hex } from "effect/encoding";
+import { TestClock } from "effect/testing";
 import type { TestCookoutService } from "../../../testing/server.ts";
 import type { WebhookCall } from "../../../webhook-fake/server.ts";
 
@@ -95,4 +96,37 @@ it.effect("a running cookout signs each delivery with the command's random secre
     expect(call.headers).toMatchObject({ "cookout-signature": signature });
     expect(call.rawBody).toMatch(/"callId":"call_[A-Za-z0-9_-]{22}"/u);
   }).pipe(Effect.provide(testCookout({ secrets: "live" }))),
+);
+
+it.effect("after an admin rotates a command's secret, calls are signed with the new secret and not the old one", () =>
+  Effect.gen(function* rotatedSecret() {
+    const cookout = yield* TestCookout;
+    const old = yield* withDeployInGrill(cookout);
+    const rotated = yield* answer(() => cookout.client.rotateCommandSecret("deploy"));
+    yield* answer(() => cookout.client.callCommand("deploy", { channel: "grill", data: { branch: "main" } }));
+    const call = yield* firstCall(cookout);
+    const [signedNew, signedOld] = yield* Effect.forEach([rotated.secret, old], (secret) => signatureOf(call, secret), {
+      concurrency: 1,
+    });
+
+    expect({ old, secret: rotated.secret }).toStrictEqual({ old: "hmac_test_2", secret: "hmac_test_3" });
+    expect(call.headers).toMatchObject({ "cookout-signature": signedNew });
+    expect(signedOld).not.toBe(signedNew);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a retry after the command's secret is rotated is signed with the new secret", () =>
+  Effect.gen(function* retryAfterRotation() {
+    const cookout = yield* TestCookout;
+    yield* Effect.andThen(withDeployInGrill(cookout), cookout.webhook.failNext(ONE_CALL, UNAVAILABLE));
+    yield* answer(() => cookout.client.callCommand("deploy", { channel: "grill", data: { branch: "main" } }));
+    yield* cookout.webhook.waitForCalls(ONE_CALL);
+    const { secret } = yield* answer(() => cookout.client.rotateCommandSecret("deploy"));
+    const step = Effect.andThen(TestClock.adjust("5 seconds"), TestClock.withLive(Effect.sleep("1 millis")));
+    const calls = yield* Effect.raceFirst(cookout.webhook.waitForCalls(TWO_CALLS), Effect.forever(step));
+    const retry = Option.getOrThrow(Arr.get(calls, ONE_CALL));
+    const signature = yield* signatureOf(retry, secret);
+
+    expect(retry.headers).toMatchObject({ "cookout-signature": signature });
+  }).pipe(Effect.provide(testCookout({ webhookTimeoutSeconds: 86_400 }))),
 );

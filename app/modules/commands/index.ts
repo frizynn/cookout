@@ -15,7 +15,7 @@ type Brand<Name extends string> = string & { readonly [brand]: Name };
 /** A command's name. It is also the name of the command's handler identity, so it follows the identity-name rule. */
 export type CommandName = Brand<"CommandName">;
 
-/** The per-command secret the server signs webhook deliveries with (an HMAC of the body). Shown once, on add. */
+/** The per-command secret the server signs webhook deliveries with (an HMAC of the body). Shown once, on add or rotate. */
 export type CommandSecret = Brand<"CommandSecret">;
 
 /** A JSON Schema, the rule a command's call data must follow. */
@@ -85,7 +85,7 @@ export interface AddCommandRequest {
   readonly description?: string;
 }
 
-/** The answer to adding a command. The secret is shown this once only. */
+/** The answer to adding a command or rotating its secret. The secret is shown this once only. */
 export interface CommandWithSecretResponse {
   readonly command: Command;
   readonly secret: CommandSecret;
@@ -115,9 +115,12 @@ export const commandsPath = "/v1/commands";
 /** `POST /v1/commands/:name/calls` (any identity): call the command `name`. */
 export const commandCallsPath = "/v1/commands/:name/calls";
 
+/** `POST /v1/commands/:name/secret` (admin): rotate the secret of the command `name`. */
+export const commandSecretPath = "/v1/commands/:name/secret";
+
 /**
- * The codes the command routes refuse with: a name in use (409), a name that is a human's (409), and a call to a
- * command that doesn't exist (404).
+ * The codes the command routes refuse with: a name in use (409), a name that is a human's (409), and a call to, or a
+ * secret rotation of, a command that doesn't exist (404).
  */
 export const commandErrorCodes = ["command_exists", "handler_not_agent", "command_not_found"] as const;
 

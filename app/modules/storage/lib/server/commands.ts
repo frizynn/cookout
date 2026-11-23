@@ -27,6 +27,7 @@ interface CommandsSection extends CommandTokensSection, DeliveriesSection {
   readonly addCommand: (stored: StoredCommand, handler: AgentIdentity) => Fails<AddCommandResult>;
   readonly listCommands: Effect.Effect<readonly Command[], StorageUnavailable>;
   readonly findCommand: (name: CommandName) => Fails<StoredCommand | undefined>;
+  readonly replaceCommandSecret: (name: CommandName, secret: CommandSecret) => Fails<StoredCommand | undefined>;
 }
 
 type PlaceHandler = (handler: AgentIdentity) => "placed" | "human";
@@ -54,6 +55,15 @@ function memoryCommands({ findIdentity, state, placeHandler }: MemoryCommandsOpt
     commands.set(stored.command.name, stored);
     return "added";
   }
+  function replaceSecret(name: CommandName, secret: CommandSecret): StoredCommand | undefined {
+    const found = commands.get(name);
+    if (Predicate.isNotUndefined(found)) {
+      const replaced = { ...found, secret };
+      commands.set(name, replaced);
+      return replaced;
+    }
+    return found;
+  }
   return {
     ...memoryCommandTokens({ findIdentity, state }),
     ...memoryDeliveries(state),
@@ -62,6 +72,7 @@ function memoryCommands({ findIdentity, state, placeHandler }: MemoryCommandsOpt
     listCommands: Effect.suspend(() =>
       open(() => Arr.map(Arr.sort(commands.values(), byName), ({ command }) => command)),
     ),
+    replaceCommandSecret: (name, secret) => open(() => replaceSecret(name, secret)),
   };
 }
 
@@ -176,6 +187,8 @@ function sqliteCommands(db: SqliteDatabase): CommandsSection {
           ),
         ),
     ),
+    replaceCommandSecret: (name, secret) =>
+      db.transaction(Effect.andThen(db.run("UPDATE commands SET secret = ? WHERE name = ?", secret, name), find(name))),
   };
 }
 

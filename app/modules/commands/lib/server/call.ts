@@ -112,5 +112,5 @@ function callCommand({
   });
 }
 
-export { type CallNeeds, callCommand, requireDataSchema };
+export { type CallNeeds, callCommand, commandNotFound, requireDataSchema };
 export { deliveriesLayer } from "./delivery.ts";

@@ -255,7 +255,7 @@ type Brand<Name extends string> = string & {
 };
 /** A command's name. It is also the name of the command's handler identity, so it follows the identity-name rule. */
 type CommandName = Brand<"CommandName">;
-/** The per-command secret the server signs webhook deliveries with (an HMAC of the body). Shown once, on add. */
+/** The per-command secret the server signs webhook deliveries with (an HMAC of the body). Shown once, on add or rotate. */
 type CommandSecret = Brand<"CommandSecret">;
 /** A JSON Schema, the rule a command's call data must follow. */
 type JsonSchema = Readonly<Record<string, JsonValue>>;
@@ -279,7 +279,7 @@ interface AddCommandRequest {
   readonly schema: JsonSchema;
   readonly description?: string;
 }
-/** The answer to adding a command. The secret is shown this once only. */
+/** The answer to adding a command or rotating its secret. The secret is shown this once only. */
 interface CommandWithSecretResponse {
   readonly command: Command;
   readonly secret: CommandSecret;
@@ -478,6 +478,12 @@ export type CookoutClient = {
    * `command_not_found`.
    */
   readonly callCommand: (name: string, request: CallCommandRequest) => Promise<CallCommandResponse>;
+  /**
+   * `POST /v1/commands/:name/secret` (admin only): issues the command a new secret in place of its old one, which
+   * signs no delivery from then on, retries of earlier calls included. The new secret is in the answer this once. An
+   * unknown command is 404 `command_not_found`.
+   */
+  readonly rotateCommandSecret: (name: string) => Promise<CommandWithSecretResponse>;
 };
 /**
  * Checks one Server-Sent Event from `GET /v1/events` against the protocol, for a reader that opens the stream itself
