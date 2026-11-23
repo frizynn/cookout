@@ -1,3 +1,4 @@
+import type { DisplayName, Identity } from "../../../identities/index.ts";
 import { Effect, String as Str } from "effect";
 import { expect, it } from "@effect/vitest";
 import {
@@ -7,7 +8,6 @@ import {
   storageLayers,
 } from "../../../testing/server.ts";
 import { isDisplayName, tokenHash } from "../../../identities/index.ts";
-import type { DisplayName } from "../../../identities/index.ts";
 
 const HASH_LENGTH = 64;
 const LONGEST = 80;
@@ -23,6 +23,10 @@ function displayName(value: string): DisplayName {
   return expect.unreachable(`${value} is not a display name`);
 }
 
+function named(unnamed: Identity, text: string): Identity {
+  return { ...unnamed, displayName: displayName(text) };
+}
+
 it.effect.each(storageLayers)(
   "storage contract ($adapter): a display name is set and kept when listed, found by name or token and rotated",
   ({ layer }) =>
@@ -30,18 +34,18 @@ it.effect.each(storageLayers)(
       const { storage } = yield* openStore(layer);
       yield* storage.createIdentity(identity("ada", { kind: "human" }), hashA);
       const set = yield* storage.setDisplayName(nameOf("ada"), displayName("Ada Lovelace"));
-      const named = identity("ada", { displayName: "Ada Lovelace", kind: "human" });
+      const ada = named(identity("ada", { kind: "human" }), "Ada Lovelace");
       const listed = yield* storage.listIdentities();
       const byName = yield* storage.findIdentityByName(nameOf("ada"));
       const byToken = yield* storage.findIdentityByTokenHash(hashA);
       const rotated = yield* storage.replaceToken(nameOf("ada"), hashB);
 
-      expect(set).toStrictEqual({ identity: named, status: "set" });
+      expect(set).toStrictEqual({ identity: ada, status: "set" });
       expect([listed, byName, byToken, rotated]).toStrictEqual([
-        [named],
-        named,
-        { identity: named, status: "active" },
-        { identity: named, status: "replaced" },
+        [ada],
+        ada,
+        { identity: ada, status: "active" },
+        { identity: ada, status: "replaced" },
       ]);
     }),
 );
@@ -49,10 +53,10 @@ it.effect.each(storageLayers)(
 it.effect.each(storageLayers)("storage contract ($adapter): an identity is created with a display name", ({ layer }) =>
   Effect.gen(function* createdWithDisplayName() {
     const { storage } = yield* openStore(layer);
-    yield* storage.createIdentity(identity("release-bot", { displayName: "Release bot", owner: "ada" }), hashA);
+    yield* storage.createIdentity(named(identity("release-bot", { owner: "ada" }), "Release bot"), hashA);
     const found = yield* storage.findIdentityByName(nameOf("release-bot"));
 
-    expect(found).toStrictEqual(identity("release-bot", { displayName: "Release bot", owner: "ada" }));
+    expect(found).toStrictEqual(named(identity("release-bot", { owner: "ada" }), "Release bot"));
   }),
 );
 
@@ -61,19 +65,19 @@ it.effect.each(storageLayers)(
   ({ layer }) =>
     Effect.gen(function* clearAndReplace() {
       const { storage } = yield* openStore(layer);
-      yield* storage.createIdentity(identity("ada", { displayName: "Ada", kind: "human" }), hashA);
-      yield* storage.createIdentity(identity("grace", { displayName: "Grace", kind: "human" }), hashB);
+      yield* storage.createIdentity(named(identity("ada", { kind: "human" }), "Ada"), hashA);
+      yield* storage.createIdentity(named(identity("grace", { kind: "human" }), "Grace"), hashB);
       const cleared = yield* storage.setDisplayName(nameOf("ada"), null);
       const replaced = yield* storage.setDisplayName(nameOf("grace"), displayName("Grace Hopper"));
       const listed = yield* storage.listIdentities();
 
       expect([cleared, replaced]).toStrictEqual([
         { identity: identity("ada", { kind: "human" }), status: "set" },
-        { identity: identity("grace", { displayName: "Grace Hopper", kind: "human" }), status: "set" },
+        { identity: named(identity("grace", { kind: "human" }), "Grace Hopper"), status: "set" },
       ]);
       expect(listed).toStrictEqual([
         identity("ada", { kind: "human" }),
-        identity("grace", { displayName: "Grace Hopper", kind: "human" }),
+        named(identity("grace", { kind: "human" }), "Grace Hopper"),
       ]);
     }),
 );
@@ -91,8 +95,8 @@ it.effect.each(storageLayers)(
       const listed = yield* storage.listIdentities();
 
       expect(listed).toStrictEqual([
-        identity("ada", { displayName: longest, kind: "human" }),
-        identity("ada-bot", { displayName: longest, owner: "ada" }),
+        named(identity("ada", { kind: "human" }), longest),
+        named(identity("ada-bot", { owner: "ada" }), longest),
       ]);
     }),
 );

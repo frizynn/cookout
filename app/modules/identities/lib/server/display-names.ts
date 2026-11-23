@@ -18,7 +18,7 @@ const SetDisplayNameRequestSchema = Schema.Struct({ displayName: Schema.NullOr(S
 interface DisplayNamesService {
   readonly set: (
     caller: Identity,
-    name: string,
+    name: IdentityName,
     displayName: DisplayName | null,
   ) => Effect.Effect<Identity, Refusal | StorageUnavailable>;
   readonly changed: Effect.Effect<PubSub.Subscription<Identity>, never, Scope.Scope>;
@@ -36,34 +36,30 @@ function notOwner(name: string): Refusal {
   };
 }
 
-function ownsAgent(caller: Identity, target: Identity): boolean {
-  if (caller.kind !== "human" || target.kind !== "agent") {
+function ownsAgent(caller: Identity, target: Identity | undefined): boolean {
+  if (Predicate.isUndefined(target) || caller.kind !== "human" || target.kind !== "agent") {
     return false;
   }
   const owner: string = target.owner ?? "";
   return owner === caller.name;
 }
 
-function maySet(caller: Identity, target: Identity): boolean {
-  return caller.admin || caller.name === target.name || ownsAgent(caller, target);
+function maySet(caller: Identity, name: IdentityName, target: Identity | undefined): boolean {
+  return caller.admin || caller.name === name || ownsAgent(caller, target);
 }
 
-function settable(
+function requireMaySet(
   storage: Storage["Service"],
   caller: Identity,
-  sent: string,
-): Effect.Effect<IdentityName, Refusal | StorageUnavailable> {
-  return Effect.gen(function* findSettable() {
-    const name = yield* nameParam({ name: sent });
-    const target = yield* storage.findIdentityByName(name);
-    if (Predicate.isUndefined(target)) {
-      return yield* Effect.fail(identityNotFound(name));
-    }
-    if (!maySet(caller, target)) {
-      return yield* Effect.fail(notOwner(name));
-    }
-    return name;
-  });
+  name: IdentityName,
+): Effect.Effect<void, Refusal | StorageUnavailable> {
+  return storage.findIdentityByName(name).pipe(
+    Effect.filterOrFail(
+      (target) => maySet(caller, name, target),
+      () => notOwner(name),
+    ),
+    Effect.asVoid,
+  );
 }
 
 const displayNamesLayer: Layer.Layer<DisplayNames, never, Storage> = Layer.effect(
@@ -73,9 +69,9 @@ const displayNamesLayer: Layer.Layer<DisplayNames, never, Storage> = Layer.effec
     const hub = yield* PubSub.unbounded<Identity>();
     return {
       changed: PubSub.subscribe(hub),
-      set: (caller, sent, displayName) =>
+      set: (caller, name, displayName) =>
         Effect.gen(function* setDisplayName() {
-          const name = yield* settable(storage, caller, sent);
+          yield* requireMaySet(storage, caller, name);
           const result = yield* storage.setDisplayName(name, displayName);
           if (result.status === "not_found") {
             return yield* Effect.fail(identityNotFound(name));
@@ -93,7 +89,8 @@ const setDisplayNameRoute: Route<Caller | DisplayNames> = {
       const caller = yield* Caller;
       const { displayName } = yield* HttpServerRequest.schemaBodyJson(SetDisplayNameRequestSchema);
       const displayNames = yield* DisplayNames;
-      const identity = yield* displayNames.set(caller, params["name"] ?? "", displayName);
+      const name = yield* nameParam(params);
+      const identity = yield* displayNames.set(caller, name, displayName);
       return yield* HttpServerResponse.schemaJson(IdentityResponseSchema)({ identity });
     }),
   method: "PUT",

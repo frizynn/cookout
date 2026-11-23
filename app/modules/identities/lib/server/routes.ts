@@ -60,8 +60,7 @@ function lastAdmin(name: string): Refusal {
   };
 }
 
-function nameParam(params: Readonly<Record<string, string>>): Effect.Effect<IdentityName, Refusal> {
-  const name = params["name"] ?? "";
+function nameParam({ name = "" }: Readonly<Record<string, string>>): Effect.Effect<IdentityName, Refusal> {
   if (isIdentityName(name)) {
     return Effect.succeed(name);
   }

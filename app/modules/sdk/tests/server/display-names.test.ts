@@ -82,6 +82,21 @@ it.effect("an agent that names another agent as its owner can't be set by that a
   }).pipe(Effect.provide(testCookout())),
 );
 
+it.effect("a human can't set the display name of an agent with no owner, or of a missing identity", () =>
+  Effect.gen(function* notOwned() {
+    const cookout = yield* TestCookout;
+    const grace = yield* cookout.createIdentity("grace", { kind: "human" });
+    yield* cookout.createIdentity("company-bot");
+    const ownerless = yield* refusal(() => grace.client.setDisplayName("company-bot", "Company bot"));
+    const missing = yield* refusal(() => grace.client.setDisplayName("nobody", "Nobody"));
+
+    expect([ownerless, missing]).toMatchObject([
+      { code: "not_owner", status: FORBIDDEN },
+      { code: "not_owner", status: FORBIDDEN },
+    ]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
 it.effect("an admin sets and clears any identity's display name", () =>
   Effect.gen(function* adminSetsAny() {
     const cookout = yield* TestCookout;
@@ -131,7 +146,7 @@ it.effect("a display name is 1-80 characters after trimming, and any other is re
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("setting the display name of a missing identity is a 404", () =>
+it.effect("an admin setting the display name of a missing identity gets a 404", () =>
   Effect.gen(function* missingIdentity() {
     const cookout = yield* TestCookout;
     const error = yield* refusal(() => cookout.client.setDisplayName("nobody", "Nobody"));
