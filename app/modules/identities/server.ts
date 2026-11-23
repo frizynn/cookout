@@ -194,17 +194,17 @@ export { requireOwnerOrAdmin } from "./lib/server/auth.ts";
 export { identityNotFound, nameParam } from "./lib/server/routes.ts";
 
 /**
- * `PUT /v1/identities/:name/display-name` and the `DisplayNames` service behind it. The route needs `Caller`, which
+ * `PUT /v1/identities/:name/display-name` and the layer of the service behind it. The route needs `Caller`, which
  * `requireToken` provides.
  */
-export { DisplayNames, displayNameRoutes, displayNamesLayer } from "./lib/server/display-names.ts";
+export { displayNameRoutes, displayNamesLayer } from "./lib/server/display-names.ts";
 
 /**
  * The `IdentityChanges` hub: every route that creates an identity or changes one (its display name, admin flag,
  * owner, deactivating and reactivating) publishes the identity as it now is, and the live stream sends each on as an
- * `identity` event. `announced` publishes one and answers it.
+ * `identity` event.
  */
-export { IdentityChanges, announced, identityChangesLayer } from "./lib/server/changes.ts";
+export { IdentityChanges, identityChangesLayer } from "./lib/server/changes.ts";
 
 /** The Schema of the identity as the server shows it, for the live stream's `identity` event. */
 export { IdentitySchema } from "./lib/server/wire.ts";

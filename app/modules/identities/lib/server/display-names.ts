@@ -88,4 +88,4 @@ const setDisplayNameRoute: Route<Caller | DisplayNames> = {
 
 const displayNameRoutes: readonly Route<Caller | DisplayNames>[] = [setDisplayNameRoute];
 
-export { DisplayNames, displayNameRoutes, displayNamesLayer };
+export { displayNameRoutes, displayNamesLayer };
