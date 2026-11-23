@@ -118,14 +118,14 @@ export type CookoutClient = CallGroups & {
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
   /**
    * `POST /v1/identities/:name/deactivate`: an admin deactivates anyone, a human their own agents (403 `not_owner`
-   * otherwise). Every token it holds fails at once, and a human's agents are deactivated with it (`agents`). Its
+   * otherwise). Every token it holds fails at once; a human's agents stay active (`agents` is always empty). Its
    * messages and name stay; the name can't be created again. The last admin is 409 `last_admin`.
    */
   readonly deactivateIdentity: (name: string) => Promise<DeactivateIdentityResponse>;
   /**
-   * `POST /v1/identities/:name/reactivate`: an admin reactivates anyone, a human their own agents. Answers a fresh
-   * token, shown this once; old tokens stay dead. 409 `not_deactivated` if it isn't, or `owner_deactivated` for an
-   * agent whose owner still is.
+   * `POST /v1/identities/:name/reactivate`: an admin reactivates anyone, a human their own agents, even while the
+   * agent's owner is Deactivated. Answers a fresh token, shown this once; old tokens stay dead. 409 `not_deactivated`
+   * if it isn't.
    */
   readonly reactivateIdentity: (name: string) => Promise<IdentityWithTokenResponse>;
   /** Admin only. Makes a human an admin and answers it; an admin stays one. An agent is 403 `human_only`. */

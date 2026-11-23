@@ -33,10 +33,7 @@ function memoryIdentityLifecycle(options: MemoryIdentityLifecycleOptions): Memor
         if (result.status !== "deactivated") {
           return Effect.void;
         }
-        return Effect.forEach([name, ...result.agents], (each) => switchOff(options, each), {
-          concurrency: 1,
-          discard: true,
-        });
+        return switchOff(options, name);
       }),
     deleteIdentity: (name) =>
       Effect.gen(function* deleteIdentity() {

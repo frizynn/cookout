@@ -34,16 +34,16 @@ it.effect.each(storageLayers)(
         ONE_AT_A_TIME,
       );
 
-      expect(deactivated).toStrictEqual({ agents: [], identity: GONE, status: "deactivated" });
+      expect(deactivated).toStrictEqual({ identity: GONE, status: "deactivated" });
       expect([found, listed]).toStrictEqual([GONE, [GONE, MATT]]);
       expect(afterwards).toStrictEqual([{ status: "revoked" }, "name_taken"]);
     }),
 );
 
 it.effect.each(storageLayers)(
-  "storage contract ($adapter): deactivating a human deactivates the agents they own, and keeps them",
+  "storage contract ($adapter): deactivating a human changes no other identity, not even the agents they own",
   ({ layer }) =>
-    Effect.gen(function* cascade() {
+    Effect.gen(function* noCascade() {
       const { storage } = yield* openStore(layer);
       yield* Effect.forEach(
         [
@@ -59,18 +59,14 @@ it.effect.each(storageLayers)(
       const tokens = yield* Effect.forEach([hashB, hashC, hashD], storage.findIdentityByTokenHash, ONE_AT_A_TIME);
       const listed = yield* storage.listIdentities();
 
-      expect(deactivated).toStrictEqual({
-        agents: ["matt/helper", "release-bot"],
-        identity: { ...MATT, deactivated: true },
-        status: "deactivated",
-      });
-      expect(tokens).toMatchObject([{ status: "revoked" }, { status: "revoked" }, { status: "active" }]);
+      expect(deactivated).toStrictEqual({ identity: { ...MATT, deactivated: true }, status: "deactivated" });
+      expect(tokens).toMatchObject([{ status: "active" }, { status: "active" }, { status: "active" }]);
       expect(Arr.map(listed, ({ deactivated: off, name }) => [name, off === true])).toStrictEqual([
         ["grace", false],
         ["grace/helper", false],
         ["matt", true],
-        ["matt/helper", true],
-        ["release-bot", true],
+        ["matt/helper", false],
+        ["release-bot", false],
       ]);
     }),
 );
@@ -127,11 +123,12 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
-  "storage contract ($adapter): reactivating holds only the new token, and leaves the agents deactivated",
+  "storage contract ($adapter): reactivating holds only the new token, even for an agent whose owner is deactivated",
   ({ layer }) =>
     Effect.gen(function* reactivate() {
       const { storage } = yield* openStore(layer);
       yield* storage.createIdentity(identity("release-bot"), hashA);
+      yield* storage.deactivateIdentity(nameOf("release-bot"));
       yield* storage.deactivateIdentity(nameOf("matt"));
       const answers = yield* Effect.all(
         [
@@ -141,20 +138,23 @@ it.effect.each(storageLayers)(
         ],
         ONE_AT_A_TIME,
       );
-      const tokens = yield* Effect.forEach([hashB, hashC, hashD], storage.findIdentityByTokenHash, ONE_AT_A_TIME);
-      const bot = yield* storage.findIdentityByName(nameOf("release-bot"));
+      const tokens = yield* Effect.forEach(
+        [hashA, hashB, hashC, hashD],
+        storage.findIdentityByTokenHash,
+        ONE_AT_A_TIME,
+      );
 
       expect(answers).toStrictEqual([
-        { owner: "matt", status: "owner_deactivated" },
+        { identity: identity("release-bot"), status: "reactivated" },
         { identity: MATT, status: "reactivated" },
         { status: "not_deactivated" },
       ]);
       expect(tokens).toStrictEqual([
-        { status: "unknown" },
+        { status: "revoked" },
+        { identity: identity("release-bot"), status: "active" },
         { identity: MATT, status: "active" },
         { status: "unknown" },
       ]);
-      expect(bot).toStrictEqual({ ...identity("release-bot"), deactivated: true });
     }),
 );
 
