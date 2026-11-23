@@ -16,6 +16,9 @@ pre-commit:
     - group:
         parallel: true
         jobs:
+          - name: adrs are append-only
+            glob: "docs/adr/*.md"
+            run: node scripts/hygiene.ts --base=HEAD~
           - name: types
             run: node_modules/.bin/tsc --noEmit --incremental
           - name: seams
