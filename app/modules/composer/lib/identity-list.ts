@@ -13,11 +13,28 @@ interface IdentityList {
 interface IdentityListOptions {
   readonly client: Pick<CookoutClient, "listIdentities">;
   readonly live: Live | null;
+  readonly deleted: (name: Identity["name"]) => void;
 }
 
 function withIdentity(identities: readonly Identity[], changed: Identity): readonly Identity[] {
   const others = identities.filter((identity) => identity.name !== changed.name);
   return [...others, changed].toSorted((first, second) => first.name.localeCompare(second.name));
+}
+
+function listedAfter(
+  identities: readonly Identity[],
+  event: CookoutEvent,
+  deleted: IdentityListOptions["deleted"],
+): readonly Identity[] | null {
+  if (event.type === "identity") {
+    return withIdentity(identities, event.identity);
+  }
+  if (event.type === "identity-deleted") {
+    const { name } = event.identity;
+    deleted(name);
+    return identities.filter((identity) => identity.name !== name);
+  }
+  return null;
 }
 
 function follow(live: Live | null, receive: (event: CookoutEvent) => void, reload: () => void): void {
@@ -40,8 +57,9 @@ function createIdentityList(options: IdentityListOptions): IdentityList {
   }
 
   function receive(event: CookoutEvent): void {
-    if (event.type === "identity") {
-      publish(withIdentity(identities, event.identity));
+    const next = listedAfter(identities, event, options.deleted);
+    if (next !== null) {
+      publish(next);
     }
   }
 

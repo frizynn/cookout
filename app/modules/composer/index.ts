@@ -19,7 +19,9 @@
  * and show each display name. With `live`, an identity that changes (its
  * display name set or cleared anywhere) takes its place in the list at once,
  * and the whole list loads again when the stream's link comes back after being
- * down, since identity events can't be replayed.
+ * down, since identity events can't be replayed. An identity deleted elsewhere
+ * leaves the list, and a profile open on it closes, with `identities.deletion`
+ * naming it for a notice until dismissed.
  * Until the identities load, or if the server refuses them, nobody is
  * suggested. `setAdmin` makes an identity an admin or removes admin from it,
  * putting the identity the server answers in the list, and `adminChange` is
@@ -51,12 +53,14 @@ import type { DraftSnapshot, Sources } from "./lib/snapshot.ts";
 import { EMPTY, changesFor } from "./lib/snapshot.ts";
 import type { AgentCreation } from "./lib/agent-creation.ts";
 import type { DisplayNameDraft } from "./lib/display-name.ts";
+import type { IdentityDeletion } from "./lib/identity-deletion.ts";
 import type { IdentityList } from "./lib/identity-list.ts";
 import type { Live } from "../live/index.ts";
 import { createAdminChanges } from "./lib/admin-change.ts";
 import { createAgentCreation } from "./lib/agent-creation.ts";
 import { createDisplayName } from "./lib/display-name.ts";
 import { createIdentityActions } from "./lib/identity-actions.ts";
+import { createIdentityDeletion } from "./lib/identity-deletion.ts";
 import { createIdentityList } from "./lib/identity-list.ts";
 import { listenersOf } from "./lib/listeners.ts";
 
@@ -187,6 +191,11 @@ export interface Identities extends AdminChanges {
   readonly actions: (name: IdentityName) => IdentityActions;
   /** Creating an agent the caller owns. */
   readonly creation: AgentCreation;
+  /**
+   * The identity just deleted elsewhere whose open profile closed, for a notice, until `dismiss`: `null` if none.
+   * With `live`, an identity deleted elsewhere leaves the list at once, and a profile open on it closes.
+   */
+  readonly deletion: Pick<IdentityDeletion, "dismiss" | "snapshot" | "subscribe">;
 }
 
 /** The composer store: a draft for each message box, and for each display name being edited. */
@@ -222,7 +231,8 @@ export function createComposer(options: ComposerOptions): Composer {
   const { client } = options;
   const drafts = new Map<string, Draft>();
   const displayNames = new Map<string, DisplayNameDraft>();
-  const list = createIdentityList({ client, live: options.live ?? null });
+  const deletion = createIdentityDeletion();
+  const list = createIdentityList({ client, deleted: deletion.closeIfOpen, live: options.live ?? null });
   const load = loaderOf(list, options.commands);
   const readers = listenersOf(load);
   function registered(): readonly Command[] {
@@ -242,6 +252,7 @@ export function createComposer(options: ComposerOptions): Composer {
     identities: {
       ...createAdminChanges({ client, identities: list.identities, publish: list.publish }),
       ...ownerPowersOf(options, list),
+      deletion,
       snapshot: list.identities,
       subscribe: readers.add,
     },
