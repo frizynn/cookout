@@ -1,7 +1,7 @@
+import type { AgentTool, Identity, Token, TokenHash } from "../../index.ts";
 import type { CommandTokenGrant, Storage, StorageUnavailable, TokenLookup } from "../../../storage/server.ts";
 import { Context, DateTime, Effect, Option, Predicate, String as Str } from "effect";
-import type { Identity, Token, TokenHash } from "../../index.ts";
-import { sessionCookieName, token } from "../../index.ts";
+import { agentToolHeader, isAgentTool, sessionCookieName, token } from "../../index.ts";
 import type { MessageId } from "../../../messages/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { Secrets } from "../../../secrets/server.ts";
@@ -42,6 +42,51 @@ const outsideCommandThread: Refusal = {
 const CommandThread = Context.Reference<Option.Option<MessageId>>("cookout/identities/CommandThread", {
   defaultValue: Option.none,
 });
+
+const AgentToolSent = Context.Reference<Option.Option<AgentTool>>("cookout/identities/AgentToolSent", {
+  defaultValue: Option.none,
+});
+
+const NO_AGENT_TOOL = {};
+
+const sentAgentTool: Effect.Effect<{ readonly agentTool?: AgentTool }> = Effect.gen(function* agentToolField() {
+  const sent = yield* AgentToolSent;
+  return Option.match(sent, { onNone: () => NO_AGENT_TOOL, onSome: (agentTool) => ({ agentTool }) });
+});
+
+const badAgentTool: Refusal = {
+  code: "invalid_request",
+  message: `The ${agentToolHeader} header must be 1-40 lowercase letters, digits or -, such as claude-code.`,
+  status: 400,
+};
+
+function agentAsHuman(identity: Identity, tool: AgentTool): Refusal {
+  return {
+    code: "agent_as_human",
+    details: { agentTool: tool, identity: identity.name },
+    message: `${identity.name} is a human identity, and this request came from ${tool}, an agent tool. Give the agent its own agent identity and token, or set COOKOUT_ALLOW_HUMAN=1 if you mean to act as this human from it.`,
+    status: 403,
+  };
+}
+
+interface AgentToolRequest {
+  readonly headers: Readonly<Record<string, string | undefined>>;
+  readonly identity: Identity;
+}
+
+function agentToolOf({ headers, identity }: AgentToolRequest): Effect.Effect<Option.Option<AgentTool>, Refusal> {
+  const sent = headers[agentToolHeader] ?? "";
+  if (sent === "") {
+    return Effect.succeedNone;
+  }
+  if (!isAgentTool(sent)) {
+    return Effect.fail(badAgentTool);
+  }
+  if (identity.kind === "human") {
+    return Effect.fail(agentAsHuman(identity, sent));
+  }
+  return Effect.succeedSome(sent);
+}
 
 interface RequestTarget {
   readonly method: string;
@@ -146,4 +191,14 @@ export const issueToken: Effect.Effect<IssuedToken, never, Secrets> = Effect.gen
   return { hash: yield* secrets.hashToken(token), token };
 });
 
-export { CommandThread, type Credentials, type Principal, credentialsOf, requireCommandRoute, sentToken };
+export {
+  AgentToolSent,
+  CommandThread,
+  agentToolOf,
+  type Credentials,
+  type Principal,
+  credentialsOf,
+  requireCommandRoute,
+  sentAgentTool,
+  sentToken,
+};

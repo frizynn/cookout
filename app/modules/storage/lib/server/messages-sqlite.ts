@@ -1,12 +1,12 @@
+import type { AgentTool, IdentityName } from "../../../identities/index.ts";
 import type { AppendMessageResult, ChannelPageRequest, MessagesSection, NewMessage, Placement } from "./messages.ts";
 import { Array as Arr, Effect, Option, Predicate, Schema, pipe } from "effect";
 import type { Author, ListMessagesResponse, Message, MessageId, ThreadResponse } from "../../../messages/index.ts";
-import { isIdentityName, isOwner } from "../../../identities/index.ts";
+import { isAgentTool, isIdentityName, isOwner } from "../../../identities/index.ts";
 import { isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
 import { recordAppended, sqliteInbox } from "./inbox-sqlite.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { CommandCallsSection } from "./command-calls.ts";
-import type { IdentityName } from "../../../identities/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { MessageReader } from "./inbox-sqlite.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
@@ -27,10 +27,12 @@ const MessageIdColumn = Schema.Int.pipe(Schema.refine(isMessageId));
 const IdentityNameColumn = Schema.String.pipe(Schema.refine(isIdentityName));
 const MentionsColumn = Schema.fromJsonString(Schema.Array(IdentityNameColumn));
 const OwnerColumn = Schema.String.pipe(Schema.refine(isOwner));
+const AgentToolColumn = Schema.String.pipe(Schema.refine(isAgentTool));
 const MentionsText = Schema.fromJsonString(Schema.Array(Schema.String));
 const JsonText = Schema.fromJsonString(Schema.Json);
 
 const MessageRow = Schema.Struct({
+  agent_tool: Schema.NullOr(AgentToolColumn),
   author_name: IdentityNameColumn,
   author_owner: Schema.NullOr(OwnerColumn),
   channel: Schema.String.pipe(Schema.refine(isChannelName)),
@@ -51,17 +53,19 @@ interface DataField {
 }
 
 const NO_DATA: DataField = {};
+const NO_AGENT_TOOL = {};
 
 const SequenceRow = Schema.Struct({ last_id: MessageIdColumn });
 
 const isFoundRow = Schema.is(Schema.Struct({ found: Schema.Literal(FOUND) }));
 
-const MESSAGE_COLUMNS = `id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at,
+const MESSAGE_COLUMNS = `id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, agent_tool,
   (SELECT count(*) FROM messages AS replies WHERE replies.reply_to = messages.id) AS reply_count,
   (SELECT max(replies.id) FROM messages AS replies WHERE replies.reply_to = messages.id) AS latest_reply_id`;
 
-const INSERT_MESSAGE = `INSERT INTO messages (id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+const INSERT_MESSAGE = `INSERT INTO messages
+  (id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, agent_tool)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 function authorOf(row: MessageRowType): Author {
   if (Predicate.isNull(row.author_owner)) {
@@ -70,9 +74,16 @@ function authorOf(row: MessageRowType): Author {
   return { name: row.author_name, owner: row.author_owner };
 }
 
+function agentToolOf(row: MessageRowType): { readonly agentTool?: AgentTool } {
+  if (Predicate.isNull(row.agent_tool)) {
+    return NO_AGENT_TOOL;
+  }
+  return { agentTool: row.agent_tool };
+}
+
 function messageOf(row: MessageRowType, data: DataField): Message {
   const fields = { author: authorOf(row), channel: row.channel, createdAt: row.created_at, id: row.id };
-  const content = { ...fields, ...data, mentions: row.mentions, text: row.text };
+  const content = { ...fields, ...agentToolOf(row), ...data, mentions: row.mentions, text: row.text };
   if (Predicate.isNull(row.reply_to)) {
     return { ...content, kind: "top-level", latestReplyId: row.latest_reply_id, replyCount: row.reply_count };
   }
@@ -153,8 +164,9 @@ function insert(db: SqliteDatabase, message: Message, data: string | null): Fail
     const mentions = yield* Schema.encodeEffect(MentionsText)(message.mentions).pipe(Effect.mapError(unreadable));
     const owner = message.author.owner ?? null;
     const replyTo = replyToOf(message);
-    const { author, channel, createdAt, id, text } = message;
-    yield* db.run(INSERT_MESSAGE, id, channel, author.name, owner, text, data, replyTo, mentions, createdAt);
+    const { agentTool = null, author, channel, createdAt, id, text } = message;
+    const columns = [id, channel, author.name, owner, text, data, replyTo, mentions, createdAt, agentTool] as const;
+    yield* db.run(INSERT_MESSAGE, ...columns);
   });
 }
 

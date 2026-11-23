@@ -98,6 +98,11 @@ type CreateIdentityRequest = {
   /** Only an agent can have an owner: a human with one is refused with 400. */
   readonly owner?: string;
 };
+/**
+ * The agent tool running a client's process, such as `claude-code`: 1–40 lowercase letters, digits or `-`. The CLI
+ * and the SDK send it in `cookout-agent-tool` when the process's environment shows such a tool runs it.
+ */
+type AgentTool = Brand$1<"AgentTool">;
 declare const brand$3: unique symbol;
 /**
  * A message's ID: a positive whole number. Message IDs are one increasing
@@ -126,6 +131,8 @@ interface MessageFields {
   readonly data?: JsonValue;
   /** Names of the identities the text mentions. */
   readonly mentions: readonly IdentityName[];
+  /** The agent tool the message was posted from, such as `claude-code`. Absent when none was named. */
+  readonly agentTool?: AgentTool;
   readonly createdAt: IsoTime;
 }
 /** A message posted straight into a channel. It may have a thread of replies. */
@@ -361,7 +368,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "lease_held", "lease_required", "lease_lost", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "lease_held", "lease_required", "lease_lost", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
@@ -400,6 +407,8 @@ export type CookoutClientOptions = {
   readonly token?: string;
   /** Where `COOKOUT_URL` and `COOKOUT_TOKEN` are read from. Default: the process's environment (none in a browser). */
   readonly env?: Readonly<Record<string, string | undefined>>;
+  /** The agent tool running this process, such as `claude-code`, sent on every request: a human's token with it is refused with 403 `agent_as_human`, and messages posted record it. Default: with a token from `COOKOUT_TOKEN`, the tool `env` shows (`CLAUDECODE=1` or `AI_AGENT` for Claude Code), unless `COOKOUT_ALLOW_HUMAN=1`. */
+  readonly agentTool?: string;
   /** A lease ID from an earlier `join` (the CLI keeps it in its lease-state file). The client sends it on every request, which renews the lease. */
   readonly leaseId?: LeaseId;
 };
@@ -540,11 +549,7 @@ export type CookoutClient = {
  * doesn't match fails with `CookoutError` code `bad_response`.
  */
 export declare const parseEvent: typeof eventOf;
-/**
- * A client for the server at `url` with `token`, each defaulting to
- * `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing`
- * (status 0) when there is no URL.
- */
+/** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Refusal, type Reply, type SchemaProblem, type ServerSentEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, refusalOf };
+export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentTool, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Refusal, type Reply, type SchemaProblem, type ServerSentEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, refusalOf };
 ```

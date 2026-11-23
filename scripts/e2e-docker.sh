@@ -71,7 +71,7 @@ if grep -qF "$admin_token" <<< "$logs"; then
   exit 1
 fi
 
-COOKOUT_URL="$url" COOKOUT_TOKEN="$admin_token" COOKOUT_STATE_DIR="$scratch/state" \
+COOKOUT_URL="$url" COOKOUT_TOKEN="$admin_token" COOKOUT_STATE_DIR="$scratch/state" COOKOUT_ALLOW_HUMAN=1 \
   node app/main.ts command add example --url http://127.0.0.1:8787/webhook \
   --schema packages/handler-example/command.schema.json \
   --description "The example handler (packages/handler-example) in its own container" > "$scratch/added.json"
@@ -104,7 +104,7 @@ echo "e2e:docker: added the command example; its handler is listening beside the
 echo "e2e:docker: running packages/e2e against $url"
 COOKOUT_E2E_URL="$url" COOKOUT_E2E_ADMIN_TOKEN="$admin_token" pnpm --filter ./packages/e2e test
 
-COOKOUT_URL="$url" COOKOUT_TOKEN="$admin_token" COOKOUT_STATE_DIR="$scratch/state" \
+COOKOUT_URL="$url" COOKOUT_TOKEN="$admin_token" COOKOUT_STATE_DIR="$scratch/state" COOKOUT_ALLOW_HUMAN=1 \
   node app/main.ts channel list > "$scratch/channels.json"
 left=$(node -e 'const { channels } = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")); console.log(channels.map(({ name }) => name).filter((name) => name.startsWith("e2e-")).join(" "))' "$scratch/channels.json")
 if [ -n "$left" ]; then

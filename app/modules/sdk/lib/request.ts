@@ -6,6 +6,7 @@ import type { CookoutConnection } from "../../config/index.ts";
 import type { CookoutErrorCode } from "./errors.ts";
 import type { HeldLease } from "./held-lease.ts";
 import type { LeaseId } from "../../leases/index.ts";
+import { agentToolHeader } from "../../identities/index.ts";
 import { heldLease } from "./held-lease.ts";
 import { isErrorResponse } from "./generated/validators.js";
 import { readCookoutConnection } from "../../config/index.ts";
@@ -45,12 +46,28 @@ function tokenHeaders(token: string | undefined): Readonly<Record<string, string
   return NO_HEADERS;
 }
 
-function headersFor({ lease, token }: ClientConnection): Readonly<Record<string, string>> {
+function agentToolHeaders(agentTool: string | undefined): Readonly<Record<string, string>> {
+  if (typeof agentTool === "string") {
+    return { [agentToolHeader]: agentTool };
+  }
+  return NO_HEADERS;
+}
+
+function headersFor({ agentTool, lease, token }: ClientConnection): Readonly<Record<string, string>> {
+  const sent = { ...tokenHeaders(token), ...agentToolHeaders(agentTool) };
   const leaseId = lease.current();
   if (typeof leaseId === "string") {
-    return { ...tokenHeaders(token), [leaseHeader]: leaseId };
+    return { ...sent, [leaseHeader]: leaseId };
   }
-  return tokenHeaders(token);
+  return sent;
+}
+
+function fromEnvironment(env: ConnectionOptions["env"], given: Partial<CookoutConnection>): Partial<CookoutConnection> {
+  const { agentTool, ...read } = readCookoutConnection(env);
+  if (typeof given.token !== "string" && typeof agentTool === "string") {
+    return { ...read, agentTool };
+  }
+  return read;
 }
 
 function forgetLostLease(lease: HeldLease, code: CookoutErrorCode): void {
@@ -108,7 +125,7 @@ export async function openEvents({ connection, headers, path, query = {} }: Even
 }
 
 export function connectionFor({ env, leaseId, ...given }: ConnectionOptions): ClientConnection {
-  const connection = { ...readCookoutConnection(env), ...given };
+  const connection = { ...fromEnvironment(env, given), ...given };
   const { url = "" } = connection;
   if (url === "") {
     throw new CookoutError({

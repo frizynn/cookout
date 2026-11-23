@@ -139,7 +139,9 @@ function webPage(url: string): string {
 }
 
 function cli(url: string, token: string, args: readonly string[]): unknown {
-  return parseJson(run("env", withEnv({ COOKOUT_TOKEN: token, COOKOUT_URL: url }, bin, args), install));
+  return parseJson(
+    run("env", withEnv({ COOKOUT_ALLOW_HUMAN: "1", COOKOUT_TOKEN: token, COOKOUT_URL: url }, bin, args), install),
+  );
 }
 
 function names(values: unknown, key: string, name: string): readonly unknown[] {

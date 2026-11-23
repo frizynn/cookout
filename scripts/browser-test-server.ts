@@ -31,6 +31,7 @@ async function setup(): Promise<() => Promise<void>> {
   const cookout = await startLine(createInterface({ input: dev.stdout }));
   process.env["COOKOUT_TOKEN"] = cookout.adminToken;
   process.env["COOKOUT_URL"] = cookout.webUrl;
+  process.env["COOKOUT_ALLOW_HUMAN"] = "1";
   return async () => {
     dev.kill("SIGINT");
     await once(dev, "exit");

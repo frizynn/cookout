@@ -4,7 +4,7 @@
  * the requests and answers of posting, threads and channel pages, their
  * paths, and the error codes they refuse with.
  */
-import type { IdentityName, Owner } from "../identities/index.ts";
+import type { AgentTool, IdentityName, Owner } from "../identities/index.ts";
 import type { ChannelName } from "../channels/index.ts";
 import type { IsoTime } from "../time/index.ts";
 
@@ -50,6 +50,8 @@ export interface MessageFields {
   readonly data?: JsonValue;
   /** Names of the identities the text mentions. */
   readonly mentions: readonly IdentityName[];
+  /** The agent tool the message was posted from, such as `claude-code`. Absent when none was named. */
+  readonly agentTool?: AgentTool;
   readonly createdAt: IsoTime;
 }
 
