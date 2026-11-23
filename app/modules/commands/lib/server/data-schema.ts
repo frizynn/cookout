@@ -30,17 +30,10 @@ function dataErrorOf({ instancePath, message = NO_MESSAGE }: AjvError): DataErro
   return { message, path: pathOf(instancePath) };
 }
 
-function messageOf(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
-}
-
 function compileDataSchema(schema: JsonSchema): Result.Result<DataCheck, string> {
   const ajv = new Ajv2020({ allErrors: true, logger: false });
   return Result.try({
-    catch: messageOf,
+    catch: String,
     try: (): DataCheck => {
       const validate = ajv.compile(schema);
       return (data) => {

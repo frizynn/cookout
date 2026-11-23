@@ -1,4 +1,4 @@
-import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
+import { TestCookout, answer, commandFixture, refusal, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { Effect } from "effect";
 import type { TestCookoutService } from "../../../testing/server.ts";
@@ -74,14 +74,32 @@ it.effect("a call to a command that doesn't exist, or into a channel that doesn'
     const noCommand = yield* refusal(() =>
       cookout.client.callCommand("release", { channel: "grill", data: { branch: "main" } }),
     );
+    const notAName = yield* refusal(() =>
+      cookout.client.callCommand("Deploy", { channel: "grill", data: { branch: "main" } }),
+    );
     const noChannel = yield* refusal(() =>
       cookout.client.callCommand("deploy", { channel: "lounge", data: { branch: "main" } }),
     );
 
-    expect([noCommand, noChannel]).toMatchObject([
+    expect([noCommand, notAName, noChannel]).toMatchObject([
+      { code: "command_not_found", status: 404 },
       { code: "command_not_found", status: 404 },
       { code: "channel_not_found", status: 404 },
     ]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a call to a stored command whose schema doesn't compile fails with 500 and posts nothing", () =>
+  Effect.gen(function* storedBadSchema() {
+    const cookout = yield* TestCookout;
+    const stored = commandFixture("deploy");
+    yield* cookout.seedCommand({ ...stored, command: { ...stored.command, schema: { type: "strnig" } } });
+    yield* answer(() => cookout.client.createChannel({ name: "grill" }));
+    const error = yield* refusal(() => cookout.client.callCommand("deploy", { channel: "grill", data: {} }));
+    const { messages } = yield* answer(() => cookout.client.listMessages("grill"));
+
+    expect(error).toMatchObject({ code: "internal_error", status: 500 });
+    expect(messages).toStrictEqual([]);
   }).pipe(Effect.provide(testCookout())),
 );
 

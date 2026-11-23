@@ -22,6 +22,7 @@ interface CommandCall extends Readonly<typeof CallCommandRequestSchema.Type> {
 
 const BAD_REQUEST = 400;
 const NOT_FOUND = 404;
+const INTERNAL_ERROR = 500;
 
 function commandNotFound(name: string): Refusal {
   return { code: "command_not_found", message: `There is no command ${echoed(name)}.`, status: NOT_FOUND };
@@ -52,9 +53,14 @@ function requireDataSchema(schema: JsonSchema): Effect.Effect<void, Refusal> {
   });
 }
 
-function storedCheck(schema: JsonSchema): Effect.Effect<DataCheck> {
+function storedCheck({ name, schema }: Command): Effect.Effect<DataCheck, Refusal> {
   return Result.match(compileDataSchema(schema), {
-    onFailure: (message) => Effect.die(new Error(`A stored command schema doesn't compile: ${message}`)),
+    onFailure: (message) =>
+      Effect.fail({
+        code: "internal_error",
+        message: `The stored schema of the command ${name} doesn't compile: ${message}`,
+        status: INTERNAL_ERROR,
+      }),
     onSuccess: Effect.succeed,
   });
 }
@@ -73,11 +79,11 @@ function storedCommand(name: string): Effect.Effect<Command, Refused, Storage> {
   });
 }
 
-function requireData(name: CommandName, schema: JsonSchema, data: CommandCall["data"]): Effect.Effect<void, Refusal> {
-  return Effect.flatMap(storedCheck(schema), (check) => {
+function requireData(command: Command, data: CommandCall["data"]): Effect.Effect<void, Refusal> {
+  return Effect.flatMap(storedCheck(command), (check) => {
     const errors = check(data);
     if (Arr.isReadonlyArrayNonEmpty(errors)) {
-      return Effect.fail(dataRefused(name, errors));
+      return Effect.fail(dataRefused(command.name, errors));
     }
     return Effect.void;
   });
@@ -91,7 +97,7 @@ function callCommand({
 }: CommandCall): Effect.Effect<CallCommandResponse, Refused, CallNeeds> {
   return Effect.gen(function* postCall() {
     const command = yield* storedCommand(name);
-    yield* requireData(command.name, command.schema, data);
+    yield* requireData(command, data);
     const messages = yield* Messages;
     const { message } = yield* messages.post(caller, {
       channel,
