@@ -1,11 +1,12 @@
 /**
  * The one source of randomness and hashing: bearer tokens, what the store
- * keeps instead of a token, lease IDs and command secrets. The live Layer uses `node:crypto`;
+ * keeps instead of a token, lease IDs, command secrets, command tokens, call
+ * IDs and the signature of a webhook delivery. The live Layer uses `node:crypto`;
  * tests count instead, with the Layer `testing` builds over this one.
  */
+import type { CallId, CommandSecret } from "../commands/index.ts";
 import { Context, Layer } from "effect";
 import type { Token, TokenHash } from "../identities/index.ts";
-import type { CommandSecret } from "../commands/index.ts";
 import type { Effect } from "effect";
 import type { LeaseId } from "../leases/index.ts";
 import { liveSecrets } from "./lib/server/live.ts";
@@ -19,6 +20,18 @@ export interface SecretsService {
   readonly newLeaseId: Effect.Effect<LeaseId>;
   /** A new command secret, for signing webhook deliveries: `hmac_` and 256 random bits. */
   readonly newCommandSecret: Effect.Effect<CommandSecret>;
+  /**
+   * The command token sent with one command call's webhook delivery. Every command token is issued here, so the
+   * server can later record it and let it post as the command's handler identity.
+   */
+  readonly newCommandToken: Effect.Effect<Token>;
+  /** A new call ID: `call_` and 128 random bits. */
+  readonly newCallId: Effect.Effect<CallId>;
+  /**
+   * The signature of a webhook delivery: the HMAC-SHA256 of `body` keyed with the command secret's UTF-8 bytes,
+   * as 64 lowercase hex characters.
+   */
+  readonly signature: (secret: CommandSecret, body: string) => Effect.Effect<string>;
   /** The SHA-256 of `text`, as hex: a file name that doesn't give away what it was made from. */
   readonly digest: (text: string) => Effect.Effect<string>;
 }

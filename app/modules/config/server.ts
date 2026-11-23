@@ -6,6 +6,8 @@ import { Config, Schema } from "effect";
 
 const SHORTEST_LEASE_SECONDS = 1;
 const DEFAULT_LEASE_SECONDS = 60;
+const SHORTEST_WEBHOOK_TIMEOUT_SECONDS = 1;
+const DEFAULT_WEBHOOK_TIMEOUT_SECONDS = 5;
 
 const isPublicUrl = Schema.makeFilter(
   (url: string) =>
@@ -37,6 +39,15 @@ export const leaseSeconds = Config.schema(
   Schema.Int.check(Schema.isGreaterThanOrEqualTo(SHORTEST_LEASE_SECONDS)),
   "COOKOUT_LEASE_SECONDS",
 ).pipe(Config.withDefault(DEFAULT_LEASE_SECONDS));
+
+/**
+ * `COOKOUT_WEBHOOK_TIMEOUT_SECONDS`: how long the server waits for a command's handler to answer one webhook
+ * delivery. The working default of 5 s is not settled yet (mattpocock/cookout#63).
+ */
+export const webhookTimeoutSeconds = Config.schema(
+  Schema.Int.check(Schema.isGreaterThanOrEqualTo(SHORTEST_WEBHOOK_TIMEOUT_SECONDS)),
+  "COOKOUT_WEBHOOK_TIMEOUT_SECONDS",
+).pipe(Config.withDefault(DEFAULT_WEBHOOK_TIMEOUT_SECONDS));
 
 /** `COOKOUT_STATE_DIR`: where the CLI keeps the lease it took with `join`. Empty counts as unset. */
 export const stateDirectory = Config.String("COOKOUT_STATE_DIR").pipe(Config.withDefault(""));

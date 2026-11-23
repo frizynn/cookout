@@ -1,17 +1,18 @@
 import { Array as Arr, Effect, Predicate, Result } from "effect";
 import type { CallCommandResponse, Command, CommandName, JsonSchema } from "../../index.ts";
 import type { DataCheck, DataError } from "./data-schema.ts";
+import type { StorageUnavailable, StoredCommand } from "../../../storage/server.ts";
 import type { CallCommandRequestSchema } from "./wire.ts";
+import { Deliveries } from "./delivery.ts";
 import type { Identity } from "../../../identities/index.ts";
 import { Messages } from "../../../messages/server.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { Storage } from "../../../storage/server.ts";
-import type { StorageUnavailable } from "../../../storage/server.ts";
 import { compileDataSchema } from "./data-schema.ts";
 import { echoed } from "../../../http/index.ts";
 import { isCommandName } from "../../index.ts";
 
-type CallNeeds = Storage | Messages;
+type CallNeeds = Storage | Messages | Deliveries;
 
 type Refused = Refusal | StorageUnavailable;
 
@@ -65,7 +66,7 @@ function storedCheck({ name, schema }: Command): Effect.Effect<DataCheck, Refusa
   });
 }
 
-function storedCommand(name: string): Effect.Effect<Command, Refused, Storage> {
+function storedCommand(name: string): Effect.Effect<StoredCommand, Refused, Storage> {
   return Effect.gen(function* findCommand() {
     if (!isCommandName(name)) {
       return yield* Effect.fail(commandNotFound(name));
@@ -75,7 +76,7 @@ function storedCommand(name: string): Effect.Effect<Command, Refused, Storage> {
     if (Predicate.isUndefined(stored)) {
       return yield* Effect.fail(commandNotFound(name));
     }
-    return stored.command;
+    return stored;
   });
 }
 
@@ -96,7 +97,8 @@ function callCommand({
   name,
 }: CommandCall): Effect.Effect<CallCommandResponse, Refused, CallNeeds> {
   return Effect.gen(function* postCall() {
-    const command = yield* storedCommand(name);
+    const stored = yield* storedCommand(name);
+    const { command } = stored;
     yield* requireData(command, data);
     const messages = yield* Messages;
     const { message } = yield* messages.post(caller, {
@@ -104,8 +106,11 @@ function callCommand({
       data: { command: command.name, data },
       text: `/${command.name}`,
     });
+    const deliveries = yield* Deliveries;
+    yield* deliveries.deliver({ data, stored, threadId: message.id });
     return { messageId: message.id, threadId: message.id };
   });
 }
 
 export { type CallNeeds, callCommand, requireDataSchema };
+export { deliveriesLayer } from "./delivery.ts";

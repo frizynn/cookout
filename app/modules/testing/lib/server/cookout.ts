@@ -1,16 +1,16 @@
 import { ConfigProvider, Context, Effect, Layer } from "effect";
 import type { CookoutClient, CookoutClientOptions, Identity, Token } from "../../../sdk/index.ts";
 import { FirstBoot, Identities } from "../../../identities/server.ts";
-import { Storage, memoryStorage } from "../../../storage/server.ts";
 import { currentTime, startTestClock } from "./time.ts";
 import type { IdentityFixtureOptions } from "./identities.ts";
+import { Storage } from "../../../storage/server.ts";
 import type { StoredCommand } from "../../../storage/server.ts";
+import { WebhookFake } from "../../../webhook-fake/server.ts";
+import { backingServices } from "./backing.ts";
 import { cookoutServer } from "../../../cli/server.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
 import { identityFixture } from "./identities.ts";
-import { secretsOf } from "./secrets.ts";
 import { serverUrl } from "../../../http/server.ts";
-import { unusableStorage } from "./storage.ts";
 
 export type TestIdentity = {
   readonly identity: Identity;
@@ -33,6 +33,7 @@ export type TestCookoutService = {
   readonly createIdentity: (name: string, options?: CreateTestIdentityOptions) => Effect.Effect<TestIdentity>;
   readonly startSecondServer: Effect.Effect<BootedServer>;
   readonly seedCommand: (stored: StoredCommand) => Effect.Effect<void>;
+  readonly webhook: WebhookFake["Service"];
 };
 
 export class TestCookout extends Context.Service<TestCookout, TestCookoutService>()("cookout/testing/TestCookout") {}
@@ -43,10 +44,6 @@ export type TestCookoutOptions = {
   readonly leaseSeconds?: number;
   readonly publicUrl?: string;
 };
-
-const storageFor = (options: TestCookoutOptions) => (options.storage === "unusable" ? unusableStorage : memoryStorage);
-
-const secretsFor = (options: TestCookoutOptions) => secretsOf(options.secrets ?? "test");
 
 function serverEnv({ leaseSeconds }: TestCookoutOptions): ConfigProvider.ConfigProvider {
   if (typeof leaseSeconds === "number") {
@@ -88,7 +85,7 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
     Effect.gen(function* () {
       yield* startTestClock;
       const scope = yield* Effect.scope;
-      const store = yield* Layer.build(Layer.mergeAll(storageFor(options), secretsFor(options)));
+      const store = yield* Layer.build(backingServices(options));
       const config = serverEnv(options);
       const boot = Effect.gen(function* () {
         const server = yield* Layer.buildWithScope(
@@ -111,6 +108,7 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
         seedCommand: seedCommand(Context.get(store, Storage)),
         startSecondServer: Effect.map(boot, ({ url, adminToken }) => ({ adminToken, url })).pipe(Effect.orDie),
         url: first.url,
+        webhook: Context.get(store, WebhookFake),
       };
     }).pipe(Effect.orDie),
   );

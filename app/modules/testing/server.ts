@@ -14,7 +14,8 @@
  * `twoSessions` gives an identity two separate SDK sessions, and
  * `freshStateFolder`, `leaseStateFiles` and `writeLeaseStates` make and
  * read a CLI session's lease-state folder. `builtWebFolder` stands in for
- * the Vite build that `cookout serve` serves at `/`.
+ * the Vite build that `cookout serve` serves at `/`. A test cookout comes
+ * with its own webhook fake, `webhook`, for a command to deliver its calls to.
  */
 export { answer, refusal } from "./lib/server/calls.ts";
 export { type ChannelFixtureOptions, channelFixture, channelName } from "./lib/server/channels.ts";
