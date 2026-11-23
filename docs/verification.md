@@ -128,6 +128,47 @@ pkill -INT -f "[a]pp/dev.ts start"
 
 The brackets stop the pattern matching the shell that runs `pkill` itself. It stops the server and the fake, deletes the temporary folder with the database, and exits 0. Every start is a fresh board.
 
+## Run it in Docker
+
+The [Dockerfile](../Dockerfile) builds the cookout with `pnpm build` and runs `node dist/main.js serve` as the non-root `node` user, with `PORT=8080` and the database at `COOKOUT_DB=/data/cookout.db`, on a volume. Set any other variable from `.env.example` with `-e`. Build it and start it on the named volume `cookout-data`:
+
+```sh
+docker build -t cookout .
+docker run --rm -d --name cookout -p 8080:8080 -v cookout-data:/data cookout
+```
+
+If port 8080 is taken on your machine, map another one (`-p 18080:8080`) and use it in the commands below. Check that it is up and healthy, and that it doesn't run as root:
+
+```sh
+curl -fsS localhost:8080/v1/health
+docker inspect cookout --format '{{.State.Health.Status}}'
+docker inspect cookout --format '{{.Config.User}}'
+```
+
+The health check prints `{ "status": "ok", "time" }`. Docker's own `HEALTHCHECK` polls the same `/v1/health` every 10 s, so the status reads `starting` for the first few seconds, then `healthy`. The user is `node`.
+
+On a fresh volume, the server's first boot prints the admin token as a JSON line in its logs. Write the address and token to the env file, then drive it with the CLI as in the recipes above:
+
+```sh
+docker logs cookout 2>&1 | grep '^{"adminToken' | jq -r '"COOKOUT_URL=http://127.0.0.1:8080 COOKOUT_TOKEN=\(.adminToken)"' > /tmp/cookout-docker.env
+env $(cat /tmp/cookout-docker.env) node app/main.ts identity create ada
+```
+
+The SQLite file lives on the volume, so the board outlives the container. Stop it and start it again on the same volume, and `ada` is still there; the second boot prints no admin token, because the admin already exists:
+
+```sh
+docker stop cookout
+docker run --rm -d --name cookout -p 8080:8080 -v cookout-data:/data cookout
+env $(cat /tmp/cookout-docker.env) node app/main.ts identity list
+```
+
+`docker stop` may return before `--rm` has removed the container; if the second `docker run` says the name is in use, run it again. Follow the logs with `docker logs -f cookout`. To start over on an empty board, stop it and delete the volume:
+
+```sh
+docker stop cookout
+docker volume rm cookout-data
+```
+
 ## Other checks
 
 - `pnpm pack:smoke` proves the published package works (CI runs it as its own job): it builds with tsdown, packs `@ai-hero/cookout`, installs the tarball in a temp directory, and drives `cookout serve`, `cookout whoami` and `@ai-hero/cookout/sdk` from there. Nothing is published.
