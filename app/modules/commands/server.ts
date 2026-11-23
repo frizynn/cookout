@@ -30,11 +30,11 @@ import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { addCommand, rotateCommandSecret } from "./lib/server/add.ts";
 import { callCommand, deliveriesLayer } from "./lib/server/call.ts";
 import { commandCallsPath, commandSecretPath, commandsPath } from "./index.ts";
+import { spawningLayer, withBuiltInCommands } from "./lib/server/spawning.ts";
 import type { AddNeeds } from "./lib/server/add.ts";
 import type { CallNeeds } from "./lib/server/call.ts";
 import type { Route } from "../http/server.ts";
 import { Storage } from "../storage/server.ts";
-import { spawningLayer } from "./lib/server/spawning.ts";
 
 const CREATED = 201;
 const ACCEPTED = 202;
@@ -67,7 +67,8 @@ const listRoute: Route<Storage> = {
   handle: () =>
     Effect.gen(function* listCommandsRoute() {
       const storage = yield* Storage;
-      const commands = yield* storage.listCommands;
+      const registered = yield* storage.listCommands;
+      const commands = withBuiltInCommands(registered);
       return yield* HttpServerResponse.schemaJson(ListCommandsResponseSchema)({ commands });
     }),
   method: "GET",
