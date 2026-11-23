@@ -63,4 +63,4 @@ function createAdminChanges(list: AdminList): AdminChanges {
   };
 }
 
-export { type AdminChange, type AdminChanges, type AdminClient, createAdminChanges };
+export { type AdminChanges, type AdminClient, createAdminChanges };
