@@ -11,6 +11,7 @@ export default defineConfig({
         "app/main.ts",
         "app/dev.ts",
         "app/web.tsx",
+        "app/modules/live/lib/event-source.ts",
       ],
       include: ["app/**/*.{ts,tsx}", "packages/handler-example/app/**/*.ts"],
       provider: "v8",
