@@ -1,11 +1,13 @@
 import type { AgentIdentity, Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import { Effect, Option, Predicate, Schema } from "effect";
 import { IdentityRow, toIdentity } from "./identity-row.ts";
+import { memorySetAdmin, sqliteSetAdmin } from "./identity-admins.ts";
 import type { FindIdentity } from "./identity-row.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { PlaceHandler } from "./commands.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
-import { StorageUnavailable } from "./errors.ts";
+import type { StorageUnavailable } from "./errors.ts";
+import { unreadable } from "./errors.ts";
 
 export type TokenLookup =
   | { readonly status: "active"; readonly identity: Identity }
@@ -33,6 +35,7 @@ export type IdentitiesSection = {
   readonly findIdentityByName: (name: IdentityName) => Fails<Identity | undefined>;
   readonly replaceToken: (name: IdentityName, hash: TokenHash) => Fails<ReplaceTokenResult>;
   readonly deleteIdentity: (name: IdentityName) => Fails<DeleteIdentityResult>;
+  readonly setAdmin: ReturnType<typeof sqliteSetAdmin>;
 };
 
 type MemoryIdentities = {
@@ -144,6 +147,7 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
         data.activeTokens.set(hash, name);
         return { identity: { ...identity }, status: "replaced" };
       }),
+    setAdmin: (name, admin) => open(() => memorySetAdmin(data.identities)(name, admin)),
     setOnlyToken: (identity, hash) => open(() => setOnlyTokenIn(data, identity, hash)),
   };
 };
@@ -151,8 +155,6 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
 const TokenRow = Schema.Struct({ name: Schema.NullOr(Schema.String), revoked: Schema.Literals([0, 1]) });
 
 const CountRow = Schema.Struct({ count: Schema.Int });
-
-const unreadable = () => new StorageUnavailable({ message: "The database holds a row this cookout can't read." });
 
 const decode =
   <S extends Schema.Decoder<unknown>>(schema: S) =>
@@ -263,6 +265,7 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
           return { identity: toIdentity(row), status: "replaced" } as const;
         }),
       ),
+    setAdmin: sqliteSetAdmin(db),
     setOnlyToken: (identity, hash) =>
       db.transaction(
         Effect.gen(function* () {
