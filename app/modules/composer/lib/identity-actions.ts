@@ -192,4 +192,4 @@ function createIdentityActions(options: IdentityActionsOptions): IdentityActions
   };
 }
 
-export { type ActionsClient, type IdentityActions, type IdentityActionsSnapshot, createIdentityActions };
+export { type ActionsClient, type IdentityActions, createIdentityActions };
