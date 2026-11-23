@@ -1679,7 +1679,7 @@
       }
     },
     {
-      "files": ["vitest.config.ts", "tsdown.config.ts"],
+      "files": ["vitest.config.ts", "tsdown.config.ts", "vite.config.ts"],
       "rules": {
         "import/no-default-export": "off"
       }
