@@ -3,7 +3,7 @@
 The cookout: a self-hosted, Slack-style board for people and agents. Spec: mattpocock/cookout#1.
 
 - [GLOSSARY.md](GLOSSARY.md): the domain language. Names in code use its terms.
-- `pnpm check` runs every check, as CI does. Run it once before you finish; it must exit 0.
+- `pnpm check` runs every check, as CI does. Run it once before you finish; it must exit 0. It waits while another `pnpm check` runs on the machine ([ADR 0035](docs/adr/0035-one-pnpm-check-at-a-time-per-machine.md)).
 - `pnpm coverage:changed` runs the tests and lists, as `file:line`, every uncovered line or branch in files changed against v1. Run it before `pnpm check` to catch a coverage gap early.
 - `pnpm merge-ticket <N>` merges ticket-N into v1. If it stops on a conflict, resolve it and commit on merge-ticket-N, then run `pnpm merge-ticket <N> --continue`: it checks and pushes, and merges again (reusing your resolution) if v1 moved.
 - Don't run fix, format or lint commands yourself. Commit, and the pre-commit hook fixes and formats what you staged; then fix by hand only what it prints as left over.
