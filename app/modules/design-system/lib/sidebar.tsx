@@ -3,7 +3,7 @@ import type { SidebarParts } from "./parts.ts";
 
 function openStyle(open: boolean): string {
   if (open) {
-    return "fixed inset-y-0 left-0 z-30 flex shadow-xl md:static md:shadow-none";
+    return "fixed top-12 bottom-0 left-0 z-30 flex shadow-xl md:static md:shadow-none";
   }
   return "hidden md:flex";
 }
