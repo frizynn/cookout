@@ -24,7 +24,7 @@ The judgement calls that no check makes. Everything mechanical is a check in `pn
 ## Storage
 
 - An operation that must be atomic is one `Storage` method, so each Layer decides how to make it a transaction.
-- Never edit or reorder a shipped migration; add a new one at the end.
+- Never edit or reorder a shipped migration; add a new one at the end. Migrations apply by position, so one inserted mid-list is skipped on a deployed database (#249). `pnpm check` refuses a list that doesn't begin with the newest `deploy/*` tag's, and merge-ticket one that doesn't begin with v1's.
 
 ## Errors
 

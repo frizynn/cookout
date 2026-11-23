@@ -6,7 +6,8 @@ import { readFileSync } from "node:fs";
 
 interface MigrationOptions {
   readonly cwd: string;
-  readonly files: readonly string[];
+  readonly migrationsBase: string;
+  readonly rules: { readonly appendOnly: readonly string[] };
   readonly ticket: number;
 }
 
@@ -16,19 +17,20 @@ interface Refusal {
 }
 
 const NONE = 0;
-const V1 = "origin/v1";
 
 function insertedMigrations(options: MigrationOptions, file: string): readonly string[] {
-  const base = git(options, "show", `${V1}:${file}`);
+  const base = git(options, "show", `${options.migrationsBase}:${file}`);
   if (!base.ok) {
     return [];
   }
   const head = readFileSync(path.join(options.cwd, file), "utf8");
-  return migrationsInserted({ base: base.output, baseName: V1, file, head });
+  return migrationsInserted({ base: base.output, baseName: options.migrationsBase, file, head });
 }
 
 function appendOnlyMigrations(options: MigrationOptions): Step {
-  const refused = options.files.map((file): Refusal => ({ file, reasons: insertedMigrations(options, file) }));
+  const refused = options.rules.appendOnly.map(
+    (file): Refusal => ({ file, reasons: insertedMigrations(options, file) }),
+  );
   const inserted = refused.filter((refusal: Readonly<Refusal>) => refusal.reasons.length > NONE);
   if (inserted.length === NONE) {
     return DONE;

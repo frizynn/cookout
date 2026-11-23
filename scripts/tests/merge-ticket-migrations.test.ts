@@ -4,6 +4,7 @@ import type { Merged } from "../lib/merge-ticket.ts";
 import path from "node:path";
 import { writeFileSync } from "node:fs";
 
+const ONE_ATTEMPT = 1;
 const TWO_ATTEMPTS = 2;
 
 function refusal(merged: Merged): { readonly files: readonly string[]; readonly reason: string } {
@@ -49,4 +50,22 @@ it("puts v1's new migrations before the ticket's when v1 moved before the push",
 
   expect(merged).toStrictEqual({ attempts: TWO_ATTEMPTS, ok: true, sha: git(origin, "rev-parse", "v1") });
   expect(git(origin, "show", "v1:migrations.ts")).toBe(migrations("a", "b", "c").trim());
+});
+
+it("lets a ticket move a migration that isn't deployed when the base is the deployed commit", {
+  timeout: 10_000,
+}, () => {
+  expect.hasAssertions();
+
+  const { origin, other, work } = repos();
+  git(work, "tag", "deploy/base", "v1");
+  repo(other).push({ "migrations.ts": migrations("a", "b", "c") });
+  git(work, "fetch", "-q", "origin");
+  git(work, "merge", "-q", "--ff-only", "origin/v1");
+  repo(work).commit("the ticket", { "migrations.ts": migrations("a", "c", "b") });
+
+  const merged = repo(work).merge({ migrationsBase: "deploy/base" });
+
+  expect(merged).toStrictEqual({ attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect(git(origin, "show", "v1:migrations.ts")).toBe(migrations("a", "c", "b").trim());
 });

@@ -16,6 +16,7 @@ interface Repos {
 interface Overrides {
   readonly check?: readonly string[];
   readonly install?: readonly string[];
+  readonly migrationsBase?: string;
 }
 
 const TICKET = 7;
@@ -117,6 +118,7 @@ function optionsFor(work: string, overrides: Overrides): MergeOptions {
     log: (line): void => {
       logged.push(line);
     },
+    migrationsBase: overrides.migrationsBase ?? "origin/v1",
     rules,
     ticket: TICKET,
     title: "Add the c table",

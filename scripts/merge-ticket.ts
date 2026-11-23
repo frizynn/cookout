@@ -12,6 +12,7 @@ const ARGUMENT = 2;
 const argument = process.argv.at(ARGUMENT) ?? "";
 const resuming = process.argv.includes("--continue");
 const fixesRedV1 = process.argv.includes("--fixes-red-v1");
+const reordersUndeployed = process.argv.includes("--reorders-undeployed-migrations");
 
 function pnpm(...args: readonly string[]): readonly string[] {
   return ["pnpm", "run", "--silent", ...args];
@@ -43,7 +44,10 @@ const rules: MergeRules = {
 
 const ticket = Number(argument);
 if (!Number.isInteger(ticket) || ticket <= NONE) {
-  fail(SCRIPT, "usage: pnpm merge-ticket <N> [--continue] [--fixes-red-v1], where ticket-N is a local branch.");
+  fail(
+    SCRIPT,
+    "usage: pnpm merge-ticket <N> [--continue] [--fixes-red-v1] [--reorders-undeployed-migrations], where ticket-N is a local branch.",
+  );
 }
 
 function run(options: MergeOptions): Merged {
@@ -98,12 +102,27 @@ requireGreen({
   subject: `ticket-${ticket}`,
 });
 
+function migrationsBase(): string {
+  if (!reordersUndeployed) {
+    return "origin/v1";
+  }
+  const [tag = ""] = gitOutput("tag", "--list", "deploy/*", "--sort=-creatordate").split("\n");
+  if (tag === "") {
+    return fail(SCRIPT, "found no deploy/* tag to compare the migrations list with. Run git fetch --tags.");
+  }
+  log(
+    `WARNING: --reorders-undeployed-migrations compares the migrations list with ${tag}'s, not v1's. Use it only for the ticket that moves a migration production hasn't run.`,
+  );
+  return tag;
+}
+
 const merged: Merged = run({
   attempts: ATTEMPTS,
   check: ["pnpm", "check"],
   cwd: process.cwd(),
   install: ["pnpm", "install", "--frozen-lockfile"],
   log,
+  migrationsBase: migrationsBase(),
   rules,
   ticket,
   title: titleOf(ticket),

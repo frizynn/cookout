@@ -31,6 +31,7 @@ interface MergeOptions {
   readonly cwd: string;
   readonly install: Command;
   readonly log: (line: string) => void;
+  readonly migrationsBase: string;
   readonly rules: MergeRules;
   readonly ticket: number;
   readonly title: string;
@@ -191,7 +192,7 @@ function attempt(options: MergeOptions): Attempt {
   }
   const stepped = firstStop([
     (): Step => merge(options, `ticket-${options.ticket}`, "ours"),
-    (): Step => appendOnlyMigrations({ cwd: options.cwd, files: options.rules.appendOnly, ticket: options.ticket }),
+    (): Step => appendOnlyMigrations(options),
     (): Step => renumberAdrs({ adrs: options.rules.adrs, cwd: options.cwd, log: options.log }),
     (): Step => install(options),
     (): Step => check(options),
@@ -227,7 +228,7 @@ function regenerateChanged(options: MergeOptions, base: string): Step {
 
 function checkAndPush(options: MergeOptions, base: string): Attempt {
   const stepped = firstStop([
-    (): Step => appendOnlyMigrations({ cwd: options.cwd, files: options.rules.appendOnly, ticket: options.ticket }),
+    (): Step => appendOnlyMigrations(options),
     (): Step => renumberAdrs({ adrs: options.rules.adrs, cwd: options.cwd, log: options.log }),
     (): Step => regenerateChanged(options, base),
     (): Step => install(options),

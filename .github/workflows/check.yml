@@ -28,8 +28,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # lint needs the base ref's baseline; drift's hygiene needs origin/v1 and each ADR's first commit.
+          # lint needs the base ref's baseline; drift's hygiene needs origin/v1, each ADR's first commit
+          # and the deploy/* tags, to compare the migrations list with production's.
           fetch-depth: ${{ (matrix.job == 'lint' || matrix.job == 'drift') && '0' || '1' }}
+          fetch-tags: ${{ matrix.job == 'drift' }}
       - uses: ./.github/actions/setup
         with:
           cache-name: ${{ matrix.job }}
