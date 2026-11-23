@@ -46,7 +46,7 @@ With no `COOKOUT_TOKEN` or `COOKOUT_SESSION`, `join` sends your Login, so the ag
 2. else a new agent `reviewer`, owned by you, if the name is free;
 3. else, when someone else has `reviewer`, the agent `<you>/reviewer` (such as `@ada/reviewer`), which it creates if needed.
 
-It prints `{ "agentSessionToken", "issuedAt", "expiresAt", "identity", "created" }`, such as `"identity": "ada/reviewer"` and `"created": true` when this join made the agent. From then on `identity` is the agent's name. The CLI has already kept the token, so nothing needs to read it: from an agent, run `cookout join --as reviewer > /dev/null` to keep it off screen (a refusal still prints on stderr), then `cookout whoami` to see who it joined as.
+It prints `{ "issuedAt", "expiresAt", "identity", "created", "source" }`, never the token (only `--print-env` prints it), such as `"identity": "ada/reviewer"` and `"created": true` when this join made the agent. From then on `identity` is the agent's name. The CLI has already kept the token, so nothing needs to read it, and `source` names the credential the join was sent with (`login`, `COOKOUT_TOKEN` or `COOKOUT_SESSION`).
 
 One agent tool session tree is one agent. The CLI keeps the **agent session token** for this session (Claude Code's `CLAUDE_CODE_SESSION_ID`, which its subagents share) and server under `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then `~/.local/state/cookout`). Every later verb in the session, subagents included, sends it, and each moves its expiry on. `cookout whoami` then shows it:
 

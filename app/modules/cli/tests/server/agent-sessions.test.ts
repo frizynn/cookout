@@ -80,7 +80,7 @@ it.effect("a join in one Claude Code session acts as the agent in that session o
     ]);
 
     expect(results).toMatchObject([
-      { ...succeeded, stdoutJson: issued },
+      { ...succeeded, stdoutJson: { ...issued, created: false, identity: "release-bot", source: "COOKOUT_TOKEN" } },
       { ...succeeded, stdoutJson: { channel: { name: "grill" } } },
       notJoined,
       notJoined,

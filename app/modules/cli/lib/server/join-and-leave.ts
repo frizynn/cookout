@@ -1,6 +1,6 @@
 import type { AgentSessionResponse, JoinRequest, LeaveResponse } from "../../../agent-sessions/index.ts";
 import type { AgentSessionStateFile, AgentSessionStateNeeds } from "./agent-session-state.ts";
-import type { CallFailure, ClientWithAgentSessionState, JoinPlace } from "./adapters/sdk.ts";
+import type { CallFailure, ClientWithAgentSessionState, CredentialSource, JoinPlace } from "./adapters/sdk.ts";
 import { Console, Effect, Option } from "effect";
 import { answered, refused } from "./output.ts";
 import { callClient, joinPlace, withClient, withJoinClient } from "./adapters/sdk.ts";
@@ -17,9 +17,16 @@ interface JoinOptions extends Omit<JoinFlags, "as"> {
   readonly as: Option.Option<IdentityName>;
 }
 
+interface Issued {
+  readonly issued: AgentSessionResponse;
+  readonly source: CredentialSource;
+}
+
+type JoinAnswer = Omit<AgentSessionResponse, "agentSessionToken"> & { readonly source: CredentialSource };
+
 const asMissing: CallFailure = {
   code: "usage",
-  message: "`cookout join` needs --as <name>, the token's own identity.",
+  message: "`cookout join` needs --as <name>: an agent you own, or the token's own agent.",
 };
 
 function noAgentTool(as: IdentityName): CallFailure {
@@ -57,29 +64,37 @@ function joinRequest({ as, force, idleExpiry }: JoinFlags): JoinRequest {
   return asked;
 }
 
-function issue(flags: JoinFlags): Effect.Effect<AgentSessionResponse, CallFailure, AgentSessionStateNeeds> {
-  return withJoinClient(callClient((client) => client.join(joinRequest(flags))));
+function issue(flags: JoinFlags): Effect.Effect<Issued, CallFailure, AgentSessionStateNeeds> {
+  return withJoinClient((opened) =>
+    Effect.map(callClient((client) => client.join(joinRequest(flags)))(opened), (issued) => ({
+      issued,
+      source: opened.source,
+    })),
+  );
 }
 
 function issueAndKeep(
   flags: JoinFlags,
   { file, url }: { readonly file: AgentSessionStateFile; readonly url: string },
-): Effect.Effect<AgentSessionResponse, CallFailure, AgentSessionStateNeeds> {
+): Effect.Effect<JoinAnswer, CallFailure, AgentSessionStateNeeds> {
   return Effect.gen(function* joinAs() {
     const stored = yield* file.read;
     if (Option.isSome(stored)) {
       return yield* Effect.fail(alreadyJoined(stored.value.identity));
     }
-    const issued = yield* issue(flags);
-    yield* file.write({ ...issued, url });
-    return issued;
+    const {
+      issued: { agentSessionToken, ...answer },
+      source,
+    } = yield* issue(flags);
+    yield* file.write({ ...answer, agentSessionToken, url });
+    return { ...answer, source };
   });
 }
 
 function joinIn(
   { file, place, url }: JoinPlace,
   flags: JoinFlags,
-): Effect.Effect<AgentSessionResponse, CallFailure, AgentSessionStateNeeds> {
+): Effect.Effect<JoinAnswer, CallFailure, AgentSessionStateNeeds> {
   const { agentTool = "" } = place;
   if (agentTool === "") {
     return Effect.fail(noAgentTool(flags.as));
@@ -100,24 +115,21 @@ function leaveAndForget(opened: ClientWithAgentSessionState): Effect.Effect<Leav
   });
 }
 
-function join({ as, ...flags }: JoinOptions): Effect.Effect<AgentSessionResponse, CallFailure, AgentSessionStateNeeds> {
+function join({ as, ...flags }: JoinOptions): Effect.Effect<JoinAnswer, CallFailure, AgentSessionStateNeeds> {
   if (Option.isNone(as)) {
     return Effect.fail(asMissing);
   }
   return Effect.flatMap(joinPlace, (place) => joinIn(place, { as: as.value, ...flags }));
 }
 
-function joinForEnvironment({
-  as,
-  ...flags
-}: JoinOptions): Effect.Effect<AgentSessionResponse, CallFailure, AgentSessionStateNeeds> {
+function joinForEnvironment({ as, ...flags }: JoinOptions): Effect.Effect<Issued, CallFailure, AgentSessionStateNeeds> {
   if (Option.isNone(as)) {
     return Effect.fail(asMissing);
   }
   return issue({ as: as.value, ...flags });
 }
 
-function printExport({ agentSessionToken }: AgentSessionResponse): Effect.Effect<void> {
+function printExport({ issued: { agentSessionToken } }: Issued): Effect.Effect<void> {
   return Console.log(`export COOKOUT_SESSION=${agentSessionToken}`);
 }
 

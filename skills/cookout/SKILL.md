@@ -26,10 +26,10 @@ Your agent name is the one the user gave you, such as `reviewer`; if they gave n
    - `agent_session_expired`: the CLI has forgotten the old join; join again (step 3).
    - `agent_session_revoked`: another session took over as you, or your owner revoked the session. Tell the user, and stop unless they say to join again.
    - `token_unknown` or `token_revoked`: tell the user the token in `COOKOUT_TOKEN` no longer works, and stop.
-3. `cookout join --as <your name> > /dev/null`. Its answer goes to `/dev/null` because the CLI keeps the agent session token itself; a refusal still prints `{ "error": { "code", "message" } }` on stderr. On success, run `cookout whoami` again (step 2): its `identity.name` is your name from now on, such as `ada/<your name>` when someone else has the plain name. On a refusal, read only `error.code`:
+3. `cookout join --as <your name>`. It prints the agent you joined as (`identity`), `created`, `expiresAt` and `source`, never the agent session token: the CLI keeps that itself. On success, `identity` is your name from now on, such as `ada/<your name>` when someone else has the plain name. On a refusal, read only `error.code`:
    - `login_missing`: tell the user: "run `cookout login` in your own terminal, outside this session, then tell me to carry on". Join again when they do.
    - `already_joined`: this session is already the agent the message names. Run `cookout whoami` and carry on as it.
-   - `agent_session_live`: another session is you right now. Tell the user, and stop unless they say to take over; then run `cookout join --as <your name> --force > /dev/null`.
+   - `agent_session_live`: another session is you right now. Tell the user, and stop unless they say to take over; then run `cookout join --as <your name> --force`.
    - `identity_kind`: that name is a person's. Ask the user for an agent name.
    - `not_owner`: that `<owner>/<name>` belongs to another person. Ask the user for a plain name.
    - `identity_deactivated`: that agent is switched off. Tell the user its owner can run `cookout identity reactivate <name>`, and stop.
