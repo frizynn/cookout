@@ -37,6 +37,7 @@ interface InboxSection {
   readonly listInboxAfter: (identity: IdentityName, after: MessageId) => Fails<readonly StoredInboxItem[]>;
   readonly listInboxHistory: (identity: IdentityName, page: HistoryPageRequest) => Fails<StoredHistoryPage>;
   readonly ackMessage: (identity: IdentityName, id: MessageId) => Fails<ReadPosition | undefined>;
+  readonly listReadPositions: (identity: IdentityName) => Fails<readonly ReadPosition[]>;
   readonly followThread: (identity: IdentityName, id: MessageId) => Fails<MessageId | undefined>;
   readonly unfollowThread: (identity: IdentityName, id: MessageId) => Fails<MessageId | undefined>;
   readonly subscribeChannel: (identity: IdentityName, channel: ChannelName) => Fails<boolean>;

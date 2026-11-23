@@ -14,6 +14,7 @@ import { counted, threadIdOf } from "./messages.ts";
 import { followersOf, movedTo, scopeOf } from "./inbox.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { StorageUnavailable } from "./errors.ts";
+import { readPositionsIn } from "./read-positions-memory.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
@@ -263,6 +264,10 @@ function memoryInbox({ changeInbox, channelExists, listChannels, read }: BoardAc
     listInboxAfter: (identity, after) =>
       read((board) => Arr.filter(inboxOf({ board, identity }), (item) => item.message.id > after)),
     listInboxHistory: (identity, page) => read((board) => historyPageOf({ board, identity }, page)),
+    listReadPositions: (identity) =>
+      read(({ inbox, messages }) =>
+        readPositionsIn({ messages, positionOf: (scope) => inbox.positions.get(keyOf(identity, scope)) }),
+      ),
     listSubscribedChannels: (identity) =>
       Effect.flatMap(listChannels(), (channels) =>
         read((board) =>
