@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 const URL = "https://github.com/o/r/actions/runs/42";
 const RUN = [{ databaseId: 42 }];
 const POLLS = 2;
+const LAST_TWO = -2;
 const NO_WAITS = 0;
 const ONE_WAIT = 1;
 const COMPLETED = "completed";
@@ -43,7 +44,7 @@ interface Gated {
 
 interface Fake {
   readonly calls: () => readonly string[];
-  readonly gate: (args: readonly string[]) => Gated;
+  readonly gate: (args: readonly string[], base?: readonly string[]) => Gated;
 }
 
 interface Responses {
@@ -59,8 +60,8 @@ function running(name: string): Job {
   return { conclusion: "", name, status: RUNNING };
 }
 
-function view(status: string, jobs: readonly Job[]): unknown {
-  return { jobs, status, url: URL };
+function view(status: string, jobs: readonly Job[], url = URL): unknown {
+  return { jobs, status, url };
 }
 
 function fake(responses: Responses): Fake {
@@ -73,11 +74,12 @@ function fake(responses: Responses): Fake {
   writeFileSync(path.join(dir, "calls.log"), "");
   return {
     calls: (): readonly string[] => readFileSync(path.join(dir, "calls.log"), "utf8").trim().split("\n"),
-    gate: (args): Gated => {
+    gate: (args, base = []): Gated => {
       const logs: string[] = [];
       const sleeps: string[] = [];
       const step = ciGreen({
         args,
+        base,
         cwd: dir,
         gh: ["node", path.join(dir, "gh.mjs")],
         log: (line) => {
@@ -111,7 +113,7 @@ it("passes when the latest Check run has every job green", { timeout: 10_000 }, 
   expect([step, logs]).toStrictEqual([{ kind: "done" }, [`v1's latest Check run is green: ${URL}`]]);
   expect(gh.calls()).toStrictEqual([
     "run list --workflow Check --event push --limit 1 --json databaseId --branch v1",
-    "run view 42 --json status,url,jobs",
+    "run view 42 --json status,conclusion,url,jobs",
   ]);
 });
 
@@ -203,4 +205,39 @@ it.each<Responses & { readonly name: string }>([
   const gh = fake(responses);
 
   expect(reasonOf(gh.gate(["--branch", "v1"]).step)).toMatch(/^Could not read v1's Check run: gh run /u);
+});
+
+const BASE = ["--branch", "v1", "--commit", "base"];
+const BASE_URL = "https://github.com/o/r/actions/runs/41";
+const BASE_RUN = [{ databaseId: 41 }];
+const TICKET = ["--branch", "ticket-7", "--commit", "abc"];
+const TICKET_RED = view(COMPLETED, [done("lint"), done("e2e-docker", "failure")]);
+
+it("says the base was red when the same jobs failed on v1's run for the merge-base", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const gh = fake({
+    list: [RUN, BASE_RUN],
+    view: [TICKET_RED, view(COMPLETED, [done("e2e-docker", "failure")], BASE_URL)],
+  });
+
+  expect(reasonOf(gh.gate(TICKET, BASE).step)).toBe(
+    `v1's latest Check run is red: e2e-docker (failure).\n${URL}\nThe same jobs failed on v1's Check run for v1's merge-base: ${BASE_URL}\nYour base was red; merge the current green v1 into v1 (git merge origin/v1), push, and rerun merge-ticket.`,
+  );
+  expect(gh.calls().slice(LAST_TWO)).toStrictEqual([
+    "run list --workflow Check --event push --limit 1 --json databaseId --branch v1 --commit base",
+    "run view 41 --json status,conclusion,url,jobs",
+  ]);
+});
+
+it.each<Responses & { readonly name: string }>([
+  { list: [RUN, BASE_RUN], name: "the base run was green", view: [TICKET_RED, view(COMPLETED, [done("e2e-docker")])] },
+  { list: [RUN, []], name: "the base has no run", view: [TICKET_RED] },
+  { list: [RUN, BASE_RUN], name: "the base run cannot be read", view: [TICKET_RED, "fail"] },
+])("blames the ticket alone when $name", { timeout: 10_000 }, (responses) => {
+  expect.hasAssertions();
+
+  const gh = fake(responses);
+
+  expect(reasonOf(gh.gate(TICKET, BASE).step)).toBe(`v1's latest Check run is red: e2e-docker (failure).\n${URL}`);
 });

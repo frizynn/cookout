@@ -63,19 +63,26 @@ function sleep(): void {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT)), SLEEP_SLOT, SLEEP_SLOT, WAIT_MS);
 }
 
-function requireGreen(subject: string, args: readonly string[], advice: string): void {
-  const step = ciGreen({ args, cwd: process.cwd(), gh: ["gh"], log, polls: WAITS, sleep, subject });
+interface Gate {
+  readonly advice: string;
+  readonly args: readonly string[];
+  readonly base: readonly string[];
+  readonly subject: string;
+}
+
+function requireGreen({ advice, args, base, subject }: Gate): void {
+  const step = ciGreen({ args, base, cwd: process.cwd(), gh: ["gh"], log, polls: WAITS, sleep, subject });
   if (step.kind === "stopped") {
     fail(SCRIPT, `${step.reason}\nNothing was merged. ${advice}`);
   }
 }
 
-function ticketHead(): string {
-  const head = spawnSync("git", ["rev-parse", `ticket-${ticket}`], { encoding: "utf8" });
-  if (head.status !== EXIT_SUCCESS) {
-    return fail(SCRIPT, `git rev-parse ticket-${ticket} failed: ${head.stderr}`);
+function gitOutput(...args: readonly string[]): string {
+  const ran = spawnSync("git", args, { encoding: "utf8" });
+  if (ran.status !== EXIT_SUCCESS) {
+    return fail(SCRIPT, `git ${args.join(" ")} failed: ${ran.stderr}`);
   }
-  return head.stdout.trim();
+  return ran.stdout.trim();
 }
 
 if (fixesRedV1) {
@@ -83,17 +90,19 @@ if (fixesRedV1) {
     "WARNING: --fixes-red-v1 skips the check of v1's latest Check run. Use it only for the ticket that fixes a red v1.",
   );
 } else {
-  requireGreen(
-    "v1",
-    ["--branch", "v1"],
-    `If ticket-${ticket} is the fix for that red, run pnpm merge-ticket ${ticket} --fixes-red-v1.`,
-  );
+  requireGreen({
+    advice: `If ticket-${ticket} is the fix for that red, run pnpm merge-ticket ${ticket} --fixes-red-v1.`,
+    args: ["--branch", "v1"],
+    base: [],
+    subject: "v1",
+  });
 }
-requireGreen(
-  `ticket-${ticket}`,
-  ["--branch", `ticket-${ticket}`, "--commit", ticketHead()],
-  `Push ticket-${ticket} and wait until every job of its Check run passes.`,
-);
+requireGreen({
+  advice: `Push ticket-${ticket} and wait until every job of its Check run passes.`,
+  args: ["--branch", `ticket-${ticket}`, "--commit", gitOutput("rev-parse", `ticket-${ticket}`)],
+  base: ["--branch", "v1", "--commit", gitOutput("merge-base", `ticket-${ticket}`, "origin/v1")],
+  subject: `ticket-${ticket}`,
+});
 
 const merged: Merged = run({
   attempts: ATTEMPTS,
