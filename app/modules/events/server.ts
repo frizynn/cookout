@@ -9,8 +9,11 @@
  * caller's new read positions, which the `Inbox` service's hub feeds on every
  * ack from any session; and, when the request asks with `?channels=all`,
  * every new message on every channel, every identity created or changed (fed
- * by the `IdentityChanges` hub) and every channel created (fed by the
- * `Channels` service's hub), for the web UI; and a comment
+ * by the `IdentityChanges` hub), every channel created or deleted (fed by the
+ * `Channels` service's hubs), every command registered or rotated (fed by the
+ * `CommandChanges` hub) and, to an agent's owner and to admins, every change
+ * to the agent's agent session (fed by the `AgentSessions` service's hub), for
+ * the web UI; and a comment
  * heartbeat every 15 s, so proxies keep the connection open. On a reconnect
  * with `Last-Event-ID`, the inbox items first replay what the caller missed;
  * only inbox items carry an event ID, so the IDs on one stream strictly increase.
@@ -25,7 +28,10 @@
  * `too_many_streams`, ADR 0033); closing the stream frees its place.
  */
 import {
+  AgentSessionEventSchema,
+  ChannelDeletedEventSchema,
   ChannelEventSchema,
+  CommandEventSchema,
   ConnectedEventSchema,
   IdentityEventSchema,
   InboxItemEventSchema,
@@ -94,7 +100,10 @@ export const eventRoutes: readonly Route<Needs>[] = [eventsRoute];
 
 /** The Schemas of the stream's events, for the SDK's generated validators. */
 export const eventResponseSchemas = {
+  AgentSessionEvent: AgentSessionEventSchema,
+  ChannelDeletedEvent: ChannelDeletedEventSchema,
   ChannelEvent: ChannelEventSchema,
+  CommandEvent: CommandEventSchema,
   ConnectedEvent: ConnectedEventSchema,
   IdentityEvent: IdentityEventSchema,
   InboxItemEvent: InboxItemEventSchema,

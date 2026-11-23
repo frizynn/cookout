@@ -2,7 +2,7 @@
 import type { AgentJoinCollectedResponse, AgentJoinRequestResponse, AgentJoinRequestStartedResponse, AgentSessionResponse, LeaveResponse, ListAgentSessionsResponse, RevokeAgentSessionResponse } from "../../../agent-sessions/index.ts";
 import type { ChannelResponse, ListChannelsResponse } from "../../../channels/index.ts";
 import type { CallCommandResponse, CommandWithSecretResponse, ListCommandsResponse } from "../../../commands/index.ts";
-import type { ChannelEvent, ConnectedEvent, IdentityEvent, InboxItemEvent, MessageEvent, ReadPositionEvent, SubscriptionEvent } from "../../../events/index.ts";
+import type { AgentSessionEvent, ChannelDeletedEvent, ChannelEvent, CommandEvent, ConnectedEvent, IdentityEvent, InboxItemEvent, MessageEvent, ReadPositionEvent, SubscriptionEvent } from "../../../events/index.ts";
 import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../../http/index.ts";
 import type { DeactivateIdentityResponse, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";
 import type { AckAllResponse, AckResponse, FollowResponse, InboxHistoryResponse, InboxResponse, ReadPositionsResponse, SubscriptionResponse } from "../../../inbox/index.ts";
@@ -21,7 +21,10 @@ export declare function isListChannelsResponse(data: unknown): data is ListChann
 export declare function isCallCommandResponse(data: unknown): data is CallCommandResponse;
 export declare function isCommandWithSecretResponse(data: unknown): data is CommandWithSecretResponse;
 export declare function isListCommandsResponse(data: unknown): data is ListCommandsResponse;
+export declare function isAgentSessionEvent(data: unknown): data is AgentSessionEvent;
+export declare function isChannelDeletedEvent(data: unknown): data is ChannelDeletedEvent;
 export declare function isChannelEvent(data: unknown): data is ChannelEvent;
+export declare function isCommandEvent(data: unknown): data is CommandEvent;
 export declare function isConnectedEvent(data: unknown): data is ConnectedEvent;
 export declare function isIdentityEvent(data: unknown): data is IdentityEvent;
 export declare function isInboxItemEvent(data: unknown): data is InboxItemEvent;

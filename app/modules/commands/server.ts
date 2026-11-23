@@ -3,7 +3,7 @@
  * secret (admin only), list them and call one (any identity). Adding a command checks its schema
  * compiles, makes its handler identity, an agent with the command's name
  * (ADR 0027), or reuses an agent of that name, and issues the command's
- * secret from `Secrets`, shown once. Rotating issues a new secret the same way,
+ * secret from `Secrets`, shown once; the live stream announces it to every web UI. Rotating issues a new secret the same way,
  * and the old one signs no delivery from then on. A call's data is checked against the
  * command's JSON Schema, then posted as a top-level message by the caller,
  * and the answer comes without waiting for any delivery to the webhook.
@@ -28,17 +28,17 @@ import { Caller, requireAdmin } from "../identities/server.ts";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { addCommand, rotateCommandSecret } from "./lib/server/add.ts";
 import { commandCallsPath, commandSecretPath, commandsPath } from "./index.ts";
+import type { AddNeeds } from "./lib/server/add.ts";
 import type { CallNeeds } from "./lib/server/call.ts";
 import { Effect } from "effect";
 import type { Route } from "../http/server.ts";
-import type { Secrets } from "../secrets/server.ts";
 import { Storage } from "../storage/server.ts";
 import { callCommand } from "./lib/server/call.ts";
 
 const CREATED = 201;
 const ACCEPTED = 202;
 
-const addRoute: Route<Caller | Storage | Secrets> = {
+const addRoute: Route<Caller | AddNeeds> = {
   handle: () =>
     Effect.gen(function* addCommandRoute() {
       yield* requireAdmin;
@@ -51,7 +51,7 @@ const addRoute: Route<Caller | Storage | Secrets> = {
   path: commandsPath,
 };
 
-const rotateRoute: Route<Caller | Storage | Secrets> = {
+const rotateRoute: Route<Caller | AddNeeds> = {
   handle: (params) =>
     Effect.gen(function* rotateSecretRoute() {
       yield* requireAdmin;
@@ -86,7 +86,7 @@ const callRoute: Route<Caller | CallNeeds> = {
 };
 
 /** The command routes, for the server's route list. They need `Caller`, which `requireToken` provides. */
-export const commandRoutes: readonly Route<Caller | Secrets | CallNeeds>[] = [
+export const commandRoutes: readonly Route<Caller | AddNeeds | CallNeeds>[] = [
   addRoute,
   rotateRoute,
   listRoute,
@@ -105,3 +105,12 @@ export const commandResponseSchemas = {
  * resumes the deliveries a stopped server left pending, with the same call IDs.
  */
 export { deliveriesLayer as commandsLayer } from "./lib/server/call.ts";
+
+/**
+ * The `CommandChanges` hub: registering a command and rotating its secret each publish the command, and the live
+ * stream sends each on as a `command` event.
+ */
+export { CommandChanges, commandChangesLayer } from "./lib/server/changes.ts";
+
+/** The Schema of a command as the server shows it, for the live stream's `command` event. */
+export { CommandSchema } from "./lib/server/wire.ts";
