@@ -34,8 +34,8 @@ function useThreadNews({ me, unread }: Looking): ReadonlyMap<MessageId, ThreadNe
 
 function useSidebarCounts({ me, state }: Counting): SidebarCounts {
   return useMemo(() => {
-    const { inbox, items } = itemsOf(state);
-    return { channels: countsByChannel({ items, me }), inbox: countsOf({ items: inbox, me }) };
+    const { inbox } = itemsOf(state);
+    return { channels: countsByChannel({ items: inbox, me }), inbox: countsOf({ items: inbox, me }) };
   }, [state, me]);
 }
 
