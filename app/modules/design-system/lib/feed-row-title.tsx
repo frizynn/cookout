@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 interface FeedRowTitleParts {
   readonly author: string;
   readonly displayName: string | null;
+  readonly note: string | null;
   readonly bold: boolean;
   readonly action: string;
   readonly channel: string;
@@ -21,6 +22,7 @@ export function FeedRowTitle(parts: FeedRowTitleParts): ReactNode {
     <span className="flex items-baseline gap-1.5 text-[13px]">
       <span className={weightOf(parts.bold)}>{parts.displayName ?? parts.author}</span>
       {parts.displayName !== null && <span className="text-xs text-muted-foreground">{`@${parts.author}`}</span>}
+      {parts.note !== null && <span className="text-xs text-muted-foreground">{parts.note}</span>}
       <span className="text-muted-foreground">{parts.action}</span>
       <span className="truncate font-mono text-xs text-muted-foreground">{`#${parts.channel}`}</span>
       <span className="ml-auto shrink-0 font-mono text-[11px] text-muted-foreground">{parts.time}</span>

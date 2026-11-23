@@ -2,6 +2,7 @@ import { adminClient, clientWith, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { inPane, inProfile } from "./regions.ts";
+import { rowsOf, subscribedReader } from "./inbox-reader.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
 import { openAt } from "./render.tsx";
 
@@ -61,6 +62,23 @@ it("a deactivated author keeps their display name on their messages, marked (dea
     expect(within(messages).getByRole("listitem").textContent).toMatch(
       /Release Bot@web-off-author-bot\(deactivated\)agent.*Deployed/u,
     );
+  });
+
+  close();
+});
+
+it("an inbox row marks a deactivated author (deactivated)", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { poster, reader } = await subscribedReader("web-off-inbox");
+  await poster.createMessage({ channel: "web-off-inbox", text: "Deployed" });
+  await adminClient().deactivateIdentity("web-off-inbox-poster");
+  const close = openAt({ client: reader, hash: "#/inbox" });
+
+  await waitFor(() => {
+    expect(rowsOf("Activity")).toStrictEqual([
+      "#/channels/web-off-inbox New in #web-off-inboxweb-off-inbox-poster(deactivated)posted in#web-off-inboxjust nowDeployed",
+    ]);
   });
 
   close();
