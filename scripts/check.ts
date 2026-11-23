@@ -122,7 +122,7 @@ function statusOf(outcome: Outcome): string {
 
 function warnOverBudget(outcome: Outcome): void {
   const { budget, name } = outcome.check;
-  const warning = `${name} took ${outcome.seconds.toFixed(DECIMALS)}s, over its ${String(budget)}s budget. A time budget warns and never fails the run (ADR 0029).`;
+  const warning = `${name} took ${outcome.seconds.toFixed(DECIMALS)}s, over its ${String(budget)}s budget. A time budget warns and never fails the run (ADR 0030).`;
   if (inCi) {
     console.log(`::warning title=${name} over its time budget::${warning}`);
     return;

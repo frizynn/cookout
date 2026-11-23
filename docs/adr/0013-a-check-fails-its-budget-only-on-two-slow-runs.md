@@ -1,6 +1,6 @@
 # A check fails its CI budget only on two slow runs in a row
 
-Superseded by [ADR 0029](0029-time-budgets-warn-and-never-block.md): a check over its budget now only warns, and is not timed again.
+Superseded by [ADR 0030](0030-time-budgets-warn-and-never-block.md): a check over its budget now only warns, and is not timed again.
 
 Each check in `scripts/check.ts` has a time budget that fails CI, but the same commit's checks vary by about half between runners (on 8832db5 the `exports` check took 2.1s on the push run and 3.3s on the PR run against its 3s budget, and a tests shard took 18.8s and 26.0s), so a single timing failed merges on runner noise (mattpocock/cookout#34). In CI, a check that passes but runs over its budget is therefore run again on its own, after the job's other checks, and fails only if that second run is over budget too; budgets stay at about twice the measured CI time, with no added margin. A check that has become slow is slow on both runs and still fails, while one noisy timing does not. The report shows the first time next to the second, so drift stays visible.
 
