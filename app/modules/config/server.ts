@@ -8,6 +8,10 @@ const SHORTEST_LEASE_SECONDS = 1;
 const DEFAULT_LEASE_SECONDS = 60;
 const SHORTEST_WEBHOOK_TIMEOUT_SECONDS = 1;
 const DEFAULT_WEBHOOK_TIMEOUT_SECONDS = 5;
+const SHORTEST_WEBHOOK_RETRY_DELAY_SECONDS = 0;
+const DEFAULT_WEBHOOK_RETRY_DELAY_SECONDS = 10;
+const SMALLEST_WEBHOOK_RETRY_FACTOR = 1;
+const DEFAULT_WEBHOOK_RETRY_FACTOR = 2.3;
 
 const isPublicUrl = Schema.makeFilter(
   (url: string) =>
@@ -48,6 +52,23 @@ export const webhookTimeoutSeconds = Config.schema(
   Schema.Int.check(Schema.isGreaterThanOrEqualTo(SHORTEST_WEBHOOK_TIMEOUT_SECONDS)),
   "COOKOUT_WEBHOOK_TIMEOUT_SECONDS",
 ).pipe(Config.withDefault(DEFAULT_WEBHOOK_TIMEOUT_SECONDS));
+
+/**
+ * `COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS`: how long the server waits before it first retries a webhook delivery that
+ * got no `2xx`. Each later wait is `COOKOUT_WEBHOOK_RETRY_FACTOR` times the one before, for 5 retries. The working
+ * defaults of 10 s and 2.3 wait about 10 s, 23 s, 53 s, 2 min and 5 min; they are not settled yet
+ * (mattpocock/cookout#65).
+ */
+export const webhookRetryDelaySeconds = Config.schema(
+  Schema.Finite.check(Schema.isGreaterThanOrEqualTo(SHORTEST_WEBHOOK_RETRY_DELAY_SECONDS)),
+  "COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS",
+).pipe(Config.withDefault(DEFAULT_WEBHOOK_RETRY_DELAY_SECONDS));
+
+/** `COOKOUT_WEBHOOK_RETRY_FACTOR`: how many times longer each wait between webhook retries is than the one before. */
+export const webhookRetryFactor = Config.schema(
+  Schema.Finite.check(Schema.isGreaterThanOrEqualTo(SMALLEST_WEBHOOK_RETRY_FACTOR)),
+  "COOKOUT_WEBHOOK_RETRY_FACTOR",
+).pipe(Config.withDefault(DEFAULT_WEBHOOK_RETRY_FACTOR));
 
 /** `COOKOUT_STATE_DIR`: where the CLI keeps the lease it took with `join`. Empty counts as unset. */
 export const stateDirectory = Config.String("COOKOUT_STATE_DIR").pipe(Config.withDefault(""));

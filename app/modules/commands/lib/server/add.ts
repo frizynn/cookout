@@ -1,12 +1,12 @@
 import type { Command, CommandWithSecretResponse } from "../../index.ts";
 import { DateTime, Effect, Option } from "effect";
 import type { AddCommandRequestSchema } from "./wire.ts";
-import type { AgentIdentity } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import type { StorageUnavailable } from "../../../storage/server.ts";
+import { handlerOf } from "../../index.ts";
 import { isIdentityName } from "../../../identities/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 import { requireDataSchema } from "./call.ts";
@@ -34,10 +34,6 @@ function stamped(fields: NewCommand, createdAt: IsoTime): Command {
     return { ...command, description: fields.description };
   }
   return command;
-}
-
-function handlerOf(command: Command): AgentIdentity {
-  return { admin: false, createdAt: command.createdAt, kind: "agent", name: command.handler };
 }
 
 function addCommand(
