@@ -1,4 +1,4 @@
-import { field, parseJson, text } from "./lib/json.ts";
+import { field, list, parseJson, text } from "./lib/json.ts";
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
 import type { ChildProcessByStdio } from "node:child_process";
@@ -72,6 +72,9 @@ function run(command: string, args: readonly string[], cwd = "."): string {
 }
 
 const adminToken = run("openssl", ["rand", "-hex", "32"]).trim();
+const AGENT = "pack-agent";
+const CHANNEL = "pack";
+const MESSAGE = "kept across a restart";
 
 function check(ok: boolean, message: string): void {
   if (!ok) {
@@ -135,8 +138,12 @@ function webPage(url: string): string {
   return run("curl", ["-fsS", `${url}/`]);
 }
 
-function whoami(url: string, token: string): string {
-  return run("env", withEnv({ COOKOUT_TOKEN: token, COOKOUT_URL: url }, bin, ["whoami"]), install);
+function cli(url: string, token: string, args: readonly string[]): unknown {
+  return parseJson(run("env", withEnv({ COOKOUT_TOKEN: token, COOKOUT_URL: url }, bin, args), install));
+}
+
+function names(values: unknown, key: string, name: string): readonly unknown[] {
+  return (list(field(values, key)) ?? []).map((value) => field(value, name));
 }
 
 function installTarball(): void {
@@ -165,19 +172,36 @@ function printsNoToken(server: Server): boolean {
   return server.lines.every((line) => !JSON.stringify(line).includes(adminToken));
 }
 
+function seed(url: string): void {
+  const created = cli(url, adminToken, ["identity", "create", AGENT, "--kind", "agent", "--owner", "admin"]);
+  const agentToken = text(field(created, "token")) ?? "";
+  check(agentToken !== "", `cookout identity create ${AGENT} answers with a token`);
+  cli(url, adminToken, ["channel", "create", CHANNEL]);
+  const posted = field(cli(url, agentToken, ["message", "post", CHANNEL, MESSAGE]), "message");
+  check(field(posted, "text") === MESSAGE, `${AGENT} posts a message in #${CHANNEL}`);
+}
+
 async function boot(): Promise<void> {
   const first = await serve();
   check(printsNoToken(first), "the first boot prints nothing of COOKOUT_ADMIN_TOKEN");
   check(typeof parseJson(health(first.url)) === "object", `curl -fsS ${first.url}/v1/health succeeds`);
   check(webPage(first.url).includes('<div id="root">'), `curl -fsS ${first.url}/ answers with the built web UI`);
+  seed(first.url);
   check((await first.stop()) === EXIT_SUCCESS, "cookout serve exits 0 on SIGTERM");
 }
 
 async function restart(): Promise<void> {
   const second = await serve();
   check(printsNoToken(second), "a restart on the same COOKOUT_DB prints nothing of COOKOUT_ADMIN_TOKEN");
-  const answer = parseJson(whoami(second.url, adminToken));
+  const answer = cli(second.url, adminToken, ["whoami"]);
   check(field(field(answer, "identity"), "name") === "admin", "COOKOUT_ADMIN_TOKEN passes cookout whoami as admin");
+  const identities = names(cli(second.url, adminToken, ["identity", "list"]), "identities", "name");
+  check(identities.includes(AGENT), `after a restart, cookout identity list still has ${AGENT}`);
+  const messages = cli(second.url, adminToken, ["message", "list", CHANNEL]);
+  const kept = (list(field(messages, "messages")) ?? []).some(
+    (message) => field(message, "text") === MESSAGE && field(field(message, "author"), "name") === AGENT,
+  );
+  check(kept, `after a restart, cookout message list ${CHANNEL} reads back ${AGENT}'s message`);
   await second.stop();
 }
 
