@@ -10,12 +10,13 @@ const TEXT = { button: "Call", calling: "Calling…", data: "Data", form: "Call 
 
 interface CallFormProps {
   readonly call: CallState;
+  readonly callData: string;
   readonly commands: readonly Command[];
   readonly messages: ChannelMessages;
 }
 
 export function CallForm(props: CallFormProps): ReactNode {
-  const { call } = props.messages;
+  const { call, editCallData } = props.messages;
   const handleCall = useCallback(
     (field: (name: string) => string) => {
       call(field("command"), field("data"));
@@ -27,7 +28,7 @@ export function CallForm(props: CallFormProps): ReactNode {
     <>
       <FieldsForm label={TEXT.form} onSubmit={handleCall}>
         <CommandSelect commands={props.commands} />
-        <DataArea label={TEXT.data} name="data" />
+        <DataArea label={TEXT.data} name="data" onEdit={editCallData} value={props.callData} />
         <SubmitButton disabled={calling}>
           {calling && TEXT.calling}
           {!calling && TEXT.button}

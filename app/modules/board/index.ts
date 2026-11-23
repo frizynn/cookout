@@ -11,7 +11,8 @@
  * reloads the replies. `commands` is every registered command, loaded when its
  * first reader subscribes; a channel's `call` calls a command with data typed
  * as JSON, posting the call message in that channel, and keeps the schema
- * errors of data the command refuses. With `live`, the board opens the live stream when any of
+ * errors of data the command refuses; `editCallData` holds the data being
+ * typed (`callData`), which only a successful call empties. With `live`, the board opens the live stream when any of
  * its stores is first read, and each new message on it joins the loaded
  * channel or thread it belongs to (a reply also counts in its top-level
  * message's replies), so messages from others appear without a reload. A refusal

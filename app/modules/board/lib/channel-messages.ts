@@ -19,6 +19,7 @@ interface Loaded {
   readonly older: OlderState;
   readonly read: ReadState;
   readonly call: CallState;
+  readonly callData: string;
 }
 
 type ChannelMessagesState = { readonly status: "loading" } | Failure | Loaded;
@@ -28,6 +29,7 @@ interface ChannelMessages {
   readonly snapshot: () => ChannelMessagesState;
   readonly loadOlder: () => void;
   readonly call: (command: string, data: string) => void;
+  readonly editCallData: (data: string) => void;
 }
 
 interface LiveChannelMessages extends ChannelMessages {
@@ -69,6 +71,7 @@ async function loadNewest(channel: Channel): Promise<void> {
     const { hasMore, messages } = await channel.client.listMessages(channel.name, { limit: channel.pageSize });
     channel.publish({
       call: { status: "idle" },
+      callData: "",
       hasMore,
       messages,
       older: { status: "idle" },
@@ -110,7 +113,7 @@ async function addNewest(channel: Channel, command: string): Promise<void> {
   update(channel, (loaded) => {
     const newest = Math.max(...loaded.messages.map((message) => message.id));
     const added = page.messages.filter((message) => message.id > newest);
-    return { ...loaded, call: { command, status: "called" }, messages: [...loaded.messages, ...added] };
+    return { ...loaded, call: { command, status: "called" }, callData: "", messages: [...loaded.messages, ...added] };
   });
 }
 
@@ -185,6 +188,9 @@ function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
   return {
     call: (command, data) => {
       queue = callAfter(queue, channel, { command, data });
+    },
+    editCallData: (data) => {
+      update(channel, (loaded) => ({ ...loaded, callData: data }));
     },
     loadOlder: () => {
       queue = loadOlderAfter(queue ?? loadNewest(channel), channel);
