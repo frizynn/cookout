@@ -1,11 +1,11 @@
 import { Sidebar, SidebarBody, SidebarFooter } from "../../design-system/index.tsx";
-import { Account } from "./account.tsx";
 import type { Board } from "../../board/index.ts";
 import type { Identity } from "../../sdk/index.ts";
 import type { Layout } from "../../layout/index.ts";
 import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
 import { SidebarLinks } from "./sidebar-links.tsx";
+import { SidebarSettings } from "./sidebar-settings.tsx";
 import type { Unread } from "../../unread/index.ts";
 import { useSyncExternalStore } from "react";
 
@@ -29,7 +29,7 @@ export function SidebarView(props: SidebarProps): ReactNode {
         <SidebarLinks board={props.board} route={props.route} unread={props.unread} />
       </SidebarBody>
       <SidebarFooter>
-        <Account identity={props.identity} layout={layout} />
+        <SidebarSettings identity={props.identity} layout={layout} />
       </SidebarFooter>
     </Sidebar>
   );

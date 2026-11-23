@@ -37,10 +37,11 @@ The server, `cookout serve`:
 Every other verb of the CLI, and the SDK's defaults:
 
 - `COOKOUT_URL` (no default): The server to talk to, such as `http://localhost:3000`.
-- `COOKOUT_TOKEN` (no default): The bearer token to send.
+- `COOKOUT_TOKEN` (no default): The bearer token to send. Unset, and with no agent tool detected, the CLI sends the Login that `cookout login --token` kept for `COOKOUT_URL`.
 - `COOKOUT_STATE_DIR` (no default): Where the CLI keeps the lease it took with `cookout join`.
 - `XDG_STATE_HOME` (no default): When `COOKOUT_STATE_DIR` is unset, the CLI keeps its state in `cookout/` under it.
-- `HOME` (no default): When neither of the above is set, the CLI keeps its state in `~/.local/state/cookout`. With none of the three, `join` is refused with `state_folder_missing`.
+- `XDG_CONFIG_HOME` (no default): The CLI keeps the Login from `cookout login` in `cookout/credentials` under it (mode 600, one entry per server URL), or in `~/.config/cookout/credentials` when it is unset.
+- `HOME` (no default): When neither of the above is set, the CLI keeps its state in `~/.local/state/cookout`. With none of the three, `join` is refused with `state_folder_missing`. It is also where `~/.config` is, for the Login.
 - `CLAUDECODE` (no default): Claude Code sets it to `1` in the processes it runs. Seeing it (or `AI_AGENT`) with a token from `COOKOUT_TOKEN`, the CLI and the SDK send `cookout-agent-tool: claude-code` on every request. The server then refuses a human identity's token with 403 `agent_as_human` (exit code 1 from the CLI), and records `agentTool` on the messages an agent identity posts. Give the agent its own agent identity and token.
 - `AI_AGENT` (no default): Claude Code sets it too; any value counts as `CLAUDECODE=1` does, unless another tool's marker below is set (opencode sets `AI_AGENT` as well).
 - `CODEX_THREAD_ID` (no default): OpenAI Codex sets it in the commands it runs; any value makes the tool `codex`, as does `CODEX_CI=1`.

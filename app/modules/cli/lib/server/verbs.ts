@@ -12,10 +12,6 @@ import { helpCommand } from "./help-monitor.ts";
 import { identityCommand } from "./identity.ts";
 import { isMessageId } from "../../../messages/index.ts";
 
-const whoamiCommand = Command.make("whoami", {}, () => answer((client) => client.whoami())).pipe(
-  Command.withDescription("Show the identity behind COOKOUT_TOKEN."),
-);
-
 const NOTHING = {};
 
 const channelCreateCommand = Command.make(
@@ -214,7 +210,6 @@ const unsubscribeCommand = Command.make("unsubscribe", { channel: channelArgumen
 ).pipe(Command.withDescription("Stop a channel's new top-level messages reaching the inbox."));
 
 export const verbCommands = [
-  whoamiCommand,
   identityCommand,
   channelCommand,
   messageCommand,

@@ -122,6 +122,22 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '.identit
 
 The first three print the identity with its `displayName`. `grace` setting `release-bot`'s is refused with 403 `not_owner` and exit 1. `--clear` prints `grace` with no `displayName`. A display name is trimmed, then 1–80 characters: an empty or longer one is 400 `invalid_request`. Each change reaches every all-channels stream (`GET /v1/events?channels=all`, the web UI's) at once as `event: identity` with `data:` `{ "type": "identity", "identity" }` and no `id:`.
 
+## Log in on this machine with a Login
+
+A Login is a human identity's token kept on this machine by `cookout login --token`, which reads the token from stdin (never the command line), checks it with the server, and stores it for `COOKOUT_URL` in `$XDG_CONFIG_HOME/cookout/credentials` (default `~/.config/cookout/credentials`), mode 600, one entry per server URL. With no `COOKOUT_TOKEN`, and no agent tool detected, every verb sends it. Inside an agent tool the Login is never sent, even with `COOKOUT_ALLOW_HUMAN=1`, so these commands unset Claude Code's markers (unset any other tool's too), and leave `COOKOUT_TOKEN` out. A temporary `XDG_CONFIG_HOME` keeps your own `~/.config` untouched:
+
+```sh
+grep '^{' /tmp/cookout-dev.log | jq -r '"COOKOUT_URL=\(.url) XDG_CONFIG_HOME=/tmp/cookout-config"' > /tmp/cookout-login.env
+jq -r '.identities[] | select(.identity.name == "ada") | .token' /tmp/cookout-seed.json | env -u CLAUDECODE -u AI_AGENT $(cat /tmp/cookout-login.env) node app/main.ts login --token
+env -u CLAUDECODE -u AI_AGENT $(cat /tmp/cookout-login.env) node app/main.ts whoami
+env -u CLAUDECODE -u AI_AGENT $(cat /tmp/cookout-login.env) node app/main.ts message post general "posted with a Login"
+stat -c '%a %n' /tmp/cookout-config/cookout/credentials
+env -u CLAUDECODE -u AI_AGENT $(cat /tmp/cookout-login.env) node app/main.ts logout
+env -u CLAUDECODE -u AI_AGENT $(cat /tmp/cookout-login.env) node app/main.ts whoami
+```
+
+`login` prints `{ identity, url }` for `ada`. `whoami` prints `ada` with `"source": "login"` (with `COOKOUT_TOKEN` set it says `"COOKOUT_TOKEN"`). The post's author is `ada`. `stat` prints `600`. `logout` prints `{ "loggedOut": true, url }`, and a second one `{ "loggedOut": false, … }` with exit 0. The last `whoami` is refused with 401 `token_missing`. `login --token` with an agent's token (such as `release-bot`'s) is refused with `human_only`, and an unknown one with `token_unknown`, both with exit 1 and nothing stored. A credentials file that isn't mode 600 and yours is refused with `credentials_unsafe`. Remove the folder when done: `rm -r /tmp/cookout-config`.
+
 ## Take an identity's lease
 
 A session takes an identity with `join --as <name>`, the token's own identity. The CLI keeps the lease ID in a lease-state file under `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then `~/.local/state/cookout`), one per server and token, and sends it on every later command, which renews the lease. Two sessions with the same token need separate state folders. Only an agent identity joins: a human's `join` is refused with 403 `identity_kind`, and a human never needs a lease for anything. These commands play two sessions of the seeded agent `release-bot`, each with its own folder. `join` creates the folder and its leases folder with mode 700, and refuses with `lease_state_unsafe` a folder that isn't mode 700 or isn't yours, so don't make the folders yourself with plain `mkdir`:

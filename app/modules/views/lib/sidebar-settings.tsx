@@ -13,7 +13,7 @@ const THEMES = [
   { label: "Dark", value: "dark" },
 ] as const;
 
-interface AccountProps {
+interface SidebarSettingsProps {
   readonly identity: Identity;
   readonly layout: Layout;
 }
@@ -22,7 +22,7 @@ function themesOf(value: string): readonly ThemeChoice[] {
   return themeChoices.filter((choice) => choice === value);
 }
 
-export function Account(props: AccountProps): ReactNode {
+export function SidebarSettings(props: SidebarSettingsProps): ReactNode {
   const { identity, layout } = props;
   const state = useSyncExternalStore(layout.subscribe, layout.snapshot);
   const handleToggle = layout.toggleSettings;

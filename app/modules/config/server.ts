@@ -146,6 +146,12 @@ export const xdgStateHome = Config.String("XDG_STATE_HOME").pipe(Config.withDefa
  */
 export const home = Config.String("HOME").pipe(Config.withDefault(""));
 
+/**
+ * `XDG_CONFIG_HOME`: the CLI keeps the Login from `cookout login` in `cookout/credentials` under it, or under
+ * `~/.config` when it is unset. Empty counts as unset.
+ */
+export const xdgConfigHome = Config.String("XDG_CONFIG_HOME").pipe(Config.withDefault(""));
+
 /** `COOKOUT_URL`: the server every CLI verb but `serve` talks to. Empty counts as unset. */
 export const cookoutUrl = Config.String("COOKOUT_URL").pipe(Config.withDefault(""));
 
