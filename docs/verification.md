@@ -24,10 +24,10 @@ Run it as a background command (or in its own terminal); it runs until stopped. 
 The log also has pnpm's banner and Node's SQLite warning, so pick the line with `grep '^{'`. Write the server's address and the admin token to the env file:
 
 ```sh
-grep '^{' /tmp/cookout-dev.log | jq -r '"COOKOUT_URL=\(.url) COOKOUT_TOKEN=\(.adminToken)"' > /tmp/cookout-dev.env
+grep '^{' /tmp/cookout-dev.log | jq -r '"COOKOUT_URL=\(.url) COOKOUT_TOKEN=\(.adminToken) COOKOUT_ALLOW_HUMAN=1"' > /tmp/cookout-dev.env
 ```
 
-If the env file is empty, the server isn't up yet: read the log again.
+If the env file is empty, the server isn't up yet: read the log again. The admin is a human identity, and from inside an agent tool such as Claude Code a human's token is refused with `agent_as_human` ([ADR 0038](adr/0038-a-human-token-from-an-agent-tool-is-refused-unless-overridden.md)); `COOKOUT_ALLOW_HUMAN=1` says acting as the admin, or as a seeded human, on this local board is meant.
 
 ## Seed it
 

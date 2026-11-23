@@ -1,6 +1,6 @@
 # A human's token from an agent tool is refused unless overridden
 
-2026-11-23 (mattpocock/cookout#109). Builds on [ADR 0027](0027-an-identity-is-a-human-or-an-agent.md). The guard keying on the process, with an override, is Matt's decision (2026-11-23, in #109: "humans keep full command-line use, so the guard keys on the *process*, not on the token. It catches accidents. It is not a security boundary."). The header's name, the refusal's code `agent_as_human`, the word "agent tool" and the `agentTool` field are chief-of-staff choices, pending Matt's review.
+2026-11-23 (mattpocock/cookout#109). Builds on [ADR 0027](0027-an-identity-is-a-human-or-an-agent.md). The guard keying on the process, with an override, is Matt's decision (2026-11-23, in #109: "humans keep full command-line use, so the guard keys on the _process_, not on the token. It catches accidents. It is not a security boundary."). The header's name, the refusal's code `agent_as_human`, the word "agent tool" and the `agentTool` field are chief-of-staff choices, pending Matt's review.
 
 The default way an agent ends up acting as a person is an agent process that inherited a human identity's `COOKOUT_TOKEN`. The board can't tell that from the token, so the client tells it from the process:
 
