@@ -1,4 +1,10 @@
-import type { AgentSessionResponse, LeaveResponse } from "../../index.ts";
+import type {
+  AgentSessionResponse,
+  LeaveResponse,
+  ListAgentSessionsResponse,
+  ListedAgentSession,
+  RevokeAgentSessionResponse,
+} from "../../index.ts";
 import { identityNamePattern, isIdentityName, isToken, tokenPattern } from "../../../identities/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
@@ -18,6 +24,21 @@ const IdleExpirySchema = Schema.String.check(
   }).abort(),
 );
 
+const HOST_LENGTH = { maximum: 253, minimum: 1 } as const;
+
+const HostSchema = Schema.String.check(
+  Schema.isBetweenLength(HOST_LENGTH.minimum, HOST_LENGTH.maximum, { message: "Use 1-253 characters." }).abort(),
+);
+
+const ListedAgentSessionSchema = matchesWire<ListedAgentSession>()(
+  Schema.Struct({
+    expiresAt: IsoTimeSchema,
+    host: Schema.optionalKey(HostSchema),
+    issuedAt: IsoTimeSchema,
+    lastUsedAt: Schema.optionalKey(IsoTimeSchema),
+  }),
+);
+
 const TokenSchema = Schema.String.check(Schema.isPattern(tokenPattern).abort()).pipe(
   Schema.refine(isToken, { identifier: "Token" }),
 );
@@ -25,11 +46,20 @@ const TokenSchema = Schema.String.check(Schema.isPattern(tokenPattern).abort()).
 export const JoinRequestSchema = Schema.Struct({
   as: IdentityNameSchema,
   force: Schema.optionalKey(Schema.Boolean),
+  host: Schema.optionalKey(HostSchema),
   idleExpiry: Schema.optionalKey(IdleExpirySchema),
 });
 
 export const AgentSessionResponseSchema = matchesWire<AgentSessionResponse>()(
   Schema.Struct({ agentSessionToken: TokenSchema, expiresAt: IsoTimeSchema, issuedAt: IsoTimeSchema }),
+);
+
+export const ListAgentSessionsResponseSchema = matchesWire<ListAgentSessionsResponse>()(
+  Schema.Struct({ agentSessions: Schema.Array(ListedAgentSessionSchema) }),
+);
+
+export const RevokeAgentSessionResponseSchema = matchesWire<RevokeAgentSessionResponse>()(
+  Schema.Struct({ revoked: Schema.Boolean }),
 );
 
 export const LeaveResponseSchema = matchesWire<LeaveResponse>()(Schema.Struct({ revoked: Schema.Literal(true) }));

@@ -9,6 +9,13 @@ import type { Token } from "../identities/index.ts";
 /** `POST /v1/agent-session` joins (issues an agent session token); `DELETE /v1/agent-session` leaves (revokes it). */
 export const agentSessionPath = "/v1/agent-session";
 
+/**
+ * `GET /v1/identities/:name/agent-session` lists the agent's live agent session token (`ListAgentSessionsResponse`),
+ * and `DELETE` revokes it (`RevokeAgentSessionResponse`): its session's next request is 401 `agent_session_revoked`.
+ * Only the agent's owner or an admin may; anyone else is 403 `not_owner` (Matt, 2026-11-23, mattpocock/cookout#118).
+ */
+export const identityAgentSessionPath = "/v1/identities/:name/agent-session";
+
 /** How long an agent session token lives unused when `join` doesn't ask: 7 days. */
 export const defaultIdleExpiry = "7d";
 
@@ -25,6 +32,8 @@ export interface JoinRequest {
   readonly force?: boolean;
   /** How long the token may go unused before it expires, such as `30d`. Default `7d`; at most `COOKOUT_MAX_IDLE_EXPIRY`. */
   readonly idleExpiry?: string;
+  /** The host the agent joins from, such as the machine's hostname, shown to its owner. 1–253 characters. */
+  readonly host?: string;
 }
 
 /** The answer to `join`. */
@@ -34,6 +43,26 @@ export interface AgentSessionResponse {
   readonly issuedAt: IsoTime;
   /** Each request sent with the token moves it forward by the idle expiry. */
   readonly expiresAt: IsoTime;
+}
+
+/** An agent's live agent session token as its owner sees it: when it was issued and last used, never the token. */
+export interface ListedAgentSession {
+  readonly issuedAt: IsoTime;
+  /** Left out until a request is sent with the token. */
+  readonly lastUsedAt?: IsoTime;
+  readonly expiresAt: IsoTime;
+  /** The host it joined from, if the joining client said. */
+  readonly host?: string;
+}
+
+/** The answer to listing an agent's agent session tokens: its live one, or none. */
+export interface ListAgentSessionsResponse {
+  readonly agentSessions: readonly ListedAgentSession[];
+}
+
+/** The answer to revoking an agent's agent session token: `false` when it had no live one. */
+export interface RevokeAgentSessionResponse {
+  readonly revoked: boolean;
 }
 
 /** The answer to `leave`. */
@@ -51,7 +80,10 @@ export interface IdleExpiryTooLongDetails {
   readonly maxIdleExpiry: string;
 }
 
-/** The 401 code for an agent session token that was revoked, by `leave` or another session's `join --force`. */
+/**
+ * The 401 code for an agent session token that was revoked: by `leave`, another session's `join --force`, or its
+ * agent's owner or an admin.
+ */
 export const agentSessionRevoked = "agent_session_revoked";
 
 /** The 401 code for an agent session token that went unused past its expiry. */

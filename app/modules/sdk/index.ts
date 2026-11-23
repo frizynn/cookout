@@ -21,7 +21,7 @@ import type {
   CommandWithSecretResponse,
   ListCommandsResponse,
 } from "./lib/commands.ts";
-import type { AgentSessionResponse, JoinRequest, LeaveResponse } from "./lib/agent-sessions.ts";
+import type { AgentSessionCalls, AgentSessionResponse, JoinRequest, LeaveResponse } from "./lib/agent-sessions.ts";
 import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "./lib/channels.ts";
 import type {
   CreateIdentityRequest,
@@ -98,13 +98,7 @@ export type {
   ThreadResponse,
   TopLevelMessage,
 } from "../messages/index.ts";
-export type {
-  AgentSessionLiveDetails,
-  AgentSessionResponse,
-  IdleExpiryTooLongDetails,
-  JoinRequest,
-  LeaveResponse,
-} from "../agent-sessions/index.ts";
+export type * from "../agent-sessions/index.ts";
 export type {
   AckRequest,
   AckResponse,
@@ -161,7 +155,7 @@ export type CookoutClient = {
   readonly listIdentities: () => Promise<ListIdentitiesResponse>;
   /** Any human creates agents it owns; see `CreateIdentityRequest`. The token is shown this once. A name in use is 409. */
   readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;
-  /** Admin only. Issues a new token; the old one stops working at once. */
+  /** The agent's owner or an admin (else 403 `not_owner`). Issues a new token; the old one stops working at once. */
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
   /** Admin only. Removes it; its token stops working. 409 for the last admin, or a human who still owns agents. */
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
@@ -171,6 +165,8 @@ export type CookoutClient = {
   readonly removeAdmin: (name: string) => Promise<IdentityResponse>;
   /** `PUT`s (trimmed, 1–80 characters) or clears (`null`) a display name: its own, its owner's or an admin's call. */
   readonly setDisplayName: (name: string, displayName: string | null) => Promise<IdentityResponse>;
+  /** Admin only: gives an agent to another human. A human is 403 `identity_kind`; `ada/x` is 400 `name_not_owned`. */
+  readonly transferAgent: (agent: string, owner: string) => Promise<IdentityResponse>;
   /** `POST /v1/channels`: any identity can create a channel. A name in use is 409 `channel_exists`. */
   readonly createChannel: (request: CreateChannelRequest) => Promise<ChannelResponse>;
   /** `GET /v1/channels`: every channel, sorted by name. */
@@ -210,6 +206,10 @@ export type CookoutClient = {
    * `agent_session_revoked` or `agent_session_expired` on every request.
    */
   readonly leave: () => Promise<LeaveResponse>;
+  /** The owner or an admin: the agent's live session (issued, last used, expiry, host if known), never its token. */
+  readonly listAgentSessions: AgentSessionCalls["listAgentSessions"];
+  /** The owner or an admin: revokes the agent's live session, whose next request is 401 `agent_session_revoked`. */
+  readonly revokeAgentSession: AgentSessionCalls["revokeAgentSession"];
   /**
    * `GET /v1/inbox`: what the caller hasn't read, oldest first, each message once with every reason it is there
    * (`followed-thread`, `mention`, `subscribed-channel`), its channel and its thread's top-level message. The

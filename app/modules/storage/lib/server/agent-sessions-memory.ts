@@ -1,14 +1,16 @@
 import type {
+  AgentAt,
   AgentSessionsSection,
   IssueAgentSession,
   IssueAgentSessionResult,
+  LiveAgentSession,
   StoredAgentSession,
   UseAgentSession,
   UseAgentSessionResult,
 } from "./agent-sessions.ts";
 import { Array as Arr, Effect, Option } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
-import { isLive, renewedExpiry } from "./agent-sessions.ts";
+import { isLive, listedSession, renewedExpiry } from "./agent-sessions.ts";
 import type { FindIdentity } from "./identity-row.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { MemoryState } from "./memory-state.ts";
@@ -18,6 +20,7 @@ type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
 interface Kept extends StoredAgentSession {
   readonly revoked: boolean;
+  readonly lastUsedAt?: IsoTime;
 }
 
 type Sessions = Map<TokenHash, Kept>;
@@ -56,6 +59,23 @@ function issue(sessions: Sessions, { force, session }: IssueAgentSession): Issue
   return { status: "issued" };
 }
 
+function listed({ expiresAt, host, issuedAt, lastUsedAt }: Kept): LiveAgentSession {
+  return listedSession({
+    expiresAt,
+    host: Option.fromUndefinedOr(host),
+    issuedAt,
+    lastUsedAt: Option.fromUndefinedOr(lastUsedAt),
+  });
+}
+
+function revokeLive(sessions: Sessions, { identity, now }: AgentAt): boolean {
+  const live = liveOf(sessions, identity, now);
+  for (const kept of live) {
+    revoke(sessions, kept);
+  }
+  return Arr.isReadonlyArrayNonEmpty(live);
+}
+
 function renewKept(sessions: Sessions, { identity, kept }: Found, now: IsoTime): UseAgentSessionResult {
   if (kept.revoked) {
     return { status: "revoked" };
@@ -64,7 +84,7 @@ function renewKept(sessions: Sessions, { identity, kept }: Found, now: IsoTime):
     return { status: "expired" };
   }
   const expiresAt = renewedExpiry({ idleSeconds: kept.idleSeconds, now });
-  sessions.set(kept.hash, { ...kept, expiresAt });
+  sessions.set(kept.hash, { ...kept, expiresAt, lastUsedAt: now });
   return { expiresAt, identity: { ...identity }, status: "active" };
 }
 
@@ -91,6 +111,8 @@ function memoryAgentSessions({ findIdentity, state }: MemoryAgentSessionsOptions
           sessions.delete(kept.hash);
         }
       }),
+    findLiveAgentSession: ({ identity, now }) =>
+      open(() => Option.map(Arr.head(liveOf(sessions, identity, now)), listed)),
     issueAgentSession: (request) => open(() => issue(sessions, request)),
     revokeAgentSession: (hash) =>
       open(() => {
@@ -98,6 +120,7 @@ function memoryAgentSessions({ findIdentity, state }: MemoryAgentSessionsOptions
           revoke(sessions, kept);
         }
       }),
+    revokeLiveAgentSession: (at) => open(() => revokeLive(sessions, at)),
     useAgentSession: (request) => open(() => used(request)),
   };
 }

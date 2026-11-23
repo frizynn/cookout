@@ -1,7 +1,6 @@
-import type { AgentTool, Identity, Token, TokenHash } from "../../index.ts";
+import type { AgentTool, Identity, IdentityName, Token, TokenHash } from "../../index.ts";
 import type {
   CommandTokenGrant,
-  Storage,
   StorageUnavailable,
   TokenLookup,
   UseAgentSessionResult,
@@ -12,6 +11,7 @@ import { agentToolHeader, isAgentTool, sessionCookieName, token } from "../../in
 import type { MessageId } from "../../../messages/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { Secrets } from "../../../secrets/server.ts";
+import { Storage } from "../../../storage/server.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 import { messagesPath } from "../../../messages/index.ts";
 
@@ -43,7 +43,8 @@ const tokenExpired: Refusal = {
 
 const agentSessionRevokedRefusal: Refusal = {
   code: agentSessionRevoked,
-  message: "This agent session token was revoked (by leave, or by another session's join --force). Join again.",
+  message:
+    "This agent session token was revoked (by leave, another session's join --force, or its owner or an admin). Join again.",
   status: 401,
 };
 
@@ -214,6 +215,39 @@ function principalOf(storage: Storage["Service"], hash: TokenHash) {
   };
 }
 
+class Caller extends Context.Service<Caller, Identity>()("@ai-hero/cookout/identities/lib/server/auth/Caller") {}
+
+function notOwner(name: IdentityName): Refusal {
+  return {
+    code: "not_owner",
+    message: `Only the human who owns ${name}, or an admin, can do this.`,
+    status: 403,
+  };
+}
+
+interface Ownership {
+  readonly caller: Identity;
+  readonly target: Identity | undefined;
+}
+
+function ownsAgent({ caller, target }: Ownership): boolean {
+  if (Predicate.isUndefined(target) || caller.kind !== "human" || target.kind !== "agent") {
+    return false;
+  }
+  return target.owner === caller.name;
+}
+
+function requireOwnerOrAdmin(name: IdentityName): Effect.Effect<void, Refusal | StorageUnavailable, Caller | Storage> {
+  return Effect.gen(function* checkOwnerOrAdmin() {
+    const caller = yield* Caller;
+    if (!caller.admin) {
+      const storage = yield* Storage;
+      const target = yield* storage.findIdentityByName(name);
+      yield* Effect.when(Effect.fail(notOwner(name)), Effect.succeed(!ownsAgent({ caller, target })));
+    }
+  });
+}
+
 export const authenticate =
   (storage: Storage["Service"], secrets: Secrets["Service"]) =>
   (credentials: Credentials): Effect.Effect<Principal, Refusal | StorageUnavailable> =>
@@ -221,8 +255,6 @@ export const authenticate =
       Effect.flatMap(secrets.hashToken),
       Effect.flatMap((hash) => Effect.flatMap(storage.findIdentityByTokenHash(hash), principalOf(storage, hash))),
     );
-
-export class Caller extends Context.Service<Caller, Identity>()("@ai-hero/cookout/identities/lib/server/auth/Caller") {}
 
 const adminOnly: Refusal = { code: "admin_only", message: "Only an admin identity can do this.", status: 403 };
 
@@ -243,13 +275,16 @@ export const issueToken: Effect.Effect<IssuedToken, never, Secrets> = Effect.gen
 
 export {
   AgentSessionSent,
+  Caller,
   AgentToolSent,
   CommandThread,
   agentToolOf,
   type Credentials,
   type Principal,
   credentialsOf,
+  ownsAgent,
   requireCommandRoute,
+  requireOwnerOrAdmin,
   sentAgentTool,
   sentToken,
 };

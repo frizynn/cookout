@@ -44,7 +44,11 @@ const identityListCommand = Command.make("list", {}, () => answer((client) => cl
 
 const identityRotateCommand = Command.make("rotate", { name: identityName }, ({ name }) =>
   answer((client) => client.rotateToken(name)),
-).pipe(Command.withDescription("Issue a new token for an identity (admin only). The old one stops working at once."));
+).pipe(
+  Command.withDescription(
+    "Issue a new token for an agent you own, or (admin) any identity. The old one stops working at once.",
+  ),
+);
 
 const identityDeleteCommand = Command.make("delete", { name: identityName }, ({ name }) =>
   answer((client) => client.deleteIdentity(name)),
@@ -63,6 +67,38 @@ const identityAdminCommand = Command.make(
     return answer((client) => client.makeAdmin(name));
   },
 ).pipe(Command.withDescription("Make a human an admin, or remove admin with --remove (admin only)."));
+
+const agentName = Argument.String("agent").pipe(Argument.withDescription("The agent's name."));
+
+const identitySessionsCommand = Command.make(
+  "sessions",
+  {
+    agent: agentName,
+    revoke: Flag.Boolean("revoke").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription("Revoke its live agent session token: the session's next request is refused."),
+    ),
+  },
+  ({ agent, revoke }) => {
+    if (revoke) {
+      return answer((client) => client.revokeAgentSession(agent));
+    }
+    return answer((client) => client.listAgentSessions(agent));
+  },
+).pipe(
+  Command.withDescription(
+    "List an agent's live agent session (issued, last used, expiry, host), or revoke it with --revoke. Owner or admin.",
+  ),
+);
+
+const identityTransferCommand = Command.make(
+  "transfer",
+  {
+    agent: agentName,
+    owner: Flag.String("owner").pipe(Flag.withDescription("The human who is to own the agent.")),
+  },
+  ({ agent, owner }) => answer((client) => client.transferAgent(agent, owner)),
+).pipe(Command.withDescription("Give an agent to another human (admin only). A namespaced agent can't move."));
 
 const textOrClear: CallFailure = { code: "usage", message: "Give either the display name or --clear, not both." };
 
@@ -92,7 +128,9 @@ const identityDisplayNameCommand = Command.make(
 ).pipe(Command.withDescription("Set or clear a display name: your own, your agent's, or (admin) anyone's."));
 
 const identityCommand = Command.make("identity").pipe(
-  Command.withDescription("Create, list, rotate and delete identities, make or remove admins, and set display names."),
+  Command.withDescription(
+    "Create, list, rotate and delete identities, make or remove admins, set display names, and manage agents' sessions and owners.",
+  ),
   Command.withSubcommands([
     identityCreateCommand,
     identityListCommand,
@@ -100,6 +138,8 @@ const identityCommand = Command.make("identity").pipe(
     identityDeleteCommand,
     identityAdminCommand,
     identityDisplayNameCommand,
+    identitySessionsCommand,
+    identityTransferCommand,
   ]),
 );
 

@@ -1,5 +1,5 @@
+import { DateTime, Option } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
-import { DateTime } from "effect";
 import type { Effect } from "effect";
 import type { IsoTime } from "../../../time/index.ts";
 import type { StorageUnavailable } from "./errors.ts";
@@ -13,6 +13,19 @@ interface StoredAgentSession {
   readonly issuedAt: IsoTime;
   readonly expiresAt: IsoTime;
   readonly idleSeconds: number;
+  readonly host?: string;
+}
+
+interface LiveAgentSession {
+  readonly issuedAt: IsoTime;
+  readonly expiresAt: IsoTime;
+  readonly lastUsedAt?: IsoTime;
+  readonly host?: string;
+}
+
+interface AgentAt {
+  readonly identity: IdentityName;
+  readonly now: IsoTime;
 }
 
 interface IssueAgentSession {
@@ -37,6 +50,8 @@ interface AgentSessionsSection {
   readonly issueAgentSession: (request: IssueAgentSession) => Fails<IssueAgentSessionResult>;
   readonly useAgentSession: (request: UseAgentSession) => Fails<UseAgentSessionResult>;
   readonly revokeAgentSession: (hash: TokenHash) => Fails<void>;
+  readonly findLiveAgentSession: (at: AgentAt) => Fails<Option.Option<LiveAgentSession>>;
+  readonly revokeLiveAgentSession: (at: AgentAt) => Fails<boolean>;
 }
 
 interface Session {
@@ -53,17 +68,33 @@ interface Renewal {
   readonly idleSeconds: number;
 }
 
+interface ListedFields {
+  readonly issuedAt: IsoTime;
+  readonly expiresAt: IsoTime;
+  readonly lastUsedAt: Option.Option<IsoTime>;
+  readonly host: Option.Option<string>;
+}
+
+function listedSession({ expiresAt, host, issuedAt, lastUsedAt }: ListedFields): LiveAgentSession {
+  const times = { expiresAt, issuedAt };
+  const used = Option.match(lastUsedAt, { onNone: () => times, onSome: (at) => ({ ...times, lastUsedAt: at }) });
+  return Option.match(host, { onNone: () => used, onSome: (joinedFrom) => ({ ...used, host: joinedFrom }) });
+}
+
 function renewedExpiry({ idleSeconds, now }: Renewal): IsoTime {
   return isoTimeOf(DateTime.add(DateTime.makeUnsafe(now), { seconds: idleSeconds }));
 }
 
 export {
+  type AgentAt,
   type AgentSessionsSection,
+  type LiveAgentSession,
   type IssueAgentSession,
   type IssueAgentSessionResult,
   type StoredAgentSession,
   type UseAgentSession,
   type UseAgentSessionResult,
   isLive,
+  listedSession,
   renewedExpiry,
 };
