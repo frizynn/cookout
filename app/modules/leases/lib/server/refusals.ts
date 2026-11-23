@@ -28,6 +28,14 @@ function notYourIdentity({ asked, caller }: WrongIdentity): Refusal {
   };
 }
 
+function onlyAgentsJoin(identity: IdentityName): Refusal {
+  return {
+    code: "identity_kind",
+    message: `${identity} is a human identity; only agent identities join.`,
+    status: FORBIDDEN,
+  };
+}
+
 function leaseHeld({ heldUntil, identity }: Held): Refusal {
   return {
     code: "lease_held",
@@ -62,4 +70,4 @@ function leaseLost(conflict: Conflict): Refusal {
   };
 }
 
-export { leaseHeld, leaseLost, leaseRequired, notYourIdentity };
+export { leaseHeld, leaseLost, leaseRequired, notYourIdentity, onlyAgentsJoin };

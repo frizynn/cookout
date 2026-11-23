@@ -84,3 +84,22 @@ it.effect("cookout join without --as, or with a name that breaks the naming rule
     expect([withoutAs, badName]).toMatchObject([failedWith("usage"), failedWith("usage")]);
   }).pipe(Effect.provide(commandLineServices)),
 );
+
+it.effect("cookout join as a human identity, with or without --force, is refused with identity_kind", () =>
+  Effect.gen(function* humanJoin() {
+    const cookout = yield* TestCookout;
+    const human = yield* cookout.createIdentity("ada", { kind: "human" });
+    const folder = yield* freshStateFolder;
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: human.token, COOKOUT_URL: cookout.url };
+    const results = yield* runAll([
+      { args: ["join", "--as", "ada"], env },
+      { args: ["join", "--as", "ada", "--force"], env },
+    ]);
+    const refused = {
+      exitCode: EXIT_FAILURE,
+      stderrJson: { error: { code: "identity_kind", message: "ada is a human identity; only agent identities join." } },
+    };
+
+    expect(results).toMatchObject([refused, refused]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
