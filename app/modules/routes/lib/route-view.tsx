@@ -41,7 +41,7 @@ export function RouteView(props: RouteViewProps): ReactNode {
     );
   }
   return (
-    <Authors identities={props.stores.composer.identities}>
+    <Authors identities={props.stores.composer.identities} presence={props.stores.presence}>
       <SignedInView identity={state.identity} profile={profile} route={route} stores={props.stores} />
     </Authors>
   );

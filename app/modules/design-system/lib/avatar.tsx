@@ -1,5 +1,5 @@
-import { AgentBadge } from "./agent-badge.tsx";
-import type { AvatarParts } from "./parts.ts";
+import type { AvatarParts } from "./avatar-parts.ts";
+import { PresenceDot } from "./presence-dot.tsx";
 import type { ReactNode } from "react";
 
 const HUES = [
@@ -59,15 +59,17 @@ function shapeOf(agent: boolean): string {
 
 export function Avatar(parts: AvatarParts): ReactNode {
   const size = SIZES[parts.size ?? "small"];
+  const { presence } = parts;
   return (
-    <span
-      aria-hidden="true"
-      className={`relative inline-flex shrink-0 items-center justify-center font-semibold text-white select-none before:content-[attr(data-initials)] ${size.box} ${shapeOf(parts.agent)} ${hueOf(parts.name)}`}
-      data-agent={parts.agent}
-      data-initials={initialsOf(parts.name)}
-      data-testid={size.testId}
-    >
-      {parts.agent && parts.size !== "tiny" && <AgentBadge />}
+    <span className="relative inline-flex shrink-0">
+      <span
+        aria-hidden="true"
+        className={`inline-flex items-center justify-center font-semibold text-white select-none before:content-[attr(data-initials)] ${size.box} ${shapeOf(parts.agent)} ${hueOf(parts.name)}`}
+        data-agent={parts.agent}
+        data-initials={initialsOf(parts.name)}
+        data-testid={size.testId}
+      />
+      {presence !== null && <PresenceDot label={presence.label} online={presence.online} />}
     </span>
   );
 }

@@ -1,6 +1,8 @@
 import type { Author, Identity } from "../../sdk/index.ts";
 import { useContext, useSyncExternalStore } from "react";
 import { AuthorList } from "./author-list.ts";
+import type { PresenceShown } from "./use-presence.ts";
+import { usePresence } from "./use-presence.ts";
 import { useProfileHref } from "./profile-base.ts";
 
 const DEACTIVATED = "(deactivated)";
@@ -12,6 +14,7 @@ interface Shown {
 }
 
 interface ShownAuthor extends Shown {
+  readonly presence: PresenceShown | null;
   readonly profileHref: string;
 }
 
@@ -49,7 +52,11 @@ function useListed(name: string): Identity | null {
 
 function useAuthor(author: Author): ShownAuthor {
   const profileOf = useProfileHref();
-  return { ...shownFrom(useListed(author.name), author), profileHref: profileOf(author.name) };
+  return {
+    ...shownFrom(useListed(author.name), author),
+    presence: usePresence(author.name),
+    profileHref: profileOf(author.name),
+  };
 }
 
 function useDrawnAuthors(authors: readonly Author[]): readonly Drawn[] {

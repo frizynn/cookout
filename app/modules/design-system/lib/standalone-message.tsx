@@ -30,6 +30,7 @@ export function StandaloneMessage(parts: StandaloneMessageParts): ReactNode {
           nameHref={parts.nameHref}
           note={parts.note}
           onAction={handleAction}
+          presence={parts.presence}
           time={parts.time}
         >
           {parts.children}

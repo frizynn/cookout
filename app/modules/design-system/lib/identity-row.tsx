@@ -25,7 +25,7 @@ export function IdentityRow(parts: IdentityRowParts): ReactNode {
         className={`flex items-center gap-3 rounded-lg px-3 py-2.5 ${rowStyle(parts.active)}`}
         href={parts.href}
       >
-        <Avatar agent={parts.agent} name={parts.name} />
+        <Avatar agent={parts.agent} name={parts.name} presence={parts.presence} />
         <IdentityRowText row={parts} />
       </a>
     </li>

@@ -65,7 +65,7 @@ function levelOf(why: UnreadWhy, unread: boolean): "for-you" | "activity" | "rea
 export function InboxItemRow(props: InboxItemRowProps): ReactNode {
   const { item } = props;
   const { message } = item;
-  const { agent, displayName, note, profileHref } = useAuthor(message.author);
+  const { agent, displayName, note, presence, profileHref } = useAuthor(message.author);
   const time = useTimeAgo(message.createdAt);
   const why = whyOf({ item, me: props.me });
   return (
@@ -80,6 +80,7 @@ export function InboxItemRow(props: InboxItemRowProps): ReactNode {
       href={linkOf(item)}
       level={levelOf(why, props.unread)}
       note={note}
+      presence={presence}
       time={time}
       why={whyText(why, item)}
     >
