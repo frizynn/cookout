@@ -1,5 +1,7 @@
 # The web UI is a chat workspace
 
+2026-11-23: Matt confirmed all three assumptions below (mattpocock/cookout#134).
+
 2026-11-23 (mattpocock/cookout#97). The layout is Matt's choice; the three assumptions below are proposed, pending Matt.
 
 On 2026-11-23 Matt picked layout A of the throwaway layout prototype (round 2) for the web UI. Until then each route was one centred card, dark and monospace throughout. The web UI is now a chat workspace:
