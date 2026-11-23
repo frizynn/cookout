@@ -8,9 +8,11 @@ on:
 permissions:
   contents: read
 
+# Each v1 push run gets a group of its own, so a newer push neither cancels it nor replaces it in
+# the queue. Other refs share one group per ref, where a newer push cancels the older run.
 concurrency:
-  group: check-${{ github.ref }}
-  cancel-in-progress: true
+  group: check-${{ github.ref }}-${{ github.ref == 'refs/heads/v1' && github.sha || 'latest' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/v1' }}
 
 jobs:
   check:
