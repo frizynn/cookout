@@ -1,9 +1,9 @@
 import { expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
+import { inPane, inSidebar } from "./regions.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
 import { adminClient } from "./identities.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
-import { inSidebar } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
 interface NewChannel {
@@ -71,6 +71,25 @@ it("creating a channel from the sidebar adds it to the channel list and opens it
     "#/channels/web-create-made",
     "Made in the web.",
     null,
+  ]);
+
+  close();
+});
+
+it("a channel created from the sidebar opens with its Subscribe toggle on", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const client = adminClient();
+  const close = await openWithChannel(client, "web-create-before-subscribed");
+
+  await submitNew({ name: "web-create-subscribed" });
+  await screen.findByRole("heading", { level: 1, name: "#web-create-subscribed" });
+  const toggle = await inPane().findByRole("button", { name: "Subscribed", pressed: true });
+  const { channels } = await client.listSubscribedChannels();
+
+  expect([toggle.textContent, channels.some(({ name }) => name === "web-create-subscribed")]).toStrictEqual([
+    "Subscribed",
+    true,
   ]);
 
   close();

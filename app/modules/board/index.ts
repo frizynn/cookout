@@ -30,10 +30,11 @@
  * created elsewhere joins the loaded list at once, as the stream announces it. `subscriptions` is the names of the channels
  * the logged-in identity subscribes to, sorted, loaded when its first reader
  * subscribes; `setSubscribed` subscribes to a channel or unsubscribes from it,
- * keeping the refusal, with the channel, if the server refuses. `creation`
+ * keeping the refusal, with the channel, if the server refuses. With `live`, a subscribe or unsubscribe from
+ * another session of the identity reaches it at once. `creation`
  * is the new channel form: whether it is open and what is typed in it;
- * `create` creates the channel as `cookout channel create` does, adds it to
- * the loaded list, empties and closes the form and only then calls `created`,
+ * `create` creates the channel as `cookout channel create` does, which subscribes
+ * the creator, adds it to the loaded list and the subscriptions, empties and closes the form and only then calls `created`,
  * so a refused name keeps what was typed, with the refusal on the field it
  * concerns (the description's own schema errors; anything else, the name). A refusal
  * keeps the server's error code; a server that can't be reached is `unreachable`.
@@ -106,6 +107,7 @@ export function createBoard(options: BoardOptions): Board {
   const channels = new Map<ChannelName, LiveChannelMessages>();
   const threads = new Map<string, LiveThreadMessages>();
   const list = createChannelList(client);
+  const { heard, subscriptions } = createSubscriptions({ client, live: options.live ?? null });
   const { follow, followed } = createLiveFeed({
     added: list.add,
     live: options.live ?? null,
@@ -117,13 +119,19 @@ export function createBoard(options: BoardOptions): Board {
         followed(createChannelMessages({ client, name, pageSize: options.pageSize ?? PAGE_SIZE })),
       ),
     commands: createCommands(client),
-    creation: createChannelCreation({ client, put: list.add }),
+    creation: createChannelCreation({
+      client,
+      put: (channel) => {
+        list.add(channel);
+        heard({ channel: channel.name, subscribed: true });
+      },
+    }),
     snapshot: list.snapshot,
     subscribe: (listener) => {
       follow();
       return list.subscribe(listener);
     },
-    subscriptions: createSubscriptions(client),
+    subscriptions,
     thread: (channel, id) =>
       storeIn(threads, `${channel}/${String(id)}`, () => followed(createThreadMessages({ channel, client, id }))),
   };

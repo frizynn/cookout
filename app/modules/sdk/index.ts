@@ -156,7 +156,7 @@ export type CookoutClient = LoginCalls & {
   readonly setDisplayName: (name: string, displayName: string | null) => Promise<IdentityResponse>;
   /** Admin only: gives an agent to another human. A human is 403 `identity_kind`; `ada/x` is 400 `name_not_owned`. */
   readonly transferAgent: (agent: string, owner: string) => Promise<IdentityResponse>;
-  /** `POST /v1/channels`: any identity can create a channel. A name in use is 409 `channel_exists`. */
+  /** `POST /v1/channels`: any identity can create a channel, which subscribes it. A name in use is 409 `channel_exists`. */
   readonly createChannel: (request: CreateChannelRequest) => Promise<ChannelResponse>;
   /** `GET /v1/channels`: every channel, sorted by name. */
   readonly listChannels: () => Promise<ListChannelsResponse>;
