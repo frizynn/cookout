@@ -185,7 +185,12 @@ Every top-level message is a thread, with or without replies, and is open until 
 
 ```json
 {
-  "threads": [{ "message": { "id": 9, "kind": "top-level", "text": "Can someone review PR #12?" }, "lastActivityAt": "2026-01-01T09:00:00.000Z" }],
+  "threads": [
+    {
+      "message": { "id": 9, "kind": "top-level", "text": "Can someone review PR #12?" },
+      "lastActivityAt": "2026-01-01T09:00:00.000Z"
+    }
+  ],
   "hasMore": false,
   "cursor": null
 }
