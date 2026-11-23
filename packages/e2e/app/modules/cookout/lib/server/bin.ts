@@ -1,5 +1,6 @@
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import { Effect, FileSystem, Option, Path, Schema, Stream } from "effect";
+import type { MessageId } from "@ai-hero/cookout/sdk";
 import type { Scope } from "effect";
 
 interface BinRun {
@@ -20,6 +21,14 @@ type BinNeeds = ChildProcessSpawner.ChildProcessSpawner | Path.Path | Scope.Scop
 
 const BIN = new URL("../../../../../node_modules/@ai-hero/cookout/dist/main.js", import.meta.url);
 const parseJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown));
+const FIRST_MESSAGE_ID = 1;
+
+function isMessageId(input: unknown): input is MessageId {
+  return Number.isSafeInteger(input) && Number(input) >= FIRST_MESSAGE_ID;
+}
+
+const Posted = Schema.Struct({ message: Schema.Struct({ id: Schema.declare(isMessageId) }) });
+const decodePosted = Schema.decodeUnknownEffect(Posted);
 
 function collect<Failure>(stream: Stream.Stream<Uint8Array, Failure>): Effect.Effect<string, Failure> {
   return stream.pipe(Stream.decodeText(), Stream.mkString);
@@ -55,4 +64,11 @@ const freshStateFolder: Effect.Effect<string, never, FileSystem.FileSystem | Pat
   },
 ).pipe(Effect.orDie);
 
-export { type BinNeeds, type BinResult, type BinRun, freshStateFolder, runBin };
+function postedMessageId({ stdoutJson }: BinResult): Effect.Effect<MessageId> {
+  return decodePosted(stdoutJson).pipe(
+    Effect.map(({ message }) => message.id),
+    Effect.orDie,
+  );
+}
+
+export { type BinNeeds, type BinResult, type BinRun, freshStateFolder, postedMessageId, runBin };

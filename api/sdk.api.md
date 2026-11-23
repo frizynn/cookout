@@ -258,7 +258,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "admin_only", "identity_exists", "identity_not_found", "last_admin", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "lease_held", "lease_required", "lease_lost", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "lease_held", "lease_required", "lease_lost", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 declare const brand: unique symbol;
@@ -294,6 +294,14 @@ export type CookoutClient = {
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */
   readonly whoami: () => Promise<IdentityResponse>;
+  /**
+   * `POST /v1/session`: logs a human identity in to the web UI. The server answers with the identity and sets an
+   * HttpOnly, SameSite=Strict session cookie, which a browser then sends instead of the token. An agent's token is
+   * refused with 403 `human_only` (`details.kind` names its kind); no token with 401 `token_missing`.
+   */
+  readonly login: () => Promise<IdentityResponse>;
+  /** `DELETE /v1/session`: clears the session cookie. */
+  readonly logout: () => Promise<IdentityResponse>;
   /** `GET /v1/identities`: every identity with its kind and owner, sorted by name. */
   readonly listIdentities: () => Promise<ListIdentitiesResponse>;
   /** Admin only. The token in the answer is shown this once. A name in use is 409 `identity_exists`. */

@@ -1,9 +1,9 @@
 import { Context, Effect } from "effect";
 import type { Identity, Token, TokenHash } from "../../index.ts";
 import type { Storage, StorageUnavailable, TokenLookup } from "../../../storage/server.ts";
+import { sessionCookieName, token } from "../../index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { Secrets } from "../../../secrets/server.ts";
-import { token } from "../../index.ts";
 
 const bearer = /^Bearer +(\S+)\s*$/iu;
 
@@ -25,10 +25,34 @@ const tokenUnknown: Refusal = {
   status: 401,
 };
 
-const bearerToken = (authorization: string | undefined): Effect.Effect<Token, Refusal> => {
-  const sent = authorization === undefined ? undefined : bearer.exec(authorization)?.[1];
+interface Credentials {
+  readonly authorization: string | undefined;
+  readonly sessionCookie: string | undefined;
+}
+
+function bearerToken(authorization: string): Effect.Effect<Token, Refusal> {
+  const sent = bearer.exec(authorization)?.[1];
   return sent === undefined ? Effect.fail(tokenMissing) : Effect.succeed(token(sent));
-};
+}
+
+function sentToken({ authorization, sessionCookie }: Credentials): Effect.Effect<Token, Refusal> {
+  if (authorization !== undefined) {
+    return bearerToken(authorization);
+  }
+  if (sessionCookie === undefined || sessionCookie === "") {
+    return Effect.fail(tokenMissing);
+  }
+  return Effect.succeed(token(sessionCookie));
+}
+
+interface CarriesCredentials {
+  readonly headers: Readonly<Record<string, string | undefined>>;
+  readonly cookies: Readonly<Record<string, string | undefined>>;
+}
+
+function credentialsOf({ cookies, headers }: CarriesCredentials): Credentials {
+  return { authorization: headers["authorization"], sessionCookie: cookies[sessionCookieName] };
+}
 
 const identityOf = (found: TokenLookup): Effect.Effect<Identity, Refusal> => {
   switch (found.status) {
@@ -46,8 +70,8 @@ const identityOf = (found: TokenLookup): Effect.Effect<Identity, Refusal> => {
 
 export const authenticate =
   (storage: Storage["Service"], secrets: Secrets["Service"]) =>
-  (authorization: string | undefined): Effect.Effect<Identity, Refusal | StorageUnavailable> =>
-    bearerToken(authorization).pipe(
+  (credentials: Credentials): Effect.Effect<Identity, Refusal | StorageUnavailable> =>
+    sentToken(credentials).pipe(
       Effect.flatMap(secrets.hashToken),
       Effect.flatMap(storage.findIdentityByTokenHash),
       Effect.flatMap(identityOf),
@@ -71,3 +95,5 @@ export const issueToken: Effect.Effect<IssuedToken, never, Secrets> = Effect.gen
   const token = yield* secrets.newToken;
   return { hash: yield* secrets.hashToken(token), token };
 });
+
+export { type Credentials, credentialsOf, sentToken };

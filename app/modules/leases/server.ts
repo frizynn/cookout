@@ -97,8 +97,8 @@ function authenticateAndRenew<Value, Failure, Needs>(
 }
 
 /**
- * Ack's and watch's need of the lease: the live lease ID, or none while nobody holds a live lease on the caller's
- * identity, which lets the web UI ack on view without taking one (ADR 0004). A stale or expired lease ID is 409
+ * Ack's and watch's need of the lease: for an agent identity, the live lease ID, or none while nobody holds a live
+ * lease on it (ADR 0004). A human identity never needs the lease (ADR 0028). A stale or expired lease ID is 409
  * `lease_lost`; none while another session holds the lease is 409 `lease_required`.
  * @internal
  */

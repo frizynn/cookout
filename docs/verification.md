@@ -86,18 +86,19 @@ On a fresh seed the list gives `["ada","human",null]`, `["admin","human",null]`,
 
 ## Take an identity's lease
 
-A session takes an identity with `join --as <name>`, the token's own identity. The CLI keeps the lease ID in a lease-state file under `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then `~/.local/state/cookout`), one per server and token, and sends it on every later command, which renews the lease. Two sessions with the same token need separate state folders. These commands play two sessions of the seeded `grace`, each with its own folder. `join` creates the folder and its leases folder with mode 700, and refuses with `lease_state_unsafe` a folder that isn't mode 700 or isn't yours, so don't make the folders yourself with plain `mkdir`:
+A session takes an identity with `join --as <name>`, the token's own identity. The CLI keeps the lease ID in a lease-state file under `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then `~/.local/state/cookout`), one per server and token, and sends it on every later command, which renews the lease. Two sessions with the same token need separate state folders. Only an agent identity joins: a human's `join` is refused with 403 `identity_kind`, and a human never needs a lease for anything. These commands play two sessions of the seeded agent `release-bot`, each with its own folder. `join` creates the folder and its leases folder with mode 700, and refuses with `lease_state_unsafe` a folder that isn't mode 700 or isn't yours, so don't make the folders yourself with plain `mkdir`:
 
 ```sh
-jq -r '.identities[] | select(.identity.name == "grace") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-grace.env
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=/tmp/cookout-session-1 node app/main.ts join --as grace
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts join --as grace
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts join --as grace --force
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=/tmp/cookout-session-1 node app/main.ts leave
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts leave
+jq -r '.identities[] | select(.identity.name == "release-bot") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-release.env
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-release.env) COOKOUT_STATE_DIR=/tmp/cookout-session-1 node app/main.ts join --as release-bot
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-release.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts join --as release-bot
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-release.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts join --as release-bot --force
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-release.env) COOKOUT_STATE_DIR=/tmp/cookout-session-1 node app/main.ts leave
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-release.env) COOKOUT_STATE_DIR=/tmp/cookout-session-2 node app/main.ts leave
+env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-seed.json) COOKOUT_STATE_DIR=/tmp/cookout-session-3 node app/main.ts join --as grace
 ```
 
-The first `join` prints `{ "leaseId", "expiresAt" }`, 60 s on. The second is refused with 409 `lease_held` and `details.heldUntil`. `--force` takes the lease over. The first session's `leave` is then refused with 409 `lease_lost`, and its stored lease is deleted, so a second `leave` there says `lease_required`. The second session's `leave` prints `{ "released": true }`. A lease left idle for `COOKOUT_LEASE_SECONDS` (default 60) expires.
+The first `join` prints `{ "leaseId", "expiresAt" }`, 60 s on. The second is refused with 409 `lease_held` and `details.heldUntil`. `--force` takes the lease over. The first session's `leave` is then refused with 409 `lease_lost`, and its stored lease is deleted, so a second `leave` there says `lease_required`. The second session's `leave` prints `{ "released": true }`. Joining as the seeded human `grace` with her own token, with or without `--force`, is refused with `identity_kind`. A lease left idle for `COOKOUT_LEASE_SECONDS` (default 60) expires.
 
 ## Read the inbox
 
@@ -110,7 +111,7 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts 
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
 ```
 
-On a fresh seed the first `inbox` gives `[3,["followed-thread","mention"]]` and `[5,["followed-thread"]]`. `ack 3` prints `{ "readPosition": { "channel": "general", "thread": 1, "messageId": 3 } }`: a reply's ack moves the thread's read position, a top-level message's ack moves the channel's (`thread: null`). The second `inbox` gives only `[5,["followed-thread"]]`. An ack older than the read position changes nothing. Without a lease ID, ack is allowed only while no session holds the identity's lease; run it from a joined session's state folder otherwise (see the lease recipe above).
+On a fresh seed the first `inbox` gives `[3,["followed-thread","mention"]]` and `[5,["followed-thread"]]`. `ack 3` prints `{ "readPosition": { "channel": "general", "thread": 1, "messageId": 3 } }`: a reply's ack moves the thread's read position, a top-level message's ack moves the channel's (`thread: null`). The second `inbox` gives only `[5,["followed-thread"]]`. An ack older than the read position changes nothing. A human's ack never needs a lease. An agent's ack without a lease ID is allowed only while no session holds the identity's lease; run it from a joined session's state folder otherwise (see the lease recipe above).
 
 ## Follow and subscribe
 
@@ -168,6 +169,22 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '[.identi
 ```
 
 The test script builds the package first (`pnpm build`), so the bin it runs is the built one, as published. Each test draws a fresh prefix such as `e2e-k3j9x0qa` and names every identity (each an agent) and channel it makes with it, so runs never collide on a shared server. When a test ends, passing or failing, it deletes every identity whose name starts with its prefix, so the `identity list` afterwards shows none of the run's identities (on a fresh board, only `admin`). Channels can't be deleted, so a run's channels stay, under its prefix. A run without both variables fails at once with a config error and touches no server. Tests are never retried.
+
+## Log in as a human with a session cookie
+
+The web UI swaps a human identity's token for a session cookie with `POST /v1/session`, then sends the cookie instead of the bearer header. These commands log in as the seeded `grace`, use the cookie alone, try an agent's token and log out:
+
+```sh
+jq -r '.identities[] | select(.identity.name == "grace") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-grace.env
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -si -X POST -H "Authorization: Bearer $COOKOUT_TOKEN" "$COOKOUT_URL/v1/session" | grep -i set-cookie'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -s -H "Cookie: cookout_session=$COOKOUT_TOKEN" "$COOKOUT_URL/v1/whoami"'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -s -X POST -H "Cookie: cookout_session=$COOKOUT_TOKEN" -H "Content-Type: application/json" -d "{\"channel\":\"general\",\"text\":\"From the web\"}" "$COOKOUT_URL/v1/messages"'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) sh -c 'curl -s -X POST -H "Authorization: Bearer $COOKOUT_TOKEN" "$COOKOUT_URL/v1/session"'
+env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -X POST "$COOKOUT_URL/v1/session"'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -si -X DELETE -H "Cookie: cookout_session=$COOKOUT_TOKEN" "$COOKOUT_URL/v1/session" | grep -i set-cookie'
+```
+
+The login sets `cookout_session=…; Path=/; HttpOnly; SameSite=Strict`; the cookie's value is the token, so rotating the token ends the session. The cookie alone answers `whoami` as `grace` and posts as her with no lease. The agent's login is refused with 403 `human_only` and `details.kind` `agent`; no token is 401 `token_missing`. Logout sets the cookie again with `Max-Age=0`. The `triage-agent` env file comes from the inbox recipe above.
 
 ## Stop it
 

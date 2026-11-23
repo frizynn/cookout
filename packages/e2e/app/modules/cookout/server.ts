@@ -10,4 +10,10 @@ export {
   type CookoutUnderTestService,
   cookoutUnderTest,
 } from "./lib/server/cookout-under-test.ts";
-export { type BinNeeds, type BinResult, type BinRun, freshStateFolder } from "./lib/server/bin.ts";
+export {
+  type BinNeeds,
+  type BinResult,
+  type BinRun,
+  freshStateFolder,
+  postedMessageId,
+} from "./lib/server/bin.ts";

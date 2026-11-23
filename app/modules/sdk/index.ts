@@ -24,7 +24,7 @@ import type {
 } from "../messages/index.ts";
 import { channelPath, channelsPath } from "../channels/index.ts";
 import { connectionFor, getJson, send } from "./lib/request.ts";
-import { identitiesPath, identityPath, identityTokenPath, whoamiPath } from "../identities/index.ts";
+import { identitiesPath, identityPath, identityTokenPath, sessionPath, whoamiPath } from "../identities/index.ts";
 import {
   isChannelResponse,
   isHealthResponse,
@@ -114,6 +114,14 @@ export type CookoutClient = {
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */
   readonly whoami: () => Promise<IdentityResponse>;
+  /**
+   * `POST /v1/session`: logs a human identity in to the web UI. The server answers with the identity and sets an
+   * HttpOnly, SameSite=Strict session cookie, which a browser then sends instead of the token. An agent's token is
+   * refused with 403 `human_only` (`details.kind` names its kind); no token with 401 `token_missing`.
+   */
+  readonly login: () => Promise<IdentityResponse>;
+  /** `DELETE /v1/session`: clears the session cookie. */
+  readonly logout: () => Promise<IdentityResponse>;
   /** `GET /v1/identities`: every identity with its kind and owner, sorted by name. */
   readonly listIdentities: () => Promise<ListIdentitiesResponse>;
   /** Admin only. The token in the answer is shown this once. A name in use is 409 `identity_exists`. */
@@ -202,6 +210,14 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
     health: () => getJson(server, healthPath, isHealthResponse),
     listChannels: () => getJson(server, channelsPath, isListChannelsResponse),
     listIdentities: () => getJson(server, identitiesPath, isListIdentitiesResponse),
+    login: async () => {
+      const loggedIn = await send(server, { isExpected: isIdentityResponse, method: "POST", path: sessionPath });
+      return loggedIn;
+    },
+    logout: async () => {
+      const loggedOut = await send(server, { isExpected: isIdentityResponse, method: "DELETE", path: sessionPath });
+      return loggedOut;
+    },
     rotateToken: (name) =>
       send(server, {
         isExpected: isIdentityWithTokenResponse,

@@ -1,6 +1,6 @@
 import { Array as Arr, Context, Effect, Layer, Random, Redacted, String as Str } from "effect";
 import type { BinNeeds, BinResult, BinRun } from "./bin.ts";
-import type { CookoutClient, IdentityWithTokenResponse } from "@ai-hero/cookout/sdk";
+import type { ChannelResponse, CookoutClient, IdentityWithTokenResponse } from "@ai-hero/cookout/sdk";
 import { e2eAdminToken, e2eUrl } from "../../../config/server.ts";
 import { createCookoutClient } from "@ai-hero/cookout/sdk";
 import { runBin } from "./bin.ts";
@@ -10,6 +10,7 @@ interface CookoutUnderTestService {
   readonly prefix: string;
   readonly admin: CookoutClient;
   readonly createAgent: (name: string) => Effect.Effect<IdentityWithTokenResponse>;
+  readonly createChannel: (name: string) => Effect.Effect<ChannelResponse>;
   readonly runCookout: (run: BinRun) => Effect.Effect<BinResult, never, BinNeeds>;
 }
 
@@ -48,6 +49,7 @@ const cookoutUnderTest: Layer.Layer<CookoutUnderTest> = Layer.effect(
       admin,
       createAgent: (name: string) =>
         Effect.promise(() => admin.createIdentity({ kind: "agent", name: `${prefix}-${name}` })),
+      createChannel: (name: string) => Effect.promise(() => admin.createChannel({ name: `${prefix}-${name}` })),
       prefix,
       runCookout: runBin(url),
       url,

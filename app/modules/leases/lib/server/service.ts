@@ -2,7 +2,7 @@ import { Context, DateTime, Effect, Layer, Option, Predicate } from "effect";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
 import type { LeaseId, LeaseResponse } from "../../index.ts";
 import type { StorageUnavailable, StoredLease } from "../../../storage/server.ts";
-import { leaseHeld, leaseLost, leaseRequired, notYourIdentity } from "./refusals.ts";
+import { leaseHeld, leaseLost, leaseRequired, notYourIdentity, onlyAgentsJoin } from "./refusals.ts";
 import type { Config } from "effect";
 import type { IsoTime } from "../../../time/index.ts";
 import type { Refusal } from "../../../http/index.ts";
@@ -109,7 +109,7 @@ function ruleRequirer(on: LeasesOn) {
   const requireLive = requirer(on);
   return (caller: Identity, sent: Sent, rule: LeaseRule): Fails<void> =>
     Effect.gen(function* requireByRule() {
-      if (rule === "none") {
+      if (rule === "none" || caller.kind === "human") {
         return;
       }
       if (Predicate.isUndefined(sent)) {
@@ -130,6 +130,9 @@ function joiner(on: LeasesOn) {
     Effect.gen(function* joinAs() {
       if (request.as !== caller.name) {
         return yield* Effect.fail(notYourIdentity({ asked: request.as, caller: caller.name }));
+      }
+      if (caller.kind === "human") {
+        return yield* Effect.fail(onlyAgentsJoin(caller.name));
       }
       const kept = yield* renew(caller, sent);
       if (Option.isSome(kept)) {
