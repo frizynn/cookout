@@ -146,6 +146,7 @@ it.effect("a thread is the parent plus its replies in order, and can be got from
 
     expect(fromParent).toStrictEqual({
       parent: { ...parent, ...latestOf(replies), replyCount: THREE_REPLIES },
+      receipts: [],
       replies,
     });
     expect(replies).toMatchObject([
@@ -164,7 +165,7 @@ it.effect("a message with no replies is a thread of its own", () =>
     const { message } = yield* answer(() => agent.client.createMessage({ channel: "grill", text: "alone" }));
     const thread = yield* answer(() => agent.client.getThread(message.id));
 
-    expect(thread).toStrictEqual({ parent: message, replies: [] });
+    expect(thread).toStrictEqual({ parent: message, receipts: [], replies: [] });
   }).pipe(Effect.provide(testCookout())),
 );
 

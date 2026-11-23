@@ -77,7 +77,7 @@ it.effect("a deleted channel's name can be created again, as a new, empty channe
     yield* answer(() => cookout.client.createChannel({ name: "grill" }));
     const page = yield* answer(() => cookout.client.listMessages("grill"));
 
-    expect(page).toStrictEqual({ hasMore: false, messages: [] });
+    expect(page).toStrictEqual({ hasMore: false, messages: [], receipts: [] });
   }).pipe(Effect.provide(testCookout())),
 );
 

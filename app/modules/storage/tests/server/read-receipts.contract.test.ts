@@ -24,6 +24,7 @@ const BOB = { author: { name: "bob" } } as const;
 const PEOPLE = [
   ["ann", "a"],
   ["bob", "b"],
+  ["cat", "c"],
 ] as const;
 
 function storeWithPeople<Failure, Needs>(
@@ -101,5 +102,25 @@ it.effect.each(storageLayers)(
       const kept = yield* storage.listReadReceipts([mention.id]);
 
       expect(kept).toStrictEqual([]);
+    }),
+);
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): one message's read receipts are listed by identity, whatever order they were seen in",
+  ({ layer }) =>
+    Effect.gen(function* byIdentity() {
+      const storage = yield* storeWithPeople(layer);
+      const mention = yield* appendTo(storage)(
+        newMessage("grill", "@ann @bob look", { author: { name: "cat" }, mentions: ["ann", "bob"] }),
+      );
+      yield* storage.ackMessage(nameOf("bob"), mention.id, fixtureTime);
+      yield* storage.ackMessage(nameOf("ann"), mention.id, LATER);
+
+      const kept = yield* storage.listReadReceipts([mention.id]);
+
+      expect(kept).toStrictEqual([
+        { identity: "ann", messageId: mention.id, seen: true, seenAt: LATER },
+        { identity: "bob", messageId: mention.id, seen: true, seenAt: fixtureTime },
+      ]);
     }),
 );
