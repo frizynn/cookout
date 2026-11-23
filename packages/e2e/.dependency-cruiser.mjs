@@ -1,3 +1,5 @@
+import rootConfig from "../../.dependency-cruiser.cjs";
+
 const MODULES = "packages/e2e/app/modules";
 const INTERNALS = `^${MODULES}/[^/]+/[^/]+/`;
 const TESTS = `^${MODULES}/[^/]+/tests/`;
@@ -65,6 +67,7 @@ const config = {
       conditionNames: ["import", "require", "node", "default", "types"],
       exportsFields: ["exports"],
     },
+    exoticRequireStrings: rootConfig.options.exoticRequireStrings,
     parser: "swc",
     tsConfig: { fileName: "tsconfig.json" },
   },
