@@ -19,7 +19,8 @@
  * unread colour), quiet, or unseen (read out only); `NavHeading` heads a
  * `NavList` of links; `ToggleButton` opens and closes a `Panel` above it,
  * such as Settings, where `ChoiceGroup` picks one of a few choices. `Pane` is
- * the main column, with a `PaneHeader` (title and description), a
+ * the main column, with a `PaneHeader` (title, description and any action on
+ * its right, such as a `PressButton`, a button that is on or off), a
  * named `ScrollArea` that stays scrolled to the end as what it counts grows, unless
  * scrolled up, and anything under it, such as a message box in a `BoxFrame`
  * with its keyboard hint; `SidePanel` is a
@@ -77,6 +78,7 @@ export { NavLink } from "./lib/nav-link.tsx";
 export { NavList } from "./lib/nav-list.tsx";
 export { Pane } from "./lib/pane.tsx";
 export { PaneHeader } from "./lib/pane-header.tsx";
+export { PressButton } from "./lib/press-button.tsx";
 export { Panel } from "./lib/panel.tsx";
 export { Pill } from "./lib/pill.tsx";
 export { RowTitle } from "./lib/row-title.tsx";

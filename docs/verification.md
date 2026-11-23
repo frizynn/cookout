@@ -204,6 +204,17 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts c
 
 On a fresh seed they print `["deploys"]`, then `["deploys","general"]`, then `["general"]`. Plain `channel list` is unchanged.
 
+In the web UI a channel's header has a toggle on its right: `Subscribed` (pressed) while the logged-in human subscribes to the channel, `Subscribe` otherwise. Clicking it calls the subscribe or unsubscribe route; a refusal shows an alert under the header and leaves the toggle as it was. On a fresh seed, logged in as `grace` (the "Log in to the web UI" recipe, same session), screenshot both headers in both themes (pick `Dark` and `Light` in `Settings`, as in "Switch the theme and see the workspace"), toggle each, and list her subscriptions again:
+
+```sh
+agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/deploys" && agent-browser --session cookout wait --text "Subscribed" && agent-browser --session cookout screenshot /tmp/cookout-deploys-header.png
+agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" && agent-browser --session cookout wait --text "Lunch at 12:30." && agent-browser --session cookout screenshot /tmp/cookout-general-header.png
+agent-browser --session cookout find role button click --name "Subscribe" && agent-browser --session cookout wait --text "Subscribed"
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts channel list --subscribed | jq -c '[.channels[].name]'
+```
+
+`#deploys` shows `Subscribed` and `#general` `Subscribe`; after the click `#general` shows `Subscribed` and the command prints `["deploys","general"]`, and a new top-level message in `general` from someone else reaches her inbox as `subscribed-channel`. Clicking `Subscribed` on `#deploys` turns it back to `Subscribe` and drops `deploys` from the list.
+
 ## Watch the live stream
 
 `GET /v1/events` is one Server-Sent Events stream per connection, with the bearer token. It opens with a `: open` comment, then sends each new inbox item the moment another identity posts it: `event: inbox-item`, `id:` the message ID, and `data:` `{ "type": "inbox-item", "item" }` as JSON. The caller's own posts never arrive. Watch as `triage-agent` in one terminal (the `triage` env file is made in the inbox recipe above), and mention it as the admin in another:
