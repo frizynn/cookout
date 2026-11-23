@@ -40,7 +40,7 @@ function filesNextTo(database: string): Effect.Effect<StoredFiles, never, FileSy
 function issueTokens(url: string, adminToken: string): Effect.Effect<readonly string[]> {
   return Effect.gen(function* createAndRotate() {
     const admin = createCookoutClient({ env: {}, token: adminToken, url });
-    const created = yield* answer(() => admin.createIdentity({ kind: "agent", name: "agent", owner: "matt" }));
+    const created = yield* answer(() => admin.createIdentity({ kind: "agent", name: "agent" }));
     const rotated = yield* answer(() => admin.rotateToken("agent"));
     return [adminToken, created.token, rotated.token];
   });

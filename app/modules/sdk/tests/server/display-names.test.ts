@@ -71,18 +71,7 @@ it.effect("anyone else setting a display name is refused with 403 not_owner, and
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("an agent that names another agent as its owner can't be set by that agent", () =>
-  Effect.gen(function* ownerMustBeHuman() {
-    const cookout = yield* TestCookout;
-    const boss = yield* cookout.createIdentity("boss-bot");
-    yield* cookout.createIdentity("minion", { owner: "boss-bot" });
-    const error = yield* refusal(() => boss.client.setDisplayName("minion", "Minion"));
-
-    expect(error).toMatchObject({ code: "not_owner", status: FORBIDDEN });
-  }).pipe(Effect.provide(testCookout())),
-);
-
-it.effect("a human can't set the display name of an agent with no owner, or of a missing identity", () =>
+it.effect("a human can't set the display name of an agent another human owns, or of a missing identity", () =>
   Effect.gen(function* notOwned() {
     const cookout = yield* TestCookout;
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });

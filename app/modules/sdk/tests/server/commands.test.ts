@@ -40,28 +40,30 @@ it.effect("a command add by an identity that is not an admin is refused with 403
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("an admin adds a command: its secret is shown once, it is listed, and its handler is a flagged agent", () =>
-  Effect.gen(function* addAndList() {
-    const cookout = yield* TestCookout;
-    const ann = yield* cookout.createIdentity("ann");
-    const added = yield* answer(() => cookout.client.addCommand({ ...deploy, description: "Ship a branch" }));
-    const listed = yield* answer(ann.client.listCommands);
-    const { identities } = yield* answer(ann.client.listIdentities);
-    const command = {
-      createdAt: BOOT,
-      description: "Ship a branch",
-      handler: "deploy",
-      name: "deploy",
-      schema,
-      url: deploy.url,
-    };
+it.effect(
+  "an admin adds a command: its secret is shown once, it is listed, and its handler is a flagged agent it owns",
+  () =>
+    Effect.gen(function* addAndList() {
+      const cookout = yield* TestCookout;
+      const ann = yield* cookout.createIdentity("ann");
+      const added = yield* answer(() => cookout.client.addCommand({ ...deploy, description: "Ship a branch" }));
+      const listed = yield* answer(ann.client.listCommands);
+      const { identities } = yield* answer(ann.client.listIdentities);
+      const command = {
+        createdAt: BOOT,
+        description: "Ship a branch",
+        handler: "deploy",
+        name: "deploy",
+        schema,
+        url: deploy.url,
+      };
 
-    expect(added).toStrictEqual({ command, secret: "hmac_test_3" });
-    expect(listed).toStrictEqual({ commands: [command] });
-    expect(Arr.filter(identities, (identity) => "handler" in identity)).toStrictEqual([
-      { admin: false, createdAt: BOOT, handler: true, kind: "agent", name: "deploy" },
-    ]);
-  }).pipe(Effect.provide(testCookout())),
+      expect(added).toStrictEqual({ command, secret: "hmac_test_3" });
+      expect(listed).toStrictEqual({ commands: [command] });
+      expect(Arr.filter(identities, (identity) => "handler" in identity)).toStrictEqual([
+        { admin: false, createdAt: BOOT, handler: true, kind: "agent", name: "deploy", owner: "admin" },
+      ]);
+    }).pipe(Effect.provide(testCookout())),
 );
 
 it.effect("a running cookout gives each command its own random secret", () =>
