@@ -1,13 +1,14 @@
-import { Array as Arr, Effect, Option, Predicate, Schema, pipe } from "effect";
+import { Array as Arr, Effect, Option, Predicate, Record, Schema, pipe } from "effect";
 import type { CommandLineNeeds, TestCookoutService } from "../../../testing/server.ts";
+import type { Identity, Message, MessageId } from "../../../sdk/index.ts";
 import { TestCookout, answer, commandLineServices, messageId, runDev, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
-import type { Identity } from "../../../sdk/index.ts";
 
 const NO_OWNER = "(no owner)";
 const SeededIdentity = Schema.Struct({ identity: Schema.Struct({ name: Schema.String }), token: Schema.String });
 const SeedOutput = Schema.Struct({
   identities: Schema.Array(SeededIdentity),
+  messages: Schema.Record(Schema.String, Schema.Int),
   thread: Schema.Int,
 });
 const onIt = "I am. It fails about one run in ten on CI.";
@@ -24,6 +25,10 @@ function ownerOf(identity: Identity): string {
     return identity.owner;
   }
   return NO_OWNER;
+}
+
+function textOf(posted: readonly Message[], id: MessageId): string {
+  return Option.getOrThrow(Arr.findFirst(posted, (message) => message.id === id)).text;
 }
 
 function seeded(cookout: TestCookoutService): Effect.Effect<typeof SeedOutput.Type, never, CommandLineNeeds> {
@@ -182,5 +187,35 @@ it.effect("the seed calls a command in deploys and its handler replies with a re
     expect(Arr.map(thread.replies, ({ author, data, text }) => [author.name, text, data])).toStrictEqual([
       ["rollback", rolledBack, { status: "done", version: "1.4.1" }],
     ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("the seed prints the ID of every message it posts, by name", () =>
+  Effect.gen(function* seededMessageIds() {
+    const cookout = yield* TestCookout;
+    const board = yield* seeded(cookout);
+    const general = yield* answer(() => cookout.client.listMessages("general"));
+    const deploys = yield* answer(() => cookout.client.listMessages("deploys"));
+    const topLevel = [...general.messages, ...deploys.messages];
+    const replies = yield* Effect.forEach(topLevel, ({ id }) => answer(() => cookout.client.getThread(id)), {
+      concurrency: 1,
+    });
+    const posted = [...topLevel, ...Arr.flatMap(replies, (thread) => thread.replies)];
+
+    expect(Record.map(board.messages, (id) => textOf(posted, messageId(id)))).toStrictEqual({
+      adaReply: thanks,
+      deployed,
+      graceReply: question,
+      lunch: "Lunch at 12:30.",
+      mentionOfGrace: mention,
+      oldBotPost: retired,
+      releaseNotes:
+        "Notes for **1.4.2**:\n- the `login` test is _fixed_\n- ~~flaky~~ green\n\nDetails: https://github.com/mattpocock/cookout/issues/150",
+      rollbackCall: "/rollback",
+      rollbackResult: rolledBack,
+      threadStart: "Morning! Who is looking at the flaky login test?",
+      triageReply: onIt,
+    });
+    expect(board.messages["threadStart"]).toBe(board.thread);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
