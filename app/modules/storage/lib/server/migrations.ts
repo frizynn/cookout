@@ -135,6 +135,21 @@ const migrations: readonly string[] = [
   `ALTER TABLE agent_session_tokens ADD COLUMN last_used_at TEXT;
    ALTER TABLE agent_session_tokens ADD COLUMN host TEXT;`,
   "ALTER TABLE identities ADD COLUMN deactivated INTEGER NOT NULL DEFAULT 0 CHECK (deactivated IN (0, 1));",
+  `CREATE TABLE login_requests (
+     request_hash TEXT PRIMARY KEY,
+     user_code TEXT NOT NULL UNIQUE,
+     host TEXT NOT NULL,
+     created_at TEXT NOT NULL,
+     expires_at TEXT NOT NULL,
+     approved_by TEXT
+   ) STRICT;
+   CREATE TABLE login_credentials (
+     hash TEXT PRIMARY KEY,
+     identity_name TEXT NOT NULL,
+     host TEXT NOT NULL,
+     created_at TEXT NOT NULL
+   ) STRICT;
+   CREATE INDEX login_credentials_by_identity ON login_credentials (identity_name);`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

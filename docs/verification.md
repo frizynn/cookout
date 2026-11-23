@@ -194,7 +194,24 @@ env -u CLAUDECODE -u AI_AGENT $(cat /tmp/cookout-login.env) node app/main.ts log
 env -u CLAUDECODE -u AI_AGENT $(cat /tmp/cookout-login.env) node app/main.ts whoami
 ```
 
-`login` prints `{ identity, url }` for `ada`. `whoami` prints `ada` with `"source": "login"` (with `COOKOUT_TOKEN` set it says `"COOKOUT_TOKEN"`). The post's author is `ada`. `stat` prints `600`. `logout` prints `{ "loggedOut": true, url }`, and a second one `{ "loggedOut": false, … }` with exit 0. The last `whoami` is refused with 401 `token_missing`. `login --token` with an agent's token (such as `release-bot`'s) is refused with `human_only`, and an unknown one with `token_unknown`, both with exit 1 and nothing stored. A credentials file that isn't mode 600 and yours is refused with `credentials_unsafe`. Remove the folder when done: `rm -r /tmp/cookout-config`.
+`login` prints `{ identity, url }` for `ada`. `whoami` prints `ada` with `"source": "login"` (with `COOKOUT_TOKEN` set it says `"COOKOUT_TOKEN"`). The post's author is `ada`. `stat` prints `600`. `logout` prints `{ "loggedOut": true, "revoked": false, url }` (a token given with `--token` isn't a Login credential, so there is nothing to revoke), and a second one `{ "loggedOut": false, … }` with exit 0. The last `whoami` is refused with 401 `token_missing`. `login --token` with an agent's token (such as `release-bot`'s) is refused with `human_only`, and an unknown one with `token_unknown`, both with exit 1 and nothing stored. A credentials file that isn't mode 600 and yours is refused with `credentials_unsafe`. Remove the folder when done: `rm -r /tmp/cookout-config`.
+
+## Log in on this machine in the browser
+
+`cookout login` with no `--token` logs the machine in by browser approval ([ADR 0047](adr/0047-a-browser-login-issues-its-own-per-machine-credential.md)). It starts a login request, prints on stderr the approval link (`COOKOUT_URL` plus `/#/approve/<code>`) and its code (such as `WDJB-MJHT`), and asks every 2 seconds whether it has been approved. The approval page is a page of its own in the web UI: logged out, it shows the login view first; logged in as a human, it shows the code, the machine's host name and when the request expires, with an `Approve` button. Approving issues a new credential for that machine, acting as the approving human, which the CLI stores as `login --token` does. The link needs the built UI, so use the built server from "Open the web UI" on port 3000, seeded, with `ada` logged in to the web UI (the "Log in to the web UI" recipe with `ada`'s token in place of `grace`'s, same `agent-browser` session). Start the login in the background, outside the agent tool, with a temporary `XDG_CONFIG_HOME`:
+
+```sh
+env -u CLAUDECODE -u AI_AGENT COOKOUT_URL=http://127.0.0.1:3000 XDG_CONFIG_HOME=/tmp/cookout-browser-config node app/main.ts login > /tmp/cookout-browser-login.json 2> /tmp/cookout-browser-login.err &
+sleep 1 && cat /tmp/cookout-browser-login.err
+agent-browser --session cookout open "$(grep -o 'http[^ ]*' /tmp/cookout-browser-login.err)" && agent-browser --session cookout wait --text "Approve a login" && agent-browser --session cookout screenshot /tmp/cookout-approve-dark.png
+agent-browser --session cookout eval 'localStorage.setItem("cookout-theme", "light")' && agent-browser --session cookout reload && agent-browser --session cookout wait --text "Approve a login" && agent-browser --session cookout screenshot /tmp/cookout-approve-light.png
+agent-browser --session cookout find role button click --name "Approve" && agent-browser --session cookout wait --text "Approved."
+wait; cat /tmp/cookout-browser-login.json
+env -u CLAUDECODE -u AI_AGENT COOKOUT_URL=http://127.0.0.1:3000 XDG_CONFIG_HOME=/tmp/cookout-browser-config node app/main.ts whoami
+env -u CLAUDECODE -u AI_AGENT COOKOUT_URL=http://127.0.0.1:3000 XDG_CONFIG_HOME=/tmp/cookout-browser-config node app/main.ts logout
+```
+
+The stderr line says `Open http://127.0.0.1:3000/#/approve/<code> and check it shows the code <code>, then approve.`, and until when the link lasts. Both screenshots show the `Approve a login` card with the code in large mono letters and `Requested by <this machine's host name>`, one dark and one light, with no sidebar. After `Approve` the page says `Approved.`, the background `login` exits 0 and prints `{ identity, url }` for `ada`, `whoami` prints `ada` with `"source": "login"`, and `logout` prints `{ "loggedOut": true, "revoked": true, url }`: that machine's credential stops working, while `ada`'s own token and any other machine's Login still work. Left unapproved, the request expires after 10 minutes and `login` exits 1 with `login_request_expired`, storing nothing. An agent can't see or approve a login request: `GET /v1/login-requests/<code>` and `PUT /v1/login-requests/<code>/approval` refuse it with 403 `human_only`. `pnpm browser approve` runs the same approval in Playwright and leaves the two screenshots, approval-page-dark.png and approval-page-light.png, in Playwright's output folder. Remove the folder when done: `rm -r /tmp/cookout-browser-config`.
 
 ## Join as an agent
 

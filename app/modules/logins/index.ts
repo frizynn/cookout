@@ -1,0 +1,104 @@
+/**
+ * Logging a machine in by browser approval, on the wire (ADR 0047), shared by the server, the SDK, the CLI and the
+ * web: the routes, their bodies and answers, the user code's rule, the approval page's path and the SDK's calls.
+ * `cookout login` starts a login request, a human approves it in the web UI by its user code, and the CLI collects
+ * the Login's own credential with the secret request ID.
+ */
+import type { Identity, Token } from "../identities/index.ts";
+import type { IsoTime } from "../time/index.ts";
+
+interface StartLoginRequest {
+  readonly host: string;
+}
+
+interface LoginRequestView {
+  readonly userCode: string;
+  readonly host: string;
+  readonly expiresAt: IsoTime;
+  readonly approved: boolean;
+}
+
+/** A login request's user code, which a person checks on the approval page against the terminal: `WDJB-MJHT`. */
+export const userCodePattern = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/u;
+
+/** How long a login request lasts before it is gone, approved or not. */
+export const loginRequestSeconds = 600;
+
+/** The longest machine name a login request may give. */
+export const hostMaximumLength = 100;
+
+/**
+ * Whether `value` follows the user code rule.
+ * @param value The text to check.
+ * @returns Whether it is a user code.
+ */
+export function isUserCode(value: string): boolean {
+  return userCodePattern.test(value);
+}
+
+/** A started login request. Only `requestId` collects the Login, and it is shown this once. */
+export interface LoginRequestStartedResponse {
+  readonly userCode: string;
+  readonly requestId: Token;
+  readonly expiresAt: IsoTime;
+  readonly approvalPath: string;
+}
+
+/** Pending until a human approves, then that human and a new Login credential for this machine, once. */
+export type LoginCollectedResponse =
+  | { readonly status: "pending" }
+  | { readonly status: "approved"; readonly identity: Identity; readonly token: Token };
+
+/** The answer to showing or approving a login request. */
+export interface LoginRequestResponse {
+  readonly loginRequest: LoginRequestView;
+}
+
+/** The answer to `DELETE /v1/login`: whether the token sent was a Login credential, now revoked. */
+export interface LogoutResponse {
+  readonly revoked: boolean;
+}
+
+/** `POST /v1/login-requests` (no token): starts a login request (ADR 0047). */
+export const loginRequestsPath = "/v1/login-requests";
+
+/** `POST /v1/login-requests/collect` (no token): 202 pending, then 200 once approved; 404 `login_request_not_found` after. */
+export const collectLoginRequestPath = "/v1/login-requests/collect";
+
+/** `GET /v1/login-requests/:code` (a human): the live request with that user code. */
+export const loginRequestPath = "/v1/login-requests/:code";
+
+/** `PUT /v1/login-requests/:code/approval` (a human; an agent is 403 `human_only`): approves it as the caller. */
+export const loginRequestApprovalPath = "/v1/login-requests/:code/approval";
+
+/** `DELETE /v1/login`: revokes the Login credential the request was sent with. */
+export const loginPath = "/v1/login";
+
+/**
+ * The approval page's path on the server for a user code.
+ * @param userCode The login request's user code.
+ * @returns The path, such as `/#/approve/WDJB-MJHT`.
+ */
+export function approvalPathOf(userCode: string): string {
+  return `/#/approve/${userCode}`;
+}
+
+/** The SDK's calls for logging a machine in by browser approval. */
+export interface LoginCalls {
+  /**
+   * `POST /v1/login-requests` (no token): starts a login request, which lasts 10 minutes. The person checks
+   * `userCode` on the approval page at `approvalPath`; only `requestId`, shown this once, collects the Login.
+   */
+  readonly startLogin: (request: StartLoginRequest) => Promise<LoginRequestStartedResponse>;
+  /**
+   * `POST /v1/login-requests/collect` (no token): `pending` until a human approves, then, once, that human and a new
+   * Login credential for this machine. A wrong, expired or collected request ID is 404 `login_request_not_found`.
+   */
+  readonly collectLogin: (requestId: Token) => Promise<LoginCollectedResponse>;
+  /** `GET /v1/login-requests/:code` (a human): the live login request with that user code, for its approval page. */
+  readonly getLoginRequest: (userCode: string) => Promise<LoginRequestResponse>;
+  /** `PUT /v1/login-requests/:code/approval` (a human; an agent is 403 `human_only`): approves it as the caller. */
+  readonly approveLogin: (userCode: string) => Promise<LoginRequestResponse>;
+  /** `DELETE /v1/login`: revokes the Login credential this client sends, answering whether it was one. */
+  readonly revokeLogin: () => Promise<LogoutResponse>;
+}

@@ -1,17 +1,14 @@
 import type { AgentTool, Identity, IdentityName, Token, TokenHash } from "../../index.ts";
-import type {
-  CommandTokenGrant,
-  StorageUnavailable,
-  TokenLookup,
-  UseAgentSessionResult,
-} from "../../../storage/server.ts";
 import { Context, DateTime, Effect, Option, Predicate, String as Str } from "effect";
+import type { StorageUnavailable, TokenLookup, UseAgentSessionResult } from "../../../storage/server.ts";
 import { agentSessionExpired, agentSessionRevoked } from "../../../agent-sessions/index.ts";
 import { agentToolHeader, isAgentTool, sessionCookieName, token } from "../../index.ts";
 import type { MessageId } from "../../../messages/index.ts";
+import type { Principal } from "./principals.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
+import { commandTokenPrincipal } from "./principals.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 import { messagesPath } from "../../../messages/index.ts";
 
@@ -32,18 +29,6 @@ const tokenRevoked: Refusal = {
 const identityDeactivated: Refusal = {
   code: "token_revoked",
   message: "This token's identity is deactivated, so none of its tokens work.",
-  status: 401,
-};
-
-const tokenUnknown: Refusal = {
-  code: "token_unknown",
-  message: "This token is not known to this cookout.",
-  status: 401,
-};
-
-const tokenExpired: Refusal = {
-  code: "token_expired",
-  message: "This command token expired 24 h after its call.",
   status: 401,
 };
 
@@ -132,12 +117,6 @@ function requireCommandRoute({ method, url }: RequestTarget): Effect.Effect<void
   return Effect.fail(outsideCommandThread);
 }
 
-interface Principal {
-  readonly identity: Identity;
-  readonly commandThread: Option.Option<MessageId>;
-  readonly agentSession: Option.Option<TokenHash>;
-}
-
 interface Credentials {
   readonly authorization: string | undefined;
   readonly sessionCookie: string | undefined;
@@ -167,19 +146,6 @@ function credentialsOf({ cookies, headers }: CarriesCredentials): Credentials {
   return { authorization: headers["authorization"], sessionCookie: cookies[sessionCookieName] };
 }
 
-function commandTokenPrincipal(grant: CommandTokenGrant | undefined): Effect.Effect<Principal, Refusal> {
-  return Effect.gen(function* checkCommandToken() {
-    if (Predicate.isUndefined(grant)) {
-      return yield* Effect.fail(tokenUnknown);
-    }
-    const now = yield* DateTime.now;
-    if (DateTime.isGreaterThanOrEqualTo(now, DateTime.makeUnsafe(grant.expiresAt))) {
-      return yield* Effect.fail(tokenExpired);
-    }
-    return { agentSession: Option.none(), commandThread: Option.some(grant.threadId), identity: grant.handler };
-  });
-}
-
 const endedAgentSession = { expired: agentSessionExpiredRefusal, revoked: agentSessionRevokedRefusal } as const;
 
 function agentSessionPrincipal(storage: Storage["Service"], hash: TokenHash) {
@@ -188,7 +154,7 @@ function agentSessionPrincipal(storage: Storage["Service"], hash: TokenHash) {
       return Effect.succeed({ agentSession: Option.some(hash), commandThread: Option.none(), identity: used.identity });
     }
     if (used.status === "unknown") {
-      return Effect.flatMap(storage.findCommandToken(hash), commandTokenPrincipal);
+      return Effect.flatMap(storage.findCommandToken(hash), commandTokenPrincipal({ hash, storage }));
     }
     return Effect.fail(endedAgentSession[used.status]);
   };
@@ -290,7 +256,6 @@ export {
   CommandThread,
   agentToolOf,
   type Credentials,
-  type Principal,
   credentialsOf,
   ownsAgent,
   requireCommandRoute,
@@ -298,3 +263,4 @@ export {
   sentAgentTool,
   sentToken,
 };
+export type { Principal } from "./principals.ts";

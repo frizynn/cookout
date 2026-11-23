@@ -1,5 +1,6 @@
 import { Effect, Equal, FileSystem, Option, Path, Random, Record as Rec, Schema, String as Str, pipe } from "effect";
-import { home, xdgConfigHome } from "../../../config/server.ts";
+import { cookoutUrl, home, xdgConfigHome } from "../../../config/server.ts";
+import { baseUrlOf } from "../../../http/client.ts";
 
 interface LoginFailure {
   readonly code: "cli_error" | "config_folder_missing" | "credentials_damaged" | "credentials_unsafe";
@@ -32,6 +33,8 @@ interface CredentialsLocation {
 function failure(error: { readonly message: string }): LoginFailure {
   return { code: "cli_error", message: error.message };
 }
+
+const serverUrl: Effect.Effect<string> = Effect.map(Effect.orDie(cookoutUrl), baseUrlOf);
 
 function setTo(value: string): Option.Option<string> {
   return Option.liftPredicate(value, Str.isNonEmpty);
@@ -136,19 +139,12 @@ function saveLogin({
   });
 }
 
-function removeLogin(url: string): Effect.Effect<boolean, LoginFailure, Needs> {
+function removeLogin(url: string): Effect.Effect<void, LoginFailure, Needs> {
   return Effect.gen(function* forgetLogin() {
-    const found = yield* locate;
-    if (Option.isNone(found)) {
-      return false;
-    }
-    const { logins } = yield* readAt(found.value);
-    if (!Rec.has(logins, url)) {
-      return false;
-    }
-    yield* writeAt(found.value, { logins: Rec.remove(logins, url) });
-    return true;
+    const location = yield* located;
+    const { logins } = yield* readAt(location);
+    yield* writeAt(location, { logins: Rec.remove(logins, url) });
   });
 }
 
-export { type LoginFailure, loginFor, removeLogin, saveLogin };
+export { type LoginFailure, loginFor, removeLogin, saveLogin, serverUrl };

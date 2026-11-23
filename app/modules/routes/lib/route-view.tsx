@@ -1,4 +1,4 @@
-import { Authors, LoginView } from "../../views/index.tsx";
+import { Authors, LoginApprovalView, LoginView } from "../../views/index.tsx";
 import { AppShell } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
@@ -18,6 +18,13 @@ export function RouteView(props: RouteViewProps): ReactNode {
     return (
       <AppShell>
         <LoginView session={session} />
+      </AppShell>
+    );
+  }
+  if (props.route.name === "approve") {
+    return (
+      <AppShell>
+        <LoginApprovalView approval={props.stores.loginApprovals.forCode(props.route.userCode)} />
       </AppShell>
     );
   }

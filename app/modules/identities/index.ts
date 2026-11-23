@@ -290,4 +290,5 @@ export const identityErrorCodes = [
   "name_not_owned",
   "not_deactivated",
   "owner_deactivated",
+  "login_request_not_found",
 ] as const;

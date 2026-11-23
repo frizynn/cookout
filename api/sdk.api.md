@@ -4,12 +4,11 @@ The SDK's public surface: the built `dist/sdk.d.ts`, as consumers of the publish
 
 ```ts
 /**
- * `@ai-hero/cookout/sdk`: a client for a cookout server, in plain TypeScript
- * for Node and the browser. Every answer is checked against the protocol; one
- * that doesn't match fails with `CookoutError` code `bad_response`. A refusal
- * with a code this SDK doesn't know (from a newer server) still fails with
- * that code, typed as `UnknownErrorCode`; its `schemaProblems` lists an `invalid_request`'s schema errors.
- * `refusalOf` turns anything a call threw into a code and message (`unreachable` unless a `CookoutError`).
+ * `@ai-hero/cookout/sdk`: a client for a cookout server, in plain TypeScript for Node and the browser. Every answer
+ * is checked against the protocol; one that doesn't match fails with `CookoutError` code `bad_response`. A refusal
+ * with a code this SDK doesn't know (from a newer server) still fails with that code, typed as `UnknownErrorCode`;
+ * its `schemaProblems` lists an `invalid_request`'s schema errors. `refusalOf` turns anything a call threw into a
+ * code and message (`unreachable` unless a `CookoutError`).
  */
 /**
  * A moment on the wire, shared by the server, the SDK and the web: the
@@ -483,13 +482,64 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "owner_deactivated", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "agent_session_live", "idle_expiry_too_long", "agent_session_required", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "owner_deactivated", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "agent_session_live", "idle_expiry_too_long", "agent_session_required", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
 interface SchemaProblem {
   readonly message: string;
   readonly path: readonly (string | number)[];
+}
+interface StartLoginRequest {
+  readonly host: string;
+}
+interface LoginRequestView {
+  readonly userCode: string;
+  readonly host: string;
+  readonly expiresAt: IsoTime;
+  readonly approved: boolean;
+}
+/** A started login request. Only `requestId` collects the Login, and it is shown this once. */
+interface LoginRequestStartedResponse {
+  readonly userCode: string;
+  readonly requestId: Token;
+  readonly expiresAt: IsoTime;
+  readonly approvalPath: string;
+}
+/** Pending until a human approves, then that human and a new Login credential for this machine, once. */
+type LoginCollectedResponse = {
+  readonly status: "pending";
+} | {
+  readonly status: "approved";
+  readonly identity: Identity;
+  readonly token: Token;
+};
+/** The answer to showing or approving a login request. */
+interface LoginRequestResponse {
+  readonly loginRequest: LoginRequestView;
+}
+/** The answer to `DELETE /v1/login`: whether the token sent was a Login credential, now revoked. */
+interface LogoutResponse {
+  readonly revoked: boolean;
+}
+/** The SDK's calls for logging a machine in by browser approval. */
+interface LoginCalls {
+  /**
+   * `POST /v1/login-requests` (no token): starts a login request, which lasts 10 minutes. The person checks
+   * `userCode` on the approval page at `approvalPath`; only `requestId`, shown this once, collects the Login.
+   */
+  readonly startLogin: (request: StartLoginRequest) => Promise<LoginRequestStartedResponse>;
+  /**
+   * `POST /v1/login-requests/collect` (no token): `pending` until a human approves, then, once, that human and a new
+   * Login credential for this machine. A wrong, expired or collected request ID is 404 `login_request_not_found`.
+   */
+  readonly collectLogin: (requestId: Token) => Promise<LoginCollectedResponse>;
+  /** `GET /v1/login-requests/:code` (a human): the live login request with that user code, for its approval page. */
+  readonly getLoginRequest: (userCode: string) => Promise<LoginRequestResponse>;
+  /** `PUT /v1/login-requests/:code/approval` (a human; an agent is 403 `human_only`): approves it as the caller. */
+  readonly approveLogin: (userCode: string) => Promise<LoginRequestResponse>;
+  /** `DELETE /v1/login`: revokes the Login credential this client sends, answering whether it was one. */
+  readonly revokeLogin: () => Promise<LogoutResponse>;
 }
 declare const brand: unique symbol;
 type UnknownErrorCode = string & {
@@ -528,7 +578,7 @@ export type CookoutClientOptions = {
   /** The agent tool running this process, such as `claude-code`, sent on every request: a human's token with it is refused with 403 `agent_as_human`, and messages posted record it. Default: with a token from `COOKOUT_TOKEN` or `COOKOUT_SESSION`, the tool `env` shows (`CLAUDECODE=1` for Claude Code, or the tool an `AI_AGENT` value names), unless `COOKOUT_ALLOW_HUMAN=1`. */
   readonly agentTool?: string;
 };
-export type CookoutClient = {
+export type CookoutClient = LoginCalls & {
   /** `GET /v1/health`. Resolves when the server and its storage are usable. */
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */

@@ -27,7 +27,9 @@ import {
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import type { HealthResponse } from "../../http/index.ts";
+import type { LoginCalls } from "../../logins/index.ts";
 import { healthPath } from "../../http/index.ts";
+import { loginCalls } from "./logins.ts";
 
 interface IdentityCalls {
   readonly health: () => Promise<HealthResponse>;
@@ -109,7 +111,7 @@ function deactivationCalls(server: ClientConnection): Pick<IdentityCalls, "deact
   };
 }
 
-function identityCalls(server: ClientConnection): IdentityCalls {
+function ownIdentityCalls(server: ClientConnection): IdentityCalls {
   return {
     createIdentity: async (body) => {
       const created = await send(server, {
@@ -156,4 +158,9 @@ function identityCalls(server: ClientConnection): IdentityCalls {
   };
 }
 
+function identityCalls(server: ClientConnection): IdentityCalls & LoginCalls {
+  return { ...loginCalls(server), ...ownIdentityCalls(server) };
+}
+
+export type { LoginCalls } from "../../logins/index.ts";
 export { identityCalls };

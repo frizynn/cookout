@@ -25,6 +25,7 @@ type CallFailureCode =
   | "already_joined"
   | "not_joined"
   | "usage"
+  | "login_request_expired"
   | "timeout"
   | "server_unreachable";
 

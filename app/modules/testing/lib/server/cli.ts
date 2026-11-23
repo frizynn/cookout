@@ -116,12 +116,11 @@ function cliResult({ exitCode, stderr, stdout }: Pick<CliResult, "exitCode" | "s
   return { exitCode, stderr, stderrJson: parseLine(stderr), stdout, stdoutJson: parseLine(stdout) };
 }
 
-function succeeded(): number {
-  return EXIT_SUCCESS;
-}
-
 function exitCodeAfter<Failure>(command: Effect.Effect<void, Failure, Needs>): Effect.Effect<number, never, Needs> {
-  return Effect.matchCause(command, { onFailure: (cause) => exitCodeFor(Cause.squash(cause)), onSuccess: succeeded });
+  return Effect.matchCause(command, {
+    onFailure: (cause) => exitCodeFor(Cause.squash(cause)),
+    onSuccess: Function.constant(EXIT_SUCCESS),
+  });
 }
 
 function exitCodeOf({ console, env, program }: CommandLine): Effect.Effect<number, never, Needs> {
@@ -287,7 +286,10 @@ export {
   type Watched,
   cliResult,
   commandLineServices,
+  exitCodeAfter,
+  exitCodeOf,
   parseLine,
+  verbLayers,
   runCookout,
   runDev,
   startDev,

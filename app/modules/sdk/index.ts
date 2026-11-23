@@ -1,10 +1,9 @@
 /**
- * `@ai-hero/cookout/sdk`: a client for a cookout server, in plain TypeScript
- * for Node and the browser. Every answer is checked against the protocol; one
- * that doesn't match fails with `CookoutError` code `bad_response`. A refusal
- * with a code this SDK doesn't know (from a newer server) still fails with
- * that code, typed as `UnknownErrorCode`; its `schemaProblems` lists an `invalid_request`'s schema errors.
- * `refusalOf` turns anything a call threw into a code and message (`unreachable` unless a `CookoutError`).
+ * `@ai-hero/cookout/sdk`: a client for a cookout server, in plain TypeScript for Node and the browser. Every answer
+ * is checked against the protocol; one that doesn't match fails with `CookoutError` code `bad_response`. A refusal
+ * with a code this SDK doesn't know (from a newer server) still fails with that code, typed as `UnknownErrorCode`;
+ * its `schemaProblems` lists an `invalid_request`'s schema errors. `refusalOf` turns anything a call threw into a
+ * code and message (`unreachable` unless a `CookoutError`).
  */
 import type {
   AckResponse,
@@ -43,6 +42,7 @@ import type {
 } from "./lib/messages.ts";
 import { eventCalls, eventOf } from "./lib/events.ts";
 import type { HealthResponse } from "../http/index.ts";
+import type { LoginCalls } from "./lib/identities.ts";
 import { agentSessionCalls } from "./lib/agent-sessions.ts";
 import { channelCalls } from "./lib/channels.ts";
 import { commandCalls } from "./lib/commands.ts";
@@ -114,7 +114,7 @@ export type CookoutClientOptions = {
   readonly agentTool?: string;
 };
 
-export type CookoutClient = {
+export type CookoutClient = LoginCalls & {
   /** `GET /v1/health`. Resolves when the server and its storage are usable. */
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */

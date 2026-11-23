@@ -21,6 +21,7 @@ export type { NewMessage } from "./lib/server/messages.ts";
 export type { NewCommandCall } from "./lib/server/command-calls.ts";
 export type { AgentAt, UseAgentSessionResult } from "./lib/server/agent-sessions.ts";
 export type { TransferAgentResult } from "./lib/server/identity-admins.ts";
+export type { LoginCollection, LoginRequest, NewLoginRequest } from "./lib/server/login-requests.ts";
 
 export class Storage extends Context.Service<Storage, StorageService>()("@ai-hero/cookout/storage/server/Storage") {}
 

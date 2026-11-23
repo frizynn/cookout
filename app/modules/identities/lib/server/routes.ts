@@ -159,3 +159,6 @@ export const identityAdminRoutes: readonly Route<Caller | Storage | Secrets>[] =
 
 export { identityNotFound, nameParam };
 export { humanAdmin } from "./create.ts";
+
+export { loginResponseSchemas, loginRoutes, openLoginRoutes } from "./logins.ts";
+export { AddressLimit } from "./login-support.ts";

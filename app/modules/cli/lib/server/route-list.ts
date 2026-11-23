@@ -1,3 +1,4 @@
+import { addressLimitLayer, limitsLayer } from "../../../limits/server.ts";
 import { agentSessionOwnerRoutes, agentSessionRoutes, agentSessionsLayer } from "../../../agent-sessions/server.ts";
 import { channelRoutes, channelsLayer } from "../../../channels/server.ts";
 import { commandRoutes, commandsLayer } from "../../../commands/server.ts";
@@ -14,7 +15,6 @@ import { messageRoutes, messagesLayer } from "../../../messages/server.ts";
 import { Layer } from "effect";
 import type { Route } from "../../../http/server.ts";
 import { eventRoutes } from "../../../events/server.ts";
-import { limitsLayer } from "../../../limits/server.ts";
 
 type NeedsOf<Routes> = Routes extends readonly Route<infer Needs>[] ? Needs : never;
 
@@ -53,4 +53,5 @@ export const domainLayers = Layer.mergeAll(
   inboxLayer,
   commandsLayer,
   limitsLayer,
+  addressLimitLayer,
 );

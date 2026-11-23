@@ -58,6 +58,8 @@ const SWITCH_OFF = [
   "UPDATE tokens SET revoked = 1 WHERE identity_name = ? AND revoked = 0",
   "UPDATE agent_session_tokens SET revoked = 1 WHERE identity_name = ? AND revoked = 0",
   "DELETE FROM command_tokens WHERE handler_name = ?",
+  "DELETE FROM login_credentials WHERE identity_name = ?",
+  "DELETE FROM login_requests WHERE approved_by = ?",
 ] as const;
 
 const OwnedRow = Schema.Struct({ name: Schema.String.pipe(Schema.refine(isIdentityName)) });

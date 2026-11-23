@@ -30,6 +30,11 @@ interface Serving extends Listen {
   readonly publicUrl?: string;
 }
 
+interface ServedRoutes<Needs, OpenNeeds> {
+  readonly gated: readonly Route<Needs>[];
+  readonly open?: readonly Route<OpenNeeds>[];
+}
+
 type NodeHttp = ReturnType<typeof nodeHttpLayer>;
 
 const MEBIBYTE = 1_048_576;
@@ -145,18 +150,19 @@ export function nodeHttpServer(listen: Listen): NodeHttp {
  * (or the host of `publicUrl`) is refused with 421 `foreign_host`, a write from another site's `Origin` with
  * 403 `foreign_origin`, and every response carries a strict CSP and refuses framing.
  * @param serving The port and host to listen on, the folder of the built web UI if it serves one, and the public URL if it has one.
- * @param routes Every route but `/v1/health`.
- * @param gate What every request to one of `routes` goes through first.
+ * @param routes Every route but `/v1/health`: the `gated` ones, and the `open` ones that need no token and never go through `gate`.
+ * @param gate What every request to one of the `gated` routes goes through first.
  * @returns The server, as a Layer.
  */
-export function httpServer<Needs, Provides, Requires, Fails>(
+export function httpServer<Needs, Provides, Requires, Fails, OpenNeeds = never>(
   serving: Serving,
-  routes: readonly Route<Needs>[],
+  routes: ServedRoutes<Needs, OpenNeeds>,
   gate: Gate<Provides, Requires, Fails>,
 ) {
   const { host, port, publicUrl = "" } = serving;
-  const open: readonly Route<Storage | WebNeeds>[] = [healthRoute, ...webRoutes(serving)];
-  const app = Effect.andThen(guardRequest(publicUrl), dispatch({ gate, gated: routes, open })).pipe(
+  const { gated, open: openRoutes = [] } = routes;
+  const open: readonly Route<Storage | WebNeeds | OpenNeeds>[] = [healthRoute, ...webRoutes(serving), ...openRoutes];
+  const app = Effect.andThen(guardRequest(publicUrl), dispatch({ gate, gated, open })).pipe(
     Effect.catch(answerFailure),
     Effect.map(HttpServerResponse.setHeaders(securityHeaders)),
     Effect.provideService(HttpIncomingMessage.MaxBodySize, maxBodySize),

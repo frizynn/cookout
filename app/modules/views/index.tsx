@@ -58,10 +58,13 @@
  * closes it. To an admin, a human's profile has "Make admin", or "Remove
  * admin" if it is one, and says why if the server refuses the change. The sidebar's footer links to the logged-in human's own profile.
  * `NotBuiltView` says a route has nothing to show.
+ * `LoginApprovalView` is the approval page for a login request: its user code
+ * to check against the terminal, the host that asked, and an Approve button.
  */
 export { Authors } from "./lib/authors.tsx";
 export { ChannelView } from "./lib/channel.tsx";
 export { InboxView } from "./lib/inbox.tsx";
+export { LoginApprovalView } from "./lib/login-approval.tsx";
 export { LoginView } from "./lib/login.tsx";
 export { NotBuiltView } from "./lib/not-built.tsx";
 export { PeopleView } from "./lib/people.tsx";

@@ -6,7 +6,7 @@ import { memoryChannels } from "./channels.ts";
 import { memoryCommandCalls } from "./command-calls.ts";
 import { memoryCommands } from "./commands.ts";
 import { memoryHealth } from "./health.ts";
-import { memoryIdentities } from "./identities.ts";
+import { memoryIdentitySections } from "./identity-sections.ts";
 import { memoryMessages } from "./messages-memory.ts";
 import { openMemoryState } from "./memory-state.ts";
 
@@ -14,7 +14,7 @@ export const openMemoryStorage: Effect.Effect<StorageService, never, Scope.Scope
   openMemoryState,
   (state) => {
     const { forgetChannel: dropChannel, ...channels } = memoryChannels(state);
-    const { findIdentity, placeHandler, ...identities } = memoryIdentities(state);
+    const { findIdentity, placeHandler, ...identities } = memoryIdentitySections(state);
     const { revokeAgentSessionsOf, ...agentSessions } = memoryAgentSessions({ findIdentity, state });
     const { forgetChannel, ...messages } = memoryMessages({ channels, identities, state });
     const { dropCommandTokens, dropCommandTokensOf, dropDeliveries, ...commands } = memoryCommands({
