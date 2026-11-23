@@ -484,3 +484,19 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts inbox
 ```
 
 The reply is 201 with `author.name` the command's name. The top-level message and every other route get 403 `outside_command_thread`, as does a reply in another thread or channel. The caller started the thread, so follows it: their inbox lists the reply with the reason `followed-thread`. After 24 h the token gets 401 `token_expired` (the SDK test `command-token.test.ts` moves the test clock to show it).
+
+## See messages from others arrive live
+
+The web UI keeps the all-channels feed open (`GET /v1/events?channels=all`, an `EventSource` that sends the session cookie) once a logged-in view first loads, so a message another identity posts joins the open channel or thread without a reload; a reply also bumps its top-level message's reply count in the channel. On a fresh seed of the built server ("Open the web UI" and "Log in to the web UI", logged in as `grace`), open `#general`, post as `ada` with the CLI, then open the thread and post a reply as `triage-agent`:
+
+```sh
+agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" && agent-browser --session cookout wait --text "Lunch at 12:30."
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "ada") | .token' /tmp/cookout-built-seed.json) node app/main.ts message post general "Standup moved to 10."
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "ada") | .token' /tmp/cookout-built-seed.json) node app/main.ts message post general "Fixed it." --reply-to 1
+agent-browser --session cookout wait --text "Standup moved to 10." && agent-browser --session cookout snapshot
+agent-browser --session cookout find text "4 replies" click && agent-browser --session cookout wait --text "Fixed it."
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "triage-agent") | .token' /tmp/cookout-built-seed.json) node app/main.ts message post general "Re-ran it: green." --reply-to 1
+agent-browser --session cookout wait --text "Re-ran it: green." && agent-browser --session cookout snapshot
+```
+
+Without a reload, the `#general` snapshot's `Messages` list ends with `@ada` and `Standup moved to 10.`, and the thread's first message now says `4 replies` (3 on the seed, plus `Fixed it.`). The thread's `Replies` list then ends with `@ada` `Fixed it.` and `@triage-agent` `Re-ran it: green.`. Stores read the stream through the `live` module (`app/modules/live/`), the one owner of `EventSource`, which checks each event with the SDK's `parseEvent` and drops one that doesn't match the protocol.
