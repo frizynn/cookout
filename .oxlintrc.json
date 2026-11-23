@@ -1056,54 +1056,6 @@
       }
     },
     {
-      "files": ["app/modules/views/lib/use-time-ago.ts"],
-      "rules": {
-        "no-restricted-globals": [
-          "error",
-          {
-            "name": "fetch",
-            "message": "Use request() from app/modules/http/client.ts."
-          },
-          {
-            "name": "URLSearchParams",
-            "message": "Build URLs with request() from app/modules/http/client.ts."
-          },
-          {
-            "name": "setTimeout",
-            "message": "Use Effect's Clock and Schedule on the backend."
-          },
-          {
-            "name": "setInterval",
-            "message": "Use Effect's Clock and Schedule on the backend."
-          },
-          {
-            "name": "setImmediate",
-            "message": "Use Effect's Clock and Schedule on the backend."
-          },
-          {
-            "name": "console",
-            "message": "Print through Effect's Console in the cli module."
-          },
-          {
-            "name": "crypto",
-            "message": "Use the Secrets service from app/modules/secrets/server.ts."
-          },
-          {
-            "name": "localStorage",
-            "message": "Browser storage has no owner yet: ask Matt before adding one."
-          },
-          {
-            "name": "sessionStorage",
-            "message": "Browser storage has no owner yet: ask Matt before adding one."
-          },
-          {
-            "name": "EventSource",
-            "message": "Read the live stream through the live module: app/modules/live/index.ts."
-          }
-        ]
-      }
-    },
-    {
       "files": ["app/modules/http/client.ts"],
       "rules": {
         "no-restricted-globals": [

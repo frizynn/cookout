@@ -5,8 +5,14 @@
  * day for a separator: `Today`, `Yesterday`, or the weekday and date
  * (`Monday, 23 November`). `dayOf(iso)` is the local day a time falls on, and
  * `millisOf(iso)` its milliseconds, to tell how far apart two times are.
+ * `timeAgo(iso)` is how long ago a time was (`5m ago`), by the current time.
+ * This is the web UI's one reader of `Date`.
  */
 const DAY = 1;
+const MINUTE = 60_000;
+const MINUTES_IN_HOUR = 60;
+const MINUTES_IN_DAY = 1440;
+const NONE = 0;
 
 const clock = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" });
 const full = new Intl.DateTimeFormat("en-GB", { dateStyle: "full", timeStyle: "short" });
@@ -14,6 +20,10 @@ const weekday = new Intl.DateTimeFormat("en-GB", { weekday: "long" });
 const date = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long" });
 
 const TEXT = { today: "Today", yesterday: "Yesterday" } as const;
+
+function minuteOf(milliseconds: number): number {
+  return Math.floor(milliseconds / MINUTE);
+}
 
 /** A message's time three ways: the ISO time, a short time to show, and the full date and time for a hover. */
 export interface MessageTime {
@@ -66,4 +76,23 @@ export function dayLabel(iso: string): string {
     return TEXT.yesterday;
   }
   return `${weekday.format(day)}, ${date.format(day)}`;
+}
+
+/**
+ * How long ago a time was, in whole minutes, hours or days, by the current time.
+ * @param iso The ISO time.
+ * @returns `just now`, `5m ago`, `2h ago` or `3d ago`.
+ */
+export function timeAgo(iso: string): string {
+  const minutes = minuteOf(Date.now()) - minuteOf(Date.parse(iso));
+  if (minutes <= NONE) {
+    return "just now";
+  }
+  if (minutes < MINUTES_IN_HOUR) {
+    return `${String(minutes)}m ago`;
+  }
+  if (minutes < MINUTES_IN_DAY) {
+    return `${String(Math.floor(minutes / MINUTES_IN_HOUR))}h ago`;
+  }
+  return `${String(Math.floor(minutes / MINUTES_IN_DAY))}d ago`;
 }
