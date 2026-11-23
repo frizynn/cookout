@@ -17,6 +17,10 @@ interface Summary {
   readonly timings: readonly FileTiming[];
 }
 
+interface SavedList extends Summary {
+  readonly dir: string;
+}
+
 interface ReportFile {
   readonly base: string;
   readonly file: string;
@@ -119,19 +123,10 @@ function readTimings({ base, file, runner }: ReportFile): readonly FileTiming[] 
   return vitestTimings({ base, report });
 }
 
-function saveFullList({ label, timings }: Summary): void {
-  mkdirSync(TIMINGS_DIR, { recursive: true });
-  writeFileSync(path.join(TIMINGS_DIR, `${label}.txt`), fullList(timings));
+function saveFullList({ dir, label, timings }: SavedList): void {
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(path.join(dir, `${label}.txt`), fullList(timings));
 }
 
 export type { FileTiming, ReportFile };
-export {
-  TIMINGS_DIR,
-  fullList,
-  playwrightTimings,
-  readTimings,
-  saveFullList,
-  slowestNames,
-  slowestSummary,
-  vitestTimings,
-};
+export { TIMINGS_DIR, readTimings, saveFullList, slowestNames, slowestSummary };

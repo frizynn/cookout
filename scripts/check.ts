@@ -121,7 +121,7 @@ function reportsOf(check: Check): readonly ReportFile[] {
 function timingsOf(check: Check): readonly FileTiming[] {
   return reportsOf(check).flatMap((reportFile) => {
     const timings = readTimings(reportFile);
-    saveFullList({ label: check.name, timings });
+    saveFullList({ dir: TIMINGS_DIR, label: check.name, timings });
     return timings;
   });
 }

@@ -1,5 +1,9 @@
-import { expect, it } from "vitest";
-import { fullList, playwrightTimings, slowestNames, slowestSummary, vitestTimings } from "../lib/slowest-files.ts";
+import { expect, it, onTestFinished } from "vitest";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { readTimings, saveFullList, slowestNames, slowestSummary } from "../lib/slowest-files.ts";
+import type { ReportFile } from "../lib/slowest-files.ts";
+import path from "node:path";
+import { tmpdir } from "node:os";
 
 const ROOT = "/repo";
 const FILE_COUNT = 12;
@@ -25,6 +29,20 @@ const playwrightReport = {
   ],
 };
 
+function folder(): string {
+  const made = mkdtempSync(path.join(tmpdir(), "slowest-files-"));
+  onTestFinished(() => {
+    rmSync(made, { force: true, recursive: true });
+  });
+  return made;
+}
+
+function reportFile(report: unknown, options: Omit<ReportFile, "file">): ReportFile {
+  const file = path.join(folder(), "report.json");
+  writeFileSync(file, JSON.stringify(report));
+  return { ...options, file };
+}
+
 const timings = Array.from({ length: FILE_COUNT }, (unused, index) => ({
   file: `f${String(index)}.test.ts`,
   seconds: index + QUARTER,
@@ -32,7 +50,7 @@ const timings = Array.from({ length: FILE_COUNT }, (unused, index) => ({
 
 it("reads each test file's duration from a Vitest JSON report, relative to the root", { timeout: 10_000 }, () => {
   expect.hasAssertions();
-  expect(vitestTimings({ base: ROOT, report: vitestReport })).toStrictEqual([
+  expect(readTimings(reportFile(vitestReport, { base: ROOT, runner: "vitest" }))).toStrictEqual([
     { file: "a.test.ts", seconds: 2.5 },
     { file: "b.test.ts", seconds: 0.25 },
   ]);
@@ -40,15 +58,19 @@ it("reads each test file's duration from a Vitest JSON report, relative to the r
 
 it("reads no timings from a report that isn't a Vitest JSON report", { timeout: 10_000 }, () => {
   expect.hasAssertions();
+
+  const missing = path.join(folder(), "missing.json");
+
   expect([
-    vitestTimings({ base: ROOT, report: null }),
-    vitestTimings({ base: ROOT, report: { testResults: [{ name: "a.test.ts" }] } }),
-  ]).toStrictEqual([[], []]);
+    readTimings(reportFile(null, { base: ROOT, runner: "vitest" })),
+    readTimings(reportFile({ testResults: [{ name: "a.test.ts" }] }, { base: ROOT, runner: "vitest" })),
+    readTimings({ base: ROOT, file: missing, runner: "vitest" }),
+  ]).toStrictEqual([[], [], []]);
 });
 
 it("adds up every result in a Playwright file, nested describes and retries included", { timeout: 10_000 }, () => {
   expect.hasAssertions();
-  expect(playwrightTimings({ base: "app/browser", report: playwrightReport })).toStrictEqual([
+  expect(readTimings(reportFile(playwrightReport, { base: "app/browser", runner: "playwright" }))).toStrictEqual([
     { file: "app/browser/chat.browser.test.ts", seconds: 2 },
     { file: "app/browser/login.browser.test.ts", seconds: 0.7 },
   ]);
@@ -57,8 +79,8 @@ it("adds up every result in a Playwright file, nested describes and retries incl
 it("reads no timings from a report that isn't a Playwright JSON report", { timeout: 10_000 }, () => {
   expect.hasAssertions();
   expect([
-    playwrightTimings({ base: "", report: null }),
-    playwrightTimings({ base: "", report: { suites: [{ specs: [] }] } }),
+    readTimings(reportFile(null, { base: "", runner: "playwright" })),
+    readTimings(reportFile({ suites: [{ specs: [] }] }, { base: "", runner: "playwright" })),
   ]).toStrictEqual([[], []]);
 });
 
@@ -98,7 +120,11 @@ it("names the 3 slowest files in one line, for the budget warning", { timeout: 1
   expect(slowestNames(timings)).toBe("f11.test.ts (11.3s), f10.test.ts (10.3s), f9.test.ts (9.3s)");
 });
 
-it("writes the full list, slowest first, one file a line", { timeout: 10_000 }, () => {
+it("saves the full list as <label>.txt, slowest first, one file a line", { timeout: 10_000 }, () => {
   expect.hasAssertions();
-  expect(fullList(timings.slice(NONE, FIRST_TWO))).toBe("1.3s\tf1.test.ts\n0.3s\tf0.test.ts\n");
+
+  const dir = path.join(folder(), "timings");
+  saveFullList({ dir, label: "tests", timings: timings.slice(NONE, FIRST_TWO) });
+
+  expect(readFileSync(path.join(dir, "tests.txt"), "utf8")).toBe("1.3s\tf1.test.ts\n0.3s\tf0.test.ts\n");
 });
