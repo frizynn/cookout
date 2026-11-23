@@ -25,20 +25,31 @@ function withHost(url: string, host: string): Effect.Effect<{ readonly json: unk
   }).pipe(Effect.provide(NodeHttpClient.layerNodeHttp), Effect.orDie);
 }
 
-it.effect("a write whose Origin is another site's is refused with 403 foreign_origin", () =>
+it.effect("a write whose Origin is another site's, or opaque, is refused with 403 foreign_origin", () =>
   Effect.gen(function* foreignOriginWrite() {
     const cookout = yield* TestCookout;
     const write = { baseUrl: cookout.url, body: { name: "general" }, method: "POST", path: channelsPath } as const;
     const foreign = yield* answer(() => request({ ...write, headers: { origin: FOREIGN_ORIGIN } }));
+    const opaque = yield* answer(() => request({ ...write, headers: { origin: "null" } }));
     const own = yield* answer(() => request({ ...write, headers: { origin: cookout.url } }));
+
+    expect(foreign.status).toBe(FORBIDDEN);
+    expect([foreign.json, opaque.json]).toMatchObject([
+      { error: { code: "foreign_origin" } },
+      { error: { code: "foreign_origin" } },
+    ]);
+    expect(own.json).toMatchObject({ error: { code: "token_missing" } });
+    expect(own.status).toBe(UNAUTHORIZED);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a read from another site's Origin is still answered", () =>
+  Effect.gen(function* foreignOriginRead() {
+    const cookout = yield* TestCookout;
     const read = yield* answer(() =>
       request({ baseUrl: cookout.url, headers: { origin: FOREIGN_ORIGIN }, method: "GET", path: healthPath }),
     );
 
-    expect(foreign.status).toBe(FORBIDDEN);
-    expect(foreign.json).toMatchObject({ error: { code: "foreign_origin" } });
-    expect(own.json).toMatchObject({ error: { code: "token_missing" } });
-    expect(own.status).toBe(UNAUTHORIZED);
     expect(read.status).toBe(OK);
   }).pipe(Effect.provide(testCookout())),
 );
