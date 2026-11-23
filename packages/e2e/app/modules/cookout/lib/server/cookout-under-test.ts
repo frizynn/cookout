@@ -10,6 +10,7 @@ interface CookoutUnderTestService {
   readonly prefix: string;
   readonly admin: CookoutClient;
   readonly createAgent: (name: string) => Effect.Effect<IdentityWithTokenResponse>;
+  readonly createHuman: (name: string) => Effect.Effect<IdentityWithTokenResponse>;
   readonly createChannel: (name: string) => Effect.Effect<ChannelResponse>;
   readonly runCookout: (run: BinRun) => Effect.Effect<BinResult, never, BinNeeds>;
 }
@@ -50,6 +51,8 @@ const cookoutUnderTest: Layer.Layer<CookoutUnderTest> = Layer.effect(
       createAgent: (name: string) =>
         Effect.promise(() => admin.createIdentity({ kind: "agent", name: `${prefix}-${name}` })),
       createChannel: (name: string) => Effect.promise(() => admin.createChannel({ name: `${prefix}-${name}` })),
+      createHuman: (name: string) =>
+        Effect.promise(() => admin.createIdentity({ kind: "human", name: `${prefix}-${name}` })),
       prefix,
       runCookout: runBin(url),
       url,
