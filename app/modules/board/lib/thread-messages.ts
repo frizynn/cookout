@@ -32,6 +32,8 @@ interface LiveThreadMessages extends ThreadMessages {
 
 type ThreadClient = Pick<CookoutClient, "ack" | "createMessage" | "getThread">;
 
+const NONE_OPEN = 0;
+
 interface Thread {
   readonly client: ThreadClient;
   readonly channel: string;
@@ -98,7 +100,12 @@ async function postReply(thread: Thread, text: string): Promise<void> {
   }
 }
 
-async function replyAfter(previous: Promise<void>, thread: Thread, text: string): Promise<void> {
+async function ackAfter(previous: Promise<void> | null, thread: Thread, id: MessageId): Promise<void> {
+  await previous;
+  await ack(thread, id);
+}
+
+async function replyAfter(previous: Promise<void> | null, thread: Thread, text: string): Promise<void> {
   await previous;
   await postReply(thread, text);
 }
@@ -125,10 +132,14 @@ function createThreadMessages(options: ThreadOptions): LiveThreadMessages {
   };
   return {
     receive: (message) => {
+      const before = state;
       update(thread, (loaded) => received(loaded, message));
+      if (state !== before && listeners.size > NONE_OPEN) {
+        queue = ackAfter(queue, thread, message.id);
+      }
     },
     reply: (text) => {
-      queue = replyAfter(queue ?? load(thread), thread, text);
+      queue = replyAfter(queue, thread, text);
     },
     snapshot: () => state,
     subscribe: (listener) => {

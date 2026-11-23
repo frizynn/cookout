@@ -28,6 +28,11 @@ interface TextFieldParts {
   readonly name: string;
 }
 
+interface DataAreaParts extends TextFieldParts {
+  readonly value: string;
+  readonly onEdit: (text: string) => void;
+}
+
 interface TextAreaParts extends TextFieldParts {
   readonly value: string;
   readonly caret: number;
@@ -78,6 +83,7 @@ interface SkeletonParts {
 export type {
   ButtonParts,
   CountParts,
+  DataAreaParts,
   DataBlockParts,
   FieldsFormParts,
   FormParts,

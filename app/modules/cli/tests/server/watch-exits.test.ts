@@ -219,10 +219,23 @@ function twoOldMentions({ cookout }: Watch): Effect.Effect<void> {
   });
 }
 
+it.effect("cookout watch --once with unread items prints the unread line and exits 0", () =>
+  Effect.gen(function* watchOnceUnread() {
+    const { result, stdoutLines } = yield* watchUntilExit({
+      args: ["watch", "--once"],
+      prepare: twoOldMentions,
+      whileWatching: () => Effect.void,
+    });
+
+    expect(result.exitCode).toBe(EXIT_SUCCESS);
+    expect(stdoutLines).toStrictEqual(["2 unread, run cookout inbox"]);
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
 it.effect("cookout watch starts with one line counting the unread items, then prints only newer items", () =>
   Effect.gen(function* watchUnread() {
     const { during, stdoutLines } = yield* watchUntilExit({
-      args: ["watch", "--once"],
+      args: ["watch", "--until-mention"],
       prepare: twoOldMentions,
       whileWatching: ({ ann }) => mention(ann, "@bob three"),
     });
@@ -246,7 +259,7 @@ function reconnectThenMention({ ann, link }: Watch): Effect.Effect<MessageId> {
 it.effect("cookout watch prints the unread line once, not again after a reconnect", () =>
   Effect.gen(function* watchUnreadOnce() {
     const { during, stdoutLines } = yield* watchUntilExit({
-      args: ["watch", "--once"],
+      args: ["watch", "--until-mention"],
       prepare: twoOldMentions,
       whileWatching: reconnectThenMention,
     });

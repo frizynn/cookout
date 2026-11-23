@@ -19,6 +19,7 @@ interface Loaded {
   readonly older: OlderState;
   readonly read: ReadState;
   readonly call: CallState;
+  readonly callData: string;
 }
 
 type ChannelMessagesState = { readonly status: "loading" } | Failure | Loaded;
@@ -28,6 +29,7 @@ interface ChannelMessages {
   readonly snapshot: () => ChannelMessagesState;
   readonly loadOlder: () => void;
   readonly call: (command: string, data: string) => void;
+  readonly editCallData: (data: string) => void;
 }
 
 interface LiveChannelMessages extends ChannelMessages {
@@ -46,6 +48,7 @@ interface Channel {
 
 const NEWEST = -1;
 const ONE_MORE = 1;
+const NONE_OPEN = 0;
 
 function update(channel: Channel, change: (loaded: Loaded) => Loaded): void {
   const current = channel.current();
@@ -69,6 +72,7 @@ async function loadNewest(channel: Channel): Promise<void> {
     const { hasMore, messages } = await channel.client.listMessages(channel.name, { limit: channel.pageSize });
     channel.publish({
       call: { status: "idle" },
+      callData: "",
       hasMore,
       messages,
       older: { status: "idle" },
@@ -110,7 +114,7 @@ async function addNewest(channel: Channel, command: string): Promise<void> {
   update(channel, (loaded) => {
     const newest = Math.max(...loaded.messages.map((message) => message.id));
     const added = page.messages.filter((message) => message.id > newest);
-    return { ...loaded, call: { command, status: "called" }, messages: [...loaded.messages, ...added] };
+    return { ...loaded, call: { command, status: "called" }, callData: "", messages: [...loaded.messages, ...added] };
   });
 }
 
@@ -163,7 +167,12 @@ async function callAfter(previous: Promise<void> | null, channel: Channel, reque
   await callCommand(channel, request);
 }
 
-async function loadOlderAfter(previous: Promise<void>, channel: Channel): Promise<void> {
+async function ackAfter(previous: Promise<void> | null, channel: Channel, message: TopLevelMessage): Promise<void> {
+  await previous;
+  await ack(channel, message);
+}
+
+async function loadOlderAfter(previous: Promise<void> | null, channel: Channel): Promise<void> {
   await previous;
   await loadOlderPage(channel);
 }
@@ -186,12 +195,20 @@ function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
     call: (command, data) => {
       queue = callAfter(queue, channel, { command, data });
     },
+    editCallData: (data) => {
+      update(channel, (loaded) => ({ ...loaded, callData: data }));
+    },
     loadOlder: () => {
-      queue = loadOlderAfter(queue ?? loadNewest(channel), channel);
+      queue = loadOlderAfter(queue, channel);
     },
     receive: (message) => {
-      if (message.channel === options.name) {
-        update(channel, (loaded) => received(loaded, message));
+      if (message.channel !== options.name) {
+        return;
+      }
+      const before = state;
+      update(channel, (loaded) => received(loaded, message));
+      if (message.kind === "top-level" && state !== before && listeners.size > NONE_OPEN) {
+        queue = ackAfter(queue, channel, message);
       }
     },
     snapshot: () => state,

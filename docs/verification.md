@@ -182,7 +182,7 @@ The first terminal prints `#general thread:<id> @admin: @triage-agent are you th
 Run the same watch again without acking: it starts with `1 unread, run cookout inbox` instead of repeating the item, then prints only newer ones. To block until something needs the agent, and check each exit code with `echo $?`:
 
 ```sh
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts watch --once           # 0 after the next item
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts watch --once           # 0 after the unread line, or else the next item
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts watch --until-mention  # 0 after the next mention only
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts watch --timeout 3      # 2 after 3 s with no item
 env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=cookout_nope node app/main.ts watch                      # 3: token invalid
@@ -433,7 +433,7 @@ The first snapshot shows the `Log in` card with a form named `Log in`: a `Token`
 
 ## Open a channel
 
-A channel's view lists its top-level messages, oldest first, newest at the bottom, each a link to its thread with its author, its text and its reply count. It loads the newest 50; when older ones remain, a `Load more` button above them loads the 50 before. Viewing a channel acks its newest top-level message as the logged-in human (no lease), so the channel's messages leave that human's inbox. Logged in as `grace` (the recipe above, same session), read her inbox, open `#deploys`, and read it again:
+A channel's view lists its top-level messages, oldest first, newest at the bottom, each a link to its thread with its author, its text and its reply count. It loads the newest 50; when older ones remain, a `Load more` button above them loads the 50 before. Viewing a channel acks its newest top-level message as the logged-in human (no lease), so the channel's messages leave that human's inbox; a top-level message that arrives live while the channel is open is acked as it arrives. Logged in as `grace` (the recipe above, same session), read her inbox, open `#deploys`, and read it again:
 
 ```sh
 env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
@@ -458,7 +458,7 @@ A channel's view has a `← Channels` link above its heading, back to the channe
 
 ## Open a thread and reply
 
-A thread's view shows its top-level message (an article named `Parent message`), then its replies, oldest first, in a list named `Replies`, then a reply box: a form named `Reply to the thread` with a `Reply` text box and a `Send reply` button. Opening a thread acks its latest message as the logged-in human (no lease), so the thread's replies leave that human's inbox. Posting a reply adds it to the end of the list and clears the box. A `← #<channel>` link above the heading goes back to the channel. On a fresh seed, log in as `grace` (the "Log in to the web UI" recipe, same session), read her inbox, open the thread in `#general`, read the inbox again, then reply:
+A thread's view shows its top-level message (an article named `Parent message`), then its replies, oldest first, in a list named `Replies`, then a reply box: a form named `Reply to the thread` with a `Reply` text box and a `Send reply` button. Opening a thread acks its latest message as the logged-in human (no lease), so the thread's replies leave that human's inbox; a reply that arrives live while the thread is open is acked as it arrives. Posting a reply adds it to the end of the list and clears the box. A `← #<channel>` link above the heading goes back to the channel. On a fresh seed, log in as `grace` (the "Log in to the web UI" recipe, same session), read her inbox, open the thread in `#general`, read the inbox again, then reply:
 
 ```sh
 env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
@@ -486,7 +486,7 @@ The first snapshot shows a list named `Mention suggestions` under the box with o
 
 ## See a command call and call a command in the web UI
 
-A message's data shows under its text as a block of JSON named `Data`. A command call message (text `/<command>`, data `{ command, data }`) shows only the data it called the command with, in a block named `Call to /<command>`, so a handler's result reply shows its `text` and its `Data`. Under a channel's messages, a form named `Call a command` has a `Command` pick of every registered command (`/<name>`), a `Data` box for JSON and a `Call` button: a good call adds the call message to the end of the channel; data the command's schema refuses shows an alert, `Couldn't call /<command> (invalid_request): …`, with a list named `Schema errors` of `<path>: <message>` rows, and posts nothing. With no commands registered there is no form. Logged in as `grace` (the "Log in to the web UI" recipe, same session), open the seeded call's thread, then call `rollback` with bad data and with good:
+A message's data shows under its text as a block of JSON named `Data`. A command call message (text `/<command>`, data `{ command, data }`) shows only the data it called the command with, in a block named `Call to /<command>`, so a handler's result reply shows its `text` and its `Data`. Under a channel's messages, a form named `Call a command` has a `Command` pick of every registered command (`/<name>`), a `Data` box for JSON and a `Call` button: a good call adds the call message to the end of the channel; data the command's schema refuses shows an alert, `Couldn't call /<command> (invalid_request): …`, with a list named `Schema errors` of `<path>: <message>` rows, and posts nothing. The `Data` box keeps what was typed after a refused call, so it can be fixed and sent again; a good call empties it. With no commands registered there is no form. Logged in as `grace` (the "Log in to the web UI" recipe, same session), open the seeded call's thread, then call `rollback` with bad data and with good:
 
 ```sh
 agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/deploys/threads/7" && agent-browser --session cookout wait --text "Rolled back to 1.4.1." && agent-browser --session cookout snapshot
@@ -499,7 +499,7 @@ agent-browser --session cookout fill 'textarea[name=data]' '{"version":"1.4.0"}'
 agent-browser --session cookout find role button click --name "Call" && agent-browser --session cookout wait --text "0 replies" && agent-browser --session cookout snapshot
 ```
 
-The thread shows `@ada`'s `/rollback` with `Call to /rollback` `{"version": "1.4.1"}` as its parent message, and the reply `@rollback` `Rolled back to 1.4.1.` with its `Data` `{"status": "done", "version": "1.4.1"}`. The bad call's alert is `Couldn't call /rollback (invalid_request): The data doesn't follow the schema of the command rollback.` with the row `data.version: must be string`. The good call ends the `Messages` list with `@grace` `/rollback`, `Call to /rollback` `{"version": "1.4.0"}` and `0 replies`. Data that isn't JSON is refused before it is sent: `Couldn't call /rollback (invalid_json): The data isn't JSON.`
+The thread shows `@ada`'s `/rollback` with `Call to /rollback` `{"version": "1.4.1"}` as its parent message, and the reply `@rollback` `Rolled back to 1.4.1.` with its `Data` `{"status": "done", "version": "1.4.1"}`. The bad call's alert is `Couldn't call /rollback (invalid_request): The data doesn't follow the schema of the command rollback.` with the row `data.version: must be string`, and the `Data` box still reads `{"version":1}`. The good call ends the `Messages` list with `@grace` `/rollback`, `Call to /rollback` `{"version": "1.4.0"}` and `0 replies`, and the `Data` box is empty. Data that isn't JSON is refused before it is sent: `Couldn't call /rollback (invalid_json): The data isn't JSON.`
 
 ## Run the web tests
 
@@ -598,7 +598,7 @@ agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" 
 agent-browser --session cookout open "http://127.0.0.1:3000/#/" && agent-browser --session cookout wait 1000 && agent-browser --session cookout snapshot
 ```
 
-The first snapshot's `Channels` list has the links `#deploys 1 unread Release announcements.` and `#general 1 unread Anything and everything.` (her seeded inbox: `[6,["subscribed-channel"]]` and `[5,["followed-thread"]]`). Without a reload, the second has `#deploys 2 unread 1 mention …`, shown as `2` and `@1`. After opening `#deploys` its link is `#deploys Release announcements.` again, while `#general` keeps `1 unread`: the channel view acks top-level messages only. After opening the thread, `#general` has no count either. A message that arrives while its channel or thread is open still counts as unread until the view is opened again (board question #467).
+The first snapshot's `Channels` list has the links `#deploys 1 unread Release announcements.` and `#general 1 unread Anything and everything.` (her seeded inbox: `[6,["subscribed-channel"]]` and `[5,["followed-thread"]]`). Without a reload, the second has `#deploys 2 unread 1 mention …`, shown as `2` and `@1`. After opening `#deploys` its link is `#deploys Release announcements.` again, while `#general` keeps `1 unread`: the channel view acks top-level messages only. After opening the thread, `#general` has no count either. A message that arrives live while its channel or thread is open counts as read: the open view acks it as it arrives, so the counts in every tab stay clear (board question #467, decided 2026-11-23 in #87).
 
 ## Read the inbox in the web UI
 

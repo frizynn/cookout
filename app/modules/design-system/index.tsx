@@ -17,7 +17,7 @@
  * to pick from under a box, such as mentions, which leaves the box focused;
  * `Button` is any other button. `FieldsForm` is a form of several fields,
  * `Select` a labelled pick in it from its `SelectOption`s, `DataArea` a
- * labelled box in it to write JSON in, and `DataBlock` a
+ * labelled box in it to write JSON in, whose text its owner holds, and `DataBlock` a
  * named block of JSON, such as a message's data. `RowTitle` is a link row's
  * title line, bold when it has something new (`marked`), with any `Count`
  * after it: a small number badge read out by its label, such as a channel's

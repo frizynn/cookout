@@ -4,14 +4,17 @@
  * the channels once, when its first reader subscribes. `channel(name)` is that
  * channel's messages, its own store: when its first reader subscribes it loads
  * the newest page of top-level messages and acks the newest one, so viewing a
- * channel counts as reading it; `loadOlder` pages further back. `thread(channel, id)`
+ * channel counts as reading it, and while a reader is subscribed it acks each
+ * new top-level message that arrives live; `loadOlder` pages further back. `thread(channel, id)`
  * is the thread's parent and replies, its own store too: when its first reader
  * subscribes it loads the thread and acks its latest message, so opening a
- * thread counts as reading it; `reply` posts a reply in that channel and
+ * thread counts as reading it, and while a reader is subscribed it acks each
+ * new reply that arrives live; `reply` posts a reply in that channel and
  * reloads the replies. `commands` is every registered command, loaded when its
  * first reader subscribes; a channel's `call` calls a command with data typed
  * as JSON, posting the call message in that channel, and keeps the schema
- * errors of data the command refuses. With `live`, the board opens the live stream when any of
+ * errors of data the command refuses; `editCallData` holds the data being
+ * typed (`callData`), which only a successful call empties. With `live`, the board opens the live stream when any of
  * its stores is first read, and each new message on it joins the loaded
  * channel or thread it belongs to (a reply also counts in its top-level
  * message's replies), so messages from others appear without a reload. A refusal

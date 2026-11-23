@@ -1,11 +1,12 @@
 import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
 import { adminClient, newIdentity, openAt, watched } from "./app.tsx";
 import { expect, it } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 
 interface LiveView {
   readonly parent: Message;
   readonly poster: CookoutClient;
+  readonly reader: CookoutClient;
   readonly close: () => Promise<void>;
 }
 
@@ -39,6 +40,7 @@ async function openLive(name: string, at: (parent: Message) => string): Promise<
     },
     parent,
     poster: poster.client,
+    reader: reader.client,
   };
 }
 
@@ -75,6 +77,25 @@ it("a reply posted by another identity appears in the open thread without a relo
     ["@web-live-thread-posterNoon works"],
     null,
   ]);
+
+  await close();
+});
+
+it("a reply that arrives in the open thread counts as read", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { close, parent, poster, reader } = await openLive(
+    "web-live-thread-read",
+    (message) => `#/channels/${message.channel}/threads/${String(message.id)}`,
+  );
+  await reader.follow(parent.id);
+
+  await poster.createMessage({ channel: parent.channel, replyTo: parent.id, text: "Noon works" });
+  await screen.findByText("Noon works");
+
+  await waitFor(async () => {
+    await expect(reader.inbox()).resolves.toStrictEqual({ items: [] });
+  });
 
   await close();
 });

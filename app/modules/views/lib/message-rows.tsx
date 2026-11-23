@@ -50,7 +50,7 @@ export function MessageRows(props: MessageRowsProps): ReactNode {
         ))}
       </LinkList>
       <ReadRefusal read={state.read} />
-      <CommandForm call={state.call} commands={props.commands} messages={messages} />
+      <CommandForm call={state.call} callData={state.callData} commands={props.commands} messages={messages} />
     </>
   );
 }

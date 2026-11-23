@@ -106,6 +106,23 @@ it("a call whose data breaks the command's schema shows the schema errors", { ti
   close();
 });
 
+it("a schema error keeps the typed data in the box, and a good call empties it", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  await channelWithCommand("web-command-keep", "web-call-keep");
+  const close = openAt({ client: adminClient(), hash: "#/channels/web-command-keep" });
+
+  await callFromTheForm("web-call-keep", '{"branch":1}');
+  await screen.findByRole("alert");
+  const kept = screen.queryByDisplayValue('{"branch":1}');
+  await callFromTheForm("web-call-keep", '{"branch":"main"}');
+  await screen.findByLabelText("Call to /web-call-keep");
+
+  expect([kept, screen.queryByDisplayValue('{"branch":"main"}')]).toStrictEqual([screen.getByLabelText("Data"), null]);
+
+  close();
+});
+
 it("data that isn't JSON is refused before it is sent", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
