@@ -33,6 +33,15 @@ function whoamiWithTool(
 const markerSets = [
   { markers: { CLAUDECODE: "1" }, shown: "CLAUDECODE=1", tool: "claude-code" },
   { markers: { AI_AGENT: "claude-code" }, shown: "AI_AGENT", tool: "claude-code" },
+  { markers: { AI_AGENT: "claude-code_2-1-330_agent" }, shown: "AI_AGENT from Claude Code", tool: "claude-code" },
+  { markers: { AI_AGENT: "opencode" }, shown: "AI_AGENT from opencode", tool: "opencode" },
+  { markers: { AI_AGENT: "Some Tool!" }, shown: "AI_AGENT from another tool", tool: "some-tool" },
+  {
+    markers: { AI_AGENT: "Long Tool Long Tool Long Tool Long Tool Long Tool v2" },
+    shown: "a long AI_AGENT",
+    tool: "long-tool-long-tool-long-tool-long-tool",
+  },
+  { markers: { AI_AGENT: "!!!" }, shown: "an AI_AGENT with no letters or digits", tool: "unknown" },
   { markers: { CODEX_THREAD_ID: "019a-thread" }, shown: "CODEX_THREAD_ID", tool: "codex" },
   { markers: { CODEX_CI: "1" }, shown: "CODEX_CI=1", tool: "codex" },
   { markers: { CURSOR_AGENT: "1" }, shown: "CURSOR_AGENT", tool: "cursor" },
@@ -115,6 +124,17 @@ it.effect("a human's token with no agent markers goes through", () =>
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     const client = createCookoutClient({ env: envFor(cookout, ada.token) });
+    const whoami = yield* answer(client.whoami);
+
+    expect(whoami.identity).toMatchObject({ kind: "human", name: "ada" });
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a human's token with an empty AI_AGENT and no other agent markers goes through", () =>
+  Effect.gen(function* emptyAiAgent() {
+    const cookout = yield* TestCookout;
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const client = createCookoutClient({ env: { ...envFor(cookout, ada.token), AI_AGENT: "", CLAUDECODE: "" } });
     const whoami = yield* answer(client.whoami);
 
     expect(whoami.identity).toMatchObject({ kind: "human", name: "ada" });
