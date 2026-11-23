@@ -17,7 +17,8 @@ export type { DeactivateIdentityResult, ReactivateIdentityResult } from "./lib/s
 export type { StoredCommand } from "./lib/server/commands.ts";
 export type { CommandTokenGrant } from "./lib/server/command-tokens.ts";
 export type { DeliveryOutcome, StoredDelivery } from "./lib/server/deliveries.ts";
-export type { NewMessage } from "./lib/server/messages.ts";
+export type { NewMessage, StoredPage, StoredThread } from "./lib/server/messages.ts";
+export type { AckedMessage } from "./lib/server/inbox.ts";
 export type { NewCommandCall } from "./lib/server/command-calls.ts";
 export type { AgentAt, UseAgentSessionResult } from "./lib/server/agent-sessions.ts";
 export type { TransferAgentResult } from "./lib/server/identity-admins.ts";
@@ -40,3 +41,10 @@ export const sqliteStorage = (path: string): Layer.Layer<Storage, StorageUnavail
 
 /** A store held in this process only. Everything is lost when the Layer is released. */
 export const memoryStorage: Layer.Layer<Storage> = Layer.effect(Storage, openMemoryStorage);
+
+/**
+ * Forgets every read receipt in the SQLite file at `path`, as a database from before read receipts had none, then runs
+ * the migration's backfill again: for the SQLite Layer's own test of the backfill.
+ * @internal
+ */
+export { backfillReadReceiptsAgain } from "./lib/server/read-receipts-sqlite.ts";

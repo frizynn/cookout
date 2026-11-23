@@ -8,7 +8,7 @@
  * instead.
  */
 import type { InboxItem, MovedBackReadPosition, ReadPosition, SubscriptionResponse } from "../inbox/index.ts";
-import type { Message, MessageId } from "../messages/index.ts";
+import type { Message, MessageId, ReadReceipt } from "../messages/index.ts";
 import type { Channel } from "../channels/index.ts";
 import type { Identity } from "../identities/index.ts";
 
@@ -49,6 +49,15 @@ export interface IdentityEvent {
   readonly identity: Identity;
 }
 
+/**
+ * A read receipt just recorded: one of a message's receipt identities has seen it for the first time. Sent only on
+ * the all-channels feed, since everyone on the board sees receipts. It has no SSE `id`.
+ */
+export interface ReadReceiptEvent {
+  readonly type: "read-receipt";
+  readonly receipt: ReadReceipt;
+}
+
 /** A channel just created, sent only on the all-channels feed so every open web UI lists it at once. It has no SSE `id`. */
 export interface ChannelEvent {
   readonly type: "channel";
@@ -82,6 +91,7 @@ export type CookoutEvent =
   | ReadPositionMovedBackEvent
   | MessageEvent
   | IdentityEvent
+  | ReadReceiptEvent
   | ChannelEvent
   | SubscriptionEvent;
 

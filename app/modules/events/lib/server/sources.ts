@@ -1,4 +1,4 @@
-import { allChannels, channels } from "./all-channels.ts";
+import { allChannels, channels, readReceipts } from "./all-channels.ts";
 import type { AllChannelsNeeds } from "./all-channels.ts";
 import type { EventSource } from "./source.ts";
 import type { IdentityChanges } from "../../../identities/server.ts";
@@ -20,6 +20,7 @@ const sources: readonly EventSource<SourceNeeds>[] = [
   allChannels,
   identities,
   channels,
+  readReceipts,
   heartbeat,
 ];
 

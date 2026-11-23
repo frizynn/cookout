@@ -2,7 +2,7 @@
 import type { AgentJoinCollectedResponse, AgentJoinRequestResponse, AgentJoinRequestStartedResponse, AgentSessionResponse, LeaveResponse, ListAgentSessionsResponse, RevokeAgentSessionResponse } from "../../../agent-sessions/index.ts";
 import type { ChannelResponse, ListChannelsResponse } from "../../../channels/index.ts";
 import type { CallCommandResponse, CommandWithSecretResponse, ListCommandsResponse } from "../../../commands/index.ts";
-import type { ChannelEvent, ConnectedEvent, IdentityEvent, InboxItemEvent, MessageEvent, ReadPositionEvent, ReadPositionMovedBackEvent, SubscriptionEvent } from "../../../events/index.ts";
+import type { ChannelEvent, ConnectedEvent, IdentityEvent, InboxItemEvent, MessageEvent, ReadPositionEvent, ReadPositionMovedBackEvent, ReadReceiptEvent, SubscriptionEvent } from "../../../events/index.ts";
 import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../../http/index.ts";
 import type { DeactivateIdentityResponse, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";
 import type { AckAllResponse, AckResponse, FollowResponse, InboxHistoryResponse, InboxResponse, MarkUnreadResponse, ReadPositionsResponse, SubscriptionResponse } from "../../../inbox/index.ts";
@@ -28,6 +28,7 @@ export declare function isInboxItemEvent(data: unknown): data is InboxItemEvent;
 export declare function isMessageEvent(data: unknown): data is MessageEvent;
 export declare function isReadPositionEvent(data: unknown): data is ReadPositionEvent;
 export declare function isReadPositionMovedBackEvent(data: unknown): data is ReadPositionMovedBackEvent;
+export declare function isReadReceiptEvent(data: unknown): data is ReadReceiptEvent;
 export declare function isSubscriptionEvent(data: unknown): data is SubscriptionEvent;
 export declare function isErrorResponse(data: unknown): data is ErrorResponse;
 export declare function isHealthResponse(data: unknown): data is HealthResponse;

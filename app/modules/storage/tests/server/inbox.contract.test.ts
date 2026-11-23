@@ -5,6 +5,7 @@ import {
   appendTo,
   channelFixture as channel,
   channelName,
+  fixtureTime,
   identityFixture as identity,
   messageId,
   identityName as nameOf,
@@ -80,7 +81,7 @@ it.effect.each(storageLayers)(
         [storage.listInbox(nameOf("ann")), storage.listInbox(nameOf("ann")), storage.listInbox(nameOf("bob"))],
         ONE_AT_A_TIME,
       );
-      const position = yield* storage.ackMessage(nameOf("ann"), reply.id);
+      const position = yield* storage.ackMessage(nameOf("ann"), reply.id, fixtureTime);
       const after = yield* storage.listInbox(nameOf("ann"));
       const current = {
         ...parent,
@@ -92,7 +93,13 @@ it.effect.each(storageLayers)(
 
       expect(before).toStrictEqual([{ message: reply, parent: current, reasons: ["followed-thread"] }]);
       expect([again, own]).toStrictEqual([before, []]);
-      expect([position, after]).toStrictEqual([{ channel: "grill", messageId: reply.id, thread: parent.id }, []]);
+      expect([position, after]).toStrictEqual([
+        {
+          readPosition: { channel: "grill", messageId: reply.id, thread: parent.id },
+          receipts: [{ identity: "ann", messageId: reply.id, seen: true, seenAt: fixtureTime }],
+        },
+        [],
+      ]);
     }),
 );
 
@@ -107,7 +114,10 @@ it.effect.each(storageLayers)(
       const first = yield* appendTo(storage)(newMessage("grill", "first", { ...BOB, replyTo: parent.id }));
       const second = yield* appendTo(storage)(newMessage("grill", "second", { ...BOB, replyTo: parent.id }));
       const [newer, older] = yield* Effect.all(
-        [storage.ackMessage(nameOf("ann"), second.id), storage.ackMessage(nameOf("ann"), first.id)],
+        [
+          storage.ackMessage(nameOf("ann"), second.id, fixtureTime),
+          storage.ackMessage(nameOf("ann"), first.id, fixtureTime),
+        ],
         ONE_AT_A_TIME,
       );
       const inbox = yield* storage.listInbox(nameOf("ann"));
@@ -245,7 +255,7 @@ it.effect.each(storageLayers)(
         [
           storage.followThread(nameOf("ann"), messageId(MISSING)),
           storage.unfollowThread(nameOf("ann"), messageId(MISSING)),
-          storage.ackMessage(nameOf("ann"), messageId(MISSING)),
+          storage.ackMessage(nameOf("ann"), messageId(MISSING), fixtureTime),
         ],
         ONE_AT_A_TIME,
       );

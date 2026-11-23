@@ -6,6 +6,7 @@ import type {
   MessageEvent,
   ReadPositionEvent,
   ReadPositionMovedBackEvent,
+  ReadReceiptEvent,
   SubscriptionEvent,
 } from "../../index.ts";
 import {
@@ -14,7 +15,7 @@ import {
   ReadPositionSchema,
   SubscriptionResponseSchema,
 } from "../../../inbox/server.ts";
-import { MessageIdSchema, MessageSchema } from "../../../messages/server.ts";
+import { MessageIdSchema, MessageSchema, ReadReceiptSchema } from "../../../messages/server.ts";
 import { ChannelSchema } from "../../../channels/server.ts";
 import { IdentitySchema } from "../../../identities/server.ts";
 import { Schema } from "effect";
@@ -38,6 +39,10 @@ export const MessageEventSchema = matchesWire<MessageEvent>()(
 
 export const IdentityEventSchema = matchesWire<IdentityEvent>()(
   Schema.Struct({ identity: IdentitySchema, type: Schema.Literal("identity") }),
+);
+
+export const ReadReceiptEventSchema = matchesWire<ReadReceiptEvent>()(
+  Schema.Struct({ receipt: ReadReceiptSchema, type: Schema.Literal("read-receipt") }),
 );
 
 export const ChannelEventSchema = matchesWire<ChannelEvent>()(

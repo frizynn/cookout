@@ -144,12 +144,51 @@ export interface ListMessagesQuery {
 export interface ListMessagesResponse {
   readonly messages: readonly TopLevelMessage[];
   readonly hasMore: boolean;
+  /** The read receipts of every message on the page, those not seen yet included. */
+  readonly receipts: readonly ReadReceipt[];
 }
 
 /** A top-level message and its replies, oldest first. */
 export interface ThreadResponse {
   readonly parent: TopLevelMessage;
   readonly replies: readonly Reply[];
+  /** The read receipts of the top-level message and every reply, those not seen yet included. */
+  readonly receipts: readonly ReadReceipt[];
+}
+
+/**
+ * Whether, and when, one of a message's receipt identities has seen it: its read position in the message's thread or
+ * channel has reached or passed it. Once seen, a receipt stays seen, though a mark unread moves the read position back.
+ */
+export interface ReadReceipt {
+  readonly messageId: MessageId;
+  readonly identity: IdentityName;
+  readonly seen: boolean;
+  /** When it was first seen. Absent while not seen, and for a message seen before the cookout kept receipts. */
+  readonly seenAt?: IsoTime;
+}
+
+/** A message, and for a reply the author of its top-level message. */
+export interface ReceiptIdentitiesOf {
+  readonly message: Message;
+  readonly parentAuthor?: IdentityName | undefined;
+}
+
+/**
+ * The identities that get a read receipt for a message: the ones it mentions, plus the parent message's author for a
+ * reply, but never the message's own author.
+ * @param of The message, and for a reply its top-level message's author.
+ * @param of.message The message.
+ * @param of.parentAuthor For a reply, the name of its top-level message's author.
+ * @returns Each receipt identity once, in the order the message names them.
+ */
+export function receiptIdentitiesOf({ message, parentAuthor }: ReceiptIdentitiesOf): readonly IdentityName[] {
+  const names = new Set(message.mentions);
+  if (message.kind === "reply" && typeof parentAuthor === "string") {
+    names.add(parentAuthor);
+  }
+  names.delete(message.author.name);
+  return [...names];
 }
 
 /** The size of a channel page: 50 unless the query says otherwise, and never more than 200. */

@@ -70,5 +70,5 @@ export {
   type TestIdentity,
   testCookout,
 } from "./lib/server/cookout.ts";
-export { isoTime, testStartTime } from "./lib/server/time.ts";
+export { fixtureTime, isoTime, testStartTime } from "./lib/server/time.ts";
 export { type BuiltWeb, builtWebFolder } from "./lib/server/web.ts";

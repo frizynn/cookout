@@ -4,6 +4,7 @@ import {
   appendTo,
   channelFixture as channel,
   channelName,
+  fixtureTime,
   identityFixture as identity,
   messageId,
   identityName as nameOf,
@@ -65,7 +66,7 @@ it.effect.each(storageLayers)(
   ({ layer }) =>
     Effect.gen(function* moveBack() {
       const { first, later, reply, second, storage } = yield* postedToAnn(layer);
-      yield* storage.ackMessage(nameOf("ann"), later.id);
+      yield* storage.ackMessage(nameOf("ann"), later.id, fixtureTime);
 
       const moved = yield* storage.moveReadPositionBack(nameOf("ann"), second.id);
       const unread = yield* unreadIds(storage);
@@ -82,14 +83,14 @@ it.effect.each(storageLayers)(
   ({ layer }) =>
     Effect.gen(function* ackAfterMovingBack() {
       const { later, reply, second, storage } = yield* postedToAnn(layer);
-      yield* storage.ackMessage(nameOf("ann"), later.id);
+      yield* storage.ackMessage(nameOf("ann"), later.id, fixtureTime);
       yield* storage.moveReadPositionBack(nameOf("ann"), second.id);
 
-      const acked = yield* storage.ackMessage(nameOf("ann"), later.id);
+      const acked = yield* storage.ackMessage(nameOf("ann"), later.id, fixtureTime);
       const unread = yield* unreadIds(storage);
 
       expect({ acked, unread }).toStrictEqual({
-        acked: { channel: "grill", messageId: later.id, thread: null },
+        acked: { readPosition: { channel: "grill", messageId: later.id, thread: null }, receipts: [] },
         unread: [reply.id],
       });
     }),
@@ -100,7 +101,7 @@ it.effect.each(storageLayers)(
   ({ layer }) =>
     Effect.gen(function* moveThreadBack() {
       const { first, reply, storage } = yield* postedToAnn(layer);
-      yield* storage.ackMessage(nameOf("ann"), reply.id);
+      yield* storage.ackMessage(nameOf("ann"), reply.id, fixtureTime);
 
       const moved = yield* storage.moveReadPositionBack(nameOf("ann"), reply.id);
       const unread = yield* unreadIds(storage);
@@ -117,7 +118,7 @@ it.effect.each(storageLayers)(
   ({ layer }) =>
     Effect.gen(function* moveToNothing() {
       const { first, storage } = yield* postedToAnn(layer);
-      yield* storage.ackMessage(nameOf("ann"), first.id);
+      yield* storage.ackMessage(nameOf("ann"), first.id, fixtureTime);
 
       const moved = yield* storage.moveReadPositionBack(nameOf("ann"), first.id);
       const positions = yield* storage.listReadPositions(nameOf("ann"));
@@ -134,7 +135,7 @@ it.effect.each(storageLayers)(
   ({ layer }) =>
     Effect.gen(function* neverForward() {
       const { first, later, storage } = yield* postedToAnn(layer);
-      yield* storage.ackMessage(nameOf("ann"), first.id);
+      yield* storage.ackMessage(nameOf("ann"), first.id, fixtureTime);
 
       const behind = yield* storage.moveReadPositionBack(nameOf("ann"), later.id);
       const missing = yield* storage.moveReadPositionBack(nameOf("ann"), messageId(MISSING));

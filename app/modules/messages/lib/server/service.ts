@@ -22,10 +22,10 @@ import type {
 } from "../../index.ts";
 import type { Harness, Identity } from "../../../identities/index.ts";
 import type { NewCommandCall, NewMessage, StorageUnavailable } from "../../../storage/server.ts";
+import { ReadReceipts, pageWithReceipts, threadWithReceipts } from "./read-receipts.ts";
 import { mentionPattern, pageSize } from "../../index.ts";
 import { messageNotFound, replyInOtherChannel, replyOutsideCommandThread } from "./refusals.ts";
 import type { ChannelName } from "../../../channels/index.ts";
-import type { IsoTime } from "../../../time/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Scope } from "effect";
 import { Storage } from "../../../storage/server.ts";
@@ -92,7 +92,7 @@ function withHarness(message: NewMessage, harness: Harness | undefined): NewMess
   return { ...message, harness };
 }
 
-function newMessage(author: Identity, posting: PostMessage, createdAt: IsoTime): NewMessage {
+function newMessage(author: Identity, posting: PostMessage, createdAt: NewMessage["createdAt"]): NewMessage {
   const { harness, channel, data, replyTo, text } = posting;
   const mentions = Arr.filter(mentionedNames(text), isIdentityName);
   const fields = withHarness({ author: authorOf(author), channel, createdAt, mentions, text }, harness);
@@ -119,7 +119,11 @@ function pageRequest({ before, limit = pageSize.default }: PageQuery): PageReque
   return { before, limit };
 }
 
-function inThread(found: ThreadResponse | undefined, threadId: MessageId, channel: ChannelName): boolean {
+function inThread(
+  found: Pick<ThreadResponse, "parent"> | undefined,
+  threadId: MessageId,
+  channel: ChannelName,
+): boolean {
   return Predicate.isNotUndefined(found) && found.parent.id === threadId && found.parent.channel === channel;
 }
 
@@ -155,7 +159,7 @@ function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
         if (Predicate.isUndefined(page)) {
           return yield* Effect.fail(channelNotFound(channel));
         }
-        return page;
+        return yield* pageWithReceipts({ storage, stored: page });
       }),
     post,
     postCommandCall: (author, message, call) =>
@@ -179,7 +183,7 @@ function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
         if (Predicate.isUndefined(thread)) {
           return yield* Effect.fail(messageNotFound(String(id)));
         }
-        return thread;
+        return yield* threadWithReceipts({ storage, stored: thread });
       }),
   };
 }
@@ -198,17 +202,18 @@ export class Messages extends Context.Service<Messages, MessagesService>()(
   "@ai-hero/cookout/messages/lib/server/service/Messages",
 ) {}
 
-export const messagesLayer: Layer.Layer<Messages, never, Storage> = Layer.effect(
+export const messagesLayer: Layer.Layer<Messages, never, Storage | ReadReceipts> = Layer.effect(
   Messages,
   Effect.gen(function* messagesOnStorage() {
     const storage = yield* Storage;
+    const readReceipts = yield* ReadReceipts;
     const pubSub = yield* PubSub.unbounded<Message>();
     const appending = yield* Semaphore.make(ONE_AT_A_TIME);
     function publishIfAppended(result: Appended): Effect.Effect<void> {
       if (result.status !== "appended") {
         return Effect.void;
       }
-      return Effect.asVoid(PubSub.publish(pubSub, result.message));
+      return Effect.andThen(PubSub.publish(pubSub, result.message), readReceipts.publish(result.receipts));
     }
     const hub: Hub = {
       appendThenPublish: (append, message) =>

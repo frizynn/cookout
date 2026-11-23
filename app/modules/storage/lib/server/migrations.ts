@@ -1,4 +1,5 @@
 import { Effect, Schema } from "effect";
+import { READ_RECEIPTS_MIGRATION } from "./read-receipts-sqlite.ts";
 import type { Scope } from "effect";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { StorageUnavailable } from "./errors.ts";
@@ -164,6 +165,7 @@ const migrations: readonly string[] = [
      force INTEGER CHECK (force IN (0, 1))
    ) STRICT;`,
   "ALTER TABLE messages RENAME COLUMN agent_tool TO harness;",
+  READ_RECEIPTS_MIGRATION,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

@@ -12,18 +12,19 @@ import type {
   ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../index.ts";
-import { Array as Arr, Context, Effect, Layer, Option, Predicate, PubSub } from "effect";
+import type { AckedMessage, StorageUnavailable } from "../../../storage/server.ts";
+import { Array as Arr, Context, DateTime, Effect, Layer, Option, Predicate, PubSub } from "effect";
 import type { Channel, ChannelName } from "../../../channels/index.ts";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
+import { ReadReceipts, messageNotFound } from "../../../messages/server.ts";
 import { isMessageId, pageSize } from "../../../messages/index.ts";
 import type { MessageId } from "../../../messages/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Scope } from "effect";
 import { Storage } from "../../../storage/server.ts";
-import type { StorageUnavailable } from "../../../storage/server.ts";
 import { channelNotFound } from "../../../channels/server.ts";
 import { isChannelName } from "../../../channels/index.ts";
-import { messageNotFound } from "../../../messages/server.ts";
+import { isoTimeOf } from "../../../time/server.ts";
 
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
 
@@ -67,6 +68,7 @@ interface Hub<Value> {
 
 interface Hubs {
   readonly acked: Hub<Acked>;
+  readonly readReceipts: ReadReceipts["Service"];
   readonly movedBack: Hub<MovedBack>;
   readonly subscriptions: Hub<SubscriptionChanged>;
 }
@@ -168,24 +170,35 @@ function inboxOf(storage: Storage["Service"], caller: Identity): Fails<InboxResp
   );
 }
 
-function inboxOn(storage: Storage["Service"], { acked: hub, movedBack, subscriptions }: Hubs): InboxService {
+function acksOn(storage: Storage["Service"], { acked: hub, readReceipts }: Hubs): Pick<InboxService, "ack" | "ackAll"> {
   return {
     ack: (caller, id) =>
       Effect.gen(function* ackMessage() {
-        const acked = yield* storage.ackMessage(caller.name, id);
-        const readPosition = yield* orMessageNotFound<ReadPosition>(String(id))(acked);
+        const now = yield* DateTime.now;
+        const acked = yield* storage.ackMessage(caller.name, id, isoTimeOf(now));
+        const { readPosition, receipts } = yield* orMessageNotFound<AckedMessage>(String(id))(acked);
         yield* hub.publish({ identity: caller.name, readPosition });
+        yield* readReceipts.publish(receipts);
         return { readPosition };
       }),
     ackAll: (caller, upTo) =>
       Effect.gen(function* ackInbox() {
-        const readPositions = yield* storage.ackInbox(caller.name, upTo);
+        const now = yield* DateTime.now;
+        const { readPositions, receipts } = yield* storage.ackInbox(caller.name, upTo, isoTimeOf(now));
         yield* Effect.forEach(readPositions, (readPosition) => hub.publish({ identity: caller.name, readPosition }), {
           concurrency: 1,
           discard: true,
         });
+        yield* readReceipts.publish(receipts);
         return { readPositions };
       }),
+  };
+}
+
+function inboxOn(storage: Storage["Service"], hubs: Hubs): InboxService {
+  const { acked: hub, movedBack, subscriptions } = hubs;
+  return {
+    ...acksOn(storage, hubs),
     acked: hub.subscribe,
     follow: following(storage.followThread, true),
     history: (caller, query) => historyOf(storage, caller, query),
@@ -220,14 +233,15 @@ function hubOf<Value>(): Effect.Effect<Hub<Value>> {
   });
 }
 
-const inboxLayer: Layer.Layer<Inbox, never, Storage> = Layer.effect(
+const inboxLayer: Layer.Layer<Inbox, never, Storage | ReadReceipts> = Layer.effect(
   Inbox,
   Effect.gen(function* inboxOnStorage() {
     const storage = yield* Storage;
+    const readReceipts = yield* ReadReceipts;
     const acked = yield* hubOf<Acked>();
     const movedBack = yield* hubOf<MovedBack>();
     const subscriptions = yield* hubOf<SubscriptionChanged>();
-    return inboxOn(storage, { acked, movedBack, subscriptions });
+    return inboxOn(storage, { acked, movedBack, readReceipts, subscriptions });
   }),
 );
 

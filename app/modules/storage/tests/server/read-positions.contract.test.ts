@@ -4,6 +4,7 @@ import {
   appendTo,
   channelFixture as channel,
   channelName,
+  fixtureTime,
   identityFixture as identity,
   identityName as nameOf,
   newMessageFixture as newMessage,
@@ -65,7 +66,7 @@ it.effect.each(storageLayers)(
       const elsewhere = yield* append(newMessage("bar", "elsewhere", BOB));
       yield* Effect.forEach(
         [reply.id, later.id, elsewhere.id, parent.id],
-        (id) => storage.ackMessage(nameOf("ann"), id),
+        (id) => storage.ackMessage(nameOf("ann"), id, fixtureTime),
         ONE_AT_A_TIME,
       );
       const positions = yield* storage.listReadPositions(nameOf("ann"));

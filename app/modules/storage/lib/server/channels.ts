@@ -84,6 +84,7 @@ const IN_CHANNEL = "SELECT id FROM messages WHERE channel = ?";
 
 const CHANNEL_DELETES: readonly string[] = [
   `DELETE FROM message_mentions WHERE message_id IN (${IN_CHANNEL})`,
+  `DELETE FROM read_receipts WHERE message_id IN (${IN_CHANNEL})`,
   `DELETE FROM follows WHERE thread_id IN (${IN_CHANNEL})`,
   `DELETE FROM thread_read_positions WHERE thread_id IN (${IN_CHANNEL})`,
   `DELETE FROM command_tokens WHERE thread_id IN (${IN_CHANNEL})`,

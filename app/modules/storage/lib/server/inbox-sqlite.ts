@@ -3,20 +3,18 @@ import { CHANNEL_COLUMNS, toChannel } from "./channels.ts";
 import type {
   HistoryPageRequest,
   InboxSection,
-  Scope,
   StoredHistoryItem,
   StoredHistoryPage,
   StoredInboxItem,
 } from "./inbox.ts";
-import type { InboxReason, ReadPosition } from "../../../inbox/index.ts";
-import type { Message, MessageId, TopLevelMessage } from "../../../messages/index.ts";
-import { followersOf, newestPerScope, reasonsIn, scopeOf } from "./inbox.ts";
-import { moveReadPositionBackIn, readPositionsIn } from "./read-positions-sqlite.ts";
+import type { Message, MessageId, ReadReceipt, TopLevelMessage } from "../../../messages/index.ts";
+import { ackAllIn, ackIn, moveReadPositionBackIn, readPositionsIn, receiptsOf } from "./read-positions-sqlite.ts";
+import { followersOf, newestPerScope, reasonsIn } from "./inbox.ts";
 import type { IdentityName } from "../../../identities/index.ts";
+import type { InboxReason } from "../../../inbox/index.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { inboxReasons } from "../../../inbox/index.ts";
-import { isMessageId } from "../../../messages/index.ts";
 import { threadIdOf } from "./messages.ts";
 import { unreadable } from "./errors.ts";
 
@@ -33,12 +31,6 @@ interface Appended {
   readonly message: Message;
 }
 
-interface Moving {
-  readonly identity: IdentityName;
-  readonly message: Message;
-  readonly scope: Scope;
-}
-
 interface InboxOn {
   readonly db: SqliteDatabase;
   readonly reader: MessageReader;
@@ -52,13 +44,11 @@ interface Reasoned {
 
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 
-const MessageIdColumn = Schema.Int.pipe(Schema.refine(isMessageId));
 const READ = 1;
 const UNREAD = 0;
 const ALL_IDS = Number.MAX_SAFE_INTEGER;
 const ONE_MORE = 1;
 const ReasonRow = Schema.Struct({ read: Schema.Literals([UNREAD, READ]), reason: Schema.Literals(inboxReasons) });
-const PositionRow = Schema.Struct({ message_id: MessageIdColumn });
 const FOUND = 1;
 const NOTHING_SEEN = 0;
 const isFoundRow = Schema.is(Schema.Struct({ found: Schema.Literal(FOUND) }));
@@ -77,14 +67,6 @@ const REASONS = `SELECT m.id AS id, 'followed-thread' AS reason
     FROM subscriptions AS s JOIN messages AS m ON m.channel = s.channel AND m.reply_to IS NULL
     WHERE s.identity_name = ?1`;
 
-const MOVE_CHANNEL_POSITION = `INSERT INTO channel_read_positions (identity_name, channel, message_id) VALUES (?, ?, ?)
-  ON CONFLICT (identity_name, channel) DO UPDATE SET message_id = max(message_id, excluded.message_id)
-  RETURNING message_id`;
-
-const MOVE_THREAD_POSITION = `INSERT INTO thread_read_positions (identity_name, thread_id, message_id) VALUES (?, ?, ?)
-  ON CONFLICT (identity_name, thread_id) DO UPDATE SET message_id = max(message_id, excluded.message_id)
-  RETURNING message_id`;
-
 function inboxSql(columns: string, ids: "messages.id > ?2" | "messages.id = ?2"): string {
   return `WITH reasons (id, reason) AS (${REASONS})
     SELECT ${columns}, reasons.reason AS reason, ${UNREAD} AS read FROM messages JOIN reasons USING (id)
@@ -101,26 +83,7 @@ function historySql(columns: string): string {
     ORDER BY messages.id DESC, reasons.reason`;
 }
 
-function positionRow(row: unknown): Fails<MessageId> {
-  return Schema.decodeUnknownEffect(PositionRow)(row).pipe(
-    Effect.mapBoth({ onFailure: unreadable, onSuccess: (decoded) => decoded.message_id }),
-  );
-}
-
-function movePosition(db: SqliteDatabase, { identity, message, scope }: Moving): Fails<unknown> {
-  if (Predicate.isNull(scope.thread)) {
-    return db.get(MOVE_CHANNEL_POSITION, identity, scope.channel, message.id);
-  }
-  return db.get(MOVE_THREAD_POSITION, identity, scope.thread, message.id);
-}
-
-function moveReadPosition(db: SqliteDatabase, identity: IdentityName, message: Message): Fails<ReadPosition> {
-  const scope = scopeOf(message);
-  const moved = movePosition(db, { identity, message, scope });
-  return Effect.map(Effect.flatMap(moved, positionRow), (messageId) => ({ ...scope, messageId }));
-}
-
-function recordAppended({ db, message }: Appended): Fails<void> {
+function recordAppended({ db, message }: Appended): Fails<readonly ReadReceipt[]> {
   return Effect.gen(function* recordMentionsAndFollows() {
     const thread = threadIdOf(message);
     yield* Effect.forEach(
@@ -134,7 +97,8 @@ function recordAppended({ db, message }: Appended): Fails<void> {
       (name) => db.run("INSERT OR IGNORE INTO follows (identity_name, thread_id) VALUES (?, ?)", name, thread),
       ONE_AT_A_TIME,
     );
-    yield* moveReadPosition(db, message.author.name, message);
+    const { receipts } = yield* ackIn({ at: message.createdAt, db, identity: message.author.name, message });
+    return receipts;
   });
 }
 
@@ -247,23 +211,19 @@ const SUBSCRIBED_CHANNELS = `SELECT ${CHANNEL_COLUMNS} FROM channels
 
 function sqliteInbox({ db, reader }: InboxOn): InboxSection {
   return {
-    ackInbox: (identity, upTo) =>
+    ackInbox: (identity, upTo, at) =>
       db.transaction(
         Effect.flatMap(inboxOf({ db, reader }, identity, NOTHING_SEEN), (items) =>
-          Effect.forEach(
-            newestPerScope({ items, upTo }),
-            (message) => moveReadPosition(db, identity, message),
-            ONE_AT_A_TIME,
-          ),
+          ackAllIn({ at, db, identity, messages: newestPerScope({ items, upTo }) }),
         ),
       ),
-    ackMessage: (identity, id) =>
+    ackMessage: (identity, id, at) =>
       db.transaction(
         Effect.flatMap(reader.findMessage(id), (message) => {
           if (Predicate.isUndefined(message)) {
             return Effect.undefined;
           }
-          return moveReadPosition(db, identity, message);
+          return ackIn({ at, db, identity, message });
         }),
       ),
     findInboxItem: (identity, id) => inboxItemOf({ db, reader }, identity, id),
@@ -272,6 +232,7 @@ function sqliteInbox({ db, reader }: InboxOn): InboxSection {
     listInboxAfter: (identity, after) => inboxOf({ db, reader }, identity, after),
     listInboxHistory: (identity, page) => historyOf({ db, reader }, identity, page),
     listReadPositions: (identity) => readPositionsIn({ db, identity }),
+    listReadReceipts: (ids) => receiptsOf({ db, ids }),
     listSubscribedChannels: (identity) =>
       db
         .all(SUBSCRIBED_CHANNELS, identity)

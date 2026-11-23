@@ -1,18 +1,20 @@
 import { Array as Arr, String as Str } from "effect";
+import type { MessageId, ReadReceipt } from "../../../messages/index.ts";
 import type { ChannelName } from "../../../channels/index.ts";
-import type { MessageId } from "../../../messages/index.ts";
 
 interface MemoryInbox {
   readonly mentions: ReadonlySet<string>;
   readonly follows: ReadonlySet<string>;
   readonly subscriptions: ReadonlySet<string>;
   readonly positions: ReadonlyMap<string, MessageId>;
+  readonly receipts: readonly ReadReceipt[];
 }
 
 const EMPTY_INBOX: MemoryInbox = {
   follows: new Set(),
   mentions: new Set(),
   positions: new Map(),
+  receipts: [],
   subscriptions: new Set(),
 };
 
@@ -31,6 +33,7 @@ function withoutChannel({ channel, ids, inbox }: ForgettingChannel): MemoryInbox
     follows: new Set(Arr.filter([...inbox.follows], kept)),
     mentions: new Set(Arr.filter([...inbox.mentions], kept)),
     positions: new Map(Arr.filter([...inbox.positions], ([key]: readonly [string, MessageId]) => kept(key))),
+    receipts: Arr.filter(inbox.receipts, (receipt) => !ids.has(receipt.messageId)),
     subscriptions: new Set(Arr.filter([...inbox.subscriptions], kept)),
   };
 }
