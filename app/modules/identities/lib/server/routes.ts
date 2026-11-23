@@ -9,7 +9,6 @@ import {
   OwnerSchema,
 } from "./wire.ts";
 import {
-  firstAdminName,
   identitiesPath,
   identityAdminPath,
   identityKinds,
@@ -198,12 +197,14 @@ function adminFlagRoute(method: "PUT" | "DELETE"): Route<Caller | Storage> {
   };
 }
 
-export const firstAdmin: Effect.Effect<Identity> = Effect.map(DateTime.now, (now) => ({
-  admin: true,
-  createdAt: isoTimeOf(now),
-  kind: "human",
-  name: firstAdminName,
-}));
+export function humanAdmin(name: IdentityName): Effect.Effect<Identity> {
+  return Effect.map(DateTime.now, (now) => ({
+    admin: true,
+    createdAt: isoTimeOf(now),
+    kind: "human",
+    name,
+  }));
+}
 
 export const responseSchemas = {
   IdentityResponse: IdentityResponseSchema,

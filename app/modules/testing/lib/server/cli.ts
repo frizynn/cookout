@@ -48,6 +48,7 @@ interface DevProcess {
 
 interface ServeOptions {
   readonly adminToken?: string;
+  readonly env?: Readonly<Record<string, string>>;
   readonly database: string;
   readonly webFolder?: string;
 }
@@ -180,21 +181,22 @@ function startUntil<Line>(
   });
 }
 
-function startServe({
-  adminToken = serveAdminToken,
-  database,
-  ...web
-}: ServeOptions): Effect.Effect<ServeProcess, never, Needs | Scope.Scope> {
+function serveCommandLine(options: ServeOptions): Omit<CommandLine, "console"> {
+  const { adminToken = serveAdminToken, database, env = {}, ...web } = options;
   const args = ["serve", "--port", "0", "--host", "127.0.0.1", "--db", database];
-  const serve = exitCodeAfter(runCommandLine(args, { storage: sqliteStorage, ...web }));
-  const env = { COOKOUT_ADMIN_TOKEN: adminToken };
-  return Effect.map(startUntil(serve, isListening, env), ({ line, lines, stdout, stop }) => ({
-    adminToken,
-    lines,
-    stdout,
-    stop,
-    url: line.listening,
-  }));
+  const program = exitCodeAfter(runCommandLine(args, { storage: sqliteStorage, ...web }));
+  return { env: { COOKOUT_ADMIN_TOKEN: adminToken, ...env }, program };
+}
+
+function runServe(options: ServeOptions): Effect.Effect<CliResult, never, Needs> {
+  return captured(serveCommandLine(options));
+}
+
+function startServe(options: ServeOptions): Effect.Effect<ServeProcess, never, Needs | Scope.Scope> {
+  const { adminToken = serveAdminToken } = options;
+  const { env, program } = serveCommandLine(options);
+  const started = startUntil(program, isListening, env);
+  return Effect.map(started, ({ line, ...output }) => ({ ...output, adminToken, url: line.listening }));
 }
 
 interface SignallingConsole {
@@ -288,6 +290,7 @@ export {
   runCookout,
   runDev,
   startDev,
+  runServe,
   startServe,
   watchCookout,
   watched,
