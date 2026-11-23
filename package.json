@@ -32,6 +32,9 @@
     "api:write": "node scripts/api-report.ts --write",
     "exports": "node scripts/check-exports.ts",
     "pack:smoke": "node scripts/pack-smoke.ts",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish",
     "e2e:docker": "scripts/e2e-docker.sh",
     "check": "node scripts/check.ts",
     "fix": "knip --production --include exports,types,dependencies --fix > /dev/null; node scripts/lint-ratchet.ts --fix > /dev/null 2>&1; biome format --write . > /dev/null && node scripts/lint-ratchet.ts",
@@ -63,6 +66,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.8",
+    "@changesets/cli": "^3.0.3",
     "@effect/tsgo": "0.73.2",
     "@effect/vitest": "4.1.5",
     "@playwright/test": "^1.65.1",
