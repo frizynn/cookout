@@ -1,6 +1,6 @@
+import { Array as Arr, Schema } from "effect";
 import type { ErrorResponse, HealthResponse } from "../../index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
-import { Schema } from "effect";
 import { matchesWire } from "../../index.ts";
 
 const SHORTEST_CODE = 1;
@@ -11,8 +11,32 @@ const ErrorBodySchema = Schema.Struct({
   message: Schema.String,
 });
 
+const contentSecurityPolicy = Arr.join(
+  [
+    "default-src 'none'",
+    "script-src 'self'",
+    "style-src 'self'",
+    "font-src 'self'",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "base-uri 'none'",
+    "form-action 'none'",
+    "frame-ancestors 'none'",
+  ],
+  "; ",
+);
+
+const securityHeaders = {
+  "content-security-policy": contentSecurityPolicy,
+  "referrer-policy": "no-referrer",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+};
+
 export const HealthResponseSchema = matchesWire<HealthResponse>()(
   Schema.Struct({ status: Schema.Literal("ok"), time: IsoTimeSchema }),
 );
 
 export const ErrorResponseSchema = matchesWire<ErrorResponse>()(Schema.Struct({ error: ErrorBodySchema }));
+
+export { securityHeaders };

@@ -38,6 +38,8 @@ export const errorCodes = [
   "invalid_json",
   "invalid_request",
   "body_too_large",
+  "foreign_host",
+  "foreign_origin",
   "storage_unavailable",
   "internal_error",
 ] as const;
