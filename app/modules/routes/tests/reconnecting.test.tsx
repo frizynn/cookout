@@ -1,33 +1,9 @@
 import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
-import type { Live } from "../../live/index.ts";
-import { createLive } from "../../live/index.ts";
+import type { Cuttable } from "./cuttable.ts";
+import { cuttable } from "./cuttable.ts";
 import { openAt } from "./render.tsx";
-
-type Link = ReturnType<Live["link"]>;
-
-interface Cuttable {
-  readonly live: Live;
-  readonly report: (link: Link) => void;
-}
-
-function cuttable(): Cuttable {
-  const reports: ((link: Link) => void)[] = [];
-  const live = createLive({
-    open: (_onEvent, onLink) => {
-      reports.push(onLink);
-    },
-  });
-  return {
-    live,
-    report: (link) => {
-      for (const onLink of reports) {
-        onLink(link);
-      }
-    },
-  };
-}
 
 function rowTexts(): readonly string[] {
   const texts: string[] = [];

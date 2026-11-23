@@ -7,7 +7,9 @@
  * on: each new inbox item (`inbox-item`) joins them, and each new read
  * position (`read-position`, from this tab's ack on view or any other
  * session's) drops the items it covers, so opening a channel or a thread takes
- * its messages out. It never acks anything itself: a message is read only once
+ * its messages out. When the stream's link comes back after being down, it reads the inbox and the read positions
+ * again, since the stream doesn't replay what it missed: read positions moved on meanwhile drop their items, and
+ * those moved back meanwhile bring theirs back, as `read-position-moved-back` does. It never acks anything itself: a message is read only once
  * some view acks it. A refusal keeps the server's error code; a server that
  * can't be reached is `unreachable`. The items have two levels, as Slack
  * shows them (Matt, #152, 2026-11-23): for you (a mention, or a reply in a
@@ -36,14 +38,16 @@
  * any, whose Mark unread calls `markUnread`; its `refusal` is why the last
  * Mark unread was refused, until the next one.
  */
-import type { ChannelName, CookoutClient, CookoutEvent, InboxItem, MessageId, Refusal } from "../sdk/index.ts";
+import type { ChannelName, CookoutClient, InboxItem, MessageId, Refusal } from "../sdk/index.ts";
+import type { Earlier, LiveEarlier } from "./lib/earlier.ts";
 import type { MarkAll, MarkAllState } from "./lib/mark-all.ts";
 import { createInboxItems, readInto } from "./lib/inbox-items.ts";
-import type { Earlier } from "./lib/earlier.ts";
 import type { InboxItems } from "./lib/inbox-items.ts";
 import type { Live } from "../live/index.ts";
+import type { MarkUnread } from "./lib/mark-unread.ts";
 import type { MessageMenu } from "./lib/message-menu.ts";
 import type { NewLine } from "./lib/new-lines.ts";
+import { catchingUp } from "./lib/catch-up.ts";
 import { createEarlier } from "./lib/earlier.ts";
 import { createMarkAll } from "./lib/mark-all.ts";
 import { createMarkUnread } from "./lib/mark-unread.ts";
@@ -72,10 +76,25 @@ async function loadedOrFailed({ client, items, markAll, onRead }: Loading): Prom
   }
 }
 
-function follow(live: Live | null, onEvent: (event: CookoutEvent) => void): void {
-  if (live !== null) {
-    live.subscribe(onEvent);
+interface Following {
+  readonly client: UnreadOptions["client"];
+  readonly earlier: LiveEarlier;
+  readonly items: InboxItems;
+  readonly live: Live | null;
+  readonly markUnread: MarkUnread;
+  readonly republish: () => void;
+}
+
+function follow({ client, earlier, items, live, markUnread, republish }: Following): void {
+  if (live === null) {
+    return;
   }
+  live.subscribe((event) => {
+    if (markUnread.receive(event) || items.receive(event, earlier.add)) {
+      republish();
+    }
+  });
+  live.onBack(catchingUp({ client, items, moveBack: markUnread.moveBack, onChange: republish, onRead: earlier.add }));
 }
 
 /** The unread inbox items, oldest first, once they have loaded. */
@@ -150,11 +169,7 @@ export function createUnread(options: UnreadOptions): Unread {
   const markUnread = createMarkUnread({ client: options.client, dropRead: earlier.drop, items, onChange: republish });
 
   async function load(): Promise<void> {
-    follow(options.live ?? null, (event) => {
-      if (markUnread.receive(event) || items.receive(event, earlier.add)) {
-        republish();
-      }
-    });
+    follow({ client: options.client, earlier, items, live: options.live ?? null, markUnread, republish });
     shown.publish(await loadedOrFailed({ client: options.client, items, markAll, onRead: earlier.add }));
   }
 

@@ -1,9 +1,9 @@
 import type { CallRequest, CallState } from "./command-call.ts";
-import type { ChannelName, CookoutClient, Message, ReadPosition, Reply, TopLevelMessage } from "../../sdk/index.ts";
+import type { ChannelName, CookoutClient, Message, ReadPosition, TopLevelMessage } from "../../sdk/index.ts";
 import type { Failure, PostState } from "./failure.ts";
 import { callFailure, notJson, parseData } from "./command-call.ts";
+import { newestSince, received, withNewest } from "./top-level-messages.ts";
 import { failure } from "./failure.ts";
-import { withNewestReply } from "../../messages/index.ts";
 
 type OlderState = { readonly status: "idle" } | { readonly status: "loading" } | Failure;
 
@@ -37,6 +37,7 @@ interface ChannelMessages {
 
 interface LiveChannelMessages extends ChannelMessages {
   readonly receive: (message: Message) => void;
+  readonly back: () => void;
 }
 
 type MessagesClient = Pick<CookoutClient, "ack" | "callCommand" | "createMessage" | "listMessages">;
@@ -51,7 +52,6 @@ interface Channel {
 
 const NEWEST = -1;
 const NONE_OPEN = 0;
-const NONE_KEPT = 0;
 
 function update(channel: Channel, change: (loaded: Loaded) => Loaded): void {
   const current = channel.current();
@@ -93,28 +93,15 @@ async function loadNewest(channel: Channel): Promise<void> {
   }
 }
 
-interface Page {
-  readonly hasMore: boolean;
-  readonly messages: readonly TopLevelMessage[];
-}
-
-function withNewest(loaded: Loaded, page: Page): Loaded {
-  const oldest = Math.min(...page.messages.map((message) => message.id));
-  const kept = loaded.messages.filter((message) => message.id < oldest);
-  if (kept.length === NONE_KEPT) {
-    return { ...loaded, hasMore: page.hasMore, messages: page.messages };
-  }
-  return { ...loaded, messages: [...kept, ...page.messages] };
-}
-
 async function reloadNewest(channel: Channel): Promise<void> {
-  if (channel.current().status !== "loaded") {
+  const current = channel.current();
+  if (current.status !== "loaded") {
     await loadNewest(channel);
     return;
   }
   try {
-    const page = await channel.client.listMessages(channel.name, { limit: channel.pageSize });
-    update(channel, (loaded) => withNewest(loaded, page));
+    const page = await newestSince({ ...channel, shown: current.messages });
+    update(channel, (loaded) => ({ ...loaded, ...withNewest({ page, shown: loaded }) }));
     await Promise.all(
       page.messages.slice(NEWEST).map(async (newest) => {
         await ack(channel, newest);
@@ -171,23 +158,6 @@ async function callCommand(channel: Channel, request: CallRequest): Promise<void
   }
 }
 
-function withReply(parent: TopLevelMessage, reply: Reply): TopLevelMessage {
-  if (parent.id !== reply.replyTo || (parent.latestReplyId !== null && parent.latestReplyId >= reply.id)) {
-    return parent;
-  }
-  return withNewestReply({ parent, reply });
-}
-
-function received(loaded: Loaded, message: Message): Loaded {
-  if (message.kind === "reply") {
-    return { ...loaded, messages: loaded.messages.map((parent) => withReply(parent, message)) };
-  }
-  if (loaded.messages.some((shown) => shown.id === message.id)) {
-    return loaded;
-  }
-  return { ...loaded, messages: [...loaded.messages, message] };
-}
-
 interface PostRequest {
   readonly text: string;
   readonly posted: () => void;
@@ -197,7 +167,7 @@ async function postMessage(channel: Channel, { posted, text }: PostRequest): Pro
   update(channel, (loaded) => ({ ...loaded, post: { status: "posting" } }));
   try {
     const { message } = await channel.client.createMessage({ channel: channel.name, text });
-    update(channel, (loaded) => ({ ...received(loaded, message), post: { status: "idle" } }));
+    update(channel, (loaded) => ({ ...received({ message, shown: loaded }), post: { status: "idle" } }));
     posted();
   } catch (error: unknown) {
     update(channel, (loaded) => ({ ...loaded, post: failure(error) }));
@@ -235,6 +205,25 @@ async function loadOlderAfter(previous: Promise<void> | null, channel: Channel):
   await loadOlderPage(channel);
 }
 
+interface Receiving {
+  readonly channel: Channel;
+  readonly message: Message;
+  readonly open: boolean;
+  readonly queue: Promise<void> | null;
+}
+
+function afterReceiving({ channel, message, open, queue }: Receiving): Promise<void> | null {
+  if (message.channel !== channel.name) {
+    return queue;
+  }
+  const before = channel.current();
+  update(channel, (loaded) => received({ message, shown: loaded }));
+  if (message.kind === "top-level" && channel.current() !== before && open) {
+    return ackAfter(queue, channel, message);
+  }
+  return queue;
+}
+
 function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
   const listeners = new Set<() => void>();
   let state: ChannelMessagesState = { status: "loading" };
@@ -250,6 +239,11 @@ function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
     },
   };
   return {
+    back: () => {
+      if (listeners.size > NONE_OPEN) {
+        queue = reloadAfter(queue, channel);
+      }
+    },
     call: (command, data, called) => {
       queue = callAfter(queue, channel, { called, command, data });
     },
@@ -263,14 +257,7 @@ function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
       queue = postAfter(queue, channel, { posted, text });
     },
     receive: (message) => {
-      if (message.channel !== options.name) {
-        return;
-      }
-      const before = state;
-      update(channel, (loaded) => received(loaded, message));
-      if (message.kind === "top-level" && state !== before && listeners.size > NONE_OPEN) {
-        queue = ackAfter(queue, channel, message);
-      }
+      queue = afterReceiving({ channel, message, open: listeners.size > NONE_OPEN, queue });
     },
     snapshot: () => state,
     subscribe: (listener) => {

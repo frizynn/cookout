@@ -34,6 +34,7 @@ interface ThreadMessages {
 
 interface LiveThreadMessages extends ThreadMessages {
   readonly receive: (message: Message) => void;
+  readonly back: () => void;
 }
 
 type ThreadClient = Pick<CookoutClient, "ack" | "createMessage" | "getThread">;
@@ -162,6 +163,11 @@ function createThreadMessages(options: ThreadOptions): LiveThreadMessages {
     },
   };
   return {
+    back: () => {
+      if (listeners.size > NONE_OPEN) {
+        queue = reloadAfter(queue, thread);
+      }
+    },
     receive: (message) => {
       const before = state;
       update(thread, (loaded) => received(loaded, message));

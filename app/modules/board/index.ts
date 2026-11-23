@@ -31,7 +31,9 @@
  * one deleted elsewhere leaves it, and if the page is on it, the page goes to the
  * inbox with its name as the snapshot's `notice` until `dismissNotice`; and each
  * command registered elsewhere joins the loaded `commands`; when the stream's link comes back after being down,
- * the list reloads, since channel events can't be replayed. `subscriptions` is the names of the channels
+ * the list reloads, and each channel or thread with a reader reloads its newest messages, paging back until it
+ * reaches those it shows, and acks the newest, since the stream doesn't replay what it missed (ADR
+ * `docs/adr/0056-a-page-catches-up-by-reading-again.md`); one with no reader reloads when it is next opened, as it always does. `subscriptions` is the names of the channels
  * the logged-in identity subscribes to, sorted, loaded when its first reader
  * subscribes; `setSubscribed` subscribes to a channel or unsubscribes from it,
  * keeping the refusal, with the channel, if the server refuses. With `live`, a subscribe or unsubscribe from
@@ -116,10 +118,9 @@ export function createBoard(options: BoardOptions): Board {
   const { heard, subscriptions } = createSubscriptions({ client, live: options.live ?? null });
   const { follow, followed } = createLiveFeed({
     added: list.add,
-    back: list.reload,
     deleted: list.remove,
     live: options.live ?? null,
-    receivers: () => [list, ...channels.values(), ...threads.values()],
+    receivers: () => [{ back: list.reload, receive: list.receive }, ...channels.values(), ...threads.values()],
   });
   return {
     channel: (name) =>

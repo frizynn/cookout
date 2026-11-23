@@ -15,6 +15,7 @@ interface InboxItems {
   readonly moveBack: (position: MovedBackReadPosition) => void;
   readonly movesBack: (channel: ChannelName, thread: MessageId | null) => number;
   readonly readPosition: (channel: ChannelName, thread: MessageId | null) => MessageId | null;
+  readonly readPositions: () => readonly ReadPosition[];
   readonly receive: (event: CookoutEvent, onRead: (item: InboxItem) => void) => boolean;
   readonly list: () => readonly InboxItem[];
   readonly has: (id: MessageId) => boolean;
@@ -41,6 +42,8 @@ function oldestFirst(items: Iterable<InboxItem>): readonly InboxItem[] {
 
 type Positions = Map<string, MessageId>;
 
+type Places = Map<string, Pick<ReadPosition, "channel" | "thread">>;
+
 const NO_MOVES = 0;
 const ONE_MORE = 1;
 
@@ -62,6 +65,17 @@ interface Moved {
   readonly moves: Map<string, number>;
 }
 
+function positionsIn(positions: Positions, places: Places): readonly ReadPosition[] {
+  const all: ReadPosition[] = [];
+  for (const [scope, place] of places) {
+    const messageId = positions.get(scope) ?? null;
+    if (messageId !== null) {
+      all.push({ ...place, messageId });
+    }
+  }
+  return all;
+}
+
 function moveBackIn({ moves, positions }: Moved, { channel, messageId, thread }: MovedBackReadPosition): void {
   const scope = scopeOf(channel, thread);
   positions.delete(scope);
@@ -75,12 +89,14 @@ interface ReadingIn {
   readonly all: readonly ReadPosition[];
   readonly items: Map<MessageId, InboxItem>;
   readonly positions: Positions;
+  readonly places: Places;
   readonly onRead: (item: InboxItem) => void;
 }
 
-function readIn({ all, items, onRead, positions }: ReadingIn): void {
+function readIn({ all, items, onRead, places, positions }: ReadingIn): void {
   for (const position of all) {
     moveTo(positions, position);
+    places.set(scopeOf(position.channel, position.thread), { channel: position.channel, thread: position.thread });
   }
   for (const [id, item] of items) {
     if (isReadAt(positions, item.message)) {
@@ -93,6 +109,7 @@ function readIn({ all, items, onRead, positions }: ReadingIn): void {
 function createInboxItems(): InboxItems {
   const items = new Map<MessageId, InboxItem>();
   const positions: Positions = new Map();
+  const places: Places = new Map();
   const moved: Moved = { moves: new Map(), positions };
 
   function isRead(message: Message): boolean {
@@ -108,7 +125,7 @@ function createInboxItems(): InboxItems {
   }
 
   function read(all: readonly ReadPosition[], onRead: (item: InboxItem) => void): void {
-    readIn({ all, items, onRead, positions });
+    readIn({ all, items, onRead, places, positions });
   }
 
   return {
@@ -117,11 +134,13 @@ function createInboxItems(): InboxItems {
     isRead,
     list: () => oldestFirst(items.values()),
     moveBack: (position) => {
+      places.set(scopeOf(position.channel, position.thread), { channel: position.channel, thread: position.thread });
       moveBackIn(moved, position);
     },
     movesBack: (channel, thread) => moved.moves.get(scopeOf(channel, thread)) ?? NO_MOVES,
     readAll: read,
     readPosition: (channel, thread) => positions.get(scopeOf(channel, thread)) ?? null,
+    readPositions: () => positionsIn(positions, places),
     receive: (event, onRead) => {
       if (event.type === "inbox-item") {
         addAll([event.item]);

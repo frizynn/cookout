@@ -3,6 +3,7 @@ import type { Live } from "../../live/index.ts";
 
 interface Receiver {
   readonly receive: (message: Message) => void;
+  readonly back: () => void;
 }
 
 interface Store {
@@ -16,13 +17,12 @@ interface LiveFeed {
 
 interface LiveFeedOptions {
   readonly added: (channel: Channel) => void;
-  readonly back: () => void;
   readonly deleted: (channel: Channel) => void;
   readonly live: Live | null;
   readonly receivers: () => Iterable<Receiver>;
 }
 
-function createLiveFeed({ added, back, deleted, live, receivers }: LiveFeedOptions): LiveFeed {
+function createLiveFeed({ added, deleted, live, receivers }: LiveFeedOptions): LiveFeed {
   let following = false;
 
   function receive(event: CookoutEvent): void {
@@ -37,6 +37,12 @@ function createLiveFeed({ added, back, deleted, live, receivers }: LiveFeedOptio
     }
     for (const receiver of receivers()) {
       receiver.receive(event.message);
+    }
+  }
+
+  function back(): void {
+    for (const receiver of receivers()) {
+      receiver.back();
     }
   }
 
