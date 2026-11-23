@@ -2,6 +2,7 @@ import type { CookoutClient, EventStream } from "../../sdk/index.ts";
 import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, waitFor, within } from "@testing-library/react";
+import { descriptionLength } from "../../identities/client.ts";
 import { inProfile } from "./regions.ts";
 import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";
@@ -140,6 +141,21 @@ it("someone else sees a description's line breaks on the profile", { timeout: 50
 
   expect(shown).toHaveProperty("textContent", "To-dos\nLife admin");
   expect(shown.className).toContain("whitespace-pre-line");
+
+  close();
+});
+
+it("an owner sees why a description over the limit didn't save", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { close } = await ownerOpens("web-describe-long");
+
+  await describe(`${"a".repeat(descriptionLength.maximum)}a`);
+
+  await expect(inProfile().findByRole("alert")).resolves.toHaveProperty(
+    "textContent",
+    expect.stringContaining("Couldn't save the description"),
+  );
 
   close();
 });
