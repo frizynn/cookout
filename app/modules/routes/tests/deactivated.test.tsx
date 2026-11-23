@@ -39,7 +39,7 @@ async function profileHeading(): Promise<string> {
 }
 
 async function deactivateFromProfile(name: string): Promise<void> {
-  fireEvent.click(await inProfile().findByRole("button", { name: "Deactivate" }));
+  fireEvent.click(await inProfile().findEnabledButton("Deactivate"));
   fireEvent.click(await inDialog().findByRole("button", { name: `Deactivate @${name}` }));
   await waitFor(async () => {
     await expect(profileHeading()).resolves.toBe(`${name}(deactivated)`);
@@ -140,7 +140,7 @@ it("deactivating a person asks without mentioning their agents, which stay activ
 
   const { bot } = await crewOf("web-off-person");
   const close = openAt({ client: adminClient(), hash: "#/people/web-off-person-human" });
-  fireEvent.click(await inProfile().findByRole("button", { name: "Deactivate" }));
+  fireEvent.click(await inProfile().findEnabledButton("Deactivate"));
   const { textContent: asked } = await screen.findByRole("alertdialog", { name: "Deactivate @web-off-person-human?" });
   fireEvent.click(inDialog().getByRole("button", { name: "Deactivate @web-off-person-human" }));
   await waitFor(async () => {

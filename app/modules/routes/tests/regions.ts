@@ -1,4 +1,5 @@
 import { screen, waitFor, within } from "@testing-library/react";
+import { expect } from "vitest";
 
 type Name = string | Readonly<RegExp> | ((accessibleName: string) => boolean);
 
@@ -17,6 +18,7 @@ interface Region {
   readonly queryByRole: (role: string, options?: RoleOptions) => HTMLElement | null;
   readonly queryAllByRole: (role: string, options?: RoleOptions) => HTMLElement[];
   readonly findByRole: (role: string, options?: RoleOptions) => Promise<HTMLElement>;
+  readonly findEnabledButton: (name: string) => Promise<HTMLElement>;
   readonly getByText: (text: Text) => HTMLElement;
   readonly findByText: (text: Text) => Promise<HTMLElement>;
 }
@@ -30,6 +32,16 @@ function regionOf(element: () => HTMLElement): Region {
     },
     findByText: async (text) => {
       const found = await waitFor(() => within(element()).getByText(text));
+      return found;
+    },
+    findEnabledButton: async (name) => {
+      const found = await waitFor(() => {
+        const button = within(element()).getByRole("button", { name });
+
+        expect(button).toHaveProperty("disabled", false);
+
+        return button;
+      });
       return found;
     },
     getAllByRole: (role, options) => within(element()).getAllByRole(role, options),

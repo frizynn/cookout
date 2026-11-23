@@ -112,9 +112,7 @@ it("an admin can click neither Deactivate nor Delete while the message count loa
   await inProfile().findByRole("button", { name: "Deactivate" });
   expectNothingClickable();
   count.resolve(SOME_MESSAGES);
-  await waitFor(() => {
-    expect(inProfile().getByRole("button", { name: "Deactivate" })).toHaveProperty("disabled", false);
-  });
+  await inProfile().findEnabledButton("Deactivate");
 
   expect(inProfile().queryByRole("button", { name: "Delete" })).toBeNull();
 
