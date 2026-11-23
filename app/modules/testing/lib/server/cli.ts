@@ -30,6 +30,7 @@ interface DevProcess {
   readonly stop: Effect.Effect<void>;
   readonly url: string;
   readonly webhookFakeUrl: string;
+  readonly webUrl: string;
 }
 
 interface ServeWithWeb {
@@ -66,6 +67,7 @@ const isDevRunning = Schema.is(
     adminToken: Schema.String,
     database: Schema.String,
     url: Schema.String,
+    webUrl: Schema.String,
     webhookFakeUrl: Schema.String,
   }),
 );

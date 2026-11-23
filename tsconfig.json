@@ -45,5 +45,5 @@
       }
     ]
   },
-  "include": ["app", "scripts", "vitest.config.ts", "tsdown.config.ts"]
+  "include": ["app", "scripts", "vitest.config.ts", "tsdown.config.ts", "vite.config.ts"]
 }

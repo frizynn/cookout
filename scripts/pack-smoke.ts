@@ -130,6 +130,10 @@ function health(url: string): string {
   return run("curl", ["-fsS", `${url}/v1/health`]);
 }
 
+function webPage(url: string): string {
+  return run("curl", ["-fsS", `${url}/`]);
+}
+
 function whoami(url: string, token: string): string {
   return run("env", withEnv({ COOKOUT_TOKEN: token, COOKOUT_URL: url }, bin, ["whoami"]), install);
 }
@@ -152,6 +156,7 @@ async function firstBoot(): Promise<string> {
   const adminToken = first.lines.map((line) => adminTokenIn(line)).find((token) => token !== "") ?? "";
   check(adminToken !== "", "the first boot prints the admin token on stdout");
   check(typeof parseJson(health(first.url)) === "object", `curl -fsS ${first.url}/v1/health succeeds`);
+  check(webPage(first.url).includes('<div id="root">'), `curl -fsS ${first.url}/ answers with the built web UI`);
   check((await first.stop()) === EXIT_SUCCESS, "cookout serve exits 0 on SIGTERM");
   return adminToken;
 }
