@@ -582,7 +582,8 @@ export type CookoutClientOptions = {
   readonly url?: string;
   /**
    * The bearer token: an Identity token, or the agent session token `join` answered, to act as the agent for that
-   * session. Default: `COOKOUT_TOKEN`, else `COOKOUT_SESSION`. Not needed for the health check.
+   * session. Default: `COOKOUT_TOKEN`, else `COOKOUT_SESSION`; inside an agent tool, `COOKOUT_SESSION` first. Not
+   * needed for the health check.
    */
   readonly token?: string;
   /** Where `COOKOUT_URL`, `COOKOUT_TOKEN` and `COOKOUT_SESSION` are read from. Default: the process's environment (none in a browser). */
