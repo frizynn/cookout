@@ -230,7 +230,10 @@ export type CookoutClient = CallGroups & {
    * each new read position (`read-position`) the moment any session of the caller acks, and each read position moved
    * back (`read-position-moved-back`) the moment one marks a message unread, so several sessions stay in sync. With `allChannels`, it also sends every new message on every channel (`message`), each newly recorded read receipt (`read-receipt`) and each change to anyone's presence (`presence`), as the web UI needs.
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
-   * a newer server, is skipped. `close` drops the connection. Opened with an agent session token, the stream moves its
+   * a newer server, is skipped. `close` drops the connection, which the server counts as a drop: presence keeps the
+   * identity online for the grace, then offline with "connection lost". `closeCleanly` first tells the server the
+   * stream is ending on purpose (`DELETE /v1/events/:connection`, naming the connection ID the `connected` event
+   * carried), so its end is expected, then closes; `cookout watch` exiting on purpose does this. Opened with an agent session token, the stream moves its
    * expiry on while open, and once the token is revoked (`leave`, or another session's `join --force`) the
    * iteration throws `agent_session_revoked` (status 200, the stream's). An agent holds one stream at most: when
    * another opens for it, with either token, this one's iteration throws `watch_replaced`. To pick up after a
