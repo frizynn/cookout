@@ -55,6 +55,14 @@ function fetchedText(url: string): Effect.Effect<Fetched> {
   }).pipe(Effect.provide(FetchHttpClient.layer), Effect.orDie);
 }
 
+function postedFrom(origin: string, url: string): Effect.Effect<string> {
+  return HttpClient.execute(HttpClientRequest.post(url).pipe(HttpClientRequest.setHeader("origin", origin))).pipe(
+    Effect.flatMap((response) => response.text),
+    Effect.provide(FetchHttpClient.layer),
+    Effect.orDie,
+  );
+}
+
 it.effect("pnpm dev serves a fresh board and a webhook fake, and removes its database when it stops", () =>
   Effect.gen(function* devServesAndCleansUp() {
     const dev = yield* startDev;
@@ -83,6 +91,19 @@ it.effect("pnpm dev serves the web UI from the Vite dev server, which passes /v1
     expect(page.text).toContain('src="/app/web.tsx"');
     expect(health.text).toContain('"status":"ok"');
   }).pipe(Effect.provide(commandLineServices)),
+);
+
+it.effect(
+  "a write from the web UI's own page passes the Origin guard through the Vite dev server, and another site's doesn't",
+  () =>
+    Effect.gen(function* devWebWrites() {
+      const dev = yield* startDev;
+      const fromPage = yield* postedFrom(dev.webUrl, `${dev.webUrl}/v1/channels`);
+      const fromElsewhere = yield* postedFrom("https://elsewhere.example", `${dev.webUrl}/v1/channels`);
+
+      expect(fromPage).toContain('"token_missing"');
+      expect(fromElsewhere).toContain('"foreign_origin"');
+    }).pipe(Effect.provide(commandLineServices)),
 );
 
 it.effect("pnpm seed prints the seeded tokens, and the cookout CLI reads the seeded thread with one", () =>
