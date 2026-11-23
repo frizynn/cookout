@@ -204,7 +204,7 @@ export function baseUrlOf(url: string): string {
 
 /**
  * Sends one request and reads the whole answer. A redirect is never followed,
- * so the headers (the token and the lease ID) go only to `baseUrl`: the
+ * so the headers (the token) go only to `baseUrl`: the
  * redirect itself is the answer.
  * @param options The request.
  * @returns The answer.
