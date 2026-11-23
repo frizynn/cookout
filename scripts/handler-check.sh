@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
-# scripts/handler-check.sh [command] [channel]: check the example handler at $COOKOUT_HANDLER_URL
+# scripts/handler-check.sh [command]: check the example handler at $COOKOUT_HANDLER_URL
 # (default https://cookout-handler-example.fly.dev) is healthy, call `command` (default `example`)
-# in `channel` (default `handler-example`) on $COOKOUT_URL with $COOKOUT_TOKEN, and pass only if
-# the command's handler replies in the call's thread within 30 s.
+# on $COOKOUT_URL with $COOKOUT_TOKEN (an admin's) in a channel `e2e-handler-check-<time>-<pid>` it
+# creates for the call and deletes on exit, and pass only if the command's handler replies in the
+# call's thread within 30 s.
 set -euo pipefail
 
 command="${1:-example}"
-channel="${2:-handler-example}"
+channel="e2e-handler-check-$(date +%s)-$$"
 handler="${COOKOUT_HANDLER_URL:-https://cookout-handler-example.fly.dev}"
 : "${COOKOUT_URL:?set COOKOUT_URL}" "${COOKOUT_TOKEN:?set COOKOUT_TOKEN}"
 
 curl -fsS -o /dev/null "$handler/health"
+node app/main.ts channel create "$channel" > /dev/null
+trap 'node app/main.ts channel delete "$channel" > /dev/null' EXIT
 thread=$(node app/main.ts command call "$command" --channel "$channel" --data '{"branch":"main"}' | jq -r .threadId)
 start=$(date +%s)
 while [ $(($(date +%s) - start)) -lt 30 ]; do

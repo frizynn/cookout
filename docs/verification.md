@@ -614,7 +614,7 @@ The example handler (`packages/handler-example`) runs as its own Fly app, `cooko
 docker build -f packages/handler-example/Dockerfile -t cookout-handler .
 ```
 
-The handler doesn't start without `COOKOUT_COMMAND_SECRET`, the secret `command add` shows once. `scripts/handler-provision.sh` makes the deployed cookout ready for it. With `COOKOUT_URL=https://cookout.fly.dev` and the admin's token in `COOKOUT_TOKEN`, it creates the channel `handler-example` and the command `example` (URL `https://cookout-handler-example.fly.dev/webhook`) if they are missing. It pipes the new command's secret straight into `flyctl secrets import --stage -a cookout-handler-example` and never prints it. If the command exists but `flyctl secrets list` shows no `COOKOUT_COMMAND_SECRET` on the app (staging failed after an earlier add), it runs `command rotate example` and stages the new secret the same way, so a rerun recovers. Once the app has the secret, a rerun changes nothing. Then deploy it and check it:
+The handler doesn't start without `COOKOUT_COMMAND_SECRET`, the secret `command add` shows once. `scripts/handler-provision.sh` makes the deployed cookout ready for it. With `COOKOUT_URL=https://cookout.fly.dev` and the admin's token in `COOKOUT_TOKEN`, it adds the command `example` (URL `https://cookout-handler-example.fly.dev/webhook`) if it is missing, and deletes the channel `handler-example` that earlier runs created, if it is still there. It pipes the new command's secret straight into `flyctl secrets import --stage -a cookout-handler-example` and never prints it. If the command exists but `flyctl secrets list` shows no `COOKOUT_COMMAND_SECRET` on the app (staging failed after an earlier add), it runs `command rotate example` and stages the new secret the same way, so a rerun recovers. Once the app has the secret and the channel is gone, a rerun changes nothing. Then deploy it and check it:
 
 ```sh
 scripts/handler-provision.sh
@@ -623,7 +623,7 @@ fly status -a cookout-handler-example
 curl -fsS https://cookout-handler-example.fly.dev/health
 ```
 
-`fly status` shows one machine in `lhr`, started, with its check passing. `scripts/handler-check.sh` checks the handler's `/health`, makes one `command call example` in `handler-example` on `$COOKOUT_URL`, and passes only if the `example` handler identity replies in that thread within 30 s:
+`fly status` shows one machine in `lhr`, started, with its check passing. `scripts/handler-check.sh` checks the handler's `/health`, creates a channel `e2e-handler-check-<time>-<pid>` on `$COOKOUT_URL`, makes one `command call example` in it, and passes only if the `example` handler identity replies in that thread within 30 s. It deletes the channel when it exits, passing or failing, so the token in `COOKOUT_TOKEN` must be an admin's:
 
 ```sh
 COOKOUT_URL=https://cookout.fly.dev scripts/handler-check.sh
@@ -637,7 +637,6 @@ echo "COOKOUT_URL=http://127.0.0.1:48775 COOKOUT_TOKEN=$(cut -d= -f2 /tmp/cookou
 env $(cat /tmp/cookout-handler-admin.env) node app/main.ts serve --host 0.0.0.0 --port 48775 --db /tmp/cookout-handler.db --public-url http://host.docker.internal:48775 > /tmp/cookout-handler-serve.log 2>&1
 printf '{"type":"object"}' > /tmp/cookout-handler.schema.json
 env $(cat /tmp/cookout-handler.env) node app/main.ts command add example --url http://127.0.0.1:48776/webhook --schema /tmp/cookout-handler.schema.json | jq -r '"COOKOUT_COMMAND_SECRET=\(.secret)"' > /tmp/cookout-handler-secret.env
-env $(cat /tmp/cookout-handler.env) node app/main.ts channel create handler-example
 docker run -d --rm --name cookout-handler -p 48776:8787 --add-host host.docker.internal:host-gateway --env-file /tmp/cookout-handler-secret.env -e COOKOUT_URL=http://host.docker.internal:48775 cookout-handler
 env $(cat /tmp/cookout-handler.env) COOKOUT_HANDLER_URL=http://127.0.0.1:48776 scripts/handler-check.sh
 docker rm -f cookout-handler
