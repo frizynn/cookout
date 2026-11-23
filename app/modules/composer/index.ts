@@ -1,7 +1,7 @@
 /**
  * The `composer` store: what is written in each message box (a thread's
  * reply box or a channel's message box) and in each display name field of
- * the Settings panel, and the identities it suggests for an `@` mention. It
+ * the settings page, and the identities it suggests for an `@` mention. It
  * loads every identity, human and agent, once, when the first reader of any
  * draft subscribes. `draft(key)` is one box's draft, an
  * external store read with `useSyncExternalStore`, the same store each time

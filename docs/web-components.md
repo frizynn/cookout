@@ -4,38 +4,29 @@ The shape a React component takes to pass the UI lint rules on its first commit.
 
 ## One component, shown
 
-`SidebarSettings` in [sidebar-settings.tsx](../app/modules/views/lib/sidebar-settings.tsx), trimmed:
+`SidebarView` in [sidebar.tsx](../app/modules/views/lib/sidebar.tsx), trimmed:
 
 ```tsx
-interface SidebarSettingsProps {
+interface SidebarProps {
   readonly identity: Identity;
   readonly layout: Layout;
-  readonly open: boolean;
+  readonly route: Route;
 }
 
-export function SidebarSettings(props: SidebarSettingsProps): ReactNode {
-  const { identity, layout } = props;
+export function SidebarView(props: SidebarProps): ReactNode {
+  const { layout } = props;
   const state = useSyncExternalStore(layout.subscribe, layout.snapshot);
-  const handleToggle = layout.toggleSettings;
-  const handleChoose = useCallback(
-    (value: string) => {
-      for (const theme of themesOf(value)) {
-        layout.chooseTheme(theme);
-      }
-    },
-    [layout],
-  );
+  const handleFollow = layout.closeSidebar;
+  const handleToggleCollapsed = layout.toggleCollapsed;
   return (
-    <>
-      {state.settings && (
-        <Panel label={TEXT.settings}>
-          <ChoiceGroup choices={THEMES} label={TEXT.theme} onChoose={handleChoose} value={state.theme} />
-        </Panel>
-      )}
-      <ToggleButton expanded={state.settings} onClick={handleToggle}>
-        {TEXT.settings}
-      </ToggleButton>
-    </>
+    <Sidebar collapsed={state.collapsed} label={TEXT.sidebar} onToggleCollapsed={handleToggleCollapsed}>
+      <SidebarBody onFollow={handleFollow}>
+        <SidebarLinks route={props.route} />
+      </SidebarBody>
+      <SidebarFooter>
+        <SidebarSettings identity={props.identity} route={props.route} />
+      </SidebarFooter>
+    </Sidebar>
   );
 }
 ```
@@ -43,10 +34,10 @@ export function SidebarSettings(props: SidebarSettingsProps): ReactNode {
 What each rule asks, and how this meets it:
 
 - `no-multi-comp`: one component per file. A second component, even a small row, gets its own file in the module's lib folder.
-- `jsx-max-depth`: keep the returned tree shallow. When nesting grows, the inner part becomes its own component (and so its own file); design-system parts such as `Panel` and `ToggleButton` carry the markup.
+- `jsx-max-depth`: keep the returned tree shallow. When nesting grows, the inner part becomes its own component (and so its own file); design-system parts such as `Sidebar` and `SidebarFooter` carry the markup.
 - `jsx-no-jsx-as-prop`: pass JSX as `children`, never as another prop.
 - `no-ternary`: show or hide with `&&`; pick between values in a small function with `if` and early returns.
-- `jsx-handler-names`: a function passed to an `on…` prop is named `handle…` (`handleToggle`, `handleChoose`); one made in the component is wrapped in `useCallback`.
+- `jsx-handler-names`: a function passed to an `on…` prop is named `handle…` (`handleFollow`, `handleToggleCollapsed`); one made in the component is wrapped in `useCallback`, as `handleChoose` is in [theme-choice.tsx](../app/modules/views/lib/theme-choice.tsx).
 - `prefer-readonly-parameter-types`: every props field is `readonly`, and arrays are `readonly T[]`.
 - `max-dependencies`: a file imports only what it draws with; split the component before its import list grows long.
 
