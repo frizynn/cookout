@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, Predicate, Schema, pipe } from "effect";
+import { Array as Arr, Effect, Option, Predicate, Schema, pipe } from "effect";
 import type { CommandLineNeeds, TestCookoutService } from "../../../testing/server.ts";
 import { TestCookout, answer, commandLineServices, messageId, runDev, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
@@ -14,6 +14,7 @@ const onIt = "I am. It fails about one run in ten on CI.";
 const question = "@triage-agent can you post the failing run?";
 const thanks = "Thanks, both of you.";
 const deployed = "Deployed 1.4.2.";
+const rolledBack = "Rolled back to 1.4.1.";
 const isSeedOutput = Schema.is(SeedOutput);
 
 function ownerOf(identity: Identity): string {
@@ -49,9 +50,17 @@ it.effect("the seed makes humans, and agents with owners, each with a working to
       ["admin", NO_OWNER],
       ["grace", NO_OWNER],
       ["release-bot", "ada"],
+      ["rollback", "ada"],
       ["triage-agent", "grace"],
     ]);
-    expect(Arr.map(identities, ({ kind }) => kind)).toStrictEqual(["human", "human", "human", "agent", "agent"]);
+    expect(Arr.map(identities, ({ kind }) => kind)).toStrictEqual([
+      "human",
+      "human",
+      "human",
+      "agent",
+      "agent",
+      "agent",
+    ]);
     expect(Arr.map(whoami, ({ identity }) => identity.name)).toStrictEqual([
       "ada",
       "grace",
@@ -100,12 +109,13 @@ it.effect("the seed leaves a mention, a followed thread and a subscribed channel
     );
 
     expect(inboxes).toStrictEqual([
-      ["ada", []],
+      ["ada", [[rolledBack, ["followed-thread"]]]],
       [
         "grace",
         [
           [thanks, ["followed-thread"]],
           [deployed, ["subscribed-channel"]],
+          ["/rollback", ["subscribed-channel"]],
         ],
       ],
       [
@@ -123,6 +133,26 @@ it.effect("the seed leaves a mention, a followed thread and a subscribed channel
           [thanks, ["followed-thread"]],
         ],
       ],
+    ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("the seed calls a command in deploys and its handler replies with a result", () =>
+  Effect.gen(function* seededCommandCall() {
+    const cookout = yield* TestCookout;
+    yield* seeded(cookout);
+    const { commands } = yield* answer(() => cookout.client.listCommands());
+    const deploys = yield* answer(() => cookout.client.listMessages("deploys"));
+    const call = Option.getOrThrow(Arr.findFirst(deploys.messages, ({ author }) => author.name === "ada"));
+    const thread = yield* answer(() => cookout.client.getThread(call.id));
+
+    expect(Arr.map(commands, ({ handler, name }) => [name, handler])).toStrictEqual([["rollback", "rollback"]]);
+    expect([thread.parent.text, thread.parent.data]).toStrictEqual([
+      "/rollback",
+      { command: "rollback", data: { version: "1.4.1" } },
+    ]);
+    expect(Arr.map(thread.replies, ({ author, data, text }) => [author.name, text, data])).toStrictEqual([
+      ["rollback", rolledBack, { status: "done", version: "1.4.1" }],
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
