@@ -39,10 +39,6 @@ interface ServeProcess {
   readonly url: string;
 }
 
-interface DevProcess extends DevStartLine {
-  readonly stop: Effect.Effect<void>;
-}
-
 interface ServeOptions {
   readonly adminToken?: string;
   readonly env?: Readonly<Record<string, string>>;
@@ -86,16 +82,6 @@ const serveAdminToken = "test-admin-token-0123456789abcdef0123456789";
 const EXIT_SUCCESS = 0;
 const verbLayers: ServeLayers = { storage: Function.constant(memoryStorage) };
 const isListening = Schema.is(Schema.Struct({ listening: Schema.String }));
-const DevStartLine = Schema.Struct({
-  adminToken: Schema.String,
-  database: Schema.String,
-  relayUrl: Schema.String,
-  url: Schema.String,
-  webUrl: Schema.String,
-  webhookFakeUrl: Schema.String,
-});
-type DevStartLine = typeof DevStartLine.Type;
-const isDevRunning = Schema.is(DevStartLine);
 const parseJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown));
 
 const commandLineServices: Layer.Layer<Needs> = Layer.merge(nodeServices, secretsTest);
@@ -265,16 +251,20 @@ function watchCookout<During, WatchNeeds>({
   });
 }
 
-const devStart = exitCodeAfter(devCommandLine(["start"]));
+interface DevCommand<Line> {
+  readonly args: readonly string[];
+  readonly isReady: (line: unknown) => line is Line;
+}
 
-const startDev: Effect.Effect<DevProcess, never, Needs | Scope.Scope> = Effect.map(
-  startUntil(devStart, isDevRunning),
-  ({ line, stop }) => ({ ...line, stop }),
-);
+function startDevCommand<Line>({
+  args,
+  isReady,
+}: DevCommand<Line>): Effect.Effect<Started<Line>, never, Needs | Scope.Scope> {
+  return startUntil(exitCodeAfter(devCommandLine(args)), isReady);
+}
 
 export {
   type CliResult,
-  type DevProcess,
   type Needs as CommandLineNeeds,
   type ServeProcess,
   type ServeOptions,
@@ -288,7 +278,7 @@ export {
   verbLayers,
   runCookout,
   runDev,
-  startDev,
+  startDevCommand,
   runServe,
   startServe,
   watchCookout,

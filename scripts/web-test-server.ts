@@ -15,7 +15,14 @@ interface RunningWebTestCookout {
   readonly stop: () => Promise<void>;
 }
 
+interface Started {
+  readonly stop: () => Promise<void>;
+  readonly value: string;
+}
+
 const adminToken = "web-test-admin-token-0123456789abcdef0123456789";
+
+const webTestBoardUrl = "https://board.example.com";
 
 function fieldsOf(line: string): Readonly<Record<string, unknown>> {
   try {
@@ -26,23 +33,38 @@ function fieldsOf(line: string): Readonly<Record<string, unknown>> {
   }
 }
 
-async function listeningUrl(lines: AsyncIterable<string>): Promise<string> {
+async function printedField(lines: AsyncIterable<string>, field: string): Promise<string> {
   for await (const line of lines) {
-    const url = fieldsOf(line)["listening"];
-    if (typeof url === "string") {
-      return url;
+    const value = fieldsOf(line)[field];
+    if (typeof value === "string") {
+      return value;
     }
   }
-  throw new Error("cookout serve stopped before printing its address");
+  throw new Error(`the process stopped before printing its ${field}`);
+}
+
+async function startPrinting(args: readonly string[], field: string): Promise<Started> {
+  const started = spawn("env", args, { stdio: ["ignore", "pipe", "ignore"] });
+  const value = await printedField(createInterface({ input: started.stdout }), field);
+  return {
+    stop: async () => {
+      started.kill("SIGINT");
+      await once(started, "exit");
+    },
+    value,
+  };
 }
 
 export async function startWebTestCookout(): Promise<RunningWebTestCookout> {
   const folder = mkdtempSync(path.join(os.tmpdir(), "cookout-web-test-"));
-  const server = spawn(
-    "env",
+  const routine = await startPrinting([process.execPath, "app/dev.ts", "fake-routine"], "fireUrl");
+  const server = await startPrinting(
     [
       `COOKOUT_ADMIN_TOKEN=${adminToken}`,
       "COOKOUT_PRESENCE_GRACE_SECONDS=0",
+      `COOKOUT_ROUTINE_FIRE_URL=${routine.value}`,
+      "COOKOUT_ROUTINE_TOKEN=web-test-routine-token",
+      `COOKOUT_PUBLIC_URL=${webTestBoardUrl}`,
       process.execPath,
       "app/main.ts",
       "serve",
@@ -53,16 +75,14 @@ export async function startWebTestCookout(): Promise<RunningWebTestCookout> {
       "--db",
       path.join(folder, "cookout.db"),
     ],
-    { stdio: ["ignore", "pipe", "ignore"] },
+    "listening",
   );
-  const url = await listeningUrl(createInterface({ input: server.stdout }));
   return {
     stop: async () => {
-      server.kill("SIGINT");
-      await once(server, "exit");
+      await Promise.all([server.stop(), routine.stop()]);
       rmSync(folder, { force: true, recursive: true });
     },
-    url,
+    url: server.value,
   };
 }
 

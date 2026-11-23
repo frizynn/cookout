@@ -4,6 +4,7 @@ import { Console, Effect, Schema } from "effect";
 import { cookoutToken, cookoutUrl } from "../../../config/server.ts";
 import type { NodeServices } from "@effect/platform-node/NodeServices";
 import { devCookout } from "./cookout.ts";
+import { fakeRoutine } from "./routine.ts";
 import { seedBoard } from "./board.ts";
 
 const PRETTY = 2;
@@ -34,6 +35,18 @@ const startCommand = Command.make("start", { port: portFlag }, ({ port }) =>
   }).pipe(Effect.scoped),
 ).pipe(Command.withDescription("Start the cookout on a temporary SQLite file, with a webhook fake."));
 
+const routineCommand = Command.make("fake-routine", {}, () =>
+  Effect.gen(function* startRoutine() {
+    const routine = yield* fakeRoutine;
+    yield* printLine({ ...routine, message: "The fake routine answers every fire with sessionUrl. Ctrl-C stops it." });
+    return yield* Effect.never;
+  }).pipe(Effect.scoped),
+).pipe(
+  Command.withDescription(
+    "Start a fake routine fire URL for COOKOUT_ROUTINE_FIRE_URL, so /spawn-agent can be tried without a real routine.",
+  ),
+);
+
 function connection(): Effect.Effect<BoardConnection, SeedFailure> {
   return Effect.gen(function* readConnection() {
     const url = yield* Effect.orDie(cookoutUrl);
@@ -56,7 +69,7 @@ const seedCommand = Command.make("seed", {}, () =>
 
 const devCommand = Command.make("dev").pipe(
   Command.withDescription("Run the cookout locally to verify a change."),
-  Command.withSubcommands([startCommand, seedCommand]),
+  Command.withSubcommands([startCommand, seedCommand, routineCommand]),
 );
 
 function devCommandLine(args: readonly string[]): Effect.Effect<void, SeedFailure, NodeServices> {
