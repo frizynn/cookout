@@ -258,7 +258,7 @@ it("a non-admin sees no admin button, and nor does an admin on an agent's profil
   const again = openAt({ client: adminClient(), hash: "#/people/web-people-nobutton-loner" });
   await profileName();
 
-  expect([asHuman, within(await profile()).queryAllByRole("button")]).toStrictEqual([[], []]);
+  expect([asHuman, within(await profile()).queryAllByRole("button", { name: /admin/u })]).toStrictEqual([[], []]);
 
   again();
 });

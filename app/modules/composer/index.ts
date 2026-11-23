@@ -26,6 +26,14 @@
  * the field's text trimmed (empty clears it), puts the answer in the identity
  * list at once and forgets the text, or, if the server refuses, keeps the
  * text and the refusal.
+ * `identities.actions(name)` is what an agent's owner or an admin does to
+ * that identity: rotate its token, list and revoke its agent session,
+ * deactivate it (after `askToDeactivate`), reactivate it and transfer it;
+ * each answer goes in the identity list at once, a fresh token is in its
+ * snapshot until `forgetToken` (`copyToken` puts it on the clipboard), and a
+ * refusal is kept as `action`.
+ * `identities.creation` creates an agent the caller owns, whose token then
+ * shows in that agent's `actions`.
  * `channelDraft(channel)`, a channel's box, also suggests the registered
  * commands (from the `commands` store given, read once the identities load)
  * whose names start with what follows `/` when that is the whole text;
@@ -33,15 +41,19 @@
  * for, until `clear`; `dismiss` hides any suggestions until the next edit. A
  * thread's reply box suggests no commands, since a call is a top-level message.
  */
+import type { ActionsClient, IdentityActions } from "./lib/identity-actions.ts";
 import type { AdminChanges, AdminClient } from "./lib/admin-change.ts";
-import type { Command, CookoutClient, Identity, IdentityName } from "../sdk/index.ts";
+import type { Command, CookoutClient, Identity, IdentityName, Token } from "../sdk/index.ts";
 import type { DraftSnapshot, Sources } from "./lib/snapshot.ts";
 import { EMPTY, changesFor } from "./lib/snapshot.ts";
+import type { AgentCreation } from "./lib/agent-creation.ts";
 import type { DisplayNameDraft } from "./lib/display-name.ts";
 import type { IdentityList } from "./lib/identity-list.ts";
 import type { Live } from "../live/index.ts";
 import { createAdminChanges } from "./lib/admin-change.ts";
+import { createAgentCreation } from "./lib/agent-creation.ts";
 import { createDisplayName } from "./lib/display-name.ts";
+import { createIdentityActions } from "./lib/identity-actions.ts";
 import { createIdentityList } from "./lib/identity-list.ts";
 import { listenersOf } from "./lib/listeners.ts";
 
@@ -116,6 +128,20 @@ interface CommandList {
   readonly snapshot: () => { readonly status: string; readonly commands?: readonly Command[] };
 }
 
+function ownerPowersOf(
+  client: ComposerOptions["client"],
+  list: IdentityList,
+): Pick<Identities, "actions" | "creation"> {
+  const stores = new Map<string, IdentityActions>();
+  function actions(name: IdentityName): IdentityActions {
+    return storeIn(stores, name, () => createIdentityActions({ client, list, name }));
+  }
+  function created(name: IdentityName, token: Token): void {
+    actions(name).showToken(token);
+  }
+  return { actions, creation: createAgentCreation({ client, created, list }) };
+}
+
 /** One message box's draft. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
 export interface Draft {
   /** Calls `listener` after every change, until the returned function is called. */
@@ -144,6 +170,10 @@ export interface Identities extends AdminChanges {
   readonly subscribe: (listener: () => void) => () => void;
   /** Every identity, sorted by name: empty until it loads, or if the server refuses it. */
   readonly snapshot: () => readonly Identity[];
+  /** What its owner or an admin does to this identity: the same store each time for one name. */
+  readonly actions: (name: IdentityName) => IdentityActions;
+  /** Creating an agent the caller owns. */
+  readonly creation: AgentCreation;
 }
 
 /** The composer store: a draft for each message box, and for each display name being edited. */
@@ -160,7 +190,9 @@ export interface Composer {
 
 /** What the composer store needs: the SDK, the commands a channel's box suggests, and the live stream that keeps the identity list up to date, if any. */
 export interface ComposerOptions {
-  readonly client: AdminClient & Pick<CookoutClient, "listIdentities" | "setDisplayName">;
+  readonly client: ActionsClient &
+    AdminClient &
+    Pick<CookoutClient, "createIdentity" | "listIdentities" | "setDisplayName">;
   readonly commands: CommandList;
   readonly live?: Live;
 }
@@ -189,6 +221,7 @@ export function createComposer(options: ComposerOptions): Composer {
       storeIn(drafts, key, () => createDraft(list, { commands: () => NO_COMMANDS, identities: list.identities }, load)),
     identities: {
       ...createAdminChanges({ client, identities: list.identities, publish: list.publish }),
+      ...ownerPowersOf(client, list),
       snapshot: list.identities,
       subscribe: readers.add,
     },
@@ -196,3 +229,5 @@ export function createComposer(options: ComposerOptions): Composer {
 }
 
 export type { DisplayNameDraft } from "./lib/display-name.ts";
+export type { AgentCreation } from "./lib/agent-creation.ts";
+export type { IdentityActions, IdentityActionsSnapshot } from "./lib/identity-actions.ts";

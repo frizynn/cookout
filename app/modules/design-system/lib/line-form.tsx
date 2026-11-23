@@ -8,6 +8,7 @@ interface LineFormParts {
   readonly saving: boolean;
   readonly onEdit: (text: string) => void;
   readonly onSubmit: () => void;
+  readonly submit?: string;
   readonly children?: ReactNode;
 }
 
@@ -48,7 +49,7 @@ export function LineForm(parts: LineFormParts): ReactNode {
           type="submit"
         >
           {parts.saving && SAVING}
-          {!parts.saving && SAVE}
+          {!parts.saving && (parts.submit ?? SAVE)}
         </button>
       </span>
       {parts.children}

@@ -4,6 +4,7 @@ import { useCallback, useSyncExternalStore } from "react";
 import type { Composer } from "../../composer/index.ts";
 import { DisplayNames } from "./display-names.tsx";
 import type { Identity } from "../../sdk/index.ts";
+import { MyAgents } from "./my-agents.tsx";
 import type { ReactNode } from "react";
 import { hrefOf } from "../../paths/index.ts";
 import { themeChoices } from "../../layout/index.ts";
@@ -46,6 +47,7 @@ export function SidebarSettings(props: SidebarSettingsProps): ReactNode {
       {state.settings && (
         <Panel label={TEXT.settings}>
           <DisplayNames composer={props.composer} me={identity.name} />
+          {identity.kind === "human" && <MyAgents identities={props.composer.identities} me={identity.name} />}
           <ChoiceGroup choices={THEMES} label={TEXT.theme} onChoose={handleChoose} value={state.theme} />
         </Panel>
       )}
