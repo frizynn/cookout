@@ -1,5 +1,5 @@
 import { test as base, expect } from "@playwright/test";
-import { browserFixtures, exampleCommand } from "../../server.ts";
+import { browserFixtures, exampleCommand, shownMessage } from "../../server.ts";
 import { createCookoutClient } from "@ai-hero/cookout/sdk";
 
 const INDENT = 2;
@@ -23,12 +23,17 @@ test("a person sees a call to the example command and the handler's result reply
   await cookout.logIn(token);
   await page.goto(`${cookout.url}/#/channels/${channel.name}/threads/${String(threadId)}`);
 
-  await expect(page.getByRole("article", { name: "Parent message" })).toContainText(`@${identity.name}`);
+  await expect(page.getByRole("article", { name: "Parent message" })).toContainText(identity.name);
   await expect(
     page.getByRole("article", { name: "Parent message" }).getByLabel(`Call to /${exampleCommand}`),
-  ).toHaveText(pretty({ branch: "main" }));
+  ).toHaveText(JSON.stringify({ branch: "main" }));
   await expect(page.getByRole("list", { name: "Replies" }).getByRole("listitem")).toHaveText(
-    [`@${exampleCommand}agent/${exampleCommand} is done.${pretty({ received: { branch: "main" } })}`],
+    [
+      shownMessage({
+        body: `/${exampleCommand} is done.▸ data▾ data${pretty({ received: { branch: "main" } })}`,
+        header: `${exampleCommand}agent`,
+      }),
+    ],
     { timeout: REPLY_WITHIN },
   );
 });
