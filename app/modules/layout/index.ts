@@ -9,7 +9,9 @@
  * keeps it. `settings` is whether the Settings panel is open, and `sidebar`
  * whether the sidebar is open on a narrow screen; `toggleSettings` and
  * `toggleSidebar` flip them, and `closeSidebar` closes the sidebar, as after
- * following a link in it. `identityFilter` and `identityKind` narrow the
+ * following a link in it. `collapsed` is whether the sidebar is collapsed to
+ * a narrow rail on a wide screen; `toggleCollapsed` flips it and keeps it in
+ * the browser's storage, so a reload keeps it. `identityFilter` and `identityKind` narrow the
  * directory of identities: the text a name must contain, and `all`, `human`
  * or `agent`; `filterIdentities` and `showKind` set them. `showDeactivated`
  * is whether it lists Deactivated identities too, which `toggleDeactivated`
@@ -25,6 +27,7 @@ interface LayoutState {
   readonly theme: ThemeChoice;
   readonly settings: boolean;
   readonly sidebar: boolean;
+  readonly collapsed: boolean;
   readonly identityFilter: string;
   readonly identityKind: KindChoice;
   readonly showDeactivated: boolean;
@@ -36,6 +39,8 @@ interface LayoutOptions {
 }
 
 const THEME_KEY = "cookout-theme";
+const COLLAPSED_KEY = "cookout-sidebar-collapsed";
+const COLLAPSED = "collapsed";
 const THEME_ATTRIBUTE = "data-theme";
 const SYSTEM: ThemeChoice = "system";
 
@@ -59,6 +64,14 @@ function keepTheme(options: LayoutOptions, theme: ThemeChoice): void {
   }
   options.storage.setItem(THEME_KEY, theme);
   options.root.setAttribute(THEME_ATTRIBUTE, theme);
+}
+
+function keepCollapsed(storage: LayoutOptions["storage"], collapsed: boolean): void {
+  if (collapsed) {
+    storage.setItem(COLLAPSED_KEY, COLLAPSED);
+    return;
+  }
+  storage.removeItem(COLLAPSED_KEY);
 }
 
 type DirectoryControls = Pick<Layout, "filterIdentities" | "showKind" | "toggleDeactivated">;
@@ -103,6 +116,8 @@ export interface Layout {
   readonly toggleSidebar: () => void;
   /** Closes the sidebar on a narrow screen. */
   readonly closeSidebar: () => void;
+  /** Collapses the sidebar to a narrow rail on a wide screen, or expands it, and keeps the choice in the browser's storage. */
+  readonly toggleCollapsed: () => void;
   /** Sets the text the directory filters identity names by. */
   readonly filterIdentities: (text: string) => void;
   /** Shows only identities of this kind, or every identity. */
@@ -119,6 +134,7 @@ export interface Layout {
 export function createLayout(options: LayoutOptions): Layout {
   const listeners = new Set<() => void>();
   let current: LayoutState = {
+    collapsed: options.storage.getItem(COLLAPSED_KEY) === COLLAPSED,
     identityFilter: "",
     identityKind: "all",
     settings: false,
@@ -152,6 +168,10 @@ export function createLayout(options: LayoutOptions): Layout {
       return () => {
         listeners.delete(listener);
       };
+    },
+    toggleCollapsed: () => {
+      keepCollapsed(options.storage, !current.collapsed);
+      publish({ collapsed: !current.collapsed, sidebar: false });
     },
     toggleSettings: () => {
       publish({ settings: !current.settings });

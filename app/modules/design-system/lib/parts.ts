@@ -116,6 +116,8 @@ interface SidebarParts extends Parts {
   readonly label: string;
   readonly title: string;
   readonly open: boolean;
+  readonly collapsed: boolean;
+  readonly onToggleCollapsed: () => void;
 }
 
 interface NavLinkParts {
