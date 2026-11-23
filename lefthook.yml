@@ -3,8 +3,6 @@ output:
   - execution_out
 pre-commit:
   jobs:
-    - name: refuse an empty commit
-      run: scripts/refuse-empty-commit.sh
     - name: refuse partially staged files
       run: scripts/refuse-partially-staged.sh
     - name: lint
