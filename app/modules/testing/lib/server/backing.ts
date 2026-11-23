@@ -2,11 +2,11 @@ import { Context, Effect, Layer } from "effect";
 import type { FileSystem, Path, Scope } from "effect";
 import { freshDatabasePath, unusableStorage } from "./storage.ts";
 import { memoryStorage, sqliteStorage } from "../../../storage/server.ts";
-import { NodeServices } from "@effect/platform-node";
 import { Secrets } from "../../../secrets/server.ts";
 import type { Storage } from "../../../storage/server.ts";
 import type { Token } from "../../../identities/index.ts";
 import type { WebhookFake } from "../../../webhook-fake/server.ts";
+import { layer as nodeServices } from "@effect/platform-node/NodeServices";
 import { secretsOf } from "./secrets.ts";
 import { webhookFake } from "../../../webhook-fake/server.ts";
 
@@ -25,9 +25,7 @@ function sharedStore(layer: Layer.Layer<Storage>): StorageFactory {
 
 function storageOf(kind: StorageKind | undefined): StorageFactory {
   if (kind === "sqlite") {
-    return Effect.map(freshDatabasePath, (path) =>
-      sqliteStorage(path).pipe(Layer.provide(NodeServices.layer), Layer.orDie),
-    );
+    return Effect.map(freshDatabasePath, (path) => sqliteStorage(path).pipe(Layer.provide(nodeServices), Layer.orDie));
   }
   if (kind === "unusable") {
     return sharedStore(unusableStorage);
@@ -36,9 +34,7 @@ function storageOf(kind: StorageKind | undefined): StorageFactory {
 }
 
 function storageFor(options: BackingOptions): Effect.Effect<Layer.Layer<Storage>, never, Scope.Scope> {
-  return Effect.flatMap(Layer.build(NodeServices.layer), (node) =>
-    Effect.provideContext(storageOf(options.storage), node),
-  );
+  return Effect.flatMap(Layer.build(nodeServices), (node) => Effect.provideContext(storageOf(options.storage), node));
 }
 
 function backingServices(options: BackingOptions): Layer.Layer<Secrets | WebhookFake> {

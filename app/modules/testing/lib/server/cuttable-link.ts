@@ -10,8 +10,8 @@ import {
 } from "effect/http";
 import type { HttpClientError, HttpClientResponse, HttpServerError } from "effect/http";
 import { nodeHttpServer, serverUrl } from "../../../http/server.ts";
-import { NodeHttpClient } from "@effect/platform-node";
 import type { Scope } from "effect";
+import { layerNodeHttp as nodeHttpClient } from "@effect/platform-node/NodeHttpClient";
 
 interface CuttableLink {
   readonly url: string;
@@ -108,7 +108,7 @@ function sentAtLeast(text: string, times: number): (sent: string) => boolean {
 
 function cuttableLink(target: string): Effect.Effect<CuttableLink, never, Scope.Scope> {
   return Effect.gen(function* openLink() {
-    const client = yield* Effect.map(Layer.build(NodeHttpClient.layerNodeHttp), Context.get(HttpClient.HttpClient));
+    const client = yield* Effect.map(Layer.build(nodeHttpClient), Context.get(HttpClient.HttpClient));
     const drops = yield* signal;
     const stalls = yield* signal;
     const sent = yield* SubscriptionRef.make("");

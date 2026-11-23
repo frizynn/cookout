@@ -1,7 +1,7 @@
 import { Context, Effect, Exit, FileSystem, Layer, Path, Scope } from "effect";
 import { Storage, StorageUnavailable, memoryStorage, sqliteStorage } from "../../../storage/server.ts";
 import { fixtureOwnerName, identityFixture } from "./identities.ts";
-import { NodeServices } from "@effect/platform-node";
+import { layer as nodeServices } from "@effect/platform-node/NodeServices";
 import { tokenHash } from "../../../identities/index.ts";
 
 interface StorageLayer {
@@ -26,7 +26,7 @@ const freshDatabasePath: Effect.Effect<string, never, FileSystem.FileSystem | Pa
 
 const freshSqliteStorage: Layer.Layer<Storage, StorageUnavailable> = Layer.unwrap(
   Effect.map(freshDatabasePath, sqliteStorage),
-).pipe(Layer.provide(NodeServices.layer));
+).pipe(Layer.provide(nodeServices));
 
 function withFixtureOwner<Failure>(
   layer: Layer.Layer<Storage, Failure>,
