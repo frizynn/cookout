@@ -6,6 +6,7 @@
  * code and message (`unreachable` unless a `CookoutError`).
  */
 import type {
+  AckAllResponse,
   AckResponse,
   FollowResponse,
   InboxHistoryQuery,
@@ -217,6 +218,12 @@ export type CookoutClient = LoginCalls & {
    * top-level message) as read. A read position never moves backwards. A missing message is 404 `message_not_found`.
    */
   readonly ack: (messageId: MessageId) => Promise<AckResponse>;
+  /**
+   * `POST /v1/inbox/ack-all`: marks every inbox item up to `upTo`, the newest the caller has seen, as read, in every
+   * thread and channel at once, and answers the read positions it moved. An item after `upTo`, such as a message that
+   * arrived since, stays unread.
+   */
+  readonly ackAll: (upTo: MessageId) => Promise<AckAllResponse>;
   /**
    * `PUT /v1/messages/:id/follow`: follows the thread holding the message, so its replies reach the inbox. Starting
    * a thread, replying in it and being mentioned in it follow it too.

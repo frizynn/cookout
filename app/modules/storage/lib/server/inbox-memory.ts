@@ -11,7 +11,7 @@ import type {
 import type { InboxReason, ReadPosition } from "../../../inbox/index.ts";
 import type { Message, MessageId, Reply, TopLevelMessage } from "../../../messages/index.ts";
 import { counted, threadIdOf } from "./messages.ts";
-import { followersOf, movedTo, scopeOf } from "./inbox.ts";
+import { followersOf, movedTo, newestPerScope, scopeOf } from "./inbox.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { readPositionsIn } from "./read-positions-memory.ts";
@@ -195,6 +195,23 @@ function ack({ board, id, identity }: Asking): Changed<ReadPosition> {
   });
 }
 
+interface AckingInbox {
+  readonly board: MemoryBoard;
+  readonly identity: IdentityName;
+  readonly upTo: MessageId;
+}
+
+function ackInbox({ board, identity, upTo }: AckingInbox): readonly [readonly ReadPosition[], MemoryInbox] {
+  const positions = new Map(board.inbox.positions);
+  const moved = Arr.map(newestPerScope({ items: inboxOf({ board, identity }), upTo }), (message) => {
+    const key = keyOf(identity, scopeOf(message));
+    const position = movedTo({ current: positions.get(key), message });
+    positions.set(key, position.messageId);
+    return position;
+  });
+  return [moved, { ...board.inbox, positions }];
+}
+
 function follow(change: KeysChange) {
   return ({ board, id, identity }: Asking): Changed<MessageId> => {
     const { inbox } = board;
@@ -247,6 +264,7 @@ function memoryInbox({ changeInbox, channelExists, listChannels, read }: BoardAc
       });
   }
   return {
+    ackInbox: (identity, upTo) => changeInbox((board) => ackInbox({ board, identity, upTo })),
     ackMessage: (identity, id) => changeFound((board) => ack({ board, id, identity })),
     findInboxItem: (identity, id) => read((board) => inboxItemOf({ board, identity }, id)),
     followThread: (identity, id) => changeFound((board) => follow(withKey)({ board, id, identity })),

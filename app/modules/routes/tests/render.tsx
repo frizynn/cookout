@@ -17,6 +17,7 @@ import { onTestFinished } from "vitest";
 type AppClient = BoardOptions["client"] &
   Pick<
     CookoutClient,
+    | "ackAll"
     | "createIdentity"
     | "deactivateIdentity"
     | "inbox"

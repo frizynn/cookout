@@ -1,4 +1,5 @@
 import type {
+  AckAllResponse,
   AckResponse,
   FollowResponse,
   InboxHistoryItem,
@@ -58,6 +59,7 @@ interface InboxService {
   readonly itemFor: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
   readonly itemsAfter: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
   readonly ack: (caller: Identity, id: MessageId) => Fails<AckResponse>;
+  readonly ackAll: (caller: Identity, upTo: MessageId) => Fails<AckAllResponse>;
   readonly readPositions: (caller: Identity) => Fails<ReadPositionsResponse>;
   readonly acked: Effect.Effect<PubSub.Subscription<Acked>, never, Scope.Scope>;
   readonly follow: (caller: Identity, asked: string) => Fails<FollowResponse>;
@@ -151,6 +153,15 @@ function inboxOn(storage: Storage["Service"], hub: AckHub): InboxService {
         const readPosition = yield* orMessageNotFound<ReadPosition>(String(id))(acked);
         yield* hub.publish({ identity: caller.name, readPosition });
         return { readPosition };
+      }),
+    ackAll: (caller, upTo) =>
+      Effect.gen(function* ackInbox() {
+        const readPositions = yield* storage.ackInbox(caller.name, upTo);
+        yield* Effect.forEach(readPositions, (readPosition) => hub.publish({ identity: caller.name, readPosition }), {
+          concurrency: 1,
+          discard: true,
+        });
+        return { readPositions };
       }),
     acked: hub.subscribe,
     follow: following(storage.followThread, true),

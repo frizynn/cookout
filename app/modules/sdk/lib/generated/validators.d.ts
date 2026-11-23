@@ -5,7 +5,7 @@ import type { CallCommandResponse, CommandWithSecretResponse, ListCommandsRespon
 import type { ChannelEvent, ConnectedEvent, IdentityEvent, InboxItemEvent, MessageEvent, ReadPositionEvent } from "../../../events/index.ts";
 import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../../http/index.ts";
 import type { DeactivateIdentityResponse, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";
-import type { AckResponse, FollowResponse, InboxHistoryResponse, InboxResponse, ReadPositionsResponse, SubscriptionResponse } from "../../../inbox/index.ts";
+import type { AckAllResponse, AckResponse, FollowResponse, InboxHistoryResponse, InboxResponse, ReadPositionsResponse, SubscriptionResponse } from "../../../inbox/index.ts";
 import type { LoginCollectedResponse, LoginRequestResponse, LoginRequestStartedResponse, LogoutResponse } from "../../../logins/index.ts";
 import type { ListMessagesResponse, MessageResponse, ThreadResponse } from "../../../messages/index.ts";
 
@@ -31,6 +31,7 @@ export declare function isDeactivateIdentityResponse(data: unknown): data is Dea
 export declare function isIdentityResponse(data: unknown): data is IdentityResponse;
 export declare function isIdentityWithTokenResponse(data: unknown): data is IdentityWithTokenResponse;
 export declare function isListIdentitiesResponse(data: unknown): data is ListIdentitiesResponse;
+export declare function isAckAllResponse(data: unknown): data is AckAllResponse;
 export declare function isAckResponse(data: unknown): data is AckResponse;
 export declare function isFollowResponse(data: unknown): data is FollowResponse;
 export declare function isInboxHistoryResponse(data: unknown): data is InboxHistoryResponse;
