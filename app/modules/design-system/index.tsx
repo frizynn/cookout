@@ -63,7 +63,8 @@
  * when it is `open`, so it never closes on its own.
  * `PaneHeader`'s title is mono, as a channel's name, unless `sans`. A
  * `Toolbar` under it holds a `FilterField` (a labelled box whose text its
- * owner holds) and `Chip`s, buttons pressed or not; a named `ListArea` scrolls
+ * owner holds) and `Chip`s, buttons pressed or not, or `ChipLink`s, links in the
+ * same look, filled when they go to the page shown (`current`); a named `ListArea` scrolls
  * from the top, and its `IdentityRow`s are links to identities, each with
  * its avatar, name, any tags and a muted detail line, highlighted when open.
  * `Profile` is one identity's large avatar beside its `ProfileName` (its
@@ -77,7 +78,7 @@
  * link, to `authorHref`, above the row's), what they did (`action`) and in which channel, a
  * short time, any `count` of how many of its messages are new ("3 new") and any
  * `context` line (a reply's thread), then what it holds: its `FeedText`, up to
- * two lines. A `for-you` row has an accent dot and why,
+ * two lines, and any `RowButton`, a small button raised above the row's link. A `for-you` row has an accent dot and why,
  * a bold name and bright text; an `activity` row has a muted dot and why, a
  * bold name and bright text; a `read` one is muted. `Mention` is
  * an `@` mention in a message's text, in the mention colour when it is the
@@ -218,6 +219,8 @@ export { WorkspaceColumn } from "./lib/workspace-column.tsx";
 export { StatusBar } from "./lib/status-bar.tsx";
 export { IdentityLink } from "./lib/identity-link.tsx";
 export { Chip } from "./lib/chip.tsx";
+export { ChipLink } from "./lib/chip-link.tsx";
+export { RowButton } from "./lib/row-button.tsx";
 export { DateText } from "./lib/date-text.tsx";
 export { FilterField } from "./lib/filter-field.tsx";
 export { IdentityRow } from "./lib/identity-row.tsx";
