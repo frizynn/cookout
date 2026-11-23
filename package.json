@@ -39,7 +39,7 @@
     "lint:baseline": "node scripts/lint-ratchet.ts --write",
     "canaries": "node scripts/canaries.ts",
     "fixers": "node scripts/check-fixers.ts",
-    "seams": "depcruise app scripts --cache node_modules/.cache/depcruise && depcruise packages/e2e/app --config packages/e2e/.dependency-cruiser.mjs --cache node_modules/.cache/depcruise-e2e",
+    "seams": "depcruise app packages/handler-example scripts --cache node_modules/.cache/depcruise && depcruise packages/e2e/app --config packages/e2e/.dependency-cruiser.mjs --cache node_modules/.cache/depcruise-e2e",
     "format": "biome format --write .",
     "format:check": "biome ci --linter-enabled=false .",
     "knip": "knip --production --include exports,types,files,dependencies",

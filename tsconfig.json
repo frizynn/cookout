@@ -32,6 +32,7 @@
           "@effect/platform-node",
           "effect/cli",
           "effect/http",
+          "effect/crypto",
           "effect/process",
           "effect/FileSystem",
           "effect/Path",
@@ -50,6 +51,7 @@
     "scripts",
     "packages/e2e/app",
     "packages/e2e/vitest.config.ts",
+    "packages/handler-example",
     "vitest.config.ts",
     "tsdown.config.ts",
     "vite.config.ts"

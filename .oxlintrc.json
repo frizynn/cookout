@@ -624,7 +624,7 @@
       }
     },
     {
-      "files": ["app/modules/*/tests/server/**"],
+      "files": ["app/modules/*/tests/server/**", "packages/handler-example/app/modules/*/tests/server/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -794,7 +794,11 @@
         "app/modules/*/tests/server/**",
         "packages/e2e/app/modules/*/server.ts",
         "packages/e2e/app/modules/*/lib/server/**",
-        "packages/e2e/app/modules/*/tests/server/**"
+        "packages/e2e/app/modules/*/tests/server/**",
+        "packages/handler-example/app/main.ts",
+        "packages/handler-example/app/modules/*/server.ts",
+        "packages/handler-example/app/modules/*/lib/server/**",
+        "packages/handler-example/app/modules/*/tests/server/**"
       ],
       "rules": {
         "typescript/promise-function-async": [
@@ -814,6 +818,7 @@
         "app/modules/storage/lib/server/**",
         "app/modules/testing/server.ts",
         "app/modules/testing/lib/server/**",
+        "packages/handler-example/app/modules/handler/server.ts",
         "app/modules/dev/server.ts",
         "app/modules/dev/lib/server/**",
         "packages/e2e/app/modules/**"
@@ -836,7 +841,9 @@
         "app/web.tsx",
         "app/modules/*/*.ts",
         "app/modules/*/*.tsx",
-        "packages/e2e/app/modules/*/*.ts"
+        "packages/e2e/app/modules/*/*.ts",
+        "packages/handler-example/app/main.ts",
+        "packages/handler-example/app/modules/*/*.ts"
       ],
       "rules": {
         "local/no-comments": [
@@ -849,7 +856,7 @@
       }
     },
     {
-      "files": ["app/main.ts", "app/dev.ts"],
+      "files": ["app/main.ts", "app/dev.ts", "packages/handler-example/app/main.ts"],
       "rules": {
         "no-restricted-properties": [
           "error",
@@ -983,7 +990,11 @@
       }
     },
     {
-      "files": ["app/modules/http/server.ts", "app/modules/http/lib/server/**"],
+      "files": [
+        "app/modules/http/server.ts",
+        "app/modules/http/lib/server/**",
+        "packages/handler-example/app/modules/handler/server.ts"
+      ],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -1126,7 +1137,8 @@
         "app/modules/storage/lib/server/**",
         "app/modules/cli/lib/server/lease-state.ts",
         "app/modules/testing/lib/server/cli.ts",
-        "packages/e2e/app/modules/cookout/lib/server/bin.ts"
+        "packages/e2e/app/modules/cookout/lib/server/bin.ts",
+        "packages/handler-example/app/modules/handler/server.ts"
       ],
       "rules": {
         "no-restricted-properties": [
