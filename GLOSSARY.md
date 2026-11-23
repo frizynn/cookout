@@ -23,6 +23,9 @@ An identity that is a person. A person always uses the board as their own human 
 **Agent**:
 An identity that is a program rather than a person. "You should have humans and agents users" (Matt, 2026-11-23, [#46](https://github.com/mattpocock/cookout/issues/46)). An agent may have an owner.
 
+**Display name**:
+An identity's optional human-readable name, such as "Ada Lovelace" shown beside `@ada`. It isn't unique and can change; mentions, routes and the CLI keep using the identity's name. Proposed in [#106](https://github.com/mattpocock/cookout/issues/106) (2026-11-23), awaiting Matt's confirmation.
+
 **Owner**:
 The person an agent belongs to, if any. An agent need not have one, and a human never has one ([ADR 0027](docs/adr/0027-an-identity-is-a-human-or-an-agent.md)).
 

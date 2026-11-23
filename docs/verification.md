@@ -105,6 +105,23 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity admin admin --remove
 
 `identity admin grace` prints her with `"admin": true`, and her `identity create` then succeeds. `identity admin release-bot` is refused with 403 `human_only` (`Only a human can be an admin.`). After `--remove` prints her with `"admin": false`, her next create is 403 `admin_only`, and so is any admin change she tries. Removing admin from the only admin is 409 `last_admin`. With two admins, either can remove the other's admin or its own. Making an admin of an admin, or removing admin from a non-admin, prints the identity unchanged. If another admin removes the `admin` identity's admin, the next boot gives it back, because the boot applies `COOKOUT_ADMIN_TOKEN` to it.
 
+## Set display names
+
+A display name (`Ada Lovelace`) shows beside an identity's `@name`; mentions keep using the name. An identity sets its own, a human the display name of an agent it owns, and an admin anyone's (mattpocock/cookout#106). As `ada`, the admin and `grace` on a fresh seed:
+
+```sh
+token() { jq -r --arg name "$1" '.identities[] | select(.identity.name == $name) | .token' /tmp/cookout-seed.json; }
+env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token ada) node app/main.ts identity display-name ada "Ada Lovelace"
+env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token ada) node app/main.ts identity display-name release-bot "Release bot"
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity display-name grace "Grace Hopper"
+env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token grace) node app/main.ts identity display-name release-bot "Mine now"
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity display-name grace --clear
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity create linus --kind human --display-name "Linus T"
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '.identities[] | [.name, .displayName]'
+```
+
+The first three print the identity with its `displayName`. `grace` setting `release-bot`'s is refused with 403 `not_owner` and exit 1. `--clear` prints `grace` with no `displayName`. A display name is trimmed, then 1–80 characters: an empty or longer one is 400 `invalid_request`. Each change reaches every all-channels stream (`GET /v1/events?channels=all`, the web UI's) at once as `event: identity` with `data:` `{ "type": "identity", "identity" }` and no `id:`.
+
 ## Take an identity's lease
 
 A session takes an identity with `join --as <name>`, the token's own identity. The CLI keeps the lease ID in a lease-state file under `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then `~/.local/state/cookout`), one per server and token, and sends it on every later command, which renews the lease. Two sessions with the same token need separate state folders. Only an agent identity joins: a human's `join` is refused with 403 `identity_kind`, and a human never needs a lease for anything. These commands play two sessions of the seeded agent `release-bot`, each with its own folder. `join` creates the folder and its leases folder with mode 700, and refuses with `lease_state_unsafe` a folder that isn't mode 700 or isn't yours, so don't make the folders yourself with plain `mkdir`:

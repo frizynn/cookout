@@ -8,6 +8,7 @@ import { getJson, send } from "./request.ts";
 import {
   identitiesPath,
   identityAdminPath,
+  identityDisplayNamePath,
   identityPath,
   identityTokenPath,
   sessionPath,
@@ -34,6 +35,7 @@ interface IdentityCalls {
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
   readonly makeAdmin: (name: string) => Promise<IdentityResponse>;
   readonly removeAdmin: (name: string) => Promise<IdentityResponse>;
+  readonly setDisplayName: (name: string, displayName: string | null) => Promise<IdentityResponse>;
 }
 
 function sessionCall(server: ClientConnection, method: "POST" | "DELETE") {
@@ -47,6 +49,19 @@ function adminCall(server: ClientConnection, method: "PUT" | "DELETE") {
   return async (name: string): Promise<IdentityResponse> => {
     const params = { name };
     const answer = await send(server, { isExpected: isIdentityResponse, method, params, path: identityAdminPath });
+    return answer;
+  };
+}
+
+function setDisplayNameCall(server: ClientConnection): IdentityCalls["setDisplayName"] {
+  return async (name, displayName) => {
+    const answer = await send(server, {
+      body: { displayName },
+      isExpected: isIdentityResponse,
+      method: "PUT",
+      params: { name },
+      path: identityDisplayNamePath,
+    });
     return answer;
   };
 }
@@ -93,6 +108,7 @@ function identityCalls(server: ClientConnection): IdentityCalls {
       });
       return rotated;
     },
+    setDisplayName: setDisplayNameCall(server),
     whoami: async () => {
       const identity = await getJson(server, whoamiPath, isIdentityResponse);
       return identity;

@@ -1,12 +1,15 @@
 import type { AgentIdentity, Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import { Effect, Option, Predicate, Schema } from "effect";
 import { IdentityRow, toIdentity } from "./identity-row.ts";
+import { memoryDisplayNames, sqliteDisplayNames } from "./display-names.ts";
 import { memorySetAdmin, sqliteSetAdmin } from "./identity-admins.ts";
+import type { DisplayNamesSection } from "./display-names.ts";
+import type { Fails } from "./errors.ts";
 import type { FindIdentity } from "./identity-row.ts";
+import { INBOX_TABLES } from "./inbox-sqlite.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { PlaceHandler } from "./commands.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
-import type { StorageUnavailable } from "./errors.ts";
 import { unreadable } from "./errors.ts";
 
 export type TokenLookup =
@@ -25,9 +28,7 @@ type DeleteIdentityResult =
 
 type SetOnlyTokenResult = "created" | "replaced" | "unchanged";
 
-type Fails<A> = Effect.Effect<A, StorageUnavailable>;
-
-export type IdentitiesSection = {
+export type IdentitiesSection = DisplayNamesSection & {
   readonly createIdentity: (identity: Identity, hash: TokenHash) => Fails<"created" | "name_taken">;
   readonly setOnlyToken: (identity: Identity, hash: TokenHash) => Fails<SetOnlyTokenResult>;
   readonly listIdentities: () => Fails<readonly Identity[]>;
@@ -136,6 +137,7 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
     findIdentityByName: (name) => open(() => data.identities.get(name)),
     findIdentityByTokenHash: (hash) => open(() => lookUp(data, hash)),
     listIdentities: () => open(() => [...data.identities.values()].sort(byName).map((found) => ({ ...found }))),
+    ...memoryDisplayNames({ identities: data.identities, open }),
     placeHandler: placeHandlerIn(data),
     replaceToken: (name, hash) =>
       open((): ReplaceTokenResult => {
@@ -175,15 +177,7 @@ const toLookup = (row: unknown): Fails<TokenLookup> =>
               })),
       );
 
-const identityColumns = "name, kind, owner, admin, created_at";
-
-const INBOX_TABLES = [
-  "message_mentions",
-  "follows",
-  "subscriptions",
-  "channel_read_positions",
-  "thread_read_positions",
-] as const;
+const identityColumns = "name, kind, owner, admin, created_at, display_name";
 
 export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
   const count = (sql: string, ...params: readonly string[]) =>
@@ -198,12 +192,13 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
   const insert = (identity: Identity, hash: TokenHash) =>
     Effect.andThen(
       db.run(
-        "INSERT INTO identities (name, kind, owner, admin, created_at) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO identities (name, kind, owner, admin, created_at, display_name) VALUES (?, ?, ?, ?, ?, ?)",
         identity.name,
         identity.kind,
         identity.kind === "agent" ? (identity.owner ?? null) : null,
         identity.admin ? 1 : 0,
         identity.createdAt,
+        identity.displayName ?? null,
       ),
       db.run("INSERT INTO tokens (token_hash, identity_name, revoked) VALUES (?, ?, 0)", hash, identity.name),
     );
@@ -243,7 +238,7 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
     findIdentityByTokenHash: (hash) =>
       db
         .get(
-          `SELECT tokens.revoked, identities.name, identities.kind, identities.owner, identities.admin, identities.created_at
+          `SELECT tokens.revoked, identities.*
            FROM tokens LEFT JOIN identities ON identities.name = tokens.identity_name
            WHERE tokens.token_hash = ?`,
           hash,
@@ -296,5 +291,6 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
           return "replaced" as const;
         }),
       ),
+    ...sqliteDisplayNames(db),
   };
 };

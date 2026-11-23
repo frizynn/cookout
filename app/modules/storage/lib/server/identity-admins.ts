@@ -17,7 +17,7 @@ type SetAdmin = (name: IdentityName, admin: boolean) => Fails<SetAdminResult>;
 
 const LAST_ADMIN_COUNT = 1;
 
-const SELECT_IDENTITY = "SELECT name, kind, owner, admin, created_at FROM identities WHERE name = ?";
+const SELECT_IDENTITY = "SELECT name, kind, owner, admin, created_at, display_name FROM identities WHERE name = ?";
 
 const COUNT_ADMINS = "SELECT count(*) AS count FROM identities WHERE admin = 1";
 

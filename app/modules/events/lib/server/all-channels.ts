@@ -27,4 +27,4 @@ function allChannels(request: StreamRequest): Connected<Messages> {
   });
 }
 
-export { allChannels };
+export { allChannels, asksForAllChannels };

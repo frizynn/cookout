@@ -72,6 +72,7 @@ export type {
   AgentIdentity,
   AgentTool,
   CreateIdentityRequest,
+  DisplayName,
   HumanIdentity,
   Identity,
   IdentityKind,
@@ -80,6 +81,7 @@ export type {
   IdentityWithTokenResponse,
   ListIdentitiesResponse,
   Owner,
+  SetDisplayNameRequest,
   Token,
 } from "../identities/index.ts";
 export type {
@@ -119,6 +121,7 @@ export type {
 export type {
   ConnectedEvent,
   CookoutEvent,
+  IdentityEvent,
   InboxItemEvent,
   MessageEvent,
   ReadPositionEvent,
@@ -165,6 +168,8 @@ export type CookoutClient = {
   readonly makeAdmin: (name: string) => Promise<IdentityResponse>;
   /** Admin only. Removes admin and answers the identity. The last admin keeps it (409 `last_admin`). */
   readonly removeAdmin: (name: string) => Promise<IdentityResponse>;
+  /** `PUT`s (trimmed, 1–80 characters) or clears (`null`) a display name: its own, its owner's or an admin's call. */
+  readonly setDisplayName: (name: string, displayName: string | null) => Promise<IdentityResponse>;
   /** `POST /v1/channels`: any identity can create a channel. A name in use is 409 `channel_exists`. */
   readonly createChannel: (request: CreateChannelRequest) => Promise<ChannelResponse>;
   /** `GET /v1/channels`: every channel, sorted by name. */

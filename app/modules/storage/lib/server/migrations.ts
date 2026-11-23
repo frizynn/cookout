@@ -106,6 +106,7 @@ const migrations: readonly string[] = [
    ) STRICT;
    CREATE INDEX deliveries_pending ON deliveries (outcome) WHERE outcome = 'pending';`,
   "ALTER TABLE messages ADD COLUMN agent_tool TEXT;",
+  `ALTER TABLE identities ADD COLUMN display_name TEXT;`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

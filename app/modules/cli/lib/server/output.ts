@@ -1,5 +1,8 @@
+import type { Call, CallFailure } from "./adapters/sdk.ts";
 import { Console, Effect, Predicate, Schema } from "effect";
 import { CliOutput } from "effect/cli";
+import type { LeaseStateNeeds } from "./lease-state.ts";
+import { callServer } from "./adapters/sdk.ts";
 
 class CommandFailed extends Schema.TaggedError<CommandFailed>()("CommandFailed", {
   code: Schema.String,
@@ -55,8 +58,8 @@ function withJsonPresenter<Value, Failure, Needs>(
 
 const usageFailed = Effect.fail(CommandFailed.make({ code: "usage" }));
 
-function printAnswer(answer: unknown): Effect.Effect<void> {
-  return toPretty(answer).pipe(Effect.orDie, Effect.flatMap(Console.log));
+function printAnswer(value: unknown): Effect.Effect<void> {
+  return toPretty(value).pipe(Effect.orDie, Effect.flatMap(Console.log));
 }
 
 function refused(error: { readonly code: string }): Effect.Effect<never, CommandFailed> {
@@ -67,4 +70,24 @@ function refused(error: { readonly code: string }): Effect.Effect<never, Command
   );
 }
 
-export { CommandFailed, exitCodeFor, printAnswer, printLine, refused, usageFailed, withJsonPresenter };
+function answered<Value>(
+  effect: Effect.Effect<Value, CallFailure, LeaseStateNeeds>,
+): Effect.Effect<void, CommandFailed, LeaseStateNeeds> {
+  return Effect.matchEffect(effect, { onFailure: refused, onSuccess: printAnswer });
+}
+
+function answer<Value>(call: Call<Value>): Effect.Effect<void, CommandFailed, LeaseStateNeeds> {
+  return answered(callServer(call));
+}
+
+export {
+  CommandFailed,
+  answer,
+  answered,
+  exitCodeFor,
+  printAnswer,
+  printLine,
+  refused,
+  usageFailed,
+  withJsonPresenter,
+};

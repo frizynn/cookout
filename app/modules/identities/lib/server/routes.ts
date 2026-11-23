@@ -7,6 +7,7 @@ import {
   IdentityWithTokenResponseSchema,
   ListIdentitiesResponseSchema,
   OwnerSchema,
+  SentDisplayNameSchema,
 } from "./wire.ts";
 import {
   firstAdminName,
@@ -33,6 +34,7 @@ const humanHasNoOwner = Schema.makeFilter(
 );
 
 const CreateIdentityRequestSchema = Schema.Struct({
+  displayName: Schema.optionalKey(SentDisplayNameSchema),
   kind: Schema.Literals(identityKinds),
   name: IdentityNameSchema,
   owner: Schema.optionalKey(OwnerSchema),
@@ -79,6 +81,13 @@ function newIdentity({ kind, name, owner }: CreateIdentityBody, createdAt: Ident
   return { admin: false, createdAt, kind, name };
 }
 
+function withDisplayName(identity: Identity, { displayName }: CreateIdentityBody): Identity {
+  if (Predicate.isUndefined(displayName)) {
+    return identity;
+  }
+  return { ...identity, displayName };
+}
+
 function flaggedIfHandler(identity: Identity, handlers: ReadonlySet<IdentityName>): Identity {
   if (identity.kind === "agent" && handlers.has(identity.name)) {
     return { ...identity, handler: true };
@@ -94,7 +103,7 @@ const createRoute: Route<Caller | Storage | Secrets> = {
       yield* requireAdmin;
       const body = yield* HttpServerRequest.schemaBodyJson(CreateIdentityRequestSchema);
       const now = yield* DateTime.now;
-      const identity = newIdentity(body, isoTimeOf(now));
+      const identity = withDisplayName(newIdentity(body, isoTimeOf(now)), body);
       const { token, hash } = yield* issueToken;
       const storage = yield* Storage;
       const result = yield* storage.createIdentity(identity, hash);
@@ -219,3 +228,5 @@ export const identityAdminRoutes: readonly Route<Caller | Storage | Secrets>[] =
   adminFlagRoute("PUT"),
   adminFlagRoute("DELETE"),
 ];
+
+export { identityNotFound, nameParam };

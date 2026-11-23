@@ -12,6 +12,7 @@ type Brand<Name extends string> = string & { readonly [brand]: Name };
 
 type IdentityFields = {
   readonly name: IdentityName;
+  readonly displayName?: DisplayName;
   readonly admin: boolean;
   readonly createdAt: IsoTime;
 };
@@ -30,11 +31,32 @@ export type TokenHash = Brand<"TokenHash">;
 
 const as = <B extends Brand<string>>(value: string): B => value as B;
 
+/**
+ * An identity's display name, such as `Ada Lovelace`, shown beside its `@name`: 1–80 characters with no space at
+ * either end. Not unique, and never what mentions use.
+ */
+export type DisplayName = Brand<"DisplayName">;
+
 /** The rule every identity name follows, for the backend's Schemas. */
 export const identityNamePattern = /^[a-z0-9-]{1,64}$/u;
 
 /** The owner rule, in UTF-16 code units as `String.length` counts them. */
 export const ownerLength = { maximum: 100, minimum: 1 } as const;
+
+/** The display-name rule, in UTF-16 code units as `String.length` counts them, after trimming. */
+export const displayNameLength = { maximum: 80, minimum: 1 } as const;
+
+/**
+ * Whether `value` is trimmed and the length of a display name.
+ *
+ * @param value The text to check.
+ * @returns Whether it is a `DisplayName`.
+ */
+export function isDisplayName(value: string): value is DisplayName {
+  return (
+    value === value.trim() && value.length >= displayNameLength.minimum && value.length <= displayNameLength.maximum
+  );
+}
 
 /** Whether `value` follows the identity-name rule; if so, it is an `IdentityName`. */
 export function isIdentityName(value: string): value is IdentityName {
@@ -103,7 +125,14 @@ export type CreateIdentityRequest = {
   readonly kind: IdentityKind;
   /** Only an agent can have an owner: a human with one is refused with 400. */
   readonly owner?: string;
+  /** Trimmed, then 1–80 characters (400 otherwise). */
+  readonly displayName?: string;
 };
+
+/** The body of `PUT /v1/identities/:name/display-name`: the new display name (trimmed, then 1–80 characters), or `null` to clear it. */
+export interface SetDisplayNameRequest {
+  readonly displayName: string | null;
+}
 
 /** `GET /v1/whoami`: the identity behind the token. */
 export const whoamiPath = "/v1/whoami";
@@ -122,6 +151,13 @@ export const identityTokenPath = "/v1/identities/:name/token";
  * with 409 `last_admin`. An agent can't be made an admin (403 `human_only`).
  */
 export const identityAdminPath = "/v1/identities/:name/admin";
+
+/**
+ * `PUT /v1/identities/:name/display-name`: sets or clears an identity's display name, answering `IdentityResponse`.
+ * The identity itself, the human who owns it (an agent whose owner is that human's name) or an admin may; anyone else
+ * is refused with 403 `not_owner`.
+ */
+export const identityDisplayNamePath = "/v1/identities/:name/display-name";
 
 /**
  * `POST /v1/session` (a human's bearer token): logs the web UI in, answering with the identity and a session
@@ -182,4 +218,5 @@ export const identityErrorCodes = [
   "identity_exists",
   "identity_not_found",
   "last_admin",
+  "not_owner",
 ] as const;

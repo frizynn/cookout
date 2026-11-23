@@ -9,6 +9,7 @@ interface SentEvent {
 }
 
 const eventTypes = {
+  identity: true,
   "inbox-item": true,
   message: true,
   "read-position": true,

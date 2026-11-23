@@ -52,6 +52,7 @@ type Brand$1<Name extends string> = string & {
 };
 type IdentityFields = {
   readonly name: IdentityName;
+  readonly displayName?: DisplayName;
   readonly admin: boolean;
   readonly createdAt: IsoTime;
 };
@@ -61,6 +62,11 @@ type IdentityName = Brand$1<"IdentityName">;
 type Owner = Brand$1<"Owner">;
 /** The secret an identity sends as `Authorization: Bearer <token>`. */
 type Token = Brand$1<"Token">;
+/**
+ * An identity's display name, such as `Ada Lovelace`, shown beside its `@name`: 1–80 characters with no space at
+ * either end. Not unique, and never what mentions use.
+ */
+type DisplayName = Brand$1<"DisplayName">;
 /** The two kinds of identity. Every identity is exactly one of them. */
 declare const identityKinds: readonly ["human", "agent"];
 /** Whether an identity is a person or an agent. Set when the identity is created, and never changed. */
@@ -97,7 +103,13 @@ type CreateIdentityRequest = {
   readonly kind: IdentityKind;
   /** Only an agent can have an owner: a human with one is refused with 400. */
   readonly owner?: string;
+  /** Trimmed, then 1–80 characters (400 otherwise). */
+  readonly displayName?: string;
 };
+/** The body of `PUT /v1/identities/:name/display-name`: the new display name (trimmed, then 1–80 characters), or `null` to clear it. */
+interface SetDisplayNameRequest {
+  readonly displayName: string | null;
+}
 /**
  * The agent tool running a client's process, such as `claude-code`: 1–40 lowercase letters, digits or `-`. The CLI
  * and the SDK send it in `cookout-agent-tool` when the process's environment shows such a tool runs it.
@@ -342,6 +354,14 @@ interface MessageEvent {
   readonly message: Message;
 }
 /**
+ * An identity whose display name has just changed, as the server now shows it, sent only on the all-channels feed so
+ * every open web UI shows the new display name at once. It has no SSE `id`.
+ */
+interface IdentityEvent {
+  readonly type: "identity";
+  readonly identity: Identity;
+}
+/**
  * The stream's first word on connecting, before any item: the newest message ID on the board at that moment (null
  * before the first message). Every item the stream then sends live is newer, so a caller that resumes from this ID
  * after a drop misses nothing and repeats nothing. It has no SSE `id`.
@@ -351,7 +371,7 @@ interface ConnectedEvent {
   readonly latestMessageId: MessageId | null;
 }
 /** Any event the stream sends. */
-type CookoutEvent = InboxItemEvent | ReadPositionEvent | MessageEvent;
+type CookoutEvent = InboxItemEvent | ReadPositionEvent | MessageEvent | IdentityEvent;
 interface EventStream extends AsyncIterable<CookoutEvent> {
   readonly close: () => Promise<void>;
 }
@@ -368,7 +388,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "lease_held", "lease_required", "lease_lost", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "lease_held", "lease_required", "lease_lost", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
@@ -437,6 +457,8 @@ export type CookoutClient = {
   readonly makeAdmin: (name: string) => Promise<IdentityResponse>;
   /** Admin only. Removes admin and answers the identity. The last admin keeps it (409 `last_admin`). */
   readonly removeAdmin: (name: string) => Promise<IdentityResponse>;
+  /** `PUT`s (trimmed, 1–80 characters) or clears (`null`) a display name: its own, its owner's or an admin's call. */
+  readonly setDisplayName: (name: string, displayName: string | null) => Promise<IdentityResponse>;
   /** `POST /v1/channels`: any identity can create a channel. A name in use is 409 `channel_exists`. */
   readonly createChannel: (request: CreateChannelRequest) => Promise<ChannelResponse>;
   /** `GET /v1/channels`: every channel, sorted by name. */
@@ -551,5 +573,5 @@ export type CookoutClient = {
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentTool, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Refusal, type Reply, type SchemaProblem, type ServerSentEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, refusalOf };
+export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentTool, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DisplayName, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityEvent, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Refusal, type Reply, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, refusalOf };
 ```

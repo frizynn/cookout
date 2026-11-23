@@ -8,7 +8,8 @@
  * caller's new inbox items, which the `Messages` service's hub feeds; the
  * caller's new read positions, which the `Inbox` service's hub feeds on every
  * ack from any session; and, when the request asks with `?channels=all`,
- * every new message on every channel, for the web UI; and a comment
+ * every new message on every channel and every identity whose display name
+ * changes (fed by the `DisplayNames` hub), for the web UI; and a comment
  * heartbeat every 15 s, so proxies keep the connection open. On a reconnect
  * with `Last-Event-ID`, the inbox items first replay what the caller missed.
  * An agent's lease
@@ -24,6 +25,7 @@
 import type { Connected, EventSource } from "./lib/server/source.ts";
 import {
   ConnectedEventSchema,
+  IdentityEventSchema,
   InboxItemEventSchema,
   MessageEventSchema,
   ReadPositionEventSchema,
@@ -92,6 +94,7 @@ export const eventRoutes: readonly Route<Needs>[] = [eventsRoute];
 /** The Schemas of the stream's events, for the SDK's generated validators. */
 export const eventResponseSchemas = {
   ConnectedEvent: ConnectedEventSchema,
+  IdentityEvent: IdentityEventSchema,
   InboxItemEvent: InboxItemEventSchema,
   MessageEvent: MessageEventSchema,
   ReadPositionEvent: ReadPositionEventSchema,

@@ -1,88 +1,22 @@
 import { Argument, Command, Flag } from "effect/cli";
-import type { Call, CallFailure } from "./adapters/sdk.ts";
-import { Effect, Option, Schema } from "effect";
 import type { ListMessagesQuery, MessageId, PostMessageRequest } from "../../../messages/index.ts";
-import { identityKinds, identityNamePattern, isIdentityName } from "../../../identities/index.ts";
+import { Option, Schema } from "effect";
+import { answer, answered } from "./output.ts";
+import { identityNamePattern, isIdentityName } from "../../../identities/index.ts";
 import { join, leave } from "./join-and-leave.ts";
-import { printAnswer, refused } from "./output.ts";
 import type { CommandFailed } from "./output.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { LeaseStateNeeds } from "./lease-state.ts";
-import { callServer } from "./adapters/sdk.ts";
 import { commandCommand } from "./command.ts";
 import { helpCommand } from "./help-monitor.ts";
+import { identityCommand } from "./identity.ts";
 import { isMessageId } from "../../../messages/index.ts";
-
-function answered<Value>(
-  effect: Effect.Effect<Value, CallFailure, LeaseStateNeeds>,
-): Effect.Effect<void, CommandFailed, LeaseStateNeeds> {
-  return effect.pipe(Effect.flatMap(printAnswer), Effect.catch(refused));
-}
-
-const answer = <A>(call: Call<A>) => answered(callServer(call));
 
 const whoamiCommand = Command.make("whoami", {}, () => answer((client) => client.whoami())).pipe(
   Command.withDescription("Show the identity behind COOKOUT_TOKEN."),
 );
 
 const NOTHING = {};
-
-const identityName = Argument.String("name").pipe(Argument.withDescription("The identity's name."));
-
-const identityCreateCommand = Command.make(
-  "create",
-  {
-    kind: Flag.Literals("kind", identityKinds).pipe(
-      Flag.withDescription("human for a person, agent for a program. It never changes."),
-    ),
-    name: identityName,
-    owner: Flag.String("owner").pipe(
-      Flag.optional,
-      Flag.withDescription("The person the agent belongs to. A human has no owner."),
-    ),
-  },
-  ({ kind, name, owner }) => {
-    const withOwner = Option.match(owner, { onNone: () => NOTHING, onSome: (value) => ({ owner: value }) });
-    return answer((client) => client.createIdentity({ kind, name, ...withOwner }));
-  },
-).pipe(Command.withDescription("Create an identity (admin only). Its token is shown this once."));
-
-const identityListCommand = Command.make("list", {}, () => answer((client) => client.listIdentities())).pipe(
-  Command.withDescription("List every identity with its kind and owner, sorted by name."),
-);
-
-const identityRotateCommand = Command.make("rotate", { name: identityName }, ({ name }) =>
-  answer((client) => client.rotateToken(name)),
-).pipe(Command.withDescription("Issue a new token for an identity (admin only). The old one stops working at once."));
-
-const identityDeleteCommand = Command.make("delete", { name: identityName }, ({ name }) =>
-  answer((client) => client.deleteIdentity(name)),
-).pipe(Command.withDescription("Delete an identity (admin only). Its token stops working."));
-
-const identityAdminCommand = Command.make(
-  "admin",
-  {
-    name: identityName,
-    remove: Flag.Boolean("remove").pipe(Flag.withDefault(false), Flag.withDescription("Remove admin instead.")),
-  },
-  ({ name, remove }) => {
-    if (remove) {
-      return answer((client) => client.removeAdmin(name));
-    }
-    return answer((client) => client.makeAdmin(name));
-  },
-).pipe(Command.withDescription("Make a human an admin, or remove admin with --remove (admin only)."));
-
-const identityCommand = Command.make("identity").pipe(
-  Command.withDescription("Create, list, rotate and delete identities, and make or remove admins."),
-  Command.withSubcommands([
-    identityCreateCommand,
-    identityListCommand,
-    identityRotateCommand,
-    identityDeleteCommand,
-    identityAdminCommand,
-  ]),
-);
 
 const channelCreateCommand = Command.make(
   "create",
