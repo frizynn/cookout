@@ -113,7 +113,13 @@ export type {
   ReadPosition,
   SubscriptionResponse,
 } from "../inbox/index.ts";
-export type { CookoutEvent, InboxItemEvent, MessageEvent, ReadPositionEvent } from "../events/index.ts";
+export type {
+  ConnectedEvent,
+  CookoutEvent,
+  InboxItemEvent,
+  MessageEvent,
+  ReadPositionEvent,
+} from "../events/index.ts";
 export type { EventStream, WatchOptions } from "./lib/events.ts";
 export { CookoutError, type CookoutErrorCode, type UnknownErrorCode } from "./lib/errors.ts";
 
@@ -213,7 +219,9 @@ export type CookoutClient = {
    * session takes the lease over (`join --force`) the iteration throws `lease_lost` (status 200, the stream's) and
    * the client drops the lease. A human identity watches with no lease. To pick up after a dropped connection, pass
    * the last message ID seen as `lastEventId`: the stream first replays the inbox items after it, then goes on live.
-   * The server sends a heartbeat every 15 s, which `onHeartbeat` hears while the stream is being iterated.
+   * The server sends a heartbeat every 15 s, which `onHeartbeat` hears while the stream is being iterated. The
+   * stream starts by telling `onConnected` the board's latest message ID (null before the first message): every
+   * item sent live is newer, so resuming from it after a drop misses nothing.
    */
   readonly watch: (options?: WatchOptions) => Promise<EventStream>;
   /**

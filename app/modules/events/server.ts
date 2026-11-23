@@ -3,7 +3,9 @@
  * Events stream (ADR 0002). The stream merges separate event sources, each
  * started when the caller connects with the caller and the request, so each
  * new kind of event is one more entry in `sources` (`lib/server/sources.ts`):
- * the caller's new inbox items, which the `Messages` service's hub feeds; the
+ * a first `connected` event with the board's latest message ID, read once
+ * every other source is listening; the
+ * caller's new inbox items, which the `Messages` service's hub feeds; the
  * caller's new read positions, which the `Inbox` service's hub feeds on every
  * ack from any session; and, when the request asks with `?channels=all`,
  * every new message on every channel, for the web UI; and a comment
@@ -19,9 +21,14 @@
  * ADR 0028).
  */
 import type { Connected, EventSource } from "./lib/server/source.ts";
+import {
+  ConnectedEventSchema,
+  InboxItemEventSchema,
+  MessageEventSchema,
+  ReadPositionEventSchema,
+} from "./lib/server/wire.ts";
 import { Effect, Exit, Scope, Stream } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import { InboxItemEventSchema, MessageEventSchema, ReadPositionEventSchema } from "./lib/server/wire.ts";
 import { isLast, lastEventIdIn, refusalSseEvent, sseText } from "./lib/server/source.ts";
 import { keepRenewingSentLease, requireLeaseWhileHeld } from "../leases/server.ts";
 import { Caller } from "../identities/server.ts";
@@ -80,6 +87,7 @@ export const eventRoutes: readonly Route<Needs>[] = [eventsRoute];
 
 /** The Schemas of the stream's events, for the SDK's generated validators. */
 export const eventResponseSchemas = {
+  ConnectedEvent: ConnectedEventSchema,
   InboxItemEvent: InboxItemEventSchema,
   MessageEvent: MessageEventSchema,
   ReadPositionEvent: ReadPositionEventSchema,

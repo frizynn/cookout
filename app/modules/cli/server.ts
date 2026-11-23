@@ -20,6 +20,7 @@
 import { CliError, Command } from "effect/cli";
 import { cookoutServer, serveCommand } from "./lib/server/serve.ts";
 import { usageFailed, withJsonPresenter } from "./lib/server/output.ts";
+
 import { Effect } from "effect";
 import type { ServeLayers } from "./lib/server/serve.ts";
 import { verbCommands } from "./lib/server/verbs.ts";
@@ -36,3 +37,5 @@ export const runCookout = (args: readonly string[], layers: ServeLayers) =>
     Effect.catchIf(CliError.isCliError, () => usageFailed),
     withJsonPresenter,
   );
+
+export { exitCodeFor } from "./lib/server/output.ts";

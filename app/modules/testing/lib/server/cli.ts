@@ -1,4 +1,17 @@
-import { Array as Arr, ConfigProvider, Console, Deferred, Effect, Fiber, Layer, Option, Schema, pipe } from "effect";
+import {
+  Array as Arr,
+  Cause,
+  ConfigProvider,
+  Console,
+  Deferred,
+  Effect,
+  Fiber,
+  Layer,
+  Option,
+  Schema,
+  pipe,
+} from "effect";
+import { exitCodeFor, runCookout as runCommandLine } from "../../../cli/server.ts";
 import { memoryStorage, sqliteStorage } from "../../../storage/server.ts";
 import { NodeServices } from "@effect/platform-node";
 import type { Scope } from "effect";
@@ -6,7 +19,6 @@ import type { Secrets } from "../../../secrets/server.ts";
 import type { ServeLayers } from "../../../cli/server.ts";
 import { TestConsole } from "effect/testing";
 import { devCommandLine } from "../../../dev/server.ts";
-import { runCookout as runCommandLine } from "../../../cli/server.ts";
 import { secretsTest } from "./secrets.ts";
 
 interface CliResult {
@@ -74,7 +86,6 @@ interface Started<Line> {
 
 const serveAdminToken = "test-admin-token-0123456789abcdef0123456789";
 const EXIT_SUCCESS = 0;
-const EXIT_FAILURE = 1;
 const verbLayers: ServeLayers = { storage: () => memoryStorage };
 const isListening = Schema.is(Schema.Struct({ listening: Schema.String }));
 const isDevRunning = Schema.is(
@@ -102,16 +113,12 @@ function cliResult({ exitCode, stderr, stdout }: Pick<CliResult, "exitCode" | "s
   return { exitCode, stderr, stderrJson: parseLine(stderr), stdout, stdoutJson: parseLine(stdout) };
 }
 
-function failed(): number {
-  return EXIT_FAILURE;
-}
-
 function succeeded(): number {
   return EXIT_SUCCESS;
 }
 
 function exitCodeAfter<Failure>(command: Effect.Effect<void, Failure, Needs>): Effect.Effect<number, never, Needs> {
-  return Effect.matchCause(command, { onFailure: failed, onSuccess: succeeded });
+  return Effect.matchCause(command, { onFailure: (cause) => exitCodeFor(Cause.squash(cause)), onSuccess: succeeded });
 }
 
 function exitCodeOf({ console, env, program }: CommandLine): Effect.Effect<number, never, Needs> {

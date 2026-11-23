@@ -8,7 +8,7 @@ import { baseUrlOf } from "../../../../http/client.ts";
 import { leaseLost } from "../../../../leases/index.ts";
 import { leaseStateFile } from "../lease-state.ts";
 
-type CallFailureCode = CookoutErrorCode | LeaseStateFailure["code"] | "usage";
+type CallFailureCode = CookoutErrorCode | LeaseStateFailure["code"] | "usage" | "timeout" | "server_unreachable";
 
 interface CallFailure {
   readonly code: CallFailureCode;

@@ -6,14 +6,21 @@
  */
 import { Cause, Effect, Exit, Layer, Runtime } from "effect";
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
-import { runCookout } from "./modules/cli/server.ts";
+import { exitCodeFor, runCookout } from "./modules/cli/server.ts";
 import { secretsLive } from "./modules/secrets/server.ts";
 import { sqliteStorage } from "./modules/storage/server.ts";
 
 const webFolder = `${import.meta.dirname}/web`;
 
-const stopIsSuccess: Runtime.Teardown = (exit, onExit) =>
-  Exit.isFailure(exit) && Cause.hasInterruptsOnly(exit.cause) ? onExit(0) : Runtime.defaultTeardown(exit, onExit);
+const stopIsSuccess: Runtime.Teardown = (exit, onExit) => {
+  if (Exit.isSuccess(exit)) {
+    Runtime.defaultTeardown(exit, onExit);
+  } else if (Cause.hasInterruptsOnly(exit.cause)) {
+    onExit(0);
+  } else {
+    onExit(exitCodeFor(Cause.squash(exit.cause)));
+  }
+};
 
 runCookout(process.argv.slice(2), { storage: sqliteStorage, webFolder }).pipe(
   Effect.provide(Layer.merge(NodeServices.layer, secretsLive)),
