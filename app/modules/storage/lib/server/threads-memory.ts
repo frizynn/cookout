@@ -1,12 +1,11 @@
 import { Array as Arr, Option, Predicate, pipe } from "effect";
-import type { Closing, Message, MessageId, Reply, TopLevelMessage } from "../../../messages/index.ts";
+import type { Closing, Message, MessageId, OpenThread, Reply, TopLevelMessage } from "../../../messages/index.ts";
 import type { MessagesSection, ThreadStateChange } from "./messages.ts";
 import type { OpenThreadsPageRequest, StoredOpenThreadsPage } from "./open-threads.ts";
 import { counted, threadIdOf } from "./messages.ts";
 import { involves, lastActivityOf, pageOfOpenThreads } from "./open-threads.ts";
 import type { Effect } from "effect";
 import type { IdentityName } from "../../../identities/index.ts";
-import type { OpenThread } from "../../../messages/client.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { reopened } from "../../../messages/index.ts";
 

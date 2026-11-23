@@ -1,9 +1,8 @@
 import { Array as Arr, Order, Predicate } from "effect";
-import type { Message, MessageId, TopLevelMessage } from "../../../messages/index.ts";
+import type { Message, MessageId, OpenThread, TopLevelMessage } from "../../../messages/index.ts";
 import type { Effect } from "effect";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
-import type { OpenThread } from "../../../messages/client.ts";
 import type { StorageUnavailable } from "./errors.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;

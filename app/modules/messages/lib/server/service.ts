@@ -3,6 +3,7 @@ import type {
   Author,
   JsonValue,
   ListMessagesResponse,
+  ListOpenThreadsResponse,
   Message,
   MessageId,
   MessageResponse,
@@ -12,7 +13,13 @@ import type {
   TopLevelMessageResponse,
 } from "../../index.ts";
 import type { Harness, Identity } from "../../../identities/index.ts";
-import type { NewCommandCall, NewMessage, Storage, StorageUnavailable } from "../../../storage/server.ts";
+import type {
+  NewCommandCall,
+  NewMessage,
+  OpenThreadsPageRequest,
+  Storage,
+  StorageUnavailable,
+} from "../../../storage/server.ts";
 import type { PubSub, Scope } from "effect";
 import { mentionPattern, pageSize } from "../../index.ts";
 import { messageNotFound, replyInOtherChannel, replyOutsideCommandThread } from "./refusals.ts";
@@ -143,7 +150,7 @@ interface MessagesOn {
   readonly reactions: Reactions["Service"];
 }
 
-type ThreadChangeCalls = "closeThread" | "reopenThread" | "threadChanged";
+type ThreadChangeCalls = "closeThread" | "reopenThread" | "threadChanged" | "listOpenThreads";
 
 function messagesOn({ hub, reactions, storage }: MessagesOn): Omit<MessagesService, ThreadChangeCalls> {
   const post = postWith(hub, storage.appendMessage);
@@ -189,7 +196,17 @@ function messagesOn({ hub, reactions, storage }: MessagesOn): Omit<MessagesServi
   };
 }
 
+export interface OpenThreadsQuery {
+  readonly all?: "true";
+  readonly cursor?: OpenThreadsPageRequest["after"];
+  readonly limit?: number;
+}
+
 export interface MessagesService {
+  readonly listOpenThreads: (
+    caller: Identity,
+    query: OpenThreadsQuery,
+  ) => Effect.Effect<ListOpenThreadsResponse, StorageUnavailable>;
   readonly post: (author: Identity, message: PostMessage) => Fails<MessageResponse>;
   readonly postCommandCall: (author: Identity, message: PostMessage, call: CallParts) => Fails<MessageResponse>;
   readonly postInThread: (author: Identity, message: PostMessage, threadId: MessageId) => Fails<MessageResponse>;

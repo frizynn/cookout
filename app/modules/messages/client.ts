@@ -2,8 +2,7 @@
  * The calls a client makes to close and reopen a thread (#216) and to list open threads (#219), and the answers they
  * share. The SDK's `CookoutClient` has them.
  */
-import type { MessageId, TopLevelMessage, TopLevelMessageResponse } from "./index.ts";
-import type { IsoTime } from "../time/index.ts";
+import type { ListOpenThreadsResponse, MessageId, TopLevelMessageResponse } from "./index.ts";
 
 /** Closing and reopening the thread holding a message. */
 export interface ClosedThreadCalls {
@@ -22,13 +21,6 @@ export interface ClosedThreadCalls {
   readonly reopenThread: (messageId: MessageId) => Promise<TopLevelMessageResponse>;
 }
 
-/** An open thread as Open threads lists it: its top-level message and when anything last happened in it. */
-export interface OpenThread {
-  readonly message: TopLevelMessage;
-  /** Its latest message's time, or its last reopen's if that is later. */
-  readonly lastActivityAt: IsoTime;
-}
-
 /** The query of an Open threads page. With no `cursor`, the page starts at the stalest open thread. */
 export interface ListOpenThreadsQuery {
   /** Every open thread on the board, not only the ones involving the caller. */
@@ -37,16 +29,6 @@ export interface ListOpenThreadsQuery {
   readonly cursor?: string;
   /** 1–200 threads. Default 50. */
   readonly limit?: number;
-}
-
-/**
- * A page of open threads, stalest first by `lastActivityAt`, ties by ID. `hasMore` says more remain after the last;
- * `cursor` reads on from it, and is null on the last page.
- */
-export interface ListOpenThreadsResponse {
-  readonly threads: readonly OpenThread[];
-  readonly hasMore: boolean;
-  readonly cursor: string | null;
 }
 
 /**

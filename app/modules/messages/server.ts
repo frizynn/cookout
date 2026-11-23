@@ -19,6 +19,7 @@ import {
   ThreadResponseSchema,
   TopLevelMessageResponseSchema,
 } from "./lib/server/wire.ts";
+import { ListOpenThreadsResponseSchema, openThreadRoutes } from "./lib/server/open-threads.ts";
 import { channelMessagesPath, closedPath, isMessageId, messagesPath, reactionPath, threadPath } from "./index.ts";
 import type { MessageId } from "./index.ts";
 import { Messages } from "./lib/server/service.ts";
@@ -162,11 +163,13 @@ export const messageRoutes: readonly Route<Caller | Messages>[] = [
   reactionRoute("DELETE", (messages) => messages.unreact),
   closeRoute,
   reopenRoute,
+  ...openThreadRoutes,
 ];
 
 /** The response Schemas of the message routes, for the SDK's generated validators. */
 export const messageResponseSchemas = {
   ListMessagesResponse: ListMessagesResponseSchema,
+  ListOpenThreadsResponse: ListOpenThreadsResponseSchema,
   MessageResponse: MessageResponseSchema,
   ReactionsResponse: ReactionsResponseSchema,
   ThreadResponse: ThreadResponseSchema,

@@ -9,7 +9,7 @@ import type { IdentityName } from "../../../identities/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { MESSAGE_COLUMNS } from "./message-rows-sqlite.ts";
 import type { MessageReader } from "./inbox-sqlite.ts";
-import type { OpenThread } from "../../../messages/client.ts";
+import type { OpenThread } from "../../../messages/index.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { unreadable } from "./errors.ts";

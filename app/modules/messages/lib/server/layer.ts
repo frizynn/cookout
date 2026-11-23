@@ -6,6 +6,7 @@ import type { Message } from "../../index.ts";
 import { Reactions } from "./reactions.ts";
 import { ReadReceipts } from "./read-receipts.ts";
 import { Storage } from "../../../storage/server.ts";
+import { openThreadsOn } from "./open-threads.ts";
 
 export const messagesLayer: Layer.Layer<Messages, never, Storage | ReadReceipts | Reactions> = Layer.effect(
   Messages,
@@ -30,6 +31,10 @@ export const messagesLayer: Layer.Layer<Messages, never, Storage | ReadReceipts 
         appending.withPermits(ONE_AT_A_TIME)(Effect.tap(append(message), publishIfAppended)),
       subscribe: PubSub.subscribe(pubSub),
     };
-    return { ...messagesOn({ hub, reactions, storage }), ...closedThreadsOn({ hub: threads, storage }) };
+    return {
+      ...messagesOn({ hub, reactions, storage }),
+      ...closedThreadsOn({ hub: threads, storage }),
+      ...openThreadsOn(storage),
+    };
   }),
 );

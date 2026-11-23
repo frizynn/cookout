@@ -287,3 +287,13 @@ export interface TopLevelMessageResponse {
 
 /** `PUT` closes and `DELETE` reopens the thread holding the message. */
 export const closedPath = "/v1/messages/:id/closed";
+
+/** Open threads, stalest first by `lastActivityAt` (latest message or later reopen); `cursor` is null on the last page. */
+export interface ListOpenThreadsResponse {
+  readonly threads: readonly { readonly message: TopLevelMessage; readonly lastActivityAt: IsoTime }[];
+  readonly hasMore: boolean;
+  readonly cursor: string | null;
+}
+
+/** An open thread: its top-level message and when anything last happened in it. */
+export type OpenThread = ListOpenThreadsResponse["threads"][number];

@@ -19,6 +19,7 @@ export type { StoredCommand } from "./lib/server/commands.ts";
 export type { CommandTokenGrant } from "./lib/server/command-tokens.ts";
 export type { DeliveryOutcome, StoredDelivery } from "./lib/server/deliveries.ts";
 export type { NewMessage, StoredPage, StoredThread } from "./lib/server/messages.ts";
+export type { OpenThreadsPageRequest } from "./lib/server/open-threads.ts";
 export type { AckedMessage } from "./lib/server/inbox.ts";
 export type { StoredPresence } from "./lib/server/presence.ts";
 export type { NewCommandCall } from "./lib/server/command-calls.ts";
