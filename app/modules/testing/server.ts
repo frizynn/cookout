@@ -30,10 +30,9 @@ export {
   runCookout,
   runDev,
   type ServeProcess,
-  type ServeWithWeb,
+  type ServeOptions,
   startDev,
   startServe,
-  startServeWithWeb,
   type Watched,
   watchCookout,
 } from "./lib/server/cli.ts";

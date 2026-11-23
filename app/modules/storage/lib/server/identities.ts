@@ -21,11 +21,13 @@ type DeleteIdentityResult =
   | { readonly status: "not_found" }
   | { readonly status: "last_admin" };
 
+type SetOnlyTokenResult = "created" | "replaced" | "unchanged";
+
 type Fails<A> = Effect.Effect<A, StorageUnavailable>;
 
 export type IdentitiesSection = {
   readonly createIdentity: (identity: Identity, hash: TokenHash) => Fails<"created" | "name_taken">;
-  readonly createIdentityIfNoneExist: (identity: Identity, hash: TokenHash) => Fails<boolean>;
+  readonly setOnlyToken: (identity: Identity, hash: TokenHash) => Fails<SetOnlyTokenResult>;
   readonly listIdentities: () => Fails<readonly Identity[]>;
   readonly findIdentityByTokenHash: (hash: TokenHash) => Fails<TokenLookup>;
   readonly replaceToken: (name: IdentityName, hash: TokenHash) => Fails<ReplaceTokenResult>;
@@ -53,6 +55,27 @@ const add = (data: MemoryIdentities, identity: Identity, hash: TokenHash) => {
   data.identities.set(identity.name, { ...identity });
   data.activeTokens.set(hash, identity.name);
 };
+
+function setOnlyTokenResultIn(data: MemoryIdentities, identity: Identity, hash: TokenHash): SetOnlyTokenResult {
+  if (!data.identities.has(identity.name)) {
+    return "created";
+  }
+  if (data.activeTokens.get(hash) === identity.name) {
+    return "unchanged";
+  }
+  return "replaced";
+}
+
+function setOnlyTokenIn(data: MemoryIdentities, identity: Identity, hash: TokenHash): SetOnlyTokenResult {
+  const result = setOnlyTokenResultIn(data, identity, hash);
+  if (result === "created") {
+    data.identities.set(identity.name, { ...identity });
+  }
+  revokeTokensOf(data, identity.name);
+  data.revokedTokens.delete(hash);
+  data.activeTokens.set(hash, identity.name);
+  return result;
+}
 
 const lookUp = (data: MemoryIdentities, hash: TokenHash): TokenLookup => {
   const name = data.activeTokens.get(hash);
@@ -101,8 +124,6 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
   return {
     createIdentity: (identity, hash) =>
       open(() => (data.identities.has(identity.name) ? "name_taken" : (add(data, identity, hash), "created"))),
-    createIdentityIfNoneExist: (identity, hash) =>
-      open(() => data.identities.size === 0 && (add(data, identity, hash), true)),
     deleteIdentity: (name) => open(() => remove(data, name)),
     findIdentityByTokenHash: (hash) => open(() => lookUp(data, hash)),
     listIdentities: () => open(() => [...data.identities.values()].sort(byName).map((found) => ({ ...found }))),
@@ -117,6 +138,7 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
         data.activeTokens.set(hash, name);
         return { identity: { ...identity }, status: "replaced" };
       }),
+    setOnlyToken: (identity, hash) => open(() => setOnlyTokenIn(data, identity, hash)),
   };
 };
 
@@ -201,16 +223,6 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
           return "created" as const;
         }),
       ),
-    createIdentityIfNoneExist: (identity, hash) =>
-      db.transaction(
-        Effect.gen(function* () {
-          if ((yield* count("SELECT count(*) AS count FROM identities")) > 0) {
-            return false;
-          }
-          yield* insert(identity, hash);
-          return true;
-        }),
-      ),
     deleteIdentity: (name) =>
       db.transaction(
         Effect.gen(function* () {
@@ -249,6 +261,36 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
           yield* revokeTokensOfName(name);
           yield* db.run("INSERT INTO tokens (token_hash, identity_name, revoked) VALUES (?, ?, 0)", hash, name);
           return { identity: toIdentity(row), status: "replaced" } as const;
+        }),
+      ),
+    setOnlyToken: (identity, hash) =>
+      db.transaction(
+        Effect.gen(function* () {
+          const existing = yield* count("SELECT count(*) AS count FROM identities WHERE name = ?", identity.name);
+          if (existing === 0) {
+            yield* Effect.andThen(db.run("DELETE FROM tokens WHERE token_hash = ?", hash), insert(identity, hash));
+            return "created" as const;
+          }
+          const held = yield* count(
+            "SELECT count(*) AS count FROM tokens WHERE token_hash = ? AND identity_name = ? AND revoked = 0",
+            hash,
+            identity.name,
+          );
+          yield* db.run(
+            "UPDATE tokens SET revoked = 1 WHERE identity_name = ? AND revoked = 0 AND token_hash <> ?",
+            identity.name,
+            hash,
+          );
+          yield* db.run(
+            `INSERT INTO tokens (token_hash, identity_name, revoked) VALUES (?, ?, 0)
+             ON CONFLICT (token_hash) DO UPDATE SET identity_name = excluded.identity_name, revoked = 0`,
+            hash,
+            identity.name,
+          );
+          if (held > 0) {
+            return "unchanged" as const;
+          }
+          return "replaced" as const;
         }),
       ),
   };

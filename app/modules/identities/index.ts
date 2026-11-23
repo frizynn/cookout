@@ -46,7 +46,7 @@ export function isOwner(value: string): value is Owner {
   return value.length >= ownerLength.minimum && value.length <= ownerLength.maximum;
 }
 
-/** Marks a string as a token. Only `secrets` issues one, and only bearer auth reads one from a request. */
+/** Marks a string as a token. Only `secrets` issues one, or `COOKOUT_ADMIN_TOKEN` sets the admin's; only bearer auth reads one from a request. */
 export function token(value: string): Token {
   return as(value);
 }
