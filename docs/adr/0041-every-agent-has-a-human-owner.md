@@ -8,7 +8,7 @@
 - **Any human creates agents it owns.** Only an admin creates a human, or an agent owned by another human; a non-admin who tries is 403 `admin_only`. An agent creates nothing (403 `human_only`). There is no cap per person.
 - **Namespaced names.** An identity name is a plain name (1–64 lowercase letters, digits or `-`) or two of them joined by one `/`, such as `matt/triage-agent`. Only an agent owned by `matt` may be named `matt/...`, whoever creates it; otherwise 400 `name_not_owned`. A human's name, and so an owner, never has a `/`, and neither does a command's name. Mentions parse `@matt/triage-agent`, and every route taking a name accepts one (the SDK percent-encodes it in the path).
 - **A command's handler is owned by the admin who added it.** A handler that `command add` reuses keeps its owner.
-- **A human who still owns agents is not deleted.** `DELETE /v1/identities/:name` answers 409 `owns_agents`, naming them in `details.agents`, so no agent is left without an owner. Whether the agents should instead go with her, or pass to the admin who deleted her, is open in #113.
+- **A human who still owns agents is not deleted.** (Superseded by [ADR 0043](0043-identities-are-deactivated-never-deleted.md): no identity is deleted, and deactivating a human deactivates its agents.) `DELETE /v1/identities/:name` answers 409 `owns_agents`, naming them in `details.agents`, so no agent is left without an owner. Whether the agents should instead go with her, or pass to the admin who deleted her, is open in #113.
 
 ## Storage
 

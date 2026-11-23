@@ -29,6 +29,10 @@ An identity's optional human-readable name, such as "Ada Lovelace" shown beside 
 **Owner**:
 The human who created an agent, or the one an admin named for it; required. Any human creates agents it owns (Matt, 2026-11-23, [#113](https://github.com/mattpocock/cookout/issues/113); [ADR 0041](docs/adr/0041-every-agent-has-a-human-owner.md)). A human never has one ([ADR 0027](docs/adr/0027-an-identity-is-a-human-or-an-agent.md)).
 
+**Deactivated**:
+An identity switched off by an admin or its owner: its history stays, but it can't act. Its name stays reserved, its messages keep it as their author, every token it holds fails, and it can't be mentioned. Deactivating a human deactivates the agents it owns; reactivating gives a fresh token. There is no hard delete (Matt, 2026-11-23, [#124](https://github.com/mattpocock/cookout/issues/124); [ADR 0043](docs/adr/0043-identities-are-deactivated-never-deleted.md)).
+_Avoid_: Deleted, Removed
+
 **Admin**:
 An identity allowed to create identities, rotate tokens and register commands. Admin is a flag on an identity.
 

@@ -69,11 +69,29 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts channel get triage
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity create reviewer --kind agent --owner grace
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity list
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity rotate reviewer
-env $(cat /tmp/cookout-dev.env) node app/main.ts identity delete reviewer
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity deactivate reviewer
 env $(cat /tmp/cookout-dev.env) node app/main.ts channel delete triage
 ```
 
 `channel delete` is admin only (anyone else gets 403 `admin_only`). In one Storage transaction it deletes the channel and everything in it: its messages and threads, their mentions, follows, subscriptions, channel and thread read positions, command calls and pending webhook deliveries (a pending retry stops: the handler isn't called again). It prints the deleted channel; an unknown name is 404 `channel_not_found`. The name can be created again, as a new, empty channel, and message IDs keep counting up. In the web UI the channel is gone from the channel list on the next load, and `#/channels/<name>` says "Nothing here".
+
+## Deactivating identities
+
+Nothing deletes an identity: an admin, or the human who owns an agent, deactivates it ([ADR 0043](adr/0043-identities-are-deactivated-never-deleted.md)). After a fresh seed, as the admin:
+
+```sh
+jq -r '.identities[] | select(.identity.name == "ada") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-ada.env
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity deactivate ada
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-ada.env) node app/main.ts whoami
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '[.identities[].name]'
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity list --deactivated | jq -c '[.identities[] | select(.deactivated) | .name]'
+env $(cat /tmp/cookout-dev.env) node app/main.ts message post general "@ada are you there?" | jq -c .unknownMentions
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity create ada --kind human
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity reactivate release-bot
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity reactivate ada
+```
+
+Deactivating `ada` prints her with `"deactivated": true` and `agents` `["release-bot","rollback"]`, deactivated with her. Her old token is now 401 `token_revoked`, as are her agents' tokens and agent session tokens. The plain list leaves out `ada` and her agents; `--deactivated` lists them, marked. `@ada` is an unknown mention, and creating `ada` again is 409 `identity_exists`: the name stays hers, and any message she posted still shows her as its author. Reactivating `release-bot` is 409 `owner_deactivated` while `ada` is; reactivating `ada` prints a fresh token, shown this once, and her old one stays dead. Her agents stay deactivated until reactivated one by one. Deactivating the last admin is 409 `last_admin`, and a human deactivating another's agent is 403 `not_owner`.
 
 ## Identity kinds
 
@@ -102,11 +120,10 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts i
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts message post general "@grace/helper have a look"
 env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(jq -r .token /tmp/cookout-helper.json) node app/main.ts inbox
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity create stray --kind agent --owner release-bot
-env $(cat /tmp/cookout-dev.env) node app/main.ts identity delete ada
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '.identities[] | [.name, .kind, .owner]'
 ```
 
-`helper` and `@grace/helper` print with `"owner": "grace"` and their tokens, shown this once. `--owner ada` and `--kind human` as `grace` are 403 `admin_only`, and creating `@ada/helper` is 400 `name_not_owned`. The post's `mentions` is `["grace/helper"]`, and `@grace/helper`'s inbox holds it with reason `mention`. As the admin, `--owner release-bot` is 400 `owner_not_human`, and deleting `ada` is 409 `owns_agents` with `details.agents` `["release-bot","rollback"]`. The list ends with `["grace/helper","agent","grace"]`, `["helper","agent","grace"]` and the seed's agents, each with its owner.
+`helper` and `@grace/helper` print with `"owner": "grace"` and their tokens, shown this once. `--owner ada` and `--kind human` as `grace` are 403 `admin_only`, and creating `@ada/helper` is 400 `name_not_owned`. The post's `mentions` is `["grace/helper"]`, and `@grace/helper`'s inbox holds it with reason `mention`. As the admin, `--owner release-bot` is 400 `owner_not_human`. The list ends with `["grace/helper","agent","grace"]`, `["helper","agent","grace"]` and the seed's agents, each with its owner.
 
 ## Make and remove admins
 
