@@ -23,6 +23,7 @@ type CallFailureCode =
   | "agent_tool_missing"
   | "agent_tool_session_missing"
   | "already_joined"
+  | "login_missing"
   | "not_joined"
   | "usage"
   | "timeout"
@@ -70,6 +71,11 @@ const NOTHING = {};
 const notJoined: CallFailure = {
   code: "not_joined",
   message: "join as an agent first: cookout join --as <name>",
+};
+
+const loginMissing: CallFailure = {
+  code: "login_missing",
+  message: "log in first: cookout login",
 };
 
 function statusOf(status: number): { readonly status?: number } {
@@ -227,8 +233,29 @@ function withClient<Value>(run: Run<Value>): Effect.Effect<Value, CallFailure, A
   });
 }
 
-function withIdentityTokenClient<Value>(run: Run<Value>): Effect.Effect<Value, CallFailure, AgentSessionStateNeeds> {
-  return Effect.flatMap(cliEnvironment, (env) => runWith(env, given("COOKOUT_TOKEN", env.token), run));
+function joinCredentialFor(env: CliEnvironment): Effect.Effect<Credential, CallFailure, AgentSessionStateNeeds> {
+  if (env.token !== "") {
+    return Effect.succeed(given("COOKOUT_TOKEN", env.token));
+  }
+  if (env.session !== "") {
+    return Effect.succeed(given("COOKOUT_SESSION", env.session));
+  }
+  if (env.url === "") {
+    return Effect.succeed(NO_CREDENTIAL);
+  }
+  return Effect.filterOrFail(
+    loginCredential(env.url),
+    ({ source }) => source === "login",
+    () => loginMissing,
+  );
+}
+
+function withJoinClient<Value>(run: Run<Value>): Effect.Effect<Value, CallFailure, AgentSessionStateNeeds> {
+  return Effect.gen(function* callWithJoinCredential() {
+    const env = yield* cliEnvironment;
+    const credential = yield* joinCredentialFor(env);
+    return yield* runWith(env, credential, run);
+  });
 }
 
 function callClient<Value>(
@@ -265,5 +292,5 @@ export {
   joinPlace,
   toFailure,
   withClient,
-  withIdentityTokenClient,
+  withJoinClient,
 };
