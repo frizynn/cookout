@@ -1,3 +1,6 @@
+# A blocked commit prints only what is left to fix by hand: each job's output, and only when it fails.
+output:
+  - execution_out
 pre-commit:
   jobs:
     - name: refuse partially staged files
@@ -8,7 +11,7 @@ pre-commit:
       stage_fixed: true
     - name: format
       glob: "*.{js,ts,cjs,mjs,jsx,tsx,json,jsonc,css}"
-      run: node_modules/.bin/biome format --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      run: scripts/quiet.sh node_modules/.bin/biome format --write --reporter=concise --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
       stage_fixed: true
     - group:
         parallel: true
@@ -16,4 +19,4 @@ pre-commit:
           - name: types
             run: node_modules/.bin/tsc --noEmit --incremental
           - name: seams
-            run: node_modules/.bin/depcruise app scripts --cache node_modules/.cache/depcruise
+            run: scripts/quiet.sh node_modules/.bin/depcruise app scripts --cache node_modules/.cache/depcruise
