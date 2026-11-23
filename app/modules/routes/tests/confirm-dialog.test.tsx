@@ -32,8 +32,14 @@ async function deactivated(name: string): Promise<boolean> {
   return identities.some((each) => each.name === name && each.deactivated === true);
 }
 
+async function undeletableAgent(name: string): Promise<void> {
+  const { client } = await newIdentity({ kind: "agent", name });
+  await client.createChannel({ name });
+  await client.createMessage({ channel: name, text: "hello" });
+}
+
 async function askingToDeactivate(name: string, client: CookoutClient): Promise<() => void> {
-  await newIdentity({ kind: "agent", name });
+  await undeletableAgent(name);
   const close = openAt({ client, hash: `#/people/${name}` });
   fireEvent.click(await inProfile().findByRole("button", { name: "Deactivate" }));
   await screen.findByRole("alertdialog", { name: `Deactivate @${name}?` });
