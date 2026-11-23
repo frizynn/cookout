@@ -5,6 +5,7 @@ import {
   Effect,
   Exit,
   Layer,
+  Option,
   Predicate,
   Record as Rec,
   Ref,
@@ -118,9 +119,7 @@ const seedIdentity =
       yield* seedMissingOwner(identity);
       const { token, hash } = yield* identities.issueToken;
       const created = yield* storage.createIdentity(identity, hash);
-      if (created !== "created") {
-        return yield* Effect.die(`seeding ${name} failed: ${created}`);
-      }
+      yield* Effect.orDie(Effect.fromOption(Option.liftPredicate(created, (result) => result === "created")));
       return { client: clientAt(url)(token), identity, token };
     }).pipe(Effect.orDie);
 

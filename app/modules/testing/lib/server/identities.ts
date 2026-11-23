@@ -1,19 +1,19 @@
 import type { Identity, IdentityName } from "../../../identities/index.ts";
 import { firstAdminName, isIdentityName, isOwner } from "../../../identities/index.ts";
-import { expect } from "@effect/vitest";
+import { Option } from "effect";
 import { fixtureTime } from "./time.ts";
 
 type AgentFixtureOptions = { readonly kind?: "agent"; readonly owner?: string; readonly admin?: boolean };
 
 function nameOf(value: string): IdentityName {
-  return isIdentityName(value) ? value : expect.unreachable(`${value} is not an identity name`);
+  return Option.getOrThrow(Option.liftPredicate(value, isIdentityName));
 }
 
 const fixtureOwnerName: IdentityName = nameOf("matt");
 
 function agentFixture(name: string, { admin = false, owner = fixtureOwnerName }: AgentFixtureOptions): Identity {
   const base = { admin, createdAt: fixtureTime, kind: "agent", name: nameOf(name) } as const;
-  return isOwner(owner) ? { ...base, owner } : expect.unreachable(`${owner} is not an owner`);
+  return { ...base, owner: Option.getOrThrow(Option.liftPredicate(owner, isOwner)) };
 }
 
 function ownedByAdminUnlessNamed(options: IdentityFixtureOptions): IdentityFixtureOptions {
