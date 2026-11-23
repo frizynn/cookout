@@ -214,3 +214,15 @@ it.effect("deactivating an identity twice answers it deactivated both times", ()
     ]);
   }).pipe(Effect.provide(testCookout())),
 );
+
+it.effect("a deactivated admin identity stays refused after a reboot sets its token from the setting again", () =>
+  Effect.gen(function* rebootKeepsItOff() {
+    const cookout = yield* TestCookout;
+    const second = yield* cookout.createIdentity("admin-2", { admin: true, kind: "human" });
+    yield* answer(() => second.client.deactivateIdentity("admin"));
+    const restarted = yield* cookout.restart;
+    const refused = yield* refusal(restarted.whoami);
+
+    expect(refused).toMatchObject({ code: "token_revoked", status: UNAUTHORIZED });
+  }).pipe(Effect.provide(testCookout({ storage: "sqlite" }))),
+);
