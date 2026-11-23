@@ -101,7 +101,7 @@ const merged: Merged = run({
   attempts: ATTEMPTS,
   check: ["pnpm", "check"],
   cwd: process.cwd(),
-  install: ["pnpm", "install"],
+  install: ["pnpm", "install", "--frozen-lockfile"],
   log,
   rules,
   ticket,

@@ -135,11 +135,12 @@ function merge(options: MergeOptions, into: string): Step {
   return resolveConflicts(options, conflicted);
 }
 
-function install(options: MergeOptions, base: string): Step {
-  if (lines(git(options, "diff", "--name-only", base, "HEAD", "--", LOCKFILE).output).length === NONE) {
+function install(options: MergeOptions): Step {
+  const ticket = `ticket-${options.ticket}`;
+  if (lines(git(options, "diff", "--name-only", ticket, "HEAD", "--", LOCKFILE).output).length === NONE) {
     return DONE;
   }
-  options.log(`${LOCKFILE} changed: running ${options.install.join(" ")}`);
+  options.log(`${LOCKFILE} differs from ${ticket}'s: running ${options.install.join(" ")}`);
   const installed = run(options.cwd, ...options.install);
   if (installed.ok) {
     return DONE;
@@ -189,7 +190,7 @@ function attempt(options: MergeOptions): Attempt {
   const stepped = firstStop([
     (): Step => merge(options, `ticket-${options.ticket}`),
     (): Step => renumberAdrs({ adrs: options.rules.adrs, cwd: options.cwd, log: options.log }),
-    (): Step => install(options, started.sha),
+    (): Step => install(options),
     (): Step => check(options),
   ]);
   if (stepped.kind === "stopped") {
@@ -225,7 +226,7 @@ function checkAndPush(options: MergeOptions, base: string): Attempt {
   const stepped = firstStop([
     (): Step => renumberAdrs({ adrs: options.rules.adrs, cwd: options.cwd, log: options.log }),
     (): Step => regenerateChanged(options, base),
-    (): Step => install(options, base),
+    (): Step => install(options),
     (): Step => check(options),
   ]);
   if (stepped.kind === "stopped") {
