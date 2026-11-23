@@ -396,9 +396,14 @@ interface SchemaProblem {
   readonly message: string;
   readonly path: readonly (string | number)[];
 }
-/** The body of `POST /v1/login-requests`: the machine asking, shown on the approval page. */
 interface StartLoginRequest {
   readonly host: string;
+}
+interface LoginRequestView {
+  readonly userCode: string;
+  readonly host: string;
+  readonly expiresAt: IsoTime;
+  readonly approved: boolean;
 }
 /** A started login request. Only `requestId` collects the Login, and it is shown this once. */
 interface LoginRequestStartedResponse {
@@ -415,13 +420,6 @@ type LoginCollectedResponse = {
   readonly identity: Identity;
   readonly token: Token;
 };
-/** A live login request as its approval page shows it. */
-interface LoginRequestView {
-  readonly userCode: string;
-  readonly host: string;
-  readonly expiresAt: IsoTime;
-  readonly approved: boolean;
-}
 /** The answer to showing or approving a login request. */
 interface LoginRequestResponse {
   readonly loginRequest: LoginRequestView;
