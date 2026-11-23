@@ -192,6 +192,25 @@ function withoutIdentity({ identity, inbox }: Forgetting): MemoryInbox {
   };
 }
 
+interface ForgettingChannel {
+  readonly inbox: MemoryInbox;
+  readonly channel: ChannelName;
+  readonly ids: ReadonlySet<MessageId>;
+}
+
+function withoutChannel({ channel, ids, inbox }: ForgettingChannel): MemoryInbox {
+  const gone = [` channel ${channel}`, ...Arr.flatMap([...ids], (id) => [` thread ${id}`, ` message ${id}`])];
+  function kept(key: string): boolean {
+    return !Arr.some(gone, (scope) => Str.endsWith(scope)(key));
+  }
+  return {
+    follows: new Set(Arr.filter([...inbox.follows], kept)),
+    mentions: new Set(Arr.filter([...inbox.mentions], kept)),
+    positions: new Map(Arr.filter([...inbox.positions], ([key]: readonly [string, MessageId]) => kept(key))),
+    subscriptions: new Set(Arr.filter([...inbox.subscriptions], kept)),
+  };
+}
+
 function memoryInbox({ changeInbox, channelExists, read }: BoardAccess): MemoryInboxSection {
   function changeFound<Value>(work: (board: MemoryBoard) => Changed<Value>): Fails<Value | undefined> {
     return Effect.map(changeInbox(work), Option.getOrUndefined);
@@ -223,4 +242,4 @@ function memoryInbox({ changeInbox, channelExists, read }: BoardAccess): MemoryI
   };
 }
 
-export { EMPTY_INBOX, type MemoryInbox, type MemoryInboxSection, afterAppend, memoryInbox };
+export { EMPTY_INBOX, type MemoryInbox, type MemoryInboxSection, afterAppend, memoryInbox, withoutChannel };

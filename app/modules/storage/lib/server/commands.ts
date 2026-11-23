@@ -1,11 +1,11 @@
 import type { AgentIdentity, IdentityName } from "../../../identities/index.ts";
 import { Array as Arr, Effect, Order, Predicate, Schema } from "effect";
 import type { Command, CommandName, CommandSecret } from "../../../commands/index.ts";
+import type { CommandTokensSection, MemoryCommandTokensSection } from "./command-tokens.ts";
+import type { DeliveriesSection, MemoryDeliveriesSection } from "./deliveries.ts";
 import { isCommandName, isCommandSecret } from "../../../commands/index.ts";
 import { memoryCommandTokens, sqliteCommandTokens } from "./command-tokens.ts";
 import { memoryDeliveries, sqliteDeliveries } from "./deliveries.ts";
-import type { CommandTokensSection } from "./command-tokens.ts";
-import type { DeliveriesSection } from "./deliveries.ts";
 import type { FindIdentity } from "./identity-row.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { MemoryState } from "./memory-state.ts";
@@ -40,7 +40,11 @@ interface MemoryCommandsOptions {
   readonly findIdentity: FindIdentity;
 }
 
-function memoryCommands({ findIdentity, state, placeHandler }: MemoryCommandsOptions): CommandsSection {
+type MemoryCommandsSection = CommandsSection &
+  Pick<MemoryCommandTokensSection, "dropCommandTokens"> &
+  Pick<MemoryDeliveriesSection, "dropDeliveries">;
+
+function memoryCommands({ findIdentity, state, placeHandler }: MemoryCommandsOptions): MemoryCommandsSection {
   const commands = new Map<CommandName, StoredCommand>();
   function open<Value>(work: () => Value): Fails<Value> {
     return Effect.andThen(state.ensureOpen, Effect.sync(work));
