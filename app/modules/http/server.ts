@@ -1,14 +1,15 @@
 /**
  * The cookout's HTTP server on Node's HTTP server: routing, `/v1/health`, the
- * body size limit, and the one place a failure becomes an `{ error }` body. A
- * handler fails with a `Refusal` to answer with it; storage, body and path
- * failures are answered by kind, and anything else is a 500.
+ * body size limit, the web guards, and the one place a failure becomes an
+ * `{ error }` body. A handler fails with a `Refusal` to answer with it;
+ * storage, body and path failures are answered by kind, and anything else is
+ * a 500.
  */
-import { ByteSize, DateTime, Effect, Layer } from "effect";
-import { ErrorResponseSchema, HealthResponseSchema } from "./lib/server/wire.ts";
+import { ByteSize, DateTime, Effect, Layer, Option } from "effect";
+import { ErrorResponseSchema, HealthResponseSchema, securityHeaders } from "./lib/server/wire.ts";
 import type { Gate, Route } from "./lib/server/router.ts";
-import { HttpIncomingMessage, HttpServer, HttpServerResponse } from "effect/http";
-import { respond, toRefusal } from "./lib/server/refusals.ts";
+import { HttpIncomingMessage, HttpServer, HttpServerRequest, HttpServerResponse } from "effect/http";
+import { guardRefusal, respond, toRefusal } from "./lib/server/refusals.ts";
 import { NodeHttpServer } from "@effect/platform-node";
 import { Storage } from "../storage/server.ts";
 import { createServer } from "node:http";
@@ -43,6 +44,15 @@ function answerFailure(failure: unknown): Effect.Effect<HttpServerResponse.HttpS
   return respond(toRefusal(failure));
 }
 
+const guardRequest = Effect.gen(function* guardHostAndOrigin() {
+  const request = yield* HttpServerRequest.HttpServerRequest;
+  const server = yield* HttpServer.HttpServer;
+  const { host = "", origin = "" } = request.headers;
+  const address = HttpServer.formatAddress(server.address);
+  const refused = guardRefusal({ address, host, method: request.method, origin });
+  return yield* Option.match(refused, { onNone: () => Effect.void, onSome: Effect.fail });
+});
+
 export type { Gate, Route } from "./lib/server/router.ts";
 export type { Listen };
 
@@ -68,7 +78,10 @@ export function nodeHttpServer(listen: Listen): NodeHttp {
  * `not_found`). Every request to a path one of `routes` serves goes through
  * `gate` first, before a wrong method is refused with 405; `/v1/health` and
  * unknown paths (404) never do. The `HttpServer` it provides says which
- * address it took: port 0 picks a free one.
+ * address it took: port 0 picks a free one. Every request goes through the
+ * web guards first: a `Host` that isn't the server's own is refused with 421
+ * `foreign_host`, a write from another site's `Origin` with 403
+ * `foreign_origin`, and every response carries a strict CSP and refuses framing.
  * @param listen The port and host to listen on.
  * @param routes Every route but `/v1/health`.
  * @param gate What every request to one of `routes` goes through first.
@@ -79,8 +92,9 @@ export function httpServer<Needs, Provides, Requires, Fails>(
   routes: readonly Route<Needs>[],
   gate: Gate<Provides, Requires, Fails>,
 ) {
-  const app = dispatch({ gate, gated: routes, open: [healthRoute] }).pipe(
+  const app = Effect.andThen(guardRequest, dispatch({ gate, gated: routes, open: [healthRoute] })).pipe(
     Effect.catch(answerFailure),
+    Effect.map(HttpServerResponse.setHeaders(securityHeaders)),
     Effect.provideService(HttpIncomingMessage.MaxBodySize, maxBodySize),
   );
   return Layer.provideMerge(HttpServer.serve(app), nodeHttpServer(listen));

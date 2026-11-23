@@ -118,6 +118,16 @@ The SDK is `@ai-hero/cookout/sdk`; from a checkout, import `app/modules/sdk/inde
 env $(cat /tmp/cookout-dev.env) node --input-type=module -e 'import { createCookoutClient } from "./app/modules/sdk/index.ts"; const client = createCookoutClient(); console.log(await client.getThread(1));'
 ```
 
+## Check the web guards
+
+Every response carries a strict CSP and `X-Frame-Options: DENY`; a write from another site's `Origin` is refused with 403 `foreign_origin`, and a `Host` that isn't the server's own (`127.0.0.1`, `localhost` or `[::1]` at its port, or the address it listens on) with 421 `foreign_host`:
+
+```sh
+env $(cat /tmp/cookout-dev.env) sh -c 'curl -si "$COOKOUT_URL/v1/health" | grep -i -e content-security-policy -e x-frame-options'
+env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -X POST -H "Origin: https://elsewhere.example" "$COOKOUT_URL/v1/channels"'
+env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -H "Host: elsewhere.example" "$COOKOUT_URL/v1/health"'
+```
+
 ## Stop it
 
 Ctrl-C in its terminal, or for a background run:

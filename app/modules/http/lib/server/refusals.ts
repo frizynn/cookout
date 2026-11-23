@@ -1,4 +1,4 @@
-import { Effect, Schema, SchemaIssue } from "effect";
+import { Array as Arr, Effect, Option, Schema, SchemaIssue } from "effect";
 import type { ErrorBody, Refusal } from "../../index.ts";
 import { HttpServerError, HttpServerResponse } from "effect/http";
 import { echoed, errorCodes } from "../../index.ts";
@@ -28,6 +28,59 @@ export const methodNotAllowed = (method: string, path: string): Refusal =>
 
 export const notFound = (method: string, path: string): Refusal =>
   refusal(404, { code: "not_found", message: `No route for ${method} ${echoed(path)}.` });
+
+interface Guarded {
+  readonly address: string;
+  readonly host: string;
+  readonly method: string;
+  readonly origin: string;
+}
+
+const FORBIDDEN = 403;
+const MISDIRECTED = 421;
+const LOOPBACK_NAMES = ["127.0.0.1", "localhost", "[::1]"];
+const READ_METHODS = new Set(["GET", "HEAD"]);
+
+function foreignHost(host: string): Refusal {
+  return refusal(MISDIRECTED, {
+    code: "foreign_host",
+    message: `This server doesn't answer to the host ${echoed(host)}.`,
+  });
+}
+
+function foreignOrigin(origin: string): Refusal {
+  return refusal(FORBIDDEN, {
+    code: "foreign_origin",
+    message: `A write from ${echoed(origin)} is not allowed: writes come from this server's own pages.`,
+  });
+}
+
+function hostsAt(address: string): ReadonlySet<string> {
+  const listening = new URL(address);
+  return new Set([...Arr.map(LOOPBACK_NAMES, (name) => `${name}:${listening.port}`), listening.host]);
+}
+
+function hostOf(origin: string): string {
+  if (!URL.canParse(origin)) {
+    return "";
+  }
+  return new URL(origin).host;
+}
+
+function isForeignWrite({ method, origin }: Guarded, hosts: ReadonlySet<string>): boolean {
+  return origin !== "" && !READ_METHODS.has(method) && !hosts.has(hostOf(origin));
+}
+
+function guardRefusal(request: Guarded): Option.Option<Refusal> {
+  const hosts = hostsAt(request.address);
+  if (!hosts.has(request.host)) {
+    return Option.some(foreignHost(request.host));
+  }
+  if (isForeignWrite(request, hosts)) {
+    return Option.some(foreignOrigin(request.origin));
+  }
+  return Option.none();
+}
 
 const fromParseError = (error: HttpServerError.RequestParseError): Refusal =>
   error.reason === "BodyTooLarge"
@@ -66,3 +119,5 @@ export const toRefusal = (error: unknown): Refusal => {
 
 export const respond = ({ status, ...error }: Refusal) =>
   HttpServerResponse.schemaJson(ErrorResponseSchema)({ error }, { status }).pipe(Effect.orDie);
+
+export { guardRefusal };
