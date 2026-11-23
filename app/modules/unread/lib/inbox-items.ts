@@ -49,6 +49,22 @@ function isReadAt(positions: Positions, message: Message): boolean {
   return position !== null && message.id <= position;
 }
 
+function isReaction(item: InboxItem): boolean {
+  return item.reasons.includes("reaction");
+}
+
+function ackedAt(position: ReadPosition, item: InboxItem): boolean {
+  const { message } = item;
+  return scopeOfMessage(message) === scopeOf(position.channel, position.thread) && message.id <= position.messageId;
+}
+
+function isReadIn({ acked, positions }: Pick<ReadingIn, "acked" | "positions">, item: InboxItem): boolean {
+  if (isReaction(item)) {
+    return acked.some((position) => ackedAt(position, item));
+  }
+  return isReadAt(positions, item.message);
+}
+
 function moveTo(positions: Positions, position: ReadPosition): void {
   const scope = scopeOf(position.channel, position.thread);
   const before = positions.get(scope) ?? position.messageId;
@@ -73,17 +89,18 @@ function moveBackIn({ moves, positions }: Moved, { channel, messageId, thread }:
 
 interface ReadingIn {
   readonly all: readonly ReadPosition[];
+  readonly acked: readonly ReadPosition[];
   readonly items: Map<MessageId, InboxItem>;
   readonly positions: Positions;
   readonly onRead: (item: InboxItem) => void;
 }
 
-function readIn({ all, items, onRead, positions }: ReadingIn): void {
+function readIn({ acked, all, items, onRead, positions }: ReadingIn): void {
   for (const position of all) {
     moveTo(positions, position);
   }
   for (const [id, item] of items) {
-    if (isReadAt(positions, item.message)) {
+    if (isReadIn({ acked, positions }, item)) {
       items.delete(id);
       onRead(item);
     }
@@ -101,14 +118,14 @@ function createInboxItems(): InboxItems {
 
   function addAll(all: readonly InboxItem[]): void {
     for (const item of all) {
-      if (!isRead(item.message)) {
+      if (isReaction(item) || !isRead(item.message)) {
         items.set(item.message.id, item);
       }
     }
   }
 
   function read(all: readonly ReadPosition[], onRead: (item: InboxItem) => void): void {
-    readIn({ all, items, onRead, positions });
+    readIn({ acked: [], all, items, onRead, positions });
   }
 
   return {
@@ -128,7 +145,7 @@ function createInboxItems(): InboxItems {
         return true;
       }
       if (event.type === "read-position") {
-        read([event.readPosition], onRead);
+        readIn({ acked: [event.readPosition], all: [event.readPosition], items, onRead, positions });
         return true;
       }
       return false;

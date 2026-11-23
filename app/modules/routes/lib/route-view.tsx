@@ -1,4 +1,4 @@
-import { AgentJoinApprovalView, Authors, LoginApprovalView, LoginView } from "../../views/index.tsx";
+import { AgentJoinApprovalView, Authors, LoginApprovalView, LoginView, Reacting } from "../../views/index.tsx";
 import { AppShell } from "../../design-system/index.tsx";
 import type { Place } from "../../paths/index.ts";
 import type { ReactNode } from "react";
@@ -42,7 +42,9 @@ export function RouteView(props: RouteViewProps): ReactNode {
   }
   return (
     <Authors identities={props.stores.composer.identities} presence={props.stores.presence}>
-      <SignedInView identity={state.identity} profile={profile} route={route} stores={props.stores} />
+      <Reacting reactions={props.stores.board.reactions}>
+        <SignedInView identity={state.identity} profile={profile} route={route} stores={props.stores} />
+      </Reacting>
     </Authors>
   );
 }

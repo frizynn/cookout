@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { StandaloneMessageParts } from "./parts.ts";
 import { messageClass } from "./message-class.ts";
 import { useMessageChoices } from "./message-choices.ts";
+import { useReactionKeys } from "./use-reaction-keys.ts";
 
 interface StandaloneArticleParts {
   readonly message: StandaloneMessageParts;
@@ -18,9 +19,15 @@ export function StandaloneArticle(parts: StandaloneArticleParts): ReactNode {
     menu: message.menu,
     onAction: handleAction,
   });
+  const article = useReactionKeys(message.menu.reactions);
   return (
     <MessageContextMenu choices={choices}>
-      <article aria-label={message.label} className={messageClass(message)} data-for-you={message.mark === "for-you"}>
+      <article
+        aria-label={message.label}
+        className={messageClass(message)}
+        data-for-you={message.mark === "for-you"}
+        ref={article}
+      >
         <MessageLayout
           actionHref={message.actionHref}
           actionLabel={message.actionLabel}
@@ -33,6 +40,7 @@ export function StandaloneArticle(parts: StandaloneArticleParts): ReactNode {
           note={message.note}
           onAction={handleAction}
           presence={message.presence}
+          reactions={message.menu.reactions}
           time={message.time}
         >
           {message.children}

@@ -4,6 +4,7 @@ import { MarkUnreadRefusal } from "./mark-unread-refusal.tsx";
 import { MessageEntry } from "./message-entry.tsx";
 import { MessageList } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
+import { ReactionRefusal } from "./reaction-refusal.tsx";
 import type { Reply } from "./use-message-menu.ts";
 import { streamRows } from "./stream-rows.ts";
 
@@ -47,6 +48,7 @@ export function MessageStream(props: MessageStreamProps): ReactNode {
         ))}
       </MessageList>
       <MarkUnreadRefusal menu={props.menu} />
+      <ReactionRefusal />
     </>
   );
 }

@@ -22,10 +22,19 @@ interface Group {
   readonly latest: InboxItem;
 }
 
-const STRENGTH: readonly UnreadWhy[] = ["mentioned-you", "replied-to-you", "followed-thread", "subscribed-channel"];
+const STRENGTH: readonly UnreadWhy[] = [
+  "mentioned-you",
+  "replied-to-you",
+  "reacted",
+  "followed-thread",
+  "subscribed-channel",
+];
 const NO_ITEMS: readonly InboxItem[] = [];
 
 function keyOf(item: InboxItem): string {
+  if (item.reasons.includes("reaction")) {
+    return `reactions ${String(item.message.id)}`;
+  }
   if (item.message.kind === "reply") {
     return `thread ${String(item.parent.id)}`;
   }

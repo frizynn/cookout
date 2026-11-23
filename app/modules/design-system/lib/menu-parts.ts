@@ -1,5 +1,12 @@
+interface ReactionChoice {
+  readonly symbol: string;
+  readonly key: string;
+  readonly onReact: () => void;
+}
+
 interface MessageMenuParts {
   readonly onMarkUnread: () => void;
+  readonly reactions: readonly ReactionChoice[];
 }
 
 interface MessageActionParts {
@@ -14,6 +21,7 @@ type MenuChoice =
 
 interface HoverActionsParts extends MessageActionParts {
   readonly choices: readonly MenuChoice[];
+  readonly reactions: readonly ReactionChoice[];
 }
 
-export type { HoverActionsParts, MenuChoice, MessageActionParts, MessageMenuParts };
+export type { HoverActionsParts, MenuChoice, MessageActionParts, MessageMenuParts, ReactionChoice };

@@ -4,6 +4,7 @@ import { MessageLayout } from "./message-layout.tsx";
 import type { ReactNode } from "react";
 import { messageClass } from "./message-class.ts";
 import { useMessageChoices } from "./message-choices.ts";
+import { useReactionKeys } from "./use-reaction-keys.ts";
 
 const FOCUSABLE = 0;
 
@@ -20,12 +21,14 @@ export function ItemArticle(parts: ItemArticleParts): ReactNode {
     menu: message.menu,
     onAction: handleAction,
   });
+  const article = useReactionKeys(message.menu.reactions);
   return (
     <MessageContextMenu choices={choices}>
       <article
         aria-current={message.mark === "open"}
         className={messageClass(message)}
         data-for-you={message.mark === "for-you"}
+        ref={article}
         tabIndex={FOCUSABLE}
       >
         <MessageLayout
@@ -40,6 +43,7 @@ export function ItemArticle(parts: ItemArticleParts): ReactNode {
           note={message.note}
           onAction={handleAction}
           presence={message.presence}
+          reactions={message.menu.reactions}
           time={message.time}
         >
           {message.children}

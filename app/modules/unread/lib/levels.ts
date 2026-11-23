@@ -1,6 +1,6 @@
 import type { ChannelName, InboxItem, MessageId } from "../../sdk/index.ts";
 
-type UnreadWhy = "mentioned-you" | "replied-to-you" | "followed-thread" | "subscribed-channel";
+type UnreadWhy = "mentioned-you" | "replied-to-you" | "reacted" | "followed-thread" | "subscribed-channel";
 
 interface UnreadCounts {
   readonly forYou: number;
@@ -26,10 +26,7 @@ const ONE_MORE = 1;
 const NO_COUNTS: UnreadCounts = { activity: 0, forYou: 0 };
 const NO_NEWS: ThreadNews = { count: 0, forYou: 0 };
 
-function whyOf({ item, me }: Reading): UnreadWhy {
-  if (item.reasons.includes("mention")) {
-    return "mentioned-you";
-  }
+function repliedWhy({ item, me }: Reading): UnreadWhy {
   if (item.message.kind === "reply" && item.parent.author.name === me) {
     return "replied-to-you";
   }
@@ -39,9 +36,20 @@ function whyOf({ item, me }: Reading): UnreadWhy {
   return "subscribed-channel";
 }
 
+function whyOf(reading: Reading): UnreadWhy {
+  const { reasons } = reading.item;
+  if (reasons.includes("reaction")) {
+    return "reacted";
+  }
+  if (reasons.includes("mention")) {
+    return "mentioned-you";
+  }
+  return repliedWhy(reading);
+}
+
 function isForYou(reading: Reading): boolean {
   const why = whyOf(reading);
-  return why === "mentioned-you" || why === "replied-to-you";
+  return why === "mentioned-you" || why === "replied-to-you" || why === "reacted";
 }
 
 function counted(counts: UnreadCounts, forYou: boolean): UnreadCounts {
@@ -78,7 +86,7 @@ function withReply(news: ThreadNews, forYou: boolean): ThreadNews {
 function newsByThread({ items, me }: ReadingAll): ReadonlyMap<MessageId, ThreadNews> {
   const news = new Map<MessageId, ThreadNews>();
   for (const item of items) {
-    if (item.message.kind === "reply") {
+    if (item.message.kind === "reply" && !item.reasons.includes("reaction")) {
       const before = news.get(item.parent.id) ?? NO_NEWS;
       news.set(item.parent.id, withReply(before, isForYou({ item, me })));
     }

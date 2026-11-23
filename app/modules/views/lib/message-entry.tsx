@@ -35,7 +35,7 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
   const { agent, displayName, note, presence, profileHref } = useAuthor(message.author);
   const href = threadHref({ channel: props.channel, message });
   const summary = threadSummaryOf(message);
-  const menu = useMessageMenu({ menu: props.menu, messageId: message.id });
+  const menu = useMessageMenu({ me: props.me, menu: props.menu, message });
   const handleReply = useReplyAction({ me: props.me, message, reply: props.reply });
   return (
     <MessageItem

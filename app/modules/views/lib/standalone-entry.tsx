@@ -23,7 +23,7 @@ interface StandaloneEntryProps {
 export function StandaloneEntry(props: StandaloneEntryProps): ReactNode {
   const { message } = props;
   const { agent, displayName, note, presence, profileHref } = useAuthor(message.author);
-  const menu = useMessageMenu({ menu: props.menu, messageId: message.id });
+  const menu = useMessageMenu({ me: props.me, menu: props.menu, message });
   const handleReply = useReplyAction({ me: props.me, message, reply: props.reply });
   return (
     <StandaloneMessage

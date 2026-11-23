@@ -47,7 +47,10 @@
  * it, if the message carries an owner), and its data is folded behind a
  * toggle, a command call's shown as the command and the data it called it
  * with. `Authors` gives
- * every message under it the identity list. `InboxView` is the inbox of
+ * every message under it the identity list, and `Reacting` the board's `reactions` store: a message shows its
+ * reactions as chips, each with its count, pressed when one is the reader's own and naming who reacted in its
+ * tooltip; clicking a chip, its 👍 or 👎 hover button or menu item, or pressing `+` or `-` on it while focused,
+ * leaves the reader's reaction or, if already left, removes it, saying why if the server refuses. `InboxView` is the inbox of
  * whoever is logged in (the `unread` store), under a notice naming the open channel
  * that was just deleted elsewhere, if any (the board's `notice`, until dismissed): For you and Activity, each
  * counting its rows, newest first and live, or "You're all caught up."; then Earlier, the read rows
@@ -82,6 +85,7 @@
  */
 export { AgentJoinApprovalView } from "./lib/agent-join-approval.tsx";
 export { Authors } from "./lib/authors.tsx";
+export { Reacting } from "./lib/reacting.tsx";
 export { ChannelView } from "./lib/channel.tsx";
 export { InboxView } from "./lib/inbox.tsx";
 export { LoginApprovalView } from "./lib/login-approval.tsx";

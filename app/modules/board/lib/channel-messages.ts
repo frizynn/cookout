@@ -266,4 +266,5 @@ function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
   };
 }
 
+export type { ChannelMessages, ChannelMessagesState, LiveChannelMessages, MessagesClient } from "./channel-state.ts";
 export { createChannelMessages };
