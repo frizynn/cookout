@@ -34,7 +34,7 @@ it("a thread's address opens its channel with the thread panel beside it, and cl
 
   const panel = await threadPanel();
   const heading = screen.getByRole("heading", { level: 1 });
-  fireEvent.click(within(panel).getByRole("link", { name: "Close thread" }));
+  fireEvent.click(within(panel).getByRole("link", { name: "Close panel" }));
   await waitFor(() => {
     expect(screen.queryByRole("complementary", { name: "Thread" })).toBeNull();
   });
@@ -44,6 +44,25 @@ it("a thread's address opens its channel with the thread panel beside it, and cl
     globalThis.location.hash,
     screen.getByRole("heading", { level: 1 }).textContent,
   ]).toStrictEqual(["#web-thread-back", "#/channels/web-thread-back", "#web-thread-back"]);
+
+  close();
+});
+
+it("the panel's X link is named Close panel, apart from the Close button that closes the thread", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const parent = await threadIn("web-thread-close-names");
+  const close = openWithClockStopped({ client: adminClient(), hash: hashOf(parent) });
+
+  const panel = await threadPanel();
+  const button = await within(panel).findByRole("button", { name: "Close" });
+
+  expect([within(panel).getByRole("link", { name: "Close panel" }).tagName, button.tagName]).toStrictEqual([
+    "A",
+    "BUTTON",
+  ]);
 
   close();
 });

@@ -10,7 +10,7 @@ import type { Unread } from "../../unread/index.ts";
 import { hrefOf } from "../../paths/index.ts";
 import { useSyncExternalStore } from "react";
 
-const TEXT = { close: "Close thread", replies: "The thread's messages", thread: "Thread" } as const;
+const TEXT = { close: "Close panel", replies: "The thread's messages", thread: "Thread" } as const;
 
 const NONE = 0;
 
