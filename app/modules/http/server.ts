@@ -134,7 +134,9 @@ function guardRequest(
  * A relay in front of the server at `target`, for tests that need a client's connection to drop: `cut` ends every
  * response streaming through it (a live stream included) and holds every new request until `restore`, which lets
  * the held requests through. A `POST` to `relayCutPath` or `relayRestorePath` on the relay does the same, for a test
- * in another process, such as a browser test. The relay forwards no `Origin`, so a page loaded through it can write.
+ * in another process, such as a browser test, and a `POST` to `relayOpenPath` opens another relay to the same server,
+ * cut and restored on its own and closed with this one, so browser tests running at once each cut only their own.
+ * The relay forwards no `Origin`, so a page loaded through it can write.
  * It listens on a free loopback port and closes with the scope.
  */
 export { type CuttableRelay, cuttableRelay } from "./lib/server/cuttable-relay.ts";

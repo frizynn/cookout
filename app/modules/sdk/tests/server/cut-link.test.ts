@@ -1,8 +1,8 @@
-import { Effect, Fiber } from "effect";
+import { Effect, Fiber, Predicate } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { TestCookout, answer, cuttableRelay, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
-import { relayCutPath, relayRestorePath } from "../../../http/index.ts";
+import { relayCutPath, relayOpenPath, relayRestorePath } from "../../../http/index.ts";
 import type { HealthResponse } from "../../index.ts";
 import { TestClock } from "effect/testing";
 import { createCookoutClient } from "../../index.ts";
@@ -65,6 +65,36 @@ it.effect("a POST to the link's cut and restore paths cuts and restores it, for 
 
     yield* HttpClient.execute(HttpClientRequest.post(`${relay.url}${relayRestorePath}`));
     const health = yield* Fiber.join(asking);
+
+    expect(health).toMatchObject({ status: "ok" });
+  }).pipe(Effect.provide([testCookout(), FetchHttpClient.layer])),
+);
+
+function cutOpenedFrom(relayUrl: string): Effect.Effect<string, never, HttpClient.HttpClient> {
+  return Effect.gen(function* openRelayAndCutIt() {
+    const opened = yield* HttpClient.execute(HttpClientRequest.post(`${relayUrl}${relayOpenPath}`));
+    const body = yield* opened.json;
+    if (!Predicate.hasProperty(body, "url") || !Predicate.isString(body.url)) {
+      return yield* Effect.die(new Error(`the relay at ${relayUrl} opened no relay`));
+    }
+    yield* HttpClient.execute(HttpClientRequest.post(`${body.url}${relayCutPath}`));
+    return body.url;
+  }).pipe(Effect.orDie);
+}
+
+it.effect("a POST to the link's open path opens another link to the cookout, which is cut on its own", () =>
+  Effect.gen(function* openAnother() {
+    const cookout = yield* TestCookout;
+    const relay = yield* cuttableRelay(cookout.url);
+    const url = yield* cutOpenedFrom(relay.url);
+    const throughFirst = yield* Effect.flatMap(healthAskedAt(relay.url), Fiber.join);
+    const throughOpened = yield* healthAskedAt(url);
+    const held = throughOpened.pollUnsafe();
+
+    expect([url === relay.url, throughFirst.status, Predicate.isUndefined(held)]).toStrictEqual([false, "ok", true]);
+
+    yield* HttpClient.execute(HttpClientRequest.post(`${url}${relayRestorePath}`));
+    const health = yield* Fiber.join(throughOpened);
 
     expect(health).toMatchObject({ status: "ok" });
   }).pipe(Effect.provide([testCookout(), FetchHttpClient.layer])),
