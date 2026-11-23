@@ -1,0 +1,17 @@
+.git
+.github
+.claude
+.vitest
+node_modules
+dist
+coverage
+*.tsbuildinfo
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.*
+!.env.example
+.DS_Store
+Dockerfile
+.dockerignore
