@@ -3,8 +3,8 @@
  * reads a hash as a `Route` (`#/`, no hash, and `#/inbox` the inbox, `#/login`,
  * `#/people` the people and agents, `#/people/<name>` the same with that
  * identity's profile open, `#/channels/<name>`,
- * `#/channels/<name>/threads/<id>` and `#/approve/<user code>` the approval
- * page for a login request); a channel name
+ * `#/channels/<name>/threads/<id>`, `#/approve/<user code>` the approval
+ * page for a login request and `#/approve-join/<user code>` for an agent join request); a channel name
  * that isn't a `ChannelName`, an identity name that isn't an `IdentityName`,
  * a thread ID that isn't a message ID, or any other hash is `missing`. `hrefOf(route)` builds the hash a link to a route
  * goes to, so no view writes a path by hand.
@@ -23,6 +23,7 @@ type Route =
   | { readonly name: "channel"; readonly channel: ChannelName }
   | { readonly name: "thread"; readonly channel: ChannelName; readonly thread: MessageId }
   | { readonly name: "approve"; readonly userCode: string }
+  | { readonly name: "approve-join"; readonly userCode: string }
   | { readonly name: "missing" };
 
 type LinkedRoute = Extract<Route, { readonly name: "inbox" | "people" | "profile" | "channel" | "thread" }>;
@@ -37,6 +38,7 @@ const CHANNEL = /^#\/channels\/(?<channel>[^/]+)$/u;
 const THREAD = /^#\/channels\/(?<channel>[^/]+)\/threads\/(?<thread>[^/]+)$/u;
 
 const APPROVE = /^#\/approve\/(?<code>[^/]+)$/u;
+const APPROVE_JOIN = /^#\/approve-join\/(?<code>[^/]+)$/u;
 const DIGITS = /^\d+$/u;
 const MISSING: Route = { name: "missing" };
 
@@ -54,11 +56,11 @@ function profileRoute(identity: string): Route {
   return { identity, name: "profile" };
 }
 
-function approveRoute(userCode: string): Route {
+function approveRoute(userCode: string, name: "approve" | "approve-join" = "approve"): Route {
   if (!isUserCode(userCode)) {
     return MISSING;
   }
-  return { name: "approve", userCode };
+  return { name, userCode };
 }
 
 function threadRoute(channel: string, thread: string): Route {
@@ -75,6 +77,7 @@ const matchers: readonly Matcher[] = [
   (hash) => PEOPLE.test(hash) && { name: "people" },
   (hash) => PROFILE.test(hash) && profileRoute(hash.replace(PROFILE, "$<identity>")),
   (hash) => APPROVE.test(hash) && approveRoute(hash.replace(APPROVE, "$<code>")),
+  (hash) => APPROVE_JOIN.test(hash) && approveRoute(hash.replace(APPROVE_JOIN, "$<code>"), "approve-join"),
   (hash) => CHANNEL.test(hash) && channelRoute(hash.replace(CHANNEL, "$<channel>")),
   (hash) => THREAD.test(hash) && threadRoute(hash.replace(THREAD, "$<channel>"), hash.replace(THREAD, "$<thread>")),
 ];

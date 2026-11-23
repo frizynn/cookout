@@ -7,8 +7,8 @@
  * The layout keeps the theme in the browser's local storage and sets it on the
  * page's root element, as `public/assets/theme.js` does before the first paint.
  */
+import { createAgentJoinApprovals, createLoginApprovals, createSession } from "./modules/session/index.ts";
 import { createLive, eventSourceAdapter } from "./modules/live/index.ts";
-import { createLoginApprovals, createSession } from "./modules/session/index.ts";
 import { CookoutApp } from "./modules/routes/index.tsx";
 import { createBoard } from "./modules/board/index.ts";
 import { createComposer } from "./modules/composer/index.ts";
@@ -32,6 +32,7 @@ if (root !== null) {
   const layout = createLayout({ root: globalThis.document.documentElement, storage: globalThis.localStorage });
   createRoot(root).render(
     <CookoutApp
+      agentJoinApprovals={createAgentJoinApprovals(client)}
       board={board}
       composer={createComposer({ client, commands: board.commands, live })}
       layout={layout}

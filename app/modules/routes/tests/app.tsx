@@ -1,8 +1,8 @@
+import type { AgentJoinApprovals, LoginApprovals, Session } from "../../session/index.ts";
 import type { Board, BoardOptions } from "../../board/index.ts";
 import type { CookoutClient, CreateIdentityRequest, Token } from "../../sdk/index.ts";
-import type { LoginApprovals, Session } from "../../session/index.ts";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
-import { createLoginApprovals, createSession } from "../../session/index.ts";
+import { createAgentJoinApprovals, createLoginApprovals, createSession } from "../../session/index.ts";
 import { expect, inject, onTestFinished } from "vitest";
 import type { Composer } from "../../composer/index.ts";
 import { CookoutApp } from "../index.tsx";
@@ -36,6 +36,7 @@ interface BoardOpening {
   readonly composer?: Composer;
   readonly layout?: Layout;
   readonly loginApprovals?: LoginApprovals;
+  readonly agentJoinApprovals?: AgentJoinApprovals;
   readonly session: Session;
   readonly unread?: Unread;
 }
@@ -44,6 +45,7 @@ interface Opening {
   readonly hash: string;
   readonly client: AppClient;
   readonly loginApprovals?: LoginApprovals;
+  readonly agentJoinApprovals?: AgentJoinApprovals;
   readonly pageSize?: number;
   readonly session?: Session;
   readonly live?: NonNullable<BoardOptions["live"]>;
@@ -114,6 +116,18 @@ function articleText(article: () => HTMLElement): string {
     action.remove();
   }
   return copy.textContent;
+}
+
+function approvalsOf(opening: BoardOpening): Pick<BoardOpening, "loginApprovals" | "agentJoinApprovals"> & {
+  readonly loginApprovals: LoginApprovals;
+  readonly agentJoinApprovals: AgentJoinApprovals;
+} {
+  return {
+    agentJoinApprovals:
+      opening.agentJoinApprovals ??
+      createAgentJoinApprovals(createCookoutClient({ env: {}, url: inject("cookout").url })),
+    loginApprovals: opening.loginApprovals ?? createLoginApprovals(anonymousLoginRequests()),
+  };
 }
 
 export async function alertSaying(start: string): Promise<HTMLElement> {
@@ -192,10 +206,11 @@ export function openBoard(opening: BoardOpening): () => void {
   const composer = opening.composer ?? createComposer({ client: adminClient(), commands: opening.board.commands });
   const unread = opening.unread ?? createUnread({ client: adminClient() });
   const layout = opening.layout ?? browserLayout();
-  const loginApprovals = opening.loginApprovals ?? createLoginApprovals(anonymousLoginRequests());
+  const { agentJoinApprovals, loginApprovals } = approvalsOf(opening);
   onTestFinished(cleanup);
   return render(
     <CookoutApp
+      agentJoinApprovals={agentJoinApprovals}
       board={opening.board}
       composer={composer}
       layout={layout}
@@ -214,6 +229,7 @@ export function openAt(opening: Opening): () => void {
     composer: createComposer({ ...opening, commands: board.commands }),
     hash: opening.hash,
     ...(opening.loginApprovals && { loginApprovals: opening.loginApprovals }),
+    ...(opening.agentJoinApprovals && { agentJoinApprovals: opening.agentJoinApprovals }),
     session,
     unread: createUnread(opening),
   });

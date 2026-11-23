@@ -10,6 +10,9 @@
  * request's user code, the request (its host and when it expires) once the
  * page subscribes, or why it can't be shown, and `approve`, which approves it
  * as whoever is logged in so the terminal that started it finishes logging in.
+ * `createAgentJoinApprovals` does the same for an agent join request: the agent
+ * it would join or create for the person viewing it, an idle expiry they may
+ * lower, and whether to replace the agent's live session.
  */
 import type { CookoutClient, Identity, Refusal } from "../sdk/index.ts";
 import { refusalOf } from "../sdk/index.ts";
@@ -110,3 +113,10 @@ export {
   type LoginRequest,
   createLoginApprovals,
 } from "./lib/login-approval.ts";
+
+export {
+  type AgentJoinApproval,
+  type AgentJoinApprovalState,
+  type AgentJoinApprovals,
+  createAgentJoinApprovals,
+} from "./lib/agent-join-approval.ts";

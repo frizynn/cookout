@@ -60,7 +60,11 @@
  * `NotBuiltView` says a route has nothing to show.
  * `LoginApprovalView` is the approval page for a login request: its user code
  * to check against the terminal, the host that asked, and an Approve button.
+ * `AgentJoinApprovalView` is the same for an agent join request: the agent it
+ * joins or creates, the host, the code, the idle expiry to keep or lower, and
+ * whether to replace the agent's live session.
  */
+export { AgentJoinApprovalView } from "./lib/agent-join-approval.tsx";
 export { Authors } from "./lib/authors.tsx";
 export { ChannelView } from "./lib/channel.tsx";
 export { InboxView } from "./lib/inbox.tsx";
