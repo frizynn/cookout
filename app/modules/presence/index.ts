@@ -32,3 +32,12 @@ export interface PresenceResponse {
 
 /** `GET /v1/presence`: every identity's presence, answering `PresenceResponse`. */
 export const presencePath = `/v1/${presenceName}`;
+
+/**
+ * The code of the `refusal` event that ends an agent's live connection when a newer one opens: an agent holds one
+ * live connection at most, and `cookout watch` exits 6 on it (ADR "one live connection per agent").
+ */
+export const watchReplaced = "watch_replaced";
+
+/** The codes presence ends a stream with. */
+export const presenceErrorCodes = [watchReplaced] as const;
