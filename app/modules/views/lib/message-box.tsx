@@ -20,6 +20,7 @@ interface MessageBoxProps {
   readonly post: PostState;
   readonly onPost: (text: string, posted: () => void) => void;
   readonly text: MessageBoxText;
+  readonly focused: boolean;
 }
 
 export function MessageBox(props: MessageBoxProps): ReactNode {
@@ -42,6 +43,7 @@ export function MessageBox(props: MessageBoxProps): ReactNode {
         <TextArea
           caret={written.caret}
           choosing={choosing}
+          focused={props.focused}
           label={text.field}
           name="text"
           onEdit={handleEdit}

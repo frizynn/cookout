@@ -13,12 +13,16 @@
  * message is read only once some view acks it. A refusal keeps the server's
  * error code; a server that can't be reached is `unreachable`. Alongside the
  * counts it keeps the inbox items they count, oldest first, for the inbox view.
+ * `newLine` is where a channel's or thread's "New" line goes: the first
+ * message there that was unread when the view opened, kept while it is open.
  */
-import type { ChannelName, CookoutClient, CookoutEvent, InboxItem, Refusal } from "../sdk/index.ts";
+import type { ChannelName, CookoutClient, CookoutEvent, InboxItem, MessageId, Refusal } from "../sdk/index.ts";
 import type { Live } from "../live/index.ts";
+import type { NewLine } from "./lib/new-lines.ts";
 import type { UnreadCounts } from "./lib/inbox-items.ts";
 import { createInboxItems } from "./lib/inbox-items.ts";
 import { refusalOf } from "../sdk/index.ts";
+import { withNewLines } from "./lib/new-lines.ts";
 
 /**
  * The counts by channel name, as far as they have loaded, and the inbox items they count, oldest first; a channel with
@@ -39,6 +43,12 @@ export interface Unread {
   readonly subscribe: (listener: () => void) => () => void;
   /** The current snapshot: a new object whenever a count changes, the same one until then. */
   readonly snapshot: () => UnreadState;
+  /**
+   * Where the "New" line goes in a channel's top-level messages (`thread` is `null`) or a thread's replies: the
+   * first message there that was unread when its first reader subscribed, once the counts have loaded. It stays put
+   * while anyone reads it, though the view's own ack reads that message, and is read afresh when it is opened again.
+   */
+  readonly newLine: (channel: ChannelName, thread: MessageId | null) => NewLine;
 }
 
 /** What the unread store is made with: an SDK client with the token of whoever is looking, and the live stream. */
@@ -91,7 +101,7 @@ export function createUnread(options: UnreadOptions): Unread {
     }
   }
 
-  return {
+  return withNewLines<Pick<Unread, "snapshot" | "subscribe">>({
     snapshot: () => current,
     subscribe: (listener) => {
       listeners.add(listener);
@@ -100,7 +110,8 @@ export function createUnread(options: UnreadOptions): Unread {
         listeners.delete(listener);
       };
     },
-  };
+  });
 }
 
 export type { UnreadCounts } from "./lib/inbox-items.ts";
+export type { NewLine } from "./lib/new-lines.ts";

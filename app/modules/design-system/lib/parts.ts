@@ -40,6 +40,7 @@ interface TextAreaParts extends TextFieldParts {
   readonly choosing: boolean;
   readonly onPick: () => void;
   readonly onMove: (direction: "down" | "up") => void;
+  readonly focused: boolean;
 }
 
 interface SuggestionsParts {
@@ -144,6 +145,60 @@ interface RowTitleParts extends Parts {
   readonly marked: boolean;
 }
 
+interface MessageTimeParts {
+  readonly iso: string;
+  readonly short: string;
+  readonly full: string;
+}
+
+interface MessageLayoutParts extends Parts {
+  readonly name: string;
+  readonly agent: boolean;
+  readonly grouped: boolean;
+  readonly time: MessageTimeParts;
+  readonly actionHref: string | null;
+  readonly actionLabel: string;
+}
+
+interface MessageItemParts extends MessageLayoutParts {
+  readonly mark: "mention" | "open" | "none";
+  readonly day: string | null;
+  readonly unreadLine: boolean;
+}
+
+interface StandaloneMessageParts extends MessageItemParts {
+  readonly label: string;
+}
+
+interface MentionParts extends Parts {
+  readonly mine: boolean;
+}
+
+interface CallChipParts {
+  readonly command: string;
+  readonly label: string;
+  readonly value: unknown;
+}
+
+interface ChannelStartParts {
+  readonly title: string;
+  readonly description: string;
+}
+
+interface SeparatorParts {
+  readonly label: string;
+}
+
+interface MessageHeaderParts {
+  readonly name: string;
+  readonly agent: boolean;
+  readonly time: MessageTimeParts;
+}
+
+interface ShownTimeParts extends MessageTimeParts {
+  readonly hidden: boolean;
+}
+
 interface SkeletonParts {
   readonly width: "short" | "long";
 }
@@ -151,6 +206,16 @@ interface SkeletonParts {
 export type {
   AuthorParts,
   AvatarParts,
+  CallChipParts,
+  ChannelStartParts,
+  MentionParts,
+  MessageHeaderParts,
+  MessageLayoutParts,
+  MessageItemParts,
+  ShownTimeParts,
+  MessageTimeParts,
+  SeparatorParts,
+  StandaloneMessageParts,
   ButtonParts,
   ChoiceGroupParts,
   NavLinkParts,

@@ -1,34 +1,52 @@
+import { CallChip, DataToggle, MessageBody } from "../../design-system/index.tsx";
 import type { JsonValue, Message } from "../../sdk/index.ts";
-import { DataBlock } from "../../design-system/index.tsx";
+import { MentionText } from "./mention-text.tsx";
 import type { ReactNode } from "react";
 
 const TEXT = { data: "Data" } as const;
 
-interface Shown {
-  readonly label: string;
-  readonly value: JsonValue;
-}
-
 interface MessageDataProps {
   readonly message: Message;
+  readonly me: string;
+}
+
+interface Call {
+  readonly command: string;
+  readonly value: JsonValue;
 }
 
 function isJsonObject(value: JsonValue): value is Readonly<Record<string, JsonValue>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function shownData(text: string, data: JsonValue): Shown {
-  if (isJsonObject(data) && typeof data["command"] === "string" && text === `/${data["command"]}`) {
-    return { label: `Call to /${data["command"]}`, value: data["data"] ?? null };
+function callIn(data: JsonValue): Call | null {
+  if (isJsonObject(data) && typeof data["command"] === "string") {
+    return { command: data["command"], value: data["data"] ?? null };
   }
-  return { label: TEXT.data, value: data };
+  return null;
+}
+
+function callOf(message: Message): Call | null {
+  const call = callIn(message.data ?? null);
+  if (call === null || message.text !== `/${call.command}`) {
+    return null;
+  }
+  return call;
 }
 
 export function MessageData(props: MessageDataProps): ReactNode {
-  const { data = null, text } = props.message;
-  if (data === null) {
-    return null;
+  const { message } = props;
+  const { data = null } = message;
+  const call = callOf(message);
+  if (call !== null) {
+    return <CallChip command={message.text} label={`Call to /${call.command}`} value={call.value} />;
   }
-  const shown = shownData(text, data);
-  return <DataBlock label={shown.label} value={shown.value} />;
+  return (
+    <>
+      <MessageBody>
+        <MentionText me={props.me} message={message} />
+      </MessageBody>
+      {data !== null && <DataToggle label={TEXT.data} value={data} />}
+    </>
+  );
 }

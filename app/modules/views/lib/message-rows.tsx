@@ -1,19 +1,20 @@
-import { Alert, CardBody, LinkList, Muted, Skeleton } from "../../design-system/index.tsx";
+import { Alert, CardBody, ChannelStart, Skeleton } from "../../design-system/index.tsx";
 import type { ChannelMessages, ChannelMessagesState } from "../../board/index.ts";
-import type { ChannelName } from "../../sdk/index.ts";
-import { MessageRow } from "./message-row.tsx";
+import type { ChannelName, MessageId } from "../../sdk/index.ts";
+import { MessageStream } from "./message-stream.tsx";
 import { Older } from "./older.tsx";
 import type { ReactNode } from "react";
 import { ReadRefusal } from "./read-refusal.tsx";
 
-const NONE = 0;
-
-const TEXT = { empty: "No messages yet.", messages: "Messages" } as const;
+const TEXT = { messages: "Messages", start: "This is the start of the channel." } as const;
 
 interface MessageRowsProps {
   readonly channel: ChannelName;
   readonly messages: ChannelMessages;
   readonly state: ChannelMessagesState;
+  readonly me: string;
+  readonly open: MessageId | null;
+  readonly unreadFrom: MessageId | null;
 }
 
 export function MessageRows(props: MessageRowsProps): ReactNode {
@@ -32,21 +33,17 @@ export function MessageRows(props: MessageRowsProps): ReactNode {
   }
   return (
     <>
-      {state.hasMore && (
-        <CardBody>
-          <Older older={state.older} onLoad={handleLoad} />
-        </CardBody>
-      )}
-      {state.messages.length === NONE && (
-        <CardBody>
-          <Muted>{TEXT.empty}</Muted>
-        </CardBody>
-      )}
-      <LinkList label={TEXT.messages}>
-        {state.messages.map((message) => (
-          <MessageRow channel={channel} key={message.id} message={message} />
-        ))}
-      </LinkList>
+      {state.hasMore && <Older older={state.older} onLoad={handleLoad} />}
+      {!state.hasMore && <ChannelStart description={TEXT.start} title={`Welcome to #${channel}`} />}
+      <MessageStream
+        after={null}
+        channel={channel}
+        label={TEXT.messages}
+        me={props.me}
+        messages={state.messages}
+        open={props.open}
+        unreadFrom={props.unreadFrom}
+      />
       <ReadRefusal read={state.read} />
     </>
   );

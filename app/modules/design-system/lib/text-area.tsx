@@ -2,13 +2,14 @@ import { useCallback, useId, useLayoutEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import type { TextAreaParts } from "./parts.ts";
 import { useBoxKeys } from "./box-keys.ts";
+import { useFocusOnOpen } from "./focus-on-open.ts";
 
 const ROWS = 3;
 
 export function TextArea(parts: TextAreaParts): ReactNode {
-  const { caret, choosing, onEdit, onMove, onPick, value } = parts;
+  const { caret, choosing, focused, onEdit, onMove, onPick, value } = parts;
   const id = useId();
-  const box = useRef<HTMLTextAreaElement>(null);
+  const box = useFocusOnOpen(focused);
   const typed = useRef({ caret, value });
   const handleEdit = useCallback(() => {
     const element = box.current;
@@ -16,13 +17,13 @@ export function TextArea(parts: TextAreaParts): ReactNode {
       typed.current = { caret: element.selectionStart, value: element.value };
       onEdit(element.value, element.selectionStart);
     }
-  }, [onEdit]);
+  }, [box, onEdit]);
   const handleSend = useCallback(() => {
     const element = box.current;
     if (element !== null && element.form !== null) {
       element.form.requestSubmit();
     }
-  }, []);
+  }, [box]);
   const handleKeyDown = useBoxKeys({ choosing, onMove, onPick, onSend: handleSend });
   useLayoutEffect(() => {
     const element = box.current;
@@ -32,7 +33,7 @@ export function TextArea(parts: TextAreaParts): ReactNode {
     typed.current = { caret, value };
     element.focus();
     element.setSelectionRange(caret, caret);
-  }, [caret, value]);
+  }, [box, caret, value]);
   return (
     <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
       <label htmlFor={id}>{parts.label}</label>

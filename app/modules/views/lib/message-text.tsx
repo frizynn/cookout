@@ -4,6 +4,8 @@ import { MessageData } from "./message-data.tsx";
 import type { ReactNode } from "react";
 import { useIsAgent } from "./use-is-agent.ts";
 
+const NOBODY = "";
+
 interface MessageTextProps {
   readonly message: Message;
 }
@@ -14,8 +16,7 @@ export function MessageText(props: MessageTextProps): ReactNode {
   return (
     <>
       <Author agent={agent} name={message.author.name} shown={`@${message.author.name}`} />
-      <span className="text-sm whitespace-pre-wrap">{message.text}</span>
-      <MessageData message={message} />
+      <MessageData me={NOBODY} message={message} />
     </>
   );
 }

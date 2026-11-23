@@ -9,6 +9,7 @@ const TEXT = { missing: "No page has this address.", nothing: "Nothing here" } a
 interface RoutePanesProps {
   readonly route: Route;
   readonly stores: Stores;
+  readonly me: string;
 }
 
 export function RoutePanes(props: RoutePanesProps): ReactNode {
@@ -20,7 +21,16 @@ export function RoutePanes(props: RoutePanesProps): ReactNode {
     return <LoginView session={stores.session} />;
   }
   if (route.name === "channel" || route.name === "thread") {
-    return <ChannelPanes board={stores.board} composer={stores.composer} key={route.channel} route={route} />;
+    return (
+      <ChannelPanes
+        board={stores.board}
+        composer={stores.composer}
+        key={route.channel}
+        me={props.me}
+        route={route}
+        unread={stores.unread}
+      />
+    );
   }
   return <NotBuiltView description={TEXT.missing} title={TEXT.nothing} />;
 }

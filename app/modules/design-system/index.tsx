@@ -52,6 +52,19 @@
  * (`mention`, which stands out).
  */
 export { Alert } from "./lib/alert.tsx";
+export { CallChip } from "./lib/call-chip.tsx";
+export { ChannelStart } from "./lib/channel-start.tsx";
+export { DataToggle } from "./lib/data-toggle.tsx";
+export { DaySeparator } from "./lib/day-separator.tsx";
+export { Mention } from "./lib/mention.tsx";
+export { MessageBody } from "./lib/message-body.tsx";
+export { MessageItem } from "./lib/message-item.tsx";
+export { MessageList } from "./lib/message-list.tsx";
+export { NewLine } from "./lib/new-line.tsx";
+export { QuietButton } from "./lib/quiet-button.tsx";
+export { RepliesDivider } from "./lib/replies-divider.tsx";
+export { ReplyCount } from "./lib/reply-count.tsx";
+export { StandaloneMessage } from "./lib/standalone-message.tsx";
 export { AppShell } from "./lib/app-shell.tsx";
 export { Article } from "./lib/article.tsx";
 export { Author } from "./lib/author.tsx";

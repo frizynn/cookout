@@ -17,5 +17,5 @@ export function ReplyFooter(props: ReplyFooterProps): ReactNode {
   if (state.status !== "loaded") {
     return null;
   }
-  return <MessageBox draft={props.draft} onPost={handleReply} post={state.reply} text={REPLY_BOX} />;
+  return <MessageBox draft={props.draft} focused onPost={handleReply} post={state.reply} text={REPLY_BOX} />;
 }
