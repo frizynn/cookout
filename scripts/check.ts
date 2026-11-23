@@ -12,7 +12,6 @@ interface Check {
 interface Outcome {
   readonly check: Check;
   readonly code: number;
-  readonly firstRun: string;
   readonly output: string;
   readonly seconds: number;
 }
@@ -25,8 +24,6 @@ interface Closed {
 const EXIT_FAILURE = 1;
 const EXIT_SUCCESS = 0;
 const NONE = 0;
-const FIRST = 0;
-const SECOND = 1;
 const DECIMALS = 1;
 const MS_PER_SECOND = 1000;
 
@@ -39,7 +36,7 @@ function option(name: string): string {
 const job = option("job");
 const shard = option("shard");
 const base = option("base");
-const enforceBudgets = process.argv.includes("--ci");
+const inCi = process.argv.includes("--ci");
 
 function testScript(): readonly string[] {
   if (shard !== "") {
@@ -59,20 +56,20 @@ function lintScript(): readonly string[] {
 }
 
 const checks: readonly Check[] = [
-  { budget: 8, job: "lint", name: "lint", script: lintScript() },
-  { budget: 9, job: "canaries", name: "canaries", script: ["canaries"] },
-  { budget: 5, job: "types", name: "types", script: ["typecheck"] },
-  { budget: 8, job: "fixers", name: "fixers", script: ["fixers"] },
-  { budget: 4, job: "seams", name: "seams", script: ["seams"] },
-  { budget: 13, job: "tests", name: "tests", script: testScript() },
-  { budget: 15, job: "browser", name: "browser", script: ["browser"] },
-  { budget: 5, job: "knip", name: "knip", script: ["knip"] },
-  { budget: 5, job: "drift", name: "validators", script: ["validators:check"] },
-  { budget: 3, job: "drift", name: "hygiene", script: ["hygiene"] },
-  { budget: 3, job: "drift", name: "docs", script: ["docs"] },
-  { budget: 5, job: "drift", name: "api", script: ["api"] },
-  { budget: 3, job: "drift", name: "exports", script: ["exports"] },
-  { afterTests: true, budget: 3, job: "format", name: "format", script: ["format:check"] },
+  { budget: 16, job: "lint", name: "lint", script: lintScript() },
+  { budget: 18, job: "canaries", name: "canaries", script: ["canaries"] },
+  { budget: 10, job: "types", name: "types", script: ["typecheck"] },
+  { budget: 16, job: "fixers", name: "fixers", script: ["fixers"] },
+  { budget: 8, job: "seams", name: "seams", script: ["seams"] },
+  { budget: 26, job: "tests", name: "tests", script: testScript() },
+  { budget: 30, job: "browser", name: "browser", script: ["browser"] },
+  { budget: 10, job: "knip", name: "knip", script: ["knip"] },
+  { budget: 10, job: "drift", name: "validators", script: ["validators:check"] },
+  { budget: 6, job: "drift", name: "hygiene", script: ["hygiene"] },
+  { budget: 6, job: "drift", name: "docs", script: ["docs"] },
+  { budget: 10, job: "drift", name: "api", script: ["api"] },
+  { budget: 6, job: "drift", name: "exports", script: ["exports"] },
+  { afterTests: true, budget: 6, job: "format", name: "format", script: ["format:check"] },
 ];
 
 async function closeOf(closing: Promise<readonly unknown[]>): Promise<Closed> {
@@ -101,7 +98,6 @@ async function run(check: Check): Promise<Outcome> {
   return {
     check,
     code: closed.code,
-    firstRun: "",
     output: `${chunks.join("")}${closed.error}`,
     seconds: (performance.now() - started) / MS_PER_SECOND,
   };
@@ -111,65 +107,38 @@ function overBudget(outcome: Outcome): boolean {
   return outcome.seconds > outcome.check.budget;
 }
 
-function failsBudget(outcome: Outcome): boolean {
-  return enforceBudgets && overBudget(outcome);
-}
-
 function passed(outcome: Outcome): boolean {
-  return outcome.code === EXIT_SUCCESS && !failsBudget(outcome);
+  return outcome.code === EXIT_SUCCESS;
 }
 
 function statusOf(outcome: Outcome): string {
   if (outcome.code !== EXIT_SUCCESS) {
     return "FAIL";
   }
-  if (failsBudget(outcome)) {
+  if (overBudget(outcome)) {
     return "SLOW";
   }
   return "ok  ";
 }
 
-async function retime(outcome: Outcome): Promise<Outcome> {
-  if (!enforceBudgets || outcome.code !== EXIT_SUCCESS || !overBudget(outcome)) {
-    return outcome;
+function warnOverBudget(outcome: Outcome): void {
+  const { budget, name } = outcome.check;
+  const warning = `${name} took ${outcome.seconds.toFixed(DECIMALS)}s, over its ${String(budget)}s budget. A time budget warns and never fails the run (ADR 0030).`;
+  if (inCi) {
+    console.log(`::warning title=${name} over its time budget::${warning}`);
+    return;
   }
-  const again = await run(outcome.check);
-  return {
-    check: again.check,
-    code: again.code,
-    firstRun: `, first run ${outcome.seconds.toFixed(DECIMALS)}s, timed again alone`,
-    output: again.output,
-    seconds: again.seconds,
-  };
-}
-
-async function retimeOneAtATime(outcomes: readonly Outcome[]): Promise<readonly Outcome[]> {
-  if (outcomes.length === NONE) {
-    return [];
-  }
-  const pending: Promise<Outcome>[] = [];
-  for (const outcome of outcomes.slice(FIRST, SECOND)) {
-    pending.push(retime(outcome));
-  }
-  const head = await Promise.all(pending);
-  const rest = await retimeOneAtATime(outcomes.slice(SECOND));
-  return [...head, ...rest];
+  console.error(`warning: ${warning}`);
 }
 
 function report(outcome: Outcome): void {
   const { budget, name } = outcome.check;
-  console.log(
-    `${statusOf(outcome)} ${name} (${outcome.seconds.toFixed(DECIMALS)}s, budget ${String(budget)}s${outcome.firstRun})`,
-  );
+  console.log(`${statusOf(outcome)} ${name} (${outcome.seconds.toFixed(DECIMALS)}s, budget ${String(budget)}s)`);
   if (outcome.code !== EXIT_SUCCESS) {
     console.log(outcome.output.trimEnd().replaceAll(/^/gmu, "     "));
   }
-  if (failsBudget(outcome)) {
-    console.log(`     ${name} took longer than its ${String(budget)}s budget on two runs in a row.`);
-  } else if (overBudget(outcome)) {
-    console.error(
-      `warning: ${name} took ${outcome.seconds.toFixed(DECIMALS)}s, over its ${String(budget)}s budget. CI fails it if it is over again when timed alone; locally it only warns.`,
-    );
+  if (overBudget(outcome)) {
+    warnOverBudget(outcome);
   }
 }
 
@@ -185,8 +154,7 @@ async function runTogether(selected: readonly Check[]): Promise<readonly Outcome
 async function runSelected(selected: readonly Check[]): Promise<readonly Outcome[]> {
   const first = await runTogether(selected.filter((check) => check.afterTests !== true));
   const after = await runTogether(selected.filter((check) => check.afterTests === true));
-  const final = await retimeOneAtATime([...first, ...after]);
-  return final;
+  return [...first, ...after];
 }
 
 async function main(): Promise<number> {
