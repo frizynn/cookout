@@ -67,19 +67,23 @@ it("an agent's messages are drawn as an agent's and a human's as a human's, one 
 
   const message = await botThread();
   const close = openAt({ client: adminClient(), hash: `#/channels/web-avatars/threads/${String(message.id)}` });
-  const rows = [...(await messageRows()), ...(await threadRows())];
 
-  expect([
-    rows.map((row) => [row.agent, row.tagged]),
-    new Set(rows.filter((row) => row.tagged).map((row) => row.hue)).size,
-  ]).toStrictEqual([
-    [
-      ["true", true],
-      ["true", true],
-      ["false", false],
-    ],
-    ONE_COLOUR,
-  ]);
+  await expect
+    .poll(async () => {
+      const rows = [...(await messageRows()), ...(await threadRows())];
+      return [
+        rows.map((row) => [row.agent, row.tagged]),
+        new Set(rows.filter((row) => row.tagged).map((row) => row.hue)).size,
+      ];
+    })
+    .toStrictEqual([
+      [
+        ["true", true],
+        ["true", true],
+        ["false", false],
+      ],
+      ONE_COLOUR,
+    ]);
 
   close();
 });
@@ -92,12 +96,15 @@ it("a deleted author is drawn as an agent if the message carries an owner, else 
   await goneAuthors();
   const close = openAt({ client: adminClient(), hash: "#/channels/web-avatars-gone" });
 
-  const rows = await messageRows();
-
-  expect(rows.map((row) => [row.agent, row.tagged])).toStrictEqual([
-    ["true", true],
-    ["false", false],
-  ]);
+  await expect
+    .poll(async () => {
+      const rows = await messageRows();
+      return rows.map((row) => [row.agent, row.tagged]);
+    })
+    .toStrictEqual([
+      ["true", true],
+      ["false", false],
+    ]);
 
   close();
 });
