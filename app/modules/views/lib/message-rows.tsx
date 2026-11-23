@@ -50,6 +50,7 @@ export function MessageRows(props: MessageRowsProps): ReactNode {
         messages={state.messages}
         open={props.open}
         readPosition={props.readPosition}
+        reply={null}
         threads={threads}
       />
       <ReadRefusal read={state.read} />

@@ -4,23 +4,13 @@ import { MessageLayout } from "./message-layout.tsx";
 import { NewLine } from "./new-line.tsx";
 import type { ReactNode } from "react";
 import { messageClass } from "./message-class.ts";
-import { useCallback } from "react";
-import { useListener } from "./use-listener.ts";
+import { useRightClick } from "./use-right-click.ts";
 
 const FOCUSABLE = 0;
 
 export function MessageItem(parts: MessageItemParts): ReactNode {
-  const { menu } = parts;
-  const opened = useCallback(
-    (event: MouseEvent) => {
-      if (menu !== null) {
-        event.preventDefault();
-        menu.onOpen();
-      }
-    },
-    [menu],
-  );
-  const article = useListener<HTMLElement, "contextmenu">({ listener: opened, type: "contextmenu" });
+  const article = useRightClick(parts.menu);
+  const handleAction = parts.onAction;
   return (
     <li className="flex flex-col">
       {parts.day !== null && <DaySeparator label={parts.day} />}
@@ -42,6 +32,7 @@ export function MessageItem(parts: MessageItemParts): ReactNode {
           name={parts.name}
           nameHref={parts.nameHref}
           note={parts.note}
+          onAction={handleAction}
           time={parts.time}
         >
           {parts.children}

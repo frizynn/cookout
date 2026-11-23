@@ -1,4 +1,6 @@
 import { useCallback, useEffect } from "react";
+import { ITEM } from "./menu-item.ts";
+import { MenuAction } from "./menu-action.tsx";
 import type { MessageMenuParts } from "./menu-parts.ts";
 import type { ReactNode } from "react";
 import { useListener } from "./use-listener.ts";
@@ -9,12 +11,10 @@ const ESCAPE = "Escape";
 const FIRST_ITEM = "[role='menuitem']";
 const NOT_TABBED = -1;
 
-const ITEM =
-  "block w-full px-3 py-1.5 text-left text-xs text-foreground outline-none hover:bg-accent focus-visible:bg-accent";
-
 interface OpenMenuParts {
   readonly actionHref: string | null;
   readonly actionLabel: string;
+  readonly onAction: (() => void) | null;
   readonly menu: MessageMenuParts;
 }
 
@@ -40,6 +40,7 @@ export function MessageMenu(parts: OpenMenuParts): ReactNode {
   }, [box]);
   const handleClose = menu.onClose;
   const handleMarkUnread = menu.onMarkUnread;
+  const handleAction = parts.onAction;
   return (
     <div
       aria-label={TEXT.label}
@@ -52,6 +53,11 @@ export function MessageMenu(parts: OpenMenuParts): ReactNode {
         <a className={ITEM} href={parts.actionHref} onClick={handleClose} role="menuitem">
           {parts.actionLabel}
         </a>
+      )}
+      {parts.actionHref === null && handleAction !== null && (
+        <MenuAction menu={menu} onAction={handleAction}>
+          {parts.actionLabel}
+        </MenuAction>
       )}
       <button className={ITEM} onClick={handleMarkUnread} role="menuitem" type="button">
         {TEXT.markUnread}

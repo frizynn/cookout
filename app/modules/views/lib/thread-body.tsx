@@ -3,6 +3,7 @@ import type { MessageMenu, ThreadNews } from "../../unread/index.ts";
 import type { MessageId } from "../../sdk/index.ts";
 import { MessageStream } from "./message-stream.tsx";
 import type { ReactNode } from "react";
+import type { Reply } from "./use-message-menu.ts";
 import { StandaloneEntry } from "./standalone-entry.tsx";
 import type { ThreadMessagesState } from "../../board/index.ts";
 import { replies } from "./message-marks.ts";
@@ -17,6 +18,7 @@ interface ThreadBodyProps {
   readonly me: string;
   readonly readPosition: number | null;
   readonly menu: MessageMenu;
+  readonly reply: Reply;
 }
 
 export function ThreadBody(props: ThreadBodyProps): ReactNode {
@@ -34,7 +36,7 @@ export function ThreadBody(props: ThreadBodyProps): ReactNode {
   }
   return (
     <>
-      <StandaloneEntry label={TEXT.parent} me={props.me} message={state.parent} />
+      <StandaloneEntry label={TEXT.parent} me={props.me} menu={props.menu} message={state.parent} reply={props.reply} />
       <RepliesDivider>{replies(state.replies.length)}</RepliesDivider>
       {state.replies.length === NONE && (
         <CardBody>
@@ -50,6 +52,7 @@ export function ThreadBody(props: ThreadBodyProps): ReactNode {
         messages={state.replies}
         open={null}
         readPosition={props.readPosition}
+        reply={props.reply}
         threads={NO_THREADS}
       />
       {state.read.status === "failed" && (

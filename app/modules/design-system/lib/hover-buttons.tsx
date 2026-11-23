@@ -1,16 +1,17 @@
-import { HoverAction } from "./hover-action.tsx";
 import type { HoverActionsParts } from "./menu-parts.ts";
+import { MessageAction } from "./message-action.tsx";
 import { MoreActions } from "./more-actions.tsx";
 import type { ReactNode } from "react";
 
 export function HoverButtons(parts: HoverActionsParts): ReactNode {
-  const { actionHref, menu } = parts;
-  if (actionHref === null && menu === null) {
+  const { actionHref, menu, onAction } = parts;
+  if (actionHref === null && onAction === null && menu === null) {
     return null;
   }
+  const handleAction = onAction;
   return (
     <div className="invisible absolute top-1 right-4 flex gap-1 group-focus-within:visible group-hover:visible">
-      {actionHref !== null && <HoverAction href={actionHref}>{parts.actionLabel}</HoverAction>}
+      <MessageAction actionHref={actionHref} actionLabel={parts.actionLabel} onAction={handleAction} />
       {menu !== null && <MoreActions menu={menu} />}
     </div>
   );

@@ -4,16 +4,16 @@ type MarkUnread = (messageId: MessageId, onRefused: (refusal: Refusal) => void) 
 
 interface MessageMenu {
   readonly subscribe: (listener: () => void) => () => void;
-  readonly snapshot: () => MessageId | null;
+  readonly snapshot: () => string | null;
   readonly refusal: () => Refusal | null;
-  readonly open: (messageId: MessageId) => void;
+  readonly open: (key: string) => void;
   readonly close: () => void;
   readonly markUnread: (messageId: MessageId) => void;
 }
 
 function createMessageMenu(markUnread: MarkUnread): MessageMenu {
   const listeners = new Set<() => void>();
-  let opened: MessageId | null = null;
+  let opened: string | null = null;
   let refused: Refusal | null = null;
 
   function notify(): void {
@@ -22,7 +22,7 @@ function createMessageMenu(markUnread: MarkUnread): MessageMenu {
     }
   }
 
-  function show(next: MessageId | null): void {
+  function show(next: string | null): void {
     opened = next;
     notify();
   }

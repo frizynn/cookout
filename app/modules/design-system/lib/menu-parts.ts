@@ -8,6 +8,7 @@ interface MessageMenuParts {
 interface HoverActionsParts {
   readonly actionHref: string | null;
   readonly actionLabel: string;
+  readonly onAction: (() => void) | null;
   readonly menu: MessageMenuParts | null;
 }
 

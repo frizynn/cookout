@@ -42,6 +42,7 @@ interface TextAreaParts extends TextFieldParts {
   readonly onPick: () => void;
   readonly onMove: (direction: "down" | "up") => void;
   readonly focused: boolean;
+  readonly focusRequests?: number;
   readonly onClose: () => void;
 }
 
@@ -195,6 +196,7 @@ interface MessageLayoutParts extends Parts {
   readonly time: MessageTimeParts;
   readonly actionHref: string | null;
   readonly actionLabel: string;
+  readonly onAction: (() => void) | null;
   readonly menu: MessageMenuParts | null;
 }
 

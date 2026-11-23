@@ -8,7 +8,10 @@ function articleText(article: () => HTMLElement): string {
   for (const hidden of copy.querySelectorAll("time")) {
     hidden.remove();
   }
-  for (const action of within(copy).queryAllByRole("link", { name: "Reply" })) {
+  for (const action of [
+    ...within(copy).queryAllByRole("link", { name: "Reply" }),
+    ...within(copy).queryAllByRole("button", { name: "Reply" }),
+  ]) {
     action.remove();
   }
   return copy.textContent;

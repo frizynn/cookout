@@ -5,11 +5,12 @@ import type { ReactNode } from "react";
 
 export function HoverActions(parts: HoverActionsParts): ReactNode {
   const { actionHref, menu } = parts;
+  const handleAction = parts.onAction;
   return (
     <>
-      <HoverButtons actionHref={actionHref} actionLabel={parts.actionLabel} menu={menu} />
+      <HoverButtons actionHref={actionHref} actionLabel={parts.actionLabel} menu={menu} onAction={handleAction} />
       {menu !== null && menu.open && (
-        <MessageMenu actionHref={actionHref} actionLabel={parts.actionLabel} menu={menu} />
+        <MessageMenu actionHref={actionHref} actionLabel={parts.actionLabel} menu={menu} onAction={handleAction} />
       )}
     </>
   );
