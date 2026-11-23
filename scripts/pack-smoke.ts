@@ -6,6 +6,7 @@ import type { Readable } from "node:stream";
 import { createInterface } from "node:readline";
 import { fail } from "./lib/tools.ts";
 import { once } from "node:events";
+import packageJson from "../package.json" with { type: "json" };
 import path from "node:path";
 import { tmpdir } from "node:os";
 
@@ -161,6 +162,12 @@ function installTarball(): void {
   run("npm", ["install", "--no-audit", "--no-fund", "--loglevel=error", path.resolve(root, tarball)], install);
 }
 
+function printsPackageVersion(): void {
+  const printed = run(bin, ["--version"], install).trim();
+  const expected = `cookout v${packageJson.version}`;
+  check(printed === expected, `the installed cookout --version prints ${expected} (it printed ${printed})`);
+}
+
 function refusesWithoutAdminToken(): void {
   const args = withEnv({ COOKOUT_ADMIN_TOKEN: "", COOKOUT_DB: database }, bin, ["serve", "--port", "0"]);
   const result = spawnSync("env", args, { cwd: install, encoding: "utf8" });
@@ -218,6 +225,7 @@ function importSdk(): void {
 
 async function main(): Promise<void> {
   installTarball();
+  printsPackageVersion();
   refusesWithoutAdminToken();
   await boot();
   await restart();

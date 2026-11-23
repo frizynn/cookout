@@ -38,6 +38,8 @@
  * a `summary` such as `ada (login) at https://cookout.fly.dev`. A credentials file that isn't mode
  * 600 and yours, or is a symlink, is `credentials_unsafe`; one that can't be
  * read as one is `credentials_damaged`.
+ *
+ * `--version` prints `package.json`'s version, which the build inlines into the bundle (mattpocock/cookout#175).
  */
 import { CliError, Command } from "effect/cli";
 import { cookoutServer, serveCommand } from "./lib/server/serve.ts";
@@ -46,6 +48,7 @@ import { usageFailed, withJsonPresenter } from "./lib/server/output.ts";
 
 import { Effect } from "effect";
 import type { ServeLayers } from "./lib/server/serve.ts";
+import packageJson from "../../../package.json" with { type: "json" };
 import { verbCommands } from "./lib/server/verbs.ts";
 import { watchCommand } from "./lib/server/watch.ts";
 import { whoamiCommand } from "./lib/server/whoami.ts";
@@ -64,7 +67,7 @@ export const runCookout = (args: readonly string[], layers: ServeLayers) =>
       ...verbCommands,
       watchCommand,
     ]),
-    (command) => Command.runWith(command, { version: "0.0.0" })(args),
+    (command) => Command.runWith(command, { version: packageJson.version })(args),
     Effect.catchIf(CliError.isCliError, () => usageFailed),
     withJsonPresenter,
   );
