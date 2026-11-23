@@ -1,0 +1,12 @@
+# Inside an agent tool, a joined session beats COOKOUT_TOKEN
+
+2026-11-23 (mattpocock/cookout#150). Supersedes the credential precedence of [ADR 0046](0046-join-keys-by-agent-tool-session.md); the rest of ADR 0046 stands. That a joined agent tool session must not be overridden by `COOKOUT_TOKEN` is Matt's decision of 2026-11-23, recorded on #150. Putting `COOKOUT_SESSION` ahead of the joined session, the SDK's matching order, and the stderr note naming the joined agent only on `whoami` are chief-of-staff choices, pending Matt's review.
+
+Under ADR 0046 a set `COOKOUT_TOKEN` won, so an agent tool started with `env $(cat reviewer.env) claude`, as the docs advise, joined and then never used the join. That defeats the point of joining.
+
+- **Inside an agent tool**, first match wins: `COOKOUT_SESSION`, then the agent session this agent tool session joined, then `COOKOUT_TOKEN`. With none, every verb but `join`, `login` and `logout` is refused with `not_joined`, as before. Detection ignores `COOKOUT_ALLOW_HUMAN`, as before.
+- **`COOKOUT_SESSION` comes first** because #116's reasoning still holds for it: an explicit variable naming one agent session says who to act as, and a `--print-env` hand-off is for a subagent, which shares its parent's session ID and so its join. If the joined session won, every hand-off inside a joined session would act as the parent.
+- **`COOKOUT_TOKEN` is the fallback.** Inside an agent tool that hasn't joined it is sent as before, with `cookout-agent-tool`, so a human's token is still refused with `agent_as_human` ([ADR 0038](0038-a-human-token-from-an-agent-tool-is-refused-unless-overridden.md)). `join` still sends `COOKOUT_TOKEN`, then `COOKOUT_SESSION`, then the Login, so joining with an agent's token and joining with the person's Login (#119) are unchanged.
+- **Outside an agent tool** nothing changes: `COOKOUT_TOKEN`, then `COOKOUT_SESSION`, then the Login. CI, services and scripts keep working.
+- **The SDK matches**: its environment default is `COOKOUT_SESSION` before `COOKOUT_TOKEN` inside an agent tool, and the other way round outside one. It has no joined session to read.
+- **`whoami` names the source it used**, and when `COOKOUT_TOKEN` is set but a joined session was sent instead, says so once on stderr: `COOKOUT_TOKEN ignored: this session joined as release-bot`. Other verbs print nothing extra, so their stderr stays the JSON refusal callers parse.

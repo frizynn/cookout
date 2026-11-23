@@ -166,7 +166,8 @@ export const cookoutToken = Config.String("COOKOUT_TOKEN").pipe(Config.withDefau
 
 /**
  * `COOKOUT_SESSION`: an agent session token, such as one `cookout join --print-env` printed, that every CLI verb but
- * `serve` sends when `COOKOUT_TOKEN` is unset (mattpocock/cookout#116). Empty counts as unset.
+ * `serve` sends ahead of everything inside an agent tool, and when `COOKOUT_TOKEN` is unset outside one
+ * (mattpocock/cookout#150). Empty counts as unset.
  */
 export const cookoutSession = Config.String("COOKOUT_SESSION").pipe(Config.withDefault(""));
 

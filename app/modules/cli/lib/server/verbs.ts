@@ -190,8 +190,8 @@ const joinCommand: JoinCommand = Command.make(
   Command.withDescription(
     "Join as COOKOUT_TOKEN's own agent (a human identity never joins) for this agent tool session, such as one Claude " +
       "Code session and its subagents (CLAUDE_CODE_SESSION_ID): the server issues an agent session token, kept in " +
-      "COOKOUT_STATE_DIR (default ~/.local/state/cookout), and every later command in the session sends it, which " +
-      "moves its expiry on. A session joins once; outside an agent tool, join only with --print-env. An agent has one " +
+      "COOKOUT_STATE_DIR (default ~/.local/state/cookout), and every later command in the session sends it, even " +
+      "with COOKOUT_TOKEN set (only COOKOUT_SESSION comes first), which moves its expiry on. A session joins once; outside an agent tool, join only with --print-env. An agent has one " +
       "live agent session token: a second join is refused unless --force.",
   ),
 );
