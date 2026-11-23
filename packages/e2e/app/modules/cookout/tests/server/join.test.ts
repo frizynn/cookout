@@ -32,8 +32,8 @@ it.live("two agents each join through the cookout bin, and a second join on one 
 
     expect([first.identity.kind, second.identity.kind]).toStrictEqual(["agent", "agent"]);
     expect([firstJoin, secondJoin]).toMatchObject([
-      { ...joined, stdoutJson: { identity: "agent-1", source: "COOKOUT_TOKEN" } },
-      { ...joined, stdoutJson: { identity: "agent-2", source: "COOKOUT_TOKEN" } },
+      { ...joined, stdoutJson: { identity: first.identity.name, source: "COOKOUT_TOKEN" } },
+      { ...joined, stdoutJson: { identity: second.identity.name, source: "COOKOUT_TOKEN" } },
     ]);
     expect(`${firstJoin.stdout}${secondJoin.stdout}`).not.toContain("agentSessionToken");
     expect(again).toMatchObject({
