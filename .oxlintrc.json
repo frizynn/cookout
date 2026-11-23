@@ -791,10 +791,18 @@
         "app/dev.ts",
         "app/modules/*/server.ts",
         "app/modules/*/lib/server/**",
-        "app/modules/*/tests/server/**"
+        "app/modules/*/tests/server/**",
+        "packages/e2e/app/modules/*/server.ts",
+        "packages/e2e/app/modules/*/lib/server/**",
+        "packages/e2e/app/modules/*/tests/server/**"
       ],
       "rules": {
-        "typescript/promise-function-async": ["error", { "checkArrowFunctions": false }],
+        "typescript/promise-function-async": [
+          "error",
+          {
+            "checkArrowFunctions": false
+          }
+        ],
         "unicorn/no-array-method-this-argument": "off"
       }
     },
@@ -807,7 +815,8 @@
         "app/modules/testing/server.ts",
         "app/modules/testing/lib/server/**",
         "app/modules/dev/server.ts",
-        "app/modules/dev/lib/server/**"
+        "app/modules/dev/lib/server/**",
+        "packages/e2e/app/modules/**"
       ],
       "rules": {
         "effecttsgo/api-stability-leak": "off"
@@ -821,7 +830,14 @@
       }
     },
     {
-      "files": ["app/main.ts", "app/dev.ts", "app/web.tsx", "app/modules/*/*.ts", "app/modules/*/*.tsx"],
+      "files": [
+        "app/main.ts",
+        "app/dev.ts",
+        "app/web.tsx",
+        "app/modules/*/*.ts",
+        "app/modules/*/*.tsx",
+        "packages/e2e/app/modules/*/*.ts"
+      ],
       "rules": {
         "local/no-comments": [
           "error",
@@ -1109,7 +1125,8 @@
         "app/modules/*/lib/server/routes/**",
         "app/modules/storage/lib/server/**",
         "app/modules/cli/lib/server/lease-state.ts",
-        "app/modules/testing/lib/server/cli.ts"
+        "app/modules/testing/lib/server/cli.ts",
+        "packages/e2e/app/modules/cookout/lib/server/bin.ts"
       ],
       "rules": {
         "no-restricted-properties": [
@@ -1648,7 +1665,15 @@
       }
     },
     {
-      "files": ["scripts/**", "lint/**", "*.cjs", "vitest.config.ts", "tsdown.config.ts"],
+      "files": [
+        "scripts/**",
+        "lint/**",
+        "*.cjs",
+        "vitest.config.ts",
+        "tsdown.config.ts",
+        "packages/e2e/vitest.config.ts",
+        "packages/e2e/.dependency-cruiser.mjs"
+      ],
       "rules": {
         "effecttsgo/async-function": "off",
         "effecttsgo/crypto-random-uuid": "off",
@@ -1679,7 +1704,12 @@
       }
     },
     {
-      "files": ["vitest.config.ts", "tsdown.config.ts"],
+      "files": [
+        "vitest.config.ts",
+        "tsdown.config.ts",
+        "packages/e2e/vitest.config.ts",
+        "packages/e2e/.dependency-cruiser.mjs"
+      ],
       "rules": {
         "import/no-default-export": "off"
       }
