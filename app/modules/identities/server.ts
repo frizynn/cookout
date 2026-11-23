@@ -200,6 +200,13 @@ export { identityNotFound, nameParam } from "./lib/server/routes.ts";
 export { displayNameRoutes, displayNamesLayer } from "./lib/server/display-names.ts";
 
 /**
+ * `GET /v1/identities/:name` (any identity) and `PATCH /v1/identities/:name`, which sets or clears an agent's
+ * description (#189): the agent itself, its owner or an admin may (403 `not_owner` otherwise; a human, who has none,
+ * is 403 `identity_kind`). The `PATCH` needs `Caller`, which `requireToken` provides.
+ */
+export { descriptionRoutes } from "./lib/server/descriptions.ts";
+
+/**
  * The `IdentityChanges` hub: every route that creates an identity or changes one (its display name, admin flag,
  * owner, deactivating and reactivating) publishes the identity as it now is, and the live stream sends each on as an
  * `identity` event.

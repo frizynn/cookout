@@ -3,6 +3,7 @@ export type {
   Harness,
   CreateIdentityRequest,
   DeactivateIdentityResponse,
+  Description,
   DisplayName,
   HumanIdentity,
   Identity,
@@ -16,3 +17,4 @@ export type {
   SetDisplayNameRequest,
   Token,
 } from "../../identities/index.ts";
+export type { DescriptionCalls, UpdateIdentityRequest } from "../../identities/client.ts";

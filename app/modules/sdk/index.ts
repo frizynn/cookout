@@ -43,7 +43,7 @@ import type {
   ThreadResponse,
 } from "./lib/messages.ts";
 import { eventCalls, eventOf } from "./lib/events.ts";
-import type { ApprovalCalls } from "./lib/identities.ts";
+import type { CallsFromModules } from "./lib/identities.ts";
 import type { HealthResponse } from "../http/index.ts";
 import { agentSessionCalls } from "./lib/agent-sessions.ts";
 import { channelCalls } from "./lib/channels.ts";
@@ -110,7 +110,7 @@ export type CookoutClientOptions = {
   readonly harness?: string;
 };
 
-export type CookoutClient = ApprovalCalls & {
+export type CookoutClient = CallsFromModules & {
   /** `GET /v1/health`. Resolves when the server and its storage are usable. */
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */

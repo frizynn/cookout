@@ -4,7 +4,7 @@
  * constructors, the identity as the server shows it, the routes, and the
  * error codes bearer auth, the admin check and identity creation answer with.
  */
-import type { Description } from "./lib/description.ts";
+import type { Description } from "./client.ts";
 import type { IsoTime } from "../time/index.ts";
 
 declare const brand: unique symbol;
@@ -296,4 +296,4 @@ export const identityErrorCodes = [
   "login_request_not_found",
 ] as const;
 
-export { type Description, descriptionLength, identityPath, isDescription } from "./lib/description.ts";
+export { type Description, descriptionLength, identityPath, isDescription } from "./client.ts";

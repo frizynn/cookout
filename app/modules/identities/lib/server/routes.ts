@@ -1,4 +1,4 @@
-import { Array as Arr, Effect } from "effect";
+import { Array as Arr, Effect, Predicate } from "effect";
 import type { Caller, IdentityChanges } from "./auth.ts";
 import { CreateIdentityRequestSchema, createIdentity, humanCaller } from "./create.ts";
 import {
@@ -11,7 +11,7 @@ import {
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import type { Identity, IdentityName, ListIdentitiesQuery } from "../../index.ts";
 import { announced, issueToken, requireAdmin, requireOwnerOrAdmin } from "./auth.ts";
-import { identitiesPath, identityAdminPath, identityTokenPath, isIdentityName } from "../../index.ts";
+import { identitiesPath, identityAdminPath, identityPath, identityTokenPath, isIdentityName } from "../../index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
 import type { Secrets } from "../../../secrets/server.ts";
@@ -85,6 +85,23 @@ const listRoute: Route<Storage> = {
   path: identitiesPath,
 };
 
+const getRoute: Route<Storage> = {
+  handle: (params) =>
+    Effect.gen(function* getIdentityRoute() {
+      const name = yield* nameParam(params);
+      const storage = yield* Storage;
+      const found = yield* storage.findIdentityByName(name);
+      if (Predicate.isUndefined(found)) {
+        return yield* Effect.fail(identityNotFound(name));
+      }
+      const commands = yield* storage.listCommands;
+      const identity = flaggedIfHandler(found, new Set(Arr.map(commands, ({ handler }) => handler)));
+      return yield* HttpServerResponse.schemaJson(IdentityResponseSchema)({ identity });
+    }),
+  method: "GET",
+  path: identityPath,
+};
+
 const rotateRoute: Route<Caller | Storage | Secrets> = {
   handle: (params) =>
     Effect.gen(function* rotateTokenRoute() {
@@ -153,6 +170,7 @@ export const responseSchemas = {
 export const identityAdminRoutes: readonly Route<Caller | Storage | Secrets | IdentityChanges>[] = [
   createRoute,
   listRoute,
+  getRoute,
   rotateRoute,
   adminFlagRoute("PUT"),
   adminFlagRoute("DELETE"),
