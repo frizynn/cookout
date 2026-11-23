@@ -11,10 +11,15 @@ import { sqliteReactions } from "./reactions-sqlite.ts";
 
 type Opened = ReturnType<typeof openMigrated>;
 
-function openSqliteStorage(path: string): Effect.Effect<StorageService, Effect.Error<Opened>, Effect.Services<Opened>> {
+interface OpenedStorage {
+  readonly db: Effect.Success<Opened>;
+  readonly storage: StorageService;
+}
+
+function openSqliteStorage(path: string): Effect.Effect<OpenedStorage, Effect.Error<Opened>, Effect.Services<Opened>> {
   return Effect.gen(function* openStorage() {
     const db = yield* openMigrated(path);
-    return {
+    const storage: StorageService = {
       ...sqliteHealth(db),
       ...sqliteIdentitySections(db),
       ...sqliteChannels(db),
@@ -23,6 +28,7 @@ function openSqliteStorage(path: string): Effect.Effect<StorageService, Effect.E
       ...sqliteAgentSessionSections(db),
       ...sqliteCommands(db),
     };
+    return { db, storage };
   });
 }
 

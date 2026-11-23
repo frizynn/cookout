@@ -10,6 +10,7 @@ import { commandErrorCodes } from "../commands/index.ts";
 import { identityErrorCodes } from "../identities/index.ts";
 import { limitErrorCodes } from "../limits/index.ts";
 import { messageErrorCodes } from "../messages/index.ts";
+import { nudgeErrorCodes } from "../inbox/index.ts";
 import { presenceErrorCodes } from "../presence/index.ts";
 
 type Same<Left, Right> = [Left] extends [Right] ? ([Right] extends [Left] ? true : false) : false;
@@ -40,6 +41,7 @@ export const errorCodes = [
   ...identityErrorCodes,
   ...channelErrorCodes,
   ...messageErrorCodes,
+  ...nudgeErrorCodes,
   ...agentSessionErrorCodes,
   ...commandErrorCodes,
   ...limitErrorCodes,

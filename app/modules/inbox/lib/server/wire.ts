@@ -1,21 +1,26 @@
 import type {
+  AckAllRequest,
   AckAllResponse,
   AckResponse,
   FollowResponse,
   InboxHistoryItem,
+  InboxHistoryNudge,
   InboxHistoryResponse,
   InboxItem,
   InboxResponse,
   MarkUnreadResponse,
   MovedBackReadPosition,
+  Nudge,
+  NudgeResponse,
   ReadPosition,
   ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../index.ts";
 import { ChannelNameSchema, ChannelSchema } from "../../../channels/server.ts";
 import { MessageIdSchema, MessageSchema, ReactionSchema, TopLevelMessageSchema } from "../../../messages/server.ts";
+import { inboxReasons, isNudgeId, nudgeKinds } from "../../index.ts";
+import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
-import { inboxReasons } from "../../index.ts";
 import { matchesWire } from "../../../http/index.ts";
 
 const InboxReasonSchema = Schema.Literals(inboxReasons);
@@ -27,6 +32,25 @@ const inboxItemFields = {
   parent: TopLevelMessageSchema,
   reasons: Schema.Array(InboxReasonSchema),
 };
+
+const NudgeIdSchema = Schema.Int.pipe(Schema.refine(isNudgeId, { identifier: "NudgeId" }));
+
+const nudgeFields = {
+  channel: ChannelSchema,
+  id: NudgeIdSchema,
+  kind: Schema.Literals(nudgeKinds),
+  parent: TopLevelMessageSchema,
+  raisedAt: IsoTimeSchema,
+  text: Schema.String,
+};
+
+const NudgeSchema = matchesWire<Nudge>()(Schema.Struct(nudgeFields));
+
+const InboxHistoryNudgeSchema = matchesWire<InboxHistoryNudge>()(
+  Schema.Struct({ ...nudgeFields, read: Schema.Boolean }),
+);
+
+const NudgeResponseSchema = matchesWire<NudgeResponse>()(Schema.Struct({ nudge: InboxHistoryNudgeSchema }));
 
 const InboxHistoryItemSchema = matchesWire<InboxHistoryItem>()(
   Schema.Struct({ ...inboxItemFields, read: Schema.Boolean }),
@@ -57,19 +81,25 @@ export const ReadPositionsResponseSchema = matchesWire<ReadPositionsResponse>()(
 export const InboxItemSchema = matchesWire<InboxItem>()(Schema.Struct(inboxItemFields));
 
 export const InboxHistoryResponseSchema = matchesWire<InboxHistoryResponse>()(
-  Schema.Struct({ hasMore: Schema.Boolean, items: Schema.Array(InboxHistoryItemSchema) }),
+  Schema.Struct({
+    hasMore: Schema.Boolean,
+    items: Schema.Array(InboxHistoryItemSchema),
+    nudges: Schema.Array(InboxHistoryNudgeSchema),
+  }),
 );
 
 export const AckRequestSchema = Schema.Struct({ messageId: MessageIdSchema });
 
-export const AckAllRequestSchema = Schema.Struct({ upTo: MessageIdSchema });
+export const AckAllRequestSchema = matchesWire<AckAllRequest>()(
+  Schema.Struct({ nudgesUpTo: Schema.optionalKey(NudgeIdSchema), upTo: Schema.optionalKey(MessageIdSchema) }),
+);
 
 export const AckAllResponseSchema = matchesWire<AckAllResponse>()(
   Schema.Struct({ readPositions: Schema.Array(ReadPositionSchema) }),
 );
 
 export const InboxResponseSchema = matchesWire<InboxResponse>()(
-  Schema.Struct({ items: Schema.Array(InboxItemSchema) }),
+  Schema.Struct({ items: Schema.Array(InboxItemSchema), nudges: Schema.Array(NudgeSchema) }),
 );
 
 export const AckResponseSchema = matchesWire<AckResponse>()(Schema.Struct({ readPosition: ReadPositionSchema }));
@@ -83,3 +113,5 @@ export const SubscriptionResponseSchema = matchesWire<SubscriptionResponse>()(
 );
 
 export { PageQuerySchema as InboxHistoryQuerySchema } from "../../../messages/server.ts";
+
+export { NudgeIdSchema, NudgeResponseSchema, NudgeSchema };

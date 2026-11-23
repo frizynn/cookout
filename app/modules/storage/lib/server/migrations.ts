@@ -1,4 +1,5 @@
 import { Effect, FileSystem, Schema } from "effect";
+import { NUDGES_MIGRATION } from "./nudges-sqlite.ts";
 import { REACTIONS_MIGRATION } from "./reactions-sqlite.ts";
 import { READ_RECEIPTS_MIGRATION } from "./read-receipts-sqlite.ts";
 import type { Scope } from "effect";
@@ -185,6 +186,7 @@ const migrations: readonly string[] = [
   `ALTER TABLE presence ADD COLUMN offline_reason TEXT;
    ALTER TABLE presence ADD COLUMN ended_unexpectedly INTEGER CHECK (ended_unexpectedly IN (0, 1));`,
   "ALTER TABLE messages ADD COLUMN reopened_at TEXT;",
+  NUDGES_MIGRATION,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

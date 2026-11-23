@@ -1,7 +1,7 @@
 /**
  * The inbox on the backend: the `Inbox` service over `Storage`, and the
  * routes that read the caller's inbox, a page of its inbox history and its read positions, ack a message or the whole
- * inbox, mark a message unread, follow and unfollow a
+ * inbox, mark a message unread or a Nudge read, follow and unfollow a
  * thread, and subscribe to and unsubscribe from a channel. Each read position an ack moves is also
  * published to an in-process hub, which `acked` subscribes to, for live
  * updates. Routes sit
@@ -18,6 +18,7 @@ import {
   InboxResponseSchema,
   MarkUnreadRequestSchema,
   MarkUnreadResponseSchema,
+  NudgeResponseSchema,
   ReadPositionsResponseSchema,
   SubscriptionResponseSchema,
 } from "./lib/server/wire.ts";
@@ -29,6 +30,7 @@ import {
   inboxHistoryPath,
   inboxPath,
   markUnreadPath,
+  nudgeReadPath,
   readPositionsPath,
   subscriptionPath,
 } from "./index.ts";
@@ -102,10 +104,10 @@ const ackRoute: Route<Needs> = {
 const ackAllRoute: Route<Needs> = {
   handle: () =>
     Effect.gen(function* ackAllRouteHandler() {
-      const { upTo } = yield* HttpServerRequest.schemaBodyJson(AckAllRequestSchema, ALL_ERRORS);
+      const request = yield* HttpServerRequest.schemaBodyJson(AckAllRequestSchema, ALL_ERRORS);
       const caller = yield* Caller;
       const inbox = yield* Inbox;
-      const answer = yield* inbox.ackAll(caller, upTo);
+      const answer = yield* inbox.ackAll(caller, request);
       return yield* HttpServerResponse.schemaJson(AckAllResponseSchema)(answer);
     }),
   method: "POST",
@@ -123,6 +125,19 @@ const markUnreadRoute: Route<Needs> = {
     }),
   method: "POST",
   path: markUnreadPath,
+};
+
+const nudgeReadRoute: Route<Needs> = {
+  handle: (params) =>
+    Effect.gen(function* nudgeReadRouteHandler() {
+      const caller = yield* Caller;
+      const inbox = yield* Inbox;
+      const answer = yield* inbox.markNudgeRead(caller, String(params["id"]));
+      return yield* HttpServerResponse.schemaJson(NudgeResponseSchema)(answer);
+    }),
+  method: "PUT",
+  path: nudgeReadPath,
+  segments: { id: (segment) => DIGITS.test(segment) },
 };
 
 function followRoute(method: Change, change: "follow" | "unfollow"): Route<Needs> {
@@ -160,6 +175,7 @@ export { Inbox, inboxLayer } from "./lib/server/service.ts";
 export {
   InboxItemSchema,
   MovedBackReadPositionSchema,
+  NudgeSchema,
   ReadPositionSchema,
   SubscriptionResponseSchema,
 } from "./lib/server/wire.ts";
@@ -175,6 +191,7 @@ export const inboxRoutes: readonly Route<Needs>[] = [
   ackRoute,
   ackAllRoute,
   markUnreadRoute,
+  nudgeReadRoute,
   followRoute("PUT", "follow"),
   followRoute("DELETE", "unfollow"),
   subscriptionRoute("PUT", "subscribe"),
@@ -189,6 +206,7 @@ export const inboxResponseSchemas = {
   InboxHistoryResponse: InboxHistoryResponseSchema,
   InboxResponse: InboxResponseSchema,
   MarkUnreadResponse: MarkUnreadResponseSchema,
+  NudgeResponse: NudgeResponseSchema,
   ReadPositionsResponse: ReadPositionsResponseSchema,
   SubscriptionResponse: SubscriptionResponseSchema,
 };

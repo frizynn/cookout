@@ -1,4 +1,4 @@
-import type { AckAllResponse, AckResponse, ReadPosition } from "../../index.ts";
+import type { AckAllRequest, AckAllResponse, AckResponse, ReadPosition } from "../../index.ts";
 import type { AckedMessage, Storage, StorageUnavailable } from "../../../storage/server.ts";
 import { DateTime, Effect, Predicate } from "effect";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
@@ -29,7 +29,7 @@ interface AckHubs {
 
 interface AckCalls {
   readonly ack: (caller: Identity, id: MessageId) => Fails<AckResponse>;
-  readonly ackAll: (caller: Identity, upTo: MessageId) => Fails<AckAllResponse>;
+  readonly ackAll: (caller: Identity, request: AckAllRequest) => Fails<AckAllResponse>;
 }
 
 function orMessageNotFound<Value>(asked: string): (value: Value | undefined) => Fails<Value> {
@@ -58,8 +58,14 @@ function acksOn({ hubs, storage }: AcksOn): AckCalls {
         yield* readReceipts.publish(receipts);
         return { readPosition };
       }),
-    ackAll: (caller, upTo) =>
+    ackAll: (caller, { nudgesUpTo, upTo }) =>
       Effect.gen(function* ackInbox() {
+        if (Predicate.isNotUndefined(nudgesUpTo)) {
+          yield* storage.markNudgesReadUpTo(caller.name, nudgesUpTo);
+        }
+        if (Predicate.isUndefined(upTo)) {
+          return { readPositions: [] };
+        }
         const now = yield* DateTime.now;
         const { readPositions, receipts } = yield* storage.ackInbox(caller.name, upTo, isoTimeOf(now));
         yield* seenUpTo({ author: caller.name, storage, upTo });
