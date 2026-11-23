@@ -42,10 +42,13 @@ test("when the second person opens the thread, the first sees that they have see
   const annPage = await openAs({ browser, hash: opened.hash, token: opened.ann.token });
   const reply = annPage.getByRole("list", { name: "Replies" }).getByRole("article");
 
-  await expect(reply).toContainText(`Not seen yet: @${bob}`);
+  await reply.locator("time").focus();
+
+  await expect(annPage.getByRole("tooltip")).toContainText(`Not seen yet: @${bob}`);
+  await expect(reply).not.toContainText("Not seen yet");
 
   const bobPage = await openAs({ browser, hash: opened.hash, token: opened.bob.token });
 
   await expect(bobPage.getByRole("list", { name: "Replies" })).toContainText("Noon works");
-  await expect(reply).toContainText(`Seen by @${bob} just now`);
+  await expect(annPage.getByRole("tooltip")).toContainText(`Seen by @${bob} just now`);
 });

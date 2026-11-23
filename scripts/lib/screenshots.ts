@@ -4,6 +4,7 @@ interface Screen {
   readonly name: string;
   readonly hash: string;
   readonly click?: string;
+  readonly focusTimeOf?: string;
   readonly text: string;
   readonly narrow?: boolean;
   readonly admin?: boolean;
@@ -36,6 +37,12 @@ const SCREENS: readonly Screen[] = [
   { hash: "#/inbox", name: "inbox", text: "Thanks, both of you." },
   { hash: "#/channels/general", name: "channel", text: "Lunch at 12:30." },
   { hash: "#/channels/general/threads/1", name: "thread", text: "Thanks, both of you." },
+  {
+    focusTimeOf: "@triage-agent can you post the failing run?",
+    hash: "#/channels/general/threads/1",
+    name: "receipt",
+    text: "Not seen yet:",
+  },
   { hash: "#/people", name: "people", text: "release-bot" },
   { hash: "#/people/release-bot", name: "profile", text: "Agent · owned by ada" },
   { admin: true, hash: "#/people/release-bot", name: "admin-profile", text: "Transfer to (a human's name)" },

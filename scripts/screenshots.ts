@@ -146,6 +146,13 @@ async function render(page: Page, shot: Shot): Promise<void> {
   if (typeof shot.screen.click === "string") {
     await page.getByRole("button", { exact: true, name: shot.screen.click }).click({ timeout: RENDER_MS });
   }
+  if (typeof shot.screen.focusTimeOf === "string") {
+    await page
+      .getByRole("article")
+      .filter({ hasText: shot.screen.focusTimeOf })
+      .locator("time")
+      .focus({ timeout: RENDER_MS });
+  }
   await page.getByText(shot.screen.text).first().waitFor({ timeout: RENDER_MS });
 }
 

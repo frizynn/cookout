@@ -47,6 +47,7 @@ it("takes each standard screen in light and then in dark before the next screen"
       "inbox",
       "channel",
       "thread",
+      "receipt",
       "people",
       "profile",
       "admin-profile",
