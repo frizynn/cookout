@@ -1,3 +1,4 @@
+import type { AgentTool, Identity } from "../../../identities/index.ts";
 import { Array as Arr, Context, DateTime, Effect, Layer, Option, Predicate, PubSub, String as Str, pipe } from "effect";
 import type {
   Author,
@@ -12,7 +13,6 @@ import type { NewCommandCall, NewMessage, StorageUnavailable } from "../../../st
 import { mentionPattern, pageSize } from "../../index.ts";
 import { messageNotFound, replyInOtherChannel, replyOutsideCommandThread } from "./refusals.ts";
 import type { ChannelName } from "../../../channels/index.ts";
-import type { Identity } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Scope } from "effect";
@@ -27,6 +27,7 @@ interface PostMessage {
   readonly text: string;
   readonly data?: JsonValue;
   readonly replyTo?: MessageId;
+  readonly agentTool?: AgentTool;
 }
 
 interface PageQuery {
@@ -72,9 +73,17 @@ function unknownMentionsIn({ mentions, text }: Message): readonly string[] {
   return Arr.filter(mentionedNames(text), (name) => !Arr.some(mentions, (mentioned) => mentioned === name));
 }
 
-function newMessage(author: Identity, { channel, data, replyTo, text }: PostMessage, createdAt: IsoTime): NewMessage {
+function withAgentTool(message: NewMessage, agentTool: AgentTool | undefined): NewMessage {
+  if (Predicate.isUndefined(agentTool)) {
+    return message;
+  }
+  return { ...message, agentTool };
+}
+
+function newMessage(author: Identity, posting: PostMessage, createdAt: IsoTime): NewMessage {
+  const { agentTool, channel, data, replyTo, text } = posting;
   const mentions = Arr.filter(mentionedNames(text), isIdentityName);
-  const fields: NewMessage = { author: authorOf(author), channel, createdAt, mentions, text };
+  const fields = withAgentTool({ author: authorOf(author), channel, createdAt, mentions, text }, agentTool);
   if (Predicate.isUndefined(data)) {
     return withReplyTo(fields, replyTo);
   }

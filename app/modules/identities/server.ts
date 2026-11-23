@@ -5,8 +5,10 @@
  * never stored: only its hash, made by `Secrets`, goes into `Storage`.
  */
 import {
+  AgentToolSent,
   Caller,
   CommandThread,
+  agentToolOf,
   authenticate,
   credentialsOf,
   issueToken,
@@ -30,6 +32,11 @@ export { Caller };
  * posts such a request only as a reply in this thread.
  */
 export { CommandThread } from "./lib/server/auth.ts";
+/**
+ * The agent tool the request named in `cookout-agent-tool`, as a field to spread into a message to post: only an
+ * agent identity's request carries one (a human's is refused with 403 `agent_as_human`), and none without the header.
+ */
+export { sentAgentTool } from "./lib/server/auth.ts";
 
 export type IdentitiesService = {
   /**
@@ -64,7 +71,8 @@ export const identitiesLayer: Layer.Layer<Identities, never, Storage | Secrets> 
  * request's bearer token or, without one, its session cookie, and provides
  * its identity as `Caller`. Refuses
  * with 401 `token_missing`, `token_unknown`, `token_revoked` or `token_expired`. A command token gets 403
- * `outside_command_thread` on every route but `POST /v1/messages`, and its thread as `CommandThread`.
+ * `outside_command_thread` on every route but `POST /v1/messages`, and its thread as `CommandThread`. A human's
+ * token sent with `cookout-agent-tool` gets 403 `agent_as_human`; an agent's provides the tool as `AgentToolSent`.
  */
 export const requireToken: Gate<
   Caller,
@@ -75,12 +83,14 @@ export const requireToken: Gate<
     const identities = yield* Identities;
     const request = yield* HttpServerRequest.HttpServerRequest;
     const { commandThread, identity } = yield* identities.authenticate(credentialsOf(request));
+    const agentTool = yield* agentToolOf({ headers: request.headers, identity });
     if (Option.isSome(commandThread)) {
       yield* requireCommandRoute(request);
     }
     return yield* effect.pipe(
       Effect.provideService(Caller, identity),
       Effect.provideService(CommandThread, commandThread),
+      Effect.provideService(AgentToolSent, agentTool),
     );
   });
 

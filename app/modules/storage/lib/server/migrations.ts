@@ -105,6 +105,7 @@ const migrations: readonly string[] = [
      outcome TEXT NOT NULL CHECK (outcome IN ('pending', 'delivered', 'failed'))
    ) STRICT;
    CREATE INDEX deliveries_pending ON deliveries (outcome) WHERE outcome = 'pending';`,
+  "ALTER TABLE messages ADD COLUMN agent_tool TEXT;",
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

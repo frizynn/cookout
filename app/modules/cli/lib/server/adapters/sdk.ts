@@ -2,8 +2,9 @@ import type { CookoutClient, CookoutClientOptions, CookoutErrorCode } from "../.
 import { CookoutError, createCookoutClient } from "../../../../sdk/index.ts";
 import { Effect, Option, Predicate } from "effect";
 import type { LeaseState, LeaseStateFailure, LeaseStateFile, LeaseStateNeeds } from "../lease-state.ts";
-import { cookoutToken, cookoutUrl } from "../../../../config/server.ts";
+import { agentToolEnvironment, cookoutToken, cookoutUrl } from "../../../../config/server.ts";
 import type { CookoutConnection } from "../../../../config/index.ts";
+import { agentToolIn } from "../../../../config/index.ts";
 import { baseUrlOf } from "../../../../http/client.ts";
 import { leaseLost } from "../../../../leases/index.ts";
 import { leaseStateFile } from "../lease-state.ts";
@@ -71,11 +72,11 @@ function onLeaseLost({
     });
 }
 
-function connectionFrom(url: string, token: string): CookoutConnection {
+function connectionFrom(url: string, token: string, agentTool: { readonly agentTool?: string }): CookoutConnection {
   if (token === "") {
     return { url: baseUrlOf(url) };
   }
-  return { token, url: baseUrlOf(url) };
+  return { ...agentTool, token, url: baseUrlOf(url) };
 }
 
 function clientFor(connection: CookoutConnection): Effect.Effect<ClientWithLeaseState, CallFailure, LeaseStateNeeds> {
@@ -96,7 +97,8 @@ function withClient<Value>(
   return Effect.gen(function* callWithClient() {
     const url = yield* Effect.orDie(cookoutUrl);
     const token = yield* Effect.orDie(cookoutToken);
-    const opened = yield* clientFor(connectionFrom(url, token));
+    const markers = yield* Effect.orDie(agentToolEnvironment);
+    const opened = yield* clientFor(connectionFrom(url, token, agentToolIn(markers)));
     return yield* run(opened).pipe(Effect.catch(onLeaseLost(opened)));
   });
 }

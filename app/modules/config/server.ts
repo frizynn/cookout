@@ -3,7 +3,8 @@
  * reads the environment, and every variable here has a line in `.env.example`
  * and a line in the README's Settings section (`pnpm hygiene` checks both).
  */
-import { Config, Redacted, Schema } from "effect";
+import { Array as Arr, Config, Record as Rec, Redacted, Schema } from "effect";
+import { agentToolVariables } from "./index.ts";
 
 const SHORTEST_LEASE_SECONDS = 1;
 const DEFAULT_LEASE_SECONDS = 60;
@@ -135,6 +136,14 @@ export const cookoutUrl = Config.String("COOKOUT_URL").pipe(Config.withDefault("
 
 /** `COOKOUT_TOKEN`: the bearer token every CLI verb but `serve` sends. Empty counts as unset. */
 export const cookoutToken = Config.String("COOKOUT_TOKEN").pipe(Config.withDefault(""));
+
+/**
+ * The variables that show which agent tool runs the CLI (`CLAUDECODE` and `AI_AGENT` for Claude Code), and
+ * `COOKOUT_ALLOW_HUMAN`, as one environment for `agentToolIn`. Each defaults to empty.
+ */
+export const agentToolEnvironment: Config.Config<Readonly<Record<string, string>>> = Config.all(
+  Rec.fromEntries(Arr.map(agentToolVariables, (name) => [name, Config.String(name).pipe(Config.withDefault(""))])),
+);
 
 /** Why `cookout serve` refused `COOKOUT_ADMIN_TOKEN`, and how to set it. It never includes the value. */
 export { adminTokenRule };

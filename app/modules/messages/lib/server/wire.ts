@@ -6,8 +6,15 @@ import type {
   ThreadResponse,
   TopLevelMessage,
 } from "../../index.ts";
+import {
+  agentToolPattern,
+  identityNamePattern,
+  isAgentTool,
+  isIdentityName,
+  isOwner,
+  ownerLength,
+} from "../../../identities/index.ts";
 import { channelNamePattern, isChannelName } from "../../../channels/index.ts";
-import { identityNamePattern, isIdentityName, isOwner, ownerLength } from "../../../identities/index.ts";
 import { isMessageId, messageTextLength, pageSize } from "../../index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
@@ -39,7 +46,13 @@ const AuthorSchema = matchesWire<Author>()(
   Schema.Struct({ name: IdentityNameSchema, owner: Schema.optionalKey(OwnerSchema) }),
 );
 
+const agentToolRule = Schema.isPattern(agentToolPattern).abort();
+const AgentToolSchema = Schema.String.check(agentToolRule).pipe(
+  Schema.refine(isAgentTool, { identifier: "AgentTool" }),
+);
+
 const messageFields = {
+  agentTool: Schema.optionalKey(AgentToolSchema),
   author: AuthorSchema,
   channel: ChannelNameSchema,
   createdAt: IsoTimeSchema,

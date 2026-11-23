@@ -123,6 +123,31 @@ export const identityTokenPath = "/v1/identities/:name/token";
  */
 export const sessionPath = "/v1/session";
 
+/**
+ * The agent tool running a client's process, such as `claude-code`: 1–40 lowercase letters, digits or `-`. The CLI
+ * and the SDK send it in `cookout-agent-tool` when the process's environment shows such a tool runs it.
+ */
+export type AgentTool = Brand<"AgentTool">;
+
+/** The rule every agent tool's name follows, for the backend's Schemas. */
+export const agentToolPattern = /^[a-z0-9-]{1,40}$/u;
+
+/**
+ * Whether `value` follows the agent tool rule; if so, it is an `AgentTool`.
+ * @param value The string to check.
+ * @returns Whether `value` is an `AgentTool`.
+ */
+export function isAgentTool(value: string): value is AgentTool {
+  return agentToolPattern.test(value);
+}
+
+/**
+ * The header a client sends its agent tool in. A human identity's token sent with it is refused with 403
+ * `agent_as_human`, to catch an agent that inherited a person's token by accident; it is not a security boundary
+ * (ADR 0037). A message posted with it records the tool as `agentTool`.
+ */
+export const agentToolHeader = "cookout-agent-tool";
+
 /** The HttpOnly, SameSite=Strict cookie the web UI's requests carry instead of the bearer header. */
 export const sessionCookieName = "cookout_session";
 
@@ -137,6 +162,7 @@ export function isToken(value: string): value is Token {
 /**
  * The codes bearer auth (401), the admin check (403), login (403 `human_only`) and identity admin refuse with. A
  * command token past its 24 h is 401 `token_expired`; used outside its call's thread it is 403 `outside_command_thread`.
+ * A human's token sent from an agent tool (`cookout-agent-tool`) is 403 `agent_as_human`.
  */
 export const identityErrorCodes = [
   "token_missing",
@@ -144,6 +170,7 @@ export const identityErrorCodes = [
   "token_revoked",
   "token_expired",
   "outside_command_thread",
+  "agent_as_human",
   "admin_only",
   "human_only",
   "identity_exists",
