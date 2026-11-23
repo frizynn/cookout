@@ -1,0 +1,62 @@
+import { field, list, parseJson, text } from "./json.ts";
+import type { Command } from "./merge-steps.ts";
+import { run } from "./merge-steps.ts";
+
+interface Job {
+  readonly conclusion: string;
+  readonly name: string;
+  readonly status: string;
+}
+
+interface CheckRun {
+  readonly conclusion: string;
+  readonly jobs: readonly Job[];
+  readonly kind: "run";
+  readonly status: string;
+  readonly url: string;
+}
+
+interface Unreadable {
+  readonly args: readonly string[];
+  readonly kind: "unreadable";
+  readonly output: string;
+}
+
+interface Gh {
+  readonly cwd: string;
+  readonly gh: Command;
+}
+
+function jobsOf(values: readonly unknown[]): readonly Job[] {
+  return values.flatMap((value) => {
+    const name = text(field(value, "name"));
+    const status = text(field(value, "status"));
+    if (typeof name !== "string" || typeof status !== "string") {
+      return [];
+    }
+    return [{ conclusion: text(field(value, "conclusion")) ?? "", name, status }];
+  });
+}
+
+function checkRunOf(args: readonly string[], output: string): CheckRun | Unreadable {
+  const value = parseJson(output);
+  const jobs = list(field(value, "jobs"));
+  const status = text(field(value, "status"));
+  if (!Array.isArray(jobs) || typeof status !== "string") {
+    return { args, kind: "unreadable", output: "gh printed no status and jobs." };
+  }
+  const conclusion = text(field(value, "conclusion")) ?? "";
+  return { conclusion, jobs: jobsOf(jobs), kind: "run", status, url: text(field(value, "url")) ?? "" };
+}
+
+function readCheckRun({ cwd, gh, runNumber }: Gh & { readonly runNumber: number }): CheckRun | Unreadable {
+  const args = ["run", "view", String(runNumber), "--json", "status,conclusion,url,jobs"];
+  const ran = run(cwd, ...gh, ...args);
+  if (!ran.ok) {
+    return { args, kind: "unreadable", output: ran.output };
+  }
+  return checkRunOf(args, ran.output);
+}
+
+export type { CheckRun, Job, Unreadable };
+export { readCheckRun };
