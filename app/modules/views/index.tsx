@@ -6,8 +6,9 @@
  * channel, or says why it can't; `ChannelView` shows a channel's top-level
  * messages with their reply counts, newest last, with "Load more" for older
  * ones, and viewing it marks the channel read; `ThreadView` shows a thread's
- * parent message and its replies, oldest first, with a reply box, and opening
- * it marks the thread read; each links back up a level. `NotBuiltView` says
+ * parent message and its replies, oldest first, with a reply box that
+ * suggests identities to mention as `@` and a name are typed (the `composer`
+ * store), and opening it marks the thread read; each links back up a level. `NotBuiltView` says
  * a route has nothing to show.
  */
 export { ChannelListView } from "./lib/channel-list.tsx";

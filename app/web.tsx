@@ -6,6 +6,7 @@
  */
 import { CookoutApp } from "./modules/routes/index.tsx";
 import { createBoard } from "./modules/board/index.ts";
+import { createComposer } from "./modules/composer/index.ts";
 import { createCookoutClient } from "./modules/sdk/index.ts";
 import { createRoot } from "react-dom/client";
 import { createSession } from "./modules/session/index.ts";
@@ -19,5 +20,7 @@ if (root !== null) {
     client,
     clientWithToken: (token) => createCookoutClient({ env: {}, token, url }),
   });
-  createRoot(root).render(<CookoutApp board={createBoard({ client })} session={session} />);
+  createRoot(root).render(
+    <CookoutApp board={createBoard({ client })} composer={createComposer({ client })} session={session} />,
+  );
 }

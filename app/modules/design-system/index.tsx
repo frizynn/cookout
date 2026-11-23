@@ -11,8 +11,10 @@
  * read out by screen readers; `Skeleton` stands in while something loads.
  * `Form` hands one field's value to `onSubmit` without reloading the page;
  * `TextField` is a labelled secret input in it, such as a token, `TextArea` a
- * labelled box to write in, such as a reply, and
- * `SubmitButton` sends it; `Button` is any other button.
+ * labelled box to write in, such as a reply, whose text and caret its owner
+ * holds, and `SubmitButton` sends it; `Suggestions` is a named list of options
+ * to pick from under a box, such as mentions, which leaves the box focused;
+ * `Button` is any other button.
  */
 export { Alert } from "./lib/alert.tsx";
 export { AppShell } from "./lib/app-shell.tsx";
@@ -30,6 +32,7 @@ export { LinkList } from "./lib/link-list.tsx";
 export { LinkRow } from "./lib/link-row.tsx";
 export { Muted } from "./lib/muted.tsx";
 export { Skeleton } from "./lib/skeleton.tsx";
+export { Suggestions } from "./lib/suggestions.tsx";
 export { SubmitButton } from "./lib/submit-button.tsx";
 export { TextArea } from "./lib/text-area.tsx";
 export { TextField } from "./lib/text-field.tsx";
