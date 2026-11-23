@@ -71,3 +71,29 @@ it.effect("inside Claude Code with no Login and no token, join says to log in fi
     });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
+
+it.effect("join sends COOKOUT_SESSION before the Login, and with no COOKOUT_URL it says so", () =>
+  Effect.gen(function* joinPrecedence() {
+    const cookout = yield* TestCookout;
+    const grace = yield* cookout.createIdentity("grace", { kind: "human" });
+    const bot = yield* cookout.createIdentity("release-bot");
+    const { agentSessionToken } = yield* answer(() => bot.client.join({ as: "release-bot" }));
+    const terminal = { COOKOUT_URL: cookout.url, XDG_CONFIG_HOME: yield* configFolder };
+    const inClaudeCode = { CLAUDECODE: "1", CLAUDE_CODE_SESSION_ID: "s1", COOKOUT_STATE_DIR: yield* freshStateFolder };
+    yield* logIn(terminal, grace.token);
+    const envs: readonly Env[] = [
+      { ...terminal, ...inClaudeCode, COOKOUT_SESSION: agentSessionToken },
+      { ...terminal, ...inClaudeCode, COOKOUT_URL: "" },
+    ];
+    const results = yield* Effect.forEach(
+      envs,
+      (env) => runCookout({ args: ["join", "--as", "release-bot", "--print-env"], env }),
+      ONE_AT_A_TIME,
+    );
+
+    expect(results).toMatchObject([
+      { exitCode: EXIT_FAILURE, stderrJson: { error: { code: "agent_session_live" } } },
+      { exitCode: EXIT_FAILURE, stderrJson: { error: { code: "url_missing" } } },
+    ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
