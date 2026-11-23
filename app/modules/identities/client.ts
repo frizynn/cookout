@@ -48,3 +48,5 @@ export interface DescriptionCalls<Answer> {
    */
   readonly setDescription: (name: string, description: string | null) => Promise<Answer>;
 }
+
+export { deactivationWarning, deletionWarning, handledCommands } from "./lib/handler.ts";

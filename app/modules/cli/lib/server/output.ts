@@ -32,6 +32,10 @@ function printError(code: string, message: string): Effect.Effect<void> {
   return toLine({ error: { code, message } }).pipe(Effect.orDie, Effect.flatMap(Console.error));
 }
 
+function printWarning(warning: string): Effect.Effect<void> {
+  return toLine({ warning }).pipe(Effect.orDie, Effect.flatMap(Console.error));
+}
+
 function presentInvalid(event: CliOutput.Presenter.InvalidInvocation): Effect.Effect<void> {
   return Effect.gen(function* presentUsage() {
     const formatter = yield* CliOutput.Formatter;
@@ -87,6 +91,7 @@ export {
   exitCodeFor,
   printAnswer,
   printLine,
+  printWarning,
   refused,
   usageFailed,
   withJsonPresenter,
