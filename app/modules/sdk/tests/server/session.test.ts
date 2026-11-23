@@ -32,16 +32,17 @@ function withCookie(url: string, cookie: string): (call: Call) => Effect.Effect<
   return (call) => answer(() => request({ ...call, baseUrl: url, headers: { cookie } }));
 }
 
-it.effect("logging in with a human token answers with the identity", () =>
+it.effect("logging in and out with a human token answers with the identity", () =>
   Effect.gen(function* humanLogsIn() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     const response = yield* logIn(cookout.url, ada.token);
-    const viaSdk = yield* answer(ada.client.login);
+    const loggedIn = yield* answer(ada.client.login);
+    const loggedOut = yield* answer(ada.client.logout);
 
     expect(response.status).toBe(OK);
     expect(response.json).toStrictEqual({ identity: ada.identity });
-    expect(viaSdk).toStrictEqual({ identity: ada.identity });
+    expect([loggedIn, loggedOut]).toStrictEqual([{ identity: ada.identity }, { identity: ada.identity }]);
   }).pipe(Effect.provide(testCookout())),
 );
 
