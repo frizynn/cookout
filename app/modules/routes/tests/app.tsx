@@ -1,0 +1,60 @@
+import type { Board, BoardClient } from "../../board/index.ts";
+import type { CookoutClient, CreateIdentityRequest, Token } from "../../sdk/index.ts";
+import { CookoutApp } from "../index.tsx";
+import type { Session } from "../../session/index.ts";
+import { createBoard } from "../../board/index.ts";
+import { createCookoutClient } from "../../sdk/index.ts";
+import { createSession } from "../../session/index.ts";
+import { inject } from "vitest";
+import { render } from "@testing-library/react";
+
+type AppClient = BoardClient & Pick<CookoutClient, "whoami">;
+
+interface BoardOpening {
+  readonly hash: string;
+  readonly board: Board;
+  readonly session: Session;
+}
+
+interface Opening {
+  readonly hash: string;
+  readonly client: AppClient;
+  readonly pageSize?: number;
+  readonly session?: Session;
+}
+
+interface NewIdentity {
+  readonly client: CookoutClient;
+  readonly token: Token;
+}
+
+export function anonymousClient(): CookoutClient {
+  return createCookoutClient({ env: {}, url: inject("cookout").url });
+}
+
+export function clientWith(token: string): CookoutClient {
+  return createCookoutClient({ env: {}, token, url: inject("cookout").url });
+}
+
+export function adminClient(): CookoutClient {
+  return clientWith(inject("cookout").adminToken);
+}
+
+export function sessionOf(client: Pick<CookoutClient, "whoami">): Session {
+  return createSession({ client, clientWithToken: clientWith });
+}
+
+export async function newIdentity(request: CreateIdentityRequest): Promise<NewIdentity> {
+  const { token } = await adminClient().createIdentity(request);
+  return { client: clientWith(token), token };
+}
+
+export function openBoard(opening: BoardOpening): () => void {
+  globalThis.location.hash = opening.hash;
+  return render(<CookoutApp board={opening.board} session={opening.session} />).unmount;
+}
+
+export function openAt(opening: Opening): () => void {
+  const session = opening.session ?? sessionOf(opening.client);
+  return openBoard({ board: createBoard(opening), hash: opening.hash, session });
+}

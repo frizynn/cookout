@@ -1,15 +1,9 @@
-import type { CookoutClient, CreateChannelRequest } from "../../sdk/index.ts";
-import { expect, inject, it } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import type { Board } from "../../board/index.ts";
-import { CookoutApp } from "../index.tsx";
+import type { CookoutClient, CreateChannelRequest, ListChannelsResponse } from "../../sdk/index.ts";
+import { adminClient, clientWith, openAt, openBoard, sessionOf } from "./app.tsx";
+import { expect, it } from "vitest";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { createBoard } from "../../board/index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
-
-function adminClient(): CookoutClient {
-  const { adminToken, url } = inject("cookout");
-  return createCookoutClient({ env: {}, token: adminToken, url });
-}
 
 async function adminWithChannels(...channels: readonly CreateChannelRequest[]): Promise<CookoutClient> {
   const client = adminClient();
@@ -22,13 +16,33 @@ async function adminWithChannels(...channels: readonly CreateChannelRequest[]): 
   return client;
 }
 
-function openBoardAt(hash: string, board: Board): () => void {
-  globalThis.location.hash = hash;
-  return render(<CookoutApp board={board} />).unmount;
+interface Counted {
+  readonly calls: readonly string[];
+  readonly client: CookoutClient;
 }
 
-function openAt(hash: string, client: CookoutClient): () => void {
-  return openBoardAt(hash, createBoard(client));
+async function shownHrefs(): Promise<readonly (string | null)[]> {
+  const list = await screen.findByRole("list", { name: "Channels" });
+  const hrefs: (string | null)[] = [];
+  for (const link of within(list).getAllByRole("link")) {
+    hrefs.push(link.getAttribute("href"));
+  }
+  return hrefs;
+}
+
+function counting(client: CookoutClient): Counted {
+  const calls: string[] = [];
+  return {
+    calls,
+    client: {
+      ...client,
+      listChannels: async (): Promise<ListChannelsResponse> => {
+        calls.push("listChannels");
+        const answer = await client.listChannels();
+        return answer;
+      },
+    },
+  };
 }
 
 function shownLink(name: string): readonly (string | null)[] {
@@ -44,11 +58,11 @@ it("the channel list shows the channels the server has, each linking to its chan
     { name: "web-list-deploys" },
   );
   const { channels } = await client.listChannels();
-  const close = openAt("", client);
+  const close = openAt({ client, hash: "" });
 
-  const list = await screen.findByRole("list", { name: "Channels" });
+  const hrefs = await shownHrefs();
 
-  expect(within(list).getAllByRole("link")).toHaveLength(channels.length);
+  expect(hrefs).toStrictEqual(expect.arrayContaining(channels.map((channel) => `#/channels/${channel.name}`)));
   expect(shownLink("#web-list-general Where the web lists channels.")).toStrictEqual([
     "#web-list-generalWhere the web lists channels.",
     "#/channels/web-list-general",
@@ -61,7 +75,7 @@ it("the channel list shows the channels the server has, each linking to its chan
 it("following a channel's link opens that channel's route", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const close = openAt("#/", await adminWithChannels({ name: "web-link-target" }));
+  const close = openAt({ client: await adminWithChannels({ name: "web-link-target" }), hash: "#/" });
 
   fireEvent.click(await screen.findByRole("link", { name: "#web-link-target" }));
   const heading = await screen.findByRole("heading", { level: 1, name: "#web-link-target" });
@@ -80,21 +94,15 @@ it("coming back to the channel list shows the channels already loaded, without a
   expect.hasAssertions();
 
   const client = await adminWithChannels({ name: "web-loaded-once" });
-  const calls: string[] = [];
-  const board = createBoard({
-    listChannels: async () => {
-      calls.push("listChannels");
-      const answer = await client.listChannels();
-      return answer;
-    },
-  });
-  const closeFirst = openBoardAt("#/", board);
+  const counted = counting(client);
+  const opening = { board: createBoard({ client: counted.client }), hash: "#/", session: sessionOf(client) };
+  const closeFirst = openBoard(opening);
   await screen.findByRole("link", { name: "#web-loaded-once" });
   closeFirst();
 
-  const close = openBoardAt("#/", board);
+  const close = openBoard(opening);
 
-  expect([shownLink("#web-loaded-once"), calls]).toStrictEqual([
+  expect([shownLink("#web-loaded-once"), counted.calls]).toStrictEqual([
     ["#web-loaded-once", "#/channels/web-loaded-once"],
     ["listChannels"],
   ]);
@@ -105,8 +113,11 @@ it("coming back to the channel list shows the channels already loaded, without a
 it("the channel list shows the server's refusal when the token is refused", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const { url } = inject("cookout");
-  const close = openAt("#/", createCookoutClient({ env: {}, token: "cookout_not-a-real-token", url }));
+  const close = openAt({
+    client: clientWith("cookout_not-a-real-token"),
+    hash: "#/",
+    session: sessionOf(adminClient()),
+  });
 
   const alert = await screen.findByRole("alert");
 
@@ -118,7 +129,8 @@ it("the channel list shows the server's refusal when the token is refused", { ti
 it("the channel list says so when the server can't be reached", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const close = openAt("#/", createCookoutClient({ env: {}, token: "cookout_any", url: "http://127.0.0.1:1" }));
+  const client = createCookoutClient({ env: {}, token: "cookout_any", url: "http://127.0.0.1:1" });
+  const close = openAt({ client, hash: "#/", session: sessionOf(adminClient()) });
 
   const alert = await screen.findByRole("alert");
 
@@ -128,16 +140,16 @@ it("the channel list says so when the server can't be reached", { timeout: 5000 
 });
 
 it.each([
-  { hash: "#/login", heading: "Sign in" },
-  { hash: "#/channels/general", heading: "#general" },
   { hash: "#/channels/general/threads/1", heading: "Thread 1 in #general" },
   { hash: "#/no-such-page", heading: "Nothing here" },
-] as const)("$hash shows $heading, which isn't built yet", { timeout: 5000 }, (route) => {
+] as const)("$hash shows $heading", { timeout: 5000 }, async (route) => {
   expect.hasAssertions();
 
-  const close = openAt(route.hash, adminClient());
+  const close = openAt({ client: adminClient(), hash: route.hash });
 
-  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(route.heading);
+  const heading = await screen.findByRole("heading", { level: 1, name: route.heading });
+
+  expect(heading.textContent).toBe(route.heading);
 
   close();
 });
