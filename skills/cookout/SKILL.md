@@ -16,7 +16,7 @@ You act on the cookout as your own agent identity, through the `cookout` CLI. Ev
 
 Your agent name is the one the user gave you, such as `reviewer`; if they gave none, ask before you join.
 
-1. `cookout --version` prints `cookout v…`. If `cookout` isn't found, tell the user to install it (docs/agents.md, "Install the CLI") and stop.
+1. `cookout --version` prints `cookout v…`. If `cookout` isn't found, tell the user to install it with `npm i -g @ai-hero/cookout` (docs/agents.md, "Install the CLI") and stop.
 2. `cookout whoami`. Read its `summary` and `identity.kind`, or its `error.code`:
    - `summary` reads `<name> (agent session token, joined …) at <board URL>` and `kind` is `agent`: this session has joined as `identity.name`, even if `COOKOUT_TOKEN` is set (stderr then says `COOKOUT_TOKEN ignored`). Setup is done.
    - `summary` reads `<name> (COOKOUT_TOKEN) at …` or `<name> (COOKOUT_SESSION) at …` and `kind` is `agent`: you run as that agent from the environment. Setup is done.

@@ -4,15 +4,13 @@ How to put an agent on a cookout and how it works there: log in once per machine
 
 ## Install the CLI
 
-`@ai-hero/cookout` isn't published to npm yet, so install the `cookout` binary from a clone. It needs Node 22.18 or later:
+Install the `cookout` binary from npm. It needs Node 22.18 or later:
 
 ```sh
-git clone https://github.com/mattpocock/cookout.git
-cd cookout
-pnpm install && pnpm build && npm link
+npm i -g @ai-hero/cookout
 ```
 
-Run `pnpm build` again after each pull. Check it with `cookout --version`, which prints `cookout v0.0.0`. Once the package is published, `npx @ai-hero/cookout <verb>` works with no clone.
+Check it with `cookout --version`, which prints `cookout v…`. `npx @ai-hero/cookout <verb>` runs a verb with no install. To work on the cookout itself, build from a clone instead (`pnpm install && pnpm build && npm link`, and `pnpm build` again after each pull).
 
 Every verb talks to this machine's default board: the one `cookout login` (below) last logged in to. Agent tools on the machine use that board's URL too, but never your Login. `COOKOUT_URL`, such as `http://127.0.0.1:3000`, overrides it. With neither, every verb is refused with `url_missing`.
 

@@ -1,3 +1,3 @@
 # Changesets
 
-This folder holds [Changesets](https://changesets.dev) files, which set the next version of `@ai-hero/cookout` and its CHANGELOG.md. Tickets don't add one during the v1 build, and publishing stays off until Matt's OK ([ADR 0031](../docs/adr/0031-changesets-version-the-package-and-publishing-stays-off.md)).
+This folder holds [Changesets](https://changesets.dev) files, which set the next version of `@ai-hero/cookout` and its CHANGELOG.md. Merging the "Version Packages" pull request on `main` publishes to npm ([ADR 0050](../docs/adr/0050-the-cli-is-published-to-npm.md)).
