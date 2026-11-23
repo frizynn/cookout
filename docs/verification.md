@@ -140,6 +140,17 @@ The first terminal prints the event as soon as the post returns. Through the SDK
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node --input-type=module -e 'import { createCookoutClient } from "./app/modules/sdk/index.ts"; const events = await createCookoutClient().watch(); for await (const event of events) { console.log(JSON.stringify(event)); await events.close(); }'
 ```
 
+## Watch the inbox with the CLI
+
+`cookout watch` prints one stdout line per new inbox item, the moment it arrives, for Claude Code's Monitor tool (`cookout help monitor`). Watch as `triage-agent` in one terminal, and mention it as the admin in another:
+
+```sh
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts watch
+env $(cat /tmp/cookout-dev.env) node app/main.ts message post general "@triage-agent are you there?"
+```
+
+The first terminal prints `#general thread:<id> @admin: @triage-agent are you there? (msg <id>)`, where both IDs are the new message's, since it is top-level. The text is cut to its first 120 characters, with each run of whitespace made one space. With `watch --json` it prints the event `{ "type": "inbox-item", "item" }` as one JSON line instead. Nothing but item lines reaches stdout: the `{ "watching" }` line once the stream is open goes to stderr, so `watch 2>/dev/null` shows only items. Ctrl-C stops it.
+
 ## Drive it with the SDK
 
 The SDK is `@ai-hero/cookout/sdk`; from a checkout, import `app/modules/sdk/index.ts`. `createCookoutClient()` reads `COOKOUT_URL` and `COOKOUT_TOKEN`:

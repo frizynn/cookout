@@ -6,7 +6,8 @@
  * Layers on fresh stores, a store that is unusable). It runs `cookout`
  * command lines in the test's own process, `serve` included, with their
  * output captured, and runs the `cookout` binary as a process only where a
- * test is about the process itself, since each spawn costs a cold start.
+ * test is about the process itself, since each spawn costs a cold start;
+ * `watchCookoutBinary` reads a long-running command's stdout line by line.
  * Tests run effects with `@effect/vitest`, which provides `TestClock`: a
  * test cookout starts at `testStartTime`, and a lease's expiry moves with it.
  * `twoSessions` gives an identity two separate SDK sessions, and
@@ -29,7 +30,13 @@ export {
   startServe,
   startServeWithWeb,
 } from "./lib/server/cli.ts";
-export { type InterruptedDev, interruptDevBinary, runCookoutBinary } from "./lib/server/process.ts";
+export {
+  type InterruptedDev,
+  type Watched,
+  interruptDevBinary,
+  runCookoutBinary,
+  watchCookoutBinary,
+} from "./lib/server/process.ts";
 export { type IdentityFixtureOptions, identityFixture, identityName } from "./lib/server/identities.ts";
 export { type FixedAnswer, serverAnswering } from "./lib/server/fixed-answer.ts";
 export {
