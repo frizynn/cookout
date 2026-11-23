@@ -5,9 +5,15 @@ import type {
   InboxItemEvent,
   MessageEvent,
   ReadPositionEvent,
+  ReadPositionMovedBackEvent,
   SubscriptionEvent,
 } from "../../index.ts";
-import { InboxItemSchema, ReadPositionSchema, SubscriptionResponseSchema } from "../../../inbox/server.ts";
+import {
+  InboxItemSchema,
+  MovedBackReadPositionSchema,
+  ReadPositionSchema,
+  SubscriptionResponseSchema,
+} from "../../../inbox/server.ts";
 import { MessageIdSchema, MessageSchema } from "../../../messages/server.ts";
 import { ChannelSchema } from "../../../channels/server.ts";
 import { IdentitySchema } from "../../../identities/server.ts";
@@ -20,6 +26,10 @@ export const InboxItemEventSchema = matchesWire<InboxItemEvent>()(
 
 export const ReadPositionEventSchema = matchesWire<ReadPositionEvent>()(
   Schema.Struct({ readPosition: ReadPositionSchema, type: Schema.Literal("read-position") }),
+);
+
+export const ReadPositionMovedBackEventSchema = matchesWire<ReadPositionMovedBackEvent>()(
+  Schema.Struct({ readPosition: MovedBackReadPositionSchema, type: Schema.Literal("read-position-moved-back") }),
 );
 
 export const MessageEventSchema = matchesWire<MessageEvent>()(

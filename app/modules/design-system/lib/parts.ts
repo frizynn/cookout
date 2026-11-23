@@ -1,3 +1,4 @@
+import type { MessageMenuParts } from "./menu-parts.ts";
 import type { ReactNode } from "react";
 
 interface Parts {
@@ -194,6 +195,7 @@ interface MessageLayoutParts extends Parts {
   readonly time: MessageTimeParts;
   readonly actionHref: string | null;
   readonly actionLabel: string;
+  readonly menu: MessageMenuParts | null;
 }
 
 interface MessageItemParts extends MessageLayoutParts {

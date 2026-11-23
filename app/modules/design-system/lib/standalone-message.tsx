@@ -15,6 +15,7 @@ export function StandaloneMessage(parts: StandaloneMessageParts): ReactNode {
           agent={parts.agent}
           displayName={parts.displayName}
           grouped={parts.grouped}
+          menu={parts.menu}
           name={parts.name}
           nameHref={parts.nameHref}
           note={parts.note}

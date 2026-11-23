@@ -6,6 +6,8 @@ import type {
   InboxHistoryResponse,
   InboxItem,
   InboxResponse,
+  MarkUnreadResponse,
+  MovedBackReadPosition,
   ReadPosition,
   ReadPositionsResponse,
   SubscriptionResponse,
@@ -31,6 +33,20 @@ const InboxHistoryItemSchema = matchesWire<InboxHistoryItem>()(
 
 export const ReadPositionSchema = matchesWire<ReadPosition>()(
   Schema.Struct({ channel: ChannelNameSchema, messageId: MessageIdSchema, thread: Schema.NullOr(MessageIdSchema) }),
+);
+
+export const MovedBackReadPositionSchema = matchesWire<MovedBackReadPosition>()(
+  Schema.Struct({
+    channel: ChannelNameSchema,
+    messageId: Schema.NullOr(MessageIdSchema),
+    thread: Schema.NullOr(MessageIdSchema),
+  }),
+);
+
+export const MarkUnreadRequestSchema = Schema.Struct({ messageId: MessageIdSchema });
+
+export const MarkUnreadResponseSchema = matchesWire<MarkUnreadResponse>()(
+  Schema.Struct({ readPosition: MovedBackReadPositionSchema }),
 );
 
 export const ReadPositionsResponseSchema = matchesWire<ReadPositionsResponse>()(

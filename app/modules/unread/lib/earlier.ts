@@ -32,6 +32,7 @@ interface Earlier {
 
 interface LiveEarlier extends Earlier {
   readonly add: (item: InboxItem) => void;
+  readonly drop: (isUnreadAgain: (message: Message) => boolean) => void;
 }
 
 interface UnreadItems {
@@ -146,6 +147,21 @@ function addRead(pages: Pages, item: InboxItem): void {
   }
 }
 
+function dropRead(pages: Pages, isUnreadAgain: (message: Message) => boolean): void {
+  const progress = pages.progress();
+  const read = new Map(progress.read);
+  for (const item of progress.read.values()) {
+    if (isUnreadAgain(item.message)) {
+      read.delete(item.message.id);
+    }
+  }
+  pages.save({ ...progress, read });
+  const shown = pages.state();
+  if (shown.status === "loaded") {
+    pages.publish(loaded(pages, shown.more));
+  }
+}
+
 function createEarlier(options: EarlierOptions): LiveEarlier {
   const listeners = new Set<() => void>();
   let queue: Promise<void> | null = null;
@@ -170,6 +186,9 @@ function createEarlier(options: EarlierOptions): LiveEarlier {
   return {
     add: (item) => {
       addRead(pages, item);
+    },
+    drop: (isUnreadAgain) => {
+      dropRead(pages, isUnreadAgain);
     },
     loadMore: () => {
       queue = loadOlderAfter(queue, pages);

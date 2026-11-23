@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, Option, Predicate, String as Str, pipe } from "effect";
+import { Array as Arr, Effect, Option, Predicate, pipe } from "effect";
 import type { Channel, ChannelName } from "../../../channels/index.ts";
 import type {
   HistoryPageRequest,
@@ -8,22 +8,16 @@ import type {
   StoredHistoryPage,
   StoredInboxItem,
 } from "./inbox.ts";
-import type { InboxReason, ReadPosition } from "../../../inbox/index.ts";
+import type { InboxReason, MovedBackReadPosition, ReadPosition } from "../../../inbox/index.ts";
 import type { Message, MessageId, Reply, TopLevelMessage } from "../../../messages/index.ts";
 import { counted, threadIdOf } from "./messages.ts";
 import { followersOf, movedTo, newestPerScope, scopeOf } from "./inbox.ts";
+import { moveBackIn, readPositionsIn } from "./read-positions-memory.ts";
 import type { IdentityName } from "../../../identities/index.ts";
+import type { MemoryInbox } from "./inbox-memory-state.ts";
 import type { StorageUnavailable } from "./errors.ts";
-import { readPositionsIn } from "./read-positions-memory.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
-
-interface MemoryInbox {
-  readonly mentions: ReadonlySet<string>;
-  readonly follows: ReadonlySet<string>;
-  readonly subscriptions: ReadonlySet<string>;
-  readonly positions: ReadonlyMap<string, MessageId>;
-}
 
 interface MemoryBoard {
   readonly messages: readonly Message[];
@@ -58,13 +52,6 @@ interface Reading {
 }
 
 const NOTHING_READ = 0;
-
-const EMPTY_INBOX: MemoryInbox = {
-  follows: new Set(),
-  mentions: new Set(),
-  positions: new Map(),
-  subscriptions: new Set(),
-};
 
 function keyOf(identity: IdentityName, { channel, thread }: Scope): string {
   if (Predicate.isNull(thread)) {
@@ -183,17 +170,33 @@ function inboxItemOf(reading: Reading, id: MessageId): StoredInboxItem | undefin
   );
 }
 
-function ack({ board, id, identity }: Asking): Changed<ReadPosition> {
-  const { inbox } = board;
-  return Option.match(findIn(board, id), {
-    onNone: () => [Option.none(), inbox],
-    onSome: (message) => {
-      const key = keyOf(identity, scopeOf(message));
-      const position = movedTo({ current: inbox.positions.get(key), message });
-      return [Option.some(position), { ...inbox, positions: new Map([...inbox.positions, [key, position.messageId]]) }];
-    },
-  });
+interface PositionMoving {
+  readonly board: MemoryBoard;
+  readonly key: string;
+  readonly message: Message;
 }
+
+type PositionMove<Value> = (moving: PositionMoving) => readonly [Value, ReadonlyMap<string, MessageId>];
+
+function moving<Value>(move: PositionMove<Value>) {
+  return ({ board, id, identity }: Asking): Changed<Value> =>
+    Option.match(findIn(board, id), {
+      onNone: () => [Option.none(), board.inbox],
+      onSome: (message) => {
+        const [value, positions] = move({ board, key: keyOf(identity, scopeOf(message)), message });
+        return [Option.some(value), { ...board.inbox, positions }];
+      },
+    });
+}
+
+const ack = moving<ReadPosition>(({ board, key, message }) => {
+  const position = movedTo({ current: board.inbox.positions.get(key), message });
+  return [position, new Map([...board.inbox.positions, [key, position.messageId]])];
+});
+
+const moveBack = moving<MovedBackReadPosition>(({ board, key, message }) =>
+  moveBackIn({ key, message, messages: board.messages, positions: board.inbox.positions }),
+);
 
 interface AckingInbox {
   readonly board: MemoryBoard;
@@ -226,25 +229,6 @@ function follow(change: KeysChange) {
 }
 
 type MemoryInboxSection = InboxSection;
-
-interface ForgettingChannel {
-  readonly inbox: MemoryInbox;
-  readonly channel: ChannelName;
-  readonly ids: ReadonlySet<MessageId>;
-}
-
-function withoutChannel({ channel, ids, inbox }: ForgettingChannel): MemoryInbox {
-  const gone = [` channel ${channel}`, ...Arr.flatMap([...ids], (id) => [` thread ${id}`, ` message ${id}`])];
-  function kept(key: string): boolean {
-    return !Arr.some(gone, (scope) => Str.endsWith(scope)(key));
-  }
-  return {
-    follows: new Set(Arr.filter([...inbox.follows], kept)),
-    mentions: new Set(Arr.filter([...inbox.mentions], kept)),
-    positions: new Map(Arr.filter([...inbox.positions], ([key]: readonly [string, MessageId]) => kept(key))),
-    subscriptions: new Set(Arr.filter([...inbox.subscriptions], kept)),
-  };
-}
 
 function memoryInbox({ changeInbox, channelExists, listChannels, read }: BoardAccess): MemoryInboxSection {
   function changeFound<Value>(work: (board: MemoryBoard) => Changed<Value>): Fails<Value | undefined> {
@@ -284,10 +268,11 @@ function memoryInbox({ changeInbox, channelExists, listChannels, read }: BoardAc
           ),
         ),
       ),
+    moveReadPositionBack: (identity, id) => changeFound((board) => moveBack({ board, id, identity })),
     subscribeChannel: subscription(withKey),
     unfollowThread: (identity, id) => changeFound((board) => follow(withoutKey)({ board, id, identity })),
     unsubscribeChannel: subscription(withoutKey),
   };
 }
 
-export { EMPTY_INBOX, type MemoryInbox, type MemoryInboxSection, afterAppend, memoryInbox, withoutChannel };
+export { type MemoryInboxSection, afterAppend, memoryInbox };

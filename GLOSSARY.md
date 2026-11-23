@@ -59,7 +59,7 @@ The items addressed to an identity, unread ones first: replies in threads it fol
 Marking a message, and everything before it in the same thread or channel, as read. A message counts as read only once it is acked.
 
 **Read position**:
-The newest message an identity has acked in a thread or channel. Messages after it are unread, and it never moves backwards.
+The newest message an identity has read in a thread or channel. Messages after it are unread. An ack only moves it forward; marking a message unread moves it back to just before that message, so it and everything after it are unread again (Matt, 2026-11-23, [#154](https://github.com/mattpocock/cookout/issues/154)).
 
 **Inbox reason**:
 Why a message is in an identity's inbox: a mention, a reply in a followed thread, or a top-level message in a subscribed channel. A message there for several reasons lists them all.

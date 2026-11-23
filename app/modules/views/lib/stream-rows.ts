@@ -66,4 +66,3 @@ function streamRows(stream: StreamOf): readonly StreamRow[] {
 }
 
 export { streamRows };
-export type { StreamRow };

@@ -227,6 +227,14 @@ const ackCommand = Command.make("ack", { id: messageIdArgument }, ({ id }) => an
   Command.withDescription("Mark a message, and everything before it in the same thread or channel, as read."),
 );
 
+const unreadCommand = Command.make("unread", { id: messageIdArgument }, ({ id }) =>
+  answer((client) => client.markUnread(id)),
+).pipe(
+  Command.withDescription(
+    "Mark a message, and everything after it in the same thread or channel, as unread: the read position there moves back to just before it.",
+  ),
+);
+
 const followCommand = Command.make("follow", { id: messageIdArgument }, ({ id }) =>
   answer((client) => client.follow(id)),
 ).pipe(Command.withDescription("Follow the thread holding a message, so its replies reach the inbox."));
@@ -252,6 +260,7 @@ export const verbCommands = [
   leaveCommand,
   inboxCommand,
   ackCommand,
+  unreadCommand,
   followCommand,
   unfollowCommand,
   subscribeCommand,

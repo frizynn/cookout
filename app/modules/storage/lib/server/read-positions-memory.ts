@@ -1,6 +1,7 @@
 import { Array as Arr, Option, Order } from "effect";
 import type { Message, MessageId } from "../../../messages/index.ts";
-import type { ReadPosition } from "../../../inbox/index.ts";
+import type { MovedBackReadPosition, ReadPosition } from "../../../inbox/index.ts";
+import { movedBackTo, scopeOf } from "./inbox.ts";
 import type { Scope } from "./inbox.ts";
 
 const NO_THREAD = 0;
@@ -32,4 +33,33 @@ function readPositionsIn({ messages, positionOf }: PositionsIn): readonly ReadPo
   return Arr.sort(positions, byScope);
 }
 
-export { readPositionsIn };
+interface MovingBackIn {
+  readonly key: string;
+  readonly message: Message;
+  readonly messages: readonly Message[];
+  readonly positions: ReadonlyMap<string, MessageId>;
+}
+
+function inSameScope(first: Message, second: Message): boolean {
+  const [one, two] = [scopeOf(first), scopeOf(second)];
+  return one.channel === two.channel && one.thread === two.thread;
+}
+
+function moveBackIn({
+  key,
+  message,
+  messages,
+  positions,
+}: MovingBackIn): readonly [MovedBackReadPosition, ReadonlyMap<string, MessageId>] {
+  const earlier = Arr.filter(messages, (other) => other.id < message.id && inSameScope(other, message));
+  const previous = Option.getOrUndefined(Option.map(Arr.last(earlier), (other) => other.id));
+  const position = movedBackTo({ current: positions.get(key), message, previous });
+  const next = new Map(positions);
+  next.delete(key);
+  return [
+    position,
+    Option.match(Option.fromNullOr(position.messageId), { onNone: () => next, onSome: (id) => next.set(key, id) }),
+  ];
+}
+
+export { moveBackIn, readPositionsIn };

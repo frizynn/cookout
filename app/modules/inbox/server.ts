@@ -1,7 +1,7 @@
 /**
  * The inbox on the backend: the `Inbox` service over `Storage`, and the
  * routes that read the caller's inbox, a page of its inbox history and its read positions, ack a message or the whole
- * inbox, follow and unfollow a
+ * inbox, mark a message unread, follow and unfollow a
  * thread, and subscribe to and unsubscribe from a channel. Each read position an ack moves is also
  * published to an in-process hub, which `acked` subscribes to, for live
  * updates. Routes sit
@@ -16,6 +16,8 @@ import {
   InboxHistoryQuerySchema,
   InboxHistoryResponseSchema,
   InboxResponseSchema,
+  MarkUnreadRequestSchema,
+  MarkUnreadResponseSchema,
   ReadPositionsResponseSchema,
   SubscriptionResponseSchema,
 } from "./lib/server/wire.ts";
@@ -26,6 +28,7 @@ import {
   followPath,
   inboxHistoryPath,
   inboxPath,
+  markUnreadPath,
   readPositionsPath,
   subscriptionPath,
 } from "./index.ts";
@@ -109,6 +112,19 @@ const ackAllRoute: Route<Needs> = {
   path: ackAllPath,
 };
 
+const markUnreadRoute: Route<Needs> = {
+  handle: () =>
+    Effect.gen(function* markUnreadRouteHandler() {
+      const { messageId } = yield* HttpServerRequest.schemaBodyJson(MarkUnreadRequestSchema, ALL_ERRORS);
+      const caller = yield* Caller;
+      const inbox = yield* Inbox;
+      const answer = yield* inbox.markUnread(caller, messageId);
+      return yield* HttpServerResponse.schemaJson(MarkUnreadResponseSchema)(answer);
+    }),
+  method: "POST",
+  path: markUnreadPath,
+};
+
 function followRoute(method: Change, change: "follow" | "unfollow"): Route<Needs> {
   return {
     handle: (params) =>
@@ -140,8 +156,13 @@ function subscriptionRoute(method: Change, change: "subscribe" | "unsubscribe"):
 
 export { Inbox, inboxLayer } from "./lib/server/service.ts";
 
-/** The Schemas of an inbox item, a read position and a subscription, for the events that carry one. */
-export { InboxItemSchema, ReadPositionSchema, SubscriptionResponseSchema } from "./lib/server/wire.ts";
+/** The Schemas of an inbox item, a read position, a moved-back one and a subscription, for the events that carry one. */
+export {
+  InboxItemSchema,
+  MovedBackReadPositionSchema,
+  ReadPositionSchema,
+  SubscriptionResponseSchema,
+} from "./lib/server/wire.ts";
 
 /**
  * The inbox routes, for the server's route list. They need `Caller`, which the token gate provides, `Inbox`, which
@@ -154,6 +175,7 @@ export const inboxRoutes: readonly Route<Needs>[] = [
   readPositionsRoute,
   ackRoute,
   ackAllRoute,
+  markUnreadRoute,
   followRoute("PUT", "follow"),
   followRoute("DELETE", "unfollow"),
   subscriptionRoute("PUT", "subscribe"),
@@ -167,6 +189,7 @@ export const inboxResponseSchemas = {
   FollowResponse: FollowResponseSchema,
   InboxHistoryResponse: InboxHistoryResponseSchema,
   InboxResponse: InboxResponseSchema,
+  MarkUnreadResponse: MarkUnreadResponseSchema,
   ReadPositionsResponse: ReadPositionsResponseSchema,
   SubscriptionResponse: SubscriptionResponseSchema,
 };

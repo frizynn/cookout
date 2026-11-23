@@ -5,6 +5,7 @@ import type {
   InboxHistoryQuery,
   InboxHistoryResponse,
   InboxResponse,
+  MarkUnreadResponse,
   ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../inbox/index.ts";
@@ -14,6 +15,7 @@ import {
   followPath,
   inboxHistoryPath,
   inboxPath,
+  markUnreadPath,
   readPositionsPath,
   subscriptionPath,
 } from "../../inbox/index.ts";
@@ -23,6 +25,7 @@ import {
   isFollowResponse,
   isInboxHistoryResponse,
   isInboxResponse,
+  isMarkUnreadResponse,
   isReadPositionsResponse,
   isSubscriptionResponse,
 } from "./generated/validators.js";
@@ -38,6 +41,7 @@ interface InboxCalls {
   readonly readPositions: () => Promise<ReadPositionsResponse>;
   readonly ack: (messageId: MessageId) => Promise<AckResponse>;
   readonly ackAll: (upTo: MessageId) => Promise<AckAllResponse>;
+  readonly markUnread: (messageId: MessageId) => Promise<MarkUnreadResponse>;
   readonly follow: (messageId: MessageId) => Promise<FollowResponse>;
   readonly unfollow: (messageId: MessageId) => Promise<FollowResponse>;
   readonly subscribe: (channel: string) => Promise<SubscriptionResponse>;
@@ -87,6 +91,16 @@ function inboxCalls(server: ClientConnection): InboxCalls {
       });
       return page;
     },
+    markUnread: async (messageId) => {
+      const body = { messageId };
+      const moved = await send(server, {
+        body,
+        isExpected: isMarkUnreadResponse,
+        method: "POST",
+        path: markUnreadPath,
+      });
+      return moved;
+    },
     readPositions: async () => {
       const answer = await send(server, {
         isExpected: isReadPositionsResponse,
@@ -108,6 +122,7 @@ export type {
   InboxHistoryQuery,
   InboxHistoryResponse,
   InboxResponse,
+  MarkUnreadResponse,
   ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../inbox/index.ts";

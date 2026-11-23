@@ -7,7 +7,7 @@ import type {
   Placement,
 } from "./messages.ts";
 import { Array as Arr, Effect, Option, Predicate, Ref, pipe } from "effect";
-import { EMPTY_INBOX, afterAppend, memoryInbox, withoutChannel } from "./inbox-memory.ts";
+import { EMPTY_INBOX, withoutChannel } from "./inbox-memory-state.ts";
 import type {
   ListMessagesResponse,
   Message,
@@ -16,11 +16,13 @@ import type {
   ThreadResponse,
   TopLevelMessage,
 } from "../../../messages/index.ts";
-import type { MemoryInbox, MemoryInboxSection } from "./inbox-memory.ts";
+import { afterAppend, memoryInbox } from "./inbox-memory.ts";
 import { asMessageId, counted, isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { IdentitiesSection } from "./identities.ts";
 import type { MemoryChannelsSection } from "./channels.ts";
+import type { MemoryInbox } from "./inbox-memory-state.ts";
+import type { MemoryInboxSection } from "./inbox-memory.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isMessageId } from "../../../messages/index.ts";

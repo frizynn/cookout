@@ -1,6 +1,6 @@
-import { Array as Arr, Order, Predicate } from "effect";
+import { Array as Arr, Option, Order, Predicate } from "effect";
 import type { Channel, ChannelName } from "../../../channels/index.ts";
-import type { InboxItem, InboxReason, ReadPosition } from "../../../inbox/index.ts";
+import type { InboxItem, InboxReason, MovedBackReadPosition, ReadPosition } from "../../../inbox/index.ts";
 import type { Message, MessageId } from "../../../messages/index.ts";
 import type { Effect } from "effect";
 import type { IdentityName } from "../../../identities/index.ts";
@@ -39,6 +39,7 @@ interface InboxSection {
   readonly listInboxHistory: (identity: IdentityName, page: HistoryPageRequest) => Fails<StoredHistoryPage>;
   readonly ackMessage: (identity: IdentityName, id: MessageId) => Fails<ReadPosition | undefined>;
   readonly ackInbox: (identity: IdentityName, upTo: MessageId) => Fails<readonly ReadPosition[]>;
+  readonly moveReadPositionBack: (identity: IdentityName, id: MessageId) => Fails<MovedBackReadPosition | undefined>;
   readonly listReadPositions: (identity: IdentityName) => Fails<readonly ReadPosition[]>;
   readonly followThread: (identity: IdentityName, id: MessageId) => Fails<MessageId | undefined>;
   readonly unfollowThread: (identity: IdentityName, id: MessageId) => Fails<MessageId | undefined>;
@@ -59,6 +60,23 @@ function movedTo({ current, message }: Moving): ReadPosition {
     return { ...scopeOf(message), messageId: current };
   }
   return { ...scopeOf(message), messageId: message.id };
+}
+
+interface MovingBack {
+  readonly message: Message;
+  readonly current: MessageId | undefined;
+  readonly previous: MessageId | undefined;
+}
+
+const byId: Order.Order<MessageId> = Order.Number;
+
+function beforeIn(message: Message, previous: MessageId | undefined): Option.Option<MessageId> {
+  return Option.orElse(Option.fromUndefinedOr(previous), () => Option.fromNullOr(scopeOf(message).thread));
+}
+
+function movedBackTo({ current, message, previous }: MovingBack): MovedBackReadPosition {
+  const moved = Option.zipWith(Option.fromUndefinedOr(current), beforeIn(message, previous), Order.min(byId));
+  return { ...scopeOf(message), messageId: Option.getOrNull(moved) };
 }
 
 function scopeKeyOf({ channel, thread }: Scope): string {
@@ -99,6 +117,7 @@ export {
   type StoredHistoryPage,
   type StoredInboxItem,
   followersOf,
+  movedBackTo,
   movedTo,
   newestPerScope,
   reasonsIn,

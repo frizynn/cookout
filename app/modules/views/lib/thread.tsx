@@ -43,7 +43,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
       label={TEXT.thread}
     >
       <ScrollArea count={countOf(state)} label={TEXT.replies}>
-        <ThreadBody me={props.me} state={state} readPosition={readPosition} />
+        <ThreadBody me={props.me} menu={props.unread.menu} state={state} readPosition={readPosition} />
       </ScrollArea>
       <ReplyFooter
         draft={props.composer.draft(`${channel}/${String(props.thread)}`)}

@@ -9,12 +9,14 @@ interface Scope {
 
 type ReadPositionOf = (channel: ChannelName, thread: MessageId | null) => MessageId | null;
 
+type MovesBackOf = (channel: ChannelName, thread: MessageId | null) => number;
+
 interface CountsStore {
   readonly subscribe: (listener: () => void) => () => void;
   readonly snapshot: () => { readonly status: string };
 }
 
-type WithNewLines<Store> = Omit<Store, "readPosition"> & {
+type WithNewLines<Store> = Omit<Store, "movesBack" | "readPosition"> & {
   readonly newLine: (channel: ChannelName, thread: MessageId | null) => NewLine;
 };
 
@@ -26,21 +28,25 @@ interface NewLine {
 interface Lining {
   readonly counts: CountsStore;
   readonly readPosition: ReadPositionOf;
+  readonly movesBack: MovesBackOf;
   readonly scope: Scope;
 }
 
-function createNewLine({ counts, readPosition, scope }: Lining): NewLine {
+function createNewLine({ counts, movesBack, readPosition, scope }: Lining): NewLine {
   const listeners = new Set<() => void>();
   let line: MessageId | null = null;
   let taken = false;
+  let moves = NONE;
   let stop: (() => void) | null = null;
 
   function take(): void {
     const state = counts.snapshot();
-    if (taken || state.status !== "loaded") {
+    const movedBack = movesBack(scope.channel, scope.thread);
+    if ((taken && moves === movedBack) || state.status !== "loaded") {
       return;
     }
     taken = true;
+    moves = movedBack;
     line = readPosition(scope.channel, scope.thread);
     for (const listener of listeners) {
       listener();
@@ -66,9 +72,10 @@ function createNewLine({ counts, readPosition, scope }: Lining): NewLine {
   };
 }
 
-type Lines<Store> = Store & { readonly readPosition: ReadPositionOf };
+type Lines<Store> = Store & { readonly readPosition: ReadPositionOf; readonly movesBack: MovesBackOf };
 
 function withNewLines<Store extends CountsStore>({
+  movesBack,
   readPosition,
   ...counts
 }: Lines<Store>): WithNewLines<Lines<Store>> {
@@ -77,7 +84,7 @@ function withNewLines<Store extends CountsStore>({
     ...counts,
     newLine: (channel, thread) => {
       const key = `${channel}/${String(thread)}`;
-      const line = lines.get(key) ?? createNewLine({ counts, readPosition, scope: { channel, thread } });
+      const line = lines.get(key) ?? createNewLine({ counts, movesBack, readPosition, scope: { channel, thread } });
       lines.set(key, line);
       return line;
     },
