@@ -9,6 +9,7 @@ import {
   startDev,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
+import { relayCutPath, relayRestorePath } from "../../../http/index.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
 
 interface Fetched {
@@ -17,6 +18,7 @@ interface Fetched {
 }
 
 const OK = 200;
+const NO_CONTENT = 204;
 const EXIT_SUCCESS = 0;
 const EXIT_FAILURE = 1;
 const THREE_REPLIES = 3;
@@ -39,8 +41,8 @@ function databaseExists(database: string): Effect.Effect<boolean, never, FileSys
   });
 }
 
-function callWebhookFake(url: string): Effect.Effect<number> {
-  return HttpClient.execute(HttpClientRequest.post(`${url}/command`)).pipe(
+function postedStatus(url: string, path: string): Effect.Effect<number> {
+  return HttpClient.execute(HttpClientRequest.post(`${url}${path}`)).pipe(
     Effect.map(({ status }) => status),
     Effect.provide(FetchHttpClient.layer),
     Effect.orDie,
@@ -69,7 +71,7 @@ it.effect("pnpm dev serves a fresh board and a webhook fake, and removes its dat
     const { identity } = yield* answer(() =>
       createCookoutClient({ env: {}, token: dev.adminToken, url: dev.url }).whoami(),
     );
-    const fakeStatus = yield* callWebhookFake(dev.webhookFakeUrl);
+    const fakeStatus = yield* postedStatus(dev.webhookFakeUrl, "/command");
     const keptWhileRunning = yield* databaseExists(dev.database);
     yield* dev.stop;
     const keptAfterStop = yield* databaseExists(dev.database);
@@ -90,6 +92,18 @@ it.effect("pnpm dev serves the web UI from the Vite dev server, which passes /v1
     expect([page.status, health.status]).toStrictEqual([OK, OK]);
     expect(page.text).toContain('src="/app/web.tsx"');
     expect(health.text).toContain('"status":"ok"');
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
+it.effect("pnpm dev serves the web UI through a relay too, which a browser test can cut and restore", () =>
+  Effect.gen(function* devServesARelay() {
+    const dev = yield* startDev;
+    const cut = yield* postedStatus(dev.relayUrl, relayCutPath);
+    const restored = yield* postedStatus(dev.relayUrl, relayRestorePath);
+    const page = yield* fetchedText(dev.relayUrl);
+
+    expect([cut, restored, page.status]).toStrictEqual([NO_CONTENT, NO_CONTENT, OK]);
+    expect(page.text).toContain('src="/app/web.tsx"');
   }).pipe(Effect.provide(commandLineServices)),
 );
 

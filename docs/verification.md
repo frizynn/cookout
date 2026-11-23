@@ -14,6 +14,7 @@ Run it as a background command (or in its own terminal); it runs until stopped. 
 {
   "adminToken": "cookout_…",
   "database": "/tmp/cookout-dev-…/cookout.db",
+  "relayUrl": "http://127.0.0.1:44107",
   "url": "http://127.0.0.1:42435",
   "webhookFakeUrl": "http://127.0.0.1:43043",
   "webUrl": "http://127.0.0.1:5173",

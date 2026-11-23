@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 
 interface DevCookout {
   readonly adminToken: string;
+  readonly relayUrl: string;
   readonly webUrl: string;
 }
 
@@ -18,9 +19,9 @@ function fieldsOf(line: string): Readonly<Record<string, unknown>> {
 
 async function startLine(lines: AsyncIterable<string>): Promise<DevCookout> {
   for await (const line of lines) {
-    const { adminToken, webUrl } = fieldsOf(line);
-    if (typeof adminToken === "string" && typeof webUrl === "string") {
-      return { adminToken, webUrl };
+    const { adminToken, relayUrl, webUrl } = fieldsOf(line);
+    if (typeof adminToken === "string" && typeof relayUrl === "string" && typeof webUrl === "string") {
+      return { adminToken, relayUrl, webUrl };
     }
   }
   throw new Error("app/dev.ts start stopped before printing its start line");
@@ -32,6 +33,7 @@ async function setup(): Promise<() => Promise<void>> {
   process.env["COOKOUT_TOKEN"] = cookout.adminToken;
   process.env["COOKOUT_URL"] = cookout.webUrl;
   process.env["COOKOUT_ALLOW_HUMAN"] = "1";
+  process.env["COOKOUT_RELAY_URL"] = cookout.relayUrl;
   return async () => {
     dev.kill("SIGINT");
     await once(dev, "exit");

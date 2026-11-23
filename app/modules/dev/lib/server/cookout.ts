@@ -1,15 +1,16 @@
 import { Context, Effect, FileSystem, Layer, Path } from "effect";
 import { Secrets, secretsLive } from "../../../secrets/server.ts";
 import { WebhookFake, webhookFake } from "../../../webhook-fake/server.ts";
+import { cuttableRelay, serverUrl } from "../../../http/server.ts";
 import type { Scope } from "effect";
 import { cookoutServer } from "../../../cli/server.ts";
-import { serverUrl } from "../../../http/server.ts";
 import { sqliteStorage } from "../../../storage/server.ts";
 import { viteDevServer } from "./web.ts";
 
 interface DevCookout {
   readonly adminToken: string;
   readonly database: string;
+  readonly relayUrl: string;
   readonly url: string;
   readonly webhookFakeUrl: string;
   readonly webUrl: string;
@@ -38,7 +39,15 @@ function devCookout(port: number): Effect.Effect<DevCookout, never, Needs> {
     const fake = yield* Layer.build(webhookFake);
     const url = yield* Effect.provideContext(serverUrl, server);
     const webUrl = yield* viteDevServer(url);
-    return { adminToken, database, url, webUrl, webhookFakeUrl: Context.get(fake, WebhookFake).url };
+    const relay = yield* cuttableRelay(webUrl);
+    return {
+      adminToken,
+      database,
+      relayUrl: relay.url,
+      url,
+      webUrl,
+      webhookFakeUrl: Context.get(fake, WebhookFake).url,
+    };
   }).pipe(Effect.orDie);
 }
 
