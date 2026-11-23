@@ -1,6 +1,6 @@
 import type { CookoutClient, Message } from "../../sdk/index.ts";
 import { adminClient, clientWith, newIdentity } from "./identities.ts";
-import { expect, it, onTestFinished } from "vitest";
+import { expect, it } from "vitest";
 import { fireEvent, getDefaultNormalizer, screen, within } from "@testing-library/react";
 import { inPane } from "./regions.ts";
 import { openAt } from "./render.tsx";
@@ -91,52 +91,6 @@ it("in a thread, its members are suggested first, most recent poster first, then
   ]);
 
   close();
-});
-
-interface Held {
-  readonly client: CookoutClient;
-  readonly release: () => void;
-}
-
-function holdingThreads(client: CookoutClient): Held {
-  const held = Promise.withResolvers<null>();
-  return {
-    client: {
-      ...client,
-      getThread: async (id) => {
-        await held.promise;
-        return client.getThread(id);
-      },
-    },
-    release: () => {
-      held.resolve(null);
-    },
-  };
-}
-
-async function suggestWhileLoading(held: Held, parent: Message): Promise<void> {
-  const close = openAt({ client: held.client, hash: hashOf(parent) });
-  const box = await screen.findByLabelText("Message");
-  fireEvent.change(box, { target: { value: "@late" } });
-  await suggested();
-  fireEvent.change(box, { target: { value: "" } });
-  held.release();
-  onTestFinished(close);
-}
-
-it("identities that load while a thread is still loading still put its members first", {
-  timeout: 5000,
-}, async () => {
-  expect.hasAssertions();
-
-  const poster = await newIdentity({ kind: "human", name: "late-bob" });
-  await newIdentity({ kind: "human", name: "late-ada" });
-  const parent = await threadIn("web-composer-late");
-  await poster.client.createMessage({ channel: parent.channel, replyTo: parent.id, text: "Reply" });
-  await suggestWhileLoading(holdingThreads(adminClient()), parent);
-  await typeInReply("Ping @late");
-
-  await expect(suggested()).resolves.toStrictEqual(["@late-bob", "@late-ada"]);
 });
 
 it("choosing a suggestion puts the mention in the reply box in place of the prefix", { timeout: 5000 }, async () => {

@@ -29,11 +29,14 @@ function countOf(state: ThreadMessagesState): number {
   return state.replies.length;
 }
 
+function isLoaded(state: ThreadMessagesState): state is Extract<ThreadMessagesState, { status: "loaded" }> {
+  return state.status === "loaded";
+}
+
 function membersOf(state: ThreadMessagesState, me: string): readonly IdentityName[] {
-  if (state.status !== "loaded") {
-    return [];
-  }
-  const posters = [state.parent, ...state.replies].map((message) => message.author.name).toReversed();
+  const loaded = [state].filter((each) => isLoaded(each));
+  const posts = [...loaded.map((thread) => thread.parent), ...loaded.flatMap((thread) => thread.replies)];
+  const posters = posts.map((message) => message.author.name).toReversed();
   return [...new Set(posters)].filter((name) => name !== me);
 }
 
