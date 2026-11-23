@@ -6,7 +6,12 @@ import { UnreadChannelRow } from "./unread-channel-row.tsx";
 
 const NONE = 0;
 
-const TEXT = { byChannel: "Unread by channel", empty: "Nothing unread.", inbox: "Inbox" } as const;
+const TEXT = {
+  byChannel: "Unread by channel",
+  empty: "Nothing unread.",
+  inbox: "Inbox",
+  messages: "Unread messages",
+} as const;
 
 type ChannelCounts = readonly [string, UnreadCounts];
 
@@ -41,11 +46,17 @@ export function InboxBody(props: InboxBodyProps): ReactNode {
   const channels: readonly ChannelCounts[] = [...unread.channels].toSorted(byName);
   return (
     <>
+      <CardBody>
+        <Muted>{TEXT.byChannel}</Muted>
+      </CardBody>
       <LinkList label={TEXT.byChannel}>
         {channels.map(([channel, counts]) => (
           <UnreadChannelRow channel={channel} counts={counts} key={channel} />
         ))}
       </LinkList>
+      <CardBody>
+        <Muted>{TEXT.messages}</Muted>
+      </CardBody>
       <LinkList label={TEXT.inbox}>
         {unread.items.map((item) => (
           <InboxItemRow item={item} key={item.message.id} />
