@@ -3,8 +3,15 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     coverage: {
-      exclude: ["app/**/tests/**", "app/modules/sdk/lib/generated/**", "app/main.ts", "app/dev.ts"],
-      include: ["app/**/*.{ts,tsx}"],
+      exclude: [
+        "app/**/tests/**",
+        "packages/*/app/**/tests/**",
+        "packages/*/app/main.ts",
+        "app/modules/sdk/lib/generated/**",
+        "app/main.ts",
+        "app/dev.ts",
+      ],
+      include: ["app/**/*.{ts,tsx}", "packages/*/app/**/*.ts"],
       provider: "v8",
       thresholds: {
         autoUpdate: false,
@@ -14,7 +21,7 @@ export default defineConfig({
         statements: 99.76,
       },
     },
-    include: ["app/**/*.test.ts", "lint/**/*.test.js"],
+    include: ["app/**/*.test.ts", "packages/*/app/**/*.test.ts", "lint/**/*.test.js"],
     isolate: false,
   },
 });

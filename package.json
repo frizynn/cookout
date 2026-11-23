@@ -39,7 +39,7 @@
     "lint:baseline": "node scripts/lint-ratchet.ts --write",
     "canaries": "node scripts/canaries.ts",
     "fixers": "node scripts/check-fixers.ts",
-    "seams": "depcruise app scripts --cache node_modules/.cache/depcruise",
+    "seams": "depcruise app packages scripts --cache node_modules/.cache/depcruise",
     "format": "biome format --write .",
     "format:check": "biome ci --linter-enabled=false .",
     "knip": "knip --production --include exports,types,files,dependencies",

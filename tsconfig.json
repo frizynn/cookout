@@ -32,6 +32,7 @@
           "@effect/platform-node",
           "effect/cli",
           "effect/http",
+          "effect/crypto",
           "effect/process",
           "effect/FileSystem",
           "effect/Path",
@@ -45,5 +46,5 @@
       }
     ]
   },
-  "include": ["app", "scripts", "vitest.config.ts", "tsdown.config.ts"]
+  "include": ["app", "packages", "scripts", "vitest.config.ts", "tsdown.config.ts"]
 }

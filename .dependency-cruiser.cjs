@@ -8,6 +8,9 @@ const WEB = `^app/web\\.tsx$|^${R}/(design-system|session|board|unread|composer|
 const PUBLISHED_ENTRIES = ["app/main.ts", `${R}/sdk/index.ts`];
 const PUBLISHED_SDK = `${R}/sdk/index.ts`;
 const TESTED_INTERFACES = ["sdk", "cli", "storage", "webhook-fake", "dev"];
+const HANDLER_EXAMPLE = "packages/handler-example";
+const HANDLER_EXAMPLE_MODULES = `${HANDLER_EXAMPLE}/app/modules`;
+const HANDLER_EXAMPLE_TESTED_INTERFACES = ["handler"];
 const exactly = (file) => `^${file.replaceAll(".", String.raw`\.`)}$`;
 
 module.exports = {
@@ -45,11 +48,37 @@ module.exports = {
     {
       from: {
         path: String.raw`\.test\.tsx?$`,
-        pathNot: `^${R}/(${TESTED_INTERFACES.join("|")})/tests/`,
+        pathNot: [
+          `^${R}/(${TESTED_INTERFACES.join("|")})/tests/`,
+          `^${HANDLER_EXAMPLE_MODULES}/(${HANDLER_EXAMPLE_TESTED_INTERFACES.join("|")})/tests/`,
+        ],
       },
       name: "tests-only-at-tested-interfaces",
       severity: "error",
       to: {},
+    },
+    {
+      from: { path: `^${HANDLER_EXAMPLE}/` },
+      name: "handler-example-imports-only-the-sdk",
+      severity: "error",
+      to: {
+        path: [
+          `^(?!${HANDLER_EXAMPLE}/|node_modules/)[^/]+/`,
+          String.raw`/node_modules/@ai-hero/cookout/(?!app/modules/sdk/index\.ts$)`,
+        ],
+      },
+    },
+    {
+      from: { path: `^${HANDLER_EXAMPLE}/`, pathNot: `^${HANDLER_EXAMPLE_MODULES}/([^/]+)/tests/` },
+      name: "handler-example-tests-folder-is-private",
+      severity: "error",
+      to: { path: `^${HANDLER_EXAMPLE_MODULES}/[^/]+/tests/` },
+    },
+    {
+      from: { path: `^${HANDLER_EXAMPLE}/`, pathNot: `^${HANDLER_EXAMPLE_MODULES}/[^/]+/` },
+      name: "handler-example-entry-points-only",
+      severity: "error",
+      to: { path: `^${HANDLER_EXAMPLE_MODULES}/[^/]+/[^/]+/` },
     },
     {
       from: { pathNot: TESTS },
@@ -132,6 +161,7 @@ module.exports = {
     },
     exclude: { path: String.raw`^app/modules/sdk/lib/generated/validators\.d\.ts$` },
     parser: "swc",
+    preserveSymlinks: true,
     tsConfig: { fileName: "tsconfig.json" },
   },
 };
