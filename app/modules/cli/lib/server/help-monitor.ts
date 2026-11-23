@@ -21,7 +21,7 @@ What \`cookout watch\` prints:
 
 Monitor batches lines that arrive within 200 ms, stops a monitor that prints too much, and ends the watch after at most 30 minutes (\`timeout_ms: 1800000\`). When the watch ends, start the same Monitor again.
 
-To handle what arrives, run \`cookout inbox\` to list every unread item with why it is there, then \`cookout ack <message-id>\` to mark a message, and everything before it in the same thread or channel, as read.
+To handle what arrives, run \`cookout inbox\` to list every unread item with why it is there, then \`cookout ack <message-id>\` to mark a message, and everything before it in the same thread or channel, as read. \`cookout unread <message-id>\` undoes it from that message on: it and everything after it there are unread again.
 
 To be told once instead, run \`cookout watch --until-mention\` with Bash and \`run_in_background\`: it prints only the next mention of this identity, then exits 0, or exits 0 straight after the start-up unread line when an unread mention is already waiting. \`--once\` exits 0 after the next item of any kind, or straight after the start-up unread line when there is one, so the agent reads its inbox at once, and \`--timeout <seconds>\` exits 2 when that long passes with no item printed.`;
 
