@@ -11,12 +11,12 @@ import type {
 import type { InboxReason, ReadPosition } from "../../../inbox/index.ts";
 import type { Message, MessageId, TopLevelMessage } from "../../../messages/index.ts";
 import { followersOf, newestPerScope, reasonsIn, scopeOf } from "./inbox.ts";
+import { moveReadPositionBackIn, readPositionsIn } from "./read-positions-sqlite.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { inboxReasons } from "../../../inbox/index.ts";
 import { isMessageId } from "../../../messages/index.ts";
-import { readPositionsIn } from "./read-positions-sqlite.ts";
 import { threadIdOf } from "./messages.ts";
 import { unreadable } from "./errors.ts";
 
@@ -276,6 +276,15 @@ function sqliteInbox({ db, reader }: InboxOn): InboxSection {
       db
         .all(SUBSCRIBED_CHANNELS, identity)
         .pipe(Effect.flatMap((rows) => Effect.forEach(rows, (row) => toChannel(row), { concurrency: 1 }))),
+    moveReadPositionBack: (identity, id) =>
+      db.transaction(
+        Effect.flatMap(reader.findMessage(id), (message) => {
+          if (Predicate.isUndefined(message)) {
+            return Effect.undefined;
+          }
+          return moveReadPositionBackIn({ db, identity, message });
+        }),
+      ),
     subscribeChannel: changeSubscription(
       db,
       "INSERT OR IGNORE INTO subscriptions (identity_name, channel) VALUES (?, ?)",

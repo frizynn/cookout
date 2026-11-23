@@ -2,7 +2,8 @@
  * The inbox on the wire, shared by the server, the SDK and the web: what an
  * identity hasn't read yet and why each item is there, the ack that marks a
  * message and everything before it in its thread or channel as read, the
- * ack of the whole inbox up to the newest item the caller has seen,
+ * ack of the whole inbox up to the newest item the caller has seen, the
+ * mark unread that moves a read position back to just before a message,
  * the inbox history of read and unread items, following a thread and
  * subscribing to a channel, and their paths. They
  * refuse with the message, channel and agent session error codes.
@@ -93,6 +94,26 @@ export interface AckAllResponse {
   readonly readPositions: readonly ReadPosition[];
 }
 
+/** The body of a mark unread: the message to make unread again, with everything after it in its thread or channel. */
+export interface MarkUnreadRequest {
+  readonly messageId: MessageId;
+}
+
+/**
+ * A read position moved back by a mark unread: `messageId` is the newest message in the scope still read, `null` where
+ * none is. In a thread with no reply left read it is the top-level message.
+ */
+export interface MovedBackReadPosition {
+  readonly channel: ChannelName;
+  readonly thread: MessageId | null;
+  readonly messageId: MessageId | null;
+}
+
+/** The answer to a mark unread: the read position of the message's scope, which never moves forward. */
+export interface MarkUnreadResponse {
+  readonly readPosition: MovedBackReadPosition;
+}
+
 /** The answer to following or unfollowing: the thread, by its top-level message's ID. */
 export interface FollowResponse {
   readonly thread: MessageId;
@@ -119,6 +140,12 @@ export const ackPath = "/v1/ack";
 
 /** `POST /v1/inbox/ack-all`: acks, as one change, every inbox item up to a message, in every thread and channel. */
 export const ackAllPath = "/v1/inbox/ack-all";
+
+/**
+ * `POST /v1/read-positions/unread`: moves the read position of a message's thread or channel back to just before it, so
+ * it and everything after it there is unread again.
+ */
+export const markUnreadPath = "/v1/read-positions/unread";
 
 /** `PUT` follows and `DELETE` unfollows the thread holding the message. */
 export const followPath = "/v1/messages/:id/follow";
