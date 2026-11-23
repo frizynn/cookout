@@ -1,5 +1,7 @@
 import type { Board, BoardOptions } from "../../board/index.ts";
 import type { CookoutClient, CreateIdentityRequest, EventStream, Token } from "../../sdk/index.ts";
+import { cleanup, render, waitFor } from "@testing-library/react";
+import { expect, inject, onTestFinished } from "vitest";
 import type { Composer } from "../../composer/index.ts";
 import { CookoutApp } from "../index.tsx";
 import type { Live } from "../../live/index.ts";
@@ -11,9 +13,10 @@ import { createCookoutClient } from "../../sdk/index.ts";
 import { createLive } from "../../live/index.ts";
 import { createSession } from "../../session/index.ts";
 import { createUnread } from "../../unread/index.ts";
-import { inject } from "vitest";
-import { render } from "@testing-library/react";
 import { watchAdapter } from "../../testing/web.ts";
+
+const NONE = 0;
+const ONE = 1;
 
 type AppClient = BoardOptions["client"] & Pick<CookoutClient, "inbox" | "listIdentities" | "whoami">;
 
@@ -38,9 +41,44 @@ interface Watched {
   readonly stream: Promise<EventStream>;
 }
 
+interface Tracked {
+  readonly client: CookoutClient;
+  readonly settled: () => Promise<void>;
+}
+
 interface NewIdentity {
   readonly client: CookoutClient;
   readonly token: Token;
+  readonly rotateToken: () => Promise<void>;
+}
+
+function tracked(client: CookoutClient): Tracked {
+  let pending = NONE;
+  const trackedClient = new Proxy(client, {
+    get: (target, key): unknown => {
+      const value: unknown = Reflect.get(target, key);
+      if (typeof value !== "function") {
+        return value;
+      }
+      return async (...args: readonly unknown[]): Promise<unknown> => {
+        pending += ONE;
+        try {
+          const answer: unknown = await Reflect.apply(value, target, args);
+          return answer;
+        } finally {
+          pending -= ONE;
+        }
+      };
+    },
+  });
+  return {
+    client: trackedClient,
+    settled: async () => {
+      await waitFor(() => {
+        expect(pending).toBe(NONE);
+      });
+    },
+  };
 }
 
 export function anonymousClient(): CookoutClient {
@@ -61,13 +99,22 @@ export function sessionOf(client: Pick<CookoutClient, "whoami">): Session {
 
 export async function newIdentity(request: CreateIdentityRequest): Promise<NewIdentity> {
   const { token } = await adminClient().createIdentity(request);
-  return { client: clientWith(token), token };
+  const { client, settled } = tracked(clientWith(token));
+  return {
+    client,
+    rotateToken: async () => {
+      await settled();
+      await adminClient().rotateToken(request.name);
+    },
+    token,
+  };
 }
 
 export function openBoard(opening: BoardOpening): () => void {
   globalThis.location.hash = opening.hash;
   const composer = opening.composer ?? createComposer({ client: adminClient() });
   const unread = opening.unread ?? createUnread({ client: adminClient() });
+  onTestFinished(cleanup);
   return render(<CookoutApp board={opening.board} composer={composer} session={opening.session} unread={unread} />)
     .unmount;
 }

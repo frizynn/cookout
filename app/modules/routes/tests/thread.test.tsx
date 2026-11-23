@@ -182,7 +182,7 @@ it("a refused reply says so and keeps the thread shown, and its text in the box"
   const writer = await newIdentity({ kind: "human", name: "web-thread-rotated" });
   const close = openAt({ client: writer.client, hash: hashOf(parent) });
   await shownReplies();
-  await adminClient().rotateToken("web-thread-rotated");
+  await writer.rotateToken();
 
   sendReply("Too late");
   const alert = await screen.findByRole("alert");
@@ -259,7 +259,7 @@ it("reopening a thread that can no longer be read says so and keeps its replies 
   const parent = await threadIn("web-thread-reopen-refused");
   const reader = await newIdentity({ kind: "human", name: "web-thread-reopen-rotated" });
   const close = await openedThenLeft(reader.client, parent);
-  await adminClient().rotateToken("web-thread-reopen-rotated");
+  await reader.rotateToken();
 
   globalThis.location.hash = hashOf(parent);
   const alert = await screen.findByRole("alert");

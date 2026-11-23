@@ -145,7 +145,7 @@ it("a refused call says so and keeps the channel shown", { timeout: 5000 }, asyn
   const caller = await newIdentity({ kind: "human", name: "web-command-rotated" });
   const close = openAt({ client: caller.client, hash: "#/channels/web-command-refused" });
   await screen.findByRole("form", { name: "Call a command" });
-  await adminClient().rotateToken("web-command-rotated");
+  await caller.rotateToken();
 
   await callFromTheForm("web-call-refused", '{"branch":"main"}');
   const alert = await screen.findByRole("alert");
