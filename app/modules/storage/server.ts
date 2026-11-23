@@ -18,6 +18,7 @@ export type { StoredCommand } from "./lib/server/commands.ts";
 export type { CommandTokenGrant } from "./lib/server/command-tokens.ts";
 export type { DeliveryOutcome, StoredDelivery } from "./lib/server/deliveries.ts";
 export type { NewMessage } from "./lib/server/messages.ts";
+export type { StoredPresence } from "./lib/server/presence.ts";
 export type { NewCommandCall } from "./lib/server/command-calls.ts";
 export type { AgentAt, UseAgentSessionResult } from "./lib/server/agent-sessions.ts";
 export type { TransferAgentResult } from "./lib/server/identity-admins.ts";
