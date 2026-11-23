@@ -37,12 +37,80 @@ interface TextAreaParts extends TextFieldParts {
   readonly value: string;
   readonly caret: number;
   readonly onEdit: (text: string, caret: number) => void;
+  readonly choosing: boolean;
+  readonly onPick: () => void;
+  readonly onMove: (direction: "down" | "up") => void;
 }
 
 interface SuggestionsParts {
   readonly label: string;
   readonly options: readonly string[];
+  readonly highlighted: number;
   readonly onChoose: (option: string) => void;
+}
+
+interface AvatarParts {
+  readonly name: string;
+  readonly agent: boolean;
+}
+
+interface WorkspaceParts extends Parts {
+  readonly sidebarOpen: boolean;
+  readonly onToggleSidebar: () => void;
+}
+
+interface SidebarParts extends Parts {
+  readonly label: string;
+  readonly title: string;
+  readonly open: boolean;
+}
+
+interface NavLinkParts {
+  readonly href: string;
+  readonly children?: ReactNode;
+  readonly label: string;
+  readonly active: boolean;
+  readonly marked: boolean;
+  readonly icon: "inbox" | "people" | "channel";
+}
+
+interface PillParts {
+  readonly count: number;
+  readonly label: string;
+  readonly tone: "loud" | "quiet" | "unseen";
+}
+
+interface PaneHeaderParts {
+  readonly title: string;
+  readonly description: string | null;
+}
+
+interface SidePanelParts extends Parts {
+  readonly label: string;
+  readonly detail: string;
+  readonly closeHref: string;
+  readonly closeLabel: string;
+}
+
+interface ChoiceParts {
+  readonly label: string;
+  readonly value: string;
+}
+
+interface ChoiceGroupParts {
+  readonly label: string;
+  readonly choices: readonly ChoiceParts[];
+  readonly value: string;
+  readonly onChoose: (value: string) => void;
+}
+
+interface ToggleButtonParts extends Parts {
+  readonly expanded: boolean;
+  readonly onClick: () => void;
+}
+
+interface AuthorParts extends AvatarParts {
+  readonly shown: string;
 }
 
 interface FieldsFormParts extends Parts {
@@ -81,7 +149,17 @@ interface SkeletonParts {
 }
 
 export type {
+  AuthorParts,
+  AvatarParts,
   ButtonParts,
+  ChoiceGroupParts,
+  NavLinkParts,
+  PaneHeaderParts,
+  PillParts,
+  SidebarParts,
+  SidePanelParts,
+  ToggleButtonParts,
+  WorkspaceParts,
   CountParts,
   DataAreaParts,
   DataBlockParts,

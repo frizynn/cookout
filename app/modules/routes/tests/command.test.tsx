@@ -1,4 +1,4 @@
-import { adminClient, clientWith, newIdentity, openAt } from "./app.tsx";
+import { adminClient, alertSaying, clientWith, newIdentity, openAt } from "./app.tsx";
 import { expect, it } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
@@ -47,7 +47,7 @@ it("a command call and its result reply show their data in the thread", { timeou
   });
   const close = openAt({ client: adminClient(), hash: `#/channels/web-command-shows/threads/${String(threadId)}` });
 
-  const reply = await screen.findByRole("listitem");
+  const reply = await within(await screen.findByRole("list", { name: "Replies" })).findByRole("listitem");
   const parent = screen.getByRole("article", { name: "Parent message" });
 
   expect([
@@ -57,7 +57,7 @@ it("a command call and its result reply show their data in the thread", { timeou
   ]).toStrictEqual([
     pretty({ branch: "main" }),
     pretty({ status: "done" }),
-    `@web-show-callShipped main.${pretty({ status: "done" })}`,
+    `@web-show-callagentShipped main.${pretty({ status: "done" })}`,
   ]);
 
   close();
@@ -148,7 +148,7 @@ it("a refused call says so and keeps the channel shown", { timeout: 5000 }, asyn
   await caller.rotateToken();
 
   await callFromTheForm("web-call-refused", '{"branch":"main"}');
-  const alert = await screen.findByRole("alert");
+  const alert = await alertSaying("Couldn't call");
 
   expect([alert.textContent, screen.queryByRole("list", { name: "Schema errors" })]).toStrictEqual([
     expect.stringMatching(/^Couldn't call \/web-call-refused \(token_revoked\)/u),

@@ -9,7 +9,11 @@
  * `mentionPattern` reads a mention, the suggestions are the identities whose
  * names start with it. `choose` swaps that `@` and prefix for the whole
  * mention and a space (or puts it at the caret if no mention is being typed),
- * and puts the caret after it; `clear` empties the box.
+ * and puts the caret after it; `clear` empties the box. While there are
+ * suggestions, one is `highlighted` (the first, after each edit): `highlight`
+ * moves it down or up, wrapping round, and `chooseHighlighted` chooses it.
+ * `identities` is the identity list itself, an external store too, loaded
+ * when its first reader subscribes, so a view can tell a human from an agent.
  * Until the identities load, or if the server refuses them, nobody is
  * suggested.
  */
@@ -18,6 +22,8 @@ import type { CookoutClient, Identity } from "../sdk/index.ts";
 const MOST_SUGGESTIONS = 8;
 const NOTHING = 0;
 const AT_SIGN = 1;
+const ONE = 1;
+const STEPS = { down: ONE, up: -ONE } as const;
 
 const typedMention = /(?<![\w.@-])@[a-z0-9-]*$/u;
 
@@ -58,6 +64,7 @@ interface DraftSnapshot {
   readonly text: string;
   readonly caret: number;
   readonly suggestions: readonly Identity[];
+  readonly highlighted: number;
 }
 
 interface Directory {
@@ -74,25 +81,41 @@ function withMention(snapshot: DraftSnapshot, name: string): Pick<DraftSnapshot,
 
 function createDraft(directory: Directory): Draft {
   const listeners = listenersOf(directory.load);
-  let current: DraftSnapshot = { caret: NOTHING, suggestions: [], text: "" };
+  let current: DraftSnapshot = { caret: NOTHING, highlighted: NOTHING, suggestions: [], text: "" };
 
   function publish(text: string, caret: number): void {
-    current = { caret, suggestions: suggestionsFor(directory.identities(), text, caret), text };
+    const suggestions = suggestionsFor(directory.identities(), text, caret);
+    current = { caret, highlighted: NOTHING, suggestions, text };
     listeners.notify();
+  }
+
+  function choose(name: string): void {
+    const written = withMention(current, name);
+    publish(written.text, written.caret);
   }
 
   directory.onLoad(() => {
     publish(current.text, current.caret);
   });
   return {
-    choose: (name) => {
-      const written = withMention(current, name);
-      publish(written.text, written.caret);
+    choose,
+    chooseHighlighted: () => {
+      for (const identity of current.suggestions.slice(current.highlighted, current.highlighted + ONE)) {
+        choose(identity.name);
+      }
     },
     clear: () => {
       publish("", NOTHING);
     },
     edit: publish,
+    highlight: (direction) => {
+      const step = STEPS[direction];
+      const count = current.suggestions.length;
+      if (count > NOTHING) {
+        current = { ...current, highlighted: (current.highlighted + step + count) % count };
+        listeners.notify();
+      }
+    },
     snapshot: () => current,
     subscribe: listeners.add,
   };
@@ -108,14 +131,28 @@ export interface Draft {
   readonly edit: (text: string, caret: number) => void;
   /** Puts `@name ` in place of the mention being typed. */
   readonly choose: (name: string) => void;
+  /** Chooses the highlighted suggestion, if there are any. */
+  readonly chooseHighlighted: () => void;
+  /** Moves the highlight one suggestion down or up, wrapping round. */
+  readonly highlight: (direction: "down" | "up") => void;
   /** Empties the box, as after sending its message. */
   readonly clear: () => void;
+}
+
+/** The identity list. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
+export interface Identities {
+  /** Calls `listener` once the list loads, until the returned function is called. */
+  readonly subscribe: (listener: () => void) => () => void;
+  /** Every identity, sorted by name: empty until it loads, or if the server refuses it. */
+  readonly snapshot: () => readonly Identity[];
 }
 
 /** The composer store: a draft for each message box. */
 export interface Composer {
   /** The draft for the box with this key (a channel's name, or `channel/id` for a thread): the same store each time for one key. */
   readonly draft: (key: string) => Draft;
+  /** The identity list the suggestions come from. */
+  readonly identities: Identities;
 }
 
 /** What the composer store needs of the SDK. */
@@ -154,11 +191,14 @@ export function createComposer(options: ComposerOptions): Composer {
       refreshes.add(refresh);
     },
   };
+  const readers = listenersOf(directory.load);
+  refreshes.add(readers.notify);
   return {
     draft: (key) => {
       const draft = drafts.get(key) ?? createDraft(directory);
       drafts.set(key, draft);
       return draft;
     },
+    identities: { snapshot: () => identities, subscribe: readers.add },
   };
 }

@@ -2,7 +2,7 @@ import { LinkList, LinkRow, Muted } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
 import { hrefOf } from "../../paths/index.ts";
 
-const TEXT = { channels: "See the channels", next: "Next" } as const;
+const TEXT = { inbox: "See the inbox", next: "Next" } as const;
 
 interface LoggedInProps {
   readonly name: string;
@@ -11,9 +11,9 @@ interface LoggedInProps {
 export function LoggedIn(props: LoggedInProps): ReactNode {
   return (
     <LinkList label={TEXT.next}>
-      <LinkRow href={hrefOf({ name: "channels" })}>
+      <LinkRow href={hrefOf({ name: "inbox" })}>
         <Muted>{`Logged in as @${props.name}.`}</Muted>
-        <span className="text-sm">{TEXT.channels}</span>
+        <span className="text-sm">{TEXT.inbox}</span>
       </LinkRow>
     </LinkList>
   );

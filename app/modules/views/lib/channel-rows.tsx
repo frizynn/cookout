@@ -1,11 +1,15 @@
-import { Alert, LinkList, Skeleton } from "../../design-system/index.tsx";
+import { Alert, NavList, Skeleton } from "../../design-system/index.tsx";
+import type { ChannelName } from "../../sdk/index.ts";
 import { ChannelRow } from "./channel-row.tsx";
 import type { ChannelsState } from "../../board/index.ts";
 import type { ReactNode } from "react";
 import type { UnreadState } from "../../unread/index.ts";
 
+const TEXT = { channels: "Channels" } as const;
+
 interface ChannelRowsProps {
   readonly channels: ChannelsState;
+  readonly open: ChannelName | null;
   readonly unread: UnreadState;
 }
 
@@ -23,10 +27,12 @@ export function ChannelRows(props: ChannelRowsProps): ReactNode {
     return <Alert>{`Couldn't load the channels (${channels.code}): ${channels.message}`}</Alert>;
   }
   return (
-    <LinkList label="Channels">
-      {channels.channels.map((channel) => (
-        <ChannelRow channel={channel} key={channel.name} unread={unread} />
-      ))}
-    </LinkList>
+    <NavList label={TEXT.channels}>
+      {channels.channels
+        .toSorted((first, second) => first.name.localeCompare(second.name))
+        .map((channel) => (
+          <ChannelRow channel={channel.name} key={channel.name} open={props.open === channel.name} unread={unread} />
+        ))}
+    </NavList>
   );
 }

@@ -1,19 +1,19 @@
 /**
  * The routes: the web UI's one tested interface (ADR 0015). `CookoutApp`
- * reads the page's location hash and draws the view for it, in the design
- * system's shell: `#/` the channel list, `#/login`, `#/inbox`, `#/channels/<name>` and
- * `#/channels/<name>/threads/<id>`. Until the session is logged in, every route
- * shows the login view. Any other hash, a channel name that isn't a channel
+ * reads the page's location hash and draws the view for it. Until the session
+ * is logged in, every route shows the login view, alone on the page. Once it
+ * is, every route is drawn in the workspace, with the sidebar beside it:
+ * `#/` (or no hash) and `#/inbox` the inbox, so the app opens on it, also
+ * right after logging in; `#/login` who is logged in; `#/people` the people
+ * and agents (not built yet, so "Nothing here"); `#/channels/<name>` the
+ * channel; and `#/channels/<name>/threads/<id>` the channel with the thread's
+ * panel open beside it. Any other hash, a channel name that isn't a channel
  * name, or a thread ID that isn't a message ID, says there is nothing here.
  * The `paths` module reads the hash and builds every link's.
  */
-import { AppShell } from "../design-system/index.tsx";
-import type { Board } from "../board/index.ts";
-import type { Composer } from "../composer/index.ts";
 import type { ReactNode } from "react";
 import { RouteView } from "./lib/route-view.tsx";
-import type { Session } from "../session/index.ts";
-import type { Unread } from "../unread/index.ts";
+import type { Stores } from "./lib/stores.ts";
 import { routeOf } from "../paths/index.ts";
 import { useSyncExternalStore } from "react";
 
@@ -29,12 +29,7 @@ function currentHash(): string {
 }
 
 /** What the web UI reads: the stores, each made with the SDK client it talks through. */
-export interface CookoutAppProps {
-  readonly board: Board;
-  readonly composer: Composer;
-  readonly session: Session;
-  readonly unread: Unread;
-}
+export type CookoutAppProps = Stores;
 
 /**
  * The whole web UI: the view for the page's location hash, redrawn when it changes.
@@ -43,15 +38,5 @@ export interface CookoutAppProps {
  */
 export function CookoutApp(props: CookoutAppProps): ReactNode {
   const hash = useSyncExternalStore(subscribeToHash, currentHash);
-  return (
-    <AppShell>
-      <RouteView
-        board={props.board}
-        composer={props.composer}
-        route={routeOf(hash)}
-        session={props.session}
-        unread={props.unread}
-      />
-    </AppShell>
-  );
+  return <RouteView route={routeOf(hash)} stores={props} />;
 }

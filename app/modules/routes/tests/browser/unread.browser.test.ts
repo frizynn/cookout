@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import { adminClient, logInWithStream, newIdentity } from "./people.ts";
+import { adminClient, logInWithStream, newIdentity, sidebar } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import type { Person } from "./people.ts";
 
@@ -15,7 +15,7 @@ async function watchList(page: Page, channel: string): Promise<Watching> {
   const reader = await newIdentity({ kind: "human", name: `${channel}-reader` });
   await reader.client.subscribe(channel);
   await logInWithStream({ page, token: reader.token });
-  const row = page.getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
+  const row = sidebar(page).getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
 
   await expect(row).toBeVisible();
 
@@ -27,7 +27,7 @@ async function rowInSecondTab(page: Page, channel: string): Promise<Locator> {
   const streamOpen = other.waitForResponse((response) => response.url().includes("/v1/events"));
   await other.goto("/");
   await streamOpen;
-  return other.getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
+  return sidebar(other).getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
 }
 
 async function openChannel(page: Page, row: Locator, newest: string): Promise<void> {
@@ -38,7 +38,9 @@ async function openChannel(page: Page, row: Locator, newest: string): Promise<vo
 
 async function openAndGoBack(page: Page, row: Locator, newest: string): Promise<void> {
   await openChannel(page, row, newest);
-  await page.getByRole("link", { name: "← Channels" }).click();
+  await sidebar(page)
+    .getByRole("link", { name: /^Inbox/u })
+    .click();
 }
 
 test("a channel's unread count goes up when another identity posts, then to zero once it is opened", async ({
@@ -72,7 +74,7 @@ test("a message that mentions the reader shows in the channel's mention count, a
   await poster.client.createMessage({ channel, text: `@${channel}-reader can you check the rollout?` });
 
   await expect(row).toHaveAccessibleName(`#${channel} 1 unread 1 mention`);
-  await expect(row.getByText("@1")).toBeVisible();
+  await expect(row.getByText("1", { exact: true })).toBeVisible();
 });
 
 test("a message that arrives in a channel the reader has open counts as read, in every tab", async ({ page }) => {

@@ -49,7 +49,7 @@ test("a command call and its result reply show their data", async ({ page }) => 
     page.getByRole("article", { name: "Parent message" }).getByLabel("Call to /browser-show-call"),
   ).toHaveText(pretty({ branch: "main" }));
   await expect(page.getByRole("list", { name: "Replies" }).getByRole("listitem")).toHaveText([
-    `@browser-show-callShipped main.${pretty({ status: "done" })}`,
+    `@browser-show-callagentShipped main.${pretty({ status: "done" })}`,
   ]);
 });
 

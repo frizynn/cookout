@@ -1,7 +1,8 @@
 import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
-import { adminClient, anonymousClient, newIdentity, openAt, sessionOf, watched } from "./app.tsx";
+import { adminClient, anonymousClient, newIdentity, openAt, sessionOf } from "./app.tsx";
 import { expect, it } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
+import { watched } from "./watched.ts";
 
 interface InboxReader {
   readonly poster: CookoutClient;
@@ -125,7 +126,8 @@ it("an inbox that can't be read says why", { timeout: 5000 }, async () => {
 
   const unmount = openAt({ client: anonymousClient(), hash: "#/inbox", session: sessionOf(adminClient()) });
 
-  const alert = await screen.findByRole("alert");
+  await screen.findByRole("navigation", { name: "Sidebar" });
+  const alert = await within(screen.getByRole("main")).findByRole("alert");
 
   expect(alert.textContent).toMatch(/^Couldn't load the inbox \(\w+\): /u);
 

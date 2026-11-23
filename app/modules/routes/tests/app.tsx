@@ -1,19 +1,18 @@
 import type { Board, BoardOptions } from "../../board/index.ts";
-import type { CookoutClient, CreateIdentityRequest, EventStream, Token } from "../../sdk/index.ts";
-import { cleanup, render, waitFor } from "@testing-library/react";
+import type { CookoutClient, CreateIdentityRequest, Token } from "../../sdk/index.ts";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { expect, inject, onTestFinished } from "vitest";
 import type { Composer } from "../../composer/index.ts";
 import { CookoutApp } from "../index.tsx";
-import type { Live } from "../../live/index.ts";
+import type { Layout } from "../../layout/index.ts";
 import type { Session } from "../../session/index.ts";
 import type { Unread } from "../../unread/index.ts";
 import { createBoard } from "../../board/index.ts";
 import { createComposer } from "../../composer/index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
-import { createLive } from "../../live/index.ts";
+import { createLayout } from "../../layout/index.ts";
 import { createSession } from "../../session/index.ts";
 import { createUnread } from "../../unread/index.ts";
-import { watchAdapter } from "../../testing/web.ts";
 
 const NONE = 0;
 const ONE = 1;
@@ -24,6 +23,7 @@ interface BoardOpening {
   readonly hash: string;
   readonly board: Board;
   readonly composer?: Composer;
+  readonly layout?: Layout;
   readonly session: Session;
   readonly unread?: Unread;
 }
@@ -33,12 +33,7 @@ interface Opening {
   readonly client: AppClient;
   readonly pageSize?: number;
   readonly session?: Session;
-  readonly live?: Live;
-}
-
-interface Watched {
-  readonly live: Live;
-  readonly stream: Promise<EventStream>;
+  readonly live?: NonNullable<BoardOptions["live"]>;
 }
 
 interface Tracked {
@@ -81,6 +76,22 @@ function tracked(client: CookoutClient): Tracked {
   };
 }
 
+export async function alertSaying(start: string): Promise<HTMLElement> {
+  const said = await waitFor(() => {
+    for (const alert of screen.getAllByRole("alert")) {
+      if (alert.textContent.startsWith(start)) {
+        return alert;
+      }
+    }
+    throw new Error(`No alert says ${start}`);
+  });
+  return said;
+}
+
+export function sidebar(): HTMLElement {
+  return screen.getByRole("navigation", { name: "Sidebar" });
+}
+
 export function anonymousClient(): CookoutClient {
   return createCookoutClient({ env: {}, url: inject("cookout").url });
 }
@@ -110,13 +121,19 @@ export async function newIdentity(request: CreateIdentityRequest): Promise<NewId
   };
 }
 
+export function browserLayout(): Layout {
+  return createLayout({ root: globalThis.document.documentElement, storage: globalThis.localStorage });
+}
+
 export function openBoard(opening: BoardOpening): () => void {
   globalThis.location.hash = opening.hash;
   const composer = opening.composer ?? createComposer({ client: adminClient() });
   const unread = opening.unread ?? createUnread({ client: adminClient() });
+  const layout = opening.layout ?? browserLayout();
   onTestFinished(cleanup);
-  return render(<CookoutApp board={opening.board} composer={composer} session={opening.session} unread={unread} />)
-    .unmount;
+  return render(
+    <CookoutApp board={opening.board} composer={composer} layout={layout} session={opening.session} unread={unread} />,
+  ).unmount;
 }
 
 export function openAt(opening: Opening): () => void {
@@ -128,18 +145,4 @@ export function openAt(opening: Opening): () => void {
     session,
     unread: createUnread(opening),
   });
-}
-
-export function watched(client: CookoutClient): Watched {
-  const { promise, resolve } = Promise.withResolvers<EventStream>();
-  const live = createLive(
-    watchAdapter({
-      watch: async (options) => {
-        const stream = await client.watch(options);
-        resolve(stream);
-        return stream;
-      },
-    }),
-  );
-  return { live, stream: promise };
 }

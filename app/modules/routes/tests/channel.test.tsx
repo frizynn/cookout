@@ -1,5 +1,5 @@
 import type { CookoutClient, InboxResponse, Message } from "../../sdk/index.ts";
-import { adminClient, clientWith, newIdentity, openAt } from "./app.tsx";
+import { adminClient, alertSaying, clientWith, newIdentity, openAt } from "./app.tsx";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 
@@ -217,7 +217,7 @@ it("a refused older page says so and keeps the messages shown", { timeout: 5000 
   await reader.rotateToken();
 
   fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-  const alert = await screen.findByRole("alert");
+  const alert = await alertSaying("Couldn't load older messages");
 
   expect([alert.textContent, await shownMessages()]).toStrictEqual([
     expect.stringMatching(/^Couldn't load older messages \(token_revoked\)/u),

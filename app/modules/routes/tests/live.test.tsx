@@ -1,7 +1,8 @@
 import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
-import { adminClient, newIdentity, openAt, watched } from "./app.tsx";
+import { adminClient, newIdentity, openAt } from "./app.tsx";
 import { expect, it } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
+import { watched } from "./watched.ts";
 
 interface LiveView {
   readonly parent: Message;
@@ -54,8 +55,8 @@ it("a message posted by another identity appears in the open channel without a r
   await screen.findByText("1 reply");
 
   await expect(shownIn("Messages")).resolves.toStrictEqual([
-    "@web-live-channel-posterDeploy at noon?1 reply",
-    "@web-live-channel-posterOr at one?0 replies",
+    "@web-live-channel-posteragentDeploy at noon?1 reply",
+    "@web-live-channel-posteragentOr at one?0 replies",
   ]);
 
   await close();
@@ -73,8 +74,10 @@ it("a reply posted by another identity appears in the open thread without a relo
   await poster.createMessage({ channel: parent.channel, replyTo: parent.id, text: "Noon works" });
   await screen.findByText("Noon works");
 
-  expect([await shownIn("Replies"), screen.queryByText("Not in this thread")]).toStrictEqual([
-    ["@web-live-thread-posterNoon works"],
+  const panel = screen.getByRole("complementary", { name: "Thread" });
+
+  expect([await shownIn("Replies"), within(panel).queryByText("Not in this thread")]).toStrictEqual([
+    ["@web-live-thread-posteragentNoon works"],
     null,
   ]);
 

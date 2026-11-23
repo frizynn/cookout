@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import { adminClient, logInToChannels, newIdentity } from "./people.ts";
+import { adminClient, logInToChannels, newIdentity, sidebar } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import type { Person } from "./people.ts";
 
@@ -12,7 +12,7 @@ async function openInbox(page: Page): Promise<void> {
   const streamOpen = page.waitForResponse((response) => response.url().includes("/v1/events"));
   await page.goto("/#/inbox");
 
-  await expect(page.getByRole("heading", { name: "Inbox" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Inbox" })).toBeVisible();
 
   await streamOpen;
 }
@@ -40,11 +40,13 @@ test("the inbox lists the identity's inbox items with their reasons, and each ch
   await poster.client.createMessage({ channel, text: `@${channel}-reader can you check the rollout?` });
   await logInToChannels({ page, token: reader.token });
 
-  await page.getByRole("banner").getByRole("link", { name: "Inbox" }).click();
+  await sidebar(page)
+    .getByRole("link", { name: /^Inbox/u })
+    .click();
 
   await expect(page.getByRole("list", { name: "Inbox" }).getByRole("link")).toHaveText([
-    `#${channel}Subscribed channel@${channel}-posterDeploy at noon?`,
-    `#${channel}Mention, Subscribed channel@${channel}-poster@${channel}-reader can you check the rollout?`,
+    `#${channel}Subscribed channel@${channel}-posteragentDeploy at noon?`,
+    `#${channel}Mention, Subscribed channel@${channel}-posteragent@${channel}-reader can you check the rollout?`,
   ]);
   await expect(countsRow(page, channel)).toHaveAccessibleName(`#${channel} 1 unread 1 mention`);
 });
@@ -59,7 +61,9 @@ async function inboxInSecondTab(page: Page, channel: string): Promise<Page> {
 }
 
 async function openChannel(page: Page, channel: string, text: string): Promise<void> {
-  await page.getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") }).click();
+  await sidebar(page)
+    .getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") })
+    .click();
 
   await expect(page.getByRole("list", { name: "Messages" })).toContainText(text);
 }

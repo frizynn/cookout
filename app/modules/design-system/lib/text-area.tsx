@@ -1,11 +1,12 @@
 import { useCallback, useId, useLayoutEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import type { TextAreaParts } from "./parts.ts";
+import { useBoxKeys } from "./box-keys.ts";
 
 const ROWS = 3;
 
 export function TextArea(parts: TextAreaParts): ReactNode {
-  const { caret, onEdit, value } = parts;
+  const { caret, choosing, onEdit, onMove, onPick, value } = parts;
   const id = useId();
   const box = useRef<HTMLTextAreaElement>(null);
   const typed = useRef({ caret, value });
@@ -16,6 +17,13 @@ export function TextArea(parts: TextAreaParts): ReactNode {
       onEdit(element.value, element.selectionStart);
     }
   }, [onEdit]);
+  const handleSend = useCallback(() => {
+    const element = box.current;
+    if (element !== null && element.form !== null) {
+      element.form.requestSubmit();
+    }
+  }, []);
+  const handleKeyDown = useBoxKeys({ choosing, onMove, onPick, onSend: handleSend });
   useLayoutEffect(() => {
     const element = box.current;
     if (element === null || (typed.current.value === value && typed.current.caret === caret)) {
@@ -33,6 +41,7 @@ export function TextArea(parts: TextAreaParts): ReactNode {
         id={id}
         name={parts.name}
         onChange={handleEdit}
+        onKeyDown={handleKeyDown}
         onSelect={handleEdit}
         ref={box}
         required

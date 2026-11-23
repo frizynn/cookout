@@ -1,12 +1,10 @@
-import { BackLink, Card, CardHeader, Heading, Muted } from "../../design-system/index.tsx";
+import { Card, CardHeader, Heading, Muted } from "../../design-system/index.tsx";
 import { InboxBody } from "./inbox-body.tsx";
 import type { ReactNode } from "react";
 import type { Unread } from "../../unread/index.ts";
-import { hrefOf } from "../../paths/index.ts";
 import { useSyncExternalStore } from "react";
 
 const TEXT = {
-  back: "← Channels",
   description: "What you haven't read yet, oldest first, and why each is here.",
   title: "Inbox",
 } as const;
@@ -20,7 +18,6 @@ export function InboxView(props: InboxProps): ReactNode {
   return (
     <Card>
       <CardHeader>
-        <BackLink href={hrefOf({ name: "channels" })}>{TEXT.back}</BackLink>
         <Heading>{TEXT.title}</Heading>
         <Muted>{TEXT.description}</Muted>
       </CardHeader>

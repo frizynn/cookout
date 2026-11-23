@@ -1,8 +1,9 @@
-import { Alert, Form, SubmitButton, Suggestions, TextArea } from "../../design-system/index.tsx";
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { Alert, BoxFrame, Form, SubmitButton, Suggestions, TextArea } from "../../design-system/index.tsx";
+import { useCallback, useSyncExternalStore } from "react";
 import type { Draft } from "../../composer/index.ts";
 import type { PostState } from "../../board/index.ts";
 import type { ReactNode } from "react";
+import { useMentions } from "./use-mentions.ts";
 
 interface MessageBoxText {
   readonly button: string;
@@ -13,8 +14,6 @@ interface MessageBoxText {
 
 const POSTING = "Sending…";
 const SUGGESTIONS = "Mention suggestions";
-
-const NONE = 0;
 
 interface MessageBoxProps {
   readonly draft: Draft;
@@ -34,24 +33,36 @@ export function MessageBox(props: MessageBoxProps): ReactNode {
     },
     [draft, onPost],
   );
-  const handleChoose = useCallback(
-    (option: string) => {
-      draft.choose(option.slice("@".length));
-    },
-    [draft],
-  );
-  const mentions = useMemo(() => written.suggestions.map((identity) => `@${identity.name}`), [written.suggestions]);
+  const { choosing, handleChoose, mentions } = useMentions({ draft, suggestions: written.suggestions });
+  const handleMove = draft.highlight;
+  const handlePick = draft.chooseHighlighted;
   return (
-    <>
+    <BoxFrame>
       <Form field="text" label={text.form} onSubmit={handleSend}>
-        <TextArea caret={written.caret} label={text.field} name="text" onEdit={handleEdit} value={written.text} />
-        {mentions.length > NONE && <Suggestions label={SUGGESTIONS} onChoose={handleChoose} options={mentions} />}
+        <TextArea
+          caret={written.caret}
+          choosing={choosing}
+          label={text.field}
+          name="text"
+          onEdit={handleEdit}
+          onMove={handleMove}
+          onPick={handlePick}
+          value={written.text}
+        />
+        {choosing && (
+          <Suggestions
+            highlighted={written.highlighted}
+            label={SUGGESTIONS}
+            onChoose={handleChoose}
+            options={mentions}
+          />
+        )}
         <SubmitButton disabled={posting}>
           {posting && POSTING}
           {!posting && text.button}
         </SubmitButton>
       </Form>
       {post.status === "failed" && <Alert>{`Couldn't post the ${text.posts} (${post.code}): ${post.message}`}</Alert>}
-    </>
+    </BoxFrame>
   );
 }

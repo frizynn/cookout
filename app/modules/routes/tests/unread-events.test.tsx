@@ -1,7 +1,7 @@
 import type { CookoutClient, InboxItem, Message, ReadPosition, ServerSentEvent } from "../../sdk/index.ts";
-import { adminClient, newIdentity, openAt } from "./app.tsx";
+import { adminClient, newIdentity, openAt, sidebar } from "./app.tsx";
 import { expect, it } from "vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { waitFor, within } from "@testing-library/react";
 import type { Live } from "../../live/index.ts";
 import { createLive } from "../../live/index.ts";
 
@@ -46,7 +46,7 @@ function readUpTo(message: Message): ServerSentEvent {
 }
 
 function countsOn(channel: string): readonly (string | null)[] {
-  const link = screen.getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
+  const link = within(sidebar()).getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
   const counts: (string | null)[] = [];
   for (const count of within(link).queryAllByText(/^\d+ (?:unread|mentions?)$/u)) {
     counts.push(count.textContent);

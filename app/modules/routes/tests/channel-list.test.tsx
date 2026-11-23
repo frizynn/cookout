@@ -1,9 +1,10 @@
 import type { CookoutClient, CreateChannelRequest, ListChannelsResponse } from "../../sdk/index.ts";
-import { adminClient, clientWith, openAt, openBoard, sessionOf, watched } from "./app.tsx";
+import { adminClient, clientWith, openAt, openBoard, sessionOf } from "./app.tsx";
 import { expect, it } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import { createBoard } from "../../board/index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
+import { watched } from "./watched.ts";
 
 async function adminWithChannels(...channels: readonly CreateChannelRequest[]): Promise<CookoutClient> {
   const client = adminClient();
@@ -61,24 +62,34 @@ function shownLink(name: string): readonly (string | null)[] {
   return [link.textContent, link.getAttribute("href")];
 }
 
-it("the channel list shows the channels the server has, each linking to its channel", { timeout: 5000 }, async () => {
+it("the sidebar lists the channels the server has, each linking to its channel", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const client = await adminWithChannels(
-    { description: "Where the web lists channels.", name: "web-list-general" },
-    { name: "web-list-deploys" },
-  );
+  const client = await adminWithChannels({ name: "web-list-general" }, { name: "web-list-deploys" });
   const { channels } = await client.listChannels();
   const close = openAt({ client, hash: "" });
 
   const hrefs = await shownHrefs();
 
   expect(hrefs).toStrictEqual(expect.arrayContaining(channels.map((channel) => `#/channels/${channel.name}`)));
-  expect(shownLink("#web-list-general Where the web lists channels.")).toStrictEqual([
-    "#web-list-generalWhere the web lists channels.",
-    "#/channels/web-list-general",
-  ]);
+  expect(shownLink("#web-list-general")).toStrictEqual(["#web-list-general", "#/channels/web-list-general"]);
   expect(shownLink("#web-list-deploys")).toStrictEqual(["#web-list-deploys", "#/channels/web-list-deploys"]);
+
+  close();
+});
+
+it("a channel's pane is headed by its name and its description", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const client = await adminWithChannels({ description: "Where the web lists channels.", name: "web-list-described" });
+  const close = openAt({ client, hash: "#/channels/web-list-described" });
+
+  const description = await screen.findByText("Where the web lists channels.");
+
+  expect([screen.getByRole("heading", { level: 1 }).textContent, description.tagName]).toStrictEqual([
+    "#web-list-described",
+    "P",
+  ]);
 
   close();
 });
@@ -138,7 +149,7 @@ it("coming back to the channel list shows the channels already loaded, without a
   close();
 });
 
-it("the channel list shows the server's refusal when the token is refused", { timeout: 5000 }, async () => {
+it("the sidebar's channel list shows the server's refusal when the token is refused", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
   const close = openAt({
@@ -147,7 +158,7 @@ it("the channel list shows the server's refusal when the token is refused", { ti
     session: sessionOf(adminClient()),
   });
 
-  const alert = await screen.findByRole("alert");
+  const alert = await within(await screen.findByRole("navigation", { name: "Sidebar" })).findByRole("alert");
 
   expect(alert.textContent).toContain("token_unknown");
 
@@ -171,13 +182,13 @@ it("a message in a channel created after the list loaded adds that channel to th
   await close();
 });
 
-it("the channel list says so when the server can't be reached", { timeout: 5000 }, async () => {
+it("the sidebar's channel list says so when the server can't be reached", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
   const client = createCookoutClient({ env: {}, token: "cookout_any", url: "http://127.0.0.1:1" });
   const close = openAt({ client, hash: "#/", session: sessionOf(adminClient()) });
 
-  const alert = await screen.findByRole("alert");
+  const alert = await within(await screen.findByRole("navigation", { name: "Sidebar" })).findByRole("alert");
 
   expect(alert.textContent).toContain("unreachable");
 
