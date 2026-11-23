@@ -9,8 +9,9 @@ function isThreadId(value: number): value is MessageId {
 
 const CommandCallSchema = Schema.Struct({
   callId: Schema.String,
+  channel: Schema.String,
   command: Schema.String,
-  data: Schema.Unknown,
+  data: Schema.Json,
   threadId: Schema.Int.pipe(Schema.refine(isThreadId, { identifier: "MessageId" })),
   token: Schema.String,
 });

@@ -17,10 +17,18 @@ const BAD_REQUEST = 400;
 const UNAUTHORIZED = 401;
 const NOT_FOUND = 404;
 
-const call = { callId: "call-1", command: "echo", data: { text: "hello" }, threadId: 1, token: "command-token" };
-const callBody = '{"callId":"call-1","command":"echo","data":{"text":"hello"},"threadId":1,"token":"command-token"}';
+const call = {
+  callId: "call-1",
+  channel: "grill",
+  command: "echo",
+  data: { text: "hello" },
+  threadId: 1,
+  token: "command-token",
+};
+const callBody =
+  '{"callId":"call-1","channel":"grill","command":"echo","data":{"text":"hello"},"threadId":1,"token":"command-token"}';
 const changedBody =
-  '{"callId":"call-1","command":"other","data":{"text":"hello"},"threadId":1,"token":"command-token"}';
+  '{"callId":"call-1","channel":"grill","command":"other","data":{"text":"hello"},"threadId":1,"token":"command-token"}';
 const utf8 = new TextEncoder();
 const macLayer = Layer.provide(Mac.layerWebCrypto, SecureRandom.layerWebCrypto);
 
@@ -37,6 +45,7 @@ function deliver(body: string, headers: Readonly<Record<string, string>>): Effec
   return Effect.gen(function* deliverWebhook() {
     const received = yield* Ref.make<readonly unknown[]>([]);
     const server = handlerServer({
+      cookoutUrl: "http://127.0.0.1:9",
       host: "127.0.0.1",
       onCall: (accepted) => Ref.update(received, (before) => [...before, accepted]),
       port: 0,
@@ -57,6 +66,7 @@ function deliver(body: string, headers: Readonly<Record<string, string>>): Effec
 
 function statusOf(path: string): Effect.Effect<number> {
   const server = handlerServer({
+    cookoutUrl: "http://127.0.0.1:9",
     host: "127.0.0.1",
     onCall: () => Effect.void,
     port: 0,

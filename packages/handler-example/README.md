@@ -2,12 +2,36 @@
 
 A tiny handler for a cookout command, and the reference for writing your own. It imports only `@ai-hero/cookout/sdk`.
 
-Run it with `COOKOUT_COMMAND_SECRET=<the command's secret> PORT=8787 node app/main.ts`.
+Run it with `COOKOUT_COMMAND_SECRET=<the command's secret> COOKOUT_URL=<the cookout's URL> PORT=8787 node app/main.ts`.
+
+## Its secret
+
+`cookout command add <name> --url <handler URL>/webhook --schema <file>` shows the command's secret once. Pass it to the handler as `COOKOUT_COMMAND_SECRET`; on Fly, `fly secrets set COOKOUT_COMMAND_SECRET=<secret>`. The handler has no default secret: without one it doesn't start.
 
 ## Endpoints
 
 - `GET /health` answers `200`.
-- `POST /webhook` takes a command call from the cookout. The body is JSON: `{ command, data, threadId, token, callId }`. A signed call answers `202`; a signed body that is not a command call answers `400`; a bad or missing signature answers `401`, and the call goes no further.
+- `POST /webhook` takes a command call from the cookout. The body is JSON: `{ command, data, channel, threadId, token, callId }`. A signed call answers `202` at once; a signed body that is not a command call answers `400`; a bad or missing signature answers `401`, and the call goes no further.
+
+## Posting the result
+
+After answering `202`, the handler posts its result as a reply in the call's thread, with the call's `token` (the command token), through `@ai-hero/cookout/sdk`:
+
+```ts
+const cookout = createCookoutClient({ token: call.token, url: process.env.COOKOUT_URL });
+await cookout.createMessage({
+  channel: call.channel,
+  data: { received: call.data },
+  replyTo: call.threadId,
+  text: `/${call.command} is done.`,
+});
+```
+
+`data` holds the structured result and `text` is for people. The command token posts as the command's handler identity, only replies in that thread, for 24 hours after the call.
+
+## Fail-first mode
+
+A call whose data has `"failFirst": true` gets `503` on its first delivery, so the cookout retries it with the same `callId`; the retry is handled as usual. It lets a test see a retry.
 
 ## Checking the signature
 
@@ -29,4 +53,4 @@ const signed =
   typeof header === "string" && /^[0-9a-f]{64}$/u.test(header) && timingSafeEqual(Buffer.from(header, "hex"), expected);
 ```
 
-The cookout retries a call that gets no `2xx` with the same `callId`, so drop a `callId` you have already handled.
+The cookout retries a call that gets no `2xx` with the same `callId`, so drop a `callId` you have already handled. This handler answers such a repeat `202` and posts nothing more.
