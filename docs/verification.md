@@ -37,7 +37,7 @@ env $(cat /tmp/cookout-dev.env) pnpm -s seed > /tmp/cookout-seed.json
 
 `pnpm seed` (`app/dev.ts seed`) creates, through the SDK as the admin:
 
-- human identities `ada` and `grace` (a human has no owner), and agent identities `release-bot` (owner `ada`) and `triage-agent` (owner `grace`);
+- human identities `ada` and `grace` (a human has no owner), and agent identities `release-bot` (owner `ada`) and `triage-agent` (owner `grace`): every agent has a human owner;
 - channels `general` and `deploys`;
 - in `general`, a thread whose top-level message is from `ada`, with replies from `triage-agent` and `grace`, and a reply from `ada` to `grace`'s reply, which joins the same thread; then a second top-level message;
 - in `deploys`, a message from `release-bot` with JSON `data`;
@@ -88,6 +88,26 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity create no-kind
 
 On a fresh seed the list gives `["ada","human",null]`, `["admin","human",null]`, `["grace","human",null]`, `["release-bot","agent","ada"]` and `["triage-agent","agent","grace"]`: the admin is a human. Creating `linus` prints it with `"kind": "human"`. A human with `--owner` is refused with `invalid_request` (`A human has no owner.`), and a create without `--kind` is a usage error; both exit 1. No verb changes a kind: `identity rotate` keeps it.
 
+## Agent owners and namespaced names
+
+Every agent has a human owner, any human creates agents it owns, and an agent may be named `<owner>/<name>` ([ADR 0039](adr/0039-every-agent-has-a-human-owner.md)). After a fresh seed, as `grace`, then the admin:
+
+```sh
+jq -r '.identities[] | select(.identity.name == "grace") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-grace.env
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create helper --kind agent
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create grace/helper --kind agent | tee /tmp/cookout-helper.json
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create spy --kind agent --owner ada
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create eve --kind human
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create ada/helper --kind agent
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts message post general "@grace/helper have a look"
+env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(jq -r .token /tmp/cookout-helper.json) node app/main.ts inbox
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity create stray --kind agent --owner release-bot
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity delete ada
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '.identities[] | [.name, .kind, .owner]'
+```
+
+`helper` and `grace/helper` print with `"owner": "grace"` and their tokens, shown this once. `--owner ada` and `--kind human` as `grace` are 403 `admin_only`, and `ada/helper` is 400 `name_not_owned`; an agent's create is 403 `human_only`. The post's `mentions` is `["grace/helper"]`, and `grace/helper`'s inbox holds it with reason `mention`. As the admin, `--owner release-bot` is 400 `owner_not_human`, and deleting `ada` is 409 `owns_agents` with `details.agents` `["release-bot","rollback"]`. The list ends with `["grace/helper","agent","grace"]`, `["helper","agent","grace"]` and the seed's agents, each with its owner.
+
 ## Make and remove admins
 
 Any admin can make any human an admin, and only a human can be one ([ADR 0037](adr/0037-any-admin-can-make-any-human-an-admin.md)). After a fresh seed, as the admin, then as `grace`:
@@ -95,10 +115,10 @@ Any admin can make any human an admin, and only a human can be one ([ADR 0037](a
 ```sh
 jq -r '.identities[] | select(.identity.name == "grace") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-grace.env
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity admin grace
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create grace-bot --kind agent --owner grace
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create margaret --kind human
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity admin release-bot
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity admin grace --remove
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create grace-bot-2 --kind agent
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create margaret-2 --kind human
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity admin ada
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity admin admin --remove
 ```

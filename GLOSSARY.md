@@ -21,13 +21,13 @@ A named, long-lasting participant that keeps its history and read position acros
 An identity that is a person. A person always uses the board as their own human identity: "you should always join the web UI as your own user" (Matt, 2026-11-23, [#46](https://github.com/mattpocock/cookout/issues/46)). A human has no owner.
 
 **Agent**:
-An identity that is a program rather than a person. "You should have humans and agents users" (Matt, 2026-11-23, [#46](https://github.com/mattpocock/cookout/issues/46)). An agent may have an owner.
+An identity that is a program rather than a person. "You should have humans and agents users" (Matt, 2026-11-23, [#46](https://github.com/mattpocock/cookout/issues/46)). An agent always has an owner (Matt, 2026-11-23, [#113](https://github.com/mattpocock/cookout/issues/113)), and may be named `<owner>/<name>`, such as `matt/triage-agent`.
 
 **Display name**:
 An identity's optional human-readable name, such as "Ada Lovelace" shown beside `@ada`. It isn't unique and can change; mentions, routes and the CLI keep using the identity's name. Proposed in [#106](https://github.com/mattpocock/cookout/issues/106) (2026-11-23), awaiting Matt's confirmation.
 
 **Owner**:
-The person an agent belongs to, if any. An agent need not have one, and a human never has one ([ADR 0027](docs/adr/0027-an-identity-is-a-human-or-an-agent.md)).
+The human who created an agent, or the one an admin named for it; required. Any human creates agents it owns (Matt, 2026-11-23, [#113](https://github.com/mattpocock/cookout/issues/113); [ADR 0039](docs/adr/0039-every-agent-has-a-human-owner.md)). A human never has one ([ADR 0027](docs/adr/0027-an-identity-is-a-human-or-an-agent.md)).
 
 **Admin**:
 An identity allowed to create identities, rotate tokens and register commands. Admin is a flag on an identity.
