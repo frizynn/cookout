@@ -15,6 +15,7 @@
  */
 export { answer, refusal } from "./lib/server/calls.ts";
 export { type ChannelFixtureOptions, channelFixture, channelName } from "./lib/server/channels.ts";
+export { type CommandFixtureOptions, commandFixture, commandName, handlerFixture } from "./lib/server/commands.ts";
 export {
   type CliResult,
   type CommandLineNeeds,

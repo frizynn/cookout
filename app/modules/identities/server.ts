@@ -103,3 +103,6 @@ export const identityResponseSchemas = {
   IdentityWithTokenResponse: IdentityWithTokenResponseSchema,
   ListIdentitiesResponse: ListIdentitiesResponseSchema,
 };
+
+/** Refuses with 403 `admin_only` unless `Caller` is an admin. */
+export { requireAdmin } from "./lib/server/auth.ts";

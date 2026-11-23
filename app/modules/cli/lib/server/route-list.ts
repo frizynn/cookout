@@ -5,6 +5,7 @@ import { leaseRoutes, leasesLayer } from "../../../leases/server.ts";
 import { messageRoutes, messagesLayer } from "../../../messages/server.ts";
 import { Layer } from "effect";
 import type { Route } from "../../../http/server.ts";
+import { commandRoutes } from "../../../commands/server.ts";
 
 type NeedsOf<Routes> = Routes extends readonly Route<infer Needs>[] ? Needs : never;
 
@@ -21,6 +22,7 @@ export const routes: readonly Route<RouteNeeds>[] = [
   ...messageRoutes,
   ...leaseRoutes,
   ...inboxRoutes,
+  ...commandRoutes,
 ];
 
 export const domainLayers = Layer.mergeAll(identitiesLayer, channelsLayer, messagesLayer, leasesLayer, inboxLayer);

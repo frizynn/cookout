@@ -15,15 +15,15 @@ The SDK's public surface: the built `dist/sdk.d.ts`, as consumers of the publish
  * `IsoTime` brand and its check. Every timestamp the protocol carries
  * (`createdAt`, `expiresAt`, `heldUntil`, the health check's `time`) is one.
  */
-declare const brand$5: unique symbol;
+declare const brand$6: unique symbol;
 /** A moment as the wire writes it: ISO 8601 in UTC with milliseconds, such as `2026-01-01T00:00:00.000Z`. */
 type IsoTime = string & {
-  readonly [brand$5]: "IsoTime";
+  readonly [brand$6]: "IsoTime";
 };
-declare const brand$4: unique symbol;
+declare const brand$5: unique symbol;
 /** A channel's name: 1–80 lowercase letters, digits or `-`. Unique on a server. */
 type ChannelName = string & {
-  readonly [brand$4]: "ChannelName";
+  readonly [brand$5]: "ChannelName";
 };
 /** A channel as the server shows it. */
 interface Channel {
@@ -45,9 +45,9 @@ interface ChannelResponse {
 interface ListChannelsResponse {
   readonly channels: readonly Channel[];
 }
-declare const brand$3: unique symbol;
-type Brand<Name extends string> = string & {
-  readonly [brand$3]: Name;
+declare const brand$4: unique symbol;
+type Brand$1<Name extends string> = string & {
+  readonly [brand$4]: Name;
 };
 type IdentityFields = {
   readonly name: IdentityName;
@@ -55,11 +55,11 @@ type IdentityFields = {
   readonly createdAt: IsoTime;
 };
 /** An identity's name: 1–64 lowercase letters, digits or `-`, so `@name` mentions parse cleanly. Unique on a server. */
-type IdentityName = Brand<"IdentityName">;
+type IdentityName = Brand$1<"IdentityName">;
 /** The person an identity belongs to, such as `matt`: 1–100 characters. */
-type Owner = Brand<"Owner">;
+type Owner = Brand$1<"Owner">;
 /** The secret an identity sends as `Authorization: Bearer <token>`. */
-type Token = Brand<"Token">;
+type Token = Brand$1<"Token">;
 /** The two kinds of identity. Every identity is exactly one of them. */
 declare const identityKinds: readonly ["human", "agent"];
 /** Whether an identity is a person or an agent. Set when the identity is created, and never changed. */
@@ -72,6 +72,8 @@ type HumanIdentity = IdentityFields & {
 type AgentIdentity = IdentityFields & {
   readonly kind: "agent";
   readonly owner?: Owner;
+  /** Present, and true, on a command's handler identity in `GET /v1/identities`. */
+  readonly handler?: true;
 };
 /** An identity as the server shows it: a human or an agent, never both. Its token is never part of it. */
 type Identity = HumanIdentity | AgentIdentity;
@@ -95,13 +97,13 @@ type CreateIdentityRequest = {
   /** Only an agent can have an owner: a human with one is refused with 400. */
   readonly owner?: string;
 };
-declare const brand$2: unique symbol;
+declare const brand$3: unique symbol;
 /**
  * A message's ID: a positive whole number. Message IDs are one increasing
  * sequence across the whole server, so they order messages.
  */
 type MessageId = number & {
-  readonly [brand$2]: "MessageId";
+  readonly [brand$3]: "MessageId";
 };
 /** Any JSON value. */
 type JsonValue = null | boolean | number | string | readonly JsonValue[] | {
@@ -214,10 +216,10 @@ interface SubscriptionResponse {
   readonly channel: ChannelName;
   readonly subscribed: boolean;
 }
-declare const brand$1: unique symbol;
+declare const brand$2: unique symbol;
 /** The value `join` returns and a session sends in `cookout-lease` to show it holds the identity. */
 type LeaseId = string & {
-  readonly [brand$1]: "LeaseId";
+  readonly [brand$2]: "LeaseId";
 };
 /** The body of `POST /v1/lease`. `as` must be the token's own identity: a check, not a switch. */
 interface JoinRequest {
@@ -242,13 +244,52 @@ interface LeaveResponse {
 interface LeaseConflictDetails {
   readonly heldUntil: IsoTime | null;
 }
+declare const brand$1: unique symbol;
+type Brand<Name extends string> = string & {
+  readonly [brand$1]: Name;
+};
+/** A command's name. It is also the name of the command's handler identity, so it follows the identity-name rule. */
+type CommandName = Brand<"CommandName">;
+/** The per-command secret the server signs webhook deliveries with (an HMAC of the body). Shown once, on add. */
+type CommandSecret = Brand<"CommandSecret">;
+/** A JSON Schema, the rule a command's call data must follow. */
+type JsonSchema = Readonly<Record<string, JsonValue>>;
+/** A registered command as the server shows it. Its secret is never part of it. */
+interface Command {
+  readonly name: CommandName;
+  /** The `http` or `https` URL the server posts calls to. */
+  readonly url: string;
+  /** The JSON Schema a call's data must follow. */
+  readonly schema: JsonSchema;
+  /** 1-500 characters. */
+  readonly description?: string;
+  /** The agent identity the command's results post as. It has the command's name. */
+  readonly handler: IdentityName;
+  readonly createdAt: IsoTime;
+}
+/** The body of `POST /v1/commands`. The server checks the name, URL, schema and description. */
+interface AddCommandRequest {
+  readonly name: string;
+  readonly url: string;
+  readonly schema: JsonSchema;
+  readonly description?: string;
+}
+/** The answer to adding a command. The secret is shown this once only. */
+interface CommandWithSecretResponse {
+  readonly command: Command;
+  readonly secret: CommandSecret;
+}
+/** The answer to `GET /v1/commands`: every command, sorted by name. */
+interface ListCommandsResponse {
+  readonly commands: readonly Command[];
+}
 /** The answer to the health check. */
 interface HealthResponse {
   readonly status: "ok";
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "admin_only", "identity_exists", "identity_not_found", "last_admin", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "lease_held", "lease_required", "lease_lost", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "admin_only", "identity_exists", "identity_not_found", "last_admin", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "lease_held", "lease_required", "lease_lost", "command_exists", "handler_not_agent", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 declare const brand: unique symbol;
@@ -284,7 +325,7 @@ export type CookoutClient = {
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */
   readonly whoami: () => Promise<IdentityResponse>;
-  /** `GET /v1/identities`: every identity with its kind and owner, sorted by name. */
+  /** `GET /v1/identities`: every identity with its kind and owner, sorted by name. A command's handler has `handler: true`. */
   readonly listIdentities: () => Promise<ListIdentitiesResponse>;
   /** Admin only. The token in the answer is shown this once. A name in use is 409 `identity_exists`. */
   readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;
@@ -345,6 +386,14 @@ export type CookoutClient = {
   readonly subscribe: (channel: string) => Promise<SubscriptionResponse>;
   /** `DELETE /v1/channels/:name/subscription`: they stop reaching it. */
   readonly unsubscribe: (channel: string) => Promise<SubscriptionResponse>;
+  /**
+   * `POST /v1/commands` (admin only): registers a webhook command. Its handler identity is an agent with the
+   * command's name, made unless an agent of that name exists. The secret deliveries are signed with is in the answer
+   * this once. A name in use is 409 `command_exists`; a human's name is 409 `handler_not_agent`.
+   */
+  readonly addCommand: (request: AddCommandRequest) => Promise<CommandWithSecretResponse>;
+  /** `GET /v1/commands`: every command, sorted by name, without its secret. */
+  readonly listCommands: () => Promise<ListCommandsResponse>;
 };
 /**
  * A client for the server at `url` with `token`, each defaulting to
@@ -352,5 +401,5 @@ export type CookoutClient = {
  * (status 0) when there is no URL.
  */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckRequest, type AckResponse, type AgentIdentity, type Author, type Channel, type ChannelName, type ChannelResponse, CookoutError, type CookoutErrorCode, type CreateChannelRequest, type CreateIdentityRequest, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type Reply, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode };
+export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type Author, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, CookoutError, type CookoutErrorCode, type CreateChannelRequest, type CreateIdentityRequest, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type Reply, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode };
 ```

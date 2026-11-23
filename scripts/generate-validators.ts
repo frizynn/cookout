@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { channelResponseSchemas } from "../app/modules/channels/server.ts";
+import { commandResponseSchemas } from "../app/modules/commands/server.ts";
 import { generateValidators } from "./lib/validators.ts";
 import { httpResponseSchemas } from "../app/modules/http/server.ts";
 import { identityResponseSchemas } from "../app/modules/identities/server.ts";
@@ -19,6 +20,7 @@ const NONE = 0;
 const OUT_DIR = "app/modules/sdk/lib/generated";
 const generated = generateValidators({
   channels: channelResponseSchemas,
+  commands: commandResponseSchemas,
   http: httpResponseSchemas,
   identities: identityResponseSchemas,
   inbox: inboxResponseSchemas,

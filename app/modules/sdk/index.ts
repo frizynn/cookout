@@ -6,6 +6,7 @@
  * that code, typed as `UnknownErrorCode`.
  */
 import type { AckResponse, FollowResponse, InboxResponse, SubscriptionResponse } from "./lib/inbox.ts";
+import type { AddCommandRequest, CommandWithSecretResponse, ListCommandsResponse } from "./lib/commands.ts";
 import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "../channels/index.ts";
 import type {
   CreateIdentityRequest,
@@ -13,7 +14,7 @@ import type {
   IdentityWithTokenResponse,
   ListIdentitiesResponse,
 } from "../identities/index.ts";
-import type { JoinRequest, LeaseId, LeaseResponse, LeaveResponse } from "../leases/index.ts";
+import type { JoinRequest, LeaseId, LeaseResponse, LeaveResponse } from "./lib/leases.ts";
 import type {
   ListMessagesQuery,
   ListMessagesResponse,
@@ -34,6 +35,7 @@ import {
   isListIdentitiesResponse,
 } from "./lib/generated/validators.js";
 import type { HealthResponse } from "../http/index.ts";
+import { commandCalls } from "./lib/commands.ts";
 import { healthPath } from "../http/index.ts";
 import { inboxCalls } from "./lib/inbox.ts";
 import { leaseCalls } from "./lib/leases.ts";
@@ -46,6 +48,15 @@ export type {
   CreateChannelRequest,
   ListChannelsResponse,
 } from "../channels/index.ts";
+export type {
+  AddCommandRequest,
+  Command,
+  CommandName,
+  CommandSecret,
+  CommandWithSecretResponse,
+  JsonSchema,
+  ListCommandsResponse,
+} from "../commands/index.ts";
 export type { HealthResponse } from "../http/index.ts";
 export type { IsoTime } from "../time/index.ts";
 export type {
@@ -110,7 +121,7 @@ export type CookoutClient = {
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */
   readonly whoami: () => Promise<IdentityResponse>;
-  /** `GET /v1/identities`: every identity with its kind and owner, sorted by name. */
+  /** `GET /v1/identities`: every identity with its kind and owner, sorted by name. A command's handler has `handler: true`. */
   readonly listIdentities: () => Promise<ListIdentitiesResponse>;
   /** Admin only. The token in the answer is shown this once. A name in use is 409 `identity_exists`. */
   readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;
@@ -171,6 +182,14 @@ export type CookoutClient = {
   readonly subscribe: (channel: string) => Promise<SubscriptionResponse>;
   /** `DELETE /v1/channels/:name/subscription`: they stop reaching it. */
   readonly unsubscribe: (channel: string) => Promise<SubscriptionResponse>;
+  /**
+   * `POST /v1/commands` (admin only): registers a webhook command. Its handler identity is an agent with the
+   * command's name, made unless an agent of that name exists. The secret deliveries are signed with is in the answer
+   * this once. A name in use is 409 `command_exists`; a human's name is 409 `handler_not_agent`.
+   */
+  readonly addCommand: (request: AddCommandRequest) => Promise<CommandWithSecretResponse>;
+  /** `GET /v1/commands`: every command, sorted by name, without its secret. */
+  readonly listCommands: () => Promise<ListCommandsResponse>;
 };
 
 /**
@@ -202,5 +221,6 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
     ...messageCalls(server),
     ...leaseCalls(server),
     ...inboxCalls(server),
+    ...commandCalls(server),
   };
 }
