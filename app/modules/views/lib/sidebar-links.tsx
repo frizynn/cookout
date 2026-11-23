@@ -33,7 +33,7 @@ export function SidebarLinks(props: SidebarLinksProps): ReactNode {
       <NavList label={TEXT.views}>
         <InboxLink active={route.name === "inbox"} unread={unread} />
         <NavLink
-          active={route.name === "people"}
+          active={route.name === "people" || route.name === "profile"}
           href={hrefOf({ name: "people" })}
           icon="people"
           label={TEXT.people}

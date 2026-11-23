@@ -27,7 +27,16 @@
  * named column on its right with a close link (the whole width on a narrow
  * screen). A name's avatar is its coloured initials, one of eight hues hashed
  * from the name, a circle for a human and a square with a badge for an agent;
- * `Author` is a message's avatar and name, with an `agent` tag for an agent.
+ * `Author` is a message's avatar and name, with an `agent` tag for an agent;
+ * `Tag` is one such small tag, such as `admin`. `IdentityLink` is the
+ * logged-in identity's avatar and name as a link, highlighted when open.
+ * `PaneHeader`'s title is mono, as a channel's name, unless `sans`. A
+ * `Toolbar` under it holds a `FilterField` (a labelled box whose text its
+ * owner holds) and `Chip`s, buttons pressed or not; a named `ListArea` scrolls
+ * from the top, and its `IdentityRow`s are links to identities, each with
+ * its avatar, name, any tags and a muted detail line, highlighted when open.
+ * `Profile` is one identity's large avatar beside its `ProfileName` (its
+ * name and any tags, as a heading) and its details; `DateText` is a moment as a date, in mono.
  *
  * `AppShell` is the page around the login view; `Card`, centred in a scrolling column, `CardHeader`,
  * `Heading` and `Muted` are a shadcn-style card and its title row, `CardBody`
@@ -97,3 +106,13 @@ export { TextField } from "./lib/text-field.tsx";
 export { ToggleButton } from "./lib/toggle-button.tsx";
 export { Workspace } from "./lib/workspace.tsx";
 export { WorkspaceMain } from "./lib/workspace-main.tsx";
+export { IdentityLink } from "./lib/identity-link.tsx";
+export { Chip } from "./lib/chip.tsx";
+export { DateText } from "./lib/date-text.tsx";
+export { FilterField } from "./lib/filter-field.tsx";
+export { IdentityRow } from "./lib/identity-row.tsx";
+export { ListArea } from "./lib/list-area.tsx";
+export { Profile } from "./lib/profile.tsx";
+export { ProfileName } from "./lib/profile-name.tsx";
+export { Tag } from "./lib/tag.tsx";
+export { Toolbar } from "./lib/toolbar.tsx";

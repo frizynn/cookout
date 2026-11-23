@@ -52,6 +52,53 @@ interface SuggestionsParts {
 interface AvatarParts {
   readonly name: string;
   readonly agent: boolean;
+  readonly size?: "large" | "small";
+}
+
+interface TagParts {
+  readonly label: string;
+}
+
+interface ChipParts extends Parts {
+  readonly pressed: boolean;
+  readonly onClick: () => void;
+}
+
+interface FilterFieldParts {
+  readonly label: string;
+  readonly value: string;
+  readonly onEdit: (text: string) => void;
+}
+
+interface IdentityRowParts {
+  readonly href: string;
+  readonly name: string;
+  readonly agent: boolean;
+  readonly active: boolean;
+  readonly detail: string;
+  readonly note: string | null;
+  readonly children?: ReactNode;
+}
+
+interface ProfileParts extends Parts {
+  readonly name: string;
+  readonly agent: boolean;
+}
+
+interface ProfileNameParts {
+  readonly name: string;
+  readonly children?: ReactNode;
+}
+
+interface DateTextParts {
+  readonly time: string;
+}
+
+interface IdentityLinkParts {
+  readonly href: string;
+  readonly name: string;
+  readonly agent: boolean;
+  readonly active: boolean;
 }
 
 interface WorkspaceParts extends Parts {
@@ -83,6 +130,7 @@ interface PillParts {
 interface PaneHeaderParts {
   readonly title: string;
   readonly description: string | null;
+  readonly sans?: boolean;
   readonly children?: ReactNode;
 }
 
@@ -156,6 +204,14 @@ interface SkeletonParts {
 }
 
 export type {
+  IdentityLinkParts,
+  ChipParts,
+  DateTextParts,
+  FilterFieldParts,
+  IdentityRowParts,
+  ProfileNameParts,
+  ProfileParts,
+  TagParts,
   AuthorParts,
   AvatarParts,
   ButtonParts,

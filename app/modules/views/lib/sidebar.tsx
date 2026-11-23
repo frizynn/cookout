@@ -29,7 +29,11 @@ export function SidebarView(props: SidebarProps): ReactNode {
         <SidebarLinks board={props.board} route={props.route} unread={props.unread} />
       </SidebarBody>
       <SidebarFooter>
-        <SidebarSettings identity={props.identity} layout={layout} />
+        <SidebarSettings
+          identity={props.identity}
+          layout={layout}
+          open={props.route.name === "profile" && props.route.identity === props.identity.name}
+        />
       </SidebarFooter>
     </Sidebar>
   );
