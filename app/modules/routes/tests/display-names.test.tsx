@@ -2,8 +2,8 @@ import type { CookoutClient, EventStream } from "../../sdk/index.ts";
 import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { inSettings, inSidebar } from "./regions.ts";
 import { alertSaying } from "./alerts.ts";
-import { inSidebar } from "./regions.ts";
 import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";
 
@@ -25,15 +25,19 @@ async function crewOf(prefix: string): Promise<Crew> {
 async function openSettings(client: CookoutClient): Promise<() => void> {
   const close = openAt({ client, hash: "#/people" });
   await screen.findByRole("list", { name: "Identities" });
-  fireEvent.click(await inSidebar().findByRole("button", { name: "Settings" }));
-  await screen.findByRole("region", { name: "Settings" });
+  fireEvent.click(await inSidebar().findByRole("link", { name: "Settings" }));
+  await inSettings().findByRole("heading", { level: 2, name: "My agents" });
   return close;
 }
 
+async function openPeople(): Promise<void> {
+  fireEvent.click(inSidebar().getByRole("link", { name: "People & agents" }));
+  await screen.findByRole("list", { name: "Identities" });
+}
+
 function formNames(): readonly (string | null)[] {
-  const panel = screen.getByRole("region", { name: "Settings" });
   const names: (string | null)[] = [];
-  for (const form of within(panel).getAllByRole("form")) {
+  for (const form of inSettings().getAllByRole("form")) {
     names.push(form.getAttribute("aria-label"));
   }
   return names;
@@ -104,6 +108,8 @@ it("settings saves your own display name and your agents', and shows them at onc
   const close = await openSettings(human);
   await saveIn("Your display name", "  Ada Lovelace ");
   await saveIn("Display name of @web-names-save-bot", "Release Bot");
+  const forms = formNames();
+  await openPeople();
   await waitFor(() => {
     expect(rowOf("web-names-save-bot")).toBe(
       "Release Bot@web-names-save-botagentAgent · owned by web-names-save-human",
@@ -111,7 +117,7 @@ it("settings saves your own display name and your agents', and shows them at onc
   });
 
   expect([
-    formNames(),
+    forms,
     rowOf("web-names-save-human"),
     inSidebar().getByRole("link", { name: /Ada Lovelace/u }).textContent,
   ]).toStrictEqual([
@@ -130,11 +136,14 @@ it("saving an empty display name clears it", { timeout: 5000 }, async () => {
   await human.setDisplayName("web-names-clear-human", "Grace Hopper");
   const close = await openSettings(human);
   await saveIn("Your display name", "");
-  await waitFor(() => {
-    expect(rowOf("web-names-clear-human")).toBe("web-names-clear-human(you)Human");
-  });
+  await inSidebar().findByRole("link", { name: /^web-names-clear-human/u });
+  const field = fieldIn("Your display name");
+  await openPeople();
 
-  expect(fieldIn("Your display name")).toHaveProperty("value", "");
+  expect([rowOf("web-names-clear-human"), field]).toStrictEqual([
+    "web-names-clear-human(you)Human",
+    expect.objectContaining({ value: "" }),
+  ]);
 
   close();
 });

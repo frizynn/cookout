@@ -1,6 +1,7 @@
-import { InboxView, LoginView, NotBuiltView } from "../../views/index.tsx";
 import { ChannelPanes } from "./channel-panes.tsx";
 import type { IdentityName } from "../../sdk/index.ts";
+import { NotBuiltView } from "../../views/index.tsx";
+import { PagePanes } from "./page-panes.tsx";
 import { PeoplePanes } from "./people-panes.tsx";
 import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
@@ -18,6 +19,12 @@ type PeopleRoute = Extract<Route, { readonly name: "people" | "profile" }>;
 
 type ChannelRoute = Extract<Route, { readonly name: "channel" | "thread" }>;
 
+type PageRoute = Extract<Route, { readonly name: "inbox" | "login" | "settings" }>;
+
+function isPage(route: Route): route is PageRoute {
+  return route.name === "inbox" || route.name === "login" || route.name === "settings";
+}
+
 function isPeople(route: Route): route is PeopleRoute {
   return route.name === "people" || route.name === "profile";
 }
@@ -28,11 +35,8 @@ function isChannel(route: Route): route is ChannelRoute {
 
 export function RoutePanes(props: RoutePanesProps): ReactNode {
   const { route, stores } = props;
-  if (route.name === "inbox") {
-    return <InboxView me={props.me} unread={stores.unread} />;
-  }
-  if (route.name === "login") {
-    return <LoginView session={stores.session} />;
+  if (isPage(route)) {
+    return <PagePanes me={props.me} route={route} stores={stores} />;
   }
   if (isPeople(route)) {
     return <PeoplePanes identities={stores.composer.identities} layout={stores.layout} me={props.me} route={route} />;

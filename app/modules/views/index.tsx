@@ -7,10 +7,12 @@
  * People & agents link, every channel sorted by name, bold when it has unread
  * messages, with its mention count as a pill (its unread count read out only),
  * or why the channels can't load, the open item highlighted, and the
- * logged-in human with a Settings button, whose panel holds a form for the
- * human's own display name and one for each agent they own (the `composer`
- * store: saving shows at once, a refusal shows in that form and keeps the
- * text) and the theme switch (the `layout` store). Wherever an identity
+ * logged-in human with a Settings link. `SettingsView` is the settings page,
+ * a section for each part with a heading that links to it (a link to one
+ * section focuses its heading): Profile, a form for the human's own display
+ * name and one for each agent they own (the `composer` store: saving shows at
+ * once, a refusal shows in that form and keeps the text), Theme, the theme
+ * switch (the `layout` store), and My agents. Wherever an identity
  * shows, its display name, read live from the identity list `Authors` gives,
  * comes first with the `@name` muted beside it. `ChannelView` is a channel's pane: its name and
  * description, its top-level messages, newest last, with "Load older
@@ -69,5 +71,6 @@ export { LoginView } from "./lib/login.tsx";
 export { NotBuiltView } from "./lib/not-built.tsx";
 export { PeopleView } from "./lib/people.tsx";
 export { ProfileView } from "./lib/profile.tsx";
+export { SettingsView } from "./lib/settings.tsx";
 export { SidebarView } from "./lib/sidebar.tsx";
 export { ThreadView } from "./lib/thread.tsx";

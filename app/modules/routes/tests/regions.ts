@@ -48,6 +48,10 @@ export function inPane(): Region {
   return regionOf(() => screen.getByRole("main"));
 }
 
+export function inSettings(): Region {
+  return regionOf(() => screen.getByRole("region", { name: "Settings" }));
+}
+
 export function inThread(): Region {
   return regionOf(() => screen.getByRole("complementary", { name: "Thread" }));
 }

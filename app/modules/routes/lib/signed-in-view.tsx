@@ -22,7 +22,6 @@ export function SignedInView(props: SignedInViewProps): ReactNode {
     <Workspace onToggleSidebar={handleToggle} sidebarOpen={sidebar}>
       <SidebarView
         board={stores.board}
-        composer={stores.composer}
         identity={props.identity}
         layout={layout}
         route={props.route}
