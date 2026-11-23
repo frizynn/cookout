@@ -162,4 +162,4 @@ export { createCommands } from "./lib/commands.ts";
 export type { PostState } from "./lib/failure.ts";
 export type { Subscriptions, SubscriptionsState } from "./lib/subscriptions.ts";
 export type { ThreadMessages, ThreadMessagesState } from "./lib/thread-messages.ts";
-export type { ClosingRefusal, ThreadClosing } from "./lib/thread-closing.ts";
+export type { ThreadClosing } from "./lib/thread-closing.ts";

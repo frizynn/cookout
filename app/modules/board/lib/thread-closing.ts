@@ -89,4 +89,4 @@ function createThreadClosing({ changed, client }: ClosingOptions): ThreadClosing
   };
 }
 
-export { type ClosingClient, type ClosingRefusal, type ThreadClosing, closedAs, createThreadClosing };
+export { type ClosingClient, type ThreadClosing, closedAs, createThreadClosing };

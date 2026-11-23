@@ -39,4 +39,4 @@ function feedRows(feed: FeedOf): readonly FeedRow[] {
   });
 }
 
-export { type FeedRow, feedRows };
+export { feedRows };
