@@ -1,6 +1,6 @@
 import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
 import { adminClient, messagesIn, newIdentity, openAt } from "./app.tsx";
-import { expect, it } from "vitest";
+import { expect, it, onTestFinished, vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import { watched } from "./watched.ts";
 
@@ -20,6 +20,14 @@ async function closeBoth(unmount: () => void, stream: Promise<EventStream>): Pro
   unmount();
   const events = await stream;
   await events.close();
+}
+
+function clockStoppedAt(moment: string): void {
+  vi.useFakeTimers({ now: 0, toFake: ["Date"] });
+  vi.setSystemTime(moment);
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
 }
 
 async function openLive(name: string, at: (parent: Message) => string): Promise<LiveView> {
@@ -45,6 +53,7 @@ it("a message posted by another identity appears in the open channel without a r
   expect.hasAssertions();
 
   const { close, parent, poster } = await openLive("web-live-channel", (message) => `#/channels/${message.channel}`);
+  clockStoppedAt(parent.createdAt);
 
   await poster.createMessage({ channel: parent.channel, text: "Or at one?" });
   await poster.createMessage({ channel: parent.channel, replyTo: parent.id, text: "Noon works" });

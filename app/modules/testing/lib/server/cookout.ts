@@ -12,7 +12,7 @@ import {
   Scope,
 } from "effect";
 import type { CookoutClient, Identity, Token } from "../../../sdk/index.ts";
-import type { StorageUnavailable, StoredCommand } from "../../../storage/server.ts";
+import type { StorageUnavailable, StoredCommand, StoredDelivery } from "../../../storage/server.ts";
 import { backingServices, newToken, storageFor } from "./backing.ts";
 import { currentTime, startTestClock } from "./time.ts";
 import { identityFixture, identityName, ownedByAdminUnlessNamed, testCookoutAdminName } from "./identities.ts";
@@ -49,6 +49,7 @@ export type TestCookoutService = {
   readonly restart: Effect.Effect<CookoutClient>;
   readonly restartServer: Effect.Effect<BootedServer>;
   readonly seedCommand: (stored: StoredCommand) => Effect.Effect<void>;
+  readonly pendingDeliveries: Effect.Effect<readonly StoredDelivery[]>;
   readonly webhook: WebhookFake["Service"];
 };
 
@@ -141,6 +142,13 @@ function seedCommand(stored: StoredCommand): Effect.Effect<void, never, Storage>
   }).pipe(Effect.orDie);
 }
 
+const pendingDeliveries: Effect.Effect<readonly StoredDelivery[], never, Storage> = Effect.gen(
+  function* listTestPendingDeliveries() {
+    const storage = yield* Storage;
+    return yield* storage.listPendingDeliveries;
+  },
+).pipe(Effect.orDie);
+
 type BootedContext = Context.Context<Storage | Identities | WebhookFake>;
 
 interface Booted {
@@ -205,6 +213,7 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
         client: clientAt(first.url)(adminToken),
         clientFor: clientAt(first.url),
         createIdentity: (name, identityOptions = {}) => onFirst(seedIdentity(first.url)(name, identityOptions)),
+        pendingDeliveries: onFirst(pendingDeliveries),
         restart: Effect.map(restartServer, ({ url }) => clientAt(url)(adminToken)),
         restartServer,
         seedCommand: (stored) => onFirst(seedCommand(stored)),

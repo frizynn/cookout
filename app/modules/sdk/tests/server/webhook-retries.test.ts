@@ -18,7 +18,12 @@ const SEE_OTHER = 303;
 const schema = { properties: { branch: { type: "string" } }, required: ["branch"], type: "object" };
 const patientCookout = testCookout({ webhookTimeoutSeconds: 86_400 });
 
-const storingTheAttempt = TestClock.withLive(Effect.sleep("200 millis"));
+function storedAttempts(cookout: TestCookoutService, attempts: number): Effect.Effect<void> {
+  return cookout.pendingDeliveries.pipe(
+    Effect.repeat({ until: (pending) => Arr.some(pending, (delivery) => delivery.attempts >= attempts) }),
+    Effect.asVoid,
+  );
+}
 
 function advanceUntilCalls(cookout: TestCookoutService, count: number): Effect.Effect<readonly WebhookCall[]> {
   const step = Effect.andThen(TestClock.adjust("5 seconds"), TestClock.withLive(Effect.sleep("1 millis")));
@@ -140,7 +145,7 @@ it.effect("a server restarted after the first failed attempt makes 6 attempts in
     const threadId = yield* calledDeploy(cookout);
     const restarted = yield* cookout.webhook
       .waitForCalls(ONE_CALL)
-      .pipe(Effect.andThen(storingTheAttempt), Effect.andThen(cookout.restart));
+      .pipe(Effect.andThen(storedAttempts(cookout, ONE_CALL)), Effect.andThen(cookout.restart));
     yield* advanceUntilCalls(cookout, SIX_CALLS);
     const thread = yield* answer(() => restarted.getThread(threadId)).pipe(
       Effect.repeat({ until: ({ replies }) => Arr.isReadonlyArrayNonEmpty(replies) }),
