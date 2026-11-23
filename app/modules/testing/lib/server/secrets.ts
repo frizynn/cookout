@@ -58,4 +58,4 @@ function secretsOf(kind: SecretsKind): Layer.Layer<Secrets> {
   return secretsTest;
 }
 
-export { leaseId, secretsOf, secretsTest };
+export { callId, leaseId, secretsOf, secretsTest };

@@ -6,6 +6,9 @@ import { TestClock } from "effect/testing";
 import type { TestCookoutService } from "../../../testing/server.ts";
 import type { WebhookCall } from "../../../webhook-fake/server.ts";
 
+const ONE_FAILURE = 1;
+const ONE_CALL = 1;
+const TWO_CALLS = 2;
 const TWO_FAILURES = 2;
 const THREE_CALLS = 3;
 const SIX_CALLS = 6;
@@ -77,4 +80,22 @@ it.effect("a handler that always fails gets 5 retries, then a failure reply appe
       },
     ]);
   }).pipe(Effect.provide(patientCookout)),
+);
+
+it.effect("a server restarted mid-backoff still retries the delivery, with the same call ID", () =>
+  Effect.gen(function* restartedMidBackoff() {
+    const cookout = yield* TestCookout;
+    yield* cookout.webhook.failNext(ONE_FAILURE, UNAVAILABLE);
+    const threadId = yield* calledDeploy(cookout);
+    const restarted = yield* Effect.andThen(cookout.webhook.waitForCalls(ONE_CALL), cookout.restart);
+    yield* advanceUntilCalls(cookout, TWO_CALLS);
+    const calls = yield* Effect.andThen(TestClock.adjust("1 hour"), cookout.webhook.calls);
+    const { replies } = yield* answer(() => restarted.getThread(threadId));
+
+    expect(Arr.map(calls, ({ status }) => status)).toStrictEqual([UNAVAILABLE, OK]);
+    expect(Arr.map(calls, (call) => call.body)).toMatchObject(
+      Arr.replicate({ callId: "call_test_4", command: "deploy", data: { branch: "main" }, threadId }, TWO_CALLS),
+    );
+    expect(replies).toStrictEqual([]);
+  }).pipe(Effect.provide(testCookout({ storage: "sqlite", webhookTimeoutSeconds: 86_400 }))),
 );
