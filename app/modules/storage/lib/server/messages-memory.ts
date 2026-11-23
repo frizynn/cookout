@@ -8,9 +8,11 @@ import type {
   ThreadResponse,
   TopLevelMessage,
 } from "../../../messages/index.ts";
-import { asMessageId, counted, isPlaced, placeIn, placed, threadIdOf } from "./messages.ts";
+import { asMessageId, counted, isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { ChannelsSection } from "./channels.ts";
+import type { IdentitiesSection } from "./identities.ts";
+import type { IdentityName } from "../../../identities/index.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { StorageUnavailable } from "./errors.ts";
 
@@ -21,7 +23,13 @@ interface MemoryMessages {
 
 interface MemoryMessagesOptions {
   readonly channels: ChannelsSection;
+  readonly identities: IdentitiesSection;
   readonly state: MemoryState;
+}
+
+interface Appending {
+  readonly known: ReadonlySet<IdentityName>;
+  readonly message: NewMessage;
 }
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
@@ -49,12 +57,13 @@ function placementOf(messages: readonly Message[], { channel, replyTo }: NewMess
   return placeIn({ channel, found: Option.getOrUndefined(findMessage(messages, replyTo)) });
 }
 
-function append(data: MemoryMessages, message: NewMessage): readonly [AppendMessageResult, MemoryMessages] {
-  const placement = placementOf(data.messages, message);
+function append(data: MemoryMessages, appending: Appending): readonly [AppendMessageResult, MemoryMessages] {
+  const placement = placementOf(data.messages, appending.message);
   if (!isPlaced(placement)) {
     return [placement, data];
   }
   const last = data.last + NEXT;
+  const message = withKnownMentions(appending);
   const stored = placed({ id: asMessageId(last), message, placement });
   return [
     { message: stored, status: "appended" },
@@ -87,7 +96,7 @@ function pageIn(messages: readonly Message[], channel: ChannelName, page: Channe
   return { hasMore: older.length > shown.length, messages: Arr.map(shown, (parent) => current(messages, parent)) };
 }
 
-function memoryMessages({ channels, state }: MemoryMessagesOptions): MessagesSection {
+function memoryMessages({ channels, identities, state }: MemoryMessagesOptions): MessagesSection {
   const ref = Ref.makeUnsafe(EMPTY);
   function change<Value>(work: (data: MemoryMessages) => readonly [Value, MemoryMessages]): Fails<Value> {
     return Effect.andThen(state.ensureOpen, Ref.modify(ref, work));
@@ -101,11 +110,15 @@ function memoryMessages({ channels, state }: MemoryMessagesOptions): MessagesSec
   function channelExists(channel: ChannelName): Fails<boolean> {
     return Effect.map(channels.findChannel(channel), Predicate.isNotUndefined);
   }
+  const knownNames: Fails<ReadonlySet<IdentityName>> = Effect.map(
+    identities.listIdentities(),
+    (listed) => new Set(Arr.map(listed, (identity) => identity.name)),
+  );
   return {
     appendMessage: (message) =>
       Effect.flatMap(channelExists(message.channel), (exists): Fails<AppendMessageResult> => {
         if (exists) {
-          return change((data) => append(data, message));
+          return Effect.flatMap(knownNames, (known) => change((data) => append(data, { known, message })));
         }
         return Effect.succeed(CHANNEL_NOT_FOUND);
       }),

@@ -41,8 +41,8 @@ const postRoute: Route<Caller | Messages> = {
       const body = yield* HttpServerRequest.schemaBodyJson(PostMessageRequestSchema, ALL_ERRORS);
       const caller = yield* Caller;
       const messages = yield* Messages;
-      const message = yield* messages.post(caller, body);
-      return yield* HttpServerResponse.schemaJson(MessageResponseSchema)({ message }, { status: CREATED });
+      const posted = yield* messages.post(caller, body);
+      return yield* HttpServerResponse.schemaJson(MessageResponseSchema)(posted, { status: CREATED });
     }),
   method: "POST",
   path: messagesPath,

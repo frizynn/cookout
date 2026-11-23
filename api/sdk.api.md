@@ -164,6 +164,8 @@ interface PostMessageRequest {
 /** The answer to posting a message. */
 interface MessageResponse {
   readonly message: Message;
+  /** Each `@name` in the text that names no identity, once each in the order written. They stay plain text. */
+  readonly unknownMentions: readonly string[];
 }
 /** The query of a channel page. With no `before`, the page is the newest messages. */
 interface ListMessagesQuery {
