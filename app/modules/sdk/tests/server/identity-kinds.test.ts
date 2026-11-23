@@ -88,7 +88,7 @@ it.effect("an identity keeps the kind it was created with, through a second crea
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("the admin made on first boot is a human", () =>
+it.effect("the admin a fresh board makes is a human", () =>
   Effect.gen(function* firstAdminIsHuman() {
     const cookout = yield* TestCookout;
     const { identity } = yield* answer(cookout.client.whoami);

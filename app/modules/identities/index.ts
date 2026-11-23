@@ -56,7 +56,7 @@ export function tokenHash(value: string): TokenHash {
   return as(value);
 }
 
-/** The name of the admin identity the server makes on its first boot. */
+/** The name of the admin identity, whose token comes from `COOKOUT_ADMIN_TOKEN` at every boot. */
 export const firstAdminName: IdentityName = as("admin");
 
 /** The two kinds of identity. Every identity is exactly one of them. */

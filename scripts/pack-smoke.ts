@@ -71,18 +71,13 @@ function run(command: string, args: readonly string[], cwd = "."): string {
   return result.stdout;
 }
 
+const adminToken = run("openssl", ["rand", "-hex", "32"]).trim();
+
 function check(ok: boolean, message: string): void {
   if (!ok) {
     fail(SCRIPT, message);
   }
   console.log(`ok   ${message}`);
-}
-
-function adminTokenIn(line: unknown): string {
-  if (field(line, "identity") !== "admin") {
-    return "";
-  }
-  return text(field(line, "adminToken")) ?? "";
 }
 
 async function closeCode(closing: Promise<readonly unknown[]>): Promise<number> {
@@ -94,7 +89,13 @@ async function closeCode(closing: Promise<readonly unknown[]>): Promise<number> 
 }
 
 function startServer(): Started {
-  const args = withEnv({ COOKOUT_DB: database }, bin, ["serve", "--port", "0", "--host", "127.0.0.1"]);
+  const args = withEnv({ COOKOUT_ADMIN_TOKEN: adminToken, COOKOUT_DB: database }, bin, [
+    "serve",
+    "--port",
+    "0",
+    "--host",
+    "127.0.0.1",
+  ]);
   const child = spawn("env", args, { cwd: install, stdio: ["ignore", "pipe", "inherit"] });
   servers.add(child);
   const exited = closeCode(once(child, "close"));
@@ -151,24 +152,32 @@ function installTarball(): void {
   run("npm", ["install", "--no-audit", "--no-fund", "--loglevel=error", path.resolve(root, tarball)], install);
 }
 
-async function firstBoot(): Promise<string> {
+function refusesWithoutAdminToken(): void {
+  const args = withEnv({ COOKOUT_ADMIN_TOKEN: "", COOKOUT_DB: database }, bin, ["serve", "--port", "0"]);
+  const result = spawnSync("env", args, { cwd: install, encoding: "utf8" });
+  check(
+    result.status === EXIT_FAILURE && result.stderr.includes("admin_token_invalid"),
+    "cookout serve without COOKOUT_ADMIN_TOKEN refuses to start with admin_token_invalid",
+  );
+}
+
+function printsNoToken(server: Server): boolean {
+  return server.lines.every((line) => !JSON.stringify(line).includes(adminToken));
+}
+
+async function boot(): Promise<void> {
   const first = await serve();
-  const adminToken = first.lines.map((line) => adminTokenIn(line)).find((token) => token !== "") ?? "";
-  check(adminToken !== "", "the first boot prints the admin token on stdout");
+  check(printsNoToken(first), "the first boot prints nothing of COOKOUT_ADMIN_TOKEN");
   check(typeof parseJson(health(first.url)) === "object", `curl -fsS ${first.url}/v1/health succeeds`);
   check(webPage(first.url).includes('<div id="root">'), `curl -fsS ${first.url}/ answers with the built web UI`);
   check((await first.stop()) === EXIT_SUCCESS, "cookout serve exits 0 on SIGTERM");
-  return adminToken;
 }
 
-async function restart(adminToken: string): Promise<void> {
+async function restart(): Promise<void> {
   const second = await serve();
-  check(
-    second.lines.every((line) => adminTokenIn(line) === ""),
-    "a restart on the same COOKOUT_DB prints no token",
-  );
+  check(printsNoToken(second), "a restart on the same COOKOUT_DB prints nothing of COOKOUT_ADMIN_TOKEN");
   const answer = parseJson(whoami(second.url, adminToken));
-  check(field(field(answer, "identity"), "name") === "admin", "the first boot's token still passes cookout whoami");
+  check(field(field(answer, "identity"), "name") === "admin", "COOKOUT_ADMIN_TOKEN passes cookout whoami as admin");
   await second.stop();
 }
 
@@ -183,7 +192,9 @@ function importSdk(): void {
 
 async function main(): Promise<void> {
   installTarball();
-  await restart(await firstBoot());
+  refusesWithoutAdminToken();
+  await boot();
+  await restart();
   importSdk();
 }
 

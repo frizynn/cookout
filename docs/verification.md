@@ -8,7 +8,7 @@ How to run the cookout locally, seed it and drive it, to prove a change works. R
 pnpm dev > /tmp/cookout-dev.log 2>&1
 ```
 
-Run it as a background command (or in its own terminal); it runs until stopped. `pnpm dev` runs `app/dev.ts start`: `cookout serve` on a fresh SQLite file in a temporary folder, on `127.0.0.1` and a free port (`pnpm dev --port 3000` picks one), plus the webhook fake. When it is up, the log has one JSON line:
+Run it as a background command (or in its own terminal); it runs until stopped. `pnpm dev` runs `app/dev.ts start`: `cookout serve` on a fresh SQLite file in a temporary folder, on `127.0.0.1` and a free port (`pnpm dev --port 3000` picks one), with an admin token it makes for the run, plus the webhook fake. When it is up, the log has one JSON line:
 
 ```json
 {
@@ -82,7 +82,7 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity create linus-2 --kind 
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity create no-kind
 ```
 
-On a fresh seed the list gives `["ada","human",null]`, `["admin","human",null]`, `["grace","human",null]`, `["release-bot","agent","ada"]` and `["triage-agent","agent","grace"]`: the first-boot admin is a human. Creating `linus` prints it with `"kind": "human"`. A human with `--owner` is refused with `invalid_request` (`A human has no owner.`), and a create without `--kind` is a usage error; both exit 1. No verb changes a kind: `identity rotate` keeps it.
+On a fresh seed the list gives `["ada","human",null]`, `["admin","human",null]`, `["grace","human",null]`, `["release-bot","agent","ada"]` and `["triage-agent","agent","grace"]`: the admin is a human. Creating `linus` prints it with `"kind": "human"`. A human with `--owner` is refused with `invalid_request` (`A human has no owner.`), and a create without `--kind` is a usage error; both exit 1. No verb changes a kind: `identity rotate` keeps it.
 
 ## Take an identity's lease
 
@@ -214,7 +214,7 @@ To run the suite against the Docker image instead, in one command:
 pnpm e2e:docker
 ```
 
-`scripts/e2e-docker.sh` builds the image, runs it on a fresh named volume with the `[env]` of [fly.toml](../fly.toml), reads the admin token from the container's first boot, runs the suite against it and removes the container, the volume and the image again, also when a test fails or on Ctrl-C. It exits with the suite's code. The one `[env]` value it replaces is `COOKOUT_PUBLIC_URL`, with the local address (`http://127.0.0.1:<free port>`), because the `Host` the suite sends is that address's. Passing it is required before any `fly deploy`.
+`scripts/e2e-docker.sh` builds the image, makes a `COOKOUT_ADMIN_TOKEN` for the run, runs the image with it on a fresh named volume with the `[env]` of [fly.toml](../fly.toml), checks that the container's logs don't show the token, runs the suite against it with that token and removes the container, the volume and the image again, also when a test fails or on Ctrl-C. It exits with the suite's code. The one `[env]` value it replaces is `COOKOUT_PUBLIC_URL`, with the local address (`http://127.0.0.1:<free port>`), because the `Host` the suite sends is that address's. Passing it is required before any `fly deploy`.
 
 ## Log in as a human with a session cookie
 
@@ -244,11 +244,12 @@ The brackets stop the pattern matching the shell that runs `pkill` itself. It st
 
 ## Run it in Docker
 
-The [Dockerfile](../Dockerfile) builds the cookout with `pnpm build` and runs `node dist/main.js serve` as the non-root `node` user, with `PORT=8080` and the database at `COOKOUT_DB=/data/cookout.db`, on a volume. Set any other variable from `.env.example` with `-e`. Build it and start it on the named volume `cookout-data`:
+The [Dockerfile](../Dockerfile) builds the cookout with `pnpm build` and runs `node dist/main.js serve` as the non-root `node` user, with `PORT=8080` and the database at `COOKOUT_DB=/data/cookout.db`, on a volume. `COOKOUT_ADMIN_TOKEN` is required: without it, or with one shorter than 32 characters, the container exits 1 with `admin_token_invalid` and never shows the value. Every boot makes it the `admin` identity's only token. Set any other variable from `.env.example` with `-e`. Make a token into an env file, build the image and start it on the named volume `cookout-data`:
 
 ```sh
+echo "COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32)" > /tmp/cookout-docker-admin.env
 docker build -t cookout .
-docker run --rm -d --name cookout -p 8080:8080 -v cookout-data:/data cookout
+docker run --rm -d --name cookout -p 8080:8080 -v cookout-data:/data --env-file /tmp/cookout-docker-admin.env cookout
 ```
 
 If port 8080 is taken on your machine, map another one (`-p 18080:8080`) and use it in the commands below. Check that it is up and healthy, and that it doesn't run as root:
@@ -261,18 +262,18 @@ docker inspect cookout --format '{{.Config.User}}'
 
 The health check prints `{ "status": "ok", "time" }`. Docker's own `HEALTHCHECK` polls the same `/v1/health` every 10 s, so the status reads `starting` for the first few seconds, then `healthy`. The user is `node`.
 
-On a fresh volume, the server's first boot prints the admin token as a JSON line in its logs. Write the address and token to the env file, then drive it with the CLI as in the recipes above:
+The server prints nothing about the token. Write the address and the token to the env file, then drive it with the CLI as in the recipes above:
 
 ```sh
-docker logs cookout 2>&1 | grep '^{"adminToken' | jq -r '"COOKOUT_URL=http://127.0.0.1:8080 COOKOUT_TOKEN=\(.adminToken)"' > /tmp/cookout-docker.env
+echo "COOKOUT_URL=http://127.0.0.1:8080 COOKOUT_TOKEN=$(cut -d= -f2 /tmp/cookout-docker-admin.env)" > /tmp/cookout-docker.env
 env $(cat /tmp/cookout-docker.env) node app/main.ts identity create ada
 ```
 
-The SQLite file lives on the volume, so the board outlives the container. Stop it and start it again on the same volume, and `ada` is still there; the second boot prints no admin token, because the admin already exists:
+The SQLite file lives on the volume, so the board outlives the container. Stop it and start it again on the same volume with the same env file, and `ada` is still there and the token still works. A different `COOKOUT_ADMIN_TOKEN` on a restart replaces the admin's token: the old one then gets 401.
 
 ```sh
 docker stop cookout
-docker run --rm -d --name cookout -p 8080:8080 -v cookout-data:/data cookout
+docker run --rm -d --name cookout -p 8080:8080 -v cookout-data:/data --env-file /tmp/cookout-docker-admin.env cookout
 env $(cat /tmp/cookout-docker.env) node app/main.ts identity list
 ```
 
@@ -303,11 +304,13 @@ fly machine restart -a cookout $(fly machines list -a cookout --json | jq -r '.[
 node app/main.ts identity list
 ```
 
-The first boot on the fresh volume printed the admin token once in `fly logs`. It is kept as the GitHub Actions secret `COOKOUT_E2E_ADMIN_TOKEN` (`gh secret list -R mattpocock/cookout`), never in the repo. Store it straight from the logs while they still have it:
+The admin's token is the Fly secret `COOKOUT_ADMIN_TOKEN` (`fly secrets list -a cookout`); the app refuses to start without it. The same value is the GitHub Actions secret `COOKOUT_E2E_ADMIN_TOKEN` (`gh secret list -R mattpocock/cookout`), and it is never in the repo. Make one and set both without printing it (bash, for the process substitution):
 
 ```sh
-fly logs -a cookout --no-tail | grep -o '{"adminToken[^}]*}' | head -n 1 | jq -j .adminToken | gh secret set COOKOUT_E2E_ADMIN_TOKEN -R mattpocock/cookout
+openssl rand -hex 32 | tr -d '\n' | tee >(gh secret set COOKOUT_E2E_ADMIN_TOKEN -R mattpocock/cookout) | sed 's/^/COOKOUT_ADMIN_TOKEN=/' | fly secrets import -a cookout
 ```
+
+`fly secrets set` takes only `NAME=VALUE` arguments, which would put the token on the command line; `fly secrets import` reads `NAME=VALUE` pairs from stdin, and `gh secret set` reads the value from stdin when there is no `--body`. Setting the secret restarts the machine, and the boot makes it the admin's only token. To replace a lost or leaked token, run the same command again: the old token gets 401 once the machine has restarted. A token made by `cookout identity rotate admin` lasts only until the next boot.
 
 ## Open the web UI
 
@@ -324,17 +327,18 @@ To see the built UI as `cookout serve` serves it, build and serve the built bina
 
 ```sh
 pnpm build
-node dist/main.js serve --port 3000 --host 127.0.0.1 --db /tmp/cookout-built.db > /tmp/cookout-built.log 2>&1
+echo "COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32)" > /tmp/cookout-built-admin.env
+env $(cat /tmp/cookout-built-admin.env) node dist/main.js serve --port 3000 --host 127.0.0.1 --db /tmp/cookout-built.db > /tmp/cookout-built.log 2>&1
 ```
 
-Run the second command in the background (or its own terminal). `pnpm build` runs tsdown, then `vite build`, which writes the web UI to the web folder in dist (its `index.html` and its assets). `cookout serve` serves that `index.html` at `/` and each asset at `/assets/<file>`, without a token, so open `http://127.0.0.1:3000/`, or run `curl -fsS http://127.0.0.1:3000/`. Running `node app/main.ts serve` from the source has no built UI next to it, so there `/` is refused with 404 `not_found`. Stop it with `pkill -INT -f "[d]ist/main.js serve"`.
+Run the last command in the background (or its own terminal). `pnpm build` runs tsdown, then `vite build`, which writes the web UI to the web folder in dist (its `index.html` and its assets). `cookout serve` serves that `index.html` at `/` and each asset at `/assets/<file>`, without a token, so open `http://127.0.0.1:3000/`, or run `curl -fsS http://127.0.0.1:3000/`. Running `node app/main.ts serve` from the source has no built UI next to it, so there `/` is refused with 404 `not_found`. Stop it with `pkill -INT -f "[d]ist/main.js serve"`.
 
 ## Log in to the web UI
 
 The web UI (`app/web.tsx`) draws `CookoutApp` from the `routes` module, which picks a view from the page's location hash: `#/` (or no hash) is the channel list, `#/channels/<name>` a channel, `#/login` the login view, and `#/channels/<name>/threads/<id>` a thread; any other hash, or a thread ID that isn't a message ID, says "Nothing here". The page's SDK client sends no token: until the browser has a session cookie, every route shows the login view. Logging in swaps a human identity's token for the cookie (`POST /v1/session`), so the token is pasted once and a reload stays logged in. With the built server from "Open the web UI" up on port 3000, seed it, then drive it with `agent-browser` in its own session (`--session`, so other browser work doesn't share its cookies):
 
 ```sh
-grep '^{"adminToken' /tmp/cookout-built.log | jq -r '"COOKOUT_URL=http://127.0.0.1:3000 COOKOUT_TOKEN=\(.adminToken)"' > /tmp/cookout-built.env
+echo "COOKOUT_URL=http://127.0.0.1:3000 COOKOUT_TOKEN=$(cut -d= -f2 /tmp/cookout-built-admin.env)" > /tmp/cookout-built.env
 env $(cat /tmp/cookout-built.env) pnpm -s seed > /tmp/cookout-built-seed.json
 agent-browser --session cookout open http://127.0.0.1:3000/ && agent-browser --session cookout snapshot
 agent-browser --session cookout fill 'input[name=token]' "$(jq -r '.identities[] | select(.identity.name == "triage-agent") | .token' /tmp/cookout-built-seed.json)"
@@ -399,9 +403,9 @@ pnpm -s browser
 
 ## Other checks
 
-- `pnpm pack:smoke` proves the published package works (CI runs it as its own job): it builds with tsdown and Vite, packs `@ai-hero/cookout`, installs the tarball in a temp directory, and drives `cookout serve` (its health check and the web UI at `/`), `cookout whoami` and `@ai-hero/cookout/sdk` from there. Nothing is published.
+- `pnpm pack:smoke` proves the published package works (CI runs it as its own job): it builds with tsdown and Vite, packs `@ai-hero/cookout`, installs the tarball in a temp directory, and drives `cookout serve` (its refusal without `COOKOUT_ADMIN_TOKEN`, its health check and the web UI at `/`), `cookout whoami` and `@ai-hero/cookout/sdk` from there. Nothing is published.
 - The SDK's public surface is pinned by `api/sdk.api.md`. After a deliberate change to it, run `pnpm api:write` and commit the report.
-- To run the server alone on a file you keep: `node app/main.ts serve --port 3000 --db cookout.db`. On first boot it prints a one-time admin token as a JSON line.
+- To run the server alone on a file you keep: `COOKOUT_ADMIN_TOKEN=<at least 32 characters> node app/main.ts serve --port 3000 --db cookout.db`. Every boot makes that the admin's token; it prints nothing about it.
 
 ## Deliver a call to the example handler
 

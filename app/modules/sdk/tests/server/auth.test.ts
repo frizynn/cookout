@@ -10,7 +10,7 @@ const NOT_FOUND = 404;
 const METHOD_NOT_ALLOWED = 405;
 
 it.effect("a fresh board makes an admin identity that works with the admin token it booted with", () =>
-  Effect.gen(function* firstBootAdmin() {
+  Effect.gen(function* freshBoardAdmin() {
     const cookout = yield* TestCookout;
     const whoami = yield* answer(cookout.client.whoami);
 
