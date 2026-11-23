@@ -414,6 +414,16 @@
               "Zoned"
             ],
             "package": "effect"
+          },
+          {
+            "from": "package",
+            "name": ["ReactNode"],
+            "package": "react"
+          },
+          {
+            "from": "package",
+            "name": ["TestProject"],
+            "package": "vitest"
           }
         ],
         "treatMethodsAsReadonly": true
