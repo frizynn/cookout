@@ -1,4 +1,4 @@
-import { Caller, announced, issueToken, requireAdmin } from "./auth.ts";
+import { Caller, announced, issueToken, requireAdmin, tokensEnded } from "./auth.ts";
 import type { DeactivateIdentityResponse, Identity, IdentityName } from "../../index.ts";
 import { DeactivateIdentityResponseSchema, IdentityWithTokenResponseSchema } from "./wire.ts";
 import type {
@@ -79,6 +79,8 @@ function reactivatedOrRefused(name: IdentityName, result: ReactivateIdentityResu
   return Effect.fail(identityNotFound(name));
 }
 
+const ALL_TOKENS = { kind: "all" } as const;
+
 const deactivateRoute: Route<Caller | Storage | IdentityChanges> = {
   handle: (params) =>
     Effect.gen(function* deactivateIdentityRoute() {
@@ -89,6 +91,8 @@ const deactivateRoute: Route<Caller | Storage | IdentityChanges> = {
         deactivatedOrRefused(name, result),
       );
       yield* announced(answer.identity);
+      const caller = yield* Caller;
+      yield* tokensEnded({ by: caller.name, cause: "deactivated", identity: name, tokens: ALL_TOKENS });
       return yield* HttpServerResponse.schemaJson(DeactivateIdentityResponseSchema)(answer);
     }),
   method: "POST",

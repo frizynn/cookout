@@ -1,6 +1,7 @@
 import { DateTime, Effect, Option, Predicate } from "effect";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
 import { AgentSessionSent } from "../../../identities/server.ts";
+import type { Connection } from "./book.ts";
 import type { LiveConnectionDetail } from "../../index.ts";
 import { Storage } from "../../../storage/server.ts";
 import { isoTimeOf } from "../../../time/server.ts";
@@ -22,19 +23,23 @@ function joinedHost(identity: IdentityName): Effect.Effect<Option.Option<string>
   }).pipe(Effect.orElseSucceed(Option.none<string>));
 }
 
-const connectionDetail = Effect.fnUntraced(function* detailOfConnection({
+const connectionOf = Effect.fnUntraced(function* detailOfConnection({
   authorization,
   caller,
-}: OpenedStream): Effect.fn.Return<LiveConnectionDetail, never, Storage> {
+}: OpenedStream): Effect.fn.Return<Connection, never, Storage> {
   if (Predicate.isUndefined(authorization)) {
-    return WEB;
+    return { detail: WEB, sentWith: { kind: "web" } };
   }
   const sent = yield* AgentSessionSent;
   if (Option.isNone(sent)) {
-    return WATCH;
+    return { detail: WATCH, sentWith: { kind: "identity token" } };
   }
   const host = yield* joinedHost(caller.name);
-  return Option.match(host, { onNone: () => WATCH, onSome: (joinedFrom) => ({ host: joinedFrom, via: "watch" }) });
+  const detail = Option.match(host, {
+    onNone: () => WATCH,
+    onSome: (joinedFrom): LiveConnectionDetail => ({ host: joinedFrom, via: "watch" }),
+  });
+  return { detail, sentWith: { hash: sent.value, kind: "agent session" } };
 });
 
-export { connectionDetail };
+export { connectionOf };

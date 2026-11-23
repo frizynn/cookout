@@ -9,12 +9,18 @@
  */
 import type { Identity, IdentityName } from "../identities/index.ts";
 import type { InboxItem, MovedBackReadPosition, ReadPosition, SubscriptionResponse } from "../inbox/index.ts";
+import type { LiveConnectionId, Presence, presenceName } from "../presence/index.ts";
 import type { Message, MessageId, ReactionsResponse, ReadReceipt } from "../messages/index.ts";
-import type { Presence, presenceName } from "../presence/index.ts";
 import type { Channel } from "../channels/index.ts";
 import type { Command } from "../commands/index.ts";
 
-export type { LiveConnectionDetail, Presence, PresenceResponse } from "../presence/index.ts";
+export type {
+  LiveConnectionDetail,
+  LiveConnectionId,
+  OfflineReason,
+  Presence,
+  PresenceResponse,
+} from "../presence/index.ts";
 
 /** A new item in the caller's inbox, sent the moment another identity posts it. */
 export interface InboxItemEvent {
@@ -126,11 +132,19 @@ export interface SubscriptionEvent {
 /**
  * The stream's first word on connecting, before any item: the newest message ID on the board at that moment (null
  * before the first message). Every item the stream then sends live is newer, so a caller that resumes from this ID
- * after a drop misses nothing and repeats nothing. It has no SSE `id`.
+ * after a drop misses nothing and repeats nothing. It has no SSE `id`. `connectionId` names this live connection, so
+ * a `cookout watch` exiting on purpose can say so first with `DELETE /v1/events/:connection` (a clean close, ADR "how
+ * a live connection ends"); a server from before clean closes sends none.
  */
 export interface ConnectedEvent {
   readonly type: "connected";
   readonly latestMessageId: MessageId | null;
+  readonly connectionId?: LiveConnectionId;
+}
+
+/** The answer to a clean close, `DELETE /v1/events/:connection`. */
+export interface CleanCloseResponse {
+  readonly closed: true;
 }
 
 /**
@@ -165,6 +179,9 @@ export type CookoutEvent =
  * it is also the all-channels feed: every new message on every channel.
  */
 export const eventsPath = "/v1/events";
+
+/** `DELETE /v1/events/:connection`: the clean close of the caller's live connection `connection`, answering `CleanCloseResponse`. */
+export const liveConnectionPath = `${eventsPath}/:connection`;
 
 /** The query that asks the stream for the all-channels feed: `?channels=all`. */
 export const allChannelsQuery = { channels: "all" } as const;

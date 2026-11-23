@@ -11,14 +11,14 @@ import {
   Ref,
   Scope,
 } from "effect";
+import type { Booted, LastEnd } from "./booted.ts";
 import type { CookoutClient, Identity, Token } from "../../../sdk/index.ts";
 import type { StorageUnavailable, StoredCommand, StoredDelivery } from "../../../storage/server.ts";
 import { backingServices, newToken, storageFor } from "./backing.ts";
-import { booted, liveConnectionsClosedOn } from "./booted.ts";
+import { booted, lastEndOn, liveConnectionsClosedOn } from "./booted.ts";
 import { currentTime, startTestClock } from "./time.ts";
 import { identityFixture, identityName, ownedByAdminUnlessNamed, testCookoutAdminName } from "./identities.ts";
 import type { AdminNameIsAgent } from "../../../identities/server.ts";
-import type { Booted } from "./booted.ts";
 import { Identities } from "../../../identities/server.ts";
 import type { IdentityFixtureOptions } from "./identities.ts";
 import { Storage } from "../../../storage/server.ts";
@@ -50,6 +50,7 @@ export type TestCookoutService = {
   readonly restart: Effect.Effect<CookoutClient>;
 
   readonly liveConnectionsClosed: (name: string) => Effect.Effect<void>;
+  readonly lastEnd: (name: string) => Effect.Effect<LastEnd>;
   readonly restartServer: Effect.Effect<BootedServer>;
   readonly seedCommand: (stored: StoredCommand) => Effect.Effect<void>;
   readonly pendingDeliveries: Effect.Effect<readonly StoredDelivery[]>;
@@ -235,6 +236,7 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
         client: clientAt(first.url)(adminToken),
         clientFor: clientAt(first.url),
         createIdentity: (name, identityOptions = {}) => onFirst(seedIdentity(first.url)(name, identityOptions)),
+        lastEnd: (name) => Effect.flatMap(Ref.get(running), (server) => lastEndOn({ name, server })),
         liveConnectionsClosed: (name) =>
           Effect.flatMap(Ref.get(running), (server) => liveConnectionsClosedOn({ name, server })),
         pendingDeliveries: onFirst(pendingDeliveries),

@@ -2,6 +2,7 @@ import type {
   AgentSessionEvent,
   ChannelDeletedEvent,
   ChannelEvent,
+  CleanCloseResponse,
   CommandEvent,
   ConnectedEvent,
   IdentityDeletedEvent,
@@ -24,11 +25,13 @@ import {
   SubscriptionResponseSchema,
 } from "../../../inbox/server.ts";
 import { MessageIdSchema, MessageSchema, ReactionCountSchema, ReadReceiptSchema } from "../../../messages/server.ts";
+import { isLiveConnectionId, presenceName } from "../../../presence/index.ts";
 import { CommandSchema } from "../../../commands/server.ts";
 import { PresenceSchema } from "../../../presence/server.ts";
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
-import { presenceName } from "../../../presence/index.ts";
+
+const LiveConnectionIdSchema = Schema.Int.pipe(Schema.refine(isLiveConnectionId, { identifier: "LiveConnectionId" }));
 
 export const InboxItemEventSchema = matchesWire<InboxItemEvent>()(
   Schema.Struct({ item: InboxItemSchema, type: Schema.Literal("inbox-item") }),
@@ -88,7 +91,15 @@ export const SubscriptionEventSchema = matchesWire<SubscriptionEvent>()(
 );
 
 export const ConnectedEventSchema = matchesWire<ConnectedEvent>()(
-  Schema.Struct({ latestMessageId: Schema.NullOr(MessageIdSchema), type: Schema.Literal("connected") }),
+  Schema.Struct({
+    connectionId: Schema.optionalKey(LiveConnectionIdSchema),
+    latestMessageId: Schema.NullOr(MessageIdSchema),
+    type: Schema.Literal("connected"),
+  }),
+);
+
+export const CleanCloseResponseSchema = matchesWire<CleanCloseResponse>()(
+  Schema.Struct({ closed: Schema.Literal(true) }),
 );
 
 export const PresenceEventSchema = matchesWire<PresenceEvent>()(

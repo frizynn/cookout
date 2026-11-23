@@ -8,6 +8,7 @@ import { agentSessionExpired, agentSessionRevoked } from "../../index.ts";
 import type { JoinCodes } from "./join-codes.ts";
 import type { JoinRequests } from "./join-requests.ts";
 import type { Refusal } from "../../../http/index.ts";
+import type { TokensEnded } from "../../../identities/server.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 import { joinCodesOn } from "./join-codes.ts";
 import { joinRequestsOn } from "./join-requests.ts";
@@ -15,12 +16,21 @@ import { joiner } from "./join.ts";
 
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
 
+interface Ends {
+  readonly endTokens: (ended: TokensEnded) => Effect.Effect<void>;
+}
+
+const AGENT_SESSIONS = { kind: "agent sessions" } as const;
+
 interface AgentSessionsService extends JoinRequests, JoinCodes {
   readonly join: (caller: Identity, request: Join) => Fails<AgentSessionResponse>;
   readonly leave: (agent: IdentityName, hash: TokenHash) => Effect.Effect<void, StorageUnavailable>;
   readonly untilEnded: (hash: TokenHash) => Effect.Effect<Refusal, StorageUnavailable>;
   readonly listFor: (identity: IdentityName) => Effect.Effect<ListAgentSessionsResponse, StorageUnavailable>;
-  readonly revokeFor: (identity: IdentityName) => Effect.Effect<RevokeAgentSessionResponse, StorageUnavailable>;
+  readonly revokeFor: (
+    identity: IdentityName,
+    by: IdentityName,
+  ) => Effect.Effect<RevokeAgentSessionResponse, StorageUnavailable>;
   readonly sessionChanged: Effect.Effect<PubSub.Subscription<Identity>, never, Scope.Scope>;
 }
 
@@ -31,12 +41,7 @@ class AgentSessions extends Context.Service<AgentSessions, AgentSessionsService>
 const CHECK_SECONDS = 30;
 const UNAUTHORIZED = 401;
 
-const endedRefusals: Readonly<Record<"deactivated" | "expired" | "revoked", Refusal>> = {
-  deactivated: {
-    code: "token_revoked",
-    message: "This session's identity was deactivated, so none of its tokens work.",
-    status: UNAUTHORIZED,
-  },
+const endedRefusals: Readonly<Record<"expired" | "revoked", Refusal>> = {
   expired: {
     code: agentSessionExpired,
     message: "This session's agent session token expired. Join again.",
@@ -52,9 +57,6 @@ const endedRefusals: Readonly<Record<"deactivated" | "expired" | "revoked", Refu
 function endedRefusal(status: string): Refusal {
   if (status === "expired") {
     return endedRefusals.expired;
-  }
-  if (status === "deactivated") {
-    return endedRefusals.deactivated;
   }
   return endedRefusals.revoked;
 }
@@ -73,26 +75,47 @@ function agentNow(identity: IdentityName): Effect.Effect<AgentAt> {
   return Effect.map(DateTime.now, (now) => ({ identity, now: isoTimeOf(now) }));
 }
 
-function ownerViews({ publishSession, storage }: On): Pick<AgentSessionsService, "listFor" | "revokeFor"> {
+function ownerViews({
+  endTokens,
+  publishSession,
+  storage,
+}: On & Ends): Pick<AgentSessionsService, "listFor" | "revokeFor"> {
   return {
     listFor: (identity) =>
       agentNow(identity).pipe(
         Effect.flatMap(storage.findLiveAgentSession),
         Effect.map((live) => ({ agentSessions: Option.toArray(live) })),
       ),
-    revokeFor: (identity) =>
+    revokeFor: (identity, by) =>
       agentNow(identity).pipe(
         Effect.flatMap(storage.revokeLiveAgentSession),
         Effect.tap((revoked) => Effect.when(publishSession(identity), Effect.succeed(revoked))),
+        Effect.tap(() => endTokens({ by, cause: "revoked", identity, tokens: AGENT_SESSIONS })),
         Effect.map((revoked) => ({ revoked })),
       ),
   };
 }
 
-function agentSessionsOn(on: On): Omit<AgentSessionsService, "sessionChanged"> {
+function forcedJoiner(on: On & Ends): AgentSessionsService["join"] {
+  const join = joiner(on);
+  return (caller, request) =>
+    Effect.tap(join(caller, request), ({ identity }) =>
+      Effect.when(
+        on.endTokens({ by: caller.name, cause: "revoked", identity, tokens: AGENT_SESSIONS }),
+        Effect.succeed(request.force === true),
+      ),
+    );
+}
+
+function agentSessionsOn(on: On & Ends): Omit<AgentSessionsService, "sessionChanged"> {
   return {
-    join: joiner(on),
-    leave: (agent, hash) => Effect.andThen(on.storage.revokeAgentSession(hash), on.publishSession(agent)),
+    join: forcedJoiner(on),
+    leave: (agent, hash) =>
+      Effect.andThen(on.storage.revokeAgentSession(hash), on.publishSession(agent)).pipe(
+        Effect.andThen(
+          on.endTokens({ by: agent, cause: "left", identity: agent, tokens: { hash, kind: "agent session" } }),
+        ),
+      ),
     untilEnded: watcher(on),
     ...ownerViews(on),
     ...joinRequestsOn(on),

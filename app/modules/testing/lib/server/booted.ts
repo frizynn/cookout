@@ -1,9 +1,10 @@
-import { Context, Effect, Layer, Schedule } from "effect";
+import { Array as Arr, Context, Effect, Layer, Schedule } from "effect";
 import type { HttpServer } from "effect/http";
 import type { Identities } from "../../../identities/server.ts";
 import { PresenceRegistry } from "../../../presence/server.ts";
 import type { Scope } from "effect";
-import type { Storage } from "../../../storage/server.ts";
+import { Storage } from "../../../storage/server.ts";
+import type { StoredPresence } from "../../../storage/server.ts";
 import { TestClock } from "effect/testing";
 import type { WebhookFake } from "../../../webhook-fake/server.ts";
 import { identityName } from "./identities.ts";
@@ -46,4 +47,25 @@ function liveConnectionsClosedOn({
     );
 }
 
-export { type Booted, booted, liveConnectionsClosedOn };
+type LastEnd = Pick<StoredPresence, "endedUnexpectedly" | "offlineReason">;
+
+function endIn(kept: StoredPresence): LastEnd {
+  const { identity: _identity, lastSeenAt: _lastSeenAt, online: _online, ...end } = kept;
+  return end;
+}
+
+function lastEndOn({
+  name,
+  server,
+}: {
+  readonly server: BootedContext;
+  readonly name: string;
+}): Effect.Effect<LastEnd> {
+  const storage = Context.get(server, Storage);
+  return storage.listPresence([identityName(name)]).pipe(
+    Effect.map((kept) => Arr.reduce(kept, {}, (_none: LastEnd, each) => endIn(each))),
+    Effect.orDie,
+  );
+}
+
+export { type Booted, type LastEnd, booted, lastEndOn, liveConnectionsClosedOn };

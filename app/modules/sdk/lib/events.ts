@@ -1,12 +1,13 @@
 import { CookoutError, isServerErrorCode } from "./errors.ts";
-import type { CookoutEvent, PresenceResponse } from "../../events/index.ts";
+import type { CookoutEvent, LiveConnectionId, PresenceResponse } from "../../events/index.ts";
 import type { ServerSentEvent, ServerSentFrame } from "../../http/client.ts";
-import { allChannelsQuery, eventsPath, refusalEvent } from "../../events/index.ts";
-import { getJson, openEvents } from "./request.ts";
+import { allChannelsQuery, eventsPath, liveConnectionPath, refusalEvent } from "../../events/index.ts";
+import { getJson, openEvents, send } from "./request.ts";
 import {
   isAgentSessionEvent,
   isChannelDeletedEvent,
   isChannelEvent,
+  isCleanCloseResponse,
   isCommandEvent,
   isConnectedEvent,
   isErrorResponse,
@@ -30,6 +31,25 @@ type EventType = CookoutEvent["type"];
 
 interface EventStream extends AsyncIterable<CookoutEvent> {
   readonly close: () => Promise<void>;
+  readonly closeCleanly: () => Promise<void>;
+}
+
+interface Heard {
+  readonly saw: (connection: LiveConnectionId | null) => void;
+}
+
+interface ConnectionSeen extends Heard {
+  readonly current: () => LiveConnectionId | null;
+}
+
+function connectionSeen(): ConnectionSeen {
+  let current: LiveConnectionId | null = null;
+  return {
+    current: () => current,
+    saw: (connection) => {
+      current = connection;
+    },
+  };
 }
 
 interface WatchOptions {
@@ -119,17 +139,18 @@ function refused(data: string): CookoutError {
   return new CookoutError({ ...json.error, code: json.error.code, status: OK });
 }
 
-function connected(data: string, { onConnected }: WatchOptions): void {
+function connected(data: string, { onConnected, saw }: WatchOptions & Heard): void {
   const json = parsedData(data);
   if (!isConnectedEvent(json)) {
     throw badEvent(CONNECTED, json);
   }
+  saw(json.connectionId ?? null);
   if (typeof onConnected === "function") {
     onConnected(json.latestMessageId);
   }
 }
 
-function eventsIn(frame: ServerSentFrame, options: WatchOptions): readonly CookoutEvent[] {
+function eventsIn(frame: ServerSentFrame, options: WatchOptions & Heard): readonly CookoutEvent[] {
   if ("comment" in frame) {
     heard(frame.comment, options);
     return [];
@@ -145,11 +166,26 @@ function eventsIn(frame: ServerSentFrame, options: WatchOptions): readonly Cooko
 
 async function* cookoutEvents(
   frames: AsyncIterable<ServerSentFrame>,
-  options: WatchOptions,
+  options: WatchOptions & Heard,
 ): AsyncGenerator<CookoutEvent, void, undefined> {
   for await (const frame of frames) {
     yield* eventsIn(frame, options);
   }
+}
+
+async function saidCleanClose(server: ClientConnection, connection: LiveConnectionId | null): Promise<boolean> {
+  if (connection === null) {
+    return false;
+  }
+  const said = await send(server, {
+    isExpected: isCleanCloseResponse,
+    method: "DELETE",
+    params: { connection: String(connection) },
+    path: liveConnectionPath,
+  })
+    .then(() => true)
+    .catch(() => false);
+  return said;
 }
 
 function queryFor(allChannels: boolean): Readonly<Record<string, string>> {
@@ -172,7 +208,15 @@ function eventCalls(server: ClientConnection): EventCalls {
         path: eventsPath,
         query: queryFor(options.allChannels ?? false),
       });
-      return { [Symbol.asyncIterator]: () => cookoutEvents(events, options), close };
+      const seen = connectionSeen();
+      return {
+        [Symbol.asyncIterator]: () => cookoutEvents(events, { ...options, saw: seen.saw }),
+        close,
+        closeCleanly: async () => {
+          await saidCleanClose(server, seen.current());
+          await close();
+        },
+      };
     },
   };
 }

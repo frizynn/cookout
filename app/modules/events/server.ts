@@ -23,7 +23,9 @@
  * starts with a comment, so Node sends the headers at once and the caller
  * knows every source is listening. A source that sends a `refusal` event
  * (`agent_session_revoked` once `leave` or another session's `join --force`
- * revokes the token) ends the stream with it. The route sits behind the
+ * revokes the token) ends the stream with it. The `connected` event names the stream's live connection, and
+ * `DELETE /v1/events/:connection` (sent with the same credential) marks it as closing cleanly: a `cookout watch`
+ * exiting on purpose says so first, so its end is expected (ADR "how a live connection ends"). The route sits behind the
  * server's token gate, and opens only while the caller holds fewer than `COOKOUT_STREAMS_PER_IDENTITY` streams (429
  * `too_many_streams`, ADR 0033); closing the stream frees its place. Every stream, whatever its query, is a live
  * connection of the caller's for as long as it is open, which keeps the caller online (`PresenceRegistry`), and the
@@ -34,6 +36,7 @@ import {
   AgentSessionEventSchema,
   ChannelDeletedEventSchema,
   ChannelEventSchema,
+  CleanCloseResponseSchema,
   CommandEventSchema,
   ConnectedEventSchema,
   IdentityDeletedEventSchema,
@@ -48,29 +51,19 @@ import {
   ReadReceiptEventSchema,
   SubscriptionEventSchema,
 } from "./lib/server/wire.ts";
-import type { Connected, EventSource } from "./lib/server/source.ts";
 import { Effect, Exit, Scope, Stream } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import { isLast, lastEventIdIn, refusalSseEvent, sseText } from "./lib/server/source.ts";
-import type { AgentSessions } from "../agent-sessions/server.ts";
+import { isLast, lastEventIdIn, sseText } from "./lib/server/source.ts";
 import { Caller } from "../identities/server.ts";
 import type { Limits } from "../limits/server.ts";
 import type { Route } from "../http/server.ts";
 import type { SourceNeeds } from "./lib/server/sources.ts";
+import { cleanCloseRoutes } from "./lib/server/clean-close.ts";
 import { eventsPath } from "./index.ts";
 import { holdStreamPlace } from "../limits/server.ts";
-import { sentAgentSessionEnded } from "../agent-sessions/server.ts";
 import { sources } from "./lib/server/sources.ts";
 
-type Needs = SourceNeeds | Caller | AgentSessions | Limits;
-
-function agentSessionEnd(): Connected<AgentSessions> {
-  return Effect.map(Effect.context<AgentSessions>(), (context) =>
-    Stream.fromEffect(Effect.flatMap(Effect.provideContext(sentAgentSessionEnded, context), refusalSseEvent)),
-  );
-}
-
-const allSources: readonly EventSource<Needs>[] = [...sources, agentSessionEnd];
+type Needs = SourceNeeds | Caller | Limits;
 
 const SSE_HEADERS = { "cache-control": "no-cache" } as const;
 const OPENED = ": open\n\n";
@@ -84,7 +77,7 @@ const eventsRoute: Route<Needs> = {
       const connection = yield* Scope.make();
       yield* holdStreamPlace.pipe(Scope.provide(connection));
       const streams = yield* Effect.forEach(
-        allSources,
+        sources,
         (source) => source({ authorization: headers["authorization"], caller, lastEventId, url }),
         {
           concurrency: "unbounded",
@@ -108,13 +101,14 @@ const eventsRoute: Route<Needs> = {
  * sources need: `Inbox`, which `inboxLayer` provides, `Messages`, which `messagesLayer` provides, and `AgentSessions`,
  * which `agentSessionsLayer` provides.
  */
-export const eventRoutes: readonly Route<Needs>[] = [eventsRoute];
+export const eventRoutes: readonly Route<Needs>[] = [eventsRoute, ...cleanCloseRoutes];
 
 /** The Schemas of the stream's events, for the SDK's generated validators. */
 export const eventResponseSchemas = {
   AgentSessionEvent: AgentSessionEventSchema,
   ChannelDeletedEvent: ChannelDeletedEventSchema,
   ChannelEvent: ChannelEventSchema,
+  CleanCloseResponse: CleanCloseResponseSchema,
   CommandEvent: CommandEventSchema,
   ConnectedEvent: ConnectedEventSchema,
   IdentityDeletedEvent: IdentityDeletedEventSchema,

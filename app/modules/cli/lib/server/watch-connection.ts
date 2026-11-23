@@ -1,4 +1,4 @@
-import { Array as Arr, Duration, Effect, Option, Queue, Ref, Schedule, Stream } from "effect";
+import { Array as Arr, Cause, Duration, Effect, Exit, Option, Queue, Ref, Schedule, Stream } from "effect";
 import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import type {
   ConnectedEvent,
@@ -23,6 +23,7 @@ const THREE_MISSED_HEARTBEATS = "45 seconds";
 const FIRST_RECONNECT_DELAY = "200 millis";
 const LONGEST_RECONNECT_DELAY = "10 seconds";
 const GIVE_UP_AFTER = Duration.toMillis("5 minutes");
+const CLEAN_CLOSE_WAIT = "2 seconds";
 const streamEnded: CallFailure = { code: "cli_error", message: "The server ended the stream." };
 const heardNothing: CallFailure = { code: "cli_error", message: "Heard nothing from the server for 45 s." };
 
@@ -32,6 +33,36 @@ function resumeFrom(lastSeen: Option.Option<MessageId>): Pick<WatchOptions, "las
 
 function closeStream(events: EventStream): Effect.Effect<void> {
   return Effect.ignore(Effect.tryPromise({ catch: toFailure, try: () => events.close() }));
+}
+
+function closeStreamCleanly(events: EventStream): Effect.Effect<void> {
+  return Effect.tryPromise({ catch: toFailure, try: () => events.closeCleanly() }).pipe(
+    Effect.timeout(CLEAN_CLOSE_WAIT),
+    Effect.matchEffect({ onFailure: () => closeStream(events), onSuccess: () => Effect.void }),
+  );
+}
+
+function isTimeout(failure: unknown): boolean {
+  return typeof failure === "object" && failure !== null && "code" in failure && failure.code === "timeout";
+}
+
+function isCleanExit(exit: Exit.Exit<unknown, unknown>): boolean {
+  if (Exit.isSuccess(exit) || Cause.hasInterruptsOnly(exit.cause)) {
+    return true;
+  }
+  return isTimeout(Cause.squash(exit.cause));
+}
+
+function closedOnExit(
+  wasDropped: Effect.Effect<boolean>,
+): (events: EventStream, exit: Exit.Exit<unknown, unknown>) => Effect.Effect<void> {
+  return (events, exit) =>
+    Effect.flatMap(wasDropped, (dropped) => {
+      if (dropped || !isCleanExit(exit)) {
+        return closeStream(events);
+      }
+      return closeStreamCleanly(events);
+    });
 }
 
 function isInboxItem(event: CookoutEvent | Heard): event is InboxItemEvent {
@@ -49,6 +80,12 @@ function heardOn(
   );
 }
 
+function droppedWhenFailed(
+  markDropped: Effect.Effect<void>,
+): (heard: Stream.Stream<readonly Heard[], CallFailure>) => Stream.Stream<readonly Heard[], CallFailure> {
+  return Stream.tapError(() => markDropped);
+}
+
 function connect(
   opened: ClientWithAgentSessionState,
   lastSeen: Option.Option<MessageId>,
@@ -63,8 +100,9 @@ function connect(
     }
     const options = { ...resumeFrom(lastSeen), onConnected, onHeartbeat };
     const watching = callClient((client) => client.watch(options))(opened);
-    const events = yield* Effect.acquireRelease(watching, closeStream);
-    return heardOn(events, Stream.fromQueue(signals));
+    const dropped = yield* Ref.make(false);
+    const events = yield* Effect.acquireRelease(watching, closedOnExit(Ref.get(dropped)));
+    return heardOn(events, Stream.fromQueue(signals)).pipe(droppedWhenFailed(Ref.set(dropped, true)));
   });
 }
 

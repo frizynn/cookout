@@ -86,9 +86,24 @@ it("once an agent goes offline, its People row and profile show the ring and its
     Promise.all([
       rowDot({ at: "web-presence-seen-bot", label: SEEN }),
       profileDot(SEEN),
-      inProfile().findByText("Offline · last seen just now"),
+      inProfile().findByText("Offline: connection lost · last seen just now"),
     ]),
   ).resolves.toStrictEqual([offline(SEEN), offline(SEEN), expect.anything()]);
+});
+
+it("the profile says why an agent went offline, from a presence event: offline: session revoked", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const agent = await agentNamed("web-presence-revoked-bot");
+  const { agentSessionToken } = await agent.client.join({ as: "web-presence-revoked-bot" });
+  await clientWith(agentSessionToken).watch();
+  await readerOn({ hash: "#/people/web-presence-revoked-bot", reader: "web-presence-revoked-reader" });
+  await inProfile().findByText("Online · watching");
+  await adminClient().revokeAgentSession("web-presence-revoked-bot");
+
+  await expect(inProfile().findByText("Offline: session revoked · last seen just now")).resolves.toBeDefined();
 });
 
 it("an agent never seen shows only that it is offline, its avatar has no badge, and its profile says it is an agent", {
