@@ -5,10 +5,13 @@
  * `ChannelListView` lists every channel on the server, each linking to its
  * channel, or says why it can't; `ChannelView` shows a channel's top-level
  * messages with their reply counts, newest last, with "Load more" for older
- * ones, and viewing it marks the channel read; `NotBuiltView` stands in for a
- * screen that has a route but isn't built yet.
+ * ones, and viewing it marks the channel read; `ThreadView` shows a thread's
+ * parent message and its replies, oldest first, with a reply box, and opening
+ * it marks the thread read; each links back up a level. `NotBuiltView` says
+ * a route has nothing to show.
  */
 export { ChannelListView } from "./lib/channel-list.tsx";
 export { ChannelView } from "./lib/channel.tsx";
 export { LoginView } from "./lib/login.tsx";
 export { NotBuiltView } from "./lib/not-built.tsx";
+export { ThreadView } from "./lib/thread.tsx";

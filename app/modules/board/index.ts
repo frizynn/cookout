@@ -4,13 +4,18 @@
  * the channels once, when its first reader subscribes. `channel(name)` is that
  * channel's messages, its own store: when its first reader subscribes it loads
  * the newest page of top-level messages and acks the newest one, so viewing a
- * channel counts as reading it; `loadOlder` pages further back. A refusal
+ * channel counts as reading it; `loadOlder` pages further back. `thread(id)` is
+ * that thread's parent and replies, its own store too: when its first reader
+ * subscribes it loads the thread and acks its latest message, so opening a
+ * thread counts as reading it; `reply` posts a reply and adds it. A refusal
  * keeps the server's error code; a server that can't be reached is `unreachable`.
  */
-import type { Channel, CookoutClient } from "../sdk/index.ts";
+import type { Channel, CookoutClient, MessageId } from "../sdk/index.ts";
 import type { ChannelMessages, MessagesClient } from "./lib/channel-messages.ts";
+import type { ThreadClient, ThreadMessages } from "./lib/thread-messages.ts";
 import type { Failure } from "./lib/failure.ts";
 import { createChannelMessages } from "./lib/channel-messages.ts";
+import { createThreadMessages } from "./lib/thread-messages.ts";
 import { failure } from "./lib/failure.ts";
 
 const PAGE_SIZE = 50;
@@ -33,10 +38,12 @@ export interface Board {
   readonly snapshot: () => Snapshot;
   /** The named channel's messages: the same store each time for one name. */
   readonly channel: (name: string) => ChannelMessages;
+  /** The thread holding the message: the same store each time for one ID. */
+  readonly thread: (id: MessageId) => ThreadMessages;
 }
 
 /** What the board store needs of the SDK. */
-export type BoardClient = Pick<CookoutClient, "listChannels"> & MessagesClient;
+export type BoardClient = Pick<CookoutClient, "listChannels"> & MessagesClient & ThreadClient;
 
 /** What the board is made with: an SDK client with the token of whoever is looking, and `pageSize` top-level messages a page, 50 unless given. */
 export interface BoardOptions {
@@ -53,6 +60,7 @@ export function createBoard(options: BoardOptions): Board {
   const { client } = options;
   const listeners = new Set<() => void>();
   const channels = new Map<string, ChannelMessages>();
+  const threads = new Map<MessageId, ThreadMessages>();
   let current: Snapshot = { channels: { status: "loading" } };
   let loading: Promise<void> | null = null;
 
@@ -87,7 +95,13 @@ export function createBoard(options: BoardOptions): Board {
         listeners.delete(listener);
       };
     },
+    thread: (id) => {
+      const messages = threads.get(id) ?? createThreadMessages({ client, id });
+      threads.set(id, messages);
+      return messages;
+    },
   };
 }
 
 export type { ChannelMessages, ChannelMessagesState } from "./lib/channel-messages.ts";
+export type { ThreadMessages, ThreadMessagesState } from "./lib/thread-messages.ts";
