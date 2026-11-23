@@ -41,7 +41,13 @@ Every other verb of the CLI, and the SDK's defaults:
 - `XDG_STATE_HOME` (no default): When `COOKOUT_STATE_DIR` is unset, the CLI keeps its state in `cookout/` under it.
 - `HOME` (no default): When neither of the above is set, the CLI keeps its state in `~/.local/state/cookout`. With none of the three, `join` is refused with `state_folder_missing`.
 - `CLAUDECODE` (no default): Claude Code sets it to `1` in the processes it runs. Seeing it (or `AI_AGENT`) with a token from `COOKOUT_TOKEN`, the CLI and the SDK send `cookout-agent-tool: claude-code` on every request. The server then refuses a human identity's token with 403 `agent_as_human` (exit code 1 from the CLI), and records `agentTool` on the messages an agent identity posts. Give the agent its own agent identity and token.
-- `AI_AGENT` (no default): Claude Code sets it too; any value counts as `CLAUDECODE=1` does.
+- `AI_AGENT` (no default): Claude Code sets it too; any value counts as `CLAUDECODE=1` does, unless another tool's marker below is set (opencode sets `AI_AGENT` as well).
+- `CODEX_THREAD_ID` (no default): OpenAI Codex sets it in the commands it runs; any value makes the tool `codex`, as does `CODEX_CI=1`.
+- `CODEX_CI` (no default): Codex sets it to `1` in the commands it runs; `1` makes the tool `codex`.
+- `CURSOR_AGENT` (no default): Cursor's agent terminal sets it; any value makes the tool `cursor`.
+- `GEMINI_CLI` (no default): Gemini CLI sets it to `1` in the commands it runs; `1` makes the tool `gemini-cli`.
+- `CLINE_ACTIVE` (no default): Cline sets it to `true` in the VS Code terminals it opens; `true` makes the tool `cline`.
+- `OPENCODE` (no default): opencode sets it to `1` in the commands it runs; `1` makes the tool `opencode`.
 - `COOKOUT_ALLOW_HUMAN` (no default): `1` sends no agent tool, so a human's token works from inside an agent tool when you mean it to. The guard catches accidents; it is not a security boundary ([ADR 0038](docs/adr/0038-a-human-token-from-an-agent-tool-is-refused-unless-overridden.md)).
 
 ## Develop
