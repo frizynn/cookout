@@ -1,18 +1,14 @@
 import type { Message, MessageId } from "../../sdk/index.ts";
-import { useMemo, useSyncExternalStore } from "react";
 import type { MessageMenu } from "../../unread/index.ts";
+import { useMemo } from "react";
 
 interface MenuParts {
-  readonly open: boolean;
-  readonly onOpen: () => void;
-  readonly onClose: () => void;
   readonly onMarkUnread: () => void;
 }
 
 interface MenuOf {
   readonly menu: MessageMenu;
   readonly messageId: MessageId;
-  readonly place: "parent" | "stream";
 }
 
 type Reply = (name: string | null) => void;
@@ -23,22 +19,14 @@ interface ReplyOf {
   readonly me: string;
 }
 
-function useMessageMenu({ menu, messageId, place }: MenuOf): MenuParts {
-  const opened = useSyncExternalStore(menu.subscribe, menu.snapshot);
-  const key = `${place}/${String(messageId)}`;
-  const open = opened === key;
+function useMessageMenu({ menu, messageId }: MenuOf): MenuParts {
   return useMemo(
     () => ({
-      onClose: menu.close,
       onMarkUnread: () => {
         menu.markUnread(messageId);
       },
-      onOpen: () => {
-        menu.open(key);
-      },
-      open,
     }),
-    [key, menu, messageId, open],
+    [menu, messageId],
   );
 }
 

@@ -1,5 +1,5 @@
 import { Avatar } from "./avatar.tsx";
-import { HoverActions } from "./hover-actions.tsx";
+import { HoverButtons } from "./hover-buttons.tsx";
 import { MessageHeader } from "./message-header.tsx";
 import type { MessageLayoutParts } from "./parts.ts";
 import { MessageTime } from "./message-time.tsx";
@@ -27,10 +27,10 @@ export function MessageLayout(parts: MessageLayoutParts): ReactNode {
         )}
         {parts.children}
       </div>
-      <HoverActions
+      <HoverButtons
         actionHref={parts.actionHref}
         actionLabel={parts.actionLabel}
-        menu={parts.menu}
+        choices={parts.choices}
         onAction={handleAction}
       />
     </>

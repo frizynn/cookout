@@ -1,4 +1,5 @@
 import { adminClient, newIdentity } from "./identities.ts";
+import { chose, pressed } from "./menus.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
@@ -92,8 +93,9 @@ it("reply from the thread starter's actions menu mentions its author", { timeout
   const { hash, reader } = await threadOf("web-thread-reply-menu");
   const close = openAt({ client: reader, hash });
 
-  fireEvent.click(within(await parentMessage()).getByRole("button", { name: "More actions" }));
-  fireEvent.click(await inThread().findByRole("menuitem", { name: "Reply" }));
+  const parent = await parentMessage();
+  pressed(() => within(parent).getByRole("button", { name: "More actions" }));
+  await chose("Reply");
 
   await boxShows(shown("@web-thread-reply-menu-ada "));
 
@@ -107,7 +109,7 @@ it("right-clicking a reply and choosing Reply mentions its author", { timeout: 5
   const close = openAt({ client: reader, hash });
 
   fireEvent.contextMenu(await replyNamed("Noon works"));
-  fireEvent.click(await inThread().findByRole("menuitem", { name: "Reply" }));
+  await chose("Reply");
 
   await boxShows(shown("@web-thread-reply-right-ada "));
 
