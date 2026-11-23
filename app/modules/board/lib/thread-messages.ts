@@ -105,7 +105,7 @@ async function ackAfter(previous: Promise<void> | null, thread: Thread, id: Mess
   await ack(thread, id);
 }
 
-async function replyAfter(previous: Promise<void>, thread: Thread, text: string): Promise<void> {
+async function replyAfter(previous: Promise<void> | null, thread: Thread, text: string): Promise<void> {
   await previous;
   await postReply(thread, text);
 }
@@ -139,7 +139,7 @@ function createThreadMessages(options: ThreadOptions): LiveThreadMessages {
       }
     },
     reply: (text) => {
-      queue = replyAfter(queue ?? load(thread), thread, text);
+      queue = replyAfter(queue, thread, text);
     },
     snapshot: () => state,
     subscribe: (listener) => {

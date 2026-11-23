@@ -42,7 +42,7 @@ function sayUnread(format: Format, count: number): Effect.Effect<boolean> {
 }
 
 function isNewerThan(counted: Option.Option<number>, { item }: InboxItemEvent): boolean {
-  return Option.match(counted, { onNone: () => true, onSome: (latest) => item.message.id > latest });
+  return !Option.exists(counted, (latest) => item.message.id <= latest);
 }
 
 interface Counting {
@@ -61,15 +61,16 @@ function startUpLine({
       Effect.gen(function* countOnce() {
         const counted = yield* Ref.make(Option.none<number>());
         const sayOnce = Effect.fnUntraced(function* sayUnreadOnce({ latestMessageId }: ConnectedEvent) {
-          const first = yield* Ref.modify(counted, (already) => [
-            Option.isNone(already),
+          const toCount = yield* Ref.modify(counted, (already) => [
+            Option.filter(Option.some(latestMessageId), () => Option.isNone(already)),
             Option.orElseSome(already, () => latestMessageId ?? NOTHING_POSTED),
           ]);
-          if (!first) {
-            return false;
-          }
-          const count = yield* unreadUpTo(opened, latestMessageId);
-          return yield* sayUnread(format, count);
+          const said = yield* Effect.forEach(
+            Option.toArray(toCount),
+            (latest) => Effect.flatMap(unreadUpTo(opened, latest), (count) => sayUnread(format, count)),
+            { concurrency: 1 },
+          );
+          return said.includes(true);
         });
         function isNewer(event: InboxItemEvent): Effect.Effect<boolean> {
           return Effect.map(Ref.get(counted), (latest) => isNewerThan(latest, event));

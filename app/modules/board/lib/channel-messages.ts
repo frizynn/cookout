@@ -172,7 +172,7 @@ async function ackAfter(previous: Promise<void> | null, channel: Channel, messag
   await ack(channel, message);
 }
 
-async function loadOlderAfter(previous: Promise<void>, channel: Channel): Promise<void> {
+async function loadOlderAfter(previous: Promise<void> | null, channel: Channel): Promise<void> {
   await previous;
   await loadOlderPage(channel);
 }
@@ -199,7 +199,7 @@ function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
       update(channel, (loaded) => ({ ...loaded, callData: data }));
     },
     loadOlder: () => {
-      queue = loadOlderAfter(queue ?? loadNewest(channel), channel);
+      queue = loadOlderAfter(queue, channel);
     },
     receive: (message) => {
       if (message.channel !== options.name) {
