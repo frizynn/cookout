@@ -4,6 +4,7 @@ import type {
   ChannelEvent,
   CommandEvent,
   ConnectedEvent,
+  IdentityDeletedEvent,
   IdentityEvent,
   InboxItemEvent,
   MessageEvent,
@@ -50,6 +51,10 @@ export const ChannelEventSchema = matchesWire<ChannelEvent>()(
 
 export const ChannelDeletedEventSchema = matchesWire<ChannelDeletedEvent>()(
   Schema.Struct({ channel: ChannelSchema, type: Schema.Literal("channel-deleted") }),
+);
+
+export const IdentityDeletedEventSchema = matchesWire<IdentityDeletedEvent>()(
+  Schema.Struct({ identity: IdentitySchema, type: Schema.Literal("identity-deleted") }),
 );
 
 export const CommandEventSchema = matchesWire<CommandEvent>()(
