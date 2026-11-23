@@ -85,4 +85,4 @@ function sqliteSetAdmin(db: SqliteDatabase): SetAdmin {
     );
 }
 
-export { memorySetAdmin, sqliteSetAdmin };
+export { memorySetAdmin, type SetAdminResult, sqliteSetAdmin };

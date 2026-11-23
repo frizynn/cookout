@@ -85,7 +85,8 @@ export const requireToken: Gate<
   });
 
 /**
- * Makes `adminToken` the only token of the `admin` identity, creating the admin on a store without one. `cookout
+ * Makes `adminToken` the only token of the `admin` identity, creating the admin on a store without one and giving
+ * it back its admin flag if another admin removed it. `cookout
  * serve` runs it at every boot with `COOKOUT_ADMIN_TOKEN` (Matt, 2026-11-23, mattpocock/cookout#85), so a token
  * rotated since, lost or leaked stops working once the setting changes and the server restarts.
  *
@@ -100,13 +101,15 @@ export function adminTokenSet(adminToken: Token): Layer.Layer<never, StorageUnav
       const hash = yield* secrets.hashToken(adminToken);
       const admin = yield* firstAdmin;
       yield* storage.setOnlyToken(admin, hash);
+      yield* storage.setAdmin(admin.name, true);
     }),
   );
 }
 
 /**
  * The identity routes, for the server's route list: whoami, logging the web
- * UI in and out, and create, list, rotate and delete. They need `Caller`, which `requireToken` provides.
+ * UI in and out, create, list, rotate and delete, and making and removing admins. They need `Caller`, which
+ * `requireToken` provides.
  */
 export const identityRoutes: readonly Route<Caller | Storage | Secrets>[] = [...callerRoutes, ...identityAdminRoutes];
 

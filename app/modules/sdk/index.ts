@@ -20,7 +20,7 @@ import type {
   IdentityResponse,
   IdentityWithTokenResponse,
   ListIdentitiesResponse,
-} from "../identities/index.ts";
+} from "./lib/identities.ts";
 import type { EventStream, WatchOptions } from "./lib/events.ts";
 import type { JoinRequest, LeaseId, LeaseResponse, LeaveResponse } from "./lib/leases.ts";
 import type {
@@ -31,20 +31,15 @@ import type {
   PostMessageRequest,
   ThreadResponse,
 } from "./lib/messages.ts";
-import { connectionFor, getJson, send } from "./lib/request.ts";
+import { connectionFor, getJson } from "./lib/request.ts";
 import { eventCalls, eventOf } from "./lib/events.ts";
-import { identitiesPath, identityPath, identityTokenPath, sessionPath, whoamiPath } from "../identities/index.ts";
-import {
-  isHealthResponse,
-  isIdentityResponse,
-  isIdentityWithTokenResponse,
-  isListIdentitiesResponse,
-} from "./lib/generated/validators.js";
 import type { HealthResponse } from "../http/index.ts";
 import { channelCalls } from "./lib/channels.ts";
 import { commandCalls } from "./lib/commands.ts";
 import { healthPath } from "../http/index.ts";
+import { identityCalls } from "./lib/identities.ts";
 import { inboxCalls } from "./lib/inbox.ts";
+import { isHealthResponse } from "./lib/generated/validators.js";
 import { leaseCalls } from "./lib/leases.ts";
 import { messageCalls } from "./lib/messages.ts";
 
@@ -155,6 +150,17 @@ export type CookoutClient = {
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
   /** Admin only. Removes the identity; its token stops working. The last admin can't be deleted (409 `last_admin`). */
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
+  /**
+   * `PUT /v1/identities/:name/admin`, admin only: makes a human an admin and answers it (an admin already is one, and
+   * nothing changes). An agent is refused with 403 `human_only`; an unknown name with 404 `identity_not_found`.
+   */
+  readonly makeAdmin: (name: string) => Promise<IdentityResponse>;
+  /**
+   * `DELETE /v1/identities/:name/admin`, admin only: removes admin from the identity and answers it (a non-admin is
+   * answered unchanged). Removing the last admin's is refused with 409 `last_admin`. The `admin` identity gets its
+   * admin back at the server's next boot.
+   */
+  readonly removeAdmin: (name: string) => Promise<IdentityResponse>;
   /** `POST /v1/channels`: any identity can create a channel. A name in use is 409 `channel_exists`. */
   readonly createChannel: (request: CreateChannelRequest) => Promise<ChannelResponse>;
   /** `GET /v1/channels`: every channel, sorted by name. */
@@ -268,28 +274,8 @@ export const parseEvent: typeof eventOf = eventOf;
 export function createCookoutClient(options: CookoutClientOptions = {}): CookoutClient {
   const server = connectionFor(options);
   return {
-    createIdentity: (body) =>
-      send(server, { body, isExpected: isIdentityWithTokenResponse, method: "POST", path: identitiesPath }),
-    deleteIdentity: (name) =>
-      send(server, { isExpected: isIdentityResponse, method: "DELETE", params: { name }, path: identityPath }),
     health: () => getJson(server, healthPath, isHealthResponse),
-    listIdentities: () => getJson(server, identitiesPath, isListIdentitiesResponse),
-    login: async () => {
-      const loggedIn = await send(server, { isExpected: isIdentityResponse, method: "POST", path: sessionPath });
-      return loggedIn;
-    },
-    logout: async () => {
-      const loggedOut = await send(server, { isExpected: isIdentityResponse, method: "DELETE", path: sessionPath });
-      return loggedOut;
-    },
-    rotateToken: (name) =>
-      send(server, {
-        isExpected: isIdentityWithTokenResponse,
-        method: "POST",
-        params: { name },
-        path: identityTokenPath,
-      }),
-    whoami: () => getJson(server, whoamiPath, isIdentityResponse),
+    ...identityCalls(server),
     ...channelCalls(server),
     ...messageCalls(server),
     ...leaseCalls(server),
