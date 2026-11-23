@@ -65,6 +65,7 @@ const checks: readonly Check[] = [
   { budget: 8, job: "fixers", name: "fixers", script: ["fixers"] },
   { budget: 4, job: "seams", name: "seams", script: ["seams"] },
   { budget: 13, job: "tests", name: "tests", script: testScript() },
+  { budget: 15, job: "browser", name: "browser", script: ["browser"] },
   { budget: 5, job: "knip", name: "knip", script: ["knip"] },
   { budget: 5, job: "drift", name: "validators", script: ["validators:check"] },
   { budget: 3, job: "drift", name: "hygiene", script: ["hygiene"] },

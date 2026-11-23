@@ -54,6 +54,7 @@
     "packages/handler-example",
     "vitest.config.ts",
     "tsdown.config.ts",
-    "vite.config.ts"
+    "vite.config.ts",
+    "playwright.config.ts"
   ]
 }

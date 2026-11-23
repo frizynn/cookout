@@ -8,3 +8,5 @@ coverage/
 .DS_Store
 .claude/worktrees/
 .vitest/
+test-results/
+playwright-report/
