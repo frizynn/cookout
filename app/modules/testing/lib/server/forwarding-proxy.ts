@@ -1,4 +1,4 @@
-import { Effect, Layer, Record, Ref, String as Str } from "effect";
+import { Effect, Layer, Record, Ref } from "effect";
 import { HttpServer, HttpServerRequest, HttpServerResponse } from "effect/http";
 import { nodeHttpServer, serverUrl } from "../../../http/server.ts";
 import { Agent } from "undici";
@@ -11,14 +11,6 @@ interface ForwardingProxy {
 
 const FORWARDED = new Set(["accept", "authorization", "content-type"]);
 const LISTEN = { host: "127.0.0.1", port: 0 } as const;
-const NO_BODY = {};
-
-function bodyOf(text: string): { readonly body?: string } {
-  if (Str.isEmpty(text)) {
-    return NO_BODY;
-  }
-  return { body: text };
-}
 
 function isForwarded(_value: string, name: string): boolean {
   return FORWARDED.has(name);
@@ -36,7 +28,7 @@ function forwardingProxy(target: string): Effect.Effect<ForwardingProxy, never, 
       const text = yield* request.text;
       const answered = yield* Effect.promise(() =>
         direct.request({
-          ...bodyOf(text),
+          body: text,
           headers: Record.filter(request.headers, isForwarded),
           method: request.method,
           origin: target,
