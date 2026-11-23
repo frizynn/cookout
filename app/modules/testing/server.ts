@@ -19,7 +19,9 @@
  * and `pendingDeliveries` reads the deliveries its storage holds as pending.
  * `cuttableLink` puts a link in front of a server that a test can cut, to
  * drop a client's connection, or take down, so every later request gets 502.
- * `silentConnection` connects to a server and sends nothing.
+ * `silentConnection` connects to a server and sends nothing. `cuttableRelay`,
+ * from the http module, is a link a test can cut and restore, from another
+ * process too, as the browser tests do.
  */
 export { answer, refusal } from "./lib/server/calls.ts";
 export { type ChannelFixtureOptions, channelFixture, channelName } from "./lib/server/channels.ts";
@@ -48,6 +50,7 @@ export {
 export { runCookoutWhile } from "./lib/server/cli-clock.ts";
 export { type IdentityFixtureOptions, identityFixture, identityName } from "./lib/server/identities.ts";
 export { type CuttableLink, cuttableLink } from "./lib/server/cuttable-link.ts";
+export { type CuttableRelay, cuttableRelay } from "../http/server.ts";
 export { type SilentConnection, silentConnection } from "./lib/server/silent-connection.ts";
 export { type FixedAnswer, serverAnswering } from "./lib/server/fixed-answer.ts";
 export { type ForwardingProxy, forwardingProxy } from "./lib/server/forwarding-proxy.ts";

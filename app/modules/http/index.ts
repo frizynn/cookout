@@ -22,6 +22,12 @@ const ECHO_START = 0;
 /** The path of the health check, the one route without a token. */
 export const healthPath = "/v1/health";
 
+/** The path a `POST` to cuts a test's `cuttableRelay`: it drops every connection through it and holds new requests. */
+export const relayCutPath = "/__relay/cut";
+
+/** The path a `POST` to restores a cut `cuttableRelay`: the requests it held go through, and new ones too. */
+export const relayRestorePath = "/__relay/restore";
+
 /** The answer to the health check. */
 export interface HealthResponse {
   readonly status: "ok";
