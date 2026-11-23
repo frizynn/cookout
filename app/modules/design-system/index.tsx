@@ -15,7 +15,9 @@
  * button on a wide screen (`collapsed`),
  * with its `SidebarBody` of links (following one, but not pressing a button, closes it on a narrow screen)
  * and its `SidebarFooter`, and a `WorkspaceMain` of the route's panes on the
- * right. In the sidebar, `NavLink` is one link, bold when
+ * right, in a `WorkspaceColumn` under any `StatusBar`: a named polite live
+ * region that shows its text in a bar, in the attention colours, only while
+ * `shown`, such as "Reconnecting…". In the sidebar, `NavLink` is one link, bold when
  * it has something new (`marked`), highlighted when it is the open item, with
  * an icon and any `Pill` after it: a count read out by its label, loud (the
  * unread colour), quiet, or unseen (read out only); `NavHeading` heads a
@@ -175,6 +177,8 @@ export { TextArea } from "./lib/text-area.tsx";
 export { TextField } from "./lib/text-field.tsx";
 export { Workspace } from "./lib/workspace.tsx";
 export { WorkspaceMain } from "./lib/workspace-main.tsx";
+export { WorkspaceColumn } from "./lib/workspace-column.tsx";
+export { StatusBar } from "./lib/status-bar.tsx";
 export { IdentityLink } from "./lib/identity-link.tsx";
 export { Chip } from "./lib/chip.tsx";
 export { DateText } from "./lib/date-text.tsx";

@@ -23,7 +23,7 @@ const eventTypes = {
 
 function eventSourceAdapter(baseUrl: string): LiveAdapter {
   return {
-    open: (onEvent) => {
+    open: (onEvent, onLink) => {
       const source = new EventSource(urlOf({ baseUrl, path: eventsPath, query: allChannelsQuery }));
       function heard({ data, type }: SentEvent): void {
         if (typeof data === "string") {
@@ -34,6 +34,12 @@ function eventSourceAdapter(baseUrl: string): LiveAdapter {
       for (const type of Object.keys(eventTypes)) {
         source.addEventListener(type, heard);
       }
+      source.addEventListener("error", () => {
+        onLink("down");
+      });
+      source.addEventListener("open", () => {
+        onLink("up");
+      });
     },
   };
 }

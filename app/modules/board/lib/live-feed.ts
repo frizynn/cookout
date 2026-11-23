@@ -16,12 +16,13 @@ interface LiveFeed {
 
 interface LiveFeedOptions {
   readonly added: (channel: Channel) => void;
+  readonly back: () => void;
   readonly deleted: (channel: Channel) => void;
   readonly live: Live | null;
   readonly receivers: () => Iterable<Receiver>;
 }
 
-function createLiveFeed({ added, deleted, live, receivers }: LiveFeedOptions): LiveFeed {
+function createLiveFeed({ added, back, deleted, live, receivers }: LiveFeedOptions): LiveFeed {
   let following = false;
 
   function receive(event: CookoutEvent): void {
@@ -43,6 +44,7 @@ function createLiveFeed({ added, deleted, live, receivers }: LiveFeedOptions): L
     if (!following && live !== null) {
       following = true;
       live.subscribe(receive);
+      live.onBack(back);
     }
   }
 

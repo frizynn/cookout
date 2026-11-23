@@ -20,6 +20,7 @@ interface ChannelList {
   readonly add: (channel: Channel) => void;
   readonly remove: (channel: Channel) => void;
   readonly dismissNotice: () => void;
+  readonly reload: () => void;
 }
 
 type ListClient = Pick<CookoutClient, "listChannels">;
@@ -94,6 +95,9 @@ function createChannelList(client: ListClient): ChannelList {
       if (isMissing(current.channels, message)) {
         loading = reloadAfter(loading);
       }
+    },
+    reload: () => {
+      loading = reloadAfter(loading);
     },
     remove: ({ name }) => {
       const channels = withoutChannel(current.channels, name);

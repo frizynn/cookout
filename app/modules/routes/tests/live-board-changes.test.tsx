@@ -150,7 +150,7 @@ it("a channel deleted elsewhere leaves the sidebar, and its open view goes to th
   const reader = await newIdentity({ kind: "human", name: "web-live-deleted-reader" });
   const close = await openChannelLive(reader.client, "web-live-deleted");
   await adminClient().deleteChannel("web-live-deleted");
-  const notice = await screen.findByRole("status");
+  const notice = await screen.findByRole("status", { name: "" });
 
   expect([
     notice.textContent,
@@ -160,7 +160,7 @@ it("a channel deleted elsewhere leaves the sidebar, and its open view goes to th
 
   fireEvent.click(within(notice).getByRole("button", { name: "Dismiss" }));
 
-  expect(screen.queryByRole("status")).toBeNull();
+  expect(screen.queryByRole("status", { name: "" })).toBeNull();
 
   await close();
 });
@@ -176,9 +176,10 @@ it("a channel deleted elsewhere leaves the sidebar of a page open on another, wi
   await adminClient().deleteChannel("web-live-gone");
 
   await waitFor(() => {
-    expect([inSidebar().queryByRole("link", { name: /^#web-live-gone/u }), screen.queryByRole("status")]).toStrictEqual(
-      [null, null],
-    );
+    expect([
+      inSidebar().queryByRole("link", { name: /^#web-live-gone/u }),
+      screen.queryByRole("status", { name: "" }),
+    ]).toStrictEqual([null, null]);
   });
 
   await close();

@@ -1,10 +1,10 @@
 import type { Identity, IdentityName } from "../../sdk/index.ts";
-import { Workspace, WorkspaceMain } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
 import { SidebarView } from "../../views/index.tsx";
 import type { Stores } from "./stores.ts";
-import { WorkspacePanes } from "./workspace-panes.tsx";
+import { Workspace } from "../../design-system/index.tsx";
+import { WorkspaceBody } from "./workspace-body.tsx";
 import { useSyncExternalStore } from "react";
 
 interface SignedInViewProps {
@@ -28,9 +28,7 @@ export function SignedInView(props: SignedInViewProps): ReactNode {
         route={props.route}
         unread={stores.unread}
       />
-      <WorkspaceMain>
-        <WorkspacePanes me={props.identity.name} profile={props.profile} route={props.route} stores={stores} />
-      </WorkspaceMain>
+      <WorkspaceBody me={props.identity.name} profile={props.profile} route={props.route} stores={stores} />
     </Workspace>
   );
 }

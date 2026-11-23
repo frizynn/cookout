@@ -17,7 +17,9 @@
  * `identities` is the identity list itself, an external store too, loaded
  * when its first reader subscribes, so a view can tell a human from an agent
  * and show each display name. With `live`, an identity that changes (its
- * display name set or cleared anywhere) takes its place in the list at once.
+ * display name set or cleared anywhere) takes its place in the list at once,
+ * and the whole list loads again when the stream's link comes back after being
+ * down, since identity events can't be replayed.
  * Until the identities load, or if the server refuses them, nobody is
  * suggested. `setAdmin` makes an identity an admin or removes admin from it,
  * putting the identity the server answers in the list, and `adminChange` is
