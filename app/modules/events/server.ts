@@ -16,7 +16,7 @@
  * the web UI; and a comment
  * heartbeat every 15 s, so proxies keep the connection open. On a reconnect
  * with `Last-Event-ID`, the inbox items first replay what the caller missed;
- * only inbox items carry an event ID, so the IDs on one stream strictly increase.
+ * only inbox items for new messages carry an event ID (a reaction's item has none), so the IDs on one stream strictly increase.
  * For a stream opened with an agent session token, one more source checks
  * every 30 s that the token is still live, moving its expiry on, here because
  * it needs the request's token. The stream
