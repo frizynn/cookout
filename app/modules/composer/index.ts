@@ -114,32 +114,25 @@ function mentioned(sources: Sources, snapshot: DraftSnapshot, name: string): Dra
   return written(sources, snapshot, { caret: before.length + mention.length, text });
 }
 
-function picked(snapshot: DraftSnapshot, name: string): DraftSnapshot {
-  const command = snapshot.commands.find((suggested) => suggested.name === name) ?? null;
-  if (command === null) {
-    return snapshot;
+function picked(snapshot: DraftSnapshot, commands: readonly Command[]): DraftSnapshot {
+  let result = snapshot;
+  for (const command of commands) {
+    result = { ...EMPTY, command };
   }
-  return { ...EMPTY, command };
+  return result;
 }
 
 function chosen(sources: Sources, snapshot: DraftSnapshot): DraftSnapshot {
   const at = snapshot.highlighted;
-  const [identity = null] = snapshot.suggestions.slice(at, at + ONE);
-  if (identity !== null) {
-    return mentioned(sources, snapshot, identity.name);
+  let result = picked(snapshot, snapshot.commands.slice(at, at + ONE));
+  for (const identity of snapshot.suggestions.slice(at, at + ONE)) {
+    result = mentioned(sources, snapshot, identity.name);
   }
-  const [command = null] = snapshot.commands.slice(at, at + ONE);
-  if (command !== null) {
-    return { ...EMPTY, command };
-  }
-  return snapshot;
+  return result;
 }
 
 function highlightMoved(snapshot: DraftSnapshot, direction: "down" | "up"): DraftSnapshot {
-  const count = snapshot.suggestions.length + snapshot.commands.length;
-  if (count === NOTHING) {
-    return snapshot;
-  }
+  const count = Math.max(ONE, snapshot.suggestions.length + snapshot.commands.length);
   return { ...snapshot, highlighted: (snapshot.highlighted + STEPS[direction] + count) % count };
 }
 
@@ -179,7 +172,12 @@ function createDraft(directory: Directory, sources: Sources): Draft {
       change((snapshot) => highlightMoved(snapshot, direction));
     },
     pick: (name) => {
-      change((snapshot) => picked(snapshot, name));
+      change((snapshot) =>
+        picked(
+          snapshot,
+          snapshot.commands.filter((command) => command.name === name),
+        ),
+      );
     },
     snapshot: () => current,
     subscribe: listeners.add,

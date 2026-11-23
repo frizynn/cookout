@@ -10,12 +10,11 @@ export function PromptForm(parts: PromptFormParts): ReactNode {
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
     const shown = form.current;
-    if (shown === null) {
-      return;
-    }
-    const field = shown.querySelector<HTMLElement>(FIRST_FIELD);
-    if (field !== null) {
-      field.focus();
+    if (shown !== null) {
+      const field = shown.querySelector<HTMLElement>(FIRST_FIELD);
+      if (field !== null) {
+        field.focus();
+      }
     }
   }, []);
   return (

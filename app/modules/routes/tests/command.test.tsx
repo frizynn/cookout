@@ -58,6 +58,7 @@ it("a good call posts the call message in the channel and brings back an empty m
   expect.hasAssertions();
 
   await channelWithCommand({ channel: "web-command-call", command: { name: "web-call-fields", schema: everyKind } });
+  await adminClient().createMessage({ channel: "web-command-call", text: "Ready to ship" });
   const caller = await newIdentity({ kind: "human", name: "web-command-caller" });
   const close = await openChannel({ channel: "web-command-call", client: caller.client });
 
@@ -70,11 +71,12 @@ it("a good call posts the call message in the channel and brings back an empty m
   const { messages } = await adminClient().listMessages("web-command-call");
 
   expect([
-    messages.map(({ author, data, text }) => [author.name, text, data]),
+    messages.map(({ author, data = "no data", text }) => [author.name, text, data]),
     screen.getByLabelText<HTMLTextAreaElement>("Message").value,
     screen.queryByRole("form", { name: "Call /web-call-fields" }),
   ]).toStrictEqual([
     [
+      ["admin", "Ready to ship", "no data"],
       [
         "web-command-caller",
         "/web-call-fields",
@@ -125,10 +127,14 @@ it("a schema with no properties falls back to a JSON data box", { timeout: 5000 
   await channelWithCommand({ channel: "web-command-json", command: { name: "web-call-json", schema: noProperties } });
   const close = await openChannel({ channel: "web-command-json" });
 
-  await callWith({ command: "web-call-json", field: "Data", value: '{"branch":"main"}' });
+  await callWith({
+    command: "web-call-json",
+    field: "Data",
+    value: '{"branch":"main","extra":["one",{"urgent":true},null]}',
+  });
   const shown = await screen.findByLabelText("Call to /web-call-json");
 
-  expect(shown.textContent).toBe(pretty({ branch: "main" }));
+  expect(shown.textContent).toBe(pretty({ branch: "main", extra: ["one", { urgent: true }, null] }));
 
   close();
 });

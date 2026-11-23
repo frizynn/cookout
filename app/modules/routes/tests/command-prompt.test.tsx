@@ -56,10 +56,14 @@ it("typing / suggests the registered commands with their descriptions, narrowed 
 it("picking a command shows a labelled field for each property of its schema", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  await channelWithCommand({ channel: "web-command-fields", command: { name: "web-fields", schema: fieldsSchema } });
+  await channelWithCommand({
+    channel: "web-command-fields",
+    command: { description: "Ship with options", name: "web-fields", schema: fieldsSchema },
+  });
   const close = await openChannel({ channel: "web-command-fields" });
 
   const prompt = await pick("web-fields");
+  const title = within(prompt).getByText("Ship with options");
 
   expect([
     [field("branch").getAttribute("type"), field("branch").hasAttribute("required"), document.activeElement],
@@ -69,6 +73,7 @@ it("picking a command shows a labelled field for each property of its schema", {
     optionsShown(),
     [field("ratio").getAttribute("step"), field("count").getAttribute("step"), field("ratio").hasAttribute("required")],
     screen.queryByLabelText("Message"),
+    title.textContent,
   ]).toStrictEqual([
     ["text", true, field("branch")],
     field("branch"),
@@ -77,6 +82,7 @@ it("picking a command shows a labelled field for each property of its schema", {
     ["—", "staging", "prod"],
     ["any", "1", false],
     null,
+    "Ship with options",
   ]);
 
   close();
@@ -133,6 +139,26 @@ it("a thread's reply box offers no commands", { timeout: 5000 }, async () => {
       name: "Command suggestions",
     }),
   ).toBeNull();
+
+  close();
+});
+
+it.each([
+  ["a nested object", "web-fallback-object", { branch: { type: "object" } }],
+  ["an untyped property", "web-fallback-untyped", { branch: { minLength: 1 } }],
+  ["a boolean schema", "web-fallback-boolean", { branch: true }],
+  ["an enum of objects", "web-fallback-enum", { branch: { enum: [{ name: "main" }] } }],
+] as const)("a schema with %s falls back to a JSON data box", { timeout: 5000 }, async (_shape, name, properties) => {
+  expect.hasAssertions();
+
+  await channelWithCommand({ channel: `${name}-channel`, command: { name, schema: { properties, type: "object" } } });
+  const close = await openChannel({ channel: `${name}-channel` });
+  const prompt = await pick(name);
+
+  expect([within(prompt).getByLabelText("Data").tagName, within(prompt).queryByLabelText("branch")]).toStrictEqual([
+    "TEXTAREA",
+    null,
+  ]);
 
   close();
 });

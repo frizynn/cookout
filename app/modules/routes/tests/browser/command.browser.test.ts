@@ -1,35 +1,67 @@
+import type { Locator, Page } from "@playwright/test";
 import { adminClient, logInToChannels, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import type { CookoutClient } from "../../../sdk/index.ts";
-import type { Page } from "@playwright/test";
 import { createCookoutClient } from "../../../sdk/index.ts";
 
-const schema = { properties: { branch: { type: "string" } }, required: ["branch"], type: "object" };
+const schema = {
+  properties: { branch: { description: "The branch to ship", minLength: 3, type: "string" } },
+  required: ["branch"],
+  type: "object",
+} as const;
 const nowhere = "http://127.0.0.1:9/command";
 const INDENT = 2;
-const NONE = 0;
+
+interface InChannel {
+  readonly channel: string;
+  readonly command: string;
+}
+
+interface Opened {
+  readonly page: Page;
+  readonly channel: string;
+}
 
 function pretty(value: unknown): string {
   return JSON.stringify(value, null, INDENT);
 }
 
-async function channelWithCommand(channel: string, command: string): Promise<CookoutClient> {
+async function channelWithCommand({ channel, command }: InChannel): Promise<CookoutClient> {
   const admin = adminClient();
   await admin.createChannel({ name: channel });
   const { token } = await admin.createIdentity({ kind: "agent", name: command, owner: "admin" });
-  await admin.addCommand({ name: command, schema, url: nowhere });
+  await admin.addCommand({ description: "Ship a branch", name: command, schema, url: nowhere });
   return createCookoutClient({ token });
 }
 
-async function callFromTheForm(page: Page, command: string, data: string): Promise<void> {
-  const form = page.getByRole("form", { name: "Call a command" });
-  await form.getByLabel("Command").selectOption(command);
-  await form.getByLabel("Data").fill(data);
-  await form.getByRole("button", { name: "Call" }).click();
+interface Typing {
+  readonly page: Page;
+  readonly text: string;
+}
+
+async function pickByKeyboard(page: Page): Promise<Locator> {
+  await expect(page.getByRole("list", { name: "Command suggestions" }).getByRole("listitem")).toHaveText([
+    "/browser-call-boxShip a branch",
+  ]);
+
+  await page.keyboard.press("Tab");
+  return page.getByRole("form", { name: "Call /browser-call-box" }).getByRole("textbox", { name: "branch" });
+}
+
+async function typeAndSend({ page, text }: Typing): Promise<void> {
+  await page.keyboard.type(text);
+  await page.keyboard.press("Enter");
+}
+
+async function openAsCaller({ channel, page }: Opened): Promise<void> {
+  const { token } = await newIdentity({ kind: "human", name: "browser-command-caller" });
+  await logInToChannels({ page, token });
+  await page.getByRole("link", { name: `#${channel}` }).click();
+  await page.getByRole("textbox", { name: "Message" }).pressSequentially("/browser-call");
 }
 
 test("a command call and its result reply show their data", async ({ page }) => {
-  const handler = await channelWithCommand("browser-command-shows", "browser-show-call");
+  const handler = await channelWithCommand({ channel: "browser-command-shows", command: "browser-show-call" });
   const { threadId } = await adminClient().callCommand("browser-show-call", {
     channel: "browser-command-shows",
     data: { branch: "main" },
@@ -53,23 +85,25 @@ test("a command call and its result reply show their data", async ({ page }) => 
   ]);
 });
 
-test("a person calls a command from the UI, and bad data shows the schema errors", async ({ page }) => {
-  await channelWithCommand("browser-command-call", "browser-call-form");
+test("a person calls a command from the message box by keyboard, and a refusal shows by its field", async ({
+  page,
+}) => {
+  await channelWithCommand({ channel: "browser-command-call", command: "browser-call-box" });
+  await openAsCaller({ channel: "browser-command-call", page });
 
-  const { token } = await newIdentity({ kind: "human", name: "browser-command-caller" });
-  await logInToChannels({ page, token });
-  await page.getByRole("link", { name: "#browser-command-call" }).click();
-  await callFromTheForm(page, "browser-call-form", '{"branch":1}');
+  const branch = await pickByKeyboard(page);
 
-  await expect(page.getByRole("alert")).toContainText("Couldn't call /browser-call-form (invalid_request)");
-  await expect(page.getByRole("list", { name: "Schema errors" }).getByRole("listitem")).toHaveText([
-    "data.branch: must be string",
-  ]);
+  await expect(branch).toBeFocused();
 
-  await callFromTheForm(page, "browser-call-form", '{"branch":"main"}');
+  await typeAndSend({ page, text: "x" });
+
+  await expect(branch).toHaveAccessibleDescription("must NOT have fewer than 3 characters The branch to ship");
+  await expect(branch).toHaveValue("x");
+
+  await typeAndSend({ page, text: "-main" });
 
   await expect(page.getByRole("list", { name: "Messages" }).getByRole("listitem")).toHaveText([
-    `@browser-command-caller/browser-call-form${pretty({ branch: "main" })}0 replies`,
+    `@browser-command-caller/browser-call-box${pretty({ branch: "x-main" })}0 replies`,
   ]);
-  await expect(page.getByRole("alert")).toHaveCount(NONE);
+  await expect(page.getByRole("textbox", { name: "Message" })).toHaveValue("");
 });

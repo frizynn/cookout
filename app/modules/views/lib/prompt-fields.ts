@@ -66,8 +66,10 @@ function isList(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
 }
 
+const CHOICE_TYPES: ReadonlySet<string> = new Set(["string", "number", "boolean"]);
+
 function isChoice(value: unknown): value is Choice {
-  return typeof value === "string" || typeof value === "number" || typeof value === "boolean";
+  return CHOICE_TYPES.has(typeof value);
 }
 
 function textOf(value: unknown): string | null {
@@ -223,15 +225,12 @@ function callDataOf({ kept, prompt, typed }: Sent): string {
 
 function fieldNamed({ fields, problem }: Named): string | null {
   const [root, name] = problem.path;
-  if (root !== DATA || problem.path.length !== PROPERTY_PATH) {
-    return null;
+  const named = root === DATA && problem.path.length === PROPERTY_PATH;
+  let found: string | null = null;
+  for (const field of fields.filter((shown) => named && shown.name === name)) {
+    found = field.name;
   }
-  for (const field of fields) {
-    if (field.name === name) {
-      return field.name;
-    }
-  }
-  return null;
+  return found;
 }
 
 function fieldErrors({ call, fields }: Refused): ReadonlyMap<string, readonly string[]> {
