@@ -53,12 +53,8 @@ function splitMentions(text: string, shown: MentionsShown): readonly MarkdownNod
   return pieces.filter((piece) => piece.type !== "text" || piece.value !== "");
 }
 
-function valueOf(node: MarkdownNode): string {
-  return node.value ?? "";
-}
-
-function htmlAsText(node: MarkdownNode, parent: string): MarkdownNode {
-  const text = textNode(valueOf(node));
+function htmlAsText(html: string, parent: string): MarkdownNode {
+  const text = textNode(html);
   if (BLOCK_PARENTS.has(parent)) {
     return { children: [text], type: "paragraph" };
   }
@@ -76,13 +72,16 @@ function withShownChildren(node: MarkdownNode, show: ShowChild): MarkdownNode {
 }
 
 function shownNode(node: MarkdownNode, parent: string, shown: MentionsShown): readonly MarkdownNode[] {
+  if (typeof node.value !== "string") {
+    return [withShownChildren(node, (child, under) => shownNode(child, under, shown))];
+  }
   if (node.type === "html") {
-    return [htmlAsText(node, parent)];
+    return [htmlAsText(node.value, parent)];
   }
   if (node.type === "text") {
-    return splitMentions(valueOf(node), shown);
+    return splitMentions(node.value, shown);
   }
-  return [withShownChildren(node, (child, under) => shownNode(child, under, shown))];
+  return [node];
 }
 
 export function remarkMessageText(shown: MentionsShown): (tree: MarkdownNode) => MarkdownNode {
