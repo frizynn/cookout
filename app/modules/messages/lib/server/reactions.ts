@@ -65,7 +65,13 @@ function countsIn(reactions: readonly Reaction[], id: MessageId): readonly React
 }
 
 function withCounts(reactions: readonly Reaction[]): <Shown extends Message>(message: Shown) => Shown {
-  return (message) => ({ ...message, reactions: countsIn(reactions, message.id) });
+  return (message) => {
+    const counts = countsIn(reactions, message.id);
+    if (!Arr.isReadonlyArrayNonEmpty(counts)) {
+      return message;
+    }
+    return { ...message, reactions: counts };
+  };
 }
 
 interface Showing<Shown> {

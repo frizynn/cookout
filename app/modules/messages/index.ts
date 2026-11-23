@@ -56,8 +56,8 @@ export interface MessageFields {
   readonly harness?: Harness;
   readonly createdAt: IsoTime;
   /**
-   * The reactions on the message, one count for each reaction anyone has left, in `reactionNames` order. Present on
-   * the messages of channel pages, threads and the inbox; absent on a message just posted, which has none.
+   * The reactions on the message, one count for each reaction anyone has left, in `reactionNames` order, on the
+   * messages of channel pages, threads and the inbox. Absent while the message has none, and on live `message` events.
    */
   readonly reactions?: readonly ReactionCount[];
 }
