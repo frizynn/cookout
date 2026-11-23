@@ -104,6 +104,7 @@ export function createBoard(options: BoardOptions): Board {
 
 export type { ChannelsState } from "./lib/channel-list.ts";
 export type { ChannelMessages, ChannelMessagesState } from "./lib/channel-messages.ts";
-export type { CallState, SchemaProblem } from "./lib/command-call.ts";
+export type { CallState } from "./lib/command-call.ts";
+export type { SchemaProblem } from "../sdk/index.ts";
 export type { Commands } from "./lib/commands.ts";
 export type { ThreadMessages, ThreadMessagesState } from "./lib/thread-messages.ts";

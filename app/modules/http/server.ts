@@ -7,7 +7,7 @@
  * `/` and the build's files under `/assets/`, with no token.
  */
 import { ByteSize, DateTime, Effect, Layer, Option, Path } from "effect";
-import { ErrorResponseSchema, HealthResponseSchema, securityHeaders } from "./lib/server/wire.ts";
+import { ErrorResponseSchema, HealthResponseSchema, SchemaProblemsSchema, securityHeaders } from "./lib/server/wire.ts";
 import type { Gate, Route } from "./lib/server/router.ts";
 import { HttpIncomingMessage, HttpServer, HttpServerRequest, HttpServerResponse } from "effect/http";
 import { guardRefusal, notFound, respond, toRefusal } from "./lib/server/refusals.ts";
@@ -103,8 +103,12 @@ function guardRequest(
 export type { Gate, Route } from "./lib/server/router.ts";
 export type { Listen, Serving };
 
-/** The response Schemas of `/v1/health` and of every refusal, for the SDK's generated validators. */
-export const httpResponseSchemas = { ErrorResponse: ErrorResponseSchema, HealthResponse: HealthResponseSchema };
+/** The response Schemas of `/v1/health`, of every refusal and of an `invalid_request` refusal's details, for the SDK's generated validators. */
+export const httpResponseSchemas = {
+  ErrorResponse: ErrorResponseSchema,
+  HealthResponse: HealthResponseSchema,
+  SchemaProblems: SchemaProblemsSchema,
+};
 
 /**
  * Node's HTTP server on `listen`, for any `HttpServer.serve` app: the one

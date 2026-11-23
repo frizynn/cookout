@@ -3,7 +3,8 @@
  * for Node and the browser. Every answer is checked against the protocol; one
  * that doesn't match fails with `CookoutError` code `bad_response`. A refusal
  * with a code this SDK doesn't know (from a newer server) still fails with
- * that code, typed as `UnknownErrorCode`.
+ * that code, typed as `UnknownErrorCode`; its `schemaProblems` lists an `invalid_request`'s schema errors.
+ * `refusalOf` turns anything a call threw into a code and message (`unreachable` unless a `CookoutError`).
  */
 import type { AckResponse, FollowResponse, InboxResponse, SubscriptionResponse } from "./lib/inbox.ts";
 import type {
@@ -67,7 +68,7 @@ export type {
   JsonSchema,
   ListCommandsResponse,
 } from "../commands/index.ts";
-export type { HealthResponse } from "../http/index.ts";
+export type { HealthResponse, SchemaProblem } from "../http/index.ts";
 export type { IsoTime } from "../time/index.ts";
 export type {
   AgentIdentity,
@@ -122,7 +123,7 @@ export type {
 } from "../events/index.ts";
 export type { EventStream, WatchOptions } from "./lib/events.ts";
 export type { ServerSentEvent } from "../http/client.ts";
-export { CookoutError, type CookoutErrorCode, type UnknownErrorCode } from "./lib/errors.ts";
+export { CookoutError, type CookoutErrorCode, type Refusal, type UnknownErrorCode, refusalOf } from "./lib/errors.ts";
 
 export type CookoutClientOptions = {
   /** The server's base URL, such as `https://cookout.example.com`. Default: `COOKOUT_URL`. */

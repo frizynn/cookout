@@ -2,7 +2,7 @@
 import type { ChannelResponse, ListChannelsResponse } from "../../../channels/index.ts";
 import type { CallCommandResponse, CommandWithSecretResponse, ListCommandsResponse } from "../../../commands/index.ts";
 import type { ConnectedEvent, InboxItemEvent, MessageEvent, ReadPositionEvent } from "../../../events/index.ts";
-import type { ErrorResponse, HealthResponse } from "../../../http/index.ts";
+import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../../http/index.ts";
 import type { IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";
 import type { AckResponse, FollowResponse, InboxResponse, SubscriptionResponse } from "../../../inbox/index.ts";
 import type { LeaseResponse, LeaveResponse } from "../../../leases/index.ts";
@@ -19,6 +19,7 @@ export declare function isMessageEvent(data: unknown): data is MessageEvent;
 export declare function isReadPositionEvent(data: unknown): data is ReadPositionEvent;
 export declare function isErrorResponse(data: unknown): data is ErrorResponse;
 export declare function isHealthResponse(data: unknown): data is HealthResponse;
+export declare function isSchemaProblems(data: unknown): data is SchemaProblems;
 export declare function isIdentityResponse(data: unknown): data is IdentityResponse;
 export declare function isIdentityWithTokenResponse(data: unknown): data is IdentityWithTokenResponse;
 export declare function isListIdentitiesResponse(data: unknown): data is ListIdentitiesResponse;

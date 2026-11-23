@@ -113,8 +113,8 @@ it.effect("a command with a bad name, url or schema is refused with 400", () =>
     const notObject = yield* postRawCommand(cookout, '{"name":"deploy","url":"https://example.com","schema":[]}');
 
     expect([name, url]).toMatchObject([
-      { code: "invalid_request", details: [{ path: ["name"] }], status: 400 },
-      { code: "invalid_request", details: [{ path: ["url"] }], status: 400 },
+      { code: "invalid_request", schemaProblems: [{ path: ["name"] }], status: 400 },
+      { code: "invalid_request", schemaProblems: [{ path: ["url"] }], status: 400 },
     ]);
     expect(notObject).toMatchObject({
       json: { error: { code: "invalid_request", details: [{ path: ["schema"] }] } },
@@ -146,10 +146,14 @@ it.effect(
       expect([missing, wrongType]).toMatchObject([
         {
           code: "invalid_request",
-          details: [{ message: "must have required property 'branch'", path: ["data"] }],
+          schemaProblems: [{ message: "must have required property 'branch'", path: ["data"] }],
           status: 400,
         },
-        { code: "invalid_request", details: [{ message: "must be string", path: ["data", "branch"] }], status: 400 },
+        {
+          code: "invalid_request",
+          schemaProblems: [{ message: "must be string", path: ["data", "branch"] }],
+          status: 400,
+        },
       ]);
       expect(messages).toStrictEqual([]);
     }).pipe(Effect.provide(testCookout())),

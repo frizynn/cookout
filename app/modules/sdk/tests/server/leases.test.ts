@@ -45,6 +45,7 @@ it.effect("a second join while the lease is held gets 409 with heldUntil", () =>
     expect(error).toMatchObject({
       code: "lease_held",
       details: { heldUntil: "2026-01-01T00:01:00.000Z" },
+      schemaProblems: [],
       status: CONFLICT,
     });
   }).pipe(Effect.provide(testCookout())),

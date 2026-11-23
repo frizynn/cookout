@@ -8,7 +8,8 @@ The SDK's public surface: the built `dist/sdk.d.ts`, as consumers of the publish
  * for Node and the browser. Every answer is checked against the protocol; one
  * that doesn't match fails with `CookoutError` code `bad_response`. A refusal
  * with a code this SDK doesn't know (from a newer server) still fails with
- * that code, typed as `UnknownErrorCode`.
+ * that code, typed as `UnknownErrorCode`; its `schemaProblems` lists an `invalid_request`'s schema errors.
+ * `refusalOf` turns anything a call threw into a code and message (`unreachable` unless a `CookoutError`).
  */
 /**
  * A moment on the wire, shared by the server, the SDK and the web: the
@@ -344,6 +345,11 @@ interface HealthResponse {
 declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "lease_held", "lease_required", "lease_lost", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
+/** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
+interface SchemaProblem {
+  readonly message: string;
+  readonly path: readonly (string | number)[];
+}
 declare const brand: unique symbol;
 type UnknownErrorCode = string & {
   readonly [brand]: "UnknownErrorCode";
@@ -360,8 +366,14 @@ declare class CookoutError extends Error {
   readonly status: number;
   readonly code: CookoutErrorCode;
   readonly details: unknown;
+  readonly schemaProblems: readonly SchemaProblem[];
   constructor(options: CookoutErrorOptions);
 }
+interface Refusal {
+  readonly code: CookoutErrorCode | "unreachable";
+  readonly message: string;
+}
+declare function refusalOf(error: unknown): Refusal;
 export type CookoutClientOptions = {
   /** The server's base URL, such as `https://cookout.example.com`. Default: `COOKOUT_URL`. */
   readonly url?: string;
@@ -497,5 +509,5 @@ export declare const parseEvent: typeof eventOf;
  * (status 0) when there is no URL.
  */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Reply, type ServerSentEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions };
+export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Refusal, type Reply, type SchemaProblem, type ServerSentEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, refusalOf };
 ```

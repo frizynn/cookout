@@ -1,4 +1,4 @@
-import { CookoutError, createCookoutClient } from "../index.ts";
+import { CookoutError, createCookoutClient, refusalOf } from "../index.ts";
 import { expect, it } from "vitest";
 
 function thrownBy(make: () => unknown): unknown {
@@ -29,4 +29,14 @@ it("given a URL and no env, the SDK reads the rest from the process's environmen
   const made = thrownBy(() => createCookoutClient({ url: "http://127.0.0.1:1" }));
 
   expect(made).toBe("nothing");
+});
+
+it("refusalOf keeps a refusal's code and message, and names anything else unreachable", { timeout: 1000 }, () => {
+  expect.hasAssertions();
+
+  const refused = refusalOf(thrownBy(() => createCookoutClient({ env: {} })));
+  const unreachable = refusalOf(new TypeError("fetch failed"));
+
+  expect(refused).toMatchObject({ code: "url_missing" });
+  expect(unreachable).toStrictEqual({ code: "unreachable", message: "TypeError: fetch failed" });
 });

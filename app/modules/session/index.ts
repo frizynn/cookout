@@ -7,13 +7,8 @@
  * cookie (`POST /v1/session`); a refused login (an agent's token, a bad token)
  * keeps the server's error code to show.
  */
-import type { CookoutClient, Identity } from "../sdk/index.ts";
-import { CookoutError } from "../sdk/index.ts";
-
-interface Refusal {
-  readonly code: string;
-  readonly message: string;
-}
+import type { CookoutClient, Identity, Refusal } from "../sdk/index.ts";
+import { refusalOf } from "../sdk/index.ts";
 
 type SessionState =
   | { readonly status: "checking" }
@@ -28,13 +23,6 @@ function shownRefusal(refusal: Refusal): Refusal | null {
     return null;
   }
   return refusal;
-}
-
-function refusalOf(error: unknown): Refusal {
-  if (error instanceof CookoutError) {
-    return { code: error.code, message: error.message };
-  }
-  return { code: "unreachable", message: String(error) };
 }
 
 /** The session store. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
