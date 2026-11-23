@@ -24,13 +24,13 @@
  * scrolled up, and anything under it, such as a message box in a `BoxFrame`
  * with its keyboard hint; `SidePanel` is a
  * named column on its right with a close link (the whole width on a narrow
- * screen). `Avatar` is a name's coloured initials, one of eight hues hashed
+ * screen). A name's avatar is its coloured initials, one of eight hues hashed
  * from the name, a circle for a human and a square with a badge for an agent;
  * `Author` is a message's avatar and name, with an `agent` tag for an agent.
  *
  * `AppShell` is the page around the login view; `Card`, centred in a scrolling column, `CardHeader`,
  * `Heading` and `Muted` are a shadcn-style card and its title row, `CardBody`
- * a padded section under it; `BackLink` leads back up a level; `LinkList` and
+ * a padded section under it; `LinkList` and
  * `LinkRow` are a named list of links, and `ItemList` and `ItemRow` a named
  * list of plain rows; `Article` is one named item shown on its own, such as a
  * thread's parent message; `Alert` is a refusal, read out by screen readers;
@@ -55,9 +55,7 @@ export { Alert } from "./lib/alert.tsx";
 export { AppShell } from "./lib/app-shell.tsx";
 export { Article } from "./lib/article.tsx";
 export { Author } from "./lib/author.tsx";
-export { Avatar } from "./lib/avatar.tsx";
 export { BoxFrame } from "./lib/box-frame.tsx";
-export { BackLink } from "./lib/back-link.tsx";
 export { Button } from "./lib/button.tsx";
 export { Card } from "./lib/card.tsx";
 export { CardBody } from "./lib/card-body.tsx";
