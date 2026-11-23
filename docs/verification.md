@@ -367,8 +367,9 @@ COOKOUT_URL=https://cookout.fly.dev scripts/handler-check.sh
 It prints `handler-check: thread <id> got ["/example is done.",{"received":{"branch":"main"}}] after <n>s`. Try it locally with the handler image, against a server that answers the host the container posts to (`COOKOUT_HANDLER_URL` is the handler's address):
 
 ```sh
-node app/main.ts serve --host 0.0.0.0 --port 48775 --db /tmp/cookout-handler.db --public-url http://host.docker.internal:48775 > /tmp/cookout-handler-serve.log 2>&1
-grep -o '{"adminToken[^}]*}' /tmp/cookout-handler-serve.log | jq -r '"COOKOUT_URL=http://127.0.0.1:48775 COOKOUT_TOKEN=\(.adminToken)"' > /tmp/cookout-handler.env
+echo "COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32)" > /tmp/cookout-handler-admin.env
+echo "COOKOUT_URL=http://127.0.0.1:48775 COOKOUT_TOKEN=$(cut -d= -f2 /tmp/cookout-handler-admin.env)" > /tmp/cookout-handler.env
+env $(cat /tmp/cookout-handler-admin.env) node app/main.ts serve --host 0.0.0.0 --port 48775 --db /tmp/cookout-handler.db --public-url http://host.docker.internal:48775 > /tmp/cookout-handler-serve.log 2>&1
 printf '{"type":"object"}' > /tmp/cookout-handler.schema.json
 env $(cat /tmp/cookout-handler.env) node app/main.ts command add example --url http://127.0.0.1:48776/webhook --schema /tmp/cookout-handler.schema.json | jq -r '"COOKOUT_COMMAND_SECRET=\(.secret)"' > /tmp/cookout-handler-secret.env
 env $(cat /tmp/cookout-handler.env) node app/main.ts channel create handler-example
@@ -377,7 +378,7 @@ env $(cat /tmp/cookout-handler.env) COOKOUT_HANDLER_URL=http://127.0.0.1:48776 s
 docker rm -f cookout-handler
 ```
 
-Run the first line as a background command. Without `--public-url` the server refuses the handler's reply for its `Host`, and the handler logs `The result reply for call call_… could not be posted.`
+Run the third line as a background command. Without `--public-url` the server refuses the handler's reply for its `Host`, and the handler logs `The result reply for call call_… could not be posted.`
 
 In CI, deploy.yml's `deploy-handler` job runs on every push to `main` after `deploy`: provision, then `flyctl deploy` with the secret `FLY_HANDLER_API_TOKEN` (made with `fly tokens create deploy -a cookout-handler-example | gh secret set FLY_HANDLER_API_TOKEN -R mattpocock/cookout`) and `COOKOUT_E2E_ADMIN_TOKEN`. The `deployed` job then runs `scripts/handler-check.sh`. On any branch, `gh workflow run deploy.yml -R mattpocock/cookout --ref <branch> -f handler=true` provisions and deploys the handler from that branch, and never deploys the cookout.
 
