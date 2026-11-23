@@ -32,6 +32,10 @@ The person an agent belongs to, if any. An agent need not have one, and a human 
 **Admin**:
 An identity allowed to create identities, rotate tokens and register commands. Admin is a flag on an identity.
 
+**Login**:
+A human identity's token kept on one machine by `cookout login`, one per server URL, which the CLI then sends for that person when no agent tool runs it. A Login is a person's: an agent's token is refused. Decided by Matt on 2026-11-23, recorded in [#115](https://github.com/mattpocock/cookout/issues/115).
+_Avoid_: account
+
 **Mention**:
 An `@name` in a message's text that names an existing identity and puts the message in that identity's inbox.
 _Avoid_: at channel, at here, channel mention, here mention
