@@ -4,7 +4,8 @@
  * and time for a hover, and the ISO time itself. `dayLabel(iso)` names the
  * day for a separator: `Today`, `Yesterday`, or the weekday and date
  * (`Monday, 23 November`). `dayOf(iso)` is the local day a time falls on, and
- * `millisOf(iso)` its milliseconds, to tell how far apart two times are.
+ * `millisOf(iso)` its milliseconds, to tell how far apart two times are, and
+ * `isPast(iso)` whether the current time has reached it.
  * `timeAgo(iso)` is how long ago a time was (`5 minutes ago`), by the current
  * time, and from a day on its date and time (`Yesterday 14:05`);
  * `everySecond(listener)` ticks it live. This is the web UI's one reader of
@@ -86,6 +87,15 @@ export function dayOf(iso: string): string {
  */
 export function millisOf(iso: string): number {
   return Date.parse(iso);
+}
+
+/**
+ * Whether a time has come, by the current time, such as an agent session's expiry.
+ * @param iso The ISO time.
+ * @returns `true` once the current time reaches it.
+ */
+export function isPast(iso: string): boolean {
+  return Date.parse(iso) <= Date.now();
 }
 
 /**

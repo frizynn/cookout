@@ -83,6 +83,7 @@
  * a padded section under it; `LinkList` and
  * `LinkRow` are a named list of links, and `ItemList` and `ItemRow` a named
  * list of plain rows; `Alert` is a refusal, read out by screen readers;
+ * `Notice` is a passing word on what just happened, read out politely;
  * `Skeleton` stands in while something loads. `Form` hands one field's value
  * to `onSubmit` without reloading the page; `TextField` is a labelled secret
  * input in it, such as a token, `TextArea` a labelled box to write in, such
@@ -143,6 +144,7 @@ export { LinkList } from "./lib/link-list.tsx";
 export { LinkRow } from "./lib/link-row.tsx";
 export { Mention } from "./lib/mention.tsx";
 export { Muted } from "./lib/muted.tsx";
+export { Notice } from "./lib/notice.tsx";
 export { HeadingButton } from "./lib/heading-button.tsx";
 export { NavHeading } from "./lib/nav-heading.tsx";
 export { NavLink } from "./lib/nav-link.tsx";

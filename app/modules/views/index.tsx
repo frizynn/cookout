@@ -40,7 +40,8 @@
  * toggle, a command call's shown as the command and the data it called it
  * with. `Authors` gives
  * every message under it the identity list. `InboxView` is the inbox of
- * whoever is logged in (the `unread` store): Unread, with its count, newest
+ * whoever is logged in (the `unread` store), under a notice naming the open channel
+ * that was just deleted elsewhere, if any (the board's `notice`, until dismissed): Unread, with its count, newest
  * first and live, or "You're all caught up."; then Earlier, the read items
  * from the inbox history, newest first, with "Load more" while older ones
  * remain and "That's everything." at the end, or "Nothing read yet.". Each

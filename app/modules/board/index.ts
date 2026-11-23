@@ -27,7 +27,10 @@
  * channel or thread it belongs to (a reply also counts in its top-level
  * message's replies), so messages from others appear without a reload; a message
  * in a channel the loaded list doesn't have reloads the list, and each channel
- * created elsewhere joins the loaded list at once, as the stream announces it. `subscriptions` is the names of the channels
+ * created elsewhere joins the loaded list at once, as the stream announces it; each
+ * one deleted elsewhere leaves it, and if the page is on it, the page goes to the
+ * inbox with its name as the snapshot's `notice` until `dismissNotice`; and each
+ * command registered elsewhere joins the loaded `commands`. `subscriptions` is the names of the channels
  * the logged-in identity subscribes to, sorted, loaded when its first reader
  * subscribes; `setSubscribed` subscribes to a channel or unsubscribes from it,
  * keeping the refusal, with the channel, if the server refuses. With `live`, a subscribe or unsubscribe from
@@ -85,6 +88,8 @@ export interface Board {
   readonly subscriptions: Subscriptions;
   /** The new channel form: one store, whose channels join the loaded list. */
   readonly creation: ChannelCreation;
+  /** Empties the snapshot's `notice`. */
+  readonly dismissNotice: () => void;
 }
 
 /**
@@ -110,6 +115,7 @@ export function createBoard(options: BoardOptions): Board {
   const { heard, subscriptions } = createSubscriptions({ client, live: options.live ?? null });
   const { follow, followed } = createLiveFeed({
     added: list.add,
+    deleted: list.remove,
     live: options.live ?? null,
     receivers: () => [list, ...channels.values(), ...threads.values()],
   });
@@ -118,7 +124,7 @@ export function createBoard(options: BoardOptions): Board {
       storeIn(channels, name, () =>
         followed(createChannelMessages({ client, name, pageSize: options.pageSize ?? PAGE_SIZE })),
       ),
-    commands: createCommands(client),
+    commands: createCommands(options),
     creation: createChannelCreation({
       client,
       put: (channel) => {
@@ -126,6 +132,7 @@ export function createBoard(options: BoardOptions): Board {
         heard({ channel: channel.name, subscribed: true });
       },
     }),
+    dismissNotice: list.dismissNotice,
     snapshot: list.snapshot,
     subscribe: (listener) => {
       follow();
