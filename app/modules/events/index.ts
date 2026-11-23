@@ -8,7 +8,13 @@
  * instead.
  */
 import type { Identity, IdentityName } from "../identities/index.ts";
-import type { InboxItem, MovedBackReadPosition, ReadPosition, SubscriptionResponse } from "../inbox/index.ts";
+import type {
+  InboxItem,
+  MovedBackReadPosition,
+  OfflineAlert,
+  ReadPosition,
+  SubscriptionResponse,
+} from "../inbox/index.ts";
 import type { LiveConnectionId, Presence, presenceName } from "../presence/index.ts";
 import type { Message, MessageId, ReactionsResponse, ReadReceipt, TopLevelMessage } from "../messages/index.ts";
 import type { Channel } from "../channels/index.ts";
@@ -166,6 +172,16 @@ export interface PresenceEvent {
   readonly presence: Presence;
 }
 
+/**
+ * An offline alert of the caller's (GLOSSARY.md) as it now stands: raised the moment an agent it owns goes offline
+ * unexpectedly, and sent again when the agent is back online or the alert is marked read. Sent on every stream of the
+ * owner, so its sessions stay in sync. It has no SSE `id`.
+ */
+export interface OfflineAlertEvent {
+  readonly type: "offline-alert";
+  readonly alert: OfflineAlert;
+}
+
 /** Any event the stream sends. */
 export type CookoutEvent =
   | InboxItemEvent
@@ -182,7 +198,8 @@ export type CookoutEvent =
   | CommandEvent
   | AgentSessionEvent
   | SubscriptionEvent
-  | PresenceEvent;
+  | PresenceEvent
+  | OfflineAlertEvent;
 
 /**
  * `GET /v1/events`: the caller's Server-Sent Events stream, one per connection. With `allChannelsQuery` as its query

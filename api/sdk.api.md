@@ -327,6 +327,67 @@ interface ListOpenThreadsResponse {
 }
 /** An open thread: its top-level message and when anything last happened in it. */
 type OpenThread = ListOpenThreadsResponse["threads"][number];
+declare const brand$2: unique symbol;
+/**
+ * The ID of one live connection, which the stream's `connected` event carries: a positive whole number, unique
+ * while the server runs. A `cookout watch` exiting on purpose names it in its clean close.
+ */
+type LiveConnectionId = number & {
+  readonly [brand$2]: "LiveConnectionId";
+};
+/** The wire's word for the feature: the CLI's field, the event's `type` and the last part of the path. */
+declare const presenceName = "presence";
+/** How an online identity is connected: a `cookout watch`, with the host its agent session was joined from when the joining client sent one, or a web tab. */
+type LiveConnectionDetail = {
+  readonly via: "watch";
+  readonly host?: string;
+} | {
+  readonly via: "web";
+};
+/**
+ * Why an offline identity went offline, as its profile shows it ("offline: session revoked"): it ran `cookout leave`,
+ * its token was refused (an agent session revoked or expired, an Identity token rotated, the identity deactivated), or
+ * its connection dropped and nothing reconnected within the grace (ADR "how a live connection ends").
+ */
+declare const offlineReasons: readonly ["left", "session revoked", "session expired", "token rotated", "deactivated", "connection lost"];
+/** One of `offlineReasons`. */
+type OfflineReason = (typeof offlineReasons)[number];
+/**
+ * One identity's presence. An online identity carries the detail of its most recent live connection, unless it shows
+ * online only because the server just restarted (the boot grace). An offline one carries when it was last seen, unless
+ * it never was, and why it went offline when the server knows. A Deactivated identity is always offline.
+ */
+interface Presence {
+  readonly identity: IdentityName;
+  readonly online: boolean;
+  readonly connection?: LiveConnectionDetail;
+  readonly lastSeenAt?: IsoTime;
+  readonly offlineReason?: OfflineReason;
+}
+/** The answer to `GET /v1/presence`: every identity's presence, Deactivated ones included, sorted by name. */
+interface PresenceResponse {
+  readonly presence: readonly Presence[];
+}
+/**
+ * The ID of one offline alert: a positive whole number, the order alerts were raised in. Mark all as read names the
+ * newest one the caller has seen.
+ */
+type OfflineAlertId = number & {
+  readonly [brand$2]: "OfflineAlertId";
+};
+/**
+ * An offline alert (GLOSSARY.md): an item in an agent's owner's Inbox saying the agent went offline unexpectedly and
+ * why, as "@triage went offline: connection lost". It is no message, so it moves no Read position. `backOnlineAt` is
+ * when the agent next had a live connection, absent while it is still offline.
+ */
+interface OfflineAlert {
+  readonly id: OfflineAlertId;
+  readonly agent: IdentityName;
+  readonly offlineReason: OfflineReason;
+  readonly raisedAt: IsoTime;
+  readonly read: boolean;
+  readonly backOnlineAt?: IsoTime;
+}
 /**
  * Why an item is in the inbox: a reply in a thread the identity follows, a message that mentions it, another
  * identity's reaction on the identity's own message, or a top-level message in a channel it subscribes to.
@@ -354,9 +415,13 @@ interface ReadPosition {
   readonly thread: MessageId | null;
   readonly messageId: MessageId;
 }
-/** The inbox, oldest first, each message once. Reading it changes nothing. */
+/**
+ * The inbox, oldest first, each message once, and beside it the caller's unread offline alerts, oldest first (always
+ * none for an agent, which owns no agent). Reading it changes nothing.
+ */
 interface InboxResponse {
   readonly items: readonly InboxItem[];
+  readonly alerts: readonly OfflineAlert[];
 }
 /** An item in the inbox history: `read` says the identity's read position for its scope is at or after it. */
 interface InboxHistoryItem extends InboxItem {
@@ -371,10 +436,13 @@ interface InboxHistoryQuery {
 }
 /**
  * A page of the inbox history: every message in the inbox for at least one reason as things stand now, read or not,
- * newest first, each message once. `hasMore` says older items remain after the last. Reading it changes nothing.
+ * newest first, each message once. `hasMore` says older items remain after the last. The first page (no `before`)
+ * also lists every offline alert raised for the caller, read or not, newest first; a later page lists none. Reading it
+ * changes nothing.
  */
 interface InboxHistoryResponse {
   readonly items: readonly InboxHistoryItem[];
+  readonly alerts: readonly OfflineAlert[];
   readonly hasMore: boolean;
 }
 /** The caller's read positions: one for each channel and thread it has acked in or posted to, by channel name. */
@@ -389,16 +457,25 @@ interface AckRequest {
 interface AckResponse {
   readonly readPosition: ReadPosition;
 }
-/** The body of an ack of the whole inbox: every inbox item up to `upTo`, the newest the caller has seen, is read. */
+/**
+ * The body of an ack of the whole inbox: every inbox item up to `upTo`, the newest the caller has seen, is read, and
+ * every offline alert up to `alertsUpTo`, the newest alert it has seen. Either may be left out.
+ */
 interface AckAllRequest {
-  readonly upTo: MessageId;
+  readonly upTo?: MessageId;
+  readonly alertsUpTo?: OfflineAlertId;
 }
 /**
- * The answer to an ack of the whole inbox: the read positions it moved, oldest first. An item after `upTo` stays
- * unread.
+ * The answer to an ack of the whole inbox: the read positions it moved, oldest first, and the offline alerts it
+ * marked read, oldest first. An item after `upTo`, or an alert after `alertsUpTo`, stays unread.
  */
 interface AckAllResponse {
   readonly readPositions: readonly ReadPosition[];
+  readonly alerts: readonly OfflineAlert[];
+}
+/** The answer to marking one offline alert read: the alert, now read. */
+interface OfflineAlertResponse {
+  readonly alert: OfflineAlert;
 }
 /** The body of a mark unread: the message to make unread again, with everything after it in its thread or channel. */
 interface MarkUnreadRequest {
@@ -427,14 +504,45 @@ interface SubscriptionResponse {
   readonly channel: ChannelName;
   readonly subscribed: boolean;
 }
+/** The SDK's call on an offline alert. */
+interface OfflineAlertCalls {
+  /**
+   * `POST /v1/inbox/alerts/:id/read`: marks the caller's offline alert read, so it leaves the inbox and stays in its
+   * history. An alert the caller has none of is 404 `offline_alert_not_found`.
+   */
+  readonly markOfflineAlertRead: (id: OfflineAlertId) => Promise<OfflineAlertResponse>;
+}
 /** One Server-Sent Event: its `event` name (`message` when it has none) and its `data`. */
 interface ServerSentEvent {
   readonly event: string;
   readonly data: string;
 }
-declare const brand$2: unique symbol;
+/**
+ * Where a client connects: the server's base URL, the bearer token if there is one, and the harness running the
+ * process if one was found, which the client names in `cookout-harness` on every request.
+ */
+interface CookoutConnection {
+  readonly url: string;
+  readonly token?: string;
+  readonly harness?: string;
+}
+type ClientConnection = CookoutConnection;
+interface InboxCalls {
+  readonly inbox: () => Promise<InboxResponse>;
+  readonly inboxHistory: (query?: InboxHistoryQuery) => Promise<InboxHistoryResponse>;
+  readonly readPositions: () => Promise<ReadPositionsResponse>;
+  readonly ack: (messageId: MessageId) => Promise<AckResponse>;
+  readonly ackAll: (upTo: MessageId | AckAllRequest) => Promise<AckAllResponse>;
+  readonly markUnread: (messageId: MessageId) => Promise<MarkUnreadResponse>;
+  readonly follow: (messageId: MessageId) => Promise<FollowResponse>;
+  readonly unfollow: (messageId: MessageId) => Promise<FollowResponse>;
+  readonly subscribe: (channel: string) => Promise<SubscriptionResponse>;
+  readonly unsubscribe: (channel: string) => Promise<SubscriptionResponse>;
+}
+declare function inboxCalls(server: ClientConnection): InboxCalls & OfflineAlertCalls;
+declare const brand$1: unique symbol;
 type Brand<Name extends string> = string & {
-  readonly [brand$2]: Name;
+  readonly [brand$1]: Name;
 };
 /** A command's name. It is also the name of the command's handler identity, so it follows the plain identity-name rule (no `/`). */
 type CommandName = Brand<"CommandName">;
@@ -705,47 +813,6 @@ interface AgentSessionCalls extends AgentJoinCalls, JoinCodeCalls {
   readonly listAgentSessions: (agent: string) => Promise<ListAgentSessionsResponse>;
   readonly revokeAgentSession: (agent: string) => Promise<RevokeAgentSessionResponse>;
 }
-declare const brand$1: unique symbol;
-/**
- * The ID of one live connection, which the stream's `connected` event carries: a positive whole number, unique
- * while the server runs. A `cookout watch` exiting on purpose names it in its clean close.
- */
-type LiveConnectionId = number & {
-  readonly [brand$1]: "LiveConnectionId";
-};
-/** The wire's word for the feature: the CLI's field, the event's `type` and the last part of the path. */
-declare const presenceName = "presence";
-/** How an online identity is connected: a `cookout watch`, with the host its agent session was joined from when the joining client sent one, or a web tab. */
-type LiveConnectionDetail = {
-  readonly via: "watch";
-  readonly host?: string;
-} | {
-  readonly via: "web";
-};
-/**
- * Why an offline identity went offline, as its profile shows it ("offline: session revoked"): it ran `cookout leave`,
- * its token was refused (an agent session revoked or expired, an Identity token rotated, the identity deactivated), or
- * its connection dropped and nothing reconnected within the grace (ADR "how a live connection ends").
- */
-declare const offlineReasons: readonly ["left", "session revoked", "session expired", "token rotated", "deactivated", "connection lost"];
-/** One of `offlineReasons`. */
-type OfflineReason = (typeof offlineReasons)[number];
-/**
- * One identity's presence. An online identity carries the detail of its most recent live connection, unless it shows
- * online only because the server just restarted (the boot grace). An offline one carries when it was last seen, unless
- * it never was, and why it went offline when the server knows. A Deactivated identity is always offline.
- */
-interface Presence {
-  readonly identity: IdentityName;
-  readonly online: boolean;
-  readonly connection?: LiveConnectionDetail;
-  readonly lastSeenAt?: IsoTime;
-  readonly offlineReason?: OfflineReason;
-}
-/** The answer to `GET /v1/presence`: every identity's presence, Deactivated ones included, sorted by name. */
-interface PresenceResponse {
-  readonly presence: readonly Presence[];
-}
 /** A new item in the caller's inbox, sent the moment another identity posts it. */
 interface InboxItemEvent {
   readonly type: "inbox-item";
@@ -873,8 +940,17 @@ interface PresenceEvent {
   readonly type: typeof presenceName;
   readonly presence: Presence;
 }
+/**
+ * An offline alert of the caller's (GLOSSARY.md) as it now stands: raised the moment an agent it owns goes offline
+ * unexpectedly, and sent again when the agent is back online or the alert is marked read. Sent on every stream of the
+ * owner, so its sessions stay in sync. It has no SSE `id`.
+ */
+interface OfflineAlertEvent {
+  readonly type: "offline-alert";
+  readonly alert: OfflineAlert;
+}
 /** Any event the stream sends. */
-type CookoutEvent = InboxItemEvent | ReadPositionEvent | ReadPositionMovedBackEvent | MessageEvent | ThreadEvent | IdentityEvent | ReadReceiptEvent | ReactionEvent | ChannelEvent | ChannelDeletedEvent | IdentityDeletedEvent | CommandEvent | AgentSessionEvent | SubscriptionEvent | PresenceEvent;
+type CookoutEvent = InboxItemEvent | ReadPositionEvent | ReadPositionMovedBackEvent | MessageEvent | ThreadEvent | IdentityEvent | ReadReceiptEvent | ReactionEvent | ChannelEvent | ChannelDeletedEvent | IdentityDeletedEvent | CommandEvent | AgentSessionEvent | SubscriptionEvent | PresenceEvent | OfflineAlertEvent;
 /**
  * `GET /v1/events`: the caller's Server-Sent Events stream, one per connection. With `allChannelsQuery` as its query
  * it is also the all-channels feed: every new message on every channel.
@@ -946,7 +1022,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "agent_join_request_not_found", "join_code_not_found", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "agent_join_request_not_found", "join_code_not_found", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
@@ -1050,7 +1126,7 @@ export type CookoutClientOptions = {
   /** The harness running this process, such as `claude-code`, sent on every request: a human's token with it is refused with 403 `agent_as_human`, and messages posted record it. Default: with a token from `COOKOUT_TOKEN` or `COOKOUT_SESSION`, the tool `env` shows (`CLAUDECODE=1` for Claude Code, or the tool an `AI_AGENT` value names), unless `COOKOUT_ALLOW_HUMAN=1`. */
   readonly harness?: string;
 };
-export type CookoutClient = CallGroups & {
+export type CookoutClient = CallGroups & Pick<ReturnType<typeof inboxCalls>, "markOfflineAlertRead"> & {
   /** `GET /v1/health`. Resolves when the server and its storage are usable. */
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */
@@ -1145,15 +1221,14 @@ export type CookoutClient = CallGroups & {
   readonly revokeAgentSession: AgentSessionCalls["revokeAgentSession"];
   /**
    * `GET /v1/inbox`: what the caller hasn't read, oldest first, each message once with every reason it is there
-   * (`followed-thread`, `mention`, `subscribed-channel`), its channel and its thread's top-level message. The
-   * caller's own messages never appear. Reading it changes nothing.
+   * (`followed-thread`, `mention`, `subscribed-channel`), its channel and its thread's top-level message. The caller's own messages never appear. Beside them, `alerts` lists the caller's unread offline alerts, oldest first. Reading it changes nothing.
    */
   readonly inbox: () => Promise<InboxResponse>;
   /**
    * `GET /v1/inbox/history`: a page of the caller's inbox history, newest first: every message in its inbox for at
    * least one reason as things stand now (current follows and subscriptions), read or not, each once with every
    * reason and `read`. The newest `limit` (default 50, 1–200), or those before `before`; page back by passing the
-   * last item's message ID as `before` while `hasMore` is true. The caller's own messages never appear.
+   * last item's message ID as `before` while `hasMore` is true. The caller's own messages never appear. The first page also lists, as `alerts`, every offline alert raised for the caller, read or not, newest first.
    */
   readonly inboxHistory: (query?: InboxHistoryQuery) => Promise<InboxHistoryResponse>;
   /** `GET /v1/read-positions`: the caller's read positions, by channel name, each channel's own before its threads'. */
@@ -1172,11 +1247,10 @@ export type CookoutClient = CallGroups & {
    */
   readonly markUnread: (messageId: MessageId) => Promise<MarkUnreadResponse>;
   /**
-   * `POST /v1/inbox/ack-all`: marks every inbox item up to `upTo`, the newest the caller has seen, as read, in every
-   * thread and channel at once, and answers the read positions it moved. An item after `upTo`, such as a message that
-   * arrived since, stays unread.
+   * `POST /v1/inbox/ack-all`: marks every inbox item up to `upTo`, the newest the caller has seen, as read, in every thread and channel at once, and answers the read positions it moved. An item after `upTo`, such as a message that
+   * arrived since, stays unread. Passed `{ upTo, alertsUpTo }`, it also marks read every offline alert up to `alertsUpTo`, answering those as `alerts`; either may be left out.
    */
-  readonly ackAll: (upTo: MessageId) => Promise<AckAllResponse>;
+  readonly ackAll: (upTo: MessageId | AckAllRequest) => Promise<AckAllResponse>;
   /**
    * `PUT /v1/messages/:id/follow`: follows the thread holding the message, so its replies reach the inbox. Starting
    * a thread, replying in it and being mentioned in it follow it too.
@@ -1192,7 +1266,7 @@ export type CookoutClient = CallGroups & {
    * `GET /v1/events`: opens one Server-Sent Events stream, resolving once the server has accepted it. Iterate it for
    * each new inbox item (`inbox-item`) the moment another identity posts it (the caller's own posts never arrive), and
    * each new read position (`read-position`) the moment any session of the caller acks, and each read position moved
-   * back (`read-position-moved-back`) the moment one marks a message unread, so several sessions stay in sync. With `allChannels`, it also sends every new message on every channel (`message`), each newly recorded read receipt (`read-receipt`), each change to a message's reactions (`reaction`), each thread closed or reopened (`thread`) and each change to anyone's presence (`presence`), as the web UI needs.
+   * back (`read-position-moved-back`) the moment one marks a message unread, so several sessions stay in sync. With `allChannels`, it also sends every new message on every channel (`message`), each newly recorded read receipt (`read-receipt`), each change to a message's reactions (`reaction`), each thread closed or reopened (`thread`) and each change to anyone's presence (`presence`), as the web UI needs. Every stream of an agent's owner also sends each offline alert of the owner's as it is raised, back online or read (`offline-alert`).
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
    * a newer server, is skipped. `close` drops the connection, which the server counts as a drop ("connection lost" after the grace); `closeCleanly` first sends `DELETE /v1/events/:connection` with the `connected` event's connection ID, so the end is expected, as `cookout watch` exiting on purpose does.
    * Opened with an agent session token, the stream moves its expiry on while open, and once the token is revoked (`leave`, or another session's `join --force`) the
@@ -1236,5 +1310,5 @@ export type CookoutClient = CallGroups & {
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type CleanCloseResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type CreateJoinCodeRequest, type DeactivateIdentityResponse, type Description, type DescriptionCalls, type DisplayName, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinCodeCalls, type JoinCodeResponse, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListOpenThreadsQuery, type ListOpenThreadsResponse, type ListedAgentSession, type LiveConnectionDetail, type LiveConnectionId, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type OfflineReason, type OpenThread, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type Reaction, type ReactionCount, type ReactionEvent, type ReactionName, type ReactionsResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type RedeemJoinCodeRequest, type Refusal, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadEvent, type ThreadResponse, type Token, type TopLevelMessage, type TopLevelMessageResponse, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type joinCodeLifetimeMinutes, type joinCodesPath, type liveConnectionPath, type redeemJoinCodePath, type refusalEvent, refusalOf };
+export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type CleanCloseResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type CreateJoinCodeRequest, type DeactivateIdentityResponse, type Description, type DescriptionCalls, type DisplayName, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinCodeCalls, type JoinCodeResponse, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListOpenThreadsQuery, type ListOpenThreadsResponse, type ListedAgentSession, type LiveConnectionDetail, type LiveConnectionId, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type OfflineAlert, type OfflineAlertEvent, type OfflineAlertId, type OfflineAlertResponse, type OfflineReason, type OpenThread, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type Reaction, type ReactionCount, type ReactionEvent, type ReactionName, type ReactionsResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type RedeemJoinCodeRequest, type Refusal, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadEvent, type ThreadResponse, type Token, type TopLevelMessage, type TopLevelMessageResponse, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type joinCodeLifetimeMinutes, type joinCodesPath, type liveConnectionPath, type redeemJoinCodePath, type refusalEvent, refusalOf };
 ```

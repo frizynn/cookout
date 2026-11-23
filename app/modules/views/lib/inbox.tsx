@@ -22,6 +22,7 @@ interface InboxProps {
 
 export function InboxView(props: InboxProps): ReactNode {
   const unread = useSyncExternalStore(props.unread.subscribe, props.unread.snapshot);
+  const handleMarkAlertRead = props.unread.alerts.markRead;
   return (
     <Pane>
       <PaneHeader description={TEXT.description} sans title={TEXT.title}>
@@ -30,8 +31,10 @@ export function InboxView(props: InboxProps): ReactNode {
       <DeletedNotice board={props.board} />
       <Feed label={TEXT.title}>
         {unread.status === "loaded" && <MarkAllFailed markAll={unread.markAll} />}
-        <InboxBody me={props.me} unread={unread} />
-        {unread.status === "loaded" && <InboxEarlier earlier={props.unread.earlier} me={props.me} />}
+        <InboxBody me={props.me} onMarkAlertRead={handleMarkAlertRead} unread={unread} />
+        {unread.status === "loaded" && (
+          <InboxEarlier alerts={props.unread.alerts} earlier={props.unread.earlier} me={props.me} />
+        )}
       </Feed>
     </Pane>
   );

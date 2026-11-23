@@ -69,7 +69,7 @@ it.live(
           { ...inboxItem(reply, ["followed-thread", "mention"]), channel: { name: channel }, parent: { id: top } },
         ],
       });
-      expect(firstAfter).toStrictEqual({ items: [] });
+      expect(firstAfter).toStrictEqual({ alerts: [], items: [] });
       expect(secondInbox).toMatchObject({
         items: [inboxItem(top, ["mention"]), inboxItem(thanks, ["followed-thread"])],
       });
@@ -95,7 +95,7 @@ it.live("an agent's ack clears its inbox items, and the next inbox run no longer
       { ...succeeded, stdoutJson: { readPosition: { channel, messageId: top, thread: null } } },
       { ...succeeded, stdoutJson: { readPosition: { channel, messageId: reply, thread: top } } },
     ]);
-    expect(after).toStrictEqual({ items: [] });
+    expect(after).toStrictEqual({ alerts: [], items: [] });
   }).pipe(Effect.provide([cookoutUnderTest, NodeServices.layer])),
 );
 

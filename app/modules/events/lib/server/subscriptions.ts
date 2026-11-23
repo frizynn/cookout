@@ -1,12 +1,13 @@
 import type { Connected, StreamRequest } from "./source.ts";
 import { Effect, Stream } from "effect";
+import { Inbox, OfflineAlerts } from "../../../inbox/server.ts";
+import { OfflineAlertEventSchema, SubscriptionEventSchema } from "./wire.ts";
 import { Channels } from "../../../channels/server.ts";
-import { Inbox } from "../../../inbox/server.ts";
-import { SubscriptionEventSchema } from "./wire.ts";
 import type { SubscriptionResponse } from "../../../inbox/index.ts";
 import { sseEvent } from "./source.ts";
 
 const subscriptionEvent = sseEvent(SubscriptionEventSchema);
+const offlineAlertEvent = sseEvent(OfflineAlertEventSchema);
 
 function subscriptions({ caller }: StreamRequest): Connected<Inbox | Channels> {
   return Effect.gen(function* subscribeToSubscriptions() {
@@ -28,4 +29,15 @@ function subscriptions({ caller }: StreamRequest): Connected<Inbox | Channels> {
   });
 }
 
-export { subscriptions };
+function offlineAlerts({ caller }: StreamRequest): Connected<OfflineAlerts> {
+  return Effect.gen(function* subscribeToOfflineAlerts() {
+    const alerts = yield* OfflineAlerts;
+    const changed = yield* alerts.changed;
+    return Stream.fromSubscription(changed).pipe(
+      Stream.filter(({ owner }) => owner === caller.name),
+      Stream.mapEffect(({ alert }) => offlineAlertEvent({ alert, type: "offline-alert" })),
+    );
+  });
+}
+
+export { offlineAlerts, subscriptions };

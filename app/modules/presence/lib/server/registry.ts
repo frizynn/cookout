@@ -1,13 +1,14 @@
-import { Array as Arr, DateTime, Effect, Predicate, PubSub, Stream, SynchronizedRef } from "effect";
+import type { Announce, AnnounceNeeds } from "./announce.ts";
+import { Array as Arr, Effect, PubSub, Stream, SynchronizedRef } from "effect";
 import type { Book, Ends } from "./endings.ts";
 import type { BookState, Connection } from "./book.ts";
 import type { LiveConnectionId, Presence } from "../../index.ts";
 import type { StorageUnavailable, StoredPresence } from "../../../storage/server.ts";
+import { announced, announcer, now } from "./announce.ts";
 import {
   connect,
   endBootGrace,
   endGrace,
-  endIn,
   forget,
   liveConnectionsIn,
   onlineAtStop,
@@ -17,12 +18,10 @@ import {
 } from "./book.ts";
 import { endsEndedTokens, heldEnding, openEnds } from "./endings.ts";
 import { IdentityChanges } from "../../../identities/server.ts";
-import type { IsoTime } from "../../../time/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Scope } from "effect";
 import { Storage } from "../../../storage/server.ts";
 import { closeCleanly } from "./ending.ts";
-import { isoTimeOf } from "../../../time/server.ts";
 
 type IdentityName = Presence["identity"];
 
@@ -40,65 +39,11 @@ interface Registry {
   readonly liveConnections: (identity: IdentityName) => Effect.Effect<number>;
 }
 
+const ONE_AT_A_TIME = { concurrency: 1, discard: true } as const;
+
 interface Graces {
   readonly graceMillis: number;
   readonly bootGraceMillis: number;
-}
-
-interface Announce {
-  readonly record: (presence: StoredPresence) => Effect.Effect<void>;
-  readonly publish: (presence: Presence) => Effect.Effect<void>;
-}
-
-interface Change {
-  readonly before: BookState;
-  readonly after: BookState;
-  readonly identity: IdentityName;
-}
-
-const ONE_AT_A_TIME = { concurrency: 1, discard: true } as const;
-
-const now: Effect.Effect<IsoTime> = Effect.map(DateTime.now, isoTimeOf);
-
-function connectionKey(connection: Presence["connection"]): string {
-  if (Predicate.isUndefined(connection)) {
-    return "";
-  }
-  if (connection.via === "web") {
-    return "web";
-  }
-  return `watch ${connection.host ?? ""}`;
-}
-
-function samePresence(left: Presence, right: Presence): boolean {
-  return (
-    left.online === right.online &&
-    left.lastSeenAt === right.lastSeenAt &&
-    left.offlineReason === right.offlineReason &&
-    connectionKey(left.connection) === connectionKey(right.connection)
-  );
-}
-
-function lastSeenOf(presence: Presence): Effect.Effect<IsoTime> {
-  const { lastSeenAt } = presence;
-  if (presence.online || Predicate.isUndefined(lastSeenAt)) {
-    return now;
-  }
-  return Effect.succeed(lastSeenAt);
-}
-
-function announced(announce: Announce, { after, before, identity }: Change): Effect.Effect<void> {
-  return Effect.gen(function* announceChange() {
-    const was = presenceIn({ identity, state: before });
-    const is = presenceIn({ identity, state: after });
-    if (was.online !== is.online || before.ends.get(identity) !== after.ends.get(identity)) {
-      const lastSeenAt = yield* lastSeenOf(is);
-      yield* announce.record({ identity, lastSeenAt, online: is.online, ...endIn({ identity, state: after }) });
-    }
-    if (!samePresence(was, is)) {
-      yield* announce.publish(is);
-    }
-  });
 }
 
 function changed(book: Book, identity: IdentityName, update: (state: BookState) => BookState): Effect.Effect<void> {
@@ -153,7 +98,7 @@ function bookOf(announce: Announce, kept: readonly StoredPresence[]): Effect.Eff
       modify: (identity, update) =>
         SynchronizedRef.modifyEffect(ref, (state) => {
           const [result, next] = update(state);
-          const announcing = announced(announce, { after: next, before: state, identity });
+          const announcing = announced({ after: next, announce, before: state, identity });
           return Effect.as(announcing, [result, next] as const);
         }),
       read: SynchronizedRef.get(ref),
@@ -176,18 +121,7 @@ function keptPresence(storage: Storage["Service"]): Effect.Effect<readonly Store
   return Effect.flatMap(storage.listIdentities(), (all) => storage.listPresence(Arr.map(all, ({ name }) => name)));
 }
 
-function announcer(storage: Storage["Service"]): Effect.Effect<Announce & { readonly hub: PubSub.PubSub<Presence> }> {
-  return Effect.gen(function* openAnnouncer() {
-    const hub = yield* PubSub.unbounded<Presence>();
-    return {
-      hub,
-      publish: (presence) => Effect.asVoid(PubSub.publish(hub, presence)),
-      record: (presence) => Effect.ignore(storage.recordPresence(presence)),
-    };
-  });
-}
-
-type RegistryNeeds = Storage | IdentityChanges;
+type RegistryNeeds = Storage | IdentityChanges | AnnounceNeeds;
 
 function openRegistry(graces: Graces): Effect.Effect<Registry, StorageUnavailable, RegistryNeeds | Scope.Scope> {
   return Effect.gen(function* openPresenceRegistry() {

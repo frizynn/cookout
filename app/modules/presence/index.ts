@@ -10,6 +10,7 @@ import type { IsoTime } from "../time/index.ts";
 declare const brand: unique symbol;
 
 const FIRST_CONNECTION = 1;
+const FIRST_ALERT = 1;
 
 /**
  * The ID of one live connection, which the stream's `connected` event carries: a positive whole number, unique
@@ -76,5 +77,37 @@ export const presencePath = `/v1/${presenceName}`;
  */
 export const watchReplaced = "watch_replaced";
 
-/** The codes presence ends a stream with. */
-export const presenceErrorCodes = [watchReplaced] as const;
+/**
+ * The ID of one offline alert: a positive whole number, the order alerts were raised in. Mark all as read names the
+ * newest one the caller has seen.
+ */
+export type OfflineAlertId = number & { readonly [brand]: "OfflineAlertId" };
+
+/**
+ * Whether `value` is a positive whole number; if so, it is an `OfflineAlertId`.
+ * @param value The number to check.
+ * @returns Whether `value` is an `OfflineAlertId`.
+ */
+export function isOfflineAlertId(value: number): value is OfflineAlertId {
+  return Number.isSafeInteger(value) && value >= FIRST_ALERT;
+}
+
+/**
+ * An offline alert (GLOSSARY.md): an item in an agent's owner's Inbox saying the agent went offline unexpectedly and
+ * why, as "@triage went offline: connection lost". It is no message, so it moves no Read position. `backOnlineAt` is
+ * when the agent next had a live connection, absent while it is still offline.
+ */
+export interface OfflineAlert {
+  readonly id: OfflineAlertId;
+  readonly agent: IdentityName;
+  readonly offlineReason: OfflineReason;
+  readonly raisedAt: IsoTime;
+  readonly read: boolean;
+  readonly backOnlineAt?: IsoTime;
+}
+
+/** The code of a mark read naming an offline alert the caller has none of. */
+export const offlineAlertNotFound = "offline_alert_not_found";
+
+/** The codes presence ends a stream with, and the code of an offline alert not found. */
+export const presenceErrorCodes = [watchReplaced, offlineAlertNotFound] as const;
