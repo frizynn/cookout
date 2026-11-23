@@ -325,6 +325,21 @@ interface CallCommandResponse {
   readonly messageId: MessageId;
   readonly threadId: MessageId;
 }
+/** `POST /v1/agent-session` joins (issues an agent session token); `DELETE /v1/agent-session` leaves (revokes it). */
+declare const agentSessionPath = "/v1/agent-session";
+/**
+ * `GET /v1/identities/:name/agent-session` lists the agent's live agent session token (`ListAgentSessionsResponse`),
+ * and `DELETE` revokes it (`RevokeAgentSessionResponse`): its session's next request is 401 `agent_session_revoked`.
+ * Only the agent's owner or an admin may; anyone else is 403 `not_owner` (Matt, 2026-11-23, mattpocock/cookout#118).
+ */
+declare const identityAgentSessionPath = "/v1/identities/:name/agent-session";
+/** How long an agent session token lives unused when `join` doesn't ask: 7 days. */
+declare const defaultIdleExpiry = "7d";
+/**
+ * The format of an idle expiry: a whole number of seconds, minutes, hours or days, such as `30d` or `12h`. An
+ * agent session token expires once it goes this long unused.
+ */
+declare const idleExpiryPattern: RegExp;
 /** The body of `POST /v1/agent-session`. `as` must be the token's own agent: a check, not a switch. */
 interface JoinRequest {
   readonly as: string;
@@ -332,6 +347,8 @@ interface JoinRequest {
   readonly force?: boolean;
   /** How long the token may go unused before it expires, such as `30d`. Default `7d`; at most `COOKOUT_MAX_IDLE_EXPIRY`. */
   readonly idleExpiry?: string;
+  /** The host the agent joins from, such as the machine's hostname, shown to its owner. 1–253 characters. */
+  readonly host?: string;
 }
 /** The answer to `join`. */
 interface AgentSessionResponse {
@@ -340,6 +357,23 @@ interface AgentSessionResponse {
   readonly issuedAt: IsoTime;
   /** Each request sent with the token moves it forward by the idle expiry. */
   readonly expiresAt: IsoTime;
+}
+/** An agent's live agent session token as its owner sees it: when it was issued and last used, never the token. */
+interface ListedAgentSession {
+  readonly issuedAt: IsoTime;
+  /** Left out until a request is sent with the token. */
+  readonly lastUsedAt?: IsoTime;
+  readonly expiresAt: IsoTime;
+  /** The host it joined from, if the joining client said. */
+  readonly host?: string;
+}
+/** The answer to listing an agent's agent session tokens: its live one, or none. */
+interface ListAgentSessionsResponse {
+  readonly agentSessions: readonly ListedAgentSession[];
+}
+/** The answer to revoking an agent's agent session token: `false` when it had no live one. */
+interface RevokeAgentSessionResponse {
+  readonly revoked: boolean;
 }
 /** The answer to `leave`. */
 interface LeaveResponse {
@@ -352,6 +386,26 @@ interface AgentSessionLiveDetails {
 /** The `details` of the 400 `idle_expiry_too_long` refusal: the longest idle expiry this cookout allows. */
 interface IdleExpiryTooLongDetails {
   readonly maxIdleExpiry: string;
+}
+/**
+ * The 401 code for an agent session token that was revoked: by `leave`, another session's `join --force`, or its
+ * agent's owner or an admin.
+ */
+declare const agentSessionRevoked = "agent_session_revoked";
+/** The 401 code for an agent session token that went unused past its expiry. */
+declare const agentSessionExpired = "agent_session_expired";
+/**
+ * The codes join and leave refuse with: the 403s `not_your_identity` (join as another identity) and `identity_kind`
+ * (join as a human: only agents join), the 409 `agent_session_live` (join while the agent has a live agent session
+ * token), the 400s `idle_expiry_too_long` and `agent_session_required` (leave sent without an agent session token),
+ * and the 401s any request sent with an ended agent session token gets.
+ */
+declare const agentSessionErrorCodes: readonly ["not_your_identity", "identity_kind", "agent_session_live", "idle_expiry_too_long", "agent_session_required", "agent_session_revoked", "agent_session_expired"];
+interface AgentSessionCalls {
+  readonly join: (request: JoinRequest) => Promise<AgentSessionResponse>;
+  readonly leave: () => Promise<LeaveResponse>;
+  readonly listAgentSessions: (agent: string) => Promise<ListAgentSessionsResponse>;
+  readonly revokeAgentSession: (agent: string) => Promise<RevokeAgentSessionResponse>;
 }
 /** A new item in the caller's inbox, sent the moment another identity posts it. */
 interface InboxItemEvent {
@@ -465,7 +519,7 @@ export type CookoutClient = {
   readonly listIdentities: () => Promise<ListIdentitiesResponse>;
   /** Any human creates agents it owns; see `CreateIdentityRequest`. The token is shown this once. A name in use is 409. */
   readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;
-  /** Admin only. Issues a new token; the old one stops working at once. */
+  /** The agent's owner or an admin (else 403 `not_owner`). Issues a new token; the old one stops working at once. */
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
   /** Admin only. Removes it; its token stops working. 409 for the last admin, or a human who still owns agents. */
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
@@ -475,6 +529,8 @@ export type CookoutClient = {
   readonly removeAdmin: (name: string) => Promise<IdentityResponse>;
   /** `PUT`s (trimmed, 1–80 characters) or clears (`null`) a display name: its own, its owner's or an admin's call. */
   readonly setDisplayName: (name: string, displayName: string | null) => Promise<IdentityResponse>;
+  /** Admin only: gives an agent to another human. A human is 403 `identity_kind`; `ada/x` is 400 `name_not_owned`. */
+  readonly transferAgent: (agent: string, owner: string) => Promise<IdentityResponse>;
   /** `POST /v1/channels`: any identity can create a channel. A name in use is 409 `channel_exists`. */
   readonly createChannel: (request: CreateChannelRequest) => Promise<ChannelResponse>;
   /** `GET /v1/channels`: every channel, sorted by name. */
@@ -514,6 +570,10 @@ export type CookoutClient = {
    * `agent_session_revoked` or `agent_session_expired` on every request.
    */
   readonly leave: () => Promise<LeaveResponse>;
+  /** The owner or an admin: the agent's live session (issued, last used, expiry, host if known), never its token. */
+  readonly listAgentSessions: AgentSessionCalls["listAgentSessions"];
+  /** The owner or an admin: revokes the agent's live session, whose next request is 401 `agent_session_revoked`. */
+  readonly revokeAgentSession: AgentSessionCalls["revokeAgentSession"];
   /**
    * `GET /v1/inbox`: what the caller hasn't read, oldest first, each message once with every reason it is there
    * (`followed-thread`, `mention`, `subscribed-channel`), its channel and its thread's top-level message. The
@@ -589,5 +649,5 @@ export type CookoutClient = {
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentSessionLiveDetails, type AgentSessionResponse, type AgentTool, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DisplayName, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityEvent, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Refusal, type Reply, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, refusalOf };
+export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentSessionLiveDetails, type AgentSessionResponse, type AgentTool, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DisplayName, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityEvent, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListedAgentSession, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Refusal, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type defaultIdleExpiry, type identityAgentSessionPath, type idleExpiryPattern, refusalOf };
 ```

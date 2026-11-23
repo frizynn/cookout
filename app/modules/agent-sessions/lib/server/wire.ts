@@ -2,6 +2,7 @@ import type {
   AgentSessionResponse,
   LeaveResponse,
   ListAgentSessionsResponse,
+  ListedAgentSession,
   RevokeAgentSessionResponse,
 } from "../../index.ts";
 import { identityNamePattern, isIdentityName, isToken, tokenPattern } from "../../../identities/index.ts";
@@ -29,12 +30,14 @@ const HostSchema = Schema.String.check(
   Schema.isBetweenLength(HOST_LENGTH.minimum, HOST_LENGTH.maximum, { message: "Use 1-253 characters." }).abort(),
 );
 
-const ListedAgentSessionSchema = Schema.Struct({
-  expiresAt: IsoTimeSchema,
-  host: Schema.optionalKey(HostSchema),
-  issuedAt: IsoTimeSchema,
-  lastUsedAt: Schema.optionalKey(IsoTimeSchema),
-});
+const ListedAgentSessionSchema = matchesWire<ListedAgentSession>()(
+  Schema.Struct({
+    expiresAt: IsoTimeSchema,
+    host: Schema.optionalKey(HostSchema),
+    issuedAt: IsoTimeSchema,
+    lastUsedAt: Schema.optionalKey(IsoTimeSchema),
+  }),
+);
 
 const TokenSchema = Schema.String.check(Schema.isPattern(tokenPattern).abort()).pipe(
   Schema.refine(isToken, { identifier: "Token" }),

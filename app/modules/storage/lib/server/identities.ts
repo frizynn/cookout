@@ -10,6 +10,7 @@ import {
 } from "./identity-owners.ts";
 import { memoryDisplayNames, sqliteDisplayNames } from "./display-names.ts";
 import { memorySetAdmin, memoryTransfers, sqliteSetAdmin, sqliteTransfers } from "./identity-admins.ts";
+import type { DisplayNamesSection } from "./display-names.ts";
 import type { Fails } from "./errors.ts";
 import type { FindIdentity } from "./identity-row.ts";
 import type { MemoryState } from "./memory-state.ts";
@@ -28,7 +29,7 @@ type ReplaceTokenResult =
 
 type SetOnlyTokenResult = "created" | "replaced" | "unchanged";
 
-export type IdentitiesSection = ReturnType<typeof sqliteDisplayNames> &
+export type IdentitiesSection = DisplayNamesSection &
   ReturnType<typeof sqliteTransfers> & {
     readonly createIdentity: (identity: Identity, hash: TokenHash) => Fails<"created" | CreateRefusal>;
     readonly setOnlyToken: (identity: Identity, hash: TokenHash) => Fails<SetOnlyTokenResult>;

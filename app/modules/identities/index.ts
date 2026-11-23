@@ -161,11 +161,6 @@ export interface SetDisplayNameRequest {
   readonly displayName: string | null;
 }
 
-/** The body of `PUT /v1/identities/:name/owner`: the name of the human who is to own the agent. */
-export interface TransferAgentRequest {
-  readonly owner: string;
-}
-
 /** `GET /v1/whoami`: the identity behind the token. */
 export const whoamiPath = "/v1/whoami";
 
@@ -191,7 +186,7 @@ export const identityTokenPath = "/v1/identities/:name/token";
 export const identityAdminPath = "/v1/identities/:name/admin";
 
 /**
- * `PUT /v1/identities/:name/owner` (admin): gives an agent to another human (`TransferAgentRequest`), answering
+ * `PUT /v1/identities/:name/owner` (admin): gives an agent to another human (`{ owner }`, a human's name), answering
  * `IdentityResponse`. A human is refused with 403 `identity_kind`, an owner who is no human with 400 `owner_not_human`,
  * and a namespaced agent (`ada/x`), which could only move with a rename, with 400 `name_not_owned`.
  */

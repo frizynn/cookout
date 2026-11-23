@@ -16,7 +16,7 @@
 
 - **Owner or admin.** The human who owns an agent, or any admin, may rotate its Identity token (`POST /v1/identities/:name/token`) and list (`GET /v1/identities/:name/agent-session`) or revoke (`DELETE` there) its agent session token. Anyone else, the agent itself included, is 403 `not_owner`, as for display names; so is a non-admin naming a missing identity, so a name's existence doesn't leak. An admin naming one gets 404 `identity_not_found`. The check is `requireOwnerOrAdmin` in the identities module, for any later owner power to reuse.
 - **Listing never shows the token.** It answers `{ agentSessions }`: the agent's live one, if any, with `issuedAt`, `expiresAt`, `lastUsedAt` once a request was sent with it, and `host` when the joining client sent one in `join`. Revoking answers `{ revoked }`, `false` when there was no live one; the session's next request is 401 `agent_session_revoked`, and its `watch` exits 4.
-- **Only an admin transfers.** `PUT /v1/identities/:name/owner` with `{ owner }` gives an agent to another human; anyone else is 403 `admin_only`. A human is 403 `identity_kind`, an owner who is no human 400 `owner_not_human`. A namespaced agent (`ada/x`) is 400 `name_not_owned`: it could only move with a rename, which isn't offered. The agent keeps its tokens.
+- **Only an admin transfers.** `PUT /v1/identities/:name/owner` with `{ owner }` gives an agent to another human; anyone else is 403 `admin_only`. A human is 403 `identity_kind`, an owner who is no human 400 `owner_not_human`. A namespaced agent (`@ada/x`) is 400 `name_not_owned`: it could only move with a rename, which isn't offered. The agent keeps its tokens.
 
 ## Storage
 

@@ -58,12 +58,5 @@ function agentSessionCalls(server: ClientConnection): AgentSessionCalls {
   };
 }
 
-export type {
-  AgentSessionResponse,
-  JoinRequest,
-  LeaveResponse,
-  ListAgentSessionsResponse,
-  ListedAgentSession,
-  RevokeAgentSessionResponse,
-} from "../../agent-sessions/index.ts";
+export type { AgentSessionResponse, JoinRequest, LeaveResponse } from "../../agent-sessions/index.ts";
 export { type AgentSessionCalls, agentSessionCalls };
