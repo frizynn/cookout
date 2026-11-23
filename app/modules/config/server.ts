@@ -3,7 +3,7 @@
  * reads the environment, and every variable here has a line in `.env.example`
  * and a line in the README's Settings section (`pnpm hygiene` checks both).
  */
-import { Config, Option, Redacted, Schema } from "effect";
+import { Config, Redacted, Schema } from "effect";
 import { firstAdminName, isIdentityName } from "../identities/index.ts";
 import type { IdentityName } from "../identities/index.ts";
 
@@ -67,11 +67,7 @@ export const adminToken = Config.schema(Schema.String.check(isStrongEnoughToken)
  * `COOKOUT_ADMIN_NAME`: the name of the identity `COOKOUT_ADMIN_TOKEN` belongs to, `admin` unless set (Matt,
  * 2026-11-23, mattpocock/cookout#107, ADR 0038). Empty counts as unset. Not an identity name, serve refuses to start.
  */
-export const adminName: Config.Config<IdentityName> = Config.schema(
-  Schema.Union([Schema.Literal(""), AdminNameSchema]),
-  "COOKOUT_ADMIN_NAME",
-).pipe(
-  Config.map((name) => Option.getOrElse(Option.liftPredicate(name, isIdentityName), () => firstAdminName)),
+export const adminName: Config.Config<IdentityName> = Config.schema(AdminNameSchema, "COOKOUT_ADMIN_NAME").pipe(
   Config.withDefault(firstAdminName),
 );
 
