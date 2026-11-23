@@ -6,6 +6,10 @@
  * secret from `Secrets`, shown once. A call's data is checked against the
  * command's JSON Schema, then posted as a top-level message by the caller,
  * and the answer comes without waiting for any delivery to the webhook.
+ * `commandsLayer` sends each call to the command's URL in the background:
+ * `{ command, data, threadId, token, callId }` as JSON, signed in the
+ * `cookout-signature` header with the hex HMAC-SHA256 of the raw body keyed
+ * with the command's secret, and given up after `COOKOUT_WEBHOOK_TIMEOUT_SECONDS`.
  */
 import {
   AddCommandRequestSchema,
@@ -72,3 +76,6 @@ export const commandResponseSchemas = {
   CommandWithSecretResponse: CommandWithSecretResponseSchema,
   ListCommandsResponse: ListCommandsResponseSchema,
 };
+
+/** The services the command routes need beyond storage: the background webhook delivery of each call. */
+export { deliveriesLayer as commandsLayer } from "./lib/server/call.ts";

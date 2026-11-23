@@ -354,3 +354,18 @@ The web tests (`app/modules/routes/tests/`, the `web` Vitest project) render `Co
 - `pnpm pack:smoke` proves the published package works (CI runs it as its own job): it builds with tsdown and Vite, packs `@ai-hero/cookout`, installs the tarball in a temp directory, and drives `cookout serve` (its health check and the web UI at `/`), `cookout whoami` and `@ai-hero/cookout/sdk` from there. Nothing is published.
 - The SDK's public surface is pinned by `api/sdk.api.md`. After a deliberate change to it, run `pnpm api:write` and commit the report.
 - To run the server alone on a file you keep: `node app/main.ts serve --port 3000 --db cookout.db`. On first boot it prints a one-time admin token as a JSON line.
+
+## Deliver a call to the example handler
+
+After "Start it", register a command whose URL is the example handler (`packages/handler-example`) on a free port, start the handler with the command's secret (the fourth line as a background command), and call it:
+
+```sh
+printf '{"type":"object","properties":{"branch":{"type":"string"}},"required":["branch"]}' > /tmp/cookout-ship.schema.json
+env $(cat /tmp/cookout-dev.env) node app/main.ts command add ship --url http://127.0.0.1:48787/webhook --schema /tmp/cookout-ship.schema.json | jq -r '"COOKOUT_COMMAND_SECRET=\(.secret)"' > /tmp/cookout-ship.env
+env $(cat /tmp/cookout-dev.env) node app/main.ts channel create ships
+env $(cat /tmp/cookout-ship.env) HOST=127.0.0.1 PORT=48787 node packages/handler-example/app/main.ts > /tmp/cookout-handler.log 2>&1
+env $(cat /tmp/cookout-dev.env) node app/main.ts command call ship --channel ships --data '{"branch":"main"}'
+cat /tmp/cookout-handler.log
+```
+
+The call prints `{ messageId, threadId }` at once. In the background the server POSTs `{ command, data, threadId, token, callId }` to the URL, signed in the `cookout-signature` header with the lowercase hex HMAC-SHA256 of the raw body, keyed with the command's secret (the scheme in `packages/handler-example/README.md`). The handler logs `call call_… of ship on thread …` only for a signed call; a bad signature gets 401 and no line. With the handler stopped, a call still answers 202 and the dev log gets a `WARN` line `The webhook delivery call_… failed.` (no retries yet). `COOKOUT_WEBHOOK_TIMEOUT_SECONDS` (default 5) bounds each delivery.
