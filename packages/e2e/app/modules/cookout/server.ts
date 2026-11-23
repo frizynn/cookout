@@ -23,7 +23,11 @@
  * handler there, and `scripts/handler-provision.sh` on the deployed one. Its
  * schema needs a string `branch`. `requireExampleCommand` fails, naming the
  * missing command, when the cookout under test doesn't have it, so a webhook
- * test fails there instead of skipping.
+ * test fails there instead of skipping. `shownMessage` matches the text a
+ * message shows in a list: an optional "New" line (whether a message was
+ * unread as the view opened depends on when it arrived), its header (the
+ * author's name, then any tag such as `agent`), its short local time, matched
+ * by shape since a test can't pin the cookout's clock, then its body.
  */
 export {
   CookoutUnderTest,
@@ -41,6 +45,7 @@ export {
 export { exampleCommand, requireExampleCommand } from "./lib/server/example-command.ts";
 export { type BrowserFixtures, type BrowserRun, browserFixtures } from "./lib/server/browser-run.ts";
 export { type Answered, type Relay, openRelay } from "./lib/server/relay.ts";
+export { shownMessage } from "./lib/server/shown-message.ts";
 export {
   type JoinAgent,
   type RunCookout,

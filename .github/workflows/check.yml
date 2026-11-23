@@ -64,6 +64,19 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
+  # The image and the example handler in Docker, driven by packages/e2e, as Deploy runs it before
+  # deploying main, so a ticket or v1 push that breaks it fails here instead of blocking a deploy.
+  e2e-docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: e2e-docker
+      - run: pnpm exec playwright install --with-deps --only-shell chromium
+      - run: pnpm e2e:docker
+
   pack:
     name: pack smoke
     runs-on: ubuntu-latest
