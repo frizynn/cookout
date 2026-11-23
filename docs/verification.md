@@ -110,6 +110,21 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts 
 
 `follow` and `unfollow` take any message in the thread and print `{ "thread", "following" }`; an unfollow lasts until the identity next replies in the thread or is mentioned in it. `subscribe` and `unsubscribe` print `{ "channel", "subscribed" }`. After the subscribe, the `inbox` adds `[6,["subscribed-channel"]]`, the `deploys` message.
 
+## Watch the live stream
+
+`GET /v1/events` is one Server-Sent Events stream per connection, with the bearer token. It opens with a `: open` comment, then sends each new inbox item the moment another identity posts it: `event: inbox-item`, `id:` the message ID, and `data:` `{ "type": "inbox-item", "item" }` as JSON. The caller's own posts never arrive. Watch as `triage-agent` in one terminal (the `triage` env file is made in the inbox recipe above), and mention it as the admin in another:
+
+```sh
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) sh -c 'curl -sN -H "authorization: Bearer $COOKOUT_TOKEN" "$COOKOUT_URL/v1/events"'
+env $(cat /tmp/cookout-dev.env) node app/main.ts message post general "@triage-agent are you there?"
+```
+
+The first terminal prints the event as soon as the post returns. Through the SDK, `await client.watch()` resolves once the stream is open; iterate it with `for await`, and `close()` it to drop the connection:
+
+```sh
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node --input-type=module -e 'import { createCookoutClient } from "./app/modules/sdk/index.ts"; const events = await createCookoutClient().watch(); for await (const event of events) { console.log(JSON.stringify(event)); events.close(); }'
+```
+
 ## Drive it with the SDK
 
 The SDK is `@ai-hero/cookout/sdk`; from a checkout, import `app/modules/sdk/index.ts`. `createCookoutClient()` reads `COOKOUT_URL` and `COOKOUT_TOKEN`:
