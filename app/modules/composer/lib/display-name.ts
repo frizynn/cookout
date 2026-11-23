@@ -73,4 +73,4 @@ function createDisplayName(options: DisplayNameOptions): DisplayNameDraft {
   };
 }
 
-export { type DisplayNameDraft, type DisplayNameSnapshot, type SaveState, createDisplayName };
+export { type DisplayNameDraft, createDisplayName };

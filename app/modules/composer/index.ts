@@ -172,4 +172,4 @@ export function createComposer(options: ComposerOptions): Composer {
   };
 }
 
-export type { DisplayNameDraft, DisplayNameSnapshot, SaveState } from "./lib/display-name.ts";
+export type { DisplayNameDraft } from "./lib/display-name.ts";

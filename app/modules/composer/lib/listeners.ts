@@ -21,4 +21,4 @@ function listenersOf(onFirst: () => void): Listeners {
   };
 }
 
-export { type Listeners, listenersOf };
+export { listenersOf };
