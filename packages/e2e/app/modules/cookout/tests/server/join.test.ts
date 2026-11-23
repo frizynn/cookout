@@ -16,7 +16,7 @@ function joinInItsOwnProcess(
   { identity, token }: IdentityWithTokenResponse,
 ): Effect.Effect<BinResult, never, Needs> {
   return Effect.flatMap(freshStateFolder, (stateFolder) =>
-    cookout.runCookout({ agentToolSession: stateFolder, args: ["join", "--as", identity.name], stateFolder, token }),
+    cookout.runCookout({ args: ["join", "--as", identity.name], harnessSession: stateFolder, stateFolder, token }),
   );
 }
 

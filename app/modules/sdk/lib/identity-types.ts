@@ -1,6 +1,6 @@
 export type {
   AgentIdentity,
-  AgentTool,
+  Harness,
   CreateIdentityRequest,
   DeactivateIdentityResponse,
   DisplayName,

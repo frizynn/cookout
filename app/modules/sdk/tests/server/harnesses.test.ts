@@ -23,7 +23,7 @@ function whoamiWithTool(
 ): Effect.Effect<number, never, HttpClient.HttpClient> {
   return HttpClientRequest.get(`${cookout.url}${whoamiPath}`).pipe(
     HttpClientRequest.setHeader("authorization", `Bearer ${token}`),
-    HttpClientRequest.setHeader("cookout-agent-tool", tool),
+    HttpClientRequest.setHeader("cookout-harness", tool),
     HttpClient.execute,
     Effect.map((response) => response.status),
     Effect.orDie,
@@ -61,7 +61,7 @@ it.effect.each(markerSets)(
 
       expect(error).toMatchObject({
         code: "agent_as_human",
-        details: { agentTool: tool, identity: "ada" },
+        details: { harness: tool, identity: "ada" },
         status: FORBIDDEN,
       });
       expect(error.message).toContain("ada");
@@ -80,7 +80,7 @@ it.effect("with COOKOUT_ALLOW_HUMAN=1, a human's token goes through from Claude 
     const { message } = yield* answer(() => client.createMessage({ channel: "grill", text: "me, on purpose" }));
 
     expect(message.author).toStrictEqual({ name: "ada" });
-    expect(message).not.toHaveProperty("agentTool");
+    expect(message).not.toHaveProperty("harness");
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -95,8 +95,8 @@ it.effect("an agent's token from Claude Code goes through, and the messages it p
     yield* answer(() => bot.client.createMessage({ channel: "grill", replyTo: parent.id, text: "by hand" }));
     const thread = yield* answer(() => cookout.client.getThread(parent.id));
 
-    expect(thread.parent.agentTool).toBe("claude-code");
-    expect(Arr.map(thread.replies, (reply) => [reply.text, reply.agentTool ?? "none"])).toStrictEqual([
+    expect(thread.parent.harness).toBe("claude-code");
+    expect(Arr.map(thread.replies, (reply) => [reply.text, reply.harness ?? "none"])).toStrictEqual([
       ["again", "claude-code"],
       ["by hand", "none"],
     ]);
@@ -115,7 +115,7 @@ it.effect("a command call an agent makes from Claude Code records the tool on th
     const called = yield* answer(() => client.callCommand("deploy", { channel: "grill", data: {} }));
     const thread = yield* answer(() => cookout.client.getThread(called.threadId));
 
-    expect(thread.parent).toMatchObject({ agentTool: "claude-code", author: { name: "bot" } });
+    expect(thread.parent).toMatchObject({ author: { name: "bot" }, harness: "claude-code" });
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -141,12 +141,12 @@ it.effect("a human's token with an empty AI_AGENT and no other agent markers goe
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("a token given to the SDK, not read from COOKOUT_TOKEN, sends no agent tool unless it is given too", () =>
+it.effect("a token given to the SDK, not read from COOKOUT_TOKEN, sends no harness unless it is given too", () =>
   Effect.gen(function* givenToken() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     const given = createCookoutClient({ env: CLAUDE_CODE, token: ada.token, url: cookout.url });
-    const named = createCookoutClient({ agentTool: "claude-code", env: {}, token: ada.token, url: cookout.url });
+    const named = createCookoutClient({ env: {}, harness: "claude-code", token: ada.token, url: cookout.url });
     const whoami = yield* answer(given.whoami);
     const error = yield* refusal(named.whoami);
 
@@ -155,7 +155,7 @@ it.effect("a token given to the SDK, not read from COOKOUT_TOKEN, sends no agent
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("the server refuses the agent tool header with a human caller, takes it with an agent's, and checks it", () =>
+it.effect("the server refuses the harness header with a human caller, takes it with an agent's, and checks it", () =>
   Effect.gen(function* serverGuard() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });

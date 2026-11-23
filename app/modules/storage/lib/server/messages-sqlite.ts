@@ -1,8 +1,8 @@
-import type { AgentTool, IdentityName, Owner } from "../../../identities/index.ts";
 import type { AppendMessageResult, ChannelPageRequest, MessagesSection, NewMessage, Placement } from "./messages.ts";
 import { Array as Arr, Effect, Option, Order, Predicate, Schema, pipe } from "effect";
 import type { Author, ListMessagesResponse, Message, MessageId, ThreadResponse } from "../../../messages/index.ts";
-import { isAgentTool, isIdentityName, isOwner } from "../../../identities/index.ts";
+import type { Harness, IdentityName, Owner } from "../../../identities/index.ts";
+import { isHarness, isIdentityName, isOwner } from "../../../identities/index.ts";
 import { isMessageId, shownRepliers } from "../../../messages/index.ts";
 import { isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
 import { recordAppended, sqliteInbox } from "./inbox-sqlite.ts";
@@ -27,7 +27,7 @@ const MessageIdColumn = Schema.Int.pipe(Schema.refine(isMessageId));
 const IdentityNameColumn = Schema.String.pipe(Schema.refine(isIdentityName));
 const MentionsColumn = Schema.fromJsonString(Schema.Array(IdentityNameColumn));
 const OwnerColumn = Schema.String.pipe(Schema.refine(isOwner));
-const AgentToolColumn = Schema.String.pipe(Schema.refine(isAgentTool));
+const HarnessColumn = Schema.String.pipe(Schema.refine(isHarness));
 const MentionsText = Schema.fromJsonString(Schema.Array(Schema.String));
 const JsonText = Schema.fromJsonString(Schema.Json);
 const ReplierCell = Schema.Struct({ last: Schema.Int, name: IdentityNameColumn, owner: Schema.NullOr(OwnerColumn) });
@@ -35,12 +35,12 @@ const RepliersColumn = Schema.fromJsonString(Schema.Array(ReplierCell));
 const latestFirst = Order.flip(Order.mapInput(Order.Number, (cell: typeof ReplierCell.Type) => cell.last));
 
 const MessageRow = Schema.Struct({
-  agent_tool: Schema.NullOr(AgentToolColumn),
   author_name: IdentityNameColumn,
   author_owner: Schema.NullOr(OwnerColumn),
   channel: Schema.String.pipe(Schema.refine(isChannelName)),
   created_at: IsoTimeSchema,
   data: Schema.NullOr(Schema.String),
+  harness: Schema.NullOr(HarnessColumn),
   id: MessageIdColumn,
   latest_reply_at: Schema.NullOr(IsoTimeSchema),
   latest_reply_id: Schema.NullOr(MessageIdColumn),
@@ -58,13 +58,13 @@ interface DataField {
 }
 
 const NO_DATA: DataField = {};
-const NO_AGENT_TOOL = {};
+const NO_HARNESS = {};
 
 const SequenceRow = Schema.Struct({ last_id: MessageIdColumn });
 
 const isFoundRow = Schema.is(Schema.Struct({ found: Schema.Literal(FOUND) }));
 
-const MESSAGE_COLUMNS = `id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, agent_tool,
+const MESSAGE_COLUMNS = `id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, harness,
   (SELECT count(*) FROM messages AS replies WHERE replies.reply_to = messages.id) AS reply_count,
   (SELECT max(replies.id) FROM messages AS replies WHERE replies.reply_to = messages.id) AS latest_reply_id,
   (SELECT replies.created_at FROM messages AS replies WHERE replies.reply_to = messages.id
@@ -76,7 +76,7 @@ const MESSAGE_COLUMNS = `id, channel, author_name, author_owner, text, data, rep
   )) AS repliers`;
 
 const INSERT_MESSAGE = `INSERT INTO messages
-  (id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, agent_tool)
+  (id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, harness)
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 interface StoredAuthor {
@@ -95,11 +95,11 @@ function repliersOf(row: MessageRowType): readonly Author[] {
   return Arr.map(Arr.sort(row.repliers, latestFirst), authorOf);
 }
 
-function agentToolOf(row: MessageRowType): { readonly agentTool?: AgentTool } {
-  if (Predicate.isNull(row.agent_tool)) {
-    return NO_AGENT_TOOL;
+function harnessOf(row: MessageRowType): { readonly harness?: Harness } {
+  if (Predicate.isNull(row.harness)) {
+    return NO_HARNESS;
   }
-  return { agentTool: row.agent_tool };
+  return { harness: row.harness };
 }
 
 function messageOf(row: MessageRowType, data: DataField): Message {
@@ -109,7 +109,7 @@ function messageOf(row: MessageRowType, data: DataField): Message {
     createdAt: row.created_at,
     id: row.id,
   };
-  const content = { ...fields, ...agentToolOf(row), ...data, mentions: row.mentions, text: row.text };
+  const content = { ...fields, ...harnessOf(row), ...data, mentions: row.mentions, text: row.text };
   if (Predicate.isNull(row.reply_to)) {
     const replies = {
       latestReplyAt: row.latest_reply_at,
@@ -195,8 +195,8 @@ function insert(db: SqliteDatabase, message: Message, data: string | null): Fail
     const mentions = yield* Schema.encodeEffect(MentionsText)(message.mentions).pipe(Effect.mapError(unreadable));
     const owner = message.author.owner ?? null;
     const replyTo = replyToOf(message);
-    const { agentTool = null, author, channel, createdAt, id, text } = message;
-    const columns = [id, channel, author.name, owner, text, data, replyTo, mentions, createdAt, agentTool] as const;
+    const { harness = null, author, channel, createdAt, id, text } = message;
+    const columns = [id, channel, author.name, owner, text, data, replyTo, mentions, createdAt, harness] as const;
     yield* db.run(INSERT_MESSAGE, ...columns);
   });
 }

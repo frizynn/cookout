@@ -31,20 +31,20 @@ const asMissing: CallFailure = {
   message: "`cookout join` needs --as <name>: an agent you own, or the token's own agent.",
 };
 
-function noAgentTool(as: IdentityName): CallFailure {
+function noHarness(as: IdentityName): CallFailure {
   return {
-    code: "agent_tool_missing",
+    code: "harness_missing",
     message:
-      "No agent tool runs this process, so there is no agent tool session to join in. Run " +
+      "No harness runs this process, so there is no harness session to join in. Run " +
       `\`cookout join --as ${as} --print-env\` and run the \`export COOKOUT_SESSION=...\` line it prints instead.`,
   };
 }
 
-function noSessionId(agentTool: string, as: IdentityName): CallFailure {
+function noSessionId(harness: string, as: IdentityName): CallFailure {
   return {
-    code: "agent_tool_session_missing",
+    code: "harness_session_missing",
     message:
-      `${agentTool} gives no session ID to key a join by. Run \`cookout join --as ${as} --print-env\` and run ` +
+      `${harness} gives no session ID to key a join by. Run \`cookout join --as ${as} --print-env\` and run ` +
       "the `export COOKOUT_SESSION=...` line it prints instead.",
   };
 }
@@ -53,7 +53,7 @@ function alreadyJoined(identity: IdentityName): CallFailure {
   return {
     code: "already_joined",
     message:
-      `This agent tool session has already joined as ${identity}. Run \`cookout leave\` first, or ` +
+      `This harness session has already joined as ${identity}. Run \`cookout leave\` first, or ` +
       "`cookout join --as <name> --print-env` to act as another agent from one subagent or script.",
   };
 }
@@ -111,12 +111,12 @@ function joinIn(
   { file, place, url }: JoinPlace,
   flags: JoinFlags,
 ): Effect.Effect<JoinAnswer, CallFailure, AgentSessionStateNeeds> {
-  const { agentTool = "" } = place;
-  if (agentTool === "") {
-    return Effect.fail(noAgentTool(flags.as));
+  const { harness = "" } = place;
+  if (harness === "") {
+    return Effect.fail(noHarness(flags.as));
   }
   if (Option.isNone(file)) {
-    return Effect.fail(noSessionId(agentTool, flags.as));
+    return Effect.fail(noSessionId(harness, flags.as));
   }
   return issueAndKeep(flags, { file: file.value, url });
 }

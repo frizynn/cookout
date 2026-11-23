@@ -7,7 +7,7 @@ import {
   storageLayers,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
-import { isAgentTool } from "../../../identities/index.ts";
+import { isHarness } from "../../../identities/index.ts";
 
 const CLAUDE_CODE = "claude-code";
 const TWO_REPLIES = 2;
@@ -58,16 +58,16 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
-  "storage contract ($adapter): a message posted from an agent tool keeps the tool's name",
+  "storage contract ($adapter): a message posted from a harness keeps the tool's name",
   ({ layer }) =>
-    Effect.gen(function* storedAgentTool() {
+    Effect.gen(function* storedHarness() {
       const { storage } = yield* openStore(layer);
       yield* storage.createChannel(channel("grill"));
-      const agentTool = Option.getOrThrow(Option.liftPredicate(CLAUDE_CODE, isAgentTool));
-      const message = yield* appendTo(storage)({ ...newMessage("grill", "hi"), agentTool });
+      const harness = Option.getOrThrow(Option.liftPredicate(CLAUDE_CODE, isHarness));
+      const message = yield* appendTo(storage)({ ...newMessage("grill", "hi"), harness });
       const thread = yield* storage.getThread(message.id);
 
-      expect(message.agentTool).toBe(CLAUDE_CODE);
+      expect(message.harness).toBe(CLAUDE_CODE);
       expect(thread).toStrictEqual({ parent: message, replies: [] });
     }),
 );

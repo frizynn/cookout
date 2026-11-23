@@ -7,7 +7,7 @@ interface BinRun {
   readonly args: readonly string[];
   readonly token?: string;
   readonly stateFolder: string;
-  readonly agentToolSession?: string;
+  readonly harnessSession?: string;
   readonly url?: string;
 }
 
@@ -52,12 +52,12 @@ function claudeCodeSession(session: string): Readonly<Record<string, string>> {
 }
 
 function runBin(url: string): (run: BinRun) => Effect.Effect<BinResult, never, BinNeeds> {
-  return ({ agentToolSession = "", args, stateFolder, token = "", url: through = url }) =>
+  return ({ harnessSession = "", args, stateFolder, token = "", url: through = url }) =>
     Effect.gen(function* spawnCookout() {
       const path = yield* Path.Path;
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
       const bin = yield* path.fromFileUrl(BIN);
-      const session = claudeCodeSession(agentToolSession);
+      const session = claudeCodeSession(harnessSession);
       const env = { ...session, COOKOUT_STATE_DIR: stateFolder, COOKOUT_TOKEN: token, COOKOUT_URL: through };
       const command = ChildProcess.make(process.execPath, [bin, ...args], { env, extendEnv: false });
       const handle = yield* spawner.spawn(command);

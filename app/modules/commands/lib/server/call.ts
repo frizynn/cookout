@@ -11,7 +11,7 @@ import { Storage } from "../../../storage/server.ts";
 import { compileDataSchema } from "./data-schema.ts";
 import { echoed } from "../../../http/index.ts";
 import { isCommandName } from "../../index.ts";
-import { sentAgentTool } from "../../../identities/server.ts";
+import { sentHarness } from "../../../identities/server.ts";
 
 type CallNeeds = Storage | Messages | Deliveries;
 
@@ -103,7 +103,7 @@ function callCommand({
     yield* requireData(command, data);
     const messages = yield* Messages;
     const deliveries = yield* Deliveries;
-    const tool = yield* sentAgentTool;
+    const tool = yield* sentHarness;
     const callMessage = { ...tool, channel, data: { command: command.name, data }, text: `/${command.name}` };
     const { threadId } = yield* deliveries.deliver({ data, stored }, (parts) =>
       Effect.map(messages.postCommandCall(caller, callMessage, parts), ({ message }) => ({

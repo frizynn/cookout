@@ -1,4 +1,3 @@
-import type { AgentTool, Identity } from "../../../identities/index.ts";
 import {
   Array as Arr,
   Context,
@@ -21,6 +20,7 @@ import type {
   MessageResponse,
   ThreadResponse,
 } from "../../index.ts";
+import type { Harness, Identity } from "../../../identities/index.ts";
 import type { NewCommandCall, NewMessage, StorageUnavailable } from "../../../storage/server.ts";
 import { mentionPattern, pageSize } from "../../index.ts";
 import { messageNotFound, replyInOtherChannel, replyOutsideCommandThread } from "./refusals.ts";
@@ -39,7 +39,7 @@ interface PostMessage {
   readonly text: string;
   readonly data?: JsonValue;
   readonly replyTo?: MessageId;
-  readonly agentTool?: AgentTool;
+  readonly harness?: Harness;
 }
 
 interface PageQuery {
@@ -85,17 +85,17 @@ function unknownMentionsIn({ mentions, text }: Message): readonly string[] {
   return Arr.filter(mentionedNames(text), (name) => !Arr.some(mentions, (mentioned) => mentioned === name));
 }
 
-function withAgentTool(message: NewMessage, agentTool: AgentTool | undefined): NewMessage {
-  if (Predicate.isUndefined(agentTool)) {
+function withHarness(message: NewMessage, harness: Harness | undefined): NewMessage {
+  if (Predicate.isUndefined(harness)) {
     return message;
   }
-  return { ...message, agentTool };
+  return { ...message, harness };
 }
 
 function newMessage(author: Identity, posting: PostMessage, createdAt: IsoTime): NewMessage {
-  const { agentTool, channel, data, replyTo, text } = posting;
+  const { harness, channel, data, replyTo, text } = posting;
   const mentions = Arr.filter(mentionedNames(text), isIdentityName);
-  const fields = withAgentTool({ author: authorOf(author), channel, createdAt, mentions, text }, agentTool);
+  const fields = withHarness({ author: authorOf(author), channel, createdAt, mentions, text }, harness);
   if (Predicate.isUndefined(data)) {
     return withReplyTo(fields, replyTo);
   }

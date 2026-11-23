@@ -163,6 +163,7 @@ const migrations: readonly string[] = [
      idle_seconds INTEGER CHECK (idle_seconds > 0),
      force INTEGER CHECK (force IN (0, 1))
    ) STRICT;`,
+  "ALTER TABLE messages RENAME COLUMN agent_tool TO harness;",
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

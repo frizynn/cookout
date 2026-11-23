@@ -10,7 +10,7 @@ const CONFLICT = 409;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 
 function fromClaudeCode(cookout: TestCookoutService, token: string): CookoutClient {
-  return createCookoutClient({ agentTool: "claude-code", env: {}, token, url: cookout.url });
+  return createCookoutClient({ env: {}, harness: "claude-code", token, url: cookout.url });
 }
 
 function humanFromClaudeCode(cookout: TestCookoutService, name: string): Effect.Effect<CookoutClient> {
@@ -120,7 +120,7 @@ it.effect("a deactivated agent the caller owns is refused until reactivated", ()
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("a human's token from an agent tool is accepted by the join route only", () =>
+it.effect("a human's token from a harness is accepted by the join route only", () =>
   Effect.gen(function* guardExemption() {
     const cookout = yield* TestCookout;
     const grace = yield* humanFromClaudeCode(cookout, "grace");

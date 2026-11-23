@@ -140,10 +140,10 @@ interface SetDisplayNameRequest {
   readonly displayName: string | null;
 }
 /**
- * The agent tool running a client's process, such as `claude-code`: 1–40 lowercase letters, digits or `-`. The CLI
- * and the SDK send it in `cookout-agent-tool` when the process's environment shows such a tool runs it.
+ * The harness running a client's process, such as `claude-code`: 1–40 lowercase letters, digits or `-`. The CLI
+ * and the SDK send it in `cookout-harness` when the process's environment shows such a tool runs it.
  */
-type AgentTool = Brand$1<"AgentTool">;
+type Harness = Brand$1<"Harness">;
 declare const brand$2: unique symbol;
 /**
  * A message's ID: a positive whole number. Message IDs are one increasing
@@ -172,8 +172,8 @@ interface MessageFields {
   readonly data?: JsonValue;
   /** Names of the identities the text mentions. */
   readonly mentions: readonly IdentityName[];
-  /** The agent tool the message was posted from, such as `claude-code`. Absent when none was named. */
-  readonly agentTool?: AgentTool;
+  /** The harness the message was posted from, such as `claude-code`. Absent when none was named. */
+  readonly harness?: Harness;
   readonly createdAt: IsoTime;
 }
 /** A message posted straight into a channel. It may have a thread of replies. */
@@ -381,7 +381,7 @@ declare const idleExpiryPattern: RegExp;
  * Sent with a human's token, `as` names an agent the human owns, or creates one (Matt, 2026-11-23,
  * mattpocock/cookout#119): an agent the caller owns by that name is joined; else a free name is created, owned by
  * the caller; else, when someone else has the name, `<caller>/<name>` is joined, or created. A human's name, or
- * `<other>/<name>`, is refused. This is the one route a human's token may use from an agent tool.
+ * `<other>/<name>`, is refused. This is the one route a human's token may use from a harness.
  */
 interface JoinRequest {
   readonly as: string;
@@ -683,14 +683,14 @@ export type CookoutClientOptions = {
   readonly url?: string;
   /**
    * The bearer token: an Identity token, or the agent session token `join` answered, to act as the agent for that
-   * session. Default: `COOKOUT_TOKEN`, else `COOKOUT_SESSION`; inside an agent tool, `COOKOUT_SESSION` first. Not
+   * session. Default: `COOKOUT_TOKEN`, else `COOKOUT_SESSION`; inside a harness, `COOKOUT_SESSION` first. Not
    * needed for the health check.
    */
   readonly token?: string;
   /** Where `COOKOUT_URL`, `COOKOUT_TOKEN` and `COOKOUT_SESSION` are read from. Default: the process's environment (none in a browser). */
   readonly env?: Readonly<Record<string, string | undefined>>;
-  /** The agent tool running this process, such as `claude-code`, sent on every request: a human's token with it is refused with 403 `agent_as_human`, and messages posted record it. Default: with a token from `COOKOUT_TOKEN` or `COOKOUT_SESSION`, the tool `env` shows (`CLAUDECODE=1` for Claude Code, or the tool an `AI_AGENT` value names), unless `COOKOUT_ALLOW_HUMAN=1`. */
-  readonly agentTool?: string;
+  /** The harness running this process, such as `claude-code`, sent on every request: a human's token with it is refused with 403 `agent_as_human`, and messages posted record it. Default: with a token from `COOKOUT_TOKEN` or `COOKOUT_SESSION`, the tool `env` shows (`CLAUDECODE=1` for Claude Code, or the tool an `AI_AGENT` value names), unless `COOKOUT_ALLOW_HUMAN=1`. */
+  readonly harness?: string;
 };
 export type CookoutClient = ApprovalCalls & {
   /** `GET /v1/health`. Resolves when the server and its storage are usable. */
@@ -857,5 +857,5 @@ export type CookoutClient = ApprovalCalls & {
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionLiveDetails, type AgentSessionResponse, type AgentTool, type ApproveAgentJoinRequest, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelEvent, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DeactivateIdentityResponse, type DisplayName, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityEvent, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListedAgentSession, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type ReadPositionsResponse, type Refusal, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type collectAgentJoinRequestPath, type defaultIdleExpiry, type identityAgentSessionPath, type idleExpiryPattern, refusalOf };
+export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelEvent, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DeactivateIdentityResponse, type DisplayName, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityEvent, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListedAgentSession, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type ReadPositionsResponse, type Refusal, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type collectAgentJoinRequestPath, type defaultIdleExpiry, type identityAgentSessionPath, type idleExpiryPattern, refusalOf };
 ```

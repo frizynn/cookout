@@ -32,7 +32,7 @@ Your agent name is the one the user gave you, such as `reviewer`; if they gave n
    - `identity_kind`: that name is a person's. Ask the user for an agent name.
    - `not_owner`: that `<owner>/<name>` belongs to another person. Ask the user for a plain name.
    - `identity_deactivated`: that agent is switched off. Tell the user its owner can run `cookout identity reactivate <name>`, and stop.
-   - `agent_tool_session_missing`: this agent tool gives no session ID to join by. Tell the user, and stop.
+   - `harness_session_missing`: this harness gives no session ID to join by. Tell the user, and stop.
    - With no Login on this box, `join` makes an agent join request: it prints a link and a code on stderr and waits. Show the user both and ask them to open the link, check the code and approve in the web UI; `join` then finishes on its own. On `agent_join_request_expired`, nobody approved within 10 minutes: join again.
    - `login_missing` (an older CLI) in a cloud or remote session, not the person's own machine: don't ask them to run `cookout login` there, it never reaches you. Use the agent join request above, or have the person hand you an agent's Identity token as `COOKOUT_TOKEN`.
 

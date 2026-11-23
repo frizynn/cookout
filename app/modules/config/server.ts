@@ -6,7 +6,7 @@
 import { Array as Arr, Config, Record as Rec, Redacted, Schema, String as Str } from "effect";
 import { firstAdminName, isIdentityName } from "../identities/index.ts";
 import type { IdentityName } from "../identities/index.ts";
-import { agentToolVariables } from "./index.ts";
+import { harnessVariables } from "./index.ts";
 import { idleExpiryPattern } from "../agent-sessions/index.ts";
 
 const SHORTEST_WEBHOOK_TIMEOUT_SECONDS = 1;
@@ -173,7 +173,7 @@ export const cookoutToken = Config.String("COOKOUT_TOKEN").pipe(Config.withDefau
 
 /**
  * `COOKOUT_SESSION`: an agent session token, such as one `cookout join --print-env` printed, that every CLI verb but
- * `serve` sends ahead of everything inside an agent tool, and when `COOKOUT_TOKEN` is unset outside one
+ * `serve` sends ahead of everything inside a harness, and when `COOKOUT_TOKEN` is unset outside one
  * (mattpocock/cookout#150). Empty counts as unset.
  */
 export const cookoutSession = Config.String("COOKOUT_SESSION").pipe(Config.withDefault(""));
@@ -190,11 +190,11 @@ export const proxyEnvironment = Config.all({
 });
 
 /**
- * The variables that show which agent tool runs the CLI (such as `CLAUDECODE` for Claude Code, and `AI_AGENT`), and
- * `COOKOUT_ALLOW_HUMAN`, as one environment for `agentToolIn`. Each defaults to empty.
+ * The variables that show which harness runs the CLI (such as `CLAUDECODE` for Claude Code, and `AI_AGENT`), and
+ * `COOKOUT_ALLOW_HUMAN`, as one environment for `harnessIn`. Each defaults to empty.
  */
-export const agentToolEnvironment: Config.Config<Readonly<Record<string, string>>> = Config.all(
-  Rec.fromEntries(Arr.map(agentToolVariables, (name) => [name, Config.String(name).pipe(Config.withDefault(""))])),
+export const harnessEnvironment: Config.Config<Readonly<Record<string, string>>> = Config.all(
+  Rec.fromEntries(Arr.map(harnessVariables, (name) => [name, Config.String(name).pipe(Config.withDefault(""))])),
 );
 
 /** Why `cookout serve` refused `COOKOUT_ADMIN_TOKEN`, and how to set it. It never includes the value. */

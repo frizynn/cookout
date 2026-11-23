@@ -6,16 +6,16 @@
  * from the caller: `serve` issues tokens with it, and `join`
  * names its agent session state file with it.
  *
- * Every verb but `serve`, `join`, `login` and `logout` sends one credential. Inside an agent tool it is the first of:
- * the agent session token in `COOKOUT_SESSION`, the agent session this agent tool session joined, and `COOKOUT_TOKEN`;
+ * Every verb but `serve`, `join`, `login` and `logout` sends one credential. Inside a harness it is the first of:
+ * the agent session token in `COOKOUT_SESSION`, the agent session this harness session joined, and `COOKOUT_TOKEN`;
  * with none of them, it is refused with `not_joined`. Outside one it is the first of `COOKOUT_TOKEN`,
  * `COOKOUT_SESSION` and the Login (mattpocock/cookout#150). `whoami` says on stderr when it ignored `COOKOUT_TOKEN`.
  *
- * `join` runs inside an agent tool session (Claude Code's `CLAUDE_CODE_SESSION_ID`, which its subagents share) and
+ * `join` runs inside a harness session (Claude Code's `CLAUDE_CODE_SESSION_ID`, which its subagents share) and
  * keeps the agent session token it was issued in a state file for that session and server, under
  * `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then `~/.local/state/cookout`); the file's name is a hash.
  * It prints the agent, `created`, the times and the credential's `source`, never the token (mattpocock/cookout#145).
- * Outside an agent tool it is `agent_tool_missing`, in a tool that gives no session ID `agent_tool_session_missing`,
+ * Outside a harness it is `harness_missing`, in a tool that gives no session ID `harness_session_missing`,
  * and in a session that has joined `already_joined`, unless `--print-env`, which keeps nothing and prints
  * `export COOKOUT_SESSION=...`. `leave` revokes the token it sends and forgets a joined session's. On
  * `agent_session_revoked` or `agent_session_expired` the stored token is deleted and the message says to run
