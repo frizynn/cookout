@@ -2,6 +2,8 @@ import { createInterface } from "node:readline";
 import { once } from "node:events";
 import { spawn } from "node:child_process";
 
+const PRESENCE_GRACE_SECONDS = "2";
+
 interface DevCookout {
   readonly adminToken: string;
   readonly relayUrl: string;
@@ -28,7 +30,10 @@ async function startLine(lines: AsyncIterable<string>): Promise<DevCookout> {
 }
 
 async function setup(): Promise<() => Promise<void>> {
-  const dev = spawn(process.execPath, ["app/dev.ts", "start"], { stdio: ["ignore", "pipe", "ignore"] });
+  const dev = spawn(process.execPath, ["app/dev.ts", "start"], {
+    env: { ...process.env, COOKOUT_PRESENCE_GRACE_SECONDS: PRESENCE_GRACE_SECONDS },
+    stdio: ["ignore", "pipe", "ignore"],
+  });
   const cookout = await startLine(createInterface({ input: dev.stdout }));
   process.env["COOKOUT_TOKEN"] = cookout.adminToken;
   process.env["COOKOUT_URL"] = cookout.webUrl;

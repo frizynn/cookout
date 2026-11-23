@@ -18,7 +18,11 @@
  * once, a refusal shows in that form and keeps the text), Theme, the theme
  * switch (the `layout` store), and My agents. Wherever an identity
  * shows, its display name, read live from the identity list `Authors` gives,
- * comes first with the `@name` muted beside it. `ChannelView` is a channel's pane: its name and
+ * comes first with the `@name` muted beside it. Wherever an avatar shows (a
+ * message's author, a People row, a profile, the sidebar's logged-in human)
+ * and on each `@` suggestion, a dot shows the identity's presence, read live
+ * from the presence store `Authors` also gives, its label ticking ("Offline,
+ * last seen 5 minutes ago"). `ChannelView` is a channel's pane: its name and
  * description, its top-level messages, newest last, with "Load older
  * messages" for older ones or, when there are none, the start of the channel,
  * and viewing it marks the channel read; under them a message box that posts a
@@ -61,7 +65,9 @@
  * `agent` and `admin` tags and its kind and owner, the open one highlighted;
  * "Nobody matches." when the filters leave none. `ProfileView` is the panel
  * beside it for one identity: its large avatar, name and tags, display name,
- * kind and owner, and when it joined, or "Unknown identity", with a link that
+ * kind and owner, its presence (how it is connected while online, "Online ·
+ * watching from laptop-1", "Online · watching" or "Online · web", or when it
+ * was last seen while offline), and when it joined, or "Unknown identity", with a link that
  * closes it (as Escape does). The panel opens beside any page: a message's
  * author and an `@name` link to it, beside the page `ProfileLinks` names. On
  * your own profile, and on an agent's to its owner, a form saves its display
