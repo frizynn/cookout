@@ -2,8 +2,9 @@
 
 /*
  * Colour roles (#152). The accent means "this needs you" and nothing else:
- * - mention-bar, mention-bg, mention-fg, mention-ink: the accent. A message that mentions or answers the reader
- *   (bar and tint), the reader's own @name (fg), and every count badge of what is for the reader (bar, with ink text).
+ * - mention-bar, mention-bg, mention-fg, mention-ink: the accent. A dot or a badge, never a filled block (#178): the
+ *   accent dot (bar) beside a message, thread summary or Inbox row that is for the reader, the reader's own @name
+ *   (fg on a faint tint), and every count badge of what is for the reader (bar, with ink text).
  * - unread: the New line in a channel or thread, and nothing else.
  * - link: the focus ring only. Links, chips, statuses and other people's @names are neutral.
  * - foreground, muted-foreground: text; bold foreground is activity (unread, not for the reader).

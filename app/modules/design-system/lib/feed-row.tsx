@@ -10,7 +10,7 @@ interface RowParts extends FeedRowParts {
 
 const LOOKS = {
   activity: "",
-  "for-you": "bg-mention-bg/60",
+  "for-you": "",
   read: "opacity-80 hover:opacity-100",
 } as const;
 
