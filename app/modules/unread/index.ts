@@ -22,7 +22,8 @@
  * when its first reader subscribes it loads the inbox history
  * (`GET /v1/inbox/history`) a page of `pageSize` items at a time (50 unless
  * given), keeping the read ones newest first and reading on until a page
- * holds one, and `loadMore` reads the next page. An item a read position
+ * holds one, and `loadMore` reads the next page; its state says the page size,
+ * for the "Show 50 earlier" button. An item a read position
  * takes out of the counts joins it, so opening an item moves it there.
  * It loads the caller's read positions (`GET /v1/read-positions`) with the
  * inbox and follows them by `read-position`. `newLine` is where a channel's or

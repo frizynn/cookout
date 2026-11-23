@@ -61,13 +61,16 @@
  * each a link over the whole row (named by its text) leading with why it is
  * there (`why`), then a message with its author's avatar and name (its own
  * link, to `authorHref`, above the row's), what they did (`action`) and in which channel, a
- * short time and any `context` line (a reply's thread), then what it holds:
- * its `FeedText`, up to two lines. A `for-you` row has an accent dot and why,
+ * short time, any `count` of how many of its messages are new ("3 new") and any
+ * `context` line (a reply's thread), then what it holds: its `FeedText`, up to
+ * two lines. A `for-you` row has an accent dot and why,
  * a bold name and bright text; an `activity` row has a muted dot and why, a
  * bold name and bright text; a `read` one is muted. `Mention` is
  * an `@` mention in a message's text, in the mention colour when it is the
  * reader's own (`mine`). `FeedNote` is a muted line in a feed: why a part is
- * `empty`, or that it has reached the `end`.
+ * `empty`, or that it has reached the `end`; `MoreButton` is a quiet
+ * full-width row under a list that loads more of it, with a spinner while
+ * `loading`.
  * `MessageList` is a named list of `MessageItem`s: one message each, which
  * takes focus, with its avatar, name and time, or only its time on hover when
  * `grouped` under the one before; the day's separator and the "New" line above it when it starts them; a
@@ -122,6 +125,7 @@ export { MessageBody } from "./lib/message-body.tsx";
 export { MessageItem } from "./lib/message-item.tsx";
 export { MessageList } from "./lib/message-list.tsx";
 export { QuietButton } from "./lib/quiet-button.tsx";
+export { MoreButton } from "./lib/more-button.tsx";
 export { RepliesDivider } from "./lib/replies-divider.tsx";
 export { ThreadSummary } from "./lib/thread-summary.tsx";
 export { StandaloneMessage } from "./lib/standalone-message.tsx";
