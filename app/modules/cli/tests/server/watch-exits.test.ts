@@ -151,7 +151,11 @@ it.effect(
       });
 
       expect(result.exitCode).toBe(EXIT_UNREACHABLE);
-      expect(stdoutLines).toStrictEqual([expect.stringMatching(/^cookout watch stopped: .*\(server_unreachable\)$/u)]);
+      expect(stdoutLines).toStrictEqual([
+        expect.stringMatching(
+          /^cookout watch stopped: cannot reach http:\S+: .* \(check COOKOUT_URL, or HTTPS_PROXY if you are behind a proxy\) \(server_unreachable\)$/u,
+        ),
+      ]);
       expect(result.stderr).toContain('"reconnecting"');
     }).pipe(Effect.provide(commandLineServices)),
 );

@@ -12,6 +12,7 @@ import { callClient, toFailure } from "./adapters/sdk.ts";
 import type { Scope } from "effect";
 import { eventsPath } from "../../../events/index.ts";
 import { note } from "./watch-lines.ts";
+import { unreachableMessage } from "./adapters/http.ts";
 
 type Heard = InboxItemEvent | ConnectedEvent;
 
@@ -74,7 +75,7 @@ function start(
 }
 
 function isDropped({ code, status = NO_STATUS }: CallFailure): boolean {
-  return code === "cli_error" || status >= SERVER_ERROR;
+  return code === "cli_error" || code === "unreachable" || status >= SERVER_ERROR;
 }
 
 function keepTrying({ elapsed, input }: { readonly elapsed: number; readonly input: CallFailure }): boolean {
@@ -93,11 +94,16 @@ function sayReconnecting(failure: CallFailure): Effect.Effect<void> {
   return note({ reconnecting: failure.message });
 }
 
-function gaveUp(failure: CallFailure): CallFailure {
-  if (!isDropped(failure)) {
-    return failure;
-  }
-  return { code: "server_unreachable", message: `Couldn't reach the server for 5 minutes: ${failure.message}` };
+function gaveUp(url: string): (failure: CallFailure) => CallFailure {
+  return (failure) => {
+    if (!isDropped(failure)) {
+      return failure;
+    }
+    if (failure.code === "unreachable") {
+      return { code: "server_unreachable", message: failure.message };
+    }
+    return { code: "server_unreachable", message: unreachableMessage({ url, why: failure.message }) };
+  };
 }
 
 function lastSeenAfter(event: Heard): (seen: Option.Option<MessageId>) => Option.Option<MessageId> {
@@ -127,7 +133,7 @@ function source({ first, opened }: Resuming): Stream.Stream<Heard, CallFailure> 
       return Stream.unwrap(next).pipe(
         Stream.tapError(sayReconnecting),
         Stream.retry(reconnectBackoff),
-        Stream.mapError(gaveUp),
+        Stream.mapError(gaveUp(opened.connection.url)),
         Stream.flattenIterable,
         Stream.tap((event) => Ref.update(lastSeen, lastSeenAfter(event))),
       );

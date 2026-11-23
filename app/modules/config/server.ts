@@ -3,7 +3,7 @@
  * reads the environment, and every variable here has a line in `.env.example`
  * and a line in the README's Settings section (`pnpm hygiene` checks both).
  */
-import { Array as Arr, Config, Record as Rec, Redacted, Schema } from "effect";
+import { Array as Arr, Config, Record as Rec, Redacted, Schema, String as Str } from "effect";
 import { firstAdminName, isIdentityName } from "../identities/index.ts";
 import type { IdentityName } from "../identities/index.ts";
 import { agentToolVariables } from "./index.ts";
@@ -36,6 +36,13 @@ const adminNameRule =
   "COOKOUT_ADMIN_NAME must be an identity name: 1 to 64 lowercase letters, digits or `-`, such as `matt`. It names the identity the admin token belongs to.";
 
 const AdminNameSchema = Schema.String.pipe(Schema.refine(isIdentityName));
+
+function proxyVariable(name: string): Config.Config<string> {
+  return Config.String(Str.toLowerCase(name)).pipe(
+    Config.orElse(() => Config.String(name)),
+    Config.withDefault(""),
+  );
+}
 
 /** `PORT`: the port `cookout serve` listens on. 0 picks a free port. */
 export const port = Config.schema(Schema.Int.check(Schema.isBetween({ maximum: 65_535, minimum: 0 })), "PORT").pipe(
@@ -170,6 +177,17 @@ export const cookoutToken = Config.String("COOKOUT_TOKEN").pipe(Config.withDefau
  * (mattpocock/cookout#150). Empty counts as unset.
  */
 export const cookoutSession = Config.String("COOKOUT_SESSION").pipe(Config.withDefault(""));
+
+/**
+ * `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`: the proxy every CLI verb but `serve` sends `http://` and `https://`
+ * requests through (`https://` falls back to `HTTP_PROXY`), and the hosts it reaches directly. Each lowercase name, as
+ * curl reads it, comes first (mattpocock/cookout#156). Empty counts as unset.
+ */
+export const proxyEnvironment = Config.all({
+  httpProxy: proxyVariable("HTTP_PROXY"),
+  httpsProxy: proxyVariable("HTTPS_PROXY"),
+  noProxy: proxyVariable("NO_PROXY"),
+});
 
 /**
  * The variables that show which agent tool runs the CLI (such as `CLAUDECODE` for Claude Code, and `AI_AGENT`), and
