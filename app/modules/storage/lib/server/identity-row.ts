@@ -28,7 +28,7 @@ const sharedColumns = {
 
 const HumanRow = Schema.Struct({
   ...sharedColumns,
-  description: Schema.Null,
+  description: Schema.optionalKey(Schema.Null),
   kind: Schema.Literal("human"),
   owner: Schema.Null,
 });

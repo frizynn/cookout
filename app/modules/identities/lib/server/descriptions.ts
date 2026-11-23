@@ -39,7 +39,7 @@ function mayDescribe(caller: Identity, target: Identity): boolean {
 
 function refusalFor(caller: Identity, name: IdentityName, target: Identity | undefined): Option.Option<Refusal> {
   if (Predicate.isUndefined(target)) {
-    return Option.some(identityNotFound(name));
+    return Option.none();
   }
   if (target.kind === "human") {
     return Option.some(humanHasNone(name));
