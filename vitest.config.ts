@@ -26,7 +26,12 @@ export default defineConfig({
       {
         extends: true,
         test: {
-          include: ["app/**/*.test.ts", "packages/handler-example/app/**/*.test.ts", "lint/**/*.test.js"],
+          include: [
+            "app/**/*.test.ts",
+            "packages/handler-example/app/**/*.test.ts",
+            "lint/**/*.test.js",
+            "scripts/**/*.test.ts",
+          ],
           isolate: false,
           name: "server",
         },

@@ -51,6 +51,7 @@ module.exports = {
         pathNot: [
           `^${R}/(${TESTED_INTERFACES.join("|")})/tests/`,
           `^${HANDLER_EXAMPLE_MODULES}/(${HANDLER_EXAMPLE_TESTED_INTERFACES.join("|")})/tests/`,
+          "^scripts/tests/",
         ],
       },
       name: "tests-only-at-tested-interfaces",
