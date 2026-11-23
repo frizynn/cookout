@@ -12,16 +12,16 @@ import {
   port,
   publicUrl,
 } from "../../../config/server.ts";
-import { adminTokenSet, openIdentityRoutes } from "../../../identities/server.ts";
-import { domainLayers, routes } from "./route-list.ts";
+import { domainLayers, openRoutes, routes } from "./route-list.ts";
 import { firstAdminName, token } from "../../../identities/index.ts";
 import { httpServer, serverUrl } from "../../../http/server.ts";
-
 import { printLine, refused } from "./output.ts";
+
 import type { AdminNameIsAgent } from "../../../identities/server.ts";
 import type { CommandFailed } from "./output.ts";
 import type { FileSystem } from "effect";
 import type { Serving } from "../../../http/server.ts";
+import { adminTokenSet } from "../../../identities/server.ts";
 import { requireTokenWithinLimit } from "./gate.ts";
 
 export type ServeLayers = {
@@ -34,7 +34,7 @@ export const cookoutServer = ({
   adminToken: admin,
   ...serving
 }: Serving & { readonly adminToken: Token; readonly adminName?: IdentityName }) =>
-  httpServer(serving, { gated: routes, open: openIdentityRoutes }, requireTokenWithinLimit).pipe(
+  httpServer(serving, { gated: routes, open: openRoutes }, requireTokenWithinLimit).pipe(
     Layer.provideMerge(adminTokenSet({ adminName: name, adminToken: admin })),
     Layer.provideMerge(domainLayers),
   );

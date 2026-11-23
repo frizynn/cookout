@@ -69,4 +69,8 @@ function joiner(on: On) {
     });
 }
 
-export { type Join, type On, joiner };
+function joinOn(settings: Omit<On, "ceilingSeconds">): On {
+  return { ...settings, ceilingSeconds: idleSecondsOf(settings.maxIdle) };
+}
+
+export { type Join, type On, joinOn, joiner };

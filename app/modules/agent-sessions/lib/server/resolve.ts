@@ -2,9 +2,9 @@ import type { AgentIdentity, HumanIdentity, Identity, IdentityName } from "../..
 import { DateTime, Effect, Option, Predicate } from "effect";
 import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import { identityDeactivated, joinNotOwned, notYourIdentity, onlyAgentsJoin } from "./refusals.ts";
+import { isIdentityName, nameFitsOwner } from "../../../identities/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Secrets } from "../../../secrets/server.ts";
-import { isIdentityName } from "../../../identities/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
@@ -23,6 +23,7 @@ interface Asked {
   readonly on: On;
   readonly caller: HumanIdentity;
   readonly name: IdentityName;
+  readonly preview: boolean;
 }
 
 type Taken = (found: Identity) => Fails<Resolved>;
@@ -50,7 +51,15 @@ function joinOwned(found: AgentIdentity): Fails<Resolved> {
   return Effect.succeed({ created: false, identity: found });
 }
 
-function createOwned({ caller, name, on }: Asked): Fails<Resolved> {
+function previewed(identity: AgentIdentity): Fails<Resolved> {
+  if (nameFitsOwner(identity)) {
+    return Effect.succeed({ created: true, identity });
+  }
+  return Effect.fail(joinNotOwned(identity.name));
+}
+
+function createOwned(asked: Asked): Fails<Resolved> {
+  const { caller, name, on } = asked;
   return Effect.gen(function* createOwnedAgent() {
     const now = yield* DateTime.now;
     const identity: AgentIdentity = {
@@ -60,6 +69,9 @@ function createOwned({ caller, name, on }: Asked): Fails<Resolved> {
       name,
       owner: caller.name,
     };
+    if (asked.preview) {
+      return yield* previewed(identity);
+    }
     const hash = yield* Effect.flatMap(on.secrets.newToken, on.secrets.hashToken);
     const result = yield* on.storage.createIdentity(identity, hash);
     if (result !== "created") {
@@ -111,7 +123,7 @@ interface Join {
 function agentToJoin(join: Join): Fails<Resolved> {
   const { as, caller, on } = join;
   if (caller.kind === "human") {
-    return resolveAgent({ caller, name: as, on });
+    return resolveAgent({ caller, name: as, on, preview: false });
   }
   if (as !== caller.name) {
     return Effect.fail(notYourIdentity({ asked: as, caller: caller.name }));
@@ -119,4 +131,18 @@ function agentToJoin(join: Join): Fails<Resolved> {
   return Effect.succeed({ created: false, identity: caller });
 }
 
-export { agentToJoin };
+interface Preview {
+  readonly on: On;
+  readonly caller: HumanIdentity;
+  readonly as: IdentityName;
+}
+
+function agentToPreview({ as, caller, on }: Preview): Fails<Resolved> {
+  return resolveAgent({ caller, name: as, on, preview: true });
+}
+
+function agentToApprove({ as, caller, on }: Preview): Fails<Resolved> {
+  return resolveAgent({ caller, name: as, on, preview: false });
+}
+
+export { agentToApprove, agentToJoin, agentToPreview };

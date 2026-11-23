@@ -4,18 +4,19 @@ import { Context, DateTime, Duration, Effect, Layer, Option } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import type { Join, On } from "./join.ts";
 import { agentSessionExpired, agentSessionRevoked } from "../../index.ts";
+import { joinOn, joiner } from "./join.ts";
 import type { Config } from "effect";
+import type { JoinRequests } from "./join-requests.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
-import { idleSecondsOf } from "./idle-expiry.ts";
 import { isoTimeOf } from "../../../time/server.ts";
-import { joiner } from "./join.ts";
+import { joinRequestsOn } from "./join-requests.ts";
 import { maxIdleExpiry } from "../../../config/server.ts";
 
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
 
-interface AgentSessionsService {
+interface AgentSessionsService extends JoinRequests {
   readonly join: (caller: Identity, request: Join) => Fails<AgentSessionResponse>;
   readonly leave: (hash: TokenHash) => Effect.Effect<void, StorageUnavailable>;
   readonly untilEnded: (hash: TokenHash) => Effect.Effect<Refusal, StorageUnavailable>;
@@ -88,7 +89,13 @@ function ownerViews({ storage }: On): Pick<AgentSessionsService, "listFor" | "re
 }
 
 function agentSessionsOn(on: On): AgentSessionsService {
-  return { join: joiner(on), leave: on.storage.revokeAgentSession, untilEnded: watcher(on), ...ownerViews(on) };
+  return {
+    join: joiner(on),
+    leave: on.storage.revokeAgentSession,
+    untilEnded: watcher(on),
+    ...ownerViews(on),
+    ...joinRequestsOn(on),
+  };
 }
 
 const agentSessionsLayer: Layer.Layer<AgentSessions, Config.ConfigError, Storage | Secrets> = Layer.effect(
@@ -97,8 +104,7 @@ const agentSessionsLayer: Layer.Layer<AgentSessions, Config.ConfigError, Storage
     const maxIdle = yield* maxIdleExpiry;
     const storage = yield* Storage;
     const secrets = yield* Secrets;
-    const ceilingSeconds = idleSecondsOf(maxIdle);
-    return agentSessionsOn({ ceilingSeconds, maxIdle, secrets, storage });
+    return agentSessionsOn(joinOn({ maxIdle, secrets, storage }));
   }),
 );
 

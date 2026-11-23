@@ -23,6 +23,7 @@ export type { AgentAt, UseAgentSessionResult } from "./lib/server/agent-sessions
 export type { TransferAgentResult } from "./lib/server/identity-admins.ts";
 export type { LoginCollection, LoginRequest, NewLoginRequest } from "./lib/server/login-requests.ts";
 export type {
+  AgentJoinApproval,
   AgentJoinCollection,
   AgentJoinRequest,
   NewAgentJoinRequest,
