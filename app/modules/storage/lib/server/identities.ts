@@ -27,11 +27,9 @@ type ReplaceTokenResult =
   | { readonly status: "replaced"; readonly identity: Identity }
   | { readonly status: "not_found" };
 
-type SetOnlyTokenResult = "created" | "replaced" | "unchanged";
-
 export type IdentitiesSection = DisplayNamesSection & {
   readonly createIdentity: (identity: Identity, hash: TokenHash) => Fails<"created" | CreateRefusal>;
-  readonly setOnlyToken: (identity: Identity, hash: TokenHash) => Fails<SetOnlyTokenResult>;
+  readonly setOnlyToken: (identity: Identity, hash: TokenHash) => Fails<void>;
   readonly listIdentities: () => Fails<readonly Identity[]>;
   readonly findIdentityByTokenHash: (hash: TokenHash) => Fails<TokenLookup>;
   readonly findIdentityByName: (name: IdentityName) => Fails<Identity | undefined>;
@@ -67,25 +65,13 @@ function createIn(data: MemoryIdentities, identity: Identity, hash: TokenHash): 
   return "created";
 }
 
-function setOnlyTokenResultIn(data: MemoryIdentities, identity: Identity, hash: TokenHash): SetOnlyTokenResult {
+function setOnlyTokenIn(data: MemoryIdentities, identity: Identity, hash: TokenHash): void {
   if (!data.identities.has(identity.name)) {
-    return "created";
-  }
-  if (data.activeTokens.get(hash) === identity.name) {
-    return "unchanged";
-  }
-  return "replaced";
-}
-
-function setOnlyTokenIn(data: MemoryIdentities, identity: Identity, hash: TokenHash): SetOnlyTokenResult {
-  const result = setOnlyTokenResultIn(data, identity, hash);
-  if (result === "created") {
     data.identities.set(identity.name, { ...identity });
   }
   revokeTokensOf(data, identity.name);
   data.revokedTokens.delete(hash);
   data.activeTokens.set(hash, identity.name);
-  return result;
 }
 
 const lookUp = (data: MemoryIdentities, hash: TokenHash): TokenLookup => {
@@ -147,7 +133,10 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
         return { identity: { ...identity }, status: "replaced" };
       }),
     setAdmin: (name, admin) => open(() => memorySetAdmin(data.identities)(name, admin)),
-    setOnlyToken: (identity, hash) => open(() => setOnlyTokenIn(data, identity, hash)),
+    setOnlyToken: (identity, hash) =>
+      open(() => {
+        setOnlyTokenIn(data, identity, hash);
+      }),
   };
 };
 
@@ -248,13 +237,8 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
           const existing = yield* count("SELECT count(*) AS count FROM identities WHERE name = ?", identity.name);
           if (existing === 0) {
             yield* Effect.andThen(db.run("DELETE FROM tokens WHERE token_hash = ?", hash), insert(identity, hash));
-            return "created" as const;
+            return;
           }
-          const held = yield* count(
-            "SELECT count(*) AS count FROM tokens WHERE token_hash = ? AND identity_name = ? AND revoked = 0",
-            hash,
-            identity.name,
-          );
           yield* db.run(
             "UPDATE tokens SET revoked = 1 WHERE identity_name = ? AND revoked = 0 AND token_hash <> ?",
             identity.name,
@@ -266,10 +250,6 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
             hash,
             identity.name,
           );
-          if (held > 0) {
-            return "unchanged" as const;
-          }
-          return "replaced" as const;
         }),
       ),
     ...sqliteDisplayNames(db),

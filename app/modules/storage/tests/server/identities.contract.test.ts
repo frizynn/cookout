@@ -156,11 +156,10 @@ it.effect.each(storageLayers)(
     Effect.gen(function* setOnlyTokenCreates() {
       const { storage } = yield* openStore(layer);
       yield* storage.createIdentity(identity("other"), hashB);
-      const result = yield* storage.setOnlyToken(identity("admin", { admin: true }), hashA);
+      yield* storage.setOnlyToken(identity("admin", { admin: true }), hashA);
       const identities = yield* storage.listIdentities();
       const found = yield* storage.findIdentityByTokenHash(hashA);
 
-      expect(result).toBe("created");
       expect(identities).toStrictEqual([identity("admin", { admin: true }), matt, identity("other")]);
       expect(found).toStrictEqual({ identity: identity("admin", { admin: true }), status: "active" });
     }),
@@ -173,11 +172,10 @@ it.effect.each(storageLayers)(
       const { storage } = yield* openStore(layer);
       yield* storage.setOnlyToken(identity("admin", { admin: true }), hashA);
       yield* storage.replaceToken(nameOf("admin"), hashB);
-      const back = yield* storage.setOnlyToken(identity("admin", { admin: true }), hashA);
-      const moved = yield* storage.setOnlyToken(identity("admin", { admin: true }), hashC);
+      yield* storage.setOnlyToken(identity("admin", { admin: true }), hashA);
+      yield* storage.setOnlyToken(identity("admin", { admin: true }), hashC);
       const lookups = yield* Effect.forEach([hashA, hashB, hashC], storage.findIdentityByTokenHash, { concurrency: 1 });
 
-      expect([back, moved]).toStrictEqual(["replaced", "replaced"]);
       expect(lookups).toStrictEqual([
         { status: "revoked" },
         { status: "revoked" },
@@ -192,11 +190,10 @@ it.effect.each(storageLayers)(
     Effect.gen(function* setOnlyTokenUnchanged() {
       const { storage } = yield* openStore(layer);
       yield* storage.setOnlyToken(identity("admin", { admin: true }), hashA);
-      const again = yield* storage.setOnlyToken(identity("admin", { admin: true }), hashA);
+      yield* storage.setOnlyToken(identity("admin", { admin: true }), hashA);
       const identities = yield* storage.listIdentities();
       const found = yield* storage.findIdentityByTokenHash(hashA);
 
-      expect(again).toBe("unchanged");
       expect(identities).toStrictEqual([identity("admin", { admin: true }), matt]);
       expect(found).toStrictEqual({ identity: identity("admin", { admin: true }), status: "active" });
     }),
@@ -207,17 +204,16 @@ it.effect.each(storageLayers)(
   ({ layer }) =>
     Effect.gen(function* setOnlyTokenAtOnce() {
       const { storage } = yield* openStore(layer);
-      const results = yield* pipe(
+      yield* pipe(
         Arr.makeBy(AT_ONCE, String),
         Effect.forEach(
           (index) =>
             storage.setOnlyToken(identity("admin", { admin: true }), tokenHash(Str.repeat(HASH_LENGTH)(index))),
-          { concurrency: "unbounded" },
+          { concurrency: "unbounded", discard: true },
         ),
       );
       const identities = yield* storage.listIdentities();
 
-      expect(Arr.filter(results, (result) => result === "created")).toStrictEqual(["created"]);
       expect(identities).toStrictEqual([identity("admin", { admin: true }), matt]);
     }),
 );
