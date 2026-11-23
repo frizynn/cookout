@@ -1,4 +1,5 @@
-import { field, list, text } from "./json.ts";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { field, list, parseJson, text } from "./json.ts";
 import path from "node:path";
 
 interface FileTiming {
@@ -16,6 +17,13 @@ interface Summary {
   readonly timings: readonly FileTiming[];
 }
 
+interface ReportFile {
+  readonly base: string;
+  readonly file: string;
+  readonly runner: "playwright" | "vitest";
+}
+
+const TIMINGS_DIR = ".timings";
 const MS_PER_SECOND = 1000;
 const DECIMALS = 1;
 const SUMMARY_COUNT = 10;
@@ -100,5 +108,30 @@ function fullList(timings: readonly FileTiming[]): string {
     .join("");
 }
 
-export type { FileTiming };
-export { fullList, playwrightTimings, slowestNames, slowestSummary, vitestTimings };
+function readTimings({ base, file, runner }: ReportFile): readonly FileTiming[] {
+  if (!existsSync(file)) {
+    return [];
+  }
+  const report = parseJson(readFileSync(file, "utf8"));
+  if (runner === "playwright") {
+    return playwrightTimings({ base, report });
+  }
+  return vitestTimings({ base, report });
+}
+
+function saveFullList({ label, timings }: Summary): void {
+  mkdirSync(TIMINGS_DIR, { recursive: true });
+  writeFileSync(path.join(TIMINGS_DIR, `${label}.txt`), fullList(timings));
+}
+
+export type { FileTiming, ReportFile };
+export {
+  TIMINGS_DIR,
+  fullList,
+  playwrightTimings,
+  readTimings,
+  saveFullList,
+  slowestNames,
+  slowestSummary,
+  vitestTimings,
+};

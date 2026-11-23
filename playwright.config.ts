@@ -17,7 +17,7 @@ export default defineConfig<RelayOptions>({
       },
     },
   ],
-  reporter: "list",
+  reporter: [["list"], ["json", { outputFile: ".timings/browser.json" }]],
   retries: 0,
   testDir: "app/modules/routes/tests/browser",
   testMatch: "*.browser.test.ts",
