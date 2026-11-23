@@ -147,3 +147,34 @@ it("someone who doesn't own the agent sees its profile with no edit controls", {
 
   close();
 });
+
+it("a profile asked for beside the people page opens as the people page's own profile", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const prefix = "web-panel-people";
+  const { stranger } = await crewOf(prefix);
+  const close = openAt({ client: stranger, hash: `#/people?profile=${prefix}-bot` });
+  const list = await screen.findByRole("list", { name: "Identities" });
+  const heading = await inProfile().findByRole("heading", { level: 3 });
+
+  expect([
+    heading.textContent,
+    within(list)
+      .getByRole("link", { name: new RegExp(`^${prefix}-human`, "u") })
+      .getAttribute("href"),
+  ]).toStrictEqual([`${prefix}-botagent`, `#/people/${prefix}-human`]);
+
+  close();
+});
+
+it("a profile open beside the login page closes to the people page", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const prefix = "web-panel-login";
+  const { stranger } = await crewOf(prefix);
+  const close = openAt({ client: stranger, hash: `#/login?profile=${prefix}-bot` });
+
+  await expect(inProfile().findByRole("link", { name: "Close profile" })).resolves.toHaveProperty("hash", "#/people");
+
+  close();
+});

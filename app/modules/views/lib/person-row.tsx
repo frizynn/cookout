@@ -3,8 +3,8 @@ import { IdentityRow } from "../../design-system/index.tsx";
 import { IdentityTags } from "./identity-tags.tsx";
 import type { ReactNode } from "react";
 import { noteOf as deactivatedNote } from "./use-author.ts";
-import { hrefOf } from "../../paths/index.ts";
 import { kindOf } from "./kind-of.ts";
+import { useProfileHref } from "./profile-base.ts";
 
 const TEXT = { you: "(you)" } as const;
 
@@ -23,13 +23,14 @@ function noteOf(identity: Identity, me: IdentityName): string | null {
 
 export function PersonRow(props: PersonRowProps): ReactNode {
   const { identity } = props;
+  const profileOf = useProfileHref();
   return (
     <IdentityRow
       active={identity.name === props.open}
       agent={identity.kind === "agent"}
       detail={kindOf(identity)}
       displayName={identity.displayName ?? null}
-      href={hrefOf({ identity: identity.name, name: "profile" })}
+      href={profileOf(identity.name)}
       name={identity.name}
       note={noteOf(identity, props.me)}
     >
