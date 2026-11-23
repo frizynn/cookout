@@ -1,5 +1,6 @@
 import type { PresenceDotParts } from "./avatar-parts.ts";
 import type { ReactNode } from "react";
+import { presenceNameOf } from "./presence-name.ts";
 
 const PLACES = {
   avatar: "absolute -right-0.5 -bottom-0.5 size-3 ring-2 ring-background",
@@ -24,7 +25,7 @@ export function PresenceDot(parts: PresenceDotParts): ReactNode {
   return (
     <span className={`flex shrink-0 rounded-full bg-background ${PLACES[parts.place ?? "avatar"]}`} title={parts.label}>
       <svg
-        aria-label={parts.label}
+        aria-label={presenceNameOf({ name: parts.name, presence: parts })}
         className={`size-full ${lookOf(parts.online)}`}
         data-presence={presenceOf(parts.online)}
         role="img"

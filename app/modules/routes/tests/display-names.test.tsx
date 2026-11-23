@@ -136,7 +136,7 @@ it("saving an empty display name clears it", { timeout: 5000 }, async () => {
   await human.setDisplayName("web-names-clear-human", "Grace Hopper");
   const close = await openSettings(human);
   await saveIn("Your display name", "");
-  await inSidebar().findByText("web-names-clear-human");
+  await inSidebar().findByRole("link", { name: /^web-names-clear-human/u });
   const field = fieldIn("Your display name");
   await openPeople();
 
