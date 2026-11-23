@@ -36,20 +36,27 @@ export type TestCookoutService = {
   readonly webhook: WebhookFake["Service"];
 };
 
-export class TestCookout extends Context.Service<TestCookout, TestCookoutService>()("cookout/testing/TestCookout") {}
+export class TestCookout extends Context.Service<TestCookout, TestCookoutService>()(
+  "@ai-hero/cookout/testing/lib/server/cookout/TestCookout",
+) {}
 
 export type TestCookoutOptions = {
   readonly storage?: "memory" | "unusable";
   readonly secrets?: "test" | "live";
   readonly leaseSeconds?: number;
   readonly publicUrl?: string;
+  readonly webhookTimeoutSeconds?: number;
 };
 
-function serverEnv({ leaseSeconds }: TestCookoutOptions): ConfigProvider.ConfigProvider {
-  if (typeof leaseSeconds === "number") {
-    return ConfigProvider.fromEnv({ env: { COOKOUT_LEASE_SECONDS: String(leaseSeconds) } });
-  }
-  return ConfigProvider.fromEnv({ env: {} });
+function serverEnv({ leaseSeconds, webhookTimeoutSeconds }: TestCookoutOptions): ConfigProvider.ConfigProvider {
+  return ConfigProvider.fromEnv({
+    env: {
+      ...(leaseSeconds === undefined ? {} : { COOKOUT_LEASE_SECONDS: String(leaseSeconds) }),
+      ...(webhookTimeoutSeconds === undefined
+        ? {}
+        : { COOKOUT_WEBHOOK_TIMEOUT_SECONDS: String(webhookTimeoutSeconds) }),
+    },
+  });
 }
 
 const clientAt =

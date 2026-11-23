@@ -4,8 +4,8 @@
  * the server shows it, the request and answers of the command routes, their
  * paths, and the error codes they refuse with.
  */
+import type { AgentIdentity, IdentityName } from "../identities/index.ts";
 import type { JsonValue, MessageId } from "../messages/index.ts";
-import type { IdentityName } from "../identities/index.ts";
 import type { IsoTime } from "../time/index.ts";
 
 declare const brand: unique symbol;
@@ -120,3 +120,12 @@ export const commandCallsPath = "/v1/commands/:name/calls";
  * command that doesn't exist (404).
  */
 export const commandErrorCodes = ["command_exists", "handler_not_agent", "command_not_found"] as const;
+
+/**
+ * The command's handler identity: an agent with the command's name, as it is stored when the command is added.
+ * @param command The command whose handler identity to make.
+ * @returns The handler identity, which posts the command's replies.
+ */
+export function handlerOf(command: Command): AgentIdentity {
+  return { admin: false, createdAt: command.createdAt, kind: "agent", name: command.handler };
+}

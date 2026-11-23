@@ -107,7 +107,7 @@ function callCommand({
       text: `/${command.name}`,
     });
     const deliveries = yield* Deliveries;
-    yield* deliveries.deliver({ data, stored, threadId: message.id });
+    yield* deliveries.deliver({ channel: message.channel, data, stored, threadId: message.id });
     return { messageId: message.id, threadId: message.id };
   });
 }
