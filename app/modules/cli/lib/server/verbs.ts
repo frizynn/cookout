@@ -82,9 +82,17 @@ const channelCreateCommand = Command.make(
   },
 ).pipe(Command.withDescription("Create a channel. Any identity can."));
 
-const channelListCommand = Command.make("list", {}, () => answer((client) => client.listChannels())).pipe(
-  Command.withDescription("List every channel, by name."),
+const subscribedFlag = Flag.Boolean("subscribed").pipe(
+  Flag.withDefault(false),
+  Flag.withDescription("Only the channels you subscribe to."),
 );
+
+const channelListCommand = Command.make("list", { subscribed: subscribedFlag }, ({ subscribed }) => {
+  if (subscribed) {
+    return answer((client) => client.listSubscribedChannels());
+  }
+  return answer((client) => client.listChannels());
+}).pipe(Command.withDescription("List every channel, by name, or with --subscribed only yours."));
 
 const channelGetCommand = Command.make("get", { name: Argument.String("name") }, ({ name }) =>
   answer((client) => client.getChannel(name)),
