@@ -114,9 +114,8 @@ export const httpResponseSchemas = {
  * Node's HTTP server on `listen`, for any `HttpServer.serve` app: the one
  * place `node:http` is opened. Port 0 picks a free port; the server closes
  * with the Layer's scope. Closing waits for the requests still being
- * answered, but drops every connection that has sent nothing, and any that
- * opens after: Node's own close waits for such a connection as if a request
- * were on its way, and Node's fetch leaves one open (opened for a request
+ * answered, but first drops every connection that has sent nothing: Node's
+ * own close waits for such a connection as if a request were on its way, and Node's fetch leaves one open (opened for a request
  * that was then aborted) until its keep-alive time, about 3 s.
  * @internal
  * @param listen The port and host to listen on.

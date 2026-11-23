@@ -18,19 +18,13 @@ const NOTHING = 0;
 function serverDroppingSilentConnections(): ClosingServer {
   const server = createServer();
   const open = new Set<Connection>();
-  let closing = false;
   server.on("connection", (socket: Connection) => {
-    if (closing) {
-      socket.destroy();
-      return;
-    }
     open.add(socket);
     socket.once("close", () => {
       open.delete(socket);
     });
   });
   const dropSilent = Effect.sync(() => {
-    closing = true;
     for (const socket of open) {
       if (socket.bytesRead === NOTHING) {
         socket.destroy();
