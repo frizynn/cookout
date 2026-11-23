@@ -21,7 +21,7 @@ interface ChannelProps {
   readonly composer: Composer;
   readonly newLine: {
     readonly subscribe: (listener: () => void) => () => void;
-    readonly snapshot: () => MessageId | null;
+    readonly snapshot: () => number | null;
   };
   readonly me: string;
   readonly open: MessageId | null;

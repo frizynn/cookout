@@ -2,6 +2,7 @@ import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
+import { alertSaying } from "./alerts.ts";
 import { inPane } from "./regions.ts";
 import { openAt } from "./render.tsx";
 import { streamOf } from "./messages.ts";
@@ -89,6 +90,38 @@ it('right-clicking a message and choosing Mark unread moves "New" above it and p
   const [second, third] = await Promise.all([inPane().findByText("Second"), inPane().findByText("Third")]);
 
   expect([second.textContent, third.textContent]).toStrictEqual(["Second", "Third"]);
+
+  close();
+});
+
+it("marking a channel's first message unread puts the New line above it", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-mark-unread-first";
+  const close = await channelRead(channel);
+
+  fireEvent.contextMenu(screen.getByText("First"));
+  await markedUnread();
+  await streamShows("Messages", ["[New]", `${channel}-adaFirst`, "Second", "Third"]);
+
+  close();
+});
+
+it("a refused Mark unread says why", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-mark-unread-refused";
+  const close = await channelRead(channel);
+  await adminClient().deleteChannel(channel);
+
+  fireEvent.contextMenu(screen.getByText("Second"));
+  await markedUnread();
+  const alert = await alertSaying("Couldn't mark the message unread");
+
+  expect([alert.textContent, screen.queryAllByRole("menu")]).toStrictEqual([
+    expect.stringMatching(/^Couldn't mark the message unread \(message_not_found\)/u),
+    [],
+  ]);
 
   close();
 });

@@ -1,10 +1,20 @@
-import type { CookoutClient, CookoutEvent, Message, MessageId, MovedBackReadPosition } from "../../sdk/index.ts";
+import type {
+  CookoutClient,
+  CookoutEvent,
+  Message,
+  MessageId,
+  MovedBackReadPosition,
+  Refusal,
+} from "../../sdk/index.ts";
 import type { InboxItems } from "./inbox-items.ts";
+import { refusalOf } from "../../sdk/index.ts";
 
 const NOTHING_READ = 0;
 
+type OnRefused = (refusal: Refusal) => void;
+
 interface MarkUnread {
-  readonly markUnread: (messageId: MessageId) => void;
+  readonly markUnread: (messageId: MessageId, onRefused: OnRefused) => void;
   readonly receive: (event: CookoutEvent) => boolean;
 }
 
@@ -25,6 +35,22 @@ function isIn(position: MovedBackReadPosition, message: Message): boolean {
   return position.thread === null;
 }
 
+interface Marking {
+  readonly client: MarkUnreadOptions["client"];
+  readonly messageId: MessageId;
+  readonly onRefused: OnRefused;
+}
+
+async function movedOrRefused({ client, messageId, onRefused }: Marking): Promise<MovedBackReadPosition | null> {
+  try {
+    const { readPosition } = await client.markUnread(messageId);
+    return readPosition;
+  } catch (error: unknown) {
+    onRefused(refusalOf(error));
+    return null;
+  }
+}
+
 function createMarkUnread({ client, dropRead, items, onChange }: MarkUnreadOptions): MarkUnread {
   let queue: Promise<void> = Promise.resolve();
 
@@ -41,24 +67,22 @@ function createMarkUnread({ client, dropRead, items, onChange }: MarkUnreadOptio
 
   async function after(previous: Promise<void>, work: () => Promise<void>): Promise<void> {
     await previous;
-    try {
-      await work();
-      onChange();
-    } catch {
-      onChange();
+    await Promise.allSettled([work()]);
+    onChange();
+  }
+
+  async function markThenReadAgain(marking: Marking): Promise<void> {
+    const moved = await movedOrRefused(marking);
+    if (moved !== null) {
+      moveBack(moved);
+      await readAgain();
     }
   }
 
-  async function markThenReadAgain(messageId: MessageId): Promise<void> {
-    const { readPosition } = await client.markUnread(messageId);
-    moveBack(readPosition);
-    await readAgain();
-  }
-
   return {
-    markUnread: (messageId) => {
+    markUnread: (messageId, onRefused) => {
       queue = after(queue, async () => {
-        await markThenReadAgain(messageId);
+        await markThenReadAgain({ client, messageId, onRefused });
       });
     },
     receive: (event) => {

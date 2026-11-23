@@ -49,7 +49,7 @@ async function followedThreadIn(channel: string, client: CookoutClient): Promise
 
 function sendReply(text: string): void {
   fireEvent.change(screen.getByLabelText("Reply"), { target: { value: text } });
-  fireEvent.click(inThread().getByRole("button", { name: "Send reply" }));
+  fireEvent.click(inThread().getByRole("button", { name: "Send" }));
 }
 
 function hashOf(parent: Message): string {

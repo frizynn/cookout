@@ -1,6 +1,7 @@
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
 
 const NONE = 0;
+const BEFORE_EVERY_MESSAGE = 0;
 
 interface Scope {
   readonly channel: ChannelName;
@@ -22,7 +23,7 @@ type WithNewLines<Store> = Omit<Store, "movesBack" | "readPosition"> & {
 
 interface NewLine {
   readonly subscribe: (listener: () => void) => () => void;
-  readonly snapshot: () => MessageId | null;
+  readonly snapshot: () => number | null;
 }
 
 interface Lining {
@@ -32,9 +33,16 @@ interface Lining {
   readonly scope: Scope;
 }
 
+function lineOf(position: MessageId | null, movedBack: number): number | null {
+  if (position === null && movedBack > NONE) {
+    return BEFORE_EVERY_MESSAGE;
+  }
+  return position;
+}
+
 function createNewLine({ counts, movesBack, readPosition, scope }: Lining): NewLine {
   const listeners = new Set<() => void>();
-  let line: MessageId | null = null;
+  let line: number | null = null;
   let taken = false;
   let moves = NONE;
   let stop: (() => void) | null = null;
@@ -47,7 +55,7 @@ function createNewLine({ counts, movesBack, readPosition, scope }: Lining): NewL
     }
     taken = true;
     moves = movedBack;
-    line = readPosition(scope.channel, scope.thread);
+    line = lineOf(readPosition(scope.channel, scope.thread), movedBack);
     for (const listener of listeners) {
       listener();
     }

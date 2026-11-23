@@ -3,7 +3,7 @@ import type { Draft } from "../../composer/index.ts";
 import { MessageBox } from "./message-box.tsx";
 import type { ReactNode } from "react";
 
-const REPLY_BOX = { button: "Send reply", field: "Reply", form: "Reply to the thread", posts: "reply" } as const;
+const REPLY_BOX = { field: "Reply", form: "Reply to the thread", posts: "reply" } as const;
 
 interface ReplyFooterProps {
   readonly draft: Draft;

@@ -15,7 +15,7 @@ const TEXT = { empty: "No replies yet.", parent: "Parent message", replies: "Rep
 interface ThreadBodyProps {
   readonly state: ThreadMessagesState;
   readonly me: string;
-  readonly readPosition: MessageId | null;
+  readonly readPosition: number | null;
   readonly menu: MessageMenu;
 }
 
