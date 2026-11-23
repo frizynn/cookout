@@ -59,9 +59,29 @@ const identityDeleteCommand = Command.make("delete", { name: identityName }, ({ 
   answer((client) => client.deleteIdentity(name)),
 ).pipe(Command.withDescription("Delete an identity (admin only). Its token stops working."));
 
+const identityAdminCommand = Command.make(
+  "admin",
+  {
+    name: identityName,
+    remove: Flag.Boolean("remove").pipe(Flag.withDefault(false), Flag.withDescription("Remove admin instead.")),
+  },
+  ({ name, remove }) => {
+    if (remove) {
+      return answer((client) => client.removeAdmin(name));
+    }
+    return answer((client) => client.makeAdmin(name));
+  },
+).pipe(Command.withDescription("Make a human an admin, or remove admin with --remove (admin only)."));
+
 const identityCommand = Command.make("identity").pipe(
-  Command.withDescription("Create, list, rotate and delete identities."),
-  Command.withSubcommands([identityCreateCommand, identityListCommand, identityRotateCommand, identityDeleteCommand]),
+  Command.withDescription("Create, list, rotate and delete identities, and make or remove admins."),
+  Command.withSubcommands([
+    identityCreateCommand,
+    identityListCommand,
+    identityRotateCommand,
+    identityDeleteCommand,
+    identityAdminCommand,
+  ]),
 );
 
 const channelCreateCommand = Command.make(

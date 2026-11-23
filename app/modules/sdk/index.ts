@@ -158,6 +158,10 @@ export type CookoutClient = {
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
   /** Admin only. Removes the identity; its token stops working. The last admin can't be deleted (409 `last_admin`). */
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
+  /** Admin only. Makes a human an admin and answers it; an admin stays one. An agent is 403 `human_only`. */
+  readonly makeAdmin: (name: string) => Promise<IdentityResponse>;
+  /** Admin only. Removes admin and answers the identity. The last admin keeps it (409 `last_admin`). */
+  readonly removeAdmin: (name: string) => Promise<IdentityResponse>;
   /** `POST /v1/channels`: any identity can create a channel. A name in use is 409 `channel_exists`. */
   readonly createChannel: (request: CreateChannelRequest) => Promise<ChannelResponse>;
   /** `GET /v1/channels`: every channel, sorted by name. */

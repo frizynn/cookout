@@ -5,7 +5,14 @@ import type {
   ListIdentitiesResponse,
 } from "../../identities/index.ts";
 import { getJson, send } from "./request.ts";
-import { identitiesPath, identityPath, identityTokenPath, sessionPath, whoamiPath } from "../../identities/index.ts";
+import {
+  identitiesPath,
+  identityAdminPath,
+  identityPath,
+  identityTokenPath,
+  sessionPath,
+  whoamiPath,
+} from "../../identities/index.ts";
 import {
   isHealthResponse,
   isIdentityResponse,
@@ -25,11 +32,21 @@ interface IdentityCalls {
   readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
+  readonly makeAdmin: (name: string) => Promise<IdentityResponse>;
+  readonly removeAdmin: (name: string) => Promise<IdentityResponse>;
 }
 
 function sessionCall(server: ClientConnection, method: "POST" | "DELETE") {
   return async (): Promise<IdentityResponse> => {
     const answer = await send(server, { isExpected: isIdentityResponse, method, path: sessionPath });
+    return answer;
+  };
+}
+
+function adminCall(server: ClientConnection, method: "PUT" | "DELETE") {
+  return async (name: string): Promise<IdentityResponse> => {
+    const params = { name };
+    const answer = await send(server, { isExpected: isIdentityResponse, method, params, path: identityAdminPath });
     return answer;
   };
 }
@@ -65,6 +82,8 @@ function identityCalls(server: ClientConnection): IdentityCalls {
     },
     login: sessionCall(server, "POST"),
     logout: sessionCall(server, "DELETE"),
+    makeAdmin: adminCall(server, "PUT"),
+    removeAdmin: adminCall(server, "DELETE"),
     rotateToken: async (name) => {
       const rotated = await send(server, {
         isExpected: isIdentityWithTokenResponse,

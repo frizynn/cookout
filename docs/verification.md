@@ -88,6 +88,23 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity create no-kind
 
 On a fresh seed the list gives `["ada","human",null]`, `["admin","human",null]`, `["grace","human",null]`, `["release-bot","agent","ada"]` and `["triage-agent","agent","grace"]`: the admin is a human. Creating `linus` prints it with `"kind": "human"`. A human with `--owner` is refused with `invalid_request` (`A human has no owner.`), and a create without `--kind` is a usage error; both exit 1. No verb changes a kind: `identity rotate` keeps it.
 
+## Make and remove admins
+
+Any admin can make any human an admin, and only a human can be one ([ADR 0037](adr/0037-any-admin-can-make-any-human-an-admin.md)). After a fresh seed, as the admin, then as `grace`:
+
+```sh
+jq -r '.identities[] | select(.identity.name == "grace") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-grace.env
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity admin grace
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create grace-bot --kind agent --owner grace
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity admin release-bot
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity admin grace --remove
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create grace-bot-2 --kind agent
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity admin ada
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity admin admin --remove
+```
+
+`identity admin grace` prints her with `"admin": true`, and her `identity create` then succeeds. `identity admin release-bot` is refused with 403 `human_only` (`Only a human can be an admin.`). After `--remove` prints her with `"admin": false`, her next create is 403 `admin_only`, and so is any admin change she tries. Removing admin from the only admin is 409 `last_admin`. With two admins, either can remove the other's admin or its own. Making an admin of an admin, or removing admin from a non-admin, prints the identity unchanged. If another admin removes the `admin` identity's admin, the next boot gives it back, because the boot applies `COOKOUT_ADMIN_TOKEN` to it.
+
 ## Take an identity's lease
 
 A session takes an identity with `join --as <name>`, the token's own identity. The CLI keeps the lease ID in a lease-state file under `COOKOUT_STATE_DIR` (default `$XDG_STATE_HOME/cookout`, then `~/.local/state/cookout`), one per server and token, and sends it on every later command, which renews the lease. Two sessions with the same token need separate state folders. Only an agent identity joins: a human's `join` is refused with 403 `identity_kind`, and a human never needs a lease for anything. These commands play two sessions of the seeded agent `release-bot`, each with its own folder. `join` creates the folder and its leases folder with mode 700, and refuses with `lease_state_unsafe` a folder that isn't mode 700 or isn't yours, so don't make the folders yourself with plain `mkdir`:

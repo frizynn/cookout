@@ -118,6 +118,12 @@ export const identityPath = "/v1/identities/:name";
 export const identityTokenPath = "/v1/identities/:name/token";
 
 /**
+ * `PUT /v1/identities/:name/admin` (admin) makes a human an admin; `DELETE` removes admin, refusing the last admin's
+ * with 409 `last_admin`. An agent can't be made an admin (403 `human_only`).
+ */
+export const identityAdminPath = "/v1/identities/:name/admin";
+
+/**
  * `POST /v1/session` (a human's bearer token): logs the web UI in, answering with the identity and a session
  * cookie. An agent is refused with 403 `human_only`. `DELETE /v1/session` clears the cookie.
  */
