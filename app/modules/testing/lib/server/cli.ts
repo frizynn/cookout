@@ -45,6 +45,17 @@ interface Invocation {
 
 type Needs = NodeServices.NodeServices | Secrets;
 
+interface WatchRun<During, WatchNeeds> extends Invocation {
+  readonly lines: number;
+  readonly whileWatching: Effect.Effect<During, never, WatchNeeds>;
+}
+
+interface Watched<During> {
+  readonly during: During;
+  readonly stdoutJson: readonly unknown[];
+  readonly stdoutLines: readonly string[];
+}
+
 interface CommandLine {
   readonly console: Console.Console;
   readonly env: Readonly<Record<string, string>>;
@@ -179,6 +190,65 @@ function startServeWithWeb({
   return startServeOn(database, { storage: sqliteStorage, webFolder });
 }
 
+interface SignallingConsole {
+  readonly console: Console.Console;
+  readonly printed: Effect.Effect<readonly unknown[]>;
+  readonly watching: Effect.Effect<string>;
+}
+
+function watched<During>({
+  during,
+  lines,
+}: {
+  readonly during: During;
+  readonly lines: readonly unknown[];
+}): Watched<During> {
+  const stdoutLines = Arr.map(lines, String);
+  return { during, stdoutJson: Arr.map(stdoutLines, (line) => parseLine(line)), stdoutLines };
+}
+
+function signallingConsole(lines: number): Effect.Effect<SignallingConsole> {
+  return Effect.gen(function* makeSignallingConsole() {
+    const output = yield* TestConsole.make;
+    const watching = yield* Deferred.make<string>();
+    const printed = yield* Deferred.make<readonly unknown[]>();
+    const logged: unknown[] = [];
+    const console: Console.Console = {
+      ...output,
+      error: (...line: readonly unknown[]): void => {
+        output.error(...line);
+        Deferred.doneUnsafe(watching, Effect.succeed(textOf(line)));
+      },
+      log: (...line: readonly unknown[]): void => {
+        output.log(...line);
+        logged.push(textOf(line));
+        if (logged.length >= lines) {
+          Deferred.doneUnsafe(printed, Effect.succeed(logged));
+        }
+      },
+    };
+    return { console, printed: Deferred.await(printed), watching: Deferred.await(watching) };
+  });
+}
+
+function watchCookout<During, WatchNeeds>({
+  args,
+  env,
+  lines,
+  whileWatching,
+}: WatchRun<During, WatchNeeds>): Effect.Effect<Watched<During>, never, Needs | WatchNeeds | Scope.Scope> {
+  return Effect.gen(function* watchInProcess() {
+    const { console, printed, watching } = yield* signallingConsole(lines);
+    const program = exitCodeAfter(runCommandLine(args, verbLayers));
+    const command = yield* Effect.forkScoped(exitCodeOf({ console, env, program }));
+    yield* watching;
+    const during = yield* whileWatching;
+    const stdout = yield* printed;
+    yield* Fiber.interrupt(command);
+    return watched({ during, lines: stdout });
+  });
+}
+
 const devStart = exitCodeAfter(devCommandLine(["start"]));
 
 const startDev: Effect.Effect<DevProcess, never, Needs | Scope.Scope> = Effect.map(
@@ -192,6 +262,8 @@ export {
   type Needs as CommandLineNeeds,
   type ServeProcess,
   type ServeWithWeb,
+  type WatchRun,
+  type Watched,
   cliResult,
   commandLineServices,
   parseLine,
@@ -200,4 +272,6 @@ export {
   startDev,
   startServe,
   startServeWithWeb,
+  watchCookout,
+  watched,
 };

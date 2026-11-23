@@ -1,7 +1,7 @@
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
+import type { CliResult, WatchRun, Watched } from "./cli.ts";
 import { Effect, Option, Path, Schema, Stream, pipe } from "effect";
-import { cliResult, parseLine } from "./cli.ts";
-import type { CliResult } from "./cli.ts";
+import { cliResult, parseLine, watched } from "./cli.ts";
 import type { Scope } from "effect";
 
 interface BinaryRun {
@@ -40,6 +40,31 @@ function runCookoutBinary({ args, env }: BinaryRun): Effect.Effect<CliResult, ne
   }).pipe(Effect.orDie);
 }
 
+function linesOf<Failure>(stream: Stream.Stream<Uint8Array, Failure>): Stream.Stream<string, Failure> {
+  return stream.pipe(Stream.decodeText(), Stream.splitLines);
+}
+
+function watchCookoutBinary<During, Needs>({
+  args,
+  env,
+  lines,
+  whileWatching,
+}: WatchRun<During, Needs>): Effect.Effect<Watched<During>, never, Spawns | Needs> {
+  return Effect.gen(function* spawnWatch() {
+    const path = yield* Path.Path;
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+    const main = yield* path.fromFileUrl(MAIN);
+    const handle = yield* spawner.spawn(
+      ChildProcess.make(process.execPath, [main, ...args], { env: { ...env }, extendEnv: false }),
+    );
+    yield* Stream.runHead(linesOf(handle.stderr));
+    const during = yield* whileWatching;
+    const stdoutLines = yield* Stream.runCollect(Stream.take(linesOf(handle.stdout), lines));
+    yield* handle.kill();
+    return watched({ during, lines: stdoutLines });
+  }).pipe(Effect.orDie);
+}
+
 function databaseIn(line: string): Option.Option<string> {
   return pipe(
     Option.liftPredicate(parseLine(line), isDevRunning),
@@ -61,4 +86,4 @@ function interruptDevBinary(): Effect.Effect<InterruptedDev, never, Spawns> {
   }).pipe(Effect.orDie);
 }
 
-export { type InterruptedDev, interruptDevBinary, runCookoutBinary };
+export { type InterruptedDev, interruptDevBinary, runCookoutBinary, watchCookoutBinary };

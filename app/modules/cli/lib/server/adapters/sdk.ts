@@ -109,4 +109,4 @@ function callServer<Value>(call: Call<Value>): Effect.Effect<Value, CallFailure,
   return withClient(callClient(call));
 }
 
-export { type Call, type CallFailure, type ClientWithLeaseState, callClient, callServer, withClient };
+export { type Call, type CallFailure, type ClientWithLeaseState, callClient, callServer, toFailure, withClient };

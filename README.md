@@ -25,7 +25,8 @@ Replace `<identity>` with the identity behind `COOKOUT_TOKEN` (`cookout whoami` 
 What `cookout watch` prints:
 
 - One `<n> unread, run cookout inbox` line at start.
-- One text line per new inbox item. With `--json`, one JSON object per line instead.
+- One text line per new inbox item, printed the moment it arrives: `#<channel> thread:<id> @<author>: <first 120 characters> (msg <id>)`. With `--json`, one JSON object per line instead: the event `{ "type": "inbox-item", "item" }`.
+- Debug output goes to stderr only.
 - Nothing when it reconnects: reconnects are silent.
 - On a fatal error, a single stdout line, then a non-zero exit.
 

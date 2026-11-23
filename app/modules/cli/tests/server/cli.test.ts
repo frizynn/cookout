@@ -1,16 +1,24 @@
 import { Effect, pipe } from "effect";
 import {
   TestCookout,
+  answer,
   commandLineServices,
   runCookout,
   runCookoutBinary,
   testCookout,
+  watchCookoutBinary,
 } from "../../../testing/server.ts";
+import type { TestIdentity, Watched } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
+import type { MessageId } from "../../../messages/index.ts";
+import type { Scope } from "effect";
 
 const EXIT_FAILURE = 1;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const succeeded = { exitCode: 0, stderr: "" };
+const TWO_LINES = 2;
+const FIRST_TEXT = "@bob have a look";
+const SECOND_TEXT = "@bob and this";
 const verbs: readonly (readonly string[])[] = [
   ["identity", "create", "bot", "--kind", "agent", "--owner", "matt"],
   ["identity", "rotate", "bot"],
@@ -160,4 +168,57 @@ it.effect("the CLI refuses an unknown command with a usage error", () =>
 
     expect(result).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "usage" } } });
   }).pipe(Effect.provide(commandLineServices)),
+);
+
+function mention(ann: TestIdentity, text: string): Effect.Effect<MessageId> {
+  return Effect.map(
+    answer(() => ann.client.createMessage({ channel: "grill", text })),
+    ({ message }) => message.id,
+  );
+}
+
+function watchTwoMentions(
+  args: readonly string[],
+): Effect.Effect<Watched<readonly [MessageId, MessageId]>, never, Scope.Scope> {
+  return Effect.gen(function* watchAsBob() {
+    const cookout = yield* TestCookout;
+    const ann = yield* cookout.createIdentity("ann");
+    const bob = yield* cookout.createIdentity("bob");
+    yield* answer(() => ann.client.createChannel({ name: "grill" }));
+    const mentions = Effect.all([mention(ann, FIRST_TEXT), mention(ann, SECOND_TEXT)], ONE_AT_A_TIME);
+    return yield* watchCookoutBinary({
+      args,
+      env: { COOKOUT_TOKEN: bob.token, COOKOUT_URL: cookout.url },
+      lines: TWO_LINES,
+      whileWatching: mentions,
+    });
+  }).pipe(Effect.provide([testCookout(), commandLineServices]));
+}
+
+it.effect("the cookout watch process prints one text line per new inbox item to stdout, and nothing else", () =>
+  Effect.gen(function* watchText() {
+    const {
+      during: [first, second],
+      stdoutLines,
+    } = yield* watchTwoMentions(["watch"]);
+
+    expect(stdoutLines).toStrictEqual([
+      `#grill thread:${String(first)} @ann: ${FIRST_TEXT} (msg ${String(first)})`,
+      `#grill thread:${String(second)} @ann: ${SECOND_TEXT} (msg ${String(second)})`,
+    ]);
+  }),
+);
+
+it.effect("the cookout watch --json process prints one JSON line per new inbox item to stdout, and nothing else", () =>
+  Effect.gen(function* watchJson() {
+    const {
+      during: [first, second],
+      stdoutJson,
+    } = yield* watchTwoMentions(["watch", "--json"]);
+
+    expect(stdoutJson).toMatchObject([
+      { item: { message: { id: first, text: FIRST_TEXT }, reasons: ["mention"] }, type: "inbox-item" },
+      { item: { message: { id: second, text: SECOND_TEXT } }, type: "inbox-item" },
+    ]);
+  }),
 );

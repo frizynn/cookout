@@ -1,6 +1,7 @@
 /**
  * The `cookout` command tree. `serve` starts the server; every other verb
- * calls the server through the SDK. Answers are JSON on stdout; refusals are
+ * calls the server through the SDK. `watch` prints one stdout line per new
+ * inbox item, and everything else on stderr. Answers are JSON on stdout; refusals are
  * `{ error: { code, message } }` on stderr with exit code 1. `Secrets` comes
  * from the caller: `serve` issues tokens and lease IDs with it, and `join`
  * names its lease-state file with it.
@@ -22,6 +23,7 @@ import { usageFailed, withJsonPresenter } from "./lib/server/output.ts";
 import { Effect } from "effect";
 import type { ServeLayers } from "./lib/server/serve.ts";
 import { verbCommands } from "./lib/server/verbs.ts";
+import { watchCommand } from "./lib/server/watch.ts";
 
 export { cookoutServer, type ServeLayers };
 
@@ -29,7 +31,7 @@ export { cookoutServer, type ServeLayers };
 export const runCookout = (args: readonly string[], layers: ServeLayers) =>
   Command.make("cookout").pipe(
     Command.withDescription("A self-hosted, Slack-style board for people and agents."),
-    Command.withSubcommands([serveCommand(layers), ...verbCommands]),
+    Command.withSubcommands([serveCommand(layers), ...verbCommands, watchCommand]),
     (command) => Command.runWith(command, { version: "0.0.0" })(args),
     Effect.catchIf(CliError.isCliError, () => usageFailed),
     withJsonPresenter,

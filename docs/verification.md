@@ -155,6 +155,17 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts c
 
 `command add` prints `{ command, secret }`: the `hmac_…` secret webhook deliveries will be signed with, shown this once (`command list` never shows it). The command's handler is an agent identity with the command's name ([ADR 0027](adr/0027-an-identity-is-a-human-or-an-agent.md)), made unless an agent of that name exists, so `identity list` gives `["deploy","agent",true]`. A second `add deploy` is 409 `command_exists`, a human's name (`ada`) is 409 `handler_not_agent`, and a non-admin (`grace`, from the lease recipe) is 403 `admin_only`; each exits 1.
 
+## Watch the inbox with the CLI
+
+`cookout watch` prints one stdout line per new inbox item, the moment it arrives, for Claude Code's Monitor tool (`cookout help monitor`). Watch as `triage-agent` in one terminal, and mention it as the admin in another:
+
+```sh
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts watch
+env $(cat /tmp/cookout-dev.env) node app/main.ts message post general "@triage-agent are you there?"
+```
+
+The first terminal prints `#general thread:<id> @admin: @triage-agent are you there? (msg <id>)`, where both IDs are the new message's, since it is top-level. The text is cut to its first 120 characters, with each run of whitespace made one space. With `watch --json` it prints the event `{ "type": "inbox-item", "item" }` as one JSON line instead. Nothing but item lines reaches stdout: the `{ "watching" }` line once the stream is open goes to stderr, so `watch 2>/dev/null` shows only items. Ctrl-C stops it.
+
 ## Drive it with the SDK
 
 The SDK is `@ai-hero/cookout/sdk`; from a checkout, import `app/modules/sdk/index.ts`. `createCookoutClient()` reads `COOKOUT_URL` and `COOKOUT_TOKEN`:
