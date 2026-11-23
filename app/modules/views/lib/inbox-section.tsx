@@ -1,28 +1,27 @@
 import { FeedHeading, FeedList } from "../../design-system/index.tsx";
-import type { InboxItem } from "../../sdk/index.ts";
-import { InboxItemRow } from "./inbox-item-row.tsx";
+import type { InboxRow } from "../../unread/index.ts";
+import { InboxRowView } from "./inbox-row-view.tsx";
 import type { ReactNode } from "react";
-import { isForYou } from "../../unread/index.ts";
 
 const NONE = 0;
 
 interface InboxSectionProps {
   readonly title: string;
-  readonly items: readonly InboxItem[];
+  readonly rows: readonly InboxRow[];
   readonly forYou: boolean;
   readonly me: string;
 }
 
 export function InboxSection(props: InboxSectionProps): ReactNode {
   const { me } = props;
-  const items = props.items.toReversed().filter((item) => isForYou({ item, me }) === props.forYou);
+  const rows = props.rows.filter((row) => row.forYou === props.forYou);
   return (
-    items.length > NONE && (
+    rows.length > NONE && (
       <>
-        <FeedHeading count={items.length} title={props.title} />
+        <FeedHeading count={rows.length} title={props.title} />
         <FeedList label={props.title}>
-          {items.map((item) => (
-            <InboxItemRow item={item} key={item.message.id} me={me} unread />
+          {rows.map((row) => (
+            <InboxRowView key={row.key} me={me} row={row} unread />
           ))}
         </FeedList>
       </>

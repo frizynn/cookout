@@ -11,14 +11,19 @@
  * some view acks it. A refusal keeps the server's error code; a server that
  * can't be reached is `unreachable`. The items have two levels, as Slack
  * shows them (Matt, #152, 2026-11-23): for you (a mention, or a reply in a
- * thread you started) and activity (the rest). `whyOf` says why one is there,
+ * thread you started) and activity (the rest). A row says why it is there,
  * `countsByChannel` counts both levels by channel, and `newsByThread` counts a
- * thread's unread replies and how many of them are for you.
+ * thread's unread replies and how many of them are for you. `rowsOf` groups
+ * items, unread or `earlier`'s, into the inbox's rows: one per thread (its
+ * replies) or channel (its top-level messages), as read positions are keyed,
+ * each with its latest item, count, level and strongest reason, newest first.
+ * Being derived from the items, the rows move with every live path above.
  * `earlier` is the read part of the inbox, for the inbox view's Earlier list:
  * when its first reader subscribes it loads the inbox history
  * (`GET /v1/inbox/history`) a page of `pageSize` items at a time (50 unless
  * given), keeping the read ones newest first and reading on until a page
- * holds one, and `loadMore` reads the next page. An item a read position
+ * holds one, and `loadMore` reads the next page; its state says the page size,
+ * for the "Show 50 earlier" button. An item a read position
  * takes out of the counts joins it, so opening an item moves it there.
  * It loads the caller's read positions (`GET /v1/read-positions`) with the
  * inbox and follows them by `read-position`. `newLine` is where a channel's or
@@ -178,5 +183,7 @@ export function createUnread(options: UnreadOptions): Unread {
 export type { Earlier, EarlierState } from "./lib/earlier.ts";
 export type { MarkAllState } from "./lib/mark-all.ts";
 export type { MessageMenu } from "./lib/message-menu.ts";
+export type { InboxRow } from "./lib/rows.ts";
+export { rowsOf } from "./lib/rows.ts";
 export type { ThreadNews, UnreadCounts, UnreadWhy } from "./lib/levels.ts";
-export { NO_COUNTS, countsByChannel, countsOf, isForYou, newsByThread, whyOf } from "./lib/levels.ts";
+export { NO_COUNTS, countsByChannel, countsOf, newsByThread } from "./lib/levels.ts";

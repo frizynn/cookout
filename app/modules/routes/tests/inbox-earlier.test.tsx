@@ -67,7 +67,13 @@ function postedRow(channel: string, text: string): string {
   return `#/channels/${channel} New in #${channel}${channel}-posterposted in#${channel}just now${text}`;
 }
 
-it("earlier lists read items newest first, a page at a time, until there are no more", { timeout: 5000 }, async () => {
+function newRow(channel: string, text: string): string {
+  return `#/channels/${channel} New in #${channel}${channel}-posterposted in#${channel}3 newjust now${text}`;
+}
+
+it("earlier lists read rows, a page at a time, merging each page into the rows it shows, until there are no more", {
+  timeout: 5000,
+}, async () => {
   expect.hasAssertions();
 
   const channel = "web-inbox-earlier";
@@ -80,14 +86,14 @@ it("earlier lists read items newest first, a page at a time, until there are no 
     null,
   ]);
 
-  fireEvent.click(inPane().getByRole("button", { name: "Load more" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Show 2 earlier" }));
   await screen.findByText("That's everything.");
 
-  expect([rowsOf("Earlier"), rowsOf("Activity"), inPane().queryByRole("button", { name: "Load more" })]).toStrictEqual([
-    ["Three", "Two", "One"].map((text) => postedRow(channel, text)),
-    ["Six", "Five", "Four"].map((text) => postedRow(channel, text)),
-    null,
-  ]);
+  expect([
+    rowsOf("Earlier"),
+    rowsOf("Activity"),
+    inPane().queryByRole("button", { name: "Show 2 earlier" }),
+  ]).toStrictEqual([[postedRow(channel, "Three")], [newRow(channel, "Six")], null]);
 
   unmount();
 });
@@ -98,13 +104,13 @@ it("clicking Load more twice before it answers reads the next page once", { time
   const channel = "web-inbox-double-click";
   const reader = await readThenUnread(channel);
   const unmount = openWithClockStopped({ client: reader, hash: "#/inbox", pageSize: TWO_A_PAGE });
-  const more = await inPane().findByRole("button", { name: "Load more" });
+  const more = await inPane().findByRole("button", { name: "Show 2 earlier" });
 
   fireEvent.click(more);
   fireEvent.click(more);
   await screen.findByText("That's everything.");
 
-  expect(rowsOf("Earlier")).toStrictEqual(["Three", "Two", "One"].map((text) => postedRow(channel, text)));
+  expect(rowsOf("Earlier")).toStrictEqual([postedRow(channel, "Three")]);
 
   unmount();
 });
@@ -121,7 +127,7 @@ it("an Earlier page that can't be read says why, at first or on Load more", { ti
     hash: "#/inbox",
     pageSize: TWO_A_PAGE,
   });
-  fireEvent.click(await inPane().findByRole("button", { name: "Load more" }));
+  fireEvent.click(await inPane().findByRole("button", { name: "Show 2 earlier" }));
   const more = await alertSaying("Couldn't load more (");
 
   expect([first.textContent, more.textContent]).toStrictEqual([

@@ -26,6 +26,7 @@ const ARGUMENTS_FROM = 2;
 const EXIT_FAILURE = 1;
 const EXIT_SUCCESS = 0;
 const NONE = 0;
+const ONE = 1;
 const MAX_BUFFER = 67_108_864;
 const RENDER_MS = 15_000;
 const WIDE = { height: 800, width: 1280 };
@@ -135,8 +136,24 @@ function viewportOf(shot: Shot): typeof WIDE {
   return WIDE;
 }
 
+async function withOlderHistory(page: Page, history: NonNullable<Screen["history"]>): Promise<void> {
+  let pages = NONE;
+  await page.route("**/v1/inbox/history*", async (route) => {
+    pages += ONE;
+    if (history === "loading" && pages > ONE) {
+      return;
+    }
+    const response = await route.fetch();
+    const body = await response.text();
+    await route.fulfill({ body: body.replace('"hasMore":false', '"hasMore":true'), response });
+  });
+}
+
 async function render(page: Page, shot: Shot): Promise<void> {
   await page.setViewportSize(viewportOf(shot));
+  if (typeof shot.screen.history === "string") {
+    await withOlderHistory(page, shot.screen.history);
+  }
   if (shot.screen.liveDown === true) {
     await page.route("**/v1/events?*", async (route) => {
       await route.abort();

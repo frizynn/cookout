@@ -20,6 +20,7 @@ type EarlierState =
       readonly status: "loaded";
       readonly items: readonly InboxItem[];
       readonly hasMore: boolean;
+      readonly pageSize: number;
       readonly more: MoreState;
     }
   | (Refusal & { readonly status: "failed" });
@@ -70,7 +71,7 @@ function newestFirst(items: Iterable<InboxItem>): readonly InboxItem[] {
 
 function loaded(pages: Pages, more: MoreState): EarlierState {
   const { hasMore, read } = pages.progress();
-  return { hasMore, items: newestFirst(read.values()), more, status: "loaded" };
+  return { hasMore, items: newestFirst(read.values()), more, pageSize: pages.pageSize, status: "loaded" };
 }
 
 function isRead(unread: UnreadItems, item: InboxHistoryItem): boolean {

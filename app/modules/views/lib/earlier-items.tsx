@@ -1,7 +1,9 @@
 import { FeedList, FeedNote } from "../../design-system/index.tsx";
 import type { InboxItem } from "../../sdk/index.ts";
-import { InboxItemRow } from "./inbox-item-row.tsx";
+import { InboxRowView } from "./inbox-row-view.tsx";
 import type { ReactNode } from "react";
+import { rowsOf } from "../../unread/index.ts";
+import { useMemo } from "react";
 
 const NONE = 0;
 const EMPTY = "Nothing read yet.";
@@ -14,13 +16,15 @@ interface EarlierItemsProps {
 }
 
 export function EarlierItems(props: EarlierItemsProps): ReactNode {
-  if (props.items.length === NONE) {
+  const { items, me } = props;
+  const rows = useMemo(() => rowsOf({ items, me }), [items, me]);
+  if (rows.length === NONE) {
     return !props.hasMore && <FeedNote place="empty">{EMPTY}</FeedNote>;
   }
   return (
     <FeedList label={props.label}>
-      {props.items.map((item) => (
-        <InboxItemRow item={item} key={item.message.id} me={props.me} unread={false} />
+      {rows.map((row) => (
+        <InboxRowView key={row.key} me={me} row={row} unread={false} />
       ))}
     </FeedList>
   );

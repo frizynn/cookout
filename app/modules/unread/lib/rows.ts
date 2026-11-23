@@ -1,0 +1,80 @@
+import type { InboxItem, MessageId } from "../../sdk/index.ts";
+import { isForYou, whyOf } from "./levels.ts";
+import type { UnreadWhy } from "./levels.ts";
+
+interface InboxRow {
+  readonly key: string;
+  readonly thread: MessageId | null;
+  readonly items: readonly InboxItem[];
+  readonly latest: InboxItem;
+  readonly count: number;
+  readonly forYou: boolean;
+  readonly why: UnreadWhy;
+}
+
+interface Grouping {
+  readonly items: readonly InboxItem[];
+  readonly me: string;
+}
+
+interface Group {
+  readonly items: readonly InboxItem[];
+  readonly latest: InboxItem;
+}
+
+const STRENGTH: readonly UnreadWhy[] = ["mentioned-you", "replied-to-you", "followed-thread", "subscribed-channel"];
+const NO_ITEMS: readonly InboxItem[] = [];
+
+function keyOf(item: InboxItem): string {
+  if (item.message.kind === "reply") {
+    return `thread ${String(item.parent.id)}`;
+  }
+  return `channel ${item.channel.name}`;
+}
+
+function threadOf(item: InboxItem): MessageId | null {
+  if (item.message.kind === "reply") {
+    return item.parent.id;
+  }
+  return null;
+}
+
+function strongest(group: Group, me: string): UnreadWhy {
+  let best = whyOf({ item: group.latest, me });
+  for (const item of group.items) {
+    const why = whyOf({ item, me });
+    if (STRENGTH.indexOf(why) < STRENGTH.indexOf(best)) {
+      best = why;
+    }
+  }
+  return best;
+}
+
+function rowOf(key: string, group: Group, me: string): InboxRow {
+  const { items, latest } = group;
+  return {
+    count: items.length,
+    forYou: items.some((item) => isForYou({ item, me })),
+    items,
+    key,
+    latest,
+    thread: threadOf(latest),
+    why: strongest(group, me),
+  };
+}
+
+function rowsOf({ items, me }: Grouping): readonly InboxRow[] {
+  const groups = new Map<string, Group>();
+  for (const item of items.toSorted((first, second) => first.message.id - second.message.id)) {
+    const key = keyOf(item);
+    const before = groups.get(key) ?? { items: NO_ITEMS, latest: item };
+    groups.set(key, { items: [...before.items, item], latest: item });
+  }
+  const rows: InboxRow[] = [];
+  for (const [key, group] of groups) {
+    rows.push(rowOf(key, group, me));
+  }
+  return rows.toSorted((first, second) => second.latest.message.id - first.latest.message.id);
+}
+
+export { type InboxRow, rowsOf };

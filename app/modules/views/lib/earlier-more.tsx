@@ -1,34 +1,35 @@
-import { Alert, Button, FeedNote } from "../../design-system/index.tsx";
+import { Alert, FeedNote, MoreButton } from "../../design-system/index.tsx";
 import type { Earlier, EarlierState } from "../../unread/index.ts";
 import type { ReactNode } from "react";
 
 const NONE = 0;
 
-const TEXT = { end: "That's everything.", loading: "Loading…", more: "Load more" } as const;
+const TEXT = { end: "That's everything.", loading: "Loading…" } as const;
 
 interface EarlierMoreProps {
   readonly earlier: Earlier;
   readonly state: Extract<EarlierState, { readonly status: "loaded" }>;
 }
 
-function labelOf(loading: boolean): string {
+function labelOf(loading: boolean, pageSize: number): string {
   if (loading) {
     return TEXT.loading;
   }
-  return TEXT.more;
+  return `Show ${String(pageSize)} earlier`;
 }
 
 export function EarlierMore(props: EarlierMoreProps): ReactNode {
-  const { hasMore, items, more } = props.state;
+  const { hasMore, items, more, pageSize } = props.state;
+  const loading = more.status === "loading";
   const handleLoadMore = props.earlier.loadMore;
   if (!hasMore) {
     return items.length > NONE && <FeedNote place="end">{TEXT.end}</FeedNote>;
   }
   return (
     <>
-      <Button disabled={more.status === "loading"} onClick={handleLoadMore}>
-        {labelOf(more.status === "loading")}
-      </Button>
+      <MoreButton loading={loading} onClick={handleLoadMore}>
+        {labelOf(loading, pageSize)}
+      </MoreButton>
       {more.status === "failed" && <Alert>{`Couldn't load more (${more.code}): ${more.message}`}</Alert>}
     </>
   );

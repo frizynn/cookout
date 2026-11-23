@@ -27,6 +27,7 @@ export function FeedRow(parts: RowParts): ReactNode {
         authorHref={parts.authorHref}
         channel={parts.channel}
         context={parts.context}
+        count={parts.count}
         displayName={parts.displayName}
         href={parts.href}
         level={parts.level}
