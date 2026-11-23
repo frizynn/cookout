@@ -70,4 +70,4 @@ function firstError(output: string): readonly string[] {
   return [];
 }
 
-export { MAX_LINES, firstError };
+export { firstError };

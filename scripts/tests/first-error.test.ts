@@ -1,7 +1,9 @@
-import { MAX_LINES, firstError } from "../lib/first-error.ts";
 import { expect, it } from "vitest";
+import { firstError } from "../lib/first-error.ts";
 import path from "node:path";
 import { readFileSync } from "node:fs";
+
+const MAX_LINES = 20;
 
 function fixture(name: string): string {
   return readFileSync(path.join("scripts/tests/fixtures", name), "utf8");
