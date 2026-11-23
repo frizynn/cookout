@@ -73,10 +73,10 @@ export interface NudgeResponse {
 }
 
 /**
- * `PUT /v1/nudges/:id/read`: marks one of the caller's nudges read, answering `NudgeResponse`. Another identity's
+ * `POST /v1/inbox/nudges/:id/read`: marks one of the caller's nudges read, answering `NudgeResponse`. Another identity's
  * nudge, or one that doesn't exist, is 404 `nudge_not_found`.
  */
-export const nudgeReadPath = "/v1/nudges/:id/read";
+export const nudgeReadPath = "/v1/inbox/nudges/:id/read";
 
 /** The codes the nudge routes refuse with: a nudge that isn't the caller's or doesn't exist. */
 export const nudgeErrorCodes = ["nudge_not_found"] as const;

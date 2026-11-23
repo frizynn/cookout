@@ -71,7 +71,7 @@ function subscriptionCall(server: ClientConnection, method: Change) {
 function markNudgeReadCall(server: ClientConnection) {
   return async (nudgeId: NudgeId): Promise<NudgeResponse> => {
     const params = { id: String(nudgeId) };
-    const read = await send(server, { isExpected: isNudgeResponse, method: "PUT", params, path: nudgeReadPath });
+    const read = await send(server, { isExpected: isNudgeResponse, method: "POST", params, path: nudgeReadPath });
     return read;
   };
 }

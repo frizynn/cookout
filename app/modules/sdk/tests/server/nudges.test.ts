@@ -124,9 +124,9 @@ const closedEarlyAndLater: Effect.Effect<Closings, never, TestCookout> = Effect.
 it.effect("a thread quiet for 3 days nudges its starter, live and in the inbox, and nobody else", () =>
   Effect.gen(function* quietThreeDays() {
     const { ada, bob } = yield* board;
-    const events = yield* watching(ada.client);
     const thread = yield* post(ada, "who owns the release notes?");
     const justUnder = yield* Effect.andThen(quietFor(JUST_UNDER_THREE_DAYS), unreadNudges(ada.client));
+    const events = yield* watching(ada.client);
     const live = yield* Effect.andThen(quietFor("1 millis"), nextNudgeEvent(events));
     const [listed, others] = yield* Effect.all([nudgesOnceThere(ada.client, ONE), unreadNudges(bob.client)], {
       concurrency: 1,

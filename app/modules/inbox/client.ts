@@ -14,9 +14,9 @@ export interface InboxReadCalls {
    */
   readonly ackAll: (upTo: MessageId | AckAllRequest) => Promise<AckAllResponse>;
   /**
-   * `PUT /v1/nudges/:id/read`: marks one of the caller's Nudges read and answers it. Another identity's nudge, or one
-   * that doesn't exist, is 404 `nudge_not_found`. A nudge also turns read when its thread is closed or gets a new
-   * message.
+   * `POST /v1/inbox/nudges/:id/read`: marks one of the caller's Nudges read and answers it. Another identity's nudge,
+   * or one that doesn't exist, is 404 `nudge_not_found`. A nudge also turns read when its thread is closed or gets a
+   * new message.
    */
   readonly markNudgeRead: (nudgeId: NudgeId) => Promise<NudgeResponse>;
 }

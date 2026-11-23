@@ -135,7 +135,7 @@ const nudgeReadRoute: Route<Needs> = {
       const answer = yield* inbox.markNudgeRead(caller, String(params["id"]));
       return yield* HttpServerResponse.schemaJson(NudgeResponseSchema)(answer);
     }),
-  method: "PUT",
+  method: "POST",
   path: nudgeReadPath,
   segments: { id: (segment) => DIGITS.test(segment) },
 };
