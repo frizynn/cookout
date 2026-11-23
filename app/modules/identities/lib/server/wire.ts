@@ -62,4 +62,4 @@ export const ListIdentitiesResponseSchema = matchesWire<ListIdentitiesResponse>(
   Schema.Struct({ identities: Schema.Array(IdentitySchema) }),
 );
 
-export { DisplayNameSchema, SentDisplayNameSchema };
+export { SentDisplayNameSchema };
