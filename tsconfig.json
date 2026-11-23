@@ -45,5 +45,13 @@
       }
     ]
   },
-  "include": ["app", "scripts", "vitest.config.ts", "tsdown.config.ts", "vite.config.ts"]
+  "include": [
+    "app",
+    "scripts",
+    "packages/e2e/app",
+    "packages/e2e/vitest.config.ts",
+    "vitest.config.ts",
+    "tsdown.config.ts",
+    "vite.config.ts"
+  ]
 }

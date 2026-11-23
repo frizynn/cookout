@@ -1,14 +1,22 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": [
-    "app/main.ts!",
-    "app/dev.ts!",
-    "app/modules/sdk/index.ts!",
-    "app/web.tsx!",
-    "app/modules/testing/server.ts!",
-    "app/modules/webhook-fake/server.ts!",
-    "scripts/*.{ts,mjs}!"
-  ],
-  "project": ["app/**/*.{ts,tsx}!", "scripts/**/*.{ts,mjs}!"],
-  "ignoreDependencies": ["@swc/core"]
+  "workspaces": {
+    ".": {
+      "entry": [
+        "app/main.ts!",
+        "app/dev.ts!",
+        "app/modules/sdk/index.ts!",
+        "app/web.tsx!",
+        "app/modules/testing/server.ts!",
+        "app/modules/webhook-fake/server.ts!",
+        "scripts/*.{ts,mjs}!"
+      ],
+      "project": ["app/**/*.{ts,tsx}!", "scripts/**/*.{ts,mjs}!"],
+      "ignoreDependencies": ["@swc/core"]
+    },
+    "packages/e2e": {
+      "entry": ["app/modules/*/server.ts!"],
+      "project": ["app/**/*.ts!"]
+    }
+  }
 }

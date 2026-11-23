@@ -71,7 +71,8 @@ const publishedExports = recordOf(field(field(manifest, "publishConfig"), "expor
 const bins = recordOf(field(manifest, "bin"));
 const files = list(field(manifest, "files")) ?? [];
 const knipConfig = parseJson(readFileSync("knip.json", "utf8"));
-const knipEntries = new Set((list(field(knipConfig, "entry")) ?? []).map((entry) => textOr(entry)));
+const knipRoot = field(field(knipConfig, "workspaces"), ".");
+const knipEntries = new Set((list(field(knipRoot, "entry")) ?? []).map((entry) => textOr(entry)));
 const depcruiseConfig: unknown = createRequire(import.meta.url)("../.dependency-cruiser.cjs");
 const publishedRules = (list(field(depcruiseConfig, "forbidden")) ?? []).filter(
   (rule) => field(rule, "name") === PUBLISHED_RULE,

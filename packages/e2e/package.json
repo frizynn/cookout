@@ -1,0 +1,19 @@
+{
+  "name": "@ai-hero/cookout-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "End-to-end tests that drive a running cookout at COOKOUT_E2E_URL through the SDK and the cookout bin.",
+  "type": "module",
+  "scripts": {
+    "test": "pnpm --dir ../.. run --silent build && vitest run"
+  },
+  "dependencies": {
+    "@ai-hero/cookout": "workspace:*"
+  },
+  "devDependencies": {
+    "@effect/platform-node": "^4.1.5",
+    "@effect/vitest": "4.1.5",
+    "effect": "^4.1.5",
+    "vitest": "^5.1.1"
+  }
+}
