@@ -1,6 +1,7 @@
 import { Effect, Predicate, String as Str } from "effect";
 import {
   appendTo,
+  callId,
   channelFixture as channel,
   commandFixture as command,
   handlerFixture as handler,
@@ -24,8 +25,16 @@ const T0 = isoTime("2026-01-01T00:00:00.000Z");
 const T30 = isoTime("2026-01-01T00:00:30.000Z");
 const T60 = isoTime("2026-01-01T00:01:00.000Z");
 const IDLE_SECONDS = 60;
+const ONE = 1;
 const PAGE = { limit: 10 } as const;
 const BOT = nameOf("e2e-bot");
+const DELIVERY = {
+  attempts: 0,
+  callId: callId("call_1"),
+  data: { branch: "main" },
+  nextAttemptAt: T0,
+  outcome: "pending",
+} as const;
 
 it.effect.each(storageLayers)(
   "storage contract ($adapter): deleting an identity with no messages removes it, its tokens and agent sessions, and frees its name",
@@ -87,17 +96,30 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
-  "storage contract ($adapter): deleting a command's handler identity removes the command",
+  "storage contract ($adapter): deleting a command's handler identity removes the command, its deliveries and tokens",
   ({ layer }) =>
     Effect.gen(function* deleteHandler() {
       const { storage } = yield* openStore(layer);
+      yield* storage.createChannel(channel("grill"));
       yield* storage.addCommand(command("deploy"), handler("deploy"));
+      yield* storage.appendCommandCall({
+        delivery: { ...DELIVERY, command: command("deploy").command.name },
+        message: newMessage("grill", "/deploy", { author: { name: "matt" } }),
+        token: { expiresAt: T60, handler: nameOf("deploy"), hash: hashD },
+      });
       const deleted = yield* storage.deleteIdentity(nameOf("deploy"));
       const found = yield* Effect.map(storage.findCommand(command("deploy").command.name), Predicate.isUndefined);
-      const listed = yield* storage.listCommands;
+      const left = yield* Effect.all(
+        [
+          storage.listCommands,
+          storage.listPendingDeliveries,
+          Effect.map(storage.findCommandToken(hashD), Predicate.isUndefined),
+        ],
+        ONE_AT_A_TIME,
+      );
 
       expect(deleted).toMatchObject({ identity: { name: "deploy" }, status: "deleted" });
-      expect([found, listed]).toStrictEqual([true, []]);
+      expect([found, ...left]).toStrictEqual([true, [], [], true]);
     }),
 );
 
@@ -123,13 +145,18 @@ it.effect.each(storageLayers)(
         ONE_AT_A_TIME,
       );
       const refused = yield* Effect.all(
-        [storage.deleteIdentity(nameOf("bob")), storage.deleteIdentity(nameOf("ada"))],
+        [
+          storage.countMessagesBy(nameOf("bob")),
+          storage.countMessagesBy(nameOf("ada")),
+          storage.deleteIdentity(nameOf("bob")),
+          storage.deleteIdentity(nameOf("ada")),
+        ],
         ONE_AT_A_TIME,
       );
       const kept = yield* storage.findIdentityByTokenHash(hashB);
       const page = yield* storage.listChannelMessages(channel("grill").name, PAGE);
 
-      expect(refused).toStrictEqual([{ status: "has_messages" }, { status: "has_messages" }]);
+      expect(refused).toStrictEqual([ONE, ONE, { status: "has_messages" }, { status: "has_messages" }]);
       expect(kept).toMatchObject({ identity: { name: "bob" }, status: "active" });
       expect(page).toMatchObject({ messages: [{ text: "mine" }, { text: "old bot" }] });
     }),

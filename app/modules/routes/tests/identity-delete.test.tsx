@@ -1,6 +1,7 @@
 import { adminClient, newIdentity } from "./identities.ts";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { fireEvent, waitFor } from "@testing-library/react";
+import type { CookoutClient } from "../../sdk/index.ts";
 import { inProfile } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
@@ -40,6 +41,23 @@ it("an admin sees Deactivate, not Delete, on the profile of an identity with mes
   });
 
   await expect(listedNames("web-delete-talker")).resolves.toStrictEqual(["web-delete-talker"]);
+
+  close();
+});
+
+it("an admin sees Deactivate when the message count can't be read", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  await newIdentity({ kind: "agent", name: "web-delete-uncounted" });
+  const countMessagesBy = vi.fn<CookoutClient["countMessagesBy"]>().mockRejectedValue(new Error("unreachable"));
+  const client = { ...adminClient(), countMessagesBy };
+  const close = openAt({ client, hash: "#/people/web-delete-uncounted" });
+  await inProfile().findByRole("button", { name: "Deactivate" });
+  await waitFor(() => {
+    expect(countMessagesBy).toHaveBeenCalledWith("web-delete-uncounted");
+  });
+
+  expect(inProfile().queryByRole("button", { name: "Delete" })).toBeNull();
 
   close();
 });
