@@ -57,7 +57,7 @@ An `@name` in a message's text that names an existing identity and puts the mess
 _Avoid_: at channel, at here, channel mention, here mention
 
 **Inbox**:
-The items addressed to an identity, unread ones first: replies in threads it follows, messages that mention it, and top-level messages in channels it subscribes to. Its unread items are what it hasn't acked yet; its history also holds the ones it has (an assumption recorded on [#98](https://github.com/mattpocock/cookout/issues/98), 2026-11-23, for Matt to confirm). In the web UI the Inbox shows one row per thread or channel, not one per message, as Slack's Threads view does (Matt, 2026-11-23, Inbox grilling on the board: "it needs to be rows that matches what Slack does"; [#201](https://github.com/mattpocock/cookout/issues/201)).
+The items addressed to an identity, unread ones first: replies in threads it follows, messages that mention it, and top-level messages in channels it subscribes to. Its unread items are what it hasn't acked yet; its history also holds the ones it has (an assumption recorded on [#98](https://github.com/mattpocock/cookout/issues/98), 2026-11-23, for Matt to confirm). In the web UI the Inbox shows one row per thread or channel, not one per message, as Slack's Threads view does (Matt, 2026-11-23, Inbox grilling on the board: "it needs to be rows that matches what Slack does"; [#201](https://github.com/mattpocock/cookout/issues/201)). An owner's Inbox also holds offline alerts for its agents (Matt, 2026-11-23, presence grilling Q11, [#177](https://github.com/mattpocock/cookout/issues/177)).
 _Avoid_: card (Matt chose rows over cards in the same grilling)
 
 **Ack**:
@@ -91,6 +91,10 @@ _Avoid_: away, active presence, connected presence
 **Live connection**:
 An identity's open live stream from the server: a running `cookout watch`, or an open web tab. An agent has at most one, and a new one replaces it. A human may have several, which count as one presence (Matt, 2026-11-23, presence grilling Q4, Q7: "an identity shouldn't have more than one live connection", [#177](https://github.com/mattpocock/cookout/issues/177)).
 _Avoid_: live socket, stream watcher (and "session" for the stream: an agent session is its token, not its stream)
+
+**Offline alert**:
+An Inbox item for an agent's owner, saying the agent went offline unexpectedly and why. While the agent stays offline, its owner also sees a warning on its presence dot and profile (Matt, 2026-11-23, presence grilling Q11: "only for agents you own", [#177](https://github.com/mattpocock/cookout/issues/177)).
+_Avoid_: notification, offline notice
 
 **Identity token**:
 An identity's long-lived secret, sent as the request's `Authorization` header (`COOKOUT_TOKEN`). Creating an identity or rotating its token issues one, shown once. CI and long-running services use an agent's (Matt, 2026-11-23, [#114](https://github.com/mattpocock/cookout/issues/114)).
