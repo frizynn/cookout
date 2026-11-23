@@ -150,6 +150,19 @@ const migrations: readonly string[] = [
      created_at TEXT NOT NULL
    ) STRICT;
    CREATE INDEX login_credentials_by_identity ON login_credentials (identity_name);`,
+  `CREATE TABLE agent_join_requests (
+     request_hash TEXT PRIMARY KEY,
+     user_code TEXT NOT NULL UNIQUE,
+     agent TEXT NOT NULL,
+     host TEXT NOT NULL,
+     idle_expiry TEXT,
+     created_at TEXT NOT NULL,
+     expires_at TEXT NOT NULL,
+     joins TEXT,
+     created INTEGER CHECK (created IN (0, 1)),
+     idle_seconds INTEGER CHECK (idle_seconds > 0),
+     force INTEGER CHECK (force IN (0, 1))
+   ) STRICT;`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

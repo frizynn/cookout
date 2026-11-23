@@ -1,7 +1,7 @@
 import { Effect, Predicate } from "effect";
 import type { Scope } from "effect";
 import type { StorageService } from "./service.ts";
-import { memoryAgentSessions } from "./agent-sessions-memory.ts";
+import { memoryAgentSessionSections } from "./agent-join-requests-memory.ts";
 import { memoryChannels } from "./channels.ts";
 import { memoryCommandCalls } from "./command-calls.ts";
 import { memoryCommands } from "./commands.ts";
@@ -15,7 +15,7 @@ export const openMemoryStorage: Effect.Effect<StorageService, never, Scope.Scope
   (state) => {
     const { forgetChannel: dropChannel, ...channels } = memoryChannels(state);
     const { findIdentity, placeHandler, ...identities } = memoryIdentitySections(state);
-    const { revokeAgentSessionsOf, ...agentSessions } = memoryAgentSessions({ findIdentity, state });
+    const { revokeAgentSessionsOf, ...agentSessions } = memoryAgentSessionSections({ findIdentity, state });
     const { forgetChannel, ...messages } = memoryMessages({ channels, identities, state });
     const { dropCommandTokens, dropCommandTokensOf, dropDeliveries, ...commands } = memoryCommands({
       findIdentity,
