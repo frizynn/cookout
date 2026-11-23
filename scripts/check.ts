@@ -1,4 +1,7 @@
+import { holdMachineLock } from "./lib/machine-lock.ts";
 import { once } from "node:events";
+import os from "node:os";
+import path from "node:path";
 import { spawn } from "node:child_process";
 
 interface Check {
@@ -26,6 +29,8 @@ const EXIT_SUCCESS = 0;
 const NONE = 0;
 const DECIMALS = 1;
 const MS_PER_SECOND = 1000;
+const LOCK_POLL_MS = 1000;
+const LOCK_FILE = path.join(os.tmpdir(), "cookout-check.lock");
 
 function option(name: string): string {
   const prefix = `--${name}=`;
@@ -157,13 +162,31 @@ async function runSelected(selected: readonly Check[]): Promise<readonly Outcome
   return [...first, ...after];
 }
 
+function waiting(holder: number): void {
+  console.error(
+    `check: waiting for the pnpm check already running on this machine (pid ${String(holder)}). Two at once overload the CPU until spawned test processes time out (#94).`,
+  );
+}
+
+async function runLocked(selected: readonly Check[]): Promise<readonly Outcome[]> {
+  if (inCi) {
+    return runSelected(selected);
+  }
+  const release = await holdMachineLock({ file: LOCK_FILE, onWait: waiting, pollMs: LOCK_POLL_MS });
+  try {
+    return await runSelected(selected);
+  } finally {
+    release();
+  }
+}
+
 async function main(): Promise<number> {
   const selected = checks.filter((check) => job === "" || check.job === job);
   if (selected.length === NONE) {
     console.error(`check: no checks in job ${job}. Jobs: ${[...new Set(checks.map((check) => check.job))].join(", ")}`);
     return EXIT_FAILURE;
   }
-  const final = await runSelected(selected);
+  const final = await runLocked(selected);
   for (const outcome of final) {
     report(outcome);
   }
