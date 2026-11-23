@@ -107,7 +107,8 @@ export function connectionFor({ env, ...given }: ConnectionOptions): ClientConne
   if (url === "") {
     throw new CookoutError({
       code: "url_missing",
-      message: "Set COOKOUT_URL to the cookout server's address.",
+      message:
+        "Set COOKOUT_URL to the cookout server's address. The cookout CLI also uses the board `cookout login` last chose.",
       status: NO_STATUS,
     });
   }

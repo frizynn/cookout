@@ -205,23 +205,13 @@ function credentialFor(env: CliEnvironment): Effect.Effect<Credential, CallFailu
   return storedCredential(env);
 }
 
-function withLoginHint(failure: CallFailure): CallFailure {
-  if (failure.code !== "url_missing") {
-    return failure;
-  }
-  return { ...failure, message: "Run `cookout login` to choose this machine's board, or set COOKOUT_URL." };
-}
-
 function clientFor(
   env: CliEnvironment,
   { joined, source, token }: Credential,
 ): Effect.Effect<ClientWithAgentSessionState, CallFailure> {
   const connection = connectionFrom(env.url, token, agentToolIn(env.markers));
   return Effect.map(
-    Effect.try({
-      catch: (error) => withLoginHint(toFailure(error)),
-      try: () => createCookoutClient({ ...connection, env: NOTHING }),
-    }),
+    Effect.try({ catch: toFailure, try: () => createCookoutClient({ ...connection, env: NOTHING }) }),
     (client) => ({ client, connection, joined, source }),
   );
 }

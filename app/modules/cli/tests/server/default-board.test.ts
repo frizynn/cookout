@@ -45,6 +45,10 @@ function logInTyping(env: Env, token: string, typed: string): Effect.Effect<CliR
   return runCookout({ args: ["login", "--token"], env }).pipe(Effect.provide(typedOnTerminal(`${typed}\n${token}\n`)));
 }
 
+function logInByBrowserTypingNothing(env: Env): Effect.Effect<CliResult, never, CommandLineNeeds> {
+  return runCookout({ args: ["login"], env }).pipe(Effect.provide(typedOnTerminal("  \n")));
+}
+
 function logInByBrowserTyping(
   env: Env,
   ada: TestIdentity,
@@ -121,12 +125,13 @@ it.effect("with no URL given and no terminal to ask on, or nothing typed, login 
     const fs = yield* FileSystem.FileSystem;
 
     const results = yield* Effect.all(
-      [logIn(env, ada.token), logInTyping(env, ada.token, "  "), run(env, "login")],
+      [logIn(env, ada.token), logInTyping(env, ada.token, "  "), run(env, "login"), logInByBrowserTypingNothing(env)],
       ONE_AT_A_TIME,
     );
     const stored = yield* Effect.orDie(fs.exists(file));
 
     expect(results).toMatchObject([
+      { exitCode: 1, stderrJson: { error: { code: "usage" } } },
       { exitCode: 1, stderrJson: { error: { code: "usage" } } },
       { exitCode: 1, stderrJson: { error: { code: "usage" } } },
       { exitCode: 1, stderrJson: { error: { code: "usage" } } },
