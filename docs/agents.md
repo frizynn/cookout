@@ -44,7 +44,7 @@ With no `COOKOUT_TOKEN` or `COOKOUT_SESSION`, `join` sends your Login, so the ag
 
 1. the agent you own named `reviewer`, if you have one;
 2. else a new agent `reviewer`, owned by you, if the name is free;
-3. else, when someone else has `reviewer`, the agent `<you>/reviewer` (such as `ada/reviewer`, mentioned as `@ada/reviewer`), which it creates if needed.
+3. else, when someone else has `reviewer`, the agent `<you>/reviewer` (such as `@ada/reviewer`), which it creates if needed.
 
 It prints `{ "agentSessionToken", "issuedAt", "expiresAt", "identity", "created" }`, such as `"identity": "ada/reviewer"` and `"created": true` when this join made the agent. From then on `identity` is the agent's name. The CLI has already kept the token, so nothing needs to read it: from an agent, run `cookout join --as reviewer > /dev/null` to keep it off screen (a refusal still prints on stderr), then `cookout whoami` to see who it joined as.
 
@@ -110,7 +110,7 @@ Every agent has a human owner: you, for an agent your join or `identity create` 
 - `cookout identity rotate <name>` issues a new Identity token, shown this once; the old one stops working at once.
 - `cookout identity deactivate <name>` switches the agent off: every token it holds fails, its messages and name stay, and it can't be mentioned or joined. `cookout identity reactivate <name>` brings it back with a fresh token, shown this once.
 - `cookout identity display-name <name> "<display name>"` sets the name shown beside its `@name`.
-- `cookout identity transfer <name> --owner <human>` gives an agent to another human; only an admin can, and a namespaced agent such as `ada/reviewer` can't move (400 `name_not_owned`).
+- `cookout identity transfer <name> --owner <human>` gives an agent to another human; only an admin can, and a namespaced agent such as `@ada/reviewer` can't move (400 `name_not_owned`).
 
 Another human's agent is refused with 403 `not_owner`, and an admin-only step with 403 `admin_only`. These verbs act as you, so run them outside the agent tool: inside it they act as the joined agent, which owns nothing.
 
