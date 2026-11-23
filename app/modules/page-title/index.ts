@@ -2,14 +2,17 @@
  * The page's title: the one owner of `document.title`, so no view sets it.
  * `usePageTitle` sets it for the page being drawn: what the page is, then
  * `· cookout` ("Inbox · cookout", "#general · cookout", "Thread in #general ·
- * cookout", "@ada · cookout"), led by how many unread messages are for whoever
- * is looking when there are any ("(3) Inbox · cookout"). Those are the unread
- * inbox items that mention them, as the sidebar counts them loud. Logged out,
- * every route is titled for the login view, and nothing is counted.
+ * cookout", "@ada · cookout"), led by how many unread messages are *For you*
+ * when there are any ("(3) Inbox · cookout"): those that mention whoever is
+ * logged in or reply to their own message, as the sidebar's strong badges
+ * count them. Logged out, every route is titled for the login view, and
+ * nothing is counted.
  */
 import type { Unread, UnreadState } from "../unread/index.ts";
 import { useEffect, useSyncExternalStore } from "react";
 import type { Route } from "../paths/index.ts";
+import type { Session } from "../session/index.ts";
+import { countsOf } from "../unread/index.ts";
 
 const APP = "cookout";
 const NONE = 0;
@@ -28,6 +31,13 @@ const LOGGED_OUT = "Log in";
 
 const NOTHING_LOADED: UnreadState = { status: "loading" };
 
+type SessionState = ReturnType<Session["snapshot"]>;
+
+interface Followed {
+  readonly subscribe: (listener: () => void) => () => void;
+  readonly snapshot: () => UnreadState;
+}
+
 function routeName(route: Route): string {
   if (route.name === "channel") {
     return `#${route.channel}`;
@@ -41,18 +51,25 @@ function routeName(route: Route): string {
   return FIXED[route.name];
 }
 
-function pageName(options: PageTitleOptions): string {
-  if (!options.loggedIn) {
-    return LOGGED_OUT;
+function meOf(session: SessionState): string | null {
+  if (session.status !== "logged-in") {
+    return null;
   }
-  return routeName(options.route);
+  return session.identity.name;
 }
 
-function forYouCount(state: UnreadState): number {
-  if (state.status !== "loaded") {
+function pageName(me: string | null, route: Route): string {
+  if (me === null) {
+    return LOGGED_OUT;
+  }
+  return routeName(route);
+}
+
+function forYouCount(me: string | null, state: UnreadState): number {
+  if (me === null || state.status !== "loaded") {
     return NONE;
   }
-  return state.items.filter((item) => item.reasons.includes("mention")).length;
+  return countsOf({ items: state.items, me }).forYou;
 }
 
 function titleOf(name: string, forYou: number): string {
@@ -76,33 +93,30 @@ function nothingLoaded(): UnreadState {
   return NOTHING_LOADED;
 }
 
-interface Followed {
-  readonly subscribe: (listener: () => void) => () => void;
-  readonly snapshot: () => UnreadState;
-}
-
-function followed(options: PageTitleOptions): Followed {
-  if (!options.loggedIn) {
+function followed(me: string | null, unread: Unread): Followed {
+  if (me === null) {
     return { snapshot: nothingLoaded, subscribe: followNothing };
   }
-  return options.unread;
+  return unread;
 }
 
-/** What sets the title: whether anyone is logged in, the route drawn, and the unread store, read only while logged in. */
+/** What sets the title: the route drawn, the session, and the unread store, read only while logged in. */
 export interface PageTitleOptions {
-  readonly loggedIn: boolean;
   readonly route: Route;
+  readonly session: Pick<Session, "snapshot" | "subscribe">;
   readonly unread: Unread;
 }
 
 /**
- * Sets the page's title for the route drawn, led by the unread count for whoever is logged in.
- * @param options Whether anyone is logged in, the route, and the unread store, read only while logged in.
+ * Sets the page's title for the route drawn, led by the For you count of whoever is logged in.
+ * @param options The route, the session, and the unread store.
  */
 export function usePageTitle(options: PageTitleOptions): void {
-  const store = followed(options);
+  const session = useSyncExternalStore(options.session.subscribe, options.session.snapshot);
+  const me = meOf(session);
+  const store = followed(me, options.unread);
   const state = useSyncExternalStore(store.subscribe, store.snapshot);
-  const title = titleOf(pageName(options), forYouCount(state));
+  const title = titleOf(pageName(me, options.route), forYouCount(me, state));
   useEffect(() => {
     globalThis.document.title = title;
   }, [title]);

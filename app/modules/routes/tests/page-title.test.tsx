@@ -69,12 +69,13 @@ it("the page's title follows the route", { timeout: 10_000 }, async () => {
   close();
 });
 
-it("the title leads with how many unread messages mention you", { timeout: 10_000 }, async () => {
+it("the title leads with how many unread messages are for you", { timeout: 10_000 }, async () => {
   expect.hasAssertions();
 
   const { poster, reader } = await subscribedReader("web-title-count");
+  const { message } = await reader.createMessage({ channel: "web-title-count", text: "Deploy at noon?" });
   await poster.createMessage({ channel: "web-title-count", text: "@web-title-count-reader lunch?" });
-  await poster.createMessage({ channel: "web-title-count", text: "@web-title-count-reader or later?" });
+  await poster.createMessage({ channel: "web-title-count", replyTo: message.id, text: "Noon works." });
   await poster.createMessage({ channel: "web-title-count", text: "No mention here." });
   const close = openAt({ client: reader, hash: "#/people" });
 
