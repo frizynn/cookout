@@ -13,7 +13,7 @@ const TEXT = { empty: "No replies yet.", parent: "Parent message", replies: "Rep
 interface ThreadBodyProps {
   readonly state: ThreadMessagesState;
   readonly me: string;
-  readonly unreadFrom: MessageId | null;
+  readonly readPosition: MessageId | null;
 }
 
 export function ThreadBody(props: ThreadBodyProps): ReactNode {
@@ -45,7 +45,7 @@ export function ThreadBody(props: ThreadBodyProps): ReactNode {
         me={props.me}
         messages={state.replies}
         open={null}
-        unreadFrom={props.unreadFrom}
+        readPosition={props.readPosition}
       />
       {state.read.status === "failed" && (
         <Alert>{`Couldn't mark the thread read (${state.read.code}): ${state.read.message}`}</Alert>

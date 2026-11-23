@@ -95,6 +95,47 @@ it("a channel with nothing unread shows no New line", { timeout: 5000 }, async (
   close();
 });
 
+it('in an unsubscribed channel, "New" sits above the first message after the read position, mention or not', {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-new-line-position";
+  const { poster, reader } = await readerOf(channel);
+  await reader.unsubscribe(channel);
+  await reader.createMessage({ channel, text: "Already read" });
+  await poster.createMessage({ channel, text: "Plain new" });
+  await poster.createMessage({ channel, text: `@${channel}-grace can you take the rollback?` });
+  const close = await openedAs(reader, `#/channels/${channel}`, "Plain new");
+
+  expect(withoutDays(await streamOf("Messages"))).toStrictEqual([
+    "web-new-line-position-graceAlready read",
+    "[New]",
+    "web-new-line-position-adaPlain new",
+    "@web-new-line-position-grace can you take the rollback?",
+  ]);
+
+  close();
+});
+
+it("with no read position in a channel, there is no New line", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-new-line-unread";
+  const { poster, reader } = await readerOf(channel);
+  await reader.unsubscribe(channel);
+  await poster.createMessage({ channel, text: "Plain new" });
+  await poster.createMessage({ channel, text: `@${channel}-grace a look?` });
+  const close = await openedAs(reader, `#/channels/${channel}`, "Plain new");
+
+  expect(withoutDays(await streamOf("Messages"))).toStrictEqual([
+    "web-new-line-unread-adaPlain new",
+    "@web-new-line-unread-grace a look?",
+  ]);
+
+  close();
+});
+
 it("a message mentioning the logged-in human is highlighted, and other mentions are only styled", {
   timeout: 5000,
 }, async () => {

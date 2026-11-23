@@ -15,7 +15,12 @@ interface StreamRow {
 interface StreamOf {
   readonly messages: readonly Message[];
   readonly after: Message | null;
-  readonly unreadFrom: MessageId | null;
+  readonly readPosition: MessageId | null;
+  readonly me: string;
+}
+
+interface Lined {
+  readonly lineAt: MessageId | null;
 }
 
 function hasReplies(message: Message): boolean {
@@ -38,14 +43,26 @@ function dayStarted(before: Message | null, message: Message): string | null {
   return dayLabel(message.createdAt);
 }
 
-function rowOf(message: Message, previous: Message | null, stream: StreamOf): StreamRow {
+function newLineAt({ me, messages, readPosition }: StreamOf): MessageId | null {
+  if (readPosition === null) {
+    return null;
+  }
+  const first = messages.find((message) => message.id > readPosition && message.author.name !== me) ?? null;
+  if (first === null) {
+    return null;
+  }
+  return first.id;
+}
+
+function rowOf(message: Message, previous: Message | null, stream: StreamOf & Lined): StreamRow {
   const day = dayStarted(previous ?? stream.after, message);
-  const unreadLine = message.id === stream.unreadFrom;
+  const unreadLine = message.id === stream.lineAt;
   return { day, grouped: day === null && !unreadLine && joins(previous, message), message, unreadLine };
 }
 
 function streamRows(stream: StreamOf): readonly StreamRow[] {
-  return stream.messages.map((message, index) => rowOf(message, stream.messages[index - PREVIOUS] ?? null, stream));
+  const lined = { ...stream, lineAt: newLineAt(stream) };
+  return stream.messages.map((message, index) => rowOf(message, stream.messages[index - PREVIOUS] ?? null, lined));
 }
 
 export { streamRows };

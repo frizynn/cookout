@@ -20,7 +20,14 @@ const ONE = 1;
 type AppClient = BoardOptions["client"] &
   Pick<
     CookoutClient,
-    "inbox" | "inboxHistory" | "listIdentities" | "makeAdmin" | "removeAdmin" | "setDisplayName" | "whoami"
+    | "inbox"
+    | "inboxHistory"
+    | "listIdentities"
+    | "readPositions"
+    | "makeAdmin"
+    | "removeAdmin"
+    | "setDisplayName"
+    | "whoami"
   >;
 
 interface BoardOpening {

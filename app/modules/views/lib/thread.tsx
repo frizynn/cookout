@@ -34,7 +34,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
   const messages = props.board.thread(channel, props.thread);
   const state = useSyncExternalStore(messages.subscribe, messages.snapshot);
   const line = props.unread.newLine(channel, props.thread);
-  const unreadFrom = useSyncExternalStore(line.subscribe, line.snapshot);
+  const readPosition = useSyncExternalStore(line.subscribe, line.snapshot);
   return (
     <SidePanel
       closeHref={hrefOf({ channel, name: "channel" })}
@@ -43,7 +43,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
       label={TEXT.thread}
     >
       <ScrollArea count={countOf(state)} label={TEXT.replies}>
-        <ThreadBody me={props.me} state={state} unreadFrom={unreadFrom} />
+        <ThreadBody me={props.me} state={state} readPosition={readPosition} />
       </ScrollArea>
       <ReplyFooter
         draft={props.composer.draft(`${channel}/${String(props.thread)}`)}

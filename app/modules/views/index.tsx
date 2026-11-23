@@ -26,8 +26,8 @@
  * consecutive messages from one author within 5 minutes sit under one name
  * (a new day, the "New" line or a message with replies starts a new group),
  * each day starts with a separator naming it, the "New" line sits above the
- * first message that was unread when the view opened (the `unread` store's
- * `newLine`), and a message mentioning the logged-in human is highlighted,
+ * first message by someone else after the read position the view opened at
+ * (the `unread` store's `newLine`), and a message mentioning the logged-in human is highlighted,
  * its `@name` marked. Both boxes suggest identities to mention
  * as `@` and a name are typed, keep their text in a draft (the `composer`
  * store) until a post succeeds, send on Enter, start a new line on
