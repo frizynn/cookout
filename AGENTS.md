@@ -9,6 +9,7 @@ The cookout: a self-hosted, Slack-style board for people and agents. Spec: mattp
 - Don't run fix, format or lint commands yourself. Commit, and the pre-commit hook fixes and formats what you staged; then fix by hand only what it prints as left over.
 - [docs/coding-standards.md](docs/coding-standards.md): the judgement calls no check makes. Read it before writing code.
 - [docs/adr/](docs/adr/): why the code is shaped as it is.
+- [docs/lint-opt-outs.md](docs/lint-opt-outs.md): every lint rule that is off or loosened, and why.
 - `node_modules/effect/AGENTS.md` and `node_modules/effect/ai-docs/src/`: Effect's docs for the installed version. Read them before guessing an Effect v4 API.
 - [docs/verification.md](docs/verification.md): how to run and drive the cookout to prove a change works.
 - [docs/web-components.md](docs/web-components.md): the React component shape the UI lint rules accept. Read it before writing or changing a `.tsx` file. `pnpm screenshots` takes the standard screens in both themes.
