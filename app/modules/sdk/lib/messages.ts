@@ -41,4 +41,12 @@ function messageCalls(server: ClientConnection): MessageCalls {
   };
 }
 
+export type {
+  ListMessagesQuery,
+  ListMessagesResponse,
+  MessageId,
+  MessageResponse,
+  PostMessageRequest,
+  ThreadResponse,
+} from "../../messages/index.ts";
 export { messageCalls };

@@ -9,7 +9,7 @@ The judgement calls that no check makes. Everything mechanical is a check in `pn
 ## Names
 
 - Name things with plain words a newcomer understands, using the domain words the spec already uses. Don't coin a word to save typing, and don't use two words for one thing.
-- A new domain term is checked with Matt first. Only Matt approves a term, and a term counts as approved only with a dated decision of Matt's cited next to it, in an ADR or a comment on a mattpocock/cookout issue. Admin is approved ([ADR 0003](adr/0003-admin-is-a-flag-on-an-identity.md), 2026-11-22). Read position and inbox reason are approved ([#7](https://github.com/mattpocock/cookout/issues/7#issuecomment-7095625520), 2026-11-23). Lease ID, command token, call ID and contract suite are still proposed.
+- A new domain term is checked with Matt first. Only Matt approves a term, and a term counts as approved only with a dated decision of Matt's cited next to it, in an ADR or a comment on a mattpocock/cookout issue. Admin is approved ([ADR 0003](adr/0003-admin-is-a-flag-on-an-identity.md), 2026-11-22). Read position and inbox reason are approved ([#7](https://github.com/mattpocock/cookout/issues/7#issuecomment-7095625520), 2026-11-23). Lease ID, command token, command secret, call ID and contract suite are still proposed.
 - Name tests as behaviour ("a reply to a reply joins the parent thread"), not as functions.
 
 ## Tests

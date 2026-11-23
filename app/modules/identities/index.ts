@@ -74,6 +74,8 @@ export type HumanIdentity = IdentityFields & {
 export type AgentIdentity = IdentityFields & {
   readonly kind: "agent";
   readonly owner?: Owner;
+  /** Present, and true, on a command's handler identity in `GET /v1/identities`. */
+  readonly handler?: true;
 };
 
 /** An identity as the server shows it: a human or an agent, never both. Its token is never part of it. */

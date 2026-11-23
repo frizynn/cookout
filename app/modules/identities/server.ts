@@ -89,3 +89,6 @@ export const identityRoutes: readonly Route<Caller | Storage | Secrets>[] = [...
 
 /** The response Schemas of the identity routes, for the SDK's generated validators. */
 export const identityResponseSchemas = { ...responseSchemas };
+
+/** Refuses with 403 `admin_only` unless `Caller` is an admin. */
+export { requireAdmin } from "./lib/server/auth.ts";

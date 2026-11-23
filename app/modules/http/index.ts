@@ -5,6 +5,7 @@
  */
 import type { IsoTime } from "../time/index.ts";
 import { channelErrorCodes } from "../channels/index.ts";
+import { commandErrorCodes } from "../commands/index.ts";
 import { identityErrorCodes } from "../identities/index.ts";
 import { leaseErrorCodes } from "../leases/index.ts";
 import { messageErrorCodes } from "../messages/index.ts";
@@ -32,6 +33,7 @@ export const errorCodes = [
   ...channelErrorCodes,
   ...messageErrorCodes,
   ...leaseErrorCodes,
+  ...commandErrorCodes,
   "not_found",
   "method_not_allowed",
   "invalid_path",

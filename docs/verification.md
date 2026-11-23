@@ -140,6 +140,21 @@ The first terminal prints the event as soon as the post returns. Through the SDK
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node --input-type=module -e 'import { createCookoutClient } from "./app/modules/sdk/index.ts"; const events = await createCookoutClient().watch(); for await (const event of events) { console.log(JSON.stringify(event)); await events.close(); }'
 ```
 
+## Register a command
+
+An admin registers a webhook command with a JSON Schema file; any identity lists them:
+
+```sh
+printf '{"type":"object","properties":{"branch":{"type":"string"}},"required":["branch"]}' > /tmp/cookout-deploy.schema.json
+env $(cat /tmp/cookout-dev.env) node app/main.ts command add deploy --url http://127.0.0.1:9/deploy --schema /tmp/cookout-deploy.schema.json --description "Ship a branch"
+env $(cat /tmp/cookout-dev.env) node app/main.ts command list
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '.identities[] | [.name, .kind, .handler]'
+env $(cat /tmp/cookout-dev.env) node app/main.ts command add ada --url http://127.0.0.1:9/x --schema /tmp/cookout-deploy.schema.json
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts command add other --url http://127.0.0.1:9/x --schema /tmp/cookout-deploy.schema.json
+```
+
+`command add` prints `{ command, secret }`: the `hmac_…` secret webhook deliveries will be signed with, shown this once (`command list` never shows it). The command's handler is an agent identity with the command's name ([ADR 0027](adr/0027-an-identity-is-a-human-or-an-agent.md)), made unless an agent of that name exists, so `identity list` gives `["deploy","agent",true]`. A second `add deploy` is 409 `command_exists`, a human's name (`ada`) is 409 `handler_not_agent`, and a non-admin (`grace`, from the lease recipe) is 403 `admin_only`; each exits 1.
+
 ## Drive it with the SDK
 
 The SDK is `@ai-hero/cookout/sdk`; from a checkout, import `app/modules/sdk/index.ts`. `createCookoutClient()` reads `COOKOUT_URL` and `COOKOUT_TOKEN`:
