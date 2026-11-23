@@ -48,7 +48,9 @@
  * `@name` muted beside it. `LineForm` is a named form of one labelled line of
  * text, whose text its owner holds, with a Save button (disabled while
  * saving; `submit` names its button, `Save` unless given) and anything under
- * it, such as an `Alert`. `ActionGroup` is a named group of what can be done
+ * it, such as an `Alert`. `AreaForm` is its form of a few growing lines of
+ * text, up to `limit` characters shown as a counter, where Enter starts a new
+ * line and Ctrl/Cmd+Enter saves. `ActionGroup` is a named group of what can be done
  * to one thing, `ButtonRow` puts buttons side by side, and `TokenText` shows a
  * secret, such as a fresh token, to copy.
  * `PaneHeader`'s title is mono, as a channel's name, unless `sans`. A
@@ -89,7 +91,8 @@
  *
  * `AppShell` is the page around the login view; `Card`, centred in a scrolling column, `CardHeader`,
  * `Heading` and `Muted` are a shadcn-style card and its title row, `CardBody`
- * a padded section under it; `LinkList` and
+ * a padded section under it; `MutedLines` is muted text that keeps its line
+ * breaks; `LinkList` and
  * `LinkRow` are a named list of links, and `ItemList` and `ItemRow` a named
  * list of plain rows; `Alert` is a refusal, read out by screen readers;
  * `Notice` is a passing word on what just happened, read out politely;
@@ -146,6 +149,7 @@ export { FeedRow } from "./lib/feed-row.tsx";
 export { FeedText } from "./lib/feed-text.tsx";
 export { Form } from "./lib/form.tsx";
 export { LineForm } from "./lib/line-form.tsx";
+export { AreaForm } from "./lib/area-form.tsx";
 export { Heading } from "./lib/heading.tsx";
 export { InputField } from "./lib/input-field.tsx";
 export { ItemList } from "./lib/item-list.tsx";
@@ -154,6 +158,7 @@ export { LinkList } from "./lib/link-list.tsx";
 export { LinkRow } from "./lib/link-row.tsx";
 export { Mention } from "./lib/mention.tsx";
 export { Muted } from "./lib/muted.tsx";
+export { MutedLines } from "./lib/muted-lines.tsx";
 export { ReceiptLine } from "./lib/receipt-line.tsx";
 export { ReceiptName } from "./lib/receipt-name.tsx";
 export { Notice } from "./lib/notice.tsx";
