@@ -35,6 +35,7 @@ async function loadNewest(channel: Channel): Promise<void> {
     channel.publish({
       call: { status: "idle" },
       callData: "",
+      expanded: new Map(),
       hasMore,
       messages,
       older: { status: "idle" },
@@ -177,6 +178,19 @@ async function postMessage(channel: Channel, { posted, text }: PostRequest): Pro
   }
 }
 
+interface ShownClosed {
+  readonly run: readonly MessageId[];
+  readonly count: number;
+}
+
+function withShown(loaded: Loaded, { count, run }: ShownClosed): Loaded {
+  const expanded = new Map(loaded.expanded);
+  for (const id of run) {
+    expanded.set(id, count);
+  }
+  return { ...loaded, expanded };
+}
+
 interface ChannelOptions {
   readonly client: MessagesClient;
   readonly name: ChannelName;
@@ -251,6 +265,9 @@ function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
     },
     post: (text, posted) => {
       enqueue(postMessage, { posted, text });
+    },
+    showClosed: (run, count) => {
+      update(channel, (loaded) => withShown(loaded, { count, run }));
     },
     snapshot: () => state,
     subscribe: (listener) => {

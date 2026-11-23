@@ -65,4 +65,4 @@ function streamRows(stream: StreamOf): readonly StreamRow[] {
   return stream.messages.map((message, index) => rowOf(message, stream.messages[index - PREVIOUS] ?? null, lined));
 }
 
-export { streamRows };
+export { type StreamRow, streamRows };

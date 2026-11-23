@@ -102,7 +102,8 @@
  * `ReactionChip`s, each a reaction and its count, pressed (in the accent) when one is the reader's own, with who
  * reacted as its tooltip. `RepliesDivider` heads a thread's replies, `ChannelStart` says a
  * channel has nothing older, and `QuietButton` is a muted centred button,
- * such as loading older messages. `TextArea` takes focus when it first appears
+ * such as loading older messages. `ClosedFold` is a row of a message list standing for closed threads folded away,
+ * a button on a dashed line that unfolds them. `TextArea` takes focus when it first appears
  * if `focused`.
  *
  * `AppShell` is the page around the login view; `Card`, centred in a scrolling column, `CardHeader`,
@@ -146,6 +147,7 @@ export { MessageBody } from "./lib/message-body.tsx";
 export { MessageItem } from "./lib/message-item.tsx";
 export { MessageList } from "./lib/message-list.tsx";
 export { QuietButton } from "./lib/quiet-button.tsx";
+export { ClosedFold } from "./lib/closed-fold.tsx";
 export { MoreButton } from "./lib/more-button.tsx";
 export { RepliesDivider } from "./lib/replies-divider.tsx";
 export { ThreadSummary } from "./lib/thread-summary.tsx";
