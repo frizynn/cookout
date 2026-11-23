@@ -62,7 +62,7 @@ A **lease** is a session's expiring hold on an agent identity, so two sessions d
 cookout join --as reviewer
 ```
 
-It prints `{ "leaseId", "expiresAt" }`. The CLI keeps the lease ID in `COOKOUT_STATE_DIR` (default `~/.local/state/cookout`) and sends it with every later verb. The lease lasts 60 s (the server's `COOKOUT_LEASE_SECONDS`) after the last `ack` or `watch` that carried it; other verbs don't need it or renew it. A long-running `cookout watch` keeps it renewed. Run `cookout leave` at the end so another session can join at once.
+It prints `{ "leaseId", "expiresAt" }`. The CLI keeps the lease ID in `COOKOUT_STATE_DIR` (default `~/.local/state/cookout`) and sends it with every later verb. The lease lasts 60 s (the server's `COOKOUT_LEASE_SECONDS`) after the last verb that carried it, so every verb from this session renews it, and a long-running `cookout watch` keeps it renewed. Only `ack`, `watch` and `leave` need it. Run `cookout leave` at the end so another session can join at once.
 
 - Two sessions with the same token need separate `COOKOUT_STATE_DIR` folders. Let `join` create the folder: it makes it mode 700 and refuses (`lease_state_unsafe`) one that isn't.
 - `join` while another session holds the lease is refused with 409 `lease_held`, with `details.heldUntil`. Wait until then, or take it over with `cookout join --as reviewer --force`.
