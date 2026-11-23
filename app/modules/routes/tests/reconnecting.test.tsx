@@ -55,13 +55,16 @@ function barText(): string {
   return screen.getByRole("status", { name: "Live link" }).textContent;
 }
 
-it("a Reconnecting bar shows while the live link is down, and goes when it is back", { timeout: 5000 }, async () => {
+it("a Reconnecting bar shows while the live link is down, however often that is reported, and goes when it is back", {
+  timeout: 5000,
+}, async () => {
   expect.hasAssertions();
 
   const report = await openPeople("web-reconnect-bar");
 
   expect(barText()).toBe("");
 
+  report("down");
   report("down");
 
   await waitFor(() => {
