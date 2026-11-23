@@ -1,27 +1,27 @@
 /**
  * Live updates on the backend: the route that opens a caller's Server-Sent
  * Events stream (ADR 0002). The stream merges separate event sources, each
- * started when the caller connects, so each new kind of event is one more
- * entry in `sources`: for now the caller's new inbox items, which the
- * `Messages` service's hub feeds. The stream starts with a comment, so Node
- * sends the headers at once and the caller knows every source is listening.
- * The route sits behind the server's token gate; the lease gate comes later.
+ * started when the caller connects with the caller and the request, so each
+ * new kind of event is one more entry in `sources` (`lib/server/sources.ts`):
+ * the caller's new inbox items, which the `Messages` service's hub feeds; the
+ * caller's new read positions, which the `Inbox` service's hub feeds on every
+ * ack from any session; and, when the request asks with `?channels=all`,
+ * every new message on every channel, for the web UI. The stream starts with
+ * a comment, so Node sends the headers at once and the caller knows every
+ * source is listening. The route sits behind the server's token gate; the
+ * lease gate comes later.
  */
 import { Effect, Exit, Scope, Stream } from "effect";
+import { HttpServerRequest, HttpServerResponse } from "effect/http";
+import { InboxItemEventSchema, MessageEventSchema, ReadPositionEventSchema } from "./lib/server/wire.ts";
 import { Caller } from "../identities/server.ts";
-import type { EventSource } from "./lib/server/source.ts";
-import { HttpServerResponse } from "effect/http";
-import type { Inbox } from "../inbox/server.ts";
-import { InboxItemEventSchema } from "./lib/server/wire.ts";
-import type { Messages } from "../messages/server.ts";
 import type { Route } from "../http/server.ts";
+import type { SourceNeeds } from "./lib/server/sources.ts";
 import { eventsPath } from "./index.ts";
-import { inboxItems } from "./lib/server/inbox-items.ts";
+import { sources } from "./lib/server/sources.ts";
 import { sseText } from "./lib/server/source.ts";
 
-type Needs = Caller | Inbox | Messages;
-
-const sources: readonly EventSource<Needs>[] = [inboxItems];
+type Needs = Caller | SourceNeeds;
 
 const SSE_HEADERS = { "cache-control": "no-cache" } as const;
 const OPENED = ": open\n\n";
@@ -30,10 +30,11 @@ const eventsRoute: Route<Needs> = {
   handle: () =>
     Effect.gen(function* openEventStream() {
       const caller = yield* Caller;
+      const { url } = yield* HttpServerRequest.HttpServerRequest;
       const connection = yield* Scope.make();
-      const streams = yield* Effect.forEach(sources, (source) => source(caller), { concurrency: "unbounded" }).pipe(
-        Scope.provide(connection),
-      );
+      const streams = yield* Effect.forEach(sources, (source) => source({ caller, url }), {
+        concurrency: "unbounded",
+      }).pipe(Scope.provide(connection));
       const body = Stream.mergeAll(streams, { concurrency: "unbounded" }).pipe(
         Stream.map(sseText),
         Stream.prepend([OPENED]),
@@ -54,4 +55,8 @@ const eventsRoute: Route<Needs> = {
 export const eventRoutes: readonly Route<Needs>[] = [eventsRoute];
 
 /** The Schemas of the stream's events, for the SDK's generated validators. */
-export const eventResponseSchemas = { InboxItemEvent: InboxItemEventSchema };
+export const eventResponseSchemas = {
+  InboxItemEvent: InboxItemEventSchema,
+  MessageEvent: MessageEventSchema,
+  ReadPositionEvent: ReadPositionEventSchema,
+};

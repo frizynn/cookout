@@ -1,6 +1,5 @@
+import type { Connected, StreamRequest } from "./source.ts";
 import { Effect, Stream } from "effect";
-import type { Connected } from "./source.ts";
-import type { Identity } from "../../../identities/index.ts";
 import { Inbox } from "../../../inbox/server.ts";
 import { InboxItemEventSchema } from "./wire.ts";
 import { Messages } from "../../../messages/server.ts";
@@ -8,7 +7,7 @@ import { sseEvent } from "./source.ts";
 
 const inboxItemEvent = sseEvent(InboxItemEventSchema);
 
-function inboxItems(caller: Identity): Connected<Inbox | Messages> {
+function inboxItems({ caller }: StreamRequest): Connected<Inbox | Messages> {
   return Effect.gen(function* subscribeToInboxItems() {
     const messages = yield* Messages;
     const inbox = yield* Inbox;

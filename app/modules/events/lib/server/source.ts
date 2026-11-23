@@ -18,7 +18,12 @@ type Connected<Needs> = Effect.Effect<
   Needs | Scope.Scope
 >;
 
-type EventSource<Needs> = (caller: Identity) => Connected<Needs>;
+interface StreamRequest {
+  readonly caller: Identity;
+  readonly url: string;
+}
+
+type EventSource<Needs> = (request: StreamRequest) => Connected<Needs>;
 
 function sseEvent<Event extends CookoutEvent>(
   schema: Schema.Codec<Event, unknown>,
@@ -36,4 +41,4 @@ function sseText({ data, event, id }: SseEvent): string {
   return `event: ${event}\nid: ${String(id)}\n${dataLines}\n`;
 }
 
-export { type Connected, type EventSource, sseEvent, sseText };
+export { type Connected, type EventSource, type StreamRequest, sseEvent, sseText };

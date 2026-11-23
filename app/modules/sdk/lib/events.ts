@@ -1,9 +1,9 @@
+import { allChannelsQuery, eventsPath } from "../../events/index.ts";
+import { isInboxItemEvent, isMessageEvent, isReadPositionEvent } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import { CookoutError } from "./errors.ts";
 import type { CookoutEvent } from "../../events/index.ts";
 import type { ServerSentEvent } from "../../http/client.ts";
-import { eventsPath } from "../../events/index.ts";
-import { isInboxItemEvent } from "./generated/validators.js";
 import { openEvents } from "./request.ts";
 
 type EventType = CookoutEvent["type"];
@@ -12,14 +12,20 @@ interface EventStream extends AsyncIterable<CookoutEvent> {
   readonly close: () => Promise<void>;
 }
 
+interface WatchOptions {
+  readonly allChannels?: boolean;
+}
+
 interface EventCalls {
-  readonly watch: () => Promise<EventStream>;
+  readonly watch: (options?: WatchOptions) => Promise<EventStream>;
 }
 
 const OK = 200;
 
 const validators: { readonly [Type in EventType]: (data: unknown) => data is Extract<CookoutEvent, { type: Type }> } = {
   "inbox-item": isInboxItemEvent,
+  message: isMessageEvent,
+  "read-position": isReadPositionEvent,
 };
 
 function isEventType(event: string): event is EventType {
@@ -60,13 +66,21 @@ async function* cookoutEvents(events: AsyncIterable<ServerSentEvent>): AsyncGene
   }
 }
 
+function queryFor(allChannels: boolean): Readonly<Record<string, string>> {
+  if (allChannels) {
+    return allChannelsQuery;
+  }
+  return {};
+}
+
 function eventCalls(server: ClientConnection): EventCalls {
   return {
-    watch: async () => {
-      const { close, events } = await openEvents({ connection: server, path: eventsPath });
+    watch: async ({ allChannels = false } = {}) => {
+      const query = queryFor(allChannels);
+      const { close, events } = await openEvents({ connection: server, path: eventsPath, query });
       return { [Symbol.asyncIterator]: () => cookoutEvents(events), close };
     },
   };
 }
 
-export { type EventStream, eventCalls };
+export { type EventStream, type WatchOptions, eventCalls };

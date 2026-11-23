@@ -13,6 +13,7 @@ import type {
   IdentityWithTokenResponse,
   ListIdentitiesResponse,
 } from "../identities/index.ts";
+import type { EventStream, WatchOptions } from "./lib/events.ts";
 import type { JoinRequest, LeaseId, LeaseResponse, LeaveResponse } from "./lib/leases.ts";
 import type {
   ListMessagesQuery,
@@ -33,7 +34,6 @@ import {
   isListChannelsResponse,
   isListIdentitiesResponse,
 } from "./lib/generated/validators.js";
-import type { EventStream } from "./lib/events.ts";
 import type { HealthResponse } from "../http/index.ts";
 import { eventCalls } from "./lib/events.ts";
 import { healthPath } from "../http/index.ts";
@@ -94,8 +94,8 @@ export type {
   ReadPosition,
   SubscriptionResponse,
 } from "../inbox/index.ts";
-export type { CookoutEvent, InboxItemEvent } from "../events/index.ts";
-export type { EventStream } from "./lib/events.ts";
+export type { CookoutEvent, InboxItemEvent, MessageEvent, ReadPositionEvent } from "../events/index.ts";
+export type { EventStream, WatchOptions } from "./lib/events.ts";
 export { CookoutError, type CookoutErrorCode, type UnknownErrorCode } from "./lib/errors.ts";
 
 export type CookoutClientOptions = {
@@ -177,11 +177,13 @@ export type CookoutClient = {
   readonly unsubscribe: (channel: string) => Promise<SubscriptionResponse>;
   /**
    * `GET /v1/events`: opens one Server-Sent Events stream, resolving once the server has accepted it. Iterate it for
-   * each new inbox item (`inbox-item`) the moment another identity posts it; the caller's own posts never arrive.
+   * each new inbox item (`inbox-item`) the moment another identity posts it (the caller's own posts never arrive), and
+   * each new read position (`read-position`) the moment any session of the caller acks, so several sessions stay in
+   * sync. With `allChannels`, it also sends every new message on every channel (`message`), as the web UI needs.
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
    * a newer server, is skipped. `close` drops the connection.
    */
-  readonly watch: () => Promise<EventStream>;
+  readonly watch: (options?: WatchOptions) => Promise<EventStream>;
 };
 
 /**
