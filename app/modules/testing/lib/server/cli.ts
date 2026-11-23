@@ -39,13 +39,8 @@ interface ServeProcess {
   readonly url: string;
 }
 
-interface DevProcess {
-  readonly adminToken: string;
-  readonly database: string;
+interface DevProcess extends DevStartLine {
   readonly stop: Effect.Effect<void>;
-  readonly url: string;
-  readonly webhookFakeUrl: string;
-  readonly webUrl: string;
 }
 
 interface ServeOptions {
@@ -91,15 +86,16 @@ const serveAdminToken = "test-admin-token-0123456789abcdef0123456789";
 const EXIT_SUCCESS = 0;
 const verbLayers: ServeLayers = { storage: Function.constant(memoryStorage) };
 const isListening = Schema.is(Schema.Struct({ listening: Schema.String }));
-const isDevRunning = Schema.is(
-  Schema.Struct({
-    adminToken: Schema.String,
-    database: Schema.String,
-    url: Schema.String,
-    webUrl: Schema.String,
-    webhookFakeUrl: Schema.String,
-  }),
-);
+const DevStartLine = Schema.Struct({
+  adminToken: Schema.String,
+  database: Schema.String,
+  relayUrl: Schema.String,
+  url: Schema.String,
+  webUrl: Schema.String,
+  webhookFakeUrl: Schema.String,
+});
+type DevStartLine = typeof DevStartLine.Type;
+const isDevRunning = Schema.is(DevStartLine);
 const parseJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown));
 
 const commandLineServices: Layer.Layer<Needs> = Layer.merge(nodeServices, secretsTest);

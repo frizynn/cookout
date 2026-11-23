@@ -137,6 +137,11 @@ function viewportOf(shot: Shot): typeof WIDE {
 
 async function render(page: Page, shot: Shot): Promise<void> {
   await page.setViewportSize(viewportOf(shot));
+  if (shot.screen.liveDown === true) {
+    await page.route("**/v1/events?*", async (route) => {
+      await route.abort();
+    });
+  }
   await page.goto(`/${shot.screen.hash}`);
   if (typeof shot.screen.click === "string") {
     await page.getByRole("button", { name: shot.screen.click }).click({ timeout: RENDER_MS });

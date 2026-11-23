@@ -5,10 +5,11 @@ import { inPane } from "./regions.ts";
 export interface LogIn {
   readonly page: Page;
   readonly token: string;
+  readonly url?: string;
 }
 
-export async function logIn({ page, token }: LogIn): Promise<void> {
-  await page.goto("/");
+export async function logIn({ page, token, url = "/" }: LogIn): Promise<void> {
+  await page.goto(url);
   await page.getByLabel("Token").fill(token);
   await inPane(page).getByRole("button", { name: "Log in" }).click();
 }
