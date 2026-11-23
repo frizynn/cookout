@@ -154,11 +154,15 @@ it.effect("the CLI says so when COOKOUT_URL is not set", () =>
   }).pipe(Effect.provide(commandLineServices)),
 );
 
-it.effect("the CLI fails with cli_error, as JSON on stderr, when it can't reach the server", () =>
+it.effect("the CLI fails with unreachable, as JSON on stderr, when it can't reach the server", () =>
   Effect.gen(function* unreachable() {
     const result = yield* runCookout({ args: ["whoami"], env: { COOKOUT_URL: "http://127.0.0.1:1/" } });
 
-    expect(result).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "cli_error" } }, stdout: "" });
+    expect(result).toMatchObject({
+      exitCode: EXIT_FAILURE,
+      stderrJson: { error: { code: "unreachable" } },
+      stdout: "",
+    });
   }).pipe(Effect.provide(commandLineServices)),
 );
 

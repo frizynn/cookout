@@ -209,7 +209,7 @@ Every verb prints its answer as JSON on stdout and exits 0. A refusal is `{ "err
 - `credentials_unsafe`, `agent_session_state_unsafe`, `state_folder_missing`: The Login's file or the state folder has the wrong mode or owner, or there is nowhere to keep state. Fix the mode (600 for the file, 700 for the folder) or set `COOKOUT_STATE_DIR`.
 - `idle_expiry_too_long`: `--idle-expiry` beyond the server's ceiling, in `details.maxIdleExpiry`. Ask for less.
 - `token_unknown`, `token_revoked`: The token isn't this cookout's, or was rotated, or its identity Deactivated. For CI, the owner rotates it (`cookout identity rotate <name>`); for a Login, run `cookout login` again.
-- `cli_error` with `fetch failed`: Nothing answers at `COOKOUT_URL`, or at the default board. Check the address, and that the server is up.
+- `unreachable`: Nothing answered at `COOKOUT_URL`, or at the default board; the message names the URL and why (a failed DNS lookup, a refused connection, TLS, or a proxy). Check the address and that the server is up, and behind a proxy set `HTTPS_PROXY` (and `NO_PROXY` for hosts to reach directly).
 - `channel_not_found`, `message_not_found`, `command_not_found`: The name or ID doesn't exist. Check `cookout channel list`, the inbox item's IDs, or `cookout command list`.
 - `reply_in_other_channel`: `--reply-to` a message in another channel. Post in the message's own `channel`.
 - `invalid_request`: The input is malformed; for a command call, the data doesn't follow its schema. Fix what `details` points at.

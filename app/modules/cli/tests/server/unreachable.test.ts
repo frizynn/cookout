@@ -1,22 +1,47 @@
+import { Effect, Exit, Scope, String as Str } from "effect";
 import {
   TestCookout,
   answer,
   commandLineServices,
+  freshDatabasePath,
   runCookout,
+  runCookoutWhile,
   serverAnswering,
+  startServe,
   testCookout,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
-import { Effect } from "effect";
 
+const TICK_SECONDS = 30;
+const EXIT_UNREACHABLE = 5;
 const UNKNOWN_HOST = "http://cookout.invalid";
 const CHECK_SETTINGS = "(check COOKOUT_URL, or HTTPS_PROXY if you are behind a proxy)";
 
 const closedPortUrl = Effect.scoped(serverAnswering({ text: "closed once the scope ends" }));
 
+it.effect("cookout watch exits 5 with the same wording when the server stops answering for 5 minutes", () =>
+  Effect.gen(function* watchServerGone() {
+    const database = yield* freshDatabasePath;
+    const serving = yield* Scope.make();
+    const server = yield* Scope.provide(serving)(startServe({ database }));
+    const env = { COOKOUT_TOKEN: server.adminToken, COOKOUT_URL: server.url };
+
+    const result = yield* runCookoutWhile({
+      args: ["watch"],
+      env,
+      tickSeconds: TICK_SECONDS,
+      whileRunning: () => Scope.close(serving, Exit.void),
+    });
+
+    expect(result.exitCode).toBe(EXIT_UNREACHABLE);
+    expect(result.stdout).toContain(`cookout watch stopped: cannot reach ${server.url}: `);
+    expect(result.stdout).toContain(`${CHECK_SETTINGS} (server_unreachable)`);
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
 it.effect("a refused port gives unreachable, naming the URL and the refused connection", () =>
   Effect.gen(function* refusedPort() {
-    const url = yield* closedPortUrl;
+    const url = yield* Effect.map(closedPortUrl, Str.replace("127.0.0.1", "localhost"));
     const result = yield* runCookout({ args: ["whoami"], env: { COOKOUT_TOKEN: "any", COOKOUT_URL: url } });
 
     expect(result).toMatchObject({ exitCode: 1, stderrJson: { error: { code: "unreachable" } } });

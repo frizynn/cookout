@@ -25,36 +25,15 @@ function unreachableMessage({ url, why }: Unreachable): string {
   return `cannot reach ${url}: ${why} (check COOKOUT_URL, or HTTPS_PROXY if you are behind a proxy)`;
 }
 
-function nameOf(cause: unknown): string {
-  if (Predicate.hasProperty(cause, "code") && Predicate.isString(cause.code)) {
-    return cause.code;
-  }
-  if (Predicate.hasProperty(cause, "name") && Predicate.isString(cause.name)) {
-    return cause.name;
-  }
-  return String(cause);
-}
-
-function messageOf(cause: unknown): string {
-  if (Predicate.hasProperty(cause, "message") && Predicate.isString(cause.message)) {
-    return cause.message;
-  }
-  return "";
-}
-
-function whyOf(cause: unknown): string {
-  const message = messageOf(cause);
-  if (message !== "") {
-    return message;
-  }
+function whyOf(cause: { readonly message: string }): string {
   if (cause instanceof AggregateError) {
     return Arr.join(Arr.map(cause.errors, whyOf), "; ");
   }
-  return nameOf(cause);
+  return cause.message;
 }
 
 function networkFailureCause(error: unknown): Option.Option<string> {
-  if (!(error instanceof TypeError) || error.message !== NETWORK_FAILURE) {
+  if (!(error instanceof TypeError) || error.message !== NETWORK_FAILURE || !(error.cause instanceof Error)) {
     return Option.none();
   }
   return Option.some(whyOf(error.cause));
