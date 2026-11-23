@@ -1,8 +1,9 @@
 import type { CookoutClient, Message } from "../../sdk/index.ts";
-import { adminClient, newIdentity } from "./identities.ts";
+import { adminClient, newIdentity, revocableView } from "./identities.ts";
 import { expect, it } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import type { Cuttable } from "./cuttable.ts";
+import { alertSaying } from "./alerts.ts";
 import { cuttable } from "./cuttable.ts";
 import { inSidebar } from "./regions.ts";
 import { messagesIn } from "./messages.ts";
@@ -105,12 +106,12 @@ it("a channel read in another session while the live link was down shows no unre
   await shownCounts("web-catch-up-read", []);
 });
 
-it("a message marked unread in another session while the live link was down counts as unread once it is back", {
+it("a channel's only message marked unread in another session while the live link was down counts as unread once it is back, and through the next reconnect", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
 
-  const { first, reader } = await reading("web-catch-up-unread");
+  const { first, poster, reader } = await reading("web-catch-up-unread", ["web-catch-up-unread-other"]);
   await reader.ack(first.id);
   const report = opened({ client: reader, hash: "#/" });
   await shownCounts("web-catch-up-unread", []);
@@ -120,6 +121,29 @@ it("a message marked unread in another session while the live link was down coun
   });
 
   await shownCounts("web-catch-up-unread", ["1 unread"]);
+  await whileDown(report, async () => {
+    await poster.createMessage({ channel: "web-catch-up-unread-other", text: "Lunch?" });
+  });
+
+  await shownCounts("web-catch-up-unread", ["1 unread"]);
+});
+
+it("a later message marked unread in another session while the live link was down counts as unread once it is back", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const { poster, reader } = await reading("web-catch-up-later");
+  const { message } = await poster.createMessage({ channel: "web-catch-up-later", text: "Or at one?" });
+  await reader.ack(message.id);
+  const report = opened({ client: reader, hash: "#/" });
+  await shownCounts("web-catch-up-later", []);
+
+  await whileDown(report, async () => {
+    await reader.markUnread(message.id);
+  });
+
+  await shownCounts("web-catch-up-later", ["1 unread"]);
 });
 
 it("every message posted while the live link was down shows once it is back, though they fill more than a page", {
@@ -142,4 +166,31 @@ it("every message posted while the live link was down shows once it is back, tho
     "Or at one?",
     "Or at two?",
   ]);
+});
+
+it("an open channel and thread that can no longer be read once the live link is back say so and keep what they show", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await adminClient().createChannel({ name: "web-catch-up-refused" });
+  const { message } = await adminClient().createMessage({ channel: "web-catch-up-refused", text: "Deploy at noon?" });
+  const reader = await revocableView({
+    methods: ["listMessages", "getThread"],
+    revoked: "web-catch-up-refused-rotated",
+    viewer: "web-catch-up-refused-viewer",
+  });
+  const report = opened({
+    client: reader.client,
+    hash: `#/channels/web-catch-up-refused/threads/${String(message.id)}`,
+  });
+  await within(await screen.findByRole("complementary", { name: "Thread" })).findByText("Deploy at noon?");
+
+  await whileDown(report, reader.rotateToken);
+  await Promise.all([
+    alertSaying("Couldn't mark the channel read (token_revoked)"),
+    alertSaying("Couldn't mark the thread read (token_revoked)"),
+  ]);
+
+  await expect(messagesIn("Messages")).resolves.toStrictEqual(["adminDeploy at noon?"]);
 });
