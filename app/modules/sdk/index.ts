@@ -49,8 +49,11 @@ export type {
 export type { HealthResponse } from "../http/index.ts";
 export type { IsoTime } from "../time/index.ts";
 export type {
+  AgentIdentity,
   CreateIdentityRequest,
+  HumanIdentity,
   Identity,
+  IdentityKind,
   IdentityName,
   IdentityResponse,
   IdentityWithTokenResponse,
@@ -107,7 +110,7 @@ export type CookoutClient = {
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */
   readonly whoami: () => Promise<IdentityResponse>;
-  /** `GET /v1/identities`: every identity and its owner, sorted by name. */
+  /** `GET /v1/identities`: every identity with its kind and owner, sorted by name. */
   readonly listIdentities: () => Promise<ListIdentitiesResponse>;
   /** Admin only. The token in the answer is shown this once. A name in use is 409 `identity_exists`. */
   readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;

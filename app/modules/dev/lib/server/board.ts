@@ -77,10 +77,10 @@ function createCast({ token, url }: BoardConnection): Effect.Effect<Cast, SeedFa
   const admin = clientAt(url, token);
   return Effect.all(
     {
-      ada: createIdentity(url, admin, { name: "ada" }),
-      grace: createIdentity(url, admin, { name: "grace" }),
-      releaseBot: createIdentity(url, admin, { name: "release-bot", owner: "ada" }),
-      triageAgent: createIdentity(url, admin, { name: "triage-agent", owner: "grace" }),
+      ada: createIdentity(url, admin, { kind: "human", name: "ada" }),
+      grace: createIdentity(url, admin, { kind: "human", name: "grace" }),
+      releaseBot: createIdentity(url, admin, { kind: "agent", name: "release-bot", owner: "ada" }),
+      triageAgent: createIdentity(url, admin, { kind: "agent", name: "triage-agent", owner: "grace" }),
     },
     ONE_AT_A_TIME,
   );

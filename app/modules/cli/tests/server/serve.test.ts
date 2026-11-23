@@ -38,7 +38,7 @@ function issueTokens(url: string, adminTokens: readonly string[]): Effect.Effect
   return Effect.gen(function* createAndRotate() {
     const [adminToken = "none"] = adminTokens;
     const admin = createCookoutClient({ env: {}, token: adminToken, url });
-    const created = yield* answer(() => admin.createIdentity({ name: "agent", owner: "matt" }));
+    const created = yield* answer(() => admin.createIdentity({ kind: "agent", name: "agent", owner: "matt" }));
     const rotated = yield* answer(() => admin.rotateToken("agent"));
     return [adminToken, created.token, rotated.token];
   });

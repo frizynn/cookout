@@ -1,6 +1,6 @@
 /**
  * Identities on the wire, shared by the server, the SDK and the web: the
- * `IdentityName`, `Owner`, `Token` and `TokenHash` brands and their
+ * `IdentityName`, `Owner`, `Token` and `TokenHash` brands, the two identity kinds and their
  * constructors, the identity as the server shows it, the routes, and the
  * error codes bearer auth and the admin check answer with.
  */
@@ -9,6 +9,12 @@ import type { IsoTime } from "../time/index.ts";
 declare const brand: unique symbol;
 
 type Brand<Name extends string> = string & { readonly [brand]: Name };
+
+type IdentityFields = {
+  readonly name: IdentityName;
+  readonly admin: boolean;
+  readonly createdAt: IsoTime;
+};
 
 /** An identity's name: 1–64 lowercase letters, digits or `-`, so `@name` mentions parse cleanly. Unique on a server. */
 export type IdentityName = Brand<"IdentityName">;
@@ -53,14 +59,25 @@ export function tokenHash(value: string): TokenHash {
 /** The name of the admin identity the server makes on its first boot. */
 export const firstAdminName: IdentityName = as("admin");
 
-/** An identity as the server shows it. Its token is never part of it. */
-export type Identity = {
-  readonly name: IdentityName;
-  readonly owner?: Owner;
-  /** Admins can create identities, rotate tokens and delete identities. */
-  readonly admin: boolean;
-  readonly createdAt: IsoTime;
+/** The two kinds of identity. Every identity is exactly one of them. */
+export const identityKinds = ["human", "agent"] as const;
+
+/** Whether an identity is a person or an agent. Set when the identity is created, and never changed. */
+export type IdentityKind = (typeof identityKinds)[number];
+
+/** A person using the board as themself. A human is its own person, so it has no owner. An admin can create identities, rotate tokens and delete identities. */
+export type HumanIdentity = IdentityFields & {
+  readonly kind: "human";
 };
+
+/** A program on the board, which may belong to a person (its owner). */
+export type AgentIdentity = IdentityFields & {
+  readonly kind: "agent";
+  readonly owner?: Owner;
+};
+
+/** An identity as the server shows it: a human or an agent, never both. Its token is never part of it. */
+export type Identity = HumanIdentity | AgentIdentity;
 
 /** The answer to `GET /v1/whoami` and `DELETE /v1/identities/<name>`. */
 export type IdentityResponse = {
@@ -78,9 +95,11 @@ export type ListIdentitiesResponse = {
   readonly identities: readonly Identity[];
 };
 
-/** The body of `POST /v1/identities`. The server checks the name and owner rules. */
+/** The body of `POST /v1/identities`. The server checks the name and owner rules, and that a human has no owner. */
 export type CreateIdentityRequest = {
   readonly name: string;
+  readonly kind: IdentityKind;
+  /** Only an agent can have an owner: a human with one is refused with 400. */
   readonly owner?: string;
 };
 

@@ -1,7 +1,7 @@
 import { Argument, Command, Flag } from "effect/cli";
 import { Effect, Option, Schema } from "effect";
 import type { ListMessagesQuery, MessageId, PostMessageRequest } from "../../../messages/index.ts";
-import { identityNamePattern, isIdentityName } from "../../../identities/index.ts";
+import { identityKinds, identityNamePattern, isIdentityName } from "../../../identities/index.ts";
 import { join, leave } from "./join-and-leave.ts";
 import { printAnswer, refused } from "./output.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
@@ -32,17 +32,23 @@ const identityName = Argument.String("name").pipe(Argument.withDescription("The 
 const identityCreateCommand = Command.make(
   "create",
   {
+    kind: Flag.Literals("kind", identityKinds).pipe(
+      Flag.withDescription("human for a person, agent for a program. It never changes."),
+    ),
     name: identityName,
-    owner: Flag.String("owner").pipe(Flag.optional, Flag.withDescription("The person the identity belongs to.")),
+    owner: Flag.String("owner").pipe(
+      Flag.optional,
+      Flag.withDescription("The person the agent belongs to. A human has no owner."),
+    ),
   },
-  ({ name, owner }) => {
+  ({ kind, name, owner }) => {
     const withOwner = Option.match(owner, { onNone: () => NOTHING, onSome: (value) => ({ owner: value }) });
-    return answer((client) => client.createIdentity({ name, ...withOwner }));
+    return answer((client) => client.createIdentity({ kind, name, ...withOwner }));
   },
 ).pipe(Command.withDescription("Create an identity (admin only). Its token is shown this once."));
 
 const identityListCommand = Command.make("list", {}, () => answer((client) => client.listIdentities())).pipe(
-  Command.withDescription("List every identity and its owner, sorted by name."),
+  Command.withDescription("List every identity with its kind and owner, sorted by name."),
 );
 
 const identityRotateCommand = Command.make("rotate", { name: identityName }, ({ name }) =>

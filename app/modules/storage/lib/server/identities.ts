@@ -1,6 +1,6 @@
 import { Effect, Schema } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
-import { isIdentityName, isOwner } from "../../../identities/index.ts";
+import { identityKinds, isIdentityName, isOwner } from "../../../identities/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
@@ -105,6 +105,7 @@ export const memoryIdentities = (state: MemoryState): IdentitiesSection => {
 const IdentityRow = Schema.Struct({
   admin: Schema.Literals([0, 1]),
   created_at: IsoTimeSchema,
+  kind: Schema.Literals(identityKinds),
   name: Schema.String.pipe(Schema.refine(isIdentityName)),
   owner: Schema.NullOr(Schema.String.pipe(Schema.refine(isOwner))),
 });
@@ -122,7 +123,13 @@ const decode =
 
 const toIdentity = (row: typeof IdentityRow.Type): Identity => {
   const fields = { admin: row.admin === 1, createdAt: row.created_at, name: row.name };
-  return row.owner === null ? fields : { ...fields, owner: row.owner };
+  if (row.kind === "human") {
+    return { ...fields, kind: "human" };
+  }
+  if (row.owner === null) {
+    return { ...fields, kind: "agent" };
+  }
+  return { ...fields, kind: "agent", owner: row.owner };
 };
 
 const toLookup = (row: unknown): Fails<TokenLookup> =>
@@ -139,7 +146,7 @@ const toLookup = (row: unknown): Fails<TokenLookup> =>
               })),
       );
 
-const identityColumns = "name, owner, admin, created_at";
+const identityColumns = "name, kind, owner, admin, created_at";
 
 export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
   const count = (sql: string, ...params: readonly string[]) =>
@@ -154,9 +161,10 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
   const insert = (identity: Identity, hash: TokenHash) =>
     Effect.andThen(
       db.run(
-        "INSERT INTO identities (name, owner, admin, created_at) VALUES (?, ?, ?, ?)",
+        "INSERT INTO identities (name, kind, owner, admin, created_at) VALUES (?, ?, ?, ?, ?)",
         identity.name,
-        identity.owner ?? null,
+        identity.kind,
+        identity.kind === "agent" ? (identity.owner ?? null) : null,
         identity.admin ? 1 : 0,
         identity.createdAt,
       ),
@@ -203,7 +211,7 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
     findIdentityByTokenHash: (hash) =>
       db
         .get(
-          `SELECT tokens.revoked, identities.name, identities.owner, identities.admin, identities.created_at
+          `SELECT tokens.revoked, identities.name, identities.kind, identities.owner, identities.admin, identities.created_at
            FROM tokens LEFT JOIN identities ON identities.name = tokens.identity_name
            WHERE tokens.token_hash = ?`,
           hash,

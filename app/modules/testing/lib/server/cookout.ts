@@ -3,6 +3,7 @@ import type { CookoutClient, CookoutClientOptions, Identity, Token } from "../..
 import { FirstBoot, Identities } from "../../../identities/server.ts";
 import { Storage, memoryStorage } from "../../../storage/server.ts";
 import { currentTime, startTestClock } from "./time.ts";
+import type { IdentityFixtureOptions } from "./identities.ts";
 import { cookoutServer } from "../../../cli/server.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
 import { identityFixture } from "./identities.ts";
@@ -16,7 +17,7 @@ export type TestIdentity = {
   readonly client: CookoutClient;
 };
 
-export type CreateTestIdentityOptions = { readonly owner?: string; readonly admin?: boolean };
+export type CreateTestIdentityOptions = IdentityFixtureOptions;
 
 export type BootedServer = {
   readonly url: string;

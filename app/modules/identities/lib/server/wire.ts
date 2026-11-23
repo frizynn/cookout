@@ -16,14 +16,22 @@ const TokenSchema = Schema.String.check(Schema.isPattern(tokenPattern)).pipe(
   Schema.refine(isToken, { identifier: "Token" }),
 );
 
-const IdentitySchema = matchesWire<Identity>()(
-  Schema.Struct({
-    admin: Schema.Boolean,
-    createdAt: IsoTimeSchema,
-    name: IdentityNameSchema,
-    owner: Schema.optionalKey(OwnerSchema),
-  }),
-);
+const HumanIdentitySchema = Schema.Struct({
+  admin: Schema.Boolean,
+  createdAt: IsoTimeSchema,
+  kind: Schema.Literal("human"),
+  name: IdentityNameSchema,
+});
+
+const AgentIdentitySchema = Schema.Struct({
+  admin: Schema.Boolean,
+  createdAt: IsoTimeSchema,
+  kind: Schema.Literal("agent"),
+  name: IdentityNameSchema,
+  owner: Schema.optionalKey(OwnerSchema),
+});
+
+const IdentitySchema = matchesWire<Identity>()(Schema.Union([HumanIdentitySchema, AgentIdentitySchema]));
 
 export const IdentityResponseSchema = matchesWire<IdentityResponse>()(Schema.Struct({ identity: IdentitySchema }));
 

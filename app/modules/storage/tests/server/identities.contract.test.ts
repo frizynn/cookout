@@ -48,6 +48,26 @@ it.effect.each(storageLayers)("storage contract ($adapter): the admin flag is ke
   }),
 );
 
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): an identity's kind is kept when it is listed, found by token and rotated",
+  ({ layer }) =>
+    Effect.gen(function* kindKept() {
+      const { storage } = yield* openStore(layer);
+      yield* storage.createIdentity(identity("ada", { kind: "human" }), hashA);
+      yield* storage.createIdentity(identity("bot", { kind: "agent", owner: "ada" }), hashB);
+      const identities = yield* storage.listIdentities();
+      const found = yield* storage.findIdentityByTokenHash(hashA);
+      const rotated = yield* storage.replaceToken(nameOf("bot"), hashC);
+
+      expect(Arr.map(identities, ({ kind, name }) => [name, kind])).toStrictEqual([
+        ["ada", "human"],
+        ["bot", "agent"],
+      ]);
+      expect(found).toStrictEqual({ identity: identity("ada", { kind: "human" }), status: "active" });
+      expect(rotated).toStrictEqual({ identity: identity("bot", { owner: "ada" }), status: "replaced" });
+    }),
+);
+
 it.effect.each(storageLayers)("storage contract ($adapter): a name can be used only once", ({ layer }) =>
   Effect.gen(function* nameOnce() {
     const { storage } = yield* openStore(layer);

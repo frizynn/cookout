@@ -15,7 +15,9 @@ it.effect("the first boot makes an admin identity with a working token", () =>
     const whoami = yield* answer(cookout.client.whoami);
 
     expect(cookout.adminToken).toMatch(/^cookout_/u);
-    expect(whoami).toStrictEqual({ identity: { admin: true, createdAt: "2026-01-01T00:00:00.000Z", name: "admin" } });
+    expect(whoami).toStrictEqual({
+      identity: { admin: true, createdAt: "2026-01-01T00:00:00.000Z", kind: "human", name: "admin" },
+    });
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -74,7 +76,9 @@ it.effect("a server on a store that already has identities makes no new admin", 
     );
 
     expect(second.adminToken).toBeUndefined();
-    expect(identities).toStrictEqual([{ admin: true, createdAt: "2026-01-01T00:00:00.000Z", name: "admin" }]);
+    expect(identities).toStrictEqual([
+      { admin: true, createdAt: "2026-01-01T00:00:00.000Z", kind: "human", name: "admin" },
+    ]);
   }).pipe(Effect.provide(testCookout())),
 );
 

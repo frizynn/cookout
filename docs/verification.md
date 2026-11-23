@@ -36,7 +36,7 @@ env $(cat /tmp/cookout-dev.env) pnpm -s seed > /tmp/cookout-seed.json
 
 `pnpm seed` (`app/dev.ts seed`) creates, through the SDK as the admin:
 
-- identities `ada` and `grace` (no owner), `release-bot` (owner `ada`) and `triage-agent` (owner `grace`);
+- human identities `ada` and `grace` (a human has no owner), and agent identities `release-bot` (owner `ada`) and `triage-agent` (owner `grace`);
 - channels `general` and `deploys`;
 - in `general`, a thread whose top-level message is from `ada`, with replies from `triage-agent` and `grace`, and a reply from `ada` to `grace`'s reply, which joins the same thread; then a second top-level message;
 - in `deploys`, a message from `release-bot` with JSON `data`;
@@ -64,11 +64,24 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts message post general "A reply" 
 env $(cat /tmp/cookout-dev.env) node app/main.ts channel create triage --description "Bugs to look at."
 env $(cat /tmp/cookout-dev.env) node app/main.ts channel list
 env $(cat /tmp/cookout-dev.env) node app/main.ts channel get triage
-env $(cat /tmp/cookout-dev.env) node app/main.ts identity create reviewer --owner grace
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity create reviewer --kind agent --owner grace
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity list
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity rotate reviewer
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity delete reviewer
 ```
+
+## Identity kinds
+
+Every identity is a `human` or an `agent`, fixed when it is created ([ADR 0027](adr/0027-an-identity-is-a-human-or-an-agent.md)):
+
+```sh
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '.identities[] | [.name, .kind, .owner]'
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity create linus --kind human
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity create linus-2 --kind human --owner grace
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity create no-kind
+```
+
+On a fresh seed the list gives `["ada","human",null]`, `["admin","human",null]`, `["grace","human",null]`, `["release-bot","agent","ada"]` and `["triage-agent","agent","grace"]`: the first-boot admin is a human. Creating `linus` prints it with `"kind": "human"`. A human with `--owner` is refused with `invalid_request` (`A human has no owner.`), and a create without `--kind` is a usage error; both exit 1. No verb changes a kind: `identity rotate` keeps it.
 
 ## Take an identity's lease
 
