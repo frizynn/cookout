@@ -26,7 +26,6 @@ export type {
   AgentJoinApproval,
   AgentJoinCollection,
   AgentJoinRequest,
-  NewAgentJoinRequest,
 } from "./lib/server/agent-join-requests.ts";
 
 export class Storage extends Context.Service<Storage, StorageService>()("@ai-hero/cookout/storage/server/Storage") {}

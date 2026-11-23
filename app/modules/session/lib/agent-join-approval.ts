@@ -143,10 +143,4 @@ function createAgentJoinApprovals(client: AgentJoinApprovalClient): AgentJoinApp
   };
 }
 
-export {
-  type AgentJoinApproval,
-  type AgentJoinApprovalState,
-  type AgentJoinApprovals,
-  type AgentJoinRequest,
-  createAgentJoinApprovals,
-};
+export { type AgentJoinApproval, type AgentJoinApprovalState, type AgentJoinApprovals, createAgentJoinApprovals };

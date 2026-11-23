@@ -62,6 +62,22 @@ interface NewIdentity {
   readonly rotateToken: () => Promise<void>;
 }
 
+function anonymousAgentJoinRequests(): Pick<CookoutClient, "approveAgentJoin" | "getAgentJoinRequest"> {
+  return {
+    approveAgentJoin: async (userCode, approval) => {
+      const approved = await createCookoutClient({ env: {}, url: inject("cookout").url }).approveAgentJoin(
+        userCode,
+        approval,
+      );
+      return approved;
+    },
+    getAgentJoinRequest: async (userCode) => {
+      const found = await createCookoutClient({ env: {}, url: inject("cookout").url }).getAgentJoinRequest(userCode);
+      return found;
+    },
+  };
+}
+
 function anonymousLoginRequests(): Pick<CookoutClient, "approveLogin" | "getLoginRequest"> {
   return {
     approveLogin: async (userCode) => {
@@ -123,9 +139,7 @@ function approvalsOf(opening: BoardOpening): Pick<BoardOpening, "loginApprovals"
   readonly agentJoinApprovals: AgentJoinApprovals;
 } {
   return {
-    agentJoinApprovals:
-      opening.agentJoinApprovals ??
-      createAgentJoinApprovals(createCookoutClient({ env: {}, url: inject("cookout").url })),
+    agentJoinApprovals: opening.agentJoinApprovals ?? createAgentJoinApprovals(anonymousAgentJoinRequests()),
     loginApprovals: opening.loginApprovals ?? createLoginApprovals(anonymousLoginRequests()),
   };
 }
