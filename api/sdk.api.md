@@ -49,6 +49,11 @@ declare const brand$3: unique symbol;
 type Brand<Name extends string> = string & {
   readonly [brand$3]: Name;
 };
+type IdentityFields = {
+  readonly name: IdentityName;
+  readonly admin: boolean;
+  readonly createdAt: IsoTime;
+};
 /** An identity's name: 1–64 lowercase letters, digits or `-`, so `@name` mentions parse cleanly. Unique on a server. */
 type IdentityName = Brand<"IdentityName">;
 /** The person an identity belongs to, such as `matt`: 1–100 characters. */
@@ -59,13 +64,7 @@ type Token = Brand<"Token">;
 declare const identityKinds: readonly ["human", "agent"];
 /** Whether an identity is a person or an agent. Set when the identity is created, and never changed. */
 type IdentityKind = (typeof identityKinds)[number];
-type IdentityFields = {
-  readonly name: IdentityName;
-  /** Admins can create identities, rotate tokens and delete identities. */
-  readonly admin: boolean;
-  readonly createdAt: IsoTime;
-};
-/** A person using the board as themself. A human is its own person, so it has no owner. */
+/** A person using the board as themself. A human is its own person, so it has no owner. An admin can create identities, rotate tokens and delete identities. */
 type HumanIdentity = IdentityFields & {
   readonly kind: "human";
 };
