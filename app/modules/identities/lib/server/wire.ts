@@ -1,5 +1,14 @@
 import type { Identity, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../index.ts";
-import { identityNamePattern, isIdentityName, isOwner, isToken, ownerLength, tokenPattern } from "../../index.ts";
+import {
+  displayNameLength,
+  identityNamePattern,
+  isDisplayName,
+  isIdentityName,
+  isOwner,
+  isToken,
+  ownerLength,
+  tokenPattern,
+} from "../../index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
@@ -12,6 +21,11 @@ export const OwnerSchema = Schema.String.check(
   Schema.isBetweenLength(ownerLength.minimum, ownerLength.maximum, { message: "Use 1-100 characters." }),
 ).pipe(Schema.refine(isOwner, { identifier: "Owner" }));
 
+const DisplayNameSchema = Schema.String.check(
+  Schema.isTrimmed({ message: "Use no space at either end." }),
+  Schema.isBetweenLength(displayNameLength.minimum, displayNameLength.maximum, { message: "Use 1-80 characters." }),
+).pipe(Schema.refine(isDisplayName, { identifier: "DisplayName" }));
+
 const TokenSchema = Schema.String.check(Schema.isPattern(tokenPattern)).pipe(
   Schema.refine(isToken, { identifier: "Token" }),
 );
@@ -19,6 +33,7 @@ const TokenSchema = Schema.String.check(Schema.isPattern(tokenPattern)).pipe(
 const HumanIdentitySchema = Schema.Struct({
   admin: Schema.Boolean,
   createdAt: IsoTimeSchema,
+  displayName: Schema.optionalKey(DisplayNameSchema),
   kind: Schema.Literal("human"),
   name: IdentityNameSchema,
 });
@@ -26,6 +41,7 @@ const HumanIdentitySchema = Schema.Struct({
 const AgentIdentitySchema = Schema.Struct({
   admin: Schema.Boolean,
   createdAt: IsoTimeSchema,
+  displayName: Schema.optionalKey(DisplayNameSchema),
   handler: Schema.optionalKey(Schema.Literal(true)),
   kind: Schema.Literal("agent"),
   name: IdentityNameSchema,
@@ -43,3 +59,5 @@ export const IdentityWithTokenResponseSchema = matchesWire<IdentityWithTokenResp
 export const ListIdentitiesResponseSchema = matchesWire<ListIdentitiesResponse>()(
   Schema.Struct({ identities: Schema.Array(IdentitySchema) }),
 );
+
+export { DisplayNameSchema };
