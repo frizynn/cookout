@@ -16,7 +16,7 @@ const agentSessionsLayer: Layer.Layer<AgentSessions, Config.ConfigError, Storage
       const maxIdle = yield* maxIdleExpiry;
       const storage = yield* Storage;
       const secrets = yield* Secrets;
-      const { publish: publishIdentity } = yield* IdentityChanges;
+      const { endTokens, publish: publishIdentity } = yield* IdentityChanges;
       const ceilingSeconds = idleSecondsOf(maxIdle);
       const hub = yield* PubSub.unbounded<Identity>();
       function publishSession(agent: IdentityName): Effect.Effect<void, StorageUnavailable> {
@@ -27,7 +27,7 @@ const agentSessionsLayer: Layer.Layer<AgentSessions, Config.ConfigError, Storage
           }),
         );
       }
-      const on = { ceilingSeconds, maxIdle, publishIdentity, publishSession, secrets, storage };
+      const on = { ceilingSeconds, endTokens, maxIdle, publishIdentity, publishSession, secrets, storage };
       return { ...agentSessionsOn(on), sessionChanged: PubSub.subscribe(hub) };
     }),
   );

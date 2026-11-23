@@ -156,7 +156,12 @@ it.effect("after its only stream closes, an identity stays online for 59 s and r
     const { afterGrace, withinGrace } = yield* aroundTheGrace(cookout.client, "ann");
 
     expect(withinGrace).toMatchObject({ online: true });
-    expect(afterGrace).toStrictEqual({ identity: "ann", lastSeenAt: TEN_SECONDS_IN, online: false });
+    expect(afterGrace).toStrictEqual({
+      identity: "ann",
+      lastSeenAt: TEN_SECONDS_IN,
+      offlineReason: "connection lost",
+      online: false,
+    });
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -194,7 +199,12 @@ it.effect("a human with two streams stays online when one closes, and only the l
     const { afterGrace, withinGrace } = yield* aroundTheGrace(cookout.client, "ann");
 
     expect([oneOpen, withinGrace]).toMatchObject([{ online: true }, { online: true }]);
-    expect(afterGrace).toStrictEqual({ identity: "ann", lastSeenAt: "2026-01-01T00:02:00.000Z", online: false });
+    expect(afterGrace).toStrictEqual({
+      identity: "ann",
+      lastSeenAt: "2026-01-01T00:02:00.000Z",
+      offlineReason: "connection lost",
+      online: false,
+    });
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -212,7 +222,10 @@ it.effect("the all-channels feed sends a presence event when an identity goes on
 
     expect([cameOnline, offline]).toStrictEqual([
       { presence: { connection: { via: "watch" }, identity: "ann", online: true }, type: "presence" },
-      { presence: { identity: "ann", lastSeenAt: BOOT, online: false }, type: "presence" },
+      {
+        presence: { identity: "ann", lastSeenAt: BOOT, offlineReason: "connection lost", online: false },
+        type: "presence",
+      },
     ]);
   }).pipe(Effect.provide(testCookout())),
 );
@@ -225,7 +238,7 @@ it.effect("a Deactivated identity is always offline, though its stream is still 
     yield* answer(() => cookout.client.deactivateIdentity("ann"));
     const presence = yield* presenceOf(cookout.client, "ann");
 
-    expect(presence).toStrictEqual({ identity: "ann", online: false });
+    expect(presence).toStrictEqual({ identity: "ann", lastSeenAt: BOOT, offlineReason: "deactivated", online: false });
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -242,7 +255,7 @@ it.effect(
 
       expect([withinBootGrace, afterBootGrace]).toStrictEqual([
         { identity: "ann", online: true },
-        { identity: "ann", lastSeenAt: TEN_SECONDS_IN, online: false },
+        { identity: "ann", lastSeenAt: TEN_SECONDS_IN, offlineReason: "connection lost", online: false },
       ]);
     }).pipe(Effect.provide(testCookout({ storage: "sqlite" }))),
 );

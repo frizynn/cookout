@@ -1,8 +1,7 @@
+import { Caller, identityNotFound, nameParam, requireOwnerOrAdmin } from "../../../identities/server.ts";
 import { Effect, Predicate } from "effect";
 import { ListAgentSessionsResponseSchema, RevokeAgentSessionResponseSchema } from "./wire.ts";
-import { identityNotFound, nameParam, requireOwnerOrAdmin } from "../../../identities/server.ts";
 import { AgentSessions } from "./service.ts";
-import type { Caller } from "../../../identities/server.ts";
 import { HttpServerResponse } from "effect/http";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { Refusal } from "../../../http/index.ts";
@@ -44,8 +43,9 @@ const revokeRoute: Route<Needs> = {
   handle: (params) =>
     Effect.gen(function* revokeAgentSessionRoute() {
       const name = yield* managedAgent(params);
+      const caller = yield* Caller;
       const agentSessions = yield* AgentSessions;
-      const revoked = yield* agentSessions.revokeFor(name);
+      const revoked = yield* agentSessions.revokeFor(name, caller.name);
       return yield* HttpServerResponse.schemaJson(RevokeAgentSessionResponseSchema)(revoked);
     }),
   method: "DELETE",

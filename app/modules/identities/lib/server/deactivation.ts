@@ -1,4 +1,4 @@
-import { Caller, announced, issueToken, requireAdmin } from "./auth.ts";
+import { Caller, announced, issueToken, requireAdmin, tokensEnded } from "./auth.ts";
 import type { DeactivateIdentityResponse, Identity, IdentityName, Owner } from "../../index.ts";
 import { DeactivateIdentityResponseSchema, IdentityWithTokenResponseSchema } from "./wire.ts";
 import type {
@@ -91,12 +91,18 @@ function reactivatedOrRefused(name: IdentityName, result: ReactivateIdentityResu
   return Effect.fail(identityNotFound(name));
 }
 
+const ALL_TOKENS = { kind: "all" } as const;
+
 function announceDeactivated(
   answer: DeactivateIdentityResponse,
-): Effect.Effect<void, StorageUnavailable, Storage | IdentityChanges> {
+): Effect.Effect<void, StorageUnavailable, Storage | IdentityChanges | Caller> {
   return Effect.gen(function* announceEach() {
     const storage = yield* Storage;
+    const caller = yield* Caller;
     yield* announced(answer.identity);
+    for (const identity of [answer.identity.name, ...answer.agents]) {
+      yield* tokensEnded({ by: caller.name, cause: "deactivated", identity, tokens: ALL_TOKENS });
+    }
     for (const agent of answer.agents) {
       const found = yield* storage.findIdentityByName(agent);
       if (Predicate.isNotUndefined(found)) {

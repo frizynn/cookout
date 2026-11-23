@@ -234,4 +234,4 @@ export {
 };
 export type { Principal } from "./principals.ts";
 export { harnessOf } from "./harness-guard.ts";
-export { IdentityChanges, announced, announcedDeleted } from "./changes.ts";
+export { IdentityChanges, announced, announcedDeleted, tokensEnded } from "./changes.ts";

@@ -7,6 +7,25 @@
 import type { IdentityName } from "../identities/index.ts";
 import type { IsoTime } from "../time/index.ts";
 
+declare const brand: unique symbol;
+
+const FIRST_CONNECTION = 1;
+
+/**
+ * The ID of one live connection, which the stream's `connected` event carries: a positive whole number, unique
+ * while the server runs. A `cookout watch` exiting on purpose names it in its clean close.
+ */
+export type LiveConnectionId = number & { readonly [brand]: "LiveConnectionId" };
+
+/**
+ * Whether `value` is a positive whole number; if so, it is a `LiveConnectionId`.
+ * @param value The number to check.
+ * @returns Whether `value` is a `LiveConnectionId`.
+ */
+export function isLiveConnectionId(value: number): value is LiveConnectionId {
+  return Number.isSafeInteger(value) && value >= FIRST_CONNECTION;
+}
+
 /** The wire's word for the feature: the CLI's field, the event's `type` and the last part of the path. */
 export const presenceName = "presence";
 

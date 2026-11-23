@@ -10,17 +10,17 @@
  * (ADR "one live connection per agent"): a newer one ends the one before with `watchReplacedRefusal`.
  */
 import type { Config, PubSub, Scope } from "effect";
+import type { Connection, Registry, RegistryNeeds } from "./lib/server/registry.ts";
 import { Context, Duration, Effect, Layer } from "effect";
 import type { Identity, IdentityName } from "../identities/index.ts";
-import type { LiveConnection, Registry, RegistryNeeds } from "./lib/server/registry.ts";
-import type { LiveConnectionDetail, Presence } from "./index.ts";
-import { openRegistry, openReplacements } from "./lib/server/registry.ts";
+import type { LiveConnectionId, Presence } from "./index.ts";
+import { connectionOf, openRegistry, openReplacements, watchReplacedRefusal } from "./lib/server/registry.ts";
 import { HttpServerResponse } from "effect/http";
 import { PresenceResponseSchema } from "./lib/server/wire.ts";
+import type { Refusal } from "../http/index.ts";
 import type { Route } from "../http/server.ts";
 import { Storage } from "../storage/server.ts";
 import type { StorageUnavailable } from "../storage/server.ts";
-import { connectionDetail } from "./lib/server/connection.ts";
 import { presenceGraceSeconds } from "../config/server.ts";
 import { presencePath } from "./index.ts";
 
@@ -31,7 +31,7 @@ function shownFor(identity: Identity, presence: Presence): Presence {
   if (identity.deactivated !== true || !presence.online) {
     return presence;
   }
-  return { identity: identity.name, online: false };
+  return { identity: identity.name, offlineReason: "deactivated", online: false };
 }
 
 function presenceOfEach(registry: Registry, identities: readonly Identity[]): Effect.Effect<readonly Presence[]> {
@@ -42,17 +42,34 @@ function presenceOfEach(registry: Registry, identities: readonly Identity[]): Ef
   );
 }
 
+/** A live connection the stream holds (ADR "how a live connection ends"). */
+export interface LiveConnection {
+  /** The connection ID the `connected` event carries, which a clean close names. */
+  readonly id: LiveConnectionId;
+  /**
+   * Succeeds with the refusal the stream must end with: `watch_replaced` once a newer live connection of the same
+   * agent replaces this one, or the refusal for a token a request just ended (left, revoked, rotated, deactivated).
+   */
+  readonly ended: Effect.Effect<Refusal>;
+  /** Ends this live connection at once, offline with the refusal's reason, for a refusal the stream found itself. */
+  readonly refused: (refusal: Refusal) => Effect.Effect<Refusal>;
+}
+
 /** The presence of the running server's identities. */
 export interface PresenceService {
   /**
    * Holds a live connection of `identity`, with how it connects, until the scope closes. An agent holds one at most,
-   * so an agent's replaces the one it held before; the answer's `replaced` succeeds once a newer one replaces this
-   * one, and never for a human's.
+   * so an agent's replaces the one it held before.
    */
   readonly holdLiveConnection: (
     identity: Identity,
-    detail: LiveConnectionDetail,
+    connection: Connection,
   ) => Effect.Effect<LiveConnection, never, Scope.Scope>;
+  /**
+   * Marks live connection `id` of `identity` as closing cleanly (its `cookout watch` exits on purpose), so its end is
+   * expected. Answers false when `identity` holds no such connection and is in no grace it started.
+   */
+  readonly closeCleanly: (identity: IdentityName, id: LiveConnectionId) => Effect.Effect<boolean>;
   /** Every identity's presence, Deactivated ones (always offline) included, sorted by name. */
   readonly everyone: Effect.Effect<readonly Presence[], StorageUnavailable>;
   /** Each identity's presence the moment it changes. */
@@ -77,9 +94,15 @@ export const presenceLayer: Layer.Layer<PresenceRegistry, Config.ConfigError | S
       const replacements = yield* openReplacements;
       return {
         changed: registry.changed,
+        closeCleanly: registry.closeCleanly,
         everyone: Effect.flatMap(storage.listIdentities(), (identities) => presenceOfEach(registry, identities)),
-        holdLiveConnection: (identity, detail) =>
-          Effect.andThen(registry.hold(identity.name, detail), replacements.take(identity)),
+        holdLiveConnection: (identity, connection) =>
+          Effect.gen(function* holdLiveConnectionOf() {
+            const held = yield* registry.hold(identity.name, connection);
+            const place = yield* replacements.take(identity);
+            const replaced = Effect.as(place.replaced, watchReplacedRefusal);
+            return { ended: Effect.raceFirst(held.ended, replaced), id: held.connection, refused: held.refused };
+          }),
         liveConnections: registry.liveConnections,
       };
     }),
@@ -89,15 +112,15 @@ export const presenceLayer: Layer.Layer<PresenceRegistry, Config.ConfigError | S
  * Holds a live connection of the stream's caller until the scope closes. A stream sent with no `Authorization`
  * header (so with the web UI's session cookie) is a web tab; any other is a `cookout watch`, with the host its agent
  * session was joined from when it was sent with an agent session token whose joining client sent one. The answer's
- * `replaced` succeeds once a newer live connection of the same agent replaces this one.
+ * `ended` succeeds with the refusal the stream must end with.
  */
 export const holdLiveConnection = Effect.fnUntraced(function* holdCallersLiveConnection(stream: {
   readonly caller: Identity;
   readonly authorization: string | undefined;
 }): Effect.fn.Return<LiveConnection, never, PresenceRegistry | Storage | Scope.Scope> {
   const presence = yield* PresenceRegistry;
-  const detail = yield* connectionDetail(stream);
-  return yield* presence.holdLiveConnection(stream.caller, detail);
+  const connection = yield* connectionOf(stream);
+  return yield* presence.holdLiveConnection(stream.caller, connection);
 });
 
 /** `GET /v1/presence`, for the server's route list, behind the token gate. */
