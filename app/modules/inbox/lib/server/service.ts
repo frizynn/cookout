@@ -28,6 +28,7 @@ type SubscriptionChange = (identity: IdentityName, channel: ChannelName) => Effe
 
 interface InboxService {
   readonly inbox: (caller: Identity) => Fails<InboxResponse>;
+  readonly itemFor: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
   readonly ack: (caller: Identity, id: MessageId) => Fails<AckResponse>;
   readonly follow: (caller: Identity, asked: string) => Fails<FollowResponse>;
   readonly unfollow: (caller: Identity, asked: string) => Fails<FollowResponse>;
@@ -82,6 +83,14 @@ function subscription(change: SubscriptionChange, subscribed: boolean) {
     });
 }
 
+function inboxOf(storage: Storage["Service"], caller: Identity): Fails<InboxResponse> {
+  return Effect.gen(function* readInbox() {
+    const items = yield* storage.listInbox(caller.name);
+    const channels = yield* storage.listChannels();
+    return { items: Arr.flatMap(items, (item) => withChannel(channels, item)) };
+  });
+}
+
 function inboxOn(storage: Storage["Service"]): InboxService {
   return {
     ack: (caller, id) =>
@@ -91,12 +100,9 @@ function inboxOn(storage: Storage["Service"]): InboxService {
         return { readPosition };
       }),
     follow: following(storage.followThread, true),
-    inbox: (caller) =>
-      Effect.gen(function* readInbox() {
-        const items = yield* storage.listInbox(caller.name);
-        const channels = yield* storage.listChannels();
-        return { items: Arr.flatMap(items, (item) => withChannel(channels, item)) };
-      }),
+    inbox: (caller) => inboxOf(storage, caller),
+    itemFor: (caller, id) =>
+      Effect.map(inboxOf(storage, caller), ({ items }) => Arr.filter(items, (item) => item.message.id === id)),
     subscribe: subscription(storage.subscribeChannel, true),
     unfollow: following(storage.unfollowThread, false),
     unsubscribe: subscription(storage.unsubscribeChannel, false),

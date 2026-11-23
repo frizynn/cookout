@@ -83,7 +83,10 @@ function subscriptionRoute(method: Change, change: "subscribe" | "unsubscribe"):
   };
 }
 
-export { inboxLayer } from "./lib/server/service.ts";
+export { Inbox, inboxLayer } from "./lib/server/service.ts";
+
+/** The Schema of an inbox item, for the events that carry one. */
+export { InboxItemSchema } from "./lib/server/wire.ts";
 
 /**
  * The inbox routes, for the server's route list. They need `Caller`, which the token gate provides, `Inbox`, which

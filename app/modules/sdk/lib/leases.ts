@@ -24,4 +24,5 @@ function leaseCalls(server: ClientConnection): LeaseCalls {
   };
 }
 
+export type { JoinRequest, LeaseId, LeaseResponse, LeaveResponse } from "../../leases/index.ts";
 export { leaseCalls };

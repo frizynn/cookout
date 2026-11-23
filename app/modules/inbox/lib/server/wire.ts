@@ -14,17 +14,17 @@ import { matchesWire } from "../../../http/index.ts";
 
 const InboxReasonSchema = Schema.Literals(inboxReasons);
 
-const InboxItemSchema = matchesWire<InboxItem>()(
+const ReadPositionSchema = matchesWire<ReadPosition>()(
+  Schema.Struct({ channel: ChannelNameSchema, messageId: MessageIdSchema, thread: Schema.NullOr(MessageIdSchema) }),
+);
+
+export const InboxItemSchema = matchesWire<InboxItem>()(
   Schema.Struct({
     channel: ChannelSchema,
     message: MessageSchema,
     parent: TopLevelMessageSchema,
     reasons: Schema.Array(InboxReasonSchema),
   }),
-);
-
-const ReadPositionSchema = matchesWire<ReadPosition>()(
-  Schema.Struct({ channel: ChannelNameSchema, messageId: MessageIdSchema, thread: Schema.NullOr(MessageIdSchema) }),
 );
 
 export const AckRequestSchema = Schema.Struct({ messageId: MessageIdSchema });

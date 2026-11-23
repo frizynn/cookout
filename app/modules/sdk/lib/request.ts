@@ -1,6 +1,7 @@
 import { CookoutError, isServerErrorCode } from "./errors.ts";
-import type { HttpMethod, HttpRequest, HttpResponse } from "../../http/client.ts";
+import type { HttpMethod, HttpRequest, HttpResponse, OpenEventStream } from "../../http/client.ts";
 import { leaseHeader, leaseLost } from "../../leases/index.ts";
+import { openEventStream, request } from "../../http/client.ts";
 import type { CookoutConnection } from "../../config/index.ts";
 import type { CookoutErrorCode } from "./errors.ts";
 import type { HeldLease } from "./held-lease.ts";
@@ -8,7 +9,6 @@ import type { LeaseId } from "../../leases/index.ts";
 import { heldLease } from "./held-lease.ts";
 import { isErrorResponse } from "./generated/validators.js";
 import { readCookoutConnection } from "../../config/index.ts";
-import { request } from "../../http/client.ts";
 
 interface ClientConnection extends CookoutConnection {
   readonly lease: HeldLease;
@@ -26,6 +26,11 @@ interface Call<Answer> {
   readonly query?: NonNullable<HttpRequest["query"]>;
   readonly body?: unknown;
   readonly isExpected: (body: unknown) => body is Answer;
+}
+
+interface EventsCall {
+  readonly connection: ClientConnection;
+  readonly path: string;
 }
 
 const NO_STATUS = 0;
@@ -86,6 +91,17 @@ export async function send<Answer>(connection: ClientConnection, call: Call<Answ
     throw badBody(method, path, response);
   }
   return response.json;
+}
+
+export async function openEvents({ connection, path }: EventsCall): Promise<OpenEventStream> {
+  const method = "GET";
+  const opened = await openEventStream({ baseUrl: connection.url, headers: headersFor(connection), method, path });
+  if (!opened.ok) {
+    const error = refusal(method, path, opened.response);
+    forgetLostLease(connection.lease, error.code);
+    throw error;
+  }
+  return opened;
 }
 
 export function connectionFor({ env, leaseId, ...given }: ConnectionOptions): ClientConnection {

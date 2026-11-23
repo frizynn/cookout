@@ -1,4 +1,4 @@
-import { Array as Arr, Context, DateTime, Effect, Layer, Option, Predicate, String as Str, pipe } from "effect";
+import { Array as Arr, Context, DateTime, Effect, Layer, Option, Predicate, PubSub, String as Str, pipe } from "effect";
 import type {
   Author,
   JsonValue,
@@ -15,6 +15,7 @@ import type { ChannelName } from "../../../channels/index.ts";
 import type { Identity } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { Refusal } from "../../../http/index.ts";
+import type { Scope } from "effect";
 import { Storage } from "../../../storage/server.ts";
 import { channelNotFound } from "../../../channels/server.ts";
 import { isChannelName } from "../../../channels/index.ts";
@@ -41,6 +42,11 @@ interface PageRequest {
 type Refused = "channel_not_found" | "reply_to_not_found" | "reply_in_other_channel";
 
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
+
+interface Hub {
+  readonly publish: (message: Message) => Effect.Effect<boolean>;
+  readonly subscribe: Effect.Effect<PubSub.Subscription<Message>, never, Scope.Scope>;
+}
 
 function authorOf(identity: Identity): Author {
   if (identity.kind === "human" || Predicate.isUndefined(identity.owner)) {
@@ -90,7 +96,7 @@ function pageRequest({ before, limit = pageSize.default }: PageQuery): PageReque
   return { before, limit };
 }
 
-function messagesOn(storage: Storage["Service"]): MessagesService {
+function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
   return {
     page: (channel, query) =>
       Effect.gen(function* pageChannel() {
@@ -108,10 +114,12 @@ function messagesOn(storage: Storage["Service"]): MessagesService {
         const now = yield* DateTime.now;
         const result = yield* storage.appendMessage(newMessage(author, message, isoTimeOf(now)));
         if (result.status === "appended") {
+          yield* hub.publish(result.message);
           return { message: result.message, unknownMentions: unknownMentionsIn(result.message) };
         }
         return yield* Effect.fail(refusalOf(result.status, message));
       }),
+    posted: hub.subscribe,
     thread: (id) =>
       Effect.gen(function* getThread() {
         const thread = yield* storage.getThread(id);
@@ -127,6 +135,7 @@ export interface MessagesService {
   readonly post: (author: Identity, message: PostMessage) => Fails<MessageResponse>;
   readonly thread: (id: MessageId) => Fails<ThreadResponse>;
   readonly page: (channel: string, query: PageQuery) => Fails<ListMessagesResponse>;
+  readonly posted: Effect.Effect<PubSub.Subscription<Message>, never, Scope.Scope>;
 }
 
 export class Messages extends Context.Service<Messages, MessagesService>()(
@@ -137,6 +146,8 @@ export const messagesLayer: Layer.Layer<Messages, never, Storage> = Layer.effect
   Messages,
   Effect.gen(function* messagesOnStorage() {
     const storage = yield* Storage;
-    return messagesOn(storage);
+    const pubSub = yield* PubSub.unbounded<Message>();
+    const hub: Hub = { publish: (message) => PubSub.publish(pubSub, message), subscribe: PubSub.subscribe(pubSub) };
+    return messagesOn(storage, hub);
   }),
 );
