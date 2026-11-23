@@ -37,6 +37,7 @@
           "effect/FileSystem",
           "effect/Path",
           "effect/ByteSize",
+          "effect/Stdio",
           "effect/testing/TestConsole"
         ],
         "keyPatterns": [
