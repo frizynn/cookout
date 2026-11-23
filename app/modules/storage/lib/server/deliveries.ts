@@ -30,7 +30,7 @@ interface StoredDelivery extends DeliveryProgress {
 interface DeliveriesSection {
   readonly addDelivery: (delivery: StoredDelivery) => Fails<void>;
   readonly updateDelivery: (callId: CallId, progress: DeliveryProgress) => Fails<void>;
-  readonly listPendingDeliveries: Fails<readonly StoredDelivery[]>;
+  readonly listPendingDeliveries: Effect.Effect<readonly StoredDelivery[], StorageUnavailable>;
 }
 
 function memoryDeliveries(state: MemoryState): DeliveriesSection {
@@ -123,11 +123,4 @@ function sqliteDeliveries(db: SqliteDatabase): DeliveriesSection {
   };
 }
 
-export {
-  type DeliveriesSection,
-  type DeliveryOutcome,
-  type DeliveryProgress,
-  type StoredDelivery,
-  memoryDeliveries,
-  sqliteDeliveries,
-};
+export { type DeliveriesSection, type DeliveryOutcome, type StoredDelivery, memoryDeliveries, sqliteDeliveries };
