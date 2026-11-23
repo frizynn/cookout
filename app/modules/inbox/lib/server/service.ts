@@ -6,6 +6,7 @@ import type {
   InboxItem,
   InboxResponse,
   ReadPosition,
+  ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../index.ts";
 import { Array as Arr, Context, Effect, Layer, Option, Predicate, PubSub } from "effect";
@@ -57,6 +58,7 @@ interface InboxService {
   readonly itemFor: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
   readonly itemsAfter: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
   readonly ack: (caller: Identity, id: MessageId) => Fails<AckResponse>;
+  readonly readPositions: (caller: Identity) => Fails<ReadPositionsResponse>;
   readonly acked: Effect.Effect<PubSub.Subscription<Acked>, never, Scope.Scope>;
   readonly follow: (caller: Identity, asked: string) => Fails<FollowResponse>;
   readonly unfollow: (caller: Identity, asked: string) => Fails<FollowResponse>;
@@ -158,6 +160,8 @@ function inboxOn(storage: Storage["Service"], hub: AckHub): InboxService {
       Effect.map(inboxOf(storage, caller), ({ items }) => Arr.filter(items, (item) => item.message.id === id)),
     itemsAfter: (caller, id) =>
       Effect.flatMap(storage.listInboxAfter(caller.name, id), (stored) => withChannels(storage, stored)),
+    readPositions: (caller) =>
+      Effect.map(storage.listReadPositions(caller.name), (readPositions) => ({ readPositions })),
     subscribe: subscription(storage.subscribeChannel, true),
     unfollow: following(storage.unfollowThread, false),
     unsubscribe: subscription(storage.unsubscribeChannel, false),

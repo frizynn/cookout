@@ -64,6 +64,11 @@ export interface InboxHistoryResponse {
   readonly hasMore: boolean;
 }
 
+/** The caller's read positions: one for each channel and thread it has acked in or posted to, by channel name. */
+export interface ReadPositionsResponse {
+  readonly readPositions: readonly ReadPosition[];
+}
+
 /** The body of an ack. */
 export interface AckRequest {
   readonly messageId: MessageId;
@@ -91,6 +96,9 @@ export const inboxPath = "/v1/inbox";
 
 /** `GET /v1/inbox/history?before=<id>&limit=<n>`: a page of the caller's inbox history, read and unread. */
 export const inboxHistoryPath = "/v1/inbox/history";
+
+/** `GET /v1/read-positions`: the caller's read positions. */
+export const readPositionsPath = "/v1/read-positions";
 
 /** `POST /v1/ack`: acks a message and everything before it in its thread or channel. */
 export const ackPath = "/v1/ack";

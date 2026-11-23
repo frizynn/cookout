@@ -4,14 +4,23 @@ import type {
   InboxHistoryQuery,
   InboxHistoryResponse,
   InboxResponse,
+  ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../inbox/index.ts";
-import { ackPath, followPath, inboxHistoryPath, inboxPath, subscriptionPath } from "../../inbox/index.ts";
+import {
+  ackPath,
+  followPath,
+  inboxHistoryPath,
+  inboxPath,
+  readPositionsPath,
+  subscriptionPath,
+} from "../../inbox/index.ts";
 import {
   isAckResponse,
   isFollowResponse,
   isInboxHistoryResponse,
   isInboxResponse,
+  isReadPositionsResponse,
   isSubscriptionResponse,
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
@@ -23,6 +32,7 @@ type Change = "PUT" | "DELETE";
 interface InboxCalls {
   readonly inbox: () => Promise<InboxResponse>;
   readonly inboxHistory: (query?: InboxHistoryQuery) => Promise<InboxHistoryResponse>;
+  readonly readPositions: () => Promise<ReadPositionsResponse>;
   readonly ack: (messageId: MessageId) => Promise<AckResponse>;
   readonly follow: (messageId: MessageId) => Promise<FollowResponse>;
   readonly unfollow: (messageId: MessageId) => Promise<FollowResponse>;
@@ -68,6 +78,14 @@ function inboxCalls(server: ClientConnection): InboxCalls {
       });
       return page;
     },
+    readPositions: async () => {
+      const answer = await send(server, {
+        isExpected: isReadPositionsResponse,
+        method: "GET",
+        path: readPositionsPath,
+      });
+      return answer;
+    },
     subscribe: subscriptionCall(server, "PUT"),
     unfollow: followCall(server, "DELETE"),
     unsubscribe: subscriptionCall(server, "DELETE"),
@@ -80,6 +98,7 @@ export type {
   InboxHistoryQuery,
   InboxHistoryResponse,
   InboxResponse,
+  ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../inbox/index.ts";
 export { inboxCalls };

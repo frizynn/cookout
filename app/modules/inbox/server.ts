@@ -1,6 +1,6 @@
 /**
  * The inbox on the backend: the `Inbox` service over `Storage`, and the
- * routes that read the caller's inbox and a page of its inbox history, ack a message, follow and unfollow a
+ * routes that read the caller's inbox, a page of its inbox history and its read positions, ack a message, follow and unfollow a
  * thread, and subscribe to and unsubscribe from a channel. Each ack is also
  * published to an in-process hub, which `acked` subscribes to, for live
  * updates. Routes sit
@@ -13,10 +13,11 @@ import {
   InboxHistoryQuerySchema,
   InboxHistoryResponseSchema,
   InboxResponseSchema,
+  ReadPositionsResponseSchema,
   SubscriptionResponseSchema,
 } from "./lib/server/wire.ts";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import { ackPath, followPath, inboxHistoryPath, inboxPath, subscriptionPath } from "./index.ts";
+import { ackPath, followPath, inboxHistoryPath, inboxPath, readPositionsPath, subscriptionPath } from "./index.ts";
 import { Caller } from "../identities/server.ts";
 import { Effect } from "effect";
 import { Inbox } from "./lib/server/service.ts";
@@ -57,6 +58,18 @@ const historyRoute: Route<Needs> = {
     }),
   method: "GET",
   path: inboxHistoryPath,
+};
+
+const readPositionsRoute: Route<Needs> = {
+  handle: () =>
+    Effect.gen(function* readPositionsRouteHandler() {
+      const caller = yield* Caller;
+      const inbox = yield* Inbox;
+      const answer = yield* inbox.readPositions(caller);
+      return yield* HttpServerResponse.schemaJson(ReadPositionsResponseSchema)(answer);
+    }),
+  method: "GET",
+  path: readPositionsPath,
 };
 
 const ackRoute: Route<Needs> = {
@@ -114,6 +127,7 @@ export { InboxItemSchema, ReadPositionSchema } from "./lib/server/wire.ts";
 export const inboxRoutes: readonly Route<Needs>[] = [
   inboxRoute,
   historyRoute,
+  readPositionsRoute,
   ackRoute,
   followRoute("PUT", "follow"),
   followRoute("DELETE", "unfollow"),
@@ -127,5 +141,6 @@ export const inboxResponseSchemas = {
   FollowResponse: FollowResponseSchema,
   InboxHistoryResponse: InboxHistoryResponseSchema,
   InboxResponse: InboxResponseSchema,
+  ReadPositionsResponse: ReadPositionsResponseSchema,
   SubscriptionResponse: SubscriptionResponseSchema,
 };
