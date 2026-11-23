@@ -28,8 +28,30 @@ interface TextFieldParts {
   readonly name: string;
 }
 
+interface TextAreaParts extends TextFieldParts {
+  readonly value: string;
+  readonly caret: number;
+  readonly onEdit: (text: string, caret: number) => void;
+}
+
+interface SuggestionsParts {
+  readonly label: string;
+  readonly options: readonly string[];
+  readonly onChoose: (option: string) => void;
+}
+
 interface SkeletonParts {
   readonly width: "short" | "long";
 }
 
-export type { ButtonParts, FormParts, LinkParts, ListParts, Parts, SkeletonParts, TextFieldParts };
+export type {
+  ButtonParts,
+  FormParts,
+  LinkParts,
+  ListParts,
+  Parts,
+  SkeletonParts,
+  SuggestionsParts,
+  TextAreaParts,
+  TextFieldParts,
+};

@@ -8,6 +8,7 @@
  */
 import { AppShell } from "../design-system/index.tsx";
 import type { Board } from "../board/index.ts";
+import type { Composer } from "../composer/index.ts";
 import type { ReactNode } from "react";
 import { RouteView } from "./lib/route-view.tsx";
 import type { Session } from "../session/index.ts";
@@ -28,6 +29,7 @@ function currentHash(): string {
 /** What the web UI reads: the stores, each made with the SDK client it talks through. */
 export interface CookoutAppProps {
   readonly board: Board;
+  readonly composer: Composer;
   readonly session: Session;
 }
 
@@ -40,7 +42,7 @@ export function CookoutApp(props: CookoutAppProps): ReactNode {
   const hash = useSyncExternalStore(subscribeToHash, currentHash);
   return (
     <AppShell>
-      <RouteView board={props.board} route={routeOf(hash)} session={props.session} />
+      <RouteView board={props.board} composer={props.composer} route={routeOf(hash)} session={props.session} />
     </AppShell>
   );
 }

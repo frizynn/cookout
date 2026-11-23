@@ -1,4 +1,5 @@
 import { Alert, Article, CardBody, Muted, Skeleton } from "../../design-system/index.tsx";
+import type { Draft } from "../../composer/index.ts";
 import { MessageText } from "./message-text.tsx";
 import type { ReactNode } from "react";
 import { Replies } from "./replies.tsx";
@@ -11,6 +12,7 @@ const NONE = 0;
 const TEXT = { empty: "No replies yet.", parent: "Parent message" } as const;
 
 interface ThreadBodyProps {
+  readonly draft: Draft;
   readonly messages: ThreadMessages;
 }
 
@@ -42,7 +44,7 @@ export function ThreadBody(props: ThreadBodyProps): ReactNode {
       {state.read.status === "failed" && (
         <Alert>{`Couldn't mark the thread read (${state.read.code}): ${state.read.message}`}</Alert>
       )}
-      <ReplyBox messages={messages} reply={state.reply} />
+      <ReplyBox draft={props.draft} messages={messages} reply={state.reply} />
     </>
   );
 }

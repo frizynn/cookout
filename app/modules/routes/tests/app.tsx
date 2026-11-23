@@ -1,18 +1,21 @@
 import type { Board, BoardClient } from "../../board/index.ts";
 import type { CookoutClient, CreateIdentityRequest, Token } from "../../sdk/index.ts";
+import type { Composer } from "../../composer/index.ts";
 import { CookoutApp } from "../index.tsx";
 import type { Session } from "../../session/index.ts";
 import { createBoard } from "../../board/index.ts";
+import { createComposer } from "../../composer/index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
 import { createSession } from "../../session/index.ts";
 import { inject } from "vitest";
 import { render } from "@testing-library/react";
 
-type AppClient = BoardClient & Pick<CookoutClient, "whoami">;
+type AppClient = BoardClient & Pick<CookoutClient, "listIdentities" | "whoami">;
 
 interface BoardOpening {
   readonly hash: string;
   readonly board: Board;
+  readonly composer?: Composer;
   readonly session: Session;
 }
 
@@ -51,10 +54,11 @@ export async function newIdentity(request: CreateIdentityRequest): Promise<NewId
 
 export function openBoard(opening: BoardOpening): () => void {
   globalThis.location.hash = opening.hash;
-  return render(<CookoutApp board={opening.board} session={opening.session} />).unmount;
+  const composer = opening.composer ?? createComposer({ client: adminClient() });
+  return render(<CookoutApp board={opening.board} composer={composer} session={opening.session} />).unmount;
 }
 
 export function openAt(opening: Opening): () => void {
   const session = opening.session ?? sessionOf(opening.client);
-  return openBoard({ board: createBoard(opening), hash: opening.hash, session });
+  return openBoard({ board: createBoard(opening), composer: createComposer(opening), hash: opening.hash, session });
 }
