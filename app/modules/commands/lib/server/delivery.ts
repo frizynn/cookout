@@ -1,6 +1,6 @@
 import type { Call, FailureReplyNeeds } from "./failure-reply.ts";
 import type { Config, Scope } from "effect";
-import { Context, DateTime, Duration, Effect, FiberSet, Layer, Option, Ref, Schedule, Schema } from "effect";
+import { Context, DateTime, Duration, Effect, FiberSet, Layer, Ref, Schedule, Schema } from "effect";
 import type { DeliveryOutcome, StorageUnavailable, StoredDelivery } from "../../../storage/server.ts";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { webhookRetryDelaySeconds, webhookRetryFactor, webhookTimeoutSeconds } from "../../../config/server.ts";
@@ -156,15 +156,11 @@ const storeDelivery = Effect.fnUntraced(function* addDelivery(
 
 const callOf = Effect.fnUntraced(function* findCall(
   pending: StoredDelivery,
-): Effect.fn.Return<Option.Option<Call>, StorageUnavailable, Storage> {
+): Effect.fn.Return<Call, StorageUnavailable, Storage> {
   const storage = yield* Storage;
-  const stored = yield* storage.findCommand(pending.command);
-  return Option.map(Option.fromUndefinedOr(stored), (found) => ({
-    channel: pending.channel,
-    data: pending.data,
-    stored: found,
-    threadId: pending.threadId,
-  }));
+  const found = yield* storage.findCommand(pending.command);
+  const stored = yield* Effect.orDie(Effect.fromNullishOr(found));
+  return { channel: pending.channel, data: pending.data, stored, threadId: pending.threadId };
 });
 
 function deliveriesWith(
@@ -180,14 +176,11 @@ function deliveriesWith(
       });
     }
     function resume(pending: StoredDelivery): Effect.Effect<void, StorageUnavailable, Secrets | Storage> {
-      return Effect.flatMap(
-        callOf(pending),
-        Option.match({
-          onNone: () => Effect.void,
-          onSome: (call) =>
-            Effect.flatMap(newCommandToken(call), (token) => sendInBackground({ call, progress: pending, token })),
-        }),
-      );
+      return Effect.gen(function* resumeDelivery() {
+        const call = yield* callOf(pending);
+        const token = yield* newCommandToken(call);
+        yield* sendInBackground({ call, progress: pending, token });
+      });
     }
     function deliver(call: Call): Effect.Effect<void, StorageUnavailable> {
       return Effect.gen(function* startDelivery() {
