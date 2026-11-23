@@ -60,21 +60,22 @@ export class PresenceRegistry extends Context.Service<PresenceRegistry, Presence
 ) {}
 
 /** `PresenceRegistry` on the running `Storage`, with the grace from `COOKOUT_PRESENCE_GRACE_SECONDS`. */
-export const presenceLayer: Layer.Layer<PresenceRegistry, Config.ConfigError, Storage> = Layer.effect(
-  PresenceRegistry,
-  Effect.gen(function* openPresence() {
-    const storage = yield* Storage;
-    const graceSeconds = yield* presenceGraceSeconds;
-    const graceMillis = Duration.toMillis(Duration.seconds(graceSeconds));
-    const registry = yield* openRegistry({ bootGraceMillis: BOOT_GRACE, graceMillis });
-    return {
-      changed: registry.changed,
-      everyone: Effect.flatMap(storage.listIdentities(), (identities) => presenceOfEach(registry, identities)),
-      holdLiveConnection: registry.hold,
-      liveConnections: registry.liveConnections,
-    };
-  }),
-);
+export const presenceLayer: Layer.Layer<PresenceRegistry, Config.ConfigError | StorageUnavailable, Storage> =
+  Layer.effect(
+    PresenceRegistry,
+    Effect.gen(function* openPresence() {
+      const storage = yield* Storage;
+      const graceSeconds = yield* presenceGraceSeconds;
+      const graceMillis = Duration.toMillis(Duration.seconds(graceSeconds));
+      const registry = yield* openRegistry({ bootGraceMillis: BOOT_GRACE, graceMillis });
+      return {
+        changed: registry.changed,
+        everyone: Effect.flatMap(storage.listIdentities(), (identities) => presenceOfEach(registry, identities)),
+        holdLiveConnection: registry.hold,
+        liveConnections: registry.liveConnections,
+      };
+    }),
+  );
 
 /**
  * Holds a live connection of the stream's caller until the scope closes. A stream sent with no `Authorization`

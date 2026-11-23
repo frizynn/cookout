@@ -39,11 +39,6 @@ interface Released extends Closing {
   readonly closedAt: IsoTime;
 }
 
-interface Stopped {
-  readonly state: BookState;
-  readonly stoppedAt: IsoTime;
-}
-
 const NONE = 0;
 const STEP = 1;
 const NOT_HELD: Held = { connections: new Map(), grace: Option.none(), latest: Option.none() };
@@ -142,19 +137,15 @@ function liveConnectionsIn(at: At): number {
   return heldBy(at).connections.size;
 }
 
-function heldAtStop(identity: IdentityName, { state, stoppedAt }: Stopped): readonly StoredPresence[] {
-  const held = heldBy({ identity, state });
-  if (held.connections.size > NONE) {
-    return [{ identity, lastSeenAt: stoppedAt, online: true }];
-  }
-  return Option.match(held.grace, {
+function heldAtStop(identity: IdentityName, state: BookState): readonly StoredPresence[] {
+  return Option.match(heldBy({ identity, state }).grace, {
     onNone: () => [],
     onSome: ({ closedAt }) => [{ identity, lastSeenAt: closedAt, online: true }],
   });
 }
 
-function onlineAtStop(stopped: Stopped): readonly StoredPresence[] {
-  return Arr.flatMap([...stopped.state.held.keys()], (identity) => heldAtStop(identity, stopped));
+function onlineAtStop(state: BookState): readonly StoredPresence[] {
+  return Arr.flatMap([...state.held.keys()], (identity) => heldAtStop(identity, state));
 }
 
 export {

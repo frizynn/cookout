@@ -1,5 +1,6 @@
 import { Array as Arr, DateTime, Effect, Predicate, PubSub, SynchronizedRef } from "effect";
 import type { LiveConnectionDetail, Presence } from "../../index.ts";
+import type { StorageUnavailable, StoredPresence } from "../../../storage/server.ts";
 import {
   connect,
   endBootGrace,
@@ -15,7 +16,6 @@ import type { IdentityName } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { Scope } from "effect";
 import { Storage } from "../../../storage/server.ts";
-import type { StoredPresence } from "../../../storage/server.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 
 interface Registry {
@@ -122,11 +122,7 @@ function bootGraceEnds(book: Book, kept: readonly StoredPresence[]): Effect.Effe
 }
 
 function keptOnStop(book: Book, announce: Announce): Effect.Effect<void> {
-  return Effect.gen(function* keepOnlineOnStop() {
-    const stoppedAt = yield* now;
-    const state = yield* book.read;
-    yield* Effect.forEach(onlineAtStop({ state, stoppedAt }), announce.record, ONE_AT_A_TIME);
-  });
+  return Effect.flatMap(book.read, (state) => Effect.forEach(onlineAtStop(state), announce.record, ONE_AT_A_TIME));
 }
 
 function bookOf(announce: Announce, kept: readonly StoredPresence[]): Effect.Effect<Book, never, Scope.Scope> {
@@ -147,7 +143,7 @@ function bookOf(announce: Announce, kept: readonly StoredPresence[]): Effect.Eff
   });
 }
 
-function openRegistry(graces: Graces): Effect.Effect<Registry, never, Storage | Scope.Scope> {
+function openRegistry(graces: Graces): Effect.Effect<Registry, StorageUnavailable, Storage | Scope.Scope> {
   return Effect.gen(function* openPresenceRegistry() {
     const storage = yield* Storage;
     const hub = yield* PubSub.unbounded<Presence>();
@@ -155,7 +151,7 @@ function openRegistry(graces: Graces): Effect.Effect<Registry, never, Storage | 
       publish: (presence) => Effect.asVoid(PubSub.publish(hub, presence)),
       record: (presence) => Effect.ignore(storage.recordPresence(presence)),
     };
-    const kept = yield* Effect.orElseSucceed(storage.listPresence, () => []);
+    const kept = yield* storage.listPresence;
     const book = yield* bookOf(announce, kept);
     const wereOnline = Arr.filter(kept, ({ online }) => online);
     yield* book.inBackground(Effect.andThen(Effect.sleep(graces.bootGraceMillis), bootGraceEnds(book, wereOnline)));

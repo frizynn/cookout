@@ -1,4 +1,12 @@
-import { TestCookout, answer, commandLineServices, runCookout, testCookout } from "../../../testing/server.ts";
+import {
+  TestCookout,
+  answer,
+  commandLineServices,
+  identityFixture,
+  runCookout,
+  serverAnswering,
+  testCookout,
+} from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { Effect } from "effect";
 
@@ -35,4 +43,17 @@ it.effect("cookout identity list and whoami print each identity's presence", () 
       stdoutJson: { identity: { name: "ann", presence: { identity: "ann", online: true } } },
     });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("cookout identity list prints an identity the server gives no presence for as offline", () =>
+  Effect.gen(function* noPresenceGiven() {
+    const ann = identityFixture("ann", { kind: "human" });
+    const url = yield* serverAnswering({ body: { identities: [ann], presence: [] } });
+    const listed = yield* runCookout({ args: list, env: { COOKOUT_TOKEN: "cookout_any", COOKOUT_URL: url } });
+
+    expect(listed).toMatchObject({
+      exitCode: 0,
+      stdoutJson: { identities: [{ name: "ann", presence: { identity: "ann", online: false } }] },
+    });
+  }).pipe(Effect.provide(commandLineServices)),
 );
