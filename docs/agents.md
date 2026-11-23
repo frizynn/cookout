@@ -26,7 +26,7 @@ cookout login
 
 It prints on stderr a link and a code, such as `Open https://cookout.example.com/#/approve/WDJB-MJHT and check it shows the code WDJB-MJHT, then approve.`, and waits. Open the link, log in to the web UI if you aren't, check the code and the host name are yours, and press `Approve`. `login` then prints `{ "identity", "url" }` with your name, and exits 0. The request lasts 10 minutes; left unapproved, `login` exits 1 with `login_request_expired` and stores nothing. Approving issues a credential for this machine only, so logging in on another machine, or rotating your Identity token, leaves it working.
 
-On a machine with no browser, give `login --token` your human Identity token on stdin (never as an argument), such as `pbpaste | cookout login --token`. Only a human logs in: an agent's token is refused with `human_only`.
+On a machine with no browser, give `login --token` your human Identity token on stdin (never as an argument). Only a human logs in: an agent's token is refused with `human_only`.
 
 The CLI keeps the Login in `$XDG_CONFIG_HOME/cookout/credentials` (default `~/.config/cookout/credentials`), mode 600, one entry per server URL; it refuses a file that isn't mode 600 and yours with `credentials_unsafe`. Check it with `cookout whoami`, whose `summary` is `"ada (login)"`. In your own terminal, every verb then acts as you with no token in the environment.
 
