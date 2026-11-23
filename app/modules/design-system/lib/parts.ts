@@ -213,7 +213,6 @@ export type {
   MessageLayoutParts,
   MessageItemParts,
   ShownTimeParts,
-  MessageTimeParts,
   SeparatorParts,
   StandaloneMessageParts,
   ButtonParts,

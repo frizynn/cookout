@@ -114,4 +114,3 @@ export function createUnread(options: UnreadOptions): Unread {
 }
 
 export type { UnreadCounts } from "./lib/inbox-items.ts";
-export type { NewLine } from "./lib/new-lines.ts";

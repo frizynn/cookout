@@ -29,7 +29,7 @@
  * `Author` is a message's avatar and name, with an `agent` tag for an agent.
  * `MessageList` is a named list of `MessageItem`s: one message each, which
  * takes focus, with its avatar, name and time, or only its time on hover when
- * `grouped` under the one before; any `DaySeparator` or `NewLine` above it; a
+ * `grouped` under the one before; the day's separator and the "New" line above it when it starts them; a
  * mark (`mention` or `open`); and an action link (such as Reply) shown on hover
  * or focus. `StandaloneMessage` is one named message on its own, such as a
  * thread's parent. In a message, `MessageBody` is its text, `Mention` an
@@ -44,8 +44,7 @@
  * `Heading` and `Muted` are a shadcn-style card and its title row, `CardBody`
  * a padded section under it; `LinkList` and
  * `LinkRow` are a named list of links, and `ItemList` and `ItemRow` a named
- * list of plain rows; `Article` is one named item shown on its own, such as a
- * thread's parent message; `Alert` is a refusal, read out by screen readers;
+ * list of plain rows; `Alert` is a refusal, read out by screen readers;
  * `Skeleton` stands in while something loads. `Form` hands one field's value
  * to `onSubmit` without reloading the page; `TextField` is a labelled secret
  * input in it, such as a token, `TextArea` a labelled box to write in, such
@@ -54,10 +53,10 @@
  * suggestions, the arrow keys move the highlight and Enter picks it;
  * `SubmitButton` sends it; `Suggestions` is a named list of options to pick
  * from under a box, such as mentions, one of them highlighted, which leaves
- * the box focused; `Button` is any other button. `FieldsForm` is a form of
+ * the box focused. `FieldsForm` is a form of
  * several fields, `Select` a labelled pick in it from its `SelectOption`s,
  * `DataArea` a labelled box in it to write JSON in, whose text its owner
- * holds, and `DataBlock` a named block of JSON, such as a message's data.
+ * holds.
  * `RowTitle` is a link row's title line, bold when it has something new
  * (`marked`), with any `Count` after it: a small number badge read out by its
  * label, such as a channel's unread messages (`plain`) or its mentions
@@ -67,28 +66,23 @@ export { Alert } from "./lib/alert.tsx";
 export { CallChip } from "./lib/call-chip.tsx";
 export { ChannelStart } from "./lib/channel-start.tsx";
 export { DataToggle } from "./lib/data-toggle.tsx";
-export { DaySeparator } from "./lib/day-separator.tsx";
 export { Mention } from "./lib/mention.tsx";
 export { MessageBody } from "./lib/message-body.tsx";
 export { MessageItem } from "./lib/message-item.tsx";
 export { MessageList } from "./lib/message-list.tsx";
-export { NewLine } from "./lib/new-line.tsx";
 export { QuietButton } from "./lib/quiet-button.tsx";
 export { RepliesDivider } from "./lib/replies-divider.tsx";
 export { ReplyCount } from "./lib/reply-count.tsx";
 export { StandaloneMessage } from "./lib/standalone-message.tsx";
 export { AppShell } from "./lib/app-shell.tsx";
-export { Article } from "./lib/article.tsx";
 export { Author } from "./lib/author.tsx";
 export { BoxFrame } from "./lib/box-frame.tsx";
-export { Button } from "./lib/button.tsx";
 export { Card } from "./lib/card.tsx";
 export { CardBody } from "./lib/card-body.tsx";
 export { CardHeader } from "./lib/card-header.tsx";
 export { ChoiceGroup } from "./lib/choice-group.tsx";
 export { Count } from "./lib/count.tsx";
 export { DataArea } from "./lib/data-area.tsx";
-export { DataBlock } from "./lib/data-block.tsx";
 export { FieldsForm } from "./lib/fields-form.tsx";
 export { Form } from "./lib/form.tsx";
 export { Heading } from "./lib/heading.tsx";
