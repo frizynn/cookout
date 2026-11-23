@@ -78,21 +78,10 @@ function offlineDetail(presence: Presence): string {
   return `${TEXT.offline}: ${reason}${text.slice(TEXT.offline.length)}`;
 }
 
-function wentOfflineText(presence: Presence): string {
-  const at = presence.lastSeenAt ?? null;
-  if (at === null) {
-    return TEXT.wentOffline;
-  }
-  return `${TEXT.wentOffline} ${timeAgo(at)}`;
-}
-
 function warningDetail(presence: Presence): string {
-  const text = wentOfflineText(presence);
-  const reason = presence.offlineReason ?? null;
-  if (reason === null) {
-    return text;
-  }
-  return `${text}: ${reason}`;
+  const ago = [presence.lastSeenAt ?? []].flat().map((at) => timeAgo(at));
+  const reasons = [presence.offlineReason ?? []].flat().map((reason) => `: ${reason}`);
+  return `${[TEXT.wentOffline, ...ago].join(" ")}${reasons.join("")}`;
 }
 
 function detailOf(presence: Presence): string {

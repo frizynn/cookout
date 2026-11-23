@@ -1,7 +1,8 @@
+import { adminClient, newIdentity } from "./identities.ts";
+import { authorDot, offline, online, openedBy, profileDot, rowDot, warned } from "./presence.ts";
 import { expect, it } from "vitest";
-import { offline, online, openedBy, profileDot, rowDot, warned } from "./presence.ts";
+import type { CookoutClient } from "../../sdk/index.ts";
 import { inProfile } from "./regions.ts";
-import { newIdentity } from "./identities.ts";
 
 const WARNING = "Offline, went offline unexpectedly";
 const SEEN = "Offline, last seen just now";
@@ -11,11 +12,17 @@ interface Owned {
   readonly agent: string;
 }
 
-async function watchingAgent({ agent, owner }: Owned): Promise<() => Promise<void>> {
-  await newIdentity({ kind: "human", name: owner });
+interface Watching {
+  readonly owner: CookoutClient;
+  readonly agent: CookoutClient;
+  readonly drop: () => Promise<void>;
+}
+
+async function watchingAgent({ agent, owner }: Owned): Promise<Watching> {
+  const human = await newIdentity({ kind: "human", name: owner });
   const bot = await newIdentity({ kind: "agent", name: agent, owner });
   const events = await bot.client.watch();
-  return events.close;
+  return { agent: bot.client, drop: events.close, owner: human.client };
 }
 
 it("as the owner, an agent that drops shows the warning on its dot and profile, and reconnecting clears it", {
@@ -62,7 +69,7 @@ it("as another person, an agent that drops shows the plain offline ring and no w
 }, async () => {
   expect.hasAssertions();
 
-  const drop = await watchingAgent({ agent: "web-warning-other-bot", owner: "web-warning-other-owner" });
+  const { drop } = await watchingAgent({ agent: "web-warning-other-bot", owner: "web-warning-other-owner" });
   const reader = await newIdentity({ kind: "human", name: "web-warning-other-reader" });
   await openedBy({ client: reader.client, hash: "#/people/web-warning-other-bot" });
   await inProfile().findByText("Online · watching");
@@ -74,4 +81,20 @@ it("as another person, an agent that drops shows the plain offline ring and no w
       inProfile().findByText("Offline: connection lost · last seen just now"),
     ]),
   ).resolves.toStrictEqual([offline(SEEN), expect.anything()]);
+});
+
+it("as the owner, the author dot of an agent that drops shows the warning beside its messages", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const watching = await watchingAgent({ agent: "web-warning-author-bot", owner: "web-warning-author-owner" });
+  await adminClient().createChannel({ name: "web-warning-author" });
+  await watching.agent.createMessage({ channel: "web-warning-author", text: "Beep from the dropped bot" });
+  await openedBy({ client: watching.owner, hash: "#/channels/web-warning-author" });
+  await watching.drop();
+
+  await expect(
+    authorDot({ at: "Beep from the dropped bot", label: WARNING, who: "web-warning-author-bot" }),
+  ).resolves.toStrictEqual(warned(WARNING));
 });

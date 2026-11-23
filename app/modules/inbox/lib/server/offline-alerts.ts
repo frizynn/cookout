@@ -26,7 +26,7 @@ interface OfflineAlertsService {
     upTo: OfflineAlertId,
   ) => Effect.Effect<readonly OfflineAlert[], StorageUnavailable>;
   readonly changed: Effect.Effect<PubSub.Subscription<OwnedAlert>, never, Scope.Scope>;
-  readonly warningsFor: (viewer: IdentityName) => Effect.Effect<(presence: Presence) => Presence>;
+  readonly warningsFor: (viewer: IdentityName) => Effect.Effect<(presence: Presence) => Presence, StorageUnavailable>;
 }
 
 class OfflineAlerts extends Context.Service<OfflineAlerts, OfflineAlertsService>()(
@@ -109,11 +109,11 @@ function warnedIn(warned: ReadonlySet<IdentityName>): (presence: Presence) => Pr
   };
 }
 
-function warnings(storage: Storage["Service"], viewer: IdentityName): Effect.Effect<(presence: Presence) => Presence> {
-  return storage.listOfflineAlerts(viewer).pipe(
-    Effect.map((alerts) => warnedIn(warnedAgents(alerts))),
-    Effect.orElseSucceed(() => warnedIn(new Set())),
-  );
+function warnings(
+  storage: Storage["Service"],
+  viewer: IdentityName,
+): Effect.Effect<(presence: Presence) => Presence, StorageUnavailable> {
+  return Effect.map(storage.listOfflineAlerts(viewer), (alerts) => warnedIn(warnedAgents(alerts)));
 }
 
 function publisher(publishOne: (owned: OwnedAlert) => Effect.Effect<boolean>): Publish {

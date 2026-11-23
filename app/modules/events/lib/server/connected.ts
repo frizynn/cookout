@@ -2,12 +2,12 @@ import type { Connected, StreamRequest } from "./source.ts";
 import { ConnectedEventSchema, PresenceEventSchema } from "./wire.ts";
 import { Effect, Schema, Stream } from "effect";
 import { PresenceRegistry, holdLiveConnection } from "../../../presence/server.ts";
+import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import { refusalSseEvent, sseEvent } from "./source.ts";
 import type { AgentSessions } from "../../../agent-sessions/server.ts";
 import { Messages } from "../../../messages/server.ts";
 import { OfflineAlerts } from "../../../inbox/server.ts";
 import type { Presence } from "../../../presence/index.ts";
-import type { Storage } from "../../../storage/server.ts";
 import { asksForAllChannels } from "./all-channels.ts";
 import { presenceName } from "../../../presence/index.ts";
 import { sentAgentSessionEnded } from "../../../agent-sessions/server.ts";
@@ -41,7 +41,7 @@ function seenBy(
   alerts: OfflineAlerts["Service"],
   { caller }: StreamRequest,
   changed: Presence,
-): Effect.Effect<{ readonly presence: Presence; readonly type: typeof presenceName }> {
+): Effect.Effect<{ readonly presence: Presence; readonly type: typeof presenceName }, StorageUnavailable> {
   if (changed.online) {
     return Effect.succeed({ presence: changed, type: presenceName });
   }
