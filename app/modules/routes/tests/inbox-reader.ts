@@ -1,4 +1,4 @@
-import { adminClient, newIdentity } from "./app.tsx";
+import { adminClient, newIdentity } from "./identities.ts";
 import { screen, within } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
 

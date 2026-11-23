@@ -1,7 +1,8 @@
-import { adminClient, clientWith, newIdentity, openAt } from "./app.tsx";
+import { adminClient, clientWith, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, getDefaultNormalizer, screen, within } from "@testing-library/react";
 import type { Message } from "../../sdk/index.ts";
+import { openAt } from "./render.tsx";
 
 async function threadIn(channel: string): Promise<Message> {
   await adminClient().createChannel({ name: channel });

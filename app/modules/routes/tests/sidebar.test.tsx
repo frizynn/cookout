@@ -1,7 +1,9 @@
-import { adminClient, anonymousClient, newIdentity, openAt, sessionOf, sidebar } from "./app.tsx";
+import { adminClient, anonymousClient, newIdentity, sessionOf } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
+import { inSidebar } from "./regions.ts";
+import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";
 
 interface Reader {
@@ -18,7 +20,7 @@ async function subscribedReader(name: string): Promise<Reader> {
 }
 
 function inboxLink(): HTMLElement {
-  return within(sidebar()).getByRole("link", { name: /^Inbox/u });
+  return inSidebar().getByRole("link", { name: /^Inbox/u });
 }
 
 it("#/ opens the inbox, highlighted in the sidebar", { timeout: 5000 }, async () => {
@@ -43,7 +45,7 @@ it("a fresh login opens the inbox", { timeout: 5000 }, async () => {
 
   const heading = await screen.findByRole("heading", { level: 1, name: "Inbox" });
 
-  expect([heading.textContent, within(sidebar()).getByText("web-sidebar-fresh").textContent]).toStrictEqual([
+  expect([heading.textContent, inSidebar().getByText("web-sidebar-fresh").textContent]).toStrictEqual([
     "Inbox",
     "web-sidebar-fresh",
   ]);
@@ -92,7 +94,7 @@ it("a channel with unread messages is bold in the sidebar, with its mention coun
   const bold = await within(await screen.findByRole("navigation", { name: "Sidebar" })).findByRole("link", {
     name: /^#web-sidebar-bold\s*1 mention$/u,
   });
-  const quiet = within(sidebar()).getByRole("link", { name: "#web-sidebar-quiet" });
+  const quiet = inSidebar().getByRole("link", { name: "#web-sidebar-quiet" });
 
   expect([
     within(bold).getByText("#web-sidebar-bold").className.includes("font-semibold"),

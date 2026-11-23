@@ -1990,6 +1990,7 @@
         "playwright.config.ts",
         "scripts/browser-test-server.ts",
         "scripts/jsdom-server-environment.ts",
+        "scripts/web-test-environment.ts",
         "packages/e2e/vitest.config.ts",
         "packages/e2e/playwright.config.ts",
         "packages/e2e/.dependency-cruiser.mjs"

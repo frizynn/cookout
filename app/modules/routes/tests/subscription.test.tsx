@@ -1,8 +1,10 @@
-import { adminClient, alertSaying, newIdentity, openAt, sessionOf } from "./app.tsx";
+import { adminClient, newIdentity, sessionOf } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
+import { alertSaying } from "./alerts.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
+import { openAt } from "./render.tsx";
 
 async function subscribedNames(client: CookoutClient): Promise<readonly string[]> {
   const { channels } = await client.listSubscribedChannels();

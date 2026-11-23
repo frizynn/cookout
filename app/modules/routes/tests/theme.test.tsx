@@ -1,6 +1,7 @@
-import { adminClient, openAt } from "./app.tsx";
 import { expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
+import { adminClient } from "./identities.ts";
+import { openAt } from "./render.tsx";
 
 async function openSettings(): Promise<void> {
   fireEvent.click(await screen.findByRole("button", { name: "Settings" }));

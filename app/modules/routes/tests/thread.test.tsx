@@ -1,8 +1,10 @@
 import type { CookoutClient, InboxResponse, Message } from "../../sdk/index.ts";
-import { adminClient, clientWith, messagesIn, newIdentity, openAt, parentShown } from "./app.tsx";
+import { adminClient, clientWith, newIdentity } from "./identities.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
+import { messagesIn, parentShown } from "./messages.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
+import { openAt } from "./render.tsx";
 
 const NONE = 0;
 

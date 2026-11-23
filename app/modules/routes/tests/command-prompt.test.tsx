@@ -1,7 +1,8 @@
 import { addCommand, channelWithCommand, openChannel, pick, suggestedFor, type } from "./commands.ts";
-import { adminClient, openAt } from "./app.tsx";
 import { expect, it } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
+import { adminClient } from "./identities.ts";
+import { openAt } from "./render.tsx";
 
 const fieldsSchema = {
   properties: {

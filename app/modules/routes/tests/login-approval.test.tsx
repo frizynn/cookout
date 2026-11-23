@@ -1,7 +1,8 @@
-import { anonymousClient, newIdentity, openAt, sessionOf } from "./app.tsx";
+import { anonymousClient, newIdentity, sessionOf } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import { createLoginApprovals } from "../../session/index.ts";
+import { openAt } from "./render.tsx";
 
 const host = { host: "ada-laptop" };
 

@@ -1,7 +1,10 @@
 import type { CookoutClient, InboxResponse, Message } from "../../sdk/index.ts";
-import { adminClient, alertSaying, clientWith, messagesIn, newIdentity, openAt } from "./app.tsx";
+import { adminClient, clientWith, newIdentity } from "./identities.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
+import { alertSaying } from "./alerts.ts";
+import { messagesIn } from "./messages.ts";
+import { openAt } from "./render.tsx";
 
 interface ReadingAsAnother {
   readonly client: CookoutClient;

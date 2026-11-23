@@ -1,7 +1,10 @@
-import { adminClient, alertSaying, messagesIn, newIdentity, openAt } from "./app.tsx";
+import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
+import { alertSaying } from "./alerts.ts";
+import { messagesIn } from "./messages.ts";
+import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";
 
 const NONE = 0;

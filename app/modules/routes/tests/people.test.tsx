@@ -1,7 +1,9 @@
-import { adminClient, newIdentity, openAt, sidebar } from "./app.tsx";
+import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
+import { inSidebar } from "./regions.ts";
+import { openAt } from "./render.tsx";
 
 const DATE_LENGTH = 10;
 const START = 0;
@@ -83,7 +85,7 @@ it("#/people lists every identity, with its kind, owner and tags, and you marked
     screen.getByRole("heading", { level: 1 }).textContent,
     screen.getByText(/^\d+ identities$/u).textContent,
     rowTexts(),
-    within(sidebar()).getByRole("link", { name: "People & agents" }).getAttribute("aria-current"),
+    inSidebar().getByRole("link", { name: "People & agents" }).getAttribute("aria-current"),
   ]).toStrictEqual([
     "People & agents",
     `${String(everyone)} identities`,

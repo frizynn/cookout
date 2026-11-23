@@ -1,8 +1,11 @@
-import { adminClient, alertSaying, clientWith, messagesIn, newIdentity, openAt } from "./app.tsx";
+import { adminClient, clientWith, newIdentity } from "./identities.ts";
 import { callWith, callWithFields, channelWithCommand, noProperties, openChannel, pretty } from "./commands.ts";
 import { expect, it } from "vitest";
 import { screen, within } from "@testing-library/react";
+import { alertSaying } from "./alerts.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
+import { messagesIn } from "./messages.ts";
+import { openAt } from "./render.tsx";
 
 const LOW = 1;
 const HIGH = 2;

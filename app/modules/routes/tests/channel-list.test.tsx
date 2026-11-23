@@ -1,7 +1,8 @@
 import type { CookoutClient, CreateChannelRequest, ListChannelsResponse } from "../../sdk/index.ts";
-import { adminClient, clientWith, openAt, openBoard, sessionOf } from "./app.tsx";
+import { adminClient, clientWith, sessionOf } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
+import { openAt, openBoard } from "./render.tsx";
 import { createBoard } from "../../board/index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
 import { watched } from "./watched.ts";

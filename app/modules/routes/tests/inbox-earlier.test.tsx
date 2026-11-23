@@ -1,8 +1,10 @@
 import type { CookoutClient, MessageId } from "../../sdk/index.ts";
-import { alertSaying, anonymousClient, openAt } from "./app.tsx";
 import { expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import { rowsOf, subscribedReader } from "./inbox-reader.ts";
+import { alertSaying } from "./alerts.ts";
+import { anonymousClient } from "./identities.ts";
+import { openAt } from "./render.tsx";
 
 const NONE = 0;
 const ONE = 1;

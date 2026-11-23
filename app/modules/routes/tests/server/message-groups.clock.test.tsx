@@ -2,9 +2,10 @@ import { DateTime, Effect, pipe } from "effect";
 import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
-import { openAt, streamOf } from "../app.tsx";
 import type { Message } from "../../../sdk/index.ts";
 import { TestClock } from "effect/testing";
+import { openAt } from "../render.tsx";
+import { streamOf } from "../messages.ts";
 
 interface People {
   readonly ada: TestIdentity;

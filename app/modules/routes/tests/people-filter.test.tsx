@@ -1,6 +1,7 @@
-import { adminClient, newIdentity, openAt } from "./app.tsx";
+import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { openAt } from "./render.tsx";
 
 const ONE_ROW = 1;
 

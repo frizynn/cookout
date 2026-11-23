@@ -41,9 +41,8 @@ export default defineConfig({
       {
         extends: true,
         test: {
-          environment: "jsdom",
+          environment: "./scripts/web-test-environment.ts",
           exclude: ["app/**/*.clock.test.tsx"],
-          globalSetup: ["scripts/web-test-server.ts"],
           include: ["app/**/*.test.tsx"],
           name: "web",
         },

@@ -1,8 +1,9 @@
 import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
-import { adminClient, anonymousClient, openAt, sessionOf } from "./app.tsx";
+import { adminClient, anonymousClient, sessionOf } from "./identities.ts";
 import { expect, it, onTestFinished, vi } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { rowsOf, subscribedReader } from "./inbox-reader.ts";
+import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";
 
 const FIVE_MINUTES = 300_000;

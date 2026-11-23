@@ -1,21 +1,21 @@
 import { mkdtempSync, rmSync } from "node:fs";
-import type { TestProject } from "vitest/node";
 import { createInterface } from "node:readline";
 import { once } from "node:events";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 
-interface TestCookout {
+interface WebTestCookout {
   readonly adminToken: string;
   readonly url: string;
 }
 
-declare module "vitest" {
-  export interface ProvidedContext {
-    readonly cookout: TestCookout;
-  }
+interface RunningWebTestCookout {
+  readonly url: string;
+  readonly stop: () => Promise<void>;
 }
+
+const adminToken = "web-test-admin-token-0123456789abcdef0123456789";
 
 function fieldsOf(line: string): Readonly<Record<string, unknown>> {
   try {
@@ -36,10 +36,8 @@ async function listeningUrl(lines: AsyncIterable<string>): Promise<string> {
   throw new Error("cookout serve stopped before printing its address");
 }
 
-export async function setup(project: TestProject): Promise<() => Promise<void>> {
+export async function startWebTestCookout(): Promise<RunningWebTestCookout> {
   const folder = mkdtempSync(path.join(os.tmpdir(), "cookout-web-test-"));
-  const adminToken = "web-test-admin-token-0123456789abcdef0123456789";
-  const database = path.join(folder, "cookout.db");
   const server = spawn(
     "env",
     [
@@ -52,15 +50,21 @@ export async function setup(project: TestProject): Promise<() => Promise<void>> 
       "--host",
       "127.0.0.1",
       "--db",
-      database,
+      path.join(folder, "cookout.db"),
     ],
     { stdio: ["ignore", "pipe", "ignore"] },
   );
   const url = await listeningUrl(createInterface({ input: server.stdout }));
-  project.provide("cookout", { adminToken, url });
-  return async () => {
-    server.kill("SIGINT");
-    await once(server, "exit");
-    rmSync(folder, { force: true, recursive: true });
+  return {
+    stop: async () => {
+      server.kill("SIGINT");
+      await once(server, "exit");
+      rmSync(folder, { force: true, recursive: true });
+    },
+    url,
   };
+}
+
+export function webTestCookout(): WebTestCookout {
+  return { adminToken, url: globalThis.location.origin };
 }
