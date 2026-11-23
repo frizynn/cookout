@@ -109,14 +109,16 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
-  "storage contract ($adapter): deleting the agent forgets its agent session tokens",
+  "storage contract ($adapter): deactivating the agent revokes its agent session tokens, even once it is reactivated",
   ({ layer }) =>
-    Effect.gen(function* deleted() {
+    Effect.gen(function* deactivated() {
       const storage = yield* withAgent(layer);
       yield* storage.issueAgentSession({ force: false, session: session(FIRST) });
-      yield* storage.deleteIdentity(AGENT);
-      const used = yield* storage.useAgentSession({ hash: FIRST, now: T30 });
+      yield* storage.deactivateIdentity(AGENT);
+      const whileDeactivated = yield* storage.useAgentSession({ hash: FIRST, now: T30 });
+      yield* storage.reactivateIdentity(AGENT, tokenHash("hash:fresh"));
+      const afterwards = yield* storage.useAgentSession({ hash: FIRST, now: T30 });
 
-      expect(used).toStrictEqual({ status: "unknown" });
+      expect([whileDeactivated, afterwards]).toStrictEqual([{ status: "revoked" }, { status: "revoked" }]);
     }),
 );

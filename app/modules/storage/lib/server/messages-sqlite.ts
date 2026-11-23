@@ -205,7 +205,7 @@ function knownNames(db: SqliteDatabase, names: readonly IdentityName[]): Fails<R
   return pipe(
     names,
     Effect.filter((name) =>
-      db.get("SELECT 1 AS found FROM identities WHERE name = ?", name).pipe(Effect.map(isFoundRow)),
+      db.get("SELECT 1 AS found FROM identities WHERE name = ? AND deactivated = 0", name).pipe(Effect.map(isFoundRow)),
     ),
     Effect.map((found: readonly IdentityName[]) => new Set(found)),
   );

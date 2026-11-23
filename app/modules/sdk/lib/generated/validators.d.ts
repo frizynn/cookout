@@ -4,7 +4,7 @@ import type { ChannelResponse, ListChannelsResponse } from "../../../channels/in
 import type { CallCommandResponse, CommandWithSecretResponse, ListCommandsResponse } from "../../../commands/index.ts";
 import type { ConnectedEvent, IdentityEvent, InboxItemEvent, MessageEvent, ReadPositionEvent } from "../../../events/index.ts";
 import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../../http/index.ts";
-import type { IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";
+import type { DeactivateIdentityResponse, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";
 import type { AckResponse, FollowResponse, InboxHistoryResponse, InboxResponse, SubscriptionResponse } from "../../../inbox/index.ts";
 import type { ListMessagesResponse, MessageResponse, ThreadResponse } from "../../../messages/index.ts";
 
@@ -25,6 +25,7 @@ export declare function isReadPositionEvent(data: unknown): data is ReadPosition
 export declare function isErrorResponse(data: unknown): data is ErrorResponse;
 export declare function isHealthResponse(data: unknown): data is HealthResponse;
 export declare function isSchemaProblems(data: unknown): data is SchemaProblems;
+export declare function isDeactivateIdentityResponse(data: unknown): data is DeactivateIdentityResponse;
 export declare function isIdentityResponse(data: unknown): data is IdentityResponse;
 export declare function isIdentityWithTokenResponse(data: unknown): data is IdentityWithTokenResponse;
 export declare function isListIdentitiesResponse(data: unknown): data is ListIdentitiesResponse;

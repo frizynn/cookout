@@ -7,6 +7,10 @@ type FindIdentity = (name: IdentityName) => Identity | undefined;
 
 const NOT_ADMIN = 0;
 const ADMIN = 1;
+const ACTIVE = 0;
+const DEACTIVATED = 1;
+
+const IDENTITY_COLUMNS = "name, kind, owner, admin, created_at, display_name, deactivated";
 
 const OwnerColumn = Schema.String.pipe(Schema.refine(isOwner));
 
@@ -15,6 +19,7 @@ const DisplayNameColumn = Schema.String.pipe(Schema.refine(isDisplayName));
 const sharedColumns = {
   admin: Schema.Literals([NOT_ADMIN, ADMIN]),
   created_at: IsoTimeSchema,
+  deactivated: Schema.Literals([ACTIVE, DEACTIVATED]),
   display_name: Schema.NullOr(DisplayNameColumn),
   name: Schema.String.pipe(Schema.refine(isIdentityName)),
 };
@@ -32,12 +37,25 @@ function displayNameOf(row: typeof IdentityRow.Type): { readonly displayName?: D
   return { displayName: row.display_name };
 }
 
+function deactivatedOf(row: typeof IdentityRow.Type): { readonly deactivated?: true } {
+  if (row.deactivated === DEACTIVATED) {
+    return { deactivated: true };
+  }
+  return {};
+}
+
 function toIdentity(row: typeof IdentityRow.Type): Identity {
-  const fields = { admin: row.admin === ADMIN, createdAt: row.created_at, name: row.name, ...displayNameOf(row) };
+  const fields = {
+    admin: row.admin === ADMIN,
+    createdAt: row.created_at,
+    name: row.name,
+    ...displayNameOf(row),
+    ...deactivatedOf(row),
+  };
   if (row.kind === "human") {
     return { ...fields, kind: "human" };
   }
   return { ...fields, kind: "agent", owner: row.owner };
 }
 
-export { AgentRow, type FindIdentity, IdentityRow, toIdentity };
+export { AgentRow, type FindIdentity, IDENTITY_COLUMNS, IdentityRow, toIdentity };

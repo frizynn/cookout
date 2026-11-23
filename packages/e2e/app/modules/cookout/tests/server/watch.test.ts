@@ -21,7 +21,7 @@ interface Watching {
   readonly first: Session;
   readonly second: Session;
   readonly relay: Relay;
-  readonly deleteTheWatcher: Effect.Effect<Exited>;
+  readonly deactivateTheWatcher: Effect.Effect<Exited>;
 }
 
 interface AcrossADrop {
@@ -49,12 +49,12 @@ const secondWatching: Effect.Effect<Watching, never, CookoutUnderTest | SessionN
     const second = yield* cookout.joinAgent("watcher", relay.url);
     const watch = yield* Effect.forkScoped(second.cookout("watch"));
     yield* relay.relayed(CONNECTED);
-    const deleteTheWatcher = Effect.promise(() => cookout.admin.deleteIdentity(second.name)).pipe(
+    const deactivateTheWatcher = Effect.promise(() => cookout.admin.deactivateIdentity(second.name)).pipe(
       Effect.andThen(relay.cut),
       Effect.andThen(Fiber.join(watch)),
       Effect.map(exitedWith),
     );
-    return { channel: channel.name, deleteTheWatcher, first, relay, second };
+    return { channel: channel.name, deactivateTheWatcher, first, relay, second };
   },
 );
 
@@ -92,13 +92,13 @@ it.live(
   "cookout watch prints one stdout line for each item another agent sends it, a mention and a reply in a thread it follows",
   () =>
     Effect.gen(function* watchTwoItems() {
-      const { channel, deleteTheWatcher, first, relay, second } = yield* secondWatching;
+      const { channel, deactivateTheWatcher, first, relay, second } = yield* secondWatching;
       const question = `Are you there, @${second.name}?`;
       const top = yield* first.post(channel, question);
       const reply = yield* second.post(channel, "Here.", "--reply-to", String(top));
       const thanks = yield* first.post(channel, "Thanks.", "--reply-to", String(reply));
       yield* relay.relayed(ITEM, TWICE);
-      const exited = yield* deleteTheWatcher;
+      const exited = yield* deactivateTheWatcher;
       const from = { author: first.name, channel, thread: top };
 
       expect(exited).toMatchObject({
@@ -118,7 +118,7 @@ it.live(
     Effect.gen(function* watchAcrossADrop() {
       const watching = yield* secondWatching;
       const { after, before, missed } = yield* mentionAcrossADrop(watching);
-      const exited = yield* watching.deleteTheWatcher;
+      const exited = yield* watching.deactivateTheWatcher;
       const lastEventIds = yield* watching.relay.lastEventIds;
       const from = { author: watching.first.name, channel: watching.channel };
 
@@ -135,10 +135,10 @@ it.live(
     }).pipe(Effect.provide([cookoutUnderTest, NodeServices.layer])),
 );
 
-it.live("deleting the watcher's identity ends cookout watch with one fatal stdout line and exit 3", () =>
-  Effect.gen(function* watchDeleted() {
-    const { deleteTheWatcher } = yield* secondWatching;
-    const exited = yield* deleteTheWatcher;
+it.live("deactivating the watcher's identity ends cookout watch with one fatal stdout line and exit 3", () =>
+  Effect.gen(function* watchDeactivated() {
+    const { deactivateTheWatcher } = yield* secondWatching;
+    const exited = yield* deactivateTheWatcher;
 
     expect(exited).toMatchObject({ exitCode: watchExitTokenRevoked, items: [] });
     expect(exited.last).toMatch(FATAL);

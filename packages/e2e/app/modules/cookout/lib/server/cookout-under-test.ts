@@ -33,11 +33,11 @@ function prefixOf(draw: number): string {
   return `e2e-${Str.padStart(PREFIX_LENGTH, "0")(draw.toString(PREFIX_RADIX))}`;
 }
 
-function deleteRunIdentities(admin: CookoutClient, prefix: string): Effect.Effect<void> {
-  return Effect.gen(function* deleteOwn() {
+function deactivateRunIdentities(admin: CookoutClient, prefix: string): Effect.Effect<void> {
+  return Effect.gen(function* deactivateOwn() {
     const { identities } = yield* Effect.promise(() => admin.listIdentities());
     const own = Arr.filter(identities, ({ name }) => Str.startsWith(`${prefix}-`)(name));
-    yield* Effect.forEach(own, ({ name }) => Effect.promise(() => admin.deleteIdentity(name)), ONE_AT_A_TIME);
+    yield* Effect.forEach(own, ({ name }) => Effect.promise(() => admin.deactivateIdentity(name)), ONE_AT_A_TIME);
   });
 }
 
@@ -71,7 +71,7 @@ const cookoutUnderTest: Layer.Layer<CookoutUnderTest> = Layer.effect(
     const draw = yield* Random.nextIntBetween(NO_DRAW, PREFIX_SPACE);
     const prefix = prefixOf(draw);
     yield* Effect.addFinalizer(() =>
-      Effect.andThen(deleteRunIdentities(admin, prefix), deleteChannelsStartingWith(admin, `${prefix}-`)),
+      Effect.andThen(deactivateRunIdentities(admin, prefix), deleteChannelsStartingWith(admin, `${prefix}-`)),
     );
     function createAgent(name: string): Effect.Effect<IdentityWithTokenResponse> {
       return Effect.promise(() => admin.createIdentity({ kind: "agent", name: `${prefix}-${name}` }));

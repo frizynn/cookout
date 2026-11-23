@@ -222,69 +222,19 @@ it.effect("rotating the token of a missing identity is a 404", () =>
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("deleting an identity removes it and its token stops working", () =>
-  Effect.gen(function* deleteIdentity() {
-    const cookout = yield* TestCookout;
-    const agent = yield* cookout.createIdentity("e2e-run-1");
-    const deleted = yield* answer(() => cookout.client.deleteIdentity("e2e-run-1"));
-    const listed = yield* answer(cookout.client.listIdentities);
-    const error = yield* refusal(agent.client.whoami);
-
-    expect(deleted).toStrictEqual({ identity: agent.identity });
-    expect(listed).toStrictEqual({ identities: [{ admin: true, createdAt: BOOT, kind: "human", name: "admin" }] });
-    expect(error).toMatchObject({ code: "token_revoked", status: 401 });
-  }).pipe(Effect.provide(testCookout())),
-);
-
-it.effect("deleting the last admin is refused with 409 last_admin", () =>
-  Effect.gen(function* lastAdmin() {
-    const cookout = yield* TestCookout;
-    yield* cookout.createIdentity("agent");
-    const error = yield* refusal(() => cookout.client.deleteIdentity("admin"));
-    const whoami = yield* answer(cookout.client.whoami);
-
-    expect(error).toMatchObject({ code: "last_admin", status: 409 });
-    expect(whoami.identity).toMatchObject({ admin: true, name: "admin" });
-  }).pipe(Effect.provide(testCookout())),
-);
-
-it.effect("an admin can delete itself while another admin remains", () =>
-  Effect.gen(function* deleteSelf() {
-    const cookout = yield* TestCookout;
-    const second = yield* cookout.createIdentity("admin-2", { admin: true, kind: "human" });
-    const deleted = yield* answer(() => cookout.client.deleteIdentity("admin"));
-    const revoked = yield* refusal(cookout.client.whoami);
-    const last = yield* refusal(() => second.client.deleteIdentity("admin-2"));
-
-    expect(deleted.identity).toMatchObject({ admin: true, name: "admin" });
-    expect(revoked).toMatchObject({ code: "token_revoked", status: 401 });
-    expect(last).toMatchObject({ code: "last_admin", status: 409 });
-  }).pipe(Effect.provide(testCookout())),
-);
-
-it.effect("deleting a missing identity is a 404", () =>
-  Effect.gen(function* deleteMissing() {
-    const cookout = yield* TestCookout;
-    const error = yield* refusal(() => cookout.client.deleteIdentity("nobody"));
-
-    expect(error).toMatchObject({ code: "identity_not_found", status: 404 });
-  }).pipe(Effect.provide(testCookout())),
-);
-
-it.effect("an agent can't create, rotate or delete identities (403)", () =>
+it.effect("an agent can't create, rotate or deactivate identities (403)", () =>
   Effect.gen(function* nonAdmin() {
     const cookout = yield* TestCookout;
     const agent = yield* cookout.createIdentity("agent");
     const created = yield* refusal(() => agent.client.createIdentity({ kind: "agent", name: "sneaky" }));
     const rotated = yield* refusal(() => agent.client.rotateToken("admin"));
-    const deleted = yield* refusal(() => agent.client.deleteIdentity("admin"));
+    const deactivated = yield* refusal(() => agent.client.deactivateIdentity("admin"));
     const listed = yield* answer(cookout.client.listIdentities);
-    const adminOnly = { code: "admin_only", status: 403 };
 
-    expect([created, rotated, deleted]).toMatchObject([
+    expect([created, rotated, deactivated]).toMatchObject([
       { code: "human_only", status: 403 },
       { code: "not_owner", status: 403 },
-      adminOnly,
+      { code: "not_owner", status: 403 },
     ]);
     expect(listed.identities).toMatchObject([{ name: "admin" }, { name: "agent" }]);
   }).pipe(Effect.provide(testCookout())),

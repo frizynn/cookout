@@ -54,7 +54,7 @@ it.effect("a refusal echoes at most 100 characters of the path or name it was se
     const long = Str.repeat(LONG)("a");
     const route = yield* answer(() => request({ baseUrl: cookout.url, method: "GET", path: `/v1/${long}` }));
     const channel = yield* refusal(() => cookout.client.getChannel(long));
-    const identity = yield* refusal(() => cookout.client.deleteIdentity(long));
+    const identity = yield* refusal(() => cookout.client.deactivateIdentity(long));
     const messages = [route.json, { error: channel }, { error: identity }];
 
     expect(messages).toMatchObject([

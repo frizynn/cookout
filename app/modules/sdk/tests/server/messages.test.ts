@@ -172,12 +172,12 @@ it.effect("message IDs increase across channels", () =>
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("a message keeps its author's name and owner after the identity is deleted", () =>
+it.effect("a message keeps its author's name and owner after the identity is deactivated", () =>
   Effect.gen(function* authorKept() {
     const cookout = yield* TestCookout;
     const agent = yield* withChannel(cookout);
     const { message } = yield* answer(() => agent.client.createMessage({ channel: "grill", text: "still here" }));
-    yield* answer(() => cookout.client.deleteIdentity("auth-griller"));
+    yield* answer(() => cookout.client.deactivateIdentity("auth-griller"));
     const thread = yield* answer(() => cookout.client.getThread(message.id));
 
     expect(thread.parent.author).toStrictEqual({ name: "auth-griller", owner: "matt" });

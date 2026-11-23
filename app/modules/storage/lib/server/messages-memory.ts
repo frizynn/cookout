@@ -116,6 +116,13 @@ function withoutMessagesIn(
   return [ids, { ...data, inbox: withoutChannel({ channel, ids, inbox: data.inbox }), messages: kept }];
 }
 
+type Listed = Effect.Success<ReturnType<IdentitiesSection["listIdentities"]>>;
+
+function activeNamesOf(listed: Listed): Mentioning["known"] {
+  const active = Arr.filter(listed, (identity) => identity.deactivated !== true);
+  return new Set(Arr.map(active, (identity) => identity.name));
+}
+
 function memoryMessages({ channels, identities, state }: MemoryMessagesOptions): MemoryMessagesSection {
   const ref = Ref.makeUnsafe(EMPTY);
   function change<Value>(work: (data: MemoryMessages) => readonly [Value, MemoryMessages]): Fails<Value> {
@@ -130,10 +137,7 @@ function memoryMessages({ channels, identities, state }: MemoryMessagesOptions):
   function channelExists(channel: ChannelName): Fails<boolean> {
     return Effect.map(channels.findChannel(channel), Predicate.isNotUndefined);
   }
-  const knownNames: Fails<Mentioning["known"]> = Effect.map(
-    identities.listIdentities(),
-    (listed) => new Set(Arr.map(listed, (identity) => identity.name)),
-  );
+  const knownNames: Fails<Mentioning["known"]> = Effect.map(identities.listIdentities(), activeNamesOf);
   return {
     ...memoryInbox({
       changeInbox: (work) =>

@@ -15,6 +15,7 @@ type IdentityFields = {
   readonly displayName?: DisplayName;
   readonly admin: boolean;
   readonly createdAt: IsoTime;
+  readonly deactivated?: true;
 };
 
 /**
@@ -94,7 +95,7 @@ export type IdentityKind = (typeof identityKinds)[number];
 /**
  * A person using the board as themself. A human is its own person, so it has no owner, and its name has no `/`. Any
  * human can create agents it owns; an admin can also create humans and agents owned by any human, rotate tokens and
- * delete identities.
+ * deactivate identities.
  */
 export type HumanIdentity = IdentityFields & {
   readonly kind: "human";
@@ -108,7 +109,11 @@ export type AgentIdentity = IdentityFields & {
   readonly handler?: true;
 };
 
-/** An identity as the server shows it: a human or an agent, never both. Its token is never part of it. */
+/**
+ * An identity as the server shows it: a human or an agent, never both. Its token is never part of it. A Deactivated
+ * identity has `deactivated: true`: its history and name stay, but every token it holds fails with 401, it can't be
+ * mentioned, and `GET /v1/identities` leaves it out unless asked (ADR 0045).
+ */
 export type Identity = HumanIdentity | AgentIdentity;
 
 /**
@@ -123,7 +128,7 @@ export function nameFitsOwner(identity: Identity): boolean {
   return !identity.name.includes("/") || (identity.kind === "agent" && identity.owner === namespace);
 }
 
-/** The answer to `GET /v1/whoami` and `DELETE /v1/identities/<name>`. */
+/** The answer to `GET /v1/whoami`, and to the admin and display-name changes. */
 export type IdentityResponse = {
   readonly identity: Identity;
 };
@@ -138,6 +143,18 @@ export type IdentityWithTokenResponse = {
 export type ListIdentitiesResponse = {
   readonly identities: readonly Identity[];
 };
+
+/** The query of `GET /v1/identities`: Deactivated identities are left out unless `include` is `deactivated`. */
+export interface ListIdentitiesQuery {
+  readonly include?: "deactivated";
+}
+
+/** The answer to `POST /v1/identities/:name/deactivate`: the identity, and the names of the agents deactivated with it. */
+export interface DeactivateIdentityResponse {
+  readonly identity: Identity;
+  /** The agents a deactivated human owned, sorted by name; empty for an agent. */
+  readonly agents: readonly IdentityName[];
+}
 
 /**
  * The body of `POST /v1/identities`. Any human may create an agent it owns; only an admin may create a human, or an
@@ -168,10 +185,20 @@ export const whoamiPath = "/v1/whoami";
 export const identitiesPath = "/v1/identities";
 
 /**
- * `DELETE /v1/identities/:name` (admin): removes the identity, and its token stops working. A human who still owns
- * agents is refused with 409 `owns_agents`, naming them.
+ * `POST /v1/identities/:name/deactivate`: Deactivates the identity, answering `DeactivateIdentityResponse`. Every token
+ * it holds fails at once; a human's agents are deactivated with it. An admin may deactivate anyone, and a human their
+ * own agents (403 `not_owner` otherwise). The last admin is refused with 409 `last_admin`. Nothing is ever deleted
+ * (ADR 0045).
  */
-export const identityPath = "/v1/identities/:name";
+export const identityDeactivatePath = "/v1/identities/:name/deactivate";
+
+/**
+ * `POST /v1/identities/:name/reactivate`: undoes deactivating, answering `IdentityWithTokenResponse` with a fresh
+ * token; the old tokens stay dead. An admin may reactivate anyone, and a human their own agents (403 `admin_only` or
+ * `not_owner` otherwise). An identity that isn't Deactivated is 409 `not_deactivated`, and an agent whose owner still is
+ * is 409 `owner_deactivated`.
+ */
+export const identityReactivatePath = "/v1/identities/:name/reactivate";
 
 /**
  * `POST /v1/identities/:name/token` (the agent's owner, or an admin): issues a new token, and the old one stops
@@ -261,5 +288,6 @@ export const identityErrorCodes = [
   "not_owner",
   "owner_not_human",
   "name_not_owned",
-  "owns_agents",
+  "not_deactivated",
+  "owner_deactivated",
 ] as const;

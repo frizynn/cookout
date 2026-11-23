@@ -53,8 +53,8 @@ async function goneAuthors(): Promise<void> {
   await adminClient().createChannel({ name: "web-avatars-gone" });
   await owned.client.createMessage({ channel: "web-avatars-gone", text: "Owned words" });
   await person.client.createMessage({ channel: "web-avatars-gone", text: "Human words" });
-  await adminClient().deleteIdentity("web-avatar-gone-bot");
-  await adminClient().deleteIdentity("web-avatar-gone-human");
+  await adminClient().deactivateIdentity("web-avatar-gone-bot");
+  await adminClient().deactivateIdentity("web-avatar-gone-human");
 }
 
 it("an agent's messages are drawn as an agent's and a human's as a human's, one name in one colour everywhere", {
@@ -85,7 +85,7 @@ it("an agent's messages are drawn as an agent's and a human's as a human's, one 
   close();
 });
 
-it("a deleted author is drawn as an agent if the message carries an owner, else as a human", {
+it("a deactivated author is drawn as an agent if the message carries an owner, else as a human", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();

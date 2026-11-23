@@ -1,42 +1,32 @@
 import { Array as Arr, Effect } from "effect";
 import { CreateIdentityRequestSchema, createIdentity, humanCaller } from "./create.ts";
-import type { DeleteIdentityResult, SetAdminResult } from "../../../storage/server.ts";
+import {
+  DeactivateIdentityResponseSchema,
+  IdentityResponseSchema,
+  IdentityWithTokenResponseSchema,
+  ListIdentitiesQuerySchema,
+  ListIdentitiesResponseSchema,
+} from "./wire.ts";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import type { Identity, IdentityName } from "../../index.ts";
-import { IdentityResponseSchema, IdentityWithTokenResponseSchema, ListIdentitiesResponseSchema } from "./wire.ts";
-import { identitiesPath, identityAdminPath, identityPath, identityTokenPath, isIdentityName } from "../../index.ts";
+import type { Identity, IdentityName, ListIdentitiesQuery } from "../../index.ts";
+import { identitiesPath, identityAdminPath, identityTokenPath, isIdentityName } from "../../index.ts";
 import { issueToken, requireAdmin, requireOwnerOrAdmin } from "./auth.ts";
 import type { Caller } from "./auth.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
 import type { Secrets } from "../../../secrets/server.ts";
+import type { SetAdminResult } from "../../../storage/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import { echoed } from "../../../http/index.ts";
 
 const CONFLICT = 409;
+const PATH_BASE = "http://cookout.invalid";
 const CREATED = 201;
 const FORBIDDEN = 403;
 const NOT_FOUND = 404;
 
 function identityNotFound(name: string): Refusal {
   return { code: "identity_not_found", message: `There is no identity named ${echoed(name)}.`, status: NOT_FOUND };
-}
-
-function ownsAgents(name: IdentityName, agents: readonly IdentityName[]): Refusal {
-  return {
-    code: "owns_agents",
-    details: { agents },
-    message: `${name} still owns ${Arr.join(agents, ", ")}. Delete those agents first.`,
-    status: CONFLICT,
-  };
-}
-
-function lastAdmin(name: string): Refusal {
-  return {
-    code: "last_admin",
-    message: `${name} is the last admin. Make another admin before deleting it.`,
-    status: CONFLICT,
-  };
 }
 
 function nameParam(params: Readonly<Record<string, string>>): Effect.Effect<IdentityName, Refusal> {
@@ -54,17 +44,11 @@ function flaggedIfHandler(identity: Identity, handlers: ReadonlySet<IdentityName
   return identity;
 }
 
-function deletedIdentity(name: IdentityName, result: DeleteIdentityResult): Effect.Effect<Identity, Refusal> {
-  if (result.status === "deleted") {
-    return Effect.succeed(result.identity);
+function shownFor(query: ListIdentitiesQuery, stored: readonly Identity[]): readonly Identity[] {
+  if (query.include === "deactivated") {
+    return stored;
   }
-  if (result.status === "last_admin") {
-    return Effect.fail(lastAdmin(name));
-  }
-  if (result.status === "owns_agents") {
-    return Effect.fail(ownsAgents(name, result.agents));
-  }
-  return Effect.fail(identityNotFound(name));
+  return Arr.filter(stored, (identity) => identity.deactivated !== true);
 }
 
 const withToken = HttpServerResponse.schemaJson(IdentityWithTokenResponseSchema);
@@ -84,11 +68,16 @@ const createRoute: Route<Caller | Storage | Secrets> = {
 const listRoute: Route<Storage> = {
   handle: () =>
     Effect.gen(function* listIdentitiesRoute() {
+      const request = yield* HttpServerRequest.HttpServerRequest;
+      const search = HttpServerRequest.searchParamsFromURL(new URL(request.url, PATH_BASE));
+      const query = yield* HttpServerRequest.schemaSearchParams(ListIdentitiesQuerySchema, { errors: "all" }).pipe(
+        Effect.provideService(HttpServerRequest.ParsedSearchParams, search),
+      );
       const storage = yield* Storage;
       const commands = yield* storage.listCommands;
       const stored = yield* storage.listIdentities();
       const handlers = new Set(Arr.map(commands, ({ handler }) => handler));
-      const identities = Arr.map(stored, (identity) => flaggedIfHandler(identity, handlers));
+      const identities = Arr.map(shownFor(query, stored), (identity) => flaggedIfHandler(identity, handlers));
       return yield* HttpServerResponse.schemaJson(ListIdentitiesResponseSchema)({ identities });
     }),
   method: "GET",
@@ -110,19 +99,6 @@ const rotateRoute: Route<Caller | Storage | Secrets> = {
     }),
   method: "POST",
   path: identityTokenPath,
-};
-
-const deleteRoute: Route<Caller | Storage> = {
-  handle: (params) =>
-    Effect.gen(function* deleteIdentityRoute() {
-      yield* requireAdmin;
-      const name = yield* nameParam(params);
-      const storage = yield* Storage;
-      const identity = yield* Effect.flatMap(storage.deleteIdentity(name), (result) => deletedIdentity(name, result));
-      return yield* HttpServerResponse.schemaJson(IdentityResponseSchema)({ identity });
-    }),
-  method: "DELETE",
-  path: identityPath,
 };
 
 function humanOnly({ kind }: Identity): Refusal {
@@ -167,6 +143,7 @@ function adminFlagRoute(method: "PUT" | "DELETE"): Route<Caller | Storage> {
 }
 
 export const responseSchemas = {
+  DeactivateIdentityResponse: DeactivateIdentityResponseSchema,
   IdentityResponse: IdentityResponseSchema,
   IdentityWithTokenResponse: IdentityWithTokenResponseSchema,
   ListIdentitiesResponse: ListIdentitiesResponseSchema,
@@ -176,7 +153,6 @@ export const identityAdminRoutes: readonly Route<Caller | Storage | Secrets>[] =
   createRoute,
   listRoute,
   rotateRoute,
-  deleteRoute,
   adminFlagRoute("PUT"),
   adminFlagRoute("DELETE"),
 ];

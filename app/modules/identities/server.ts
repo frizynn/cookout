@@ -145,13 +145,19 @@ export function adminTokenSet(
 
 /**
  * The identity routes, for the server's route list: whoami, logging the web
- * UI in and out, create, list, rotate and delete, and making and removing admins. They need `Caller`, which
+ * UI in and out, create, list and rotate, and making and removing admins. They need `Caller`, which
  * `requireToken` provides.
  */
 export const identityRoutes: readonly Route<Caller | Storage | Secrets>[] = [...callerRoutes, ...identityAdminRoutes];
 
 /** `PUT /v1/identities/:name/owner`, an admin transferring an agent to another human. It needs `Caller`. */
 export { transferRoutes } from "./lib/server/transfer.ts";
+
+/**
+ * `POST /v1/identities/:name/deactivate` and `/reactivate`: an admin, or the human who owns an agent, switches an
+ * identity off or back on (ADR 0044). Nothing deletes an identity.
+ */
+export { deactivationRoutes } from "./lib/server/deactivation.ts";
 
 /** The response Schemas of the identity routes, for the SDK's generated validators. */
 export const identityResponseSchemas = { ...responseSchemas };

@@ -29,6 +29,12 @@ const tokenRevoked: Refusal = {
   status: 401,
 };
 
+const identityDeactivated: Refusal = {
+  code: "token_revoked",
+  message: "This token's identity is deactivated, so none of its tokens work.",
+  status: 401,
+};
+
 const tokenUnknown: Refusal = {
   code: "token_unknown",
   message: "This token is not known to this cookout.",
@@ -254,6 +260,10 @@ export const authenticate =
     sentToken(credentials).pipe(
       Effect.flatMap(secrets.hashToken),
       Effect.flatMap((hash) => Effect.flatMap(storage.findIdentityByTokenHash(hash), principalOf(storage, hash))),
+      Effect.filterOrFail(
+        (principal) => principal.identity.deactivated !== true,
+        () => identityDeactivated,
+      ),
     );
 
 const adminOnly: Refusal = { code: "admin_only", message: "Only an admin identity can do this.", status: 403 };

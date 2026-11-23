@@ -2,6 +2,7 @@ import { agentSessionOwnerRoutes, agentSessionRoutes, agentSessionsLayer } from 
 import { channelRoutes, channelsLayer } from "../../../channels/server.ts";
 import { commandRoutes, commandsLayer } from "../../../commands/server.ts";
 import {
+  deactivationRoutes,
   displayNameRoutes,
   displayNamesLayer,
   identitiesLayer,
@@ -33,6 +34,7 @@ export const routes: readonly Route<RouteNeeds>[] = [
   ...identityRoutes,
   ...displayNameRoutes,
   ...transferRoutes,
+  ...deactivationRoutes,
   ...channelRoutes,
   ...messageRoutes,
   ...agentSessionRoutes,

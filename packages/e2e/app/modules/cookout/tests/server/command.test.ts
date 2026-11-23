@@ -48,7 +48,7 @@ function callerWatching(cookout: CookoutUnderTestService): Effect.Effect<Watchin
     const caller = yield* cookout.joinAgent("caller", relay.url);
     const watch = yield* Effect.forkScoped(caller.cookout("watch"));
     yield* relay.relayed(CONNECTED);
-    const stopWatching = Effect.promise(() => cookout.admin.deleteIdentity(caller.name)).pipe(
+    const stopWatching = Effect.promise(() => cookout.admin.deactivateIdentity(caller.name)).pipe(
       Effect.andThen(relay.cut),
       Effect.andThen(Fiber.join(watch)),
     );

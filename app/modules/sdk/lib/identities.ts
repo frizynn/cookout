@@ -1,21 +1,25 @@
 import type {
   CreateIdentityRequest,
+  DeactivateIdentityResponse,
   IdentityResponse,
   IdentityWithTokenResponse,
+  ListIdentitiesQuery,
   ListIdentitiesResponse,
 } from "../../identities/index.ts";
 import { getJson, send } from "./request.ts";
 import {
   identitiesPath,
   identityAdminPath,
+  identityDeactivatePath,
   identityDisplayNamePath,
   identityOwnerPath,
-  identityPath,
+  identityReactivatePath,
   identityTokenPath,
   sessionPath,
   whoamiPath,
 } from "../../identities/index.ts";
 import {
+  isDeactivateIdentityResponse,
   isHealthResponse,
   isIdentityResponse,
   isIdentityWithTokenResponse,
@@ -30,10 +34,11 @@ interface IdentityCalls {
   readonly whoami: () => Promise<IdentityResponse>;
   readonly login: () => Promise<IdentityResponse>;
   readonly logout: () => Promise<IdentityResponse>;
-  readonly listIdentities: () => Promise<ListIdentitiesResponse>;
+  readonly listIdentities: (query?: ListIdentitiesQuery) => Promise<ListIdentitiesResponse>;
   readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
-  readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
+  readonly deactivateIdentity: (name: string) => Promise<DeactivateIdentityResponse>;
+  readonly reactivateIdentity: (name: string) => Promise<IdentityWithTokenResponse>;
   readonly makeAdmin: (name: string) => Promise<IdentityResponse>;
   readonly removeAdmin: (name: string) => Promise<IdentityResponse>;
   readonly setDisplayName: (name: string, displayName: string | null) => Promise<IdentityResponse>;
@@ -81,6 +86,29 @@ function transferAgentCall(server: ClientConnection): IdentityCalls["transferAge
   };
 }
 
+function deactivationCalls(server: ClientConnection): Pick<IdentityCalls, "deactivateIdentity" | "reactivateIdentity"> {
+  return {
+    deactivateIdentity: async (name) => {
+      const deactivated = await send(server, {
+        isExpected: isDeactivateIdentityResponse,
+        method: "POST",
+        params: { name },
+        path: identityDeactivatePath,
+      });
+      return deactivated;
+    },
+    reactivateIdentity: async (name) => {
+      const reactivated = await send(server, {
+        isExpected: isIdentityWithTokenResponse,
+        method: "POST",
+        params: { name },
+        path: identityReactivatePath,
+      });
+      return reactivated;
+    },
+  };
+}
+
 function identityCalls(server: ClientConnection): IdentityCalls {
   return {
     createIdentity: async (body) => {
@@ -92,22 +120,18 @@ function identityCalls(server: ClientConnection): IdentityCalls {
       });
       return created;
     },
-    deleteIdentity: async (name) => {
-      const params = { name };
-      const deleted = await send(server, {
-        isExpected: isIdentityResponse,
-        method: "DELETE",
-        params,
-        path: identityPath,
-      });
-      return deleted;
-    },
+    ...deactivationCalls(server),
     health: async () => {
       const healthy = await getJson(server, healthPath, isHealthResponse);
       return healthy;
     },
-    listIdentities: async () => {
-      const listed = await getJson(server, identitiesPath, isListIdentitiesResponse);
+    listIdentities: async (query = {}) => {
+      const listed = await send(server, {
+        isExpected: isListIdentitiesResponse,
+        method: "GET",
+        path: identitiesPath,
+        query: { ...query },
+      });
       return listed;
     },
     login: sessionCall(server, "POST"),

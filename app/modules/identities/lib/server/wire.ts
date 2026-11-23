@@ -1,4 +1,11 @@
-import type { Identity, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../index.ts";
+import type {
+  DeactivateIdentityResponse,
+  Identity,
+  IdentityResponse,
+  IdentityWithTokenResponse,
+  ListIdentitiesQuery,
+  ListIdentitiesResponse,
+} from "../../index.ts";
 import { Schema, SchemaTransformation } from "effect";
 import {
   displayNameLength,
@@ -12,6 +19,8 @@ import {
 } from "../../index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { matchesWire } from "../../../http/index.ts";
+
+const IncludeDeactivatedSchema = Schema.optionalKey(Schema.Literal("deactivated"));
 
 export const IdentityNameSchema = Schema.String.check(
   Schema.isPattern(identityNamePattern, {
@@ -37,6 +46,7 @@ const TokenSchema = Schema.String.check(Schema.isPattern(tokenPattern)).pipe(
 const HumanIdentitySchema = Schema.Struct({
   admin: Schema.Boolean,
   createdAt: IsoTimeSchema,
+  deactivated: Schema.optionalKey(Schema.Literal(true)),
   displayName: Schema.optionalKey(DisplayNameSchema),
   kind: Schema.Literal("human"),
   name: IdentityNameSchema,
@@ -45,6 +55,7 @@ const HumanIdentitySchema = Schema.Struct({
 const AgentIdentitySchema = Schema.Struct({
   admin: Schema.Boolean,
   createdAt: IsoTimeSchema,
+  deactivated: Schema.optionalKey(Schema.Literal(true)),
   displayName: Schema.optionalKey(DisplayNameSchema),
   handler: Schema.optionalKey(Schema.Literal(true)),
   kind: Schema.Literal("agent"),
@@ -62,6 +73,14 @@ export const IdentityWithTokenResponseSchema = matchesWire<IdentityWithTokenResp
 
 export const ListIdentitiesResponseSchema = matchesWire<ListIdentitiesResponse>()(
   Schema.Struct({ identities: Schema.Array(IdentitySchema) }),
+);
+
+export const DeactivateIdentityResponseSchema = matchesWire<DeactivateIdentityResponse>()(
+  Schema.Struct({ agents: Schema.Array(IdentityNameSchema), identity: IdentitySchema }),
+);
+
+export const ListIdentitiesQuerySchema = matchesWire<ListIdentitiesQuery>()(
+  Schema.Struct({ include: IncludeDeactivatedSchema }),
 );
 
 export { SentDisplayNameSchema };

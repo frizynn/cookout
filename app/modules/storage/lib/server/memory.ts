@@ -15,9 +15,13 @@ export const openMemoryStorage: Effect.Effect<StorageService, never, Scope.Scope
   (state) => {
     const { forgetChannel: dropChannel, ...channels } = memoryChannels(state);
     const { findIdentity, placeHandler, ...identities } = memoryIdentities(state);
-    const { dropAgentSessions, ...agentSessions } = memoryAgentSessions({ findIdentity, state });
-    const { forgetChannel, forgetIdentity, ...messages } = memoryMessages({ channels, identities, state });
-    const { dropCommandTokens, dropDeliveries, ...commands } = memoryCommands({ findIdentity, placeHandler, state });
+    const { revokeAgentSessionsOf, ...agentSessions } = memoryAgentSessions({ findIdentity, state });
+    const { forgetChannel, ...messages } = memoryMessages({ channels, identities, state });
+    const { dropCommandTokens, dropCommandTokensOf, dropDeliveries, ...commands } = memoryCommands({
+      findIdentity,
+      placeHandler,
+      state,
+    });
     return {
       ...memoryHealth(state),
       ...identities,
@@ -26,6 +30,23 @@ export const openMemoryStorage: Effect.Effect<StorageService, never, Scope.Scope
       ...agentSessions,
       ...commands,
       ...memoryCommandCalls({ ...commands, ...messages }),
+      deactivateIdentity: (name) =>
+        Effect.tap(identities.deactivateIdentity(name), (result) => {
+          if (result.status !== "deactivated") {
+            return Effect.void;
+          }
+          return Effect.forEach(
+            [name, ...result.agents],
+            (each) =>
+              Effect.andThen(
+                revokeAgentSessionsOf(each),
+                Effect.sync(() => {
+                  dropCommandTokensOf(each);
+                }),
+              ),
+            { concurrency: 1, discard: true },
+          );
+        }),
       deleteChannel: (name) =>
         Effect.gen(function* deleteChannel() {
           const found = yield* channels.findChannel(name);
@@ -38,13 +59,6 @@ export const openMemoryStorage: Effect.Effect<StorageService, never, Scope.Scope
           dropDeliveries(name);
           return found;
         }),
-      deleteIdentity: (name) =>
-        Effect.tap(identities.deleteIdentity(name), (result) =>
-          Effect.when(
-            Effect.andThen(dropAgentSessions(name), forgetIdentity(name)),
-            Effect.succeed(result.status === "deleted"),
-          ),
-        ),
     };
   },
 );
