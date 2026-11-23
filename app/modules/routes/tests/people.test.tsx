@@ -181,7 +181,7 @@ it("a profile's address opens it, with the admin tag and display name, and an un
   const unknown = await within(await profile()).findByText("Unknown identity");
 
   expect([shown, unknown.textContent]).toStrictEqual([
-    ["web-people-link-bossadmin", "The Boss", "Human"],
+    ["The Boss@web-people-link-bossadmin", "The Boss", "Human"],
     "Unknown identity",
   ]);
 

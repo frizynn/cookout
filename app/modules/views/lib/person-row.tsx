@@ -27,6 +27,7 @@ export function PersonRow(props: PersonRowProps): ReactNode {
       active={identity.name === props.open}
       agent={identity.kind === "agent"}
       detail={kindOf(identity)}
+      displayName={identity.displayName ?? null}
       href={hrefOf({ identity: identity.name, name: "profile" })}
       name={identity.name}
       note={noteOf(identity, props.me)}

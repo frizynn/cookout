@@ -10,8 +10,13 @@ interface MentionsOf {
   readonly suggestions: readonly Identity[];
 }
 
+interface Mention {
+  readonly option: string;
+  readonly detail: string | null;
+}
+
 interface Mentions {
-  readonly mentions: readonly string[];
+  readonly mentions: readonly Mention[];
   readonly choosing: boolean;
   readonly handleChoose: (option: string) => void;
 }
@@ -23,7 +28,11 @@ function useMentions({ draft, suggestions }: MentionsOf): Mentions {
     },
     [draft],
   );
-  const mentions = useMemo(() => suggestions.map((identity) => `${AT_SIGN}${identity.name}`), [suggestions]);
+  const mentions = useMemo(
+    () =>
+      suggestions.map((identity) => ({ detail: identity.displayName ?? null, option: `${AT_SIGN}${identity.name}` })),
+    [suggestions],
+  );
   return { choosing: mentions.length > NONE, handleChoose, mentions };
 }
 

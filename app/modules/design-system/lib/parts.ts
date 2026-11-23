@@ -42,9 +42,14 @@ interface TextAreaParts extends TextFieldParts {
   readonly onMove: (direction: "down" | "up") => void;
 }
 
+interface SuggestionParts {
+  readonly option: string;
+  readonly detail: string | null;
+}
+
 interface SuggestionsParts {
   readonly label: string;
-  readonly options: readonly string[];
+  readonly options: readonly SuggestionParts[];
   readonly highlighted: number;
   readonly onChoose: (option: string) => void;
 }
@@ -73,6 +78,7 @@ interface FilterFieldParts {
 interface IdentityRowParts {
   readonly href: string;
   readonly name: string;
+  readonly displayName: string | null;
   readonly agent: boolean;
   readonly active: boolean;
   readonly detail: string;
@@ -87,6 +93,7 @@ interface ProfileParts extends Parts {
 
 interface ProfileNameParts {
   readonly name: string;
+  readonly displayName: string | null;
   readonly children?: ReactNode;
 }
 
@@ -97,6 +104,7 @@ interface DateTextParts {
 interface IdentityLinkParts {
   readonly href: string;
   readonly name: string;
+  readonly displayName: string | null;
   readonly agent: boolean;
   readonly active: boolean;
 }
@@ -166,6 +174,17 @@ interface ToggleButtonParts extends Parts {
 
 interface AuthorParts extends AvatarParts {
   readonly shown: string;
+  readonly handle: string | null;
+}
+
+interface LineFormParts {
+  readonly label: string;
+  readonly field: string;
+  readonly value: string;
+  readonly saving: boolean;
+  readonly onEdit: (text: string) => void;
+  readonly onSubmit: () => void;
+  readonly children?: ReactNode;
 }
 
 interface FieldsFormParts extends Parts {
@@ -229,6 +248,7 @@ export type {
   DataBlockParts,
   FieldsFormParts,
   FormParts,
+  LineFormParts,
   LinkParts,
   ListParts,
   Parts,
@@ -236,6 +256,7 @@ export type {
   SelectOptionParts,
   SelectParts,
   SkeletonParts,
+  SuggestionParts,
   SuggestionsParts,
   TextAreaParts,
   TextFieldParts,

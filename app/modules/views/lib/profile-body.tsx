@@ -1,6 +1,6 @@
 import { CardBody, DateText, Muted, Profile, ProfileName, Skeleton } from "../../design-system/index.tsx";
-import type { Identity, IdentityName } from "../../sdk/index.ts";
 import type { Identities } from "../../composer/index.ts";
+import type { IdentityName } from "../../sdk/index.ts";
 import { IdentityTags } from "./identity-tags.tsx";
 import type { ReactNode } from "react";
 import { kindOf } from "./kind-of.ts";
@@ -13,13 +13,6 @@ const TEXT = { joined: "joined ", unknown: "Unknown identity" } as const;
 interface ProfileBodyProps {
   readonly identities: Identities;
   readonly name: IdentityName;
-}
-
-function displayNameOf(identity: Identity): string | null {
-  if ("displayName" in identity) {
-    return identity.displayName;
-  }
-  return null;
 }
 
 export function ProfileBody(props: ProfileBodyProps): ReactNode {
@@ -41,10 +34,9 @@ export function ProfileBody(props: ProfileBodyProps): ReactNode {
   }
   return found.map((identity) => (
     <Profile agent={identity.kind === "agent"} key={identity.name} name={identity.name}>
-      <ProfileName name={identity.name}>
+      <ProfileName displayName={identity.displayName ?? null} name={identity.name}>
         <IdentityTags identity={identity} />
       </ProfileName>
-      {displayNameOf(identity) !== null && <Muted>{displayNameOf(identity)}</Muted>}
       <Muted>{kindOf(identity)}</Muted>
       <Muted>
         {TEXT.joined}

@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
+import type { SuggestionParts } from "./parts.ts";
 import { useCallback } from "react";
 
-interface OptionParts {
-  readonly option: string;
+interface OptionParts extends SuggestionParts {
   readonly highlighted: boolean;
   readonly onChoose: (option: string) => void;
 }
@@ -23,11 +23,12 @@ export function SuggestionOption(parts: OptionParts): ReactNode {
     <li>
       <button
         aria-current={parts.highlighted}
-        className={`w-full px-3 py-1.5 text-left text-foreground hover:bg-muted focus:bg-muted focus:outline-none ${optionStyle(parts.highlighted)}`}
+        className={`flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-foreground hover:bg-muted focus:bg-muted focus:outline-none ${optionStyle(parts.highlighted)}`}
         onClick={handleClick}
         type="button"
       >
-        {option}
+        <span>{option}</span>
+        {parts.detail !== null && <span className="truncate text-xs text-muted-foreground">{parts.detail}</span>}
       </button>
     </li>
   );

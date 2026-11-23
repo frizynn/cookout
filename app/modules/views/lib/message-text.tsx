@@ -2,7 +2,7 @@ import { Author } from "../../design-system/index.tsx";
 import type { Message } from "../../sdk/index.ts";
 import { MessageData } from "./message-data.tsx";
 import type { ReactNode } from "react";
-import { useIsAgent } from "./use-is-agent.ts";
+import { useAuthor } from "./use-author.ts";
 
 interface MessageTextProps {
   readonly message: Message;
@@ -10,10 +10,12 @@ interface MessageTextProps {
 
 export function MessageText(props: MessageTextProps): ReactNode {
   const { message } = props;
-  const agent = useIsAgent(message.author);
+  const handle = `@${message.author.name}`;
+  const { agent, displayName } = useAuthor(message.author);
   return (
     <>
-      <Author agent={agent} name={message.author.name} shown={`@${message.author.name}`} />
+      {displayName === null && <Author agent={agent} handle={null} name={message.author.name} shown={handle} />}
+      {displayName !== null && <Author agent={agent} handle={handle} name={message.author.name} shown={displayName} />}
       <span className="text-sm whitespace-pre-wrap">{message.text}</span>
       <MessageData message={message} />
     </>
