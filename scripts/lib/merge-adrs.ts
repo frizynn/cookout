@@ -18,6 +18,7 @@ interface Rewrite {
 }
 
 const NONE = 0;
+const TEST_FOLDER = /(?:^|\/)tests\//u;
 
 function linesAt(options: AdrOptions, revision: string, file: string): ReadonlySet<string> {
   const shown = git(options, "show", `${revision}:${file}`);
@@ -35,7 +36,9 @@ function rewriteLine(line: string, added: ReadonlySet<string>, renames: readonly
 }
 
 function rewriteAddedLines({ base, options, renames }: Rewrite): void {
-  const changed = lines(git(options, "diff", "--name-only", "--no-renames", "--diff-filter=d", base, "HEAD^2").output);
+  const changed = lines(
+    git(options, "diff", "--name-only", "--no-renames", "--diff-filter=d", base, "HEAD^2").output,
+  ).filter((file) => !TEST_FOLDER.test(file));
   for (const file of changed) {
     const filePath = path.join(options.cwd, file);
     const before = linesAt(options, base, file);
