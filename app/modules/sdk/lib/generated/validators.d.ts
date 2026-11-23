@@ -4,7 +4,7 @@ import type { CallCommandResponse, CommandWithSecretResponse, ListCommandsRespon
 import type { ConnectedEvent, InboxItemEvent, MessageEvent, ReadPositionEvent } from "../../../events/index.ts";
 import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../../http/index.ts";
 import type { IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";
-import type { AckResponse, FollowResponse, InboxResponse, SubscriptionResponse } from "../../../inbox/index.ts";
+import type { AckResponse, FollowResponse, InboxHistoryResponse, InboxResponse, SubscriptionResponse } from "../../../inbox/index.ts";
 import type { LeaseResponse, LeaveResponse } from "../../../leases/index.ts";
 import type { ListMessagesResponse, MessageResponse, ThreadResponse } from "../../../messages/index.ts";
 
@@ -25,6 +25,7 @@ export declare function isIdentityWithTokenResponse(data: unknown): data is Iden
 export declare function isListIdentitiesResponse(data: unknown): data is ListIdentitiesResponse;
 export declare function isAckResponse(data: unknown): data is AckResponse;
 export declare function isFollowResponse(data: unknown): data is FollowResponse;
+export declare function isInboxHistoryResponse(data: unknown): data is InboxHistoryResponse;
 export declare function isInboxResponse(data: unknown): data is InboxResponse;
 export declare function isSubscriptionResponse(data: unknown): data is SubscriptionResponse;
 export declare function isLeaseResponse(data: unknown): data is LeaseResponse;

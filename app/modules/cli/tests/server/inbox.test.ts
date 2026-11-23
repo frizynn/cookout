@@ -64,3 +64,25 @@ it.effect("cookout follow, unfollow, subscribe and unsubscribe print the new sta
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
+
+it.effect("cookout inbox --history prints a page of the inbox history, paged with --before and --limit", () =>
+  Effect.gen(function* inboxHistory() {
+    const cookout = yield* TestCookout;
+    const ann = yield* cookout.createIdentity("ann");
+    const bob = yield* cookout.createIdentity("bob");
+    const folder = yield* freshStateFolder;
+    yield* answer(() => ann.client.createChannel({ name: "grill" }));
+    const first = yield* answer(() => ann.client.createMessage({ channel: "grill", text: "@bob one" }));
+    const second = yield* answer(() => ann.client.createMessage({ channel: "grill", text: "@bob two" }));
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bob.token, COOKOUT_URL: cookout.url };
+    const results = yield* runAll(env, [
+      ["inbox", "--history", "--limit", "1"],
+      ["inbox", "--history", "--before", String(second.message.id), "--limit", "1"],
+    ]);
+
+    expect(results).toMatchObject([
+      { exitCode: 0, stdoutJson: { hasMore: true, items: [{ message: { id: second.message.id }, read: false }] } },
+      { exitCode: 0, stdoutJson: { hasMore: false, items: [{ message: { id: first.message.id }, read: false }] } },
+    ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);

@@ -199,6 +199,25 @@ interface ReadPosition {
 interface InboxResponse {
   readonly items: readonly InboxItem[];
 }
+/** An item in the inbox history: `read` says the identity's read position for its scope is at or after it. */
+interface InboxHistoryItem extends InboxItem {
+  readonly read: boolean;
+}
+/** The query of an inbox history page. With no `before`, the page is the newest items. */
+interface InboxHistoryQuery {
+  /** Only items before this message ID: pass the last item's ID to read further back. */
+  readonly before?: number;
+  /** 1–200 items. Default 50. */
+  readonly limit?: number;
+}
+/**
+ * A page of the inbox history: every message in the inbox for at least one reason as things stand now, read or not,
+ * newest first, each message once. `hasMore` says older items remain after the last. Reading it changes nothing.
+ */
+interface InboxHistoryResponse {
+  readonly items: readonly InboxHistoryItem[];
+  readonly hasMore: boolean;
+}
 /** The body of an ack. */
 interface AckRequest {
   readonly messageId: MessageId;
@@ -448,6 +467,13 @@ export type CookoutClient = {
    */
   readonly inbox: () => Promise<InboxResponse>;
   /**
+   * `GET /v1/inbox/history`: a page of the caller's inbox history, newest first: every message in its inbox for at
+   * least one reason as things stand now (current follows and subscriptions), read or not, each once with every
+   * reason and `read`. The newest `limit` (default 50, 1–200), or those before `before`; page back by passing the
+   * last item's message ID as `before` while `hasMore` is true. The caller's own messages never appear.
+   */
+  readonly inboxHistory: (query?: InboxHistoryQuery) => Promise<InboxHistoryResponse>;
+  /**
    * `POST /v1/ack`: marks the message and everything before it in its thread (for a reply) or channel (for a
    * top-level message) as read. A read position never moves backwards. Sent without a lease ID, it is allowed only
    * while nobody holds the lease on the caller's identity (409 `lease_required` otherwise); a stale lease ID is 409
@@ -516,5 +542,5 @@ export declare const parseEvent: typeof eventOf;
  * (status 0) when there is no URL.
  */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Refusal, type Reply, type SchemaProblem, type ServerSentEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, refusalOf };
+export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Refusal, type Reply, type SchemaProblem, type ServerSentEvent, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, refusalOf };
 ```

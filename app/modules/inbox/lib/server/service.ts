@@ -1,6 +1,8 @@
 import type {
   AckResponse,
   FollowResponse,
+  InboxHistoryItem,
+  InboxHistoryResponse,
   InboxItem,
   InboxResponse,
   ReadPosition,
@@ -9,6 +11,7 @@ import type {
 import { Array as Arr, Context, Effect, Layer, Option, Predicate, PubSub } from "effect";
 import type { Channel, ChannelName } from "../../../channels/index.ts";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
+import { isMessageId, pageSize } from "../../../messages/index.ts";
 import type { MessageId } from "../../../messages/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Scope } from "effect";
@@ -16,12 +19,23 @@ import { Storage } from "../../../storage/server.ts";
 import type { StorageUnavailable } from "../../../storage/server.ts";
 import { channelNotFound } from "../../../channels/server.ts";
 import { isChannelName } from "../../../channels/index.ts";
-import { isMessageId } from "../../../messages/index.ts";
 import { messageNotFound } from "../../../messages/server.ts";
 
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
 
 type StoredItem = Omit<InboxItem, "channel">;
+
+type StoredHistoryItem = Omit<InboxHistoryItem, "channel">;
+
+interface HistoryQuery {
+  readonly before?: MessageId;
+  readonly limit?: number;
+}
+
+interface HistoryPage {
+  readonly before?: MessageId;
+  readonly limit: number;
+}
 
 type FollowChange = (identity: IdentityName, id: MessageId) => Effect.Effect<MessageId | undefined, StorageUnavailable>;
 
@@ -39,6 +53,7 @@ interface AckHub {
 
 interface InboxService {
   readonly inbox: (caller: Identity) => Fails<InboxResponse>;
+  readonly history: (caller: Identity, query: HistoryQuery) => Fails<InboxHistoryResponse>;
   readonly itemFor: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
   readonly itemsAfter: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
   readonly ack: (caller: Identity, id: MessageId) => Fails<AckResponse>;
@@ -51,7 +66,10 @@ interface InboxService {
 
 class Inbox extends Context.Service<Inbox, InboxService>()("@ai-hero/cookout/inbox/lib/server/service/Inbox") {}
 
-function withChannel(channels: readonly Channel[], item: StoredItem): readonly InboxItem[] {
+function withChannel<Item extends StoredItem>(
+  channels: readonly Channel[],
+  item: Item,
+): readonly (Item & { readonly channel: Channel })[] {
   const channel = Arr.findFirst(channels, (listed) => listed.name === item.message.channel);
   return Option.toArray(Option.map(channel, (listed) => ({ ...item, channel: listed })));
 }
@@ -96,8 +114,24 @@ function subscription(change: SubscriptionChange, subscribed: boolean) {
     });
 }
 
-function withChannels(storage: Storage["Service"], items: readonly StoredItem[]): Fails<readonly InboxItem[]> {
+function withChannels<Item extends StoredItem>(
+  storage: Storage["Service"],
+  items: readonly Item[],
+): Fails<readonly (Item & { readonly channel: Channel })[]> {
   return Effect.map(storage.listChannels(), (channels) => Arr.flatMap(items, (item) => withChannel(channels, item)));
+}
+
+function historyPage({ before, limit = pageSize.default }: HistoryQuery): HistoryPage {
+  if (Predicate.isUndefined(before)) {
+    return { limit };
+  }
+  return { before, limit };
+}
+
+function historyOf(storage: Storage["Service"], caller: Identity, query: HistoryQuery): Fails<InboxHistoryResponse> {
+  return Effect.flatMap(storage.listInboxHistory(caller.name, historyPage(query)), ({ hasMore, items }) =>
+    Effect.map(withChannels<StoredHistoryItem>(storage, items), (listed) => ({ hasMore, items: listed })),
+  );
 }
 
 function inboxOf(storage: Storage["Service"], caller: Identity): Fails<InboxResponse> {
@@ -118,6 +152,7 @@ function inboxOn(storage: Storage["Service"], hub: AckHub): InboxService {
       }),
     acked: hub.subscribe,
     follow: following(storage.followThread, true),
+    history: (caller, query) => historyOf(storage, caller, query),
     inbox: (caller) => inboxOf(storage, caller),
     itemFor: (caller, id) =>
       Effect.map(inboxOf(storage, caller), ({ items }) => Arr.filter(items, (item) => item.message.id === id)),

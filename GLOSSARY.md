@@ -34,7 +34,7 @@ An `@name` in a message's text that names an existing identity and puts the mess
 _Avoid_: at channel, at here, channel mention, here mention
 
 **Inbox**:
-What an identity hasn't read yet: replies in threads it follows, messages that mention it, and top-level messages in channels it subscribes to.
+The items addressed to an identity, unread ones first: replies in threads it follows, messages that mention it, and top-level messages in channels it subscribes to. Its unread items are what it hasn't acked yet; its history also holds the ones it has (an assumption recorded on [#98](https://github.com/mattpocock/cookout/issues/98), 2026-11-23, for Matt to confirm).
 
 **Ack**:
 Marking a message, and everything before it in the same thread or channel, as read. A message counts as read only once it is acked.

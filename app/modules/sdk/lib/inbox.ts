@@ -1,6 +1,19 @@
-import type { AckResponse, FollowResponse, InboxResponse, SubscriptionResponse } from "../../inbox/index.ts";
-import { ackPath, followPath, inboxPath, subscriptionPath } from "../../inbox/index.ts";
-import { isAckResponse, isFollowResponse, isInboxResponse, isSubscriptionResponse } from "./generated/validators.js";
+import type {
+  AckResponse,
+  FollowResponse,
+  InboxHistoryQuery,
+  InboxHistoryResponse,
+  InboxResponse,
+  SubscriptionResponse,
+} from "../../inbox/index.ts";
+import { ackPath, followPath, inboxHistoryPath, inboxPath, subscriptionPath } from "../../inbox/index.ts";
+import {
+  isAckResponse,
+  isFollowResponse,
+  isInboxHistoryResponse,
+  isInboxResponse,
+  isSubscriptionResponse,
+} from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import type { MessageId } from "../../messages/index.ts";
 import { send } from "./request.ts";
@@ -9,6 +22,7 @@ type Change = "PUT" | "DELETE";
 
 interface InboxCalls {
   readonly inbox: () => Promise<InboxResponse>;
+  readonly inboxHistory: (query?: InboxHistoryQuery) => Promise<InboxHistoryResponse>;
   readonly ack: (messageId: MessageId) => Promise<AckResponse>;
   readonly follow: (messageId: MessageId) => Promise<FollowResponse>;
   readonly unfollow: (messageId: MessageId) => Promise<FollowResponse>;
@@ -44,11 +58,28 @@ function inboxCalls(server: ClientConnection): InboxCalls {
       const answer = await send(server, { isExpected: isInboxResponse, method: "GET", path: inboxPath });
       return answer;
     },
+    inboxHistory: async ({ before, limit } = {}) => {
+      const query = { before, limit };
+      const page = await send(server, {
+        isExpected: isInboxHistoryResponse,
+        method: "GET",
+        path: inboxHistoryPath,
+        query,
+      });
+      return page;
+    },
     subscribe: subscriptionCall(server, "PUT"),
     unfollow: followCall(server, "DELETE"),
     unsubscribe: subscriptionCall(server, "DELETE"),
   };
 }
 
-export type { AckResponse, FollowResponse, InboxResponse, SubscriptionResponse } from "../../inbox/index.ts";
+export type {
+  AckResponse,
+  FollowResponse,
+  InboxHistoryQuery,
+  InboxHistoryResponse,
+  InboxResponse,
+  SubscriptionResponse,
+} from "../../inbox/index.ts";
 export { inboxCalls };

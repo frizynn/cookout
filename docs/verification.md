@@ -117,6 +117,18 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts 
 
 On a fresh seed the first `inbox` gives `[3,["followed-thread","mention"]]` and `[5,["followed-thread"]]`. `ack 3` prints `{ "readPosition": { "channel": "general", "thread": 1, "messageId": 3 } }`: a reply's ack moves the thread's read position, a top-level message's ack moves the channel's (`thread: null`). The second `inbox` gives only `[5,["followed-thread"]]`. An ack older than the read position changes nothing. A human's ack never needs a lease. An agent's ack without a lease ID is allowed only while no session holds the identity's lease; run it from a joined session's state folder otherwise (see the lease recipe above).
 
+`inbox --history` (`GET /v1/inbox/history`) is the inbox history: every message in the inbox for at least one reason as things stand now (current follows and subscriptions), read or not, newest first, each once with every reason and `read`. It pages as a channel page does: `--limit` 1-200 (default 50), `--before <id>` for older items, and `hasMore` says older ones remain. On a fresh seed, before and after `ack 3`:
+
+```sh
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox --history | jq -c '.items[] | [.message.id, .reasons, .read]'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts ack 3
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox --history | jq -c '.items[] | [.message.id, .reasons, .read]'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox --history --limit 1 | jq -c '[.hasMore, [.items[].message.id]]'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox --history --before 5 --limit 1 | jq -c '[.hasMore, [.items[].message.id]]'
+```
+
+The first gives `[5,["followed-thread"],false]` then `[3,["followed-thread","mention"],false]`; after the ack, 3 is `true` and 5 still `false`. `--limit 1` gives `[true,[5]]` and `--before 5 --limit 1` gives `[false,[3]]`. A bad `--before` or `--limit` is 400 `invalid_request`. Plain `inbox` is unchanged.
+
 ## Follow and subscribe
 
 ```sh

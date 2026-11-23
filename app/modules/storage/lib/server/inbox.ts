@@ -10,6 +10,18 @@ type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
 type StoredInboxItem = Omit<InboxItem, "channel">;
 
+type StoredHistoryItem = StoredInboxItem & { readonly read: boolean };
+
+interface HistoryPageRequest {
+  readonly before?: MessageId;
+  readonly limit: number;
+}
+
+interface StoredHistoryPage {
+  readonly items: readonly StoredHistoryItem[];
+  readonly hasMore: boolean;
+}
+
 interface Scope {
   readonly channel: ChannelName;
   readonly thread: MessageId | null;
@@ -23,6 +35,7 @@ interface Moving {
 interface InboxSection {
   readonly listInbox: (identity: IdentityName) => Fails<readonly StoredInboxItem[]>;
   readonly listInboxAfter: (identity: IdentityName, after: MessageId) => Fails<readonly StoredInboxItem[]>;
+  readonly listInboxHistory: (identity: IdentityName, page: HistoryPageRequest) => Fails<StoredHistoryPage>;
   readonly ackMessage: (identity: IdentityName, id: MessageId) => Fails<ReadPosition | undefined>;
   readonly followThread: (identity: IdentityName, id: MessageId) => Fails<MessageId | undefined>;
   readonly unfollowThread: (identity: IdentityName, id: MessageId) => Fails<MessageId | undefined>;
@@ -53,4 +66,15 @@ function reasonsIn(reasons: readonly InboxReason[]): readonly InboxReason[] {
   return Arr.sort(Arr.dedupe(reasons), Order.String);
 }
 
-export { type InboxSection, type Scope, type StoredInboxItem, followersOf, movedTo, reasonsIn, scopeOf };
+export {
+  type HistoryPageRequest,
+  type InboxSection,
+  type Scope,
+  type StoredHistoryItem,
+  type StoredHistoryPage,
+  type StoredInboxItem,
+  followersOf,
+  movedTo,
+  reasonsIn,
+  scopeOf,
+};

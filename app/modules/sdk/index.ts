@@ -6,7 +6,14 @@
  * that code, typed as `UnknownErrorCode`; its `schemaProblems` lists an `invalid_request`'s schema errors.
  * `refusalOf` turns anything a call threw into a code and message (`unreachable` unless a `CookoutError`).
  */
-import type { AckResponse, FollowResponse, InboxResponse, SubscriptionResponse } from "./lib/inbox.ts";
+import type {
+  AckResponse,
+  FollowResponse,
+  InboxHistoryQuery,
+  InboxHistoryResponse,
+  InboxResponse,
+  SubscriptionResponse,
+} from "./lib/inbox.ts";
 import type {
   AddCommandRequest,
   CallCommandRequest,
@@ -31,19 +38,12 @@ import type {
   PostMessageRequest,
   ThreadResponse,
 } from "./lib/messages.ts";
-import { connectionFor, getJson, send } from "./lib/request.ts";
 import { eventCalls, eventOf } from "./lib/events.ts";
-import { identitiesPath, identityPath, identityTokenPath, sessionPath, whoamiPath } from "../identities/index.ts";
-import {
-  isHealthResponse,
-  isIdentityResponse,
-  isIdentityWithTokenResponse,
-  isListIdentitiesResponse,
-} from "./lib/generated/validators.js";
 import type { HealthResponse } from "../http/index.ts";
 import { channelCalls } from "./lib/channels.ts";
 import { commandCalls } from "./lib/commands.ts";
-import { healthPath } from "../http/index.ts";
+import { connectionFor } from "./lib/request.ts";
+import { identityCalls } from "./lib/identities.ts";
 import { inboxCalls } from "./lib/inbox.ts";
 import { leaseCalls } from "./lib/leases.ts";
 import { messageCalls } from "./lib/messages.ts";
@@ -106,6 +106,9 @@ export type {
   AckRequest,
   AckResponse,
   FollowResponse,
+  InboxHistoryItem,
+  InboxHistoryQuery,
+  InboxHistoryResponse,
   InboxItem,
   InboxReason,
   InboxResponse,
@@ -198,6 +201,13 @@ export type CookoutClient = {
    */
   readonly inbox: () => Promise<InboxResponse>;
   /**
+   * `GET /v1/inbox/history`: a page of the caller's inbox history, newest first: every message in its inbox for at
+   * least one reason as things stand now (current follows and subscriptions), read or not, each once with every
+   * reason and `read`. The newest `limit` (default 50, 1–200), or those before `before`; page back by passing the
+   * last item's message ID as `before` while `hasMore` is true. The caller's own messages never appear.
+   */
+  readonly inboxHistory: (query?: InboxHistoryQuery) => Promise<InboxHistoryResponse>;
+  /**
    * `POST /v1/ack`: marks the message and everything before it in its thread (for a reply) or channel (for a
    * top-level message) as read. A read position never moves backwards. Sent without a lease ID, it is allowed only
    * while nobody holds the lease on the caller's identity (409 `lease_required` otherwise); a stale lease ID is 409
@@ -270,22 +280,7 @@ export const parseEvent: typeof eventOf = eventOf;
 export function createCookoutClient(options: CookoutClientOptions = {}): CookoutClient {
   const server = connectionFor(options);
   return {
-    createIdentity: (body) =>
-      send(server, { body, isExpected: isIdentityWithTokenResponse, method: "POST", path: identitiesPath }),
-    deleteIdentity: (name) =>
-      send(server, { isExpected: isIdentityResponse, method: "DELETE", params: { name }, path: identityPath }),
-    health: () => getJson(server, healthPath, isHealthResponse),
-    listIdentities: () => getJson(server, identitiesPath, isListIdentitiesResponse),
-    login: () => send(server, { isExpected: isIdentityResponse, method: "POST", path: sessionPath }),
-    logout: () => send(server, { isExpected: isIdentityResponse, method: "DELETE", path: sessionPath }),
-    rotateToken: (name) =>
-      send(server, {
-        isExpected: isIdentityWithTokenResponse,
-        method: "POST",
-        params: { name },
-        path: identityTokenPath,
-      }),
-    whoami: () => getJson(server, whoamiPath, isIdentityResponse),
+    ...identityCalls(server),
     ...channelCalls(server),
     ...messageCalls(server),
     ...leaseCalls(server),

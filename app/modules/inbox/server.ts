@@ -1,6 +1,6 @@
 /**
  * The inbox on the backend: the `Inbox` service over `Storage`, and the
- * routes that read the caller's inbox, ack a message, follow and unfollow a
+ * routes that read the caller's inbox and a page of its inbox history, ack a message, follow and unfollow a
  * thread, and subscribe to and unsubscribe from a channel. Each ack is also
  * published to an in-process hub, which `acked` subscribes to, for live
  * updates. Ack needs the lease while one is held (ADR 0004). Routes sit
@@ -10,11 +10,13 @@ import {
   AckRequestSchema,
   AckResponseSchema,
   FollowResponseSchema,
+  InboxHistoryQuerySchema,
+  InboxHistoryResponseSchema,
   InboxResponseSchema,
   SubscriptionResponseSchema,
 } from "./lib/server/wire.ts";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import { ackPath, followPath, inboxPath, subscriptionPath } from "./index.ts";
+import { ackPath, followPath, inboxHistoryPath, inboxPath, subscriptionPath } from "./index.ts";
 import { Caller } from "../identities/server.ts";
 import { Effect } from "effect";
 import { Inbox } from "./lib/server/service.ts";
@@ -28,6 +30,7 @@ type Change = "PUT" | "DELETE";
 
 const ALL_ERRORS = { errors: "all" } as const;
 const DIGITS = /^\d+$/u;
+const PATH_BASE = "http://cookout.invalid";
 
 const inboxRoute: Route<Needs> = {
   handle: () =>
@@ -39,6 +42,23 @@ const inboxRoute: Route<Needs> = {
     }),
   method: "GET",
   path: inboxPath,
+};
+
+const historyRoute: Route<Needs> = {
+  handle: () =>
+    Effect.gen(function* inboxHistoryRouteHandler() {
+      const request = yield* HttpServerRequest.HttpServerRequest;
+      const search = HttpServerRequest.searchParamsFromURL(new URL(request.url, PATH_BASE));
+      const query = yield* HttpServerRequest.schemaSearchParams(InboxHistoryQuerySchema, ALL_ERRORS).pipe(
+        Effect.provideService(HttpServerRequest.ParsedSearchParams, search),
+      );
+      const caller = yield* Caller;
+      const inbox = yield* Inbox;
+      const answer = yield* inbox.history(caller, query);
+      return yield* HttpServerResponse.schemaJson(InboxHistoryResponseSchema)(answer);
+    }),
+  method: "GET",
+  path: inboxHistoryPath,
 };
 
 const ackRoute: Route<Needs> = {
@@ -96,6 +116,7 @@ export { InboxItemSchema, ReadPositionSchema } from "./lib/server/wire.ts";
  */
 export const inboxRoutes: readonly Route<Needs>[] = [
   inboxRoute,
+  historyRoute,
   ackRoute,
   followRoute("PUT", "follow"),
   followRoute("DELETE", "unfollow"),
@@ -107,6 +128,7 @@ export const inboxRoutes: readonly Route<Needs>[] = [
 export const inboxResponseSchemas = {
   AckResponse: AckResponseSchema,
   FollowResponse: FollowResponseSchema,
+  InboxHistoryResponse: InboxHistoryResponseSchema,
   InboxResponse: InboxResponseSchema,
   SubscriptionResponse: SubscriptionResponseSchema,
 };
