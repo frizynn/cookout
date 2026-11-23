@@ -7,6 +7,7 @@ interface Screen {
   readonly text: string;
   readonly narrow?: boolean;
   readonly admin?: boolean;
+  readonly liveDown?: boolean;
 }
 
 interface Shot {
@@ -43,6 +44,7 @@ const SCREENS: readonly Screen[] = [
   { click: "New channel", hash: "#/channels/general", name: "new-channel", text: "Lowercase letters" },
   { click: "Open the sidebar", hash: "#/channels/general", name: "narrow", narrow: true, text: "#deploys" },
   { click: "Collapse sidebar", hash: "#/channels/general", name: "collapsed", text: "Lunch at 12:30." },
+  { hash: "#/channels/general", liveDown: true, name: "reconnecting", text: "Reconnecting…" },
 ];
 
 const NONE = 0;
