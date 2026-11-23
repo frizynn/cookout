@@ -229,3 +229,32 @@ it.effect("a command whose schema is not a JSON Schema is refused with 400 when 
     expect(commands).toStrictEqual([]);
   }).pipe(Effect.provide(testCookout())),
 );
+
+const ordinaryCommands = [
+  { ...deploy, schema: { properties: { at: { format: "date-time", type: "string" } }, type: "object" } },
+  {
+    ...deploy,
+    name: "release",
+    schema: { $schema: "http://json-schema.org/draft-07/schema#", properties: { branch: { type: "string" } } },
+  },
+  { ...deploy, name: "tag", schema: { properties: { branch: { type: "string" } }, "x-generated-by": "zod" } },
+] as const;
+
+it.effect(
+  "a command with an ordinary JSON Schema (formats, draft-07, extra keywords) is added and checks formats",
+  () =>
+    Effect.gen(function* ordinarySchema() {
+      const cookout = yield* TestCookout;
+      yield* Effect.forEach(ordinaryCommands, (command) => answer(() => cookout.client.addCommand(command)), {
+        concurrency: 1,
+      });
+      yield* answer(() => cookout.client.createChannel({ name: "grill" }));
+      const badDate = yield* refusal(() =>
+        cookout.client.callCommand("deploy", { channel: "grill", data: { at: "yesterday" } }),
+      );
+      const { commands } = yield* answer(cookout.client.listCommands);
+
+      expect(Arr.map(commands, ({ name }) => name)).toStrictEqual(["deploy", "release", "tag"]);
+      expect(badDate).toMatchObject({ code: "invalid_request", details: [{ path: ["data", "at"] }], status: 400 });
+    }).pipe(Effect.provide(testCookout())),
+);
