@@ -216,6 +216,22 @@ it("in a thread, a reply that mentions you or answers your message has an accent
   close();
 });
 
+it("a thread's parent message that mentions you has an accent dot, not a filled block", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-attention-parent";
+  const { poster, reader } = await people(channel);
+  const parent = await post({ by: poster, channel, text: `@${channel}-reader a thread for you` });
+  await post({ by: poster, channel, replyTo: parent, text: "First reply" });
+  const close = openAt({ client: reader, hash: `#/channels/${channel}/threads/${String(parent.id)}` });
+  await screen.findByText("First reply");
+  const panel = screen.getByRole("complementary", { name: "Thread" });
+
+  expect(accentsOf(() => [within(panel).getByRole("article", { name: "Parent message" })])).toStrictEqual([DOTTED]);
+
+  close();
+});
+
 async function followedThreads(channel: string): Promise<CookoutClient> {
   const { poster, reader } = await people(channel);
   const quiet = await post({ by: poster, channel, text: "Deploy at noon?" });
