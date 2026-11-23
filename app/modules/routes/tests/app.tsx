@@ -5,20 +5,23 @@ import type { Composer } from "../../composer/index.ts";
 import { CookoutApp } from "../index.tsx";
 import type { Live } from "../../live/index.ts";
 import type { Session } from "../../session/index.ts";
+import type { Unread } from "../../unread/index.ts";
 import { createBoard } from "../../board/index.ts";
 import { createComposer } from "../../composer/index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
 import { createSession } from "../../session/index.ts";
+import { createUnread } from "../../unread/index.ts";
 import { inject } from "vitest";
 import { render } from "@testing-library/react";
 
-type AppClient = BoardClient & Pick<CookoutClient, "listIdentities" | "whoami">;
+type AppClient = BoardClient & Pick<CookoutClient, "inbox" | "listIdentities" | "whoami">;
 
 interface BoardOpening {
   readonly hash: string;
   readonly board: Board;
   readonly composer?: Composer;
   readonly session: Session;
+  readonly unread?: Unread;
 }
 
 interface Opening {
@@ -63,12 +66,20 @@ export async function newIdentity(request: CreateIdentityRequest): Promise<NewId
 export function openBoard(opening: BoardOpening): () => void {
   globalThis.location.hash = opening.hash;
   const composer = opening.composer ?? createComposer({ client: adminClient() });
-  return render(<CookoutApp board={opening.board} composer={composer} session={opening.session} />).unmount;
+  const unread = opening.unread ?? createUnread({ client: adminClient() });
+  return render(<CookoutApp board={opening.board} composer={composer} session={opening.session} unread={unread} />)
+    .unmount;
 }
 
 export function openAt(opening: Opening): () => void {
   const session = opening.session ?? sessionOf(opening.client);
-  return openBoard({ board: createBoard(opening), composer: createComposer(opening), hash: opening.hash, session });
+  return openBoard({
+    board: createBoard(opening),
+    composer: createComposer(opening),
+    hash: opening.hash,
+    session,
+    unread: createUnread(opening),
+  });
 }
 
 export function watched(client: CookoutClient): Watched {

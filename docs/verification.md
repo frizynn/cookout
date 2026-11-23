@@ -576,3 +576,20 @@ agent-browser --session cookout wait --text "Re-ran it: green." && agent-browser
 ```
 
 Without a reload, the `#general` snapshot's `Messages` list ends with `@ada` and `Standup moved to 10.`, and the thread's first message now says `4 replies` (3 on the seed, plus `Fixed it.`). The thread's `Replies` list then ends with `@ada` `Fixed it.` and `@triage-agent` `Re-ran it: green.`. Stores read the stream through the `live` module (`app/modules/live/`), the one owner of `EventSource`, which checks each event with the SDK's `parseEvent` and drops one that doesn't match the protocol.
+
+## See unread counts on the channel list
+
+The channel list shows each channel's unread messages for whoever is logged in, from their inbox (`GET /v1/inbox`, the `unread` module, `app/modules/unread/`): a channel with any is bold, with a grey count of its plain unread messages and a light `@` count of the ones that mention them, counted apart (a screen reader hears `2 unread` and `1 mention`). Each new inbox item on the live stream raises a count without a reload; each new read position drops what it covers, so opening the channel clears its top-level messages and opening a thread clears its replies. On a fresh seed of the built server ("Open the web UI" and "Log in to the web UI", logged in as `grace`), post to `#deploys` as `ada`, one message mentioning `grace`, then open `#deploys`, go back, and open the thread in `#general`:
+
+```sh
+agent-browser --session cookout open "http://127.0.0.1:3000/#/" && agent-browser --session cookout snapshot
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "ada") | .token' /tmp/cookout-built-seed.json) node app/main.ts message post deploys "@grace can you check the 1.4.2 rollout?"
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "ada") | .token' /tmp/cookout-built-seed.json) node app/main.ts message post deploys "Rollback plan is in the doc."
+agent-browser --session cookout wait --text "2 unread" && agent-browser --session cookout snapshot && agent-browser --session cookout screenshot unread.png
+agent-browser --session cookout find text "#deploys" click && agent-browser --session cookout wait --text "Rollback plan is in the doc."
+agent-browser --session cookout find text "← Channels" click && agent-browser --session cookout wait 1000 && agent-browser --session cookout snapshot
+agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" && agent-browser --session cookout find text "3 replies" click && agent-browser --session cookout wait --text "Thanks, both of you."
+agent-browser --session cookout open "http://127.0.0.1:3000/#/" && agent-browser --session cookout wait 1000 && agent-browser --session cookout snapshot
+```
+
+The first snapshot's `Channels` list has the links `#deploys 1 unread Release announcements.` and `#general 1 unread Anything and everything.` (her seeded inbox: `[6,["subscribed-channel"]]` and `[5,["followed-thread"]]`). Without a reload, the second has `#deploys 2 unread 1 mention …`, shown as `2` and `@1`. After opening `#deploys` its link is `#deploys Release announcements.` again, while `#general` keeps `1 unread`: the channel view acks top-level messages only. After opening the thread, `#general` has no count either. A message that arrives while its channel or thread is open still counts as unread until the view is opened again (board question #467).

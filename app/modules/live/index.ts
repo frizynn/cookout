@@ -1,10 +1,11 @@
 /**
  * The `live` module: the web's one reader of the live stream, and the one
  * owner of `EventSource`. `createLive` opens the all-channels feed
- * (`GET /v1/events?channels=all`) through an adapter for each subscriber
- * (the board subscribes once, when its first store is read), checks each
- * event with the SDK's generated validators (`parseEvent`), and calls the
- * subscriber with it, for as long as the page lives. An event that doesn't match the protocol, or whose type the SDK
+ * (`GET /v1/events?channels=all`) through an adapter once, when its first
+ * subscriber arrives (the board and the unread store each subscribe once, when
+ * first read), checks each event with the SDK's generated validators
+ * (`parseEvent`), and calls every subscriber with it, for as long as the page
+ * lives. An event that doesn't match the protocol, or whose type the SDK
  * doesn't know, is dropped. Stores read the stream through `live`, never
  * `EventSource` directly.
  *
@@ -26,7 +27,7 @@ function checked(event: ServerSentEvent): CookoutEvent | null {
   }
 }
 
-/** The live stream: `subscribe` opens a stream of its own and calls `listener` with each event on it. */
+/** The live stream: `subscribe` calls `listener` with each event on it, opening the stream for the first listener. */
 export interface Live {
   readonly subscribe: (listener: (event: CookoutEvent) => void) => void;
 }
@@ -37,12 +38,21 @@ export interface Live {
  * @returns The live stream.
  */
 export function createLive(adapter: LiveAdapter): Live {
+  const listeners: ((event: CookoutEvent) => void)[] = [];
+  let opened = false;
   return {
     subscribe: (listener) => {
+      listeners.push(listener);
+      if (opened) {
+        return;
+      }
+      opened = true;
       adapter.open((raw) => {
         const event = checked(raw);
         if (event !== null) {
-          listener(event);
+          for (const each of listeners) {
+            each(event);
+          }
         }
       });
     },

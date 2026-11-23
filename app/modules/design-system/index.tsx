@@ -17,7 +17,10 @@
  * `Button` is any other button. `FieldsForm` is a form of several fields,
  * `Select` a labelled pick in it from its `SelectOption`s, `DataArea` a
  * labelled box in it to write JSON in, and `DataBlock` a
- * named block of JSON, such as a message's data.
+ * named block of JSON, such as a message's data. `RowTitle` is a link row's
+ * title line, bold when it has something new (`marked`), with any `Count`
+ * after it: a small number badge read out by its label, such as a channel's
+ * unread messages (`plain`) or its mentions (`mention`, which stands out).
  */
 export { Alert } from "./lib/alert.tsx";
 export { AppShell } from "./lib/app-shell.tsx";
@@ -27,6 +30,7 @@ export { Button } from "./lib/button.tsx";
 export { Card } from "./lib/card.tsx";
 export { CardBody } from "./lib/card-body.tsx";
 export { CardHeader } from "./lib/card-header.tsx";
+export { Count } from "./lib/count.tsx";
 export { DataArea } from "./lib/data-area.tsx";
 export { DataBlock } from "./lib/data-block.tsx";
 export { FieldsForm } from "./lib/fields-form.tsx";
@@ -37,6 +41,7 @@ export { ItemRow } from "./lib/item-row.tsx";
 export { LinkList } from "./lib/link-list.tsx";
 export { LinkRow } from "./lib/link-row.tsx";
 export { Muted } from "./lib/muted.tsx";
+export { RowTitle } from "./lib/row-title.tsx";
 export { Select } from "./lib/select.tsx";
 export { SelectOption } from "./lib/select-option.tsx";
 export { Skeleton } from "./lib/skeleton.tsx";

@@ -12,6 +12,7 @@ import type { Composer } from "../composer/index.ts";
 import type { ReactNode } from "react";
 import { RouteView } from "./lib/route-view.tsx";
 import type { Session } from "../session/index.ts";
+import type { Unread } from "../unread/index.ts";
 import { routeOf } from "./lib/route.ts";
 import { useSyncExternalStore } from "react";
 
@@ -31,6 +32,7 @@ export interface CookoutAppProps {
   readonly board: Board;
   readonly composer: Composer;
   readonly session: Session;
+  readonly unread: Unread;
 }
 
 /**
@@ -42,7 +44,13 @@ export function CookoutApp(props: CookoutAppProps): ReactNode {
   const hash = useSyncExternalStore(subscribeToHash, currentHash);
   return (
     <AppShell>
-      <RouteView board={props.board} composer={props.composer} route={routeOf(hash)} session={props.session} />
+      <RouteView
+        board={props.board}
+        composer={props.composer}
+        route={routeOf(hash)}
+        session={props.session}
+        unread={props.unread}
+      />
     </AppShell>
   );
 }
