@@ -1,17 +1,17 @@
 import type { Board, BoardOptions } from "../../board/index.ts";
 import type { CookoutClient, CreateIdentityRequest, Token } from "../../sdk/index.ts";
+import type { LoginApprovals, Session } from "../../session/index.ts";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { createLoginApprovals, createSession } from "../../session/index.ts";
 import { expect, inject, onTestFinished } from "vitest";
 import type { Composer } from "../../composer/index.ts";
 import { CookoutApp } from "../index.tsx";
 import type { Layout } from "../../layout/index.ts";
-import type { Session } from "../../session/index.ts";
 import type { Unread } from "../../unread/index.ts";
 import { createBoard } from "../../board/index.ts";
 import { createComposer } from "../../composer/index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
 import { createLayout } from "../../layout/index.ts";
-import { createSession } from "../../session/index.ts";
 import { createUnread } from "../../unread/index.ts";
 
 const NONE = 0;
@@ -24,6 +24,7 @@ interface BoardOpening {
   readonly board: Board;
   readonly composer?: Composer;
   readonly layout?: Layout;
+  readonly loginApprovals?: LoginApprovals;
   readonly session: Session;
   readonly unread?: Unread;
 }
@@ -31,6 +32,7 @@ interface BoardOpening {
 interface Opening {
   readonly hash: string;
   readonly client: AppClient;
+  readonly loginApprovals?: LoginApprovals;
   readonly pageSize?: number;
   readonly session?: Session;
   readonly live?: NonNullable<BoardOptions["live"]>;
@@ -130,9 +132,17 @@ export function openBoard(opening: BoardOpening): () => void {
   const composer = opening.composer ?? createComposer({ client: adminClient() });
   const unread = opening.unread ?? createUnread({ client: adminClient() });
   const layout = opening.layout ?? browserLayout();
+  const loginApprovals = opening.loginApprovals ?? createLoginApprovals(anonymousClient());
   onTestFinished(cleanup);
   return render(
-    <CookoutApp board={opening.board} composer={composer} layout={layout} session={opening.session} unread={unread} />,
+    <CookoutApp
+      board={opening.board}
+      composer={composer}
+      layout={layout}
+      loginApprovals={loginApprovals}
+      session={opening.session}
+      unread={unread}
+    />,
   ).unmount;
 }
 
@@ -142,6 +152,7 @@ export function openAt(opening: Opening): () => void {
     board: createBoard(opening),
     composer: createComposer(opening),
     hash: opening.hash,
+    ...(opening.loginApprovals && { loginApprovals: opening.loginApprovals }),
     session,
     unread: createUnread(opening),
   });

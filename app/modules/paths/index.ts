@@ -1,8 +1,9 @@
 /**
  * The web UI's paths: the one owner of its location hashes. `routeOf(hash)`
  * reads a hash as a `Route` (`#/`, no hash, and `#/inbox` the inbox, `#/login`,
- * `#/people` the people and agents, `#/channels/<name>` and
- * `#/channels/<name>/threads/<id>`); a channel name
+ * `#/people` the people and agents, `#/channels/<name>`,
+ * `#/channels/<name>/threads/<id>` and `#/approve/<user code>` the approval
+ * page for a login request); a channel name
  * that isn't a `ChannelName`, a thread ID that isn't a message ID, or any
  * other hash is `missing`. `hrefOf(route)` builds the hash a link to a route
  * goes to, so no view writes a path by hand.
@@ -10,6 +11,7 @@
 import type { ChannelName, MessageId } from "../sdk/index.ts";
 import { isChannelName } from "../channels/index.ts";
 import { isMessageId } from "../messages/index.ts";
+import { isUserCode } from "../logins/index.ts";
 
 type Route =
   | { readonly name: "login" }
@@ -17,6 +19,7 @@ type Route =
   | { readonly name: "inbox" }
   | { readonly name: "channel"; readonly channel: ChannelName }
   | { readonly name: "thread"; readonly channel: ChannelName; readonly thread: MessageId }
+  | { readonly name: "approve"; readonly userCode: string }
   | { readonly name: "missing" };
 
 type LinkedRoute = Extract<Route, { readonly name: "inbox" | "people" | "channel" | "thread" }>;
@@ -29,6 +32,7 @@ const PEOPLE = /^#\/people$/u;
 const CHANNEL = /^#\/channels\/(?<channel>[^/]+)$/u;
 const THREAD = /^#\/channels\/(?<channel>[^/]+)\/threads\/(?<thread>[^/]+)$/u;
 
+const APPROVE = /^#\/approve\/(?<code>[^/]+)$/u;
 const DIGITS = /^\d+$/u;
 const MISSING: Route = { name: "missing" };
 
@@ -37,6 +41,13 @@ function channelRoute(channel: string): Route {
     return MISSING;
   }
   return { channel, name: "channel" };
+}
+
+function approveRoute(userCode: string): Route {
+  if (!isUserCode(userCode)) {
+    return MISSING;
+  }
+  return { name: "approve", userCode };
 }
 
 function threadRoute(channel: string, thread: string): Route {
@@ -51,6 +62,7 @@ const matchers: readonly Matcher[] = [
   (hash) => INBOX.test(hash) && { name: "inbox" },
   (hash) => LOGIN.test(hash) && { name: "login" },
   (hash) => PEOPLE.test(hash) && { name: "people" },
+  (hash) => APPROVE.test(hash) && approveRoute(hash.replace(APPROVE, "$<code>")),
   (hash) => CHANNEL.test(hash) && channelRoute(hash.replace(CHANNEL, "$<channel>")),
   (hash) => THREAD.test(hash) && threadRoute(hash.replace(THREAD, "$<channel>"), hash.replace(THREAD, "$<thread>")),
 ];

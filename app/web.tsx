@@ -8,13 +8,13 @@
  * page's root element, as `public/assets/theme.js` does before the first paint.
  */
 import { createLive, eventSourceAdapter } from "./modules/live/index.ts";
+import { createLoginApprovals, createSession } from "./modules/session/index.ts";
 import { CookoutApp } from "./modules/routes/index.tsx";
 import { createBoard } from "./modules/board/index.ts";
 import { createComposer } from "./modules/composer/index.ts";
 import { createCookoutClient } from "./modules/sdk/index.ts";
 import { createLayout } from "./modules/layout/index.ts";
 import { createRoot } from "react-dom/client";
-import { createSession } from "./modules/session/index.ts";
 import { createUnread } from "./modules/unread/index.ts";
 
 const root = document.querySelector("#root");
@@ -35,6 +35,7 @@ if (root !== null) {
       board={board}
       composer={createComposer({ client })}
       layout={layout}
+      loginApprovals={createLoginApprovals(client)}
       session={session}
       unread={unread}
     />,

@@ -27,10 +27,13 @@
  * items of whoever is logged in, oldest first, each with its reasons and a
  * link to where it is read, after each channel's unread and mention counts
  * (the `unread` store, live). `NotBuiltView` says a route has nothing to show.
+ * `LoginApprovalView` is the approval page for a login request: its user code
+ * to check against the terminal, the host that asked, and an Approve button.
  */
 export { Authors } from "./lib/authors.tsx";
 export { ChannelView } from "./lib/channel.tsx";
 export { InboxView } from "./lib/inbox.tsx";
+export { LoginApprovalView } from "./lib/login-approval.tsx";
 export { LoginView } from "./lib/login.tsx";
 export { NotBuiltView } from "./lib/not-built.tsx";
 export { SidebarView } from "./lib/sidebar.tsx";

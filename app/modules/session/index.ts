@@ -6,6 +6,10 @@
  * simply logged out. `logIn` swaps a human identity's token for the session
  * cookie (`POST /v1/session`); a refused login (an agent's token, a bad token)
  * keeps the server's error code to show.
+ * `createLoginApprovals` makes the store the approval page reads: for a login
+ * request's user code, the request (its host and when it expires) once the
+ * page subscribes, or why it can't be shown, and `approve`, which approves it
+ * as whoever is logged in so the terminal that started it finishes logging in.
  */
 import type { CookoutClient, Identity, Refusal } from "../sdk/index.ts";
 import { refusalOf } from "../sdk/index.ts";
@@ -98,3 +102,12 @@ export function createSession(clients: SessionClients): Session {
     },
   };
 }
+
+export {
+  type LoginApproval,
+  type LoginApprovalClient,
+  type LoginApprovalState,
+  type LoginApprovals,
+  type LoginRequest,
+  createLoginApprovals,
+} from "./lib/login-approval.ts";

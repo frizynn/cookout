@@ -9,7 +9,9 @@
  * channel; and `#/channels/<name>/threads/<id>` the channel with the thread's
  * panel open beside it. Any other hash, a channel name that isn't a channel
  * name, or a thread ID that isn't a message ID, says there is nothing here.
- * The `paths` module reads the hash and builds every link's.
+ * `#/approve/<user code>` is the approval page for a login request, a page of
+ * its own outside the workspace (after the login view, if logged out). The
+ * `paths` module reads the hash and builds every link's.
  */
 import type { ReactNode } from "react";
 import { RouteView } from "./lib/route-view.tsx";
