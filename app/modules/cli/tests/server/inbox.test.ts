@@ -113,3 +113,27 @@ it.effect("cookout thread get prints the thread's read receipts, seen once the m
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
+
+it.effect("cookout inbox prints the owner's unread offline alerts beside the items", () =>
+  Effect.gen(function* inboxAlerts() {
+    const cookout = yield* TestCookout;
+    const matt = yield* cookout.createIdentity("matt", { kind: "human" });
+    yield* cookout.createIdentity("triage", { owner: "matt" });
+    const folder = yield* freshStateFolder;
+    const { agentSessionToken } = yield* answer(() => matt.client.join({ as: "triage" }));
+    yield* answer(() => cookout.clientFor(agentSessionToken).watch());
+    yield* Effect.andThen(
+      answer(() => cookout.client.revokeAgentSession("triage")),
+      cookout.liveConnectionsClosed("triage"),
+    );
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: matt.token, COOKOUT_URL: cookout.url };
+    const results = yield* runAll(env, [["inbox"]]);
+
+    expect(results).toMatchObject([
+      {
+        exitCode: 0,
+        stdoutJson: { alerts: [{ agent: "triage", offlineReason: "session revoked", read: false }], items: [] },
+      },
+    ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
