@@ -2,8 +2,19 @@ import { mentionPattern } from "../../messages/index.ts";
 
 const AT_SIGN = 1;
 const BLOCK_PARENTS = new Set(["blockquote", "footnoteDefinition", "listItem", "root"]);
+const INLINE_PARENTS = new Set([
+  "delete",
+  "emphasis",
+  "heading",
+  "link",
+  "linkReference",
+  "paragraph",
+  "strong",
+  "tableCell",
+]);
 const PLAIN_TEXT_LANGUAGES = new Set(["text", "txt"]);
 const START = 0;
+const WHITESPACE = /\s+/gu;
 
 interface MarkdownNode {
   readonly type: string;
@@ -14,6 +25,12 @@ interface MarkdownNode {
     readonly hName: string;
     readonly hProperties: Readonly<Record<string, string>>;
   };
+}
+
+interface PlainNode {
+  readonly type: string;
+  readonly value?: string | undefined;
+  readonly children?: readonly PlainNode[] | undefined;
 }
 
 interface MentionsShown {
@@ -103,9 +120,28 @@ function shownNode(node: MarkdownNode, parent: string, shown: MentionsShown): re
   return [node];
 }
 
+function plainPieces(node: PlainNode): string {
+  if (node.type === "break") {
+    return " ";
+  }
+  if (typeof node.value === "string") {
+    return node.value;
+  }
+  const { children = [] } = node;
+  const pieces = children.map((child) => plainPieces(child));
+  if (INLINE_PARENTS.has(node.type)) {
+    return pieces.join("");
+  }
+  return pieces.join(" ");
+}
+
 export function remarkMessageText(shown: MentionsShown): (tree: MarkdownNode) => MarkdownNode {
   return (tree) => {
     const [root = tree] = shownNode(tree, "", shown);
     return root;
   };
+}
+
+export function plainTextOfTree(tree: PlainNode): string {
+  return plainPieces(tree).replaceAll(WHITESPACE, " ").trim();
 }

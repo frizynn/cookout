@@ -3,6 +3,7 @@ import type { InboxItem, InboxReason } from "../../sdk/index.ts";
 import { MentionText } from "./mention-text.tsx";
 import type { ReactNode } from "react";
 import { hrefOf } from "../../paths/index.ts";
+import { plainTextOf } from "./markdown-plain-text.ts";
 import { useAuthor } from "./use-author.ts";
 import { useTimeAgo } from "./use-time-ago.ts";
 
@@ -35,7 +36,7 @@ function contextOf(item: InboxItem): string | null {
   if (item.message.kind !== "reply") {
     return null;
   }
-  const { text } = item.parent;
+  const text = plainTextOf(item.parent.text);
   if (text.length <= CONTEXT_LENGTH) {
     return text;
   }
