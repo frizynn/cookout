@@ -1,9 +1,9 @@
 import { Argument, Command, Flag } from "effect/cli";
 import { Effect, Option } from "effect";
 import { answer, answered } from "./output.ts";
-import { callServer, withClient } from "./adapters/sdk.ts";
+import { deactivation, identitiesAnswer, identityAnswer } from "./handles.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
-import { identitiesWithPresence } from "./presence.ts";
+import { callServer } from "./adapters/sdk.ts";
 import { identityKinds } from "../../../identities/index.ts";
 
 const NOTHING = {};
@@ -49,9 +49,9 @@ const identityListCommand = Command.make(
   },
   ({ deactivated }) => {
     if (deactivated) {
-      return answered(withClient(identitiesWithPresence({ include: "deactivated" })));
+      return answered(identitiesAnswer({ include: "deactivated" }));
     }
-    return answered(withClient(identitiesWithPresence({})));
+    return answered(identitiesAnswer({}));
   },
 ).pipe(
   Command.withDescription(
@@ -68,10 +68,10 @@ const identityRotateCommand = Command.make("rotate", { name: identityName }, ({ 
 );
 
 const identityDeactivateCommand = Command.make("deactivate", { name: identityName }, ({ name }) =>
-  answer((client) => client.deactivateIdentity(name)),
+  answered(deactivation(name)),
 ).pipe(
   Command.withDescription(
-    "Deactivate an identity (admin, or a human for their own agents). Its tokens stop working, a human's agents are deactivated too, and its messages and name stay.",
+    "Deactivate an identity (admin, or a human for their own agents). Its tokens stop working, a human's agents are deactivated too, and its messages and name stay. On a command's handler it warns on stderr that the command stops replying.",
   ),
 );
 
@@ -191,8 +191,12 @@ const identityDescribeCommand = Command.make(
 );
 
 const identityGetCommand = Command.make("get", { name: identityName }, ({ name }) =>
-  answer((client) => client.getIdentity(name)),
-).pipe(Command.withDescription("Show one identity, with an agent's description."));
+  answered(identityAnswer(name)),
+).pipe(
+  Command.withDescription(
+    "Show one identity, with an agent's description, and on a command's handler the commands it handles.",
+  ),
+);
 
 const identityCommand = Command.make("identity").pipe(
   Command.withDescription(

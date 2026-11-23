@@ -24,8 +24,8 @@ export function IdentityActionsView(props: IdentityActionsProps): ReactNode {
     <>
       {agent && <SessionLine actions={actions} />}
       <ActionButtons actions={actions} deletable={props.deletable} identity={identity} />
-      <DeactivateConfirm actions={actions} name={identity.name} />
-      <DeleteConfirm actions={actions} name={identity.name} />
+      <DeactivateConfirm actions={actions} identity={identity} />
+      <DeleteConfirm actions={actions} identity={identity} />
       <TokenShown actions={actions} />
       <ActionRefusal actions={actions} />
       {agent && props.transfer && <TransferForm actions={actions} name={identity.name} />}
