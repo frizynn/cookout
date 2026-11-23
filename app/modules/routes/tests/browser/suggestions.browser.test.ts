@@ -43,14 +43,19 @@ async function pointsOver(list: Locator): Promise<readonly Point[]> {
   return SPOTS.flatMap((across) => SPOTS.map((down): Point => [box.x + box.width * across, box.y + box.height * down]));
 }
 
-function uncovered(over: readonly Point[]): number {
-  const shown = document.querySelector(LIST);
+interface Looking {
+  readonly over: readonly Point[];
+  readonly selector: string;
+}
+
+function uncovered({ over, selector }: Looking): number {
+  const shown = document.querySelector(selector);
   return over.filter(([left, top]) => shown === null || !shown.contains(document.elementFromPoint(left, top))).length;
 }
 
 async function coveredPoints(list: Locator): Promise<number> {
   const points = await pointsOver(list);
-  return list.page().evaluate(uncovered, points);
+  return list.page().evaluate(uncovered, { over: points, selector: LIST });
 }
 
 test("the @ suggestion box is the topmost element everywhere it shows, over the messages and their thread summaries", async ({
