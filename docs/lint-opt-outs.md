@@ -34,6 +34,7 @@ Every Oxlint category is `"error"` in `.oxlintrc.json`, and every Oxlint plugin 
 - `vitest/no-standalone-expect`: `@effect/vitest`'s `it.effect`, `it.live` and `it.prop` count as test blocks.
 - `vitest/consistent-test-it`: `it`, inside and outside `describe`. `@effect/vitest` exports `it` (with `it.effect`) and no `test`. The default (`test`) has a fix that renames `it` to `test` without an import, which breaks `tsc`.
 - `typescript/prefer-readonly-parameter-types`: allows `@effect/vitest`'s `Methods` and `MethodsNonLive`, the mutable `it` its callbacks receive.
+- `typescript/prefer-readonly-parameter-types`: allows React's `KeyboardEvent` and `MouseEvent`, which a handler receives as React makes them and can't mark readonly (`SidebarBody` reads a click's target, #144).
 - `effecttsgo/unstable-api-usage`: `allowedUnstableApis` in the `@effect/language-service` entry of `tsconfig.json` holds `@effect/vitest`, which the tests use, and the unstable Effect 4 modules the cookout is built on: `effect/cli`, `effect/http`, `effect/process`, `effect/FileSystem`, `effect/Path`, `effect/ByteSize`, `effect/Stdio` (which `cookout login --token` reads the token from, #115), `@effect/platform-node`, and `@effect/platform-node-shared/NodeSocket`, which `@effect/platform-node`'s `NodeSocket` re-exports and the reporter names in its place (a test opens a raw TCP connection with it, #130).
 - `effecttsgo/deterministic-keys`: `keyPatterns` skips the leading `app/modules/` of a file path, so a key derives from the module path.
 

@@ -13,13 +13,14 @@
  * the left (on a narrow screen, behind a button that opens and closes it),
  * which a button at its top collapses to a narrow rail holding only that
  * button on a wide screen (`collapsed`),
- * with its `SidebarBody` of links (following one closes it on a narrow screen)
+ * with its `SidebarBody` of links (following one, but not pressing a button, closes it on a narrow screen)
  * and its `SidebarFooter`, and a `WorkspaceMain` of the route's panes on the
  * right. In the sidebar, `NavLink` is one link, bold when
  * it has something new (`marked`), highlighted when it is the open item, with
  * an icon and any `Pill` after it: a count read out by its label, loud (the
  * unread colour), quiet, or unseen (read out only); `NavHeading` heads a
- * `NavList` of links; `ToggleButton` opens and closes a `Panel` above it,
+ * `NavList` of links, and a `NavButton` under them, with a plus, starts
+ * something new, such as a channel; `ToggleButton` opens and closes a `Panel` above it,
  * such as Settings, where `ChoiceGroup` picks one of a few choices. `Pane` is
  * the main column, with a `PaneHeader` (title, description and any action on
  * its right, such as a `PressButton`, a button that is on or off), a
@@ -139,6 +140,7 @@ export { LinkList } from "./lib/link-list.tsx";
 export { LinkRow } from "./lib/link-row.tsx";
 export { Mention } from "./lib/mention.tsx";
 export { Muted } from "./lib/muted.tsx";
+export { NavButton } from "./lib/nav-button.tsx";
 export { NavHeading } from "./lib/nav-heading.tsx";
 export { NavLink } from "./lib/nav-link.tsx";
 export { NavList } from "./lib/nav-list.tsx";

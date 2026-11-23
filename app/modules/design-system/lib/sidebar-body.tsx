@@ -1,12 +1,25 @@
-import type { ReactNode } from "react";
+import type { MouseEventHandler, ReactNode } from "react";
+import { useCallback } from "react";
 
 interface SidebarBodyParts {
   readonly children: ReactNode;
   readonly onFollow: () => void;
 }
 
+function isLink(target: EventTarget): boolean {
+  return target instanceof Element && target.closest("a") !== null;
+}
+
 export function SidebarBody(parts: SidebarBodyParts): ReactNode {
-  const handleFollow = parts.onFollow;
+  const { onFollow } = parts;
+  const handleFollow = useCallback<MouseEventHandler>(
+    (event) => {
+      if (isLink(event.target)) {
+        onFollow();
+      }
+    },
+    [onFollow],
+  );
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pt-1 pb-3" onClickCapture={handleFollow}>
       {parts.children}

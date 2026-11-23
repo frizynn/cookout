@@ -422,7 +422,7 @@
           },
           {
             "from": "package",
-            "name": ["KeyboardEvent", "ReactNode"],
+            "name": ["KeyboardEvent", "MouseEvent", "ReactNode"],
             "package": "react"
           },
           {
