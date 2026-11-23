@@ -1,5 +1,5 @@
 import { Array as Arr, Console, Effect, Schema, String as Str, pipe } from "effect";
-import type { InboxItemEvent, Reaction } from "../../../sdk/index.ts";
+import type { InboxItemEvent, NudgeEvent, Reaction } from "../../../sdk/index.ts";
 import { reactionSymbols } from "../../../messages/index.ts";
 
 type Format = "json" | "text";
@@ -11,7 +11,11 @@ function reactedLine({ identity, reaction }: Reaction): string {
   return `@${identity} reacted with ${reactionSymbols[reaction]}`;
 }
 
-function textLine({ item: { channel, message, newReactions = [], parent } }: InboxItemEvent): string {
+function nudgeLine({ nudge: { channel, id, parent, text } }: NudgeEvent): string {
+  return `#${channel.name} thread:${String(parent.id)} ${text} (nudge ${String(id)})`;
+}
+
+function itemLine({ item: { channel, message, newReactions = [], parent } }: InboxItemEvent): string {
   const shown = pipe(message.text, Str.replaceAll(/\s+/gu, " "), Str.takeLeft(SHOWN_CHARACTERS));
   const where = `#${channel.name} thread:${String(parent.id)}`;
   const at = `(msg ${String(message.id)})`;
@@ -19,6 +23,13 @@ function textLine({ item: { channel, message, newReactions = [], parent } }: Inb
     return `${where} ${Arr.join(Arr.map(newReactions, reactedLine), ", ")} to your message: ${shown} ${at}`;
   }
   return `${where} @${message.author.name}: ${shown} ${at}`;
+}
+
+function textLine(event: InboxItemEvent | NudgeEvent): string {
+  if (event.type === "nudge") {
+    return nudgeLine(event);
+  }
+  return itemLine(event);
 }
 
 interface Line {
