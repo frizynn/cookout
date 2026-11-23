@@ -13,7 +13,12 @@ interface ChannelsSection {
   readonly createChannel: (channel: Channel) => Fails<"created" | "name_taken">;
   readonly listChannels: () => Fails<readonly Channel[]>;
   readonly findChannel: (name: ChannelName) => Fails<Channel | undefined>;
+  readonly deleteChannel: (name: ChannelName) => Fails<Channel | undefined>;
 }
+
+type MemoryChannelsSection = Omit<ChannelsSection, "deleteChannel"> & {
+  readonly forgetChannel: (name: ChannelName) => void;
+};
 
 const CHANNEL_COLUMNS = "name, description, created_at";
 
@@ -27,7 +32,7 @@ const ChannelRow = Schema.Struct({
 
 type ChannelRowType = typeof ChannelRow.Type;
 
-function memoryChannels(state: MemoryState): ChannelsSection {
+function memoryChannels(state: MemoryState): MemoryChannelsSection {
   const channels = new Map<ChannelName, Channel>();
   function open<Value>(work: () => Value): Fails<Value> {
     return Effect.andThen(state.ensureOpen, Effect.sync(work));
@@ -42,6 +47,9 @@ function memoryChannels(state: MemoryState): ChannelsSection {
   return {
     createChannel: (channel) => open(() => create(channel)),
     findChannel: (name) => open(() => channels.get(name)),
+    forgetChannel: (name) => {
+      channels.delete(name);
+    },
     listChannels: () => open(() => Arr.sort(channels.values(), byName)),
   };
 }
@@ -71,6 +79,21 @@ function insert(db: SqliteDatabase, channel: Channel): Fails<void> {
   return db.run("INSERT INTO channels (name, created_at) VALUES (?, ?)", channel.name, channel.createdAt);
 }
 
+const IN_CHANNEL = "SELECT id FROM messages WHERE channel = ?";
+
+const CHANNEL_DELETES: readonly string[] = [
+  `DELETE FROM message_mentions WHERE message_id IN (${IN_CHANNEL})`,
+  `DELETE FROM follows WHERE thread_id IN (${IN_CHANNEL})`,
+  `DELETE FROM thread_read_positions WHERE thread_id IN (${IN_CHANNEL})`,
+  `DELETE FROM command_tokens WHERE thread_id IN (${IN_CHANNEL})`,
+  "DELETE FROM deliveries WHERE channel = ?",
+  "DELETE FROM subscriptions WHERE channel = ?",
+  "DELETE FROM channel_read_positions WHERE channel = ?",
+  "DELETE FROM messages WHERE channel = ? AND reply_to IS NOT NULL",
+  "DELETE FROM messages WHERE channel = ?",
+  "DELETE FROM channels WHERE name = ?",
+];
+
 function sqliteChannels(db: SqliteDatabase): ChannelsSection {
   function find(name: ChannelName): Fails<Channel | undefined> {
     return db.get(`SELECT ${CHANNEL_COLUMNS} FROM channels WHERE name = ?`, name).pipe(
@@ -94,6 +117,16 @@ function sqliteChannels(db: SqliteDatabase): ChannelsSection {
           return "created" as const;
         }),
       ),
+    deleteChannel: (name) =>
+      db.transaction(
+        Effect.gen(function* deleteChannel() {
+          const found = yield* find(name);
+          if (typeof found === "object") {
+            yield* Effect.forEach(CHANNEL_DELETES, (sql) => db.run(sql, name), { concurrency: 1, discard: true });
+          }
+          return found;
+        }),
+      ),
     findChannel: find,
     listChannels: () =>
       db
@@ -102,4 +135,4 @@ function sqliteChannels(db: SqliteDatabase): ChannelsSection {
   };
 }
 
-export { type ChannelsSection, memoryChannels, sqliteChannels };
+export { type ChannelsSection, type MemoryChannelsSection, memoryChannels, sqliteChannels };

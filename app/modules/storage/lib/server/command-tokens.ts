@@ -36,7 +36,11 @@ interface MemoryCommandTokensOptions {
   readonly findIdentity: FindIdentity;
 }
 
-function memoryCommandTokens({ findIdentity, state }: MemoryCommandTokensOptions): CommandTokensSection {
+type MemoryCommandTokensSection = CommandTokensSection & {
+  readonly dropCommandTokens: (threadIds: ReadonlySet<MessageId>) => void;
+};
+
+function memoryCommandTokens({ findIdentity, state }: MemoryCommandTokensOptions): MemoryCommandTokensSection {
   const tokens = new Map<TokenHash, StoredCommandToken>();
   function open<Value>(work: () => Value): Fails<Value> {
     return Effect.andThen(state.ensureOpen, Effect.sync(work));
@@ -56,6 +60,13 @@ function memoryCommandTokens({ findIdentity, state }: MemoryCommandTokensOptions
       open(() => {
         tokens.set(stored.hash, { ...stored });
       }),
+    dropCommandTokens: (threadIds) => {
+      for (const [hash, stored] of tokens) {
+        if (threadIds.has(stored.threadId)) {
+          tokens.delete(hash);
+        }
+      }
+    },
     findCommandToken: (hash) => open(() => find(hash)),
   };
 }
@@ -102,6 +113,7 @@ function sqliteCommandTokens(db: SqliteDatabase): CommandTokensSection {
 export {
   type CommandTokenGrant,
   type CommandTokensSection,
+  type MemoryCommandTokensSection,
   type StoredCommandToken,
   memoryCommandTokens,
   sqliteCommandTokens,

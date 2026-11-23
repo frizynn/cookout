@@ -33,7 +33,11 @@ interface DeliveriesSection {
   readonly listPendingDeliveries: Effect.Effect<readonly StoredDelivery[], StorageUnavailable>;
 }
 
-function memoryDeliveries(state: MemoryState): DeliveriesSection {
+type MemoryDeliveriesSection = DeliveriesSection & {
+  readonly dropDeliveries: (channel: ChannelName) => void;
+};
+
+function memoryDeliveries(state: MemoryState): MemoryDeliveriesSection {
   const deliveries = new Map<CallId, StoredDelivery>();
   function open<Value>(work: () => Value): Fails<Value> {
     return Effect.andThen(state.ensureOpen, Effect.sync(work));
@@ -43,6 +47,13 @@ function memoryDeliveries(state: MemoryState): DeliveriesSection {
       open(() => {
         deliveries.set(delivery.callId, { ...delivery });
       }),
+    dropDeliveries: (channel) => {
+      for (const [callId, delivery] of deliveries) {
+        if (delivery.channel === channel) {
+          deliveries.delete(callId);
+        }
+      }
+    },
     listPendingDeliveries: Effect.suspend(() =>
       open(() => Arr.filter([...deliveries.values()], ({ outcome }) => outcome === "pending")),
     ),
@@ -123,4 +134,11 @@ function sqliteDeliveries(db: SqliteDatabase): DeliveriesSection {
   };
 }
 
-export { type DeliveriesSection, type DeliveryOutcome, type StoredDelivery, memoryDeliveries, sqliteDeliveries };
+export {
+  type DeliveriesSection,
+  type DeliveryOutcome,
+  type MemoryDeliveriesSection,
+  type StoredDelivery,
+  memoryDeliveries,
+  sqliteDeliveries,
+};

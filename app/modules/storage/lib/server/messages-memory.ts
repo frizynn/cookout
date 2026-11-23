@@ -7,7 +7,7 @@ import type {
   Placement,
 } from "./messages.ts";
 import { Array as Arr, Effect, Option, Predicate, Ref, pipe } from "effect";
-import { EMPTY_INBOX, afterAppend, memoryInbox } from "./inbox-memory.ts";
+import { EMPTY_INBOX, afterAppend, memoryInbox, withoutChannel } from "./inbox-memory.ts";
 import type {
   ListMessagesResponse,
   Message,
@@ -19,8 +19,8 @@ import type {
 import type { MemoryInbox, MemoryInboxSection } from "./inbox-memory.ts";
 import { asMessageId, counted, isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
 import type { ChannelName } from "../../../channels/index.ts";
-import type { ChannelsSection } from "./channels.ts";
 import type { IdentitiesSection } from "./identities.ts";
+import type { MemoryChannelsSection } from "./channels.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isMessageId } from "../../../messages/index.ts";
@@ -32,7 +32,7 @@ interface MemoryMessages {
 }
 
 interface MemoryMessagesOptions {
-  readonly channels: ChannelsSection;
+  readonly channels: Pick<MemoryChannelsSection, "findChannel">;
   readonly identities: IdentitiesSection;
   readonly state: MemoryState;
 }
@@ -101,7 +101,22 @@ function pageIn(messages: readonly Message[], channel: ChannelName, page: Channe
   return { hasMore: older.length > shown.length, messages: Arr.map(shown, (parent) => current(messages, parent)) };
 }
 
-function memoryMessages({ channels, identities, state }: MemoryMessagesOptions): MessagesSection & MemoryInboxSection {
+type MemoryMessagesSection = MessagesSection &
+  MemoryInboxSection & {
+    readonly forgetChannel: (channel: ChannelName) => Fails<ReadonlySet<MessageId>>;
+  };
+
+function withoutMessagesIn(
+  data: MemoryMessages,
+  channel: ChannelName,
+): readonly [ReadonlySet<MessageId>, MemoryMessages] {
+  const gone = Arr.filter(data.messages, (message) => message.channel === channel);
+  const kept = Arr.filter(data.messages, (message) => message.channel !== channel);
+  const ids = new Set(Arr.map(gone, (message) => message.id));
+  return [ids, { ...data, inbox: withoutChannel({ channel, ids, inbox: data.inbox }), messages: kept }];
+}
+
+function memoryMessages({ channels, identities, state }: MemoryMessagesOptions): MemoryMessagesSection {
   const ref = Ref.makeUnsafe(EMPTY);
   function change<Value>(work: (data: MemoryMessages) => readonly [Value, MemoryMessages]): Fails<Value> {
     return Effect.andThen(state.ensureOpen, Ref.modify(ref, work));
@@ -136,6 +151,7 @@ function memoryMessages({ channels, identities, state }: MemoryMessagesOptions):
         }
         return Effect.succeed(CHANNEL_NOT_FOUND);
       }),
+    forgetChannel: (channel) => change((data) => withoutMessagesIn(data, channel)),
     getThread: (id) => read((messages) => threadIn(messages, id)),
     latestMessageId: readBoard(({ last }) => Option.getOrUndefined(Option.liftPredicate(last, isMessageId))),
     listChannelMessages: (channel, page) =>

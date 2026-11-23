@@ -166,14 +166,28 @@ it("an empty channel says it has no messages", { timeout: 5000 }, async () => {
   close();
 });
 
-it("a channel that doesn't exist shows the server's refusal", { timeout: 5000 }, async () => {
+it("a channel that doesn't exist shows Nothing here", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
   const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-missing" });
 
-  const alert = await screen.findByRole("alert");
+  const heading = await screen.findByRole("heading", { level: 1, name: "Nothing here" });
 
-  expect(alert.textContent).toMatch(/^Couldn't load the messages \(channel_not_found\)/u);
+  expect([heading.textContent, screen.queryByRole("alert")]).toStrictEqual(["Nothing here", null]);
+
+  close();
+});
+
+it("a deleted channel shows Nothing here", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  await channelWith("web-channel-deleted", ["Soon gone"]);
+  await adminClient().deleteChannel("web-channel-deleted");
+  const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-deleted" });
+
+  const heading = await screen.findByRole("heading", { level: 1, name: "Nothing here" });
+
+  expect(heading.textContent).toBe("Nothing here");
 
   close();
 });

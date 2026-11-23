@@ -412,6 +412,11 @@ export type CookoutClient = {
   /** `GET /v1/channels/:name`. A missing channel is 404 `channel_not_found`. */
   readonly getChannel: (name: string) => Promise<ChannelResponse>;
   /**
+   * `DELETE /v1/channels/:name`, admin only: deletes the channel and everything in it, and answers it. A missing
+   * channel is 404 `channel_not_found`. The name can be created again, as a new, empty channel.
+   */
+  readonly deleteChannel: (name: string) => Promise<ChannelResponse>;
+  /**
    * `POST /v1/messages`: a top-level message, or a reply with `replyTo` (a reply to a reply joins the parent's thread).
    * A missing channel or message is 404; replying in another channel is 400 `reply_in_other_channel`.
    */

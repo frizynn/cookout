@@ -14,7 +14,7 @@ import type {
   CommandWithSecretResponse,
   ListCommandsResponse,
 } from "./lib/commands.ts";
-import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "../channels/index.ts";
+import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "./lib/channels.ts";
 import type {
   CreateIdentityRequest,
   IdentityResponse,
@@ -31,19 +31,17 @@ import type {
   PostMessageRequest,
   ThreadResponse,
 } from "./lib/messages.ts";
-import { channelPath, channelsPath } from "../channels/index.ts";
 import { connectionFor, getJson, send } from "./lib/request.ts";
 import { eventCalls, eventOf } from "./lib/events.ts";
 import { identitiesPath, identityPath, identityTokenPath, sessionPath, whoamiPath } from "../identities/index.ts";
 import {
-  isChannelResponse,
   isHealthResponse,
   isIdentityResponse,
   isIdentityWithTokenResponse,
-  isListChannelsResponse,
   isListIdentitiesResponse,
 } from "./lib/generated/validators.js";
 import type { HealthResponse } from "../http/index.ts";
+import { channelCalls } from "./lib/channels.ts";
 import { commandCalls } from "./lib/commands.ts";
 import { healthPath } from "../http/index.ts";
 import { inboxCalls } from "./lib/inbox.ts";
@@ -56,7 +54,7 @@ export type {
   ChannelResponse,
   CreateChannelRequest,
   ListChannelsResponse,
-} from "../channels/index.ts";
+} from "./lib/channels.ts";
 export type {
   AddCommandRequest,
   CallCommandRequest,
@@ -164,6 +162,11 @@ export type CookoutClient = {
   /** `GET /v1/channels/:name`. A missing channel is 404 `channel_not_found`. */
   readonly getChannel: (name: string) => Promise<ChannelResponse>;
   /**
+   * `DELETE /v1/channels/:name`, admin only: deletes the channel and everything in it, and answers it. A missing
+   * channel is 404 `channel_not_found`. The name can be created again, as a new, empty channel.
+   */
+  readonly deleteChannel: (name: string) => Promise<ChannelResponse>;
+  /**
    * `POST /v1/messages`: a top-level message, or a reply with `replyTo` (a reply to a reply joins the parent's thread).
    * A missing channel or message is 404; replying in another channel is 400 `reply_in_other_channel`.
    */
@@ -265,15 +268,11 @@ export const parseEvent: typeof eventOf = eventOf;
 export function createCookoutClient(options: CookoutClientOptions = {}): CookoutClient {
   const server = connectionFor(options);
   return {
-    createChannel: (body) => send(server, { body, isExpected: isChannelResponse, method: "POST", path: channelsPath }),
     createIdentity: (body) =>
       send(server, { body, isExpected: isIdentityWithTokenResponse, method: "POST", path: identitiesPath }),
     deleteIdentity: (name) =>
       send(server, { isExpected: isIdentityResponse, method: "DELETE", params: { name }, path: identityPath }),
-    getChannel: (name) =>
-      send(server, { isExpected: isChannelResponse, method: "GET", params: { name }, path: channelPath }),
     health: () => getJson(server, healthPath, isHealthResponse),
-    listChannels: () => getJson(server, channelsPath, isListChannelsResponse),
     listIdentities: () => getJson(server, identitiesPath, isListIdentitiesResponse),
     login: async () => {
       const loggedIn = await send(server, { isExpected: isIdentityResponse, method: "POST", path: sessionPath });
@@ -291,6 +290,7 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
         path: identityTokenPath,
       }),
     whoami: () => getJson(server, whoamiPath, isIdentityResponse),
+    ...channelCalls(server),
     ...messageCalls(server),
     ...leaseCalls(server),
     ...inboxCalls(server),

@@ -50,6 +50,8 @@ interface Settled {
 
 type DeliveryNeeds = Secrets | Storage | FailureReplyNeeds | HttpClient.HttpClient;
 
+type Attempted = "delivered" | "failed" | "gone";
+
 const SIGNATURE_HEADER = "cookout-signature";
 const RETRIES = 5;
 const NONE = 0;
@@ -96,30 +98,72 @@ function currentSecret(
   });
 }
 
-function attempt(
-  { call, token, progress: { callId } }: Delivery,
-  timeoutSeconds: number,
-): Effect.Effect<boolean, never, Secrets | Storage | HttpClient.HttpClient> {
-  return Effect.gen(function* sendWebhook() {
+function webhookRequest({
+  call,
+  token,
+  progress: { callId },
+}: Delivery): Effect.Effect<
+  HttpClientRequest.HttpClientRequest,
+  StorageUnavailable | Cause.NoSuchElementError,
+  Secrets | Storage
+> {
+  return Effect.gen(function* signRequest() {
     const { channel, data, threadId } = call;
     const fields = { callId, channel, command: call.stored.command.name, data, threadId, token };
     const body = yield* Effect.orDie(toJson(fields));
     const secret = yield* currentSecret(call.stored.command.name);
     const secrets = yield* Secrets;
     const signature = yield* secrets.signature(secret, body);
-    const request = HttpClientRequest.post(call.stored.command.url).pipe(
+    return HttpClientRequest.post(call.stored.command.url).pipe(
       HttpClientRequest.setHeader(SIGNATURE_HEADER, signature),
       HttpClientRequest.bodyText(body, "application/json"),
     );
+  });
+}
+
+function attempt(
+  delivery: Delivery,
+  timeoutSeconds: number,
+): Effect.Effect<Attempted, never, Secrets | Storage | HttpClient.HttpClient> {
+  return Effect.gen(function* sendWebhook() {
+    const storage = yield* Storage;
+    const thread = yield* storage.getThread(delivery.call.threadId);
+    if (typeof thread !== "object") {
+      return "gone" as const;
+    }
+    const request = yield* webhookRequest(delivery);
     const anyStatus = yield* HttpClient.HttpClient;
     const client = HttpClient.filterStatusOk(anyStatus);
     yield* client.execute(request).pipe(Effect.timeout(Duration.seconds(timeoutSeconds)));
+    return "delivered" as const;
   }).pipe(
     Effect.matchEffect({
-      onFailure: () => Effect.as(Effect.logWarning(`An attempt at the webhook delivery ${callId} failed.`), false),
-      onSuccess: () => Effect.succeed(true),
+      onFailure: () =>
+        Effect.as(
+          Effect.logWarning(`An attempt at the webhook delivery ${delivery.progress.callId} failed.`),
+          "failed" as const,
+        ),
+      onSuccess: (outcome) => Effect.succeed(outcome),
     }),
   );
+}
+
+type Settle = (outcome: DeliveryOutcome, extra: number) => Effect.Effect<void, never, Storage>;
+
+interface Finishing {
+  readonly attempted: Attempted;
+  readonly call: Call;
+  readonly settle: Settle;
+}
+
+function finish({ attempted, call, settle }: Finishing): Effect.Effect<void, never, DeliveryNeeds> {
+  if (attempted === "gone") {
+    return Effect.void;
+  }
+  if (attempted === "delivered") {
+    return settle("delivered", ONE);
+  }
+  return Effect.andThen(failureReply({ call, retries: RETRIES }), settle("failed", NONE));
 }
 
 function sendDelivery(backoff: Backoff, delivery: Delivery): Effect.Effect<void, never, DeliveryNeeds> {
@@ -139,15 +183,11 @@ function sendDelivery(backoff: Backoff, delivery: Delivery): Effect.Effect<void,
     );
     const schedule = Schedule.exponential(Duration.seconds(delaySecondsAfter(backoff, attempts + ONE)), backoff.factor);
     yield* untilDue(progress.nextAttemptAt);
-    const delivered = yield* attempt(delivery, backoff.timeoutSeconds).pipe(
-      Effect.tap((succeeded) => Effect.when(countFailure, Effect.succeed(!succeeded))),
-      Effect.repeat({ schedule, times: Math.max(RETRIES - attempts, NONE), until: (succeeded) => succeeded }),
+    const attempted = yield* attempt(delivery, backoff.timeoutSeconds).pipe(
+      Effect.tap((outcome) => Effect.when(countFailure, Effect.succeed(outcome === "failed"))),
+      Effect.repeat({ schedule, times: Math.max(RETRIES - attempts, NONE), until: (outcome) => outcome !== "failed" }),
     );
-    if (delivered) {
-      return yield* settle("delivered", ONE);
-    }
-    yield* failureReply({ call, retries: RETRIES });
-    return yield* settle("failed", NONE);
+    yield* finish({ attempted, call, settle });
   });
 }
 
