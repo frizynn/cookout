@@ -16,6 +16,7 @@ interface Join extends Omit<JoinRequest, "as"> {
 }
 
 interface On {
+  readonly publishIdentity: (identity: Identity) => Effect.Effect<void>;
   readonly maxIdle: string;
   readonly ceilingSeconds: number;
   readonly secrets: Secrets["Service"];

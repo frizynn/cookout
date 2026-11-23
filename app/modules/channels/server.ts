@@ -10,13 +10,14 @@ import {
   ListChannelsQuerySchema,
   ListChannelsResponseSchema,
 } from "./lib/server/wire.ts";
-import { Context, DateTime, Effect, Layer } from "effect";
+import { Context, DateTime, Effect, Layer, PubSub } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { channelPath, channelsPath, isChannelName } from "./index.ts";
 import type { Channel } from "./index.ts";
 import type { IsoTime } from "../time/index.ts";
 import type { Refusal } from "../http/index.ts";
 import type { Route } from "../http/server.ts";
+import type { Scope } from "effect";
 import { Storage } from "../storage/server.ts";
 import type { StorageUnavailable } from "../storage/server.ts";
 import { echoed } from "../http/index.ts";
@@ -44,7 +45,10 @@ function stamped(fields: NewChannel, createdAt: IsoTime): Channel {
   return { createdAt, name: fields.name };
 }
 
-function channelsOn(storage: Storage["Service"]): ChannelsService {
+function channelsOn(
+  storage: Storage["Service"],
+  publish: (channel: Channel) => Effect.Effect<boolean>,
+): Omit<ChannelsService, "created"> {
   return {
     create: (fields) =>
       Effect.gen(function* createChannel() {
@@ -54,6 +58,7 @@ function channelsOn(storage: Storage["Service"]): ChannelsService {
         if (outcome === "name_taken") {
           return yield* Effect.fail(channelExists(channel.name));
         }
+        yield* publish(channel);
         return channel;
       }),
     get: (name) =>
@@ -92,6 +97,8 @@ export const channelNotFound: (name: string) => Refusal = missingChannel;
 export interface ChannelsService {
   /** Makes a channel, stamped with the current time. Refuses with 409 `channel_exists` when the name is in use. */
   readonly create: (channel: NewChannel) => Effect.Effect<Channel, Refusal | StorageUnavailable>;
+  /** Every channel created from now on, for as long as the scope lasts: the live stream sends each as a `channel` event. */
+  readonly created: Effect.Effect<PubSub.Subscription<Channel>, never, Scope.Scope>;
   /** Every channel, sorted by name. */
   readonly list: Effect.Effect<readonly Channel[], StorageUnavailable>;
   /** The channels `identity` subscribes to, sorted by name. */
@@ -115,7 +122,11 @@ export const channelsLayer: Layer.Layer<Channels, never, Storage> = Layer.effect
   Channels,
   Effect.gen(function* channelsOnStorage() {
     const storage = yield* Storage;
-    return channelsOn(storage);
+    const hub = yield* PubSub.unbounded<Channel>();
+    function publish(channel: Channel): Effect.Effect<boolean> {
+      return PubSub.publish(hub, channel);
+    }
+    return { ...channelsOn(storage, publish), created: PubSub.subscribe(hub) };
   }),
 );
 

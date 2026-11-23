@@ -1,7 +1,7 @@
 import type { Connected, StreamRequest } from "./source.ts";
 import { Effect, Schema, Stream } from "effect";
-import { DisplayNames } from "../../../identities/server.ts";
 import type { Identity } from "../../../identities/index.ts";
+import { IdentityChanges } from "../../../identities/server.ts";
 import type { IdentityEvent } from "../../index.ts";
 import { IdentityEventSchema } from "./wire.ts";
 import { asksForAllChannels } from "./all-channels.ts";
@@ -17,13 +17,13 @@ function identityEvent(
   }));
 }
 
-function identities(request: StreamRequest): Connected<DisplayNames> {
+function identities(request: StreamRequest): Connected<IdentityChanges> {
   return Effect.gen(function* subscribeToIdentities() {
     if (!asksForAllChannels(request)) {
       return Stream.empty;
     }
-    const displayNames = yield* DisplayNames;
-    const changed = yield* displayNames.changed;
+    const changes = yield* IdentityChanges;
+    const changed = yield* changes.changed;
     return Stream.fromSubscription(changed).pipe(Stream.mapEffect(identityEvent));
   });
 }

@@ -9,6 +9,7 @@ interface SentEvent {
 }
 
 const eventTypes = {
+  channel: true,
   identity: true,
   "inbox-item": true,
   message: true,

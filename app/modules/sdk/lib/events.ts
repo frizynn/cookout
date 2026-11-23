@@ -2,6 +2,7 @@ import { CookoutError, isServerErrorCode } from "./errors.ts";
 import type { ServerSentEvent, ServerSentFrame } from "../../http/client.ts";
 import { allChannelsQuery, eventsPath, refusalEvent } from "../../events/index.ts";
 import {
+  isChannelEvent,
   isConnectedEvent,
   isErrorResponse,
   isIdentityEvent,
@@ -50,6 +51,7 @@ function resumeHeaders({ lastEventId }: WatchOptions): Readonly<Record<string, s
 }
 
 const validators: { readonly [Type in EventType]: (data: unknown) => data is Extract<CookoutEvent, { type: Type }> } = {
+  channel: isChannelEvent,
   identity: isIdentityEvent,
   "inbox-item": isInboxItemEvent,
   message: isMessageEvent,

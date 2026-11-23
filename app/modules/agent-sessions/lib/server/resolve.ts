@@ -15,6 +15,7 @@ interface Resolved {
 }
 
 interface On {
+  readonly publishIdentity: (identity: Identity) => Effect.Effect<void>;
   readonly secrets: Secrets["Service"];
   readonly storage: Storage["Service"];
 }
@@ -65,6 +66,7 @@ function createOwned({ caller, name, on }: Asked): Fails<Resolved> {
     if (result !== "created") {
       return yield* Effect.fail(createRefusals(name)[result]);
     }
+    yield* on.publishIdentity(identity);
     return { created: true, identity };
   });
 }

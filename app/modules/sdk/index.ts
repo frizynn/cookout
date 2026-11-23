@@ -89,6 +89,7 @@ export type {
 export type * from "../agent-sessions/index.ts";
 export type * from "./lib/inbox-types.ts";
 export type {
+  ChannelEvent,
   ConnectedEvent,
   CookoutEvent,
   IdentityEvent,

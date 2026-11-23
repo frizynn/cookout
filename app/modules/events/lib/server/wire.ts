@@ -1,6 +1,14 @@
-import type { ConnectedEvent, IdentityEvent, InboxItemEvent, MessageEvent, ReadPositionEvent } from "../../index.ts";
+import type {
+  ChannelEvent,
+  ConnectedEvent,
+  IdentityEvent,
+  InboxItemEvent,
+  MessageEvent,
+  ReadPositionEvent,
+} from "../../index.ts";
 import { InboxItemSchema, ReadPositionSchema } from "../../../inbox/server.ts";
 import { MessageIdSchema, MessageSchema } from "../../../messages/server.ts";
+import { ChannelSchema } from "../../../channels/server.ts";
 import { IdentitySchema } from "../../../identities/server.ts";
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
@@ -19,6 +27,10 @@ export const MessageEventSchema = matchesWire<MessageEvent>()(
 
 export const IdentityEventSchema = matchesWire<IdentityEvent>()(
   Schema.Struct({ identity: IdentitySchema, type: Schema.Literal("identity") }),
+);
+
+export const ChannelEventSchema = matchesWire<ChannelEvent>()(
+  Schema.Struct({ channel: ChannelSchema, type: Schema.Literal("channel") }),
 );
 
 export const ConnectedEventSchema = matchesWire<ConnectedEvent>()(

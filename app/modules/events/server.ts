@@ -8,8 +8,9 @@
  * caller's new inbox items, which the `Messages` service's hub feeds; the
  * caller's new read positions, which the `Inbox` service's hub feeds on every
  * ack from any session; and, when the request asks with `?channels=all`,
- * every new message on every channel and every identity whose display name
- * changes (fed by the `DisplayNames` hub), for the web UI; and a comment
+ * every new message on every channel, every identity created or changed (fed
+ * by the `IdentityChanges` hub) and every channel created (fed by the
+ * `Channels` service's hub), for the web UI; and a comment
  * heartbeat every 15 s, so proxies keep the connection open. On a reconnect
  * with `Last-Event-ID`, the inbox items first replay what the caller missed;
  * only inbox items carry an event ID, so the IDs on one stream strictly increase.
@@ -23,14 +24,15 @@
  * server's token gate, and opens only while the caller holds fewer than `COOKOUT_STREAMS_PER_IDENTITY` streams (429
  * `too_many_streams`, ADR 0033); closing the stream frees its place.
  */
-import type { Connected, EventSource } from "./lib/server/source.ts";
 import {
+  ChannelEventSchema,
   ConnectedEventSchema,
   IdentityEventSchema,
   InboxItemEventSchema,
   MessageEventSchema,
   ReadPositionEventSchema,
 } from "./lib/server/wire.ts";
+import type { Connected, EventSource } from "./lib/server/source.ts";
 import { Effect, Exit, Scope, Stream } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { isLast, lastEventIdIn, refusalSseEvent, sseText } from "./lib/server/source.ts";
@@ -91,6 +93,7 @@ export const eventRoutes: readonly Route<Needs>[] = [eventsRoute];
 
 /** The Schemas of the stream's events, for the SDK's generated validators. */
 export const eventResponseSchemas = {
+  ChannelEvent: ChannelEventSchema,
   ConnectedEvent: ConnectedEventSchema,
   IdentityEvent: IdentityEventSchema,
   InboxItemEvent: InboxItemEventSchema,

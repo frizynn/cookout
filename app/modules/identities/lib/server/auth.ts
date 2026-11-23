@@ -234,3 +234,4 @@ export {
 };
 export type { Principal } from "./principals.ts";
 export { agentToolOf } from "./agent-tool-guard.ts";
+export { IdentityChanges, announced } from "./changes.ts";

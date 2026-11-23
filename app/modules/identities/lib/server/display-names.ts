@@ -1,12 +1,11 @@
-import { Caller, ownsAgent } from "./auth.ts";
-import { Context, Effect, Layer, PubSub, Schema } from "effect";
+import { Caller, IdentityChanges, ownsAgent } from "./auth.ts";
+import { Context, Effect, Layer, Schema } from "effect";
 import type { DisplayName, Identity, IdentityName } from "../../index.ts";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { IdentityResponseSchema, SentDisplayNameSchema } from "./wire.ts";
 import { identityNotFound, nameParam } from "./routes.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
-import type { Scope } from "effect";
 import { Storage } from "../../../storage/server.ts";
 import type { StorageUnavailable } from "../../../storage/server.ts";
 import { identityDisplayNamePath } from "../../index.ts";
@@ -21,7 +20,6 @@ interface DisplayNamesService {
     name: IdentityName,
     displayName: DisplayName | null,
   ) => Effect.Effect<Identity, Refusal | StorageUnavailable>;
-  readonly changed: Effect.Effect<PubSub.Subscription<Identity>, never, Scope.Scope>;
 }
 
 class DisplayNames extends Context.Service<DisplayNames, DisplayNamesService>()(
@@ -54,13 +52,12 @@ function requireMaySet(
   );
 }
 
-const displayNamesLayer: Layer.Layer<DisplayNames, never, Storage> = Layer.effect(
+const displayNamesLayer: Layer.Layer<DisplayNames, never, Storage | IdentityChanges> = Layer.effect(
   DisplayNames,
   Effect.gen(function* displayNamesOnStorage() {
     const storage = yield* Storage;
-    const hub = yield* PubSub.unbounded<Identity>();
+    const changes = yield* IdentityChanges;
     return {
-      changed: PubSub.subscribe(hub),
       set: (caller, name, displayName) =>
         Effect.gen(function* setDisplayName() {
           yield* requireMaySet(storage, caller, name);
@@ -68,7 +65,7 @@ const displayNamesLayer: Layer.Layer<DisplayNames, never, Storage> = Layer.effec
           if (result.status === "not_found") {
             return yield* Effect.fail(identityNotFound(name));
           }
-          yield* PubSub.publish(hub, result.identity);
+          yield* changes.publish(result.identity);
           return result.identity;
         }),
     };

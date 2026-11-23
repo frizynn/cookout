@@ -7,6 +7,7 @@ import {
   displayNameRoutes,
   displayNamesLayer,
   identitiesLayer,
+  identityChangesLayer,
   identityRoutes,
   transferRoutes,
 } from "../../../identities/server.ts";
@@ -54,4 +55,4 @@ export const domainLayers = Layer.mergeAll(
   commandsLayer,
   limitsLayer,
   addressLimitLayer,
-);
+).pipe(Layer.provideMerge(identityChangesLayer));

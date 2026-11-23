@@ -1,4 +1,5 @@
 import { Array as Arr, Effect } from "effect";
+import type { Caller, IdentityChanges } from "./auth.ts";
 import { CreateIdentityRequestSchema, createIdentity, humanCaller } from "./create.ts";
 import {
   DeactivateIdentityResponseSchema,
@@ -9,9 +10,8 @@ import {
 } from "./wire.ts";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import type { Identity, IdentityName, ListIdentitiesQuery } from "../../index.ts";
+import { announced, issueToken, requireAdmin, requireOwnerOrAdmin } from "./auth.ts";
 import { identitiesPath, identityAdminPath, identityTokenPath, isIdentityName } from "../../index.ts";
-import { issueToken, requireAdmin, requireOwnerOrAdmin } from "./auth.ts";
-import type { Caller } from "./auth.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
 import type { Secrets } from "../../../secrets/server.ts";
@@ -53,12 +53,13 @@ function shownFor(query: ListIdentitiesQuery, stored: readonly Identity[]): read
 
 const withToken = HttpServerResponse.schemaJson(IdentityWithTokenResponseSchema);
 
-const createRoute: Route<Caller | Storage | Secrets> = {
+const createRoute: Route<Caller | Storage | Secrets | IdentityChanges> = {
   handle: () =>
     Effect.gen(function* createIdentityRoute() {
       const caller = yield* humanCaller;
       const body = yield* HttpServerRequest.schemaBodyJson(CreateIdentityRequestSchema);
       const created = yield* createIdentity({ body, caller });
+      yield* announced(created.identity);
       return yield* withToken(created, { status: CREATED });
     }),
   method: "POST",
@@ -126,7 +127,7 @@ function changedIdentity(name: IdentityName, result: SetAdminResult): Effect.Eff
   return Effect.fail(identityNotFound(name));
 }
 
-function adminFlagRoute(method: "PUT" | "DELETE"): Route<Caller | Storage> {
+function adminFlagRoute(method: "PUT" | "DELETE"): Route<Caller | Storage | IdentityChanges> {
   return {
     handle: (params) =>
       Effect.gen(function* setAdminRoute() {
@@ -134,7 +135,7 @@ function adminFlagRoute(method: "PUT" | "DELETE"): Route<Caller | Storage> {
         const name = yield* nameParam(params);
         const storage = yield* Storage;
         const result = yield* storage.setAdmin(name, method === "PUT");
-        const identity = yield* changedIdentity(name, result);
+        const identity = yield* Effect.flatMap(changedIdentity(name, result), announced);
         return yield* HttpServerResponse.schemaJson(IdentityResponseSchema)({ identity });
       }),
     method,
@@ -149,7 +150,7 @@ export const responseSchemas = {
   ListIdentitiesResponse: ListIdentitiesResponseSchema,
 };
 
-export const identityAdminRoutes: readonly Route<Caller | Storage | Secrets>[] = [
+export const identityAdminRoutes: readonly Route<Caller | Storage | Secrets | IdentityChanges>[] = [
   createRoute,
   listRoute,
   rotateRoute,
