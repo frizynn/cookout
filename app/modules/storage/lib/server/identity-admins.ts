@@ -1,6 +1,6 @@
 import { Array as Arr, Effect, Predicate, Schema } from "effect";
+import { IDENTITY_COLUMNS, IdentityRow, toIdentity } from "./identity-row.ts";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
-import { IdentityRow, toIdentity } from "./identity-row.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { unreadable } from "./errors.ts";
@@ -17,9 +17,9 @@ type SetAdmin = (name: IdentityName, admin: boolean) => Fails<SetAdminResult>;
 
 const LAST_ADMIN_COUNT = 1;
 
-const SELECT_IDENTITY = "SELECT name, kind, owner, admin, created_at, display_name FROM identities WHERE name = ?";
+const SELECT_IDENTITY = `SELECT ${IDENTITY_COLUMNS} FROM identities WHERE name = ?`;
 
-const COUNT_ADMINS = "SELECT count(*) AS count FROM identities WHERE admin = 1";
+const COUNT_ADMINS = "SELECT count(*) AS count FROM identities WHERE admin = 1 AND deactivated = 0";
 
 const AdminCountRow = Schema.Struct({ count: Schema.Int });
 
@@ -45,7 +45,7 @@ function memorySetAdmin(
     if (Predicate.isUndefined(identity)) {
       return { status: "not_found" };
     }
-    const admins = Arr.filter([...identities.values()], (found) => found.admin).length;
+    const admins = Arr.filter([...identities.values()], (found) => found.admin && found.deactivated !== true).length;
     const result = adminChange({ ...identity }, admin, admins);
     if (result.status === "set") {
       identities.set(name, { ...result.identity });

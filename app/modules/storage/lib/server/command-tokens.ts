@@ -38,6 +38,7 @@ interface MemoryCommandTokensOptions {
 
 type MemoryCommandTokensSection = CommandTokensSection & {
   readonly dropCommandTokens: (threadIds: ReadonlySet<MessageId>) => void;
+  readonly dropCommandTokensOf: (handler: IdentityName) => void;
 };
 
 function memoryCommandTokens({ findIdentity, state }: MemoryCommandTokensOptions): MemoryCommandTokensSection {
@@ -67,6 +68,13 @@ function memoryCommandTokens({ findIdentity, state }: MemoryCommandTokensOptions
         }
       }
     },
+    dropCommandTokensOf: (handler) => {
+      for (const [hash, stored] of tokens) {
+        if (stored.handler === handler) {
+          tokens.delete(hash);
+        }
+      }
+    },
     findCommandToken: (hash) => open(() => find(hash)),
   };
 }
@@ -85,7 +93,7 @@ function toGrant(row: unknown): Fails<CommandTokenGrant> {
   );
 }
 
-const FIND_GRANT = `SELECT i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name, t.thread_id, t.expires_at
+const FIND_GRANT = `SELECT i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name, i.deactivated, t.thread_id, t.expires_at
   FROM command_tokens AS t JOIN identities AS i ON i.name = t.handler_name WHERE t.hash = ?`;
 
 function sqliteCommandTokens(db: SqliteDatabase): CommandTokensSection {

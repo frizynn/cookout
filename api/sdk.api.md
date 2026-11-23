@@ -55,6 +55,7 @@ type IdentityFields = {
   readonly displayName?: DisplayName;
   readonly admin: boolean;
   readonly createdAt: IsoTime;
+  readonly deactivated?: true;
 };
 /**
  * An identity's name: 1–64 lowercase letters, digits or `-`, so `@name` mentions parse cleanly, or two such parts
@@ -78,7 +79,7 @@ type IdentityKind = (typeof identityKinds)[number];
 /**
  * A person using the board as themself. A human is its own person, so it has no owner, and its name has no `/`. Any
  * human can create agents it owns; an admin can also create humans and agents owned by any human, rotate tokens and
- * delete identities.
+ * deactivate identities.
  */
 type HumanIdentity = IdentityFields & {
   readonly kind: "human";
@@ -90,9 +91,13 @@ type AgentIdentity = IdentityFields & {
   /** Present, and true, on a command's handler identity in `GET /v1/identities`. */
   readonly handler?: true;
 };
-/** An identity as the server shows it: a human or an agent, never both. Its token is never part of it. */
+/**
+ * An identity as the server shows it: a human or an agent, never both. Its token is never part of it. A Deactivated
+ * identity has `deactivated: true`: its history and name stay, but every token it holds fails with 401, it can't be
+ * mentioned, and `GET /v1/identities` leaves it out unless asked (ADR 0043).
+ */
 type Identity = HumanIdentity | AgentIdentity;
-/** The answer to `GET /v1/whoami` and `DELETE /v1/identities/<name>`. */
+/** The answer to `GET /v1/whoami`, and to the admin and display-name changes. */
 type IdentityResponse = {
   readonly identity: Identity;
 };
@@ -105,6 +110,16 @@ type IdentityWithTokenResponse = {
 type ListIdentitiesResponse = {
   readonly identities: readonly Identity[];
 };
+/** The query of `GET /v1/identities`: Deactivated identities are left out unless `include` is `deactivated`. */
+interface ListIdentitiesQuery {
+  readonly include?: "deactivated";
+}
+/** The answer to `POST /v1/identities/:name/deactivate`: the identity, and the names of the agents deactivated with it. */
+interface DeactivateIdentityResponse {
+  readonly identity: Identity;
+  /** The agents a deactivated human owned, sorted by name; empty for an agent. */
+  readonly agents: readonly IdentityName[];
+}
 /**
  * The body of `POST /v1/identities`. Any human may create an agent it owns; only an admin may create a human, or an
  * agent owned by another human (403 `admin_only`). An agent may create nothing (403 `human_only`).
@@ -403,7 +418,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "owns_agents", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "agent_session_live", "idle_expiry_too_long", "agent_session_required", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "owner_deactivated", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "agent_session_live", "idle_expiry_too_long", "agent_session_required", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
@@ -461,14 +476,24 @@ export type CookoutClient = {
   readonly login: () => Promise<IdentityResponse>;
   /** `DELETE /v1/session`: clears the session cookie. */
   readonly logout: () => Promise<IdentityResponse>;
-  /** `GET /v1/identities`: every identity with its kind and owner, sorted by name. A command's handler has `handler: true`. */
-  readonly listIdentities: () => Promise<ListIdentitiesResponse>;
+  /** `GET /v1/identities`: every identity, sorted by name; Deactivated ones only with `{ include: "deactivated" }`. */
+  readonly listIdentities: (query?: ListIdentitiesQuery) => Promise<ListIdentitiesResponse>;
   /** Any human creates agents it owns; see `CreateIdentityRequest`. The token is shown this once. A name in use is 409. */
   readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;
   /** Admin only. Issues a new token; the old one stops working at once. */
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
-  /** Admin only. Removes it; its token stops working. 409 for the last admin, or a human who still owns agents. */
-  readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
+  /**
+   * `POST /v1/identities/:name/deactivate`: an admin deactivates anyone, a human their own agents (403 `not_owner`
+   * otherwise). Every token it holds fails at once, and a human's agents are deactivated with it (`agents`). Its
+   * messages and name stay; the name can't be created again. The last admin is 409 `last_admin`.
+   */
+  readonly deactivateIdentity: (name: string) => Promise<DeactivateIdentityResponse>;
+  /**
+   * `POST /v1/identities/:name/reactivate`: an admin reactivates anyone, a human their own agents. Answers a fresh
+   * token, shown this once; old tokens stay dead. 409 `not_deactivated` if it isn't, or `owner_deactivated` for an
+   * agent whose owner still is.
+   */
+  readonly reactivateIdentity: (name: string) => Promise<IdentityWithTokenResponse>;
   /** Admin only. Makes a human an admin and answers it; an admin stays one. An agent is 403 `human_only`. */
   readonly makeAdmin: (name: string) => Promise<IdentityResponse>;
   /** Admin only. Removes admin and answers the identity. The last admin keeps it (409 `last_admin`). */
@@ -589,5 +614,5 @@ export type CookoutClient = {
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentSessionLiveDetails, type AgentSessionResponse, type AgentTool, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DisplayName, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityEvent, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Refusal, type Reply, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, refusalOf };
+export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentSessionLiveDetails, type AgentSessionResponse, type AgentTool, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type DeactivateIdentityResponse, type DisplayName, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityEvent, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Refusal, type Reply, type SchemaProblem, type ServerSentEvent, type SetDisplayNameRequest, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions, refusalOf };
 ```

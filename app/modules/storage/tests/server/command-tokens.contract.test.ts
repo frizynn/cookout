@@ -40,9 +40,9 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
-  "storage contract ($adapter): a command token whose handler identity was deleted is not found",
+  "storage contract ($adapter): a command token whose handler was deactivated is not found, even once it is reactivated",
   ({ layer }) =>
-    Effect.gen(function* handlerDeleted() {
+    Effect.gen(function* handlerDeactivated() {
       const { storage } = yield* openStore(layer);
       yield* storage.addCommand(command("deploy"), handler("deploy"));
       yield* storage.createChannel(channel("grill"));
@@ -53,7 +53,8 @@ it.effect.each(storageLayers)(
         hash: tokenHash("hash:command"),
         threadId: call.id,
       });
-      yield* storage.deleteIdentity(identityName("deploy"));
+      yield* storage.deactivateIdentity(identityName("deploy"));
+      yield* storage.reactivateIdentity(identityName("deploy"), tokenHash("hash:fresh"));
       const found = yield* storage.findCommandToken(tokenHash("hash:command"));
 
       expect(found).toBeUndefined();

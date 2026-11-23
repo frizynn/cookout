@@ -96,7 +96,7 @@ it.effect("a path segment that isn't valid percent-encoding is 400 invalid_path 
       [
         HttpClientRequest.get(`${cookout.url}/v1/channels/%E0`),
         HttpClientRequest.get(`${cookout.url}/v1/channels/%E0/messages`),
-        HttpClientRequest.make("DELETE")(`${cookout.url}/v1/identities/%E0`),
+        HttpClientRequest.post(`${cookout.url}/v1/identities/%E0/deactivate`),
         HttpClientRequest.post(`${cookout.url}/v1/identities/%E0/token`),
       ],
       Effect.forEach(

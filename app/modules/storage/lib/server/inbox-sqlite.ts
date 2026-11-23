@@ -256,12 +256,4 @@ function sqliteInbox({ db, reader }: InboxOn): InboxSection {
   };
 }
 
-const INBOX_TABLES = [
-  "message_mentions",
-  "follows",
-  "subscriptions",
-  "channel_read_positions",
-  "thread_read_positions",
-] as const;
-
-export { INBOX_TABLES, type MessageReader, recordAppended, sqliteInbox };
+export { type MessageReader, recordAppended, sqliteInbox };

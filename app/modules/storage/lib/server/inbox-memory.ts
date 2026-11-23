@@ -197,26 +197,7 @@ function follow(change: KeysChange) {
   };
 }
 
-interface Forgetting {
-  readonly inbox: MemoryInbox;
-  readonly identity: IdentityName;
-}
-
-type MemoryInboxSection = InboxSection & {
-  readonly forgetIdentity: (identity: IdentityName) => Fails<void>;
-};
-
-function withoutIdentity({ identity, inbox }: Forgetting): MemoryInbox {
-  function kept(key: string): boolean {
-    return !Str.startsWith(`${identity} `)(key);
-  }
-  return {
-    follows: new Set(Arr.filter([...inbox.follows], kept)),
-    mentions: new Set(Arr.filter([...inbox.mentions], kept)),
-    positions: new Map(Arr.filter([...inbox.positions], ([key]: readonly [string, MessageId]) => kept(key))),
-    subscriptions: new Set(Arr.filter([...inbox.subscriptions], kept)),
-  };
-}
+type MemoryInboxSection = InboxSection;
 
 interface ForgettingChannel {
   readonly inbox: MemoryInbox;
@@ -257,8 +238,6 @@ function memoryInbox({ changeInbox, channelExists, listChannels, read }: BoardAc
   return {
     ackMessage: (identity, id) => changeFound((board) => ack({ board, id, identity })),
     followThread: (identity, id) => changeFound((board) => follow(withKey)({ board, id, identity })),
-    forgetIdentity: (identity) =>
-      Effect.asVoid(changeInbox((board) => [true, withoutIdentity({ identity, inbox: board.inbox })])),
     listInbox: (identity) => read((board) => inboxOf({ board, identity })),
     listInboxAfter: (identity, after) =>
       read((board) => Arr.filter(inboxOf({ board, identity }), (item) => item.message.id > after)),

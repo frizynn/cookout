@@ -119,11 +119,11 @@ it.effect("cookout watch prints one stdout line and exits 3 when its token is ro
   }).pipe(Effect.provide(commandLineServices)),
 );
 
-it.effect("cookout watch --json prints one JSON error line and exits 3 when its identity is deleted", () =>
-  Effect.gen(function* watchDeleted() {
+it.effect("cookout watch --json prints one JSON error line and exits 3 when its identity is deactivated", () =>
+  Effect.gen(function* watchDeactivated() {
     const { result, stdoutLines } = yield* watchUntilExit({
       args: ["watch", "--json"],
-      whileWatching: cutAfter(({ cookout }) => answer(() => cookout.client.deleteIdentity("bob"))),
+      whileWatching: cutAfter(({ cookout }) => answer(() => cookout.client.deactivateIdentity("bob"))),
     });
 
     expect(result).toMatchObject({ exitCode: EXIT_TOKEN, stdoutJson: { error: { code: "token_revoked" } } });

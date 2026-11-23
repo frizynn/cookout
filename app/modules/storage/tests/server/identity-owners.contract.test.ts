@@ -62,25 +62,3 @@ it.effect.each(storageLayers)(
       expect(rotated).toStrictEqual({ identity: identity("matt/helper"), status: "replaced" });
     }),
 );
-
-it.effect.each(storageLayers)(
-  "storage contract ($adapter): a human who owns agents is not deleted, and is once they are gone",
-  ({ layer }) =>
-    Effect.gen(function* ownerKept() {
-      const { storage } = yield* openStore(layer);
-      yield* storage.createIdentity(identity("release-bot"), hashA);
-      yield* storage.createIdentity(identity("matt/helper"), hashB);
-      const refused = yield* storage.deleteIdentity(nameOf("matt"));
-      const stillThere = yield* storage.findIdentityByName(nameOf("matt"));
-      yield* Effect.forEach(
-        ["release-bot", "matt/helper"],
-        (agent) => storage.deleteIdentity(nameOf(agent)),
-        ONE_AT_A_TIME,
-      );
-      const deleted = yield* storage.deleteIdentity(nameOf("matt"));
-
-      expect(refused).toStrictEqual({ agents: ["matt/helper", "release-bot"], status: "owns_agents" });
-      expect(stillThere).toStrictEqual(identity("matt", { kind: "human" }));
-      expect(deleted).toStrictEqual({ identity: identity("matt", { kind: "human" }), status: "deleted" });
-    }),
-);

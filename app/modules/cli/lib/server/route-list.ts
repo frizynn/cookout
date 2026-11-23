@@ -1,7 +1,13 @@
 import { agentSessionRoutes, agentSessionsLayer } from "../../../agent-sessions/server.ts";
 import { channelRoutes, channelsLayer } from "../../../channels/server.ts";
 import { commandRoutes, commandsLayer } from "../../../commands/server.ts";
-import { displayNameRoutes, displayNamesLayer, identitiesLayer, identityRoutes } from "../../../identities/server.ts";
+import {
+  deactivationRoutes,
+  displayNameRoutes,
+  displayNamesLayer,
+  identitiesLayer,
+  identityRoutes,
+} from "../../../identities/server.ts";
 import { inboxLayer, inboxRoutes } from "../../../inbox/server.ts";
 import { messageRoutes, messagesLayer } from "../../../messages/server.ts";
 import { Layer } from "effect";
@@ -24,6 +30,7 @@ type RouteNeeds =
 export const routes: readonly Route<RouteNeeds>[] = [
   ...identityRoutes,
   ...displayNameRoutes,
+  ...deactivationRoutes,
   ...channelRoutes,
   ...messageRoutes,
   ...agentSessionRoutes,

@@ -41,7 +41,7 @@ interface MemoryCommandsOptions {
 }
 
 type MemoryCommandsSection = CommandsSection &
-  Pick<MemoryCommandTokensSection, "dropCommandTokens"> &
+  Pick<MemoryCommandTokensSection, "dropCommandTokens" | "dropCommandTokensOf"> &
   Pick<MemoryDeliveriesSection, "dropDeliveries">;
 
 function memoryCommands({ findIdentity, state, placeHandler }: MemoryCommandsOptions): MemoryCommandsSection {

@@ -25,8 +25,10 @@ import type { AgentSessionResponse, JoinRequest, LeaveResponse } from "./lib/age
 import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "./lib/channels.ts";
 import type {
   CreateIdentityRequest,
+  DeactivateIdentityResponse,
   IdentityResponse,
   IdentityWithTokenResponse,
+  ListIdentitiesQuery,
   ListIdentitiesResponse,
 } from "../identities/index.ts";
 import type { EventStream, WatchOptions } from "./lib/events.ts";
@@ -68,22 +70,7 @@ export type {
 } from "../commands/index.ts";
 export type { HealthResponse, SchemaProblem } from "../http/index.ts";
 export type { IsoTime } from "../time/index.ts";
-export type {
-  AgentIdentity,
-  AgentTool,
-  CreateIdentityRequest,
-  DisplayName,
-  HumanIdentity,
-  Identity,
-  IdentityKind,
-  IdentityName,
-  IdentityResponse,
-  IdentityWithTokenResponse,
-  ListIdentitiesResponse,
-  Owner,
-  SetDisplayNameRequest,
-  Token,
-} from "../identities/index.ts";
+export type * from "./lib/identity-types.ts";
 export type {
   Author,
   JsonValue,
@@ -157,14 +144,24 @@ export type CookoutClient = {
   readonly login: () => Promise<IdentityResponse>;
   /** `DELETE /v1/session`: clears the session cookie. */
   readonly logout: () => Promise<IdentityResponse>;
-  /** `GET /v1/identities`: every identity with its kind and owner, sorted by name. A command's handler has `handler: true`. */
-  readonly listIdentities: () => Promise<ListIdentitiesResponse>;
+  /** `GET /v1/identities`: every identity, sorted by name; Deactivated ones only with `{ include: "deactivated" }`. */
+  readonly listIdentities: (query?: ListIdentitiesQuery) => Promise<ListIdentitiesResponse>;
   /** Any human creates agents it owns; see `CreateIdentityRequest`. The token is shown this once. A name in use is 409. */
   readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;
   /** Admin only. Issues a new token; the old one stops working at once. */
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
-  /** Admin only. Removes it; its token stops working. 409 for the last admin, or a human who still owns agents. */
-  readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
+  /**
+   * `POST /v1/identities/:name/deactivate`: an admin deactivates anyone, a human their own agents (403 `not_owner`
+   * otherwise). Every token it holds fails at once, and a human's agents are deactivated with it (`agents`). Its
+   * messages and name stay; the name can't be created again. The last admin is 409 `last_admin`.
+   */
+  readonly deactivateIdentity: (name: string) => Promise<DeactivateIdentityResponse>;
+  /**
+   * `POST /v1/identities/:name/reactivate`: an admin reactivates anyone, a human their own agents. Answers a fresh
+   * token, shown this once; old tokens stay dead. 409 `not_deactivated` if it isn't, or `owner_deactivated` for an
+   * agent whose owner still is.
+   */
+  readonly reactivateIdentity: (name: string) => Promise<IdentityWithTokenResponse>;
   /** Admin only. Makes a human an admin and answers it; an admin stays one. An agent is 403 `human_only`. */
   readonly makeAdmin: (name: string) => Promise<IdentityResponse>;
   /** Admin only. Removes admin and answers the identity. The last admin keeps it (409 `last_admin`). */

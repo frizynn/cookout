@@ -38,17 +38,41 @@ const identityCreateCommand = Command.make(
   ),
 );
 
-const identityListCommand = Command.make("list", {}, () => answer((client) => client.listIdentities())).pipe(
-  Command.withDescription("List every identity with its kind and owner, sorted by name."),
-);
+const identityListCommand = Command.make(
+  "list",
+  {
+    deactivated: Flag.Boolean("deactivated").pipe(
+      Flag.withDefault(false),
+      Flag.withDescription("Also list deactivated identities, marked deactivated: true."),
+    ),
+  },
+  ({ deactivated }) => {
+    if (deactivated) {
+      return answer((client) => client.listIdentities({ include: "deactivated" }));
+    }
+    return answer((client) => client.listIdentities());
+  },
+).pipe(Command.withDescription("List every active identity with its kind and owner, sorted by name."));
 
 const identityRotateCommand = Command.make("rotate", { name: identityName }, ({ name }) =>
   answer((client) => client.rotateToken(name)),
 ).pipe(Command.withDescription("Issue a new token for an identity (admin only). The old one stops working at once."));
 
-const identityDeleteCommand = Command.make("delete", { name: identityName }, ({ name }) =>
-  answer((client) => client.deleteIdentity(name)),
-).pipe(Command.withDescription("Delete an identity (admin only). Its token stops working."));
+const identityDeactivateCommand = Command.make("deactivate", { name: identityName }, ({ name }) =>
+  answer((client) => client.deactivateIdentity(name)),
+).pipe(
+  Command.withDescription(
+    "Deactivate an identity (admin, or a human for their own agents). Its tokens stop working, a human's agents are deactivated too, and its messages and name stay.",
+  ),
+);
+
+const identityReactivateCommand = Command.make("reactivate", { name: identityName }, ({ name }) =>
+  answer((client) => client.reactivateIdentity(name)),
+).pipe(
+  Command.withDescription(
+    "Reactivate a deactivated identity (admin, or a human for their own agents). A fresh token is shown this once.",
+  ),
+);
 
 const identityAdminCommand = Command.make(
   "admin",
@@ -92,12 +116,15 @@ const identityDisplayNameCommand = Command.make(
 ).pipe(Command.withDescription("Set or clear a display name: your own, your agent's, or (admin) anyone's."));
 
 const identityCommand = Command.make("identity").pipe(
-  Command.withDescription("Create, list, rotate and delete identities, make or remove admins, and set display names."),
+  Command.withDescription(
+    "Create, list, rotate, deactivate and reactivate identities, make or remove admins, and set display names.",
+  ),
   Command.withSubcommands([
     identityCreateCommand,
     identityListCommand,
     identityRotateCommand,
-    identityDeleteCommand,
+    identityDeactivateCommand,
+    identityReactivateCommand,
     identityAdminCommand,
     identityDisplayNameCommand,
   ]),

@@ -30,7 +30,7 @@ const SessionRow = Schema.Struct({
 const FIND_LIVE = `SELECT expires_at FROM agent_session_tokens
   WHERE identity_name = ? AND revoked = 0 AND expires_at > ? ORDER BY expires_at DESC LIMIT 1`;
 
-const FIND_SESSION = `SELECT i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name,
+const FIND_SESSION = `SELECT i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name, i.deactivated,
   t.expires_at, t.idle_seconds, t.revoked
   FROM agent_session_tokens AS t JOIN identities AS i ON i.name = t.identity_name WHERE t.hash = ?`;
 

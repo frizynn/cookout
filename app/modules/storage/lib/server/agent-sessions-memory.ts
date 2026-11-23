@@ -23,7 +23,7 @@ interface Kept extends StoredAgentSession {
 type Sessions = Map<TokenHash, Kept>;
 
 interface MemoryAgentSessions extends AgentSessionsSection {
-  readonly dropAgentSessions: (identity: IdentityName) => Effect.Effect<void>;
+  readonly revokeAgentSessionsOf: (identity: IdentityName) => Effect.Effect<void>;
 }
 
 interface MemoryAgentSessionsOptions {
@@ -85,16 +85,16 @@ function memoryAgentSessions({ findIdentity, state }: MemoryAgentSessionsOptions
     });
   }
   return {
-    dropAgentSessions: (identity) =>
-      Effect.sync(() => {
-        for (const kept of Arr.filter([...sessions.values()], (each) => each.identity === identity)) {
-          sessions.delete(kept.hash);
-        }
-      }),
     issueAgentSession: (request) => open(() => issue(sessions, request)),
     revokeAgentSession: (hash) =>
       open(() => {
         for (const kept of Option.toArray(Option.fromNullishOr(sessions.get(hash)))) {
+          revoke(sessions, kept);
+        }
+      }),
+    revokeAgentSessionsOf: (identity) =>
+      Effect.sync(() => {
+        for (const kept of Arr.filter([...sessions.values()], (each) => each.identity === identity)) {
           revoke(sessions, kept);
         }
       }),

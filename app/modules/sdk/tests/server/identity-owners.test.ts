@@ -4,7 +4,6 @@ import { expect, it } from "@effect/vitest";
 
 const BAD_REQUEST = 400;
 const FORBIDDEN = 403;
-const CONFLICT = 409;
 const BOOT = "2026-01-01T00:00:00.000Z";
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const HUMAN = { kind: "human" } as const;
@@ -129,49 +128,28 @@ it.effect("@owner/name mentions a namespaced agent and reaches its inbox", () =>
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("whoami, display-name, rotate and delete work on a namespaced name", () =>
+it.effect("whoami, display-name, rotate and deactivate work on a namespaced name", () =>
   Effect.gen(function* namespacedRoutes() {
     const cookout = yield* TestCookout;
     const grace = yield* cookout.createIdentity("grace", HUMAN);
     const helper = yield* cookout.createIdentity("grace/helper", { owner: "grace" });
     const whoami = yield* answer(helper.client.whoami);
     const named = yield* answer(() => grace.client.setDisplayName("grace/helper", "Helper"));
-    const [rotated, deleted] = yield* Effect.all(
+    const [rotated, deactivated] = yield* Effect.all(
       [
         answer(() => cookout.client.rotateToken("grace/helper")),
-        answer(() => cookout.client.deleteIdentity("grace/helper")),
+        answer(() => cookout.client.deactivateIdentity("grace/helper")),
       ],
       ONE_AT_A_TIME,
     );
     const gone = yield* refusal(cookout.clientFor(rotated.token).whoami);
 
     expect(whoami.identity).toMatchObject({ name: "grace/helper", owner: "grace" });
-    expect([named, rotated, deleted]).toMatchObject([
+    expect([named, rotated, deactivated]).toMatchObject([
       { identity: { displayName: "Helper", name: "grace/helper" } },
       { identity: { name: "grace/helper" } },
       { identity: { name: "grace/helper" } },
     ]);
     expect(gone).toMatchObject({ code: "token_revoked" });
-  }).pipe(Effect.provide(testCookout())),
-);
-
-it.effect("deleting a human who still owns agents is refused with 409, naming them", () =>
-  Effect.gen(function* ownerDeleteRefused() {
-    const cookout = yield* TestCookout;
-    yield* cookout.createIdentity("ada", HUMAN);
-    yield* cookout.createIdentity("release-bot", { owner: "ada" });
-    yield* cookout.createIdentity("ada/helper", { owner: "ada" });
-    const refused = yield* refusal(() => cookout.client.deleteIdentity("ada"));
-    yield* Effect.forEach(["release-bot", "ada/helper"], (name) => answer(() => cookout.client.deleteIdentity(name)), {
-      concurrency: 1,
-    });
-    const deleted = yield* answer(() => cookout.client.deleteIdentity("ada"));
-
-    expect(refused).toMatchObject({
-      code: "owns_agents",
-      details: { agents: ["ada/helper", "release-bot"] },
-      status: CONFLICT,
-    });
-    expect(deleted.identity).toMatchObject({ kind: "human", name: "ada" });
   }).pipe(Effect.provide(testCookout())),
 );

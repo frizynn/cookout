@@ -34,7 +34,7 @@ const verbs: readonly (readonly string[])[] = [
   ["message", "post", "grill", "Yes.", "--reply-to", "1"],
   ["message", "list", "grill", "--limit", "1", "--before", "2"],
   ["thread", "get", "2"],
-  ["identity", "delete", "bot"],
+  ["identity", "deactivate", "bot"],
   ["whoami"],
   ["identity", "list"],
   ["channel", "list"],
@@ -63,7 +63,7 @@ it.effect("every verb passes its arguments and flags to the server and prints th
       { ...succeeded, stdoutJson: { message: { id: 2, replyTo: 1 } } },
       { ...succeeded, stdoutJson: { hasMore: false, messages: [{ id: 1 }] } },
       { ...succeeded, stdoutJson: { parent: { id: 1 }, replies: [{ id: 2 }] } },
-      { ...succeeded, stdoutJson: { identity: { name: "bot" } } },
+      { ...succeeded, stdoutJson: { agents: [], identity: { deactivated: true, name: "bot" } } },
       { ...succeeded, stdoutJson: { identity: { name: "admin" } } },
       { ...succeeded, stdoutJson: { identities: [{ kind: "human", name: "admin" }] } },
       { ...succeeded, stdoutJson: { channels: [{ name: "grill" }] } },
@@ -80,7 +80,7 @@ it.effect("a refusal is JSON on stderr, with its status, and exit code 1", () =>
   Effect.gen(function* refusalOnStderr() {
     const cookout = yield* TestCookout;
     const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
-    const gone = yield* runCookout({ args: ["identity", "delete", "nobody"], env });
+    const gone = yield* runCookout({ args: ["identity", "deactivate", "nobody"], env });
 
     expect(gone).toMatchObject({
       exitCode: EXIT_FAILURE,

@@ -1,15 +1,15 @@
 import type { AgentIdentity, Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
-import type { CreateRefusal, DeleteIdentityResult } from "./identity-owners.ts";
 import { Effect, Option, Predicate, Schema } from "effect";
-import { IdentityRow, toIdentity } from "./identity-row.ts";
+import { IDENTITY_COLUMNS, IdentityRow, toIdentity } from "./identity-row.ts";
 import {
   memoryCreateRefusal,
-  memoryDeleteIdentity,
+  memoryDeactivations,
   sqliteCreateRefusal,
-  sqliteDeleteIdentity,
+  sqliteDeactivations,
 } from "./identity-owners.ts";
 import { memoryDisplayNames, sqliteDisplayNames } from "./display-names.ts";
 import { memorySetAdmin, sqliteSetAdmin } from "./identity-admins.ts";
+import type { CreateRefusal } from "./identity-owners.ts";
 import type { DisplayNamesSection } from "./display-names.ts";
 import type { Fails } from "./errors.ts";
 import type { FindIdentity } from "./identity-row.ts";
@@ -29,16 +29,16 @@ type ReplaceTokenResult =
 
 type SetOnlyTokenResult = "created" | "replaced" | "unchanged";
 
-export type IdentitiesSection = DisplayNamesSection & {
-  readonly createIdentity: (identity: Identity, hash: TokenHash) => Fails<"created" | CreateRefusal>;
-  readonly setOnlyToken: (identity: Identity, hash: TokenHash) => Fails<SetOnlyTokenResult>;
-  readonly listIdentities: () => Fails<readonly Identity[]>;
-  readonly findIdentityByTokenHash: (hash: TokenHash) => Fails<TokenLookup>;
-  readonly findIdentityByName: (name: IdentityName) => Fails<Identity | undefined>;
-  readonly replaceToken: (name: IdentityName, hash: TokenHash) => Fails<ReplaceTokenResult>;
-  readonly deleteIdentity: (name: IdentityName) => Fails<DeleteIdentityResult>;
-  readonly setAdmin: ReturnType<typeof sqliteSetAdmin>;
-};
+export type IdentitiesSection = DisplayNamesSection &
+  ReturnType<typeof sqliteDeactivations> & {
+    readonly createIdentity: (identity: Identity, hash: TokenHash) => Fails<"created" | CreateRefusal>;
+    readonly setOnlyToken: (identity: Identity, hash: TokenHash) => Fails<SetOnlyTokenResult>;
+    readonly listIdentities: () => Fails<readonly Identity[]>;
+    readonly findIdentityByTokenHash: (hash: TokenHash) => Fails<TokenLookup>;
+    readonly findIdentityByName: (name: IdentityName) => Fails<Identity | undefined>;
+    readonly replaceToken: (name: IdentityName, hash: TokenHash) => Fails<ReplaceTokenResult>;
+    readonly setAdmin: ReturnType<typeof sqliteSetAdmin>;
+  };
 
 type MemoryIdentities = {
   readonly identities: Map<IdentityName, Identity>;
@@ -119,23 +119,25 @@ type MemoryIdentitiesSection = IdentitiesSection & {
 export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection => {
   const data: MemoryIdentities = { activeTokens: new Map(), identities: new Map(), revokedTokens: new Set() };
   const open = <A>(work: () => A): Fails<A> => Effect.andThen(state.ensureOpen, Effect.sync(work));
+  const deactivations = memoryDeactivations({
+    holdToken: (name, hash) => {
+      data.activeTokens.set(hash, name);
+    },
+    identities: data.identities,
+    revokeTokensOf: (name) => {
+      revokeTokensOf(data, name);
+    },
+  });
   return {
     createIdentity: (identity, hash) => open(() => createIn(data, identity, hash)),
-    deleteIdentity: (name) =>
-      open(() =>
-        memoryDeleteIdentity({
-          identities: data.identities,
-          revokeTokensOf: (held) => {
-            revokeTokensOf(data, held);
-          },
-        })(name),
-      ),
+    deactivateIdentity: (name) => open(() => deactivations.deactivate(name)),
     findIdentity: (name) => data.identities.get(name),
     findIdentityByName: (name) => open(() => data.identities.get(name)),
     findIdentityByTokenHash: (hash) => open(() => lookUp(data, hash)),
     listIdentities: () => open(() => [...data.identities.values()].sort(byName).map((found) => ({ ...found }))),
     ...memoryDisplayNames({ identities: data.identities, open }),
     placeHandler: placeHandlerIn(data),
+    reactivateIdentity: (name, hash) => open(() => deactivations.reactivate(name, hash)),
     replaceToken: (name, hash) =>
       open((): ReplaceTokenResult => {
         const identity = data.identities.get(name);
@@ -174,8 +176,6 @@ const toLookup = (row: unknown): Fails<TokenLookup> =>
               })),
       );
 
-const identityColumns = "name, kind, owner, admin, created_at, display_name";
-
 export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
   const count = (sql: string, ...params: readonly string[]) =>
     db.get(sql, ...params).pipe(
@@ -184,7 +184,7 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
     );
   const find = (name: IdentityName) =>
     db
-      .get(`SELECT ${identityColumns} FROM identities WHERE name = ?`, name)
+      .get(`SELECT ${IDENTITY_COLUMNS} FROM identities WHERE name = ?`, name)
       .pipe(Effect.flatMap((row) => (row === undefined ? Effect.succeed(undefined) : decode(IdentityRow)(row))));
   const insert = (identity: Identity, hash: TokenHash) =>
     Effect.andThen(
@@ -213,7 +213,7 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
           return "created" as const;
         }),
       ),
-    deleteIdentity: sqliteDeleteIdentity(db),
+    ...sqliteDeactivations(db),
     findIdentityByName: (name) =>
       Effect.map(find(name), (row) => Option.getOrUndefined(Option.map(Option.fromUndefinedOr(row), toIdentity))),
     findIdentityByTokenHash: (hash) =>
@@ -227,7 +227,7 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
         .pipe(Effect.flatMap(toLookup)),
     listIdentities: () =>
       db
-        .all(`SELECT ${identityColumns} FROM identities ORDER BY name`)
+        .all(`SELECT ${IDENTITY_COLUMNS} FROM identities ORDER BY name`)
         .pipe(Effect.flatMap(Effect.forEach((row) => Effect.map(decode(IdentityRow)(row), toIdentity)))),
     replaceToken: (name, hash) =>
       db.transaction(
