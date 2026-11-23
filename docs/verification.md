@@ -331,7 +331,7 @@ Run the second command in the background (or its own terminal). `pnpm build` run
 
 ## Log in to the web UI
 
-The web UI (`app/web.tsx`) draws `CookoutApp` from the `routes` module, which picks a view from the page's location hash: `#/` (or no hash) is the channel list, `#/channels/<name>` a channel, `#/login` the login view, and `#/channels/<name>/threads/<id>` says it isn't built yet; any other hash says "Nothing here". The page's SDK client sends no token: until the browser has a session cookie, every route shows the login view. Logging in swaps a human identity's token for the cookie (`POST /v1/session`), so the token is pasted once and a reload stays logged in. With the built server from "Open the web UI" up on port 3000, seed it, then drive it with `agent-browser` in its own session (`--session`, so other browser work doesn't share its cookies):
+The web UI (`app/web.tsx`) draws `CookoutApp` from the `routes` module, which picks a view from the page's location hash: `#/` (or no hash) is the channel list, `#/channels/<name>` a channel, `#/login` the login view, and `#/channels/<name>/threads/<id>` a thread; any other hash, or a thread ID that isn't a message ID, says "Nothing here". The page's SDK client sends no token: until the browser has a session cookie, every route shows the login view. Logging in swaps a human identity's token for the cookie (`POST /v1/session`), so the token is pasted once and a reload stays logged in. With the built server from "Open the web UI" up on port 3000, seed it, then drive it with `agent-browser` in its own session (`--session`, so other browser work doesn't share its cookies):
 
 ```sh
 grep '^{"adminToken' /tmp/cookout-built.log | jq -r '"COOKOUT_URL=http://127.0.0.1:3000 COOKOUT_TOKEN=\(.adminToken)"' > /tmp/cookout-built.env
@@ -367,6 +367,24 @@ agent-browser --session cookout close
 ```
 
 The first snapshot has the `Load more` button and 50 messages, `Message 4` to `Message 53`; after the click there are all 53 and no button. Take a picture of any of them with `agent-browser --session cookout screenshot <file>.png`.
+
+A channel's view has a `← Channels` link above its heading, back to the channel list.
+
+## Open a thread and reply
+
+A thread's view shows its top-level message (an article named `Parent message`), then its replies, oldest first, in a list named `Replies`, then a reply box: a form named `Reply to the thread` with a `Reply` text box and a `Send reply` button. Opening a thread acks its latest message as the logged-in human (no lease), so the thread's replies leave that human's inbox. Posting a reply adds it to the end of the list and clears the box. A `← #<channel>` link above the heading goes back to the channel. On a fresh seed, log in as `grace` (the "Log in to the web UI" recipe, same session), read her inbox, open the thread in `#general`, read the inbox again, then reply:
+
+```sh
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
+agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" && agent-browser --session cookout find text "3 replies" click && agent-browser --session cookout get url && agent-browser --session cookout snapshot
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
+agent-browser --session cookout fill 'textarea[name=text]' "On it after lunch."
+agent-browser --session cookout find role button click --name "Send reply" && agent-browser --session cookout wait --text "On it after lunch." && agent-browser --session cookout snapshot
+env $(cat /tmp/cookout-built.env) node app/main.ts thread get 1 | jq -c '[.replies[] | [.id, .author.name, .text]]'
+agent-browser --session cookout find text "← #general" click && agent-browser --session cookout get url
+```
+
+The first inbox gives `[5,["followed-thread"]]` and `[6,["subscribed-channel"]]` (only `[5,["followed-thread"]]` if you ran "Open a channel" first). Clicking `3 replies` moves to `http://127.0.0.1:3000/#/channels/general/threads/1`; the snapshot shows the heading `Thread in #general`, `@ada`'s top-level message, and the replies from `@triage-agent`, `@grace` and `@ada`. The second inbox no longer has `[5,["followed-thread"]]`: opening the thread acked its latest reply. After `Send reply` the list ends with `@grace` and `On it after lunch.`, the server's thread ends with `[7,"grace","On it after lunch."]` (a later ID if you posted to `busy` first), and the back link moves to `http://127.0.0.1:3000/#/channels/general`. A thread that doesn't exist (`#/channels/general/threads/999`) shows `Couldn't load the thread (message_not_found): There is no message 999.`
 
 ## Run the web tests
 
