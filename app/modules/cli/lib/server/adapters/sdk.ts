@@ -9,12 +9,12 @@ import type { CookoutClient, CookoutErrorCode } from "../../../../sdk/index.ts";
 import { CookoutError, createCookoutClient } from "../../../../sdk/index.ts";
 import { Effect, Option, Predicate } from "effect";
 import { agentSessionExpired, agentSessionRevoked } from "../../../../agent-sessions/index.ts";
-import { agentToolEnvironment, cookoutSession, cookoutToken, cookoutUrl } from "../../../../config/server.ts";
+import { agentToolEnvironment, cookoutSession, cookoutToken } from "../../../../config/server.ts";
 import { agentToolIn, agentToolSessionIn } from "../../../../config/index.ts";
+import { boardUrlOrEmpty, loginFor } from "../logins.ts";
 import type { LoginFailure } from "../logins.ts";
 import { agentSessionStateFile } from "../agent-session-state.ts";
 import { baseUrlOf } from "../../../../http/client.ts";
-import { loginFor } from "../logins.ts";
 
 type CallFailureCode =
   | CookoutErrorCode
@@ -27,6 +27,7 @@ type CallFailureCode =
   | "not_joined"
   | "usage"
   | "login_request_expired"
+  | "not_a_cookout"
   | "timeout"
   | "server_unreachable";
 
@@ -119,12 +120,11 @@ function onAgentSessionEnded({
     });
 }
 
-const cliEnvironment: Effect.Effect<CliEnvironment> = Effect.orDie(
-  Effect.all(
-    { markers: agentToolEnvironment, session: cookoutSession, token: cookoutToken, url: cookoutUrl },
-    { concurrency: 1 },
-  ),
+const variables = Effect.orDie(
+  Effect.all({ markers: agentToolEnvironment, session: cookoutSession, token: cookoutToken }, { concurrency: 1 }),
 );
+
+const cliEnvironment = Effect.zipWith(boardUrlOrEmpty, variables, (url, found): CliEnvironment => ({ ...found, url }));
 
 function connectionFrom(url: string, token: string, agentTool: { readonly agentTool?: string }): CookoutConnection {
   if (token === "") {
@@ -275,7 +275,7 @@ interface JoinPlace {
   readonly url: string;
 }
 
-const joinPlace: Effect.Effect<JoinPlace, never, AgentSessionStateNeeds> = Effect.gen(function* findJoinPlace() {
+const joinPlace: Effect.Effect<JoinPlace, CallFailure, AgentSessionStateNeeds> = Effect.gen(function* findJoinPlace() {
   const env = yield* cliEnvironment;
   const place = agentToolSessionIn(env.markers);
   const file = yield* joinedSessionFile(place, env.url);

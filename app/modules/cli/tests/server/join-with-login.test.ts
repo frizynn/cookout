@@ -72,7 +72,7 @@ it.effect("inside Claude Code with no Login and no token, join says to log in fi
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("join sends COOKOUT_SESSION before the Login, and with no COOKOUT_URL it says so", () =>
+it.effect("join sends COOKOUT_SESSION before the Login, and with no COOKOUT_URL and no default board it says so", () =>
   Effect.gen(function* joinPrecedence() {
     const cookout = yield* TestCookout;
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
@@ -83,7 +83,7 @@ it.effect("join sends COOKOUT_SESSION before the Login, and with no COOKOUT_URL 
     yield* logIn(terminal, grace.token);
     const envs: readonly Env[] = [
       { ...terminal, ...inClaudeCode, COOKOUT_SESSION: agentSessionToken },
-      { ...terminal, ...inClaudeCode, COOKOUT_URL: "" },
+      { ...inClaudeCode, XDG_CONFIG_HOME: yield* configFolder },
     ];
     const results = yield* Effect.forEach(
       envs,

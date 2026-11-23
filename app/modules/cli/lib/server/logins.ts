@@ -1,4 +1,16 @@
-import { Effect, Equal, FileSystem, Option, Path, Random, Record as Rec, Schema, String as Str, pipe } from "effect";
+import {
+  Effect,
+  Equal,
+  FileSystem,
+  Option,
+  Path,
+  Predicate,
+  Random,
+  Record as Rec,
+  Schema,
+  String as Str,
+  pipe,
+} from "effect";
 import { cookoutUrl, home, xdgConfigHome } from "../../../config/server.ts";
 import { baseUrlOf } from "../../../http/client.ts";
 
@@ -15,6 +27,7 @@ const PRIVATE_FILE = 0o600;
 const PERMISSIONS = 0o1000;
 
 const CredentialsSchema = Schema.Struct({
+  defaultBoard: Schema.optionalKey(Schema.String),
   logins: Schema.Record(Schema.String, Schema.Struct({ token: Schema.String })),
 });
 
@@ -33,8 +46,6 @@ interface CredentialsLocation {
 function failure(error: { readonly message: string }): LoginFailure {
   return { code: "cli_error", message: error.message };
 }
-
-const serverUrl: Effect.Effect<string> = Effect.map(Effect.orDie(cookoutUrl), baseUrlOf);
 
 function setTo(value: string): Option.Option<string> {
   return Option.liftPredicate(value, Str.isNonEmpty);
@@ -110,16 +121,30 @@ function writeAt(
   });
 }
 
+const stored: Effect.Effect<Credentials, LoginFailure, Needs> = Effect.flatMap(
+  locate,
+  Option.match({ onNone: () => Effect.succeed(NO_LOGINS), onSome: readAt }),
+);
+
 function loginFor(url: string): Effect.Effect<Option.Option<string>, LoginFailure, Needs> {
-  return Effect.flatMap(
-    locate,
-    Option.match({
-      onNone: () => Effect.succeedNone,
-      onSome: (location) =>
-        Effect.map(readAt(location), ({ logins }) => Option.map(Rec.get(logins, url), ({ token }) => token)),
-    }),
-  );
+  return Effect.map(stored, ({ logins }) => Option.map(Rec.get(logins, url), ({ token }) => token));
 }
+
+const defaultBoard: Effect.Effect<Option.Option<string>, LoginFailure, Needs> = Effect.map(
+  stored,
+  ({ defaultBoard: url }) => Option.fromUndefinedOr(url),
+);
+
+const boardUrl: Effect.Effect<Option.Option<string>, LoginFailure, Needs> = Effect.flatMap(
+  Effect.orDie(cookoutUrl),
+  (url) =>
+    Option.match(setTo(url), { onNone: () => defaultBoard, onSome: (given) => Effect.succeedSome(baseUrlOf(given)) }),
+);
+
+const boardUrlOrEmpty: Effect.Effect<string, LoginFailure, Needs> = Effect.map(
+  boardUrl,
+  Option.getOrElse(() => ""),
+);
 
 const located: Effect.Effect<CredentialsLocation, LoginFailure, Needs> = Effect.flatMap(locate, (found) =>
   Effect.mapError(Effect.fromOption(found), () => noConfigFolder),
@@ -135,16 +160,20 @@ function saveLogin({
   return Effect.gen(function* keepLogin() {
     const location = yield* located;
     const { logins } = yield* readAt(location);
-    yield* writeAt(location, { logins: Rec.set(logins, url, { token }) });
+    yield* writeAt(location, { defaultBoard: url, logins: Rec.set(logins, url, { token }) });
   });
 }
 
 function removeLogin(url: string): Effect.Effect<void, LoginFailure, Needs> {
   return Effect.gen(function* forgetLogin() {
     const location = yield* located;
-    const { logins } = yield* readAt(location);
-    yield* writeAt(location, { logins: Rec.remove(logins, url) });
+    const { defaultBoard: board, logins } = yield* readAt(location);
+    const remaining = { logins: Rec.remove(logins, url) };
+    if (Predicate.isUndefined(board) || board === url) {
+      return yield* writeAt(location, remaining);
+    }
+    return yield* writeAt(location, { ...remaining, defaultBoard: board });
   });
 }
 
-export { type LoginFailure, loginFor, removeLogin, saveLogin, serverUrl };
+export { type LoginFailure, boardUrl, boardUrlOrEmpty, loginFor, removeLogin, saveLogin };

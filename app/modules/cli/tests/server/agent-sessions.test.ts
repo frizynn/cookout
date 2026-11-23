@@ -116,7 +116,11 @@ it.effect("a second join in a joined session is refused naming the agent; --prin
       succeeded,
       {
         ...succeeded,
-        stdoutJson: { identity: { name: "other" }, source: "COOKOUT_SESSION", summary: "other (COOKOUT_SESSION)" },
+        stdoutJson: {
+          identity: { name: "other" },
+          source: "COOKOUT_SESSION",
+          summary: `other (COOKOUT_SESSION) at ${cookout.url}`,
+        },
       },
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
@@ -178,13 +182,13 @@ it.effect("the credential is COOKOUT_TOKEN, then COOKOUT_SESSION, then the joine
     ]);
 
     expect(Arr.map(results, ({ stdoutJson }) => stdoutJson)).toMatchObject([
-      { identity: { name: "third" }, source: "COOKOUT_TOKEN", summary: "third (COOKOUT_TOKEN)" },
+      { identity: { name: "third" }, source: "COOKOUT_TOKEN", summary: `third (COOKOUT_TOKEN) at ${cookout.url}` },
       { identity: { name: "other" }, source: "COOKOUT_SESSION" },
       {
         identity: { name: "release-bot" },
         joinedAt: "2026-01-01T00:00:00.000Z",
         source: "agent session token",
-        summary: "release-bot (agent session token, joined 2 h ago)",
+        summary: `release-bot (agent session token, joined 2 h ago) at ${cookout.url}`,
       },
       { revoked: true },
       { identity: { name: "release-bot" }, source: "agent session token" },
@@ -204,9 +208,9 @@ it.effect("whoami says how long ago this agent tool session joined", () =>
     );
 
     expect(summaries).toMatchObject([
-      { summary: "release-bot (agent session token, joined just now)" },
-      { summary: "release-bot (agent session token, joined 30 min ago)" },
-      { summary: "release-bot (agent session token, joined 3 d ago)" },
+      { summary: `release-bot (agent session token, joined just now) at ${cookout.url}` },
+      { summary: `release-bot (agent session token, joined 30 min ago) at ${cookout.url}` },
+      { summary: `release-bot (agent session token, joined 3 d ago) at ${cookout.url}` },
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

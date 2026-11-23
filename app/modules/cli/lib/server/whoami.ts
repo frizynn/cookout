@@ -10,6 +10,7 @@ interface WhoamiAnswer extends IdentityResponse {
   readonly joinedAt?: IsoTime;
   readonly source: CredentialSource;
   readonly summary: string;
+  readonly url: string;
 }
 
 const MILLISECONDS_IN_A_MINUTE = 60_000;
@@ -33,22 +34,22 @@ function ago(milliseconds: number): string {
   return `${String(Math.floor(hours / HOURS_IN_A_DAY))} d ago`;
 }
 
-function joinedAnswer(answer: IdentityResponse, joinedAt: IsoTime): Effect.Effect<WhoamiAnswer> {
+function joinedAnswer(answer: IdentityResponse, joinedAt: IsoTime, url: string): Effect.Effect<WhoamiAnswer> {
   return Effect.map(DateTime.now, (now) => {
     const since = DateTime.toEpochMillis(now) - DateTime.toEpochMillis(DateTime.makeUnsafe(joinedAt));
-    const summary = `${answer.identity.name} (agent session token, joined ${ago(since)})`;
-    return { ...answer, joinedAt, source: "agent session token", summary };
+    const summary = `${answer.identity.name} (agent session token, joined ${ago(since)}) at ${url}`;
+    return { ...answer, joinedAt, source: "agent session token", summary, url };
   });
 }
 
 function whoamiAnswer(
-  { joined, source }: ClientWithAgentSessionState,
+  { connection: { url }, joined, source }: ClientWithAgentSessionState,
   answer: IdentityResponse,
 ): Effect.Effect<WhoamiAnswer> {
   if (Option.isSome(joined)) {
-    return joinedAnswer(answer, joined.value.state.issuedAt);
+    return joinedAnswer(answer, joined.value.state.issuedAt, url);
   }
-  return Effect.succeed({ ...answer, source, summary: `${answer.identity.name} (${source})` });
+  return Effect.succeed({ ...answer, source, summary: `${answer.identity.name} (${source}) at ${url}`, url });
 }
 
 const whoami = withClient((opened) =>
@@ -57,8 +58,8 @@ const whoami = withClient((opened) =>
 
 const whoamiCommand = Command.make("whoami", {}, () => answered(whoami)).pipe(
   Command.withDescription(
-    "Show the identity behind the credential this CLI sends, and where it came from: COOKOUT_TOKEN, COOKOUT_SESSION, " +
-      "the agent session token this agent tool session joined (and when), or login.",
+    "Show the identity behind the credential this CLI sends, the board's URL, and where the credential came from: " +
+      "COOKOUT_TOKEN, COOKOUT_SESSION, the agent session token this agent tool session joined (and when), or login.",
   ),
 );
 
