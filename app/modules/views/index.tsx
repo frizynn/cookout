@@ -3,7 +3,8 @@
  * from the stores with `useSyncExternalStore`. `LoginView` swaps a human
  * identity's token for the session cookie, or shows who is logged in;
  * `ChannelListView` lists every channel on the server, each linking to its
- * channel, or says why it can't; `ChannelView` shows a channel's top-level
+ * channel, a channel with unread messages in bold with its unread count and
+ * its mention count after it (the `unread` store), or says why it can't; `ChannelView` shows a channel's top-level
  * messages with their reply counts, newest last, with "Load more" for older
  * ones, and viewing it marks the channel read; `ThreadView` shows a thread's
  * parent message and its replies, oldest first, with a reply box that

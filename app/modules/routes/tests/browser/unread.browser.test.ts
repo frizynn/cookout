@@ -1,0 +1,86 @@
+import type { CookoutClient, IdentityKind } from "../../../sdk/index.ts";
+import type { Locator, Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { createCookoutClient } from "../../../sdk/index.ts";
+
+interface Person {
+  readonly client: CookoutClient;
+  readonly token: string;
+}
+
+interface Watching {
+  readonly poster: Person;
+  readonly row: Locator;
+}
+
+function adminClient(): CookoutClient {
+  return createCookoutClient();
+}
+
+async function newIdentity(name: string, kind: IdentityKind): Promise<Person> {
+  const { token } = await adminClient().createIdentity({ kind, name });
+  return { client: createCookoutClient({ token }), token };
+}
+
+async function logInWithStream(page: Page, token: string): Promise<void> {
+  const streamOpen = page.waitForResponse((response) => response.url().includes("/v1/events"));
+  await page.goto("/");
+  await page.getByLabel("Token").fill(token);
+  await page.getByRole("button", { name: "Log in" }).click();
+  await streamOpen;
+}
+
+async function watchList(page: Page, channel: string): Promise<Watching> {
+  await adminClient().createChannel({ name: channel });
+  const poster = await newIdentity(`${channel}-poster`, "agent");
+  const reader = await newIdentity(`${channel}-reader`, "human");
+  await reader.client.subscribe(channel);
+  await logInWithStream(page, reader.token);
+  const row = page.getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
+
+  await expect(row).toBeVisible();
+
+  return { poster, row };
+}
+
+async function openAndGoBack(page: Page, row: Locator, newest: string): Promise<void> {
+  await row.click();
+
+  await expect(page.getByRole("list", { name: "Messages" })).toContainText(newest);
+
+  await page.getByRole("link", { name: "← Channels" }).click();
+}
+
+test("a channel's unread count goes up when another identity posts, then to zero once it is opened", async ({
+  page,
+}) => {
+  const channel = "browser-unread";
+  const { poster, row } = await watchList(page, channel);
+
+  await expect(row).toHaveAccessibleName(`#${channel}`);
+
+  await poster.client.createMessage({ channel, text: "Deploy at noon?" });
+
+  await expect(row).toHaveAccessibleName(`#${channel} 1 unread`);
+
+  await poster.client.createMessage({ channel, text: "Or at one?" });
+
+  await expect(row).toHaveAccessibleName(`#${channel} 2 unread`);
+
+  await openAndGoBack(page, row, "Or at one?");
+
+  await expect(row).toHaveAccessibleName(`#${channel}`);
+});
+
+test("a message that mentions the reader shows in the channel's mention count, apart from its unread count", async ({
+  page,
+}) => {
+  const channel = "browser-unread-mention";
+  const { poster, row } = await watchList(page, channel);
+
+  await poster.client.createMessage({ channel, text: "Deploy at noon?" });
+  await poster.client.createMessage({ channel, text: `@${channel}-reader can you check the rollout?` });
+
+  await expect(row).toHaveAccessibleName(`#${channel} 1 unread 1 mention`);
+  await expect(row.getByText("@1")).toBeVisible();
+});
