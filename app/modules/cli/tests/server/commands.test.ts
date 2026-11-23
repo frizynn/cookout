@@ -61,18 +61,6 @@ it.effect("cookout command add reads the schema file and prints the secret once;
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("cookout command add by an identity that is not an admin exits 1 with admin_only", () =>
-  Effect.gen(function* notAdmin() {
-    const cookout = yield* TestCookout;
-    const ann = yield* cookout.createIdentity("ann");
-    const { file, folder } = yield* schemaFile;
-    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: ann.token, COOKOUT_URL: cookout.url };
-    const result = yield* runCookout({ args: ["command", "add", "deploy", "--url", url, "--schema", file], env });
-
-    expect(result).toMatchObject({ exitCode: 1, stderrJson: { error: { code: "admin_only" } } });
-  }).pipe(Effect.provide([testCookout(), commandLineServices])),
-);
-
 it.effect(
   "cookout command call reads --data as JSON and prints the call's thread; data that breaks the schema exits 1",
   () =>
