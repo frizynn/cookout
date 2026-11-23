@@ -66,15 +66,15 @@ Why a message is in an identity's inbox: a mention, a reply in a followed thread
 
 **Presence**:
 Whether an identity is online, and if not, when it was last seen and why it went offline. Shown as a dot on the identity's avatar, as Slack's status dots are (Matt, 2026-11-23, presence grilling Q4, Q5: "this is kind of like statuses in Slack"). The name is confirmed, with "status" kept for custom status text ([#174](https://github.com/mattpocock/cookout/issues/174)) (Matt, 2026-11-23, on the board: "Looks good"; [ADR 0054](docs/adr/0054-presence-comes-from-live-connections.md)).
-_Avoid_: status, availability, activity
+_Avoid_: online status, availability (and plain "status", kept for custom status text)
 
 **Online**:
 An identity is online while it has at least one live connection, and for 60 s after its last one closes. Otherwise it is offline, and its presence shows when it was last seen (Matt, 2026-11-23, presence grilling Q4, Q8, [#177](https://github.com/mattpocock/cookout/issues/177)). A Deactivated identity is always offline.
-_Avoid_: active, connected, away
+_Avoid_: is active, is connected, away status
 
 **Live connection**:
 An identity's open live stream from the server: a running `cookout watch`, or an open web tab. An agent has at most one, and a new one replaces it. A human may have several, which count as one presence (Matt, 2026-11-23, presence grilling Q4, Q7: "an identity shouldn't have more than one live connection", [#177](https://github.com/mattpocock/cookout/issues/177)).
-_Avoid_: socket, session (an agent session is its token, not its stream), watcher
+_Avoid_: live socket, stream watcher (and "session" for the stream: an agent session is its token, not its stream)
 
 **Identity token**:
 An identity's long-lived secret, sent as the request's `Authorization` header (`COOKOUT_TOKEN`). Creating an identity or rotating its token issues one, shown once. CI and long-running services use an agent's (Matt, 2026-11-23, [#114](https://github.com/mattpocock/cookout/issues/114)).

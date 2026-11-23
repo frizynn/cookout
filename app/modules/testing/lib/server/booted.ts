@@ -46,4 +46,4 @@ function liveConnectionsClosedOn({
     );
 }
 
-export { type Booted, type BootedContext, booted, liveConnectionsClosedOn };
+export { type Booted, booted, liveConnectionsClosedOn };
