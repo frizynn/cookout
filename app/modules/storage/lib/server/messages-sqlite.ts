@@ -238,7 +238,7 @@ function sqliteMessages(db: SqliteDatabase): MessagesSection & InboxSection {
     ...sqliteInbox({ db, reader: sqliteMessageReader(db) }),
     appendMessage: (message) => db.transaction(append(db, message)),
     getThread: (id) => threadOf(db, id),
-    latestMessageId: () => latestOf(db),
+    latestMessageId: latestOf(db),
     listChannelMessages: (channel, page) =>
       Effect.flatMap(channelExists(db, channel), (exists) => {
         if (exists) {

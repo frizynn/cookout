@@ -98,7 +98,7 @@ function pageRequest({ before, limit = pageSize.default }: PageQuery): PageReque
 
 function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
   return {
-    latestId: storage.latestMessageId(),
+    latestId: storage.latestMessageId,
     page: (channel, query) =>
       Effect.gen(function* pageChannel() {
         if (!isChannelName(channel)) {

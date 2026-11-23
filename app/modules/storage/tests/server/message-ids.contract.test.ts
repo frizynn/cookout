@@ -75,11 +75,11 @@ it.effect.each(storageLayers)(
     Effect.gen(function* latestIds() {
       const { storage } = yield* openStore(layer);
       yield* storage.createChannel(channel("grill"));
-      const before = yield* storage.latestMessageId();
+      const before = yield* storage.latestMessageId;
       yield* appendTo(storage)(newMessage("grill", "first"));
       const { id } = yield* appendTo(storage)(newMessage("grill", "second"));
       const refused = yield* storage.appendMessage(newMessage("gone", "nowhere"));
-      const latest = yield* storage.latestMessageId();
+      const latest = yield* storage.latestMessageId;
 
       expect(before).toBeUndefined();
       expect({ latest, refused }).toStrictEqual({ latest: id, refused: { status: "channel_not_found" } });

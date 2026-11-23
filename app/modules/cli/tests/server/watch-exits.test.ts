@@ -52,6 +52,8 @@ const ONE_LINE = 1;
 const NEWLINE = "\n";
 const A_WHILE = "5 seconds";
 const EXIT_SUCCESS = 0;
+const EXIT_REFUSED = 1;
+const TWICE = 2;
 const EXIT_TIMEOUT = 2;
 const EXIT_TOKEN = 3;
 const EXIT_LEASE_LOST = 4;
@@ -231,4 +233,43 @@ it.effect("cookout watch starts with one line counting the unread items, then pr
       `#grill thread:${id} @ann: @bob three (msg ${id})`,
     ]);
   }).pipe(Effect.provide(commandLineServices)),
+);
+
+function reconnectThenMention({ ann, link }: Watch): Effect.Effect<MessageId> {
+  return Effect.gen(function* cutThenMention() {
+    yield* link.cut;
+    yield* Effect.raceFirst(link.relayed("event: connected", TWICE), passTime);
+    return yield* mention(ann, "@bob after the drop");
+  });
+}
+
+it.effect("cookout watch prints the unread line once, not again after a reconnect", () =>
+  Effect.gen(function* watchUnreadOnce() {
+    const { during, stdoutLines } = yield* watchUntilExit({
+      args: ["watch", "--once"],
+      prepare: twoOldMentions,
+      whileWatching: reconnectThenMention,
+    });
+    const id = String(during);
+
+    expect(stdoutLines).toStrictEqual([
+      "2 unread, run cookout inbox",
+      `#grill thread:${id} @ann: @bob after the drop (msg ${id})`,
+    ]);
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
+it.effect("cookout watch stops with exit 1 and its refusal on stderr only, when another session holds the lease", () =>
+  Effect.gen(function* watchWithoutLease() {
+    const watch = yield* board;
+    const other = yield* freshStateFolder;
+    yield* join({ args: JOIN, folder: other, watch });
+    const result = yield* runCookout({ args: ["watch"], env: envOf(watch, watch.folder) });
+
+    expect(result).toMatchObject({
+      exitCode: EXIT_REFUSED,
+      stderrJson: { error: { code: "lease_required" } },
+      stdout: "",
+    });
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

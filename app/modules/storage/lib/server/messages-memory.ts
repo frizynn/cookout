@@ -138,7 +138,7 @@ function memoryMessages({ channels, identities, state }: MemoryMessagesOptions):
         return Effect.succeed(CHANNEL_NOT_FOUND);
       }),
     getThread: (id) => read((messages) => threadIn(messages, id)),
-    latestMessageId: () => readBoard(({ last }) => Option.getOrUndefined(Option.liftPredicate(last, isMessageId))),
+    latestMessageId: readBoard(({ last }) => Option.getOrUndefined(Option.liftPredicate(last, isMessageId))),
     listChannelMessages: (channel, page) =>
       Effect.flatMap(channelExists(channel), (exists) => {
         if (exists) {
