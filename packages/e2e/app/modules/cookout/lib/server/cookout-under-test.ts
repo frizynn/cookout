@@ -1,6 +1,6 @@
 import { Array as Arr, Context, Effect, Layer, Random, Redacted, String as Str } from "effect";
 import type { BinNeeds, BinResult, BinRun } from "./bin.ts";
-import type { ChannelResponse, CookoutClient, IdentityWithTokenResponse } from "@ai-hero/cookout/sdk";
+import type { ChannelResponse, CookoutClient, Identity, IdentityWithTokenResponse } from "@ai-hero/cookout/sdk";
 import { e2eAdminToken, e2eUrl } from "../../../config/server.ts";
 import { e2eNameStart, runPrefix, runPrefixSpace } from "./run-prefix.ts";
 import type { Config } from "effect";
@@ -21,17 +21,31 @@ interface CookoutUnderTestService {
 }
 
 const NO_DRAW = 0;
+const REFUSED = "refused";
 const ONE_AT_A_TIME = { concurrency: 1, discard: true } as const;
 
 class CookoutUnderTest extends Context.Service<CookoutUnderTest, CookoutUnderTestService>()(
   "@ai-hero/cookout-e2e/cookout/lib/server/cookout-under-test/CookoutUnderTest",
 ) {}
 
-function deactivateRunIdentities(admin: CookoutClient, prefix: string): Effect.Effect<void> {
-  return Effect.gen(function* deactivateOwn() {
-    const { identities } = yield* Effect.promise(() => admin.listIdentities());
+function removeIdentity(admin: CookoutClient, identity: Identity): Effect.Effect<void> {
+  const deleting = Effect.tryPromise({ catch: () => REFUSED, try: () => admin.deleteIdentity(identity.name) });
+  if (identity.deactivated === true) {
+    return Effect.ignore(deleting);
+  }
+  return Effect.matchEffect(deleting, {
+    onFailure: () => Effect.asVoid(Effect.promise(() => admin.deactivateIdentity(identity.name))),
+    onSuccess: () => Effect.void,
+  });
+}
+
+function removeRunIdentities(admin: CookoutClient, prefix: string): Effect.Effect<void> {
+  return Effect.gen(function* removeOwn() {
+    const { identities } = yield* Effect.promise(() => admin.listIdentities({ include: "deactivated" }));
     const own = Arr.filter(identities, ({ name }) => Str.startsWith(`${prefix}-`)(name));
-    yield* Effect.forEach(own, ({ name }) => Effect.promise(() => admin.deactivateIdentity(name)), ONE_AT_A_TIME);
+    const agents = Arr.filter(own, ({ kind }) => kind === "agent");
+    const humans = Arr.filter(own, ({ kind }) => kind === "human");
+    yield* Effect.forEach([...agents, ...humans], (identity) => removeIdentity(admin, identity), ONE_AT_A_TIME);
   });
 }
 
@@ -65,7 +79,7 @@ const cookoutUnderTest: Layer.Layer<CookoutUnderTest> = Layer.effect(
     const draw = yield* Random.nextIntBetween(NO_DRAW, runPrefixSpace);
     const prefix = runPrefix(draw);
     yield* Effect.addFinalizer(() =>
-      Effect.andThen(deactivateRunIdentities(admin, prefix), deleteChannelsStartingWith(admin, `${prefix}-`)),
+      Effect.andThen(deleteChannelsStartingWith(admin, `${prefix}-`), removeRunIdentities(admin, prefix)),
     );
     function createAgent(name: string): Effect.Effect<IdentityWithTokenResponse> {
       return Effect.promise(() => admin.createIdentity({ kind: "agent", name: `${prefix}-${name}` }));

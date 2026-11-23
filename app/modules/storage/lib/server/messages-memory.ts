@@ -7,8 +7,8 @@ import type {
   Placement,
 } from "./messages.ts";
 import { Array as Arr, Effect, Option, Predicate, Ref, pipe } from "effect";
-import { EMPTY_INBOX, withoutChannel } from "./inbox-memory-state.ts";
 import type {
+  Author,
   ListMessagesResponse,
   Message,
   MessageId,
@@ -16,6 +16,7 @@ import type {
   ThreadResponse,
   TopLevelMessage,
 } from "../../../messages/index.ts";
+import { EMPTY_INBOX, withoutChannel, withoutIdentity } from "./inbox-memory-state.ts";
 import { afterAppend, memoryInbox } from "./inbox-memory.ts";
 import { asMessageId, counted, isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
 import type { ChannelName } from "../../../channels/index.ts";
@@ -35,7 +36,7 @@ interface MemoryMessages {
 
 interface MemoryMessagesOptions {
   readonly channels: Pick<MemoryChannelsSection, "findChannel" | "listChannels">;
-  readonly identities: IdentitiesSection;
+  readonly identities: Pick<IdentitiesSection, "listIdentities">;
   readonly state: MemoryState;
 }
 
@@ -106,6 +107,8 @@ function pageIn(messages: readonly Message[], channel: ChannelName, page: Channe
 type MemoryMessagesSection = MessagesSection &
   MemoryInboxSection & {
     readonly forgetChannel: (channel: ChannelName) => Fails<ReadonlySet<MessageId>>;
+    readonly forgetIdentity: (identity: Author["name"]) => Fails<void>;
+    readonly countMessagesBy: (identity: Author["name"]) => Fails<number>;
   };
 
 function withoutMessagesIn(
@@ -116,6 +119,10 @@ function withoutMessagesIn(
   const kept = Arr.filter(data.messages, (message) => message.channel !== channel);
   const ids = new Set(Arr.map(gone, (message) => message.id));
   return [ids, { ...data, inbox: withoutChannel({ channel, ids, inbox: data.inbox }), messages: kept }];
+}
+
+function namesAuthor(identity: Author["name"]): (message: Message) => boolean {
+  return ({ author }) => author.name === identity || author.owner === identity;
 }
 
 type Listed = Effect.Success<ReturnType<IdentitiesSection["listIdentities"]>>;
@@ -158,7 +165,10 @@ function memoryMessages({ channels, identities, state }: MemoryMessagesOptions):
         }
         return Effect.succeed(CHANNEL_NOT_FOUND);
       }),
+    countMessagesBy: (identity) => read((messages) => Arr.filter(messages, namesAuthor(identity)).length),
     forgetChannel: (channel) => change((data) => withoutMessagesIn(data, channel)),
+    forgetIdentity: (identity) =>
+      Effect.asVoid(change((data) => [true, { ...data, inbox: withoutIdentity({ identity, inbox: data.inbox }) }])),
     getThread: (id) => read((messages) => threadIn(messages, id)),
     latestMessageId: readBoard(({ last }) => Option.getOrUndefined(Option.liftPredicate(last, isMessageId))),
     listChannelMessages: (channel, page) =>

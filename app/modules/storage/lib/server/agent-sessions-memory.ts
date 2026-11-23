@@ -27,6 +27,7 @@ type Sessions = Map<TokenHash, Kept>;
 
 interface MemoryAgentSessions extends AgentSessionsSection {
   readonly revokeAgentSessionsOf: (identity: IdentityName) => Effect.Effect<void>;
+  readonly dropAgentSessionsOf: (identity: IdentityName) => Effect.Effect<void>;
 }
 
 interface MemoryAgentSessionsOptions {
@@ -108,6 +109,12 @@ function memoryAgentSessions({ findIdentity, state }: MemoryAgentSessionsOptions
     });
   }
   return {
+    dropAgentSessionsOf: (identity) =>
+      Effect.sync(() => {
+        for (const kept of Arr.filter([...sessions.values()], (each) => each.identity === identity)) {
+          sessions.delete(kept.hash);
+        }
+      }),
     findLiveAgentSession: ({ identity, now }) =>
       open(() => Option.map(Arr.head(liveOf(sessions, identity, now)), listed)),
     issueAgentSession: (request) => open(() => issue(sessions, request)),

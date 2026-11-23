@@ -5,6 +5,7 @@
  * error codes bearer auth, the admin check and identity creation answer with.
  */
 import type { IsoTime } from "../time/index.ts";
+import { identityDeletionErrorCodes } from "./lib/deletion.ts";
 
 declare const brand: unique symbol;
 
@@ -178,6 +179,9 @@ export interface SetDisplayNameRequest {
   readonly displayName: string | null;
 }
 
+/** `DELETE /v1/identities/:name` (admin) deletes an identity no message names; `GET …/message-count` counts them. */
+export { type IdentityMessageCountResponse, identityMessageCountPath, identityPath } from "./lib/deletion.ts";
+
 /** `GET /v1/whoami`: the identity behind the token. */
 export const whoamiPath = "/v1/whoami";
 
@@ -187,8 +191,8 @@ export const identitiesPath = "/v1/identities";
 /**
  * `POST /v1/identities/:name/deactivate`: Deactivates the identity, answering `DeactivateIdentityResponse`. Every token
  * it holds fails at once; a human's agents are deactivated with it. An admin may deactivate anyone, and a human their
- * own agents (403 `not_owner` otherwise). The last admin is refused with 409 `last_admin`. Nothing is ever deleted
- * (ADR 0045).
+ * own agents (403 `not_owner` otherwise). The last admin is refused with 409 `last_admin`. Its messages and name stay
+ * (ADR 0045); only an identity no message names can be deleted instead (`identityPath`).
  */
 export const identityDeactivatePath = "/v1/identities/:name/deactivate";
 
@@ -290,5 +294,6 @@ export const identityErrorCodes = [
   "name_not_owned",
   "not_deactivated",
   "owner_deactivated",
+  ...identityDeletionErrorCodes,
   "login_request_not_found",
 ] as const;

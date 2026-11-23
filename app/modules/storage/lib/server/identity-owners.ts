@@ -66,4 +66,11 @@ function sqliteCreateRefusal(db: SqliteDatabase): (identity: Identity) => Fails<
 
 export { memoryDeactivations, sqliteDeactivations } from "./identity-deactivations.ts";
 
+export {
+  type DeleteIdentityResult,
+  type IdentityDeletesSection,
+  memoryRemoveIdentity,
+  sqliteIdentityDeletes,
+} from "./identity-deletes.ts";
+
 export { type CreateRefusal, memoryCreateRefusal, sqliteCreateRefusal };

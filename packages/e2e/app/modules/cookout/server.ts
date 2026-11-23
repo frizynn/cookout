@@ -3,7 +3,8 @@
  * caller drives it, through `@ai-hero/cookout/sdk` and the built `cookout`
  * bin run as its own process, never through the app's `testing` module. Each
  * `cookoutUnderTest` Layer is one run: it draws a fresh prefix for the names
- * it makes and deletes the run's identities and channels when it closes, passing or failing.
+ * it makes and, when it closes, passing or failing, deletes the run's channels (and their messages) and then its
+ * identities, agents before their owners; one the server still refuses to delete is deactivated.
  * `runPrefix` is that prefix: `e2e-` (`e2eNameStart`) then the run's own eight characters. Deploy's
  * leftover checks count only names that start with `e2e-`, so a real identity made mid-run isn't one.
  * Vitest's `globalSetup` (`lib/server/leftover-channels.ts`) deletes every channel whose name starts

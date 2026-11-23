@@ -14,3 +14,5 @@
 ## Storage
 
 `deactivateIdentity` and `reactivateIdentity` are each one atomic `Storage` method. A new SQLite migration adds `identities.deactivated` (0 or 1); being pre-release, nothing earlier is migrated. Inbox rows of a Deactivated identity stay, as its read positions would on reactivation.
+
+Superseded in part on 2026-11-23 by [ADR 0054](0054-an-identity-no-message-names-can-be-deleted.md): an admin may delete an identity no message names (mattpocock/cookout#172); one with messages is still only deactivated.

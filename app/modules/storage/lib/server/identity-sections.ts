@@ -5,6 +5,7 @@ import type { LoginRequestsSection } from "./login-requests.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { memoryLoginRequests } from "./login-requests-memory.ts";
+import { sqliteIdentityDeletes } from "./identity-owners.ts";
 import { sqliteLoginRequests } from "./login-requests-sqlite.ts";
 
 type MemoryIdentitySections = ReturnType<typeof memoryIdentities> & LoginRequestsSection;
@@ -22,11 +23,17 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
       Effect.tap(identities.deactivateIdentity(name), ({ status }) =>
         Effect.when(dropLoginCredentials(name), Effect.succeed(status === "deactivated")),
       ),
+    removeIdentity: (name, messages) =>
+      Effect.tap(identities.removeIdentity(name, messages), ({ status }) =>
+        Effect.when(dropLoginCredentials(name), Effect.succeed(status === "deleted")),
+      ),
   };
 }
 
 function sqliteIdentitySections(db: SqliteDatabase): IdentitiesSection & LoginRequestsSection {
-  return { ...sqliteIdentities(db), ...sqliteLoginRequests(db) };
+  return { ...sqliteIdentities(db), ...sqliteIdentityDeletes(db), ...sqliteLoginRequests(db) };
 }
+
+export { memoryIdentityLifecycle } from "./identity-lifecycle-memory.ts";
 
 export { memoryIdentitySections, sqliteIdentitySections };

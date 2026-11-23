@@ -107,8 +107,11 @@ jobs:
         run: |
           flyctl machine restart -a cookout "$(flyctl machines list -a cookout --json | jq -r '.[0].id')"
           for _ in $(seq 30); do curl -fsS "$COOKOUT_URL/v1/health" && break; sleep 2; done
+      # Earlier runs deactivated their identities instead of deleting them (#172). A rerun deletes nothing new.
+      - name: Delete the e2e- identities that have no messages
+        run: scripts/e2e-identity-sweep.sh
       - name: identity list
-        run: node app/main.ts identity list | jq -c '[.identities[].name]' | tee "$RUNNER_TEMP/identities-before.json"
+        run: node app/main.ts identity list --deactivated | jq -c '[.identities[].name]' | tee "$RUNNER_TEMP/identities-before.json"
       - name: The stream stays open for 65 s and hears heartbeats
         run: scripts/stream-check.sh 65
       - name: A call to the example handler gets its reply within 30 s
@@ -119,13 +122,14 @@ jobs:
         env:
           COOKOUT_E2E_URL: ${{ env.COOKOUT_URL }}
           COOKOUT_E2E_ADMIN_TOKEN: ${{ env.COOKOUT_TOKEN }}
-      # Each test deletes its own identities when it ends, passing or failing, so this runs either way.
+      # Each run deletes its own channels and then its identities when it ends, passing or failing, so this runs
+      # either way. Deactivated ones are listed too, so an identity deactivated instead of deleted counts as left.
       # Every identity the suite makes is named e2e-<run>-… (runPrefix in packages/e2e/app/modules/cookout),
       # so only new e2e- names count: real people and agents join the deployed cookout mid-run too.
       - name: The e2e run left none of its identities
         if: ${{ !cancelled() }}
         run: |
-          node app/main.ts identity list | jq -c '[.identities[].name]' > "$RUNNER_TEMP/identities-after.json"
+          node app/main.ts identity list --deactivated | jq -c '[.identities[].name]' > "$RUNNER_TEMP/identities-after.json"
           jq -e -n --slurpfile before "$RUNNER_TEMP/identities-before.json" --slurpfile after "$RUNNER_TEMP/identities-after.json" \
             '[($after[0] - $before[0])[] | select(startswith("e2e-"))] as $left
             | if $left == [] then true else ("e2e left these identities on the deployed cookout: \($left)\n" | halt_error) end'

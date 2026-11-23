@@ -3,6 +3,7 @@ import type { Caller, IdentityChanges } from "./auth.ts";
 import { CreateIdentityRequestSchema, createIdentity, humanCaller } from "./create.ts";
 import {
   DeactivateIdentityResponseSchema,
+  IdentityMessageCountResponseSchema,
   IdentityResponseSchema,
   IdentityWithTokenResponseSchema,
   ListIdentitiesQuerySchema,
@@ -145,6 +146,7 @@ function adminFlagRoute(method: "PUT" | "DELETE"): Route<Caller | Storage | Iden
 
 export const responseSchemas = {
   DeactivateIdentityResponse: DeactivateIdentityResponseSchema,
+  IdentityMessageCountResponse: IdentityMessageCountResponseSchema,
   IdentityResponse: IdentityResponseSchema,
   IdentityWithTokenResponse: IdentityWithTokenResponseSchema,
   ListIdentitiesResponse: ListIdentitiesResponseSchema,

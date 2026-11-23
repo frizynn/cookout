@@ -7,6 +7,7 @@ interface IdentityList {
   readonly onChange: (refresh: () => void) => void;
   readonly publish: (identities: readonly Identity[]) => void;
   readonly put: (identity: Identity) => void;
+  readonly remove: (name: Identity["name"]) => void;
 }
 
 interface IdentityListOptions {
@@ -31,13 +32,9 @@ function createIdentityList(options: IdentityListOptions): IdentityList {
     }
   }
 
-  function put(identity: Identity): void {
-    publish(withIdentity(identities, identity));
-  }
-
   function receive(event: CookoutEvent): void {
     if (event.type === "identity") {
-      put(event.identity);
+      publish(withIdentity(identities, event.identity));
     }
   }
 
@@ -64,7 +61,12 @@ function createIdentityList(options: IdentityListOptions): IdentityList {
       refreshes.add(refresh);
     },
     publish,
-    put,
+    put: (identity) => {
+      publish(withIdentity(identities, identity));
+    },
+    remove: (name) => {
+      publish(identities.filter((identity) => identity.name !== name));
+    },
   };
 }
 

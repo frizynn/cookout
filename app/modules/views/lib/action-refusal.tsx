@@ -5,6 +5,7 @@ import { useSyncExternalStore } from "react";
 
 const VERBS = {
   deactivate: "deactivate",
+  delete: "delete",
   reactivate: "reactivate",
   revoke: "revoke the session",
   rotate: "rotate the token",

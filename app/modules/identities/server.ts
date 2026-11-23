@@ -171,9 +171,15 @@ export { transferRoutes } from "./lib/server/transfer.ts";
 
 /**
  * `POST /v1/identities/:name/deactivate` and `/reactivate`: an admin, or the human who owns an agent, switches an
- * identity off or back on (ADR 0045). Nothing deletes an identity.
+ * identity off or back on (ADR 0045). Only an identity no message names can be deleted, by an admin.
  */
 export { deactivationRoutes } from "./lib/server/deactivation.ts";
+
+/**
+ * `DELETE /v1/identities/:name` (admin) and `GET /v1/identities/:name/message-count`: deleting an identity no message
+ * names, with everything that refers to it. It needs `Caller`.
+ */
+export { deletionRoutes } from "./lib/server/deletion.ts";
 
 /** The response Schemas of the identity routes, for the SDK's generated validators. */
 export const identityResponseSchemas = { ...responseSchemas };

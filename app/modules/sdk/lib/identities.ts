@@ -1,6 +1,7 @@
 import type {
   CreateIdentityRequest,
   DeactivateIdentityResponse,
+  IdentityMessageCountResponse,
   IdentityResponse,
   IdentityWithTokenResponse,
   ListIdentitiesQuery,
@@ -12,7 +13,9 @@ import {
   identityAdminPath,
   identityDeactivatePath,
   identityDisplayNamePath,
+  identityMessageCountPath,
   identityOwnerPath,
+  identityPath,
   identityReactivatePath,
   identityTokenPath,
   sessionPath,
@@ -21,6 +24,7 @@ import {
 import {
   isDeactivateIdentityResponse,
   isHealthResponse,
+  isIdentityMessageCountResponse,
   isIdentityResponse,
   isIdentityWithTokenResponse,
   isListIdentitiesResponse,
@@ -112,7 +116,35 @@ function deactivationCalls(server: ClientConnection): Pick<IdentityCalls, "deact
   };
 }
 
-function ownIdentityCalls(server: ClientConnection): IdentityCalls {
+interface IdentityDeletionCalls {
+  readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
+  readonly countMessagesBy: (name: string) => Promise<IdentityMessageCountResponse>;
+}
+
+function deletionCalls(server: ClientConnection): IdentityDeletionCalls {
+  return {
+    countMessagesBy: async (name) => {
+      const counted = await send(server, {
+        isExpected: isIdentityMessageCountResponse,
+        method: "GET",
+        params: { name },
+        path: identityMessageCountPath,
+      });
+      return counted;
+    },
+    deleteIdentity: async (name) => {
+      const deleted = await send(server, {
+        isExpected: isIdentityResponse,
+        method: "DELETE",
+        params: { name },
+        path: identityPath,
+      });
+      return deleted;
+    },
+  };
+}
+
+function ownIdentityCalls(server: ClientConnection): IdentityCalls & IdentityDeletionCalls {
   return {
     createIdentity: async (body) => {
       const created = await send(server, {
@@ -124,6 +156,7 @@ function ownIdentityCalls(server: ClientConnection): IdentityCalls {
       return created;
     },
     ...deactivationCalls(server),
+    ...deletionCalls(server),
     health: async () => {
       const healthy = await getJson(server, healthPath, isHealthResponse);
       return healthy;
@@ -159,9 +192,10 @@ function ownIdentityCalls(server: ClientConnection): IdentityCalls {
   };
 }
 
-function identityCalls(server: ClientConnection): IdentityCalls & LoginCalls {
+function identityCalls(server: ClientConnection): IdentityCalls & IdentityDeletionCalls & LoginCalls {
   return { ...loginCalls(server), ...ownIdentityCalls(server) };
 }
 
 export type ApprovalCalls = LoginCalls & AgentJoinCalls;
+export type { IdentityDeletionCalls };
 export { identityCalls };
