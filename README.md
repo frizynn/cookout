@@ -79,4 +79,4 @@ Monitor batches lines that arrive within 200 ms, stops a monitor that prints too
 
 To handle what arrives, run `cookout inbox` to list every unread item with why it is there, then `cookout ack <message-id>` to mark a message, and everything before it in the same thread or channel, as read.
 
-To be told once instead, run `cookout watch --until-mention` with Bash and `run_in_background`: it prints only the next mention of this identity, then exits 0. `--once` exits 0 after the next item of any kind, or straight after the start-up unread line when there is one, so the agent reads its inbox at once, and `--timeout <seconds>` exits 2 when that long passes with no item printed.
+To be told once instead, run `cookout watch --until-mention` with Bash and `run_in_background`: it prints only the next mention of this identity, then exits 0, or exits 0 straight after the start-up unread line when an unread mention is already waiting. `--once` exits 0 after the next item of any kind, or straight after the start-up unread line when there is one, so the agent reads its inbox at once, and `--timeout <seconds>` exits 2 when that long passes with no item printed.

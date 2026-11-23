@@ -1,7 +1,9 @@
-import { Array as Arr, Result, String as Str, pipe } from "effect";
+import { Array as Arr, Option, Result, String as Str, pipe } from "effect";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import type { JsonSchema } from "../../index.ts";
 import type { JsonValue } from "../../../messages/index.ts";
+import addFormats from "ajv-formats";
+import draft07 from "ajv/dist/refs/json-schema-draft-07.json" with { type: "json" };
 
 interface DataError {
   readonly message: string;
@@ -31,7 +33,8 @@ function dataErrorOf({ instancePath, message = NO_MESSAGE }: AjvError): DataErro
 }
 
 function compileDataSchema(schema: JsonSchema): Result.Result<DataCheck, string> {
-  const ajv = new Ajv2020({ allErrors: true, logger: false });
+  const ajv = addFormats(new Ajv2020({ allErrors: true, logger: false, strict: false }));
+  ajv.addMetaSchema(draft07);
   return Result.try({
     catch: String,
     try: (): DataCheck => {
@@ -40,7 +43,7 @@ function compileDataSchema(schema: JsonSchema): Result.Result<DataCheck, string>
         if (validate(data)) {
           return [];
         }
-        return Arr.map(validate.errors ?? [], dataErrorOf);
+        return Arr.map(Option.getOrElse(Option.fromNullishOr(validate.errors), Arr.empty), dataErrorOf);
       };
     },
   });

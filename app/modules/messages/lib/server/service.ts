@@ -8,7 +8,7 @@ import type {
   MessageResponse,
   ThreadResponse,
 } from "../../index.ts";
-import type { NewMessage, StorageUnavailable } from "../../../storage/server.ts";
+import type { NewCommandCall, NewMessage, StorageUnavailable } from "../../../storage/server.ts";
 import { mentionPattern, pageSize } from "../../index.ts";
 import { messageNotFound, replyInOtherChannel, replyOutsideCommandThread } from "./refusals.ts";
 import type { ChannelName } from "../../../channels/index.ts";
@@ -42,6 +42,8 @@ interface PageRequest {
 type Refused = "channel_not_found" | "reply_to_not_found" | "reply_in_other_channel";
 
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
+
+type CallParts = Omit<NewCommandCall, "message">;
 
 interface Hub {
   readonly publish: (message: Message) => Effect.Effect<boolean>;
@@ -100,18 +102,23 @@ function inThread(found: ThreadResponse | undefined, threadId: MessageId, channe
   return Predicate.isNotUndefined(found) && found.parent.id === threadId && found.parent.channel === channel;
 }
 
-function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
-  function post(author: Identity, message: PostMessage): Fails<MessageResponse> {
-    return Effect.gen(function* postMessage() {
+type Append = Storage["Service"]["appendMessage"];
+
+function postWith(hub: Hub, append: Append): (author: Identity, message: PostMessage) => Fails<MessageResponse> {
+  return (author, message) =>
+    Effect.gen(function* postMessage() {
       const now = yield* DateTime.now;
-      const result = yield* storage.appendMessage(newMessage(author, message, isoTimeOf(now)));
+      const result = yield* append(newMessage(author, message, isoTimeOf(now)));
       if (result.status === "appended") {
         yield* hub.publish(result.message);
         return { message: result.message, unknownMentions: unknownMentionsIn(result.message) };
       }
       return yield* Effect.fail(refusalOf(result.status, message));
     });
-  }
+}
+
+function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
+  const post = postWith(hub, storage.appendMessage);
   return {
     latestId: storage.latestMessageId,
     page: (channel, query) =>
@@ -126,6 +133,8 @@ function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
         return page;
       }),
     post,
+    postCommandCall: (author, message, call) =>
+      postWith(hub, (stored) => storage.appendCommandCall({ ...call, message: stored }))(author, message),
     postInThread: (author, message, threadId) =>
       Effect.gen(function* postInCommandThread() {
         const { channel, replyTo } = message;
@@ -152,6 +161,7 @@ function messagesOn(storage: Storage["Service"], hub: Hub): MessagesService {
 
 export interface MessagesService {
   readonly post: (author: Identity, message: PostMessage) => Fails<MessageResponse>;
+  readonly postCommandCall: (author: Identity, message: PostMessage, call: CallParts) => Fails<MessageResponse>;
   readonly postInThread: (author: Identity, message: PostMessage, threadId: MessageId) => Fails<MessageResponse>;
   readonly thread: (id: MessageId) => Fails<ThreadResponse>;
   readonly page: (channel: string, query: PageQuery) => Fails<ListMessagesResponse>;

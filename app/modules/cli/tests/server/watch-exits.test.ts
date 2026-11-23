@@ -219,24 +219,36 @@ function twoOldMentions({ cookout }: Watch): Effect.Effect<void> {
   });
 }
 
-it.effect("cookout watch --once with unread items prints the unread line and exits 0", () =>
-  Effect.gen(function* watchOnceUnread() {
-    const { result, stdoutLines } = yield* watchUntilExit({
-      args: ["watch", "--once"],
-      prepare: twoOldMentions,
-      whileWatching: () => Effect.void,
-    });
+function twoOldPosts({ bob, cookout }: Watch): Effect.Effect<void> {
+  return Effect.gen(function* postTwiceWhereBobSubscribes() {
+    const cat = yield* cookout.createIdentity("cat");
+    yield* answer(() => cat.client.createChannel({ name: "old" }));
+    yield* answer(() => bob.client.subscribe("old"));
+    yield* answer(() => cat.client.createMessage({ channel: "old", text: "one" }));
+    yield* answer(() => cat.client.createMessage({ channel: "old", text: "two" }));
+  });
+}
 
-    expect(result.exitCode).toBe(EXIT_SUCCESS);
-    expect(stdoutLines).toStrictEqual(["2 unread, run cookout inbox"]);
-  }).pipe(Effect.provide(commandLineServices)),
+it.effect.each(["--once", "--until-mention"])(
+  "cookout watch %s with unread mentions waiting prints the unread line and exits 0",
+  (flag) =>
+    Effect.gen(function* watchStopsAtUnread() {
+      const { result, stdoutLines } = yield* watchUntilExit({
+        args: ["watch", flag],
+        prepare: twoOldMentions,
+        whileWatching: () => Effect.void,
+      });
+
+      expect(result.exitCode).toBe(EXIT_SUCCESS);
+      expect(stdoutLines).toStrictEqual(["2 unread, run cookout inbox"]);
+    }).pipe(Effect.provide(commandLineServices)),
 );
 
 it.effect("cookout watch starts with one line counting the unread items, then prints only newer items", () =>
   Effect.gen(function* watchUnread() {
     const { during, stdoutLines } = yield* watchUntilExit({
       args: ["watch", "--until-mention"],
-      prepare: twoOldMentions,
+      prepare: twoOldPosts,
       whileWatching: ({ ann }) => mention(ann, "@bob three"),
     });
     const id = String(during);
@@ -260,7 +272,7 @@ it.effect("cookout watch prints the unread line once, not again after a reconnec
   Effect.gen(function* watchUnreadOnce() {
     const { during, stdoutLines } = yield* watchUntilExit({
       args: ["watch", "--until-mention"],
-      prepare: twoOldMentions,
+      prepare: twoOldPosts,
       whileWatching: reconnectThenMention,
     });
     const id = String(during);

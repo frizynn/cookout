@@ -223,7 +223,7 @@ const followCommand = Command.make("follow", { id: messageIdArgument }, ({ id })
 
 const unfollowCommand = Command.make("unfollow", { id: messageIdArgument }, ({ id }) =>
   answer((client) => client.unfollow(id)),
-).pipe(Command.withDescription("Stop following a thread until the next reply in it or mention of this identity."));
+).pipe(Command.withDescription("Stop following a thread until this identity replies in it or is mentioned in it."));
 
 const subscribeCommand = Command.make("subscribe", { channel: channelArgument }, ({ channel }) =>
   answer((client) => client.subscribe(channel)),

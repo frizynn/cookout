@@ -115,3 +115,18 @@ it.effect("a server restarted mid-backoff still retries the delivery, with the s
     expect(replies).toStrictEqual([]);
   }).pipe(Effect.provide(testCookout({ storage: "sqlite", webhookTimeoutSeconds: 86_400 }))),
 );
+
+it.effect("the failure reply is posted as the stored handler identity, owner included", () =>
+  Effect.gen(function* failureByStoredHandler() {
+    const cookout = yield* TestCookout;
+    const bot = yield* cookout.createIdentity("deploy", { owner: "matt" });
+    yield* cookout.webhook.failNext(SIX_CALLS, UNAVAILABLE);
+    const threadId = yield* calledDeploy(cookout);
+    yield* advanceUntilCalls(cookout, SIX_CALLS);
+    const thread = yield* answer(() => cookout.client.getThread(threadId)).pipe(
+      Effect.repeat({ until: ({ replies }) => Arr.isReadonlyArrayNonEmpty(replies) }),
+    );
+
+    expect(thread.replies).toMatchObject([{ author: { name: bot.identity.name, owner: "matt" } }]);
+  }).pipe(Effect.provide(patientCookout)),
+);

@@ -56,7 +56,9 @@ const onceFlag = Flag.Boolean("once").pipe(
 
 const untilMentionFlag = Flag.Boolean("until-mention").pipe(
   Flag.withDefault(false),
-  Flag.withDescription("Print only the first new item that @-mentions this identity, then exit 0."),
+  Flag.withDescription(
+    "Print only the first new item that @-mentions this identity, then exit 0, or exit 0 at the start-up unread line when an unread mention is waiting.",
+  ),
 );
 
 const timeoutFlag = Flag.Int("timeout").pipe(

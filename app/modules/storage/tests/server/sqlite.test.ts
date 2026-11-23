@@ -172,6 +172,20 @@ it.effect("a damaged channel row fails with StorageUnavailable when it is read",
   }).pipe(Effect.provide(NodeServices.layer)),
 );
 
+it.effect("a damaged identity row fails with StorageUnavailable when it is read", () =>
+  Effect.gen(function* damagedIdentity() {
+    const path = yield* freshDatabasePath;
+    yield* createThenRotate(path);
+    yield* damage(path, upperCased("auth-griller"));
+    const { storage } = yield* openStore(sqliteStorage(path));
+    const error = yield* Effect.flip(storage.listIdentities());
+
+    expect(error).toStrictEqual(
+      StorageUnavailable.make({ message: "The database holds a row this cookout can't read." }),
+    );
+  }).pipe(Effect.provide(NodeServices.layer)),
+);
+
 it.effect("message IDs keep increasing after the database is reopened", () =>
   Effect.gen(function* idsAfterReopen() {
     const path = yield* freshDatabasePath;

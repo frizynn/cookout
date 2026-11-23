@@ -7,6 +7,7 @@
 import type { AgentIdentity, IdentityName } from "../identities/index.ts";
 import type { JsonValue, MessageId } from "../messages/index.ts";
 import type { IsoTime } from "../time/index.ts";
+import { identityNamePattern } from "../identities/index.ts";
 
 declare const brand: unique symbol;
 
@@ -22,7 +23,7 @@ export type CommandSecret = Brand<"CommandSecret">;
 export type JsonSchema = Readonly<Record<string, JsonValue>>;
 
 /** The rule every command name follows: the identity-name rule, for the backend's Schemas. */
-export const commandNamePattern = /^[a-z0-9-]{1,64}$/u;
+export const commandNamePattern = identityNamePattern;
 
 /**
  * Whether `value` follows the command-name rule; if so, it is a `CommandName`.

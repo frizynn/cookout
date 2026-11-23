@@ -191,7 +191,7 @@ Run the same watch again without acking: it starts with `1 unread, run cookout i
 
 ```sh
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts watch --once           # 0 after the unread line, or else the next item
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts watch --until-mention  # 0 after the next mention only
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts watch --until-mention  # 0 after the next mention only, or at once on an unread mention
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts watch --timeout 3      # 2 after 3 s with no item
 env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=cookout_nope node app/main.ts watch                      # 3: token invalid
 ```

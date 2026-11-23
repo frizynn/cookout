@@ -16,12 +16,11 @@ import type {
   ThreadResponse,
   TopLevelMessage,
 } from "../../../messages/index.ts";
+import type { MemoryInbox, MemoryInboxSection } from "./inbox-memory.ts";
 import { asMessageId, counted, isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { ChannelsSection } from "./channels.ts";
 import type { IdentitiesSection } from "./identities.ts";
-import type { InboxSection } from "./inbox.ts";
-import type { MemoryInbox } from "./inbox-memory.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isMessageId } from "../../../messages/index.ts";
@@ -102,7 +101,7 @@ function pageIn(messages: readonly Message[], channel: ChannelName, page: Channe
   return { hasMore: older.length > shown.length, messages: Arr.map(shown, (parent) => current(messages, parent)) };
 }
 
-function memoryMessages({ channels, identities, state }: MemoryMessagesOptions): MessagesSection & InboxSection {
+function memoryMessages({ channels, identities, state }: MemoryMessagesOptions): MessagesSection & MemoryInboxSection {
   const ref = Ref.makeUnsafe(EMPTY);
   function change<Value>(work: (data: MemoryMessages) => readonly [Value, MemoryMessages]): Fails<Value> {
     return Effect.andThen(state.ensureOpen, Ref.modify(ref, work));

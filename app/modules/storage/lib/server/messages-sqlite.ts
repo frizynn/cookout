@@ -5,14 +5,15 @@ import { isIdentityName, isOwner } from "../../../identities/index.ts";
 import { isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
 import { recordAppended, sqliteInbox } from "./inbox-sqlite.ts";
 import type { ChannelName } from "../../../channels/index.ts";
+import type { CommandCallsSection } from "./command-calls.ts";
 import type { IdentityName } from "../../../identities/index.ts";
-import type { InboxSection } from "./inbox.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { MessageReader } from "./inbox-sqlite.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isChannelName } from "../../../channels/index.ts";
 import { isMessageId } from "../../../messages/index.ts";
+import { sqliteCommandCalls } from "./command-calls.ts";
 import { unreadable } from "./errors.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
@@ -233,9 +234,10 @@ function sqliteMessageReader(db: SqliteDatabase): MessageReader {
   return { columns: MESSAGE_COLUMNS, findMessage: (id) => find(db, id), toMessage };
 }
 
-function sqliteMessages(db: SqliteDatabase): MessagesSection & InboxSection {
+function sqliteMessages(db: SqliteDatabase): MessagesSection & ReturnType<typeof sqliteInbox> & CommandCallsSection {
   return {
     ...sqliteInbox({ db, reader: sqliteMessageReader(db) }),
+    ...sqliteCommandCalls({ appendMessage: (message) => append(db, message), db }),
     appendMessage: (message) => db.transaction(append(db, message)),
     getThread: (id) => threadOf(db, id),
     latestMessageId: latestOf(db),

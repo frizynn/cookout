@@ -99,4 +99,10 @@ function sqliteCommandTokens(db: SqliteDatabase): CommandTokensSection {
   };
 }
 
-export { type CommandTokenGrant, type CommandTokensSection, memoryCommandTokens, sqliteCommandTokens };
+export {
+  type CommandTokenGrant,
+  type CommandTokensSection,
+  type StoredCommandToken,
+  memoryCommandTokens,
+  sqliteCommandTokens,
+};

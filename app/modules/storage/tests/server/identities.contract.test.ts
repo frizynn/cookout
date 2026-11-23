@@ -25,6 +25,20 @@ it.effect.each(storageLayers)("storage contract ($adapter): a new store has no i
 );
 
 it.effect.each(storageLayers)(
+  "storage contract ($adapter): an identity is found by name as stored, and a missing name finds nothing",
+  ({ layer }) =>
+    Effect.gen(function* findByName() {
+      const { storage } = yield* openStore(layer);
+      yield* storage.createIdentity(identity("zed", { owner: "matt" }), hashA);
+      const found = yield* storage.findIdentityByName(nameOf("zed"));
+      const missing = yield* storage.findIdentityByName(nameOf("nobody"));
+
+      expect(found).toStrictEqual(identity("zed", { owner: "matt" }));
+      expect(missing).toBeUndefined();
+    }),
+);
+
+it.effect.each(storageLayers)(
   "storage contract ($adapter): an identity is created with or without an owner and listed by name",
   ({ layer }) =>
     Effect.gen(function* createAndList() {
