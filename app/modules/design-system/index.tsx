@@ -68,8 +68,9 @@
  * `MessageList` is a named list of `MessageItem`s: one message each, which
  * takes focus, with its avatar, name and time, or only its time on hover when
  * `grouped` under the one before; the day's separator and the "New" line above it when it starts them; a
- * mark (`for-you`, the accent, when it mentions or answers the reader, or `open`); and an action link (such as Reply) shown on hover
- * or focus. `StandaloneMessage` is one named message on its own, such as a
+ * mark (`for-you`, the accent, when it mentions or answers the reader, or `open`); and an action link (such as Reply) and
+ * a More actions button shown on hover or focus. With a `menu`, right-clicking it or that button opens its actions
+ * menu (the action link and Mark unread), which takes focus and closes on Escape. `StandaloneMessage` is one named message on its own, such as a
  * thread's parent. In a message, `MessageBody` holds its rendered Markdown text, `Mention` an
  * `@name` in it, `CallChip` a command call
  * and its data, `DataToggle` its data folded away, and `ThreadSummary` a link to
