@@ -217,6 +217,11 @@ function createDirectory(options: ComposerOptions): Directory {
   };
 }
 
+interface CommandList {
+  readonly subscribe: (listener: () => void) => () => void;
+  readonly snapshot: () => { readonly status: string; readonly commands?: readonly Command[] };
+}
+
 /** One message box's draft. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
 export interface Draft {
   /** Calls `listener` after every change, until the returned function is called. */
@@ -255,14 +260,6 @@ export interface Composer {
   readonly channelDraft: (channel: string) => Draft;
   /** The identity list the suggestions come from. */
   readonly identities: Identities;
-}
-
-/** The registered commands, as the board's `commands` store holds them. */
-export interface CommandList {
-  /** Calls `listener` after every change, until the returned function is called. */
-  readonly subscribe: (listener: () => void) => () => void;
-  /** The commands once loaded; in any other state the box suggests none. */
-  readonly snapshot: () => { readonly status: string; readonly commands?: readonly Command[] };
 }
 
 /** What the composer store needs: the SDK, for the identities, and the commands a channel's box suggests. */
