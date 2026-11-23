@@ -54,7 +54,6 @@ function acksOn({ hubs, storage }: AcksOn): AckCalls {
         const now = yield* DateTime.now;
         const acked = yield* storage.ackMessage(caller.name, id, isoTimeOf(now));
         const { readPosition, receipts } = yield* orMessageNotFound<AckedMessage>(String(id))(acked);
-        yield* storage.markReactionsSeen(caller.name, [id]);
         yield* hub.publish({ identity: caller.name, readPosition });
         yield* readReceipts.publish(receipts);
         return { readPosition };

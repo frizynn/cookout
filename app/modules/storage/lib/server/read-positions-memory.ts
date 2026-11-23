@@ -89,6 +89,29 @@ function ackIn({ at, identity, inbox, key, message, messages }: AckingIn): reado
   ];
 }
 
+function reactionsSeenUpTo({ identity, inbox, message, messages }: AckingIn): MemoryInbox {
+  const { channel, thread } = scopeOf(message);
+  const read = Arr.filter(messages, (passed) => {
+    const scope = scopeOf(passed);
+    return (
+      passed.author.name === identity && scope.channel === channel && scope.thread === thread && passed.id <= message.id
+    );
+  });
+  const ids = new Set(Arr.map(read, (passed) => passed.id));
+  const reactions = Arr.map(inbox.reactions, (stored) => {
+    if (ids.has(stored.messageId)) {
+      return { ...stored, seen: true };
+    }
+    return stored;
+  });
+  return { ...inbox, reactions };
+}
+
+function ackMessageIn(acking: AckingIn): readonly [AckedMessage, MemoryInbox] {
+  const [acked, inbox] = ackIn(acking);
+  return [acked, reactionsSeenUpTo({ ...acking, inbox })];
+}
+
 interface AckingAllIn extends Omit<AckingIn, "key" | "message"> {
   readonly keyFor: (message: Message) => string;
   readonly newest: readonly Message[];
@@ -105,5 +128,5 @@ function ackAllIn({ keyFor, newest, ...acking }: AckingAllIn): readonly [AckedIn
   });
 }
 
-export { ackAllIn, ackIn, moveBackIn, readPositionsIn };
+export { ackAllIn, ackIn, ackMessageIn, moveBackIn, readPositionsIn };
 export { receiptsOf } from "./read-receipts-memory.ts";

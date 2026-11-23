@@ -8,7 +8,14 @@ import type {
   StoredInboxItem,
 } from "./inbox.ts";
 import type { Message, MessageId, ReadReceipt, TopLevelMessage } from "../../../messages/index.ts";
-import { ackAllIn, ackIn, moveReadPositionBackIn, readPositionsIn, receiptsOf } from "./read-positions-sqlite.ts";
+import {
+  ackAllIn,
+  ackIn,
+  ackMessageIn,
+  moveReadPositionBackIn,
+  readPositionsIn,
+  receiptsOf,
+} from "./read-positions-sqlite.ts";
 import { followersOf, newestPerScope, reasonsIn } from "./inbox.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { InboxReason } from "../../../inbox/index.ts";
@@ -223,7 +230,7 @@ function sqliteInbox({ db, reader }: InboxOn): InboxSection {
           if (Predicate.isUndefined(message)) {
             return Effect.undefined;
           }
-          return ackIn({ at, db, identity, message });
+          return ackMessageIn({ at, db, identity, message });
         }),
       ),
     findInboxItem: (identity, id) => inboxItemOf({ db, reader }, identity, id),

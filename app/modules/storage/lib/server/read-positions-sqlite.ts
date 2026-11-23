@@ -152,6 +152,24 @@ function ackIn(acking: Acking): Fails<AckedMessage> {
   });
 }
 
+const SEEN_IN_CHANNEL = `UPDATE reactions SET seen = 1 WHERE seen = 0 AND message_id IN
+  (SELECT id FROM messages WHERE author_name = ?1 AND channel = ?2 AND reply_to IS NULL AND id <= ?3)`;
+
+const SEEN_IN_THREAD = `UPDATE reactions SET seen = 1 WHERE seen = 0 AND message_id IN
+  (SELECT id FROM messages WHERE author_name = ?1 AND reply_to = ?2 AND id <= ?3)`;
+
+function reactionsSeenUpTo({ db, identity, message }: Acking): Fails<void> {
+  const { channel, thread } = scopeOf(message);
+  if (Predicate.isNull(thread)) {
+    return db.run(SEEN_IN_CHANNEL, identity, channel, message.id);
+  }
+  return db.run(SEEN_IN_THREAD, identity, thread, message.id);
+}
+
+function ackMessageIn(acking: Acking): Fails<AckedMessage> {
+  return Effect.tap(ackIn(acking), () => reactionsSeenUpTo(acking));
+}
+
 interface AckingAll extends Reading {
   readonly at: Message["createdAt"];
   readonly messages: readonly Message[];
@@ -167,5 +185,5 @@ function ackAllIn({ messages, ...acking }: AckingAll): Fails<AckedInbox> {
   );
 }
 
-export { ackAllIn, ackIn, moveReadPositionBackIn, readPositionsIn };
+export { ackAllIn, ackIn, ackMessageIn, moveReadPositionBackIn, readPositionsIn };
 export { receiptsOf } from "./read-receipts-sqlite.ts";
