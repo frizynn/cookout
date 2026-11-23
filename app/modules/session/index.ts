@@ -10,6 +10,17 @@
 import type { CookoutClient, Identity } from "../sdk/index.ts";
 import { CookoutError } from "../sdk/index.ts";
 
+interface Refusal {
+  readonly code: string;
+  readonly message: string;
+}
+
+type SessionState =
+  | { readonly status: "checking" }
+  | { readonly status: "logged-out"; readonly refusal: Refusal | null }
+  | { readonly status: "logging-in" }
+  | { readonly status: "logged-in"; readonly identity: Identity };
+
 const NOT_LOGGED_IN = "token_missing";
 
 function shownRefusal(refusal: Refusal): Refusal | null {
@@ -25,19 +36,6 @@ function refusalOf(error: unknown): Refusal {
   }
   return { code: "unreachable", message: String(error) };
 }
-
-/** Why something was refused: the server's error code, or `unreachable` when it couldn't be reached. */
-export interface Refusal {
-  readonly code: string;
-  readonly message: string;
-}
-
-/** The login state. `refusal` is why the last attempt failed, or `null`. */
-export type SessionState =
-  | { readonly status: "checking" }
-  | { readonly status: "logged-out"; readonly refusal: Refusal | null }
-  | { readonly status: "logging-in" }
-  | { readonly status: "logged-in"; readonly identity: Identity };
 
 /** The session store. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
 export interface Session {

@@ -8,6 +8,7 @@
         "app/modules/sdk/index.ts!",
         "app/web.tsx!",
         "app/modules/testing/server.ts!",
+        "app/modules/routes/tests/app.tsx!",
         "app/modules/webhook-fake/server.ts!",
         "scripts/*.{ts,mjs}!"
       ],

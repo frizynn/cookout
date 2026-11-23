@@ -111,6 +111,26 @@ it('"Load more" loads the older messages, until there are none', { timeout: 5000
   close();
 });
 
+it('clicking "Load more" twice before it answers loads the older page once', { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  await channelWith("web-channel-double-click", ["One", "Two", "Three"]);
+  const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-double-click", pageSize: TWO_A_PAGE });
+  await shownMessages();
+
+  fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+  fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+  await screen.findByRole("link", { name: /One/u });
+
+  await expect(shownMessages()).resolves.toStrictEqual([
+    "@adminOne0 replies",
+    "@adminTwo0 replies",
+    "@adminThree0 replies",
+  ]);
+
+  close();
+});
+
 it("viewing a channel acks its newest top-level message, so its messages leave the inbox", {
   timeout: 5000,
 }, async () => {
