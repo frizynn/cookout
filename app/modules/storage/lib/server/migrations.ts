@@ -172,6 +172,8 @@ const migrations: readonly string[] = [
      online INTEGER NOT NULL CHECK (online IN (0, 1)),
      last_seen_at TEXT NOT NULL
    ) STRICT;`,
+  `ALTER TABLE messages ADD COLUMN closed_at TEXT;
+   ALTER TABLE messages ADD COLUMN closed_by TEXT;`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

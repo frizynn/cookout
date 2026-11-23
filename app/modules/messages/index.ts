@@ -70,6 +70,23 @@ export interface TopLevelMessage extends MessageFields {
    * Each is the author as stored on their latest reply, so a deleted replier still shows.
    */
   readonly repliers: readonly Author[];
+  /** When its thread was closed. Present only while the thread is closed; `closedBy` is present with it. */
+  readonly closedAt?: IsoTime;
+  /** Who closed its thread. Present only while the thread is closed; `closedAt` is present with it. */
+  readonly closedBy?: IdentityName;
+}
+
+/** Who closed a thread and when, as its top-level message carries it while the thread is closed. */
+export type Closing = Required<Pick<TopLevelMessage, "closedAt" | "closedBy">>;
+
+/**
+ * A top-level message with its thread open: no `closedAt` and no `closedBy`.
+ * @param parent The top-level message.
+ * @returns The same message, open.
+ */
+export function reopened(parent: TopLevelMessage): TopLevelMessage {
+  const { closedAt: _closedAt, closedBy: _closedBy, ...open } = parent;
+  return open;
 }
 
 /** A top-level message and the newest reply in its thread. */
@@ -83,7 +100,7 @@ export const shownRepliers = 4;
 
 /**
  * A top-level message as it is once `reply`, the newest reply in its thread, is posted: one more reply, `reply` as its
- * latest, and `reply`'s author as its latest replier.
+ * latest, `reply`'s author as its latest replier, and its thread open, since a reply reopens a closed thread.
  * @param replying The top-level message and its newest reply.
  * @param replying.parent The top-level message.
  * @param replying.reply The newest reply in its thread.
@@ -92,7 +109,7 @@ export const shownRepliers = 4;
 export function withNewestReply({ parent, reply }: Replying): TopLevelMessage {
   const others = parent.repliers.filter((replier) => replier.name !== reply.author.name);
   return {
-    ...parent,
+    ...reopened(parent),
     latestReplyAt: reply.createdAt,
     latestReplyId: reply.id,
     repliers: [reply.author, ...others].slice(FIRST, shownRepliers),
@@ -202,6 +219,14 @@ export const channelMessagesPath = "/v1/channels/:name/messages";
 
 /** `GET /v1/messages/:id/thread`: the thread holding the message. */
 export const threadPath = "/v1/messages/:id/thread";
+
+/** The answer to closing or reopening a thread: its top-level message as it now stands. */
+export interface TopLevelMessageResponse {
+  readonly message: TopLevelMessage;
+}
+
+/** `PUT` closes and `DELETE` reopens the thread holding the message. */
+export const closedPath = "/v1/messages/:id/closed";
 
 /** The codes the message routes refuse with: a missing message (404) and a reply in another channel (400). */
 export const messageErrorCodes = ["message_not_found", "reply_in_other_channel"] as const;

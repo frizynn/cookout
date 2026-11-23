@@ -1,0 +1,73 @@
+import { Effect, Option, Predicate } from "effect";
+import type { Message, MessageId, TopLevelMessage } from "../../../messages/index.ts";
+import type { MessagesSection, ThreadStateChange } from "./messages.ts";
+import type { MessageReader } from "./inbox-sqlite.ts";
+import type { SqliteDatabase } from "./adapters/sqlite.ts";
+import type { StorageUnavailable } from "./errors.ts";
+import { threadIdOf } from "./messages.ts";
+
+type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
+
+type ClosedThreadsSection = Pick<MessagesSection, "closeThread" | "reopenThread">;
+
+interface ClosedThreadsOptions {
+  readonly db: SqliteDatabase;
+  readonly reader: MessageReader;
+}
+
+interface Reopening extends ClosedThreadsOptions {
+  readonly message: Message;
+}
+
+const CLOSE = "UPDATE messages SET closed_at = ?, closed_by = ? WHERE id = ? AND closed_at IS NULL RETURNING id";
+const REOPEN =
+  "UPDATE messages SET closed_at = NULL, closed_by = NULL WHERE id = ? AND closed_at IS NOT NULL RETURNING id";
+
+function isTopLevel(message: Message): message is TopLevelMessage {
+  return message.kind === "top-level";
+}
+
+function parentOf(reader: MessageReader, id: MessageId): Fails<Option.Option<TopLevelMessage>> {
+  return Effect.map(reader.findMessage(id), (found) => Option.filter(Option.fromUndefinedOr(found), isTopLevel));
+}
+
+function changeThread(
+  { db, reader }: ClosedThreadsOptions,
+  id: MessageId,
+  change: (parent: MessageId) => Fails<unknown>,
+): Fails<ThreadStateChange | undefined> {
+  return Effect.gen(function* changeThreadState() {
+    const found = yield* reader.findMessage(id);
+    if (Predicate.isUndefined(found)) {
+      return found;
+    }
+    const changed = yield* Effect.map(change(threadIdOf(found)), Predicate.isObject);
+    const parent = yield* parentOf(reader, threadIdOf(found));
+    return Option.getOrUndefined(Option.map(parent, (now) => ({ changed, parent: now })));
+  }).pipe(db.transaction);
+}
+
+function reopenedBy({ db, message, reader }: Reopening): Fails<TopLevelMessage | undefined> {
+  if (message.kind === "top-level") {
+    return Effect.undefined;
+  }
+  return db.get(REOPEN, message.replyTo).pipe(
+    Effect.flatMap((row) => {
+      if (Predicate.isObject(row)) {
+        return Effect.map(parentOf(reader, message.replyTo), Option.getOrUndefined);
+      }
+      return Effect.undefined;
+    }),
+  );
+}
+
+function sqliteClosedThreads(options: ClosedThreadsOptions): ClosedThreadsSection {
+  const { db } = options;
+  return {
+    closeThread: (id, { closedAt, closedBy }) =>
+      changeThread(options, id, (parent) => db.get(CLOSE, closedAt, closedBy, parent)),
+    reopenThread: (id) => changeThread(options, id, (parent) => db.get(REOPEN, parent)),
+  };
+}
+
+export { reopenedBy, sqliteClosedThreads };
