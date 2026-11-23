@@ -1,6 +1,8 @@
 import { expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
+import type { CookoutClient } from "../../sdk/index.ts";
 import { adminClient } from "./identities.ts";
+import { createCookoutClient } from "../../sdk/index.ts";
 import { inSidebar } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
@@ -30,6 +32,13 @@ async function submitNew(channel: NewChannel): Promise<void> {
   fireEvent.click(inSidebar().getByRole("button", { name: "Create" }));
 }
 
+async function openWithChannel(client: CookoutClient, name: string): Promise<() => void> {
+  await client.createChannel({ name });
+  const close = openAt({ client, hash: "#/" });
+  await inSidebar().findByRole("link", { name: `#${name}` });
+  return close;
+}
+
 const REFUSED = /^Couldn't create the channel/u;
 const TOO_LONG = 501;
 
@@ -41,7 +50,7 @@ it("creating a channel from the sidebar adds it to the channel list and opens it
   expect.hasAssertions();
 
   const client = adminClient();
-  const close = openAt({ client, hash: "#/" });
+  const close = await openWithChannel(client, "web-create-earlier");
 
   await submitNew({ description: "Made in the web.", name: "web-create-made" });
   const heading = await screen.findByRole("heading", { level: 1, name: "#web-create-made" });
@@ -51,12 +60,14 @@ it("creating a channel from the sidebar adds it to the channel list and opens it
   expect([
     heading.textContent,
     link.getAttribute("href"),
+    inSidebar().getByRole("link", { name: "#web-create-earlier" }).textContent,
     globalThis.location.hash,
     channel.description,
     inSidebar().queryByRole("form", { name: "New channel" }),
   ]).toStrictEqual([
     "#web-create-made",
     "#/channels/web-create-made",
+    "#web-create-earlier",
     "#/channels/web-create-made",
     "Made in the web.",
     null,
@@ -135,6 +146,20 @@ it("cancelling the new channel form closes it without creating anything", { time
     inSidebar().queryByRole("form", { name: "New channel" }),
     channels.some((channel) => channel.name === "web-create-cancelled"),
   ]).toStrictEqual([null, false]);
+
+  close();
+});
+
+it("a server that can't be reached is refused beside the name field", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const unreachable = createCookoutClient({ env: {}, token: "cookout_any", url: "http://127.0.0.1:1" });
+  const close = openAt({ client: { ...adminClient(), createChannel: unreachable.createChannel }, hash: "#/" });
+
+  await submitNew({ name: "web-create-unreachable" });
+  await inSidebar().findByText(/unreachable/u);
+
+  expect([refusedOn("Name"), fieldNamed("Name").value]).toStrictEqual([true, "web-create-unreachable"]);
 
   close();
 });
