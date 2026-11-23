@@ -1,33 +1,12 @@
 import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
-import { adminClient, newIdentity, openAt } from "./app.tsx";
-import { createLive, watchAdapter } from "../../live/index.ts";
+import { adminClient, newIdentity, openAt, watched } from "./app.tsx";
 import { expect, it } from "vitest";
 import { screen, within } from "@testing-library/react";
-import type { Live } from "../../live/index.ts";
-
-interface Watched {
-  readonly live: Live;
-  readonly stream: Promise<EventStream>;
-}
 
 interface LiveView {
   readonly parent: Message;
   readonly poster: CookoutClient;
   readonly close: () => Promise<void>;
-}
-
-function watched(client: CookoutClient): Watched {
-  const { promise, resolve } = Promise.withResolvers<EventStream>();
-  const live = createLive(
-    watchAdapter({
-      watch: async (options) => {
-        const stream = await client.watch(options);
-        resolve(stream);
-        return stream;
-      },
-    }),
-  );
-  return { live, stream: promise };
 }
 
 async function shownIn(name: string): Promise<readonly (string | null)[]> {

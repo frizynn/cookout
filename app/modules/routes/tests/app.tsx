@@ -1,5 +1,6 @@
 import type { Board, BoardClient } from "../../board/index.ts";
-import type { CookoutClient, CreateIdentityRequest, Token } from "../../sdk/index.ts";
+import type { CookoutClient, CreateIdentityRequest, EventStream, Token } from "../../sdk/index.ts";
+import { createLive, watchAdapter } from "../../live/index.ts";
 import { CookoutApp } from "../index.tsx";
 import type { Live } from "../../live/index.ts";
 import type { Session } from "../../session/index.ts";
@@ -23,6 +24,11 @@ interface Opening {
   readonly pageSize?: number;
   readonly session?: Session;
   readonly live?: Live;
+}
+
+interface Watched {
+  readonly live: Live;
+  readonly stream: Promise<EventStream>;
 }
 
 interface NewIdentity {
@@ -59,4 +65,18 @@ export function openBoard(opening: BoardOpening): () => void {
 export function openAt(opening: Opening): () => void {
   const session = opening.session ?? sessionOf(opening.client);
   return openBoard({ board: createBoard(opening), hash: opening.hash, session });
+}
+
+export function watched(client: CookoutClient): Watched {
+  const { promise, resolve } = Promise.withResolvers<EventStream>();
+  const live = createLive(
+    watchAdapter({
+      watch: async (options) => {
+        const stream = await client.watch(options);
+        resolve(stream);
+        return stream;
+      },
+    }),
+  );
+  return { live, stream: promise };
 }

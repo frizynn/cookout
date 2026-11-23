@@ -50,4 +50,4 @@ function createLiveFeed({ live, receivers }: LiveFeedOptions): LiveFeed {
   };
 }
 
-export { type LiveFeed, createLiveFeed };
+export { createLiveFeed };

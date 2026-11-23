@@ -27,9 +27,6 @@ function eventSourceAdapter(baseUrl: string): LiveAdapter {
       for (const type of Object.keys(eventTypes)) {
         source.addEventListener(type, heard);
       }
-      return () => {
-        source.close();
-      };
     },
   };
 }
