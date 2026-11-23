@@ -219,6 +219,21 @@ it.effect("a stream opened with an agent session token ends with agent_session_r
   }).pipe(Effect.provide(testCookout())),
 );
 
+it.effect("a stream opened with an agent session token ends with token_revoked once its identity is deactivated", () =>
+  Effect.gen(function* streamEndsOnDeactivation() {
+    const cookout = yield* TestCookout;
+    const { first } = yield* twoSessions(cookout);
+    const issued = yield* answer(() => first.join(AS));
+    const events = yield* watching(cookout.clientFor(issued.agentSessionToken));
+    yield* answer(() => cookout.client.deactivateIdentity(AS.as));
+    const next = yield* Effect.forkChild(refusal(() => events.next()));
+    yield* TestClock.adjust(Duration.seconds(PAST_A_CHECK));
+    const error = yield* Fiber.join(next);
+
+    expect(error).toMatchObject({ code: "token_revoked" });
+  }).pipe(Effect.provide(testCookout())),
+);
+
 it.effect("an open stream moves its agent session token's expiry on", () =>
   Effect.gen(function* streamRenews() {
     const cookout = yield* TestCookout;

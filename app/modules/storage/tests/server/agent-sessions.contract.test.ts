@@ -119,6 +119,6 @@ it.effect.each(storageLayers)(
       yield* storage.reactivateIdentity(AGENT, tokenHash("hash:fresh"));
       const afterwards = yield* storage.useAgentSession({ hash: FIRST, now: T30 });
 
-      expect([whileDeactivated, afterwards]).toStrictEqual([{ status: "revoked" }, { status: "revoked" }]);
+      expect([whileDeactivated, afterwards]).toStrictEqual([{ status: "deactivated" }, { status: "revoked" }]);
     }),
 );

@@ -77,6 +77,9 @@ function revokeLive(sessions: Sessions, { identity, now }: AgentAt): boolean {
 }
 
 function renewKept(sessions: Sessions, { identity, kept }: Found, now: IsoTime): UseAgentSessionResult {
+  if (identity.deactivated === true) {
+    return { status: "deactivated" };
+  }
   if (kept.revoked) {
     return { status: "revoked" };
   }

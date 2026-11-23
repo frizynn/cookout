@@ -180,7 +180,11 @@ function commandTokenPrincipal(grant: CommandTokenGrant | undefined): Effect.Eff
   });
 }
 
-const endedAgentSession = { expired: agentSessionExpiredRefusal, revoked: agentSessionRevokedRefusal } as const;
+const endedAgentSession = {
+  deactivated: identityDeactivated,
+  expired: agentSessionExpiredRefusal,
+  revoked: agentSessionRevokedRefusal,
+} as const;
 
 function agentSessionPrincipal(storage: Storage["Service"], hash: TokenHash) {
   return (used: UseAgentSessionResult): Effect.Effect<Principal, Refusal | StorageUnavailable> => {

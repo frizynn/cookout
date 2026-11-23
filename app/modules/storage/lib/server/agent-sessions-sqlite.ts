@@ -19,6 +19,7 @@ type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
 const NOT_REVOKED = 0;
 const REVOKED = 1;
+const DEACTIVATED = 1;
 
 const LiveRow = Schema.Struct({ expires_at: IsoTimeSchema });
 
@@ -126,6 +127,9 @@ function issue(db: SqliteDatabase, { force, session }: IssueAgentSession): Fails
 
 function useFound(db: SqliteDatabase, { hash, now }: UseAgentSession) {
   return (session: typeof SessionRow.Type): Fails<UseAgentSessionResult> => {
+    if (session.deactivated === DEACTIVATED) {
+      return Effect.succeed({ status: "deactivated" });
+    }
     if (session.revoked === REVOKED) {
       return Effect.succeed({ status: "revoked" });
     }
