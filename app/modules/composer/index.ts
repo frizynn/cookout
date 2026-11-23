@@ -8,7 +8,8 @@
  * and caret: when the caret sits just after `@` and the start of a name, as
  * `mentionPattern` reads a mention, the suggestions are the identities whose
  * names start with it. `choose` swaps that `@` and prefix for the whole
- * mention and a space, and puts the caret after it; `clear` empties the box.
+ * mention and a space (or puts it at the caret if no mention is being typed),
+ * and puts the caret after it; `clear` empties the box.
  * Until the identities load, or if the server refuses them, nobody is
  * suggested.
  */
@@ -20,26 +21,14 @@ const AT_SIGN = 1;
 
 const typedMention = /(?<![\w.@-])@[a-z0-9-]*$/u;
 
-interface Typed {
-  readonly at: number;
-  readonly prefix: string;
-}
-
-function typedAt(text: string, caret: number): Typed | null {
+function suggestionsFor(identities: readonly Identity[], text: string, caret: number): readonly Identity[] {
   const found = typedMention.exec(text.slice(NOTHING, caret));
   if (found === null) {
-    return null;
-  }
-  const [mention] = found;
-  return { at: found.index, prefix: mention.slice(AT_SIGN) };
-}
-
-function suggestionsFor(identities: readonly Identity[], text: string, caret: number): readonly Identity[] {
-  const typed = typedAt(text, caret);
-  if (typed === null) {
     return [];
   }
-  return identities.filter((identity) => identity.name.startsWith(typed.prefix)).slice(NOTHING, MOST_SUGGESTIONS);
+  const [mention] = found;
+  const prefix = mention.slice(AT_SIGN);
+  return identities.filter((identity) => identity.name.startsWith(prefix)).slice(NOTHING, MOST_SUGGESTIONS);
 }
 
 interface Listeners {
@@ -65,22 +54,22 @@ function listenersOf(onFirst: () => void): Listeners {
   };
 }
 
+interface DraftSnapshot {
+  readonly text: string;
+  readonly caret: number;
+  readonly suggestions: readonly Identity[];
+}
+
 interface Directory {
   readonly identities: () => readonly Identity[];
   readonly load: () => void;
   readonly onLoad: (refresh: () => void) => void;
 }
 
-function withMention(snapshot: DraftSnapshot, name: string): Pick<DraftSnapshot, "caret" | "text"> | null {
-  const typed = typedAt(snapshot.text, snapshot.caret);
-  if (typed === null) {
-    return null;
-  }
+function withMention(snapshot: DraftSnapshot, name: string): Pick<DraftSnapshot, "caret" | "text"> {
+  const before = snapshot.text.slice(NOTHING, snapshot.caret).replace(typedMention, "");
   const mention = `@${name} `;
-  return {
-    caret: typed.at + mention.length,
-    text: snapshot.text.slice(NOTHING, typed.at) + mention + snapshot.text.slice(snapshot.caret),
-  };
+  return { caret: before.length + mention.length, text: before + mention + snapshot.text.slice(snapshot.caret) };
 }
 
 function createDraft(directory: Directory): Draft {
@@ -98,9 +87,7 @@ function createDraft(directory: Directory): Draft {
   return {
     choose: (name) => {
       const written = withMention(current, name);
-      if (written !== null) {
-        publish(written.text, written.caret);
-      }
+      publish(written.text, written.caret);
     },
     clear: () => {
       publish("", NOTHING);
@@ -109,13 +96,6 @@ function createDraft(directory: Directory): Draft {
     snapshot: () => current,
     subscribe: listeners.add,
   };
-}
-
-/** What one reply box shows: its text, where the caret is, and who the mention being typed could be. */
-export interface DraftSnapshot {
-  readonly text: string;
-  readonly caret: number;
-  readonly suggestions: readonly Identity[];
 }
 
 /** One reply box's draft. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */

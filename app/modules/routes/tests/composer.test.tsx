@@ -1,4 +1,4 @@
-import { adminClient, newIdentity, openAt } from "./app.tsx";
+import { adminClient, clientWith, newIdentity, openAt } from "./app.tsx";
 import { expect, it } from "vitest";
 import { fireEvent, getDefaultNormalizer, screen, within } from "@testing-library/react";
 import type { Message } from "../../sdk/index.ts";
@@ -74,6 +74,26 @@ it("text with no @ before the caret suggests nobody", { timeout: 5000 }, async (
   await typeInReply("mail me at me@admin");
 
   expect(screen.queryByRole("list", { name: "Mention suggestions" })).toBeNull();
+
+  close();
+});
+
+it("when the server refuses the identity list, typing @ suggests nobody and the box still takes text", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const parent = await threadIn("web-composer-refused");
+  const refused = clientWith("cookout_not-a-real-token");
+  const close = openAt({ client: { ...adminClient(), listIdentities: refused.listIdentities }, hash: hashOf(parent) });
+  const box = await typeInReply("Ping @adm");
+
+  await expect(refused.listIdentities()).rejects.toThrow("token");
+
+  expect([
+    screen.queryByRole("list", { name: "Mention suggestions" }),
+    screen.queryByDisplayValue("Ping @adm"),
+  ]).toStrictEqual([null, box]);
 
   close();
 });
