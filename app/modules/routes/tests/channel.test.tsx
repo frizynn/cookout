@@ -1,7 +1,7 @@
 import type { CookoutClient, InboxResponse, Message } from "../../sdk/index.ts";
-import { adminClient, alertSaying, clientWith, newIdentity, openAt } from "./app.tsx";
+import { adminClient, alertSaying, clientWith, messagesIn, newIdentity, openAt } from "./app.tsx";
 import { expect, it, vi } from "vitest";
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 
 const ONE_A_PAGE = 1;
 const TWO_A_PAGE = 2;
@@ -54,12 +54,8 @@ async function subscribedTo(channel: string, client: CookoutClient): Promise<voi
   await client.subscribe(channel);
 }
 
-async function shownMessages(): Promise<readonly (string | null)[]> {
-  const list = await screen.findByRole("list", { name: "Messages" });
-  const shown: (string | null)[] = [];
-  for (const link of within(list).getAllByRole("link")) {
-    shown.push(link.textContent);
-  }
+async function shownMessages(): Promise<readonly string[]> {
+  const shown = await messagesIn("Messages");
   return shown;
 }
 
@@ -80,8 +76,8 @@ it("the channel view shows the channel's top-level messages, oldest first, with 
 
   const shown = await shownMessages();
 
-  expect([shown, screen.getByRole("link", { name: /First/u }).getAttribute("href")]).toStrictEqual([
-    ["@adminFirst2 replies", "@adminSecond0 replies", "@adminThird0 replies"],
+  expect([shown, screen.getByRole("link", { name: "2 replies" }).getAttribute("href")]).toStrictEqual([
+    ["adminFirst2 replies", "adminSecond", "Third"],
     `#/channels/web-channel-shows/threads/${String(parent.id)}`,
   ]);
 
@@ -95,46 +91,42 @@ it("a message with one reply says 1 reply", { timeout: 5000 }, async () => {
   await threadWithReplies("web-channel-one-reply", ONE_A_PAGE);
   const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-one-reply" });
 
-  await expect(shownMessages()).resolves.toStrictEqual(["@adminFirst1 reply"]);
+  await expect(shownMessages()).resolves.toStrictEqual(["adminFirst1 reply"]);
 
   close();
 });
 
-it('"Load more" loads the older messages, until there are none', { timeout: 5000 }, async () => {
+it('"Load older messages" loads the older messages, until there are none', { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
   await channelWith("web-channel-pages", ["One", "Two", "Three"]);
   const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-pages", pageSize: TWO_A_PAGE });
   const firstPage = await shownMessages();
 
-  fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-  await screen.findByRole("link", { name: /One/u });
+  fireEvent.click(screen.getByRole("button", { name: "Load older messages" }));
+  await screen.findByText("One");
 
-  expect([firstPage, await shownMessages(), screen.queryByRole("button", { name: "Load more" })]).toStrictEqual([
-    ["@adminTwo0 replies", "@adminThree0 replies"],
-    ["@adminOne0 replies", "@adminTwo0 replies", "@adminThree0 replies"],
-    null,
-  ]);
+  expect([
+    firstPage,
+    await shownMessages(),
+    screen.queryByRole("button", { name: "Load older messages" }),
+  ]).toStrictEqual([["adminTwo", "Three"], ["adminOne", "Two", "Three"], null]);
 
   close();
 });
 
-it('clicking "Load more" twice before it answers loads the older page once', { timeout: 5000 }, async () => {
+it('clicking "Load older messages" twice before it answers loads the older page once', { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
   await channelWith("web-channel-double-click", ["One", "Two", "Three"]);
   const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-double-click", pageSize: TWO_A_PAGE });
   await shownMessages();
 
-  fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-  fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-  await screen.findByRole("link", { name: /One/u });
+  fireEvent.click(screen.getByRole("button", { name: "Load older messages" }));
+  fireEvent.click(screen.getByRole("button", { name: "Load older messages" }));
+  await screen.findByText("One");
 
-  await expect(shownMessages()).resolves.toStrictEqual([
-    "@adminOne0 replies",
-    "@adminTwo0 replies",
-    "@adminThree0 replies",
-  ]);
+  await expect(shownMessages()).resolves.toStrictEqual(["adminOne", "Two", "Three"]);
 
   close();
 });
@@ -161,15 +153,19 @@ it("viewing a channel acks its newest top-level message, so its messages leave t
   close();
 });
 
-it("an empty channel says it has no messages", { timeout: 5000 }, async () => {
+it("a channel with nothing older says it is the start of the channel", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
   await channelWith("web-channel-empty", []);
   const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-empty" });
 
-  const empty = await screen.findByText("No messages yet.");
+  const start = await screen.findByRole("heading", { level: 2, name: "Welcome to #web-channel-empty" });
 
-  expect([empty.textContent, screen.queryByRole("alert")]).toStrictEqual(["No messages yet.", null]);
+  expect([
+    start.textContent,
+    screen.getByText("This is the start of the channel.").tagName,
+    screen.queryByRole("alert"),
+  ]).toStrictEqual(["Welcome to #web-channel-empty", "P", null]);
 
   close();
 });
@@ -224,12 +220,12 @@ it("a refused older page says so and keeps the messages shown", { timeout: 5000 
   await shownMessages();
   await reader.rotateToken();
 
-  fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+  fireEvent.click(screen.getByRole("button", { name: "Load older messages" }));
   const alert = await alertSaying("Couldn't load older messages");
 
   expect([alert.textContent, await shownMessages()]).toStrictEqual([
     expect.stringMatching(/^Couldn't load older messages \(token_revoked\)/u),
-    ["@adminB0 replies"],
+    ["adminB"],
   ]);
 
   close();

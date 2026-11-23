@@ -1,10 +1,10 @@
-import { Alert, Button } from "../../design-system/index.tsx";
+import { Alert, QuietButton } from "../../design-system/index.tsx";
 import type { ChannelMessagesState } from "../../board/index.ts";
 import type { ReactNode } from "react";
 
 type OlderState = Extract<ChannelMessagesState, { readonly status: "loaded" }>["older"];
 
-const TEXT = { idle: "Load more", loading: "Loading…" } as const;
+const TEXT = { idle: "Load older messages", loading: "Loading…" } as const;
 
 interface OlderProps {
   readonly older: OlderState;
@@ -16,10 +16,10 @@ export function Older(props: OlderProps): ReactNode {
   const loading = older.status === "loading";
   return (
     <>
-      <Button disabled={loading} onClick={props.onLoad}>
+      <QuietButton disabled={loading} onClick={props.onLoad}>
         {loading && TEXT.loading}
         {!loading && TEXT.idle}
-      </Button>
+      </QuietButton>
       {older.status === "failed" && <Alert>{`Couldn't load older messages (${older.code}): ${older.message}`}</Alert>}
     </>
   );

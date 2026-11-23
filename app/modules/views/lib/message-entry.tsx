@@ -1,0 +1,41 @@
+import type { ChannelName, MessageId } from "../../sdk/index.ts";
+import { MessageItem, ReplyCount } from "../../design-system/index.tsx";
+import { markOf, replies, replyCountOf, threadHref } from "./message-marks.ts";
+import { MessageData } from "./message-data.tsx";
+import type { ReactNode } from "react";
+import type { StreamRow } from "./stream-rows.ts";
+import { timeOf } from "../../format/index.ts";
+import { useIsAgent } from "./use-is-agent.ts";
+
+const NONE = 0;
+const REPLY = "Reply";
+
+interface MessageEntryProps {
+  readonly row: StreamRow;
+  readonly me: string;
+  readonly channel: ChannelName | null;
+  readonly open: MessageId | null;
+}
+
+export function MessageEntry(props: MessageEntryProps): ReactNode {
+  const { message } = props.row;
+  const agent = useIsAgent(message.author);
+  const href = threadHref({ channel: props.channel, message });
+  const count = replyCountOf(message);
+  return (
+    <MessageItem
+      actionHref={href}
+      actionLabel={REPLY}
+      agent={agent}
+      day={props.row.day}
+      grouped={props.row.grouped}
+      mark={markOf({ me: props.me, message, open: props.open })}
+      name={message.author.name}
+      time={timeOf(message.createdAt)}
+      unreadLine={props.row.unreadLine}
+    >
+      <MessageData me={props.me} message={message} />
+      {href !== null && count > NONE && <ReplyCount href={href}>{replies(count)}</ReplyCount>}
+    </MessageItem>
+  );
+}

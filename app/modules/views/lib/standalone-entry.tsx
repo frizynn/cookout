@@ -1,0 +1,36 @@
+import { dayLabel, timeOf } from "../../format/index.ts";
+import type { Message } from "../../sdk/index.ts";
+import { MessageData } from "./message-data.tsx";
+import type { ReactNode } from "react";
+import { StandaloneMessage } from "../../design-system/index.tsx";
+import { markOf } from "./message-marks.ts";
+import { useIsAgent } from "./use-is-agent.ts";
+
+const NO_ACTION = "";
+
+interface StandaloneEntryProps {
+  readonly message: Message;
+  readonly me: string;
+  readonly label: string;
+}
+
+export function StandaloneEntry(props: StandaloneEntryProps): ReactNode {
+  const { message } = props;
+  const agent = useIsAgent(message.author);
+  return (
+    <StandaloneMessage
+      actionHref={null}
+      actionLabel={NO_ACTION}
+      agent={agent}
+      day={dayLabel(message.createdAt)}
+      grouped={false}
+      label={props.label}
+      mark={markOf({ me: props.me, message, open: null })}
+      name={message.author.name}
+      time={timeOf(message.createdAt)}
+      unreadLine={false}
+    >
+      <MessageData me={props.me} message={message} />
+    </StandaloneMessage>
+  );
+}

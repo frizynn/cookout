@@ -59,7 +59,7 @@ export function InboxItemRow(props: InboxItemRowProps): ReactNode {
       unread={props.unread}
     >
       <FeedText unread={props.unread}>
-        <MentionText me={props.me} text={message.text} />
+        <MentionText me={props.me} message={message} />
       </FeedText>
       <BadgeList>
         {item.reasons.map((reason) => (

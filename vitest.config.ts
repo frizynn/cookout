@@ -42,9 +42,18 @@ export default defineConfig({
         extends: true,
         test: {
           environment: "jsdom",
+          exclude: ["app/**/*.clock.test.tsx"],
           globalSetup: ["scripts/web-test-server.ts"],
           include: ["app/**/*.test.tsx"],
           name: "web",
+        },
+      },
+      {
+        extends: true,
+        test: {
+          environment: "./scripts/jsdom-server-environment.ts",
+          include: ["app/**/*.clock.test.tsx"],
+          name: "web-clock",
         },
       },
     ],

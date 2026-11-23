@@ -1,15 +1,19 @@
-import { Alert, Article, CardBody, Muted, Skeleton } from "../../design-system/index.tsx";
-import { MessageText } from "./message-text.tsx";
+import { Alert, CardBody, Muted, RepliesDivider, Skeleton } from "../../design-system/index.tsx";
+import type { MessageId } from "../../sdk/index.ts";
+import { MessageStream } from "./message-stream.tsx";
 import type { ReactNode } from "react";
-import { Replies } from "./replies.tsx";
+import { StandaloneEntry } from "./standalone-entry.tsx";
 import type { ThreadMessagesState } from "../../board/index.ts";
+import { replies } from "./message-marks.ts";
 
 const NONE = 0;
 
-const TEXT = { empty: "No replies yet.", parent: "Parent message" } as const;
+const TEXT = { empty: "No replies yet.", parent: "Parent message", replies: "Replies" } as const;
 
 interface ThreadBodyProps {
   readonly state: ThreadMessagesState;
+  readonly me: string;
+  readonly unreadFrom: MessageId | null;
 }
 
 export function ThreadBody(props: ThreadBodyProps): ReactNode {
@@ -27,15 +31,22 @@ export function ThreadBody(props: ThreadBodyProps): ReactNode {
   }
   return (
     <>
-      <Article label={TEXT.parent}>
-        <MessageText message={state.parent} />
-      </Article>
+      <StandaloneEntry label={TEXT.parent} me={props.me} message={state.parent} />
+      <RepliesDivider>{replies(state.replies.length)}</RepliesDivider>
       {state.replies.length === NONE && (
         <CardBody>
           <Muted>{TEXT.empty}</Muted>
         </CardBody>
       )}
-      <Replies replies={state.replies} />
+      <MessageStream
+        after={state.parent}
+        channel={null}
+        label={TEXT.replies}
+        me={props.me}
+        messages={state.replies}
+        open={null}
+        unreadFrom={props.unreadFrom}
+      />
       {state.read.status === "failed" && (
         <Alert>{`Couldn't mark the thread read (${state.read.code}): ${state.read.message}`}</Alert>
       )}

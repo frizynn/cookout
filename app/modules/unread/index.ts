@@ -19,14 +19,18 @@
  * given), keeping the read ones newest first and reading on until a page
  * holds one, and `loadMore` reads the next page. An item a read position
  * takes out of the counts joins it, so opening an item moves it there.
+ * `newLine` is where a channel's or thread's "New" line goes: the first
+ * message there that was unread when the view opened, kept while it is open.
  */
-import type { ChannelName, CookoutClient, CookoutEvent, InboxItem, Refusal } from "../sdk/index.ts";
+import type { ChannelName, CookoutClient, CookoutEvent, InboxItem, MessageId, Refusal } from "../sdk/index.ts";
 import type { Earlier } from "./lib/earlier.ts";
 import type { Live } from "../live/index.ts";
+import type { NewLine } from "./lib/new-lines.ts";
 import type { UnreadCounts } from "./lib/inbox-items.ts";
 import { createEarlier } from "./lib/earlier.ts";
 import { createInboxItems } from "./lib/inbox-items.ts";
 import { refusalOf } from "../sdk/index.ts";
+import { withNewLines } from "./lib/new-lines.ts";
 
 /**
  * The counts by channel name, as far as they have loaded, and the inbox items they count, oldest first; a channel with
@@ -49,6 +53,12 @@ export interface Unread {
   readonly snapshot: () => UnreadState;
   /** The read inbox items, newest first, a page at a time: an external store of its own. */
   readonly earlier: Earlier;
+  /**
+   * Where the "New" line goes in a channel's top-level messages (`thread` is `null`) or a thread's replies: the
+   * first message there that was unread when its first reader subscribed, once the counts have loaded. It stays put
+   * while anyone reads it, though the view's own ack reads that message, and is read afresh when it is opened again.
+   */
+  readonly newLine: (channel: ChannelName, thread: MessageId | null) => NewLine;
 }
 
 /**
@@ -104,7 +114,7 @@ export function createUnread(options: UnreadOptions): Unread {
     }
   }
 
-  return {
+  return withNewLines<Pick<Unread, "earlier" | "snapshot" | "subscribe">>({
     earlier,
     snapshot: () => current,
     subscribe: (listener) => {
@@ -114,7 +124,7 @@ export function createUnread(options: UnreadOptions): Unread {
         listeners.delete(listener);
       };
     },
-  };
+  });
 }
 
 export type { Earlier, EarlierState } from "./lib/earlier.ts";

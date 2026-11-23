@@ -50,13 +50,24 @@
  * reader's own (`mine`). `FeedNote` is a muted line in a feed: why a part is
  * `empty`, or that it has reached the `end`. A `Badge` is a small label, in the
  * mention colour (`mention`) or muted (`plain`).
+ * `MessageList` is a named list of `MessageItem`s: one message each, which
+ * takes focus, with its avatar, name and time, or only its time on hover when
+ * `grouped` under the one before; the day's separator and the "New" line above it when it starts them; a
+ * mark (`mention` or `open`); and an action link (such as Reply) shown on hover
+ * or focus. `StandaloneMessage` is one named message on its own, such as a
+ * thread's parent. In a message, `MessageBody` is its text, `Mention` an
+ * `@name` in it, `CallChip` a command call
+ * and its data, `DataToggle` its data folded away, and `ReplyCount` a link to
+ * its thread. `RepliesDivider` heads a thread's replies, `ChannelStart` says a
+ * channel has nothing older, and `QuietButton` is a muted centred button,
+ * such as loading older messages. `TextArea` takes focus when it first appears
+ * if `focused`.
  *
  * `AppShell` is the page around the login view; `Card`, centred in a scrolling column, `CardHeader`,
  * `Heading` and `Muted` are a shadcn-style card and its title row, `CardBody`
  * a padded section under it; `LinkList` and
  * `LinkRow` are a named list of links, and `ItemList` and `ItemRow` a named
- * list of plain rows; `Article` is one named item shown on its own, such as a
- * thread's parent message; `Alert` is a refusal, read out by screen readers;
+ * list of plain rows; `Alert` is a refusal, read out by screen readers;
  * `Skeleton` stands in while something loads. `Form` hands one field's value
  * to `onSubmit` without reloading the page; `TextField` is a labelled secret
  * input in it, such as a token, `TextArea` a labelled box to write in, such
@@ -68,12 +79,20 @@
  * the box focused; `Button` is any other button. `FieldsForm` is a form of
  * several fields, `Select` a labelled pick in it from its `SelectOption`s,
  * `DataArea` a labelled box in it to write JSON in, whose text its owner
- * holds, and `DataBlock` a named block of JSON, such as a message's data.
+ * holds.
  */
 export { Alert } from "./lib/alert.tsx";
+export { CallChip } from "./lib/call-chip.tsx";
+export { ChannelStart } from "./lib/channel-start.tsx";
+export { DataToggle } from "./lib/data-toggle.tsx";
+export { MessageBody } from "./lib/message-body.tsx";
+export { MessageItem } from "./lib/message-item.tsx";
+export { MessageList } from "./lib/message-list.tsx";
+export { QuietButton } from "./lib/quiet-button.tsx";
+export { RepliesDivider } from "./lib/replies-divider.tsx";
+export { ReplyCount } from "./lib/reply-count.tsx";
+export { StandaloneMessage } from "./lib/standalone-message.tsx";
 export { AppShell } from "./lib/app-shell.tsx";
-export { Article } from "./lib/article.tsx";
-export { Author } from "./lib/author.tsx";
 export { Badge } from "./lib/badge.tsx";
 export { BadgeList } from "./lib/badge-list.tsx";
 export { BoxFrame } from "./lib/box-frame.tsx";
@@ -83,7 +102,6 @@ export { CardBody } from "./lib/card-body.tsx";
 export { CardHeader } from "./lib/card-header.tsx";
 export { ChoiceGroup } from "./lib/choice-group.tsx";
 export { DataArea } from "./lib/data-area.tsx";
-export { DataBlock } from "./lib/data-block.tsx";
 export { Feed } from "./lib/feed.tsx";
 export { FeedHeading } from "./lib/feed-heading.tsx";
 export { FeedList } from "./lib/feed-list.tsx";

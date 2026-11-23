@@ -26,7 +26,7 @@ export function MessageFooter(props: MessageFooterProps): ReactNode {
   }
   return (
     <>
-      <MessageBox draft={props.draft} onPost={handlePost} post={state.post} text={MESSAGE_BOX} />
+      <MessageBox draft={props.draft} focused={false} onPost={handlePost} post={state.post} text={MESSAGE_BOX} />
       <CommandForm call={state.call} callData={state.callData} commands={props.commands} messages={messages} />
     </>
   );

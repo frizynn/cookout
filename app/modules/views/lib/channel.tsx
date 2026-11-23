@@ -1,6 +1,6 @@
 import type { Board, ChannelMessagesState } from "../../board/index.ts";
+import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import { Pane, PaneHeader, ScrollArea } from "../../design-system/index.tsx";
-import type { ChannelName } from "../../sdk/index.ts";
 import type { Composer } from "../../composer/index.ts";
 import { MessageFooter } from "./message-footer.tsx";
 import { MessageRows } from "./message-rows.tsx";
@@ -18,6 +18,12 @@ interface ChannelProps {
   readonly board: Board;
   readonly channel: ChannelName;
   readonly composer: Composer;
+  readonly newLine: {
+    readonly subscribe: (listener: () => void) => () => void;
+    readonly snapshot: () => MessageId | null;
+  };
+  readonly me: string;
+  readonly open: MessageId | null;
 }
 
 function useDescription(board: Board, name: ChannelName): string | null {
@@ -46,6 +52,7 @@ export function ChannelView(props: ChannelProps): ReactNode {
   const description = useDescription(props.board, props.channel);
   const { subscriptions } = props.board;
   const subscribed = useSyncExternalStore(subscriptions.subscribe, subscriptions.snapshot);
+  const unreadFrom = useSyncExternalStore(props.newLine.subscribe, props.newLine.snapshot);
   if (state.status === "failed" && state.code === "channel_not_found") {
     return <NotBuiltView description={TEXT.missing} title={TEXT.nothing} />;
   }
@@ -58,7 +65,14 @@ export function ChannelView(props: ChannelProps): ReactNode {
       </PaneHeader>
       <SubscriptionRefusal channel={props.channel} state={subscribed} />
       <ScrollArea count={countOf(state)} label={`Messages in #${props.channel}`}>
-        <MessageRows channel={props.channel} messages={messages} state={state} />
+        <MessageRows
+          channel={props.channel}
+          me={props.me}
+          messages={messages}
+          open={props.open}
+          state={state}
+          unreadFrom={unreadFrom}
+        />
       </ScrollArea>
       <MessageFooter
         commands={props.board.commands}

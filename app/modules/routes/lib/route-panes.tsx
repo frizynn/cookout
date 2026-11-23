@@ -38,7 +38,16 @@ export function RoutePanes(props: RoutePanesProps): ReactNode {
     return <PeoplePanes identities={stores.composer.identities} layout={stores.layout} me={props.me} route={route} />;
   }
   if (isChannel(route)) {
-    return <ChannelPanes board={stores.board} composer={stores.composer} key={route.channel} route={route} />;
+    return (
+      <ChannelPanes
+        board={stores.board}
+        composer={stores.composer}
+        key={route.channel}
+        me={props.me}
+        route={route}
+        unread={stores.unread}
+      />
+    );
   }
   return <NotBuiltView description={TEXT.missing} title={TEXT.nothing} />;
 }

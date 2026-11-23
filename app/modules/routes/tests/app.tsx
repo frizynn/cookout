@@ -1,6 +1,6 @@
 import type { Board, BoardOptions } from "../../board/index.ts";
 import type { CookoutClient, CreateIdentityRequest, Token } from "../../sdk/index.ts";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { expect, inject, onTestFinished } from "vitest";
 import type { Composer } from "../../composer/index.ts";
 import { CookoutApp } from "../index.tsx";
@@ -77,6 +77,20 @@ function tracked(client: CookoutClient): Tracked {
   };
 }
 
+function articleText(article: () => HTMLElement): string {
+  const copy = article().cloneNode(true);
+  if (!(copy instanceof HTMLElement)) {
+    return "";
+  }
+  for (const hidden of copy.querySelectorAll("time")) {
+    hidden.remove();
+  }
+  for (const action of within(copy).queryAllByRole("link", { name: "Reply" })) {
+    action.remove();
+  }
+  return copy.textContent;
+}
+
 export async function alertSaying(start: string): Promise<HTMLElement> {
   const said = await waitFor(() => {
     for (const alert of screen.getAllByRole("alert")) {
@@ -87,6 +101,28 @@ export async function alertSaying(start: string): Promise<HTMLElement> {
     throw new Error(`No alert says ${start}`);
   });
   return said;
+}
+
+export async function streamOf(label: string): Promise<readonly string[]> {
+  const list = await screen.findByRole("list", { name: label });
+  const shown: string[] = [];
+  for (const item of within(list).queryAllByRole("listitem")) {
+    for (const line of within(item).queryAllByRole("separator")) {
+      shown.push(`[${String(line.getAttribute("aria-label"))}]`);
+    }
+    shown.push(articleText(() => within(item).getByRole("article")));
+  }
+  return shown;
+}
+
+export async function messagesIn(label: string): Promise<readonly string[]> {
+  const shown = await streamOf(label);
+  return shown.filter((row) => !row.startsWith("["));
+}
+
+export async function parentShown(): Promise<string> {
+  await screen.findByRole("article", { name: "Parent message" });
+  return articleText(() => screen.getByRole("article", { name: "Parent message" }));
 }
 
 export function sidebar(): HTMLElement {

@@ -1,0 +1,69 @@
+/**
+ * The web UI's formats: how it writes a time for a person, in their own time
+ * zone. `timeOf(iso)` is a message's short time (`2:14 PM`), its full date
+ * and time for a hover, and the ISO time itself. `dayLabel(iso)` names the
+ * day for a separator: `Today`, `Yesterday`, or the weekday and date
+ * (`Monday, 23 November`). `dayOf(iso)` is the local day a time falls on, and
+ * `millisOf(iso)` its milliseconds, to tell how far apart two times are.
+ */
+const DAY = 1;
+
+const clock = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" });
+const full = new Intl.DateTimeFormat("en-GB", { dateStyle: "full", timeStyle: "short" });
+const weekday = new Intl.DateTimeFormat("en-GB", { weekday: "long" });
+const date = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long" });
+
+const TEXT = { today: "Today", yesterday: "Yesterday" } as const;
+
+/** A message's time three ways: the ISO time, a short time to show, and the full date and time for a hover. */
+export interface MessageTime {
+  readonly iso: string;
+  readonly short: string;
+  readonly full: string;
+}
+
+/**
+ * A time as a message shows it.
+ * @param iso The ISO time.
+ * @returns Its short and full forms, in the local time zone.
+ */
+export function timeOf(iso: string): MessageTime {
+  const at = new Date(iso);
+  return { full: full.format(at), iso, short: clock.format(at) };
+}
+
+/**
+ * The local day a time falls on, to tell whether two times share one.
+ * @param iso The ISO time.
+ * @returns The day, the same string for every time on it.
+ */
+export function dayOf(iso: string): string {
+  return new Date(iso).toDateString();
+}
+
+/**
+ * A time as milliseconds since the epoch, to tell how far apart two times are.
+ * @param iso The ISO time.
+ * @returns Its milliseconds.
+ */
+export function millisOf(iso: string): number {
+  return Date.parse(iso);
+}
+
+/**
+ * The label of a day separator.
+ * @param iso Any time on the day.
+ * @returns `Today`, `Yesterday`, or the weekday and date.
+ */
+export function dayLabel(iso: string): string {
+  const day = new Date(iso);
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - DAY);
+  if (day.toDateString() === new Date().toDateString()) {
+    return TEXT.today;
+  }
+  if (day.toDateString() === yesterday.toDateString()) {
+    return TEXT.yesterday;
+  }
+  return `${weekday.format(day)}, ${date.format(day)}`;
+}

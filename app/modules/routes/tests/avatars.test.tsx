@@ -29,17 +29,14 @@ function drawn(rows: () => readonly HTMLElement[]): readonly Drawn[] {
 
 async function messageRows(): Promise<readonly Drawn[]> {
   const list = await screen.findByRole("list", { name: "Messages" });
-  await within(list).findAllByRole("link");
-  return drawn(() => within(list).getAllByRole("link"));
+  await within(list).findAllByRole("article");
+  return drawn(() => within(list).getAllByRole("article"));
 }
 
 async function threadRows(): Promise<readonly Drawn[]> {
   const panel = await screen.findByRole("complementary", { name: "Thread" });
   const parent = await within(panel).findByRole("article", { name: "Parent message" });
-  return drawn(() => [
-    parent,
-    ...within(within(panel).getByRole("list", { name: "Replies" })).getAllByRole("listitem"),
-  ]);
+  return drawn(() => [parent, ...within(within(panel).getByRole("list", { name: "Replies" })).getAllByRole("article")]);
 }
 
 async function botThread(): Promise<Message> {

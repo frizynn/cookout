@@ -1,5 +1,5 @@
 import type { CookoutClient, InboxResponse, Message } from "../../sdk/index.ts";
-import { adminClient, clientWith, newIdentity, openAt } from "./app.tsx";
+import { adminClient, clientWith, messagesIn, newIdentity, openAt, parentShown } from "./app.tsx";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import { createCookoutClient } from "../../sdk/index.ts";
@@ -57,12 +57,8 @@ function hashOf(parent: Message): string {
   return `#/channels/${parent.channel}/threads/${String(parent.id)}`;
 }
 
-async function shownReplies(): Promise<readonly (string | null)[]> {
-  const list = await screen.findByRole("list", { name: "Replies" });
-  const shown: (string | null)[] = [];
-  for (const item of within(list).getAllByRole("listitem")) {
-    shown.push(item.textContent);
-  }
+async function shownReplies(): Promise<readonly string[]> {
+  const shown = await messagesIn("Replies");
   return shown;
 }
 
@@ -79,10 +75,7 @@ it("the thread view shows the parent message and its replies, oldest first", { t
 
   const replies = await shownReplies();
 
-  expect([screen.getByRole("article", { name: "Parent message" }).textContent, replies]).toStrictEqual([
-    "@adminThe parent",
-    ["@adminFirst reply", "@adminSecond reply"],
-  ]);
+  expect([await parentShown(), replies]).toStrictEqual(["adminThe parent", ["adminFirst reply", "Second reply"]]);
 
   close();
 });
@@ -126,7 +119,7 @@ it("posting a reply shows it in the thread", { timeout: 5000 }, async () => {
     replies.map((reply) => reply.text),
     screen.queryByDisplayValue("My reply"),
   ]).toStrictEqual([
-    ["@adminFirst reply", "@adminSecond reply", "@adminMy reply"],
+    ["adminFirst reply", "Second reply", "My reply"],
     ["First reply", "Second reply", "My reply"],
     null,
   ]);
@@ -189,7 +182,7 @@ it("a refused reply says so and keeps the thread shown, and its text in the box"
 
   expect([alert.textContent, await shownReplies(), screen.queryByDisplayValue("Too late")]).toStrictEqual([
     expect.stringMatching(/^Couldn't post the reply \(token_revoked\)/u),
-    ["@adminFirst reply", "@adminSecond reply"],
+    ["adminFirst reply", "Second reply"],
     screen.getByLabelText("Reply"),
   ]);
 
@@ -246,7 +239,7 @@ it("reopening a thread shows the replies posted while it was closed", { timeout:
   globalThis.location.hash = hashOf(parent);
   await screen.findByText("Third reply");
 
-  await expect(shownReplies()).resolves.toStrictEqual(["@adminFirst reply", "@adminSecond reply", "@adminThird reply"]);
+  await expect(shownReplies()).resolves.toStrictEqual(["adminFirst reply", "Second reply", "Third reply"]);
 
   close();
 });
@@ -266,7 +259,7 @@ it("reopening a thread that can no longer be read says so and keeps its replies 
 
   expect([alert.textContent, await shownReplies()]).toStrictEqual([
     expect.stringMatching(/^Couldn't mark the thread read \(token_revoked\)/u),
-    ["@adminFirst reply", "@adminSecond reply"],
+    ["adminFirst reply", "Second reply"],
   ]);
 
   close();
@@ -282,7 +275,7 @@ it("reopening a thread that failed to load loads it again and acks it", { timeou
   globalThis.location.hash = hashOf(parent);
 
   await expect(Promise.all([shownReplies(), inboxEmptied(reader.client)])).resolves.toStrictEqual([
-    ["@adminFirst reply", "@adminSecond reply"],
+    ["adminFirst reply", "Second reply"],
     expect.objectContaining({ items: [] }),
   ]);
 

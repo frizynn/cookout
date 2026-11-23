@@ -1,5 +1,5 @@
 import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
-import { adminClient, newIdentity, openAt } from "./app.tsx";
+import { adminClient, messagesIn, newIdentity, openAt } from "./app.tsx";
 import { expect, it } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import { watched } from "./watched.ts";
@@ -11,12 +11,8 @@ interface LiveView {
   readonly close: () => Promise<void>;
 }
 
-async function shownIn(name: string): Promise<readonly (string | null)[]> {
-  const list = await screen.findByRole("list", { name });
-  const shown: (string | null)[] = [];
-  for (const item of within(list).getAllByRole("listitem")) {
-    shown.push(item.textContent);
-  }
+async function shownIn(name: string): Promise<readonly string[]> {
+  const shown = await messagesIn(name);
   return shown;
 }
 
@@ -55,8 +51,8 @@ it("a message posted by another identity appears in the open channel without a r
   await screen.findByText("1 reply");
 
   await expect(shownIn("Messages")).resolves.toStrictEqual([
-    "@web-live-channel-posteragentDeploy at noon?1 reply",
-    "@web-live-channel-posteragentOr at one?0 replies",
+    "web-live-channel-posteragentDeploy at noon?1 reply",
+    "web-live-channel-posteragentOr at one?",
   ]);
 
   await close();
@@ -77,7 +73,7 @@ it("a reply posted by another identity appears in the open thread without a relo
   const panel = screen.getByRole("complementary", { name: "Thread" });
 
   expect([await shownIn("Replies"), within(panel).queryByText("Not in this thread")]).toStrictEqual([
-    ["@web-live-thread-posteragentNoon works"],
+    ["web-live-thread-posteragentNoon works"],
     null,
   ]);
 

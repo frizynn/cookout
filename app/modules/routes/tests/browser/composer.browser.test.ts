@@ -11,7 +11,8 @@ async function threadIn(channel: string): Promise<void> {
 async function openThread(page: Page, token: string, channel: string): Promise<void> {
   await logIn({ page, token });
   await page.getByRole("link", { name: `#${channel}` }).click();
-  await page.getByRole("link", { name: /Who can review this\?/u }).click();
+  await page.getByRole("article").hover();
+  await page.getByRole("link", { name: "Reply" }).click();
 }
 
 async function mentionerAndReviewers(): Promise<string> {
