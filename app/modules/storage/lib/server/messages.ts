@@ -116,6 +116,7 @@ function counted({ parent, replies }: Counting): TopLevelMessage {
 export {
   type AppendMessageResult,
   type ChannelPageRequest,
+  type Mentioning,
   type MessagesSection,
   type NewMessage,
   type Placement,

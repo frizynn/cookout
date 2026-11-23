@@ -1,5 +1,5 @@
+import { Array as Arr, Effect, Option, Predicate } from "effect";
 import type { Author, JsonValue, Message, MessageId } from "../../../messages/index.ts";
-import { Effect, Option, Predicate } from "effect";
 import type { NewMessage, Storage } from "../../../storage/server.ts";
 import { channelName } from "./channels.ts";
 import { fixtureTime } from "./time.ts";
@@ -16,6 +16,7 @@ interface NewMessageOptions {
   readonly author?: AuthorOptions;
   readonly data?: JsonValue;
   readonly replyTo?: MessageId;
+  readonly mentions?: readonly string[];
 }
 
 type Append = (message: NewMessage) => Effect.Effect<Message>;
@@ -53,7 +54,7 @@ function newMessageFixture(channel: string, text: string, ...options: readonly N
     author: authorFixture(extra.author ?? AGENT),
     channel: channelName(channel),
     createdAt: fixtureTime,
-    mentions: [],
+    mentions: Arr.map(extra.mentions ?? [], identityName),
     text,
   };
   return withOptions(message, extra);
