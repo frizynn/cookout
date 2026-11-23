@@ -1,10 +1,13 @@
 import { Context, Effect, Exit, FileSystem, Layer, Path, Scope } from "effect";
 import { Storage, StorageUnavailable, memoryStorage, sqliteStorage } from "../../../storage/server.ts";
+import { fixtureOwnerName, identityFixture } from "./identities.ts";
 import { NodeServices } from "@effect/platform-node";
+import { tokenHash } from "../../../identities/index.ts";
 
 interface StorageLayer {
   readonly adapter: "memory" | "sqlite";
   readonly layer: Layer.Layer<Storage, StorageUnavailable>;
+  readonly emptyLayer: Layer.Layer<Storage, StorageUnavailable>;
 }
 
 interface OpenStore {
@@ -25,9 +28,20 @@ const freshSqliteStorage: Layer.Layer<Storage, StorageUnavailable> = Layer.unwra
   Effect.map(freshDatabasePath, sqliteStorage),
 ).pipe(Layer.provide(NodeServices.layer));
 
+function withFixtureOwner<Failure>(
+  layer: Layer.Layer<Storage, Failure>,
+): Layer.Layer<Storage, Failure | StorageUnavailable> {
+  return Layer.tap(layer, (context) =>
+    Context.get(context, Storage).createIdentity(
+      identityFixture(fixtureOwnerName, { kind: "human" }),
+      tokenHash("fixture-owner-token-hash"),
+    ),
+  );
+}
+
 const storageLayers: readonly StorageLayer[] = [
-  { adapter: "memory", layer: memoryStorage },
-  { adapter: "sqlite", layer: freshSqliteStorage },
+  { adapter: "memory", emptyLayer: memoryStorage, layer: withFixtureOwner(memoryStorage) },
+  { adapter: "sqlite", emptyLayer: freshSqliteStorage, layer: withFixtureOwner(freshSqliteStorage) },
 ];
 
 const unusableStorage: Layer.Layer<Storage> = Layer.effect(

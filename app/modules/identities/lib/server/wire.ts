@@ -7,18 +7,20 @@ import {
   isIdentityName,
   isOwner,
   isToken,
-  ownerLength,
+  plainNamePattern,
   tokenPattern,
 } from "../../index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { matchesWire } from "../../../http/index.ts";
 
 export const IdentityNameSchema = Schema.String.check(
-  Schema.isPattern(identityNamePattern, { message: "Use 1-64 lowercase letters, digits or '-'." }),
+  Schema.isPattern(identityNamePattern, {
+    message: "Use 1-64 lowercase letters, digits or '-', or two such parts joined by one '/'.",
+  }),
 ).pipe(Schema.refine(isIdentityName, { identifier: "IdentityName" }));
 
 export const OwnerSchema = Schema.String.check(
-  Schema.isBetweenLength(ownerLength.minimum, ownerLength.maximum, { message: "Use 1-100 characters." }),
+  Schema.isPattern(plainNamePattern, { message: "Use a human's name: 1-64 lowercase letters, digits or '-'." }),
 ).pipe(Schema.refine(isOwner, { identifier: "Owner" }));
 
 const DisplayNameSchema = Schema.String.check(
@@ -47,7 +49,7 @@ const AgentIdentitySchema = Schema.Struct({
   handler: Schema.optionalKey(Schema.Literal(true)),
   kind: Schema.Literal("agent"),
   name: IdentityNameSchema,
-  owner: Schema.optionalKey(OwnerSchema),
+  owner: OwnerSchema,
 });
 
 export const IdentitySchema = matchesWire<Identity>()(Schema.Union([HumanIdentitySchema, AgentIdentitySchema]));

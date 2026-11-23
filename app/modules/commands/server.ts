@@ -41,8 +41,9 @@ const addRoute: Route<Caller | Storage | Secrets> = {
   handle: () =>
     Effect.gen(function* addCommandRoute() {
       yield* requireAdmin;
+      const caller = yield* Caller;
       const fields = yield* HttpServerRequest.schemaBodyJson(AddCommandRequestSchema, { errors: "all" });
-      const added = yield* addCommand(fields);
+      const added = yield* addCommand({ fields, owner: caller.name });
       return yield* HttpServerResponse.schemaJson(CommandWithSecretResponseSchema)(added, { status: CREATED });
     }),
   method: "POST",

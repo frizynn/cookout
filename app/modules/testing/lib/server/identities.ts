@@ -1,5 +1,5 @@
 import type { Identity, IdentityName } from "../../../identities/index.ts";
-import { isIdentityName, isOwner } from "../../../identities/index.ts";
+import { firstAdminName, isIdentityName, isOwner } from "../../../identities/index.ts";
 import { expect } from "@effect/vitest";
 import { fixtureTime } from "./time.ts";
 
@@ -9,13 +9,21 @@ function nameOf(value: string): IdentityName {
   return isIdentityName(value) ? value : expect.unreachable(`${value} is not an identity name`);
 }
 
-function agentFixture(name: string, { admin = false, owner }: AgentFixtureOptions): Identity {
+const fixtureOwnerName: IdentityName = nameOf("matt");
+
+function agentFixture(name: string, { admin = false, owner = fixtureOwnerName }: AgentFixtureOptions): Identity {
   const base = { admin, createdAt: fixtureTime, kind: "agent", name: nameOf(name) } as const;
-  if (owner === undefined) {
-    return base;
-  }
   return isOwner(owner) ? { ...base, owner } : expect.unreachable(`${owner} is not an owner`);
 }
+
+function ownedByAdminUnlessNamed(options: IdentityFixtureOptions): IdentityFixtureOptions {
+  if (options.kind === "human") {
+    return options;
+  }
+  return { owner: firstAdminName, ...options };
+}
+
+const testCookoutAdminName = firstAdminName;
 
 export const identityName = nameOf;
 
@@ -27,3 +35,5 @@ export const identityFixture = (name: string, options: IdentityFixtureOptions = 
   }
   return agentFixture(name, options);
 };
+
+export { fixtureOwnerName, ownedByAdminUnlessNamed, testCookoutAdminName };

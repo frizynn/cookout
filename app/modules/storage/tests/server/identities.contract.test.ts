@@ -14,10 +14,11 @@ const hashA = tokenHash(Str.repeat(HASH_LENGTH)("a"));
 const hashB = tokenHash(Str.repeat(HASH_LENGTH)("b"));
 const hashC = tokenHash(Str.repeat(HASH_LENGTH)("c"));
 const unavailable = { _tag: "StorageUnavailable" };
+const matt = identity("matt", { kind: "human" });
 
-it.effect.each(storageLayers)("storage contract ($adapter): a new store has no identities", ({ layer }) =>
+it.effect.each(storageLayers)("storage contract ($adapter): a new store has no identities", ({ emptyLayer }) =>
   Effect.gen(function* newStore() {
-    const { storage } = yield* openStore(layer);
+    const { storage } = yield* openStore(emptyLayer);
     const identities = yield* storage.listIdentities();
 
     expect(identities).toStrictEqual([]);
@@ -38,18 +39,16 @@ it.effect.each(storageLayers)(
     }),
 );
 
-it.effect.each(storageLayers)(
-  "storage contract ($adapter): an identity is created with or without an owner and listed by name",
-  ({ layer }) =>
-    Effect.gen(function* createAndList() {
-      const { storage } = yield* openStore(layer);
-      const withOwner = yield* storage.createIdentity(identity("zed", { owner: "matt" }), hashA);
-      const withoutOwner = yield* storage.createIdentity(identity("auth-griller"), hashB);
-      const identities = yield* storage.listIdentities();
+it.effect.each(storageLayers)("storage contract ($adapter): identities are created and listed by name", ({ layer }) =>
+  Effect.gen(function* createAndList() {
+    const { storage } = yield* openStore(layer);
+    const agent = yield* storage.createIdentity(identity("zed", { owner: "matt" }), hashA);
+    const human = yield* storage.createIdentity(identity("auth-griller", { kind: "human" }), hashB);
+    const identities = yield* storage.listIdentities();
 
-      expect([withOwner, withoutOwner]).toStrictEqual(["created", "created"]);
-      expect(identities).toStrictEqual([identity("auth-griller"), identity("zed", { owner: "matt" })]);
-    }),
+    expect([agent, human]).toStrictEqual(["created", "created"]);
+    expect(identities).toStrictEqual([identity("auth-griller", { kind: "human" }), matt, identity("zed")]);
+  }),
 );
 
 it.effect.each(storageLayers)("storage contract ($adapter): the admin flag is kept", ({ layer }) =>
@@ -58,7 +57,7 @@ it.effect.each(storageLayers)("storage contract ($adapter): the admin flag is ke
     yield* storage.createIdentity(identity("boss", { admin: true }), hashA);
     const identities = yield* storage.listIdentities();
 
-    expect(identities).toStrictEqual([identity("boss", { admin: true })]);
+    expect(identities).toStrictEqual([identity("boss", { admin: true }), matt]);
   }),
 );
 
@@ -76,6 +75,7 @@ it.effect.each(storageLayers)(
       expect(Arr.map(identities, ({ kind, name }) => [name, kind])).toStrictEqual([
         ["ada", "human"],
         ["bot", "agent"],
+        ["matt", "human"],
       ]);
       expect(found).toStrictEqual({ identity: identity("ada", { kind: "human" }), status: "active" });
       expect(rotated).toStrictEqual({ identity: identity("bot", { owner: "ada" }), status: "replaced" });
@@ -91,7 +91,7 @@ it.effect.each(storageLayers)("storage contract ($adapter): a name can be used o
     const secondHash = yield* storage.findIdentityByTokenHash(hashB);
 
     expect(second).toBe("name_taken");
-    expect(identities).toStrictEqual([identity("dup", { owner: "matt" })]);
+    expect(identities).toStrictEqual([identity("dup", { owner: "matt" }), matt]);
     expect(secondHash).toStrictEqual({ status: "unknown" });
   }),
 );
@@ -161,7 +161,7 @@ it.effect.each(storageLayers)(
       const found = yield* storage.findIdentityByTokenHash(hashA);
 
       expect(result).toBe("created");
-      expect(identities).toStrictEqual([identity("admin", { admin: true }), identity("other")]);
+      expect(identities).toStrictEqual([identity("admin", { admin: true }), matt, identity("other")]);
       expect(found).toStrictEqual({ identity: identity("admin", { admin: true }), status: "active" });
     }),
 );
@@ -197,7 +197,7 @@ it.effect.each(storageLayers)(
       const found = yield* storage.findIdentityByTokenHash(hashA);
 
       expect(again).toBe("unchanged");
-      expect(identities).toStrictEqual([identity("admin", { admin: true })]);
+      expect(identities).toStrictEqual([identity("admin", { admin: true }), matt]);
       expect(found).toStrictEqual({ identity: identity("admin", { admin: true }), status: "active" });
     }),
 );
@@ -218,7 +218,7 @@ it.effect.each(storageLayers)(
       const identities = yield* storage.listIdentities();
 
       expect(Arr.filter(results, (result) => result === "created")).toStrictEqual(["created"]);
-      expect(identities).toStrictEqual([identity("admin", { admin: true })]);
+      expect(identities).toStrictEqual([identity("admin", { admin: true }), matt]);
     }),
 );
 

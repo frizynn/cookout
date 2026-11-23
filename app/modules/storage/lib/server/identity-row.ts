@@ -1,5 +1,5 @@
 import type { DisplayName, Identity, IdentityName } from "../../../identities/index.ts";
-import { identityKinds, isDisplayName, isIdentityName, isOwner } from "../../../identities/index.ts";
+import { isDisplayName, isIdentityName, isOwner } from "../../../identities/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
 
@@ -12,14 +12,18 @@ const OwnerColumn = Schema.String.pipe(Schema.refine(isOwner));
 
 const DisplayNameColumn = Schema.String.pipe(Schema.refine(isDisplayName));
 
-const IdentityRow = Schema.Struct({
+const sharedColumns = {
   admin: Schema.Literals([NOT_ADMIN, ADMIN]),
   created_at: IsoTimeSchema,
   display_name: Schema.NullOr(DisplayNameColumn),
-  kind: Schema.Literals(identityKinds),
   name: Schema.String.pipe(Schema.refine(isIdentityName)),
-  owner: Schema.NullOr(OwnerColumn),
-});
+};
+
+const HumanRow = Schema.Struct({ ...sharedColumns, kind: Schema.Literal("human"), owner: Schema.Null });
+
+const AgentRow = Schema.Struct({ ...sharedColumns, kind: Schema.Literal("agent"), owner: OwnerColumn });
+
+const IdentityRow = Schema.Union([HumanRow, AgentRow]);
 
 function displayNameOf(row: typeof IdentityRow.Type): { readonly displayName?: DisplayName } {
   if (row.display_name === null) {
@@ -33,10 +37,7 @@ function toIdentity(row: typeof IdentityRow.Type): Identity {
   if (row.kind === "human") {
     return { ...fields, kind: "human" };
   }
-  if (row.owner === null) {
-    return { ...fields, kind: "agent" };
-  }
   return { ...fields, kind: "agent", owner: row.owner };
 }
 
-export { type FindIdentity, IdentityRow, toIdentity };
+export { AgentRow, type FindIdentity, IdentityRow, toIdentity };

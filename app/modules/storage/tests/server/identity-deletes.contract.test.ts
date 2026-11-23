@@ -52,7 +52,7 @@ it.effect.each(storageLayers)(
       const oldHash = yield* storage.findIdentityByTokenHash(hashA);
 
       expect(deleted).toStrictEqual({ identity: identity("gone", { owner: "matt" }), status: "deleted" });
-      expect(identities).toStrictEqual([identity("stays")]);
+      expect(identities).toStrictEqual([identity("matt", { kind: "human" }), identity("stays")]);
       expect(oldHash).toStrictEqual({ status: "revoked" });
     }),
 );
@@ -76,7 +76,11 @@ it.effect.each(storageLayers)("storage contract ($adapter): the last admin can't
     const bossHash = yield* storage.findIdentityByTokenHash(hashA);
 
     expect(deleted).toStrictEqual({ status: "last_admin" });
-    expect(identities).toStrictEqual([identity("agent"), identity("boss", { admin: true })]);
+    expect(identities).toStrictEqual([
+      identity("agent"),
+      identity("boss", { admin: true }),
+      identity("matt", { kind: "human" }),
+    ]);
     expect(bossHash).toStrictEqual({ identity: identity("boss", { admin: true }), status: "active" });
   }),
 );

@@ -1,16 +1,27 @@
-import { Array as Arr, ConfigProvider, Context, Effect, Exit, Layer, Record as Rec, Ref, Scope } from "effect";
+import {
+  Array as Arr,
+  ConfigProvider,
+  Context,
+  Effect,
+  Exit,
+  Layer,
+  Predicate,
+  Record as Rec,
+  Ref,
+  Scope,
+} from "effect";
 import type { CookoutClient, CookoutClientOptions, Identity, Token } from "../../../sdk/index.ts";
+import type { StorageUnavailable, StoredCommand } from "../../../storage/server.ts";
 import { backingServices, newToken, storageFor } from "./backing.ts";
 import { currentTime, startTestClock } from "./time.ts";
+import { identityFixture, ownedByAdminUnlessNamed, testCookoutAdminName } from "./identities.ts";
 import { Identities } from "../../../identities/server.ts";
 import type { IdentityFixtureOptions } from "./identities.ts";
 import { Storage } from "../../../storage/server.ts";
 import type { StorageKind } from "./backing.ts";
-import type { StoredCommand } from "../../../storage/server.ts";
 import { WebhookFake } from "../../../webhook-fake/server.ts";
 import { cookoutServer } from "../../../cli/server.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
-import { identityFixture } from "./identities.ts";
 import { serverUrl } from "../../../http/server.ts";
 
 export type TestIdentity = {
@@ -80,6 +91,22 @@ const clientAt =
   (token: string | undefined, options: Pick<CookoutClientOptions, "leaseId"> = {}): CookoutClient =>
     createCookoutClient({ env: {}, url, ...(token === undefined ? {} : { token }), ...options });
 
+function seedMissingOwner(identity: Identity): Effect.Effect<void, StorageUnavailable, Storage | Identities> {
+  return Effect.gen(function* seedOwner() {
+    if (identity.kind === "human") {
+      return;
+    }
+    const storage = yield* Storage;
+    const found = yield* storage.findIdentityByName(identity.owner);
+    if (Predicate.isNotUndefined(found)) {
+      return;
+    }
+    const { hash } = yield* Effect.flatMap(Identities, (identities) => identities.issueToken);
+    const owner = identityFixture(identity.owner, { kind: "human" });
+    yield* storage.createIdentity({ ...owner, createdAt: identity.createdAt }, hash);
+  });
+}
+
 const seedIdentity =
   (url: string) =>
   (name: string, options: CreateTestIdentityOptions = {}): Effect.Effect<TestIdentity, never, Storage | Identities> =>
@@ -87,9 +114,13 @@ const seedIdentity =
       const storage = yield* Storage;
       const identities = yield* Identities;
       const createdAt = yield* currentTime;
-      const identity: Identity = { ...identityFixture(name, options), createdAt };
+      const identity: Identity = { ...identityFixture(name, ownedByAdminUnlessNamed(options)), createdAt };
+      yield* seedMissingOwner(identity);
       const { token, hash } = yield* identities.issueToken;
-      yield* storage.createIdentity(identity, hash);
+      const created = yield* storage.createIdentity(identity, hash);
+      if (created !== "created") {
+        return yield* Effect.die(`seeding ${name} failed: ${created}`);
+      }
       return { client: clientAt(url)(token), identity, token };
     }).pipe(Effect.orDie);
 
@@ -99,6 +130,7 @@ function seedCommand(stored: StoredCommand): Effect.Effect<void, never, Storage>
     createdAt: stored.command.createdAt,
     kind: "agent",
     name: stored.command.handler,
+    owner: testCookoutAdminName,
   } as const;
   return Effect.gen(function* seedTestCommand() {
     const storage = yield* Storage;

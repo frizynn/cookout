@@ -4,6 +4,7 @@ import { commandNotFound, requireDataSchema } from "./call.ts";
 import { handlerOf, isCommandName } from "../../index.ts";
 import type { AddCommandRequestSchema } from "./wire.ts";
 import type { IsoTime } from "../../../time/index.ts";
+import type { Owner } from "../../../identities/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
@@ -36,9 +37,13 @@ function stamped(fields: NewCommand, createdAt: IsoTime): Command {
   return command;
 }
 
-function addCommand(
-  fields: NewCommand,
-): Effect.Effect<CommandWithSecretResponse, Refusal | StorageUnavailable, Storage | Secrets> {
+function addCommand({
+  fields,
+  owner,
+}: {
+  readonly fields: NewCommand;
+  readonly owner: Owner;
+}): Effect.Effect<CommandWithSecretResponse, Refusal | StorageUnavailable, Storage | Secrets> {
   return Effect.gen(function* addStampedCommand() {
     const command = yield* Effect.andThen(
       requireDataSchema(fields.schema),
@@ -47,7 +52,7 @@ function addCommand(
     const secrets = yield* Secrets;
     const secret = yield* secrets.newCommandSecret;
     const storage = yield* Storage;
-    const result = yield* storage.addCommand({ command, secret }, handlerOf(command));
+    const result = yield* storage.addCommand({ command, secret }, handlerOf({ command, owner }));
     if (result === "name_taken") {
       return yield* Effect.fail(commandExists(command.name));
     }

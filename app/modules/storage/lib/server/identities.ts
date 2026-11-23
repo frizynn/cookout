@@ -1,12 +1,18 @@
 import type { AgentIdentity, Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
+import type { CreateRefusal, DeleteIdentityResult } from "./identity-owners.ts";
 import { Effect, Option, Predicate, Schema } from "effect";
 import { IdentityRow, toIdentity } from "./identity-row.ts";
+import {
+  memoryCreateRefusal,
+  memoryDeleteIdentity,
+  sqliteCreateRefusal,
+  sqliteDeleteIdentity,
+} from "./identity-owners.ts";
 import { memoryDisplayNames, sqliteDisplayNames } from "./display-names.ts";
 import { memorySetAdmin, sqliteSetAdmin } from "./identity-admins.ts";
 import type { DisplayNamesSection } from "./display-names.ts";
 import type { Fails } from "./errors.ts";
 import type { FindIdentity } from "./identity-row.ts";
-import { INBOX_TABLES } from "./inbox-sqlite.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { PlaceHandler } from "./commands.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
@@ -21,15 +27,10 @@ type ReplaceTokenResult =
   | { readonly status: "replaced"; readonly identity: Identity }
   | { readonly status: "not_found" };
 
-type DeleteIdentityResult =
-  | { readonly status: "deleted"; readonly identity: Identity }
-  | { readonly status: "not_found" }
-  | { readonly status: "last_admin" };
-
 type SetOnlyTokenResult = "created" | "replaced" | "unchanged";
 
 export type IdentitiesSection = DisplayNamesSection & {
-  readonly createIdentity: (identity: Identity, hash: TokenHash) => Fails<"created" | "name_taken">;
+  readonly createIdentity: (identity: Identity, hash: TokenHash) => Fails<"created" | CreateRefusal>;
   readonly setOnlyToken: (identity: Identity, hash: TokenHash) => Fails<SetOnlyTokenResult>;
   readonly listIdentities: () => Fails<readonly Identity[]>;
   readonly findIdentityByTokenHash: (hash: TokenHash) => Fails<TokenLookup>;
@@ -56,10 +57,15 @@ const revokeTokensOf = (data: MemoryIdentities, name: IdentityName) => {
   }
 };
 
-const add = (data: MemoryIdentities, identity: Identity, hash: TokenHash) => {
+function createIn(data: MemoryIdentities, identity: Identity, hash: TokenHash): "created" | CreateRefusal {
+  const refusal = memoryCreateRefusal(data.identities)(identity);
+  if (Option.isSome(refusal)) {
+    return refusal.value;
+  }
   data.identities.set(identity.name, { ...identity });
   data.activeTokens.set(hash, identity.name);
-};
+  return "created";
+}
 
 function setOnlyTokenResultIn(data: MemoryIdentities, identity: Identity, hash: TokenHash): SetOnlyTokenResult {
   if (!data.identities.has(identity.name)) {
@@ -91,22 +97,6 @@ const lookUp = (data: MemoryIdentities, hash: TokenHash): TokenLookup => {
   return data.revokedTokens.has(hash) ? { status: "revoked" } : { status: "unknown" };
 };
 
-const isLastAdmin = (data: MemoryIdentities, identity: Identity) =>
-  identity.admin && [...data.identities.values()].filter((found) => found.admin).length === 1;
-
-const remove = (data: MemoryIdentities, name: IdentityName): DeleteIdentityResult => {
-  const identity = data.identities.get(name);
-  if (identity === undefined) {
-    return { status: "not_found" };
-  }
-  if (isLastAdmin(data, identity)) {
-    return { status: "last_admin" };
-  }
-  revokeTokensOf(data, name);
-  data.identities.delete(name);
-  return { identity: { ...identity }, status: "deleted" };
-};
-
 function placeHandlerIn(data: MemoryIdentities): PlaceHandler {
   return (handler: AgentIdentity) => {
     const found = data.identities.get(handler.name);
@@ -130,9 +120,16 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
   const data: MemoryIdentities = { activeTokens: new Map(), identities: new Map(), revokedTokens: new Set() };
   const open = <A>(work: () => A): Fails<A> => Effect.andThen(state.ensureOpen, Effect.sync(work));
   return {
-    createIdentity: (identity, hash) =>
-      open(() => (data.identities.has(identity.name) ? "name_taken" : (add(data, identity, hash), "created"))),
-    deleteIdentity: (name) => open(() => remove(data, name)),
+    createIdentity: (identity, hash) => open(() => createIn(data, identity, hash)),
+    deleteIdentity: (name) =>
+      open(() =>
+        memoryDeleteIdentity({
+          identities: data.identities,
+          revokeTokensOf: (held) => {
+            revokeTokensOf(data, held);
+          },
+        })(name),
+      ),
     findIdentity: (name) => data.identities.get(name),
     findIdentityByName: (name) => open(() => data.identities.get(name)),
     findIdentityByTokenHash: (hash) => open(() => lookUp(data, hash)),
@@ -195,7 +192,7 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
         "INSERT INTO identities (name, kind, owner, admin, created_at, display_name) VALUES (?, ?, ?, ?, ?, ?)",
         identity.name,
         identity.kind,
-        identity.kind === "agent" ? (identity.owner ?? null) : null,
+        identity.kind === "agent" ? identity.owner : null,
         identity.admin ? 1 : 0,
         identity.createdAt,
         identity.displayName ?? null,
@@ -208,31 +205,15 @@ export const sqliteIdentities = (db: SqliteDatabase): IdentitiesSection => {
     createIdentity: (identity, hash) =>
       db.transaction(
         Effect.gen(function* () {
-          if ((yield* find(identity.name)) !== undefined) {
-            return "name_taken" as const;
+          const refusal = yield* sqliteCreateRefusal(db)(identity);
+          if (Option.isSome(refusal)) {
+            return refusal.value;
           }
           yield* insert(identity, hash);
           return "created" as const;
         }),
       ),
-    deleteIdentity: (name) =>
-      db.transaction(
-        Effect.gen(function* () {
-          const row = yield* find(name);
-          if (row === undefined) {
-            return { status: "not_found" } as const;
-          }
-          if (row.admin === 1 && (yield* count("SELECT count(*) AS count FROM identities WHERE admin = 1")) === 1) {
-            return { status: "last_admin" } as const;
-          }
-          yield* revokeTokensOfName(name);
-          yield* Effect.forEach(INBOX_TABLES, (table) => db.run(`DELETE FROM ${table} WHERE identity_name = ?`, name), {
-            concurrency: 1,
-          });
-          yield* db.run("DELETE FROM identities WHERE name = ?", name);
-          return { identity: toIdentity(row), status: "deleted" } as const;
-        }),
-      ),
+    deleteIdentity: sqliteDeleteIdentity(db),
     findIdentityByName: (name) =>
       Effect.map(find(name), (row) => Option.getOrUndefined(Option.map(Option.fromUndefinedOr(row), toIdentity))),
     findIdentityByTokenHash: (hash) =>

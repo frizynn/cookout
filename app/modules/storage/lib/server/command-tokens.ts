@@ -1,6 +1,6 @@
+import { AgentRow, toIdentity } from "./identity-row.ts";
 import { Effect, Option, Schema, pipe } from "effect";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
-import { IdentityRow, toIdentity } from "./identity-row.ts";
 import type { FindIdentity } from "./identity-row.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
@@ -73,7 +73,7 @@ function memoryCommandTokens({ findIdentity, state }: MemoryCommandTokensOptions
 
 const ThreadIdColumn = Schema.Int.pipe(Schema.refine(isMessageId));
 
-const GrantRow = Schema.Struct({ ...IdentityRow.fields, expires_at: IsoTimeSchema, thread_id: ThreadIdColumn });
+const GrantRow = Schema.Struct({ ...AgentRow.fields, expires_at: IsoTimeSchema, thread_id: ThreadIdColumn });
 
 function grantFrom(row: typeof GrantRow.Type): CommandTokenGrant {
   return { expiresAt: row.expires_at, handler: toIdentity(row), threadId: row.thread_id };

@@ -29,9 +29,9 @@ function named(unnamed: Identity, text: string): Identity {
 
 it.effect.each(storageLayers)(
   "storage contract ($adapter): a display name is set and kept when listed, found by name or token and rotated",
-  ({ layer }) =>
+  ({ emptyLayer }) =>
     Effect.gen(function* displayNameKept() {
-      const { storage } = yield* openStore(layer);
+      const { storage } = yield* openStore(emptyLayer);
       yield* storage.createIdentity(identity("ada", { kind: "human" }), hashA);
       const set = yield* storage.setDisplayName(nameOf("ada"), displayName("Ada Lovelace"));
       const ada = named(identity("ada", { kind: "human" }), "Ada Lovelace");
@@ -50,21 +50,24 @@ it.effect.each(storageLayers)(
     }),
 );
 
-it.effect.each(storageLayers)("storage contract ($adapter): an identity is created with a display name", ({ layer }) =>
-  Effect.gen(function* createdWithDisplayName() {
-    const { storage } = yield* openStore(layer);
-    yield* storage.createIdentity(named(identity("release-bot", { owner: "ada" }), "Release bot"), hashA);
-    const found = yield* storage.findIdentityByName(nameOf("release-bot"));
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): an identity is created with a display name",
+  ({ emptyLayer }) =>
+    Effect.gen(function* createdWithDisplayName() {
+      const { storage } = yield* openStore(emptyLayer);
+      yield* storage.createIdentity(identity("ada", { kind: "human" }), hashB);
+      yield* storage.createIdentity(named(identity("release-bot", { owner: "ada" }), "Release bot"), hashA);
+      const found = yield* storage.findIdentityByName(nameOf("release-bot"));
 
-    expect(found).toStrictEqual(named(identity("release-bot", { owner: "ada" }), "Release bot"));
-  }),
+      expect(found).toStrictEqual(named(identity("release-bot", { owner: "ada" }), "Release bot"));
+    }),
 );
 
 it.effect.each(storageLayers)(
   "storage contract ($adapter): clearing a display name removes it, and a new one replaces the old",
-  ({ layer }) =>
+  ({ emptyLayer }) =>
     Effect.gen(function* clearAndReplace() {
-      const { storage } = yield* openStore(layer);
+      const { storage } = yield* openStore(emptyLayer);
       yield* storage.createIdentity(named(identity("ada", { kind: "human" }), "Ada"), hashA);
       yield* storage.createIdentity(named(identity("grace", { kind: "human" }), "Grace"), hashB);
       const cleared = yield* storage.setDisplayName(nameOf("ada"), null);
@@ -84,9 +87,9 @@ it.effect.each(storageLayers)(
 
 it.effect.each(storageLayers)(
   "storage contract ($adapter): a display name of 80 characters is kept whole, and two identities may share one",
-  ({ layer }) =>
+  ({ emptyLayer }) =>
     Effect.gen(function* longestAndShared() {
-      const { storage } = yield* openStore(layer);
+      const { storage } = yield* openStore(emptyLayer);
       const longest = Str.repeat(LONGEST)("é");
       yield* storage.createIdentity(identity("ada", { kind: "human" }), hashA);
       yield* storage.createIdentity(identity("ada-bot", { owner: "ada" }), hashB);
@@ -103,9 +106,9 @@ it.effect.each(storageLayers)(
 
 it.effect.each(storageLayers)(
   "storage contract ($adapter): setting the display name of a missing identity finds nothing",
-  ({ layer }) =>
+  ({ emptyLayer }) =>
     Effect.gen(function* missingIdentity() {
-      const { storage } = yield* openStore(layer);
+      const { storage } = yield* openStore(emptyLayer);
       const result = yield* storage.setDisplayName(nameOf("nobody"), displayName("Nobody"));
       const listed = yield* storage.listIdentities();
 

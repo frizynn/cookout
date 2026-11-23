@@ -107,6 +107,21 @@ const migrations: readonly string[] = [
    CREATE INDEX deliveries_pending ON deliveries (outcome) WHERE outcome = 'pending';`,
   "ALTER TABLE messages ADD COLUMN agent_tool TEXT;",
   `ALTER TABLE identities ADD COLUMN display_name TEXT;`,
+  `UPDATE identities SET owner = (
+     SELECT name FROM identities AS admins WHERE admins.kind = 'human' AND admins.admin = 1
+     ORDER BY admins.created_at, admins.name LIMIT 1
+   )
+   WHERE kind = 'agent' AND (owner IS NULL OR owner NOT IN (SELECT name FROM identities WHERE kind = 'human'));
+   CREATE TRIGGER agent_has_owner_on_insert BEFORE INSERT ON identities
+   WHEN NEW.kind = 'agent' AND NEW.owner IS NULL
+   BEGIN
+     SELECT RAISE(ABORT, 'An agent has an owner.');
+   END;
+   CREATE TRIGGER agent_has_owner_on_update BEFORE UPDATE OF owner ON identities
+   WHEN NEW.kind = 'agent' AND NEW.owner IS NULL
+   BEGIN
+     SELECT RAISE(ABORT, 'An agent has an owner.');
+   END;`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });
