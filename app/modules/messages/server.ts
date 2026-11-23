@@ -89,6 +89,9 @@ export { messageNotFound } from "./lib/server/refusals.ts";
 /** The Schemas of a message and its ID, for other modules' answers that hold messages. */
 export { MessageIdSchema, MessageSchema, TopLevelMessageSchema } from "./lib/server/wire.ts";
 
+/** The Schema of a page query (`before` and `limit`), for other pages that follow a channel page's rules. */
+export { ListMessagesQuerySchema as PageQuerySchema } from "./lib/server/wire.ts";
+
 /**
  * The message routes, for the server's route list. They need `Caller`, which the token gate provides, and `Messages`,
  * which `messagesLayer` provides.

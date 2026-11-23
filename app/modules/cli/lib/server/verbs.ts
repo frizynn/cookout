@@ -122,7 +122,7 @@ function postRequest({ channel, data, replyTo, text }: PostFlags): PostMessageRe
   return { channel, text, ...withData, ...withReplyTo };
 }
 
-function pageQuery({ before, limit }: ListFlags): ListMessagesQuery {
+function pageQuery({ before, limit }: Omit<ListFlags, "channel">): ListMessagesQuery {
   const withBefore = Option.match(before, { onNone: () => NOTHING, onSome: (value) => ({ before: value }) });
   const withLimit = Option.match(limit, { onNone: () => NOTHING, onSome: (value) => ({ limit: value }) });
   return { ...withBefore, ...withLimit };
@@ -215,9 +215,19 @@ const leaveCommand = Command.make("leave", {}, () => answered(leave)).pipe(
   Command.withDescription("Release the lease this session took with join, so another session can join at once."),
 );
 
-const inboxCommand = Command.make("inbox", {}, () => answer((client) => client.inbox())).pipe(
+const historyFlag = Flag.Boolean("history").pipe(
+  Flag.withDefault(false),
+  Flag.withDescription("List the inbox history instead: read and unread items, newest first, a page at a time."),
+);
+
+const inboxCommand = Command.make("inbox", { before: beforeFlag, history: historyFlag, limit: limitFlag }, (flags) => {
+  if (flags.history) {
+    return answer((client) => client.inboxHistory(pageQuery(flags)));
+  }
+  return answer((client) => client.inbox());
+}).pipe(
   Command.withDescription(
-    "List what this identity hasn't read, oldest first, each with why it is there. Changes nothing: ack clears items.",
+    "List what this identity hasn't read, oldest first, each with why it is there. Changes nothing: ack clears items. With --history, --before and --limit page through it.",
   ),
 );
 
