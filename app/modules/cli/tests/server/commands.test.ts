@@ -55,11 +55,13 @@ it.effect("cookout command add reads the schema file and prints the secret once;
       args: ["command", "add", "deploy", "--url", url, "--schema", file, "--description", "Ship it"],
       env,
     });
+    yield* runCookout({ args: ["command", "add", "release", "--url", url, "--schema", file], env });
     const listed = yield* runCookout({ args: ["command", "list"], env });
     const command = { description: "Ship it", handler: "deploy", name: "deploy", schema, url };
+    const release = { handler: "release", name: "release", schema, url };
 
     expect(added).toMatchObject({ exitCode: 0, stdoutJson: { command, secret: "hmac_test_2" } });
-    expect(listed).toMatchObject({ exitCode: 0, stdoutJson: { commands: [command] } });
+    expect(listed).toMatchObject({ exitCode: 0, stdoutJson: { commands: [command, release] } });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
