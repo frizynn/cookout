@@ -1,5 +1,5 @@
 import type { CliResult, CommandLineNeeds, TestCookoutService, TestIdentity } from "../../../testing/server.ts";
-import { Effect, FileSystem, Path } from "effect";
+import { Effect, FileSystem, Path, Stdio, Stream } from "effect";
 import { TestCookout, answer, commandLineServices, runCookout, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import type { Scope } from "effect";
@@ -21,8 +21,11 @@ interface LoginSetup {
 
 type SetupNeeds = CommandLineNeeds | TestCookout | Scope.Scope;
 
+const encoder = new TextEncoder();
+
 function logIn(env: Env, token: string): Effect.Effect<CliResult, never, CommandLineNeeds> {
-  return runCookout({ args: ["login", "--token"], env, stdin: `${token}\n` });
+  const stdin = Stdio.layerTest({ stdin: Stream.make(encoder.encode(`${token}\n`)) });
+  return runCookout({ args: ["login", "--token"], env }).pipe(Effect.provide(stdin));
 }
 
 function run(env: Env, ...args: readonly string[]): Effect.Effect<CliResult, never, CommandLineNeeds> {
@@ -178,6 +181,20 @@ it.effect("the CLI refuses a credentials file others can read with credentials_u
       { exitCode: 1, stderrJson: { error: { code: "credentials_unsafe" } } },
       { exitCode: 1, stderrJson: { error: { code: "credentials_unsafe" } } },
     ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("login --token whose config folder can't be made fails with cli_error", () =>
+  Effect.gen(function* configFolderIsAFile() {
+    const { ada, cookout, folder } = yield* setUp;
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const notAFolder = path.join(folder, "not-a-folder");
+    yield* Effect.orDie(fs.writeFileString(notAFolder, ""));
+
+    const refused = yield* logIn({ COOKOUT_URL: cookout.url, XDG_CONFIG_HOME: notAFolder }, ada.token);
+
+    expect(refused).toMatchObject({ exitCode: 1, stderrJson: { error: { code: "cli_error" } } });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
