@@ -106,7 +106,7 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity delete ada
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '.identities[] | [.name, .kind, .owner]'
 ```
 
-`helper` and `grace/helper` print with `"owner": "grace"` and their tokens, shown this once. `--owner ada` and `--kind human` as `grace` are 403 `admin_only`, and `ada/helper` is 400 `name_not_owned`; an agent's create is 403 `human_only`. The post's `mentions` is `["grace/helper"]`, and `grace/helper`'s inbox holds it with reason `mention`. As the admin, `--owner release-bot` is 400 `owner_not_human`, and deleting `ada` is 409 `owns_agents` with `details.agents` `["release-bot","rollback"]`. The list ends with `["grace/helper","agent","grace"]`, `["helper","agent","grace"]` and the seed's agents, each with its owner.
+`helper` and `@grace/helper` print with `"owner": "grace"` and their tokens, shown this once. `--owner ada` and `--kind human` as `grace` are 403 `admin_only`, and creating `@ada/helper` is 400 `name_not_owned`. The post's `mentions` is `["grace/helper"]`, and `@grace/helper`'s inbox holds it with reason `mention`. As the admin, `--owner release-bot` is 400 `owner_not_human`, and deleting `ada` is 409 `owns_agents` with `details.agents` `["release-bot","rollback"]`. The list ends with `["grace/helper","agent","grace"]`, `["helper","agent","grace"]` and the seed's agents, each with its owner.
 
 ## Make and remove admins
 

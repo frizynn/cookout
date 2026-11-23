@@ -40,8 +40,7 @@ function ownsAgent(caller: Identity, target: Identity | undefined): boolean {
   if (Predicate.isUndefined(target) || caller.kind !== "human" || target.kind !== "agent") {
     return false;
   }
-  const owner: string = target.owner ?? "";
-  return owner === caller.name;
+  return target.owner === caller.name;
 }
 
 function maySet(caller: Identity, name: IdentityName, target: Identity | undefined): boolean {

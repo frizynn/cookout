@@ -56,10 +56,14 @@ type IdentityFields = {
   readonly admin: boolean;
   readonly createdAt: IsoTime;
 };
-/** An identity's name: 1–64 lowercase letters, digits or `-`, so `@name` mentions parse cleanly. Unique on a server. */
+/**
+ * An identity's name: 1–64 lowercase letters, digits or `-`, so `@name` mentions parse cleanly, or two such parts
+ * joined by one `/`, such as `matt/triage-agent`. The first part of a namespaced name is the name of the human who
+ * owns the agent. Unique on a server.
+ */
 type IdentityName = Brand$1<"IdentityName">;
-/** The person an identity belongs to, such as `matt`: 1–100 characters. */
-type Owner = Brand$1<"Owner">;
+/** The name of the human who owns an agent, such as `matt`. A human's name never contains `/`. */
+type Owner = IdentityName;
 /** The secret an identity sends as `Authorization: Bearer <token>`. */
 type Token = Brand$1<"Token">;
 /**
@@ -71,14 +75,18 @@ type DisplayName = Brand$1<"DisplayName">;
 declare const identityKinds: readonly ["human", "agent"];
 /** Whether an identity is a person or an agent. Set when the identity is created, and never changed. */
 type IdentityKind = (typeof identityKinds)[number];
-/** A person using the board as themself. A human is its own person, so it has no owner. An admin can create identities, rotate tokens and delete identities. */
+/**
+ * A person using the board as themself. A human is its own person, so it has no owner, and its name has no `/`. Any
+ * human can create agents it owns; an admin can also create humans and agents owned by any human, rotate tokens and
+ * delete identities.
+ */
 type HumanIdentity = IdentityFields & {
   readonly kind: "human";
 };
-/** A program on the board, which may belong to a person (its owner). */
+/** A program on the board. It always has an owner: the human who created it, or the one an admin named. */
 type AgentIdentity = IdentityFields & {
   readonly kind: "agent";
-  readonly owner?: Owner;
+  readonly owner: Owner;
   /** Present, and true, on a command's handler identity in `GET /v1/identities`. */
   readonly handler?: true;
 };
@@ -97,11 +105,18 @@ type IdentityWithTokenResponse = {
 type ListIdentitiesResponse = {
   readonly identities: readonly Identity[];
 };
-/** The body of `POST /v1/identities`. The server checks the name and owner rules, and that a human has no owner. */
+/**
+ * The body of `POST /v1/identities`. Any human may create an agent it owns; only an admin may create a human, or an
+ * agent owned by another human (403 `admin_only`). An agent may create nothing (403 `human_only`).
+ */
 type CreateIdentityRequest = {
+  /** A plain name, or `<owner>/<name>` for an agent whose owner is `<owner>` (400 `name_not_owned` otherwise). A human's name has no `/`. */
   readonly name: string;
   readonly kind: IdentityKind;
-  /** Only an agent can have an owner: a human with one is refused with 400. */
+  /**
+   * An agent's owner: the name of an existing human (400 `owner_not_human` otherwise). Left out, the caller owns the
+   * agent. A human with one is refused with 400.
+   */
   readonly owner?: string;
   /** Trimmed, then 1–80 characters (400 otherwise). */
   readonly displayName?: string;
@@ -292,7 +307,7 @@ declare const brand$1: unique symbol;
 type Brand<Name extends string> = string & {
   readonly [brand$1]: Name;
 };
-/** A command's name. It is also the name of the command's handler identity, so it follows the identity-name rule. */
+/** A command's name. It is also the name of the command's handler identity, so it follows the plain identity-name rule (no `/`). */
 type CommandName = Brand<"CommandName">;
 /** The per-command secret the server signs webhook deliveries with (an HMAC of the body). Shown once, on add or rotate. */
 type CommandSecret = Brand<"CommandSecret">;
@@ -388,7 +403,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "lease_held", "lease_required", "lease_lost", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "owns_agents", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "lease_held", "lease_required", "lease_lost", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
@@ -447,11 +462,11 @@ export type CookoutClient = {
   readonly logout: () => Promise<IdentityResponse>;
   /** `GET /v1/identities`: every identity with its kind and owner, sorted by name. A command's handler has `handler: true`. */
   readonly listIdentities: () => Promise<ListIdentitiesResponse>;
-  /** Admin only. The token in the answer is shown this once. A name in use is 409 `identity_exists`. */
+  /** Any human creates agents it owns; see `CreateIdentityRequest`. The token is shown this once. A name in use is 409. */
   readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;
   /** Admin only. Issues a new token; the old one stops working at once. */
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
-  /** Admin only. Removes the identity; its token stops working. The last admin can't be deleted (409 `last_admin`). */
+  /** Admin only. Removes it; its token stops working. 409 for the last admin, or a human who still owns agents. */
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
   /** Admin only. Makes a human an admin and answers it; an admin stays one. An agent is 403 `human_only`. */
   readonly makeAdmin: (name: string) => Promise<IdentityResponse>;
