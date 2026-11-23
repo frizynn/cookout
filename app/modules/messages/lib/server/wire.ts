@@ -2,6 +2,9 @@ import type {
   Author,
   ListMessagesResponse,
   MessageResponse,
+  Reaction,
+  ReactionCount,
+  ReactionsResponse,
   ReadReceipt,
   Reply,
   ThreadResponse,
@@ -16,7 +19,7 @@ import {
   isOwner,
   plainNamePattern,
 } from "../../../identities/index.ts";
-import { isMessageId, messageTextLength, pageSize, shownRepliers } from "../../index.ts";
+import { isMessageId, messageTextLength, pageSize, reactionNames, shownRepliers } from "../../index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
@@ -50,6 +53,18 @@ const AuthorSchema = matchesWire<Author>()(
 const harnessRule = Schema.isPattern(harnessPattern).abort();
 const HarnessSchema = Schema.String.check(harnessRule).pipe(Schema.refine(isHarness, { identifier: "Harness" }));
 
+const ReactionNameSchema = Schema.Literals(reactionNames);
+
+const ReactorCountSchema = Schema.Int.check(Schema.isGreaterThanOrEqualTo(LOWEST_ID));
+
+const ReactionCountSchema = matchesWire<ReactionCount>()(
+  Schema.Struct({
+    by: Schema.Array(IdentityNameSchema),
+    count: ReactorCountSchema,
+    reaction: ReactionNameSchema,
+  }),
+);
+
 const messageFields = {
   author: AuthorSchema,
   channel: ChannelNameSchema,
@@ -58,6 +73,7 @@ const messageFields = {
   harness: Schema.optionalKey(HarnessSchema),
   id: MessageIdSchema,
   mentions: Schema.Array(IdentityNameSchema),
+  reactions: Schema.optionalKey(Schema.Array(ReactionCountSchema)),
   text: TextSchema,
 };
 
@@ -130,4 +146,21 @@ export const ThreadResponseSchema = matchesWire<ThreadResponse>()(
   }),
 );
 
-export { MessageIdSchema, MessageSchema, TopLevelMessageSchema };
+export const ReactionSchema = matchesWire<Reaction>()(
+  Schema.Struct({
+    identity: IdentityNameSchema,
+    messageId: MessageIdSchema,
+    reactedAt: IsoTimeSchema,
+    reaction: ReactionNameSchema,
+  }),
+);
+
+export const ReactionsResponseSchema = matchesWire<ReactionsResponse>()(
+  Schema.Struct({
+    channel: ChannelNameSchema,
+    messageId: MessageIdSchema,
+    reactions: Schema.Array(ReactionCountSchema),
+  }),
+);
+
+export { MessageIdSchema, MessageSchema, ReactionCountSchema, TopLevelMessageSchema };

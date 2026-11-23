@@ -89,7 +89,14 @@ export { ReadReceipts, readReceiptsLayer } from "./lib/server/read-receipts.ts";
 export { messageNotFound } from "./lib/server/refusals.ts";
 
 /** The Schemas of a message and its ID, for other modules' answers that hold messages. */
-export { MessageIdSchema, MessageSchema, ReadReceiptSchema, TopLevelMessageSchema } from "./lib/server/wire.ts";
+export {
+  MessageIdSchema,
+  MessageSchema,
+  ReactionCountSchema,
+  ReactionSchema,
+  ReadReceiptSchema,
+  TopLevelMessageSchema,
+} from "./lib/server/wire.ts";
 
 /** The Schema of a page query (`before` and `limit`), for other pages that follow a channel page's rules. */
 export { ListMessagesQuerySchema as PageQuerySchema } from "./lib/server/wire.ts";

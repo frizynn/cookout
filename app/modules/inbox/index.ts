@@ -9,16 +9,16 @@
  * refuse with the message, channel and agent session error codes.
  */
 import type { Channel, ChannelName } from "../channels/index.ts";
-import type { Message, MessageId, TopLevelMessage } from "../messages/index.ts";
+import type { Message, MessageId, Reaction, TopLevelMessage } from "../messages/index.ts";
 
 /**
- * Why an item is in the inbox: a reply in a thread the identity follows, a message that mentions it, or a top-level
- * message in a channel it subscribes to.
+ * Why an item is in the inbox: a reply in a thread the identity follows, a message that mentions it, another
+ * identity's reaction on the identity's own message, or a top-level message in a channel it subscribes to.
  */
-export type InboxReason = "followed-thread" | "mention" | "subscribed-channel";
+export type InboxReason = "followed-thread" | "mention" | "reaction" | "subscribed-channel";
 
 /** Every inbox reason, in the order an item lists them. */
-export const inboxReasons: readonly InboxReason[] = ["followed-thread", "mention", "subscribed-channel"];
+export const inboxReasons: readonly InboxReason[] = ["followed-thread", "mention", "reaction", "subscribed-channel"];
 
 /** A message the identity hasn't read, with every reason it is there, its channel and its thread's top-level message. */
 export interface InboxItem {
@@ -27,6 +27,11 @@ export interface InboxItem {
   /** The thread's top-level message: the message itself when it is top-level. */
   readonly parent: TopLevelMessage;
   readonly message: Message;
+  /**
+   * For the `reaction` reason, the reactions on the identity's own message that it hasn't acked yet, oldest first, each
+   * shown as "@name reacted with 👍". Absent for an item there for no reaction.
+   */
+  readonly newReactions?: readonly Reaction[];
 }
 
 /**

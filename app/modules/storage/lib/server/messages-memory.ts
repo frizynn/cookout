@@ -10,7 +10,7 @@ import type {
 } from "./messages.ts";
 import { Array as Arr, Effect, Option, Predicate, Ref, pipe } from "effect";
 import type { Author, Message, MessageId, Reply, TopLevelMessage } from "../../../messages/index.ts";
-import { EMPTY_INBOX, withoutChannel, withoutIdentity } from "./inbox-memory-state.ts";
+import { EMPTY_INBOX, memoryReactions, withoutChannel, withoutIdentity } from "./inbox-memory-state.ts";
 import { afterAppend, memoryInbox } from "./inbox-memory.ts";
 import { asMessageId, counted, isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
 import type { ChannelName } from "../../../channels/index.ts";
@@ -101,7 +101,8 @@ function pageIn(messages: readonly Message[], channel: ChannelName, page: Channe
 }
 
 type MemoryMessagesSection = MessagesSection &
-  MemoryInboxSection & {
+  MemoryInboxSection &
+  ReturnType<typeof memoryReactions> & {
     readonly forgetChannel: (channel: ChannelName) => Fails<ReadonlySet<MessageId>>;
     readonly forgetIdentity: (identity: Author["name"]) => Fails<void>;
     readonly countMessagesBy: (identity: Author["name"]) => Fails<number>;
@@ -143,17 +144,15 @@ function memoryMessages({ channels, identities, state }: MemoryMessagesOptions):
     return Effect.map(channels.findChannel(channel), Predicate.isNotUndefined);
   }
   const knownNames: Fails<Mentioning["known"]> = Effect.map(identities.listIdentities(), activeNamesOf);
+  function changeInbox<Value>(work: (data: MemoryMessages) => readonly [Value, MemoryInbox]): Fails<Value> {
+    return change((data) => {
+      const [value, inbox] = work(data);
+      return [value, { ...data, inbox }];
+    });
+  }
   return {
-    ...memoryInbox({
-      changeInbox: (work) =>
-        change((data) => {
-          const [value, inbox] = work(data);
-          return [value, { ...data, inbox }];
-        }),
-      channelExists,
-      listChannels: channels.listChannels,
-      read: readBoard,
-    }),
+    ...memoryInbox({ changeInbox, channelExists, listChannels: channels.listChannels, read: readBoard }),
+    ...memoryReactions({ changeInbox, read: readBoard }),
     appendMessage: (message) =>
       Effect.flatMap(channelExists(message.channel), (exists): Fails<AppendMessageResult> => {
         if (exists) {

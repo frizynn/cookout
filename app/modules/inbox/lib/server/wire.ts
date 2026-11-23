@@ -13,7 +13,7 @@ import type {
   SubscriptionResponse,
 } from "../../index.ts";
 import { ChannelNameSchema, ChannelSchema } from "../../../channels/server.ts";
-import { MessageIdSchema, MessageSchema, TopLevelMessageSchema } from "../../../messages/server.ts";
+import { MessageIdSchema, MessageSchema, ReactionSchema, TopLevelMessageSchema } from "../../../messages/server.ts";
 import { Schema } from "effect";
 import { inboxReasons } from "../../index.ts";
 import { matchesWire } from "../../../http/index.ts";
@@ -23,6 +23,7 @@ const InboxReasonSchema = Schema.Literals(inboxReasons);
 const inboxItemFields = {
   channel: ChannelSchema,
   message: MessageSchema,
+  newReactions: Schema.optionalKey(Schema.Array(ReactionSchema)),
   parent: TopLevelMessageSchema,
   reasons: Schema.Array(InboxReasonSchema),
 };

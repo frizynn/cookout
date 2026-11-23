@@ -1,7 +1,5 @@
-import { Effect, FileSystem } from "effect";
-import type { Scope } from "effect";
+import { Effect } from "effect";
 import type { StorageService } from "./service.ts";
-import { StorageUnavailable } from "./errors.ts";
 import { openMigrated } from "./migrations.ts";
 import { sqliteAgentSessionSections } from "./agent-join-requests-sqlite.ts";
 import { sqliteChannels } from "./channels.ts";
@@ -9,31 +7,19 @@ import { sqliteCommands } from "./commands.ts";
 import { sqliteHealth } from "./health.ts";
 import { sqliteIdentitySections } from "./identity-sections.ts";
 import { sqliteMessages } from "./messages-sqlite.ts";
+import { sqliteReactions } from "./reactions-sqlite.ts";
 
-const OWNER_ONLY = 0o600;
+type Opened = ReturnType<typeof openMigrated>;
 
-function unavailable({ message }: { readonly message: string }): StorageUnavailable {
-  return StorageUnavailable.make({ message });
-}
-
-function createOwnerOnly(path: string): Effect.Effect<void, StorageUnavailable, FileSystem.FileSystem> {
-  return Effect.gen(function* createDatabaseFile() {
-    const fs = yield* FileSystem.FileSystem;
-    yield* Effect.scoped(fs.open(path, { flag: "a", mode: OWNER_ONLY }));
-  }).pipe(Effect.mapError(unavailable));
-}
-
-function openSqliteStorage(
-  path: string,
-): Effect.Effect<StorageService, StorageUnavailable, FileSystem.FileSystem | Scope.Scope> {
+function openSqliteStorage(path: string): Effect.Effect<StorageService, Effect.Error<Opened>, Effect.Services<Opened>> {
   return Effect.gen(function* openStorage() {
-    yield* createOwnerOnly(path);
     const db = yield* openMigrated(path);
     return {
       ...sqliteHealth(db),
       ...sqliteIdentitySections(db),
       ...sqliteChannels(db),
       ...sqliteMessages(db),
+      ...sqliteReactions(db),
       ...sqliteAgentSessionSections(db),
       ...sqliteCommands(db),
     };

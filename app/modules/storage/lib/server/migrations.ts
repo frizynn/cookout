@@ -1,4 +1,5 @@
-import { Effect, Schema } from "effect";
+import { Effect, FileSystem, Schema } from "effect";
+import { REACTIONS_MIGRATION } from "./reactions-sqlite.ts";
 import { READ_RECEIPTS_MIGRATION } from "./read-receipts-sqlite.ts";
 import type { Scope } from "effect";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
@@ -172,6 +173,7 @@ const migrations: readonly string[] = [
      online INTEGER NOT NULL CHECK (online IN (0, 1)),
      last_seen_at TEXT NOT NULL
    ) STRICT;`,
+  REACTIONS_MIGRATION,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });
@@ -202,6 +204,21 @@ const migrate = (db: SqliteDatabase): Effect.Effect<void, StorageUnavailable> =>
     }
   });
 
-export function openMigrated(path: string): Effect.Effect<SqliteDatabase, StorageUnavailable, Scope.Scope> {
-  return Effect.tap(openSqlite(path), migrate);
+const OWNER_ONLY = 0o600;
+
+function unavailable({ message }: { readonly message: string }): StorageUnavailable {
+  return StorageUnavailable.make({ message });
+}
+
+function createOwnerOnly(path: string): Effect.Effect<void, StorageUnavailable, FileSystem.FileSystem> {
+  return Effect.gen(function* createDatabaseFile() {
+    const fs = yield* FileSystem.FileSystem;
+    yield* Effect.scoped(fs.open(path, { flag: "a", mode: OWNER_ONLY }));
+  }).pipe(Effect.mapError(unavailable));
+}
+
+export function openMigrated(
+  path: string,
+): Effect.Effect<SqliteDatabase, StorageUnavailable, FileSystem.FileSystem | Scope.Scope> {
+  return Effect.andThen(createOwnerOnly(path), Effect.tap(openSqlite(path), migrate));
 }
