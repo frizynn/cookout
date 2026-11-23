@@ -1,4 +1,4 @@
-import { Array as Arr, Context, DateTime, Duration, Effect, Layer, PubSub, Queue, Stream } from "effect";
+import { Array as Arr, Context, DateTime, Duration, Effect, Layer, PubSub, Queue, Schedule, Stream } from "effect";
 import type { StorageUnavailable, StoredNudge } from "../../../storage/server.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
@@ -84,7 +84,7 @@ const nudgesLayer: Layer.Layer<Nudges, never, Storage | Messages> = Layer.effect
       return Effect.asVoid(PubSub.publishAll(hub, raised));
     }
     const step = raiseThenWait({ publish, storage, woken: Queue.take(wake) }).pipe(
-      Effect.catchTag("StorageUnavailable", () => Effect.sleep(RETRY_AFTER_TROUBLE)),
+      Effect.retry(Schedule.spaced(RETRY_AFTER_TROUBLE)),
     );
     yield* Effect.forkScoped(Effect.forever(step));
     return { raised: PubSub.subscribe(hub) };

@@ -5,7 +5,6 @@ import type { MessageId, OpenThread } from "../../../messages/index.ts";
 import type { IdentitiesSection } from "./identities.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { MessagesSection } from "./messages.ts";
-import type { OpenThreadsCursor } from "./open-threads.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isIdentityName } from "../../../identities/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
@@ -67,11 +66,6 @@ interface Dating {
   readonly since: IsoTime;
 }
 
-interface Gathering {
-  readonly after: OpenThreadsCursor | null;
-  readonly gathered: readonly OpenThread[];
-}
-
 interface Raising {
   readonly due: Due;
   readonly now: IsoTime;
@@ -84,7 +78,8 @@ interface Shown {
   readonly recipient: IdentityName;
 }
 
-const OPEN_THREADS_PAGE = 500;
+const ONE_MORE_ROW = 1;
+const EVERY = Number.MAX_SAFE_INTEGER - ONE_MORE_ROW;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const ANYONE = Option.getOrThrow(Option.liftPredicate("anyone", isIdentityName));
 
@@ -111,32 +106,8 @@ function dueOf({ intervals, latest, since }: Dating): (thread: OpenThread) => re
   };
 }
 
-function cursorAfter(threads: readonly OpenThread[]): OpenThreadsCursor | null {
-  return Option.getOrNull(
-    Option.map(Arr.last(threads), ({ lastActivityAt, message }) => ({ id: message.id, lastActivityAt })),
-  );
-}
-
-function pageAfter(after: OpenThreadsCursor | null): { readonly after?: OpenThreadsCursor } {
-  if (after === null) {
-    return {};
-  }
-  return { after };
-}
-
-function allOpenThreads(messages: NudgesOn["messages"], { after, gathered }: Gathering): Fails<readonly OpenThread[]> {
-  const page = { all: true, limit: OPEN_THREADS_PAGE, ...pageAfter(after) };
-  return Effect.flatMap(messages.listOpenThreads(ANYONE, page), ({ hasMore, threads }) => {
-    const all = [...gathered, ...threads];
-    if (!hasMore) {
-      return Effect.succeed(all);
-    }
-    return allOpenThreads(messages, { after: cursorAfter(threads), gathered: all });
-  });
-}
-
 function everyOpenThread(messages: NudgesOn["messages"]): Fails<readonly OpenThread[]> {
-  return allOpenThreads(messages, { after: null, gathered: [] });
+  return Effect.map(messages.listOpenThreads(ANYONE, { all: true, limit: EVERY }), ({ threads }) => threads);
 }
 
 function dueNudges({ messages, records }: NudgesOn, intervals: NudgeIntervals): Fails<readonly Due[]> {

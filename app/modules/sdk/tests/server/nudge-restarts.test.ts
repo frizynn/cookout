@@ -1,5 +1,6 @@
 import { Array as Arr, DateTime, Duration, Effect } from "effect";
 import type { CookoutClient, Message, Nudge } from "../../index.ts";
+import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { TestClock } from "effect/testing";
@@ -16,6 +17,7 @@ interface HistoryEntry {
 const HUMAN = { kind: "human" } as const;
 const ONE = 1;
 const SETTLE = "30 millis";
+const NOT_FOUND = 404;
 
 const board = Effect.gen(function* openBoard() {
   const cookout = yield* TestCookout;
@@ -85,4 +87,17 @@ it.effect("a nudge that fell due while the server was down is raised at boot", (
 
     expect(nudges).toMatchObject([{ kind: "first", raisedAt: later(thread.createdAt, "4 days") }]);
   }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("marking nudge 0 read is refused as a nudge the caller doesn't have", () =>
+  Effect.gen(function* nudgeZero() {
+    const { ada, cookout } = yield* board;
+    const response = yield* HttpClientRequest.post(`${cookout.url}/v1/inbox/nudges/0/read`).pipe(
+      HttpClientRequest.setHeader("authorization", `Bearer ${ada.token}`),
+      HttpClient.execute,
+    );
+    const json = yield* response.json;
+
+    expect([response.status, json]).toMatchObject([NOT_FOUND, { error: { code: "nudge_not_found" } }]);
+  }).pipe(Effect.provide([testCookout(), FetchHttpClient.layer])),
 );
