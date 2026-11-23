@@ -6,6 +6,10 @@
 
 type QueryValue = string | number | undefined;
 
+interface ServerSentComment {
+  readonly comment: string;
+}
+
 interface Parsed {
   readonly json?: unknown;
 }
@@ -160,11 +164,6 @@ export interface HttpResponse {
 export interface ServerSentEvent {
   readonly event: string;
   readonly data: string;
-}
-
-/** One Server-Sent Events comment line (`: text`), such as a heartbeat: its text after the colon. */
-export interface ServerSentComment {
-  readonly comment: string;
 }
 
 /** What an open stream sends: events, and the comments between them. */
