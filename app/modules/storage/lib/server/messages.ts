@@ -9,6 +9,7 @@ import type {
 } from "../../../messages/index.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { Effect } from "effect";
+import type { IdentityName } from "../../../identities/index.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isMessageId } from "../../../messages/index.ts";
 
@@ -44,6 +45,11 @@ interface Placing {
   readonly id: MessageId;
   readonly message: NewMessage;
   readonly placement: Placed;
+}
+
+interface Mentioning {
+  readonly known: ReadonlySet<IdentityName>;
+  readonly message: NewMessage;
 }
 
 interface Counting {
@@ -94,6 +100,10 @@ function placed({ id, message, placement }: Placing): Message {
   return { ...message, id, kind: "top-level", latestReplyId: null, replyCount: NO_REPLIES };
 }
 
+function withKnownMentions({ known, message }: Mentioning): NewMessage {
+  return { ...message, mentions: Arr.filter(message.mentions, (name) => known.has(name)) };
+}
+
 function counted({ parent, replies }: Counting): TopLevelMessage {
   const latestReplyId = pipe(
     Arr.last(replies),
@@ -106,6 +116,7 @@ function counted({ parent, replies }: Counting): TopLevelMessage {
 export {
   type AppendMessageResult,
   type ChannelPageRequest,
+  type Mentioning,
   type MessagesSection,
   type NewMessage,
   type Placement,
@@ -115,4 +126,5 @@ export {
   placeIn,
   placed,
   threadIdOf,
+  withKnownMentions,
 };

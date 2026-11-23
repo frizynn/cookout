@@ -4,10 +4,15 @@ import { TestCookout, answer, commandLineServices, messageId, runDev, testCookou
 import { expect, it } from "@effect/vitest";
 
 const NO_OWNER = "(no owner)";
+const SeededIdentity = Schema.Struct({ identity: Schema.Struct({ name: Schema.String }), token: Schema.String });
 const SeedOutput = Schema.Struct({
-  identities: Schema.Array(Schema.Struct({ token: Schema.String })),
+  identities: Schema.Array(SeededIdentity),
   thread: Schema.Int,
 });
+const onIt = "I am. It fails about one run in ten on CI.";
+const question = "@triage-agent can you post the failing run?";
+const thanks = "Thanks, both of you.";
+const deployed = "Deployed 1.4.2.";
 const isSeedOutput = Schema.is(SeedOutput);
 
 function seeded(cookout: TestCookoutService): Effect.Effect<typeof SeedOutput.Type, never, CommandLineNeeds> {
@@ -65,6 +70,50 @@ it.effect("the seed makes channels with top-level messages and a thread holding 
       ["triage-agent", board.thread, "I am. It fails about one run in ten on CI."],
       ["grace", board.thread, "@triage-agent can you post the failing run?"],
       ["ada", board.thread, "Thanks, both of you."],
+    ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("the seed leaves a mention, a followed thread and a subscribed channel in the inboxes", () =>
+  Effect.gen(function* seededInboxes() {
+    const cookout = yield* TestCookout;
+    const board = yield* seeded(cookout);
+    const inboxes = yield* pipe(
+      board.identities,
+      Effect.forEach(
+        ({ identity, token }) =>
+          Effect.map(
+            answer(() => cookout.clientFor(token).inbox()),
+            ({ items }) => [identity.name, Arr.map(items, ({ message, reasons }) => [message.text, reasons])] as const,
+          ),
+        { concurrency: 1 },
+      ),
+    );
+
+    expect(inboxes).toStrictEqual([
+      ["ada", []],
+      [
+        "grace",
+        [
+          [thanks, ["followed-thread"]],
+          [deployed, ["subscribed-channel"]],
+        ],
+      ],
+      [
+        "release-bot",
+        [
+          [onIt, ["followed-thread"]],
+          [question, ["followed-thread"]],
+          [thanks, ["followed-thread"]],
+        ],
+      ],
+      [
+        "triage-agent",
+        [
+          [question, ["followed-thread", "mention"]],
+          [thanks, ["followed-thread"]],
+        ],
+      ],
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

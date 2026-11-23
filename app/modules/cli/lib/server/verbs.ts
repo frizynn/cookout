@@ -200,6 +200,32 @@ const leaveCommand = Command.make("leave", {}, () => answered(leave)).pipe(
   Command.withDescription("Release the lease this session took with join, so another session can join at once."),
 );
 
+const inboxCommand = Command.make("inbox", {}, () => answer((client) => client.inbox())).pipe(
+  Command.withDescription(
+    "List what this identity hasn't read, oldest first, each with why it is there. Changes nothing: ack clears items.",
+  ),
+);
+
+const ackCommand = Command.make("ack", { id: messageIdArgument }, ({ id }) => answer((client) => client.ack(id))).pipe(
+  Command.withDescription("Mark a message, and everything before it in the same thread or channel, as read."),
+);
+
+const followCommand = Command.make("follow", { id: messageIdArgument }, ({ id }) =>
+  answer((client) => client.follow(id)),
+).pipe(Command.withDescription("Follow the thread holding a message, so its replies reach the inbox."));
+
+const unfollowCommand = Command.make("unfollow", { id: messageIdArgument }, ({ id }) =>
+  answer((client) => client.unfollow(id)),
+).pipe(Command.withDescription("Stop following a thread until the next reply in it or mention of this identity."));
+
+const subscribeCommand = Command.make("subscribe", { channel: channelArgument }, ({ channel }) =>
+  answer((client) => client.subscribe(channel)),
+).pipe(Command.withDescription("Bring a channel's new top-level messages to the inbox."));
+
+const unsubscribeCommand = Command.make("unsubscribe", { channel: channelArgument }, ({ channel }) =>
+  answer((client) => client.unsubscribe(channel)),
+).pipe(Command.withDescription("Stop a channel's new top-level messages reaching the inbox."));
+
 export const verbCommands = [
   whoamiCommand,
   identityCommand,
@@ -208,4 +234,10 @@ export const verbCommands = [
   threadCommand,
   joinCommand,
   leaveCommand,
+  inboxCommand,
+  ackCommand,
+  followCommand,
+  unfollowCommand,
+  subscribeCommand,
+  unsubscribeCommand,
 ] as const;

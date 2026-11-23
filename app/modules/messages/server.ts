@@ -41,8 +41,8 @@ const postRoute: Route<Caller | Messages> = {
       const body = yield* HttpServerRequest.schemaBodyJson(PostMessageRequestSchema, ALL_ERRORS);
       const caller = yield* Caller;
       const messages = yield* Messages;
-      const message = yield* messages.post(caller, body);
-      return yield* HttpServerResponse.schemaJson(MessageResponseSchema)({ message }, { status: CREATED });
+      const posted = yield* messages.post(caller, body);
+      return yield* HttpServerResponse.schemaJson(MessageResponseSchema)(posted, { status: CREATED });
     }),
   method: "POST",
   path: messagesPath,
@@ -78,6 +78,10 @@ const pageRoute: Route<Messages> = {
 };
 
 export { Messages, messagesLayer } from "./lib/server/service.ts";
+export { messageNotFound } from "./lib/server/refusals.ts";
+
+/** The Schemas of a message and its ID, for other modules' answers that hold messages. */
+export { MessageIdSchema, MessageSchema, TopLevelMessageSchema } from "./lib/server/wire.ts";
 
 /**
  * The message routes, for the server's route list. They need `Caller`, which the token gate provides, and `Messages`,

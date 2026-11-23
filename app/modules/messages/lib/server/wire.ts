@@ -85,7 +85,9 @@ export const ListMessagesQuerySchema = Schema.Struct({
   limit: Schema.optionalKey(Schema.FiniteFromString.pipe(decodesToLimit)),
 });
 
-export const MessageResponseSchema = matchesWire<MessageResponse>()(Schema.Struct({ message: MessageSchema }));
+export const MessageResponseSchema = matchesWire<MessageResponse>()(
+  Schema.Struct({ message: MessageSchema, unknownMentions: Schema.Array(Schema.String) }),
+);
 
 export const ListMessagesResponseSchema = matchesWire<ListMessagesResponse>()(
   Schema.Struct({ hasMore: Schema.Boolean, messages: Schema.Array(TopLevelMessageSchema) }),
@@ -94,3 +96,5 @@ export const ListMessagesResponseSchema = matchesWire<ListMessagesResponse>()(
 export const ThreadResponseSchema = matchesWire<ThreadResponse>()(
   Schema.Struct({ parent: TopLevelMessageSchema, replies: Schema.Array(ReplySchema) }),
 );
+
+export { MessageIdSchema, MessageSchema, TopLevelMessageSchema };

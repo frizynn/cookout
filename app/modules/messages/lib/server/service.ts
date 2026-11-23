@@ -1,6 +1,15 @@
-import type { Author, JsonValue, ListMessagesResponse, Message, MessageId, ThreadResponse } from "../../index.ts";
-import { Context, DateTime, Effect, Layer, Predicate } from "effect";
+import { Array as Arr, Context, DateTime, Effect, Layer, Option, Predicate, String as Str, pipe } from "effect";
+import type {
+  Author,
+  JsonValue,
+  ListMessagesResponse,
+  Message,
+  MessageId,
+  MessageResponse,
+  ThreadResponse,
+} from "../../index.ts";
 import type { NewMessage, StorageUnavailable } from "../../../storage/server.ts";
+import { mentionPattern, pageSize } from "../../index.ts";
 import { messageNotFound, replyInOtherChannel } from "./refusals.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { Identity } from "../../../identities/index.ts";
@@ -9,8 +18,8 @@ import type { Refusal } from "../../../http/index.ts";
 import { Storage } from "../../../storage/server.ts";
 import { channelNotFound } from "../../../channels/server.ts";
 import { isChannelName } from "../../../channels/index.ts";
+import { isIdentityName } from "../../../identities/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
-import { pageSize } from "../../index.ts";
 
 interface PostMessage {
   readonly channel: ChannelName;
@@ -47,8 +56,17 @@ function withReplyTo(message: NewMessage, replyTo: MessageId | undefined): NewMe
   return { ...message, replyTo };
 }
 
+function mentionedNames(text: string): readonly string[] {
+  return pipe(text, Str.match(mentionPattern), Option.map(Arr.dedupe), Option.getOrElse(Arr.empty));
+}
+
+function unknownMentionsIn({ mentions, text }: Message): readonly string[] {
+  return Arr.filter(mentionedNames(text), (name) => !Arr.some(mentions, (mentioned) => mentioned === name));
+}
+
 function newMessage(author: Identity, { channel, data, replyTo, text }: PostMessage, createdAt: IsoTime): NewMessage {
-  const fields: NewMessage = { author: authorOf(author), channel, createdAt, mentions: [], text };
+  const mentions = Arr.filter(mentionedNames(text), isIdentityName);
+  const fields: NewMessage = { author: authorOf(author), channel, createdAt, mentions, text };
   if (Predicate.isUndefined(data)) {
     return withReplyTo(fields, replyTo);
   }
@@ -90,7 +108,7 @@ function messagesOn(storage: Storage["Service"]): MessagesService {
         const now = yield* DateTime.now;
         const result = yield* storage.appendMessage(newMessage(author, message, isoTimeOf(now)));
         if (result.status === "appended") {
-          return result.message;
+          return { message: result.message, unknownMentions: unknownMentionsIn(result.message) };
         }
         return yield* Effect.fail(refusalOf(result.status, message));
       }),
@@ -106,7 +124,7 @@ function messagesOn(storage: Storage["Service"]): MessagesService {
 }
 
 export interface MessagesService {
-  readonly post: (author: Identity, message: PostMessage) => Fails<Message>;
+  readonly post: (author: Identity, message: PostMessage) => Fails<MessageResponse>;
   readonly thread: (id: MessageId) => Fails<ThreadResponse>;
   readonly page: (channel: string, query: PageQuery) => Fails<ListMessagesResponse>;
 }

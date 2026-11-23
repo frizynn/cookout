@@ -6,12 +6,13 @@
  * clock. Routes sit behind the server's token gate.
  */
 import { Caller, requireToken } from "../identities/server.ts";
+import { Effect, String as Str } from "effect";
 import type { Gate, Route } from "../http/server.ts";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { JoinRequestSchema, LeaseResponseSchema, LeaveResponseSchema } from "./lib/server/wire.ts";
 import { leaseHeader, leasePath } from "./index.ts";
-import { Effect } from "effect";
 import type { Identities } from "../identities/server.ts";
+import type { LeaseRule } from "./lib/server/service.ts";
 import { Leases } from "./lib/server/service.ts";
 import type { Refusal } from "../http/index.ts";
 import type { StorageUnavailable } from "../storage/server.ts";
@@ -52,14 +53,39 @@ const leaveRoute: Route<Caller | Leases> = {
   path: leasePath,
 };
 
+const otherWritesRule: LeaseRule = "none";
+
+function ruleFor(request: HttpServerRequest.HttpServerRequest): LeaseRule {
+  if (request.method === "GET" || Str.startsWith(leasePath)(request.url)) {
+    return "none";
+  }
+  return otherWritesRule;
+}
+
+function requiringRule(
+  rule: (request: HttpServerRequest.HttpServerRequest) => LeaseRule,
+): Effect.Effect<void, Refusal | StorageUnavailable, Caller | Leases | HttpServerRequest.HttpServerRequest> {
+  return Effect.gen(function* requireLeaseByRule() {
+    const caller = yield* Caller;
+    const leases = yield* Leases;
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    yield* leases.requireLease(caller, request.headers[leaseHeader], rule(request));
+  });
+}
+
 function renewingLease<Value, Failure, Needs>(
   effect: Effect.Effect<Value, Failure, Needs>,
-): Effect.Effect<Value, Failure | StorageUnavailable, Needs | Caller | Leases | HttpServerRequest.HttpServerRequest> {
+): Effect.Effect<
+  Value,
+  Failure | Refusal | StorageUnavailable,
+  Needs | Caller | Leases | HttpServerRequest.HttpServerRequest
+> {
   return Effect.gen(function* renewSentLease() {
     const caller = yield* Caller;
     const leases = yield* Leases;
     const sent = yield* sentLeaseId;
     yield* leases.renew(caller, sent);
+    yield* requiringRule(ruleFor);
     return yield* effect;
   });
 }
@@ -69,6 +95,18 @@ function authenticateAndRenew<Value, Failure, Needs>(
 ): Effect.Effect<Value, Failure | Refusal | StorageUnavailable, Exclude<Needs, Caller> | GateNeeds> {
   return renewingLease(effect).pipe(requireToken);
 }
+
+/**
+ * Ack's and watch's need of the lease: the live lease ID, or none while nobody holds a live lease on the caller's
+ * identity, which lets the web UI ack on view without taking one (ADR 0004). A stale or expired lease ID is 409
+ * `lease_lost`; none while another session holds the lease is 409 `lease_required`.
+ * @internal
+ */
+export const requireLeaseWhileHeld: Effect.Effect<
+  void,
+  Refusal | StorageUnavailable,
+  Caller | Leases | HttpServerRequest.HttpServerRequest
+> = requiringRule(() => "while-held");
 
 /**
  * The gate every route but `/v1/health` sits behind: `requireToken`, then the renewal of the caller's lease if the

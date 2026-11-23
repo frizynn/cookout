@@ -2,9 +2,13 @@ import type { AppendMessageResult, ChannelPageRequest, MessagesSection, NewMessa
 import { Array as Arr, Effect, Option, Predicate, Schema, pipe } from "effect";
 import type { Author, ListMessagesResponse, Message, MessageId, ThreadResponse } from "../../../messages/index.ts";
 import { isIdentityName, isOwner } from "../../../identities/index.ts";
-import { isPlaced, placeIn, placed, threadIdOf } from "./messages.ts";
+import { isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
+import { recordAppended, sqliteInbox } from "./inbox-sqlite.ts";
 import type { ChannelName } from "../../../channels/index.ts";
+import type { IdentityName } from "../../../identities/index.ts";
+import type { InboxSection } from "./inbox.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
+import type { MessageReader } from "./inbox-sqlite.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isChannelName } from "../../../channels/index.ts";
@@ -144,6 +148,16 @@ function insert(db: SqliteDatabase, message: Message, data: string | null): Fail
   });
 }
 
+function knownNames(db: SqliteDatabase, names: readonly IdentityName[]): Fails<ReadonlySet<IdentityName>> {
+  return pipe(
+    names,
+    Effect.filter((name) =>
+      db.get("SELECT 1 AS found FROM identities WHERE name = ?", name).pipe(Effect.map(isFoundRow)),
+    ),
+    Effect.map((found: readonly IdentityName[]) => new Set(found)),
+  );
+}
+
 function appendInChannel(db: SqliteDatabase, message: NewMessage): Fails<AppendMessageResult> {
   return Effect.gen(function* appendMessage() {
     const placement = yield* placementOf(db, message);
@@ -151,9 +165,11 @@ function appendInChannel(db: SqliteDatabase, message: NewMessage): Fails<AppendM
       return placement;
     }
     const data = yield* dataText(message);
+    const known = yield* knownNames(db, message.mentions);
+    const mentioning = withKnownMentions({ known, message });
     const id = yield* takeId(db);
-    const stored = placed({ id, message, placement });
-    yield* insert(db, stored, data);
+    const stored = placed({ id, message: mentioning, placement });
+    yield* Effect.andThen(insert(db, stored, data), recordAppended({ db, message: stored }));
     return { message: stored, status: "appended" } as const;
   });
 }
@@ -204,8 +220,13 @@ function pageOf(db: SqliteDatabase, channel: ChannelName, page: ChannelPageReque
   });
 }
 
-function sqliteMessages(db: SqliteDatabase): MessagesSection {
+function sqliteMessageReader(db: SqliteDatabase): MessageReader {
+  return { columns: MESSAGE_COLUMNS, findMessage: (id) => find(db, id), toMessage };
+}
+
+function sqliteMessages(db: SqliteDatabase): MessagesSection & InboxSection {
   return {
+    ...sqliteInbox({ db, reader: sqliteMessageReader(db) }),
     appendMessage: (message) => db.transaction(append(db, message)),
     getThread: (id) => threadOf(db, id),
     listChannelMessages: (channel, page) =>

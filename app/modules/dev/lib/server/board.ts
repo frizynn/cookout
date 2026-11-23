@@ -86,15 +86,23 @@ function createCast({ token, url }: BoardConnection): Effect.Effect<Cast, SeedFa
   );
 }
 
-function postConversation(cast: Cast): Effect.Effect<MessageId, SeedFailure> {
-  return Effect.gen(function* conversation() {
+function createChannels(cast: Cast): Effect.Effect<void, SeedFailure> {
+  return Effect.gen(function* channels() {
     yield* call(() => cast.ada.client.createChannel({ description: "Anything and everything.", name: "general" }));
     yield* call(() => cast.releaseBot.client.createChannel({ description: "Release announcements.", name: "deploys" }));
+    yield* call(() => cast.grace.client.subscribe("deploys"));
+  });
+}
+
+function postConversation(cast: Cast): Effect.Effect<MessageId, SeedFailure> {
+  return Effect.gen(function* conversation() {
+    yield* createChannels(cast);
     const opening = yield* post(cast.ada, {
       channel: "general",
       text: "Morning! Who is looking at the flaky login test?",
     });
     const thread = { channel: "general", replyTo: opening.id } as const;
+    yield* call(() => cast.releaseBot.client.follow(opening.id));
     yield* post(cast.triageAgent, { ...thread, text: "I am. It fails about one run in ten on CI." });
     const question = yield* post(cast.grace, { ...thread, text: "@triage-agent can you post the failing run?" });
     yield* post(cast.grace, { channel: "general", text: "Lunch at 12:30." });

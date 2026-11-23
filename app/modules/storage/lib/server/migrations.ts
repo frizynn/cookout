@@ -43,6 +43,33 @@ const migrations: readonly string[] = [
      lease_id TEXT NOT NULL,
      expires_at TEXT NOT NULL
    ) STRICT;`,
+  `CREATE TABLE message_mentions (
+     identity_name TEXT NOT NULL,
+     message_id INTEGER NOT NULL REFERENCES messages (id),
+     PRIMARY KEY (identity_name, message_id)
+   ) STRICT, WITHOUT ROWID;
+   CREATE TABLE follows (
+     identity_name TEXT NOT NULL,
+     thread_id INTEGER NOT NULL REFERENCES messages (id),
+     PRIMARY KEY (identity_name, thread_id)
+   ) STRICT, WITHOUT ROWID;
+   CREATE TABLE subscriptions (
+     identity_name TEXT NOT NULL,
+     channel TEXT NOT NULL REFERENCES channels (name),
+     PRIMARY KEY (identity_name, channel)
+   ) STRICT, WITHOUT ROWID;
+   CREATE TABLE channel_read_positions (
+     identity_name TEXT NOT NULL,
+     channel TEXT NOT NULL REFERENCES channels (name),
+     message_id INTEGER NOT NULL,
+     PRIMARY KEY (identity_name, channel)
+   ) STRICT, WITHOUT ROWID;
+   CREATE TABLE thread_read_positions (
+     identity_name TEXT NOT NULL,
+     thread_id INTEGER NOT NULL REFERENCES messages (id),
+     message_id INTEGER NOT NULL,
+     PRIMARY KEY (identity_name, thread_id)
+   ) STRICT, WITHOUT ROWID;`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

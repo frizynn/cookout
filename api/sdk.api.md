@@ -82,40 +82,12 @@ type CreateIdentityRequest = {
   readonly owner?: string;
 };
 declare const brand$2: unique symbol;
-/** The value `join` returns and a session sends in `cookout-lease` to show it holds the identity. */
-type LeaseId = string & {
-  readonly [brand$2]: "LeaseId";
-};
-/** The body of `POST /v1/lease`. `as` must be the token's own identity: a check, not a switch. */
-interface JoinRequest {
-  readonly as: string;
-  /** Takes the lease even if another session holds it; that session's lease ID stops working at once. */
-  readonly force?: boolean;
-}
-/** The answer to `join`. */
-interface LeaseResponse {
-  readonly leaseId: LeaseId;
-  /** Each request carrying the lease ID moves it forward. */
-  readonly expiresAt: IsoTime;
-}
-/** The answer to `leave`. */
-interface LeaveResponse {
-  readonly released: true;
-}
-/**
- * The `details` of the 409 lease refusals: when the current holder's lease
- * ends, or `null` if nobody holds the identity.
- */
-interface LeaseConflictDetails {
-  readonly heldUntil: IsoTime | null;
-}
-declare const brand$1: unique symbol;
 /**
  * A message's ID: a positive whole number. Message IDs are one increasing
  * sequence across the whole server, so they order messages.
  */
 type MessageId = number & {
-  readonly [brand$1]: "MessageId";
+  readonly [brand$2]: "MessageId";
 };
 /** Any JSON value. */
 type JsonValue = null | boolean | number | string | readonly JsonValue[] | {
@@ -164,6 +136,8 @@ interface PostMessageRequest {
 /** The answer to posting a message. */
 interface MessageResponse {
   readonly message: Message;
+  /** Each `@name` in the text that names no identity, once each in the order written. They stay plain text. */
+  readonly unknownMentions: readonly string[];
 }
 /** The query of a channel page. With no `before`, the page is the newest messages. */
 interface ListMessagesQuery {
@@ -181,6 +155,78 @@ interface ListMessagesResponse {
 interface ThreadResponse {
   readonly parent: TopLevelMessage;
   readonly replies: readonly Reply[];
+}
+/**
+ * Why an item is in the inbox: a reply in a thread the identity follows, a message that mentions it, or a top-level
+ * message in a channel it subscribes to.
+ */
+type InboxReason = "followed-thread" | "mention" | "subscribed-channel";
+/** A message the identity hasn't read, with every reason it is there, its channel and its thread's top-level message. */
+interface InboxItem {
+  readonly reasons: readonly InboxReason[];
+  readonly channel: Channel;
+  /** The thread's top-level message: the message itself when it is top-level. */
+  readonly parent: TopLevelMessage;
+  readonly message: Message;
+}
+/**
+ * An identity's read position in one scope: a channel's top-level messages (`thread` is `null`) or one thread's
+ * replies. Every message in the scope up to `messageId` is read.
+ */
+interface ReadPosition {
+  readonly channel: ChannelName;
+  readonly thread: MessageId | null;
+  readonly messageId: MessageId;
+}
+/** The inbox, oldest first, each message once. Reading it changes nothing. */
+interface InboxResponse {
+  readonly items: readonly InboxItem[];
+}
+/** The body of an ack. */
+interface AckRequest {
+  readonly messageId: MessageId;
+}
+/** The answer to an ack: the read position of the message's scope, which never moves backwards. */
+interface AckResponse {
+  readonly readPosition: ReadPosition;
+}
+/** The answer to following or unfollowing: the thread, by its top-level message's ID. */
+interface FollowResponse {
+  readonly thread: MessageId;
+  readonly following: boolean;
+}
+/** The answer to subscribing or unsubscribing. */
+interface SubscriptionResponse {
+  readonly channel: ChannelName;
+  readonly subscribed: boolean;
+}
+declare const brand$1: unique symbol;
+/** The value `join` returns and a session sends in `cookout-lease` to show it holds the identity. */
+type LeaseId = string & {
+  readonly [brand$1]: "LeaseId";
+};
+/** The body of `POST /v1/lease`. `as` must be the token's own identity: a check, not a switch. */
+interface JoinRequest {
+  readonly as: string;
+  /** Takes the lease even if another session holds it; that session's lease ID stops working at once. */
+  readonly force?: boolean;
+}
+/** The answer to `join`. */
+interface LeaseResponse {
+  readonly leaseId: LeaseId;
+  /** Each request carrying the lease ID moves it forward. */
+  readonly expiresAt: IsoTime;
+}
+/** The answer to `leave`. */
+interface LeaveResponse {
+  readonly released: true;
+}
+/**
+ * The `details` of the 409 lease refusals: when the current holder's lease
+ * ends, or `null` if nobody holds the identity.
+ */
+interface LeaseConflictDetails {
+  readonly heldUntil: IsoTime | null;
 }
 /** The answer to the health check. */
 interface HealthResponse {
@@ -261,6 +307,30 @@ export type CookoutClient = {
    * `lease_required` without one, `lease_lost` if it is no longer live. After a `lease_lost` the client stops sending it.
    */
   readonly leave: () => Promise<LeaveResponse>;
+  /**
+   * `GET /v1/inbox`: what the caller hasn't read, oldest first, each message once with every reason it is there
+   * (`followed-thread`, `mention`, `subscribed-channel`), its channel and its thread's top-level message. The
+   * caller's own messages never appear. Reading it changes nothing.
+   */
+  readonly inbox: () => Promise<InboxResponse>;
+  /**
+   * `POST /v1/ack`: marks the message and everything before it in its thread (for a reply) or channel (for a
+   * top-level message) as read. A read position never moves backwards. Sent without a lease ID, it is allowed only
+   * while nobody holds the lease on the caller's identity (409 `lease_required` otherwise); a stale lease ID is 409
+   * `lease_lost`. A missing message is 404 `message_not_found`.
+   */
+  readonly ack: (messageId: MessageId) => Promise<AckResponse>;
+  /**
+   * `PUT /v1/messages/:id/follow`: follows the thread holding the message, so its replies reach the inbox. Starting
+   * a thread, replying in it and being mentioned in it follow it too.
+   */
+  readonly follow: (messageId: MessageId) => Promise<FollowResponse>;
+  /** `DELETE /v1/messages/:id/follow`: stops following the thread until the caller next replies or is mentioned in it. */
+  readonly unfollow: (messageId: MessageId) => Promise<FollowResponse>;
+  /** `PUT /v1/channels/:name/subscription`: new top-level messages in the channel reach the inbox. */
+  readonly subscribe: (channel: string) => Promise<SubscriptionResponse>;
+  /** `DELETE /v1/channels/:name/subscription`: they stop reaching it. */
+  readonly unsubscribe: (channel: string) => Promise<SubscriptionResponse>;
 };
 /**
  * A client for the server at `url` with `token`, each defaulting to
@@ -268,5 +338,5 @@ export type CookoutClient = {
  * (status 0) when there is no URL.
  */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type Author, type Channel, type ChannelName, type ChannelResponse, CookoutError, type CookoutErrorCode, type CreateChannelRequest, type CreateIdentityRequest, type HealthResponse, type Identity, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IsoTime, type JoinRequest, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type Reply, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode };
+export { type AckRequest, type AckResponse, type Author, type Channel, type ChannelName, type ChannelResponse, CookoutError, type CookoutErrorCode, type CreateChannelRequest, type CreateIdentityRequest, type FollowResponse, type HealthResponse, type Identity, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type Reply, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode };
 ```

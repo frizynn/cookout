@@ -18,7 +18,7 @@ export const openMemoryStorage: Effect.Effect<StorageService, never, Scope.Scope
       ...memoryHealth(state),
       ...identities,
       ...channels,
-      ...memoryMessages({ channels, state }),
+      ...memoryMessages({ channels, identities, state }),
       ...leases,
       deleteIdentity: (name) =>
         Effect.tap(identities.deleteIdentity(name), (result) =>

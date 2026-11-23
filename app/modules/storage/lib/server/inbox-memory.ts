@@ -1,0 +1,189 @@
+import { Array as Arr, Effect, Option, Predicate, pipe } from "effect";
+import type { InboxReason, ReadPosition } from "../../../inbox/index.ts";
+import type { InboxSection, Scope, StoredInboxItem } from "./inbox.ts";
+import type { Message, MessageId, Reply, TopLevelMessage } from "../../../messages/index.ts";
+import { counted, threadIdOf } from "./messages.ts";
+import { followersOf, movedTo, scopeOf } from "./inbox.ts";
+import type { ChannelName } from "../../../channels/index.ts";
+import type { IdentityName } from "../../../identities/index.ts";
+import type { StorageUnavailable } from "./errors.ts";
+
+type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
+
+interface MemoryInbox {
+  readonly follows: ReadonlySet<string>;
+  readonly subscriptions: ReadonlySet<string>;
+  readonly positions: ReadonlyMap<string, MessageId>;
+}
+
+interface MemoryBoard {
+  readonly messages: readonly Message[];
+  readonly inbox: MemoryInbox;
+}
+
+interface BoardAccess {
+  readonly read: <Value>(work: (board: MemoryBoard) => Value) => Fails<Value>;
+  readonly changeInbox: <Value>(work: (board: MemoryBoard) => readonly [Value, MemoryInbox]) => Fails<Value>;
+  readonly channelExists: (channel: ChannelName) => Fails<boolean>;
+}
+
+interface Asking {
+  readonly board: MemoryBoard;
+  readonly id: MessageId;
+  readonly identity: IdentityName;
+}
+
+type Changed<Value> = readonly [Option.Option<Value>, MemoryInbox];
+
+type KeysChange = (keys: ReadonlySet<string>, key: string) => ReadonlySet<string>;
+
+interface Appended {
+  readonly inbox: MemoryInbox;
+  readonly message: Message;
+}
+
+interface Reading {
+  readonly board: MemoryBoard;
+  readonly identity: IdentityName;
+}
+
+const NOTHING_READ = 0;
+
+const EMPTY_INBOX: MemoryInbox = { follows: new Set(), positions: new Map(), subscriptions: new Set() };
+
+function keyOf(identity: IdentityName, { channel, thread }: Scope): string {
+  if (Predicate.isNull(thread)) {
+    return `${identity} channel ${channel}`;
+  }
+  return `${identity} thread ${String(thread)}`;
+}
+
+function threadScopeOf(message: Message): Scope {
+  return { channel: message.channel, thread: threadIdOf(message) };
+}
+
+function withKey(keys: ReadonlySet<string>, key: string): ReadonlySet<string> {
+  return new Set([...keys, key]);
+}
+
+function withoutKey(keys: ReadonlySet<string>, key: string): ReadonlySet<string> {
+  return new Set(Arr.filter([...keys], (kept) => kept !== key));
+}
+
+function afterAppend({ inbox, message }: Appended): MemoryInbox {
+  const followed = Arr.map(followersOf(message), (name) => keyOf(name, threadScopeOf(message)));
+  const read = keyOf(message.author.name, scopeOf(message));
+  const position = movedTo({ current: inbox.positions.get(read), message });
+  return {
+    ...inbox,
+    follows: new Set([...inbox.follows, ...followed]),
+    positions: new Map([...inbox.positions, [read, position.messageId]]),
+  };
+}
+
+function isUnread({ board, identity }: Reading, message: Message): boolean {
+  const marker = board.inbox.positions.get(keyOf(identity, scopeOf(message))) ?? NOTHING_READ;
+  return message.author.name !== identity && message.id > marker;
+}
+
+function reasonsFor(reading: Reading, message: Message): readonly InboxReason[] {
+  const { follows, subscriptions } = reading.board.inbox;
+  const key = keyOf(reading.identity, scopeOf(message));
+  const followed = message.kind === "reply" && follows.has(key);
+  const mentioned = Arr.some(message.mentions, (name) => name === reading.identity);
+  const subscribed = message.kind === "top-level" && subscriptions.has(key);
+  const reasons: readonly (readonly [InboxReason, boolean])[] = [
+    ["followed-thread", followed],
+    ["mention", mentioned],
+    ["subscribed-channel", subscribed],
+  ];
+  return Arr.map(
+    Arr.filter(reasons, ([, holds]) => holds),
+    ([reason]) => reason,
+  );
+}
+
+function currentParent(messages: readonly Message[], id: MessageId): TopLevelMessage | undefined {
+  return pipe(
+    Arr.findFirst(messages, (found): found is TopLevelMessage => found.kind === "top-level" && found.id === id),
+    Option.map((parent) => {
+      const replies = Arr.filter(messages, (reply): reply is Reply => reply.kind === "reply" && reply.replyTo === id);
+      return counted({ parent, replies });
+    }),
+    Option.getOrUndefined,
+  );
+}
+
+function itemFor(reading: Reading, message: Message): readonly StoredInboxItem[] {
+  const reasons = reasonsFor(reading, message);
+  const parent = currentParent(reading.board.messages, threadIdOf(message));
+  if (!isUnread(reading, message) || !Arr.isReadonlyArrayNonEmpty(reasons) || Predicate.isUndefined(parent)) {
+    return [];
+  }
+  if (message.kind === "top-level") {
+    return [{ message: parent, parent, reasons }];
+  }
+  return [{ message, parent, reasons }];
+}
+
+function inboxOf(reading: Reading): readonly StoredInboxItem[] {
+  return Arr.flatMap(reading.board.messages, (message) => itemFor(reading, message));
+}
+
+function findIn(board: MemoryBoard, id: MessageId): Option.Option<Message> {
+  return Arr.findFirst(board.messages, (message) => message.id === id);
+}
+
+function ack({ board, id, identity }: Asking): Changed<ReadPosition> {
+  const { inbox } = board;
+  return Option.match(findIn(board, id), {
+    onNone: () => [Option.none(), inbox],
+    onSome: (message) => {
+      const key = keyOf(identity, scopeOf(message));
+      const position = movedTo({ current: inbox.positions.get(key), message });
+      return [Option.some(position), { ...inbox, positions: new Map([...inbox.positions, [key, position.messageId]]) }];
+    },
+  });
+}
+
+function follow(change: KeysChange) {
+  return ({ board, id, identity }: Asking): Changed<MessageId> => {
+    const { inbox } = board;
+    return Option.match(findIn(board, id), {
+      onNone: () => [Option.none(), inbox],
+      onSome: (message) => [
+        Option.some(threadIdOf(message)),
+        { ...inbox, follows: change(inbox.follows, keyOf(identity, threadScopeOf(message))) },
+      ],
+    });
+  };
+}
+
+function memoryInbox({ changeInbox, channelExists, read }: BoardAccess): InboxSection {
+  function changeFound<Value>(work: (board: MemoryBoard) => Changed<Value>): Fails<Value | undefined> {
+    return Effect.map(changeInbox(work), Option.getOrUndefined);
+  }
+  function subscription(change: KeysChange) {
+    return (identity: IdentityName, channel: ChannelName): Fails<boolean> =>
+      Effect.flatMap(channelExists(channel), (exists) => {
+        if (!exists) {
+          return Effect.succeed(false);
+        }
+        const key = keyOf(identity, { channel, thread: null });
+        return changeInbox((board) => [
+          true,
+          { ...board.inbox, subscriptions: change(board.inbox.subscriptions, key) },
+        ]);
+      });
+  }
+  return {
+    ackMessage: (identity, id) => changeFound((board) => ack({ board, id, identity })),
+    followThread: (identity, id) => changeFound((board) => follow(withKey)({ board, id, identity })),
+    listInbox: (identity) => read((board) => inboxOf({ board, identity })),
+    subscribeChannel: subscription(withKey),
+    unfollowThread: (identity, id) => changeFound((board) => follow(withoutKey)({ board, id, identity })),
+    unsubscribeChannel: subscription(withoutKey),
+  };
+}
+
+export { EMPTY_INBOX, type MemoryInbox, afterAppend, memoryInbox };
