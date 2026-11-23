@@ -19,9 +19,11 @@ test("hovering a message shows its Reply button, which opens the thread with the
 
   await expect(reply).toBeHidden();
 
-  await message.hover();
+  await expect(async () => {
+    await message.hover();
 
-  await expect(reply).toBeVisible();
+    await expect(reply).toBeVisible({ timeout: 1000 });
+  }).toPass();
 
   await reply.click();
 
