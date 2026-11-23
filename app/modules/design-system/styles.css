@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/*
+ * Colour roles (#152). The accent means "this needs you" and nothing else:
+ * - mention-bar, mention-bg, mention-fg, mention-ink: the accent. A message that mentions or answers the reader
+ *   (bar and tint), the reader's own @name (fg), and every count badge of what is for the reader (bar, with ink text).
+ * - unread: the New line in a channel or thread, and nothing else.
+ * - link: the focus ring only. Links, chips, statuses and other people's @names are neutral.
+ * - foreground, muted-foreground: text; bold foreground is activity (unread, not for the reader).
+ * - destructive: errors.
+ * - background, card, muted, surface, accent, hover, border: neutral surfaces (accent is the selected row, not the
+ *   accent colour).
+ */
 @theme {
   --font-sans:
     "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -15,6 +26,7 @@
   --color-mention-bg: rgb(255 178 36 / 0.09);
   --color-mention-bar: #f5a524;
   --color-mention-fg: #ffc96b;
+  --color-mention-ink: #1f1300;
   --color-unread: #ff6166;
   --color-link: #52a8ff;
   --color-hover: rgb(255 255 255 / 0.035);

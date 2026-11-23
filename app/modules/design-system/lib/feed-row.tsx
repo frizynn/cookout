@@ -8,18 +8,17 @@ interface RowParts extends FeedRowParts {
   readonly agent: boolean;
 }
 
-function lookOf(unread: boolean): string {
-  if (unread) {
-    return "";
-  }
-  return "opacity-80 hover:opacity-100";
-}
+const LOOKS = {
+  activity: "",
+  "for-you": "bg-mention-bg/60",
+  read: "opacity-80 hover:opacity-100",
+} as const;
 
 export function FeedRow(parts: RowParts): ReactNode {
   return (
     <li>
       <a
-        className={`relative flex gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-hover ${lookOf(parts.unread)}`}
+        className={`relative flex gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-hover ${LOOKS[parts.level]}`}
         href={parts.href}
       >
         <Avatar agent={parts.agent} name={parts.author} />
@@ -29,8 +28,9 @@ export function FeedRow(parts: RowParts): ReactNode {
           channel={parts.channel}
           context={parts.context}
           displayName={parts.displayName}
+          level={parts.level}
           time={parts.time}
-          unread={parts.unread}
+          why={parts.why}
         >
           {parts.children}
         </FeedRowBody>

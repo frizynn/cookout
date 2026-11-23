@@ -1,8 +1,10 @@
 import { FeedRowTitle } from "./feed-row-title.tsx";
+import { FeedRowWhy } from "./feed-row-why.tsx";
 import type { ReactNode } from "react";
 
 interface FeedRowParts {
-  readonly unread: boolean;
+  readonly level: "for-you" | "activity" | "read";
+  readonly why: string;
   readonly author: string;
   readonly displayName: string | null;
   readonly action: string;
@@ -12,16 +14,20 @@ interface FeedRowParts {
   readonly children: ReactNode;
 }
 
+const DOTS = { activity: "bg-muted-foreground/60", "for-you": "bg-mention-bar", read: "hidden" } as const;
+
 export function FeedRowBody(parts: FeedRowParts): ReactNode {
   return (
     <span className="flex min-w-0 flex-1 flex-col">
-      {parts.unread && (
-        <span aria-hidden="true" className="absolute top-[1.35rem] left-0 h-1.5 w-1.5 rounded-full bg-link" />
-      )}
+      <span
+        aria-hidden="true"
+        className={`absolute top-[1.35rem] left-0 h-1.5 w-1.5 rounded-full ${DOTS[parts.level]}`}
+      />
+      <FeedRowWhy level={parts.level}>{parts.why}</FeedRowWhy>
       <FeedRowTitle
         action={parts.action}
         author={parts.author}
-        bold={parts.unread}
+        bold={parts.level !== "read"}
         channel={parts.channel}
         displayName={parts.displayName}
         time={parts.time}

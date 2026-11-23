@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
 import type { Unread } from "../../unread/index.ts";
 import { hrefOf } from "../../paths/index.ts";
+import { useSidebarCounts } from "./use-unread-levels.ts";
 import { useSyncExternalStore } from "react";
 
 const TEXT = { channels: "Channels", people: "People & agents", views: "Views" } as const;
@@ -15,6 +16,7 @@ interface SidebarLinksProps {
   readonly board: Board;
   readonly route: Route;
   readonly unread: Unread;
+  readonly me: string;
 }
 
 function openChannel(route: Route): ChannelName | null {
@@ -28,10 +30,11 @@ export function SidebarLinks(props: SidebarLinksProps): ReactNode {
   const { route } = props;
   const { channels } = useSyncExternalStore(props.board.subscribe, props.board.snapshot);
   const unread = useSyncExternalStore(props.unread.subscribe, props.unread.snapshot);
+  const counts = useSidebarCounts({ me: props.me, state: unread });
   return (
     <>
       <NavList label={TEXT.views}>
-        <InboxLink active={route.name === "inbox"} unread={unread} />
+        <InboxLink active={route.name === "inbox"} counts={counts.inbox} />
         <NavLink
           active={route.name === "people" || route.name === "profile"}
           href={hrefOf({ name: "people" })}
@@ -41,7 +44,7 @@ export function SidebarLinks(props: SidebarLinksProps): ReactNode {
         />
       </NavList>
       <NavHeading>{TEXT.channels}</NavHeading>
-      <ChannelRows channels={channels} open={openChannel(route)} unread={unread} />
+      <ChannelRows channels={channels} open={openChannel(route)} counts={counts.channels} />
     </>
   );
 }

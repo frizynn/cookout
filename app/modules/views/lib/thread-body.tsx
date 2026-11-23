@@ -4,9 +4,11 @@ import { MessageStream } from "./message-stream.tsx";
 import type { ReactNode } from "react";
 import { StandaloneEntry } from "./standalone-entry.tsx";
 import type { ThreadMessagesState } from "../../board/index.ts";
+import type { ThreadNews } from "../../unread/index.ts";
 import { replies } from "./message-marks.ts";
 
 const NONE = 0;
+const NO_THREADS: ReadonlyMap<MessageId, ThreadNews> = new Map();
 
 const TEXT = { empty: "No replies yet.", parent: "Parent message", replies: "Replies" } as const;
 
@@ -46,6 +48,7 @@ export function ThreadBody(props: ThreadBodyProps): ReactNode {
         messages={state.replies}
         open={null}
         readPosition={props.readPosition}
+        threads={NO_THREADS}
       />
       {state.read.status === "failed" && (
         <Alert>{`Couldn't mark the thread read (${state.read.code}): ${state.read.message}`}</Alert>

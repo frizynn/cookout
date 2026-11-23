@@ -8,7 +8,7 @@ export function StandaloneMessage(parts: StandaloneMessageParts): ReactNode {
   return (
     <>
       {parts.day !== null && <DaySeparator label={parts.day} />}
-      <article aria-label={parts.label} className={messageClass(parts)} data-mentions-me={parts.mark === "mention"}>
+      <article aria-label={parts.label} className={messageClass(parts)} data-for-you={parts.mark === "for-you"}>
         <MessageLayout
           actionHref={parts.actionHref}
           actionLabel={parts.actionLabel}

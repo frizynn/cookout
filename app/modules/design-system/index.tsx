@@ -52,24 +52,24 @@
  * `Feed` is a named, centred column that scrolls, such as the inbox, read
  * from the top: a `FeedHeading` heads a part of it, with its count, or, with
  * no count, as a divider line; a `FeedList` is a named list of `FeedRow`s,
- * each a link showing a message with its author's avatar and name, what they
- * did (`action`) and in which channel, a short time and any `context` line
- * (a reply's thread), then what it holds: its `FeedText`, up to two lines,
- * and a `BadgeList` of its `Badge`s. An `unread` row has a dot and a bold name,
- * and its text is bright; a read one is muted. `Mention` is
+ * each a link leading with why it is there (`why`), then a message with its
+ * author's avatar and name, what they did (`action`) and in which channel, a
+ * short time and any `context` line (a reply's thread), then what it holds:
+ * its `FeedText`, up to two lines. A `for-you` row has an accent dot and why,
+ * a bold name and bright text; an `activity` row has a muted dot and why, a
+ * bold name and bright text; a `read` one is muted. `Mention` is
  * an `@` mention in a message's text, in the mention colour when it is the
  * reader's own (`mine`). `FeedNote` is a muted line in a feed: why a part is
- * `empty`, or that it has reached the `end`. A `Badge` is a small label, in the
- * mention colour (`mention`) or muted (`plain`).
+ * `empty`, or that it has reached the `end`.
  * `MessageList` is a named list of `MessageItem`s: one message each, which
  * takes focus, with its avatar, name and time, or only its time on hover when
  * `grouped` under the one before; the day's separator and the "New" line above it when it starts them; a
- * mark (`mention` or `open`); and an action link (such as Reply) shown on hover
+ * mark (`for-you`, the accent, when it mentions or answers the reader, or `open`); and an action link (such as Reply) shown on hover
  * or focus. `StandaloneMessage` is one named message on its own, such as a
  * thread's parent. In a message, `MessageBody` is its text, `Mention` an
  * `@name` in it, `CallChip` a command call
  * and its data, `DataToggle` its data folded away, and `ThreadSummary` a link to
- * its thread: its repliers' avatars, its reply count and when it was last replied to. `RepliesDivider` heads a thread's replies, `ChannelStart` says a
+ * its thread: its repliers' avatars, its reply count, how many replies are new (bold, or in the accent with why when one is for the reader) and when it was last replied to. `RepliesDivider` heads a thread's replies, `ChannelStart` says a
  * channel has nothing older, and `QuietButton` is a muted centred button,
  * such as loading older messages. `TextArea` takes focus when it first appears
  * if `focused`.
@@ -113,8 +113,6 @@ export { RepliesDivider } from "./lib/replies-divider.tsx";
 export { ThreadSummary } from "./lib/thread-summary.tsx";
 export { StandaloneMessage } from "./lib/standalone-message.tsx";
 export { AppShell } from "./lib/app-shell.tsx";
-export { Badge } from "./lib/badge.tsx";
-export { BadgeList } from "./lib/badge-list.tsx";
 export { BoxFrame } from "./lib/box-frame.tsx";
 export { Button } from "./lib/button.tsx";
 export { Card } from "./lib/card.tsx";

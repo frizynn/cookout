@@ -32,6 +32,7 @@ export function ChannelPanes(props: ChannelPanesProps): ReactNode {
         me={me}
         open={openThread(route)}
         newLine={unread.newLine(route.channel, null)}
+        unread={unread}
       />
       {route.name === "thread" && (
         <ThreadView

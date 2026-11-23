@@ -26,7 +26,7 @@ export function StandaloneEntry(props: StandaloneEntryProps): ReactNode {
       day={dayLabel(message.createdAt)}
       grouped={false}
       label={props.label}
-      mark={markOf({ me: props.me, message, open: null })}
+      mark={markOf({ me: props.me, message, open: null, parent: null })}
       name={message.author.name}
       note={note}
       time={timeOf(message.createdAt)}

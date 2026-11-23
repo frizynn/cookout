@@ -1,4 +1,5 @@
 import type { Author, ChannelName, Message, MessageId } from "../../sdk/index.ts";
+import type { ThreadNews } from "../../unread/index.ts";
 import { hrefOf } from "../../paths/index.ts";
 
 const NONE = 0;
@@ -17,10 +18,29 @@ function replies(count: number): string {
   return `${String(count)} ${REPLIES[plural.select(count)]}`;
 }
 
+const FOR_YOU = { "mentioned-you": "mentions you", "replied-to-you": "replies to you" } as const;
+
+interface NewsText {
+  readonly text: string;
+  readonly forYou: boolean;
+}
+
+function newsText(news: ThreadNews | null): NewsText | null {
+  if (news === null) {
+    return null;
+  }
+  const text = `${String(news.count)} new ${REPLIES[plural.select(news.count)]}`;
+  if (news.forYou === null) {
+    return { forYou: false, text };
+  }
+  return { forYou: true, text: `${text} · ${FOR_YOU[news.forYou]}` };
+}
+
 interface Marking {
   readonly message: Message;
   readonly me: string;
   readonly open: MessageId | null;
+  readonly parent: Message | null;
 }
 
 interface Linking {
@@ -28,9 +48,17 @@ interface Linking {
   readonly message: Message;
 }
 
-function markOf({ me, message, open }: Marking): "mention" | "open" | "none" {
-  if (message.mentions.some((name) => name === me)) {
-    return "mention";
+function answersMe({ me, message, parent }: Marking): boolean {
+  if (parent === null) {
+    return false;
+  }
+  return parent.author.name === me && message.author.name !== me;
+}
+
+function markOf(marking: Marking): "for-you" | "open" | "none" {
+  const { me, message, open } = marking;
+  if (message.mentions.some((name) => name === me) || answersMe(marking)) {
+    return "for-you";
   }
   if (message.id === open) {
     return "open";
@@ -58,4 +86,4 @@ function threadSummaryOf(message: Message): ThreadSummaryOf | null {
   return { latestReplyAt: message.latestReplyAt, repliers: message.repliers, replyCount: message.replyCount };
 }
 
-export { type ThreadSummaryOf, markOf, replies, threadHref, threadSummaryOf };
+export { type NewsText, type ThreadSummaryOf, markOf, newsText, replies, threadHref, threadSummaryOf };

@@ -1,27 +1,19 @@
-import { NONE, hasUnread } from "./unread-counts.ts";
-import type { UnreadCounts, UnreadState } from "../../unread/index.ts";
 import { ChannelBadges } from "./channel-badges.tsx";
 import type { ChannelName } from "../../sdk/index.ts";
 import { NavLink } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
+import type { UnreadCounts } from "../../unread/index.ts";
+import { hasUnread } from "./unread-counts.ts";
 import { hrefOf } from "../../paths/index.ts";
 
 interface ChannelRowProps {
   readonly channel: ChannelName;
   readonly open: boolean;
-  readonly unread: UnreadState;
-}
-
-function countsOf(unread: UnreadState, channel: ChannelName): UnreadCounts {
-  if (unread.status !== "loaded") {
-    return NONE;
-  }
-  return unread.channels.get(channel) ?? NONE;
+  readonly counts: UnreadCounts;
 }
 
 export function ChannelRow(props: ChannelRowProps): ReactNode {
-  const { channel } = props;
-  const counts = countsOf(props.unread, channel);
+  const { channel, counts } = props;
   return (
     <NavLink
       active={props.open}

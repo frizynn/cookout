@@ -5,6 +5,8 @@ import { MessageStream } from "./message-stream.tsx";
 import { Older } from "./older.tsx";
 import type { ReactNode } from "react";
 import { ReadRefusal } from "./read-refusal.tsx";
+import type { Unread } from "../../unread/index.ts";
+import { useThreadNews } from "./use-unread-levels.ts";
 
 const TEXT = { messages: "Messages", start: "This is the start of the channel." } as const;
 
@@ -15,11 +17,15 @@ interface MessageRowsProps {
   readonly me: string;
   readonly open: MessageId | null;
   readonly readPosition: MessageId | null;
+  readonly unread: Unread;
 }
+
+export type { MessageRowsProps };
 
 export function MessageRows(props: MessageRowsProps): ReactNode {
   const { channel, messages, state } = props;
   const handleLoad = messages.loadOlder;
+  const threads = useThreadNews({ me: props.me, unread: props.unread });
   if (state.status === "loading") {
     return (
       <CardBody>
@@ -43,6 +49,7 @@ export function MessageRows(props: MessageRowsProps): ReactNode {
         messages={state.messages}
         open={props.open}
         readPosition={props.readPosition}
+        threads={threads}
       />
       <ReadRefusal read={state.read} />
     </>
