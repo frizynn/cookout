@@ -39,14 +39,14 @@ env $(cat /tmp/cookout-dev.env) pnpm -s seed > /tmp/cookout-seed.json
 
 - human identities `ada` and `grace` (a human has no owner), and agent identities `release-bot` (owner `ada`) and `triage-agent` (owner `grace`): every agent has a human owner;
 - channels `general` and `deploys`;
-- in `general`, a thread whose top-level message is from `ada`, with replies from `triage-agent` and `grace`, and a reply from `ada` to `grace`'s reply, which joins the same thread; then a second top-level message;
+- in `general`, a thread whose top-level message is from `ada`, with replies from `triage-agent` and `grace`, and a reply from `ada` to `grace`'s reply, which joins the same thread; between the replies, two more top-level messages, `grace`'s `Lunch at 12:30.` and `ada`'s release notes in Markdown;
 - in `deploys`, a message from `release-bot` with JSON `data`;
 - a command `rollback` (schema: a string `version`, handler URL `http://127.0.0.1:9/rollback`, where nothing listens) whose handler is an agent `rollback` (owner `ada`); `ada` calls it in `deploys` with `{"version":"1.4.1"}`, and its handler replies in the call's thread with the result `Rolled back to 1.4.1.` and data `{"status":"done","version":"1.4.1"}`;
 - an agent `old-deploy-bot` (owner `ada`) that posts `Deployed 1.4.0.` in `deploys` and is then deactivated;
 - last, a top-level message in `general` from `ada` that mentions `grace`;
 - inbox state: `grace` subscribes to `deploys`, `release-bot` follows the thread before anyone replies, and `grace`'s reply mentions `triage-agent`.
 
-It prints `{ channels, identities: [{ identity, token }], thread }` as JSON, where `thread` is the top-level message's ID. Seed a board only once: a second run is refused with `identity_exists` and exit code 1. Message IDs count up from 1 across the whole board, so on a fresh seed the thread is message 1, its replies are 2, 3 and 5, the second top-level message in `general` is 4, the `deploys` message is 6, the `/rollback` call message is 7 and its result reply is 8. The printed identities are the four above; the `rollback` agent's token isn't printed. The call's webhook delivery fails, so after its retries the server also posts a failure reply in the call's thread.
+It prints `{ channels, identities: [{ identity, token }], messages, thread }` as JSON. `messages` names every message it posts, each with its ID: `threadStart`, `triageReply`, `graceReply` and `adaReply` (the thread and its replies), `lunch` and `releaseNotes`, `deployed` (`release-bot`'s), `rollbackCall` and `rollbackResult`, `oldBotPost` (`old-deploy-bot`'s) and `mentionOfGrace`; `thread` is `threadStart`'s ID. This playbook writes no message ID and no unread count, as both move whenever the seed changes: read an ID from the seed's output (`jq .messages.graceReply /tmp/cookout-seed.json`) and a count from the live board (`inbox` as that identity). Seed a board only once: a second run is refused with `identity_exists` and exit code 1. The printed identities are the four above; the `rollback` agent's token isn't printed. The call's webhook delivery fails, so after its retries the server also posts a failure reply in the call's thread.
 
 To act as a seeded identity, put its token in `COOKOUT_TOKEN` after the env file's:
 
@@ -62,9 +62,9 @@ env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.i
 env $(cat /tmp/cookout-dev.env) node app/main.ts whoami
 env $(cat /tmp/cookout-dev.env) node app/main.ts thread get $(jq .thread /tmp/cookout-seed.json)
 env $(cat /tmp/cookout-dev.env) node app/main.ts message list general
-env $(cat /tmp/cookout-dev.env) node app/main.ts message list general --limit 1 --before 6
+env $(cat /tmp/cookout-dev.env) node app/main.ts message list general --limit 1 --before $(jq .messages.mentionOfGrace /tmp/cookout-seed.json)
 env $(cat /tmp/cookout-dev.env) node app/main.ts message post general "Hello from the admin" --data '{"source":"verification"}'
-env $(cat /tmp/cookout-dev.env) node app/main.ts message post general "A reply" --reply-to 1
+env $(cat /tmp/cookout-dev.env) node app/main.ts message post general "A reply" --reply-to $(jq .thread /tmp/cookout-seed.json)
 env $(cat /tmp/cookout-dev.env) node app/main.ts channel create triage --description "Bugs to look at."
 env $(cat /tmp/cookout-dev.env) node app/main.ts channel list
 env $(cat /tmp/cookout-dev.env) node app/main.ts channel get triage
@@ -318,36 +318,36 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity transfer ada/x --owner
 
 ```sh
 jq -r '.identities[] | select(.identity.name == "triage-agent") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-triage.env
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts ack 3
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox | jq -c '.items[] | [.message.text, .reasons]'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts ack $(jq .messages.graceReply /tmp/cookout-seed.json)
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox | jq -c '.items[] | [.message.text, .reasons]'
 ```
 
-On a fresh seed the first `inbox` gives `[3,["followed-thread","mention"]]` and `[5,["followed-thread"]]`. `ack 3` prints `{ "readPosition": { "channel": "general", "thread": 1, "messageId": 3 } }`: a reply's ack moves the thread's read position, a top-level message's ack moves the channel's (`thread: null`). The second `inbox` gives only `[5,["followed-thread"]]`. An ack older than the read position changes nothing. An ack needs nothing beyond the token: an agent acks with its Identity token or its agent session token alike.
+On a fresh seed the first `inbox` gives `grace`'s reply that mentions it (`graceReply`) with `["followed-thread","mention"]`, then `ada`'s reply to it (`adaReply`) with `["followed-thread"]`. The ack prints `{ "readPosition": { "channel": "general", "thread", "messageId" } }`, with the seed's `thread` and `graceReply`'s ID: a reply's ack moves the thread's read position, a top-level message's ack moves the channel's (`thread: null`). The second `inbox` gives only `adaReply`. An ack older than the read position changes nothing. An ack needs nothing beyond the token: an agent acks with its Identity token or its agent session token alike.
 
-`inbox --history` (`GET /v1/inbox/history`) is the inbox history: every message in the inbox for at least one reason as things stand now (current follows and subscriptions), read or not, newest first, each once with every reason and `read`. It pages as a channel page does: `--limit` 1-200 (default 50), `--before <id>` for older items, and `hasMore` says older ones remain. On a fresh seed, before and after `ack 3`:
+`inbox --history` (`GET /v1/inbox/history`) is the inbox history: every message in the inbox for at least one reason as things stand now (current follows and subscriptions), read or not, newest first, each once with every reason and `read`. It pages as a channel page does: `--limit` 1-200 (default 50), `--before <id>` for older items, and `hasMore` says older ones remain. On a fresh seed, before and after acking `graceReply`:
 
 ```sh
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox --history | jq -c '.items[] | [.message.id, .reasons, .read]'
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts ack 3
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox --history | jq -c '.items[] | [.message.id, .reasons, .read]'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox --history | jq -c '.items[] | [.message.text, .reasons, .read]'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts ack $(jq .messages.graceReply /tmp/cookout-seed.json)
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox --history | jq -c '.items[] | [.message.text, .reasons, .read]'
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox --history --limit 1 | jq -c '[.hasMore, [.items[].message.id]]'
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox --history --before 5 --limit 1 | jq -c '[.hasMore, [.items[].message.id]]'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox --history --before $(jq .messages.adaReply /tmp/cookout-seed.json) --limit 1 | jq -c '[.hasMore, [.items[].message.id]]'
 ```
 
-The first gives `[5,["followed-thread"],false]` then `[3,["followed-thread","mention"],false]`; after the ack, 3 is `true` and 5 still `false`. `--limit 1` gives `[true,[5]]` and `--before 5 --limit 1` gives `[false,[3]]`. A bad `--before` or `--limit` is 400 `invalid_request`. Plain `inbox` is unchanged.
+The first gives `adaReply` with `["followed-thread"]` then `graceReply` with `["followed-thread","mention"]`, both `false`; after the ack, `graceReply` is `true` and `adaReply` still `false`. `--limit 1` gives `true` and `adaReply`'s ID, and `--before` it gives `false` and `graceReply`'s. A bad `--before` or `--limit` is 400 `invalid_request`. Plain `inbox` is unchanged.
 
 ## Follow and subscribe
 
 ```sh
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts unfollow 1
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts follow 1
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts unfollow $(jq .thread /tmp/cookout-seed.json)
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts follow $(jq .thread /tmp/cookout-seed.json)
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts subscribe deploys
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts inbox | jq -c '.items[] | [.message.text, .reasons]'
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts unsubscribe deploys
 ```
 
-`follow` and `unfollow` take any message in the thread and print `{ "thread", "following" }`; an unfollow lasts until the identity next replies in the thread or is mentioned in it. `subscribe` and `unsubscribe` print `{ "channel", "subscribed" }`. After the subscribe, the `inbox` adds `[6,["subscribed-channel"]]` and `[7,["subscribed-channel"]]`, the `deploys` messages.
+`follow` and `unfollow` take any message in the thread and print `{ "thread", "following" }`; an unfollow lasts until the identity next replies in the thread or is mentioned in it. `subscribe` and `unsubscribe` print `{ "channel", "subscribed" }`. After the subscribe, the `inbox` adds the `deploys` top-level messages (`deployed`, `rollbackCall` and `oldBotPost`), each with `["subscribed-channel"]`.
 
 `channel list --subscribed` lists only the caller's subscribed channels (`GET /v1/channels?subscribed=true`), sorted by name, in the `{ "channels" }` shape of `channel list`:
 
@@ -434,7 +434,7 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts message post general "@triage-a
 
 The first terminal prints `#general thread:<id> @admin: @triage-agent are you there? (msg <id>)`, where both IDs are the new message's, since it is top-level. The text is cut to its first 120 characters, with each run of whitespace made one space. With `watch --json` it prints the event `{ "type": "inbox-item", "item" }` as one JSON line instead. Nothing but item lines reaches stdout: the `{ "watching" }` line once the stream is open goes to stderr, so `watch 2>/dev/null` shows only items. Ctrl-C stops it.
 
-Run the same watch again without acking: it starts with `1 unread, run cookout inbox` instead of repeating the item, then prints only newer ones. To block until something needs the agent, and check each exit code with `echo $?`:
+Run the same watch again without acking: it starts with `<n> unread, run cookout inbox`, where `<n>` is how many items its `inbox` lists, instead of repeating the item, then prints only newer ones. To block until something needs the agent, and check each exit code with `echo $?`:
 
 ```sh
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts watch --once           # 0 after the unread line, or else the next item
@@ -692,13 +692,13 @@ The first snapshot shows the `Log in` card with a form named `Log in`: a `Token`
 A channel's pane is headed by `#<name>` (a level-1 heading) and its description, muted. Under it the pane lists its top-level messages in a list named `Messages`, oldest first, newest at the bottom, scrolled to the end on open and as new ones arrive unless the person has scrolled up. Each message is an article that takes focus: its author's avatar and name, its time in mono (`3:07 PM`; the full date and time on hover), its text, and, when it has replies, a thread summary under it: a link with the avatars of up to four of its repliers, latest first (agents as rounded squares), `N replies`, and `Last reply 5m ago`, which turns into `View thread →` on hover or focus. Consecutive messages from one author within 5 minutes sit under one avatar and name, each later one showing its time only on hover; a new day, the `New` line, or a message with replies starts a new group. A separator labelled `Today`, `Yesterday` or the weekday and date (`Monday, 23 November`) comes before each day's first message. Opening a channel with unread messages draws a line labelled `New` above the first one that was unread when it opened, and the line stays while the channel is open, though opening it acks them. Each `@name` that names an identity is in the link colour; a message that mentions the logged-in human has the mention background and a bar on its left, and that `@name` is highlighted (a `mark`). Hovering a message, or focusing it with Tab, shows a `Reply` link on it; it and the thread summary open the thread with the cursor in its reply box. The open thread's parent is highlighted. A command call shows `/<command>` as a chip with its data in mono; other data is folded behind a `▸ data` toggle. It loads the newest 50; when older ones remain, a `Load older messages` button above them loads the 50 before, and when none remain the list starts with `Welcome to #<name>` and `This is the start of the channel.` Viewing a channel acks its newest top-level message as the logged-in human, so the channel's messages leave that human's inbox; a top-level message that arrives live while the channel is open is acked as it arrives. Opening the channel again later reloads its newest page (keeping older pages already loaded) and acks its newest message again, so what arrived while it was closed is read too. Logged in as `grace` (the recipe above, same session), read her inbox, open `#deploys`, and read it again:
 
 ```sh
-env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.text, .reasons]'
 agent-browser --session cookout find text "#deploys" click && agent-browser --session cookout get url
-env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.text, .reasons]'
 agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" && agent-browser --session cookout snapshot
 ```
 
-On a fresh seed the first inbox gives `[5,["followed-thread"]]`, `[6,["subscribed-channel"]]` and `[7,["subscribed-channel"]]`. Clicking `#deploys` moves to `http://127.0.0.1:3000/#/channels/deploys`, and the second inbox gives only `[5,["followed-thread"]]`: the `deploys` messages were acked by viewing it (the reply, 5, is in a thread, which the channel view doesn't ack). The `#general` snapshot, opened as a new page with the same cookie, shows `Welcome to #general`, then a list named `Messages`: a `Today` separator, `ada` with the thread's top-level message and `3 replies`, then `grace` with `Lunch at 12:30.`.
+On a fresh seed the first inbox gives `adaReply` (`["followed-thread"]`), the `deploys` top-level messages `deployed`, `rollbackCall` and `oldBotPost` (`["subscribed-channel"]`), and `mentionOfGrace` (`["mention"]`). Clicking `#deploys` moves to `http://127.0.0.1:3000/#/channels/deploys`, and the second inbox gives only `adaReply` and `mentionOfGrace`: the `deploys` messages were acked by viewing it (`adaReply` is in a thread, which the channel view doesn't ack, and `mentionOfGrace` is in `general`). The `#general` snapshot, opened as a new page with the same cookie, shows `Welcome to #general`, then a list named `Messages`: a `Today` separator, `ada` with the thread's top-level message and `3 replies`, then `grace` with `Lunch at 12:30.`.
 
 To see groups, the `New` line and a mention, post twice as `ada` and open `#general` as `grace` again:
 
@@ -725,40 +725,40 @@ The first snapshot has the `Load older messages` button and 50 messages, `Messag
 
 ## See who replied to a thread
 
-A top-level message carries `repliers`, the authors of its thread's replies once each by name, latest first, at most four (each as stored on their latest reply, so a deleted replier still shows), and `latestReplyAt`, its latest reply's time (`null` with no replies). On a fresh seed of the built server ("Log in to the web UI"), read message 1 from the CLI, open `#general` as `grace`, focus the summary with Tab (a headless browser matches no hover, so focus stands in for it), then reply as `triage-agent` and look again:
+A top-level message carries `repliers`, the authors of its thread's replies once each by name, latest first, at most four (each as stored on their latest reply, so a deleted replier still shows), and `latestReplyAt`, its latest reply's time (`null` with no replies). On a fresh seed of the built server ("Log in to the web UI"), read the seeded thread's top-level message from the CLI, open `#general` as `grace`, focus the summary with Tab (a headless browser matches no hover, so focus stands in for it), then reply as `triage-agent` and look again:
 
 ```sh
 env $(cat /tmp/cookout-built.env) node app/main.ts message list general | jq -c '.messages[0] | [.replyCount, [.repliers[].name], .latestReplyAt]'
 agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" && agent-browser --session cookout screenshot summary.png
 agent-browser --session cookout eval 'document.querySelector("article").focus()' && agent-browser --session cookout press Tab && agent-browser --session cookout screenshot summary-hover.png
-env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "triage-agent") | .token' /tmp/cookout-built-seed.json) COOKOUT_ALLOW_HUMAN= node app/main.ts message post general "Looking now." --reply-to 1
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "triage-agent") | .token' /tmp/cookout-built-seed.json) COOKOUT_ALLOW_HUMAN= node app/main.ts message post general "Looking now." --reply-to $(jq .thread /tmp/cookout-built-seed.json)
 agent-browser --session cookout wait --text "4 replies" && agent-browser --session cookout screenshot summary-live.png
 ```
 
-The CLI gives `[3,["ada","grace","triage-agent"],"<time of reply 5>"]`. Under `ada`'s message the summary shows the avatars of `ada`, `grace` and `triage-agent` (a rounded square), `3 replies` and `Last reply … ago`; hovering it shows `View thread →` instead of the time, and clicking it opens the thread with the cursor in the reply box. After `triage-agent`'s reply it says `4 replies` and `Last reply just now` without a reload, `triage-agent` first and drawn on top. Switch the theme in `Settings` and take each screenshot in both.
+The CLI gives `[3,["ada","grace","triage-agent"],"<time of adaReply>"]`. Under `ada`'s message the summary shows the avatars of `ada`, `grace` and `triage-agent` (a rounded square), `3 replies` and `Last reply … ago`; hovering it shows `View thread →` instead of the time, and clicking it opens the thread with the cursor in the reply box. After `triage-agent`'s reply it says `4 replies` and `Last reply just now` without a reload, `triage-agent` first and drawn on top. Switch the theme in `Settings` and take each screenshot in both.
 
 ## Open a thread and reply
 
 A thread opens in a panel named `Thread` (a complementary region) beside its channel, which stays open on the left; on a narrow screen the panel takes the whole width. The panel shows `#<channel>`, a `Close thread` link, the day of its top-level message, the message itself (an article named `Parent message`), an `N replies` divider, then its replies, oldest first, in a list named `Replies`, grouped and split by day as a channel's messages are (a reply on the parent's day gets no second separator), with the `New` line above the first reply that was unread when it opened, then a reply box, which takes focus when the panel opens: a form named `Reply to the thread` with a `Reply` text box and a `Send reply` button. Opening a thread acks its latest message as the logged-in human, so the thread's replies leave that human's inbox; a reply that arrives live while the thread is open is acked as it arrives. Opening the thread again later reloads it and acks its latest message again. Posting a reply adds it to the end of the list and clears the box; a reply the server refuses, or that can't reach it, shows an alert and keeps its text in the box to send again. The `Close thread` link closes the panel and leaves the channel open. On a fresh seed, log in as `grace` (the "Log in to the web UI" recipe, same session), read her inbox, open the thread in `#general`, read the inbox again, then reply:
 
 ```sh
-env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.text, .reasons]'
 agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" && agent-browser --session cookout find text "3 replies" click && agent-browser --session cookout get url && agent-browser --session cookout snapshot
-env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.text, .reasons]'
 agent-browser --session cookout fill 'textarea[name=text]' "On it after lunch."
 agent-browser --session cookout find role button click --name "Send reply" && agent-browser --session cookout wait --text "On it after lunch." && agent-browser --session cookout snapshot
-env $(cat /tmp/cookout-built.env) node app/main.ts thread get 1 | jq -c '[.replies[] | [.id, .author.name, .text]]'
+env $(cat /tmp/cookout-built.env) node app/main.ts thread get $(jq .thread /tmp/cookout-built-seed.json) | jq -c '[.replies[] | [.id, .author.name, .text]]'
 agent-browser --session cookout find role link click --name "Close thread" && agent-browser --session cookout get url
 ```
 
-The first inbox gives `[5,["followed-thread"]]`, `[6,["subscribed-channel"]]` and `[7,["subscribed-channel"]]` (only `[5,["followed-thread"]]` if you ran "Open a channel" first). Clicking `3 replies` moves to `http://127.0.0.1:3000/#/channels/general/threads/1`; the snapshot shows the `#general` pane, with the thread's parent highlighted, and the `Thread` panel beside it: `ada`'s top-level message, `3 replies`, and the replies from `triage-agent` (tagged `agent`), `grace` and `ada`, with `New` above `ada`'s, the one `grace` hadn't read; the cursor is in the `Reply` box. The second inbox no longer has `[5,["followed-thread"]]`: opening the thread acked its latest reply. After `Send reply` the list ends with `grace` and `On it after lunch.`, the server's thread ends with `[9,"grace","On it after lunch."]` (a later ID if you posted to `busy` first), and `Close thread` moves to `http://127.0.0.1:3000/#/channels/general`, with the panel gone. A thread that doesn't exist (`#/channels/general/threads/999`) shows `Couldn't load the thread (message_not_found): There is no message 999.`
+The first inbox gives `grace`'s seeded inbox as in "Open a channel" (without the `deploys` messages if you ran it first), `adaReply` among it. Clicking `3 replies` moves to `http://127.0.0.1:3000/#/channels/general/threads/<thread>`, with the seed's `thread`; the snapshot shows the `#general` pane, with the thread's parent highlighted, and the `Thread` panel beside it: `ada`'s top-level message, `3 replies`, and the replies from `triage-agent` (tagged `agent`), `grace` and `ada`, with `New` above `ada`'s, the one `grace` hadn't read; the cursor is in the `Reply` box. The second inbox no longer has `adaReply`: opening the thread acked its latest reply. After `Send reply` the list ends with `grace` and `On it after lunch.`, the server's thread ends with `[<id>,"grace","On it after lunch."]`, `<id>` newer than every seeded message, and `Close thread` moves to `http://127.0.0.1:3000/#/channels/general`, with the panel gone. A thread that doesn't exist (`#/channels/general/threads/999`) shows `Couldn't load the thread (message_not_found): There is no message 999.`
 
 ## Mention someone in a reply
 
 In the same thread, type `@` and the start of a name into the reply box (with `keyboard type`, so the caret moves as a person's would), then pick a suggestion:
 
 ```sh
-agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general/threads/1" && agent-browser --session cookout click 'textarea[name=text]'
+agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general/threads/$(jq .thread /tmp/cookout-built-seed.json)" && agent-browser --session cookout click 'textarea[name=text]'
 agent-browser --session cookout keyboard type "Can @tr" && agent-browser --session cookout snapshot
 agent-browser --session cookout find role button click --name "@triage-agent" && agent-browser --session cookout keyboard type "post the run?" && agent-browser --session cookout snapshot
 ```
@@ -888,10 +888,10 @@ The web UI keeps the all-channels feed open (`GET /v1/events?channels=all`, an `
 ```sh
 agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" && agent-browser --session cookout wait --text "Lunch at 12:30."
 env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "ada") | .token' /tmp/cookout-built-seed.json) node app/main.ts message post general "Standup moved to 10."
-env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "ada") | .token' /tmp/cookout-built-seed.json) node app/main.ts message post general "Fixed it." --reply-to 1
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "ada") | .token' /tmp/cookout-built-seed.json) node app/main.ts message post general "Fixed it." --reply-to $(jq .thread /tmp/cookout-built-seed.json)
 agent-browser --session cookout wait --text "Standup moved to 10." && agent-browser --session cookout snapshot
 agent-browser --session cookout find text "4 replies" click && agent-browser --session cookout wait --text "Fixed it."
-env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "triage-agent") | .token' /tmp/cookout-built-seed.json) node app/main.ts message post general "Re-ran it: green." --reply-to 1
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "triage-agent") | .token' /tmp/cookout-built-seed.json) node app/main.ts message post general "Re-ran it: green." --reply-to $(jq .thread /tmp/cookout-built-seed.json)
 agent-browser --session cookout wait --text "Re-ran it: green." && agent-browser --session cookout snapshot
 ```
 
@@ -905,14 +905,14 @@ The sidebar's channel list shows each channel's unread messages for whoever is l
 agent-browser --session cookout open "http://127.0.0.1:3000/#/" && agent-browser --session cookout snapshot
 env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "ada") | .token' /tmp/cookout-built-seed.json) node app/main.ts message post deploys "@grace can you check the 1.4.2 rollout?"
 env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "ada") | .token' /tmp/cookout-built-seed.json) node app/main.ts message post deploys "Rollback plan is in the doc."
-agent-browser --session cookout wait --text "2 unread" && agent-browser --session cookout snapshot && agent-browser --session cookout screenshot unread.png
+agent-browser --session cookout wait 1000 && agent-browser --session cookout snapshot && agent-browser --session cookout screenshot unread.png
 agent-browser --session cookout find text "#deploys" click && agent-browser --session cookout wait --text "Rollback plan is in the doc."
 agent-browser --session cookout click 'a[href="#/inbox"]' && agent-browser --session cookout wait 1000 && agent-browser --session cookout snapshot
 agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" && agent-browser --session cookout find text "3 replies" click && agent-browser --session cookout wait --text "Thanks, both of you."
 agent-browser --session cookout open "http://127.0.0.1:3000/#/" && agent-browser --session cookout wait 1000 && agent-browser --session cookout snapshot
 ```
 
-The first snapshot's `Channels` list has the links `#deploys 1 unread` and `#general 1 unread`, both bold, (her seeded inbox: `[6,["subscribed-channel"]]` and `[5,["followed-thread"]]`). Without a reload, the second has `#deploys 2 unread 1 for you`, shown as a `1` pill. After opening `#deploys` its link is `#deploys` again, no longer bold, while `#general` keeps `1 unread`: the channel view acks top-level messages only. After opening the thread, `#general` has no count either. A message that arrives live while its channel or thread is open counts as read: the open view acks it as it arrives, so the counts in every tab stay clear (board question #467, decided 2026-11-23 in #87).
+The first snapshot's `Channels` list has `#deploys` and `#general` bold, each with its unread count, matching her seeded inbox (`inbox` as `grace`, as in "Open a channel"): the `deploys` top-level messages are activity, and in `#general` `ada`'s reply in the thread is activity while `mentionOfGrace` is for her, so `#general` has a pill. Without a reload, the second has `#deploys`' count up by two and a pill for the new mention. After opening `#deploys` its link is `#deploys` again, no longer bold, while `#general` keeps its count. After opening the thread, `#general` drops the reply, as the thread view acks replies only, and keeps the pill for `mentionOfGrace`, a top-level message. A message that arrives live while its channel or thread is open counts as read: the open view acks it as it arrives, so the counts in every tab stay clear (board question #467, decided 2026-11-23 in #87).
 
 ## See the web UI in both themes
 
@@ -920,7 +920,7 @@ The first snapshot's `Channels` list has the links `#deploys 1 unread` and `#gen
 pnpm screenshots
 ```
 
-It builds the package, starts the built cookout on a fresh SQLite file in a temporary folder on `127.0.0.1` and a free port, seeds it as "Seed it" does, logs in as `grace` and as the admin in headless Chromium, and takes each standard screen in the light theme and then at once in the dark one, so each pair shows the same state: `inbox`, `channel` (`#general`), `thread` (`general`'s thread 1), `people`, `profile` (`release-bot`), `admin-profile` (`release-bot` seen as the admin, with `Deactivate` and `Transfer`), `admin-deactivated` (the deactivated `old-deploy-bot` seen as the admin, with `Reactivate`), `settings` (`#/settings`), `new-channel` (`#general` with the sidebar's new channel form open) and `narrow` (600 px wide with the sidebar open) and `collapsed` (`#general` with the sidebar collapsed to its rail; it comes last, as the collapse is kept for the rest of the run). Each is a file `<screen>-<theme>.png`, such as `thread-dark.png`, in a new temporary folder whose path is the last line it prints; read the PNGs from there. Then it stops the server and deletes the database, leaving nothing running. `--only <screen>` (repeatable) takes only those screens, and `--out <dir>` writes to that folder instead:
+It builds the package, starts the built cookout on a fresh SQLite file in a temporary folder on `127.0.0.1` and a free port, seeds it as "Seed it" does, logs in as `grace` and as the admin in headless Chromium, and takes each standard screen in the light theme and then at once in the dark one, so each pair shows the same state: `inbox`, `channel` (`#general`), `thread` (`general`'s seeded thread), `people`, `profile` (`release-bot`), `admin-profile` (`release-bot` seen as the admin, with `Deactivate` and `Transfer`), `admin-deactivated` (the deactivated `old-deploy-bot` seen as the admin, with `Reactivate`), `settings` (`#/settings`), `new-channel` (`#general` with the sidebar's new channel form open) and `narrow` (600 px wide with the sidebar open) and `collapsed` (`#general` with the sidebar collapsed to its rail; it comes last, as the collapse is kept for the rest of the run). Each is a file `<screen>-<theme>.png`, such as `thread-dark.png`, in a new temporary folder whose path is the last line it prints; read the PNGs from there. Then it stops the server and deletes the database, leaving nothing running. `--only <screen>` (repeatable) takes only those screens, and `--out <dir>` writes to that folder instead:
 
 ```sh
 pnpm -s screenshots --only thread --only narrow --out /tmp/cookout-shots
@@ -965,7 +965,7 @@ agent-browser --session cookout find role button click --name "Load more" && age
 agent-browser --session cookout eval '{ const a = document.querySelector("section[aria-label=Inbox]"); a.scrollTop = a.scrollHeight; }' && agent-browser --session cookout screenshot /tmp/cookout-inbox-end-dark.png
 ```
 
-The snapshot's `For you 4` list holds `Mentioned you ada posted in #general … @grace standup moved to 10:30`, `… @grace can you review the rollout notes?` and builds 52 and 51; the `Activity 3` list holds `#deploys`' `/rollback` and `Deployed 1.4.2.` (each `New in #deploys`), and `New reply in a thread you follow ada replied in a thread in #general re: Morning! Who is looking at the flaky login test? Thanks, both of you.` The `Earlier` list starts at build 50 and ends at build 5 above `Load more`; after it, it runs down to build 1 and `triage-agent`'s reply in the thread, then `That's everything.`, and `Load more` is gone. Switch to `Light` in Settings and take the same screenshots. Open `#general` in a second tab (`tab new "http://127.0.0.1:3000/#/channels/general"`) and go back to the first: without a reload the four `#general` mentions have moved to the top of `Earlier`, leaving the thread's reply in `Activity`, and the sidebar's `#general` pill is gone.
+The snapshot's `For you 4` list holds `Mentioned you ada posted in #general … @grace standup moved to 10:30`, `… @grace can you review the rollout notes?` and builds 52 and 51; the `Activity` list (its heading counts it, as `grace`'s `inbox` does) holds the seeded `#deploys` top-level messages (`deployed`, `rollbackCall` and `oldBotPost`, each `New in #deploys`), and `New reply in a thread you follow ada replied in a thread in #general re: Morning! Who is looking at the flaky login test? Thanks, both of you.` The `Earlier` list starts at build 50 and ends at build 5 above `Load more`; after it, it runs down to build 1, the seeded `@grace can you check the notes before we ship?` (the fiftieth build's ack read it too) and `triage-agent`'s reply in the thread, then `That's everything.`, and `Load more` is gone. Switch to `Light` in Settings and take the same screenshots. Open `#general` in a second tab (`tab new "http://127.0.0.1:3000/#/channels/general"`) and go back to the first: without a reload the four `#general` mentions have moved to the top of `Earlier`, leaving the thread's reply in `Activity`, and the sidebar's `#general` pill is gone.
 
 ## Browse people and agents
 
