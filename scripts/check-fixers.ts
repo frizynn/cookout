@@ -15,6 +15,7 @@ const ONE = 1;
 const PASSED = 0;
 const check = ["-c", `${RUN}/.oxlintrc.json`, "--disable-nested-config", TREE];
 const fix = ["-c", `${RUN}/.oxlintrc.fix.json`, "--disable-nested-config", TREE];
+const suggest = ["--fix-suggestions", "-c", "lint/suggest.oxlintrc.json", "--disable-nested-config"];
 const pristine = ["-c", `${FIXTURE}/.oxlintrc.json`, "--disable-nested-config", `${FIXTURE}/app`];
 
 function tally(diagnostics: readonly Diagnostic[], root: string): ReadonlyMap<string, number> {
@@ -45,7 +46,7 @@ const paths = readdirSync(TREE, { encoding: "utf8", recursive: true })
 const [found, firstFix] = await Promise.all([lint(pristine), lint(["--fix", ...fix])]);
 unwrap(SCRIPT, firstFix);
 const before = tally(unwrap(SCRIPT, found), FIXTURE);
-const fixed = await lintFixed({ check, fix, passesLeft: MAX_FIX_PASSES - ONE, paths });
+const fixed = await lintFixed({ check, fix, passesLeft: MAX_FIX_PASSES - ONE, paths, suggest });
 const after = tally(unwrap(SCRIPT, fixed), RUN);
 const raised: string[] = [];
 for (const [key, count] of after) {
