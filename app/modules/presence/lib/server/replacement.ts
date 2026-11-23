@@ -66,4 +66,4 @@ const openReplacements: Effect.Effect<Replacements> = Effect.gen(function* openA
   };
 });
 
-export { type LiveConnection, type Replacements, openReplacements, watchReplacedRefusal };
+export { type LiveConnection, openReplacements, watchReplacedRefusal };
