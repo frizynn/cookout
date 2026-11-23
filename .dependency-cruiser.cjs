@@ -12,6 +12,13 @@ const HANDLER_EXAMPLE = "packages/handler-example";
 const HANDLER_EXAMPLE_MODULES = `${HANDLER_EXAMPLE}/app/modules`;
 const HANDLER_EXAMPLE_TESTED_INTERFACES = ["handler"];
 const exactly = (file) => `^${file.replaceAll(".", String.raw`\.`)}$`;
+function installedDependencies() {
+  const { readFileSync } = process.getBuiltinModule("node:fs");
+  const { createHash } = process.getBuiltinModule("node:crypto");
+  const { join } = process.getBuiltinModule("node:path");
+  const lockfile = readFileSync(join(__dirname, "node_modules/.pnpm/lock.yaml"));
+  return `installed-dependencies:${createHash("sha256").update(lockfile).digest("hex")}`;
+}
 
 module.exports = {
   forbidden: [
@@ -167,6 +174,7 @@ module.exports = {
       exportsFields: ["exports"],
     },
     exclude: { path: String.raw`^app/modules/sdk/lib/generated/validators\.d\.ts$` },
+    exoticRequireStrings: [installedDependencies()],
     parser: "swc",
     preserveSymlinks: true,
     tsConfig: { fileName: "tsconfig.json" },
