@@ -1,0 +1,53 @@
+
+ RUN  v5.1.1 /repo
+
+ ❯ |server| scripts/tests/zz-sample.test.ts (3 tests | 2 failed) 11ms
+   ✓ passes 1ms
+   × fails on an assertion 8ms
+   × fails on a throw 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |server| scripts/tests/zz-sample.test.ts > fails on an assertion
+AssertionError: expected { a: 1, b: [ 1, 2 ] } to strictly equal { a: 2, b: [ 1, 2 ] }
+
+- Expected
++ Received
+
+  {
+-   "a": 2,
++   "a": 1,
+    "b": [
+      1,
+      2,
+    ],
+  }
+
+ ❯ scripts/tests/zz-sample.test.ts:8:31
+      6|
+      7| it("fails on an assertion", () => {
+      8|   expect({ a: 1, b: [1, 2] }).toStrictEqual({ a: 2, b: [1, 2] });
+       |                               ^
+      9| });
+     10|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |server| scripts/tests/zz-sample.test.ts > fails on a throw
+TypeError: boom
+ ❯ scripts/tests/zz-sample.test.ts:12:9
+     10|
+     11| it("fails on a throw", () => {
+     12|   throw new TypeError("boom");
+       |         ^
+     13| });
+     14|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed (3)
+   Start at  23:53:22
+   Duration  177ms (transform 34%, import 32%, tests 27%, worker 7%)
+
