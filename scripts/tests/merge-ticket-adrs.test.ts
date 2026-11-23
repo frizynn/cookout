@@ -1,7 +1,9 @@
 import { BRANCH, TICKET, git, repo, repos } from "./lib/merge-repos.ts";
 import { expect, it } from "vitest";
+import path from "node:path";
 
 const ONE_ATTEMPT = 1;
+const TWO_ATTEMPTS = 2;
 const ADRS = {
   ticket: {
     "docs/adr/0002-ticket.md": "# Ticket\n\nSee ADR 0002.\n",
@@ -75,4 +77,33 @@ it("renumbers an ADR the ticket renamed onto a number v1 has since taken", { tim
 
   expect(merged).toStrictEqual({ attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") });
   expect(adrsOn(origin)).toStrictEqual(["docs/adr/0002-v1.md", "docs/adr/0003-base.md"]);
+});
+
+it("renumbers a ticket's ADR again when v1 takes its new number before the retry", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const { origin, other, root, work } = repos();
+  repo(other).push(ADRS.v1);
+  repo(work).commit("the ticket", ADRS.ticket);
+  const moved = path.join(root, "moved");
+  const takeNumber = [
+    `echo '# Other' > ${other}/docs/adr/0003-other.md`,
+    `git -C ${other} add -A`,
+    `git -C ${other} commit -q -m moved`,
+    `git -C ${other} push -q origin HEAD:v1`,
+    `touch ${moved}`,
+  ].join(" && ");
+
+  const merged = repo(work).merge({ check: ["sh", "-c", `test -f ${moved} || { ${takeNumber}; }`] });
+
+  expect(merged).toStrictEqual({ attempts: TWO_ATTEMPTS, ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect([
+    adrsOn(origin),
+    git(origin, "show", "v1:docs/adr/0004-ticket.md"),
+    git(origin, "show", "v1:notes.txt"),
+  ]).toStrictEqual([
+    ["docs/adr/0001-base.md", "docs/adr/0002-v1.md", "docs/adr/0003-other.md", "docs/adr/0004-ticket.md"],
+    "# Ticket\n\nSee ADR 0004.",
+    "ticket: ADR 0004, adr/0004-ticket.md",
+  ]);
 });

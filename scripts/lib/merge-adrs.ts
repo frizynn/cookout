@@ -1,5 +1,5 @@
 import { DONE, firstStop, git, lines, stepOf } from "./merge-steps.ts";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { renumbering, rewriteReferences } from "./adr-numbers.ts";
 import type { Rename } from "./adr-numbers.ts";
 import type { Step } from "./merge-steps.ts";
@@ -11,14 +11,9 @@ interface AdrOptions {
   readonly log: (line: string) => void;
 }
 
-interface Rewrite {
-  readonly base: string;
-  readonly options: AdrOptions;
-  readonly renames: readonly Rename[];
-}
-
 const NONE = 0;
 const TEST_FOLDER = /(?:^|\/)tests\//u;
+const V1 = "HEAD^1";
 
 function linesAt(options: AdrOptions, revision: string, file: string): ReadonlySet<string> {
   const shown = git(options, "show", `${revision}:${file}`);
@@ -35,15 +30,15 @@ function rewriteLine(line: string, added: ReadonlySet<string>, renames: readonly
   return line;
 }
 
-function rewriteAddedLines({ base, options, renames }: Rewrite): void {
+function rewriteAddedLines(options: AdrOptions, renames: readonly Rename[]): void {
   const changed = lines(
-    git(options, "diff", "--name-only", "--no-renames", "--diff-filter=d", base, "HEAD^2").output,
+    git(options, "diff", "--name-only", "--no-renames", "--diff-filter=d", V1, "HEAD").output,
   ).filter((file) => !TEST_FOLDER.test(file));
   for (const file of changed) {
     const filePath = path.join(options.cwd, file);
-    const before = linesAt(options, base, file);
-    const added = new Set([...linesAt(options, "HEAD^2", file)].filter((line) => !before.has(line)));
-    if (existsSync(filePath) && added.size > NONE) {
+    const before = linesAt(options, V1, file);
+    const added = new Set([...linesAt(options, "HEAD", file)].filter((line) => !before.has(line)));
+    if (added.size > NONE) {
       const source = readFileSync(filePath, "utf8").split("\n");
       writeFileSync(filePath, source.map((line) => rewriteLine(line, added, renames)).join("\n"));
     }
@@ -51,18 +46,17 @@ function rewriteAddedLines({ base, options, renames }: Rewrite): void {
 }
 
 function renumberAdrs(options: AdrOptions): Step {
-  const base = git(options, "merge-base", "HEAD^1", "HEAD^2").output;
-  const v1 = lines(git(options, "ls-tree", "--name-only", "HEAD^1", "--", `${options.adrs}/`).output);
+  const v1 = lines(git(options, "ls-tree", "--name-only", V1, "--", `${options.adrs}/`).output);
   const added = lines(
-    git(options, "diff", "--name-only", "--no-renames", "--diff-filter=A", base, "HEAD^2", "--", options.adrs).output,
-  ).filter((file) => existsSync(path.join(options.cwd, file)));
+    git(options, "diff", "--name-only", "--no-renames", "--diff-filter=A", V1, "HEAD", "--", options.adrs).output,
+  );
   const renames = renumbering({ added, v1 });
   if (renames.length === NONE) {
     return DONE;
   }
   const listed = renames.map((rename) => `${rename.from.file} -> ${rename.to.file}`).join(", ");
   options.log(`Renumbering ADRs past v1's highest: ${listed}`);
-  rewriteAddedLines({ base, options, renames });
+  rewriteAddedLines(options, renames);
   return firstStop([
     ...renames.map(
       (rename) => (): Step => stepOf({ ran: git(options, "mv", rename.from.file, rename.to.file), what: "git mv" }),
