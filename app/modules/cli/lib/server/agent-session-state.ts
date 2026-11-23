@@ -209,7 +209,6 @@ export {
   type AgentSessionState,
   type AgentSessionStateFailure,
   type AgentSessionStateFile,
-  type JoinedSessionKey,
   type Needs as AgentSessionStateNeeds,
   agentSessionStateFile,
 };

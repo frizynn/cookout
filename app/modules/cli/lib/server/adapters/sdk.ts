@@ -260,7 +260,6 @@ export {
   type ClientWithAgentSessionState,
   type CredentialSource,
   type JoinPlace,
-  type JoinedSession,
   callClient,
   callServer,
   joinPlace,
