@@ -133,4 +133,4 @@ function createReactionStore(options: ReactionStoreOptions): ReactionStore {
   };
 }
 
-export { type ReactionStore, type ReactionStoreOptions, type ReactionsState, createReactionStore, reactionsOf };
+export { type ReactionStore, type ReactionStoreOptions, createReactionStore, reactionsOf };

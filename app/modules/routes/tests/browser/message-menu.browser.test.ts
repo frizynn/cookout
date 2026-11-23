@@ -99,7 +99,7 @@ test("the More actions menu takes focus, moves with the arrow keys and gives foc
 
   await page.keyboard.press("ArrowDown");
 
-  await expect(page.getByRole("menuitem", { name: "Mark unread" })).toBeFocused();
+  await expect(page.getByRole("menuitem", { name: "React with 👍" })).toBeFocused();
 
   await page.keyboard.press("Escape");
 
