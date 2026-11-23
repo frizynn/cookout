@@ -11,7 +11,7 @@
  * some view acks it. A refusal keeps the server's error code; a server that
  * can't be reached is `unreachable`. The items have two levels, as Slack
  * shows them (Matt, #152, 2026-11-23): for you (a mention, or a reply in a
- * thread you started) and activity (the rest). `whyOf` says why one is there,
+ * thread you started) and activity (the rest). A row says why it is there,
  * `countsByChannel` counts both levels by channel, and `newsByThread` counts a
  * thread's unread replies and how many of them are for you. `rowsOf` groups
  * items, unread or `earlier`'s, into the inbox's rows: one per thread (its
@@ -186,4 +186,4 @@ export type { MessageMenu } from "./lib/message-menu.ts";
 export type { InboxRow } from "./lib/rows.ts";
 export { rowsOf } from "./lib/rows.ts";
 export type { ThreadNews, UnreadCounts, UnreadWhy } from "./lib/levels.ts";
-export { NO_COUNTS, countsByChannel, countsOf, isForYou, newsByThread, whyOf } from "./lib/levels.ts";
+export { NO_COUNTS, countsByChannel, countsOf, newsByThread } from "./lib/levels.ts";
