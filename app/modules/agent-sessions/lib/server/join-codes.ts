@@ -134,4 +134,4 @@ function joinCodesOn(on: On): JoinCodes {
   return { createJoinCode: creator(on), redeemJoinCode: redeemer(on) };
 }
 
-export { type JoinCodes, type NewAgent, joinCodesOn };
+export { type JoinCodes, joinCodesOn };
