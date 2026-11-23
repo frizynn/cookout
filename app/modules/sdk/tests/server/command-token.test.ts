@@ -5,8 +5,11 @@ import type { CookoutClient } from "../../index.ts";
 import type { MessageId } from "../../../messages/index.ts";
 import { TestClock } from "effect/testing";
 import type { TestCookoutService } from "../../../testing/server.ts";
+import { createCookoutClient } from "../../index.ts";
 
 const ONE_CALL = 1;
+const TWO_CALLS = 2;
+const UNAVAILABLE = 503;
 const FORBIDDEN = 403;
 const UNAUTHORIZED = 401;
 const schema = { properties: { branch: { type: "string" } }, required: ["branch"], type: "object" };
@@ -94,6 +97,31 @@ it.effect("the command token works until 24 h after the call, then gets 401", ()
     expect(late.message).toMatchObject({ author: { name: "deploy" }, kind: "reply" });
     expect(error).toMatchObject({ code: "token_expired", status: UNAUTHORIZED });
   }).pipe(Effect.provide(testCookout())),
+);
+
+function handlerAfterRestart(cookout: TestCookoutService): Effect.Effect<CookoutClient> {
+  return Effect.gen(function* restartMidBackoff() {
+    yield* TestClock.adjust("5 seconds");
+    const { url } = yield* cookout.restartServer;
+    yield* TestClock.adjust("10 seconds");
+    const calls = yield* cookout.webhook.waitForCalls(TWO_CALLS);
+    return createCookoutClient({ env: {}, token: tokenIn(Arr.getUnsafe(calls, ONE_CALL).body), url });
+  });
+}
+
+it.effect("a delivery resumed after a restart sends a command token that still expires 24 h after the call", () =>
+  Effect.gen(function* resumedTokenKeepsExpiry() {
+    const cookout = yield* TestCookout;
+    yield* cookout.webhook.failNext(ONE_CALL, UNAVAILABLE);
+    const { threadId } = yield* deliveredCall(cookout);
+    const resumed = yield* handlerAfterRestart(cookout);
+    yield* TestClock.adjust("86387 seconds");
+    const error = yield* refusal(() =>
+      resumed.createMessage({ channel: "grill", replyTo: threadId, text: "after the call's 24 h" }),
+    );
+
+    expect(error).toMatchObject({ code: "token_expired", status: UNAUTHORIZED });
+  }).pipe(Effect.provide(testCookout({ storage: "sqlite", webhookTimeoutSeconds: 86_400 }))),
 );
 
 it.effect("the caller follows the call's thread, so the handler's result reply shows in the caller's inbox", () =>
