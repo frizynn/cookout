@@ -12,7 +12,7 @@ import { Array as Arr, Effect, Option, Predicate, pipe } from "effect";
 import type { Channel, ChannelName } from "../../../channels/index.ts";
 import type { InboxReason, MovedBackReadPosition } from "../../../inbox/index.ts";
 import type { Message, MessageId, ReadReceipt, Reply, TopLevelMessage } from "../../../messages/index.ts";
-import { ackAllIn, ackIn, moveBackIn, readPositionsIn, receiptsOf } from "./read-positions-memory.ts";
+import { ackAllIn, ackIn, ackMessageIn, moveBackIn, readPositionsIn, receiptsOf } from "./read-positions-memory.ts";
 import { counted, threadIdOf } from "./messages.ts";
 import { followersOf, newestPerScope, scopeOf } from "./inbox.ts";
 import type { IdentityName } from "../../../identities/index.ts";
@@ -200,7 +200,7 @@ function ack({ at, board, id, identity }: Asking & { readonly at: Message["creat
     onNone: () => [Option.none(), board.inbox],
     onSome: (message) => {
       const key = keyOf(identity, scopeOf(message));
-      const [acked, inbox] = ackIn({ at, identity, inbox: board.inbox, key, message, messages: board.messages });
+      const [acked, inbox] = ackMessageIn({ at, identity, inbox: board.inbox, key, message, messages: board.messages });
       return [Option.some(acked), inbox];
     },
   });

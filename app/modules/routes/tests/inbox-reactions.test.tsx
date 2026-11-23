@@ -35,6 +35,14 @@ async function reactedTo(reacting: Reacting): Promise<Reacted> {
   return { poster: `@${reacting.channel}-poster`, reader };
 }
 
+async function reactedThenFollowedUp(channel: string): Promise<CookoutClient> {
+  const { poster, reader } = await people(channel);
+  const reacted = await post({ by: reader, channel, text: "Deployed" });
+  await poster.react(reacted.id, "thumbs_up");
+  await post({ by: poster, channel, text: "Thanks" });
+  return reader;
+}
+
 async function forYouShown(): Promise<void> {
   await screen.findByRole("list", { name: "For you" });
 }
@@ -94,4 +102,22 @@ it("opening the channel of a reaction's message acks it, so it leaves the Inbox"
   });
 
   await expect(reader.inbox()).resolves.toMatchObject({ items: [] });
+});
+
+it("opening a channel clears a reaction on an earlier message there too, so it stays gone after a reload", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-inbox-reacted-earlier";
+  const reader = await reactedThenFollowedUp(channel);
+  const unmount = openAt({ client: reader, hash: `#/channels/${channel}` });
+  await screen.findByText("Thanks");
+  await waitFor(async () => {
+    await expect(reader.inbox()).resolves.toMatchObject({ items: [] });
+  });
+  unmount();
+  openAt({ client: reader, hash: "#/inbox" });
+
+  await expect(screen.findByText("You're all caught up.")).resolves.toBeDefined();
 });
