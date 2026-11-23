@@ -146,12 +146,4 @@ export const issueToken: Effect.Effect<IssuedToken, never, Secrets> = Effect.gen
   return { hash: yield* secrets.hashToken(token), token };
 });
 
-export {
-  CommandThread,
-  type Credentials,
-  type Principal,
-  credentialsOf,
-  outsideCommandThread,
-  requireCommandRoute,
-  sentToken,
-};
+export { CommandThread, type Credentials, type Principal, credentialsOf, requireCommandRoute, sentToken };

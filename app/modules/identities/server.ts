@@ -24,12 +24,12 @@ import type { StorageUnavailable } from "../storage/server.ts";
 import type { Token } from "./index.ts";
 import { callerRoutes } from "./lib/server/session.ts";
 
-/**
- * `CommandThread` is the one thread a request may reply in when it carries a command token, and none for any other
- * token. The command token reaches only `POST /v1/messages`; `outsideCommandThread` is its 403 anywhere else.
- */
 export { Caller };
-export { CommandThread, outsideCommandThread } from "./lib/server/auth.ts";
+/**
+ * The one thread a request may reply in when it carries a command token, and none for any other token. `Messages`
+ * posts such a request only as a reply in this thread.
+ */
+export { CommandThread } from "./lib/server/auth.ts";
 
 export type IdentitiesService = {
   /**
