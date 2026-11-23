@@ -36,6 +36,7 @@ interface PlainNode {
 interface MentionsShown {
   readonly mentions: readonly string[];
   readonly me: string;
+  readonly inLink?: boolean;
 }
 
 function textNode(value: string): MarkdownNode {
@@ -49,10 +50,18 @@ function whoseMention(name: string, shown: MentionsShown): string {
   return "other";
 }
 
+function mentionProperties(name: string, shown: MentionsShown): Readonly<Record<string, string>> {
+  const whose = whoseMention(name, shown);
+  if (shown.inLink === true) {
+    return { dataMention: whose };
+  }
+  return { dataMention: whose, dataName: name };
+}
+
 function mentionNode(name: string, shown: MentionsShown): MarkdownNode {
   return {
     children: [textNode(`@${name}`)],
-    data: { hName: "span", hProperties: { dataMention: whoseMention(name, shown) } },
+    data: { hName: "span", hProperties: mentionProperties(name, shown) },
     type: "mention",
   };
 }
@@ -104,9 +113,14 @@ function withShownChildren(node: MarkdownNode, show: ShowChild): MarkdownNode {
   return { ...node, children: children.flatMap((child) => show(child, node.type)) };
 }
 
+function underOf(node: MarkdownNode, shown: MentionsShown): MentionsShown {
+  return { ...shown, inLink: shown.inLink === true || node.type === "link" };
+}
+
 function shownNode(node: MarkdownNode, parent: string, shown: MentionsShown): readonly MarkdownNode[] {
   if (typeof node.value !== "string") {
-    return [withShownChildren(node, (child, under) => shownNode(child, under, shown))];
+    const under = underOf(node, shown);
+    return [withShownChildren(node, (child, parentType) => shownNode(child, parentType, under))];
   }
   if (node.type === "html") {
     return [htmlAsText(node.value, parent)];
