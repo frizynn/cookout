@@ -12,10 +12,13 @@ const TEXT = {
   watching: "watching",
   watchingFrom: "watching from ",
   web: "web",
+  wentOffline: "Went offline unexpectedly",
+  wentOfflineLabel: "Offline, went offline unexpectedly",
 } as const;
 
 interface PresenceShown {
   readonly online: boolean;
+  readonly warning: boolean;
   readonly label: string;
   readonly spoken: string;
 }
@@ -41,9 +44,16 @@ function offlineText(presence: Presence, between: string): string {
   return `${TEXT.offline}${between}${lastSeen}`;
 }
 
+function warnedOf(presence: Presence): boolean {
+  return !presence.online && presence.warning === true;
+}
+
 function labelOf(presence: Presence): string {
   if (presence.online) {
     return TEXT.online;
+  }
+  if (warnedOf(presence)) {
+    return TEXT.wentOfflineLabel;
   }
   return offlineText(presence, ", ");
 }
@@ -68,7 +78,27 @@ function offlineDetail(presence: Presence): string {
   return `${TEXT.offline}: ${reason}${text.slice(TEXT.offline.length)}`;
 }
 
+function wentOfflineText(presence: Presence): string {
+  const at = presence.lastSeenAt ?? null;
+  if (at === null) {
+    return TEXT.wentOffline;
+  }
+  return `${TEXT.wentOffline} ${timeAgo(at)}`;
+}
+
+function warningDetail(presence: Presence): string {
+  const text = wentOfflineText(presence);
+  const reason = presence.offlineReason ?? null;
+  if (reason === null) {
+    return text;
+  }
+  return `${text}: ${reason}`;
+}
+
 function detailOf(presence: Presence): string {
+  if (warnedOf(presence)) {
+    return warningDetail(presence);
+  }
   if (!presence.online) {
     return offlineDetail(presence);
   }
@@ -94,7 +124,7 @@ function shownIn({ name, presences }: Among): PresenceShown | null {
     return null;
   }
   const label = labelOf(presence);
-  return { label, online: presence.online, spoken: label };
+  return { label, online: presence.online, spoken: label, warning: warnedOf(presence) };
 }
 
 function useTicking(presence: Presence | null, text: (known: Presence) => string): string | null {
@@ -112,12 +142,15 @@ function usePresence(name: IdentityName): PresenceShown | null {
   if (presence === null || label === null) {
     return null;
   }
-  return { label, online: presence.online, spoken: label };
+  return { label, online: presence.online, spoken: label, warning: warnedOf(presence) };
 }
 
-function briefOf(online: boolean): string {
+function briefOf({ online, warning }: PresenceShown): string {
   if (online) {
     return TEXT.online;
+  }
+  if (warning) {
+    return TEXT.wentOfflineLabel;
   }
   return TEXT.offline;
 }
@@ -127,7 +160,7 @@ function useAuthorPresence(name: IdentityName): PresenceShown | null {
   if (presence === null) {
     return null;
   }
-  return { ...presence, spoken: briefOf(presence.online) };
+  return { ...presence, spoken: briefOf(presence) };
 }
 
 function usePresenceDetail(name: IdentityName): string | null {

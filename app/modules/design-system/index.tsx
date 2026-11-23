@@ -36,7 +36,9 @@
  * screen). A name's avatar is its coloured initials, one of eight hues hashed
  * from the name, a circle for a human and a rounded square for an agent, with
  * its `PresenceDot` in the corner once its presence is known: filled in the
- * online colour while online, a hollow grey ring while offline, named for a
+ * online colour while online, a hollow grey ring while offline, a ring in the
+ * accent with a dot in its middle for the owner's warning ("Offline, went
+ * offline unexpectedly"), named for a
  * screen reader and as a tooltip ("Offline, last seen 5 minutes ago"), as a
  * `Suggestions` option shows it beside the name;
  * `Author` is a message's avatar and name (a display name, with the `@name`
