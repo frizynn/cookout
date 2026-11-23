@@ -45,8 +45,8 @@ export interface MessageEvent {
 
 /**
  * An identity just created or changed (its display name, admin flag or owner, deactivating or reactivating it), as
- * the server now shows it, sent only on the all-channels feed so every open web UI shows it at once. Deactivating a
- * human sends one for it and one for each of its agents. It has no SSE `id`.
+ * the server now shows it, sent only on the all-channels feed so every open web UI shows it at once. It has no SSE
+ * `id`.
  */
 export interface IdentityEvent {
   readonly type: "identity";

@@ -42,7 +42,7 @@ it.effect("an agent that joining creates reaches every all-channels watcher as a
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("deactivating a human sends it and each of its agents as identity events", () =>
+it.effect("deactivating a human sends it as an identity event, and nothing for the agents it owns", () =>
   Effect.gen(function* deactivationArrives() {
     const cookout = yield* TestCookout;
     yield* cookout.createIdentity("ada", { kind: "human" });
@@ -51,10 +51,13 @@ it.effect("deactivating a human sends it and each of its agents as identity even
     const events = yield* watchingAllChannels(grace.client);
     const { identity } = yield* answer(() => cookout.client.deactivateIdentity("ada"));
     const first = yield* answer(() => events.next());
+    yield* answer(() => cookout.client.setDisplayName("grace", "Grace"));
     const second = yield* answer(() => events.next());
 
-    expect(first).toStrictEqual({ done: false, value: { identity, type: "identity" } });
-    expect(second).toMatchObject({ value: { identity: { deactivated: true, name: "ada/helper" }, type: "identity" } });
+    expect([first, second]).toMatchObject([
+      { done: false, value: { identity, type: "identity" } },
+      { value: { identity: { name: "grace" }, type: "identity" } },
+    ]);
   }).pipe(Effect.provide(testCookout())),
 );
 

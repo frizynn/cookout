@@ -71,7 +71,7 @@ const identityDeactivateCommand = Command.make("deactivate", { name: identityNam
   answered(deactivation(name)),
 ).pipe(
   Command.withDescription(
-    "Deactivate an identity (admin, or a human for their own agents). Its tokens stop working, a human's agents are deactivated too, and its messages and name stay. On a command's handler it warns on stderr that the command stops replying.",
+    "Deactivate an identity (admin, or a human for their own agents). Its tokens stop working, and its messages and name stay; a human's agents stay active. On a command's handler it warns on stderr that the command stops replying.",
   ),
 );
 

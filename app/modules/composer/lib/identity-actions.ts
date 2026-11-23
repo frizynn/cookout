@@ -70,21 +70,12 @@ const START: IdentityActionsSnapshot = {
   transferTo: "",
 };
 
-function markDeactivated(list: IdentityList, names: readonly IdentityName[]): void {
-  for (const identity of list.identities()) {
-    if (names.includes(identity.name)) {
-      list.put({ ...identity, deactivated: true });
-    }
-  }
-}
-
 function sendsFor(options: IdentityActionsOptions, transferTo: () => string): Sends {
   const { client, list, name } = options;
   return {
     deactivate: async () => {
-      const { agents, identity } = await client.deactivateIdentity(name);
+      const { identity } = await client.deactivateIdentity(name);
       list.put(identity);
-      markDeactivated(list, agents);
       return { sessions: [], token: null };
     },
     delete: async () => {

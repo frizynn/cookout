@@ -90,11 +90,12 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '[.identi
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity list --deactivated | jq -c '[.identities[] | select(.deactivated) | .name]'
 env $(cat /tmp/cookout-dev.env) node app/main.ts message post general "@ada are you there?" | jq -c .unknownMentions
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity create ada --kind human
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity deactivate release-bot
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity reactivate release-bot
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity reactivate ada
 ```
 
-Deactivating `ada` prints her with `"deactivated": true` and `agents` `["release-bot","rollback"]`, deactivated with her. Her old token is now 401 `token_revoked`, as are her agents' tokens and agent session tokens. The plain list leaves out `ada` and her agents; `--deactivated` lists them, marked. `@ada` is an unknown mention, and creating `ada` again is 409 `identity_exists`: the name stays hers, and any message she posted still shows her as its author. Reactivating `release-bot` is 409 `owner_deactivated` while `ada` is; reactivating `ada` prints a fresh token, shown this once, and her old one stays dead. Her agents stay deactivated until reactivated one by one. Deactivating the last admin is 409 `last_admin`, and a human deactivating another's agent is 403 `not_owner`.
+Deactivating `ada` prints her with `"deactivated": true` and `agents` `[]`: her agents `release-bot` and `rollback` stay active, keeping their tokens, sessions and live connections ([ADR 0060](adr/0060-a-deactivated-persons-agents-stay-active.md)). Her old token is now 401 `token_revoked`. The plain list leaves out `ada` but keeps her agents; `--deactivated` lists her, marked. `@ada` is an unknown mention, and creating `ada` again is 409 `identity_exists`: the name stays hers, and any message she posted still shows her as its author. Deactivating `release-bot` and reactivating it while `ada` is still Deactivated prints a fresh token for it; reactivating `ada` prints a fresh token, shown this once, and her old one stays dead. Deactivating the last admin is 409 `last_admin`, and a human deactivating another's agent is 403 `not_owner`.
 
 ## Identity kinds
 
