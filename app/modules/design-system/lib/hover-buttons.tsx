@@ -5,9 +5,6 @@ import type { ReactNode } from "react";
 
 export function HoverButtons(parts: HoverActionsParts): ReactNode {
   const { actionHref, menu, onAction } = parts;
-  if (actionHref === null && onAction === null && menu === null) {
-    return null;
-  }
   const handleAction = onAction;
   return (
     <div className="invisible absolute top-1 right-4 flex gap-1 group-focus-within:visible group-hover:visible">

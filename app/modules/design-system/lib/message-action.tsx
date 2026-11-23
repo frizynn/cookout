@@ -13,9 +13,6 @@ export function MessageAction(parts: MessageActionParts): ReactNode {
   if (actionHref !== null) {
     return <HoverAction href={actionHref}>{parts.actionLabel}</HoverAction>;
   }
-  if (onAction === null) {
-    return null;
-  }
   const handleAction = onAction;
-  return <HoverButton onClick={handleAction}>{parts.actionLabel}</HoverButton>;
+  return handleAction !== null && <HoverButton onClick={handleAction}>{parts.actionLabel}</HoverButton>;
 }

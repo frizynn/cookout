@@ -5,11 +5,10 @@ import { useBoxKeys } from "./box-keys.ts";
 import { useTypedCaret } from "./use-typed-caret.ts";
 
 const ROWS = 3;
-const NEVER = 0;
 
 export function TextArea(parts: TextAreaParts): ReactNode {
   const { caret, choosing, focused, onClose, onEdit, onMove, onPick, value } = parts;
-  const focusRequests = parts.focusRequests ?? NEVER;
+  const { focusRequests } = parts;
   const id = useId();
   const { box, handleEdit } = useTypedCaret({ caret, focusRequests, focused, onEdit, value });
   const handleSend = useCallback(() => {

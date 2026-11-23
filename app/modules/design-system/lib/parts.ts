@@ -42,7 +42,7 @@ interface TextAreaParts extends TextFieldParts {
   readonly onPick: () => void;
   readonly onMove: (direction: "down" | "up") => void;
   readonly focused: boolean;
-  readonly focusRequests?: number;
+  readonly focusRequests: number;
   readonly onClose: () => void;
 }
 
