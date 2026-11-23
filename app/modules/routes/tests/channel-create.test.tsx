@@ -1,10 +1,11 @@
+import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import { inPane, inSidebar } from "./regions.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
-import { adminClient } from "./identities.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
 import { openAt } from "./render.tsx";
+import { watched } from "./watched.ts";
 
 interface NewChannel {
   readonly name: string;
@@ -37,6 +38,27 @@ async function openWithChannel(client: CookoutClient, name: string): Promise<() 
   const close = openAt({ client, hash: "#/" });
   await inSidebar().findByRole("link", { name: `#${name}` });
   return close;
+}
+
+interface LiveChannel {
+  readonly client: CookoutClient;
+  readonly close: () => Promise<void>;
+}
+
+async function openLiveChannel(name: string): Promise<LiveChannel> {
+  const { client } = await newIdentity({ kind: "human", name });
+  await adminClient().createChannel({ name });
+  const { live, stream } = watched(client);
+  const unmount = openAt({ client, hash: `#/channels/${name}`, live });
+  await inPane().findByRole("button", { name: "Subscribe", pressed: false });
+  const events = await stream;
+  return {
+    client,
+    close: async () => {
+      unmount();
+      await events.close();
+    },
+  };
 }
 
 const REFUSED = /^Couldn't create the channel/u;
@@ -93,6 +115,21 @@ it("a channel created from the sidebar opens with its Subscribe toggle on", { ti
   ]);
 
   close();
+});
+
+it("subscribing or unsubscribing in another session flips the open channel's toggle", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { client, close } = await openLiveChannel("web-create-other-tab");
+
+  await client.subscribe("web-create-other-tab");
+  const { textContent: on } = await inPane().findByRole("button", { name: "Subscribed", pressed: true });
+  await client.unsubscribe("web-create-other-tab");
+  const { textContent: off } = await inPane().findByRole("button", { name: "Subscribe", pressed: false });
+
+  expect([on, off]).toStrictEqual(["Subscribed", "Subscribe"]);
+
+  await close();
 });
 
 it("a taken channel name is refused beside the name field, keeping what was typed", { timeout: 5000 }, async () => {
