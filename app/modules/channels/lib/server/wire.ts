@@ -25,6 +25,8 @@ export const CreateChannelRequestSchema = Schema.Struct({
   name: ChannelNameSchema,
 });
 
+export const ListChannelsQuerySchema = Schema.Struct({ subscribed: Schema.optionalKey(Schema.Literal("true")) });
+
 export const ChannelResponseSchema = matchesWire<ChannelResponse>()(Schema.Struct({ channel: ChannelSchema }));
 
 export const ListChannelsResponseSchema = matchesWire<ListChannelsResponse>()(

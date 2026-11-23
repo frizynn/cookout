@@ -7,6 +7,7 @@ import type { ClientConnection } from "./request.ts";
 interface ChannelCalls {
   readonly createChannel: (request: CreateChannelRequest) => Promise<ChannelResponse>;
   readonly listChannels: () => Promise<ListChannelsResponse>;
+  readonly listSubscribedChannels: () => Promise<ListChannelsResponse>;
   readonly getChannel: (name: string) => Promise<ChannelResponse>;
   readonly deleteChannel: (name: string) => Promise<ChannelResponse>;
 }
@@ -37,6 +38,15 @@ function channelCalls(server: ClientConnection): ChannelCalls {
     },
     listChannels: async () => {
       const listed = await getJson(server, channelsPath, isListChannelsResponse);
+      return listed;
+    },
+    listSubscribedChannels: async () => {
+      const listed = await send(server, {
+        isExpected: isListChannelsResponse,
+        method: "GET",
+        path: channelsPath,
+        query: { subscribed: "true" },
+      });
       return listed;
     },
   };
