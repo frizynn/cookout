@@ -1,7 +1,8 @@
-import { expect, it, onTestFinished, vi } from "vitest";
+import { expect, it, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
 import type { Message } from "../../sdk/index.ts";
 import { adminClient } from "./identities.ts";
+import { clockStoppedAt } from "./clock.ts";
 import { openAt } from "./render.tsx";
 
 const JUST_UNDER_TEN_SECONDS = 9000;
@@ -32,11 +33,7 @@ const SHOWN_TIME = /just now|ago$|\d\d:\d\d$/u;
 async function posted(channel: string): Promise<Message> {
   await adminClient().createChannel({ name: channel });
   const { message } = await adminClient().createMessage({ channel, text: "Deploy at noon?" });
-  vi.useFakeTimers({ now: 0, toFake: ["Date"] });
-  onTestFinished(() => {
-    vi.useRealTimers();
-  });
-  vi.setSystemTime(message.createdAt);
+  clockStoppedAt(message.createdAt);
   return message;
 }
 

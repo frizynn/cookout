@@ -4,7 +4,7 @@ import { messagesIn, parentShown } from "./messages.ts";
 import type { Message } from "../../sdk/index.ts";
 import { adminClient } from "./identities.ts";
 import { inPane } from "./regions.ts";
-import { openAt } from "./render.tsx";
+import { openWithClockStopped } from "./clock.ts";
 
 async function threadIn(channel: string): Promise<Message> {
   const admin = adminClient();
@@ -30,7 +30,7 @@ it("a thread's address opens its channel with the thread panel beside it, and cl
   expect.hasAssertions();
 
   const parent = await threadIn("web-thread-back");
-  const close = openAt({ client: adminClient(), hash: hashOf(parent) });
+  const close = openWithClockStopped({ client: adminClient(), hash: hashOf(parent) });
 
   const panel = await threadPanel();
   const heading = screen.getByRole("heading", { level: 1 });
@@ -54,7 +54,7 @@ it("following a message's reply count opens its thread in the panel, beside the 
   expect.hasAssertions();
 
   const parent = await threadIn("web-thread-opens");
-  const close = openAt({ client: adminClient(), hash: `#/channels/${parent.channel}` });
+  const close = openWithClockStopped({ client: adminClient(), hash: `#/channels/${parent.channel}` });
 
   fireEvent.click(await inPane().findByRole("link", { name: /^2 replies/u }));
   await threadPanel();

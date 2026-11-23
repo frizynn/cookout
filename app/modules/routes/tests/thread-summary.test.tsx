@@ -4,7 +4,7 @@ import { expect, it } from "vitest";
 import type { Live } from "../../live/index.ts";
 import { createLive } from "../../live/index.ts";
 import { inPane } from "./regions.ts";
-import { openAt } from "./render.tsx";
+import { openWithClockStopped } from "./clock.ts";
 import { within } from "@testing-library/react";
 
 interface Scripted {
@@ -71,7 +71,7 @@ it("a message with replies shows who replied, how many and when, and the summary
 
   const { ada, parent } = await threadRepliedTo();
   const { live, send } = scripted();
-  const close = openAt({ client: adminClient(), hash: `#/channels/${CHANNEL}`, live });
+  const close = openWithClockStopped({ client: adminClient(), hash: `#/channels/${CHANNEL}`, live });
 
   await expect(summaryShown("2 replies")).resolves.toStrictEqual({
     repliers: [

@@ -1,6 +1,7 @@
 import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
 import { adminClient, anonymousClient, sessionOf } from "./identities.ts";
-import { expect, it, onTestFinished, vi } from "vitest";
+import { clockStoppedAt, openWithClockStopped } from "./clock.ts";
+import { expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { rowsOf, subscribedReader } from "./inbox-reader.ts";
 import { openAt } from "./render.tsx";
@@ -40,18 +41,10 @@ async function postedIn(channel: string, also: string): Promise<Posted> {
   return { first, other, parent, reader, reply };
 }
 
-function clockAt(moment: string): void {
-  vi.useFakeTimers({ now: 0, toFake: ["Date"] });
-  onTestFinished(() => {
-    vi.useRealTimers();
-  });
-  vi.setSystemTime(moment);
-}
-
 async function openWatched(channel: string): Promise<OpenInbox> {
   const { poster, reader } = await subscribedReader(channel);
   const { live, stream } = watched(reader);
-  const unmount = openAt({ client: reader, hash: "#/inbox", live });
+  const unmount = openWithClockStopped({ client: reader, hash: "#/inbox", live });
   await screen.findByText("You're all caught up.");
   await stream;
   return {
@@ -89,7 +82,7 @@ it("the inbox lists unread items newest first, each with who posted it where, it
   const channel = "web-inbox";
   const also = `${channel}-also`;
   const { first, other, parent, reader, reply } = await postedIn(channel, also);
-  const unmount = openAt({ client: reader, hash: "#/inbox" });
+  const unmount = openWithClockStopped({ client: reader, hash: "#/inbox" });
 
   await screen.findByRole("list", { name: "Unread" });
 
@@ -134,7 +127,7 @@ it("each item's time is how long ago it was posted, in minutes or hours, and aft
   const channel = "web-inbox-times";
   const { poster, reader } = await subscribedReader(channel);
   const { message } = await poster.createMessage({ channel, text: "Deploy at noon?" });
-  clockAt(message.createdAt);
+  clockStoppedAt(message.createdAt);
   const minutes = await timeShown(reader, FIVE_MINUTES);
   const hours = await timeShown(reader, TWO_HOURS);
   const days = await timeShown(reader, THREE_DAYS);
@@ -151,7 +144,7 @@ it("clicking a reply's row opens its thread", { timeout: 5000 }, async () => {
 
   const channel = "web-inbox-open";
   const { parent, reader } = await postedIn(channel, `${channel}-also`);
-  const unmount = openAt({ client: reader, hash: "#/inbox" });
+  const unmount = openWithClockStopped({ client: reader, hash: "#/inbox" });
   const unread = await screen.findByRole("list", { name: "Unread" });
 
   fireEvent.click(within(unread).getByRole("link", { name: /replied in a thread/u }));
@@ -166,7 +159,11 @@ it("clicking a reply's row opens its thread", { timeout: 5000 }, async () => {
 it("an inbox that can't be read says why", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const unmount = openAt({ client: anonymousClient(), hash: "#/inbox", session: sessionOf(adminClient()) });
+  const unmount = openWithClockStopped({
+    client: anonymousClient(),
+    hash: "#/inbox",
+    session: sessionOf(adminClient()),
+  });
 
   await screen.findByRole("navigation", { name: "Sidebar" });
   const alert = await within(screen.getByRole("main")).findByRole("alert");

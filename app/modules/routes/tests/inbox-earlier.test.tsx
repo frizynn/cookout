@@ -5,7 +5,7 @@ import { rowsOf, subscribedReader } from "./inbox-reader.ts";
 import { alertSaying } from "./alerts.ts";
 import { anonymousClient } from "./identities.ts";
 import { inPane } from "./regions.ts";
-import { openAt } from "./render.tsx";
+import { openWithClockStopped } from "./clock.ts";
 
 const NONE = 0;
 const ONE = 1;
@@ -72,7 +72,7 @@ it("earlier lists read items newest first, a page at a time, until there are no 
 
   const channel = "web-inbox-earlier";
   const reader = await readThenUnread(channel);
-  const unmount = openAt({ client: reader, hash: "#/inbox", pageSize: TWO_A_PAGE });
+  const unmount = openWithClockStopped({ client: reader, hash: "#/inbox", pageSize: TWO_A_PAGE });
   await screen.findByRole("list", { name: "Earlier" });
 
   expect([rowsOf("Earlier"), screen.queryByText("That's everything.")]).toStrictEqual([
@@ -97,7 +97,7 @@ it("clicking Load more twice before it answers reads the next page once", { time
 
   const channel = "web-inbox-double-click";
   const reader = await readThenUnread(channel);
-  const unmount = openAt({ client: reader, hash: "#/inbox", pageSize: TWO_A_PAGE });
+  const unmount = openWithClockStopped({ client: reader, hash: "#/inbox", pageSize: TWO_A_PAGE });
   const more = await inPane().findByRole("button", { name: "Load more" });
 
   fireEvent.click(more);
@@ -113,10 +113,14 @@ it("an Earlier page that can't be read says why, at first or on Load more", { ti
   expect.hasAssertions();
 
   const reader = await readThenUnread("web-inbox-earlier-refused");
-  const unmount = openAt({ client: historyRefusedAfter(reader, NONE), hash: "#/inbox" });
+  const unmount = openWithClockStopped({ client: historyRefusedAfter(reader, NONE), hash: "#/inbox" });
   const first = await alertSaying("Couldn't load what you've read (");
   unmount();
-  const reopened = openAt({ client: historyRefusedAfter(reader, TWO_A_PAGE), hash: "#/inbox", pageSize: TWO_A_PAGE });
+  const reopened = openWithClockStopped({
+    client: historyRefusedAfter(reader, TWO_A_PAGE),
+    hash: "#/inbox",
+    pageSize: TWO_A_PAGE,
+  });
   fireEvent.click(await inPane().findByRole("button", { name: "Load more" }));
   const more = await alertSaying("Couldn't load more (");
 
@@ -132,7 +136,7 @@ it("with nothing in it, the inbox says it is all caught up and nothing is read y
   expect.hasAssertions();
 
   const { reader } = await subscribedReader("web-inbox-empty");
-  const unmount = openAt({ client: reader, hash: "#/inbox" });
+  const unmount = openWithClockStopped({ client: reader, hash: "#/inbox" });
 
   await screen.findByText("Nothing read yet.");
 
@@ -148,7 +152,7 @@ it("an item read in another session after the inbox loaded stays in Unread, not 
   expect.hasAssertions();
 
   const channel = "web-inbox-read-elsewhere";
-  const unmount = openAt({ client: await readElsewhere(channel), hash: "#/inbox" });
+  const unmount = openWithClockStopped({ client: await readElsewhere(channel), hash: "#/inbox" });
   await screen.findByText("Nothing read yet.");
 
   expect(rowsOf("Unread")).toStrictEqual([postedRow(channel, "One")]);
