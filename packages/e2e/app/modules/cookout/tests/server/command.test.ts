@@ -5,18 +5,16 @@ import {
   calledThreadId,
   cookoutUnderTest,
   exampleCommand,
-  exampleCommandRegistered,
   freshStateFolder,
   link,
+  requireExampleCommand,
 } from "../../server.ts";
 import type { FileSystem, Scope } from "effect";
 import type { MessageId, Reply } from "@ai-hero/cookout/sdk";
 import { expect, it } from "@effect/vitest";
 import { NodeServices } from "@effect/platform-node";
-import type { TestContext } from "vitest";
 
 type Needs = BinNeeds | FileSystem.FileSystem;
-type Skippable = Readonly<Pick<TestContext, "skip">>;
 
 interface Session {
   readonly name: string;
@@ -42,16 +40,12 @@ const RETRIED_WITHIN = 60_000;
 const callPath = `/v1/commands/${exampleCommand}/calls`;
 const done = `/${exampleCommand} is done.`;
 
-function handlerOrSkip(context: Skippable): Effect.Effect<CookoutUnderTestService, never, CookoutUnderTest> {
-  return Effect.gen(function* checkTheHandler() {
-    const cookout = yield* CookoutUnderTest;
-    const registered = yield* exampleCommandRegistered;
-    if (!registered) {
-      return yield* Effect.sync(() => context.skip(`The cookout has no command ${exampleCommand}.`));
-    }
-    return cookout;
-  });
-}
+const cookoutWithHandler: Effect.Effect<CookoutUnderTestService, never, CookoutUnderTest> = Effect.gen(
+  function* checkTheHandler() {
+    yield* requireExampleCommand;
+    return yield* CookoutUnderTest;
+  },
+);
 
 function joinedAgent(
   cookout: CookoutUnderTestService,
@@ -130,9 +124,9 @@ function lineFor(channel: string, thread: MessageId): (reply: Reply) => string {
   return ({ author, id, text }) => `#${channel} thread:${String(thread)} @${author.name}: ${text} (msg ${String(id)})`;
 }
 
-function callAndWatch(context: Skippable): Effect.Effect<void, never, Scope.Scope> {
+function callAndWatch(): Effect.Effect<void, never, Scope.Scope> {
   return Effect.gen(function* watchTheResult() {
-    const cookout = yield* handlerOrSkip(context);
+    const cookout = yield* cookoutWithHandler;
     const watching = yield* callerWatching(cookout);
     const thread = yield* calledWhileWatching(watching);
     yield* watching.relay.relayed(ITEM);
@@ -147,9 +141,9 @@ function callAndWatch(context: Skippable): Effect.Effect<void, never, Scope.Scop
   }).pipe(Effect.provide([cookoutUnderTest, NodeServices.layer]));
 }
 
-function callFailFirst(context: Skippable): Effect.Effect<void, never, Scope.Scope> {
+function callFailFirst(): Effect.Effect<void, never, Scope.Scope> {
   return Effect.gen(function* waitForTheRetry() {
-    const cookout = yield* handlerOrSkip(context);
+    const cookout = yield* cookoutWithHandler;
     const { channel } = yield* cookout.createChannel("retried");
     const caller = yield* joinedAgent(cookout, "caller");
     const thread = yield* callExample(caller, channel.name, '{"branch":"main","failFirst":true}');

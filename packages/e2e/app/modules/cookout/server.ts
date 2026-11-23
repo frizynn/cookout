@@ -16,9 +16,9 @@
  * fresh command per run and still have the handler sign its calls:
  * `pnpm e2e:docker` adds it on the local container before it starts the
  * handler there, and `scripts/handler-provision.sh` on the deployed one. Its
- * schema needs a string `branch`. `exampleCommandRegistered` says whether the
- * cookout under test has it, and logs a warning saying why the webhook tests
- * skip when it doesn't.
+ * schema needs a string `branch`. `requireExampleCommand` fails, naming the
+ * missing command, when the cookout under test doesn't have it, so a webhook
+ * test fails there instead of skipping.
  */
 export {
   CookoutUnderTest,
@@ -33,6 +33,6 @@ export {
   freshStateFolder,
   postedMessageId,
 } from "./lib/server/bin.ts";
-export { exampleCommand, exampleCommandRegistered } from "./lib/server/example-command.ts";
+export { exampleCommand, requireExampleCommand } from "./lib/server/example-command.ts";
 export { type BrowserFixtures, type BrowserRun, browserFixtures } from "./lib/server/browser-run.ts";
 export { type Answered, type Link, link } from "./lib/server/link.ts";

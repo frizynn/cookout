@@ -45,6 +45,7 @@ const BAD_GATEWAY = 502;
 const EVENTS_PATH = "/v1/events";
 const HOP_BY_HOP = ["connection", "content-length", "host", "transfer-encoding"] as const;
 const endToEnd = Headers.removeMany(HOP_BY_HOP);
+const uncompressed = Headers.removeMany([...HOP_BY_HOP, "accept-encoding"]);
 
 function forwardedTo(
   target: string,
@@ -58,7 +59,7 @@ function forwardedTo(
     const request = yield* HttpServerRequest.HttpServerRequest;
     const sent = yield* request.arrayBuffer;
     return HttpClientRequest.make(method)(`${target}${request.url}`).pipe(
-      HttpClientRequest.setHeaders(endToEnd(request.headers)),
+      HttpClientRequest.setHeaders(uncompressed(request.headers)),
       HttpClientRequest.bodyUint8Array(new Uint8Array(sent), request.headers["content-type"]),
     );
   });
