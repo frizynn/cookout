@@ -70,6 +70,7 @@ export type TestCookoutOptions = {
   readonly requestsPerMinute?: number;
   readonly commandCallsPerMinute?: number;
   readonly streamsPerIdentity?: number;
+  readonly routine?: "fake" | "unreachable";
 };
 
 type Setting =
@@ -87,12 +88,35 @@ const settingNames: readonly (readonly [Setting, string])[] = [
   ["webhookTimeoutSeconds", "COOKOUT_WEBHOOK_TIMEOUT_SECONDS"],
 ];
 
-function serverEnv(options: TestCookoutOptions): ConfigProvider.ConfigProvider {
+const testRoutineFirePath = "/v1/claude_code/routines/trig_test/fire";
+
+const testRoutineToken = "routine-test-token";
+
+const unreachableUrl = "http://127.0.0.1:1";
+
+function routineBase(routine: "fake" | "unreachable", webhookUrl: string): string {
+  if (routine === "fake") {
+    return webhookUrl;
+  }
+  return unreachableUrl;
+}
+
+function routineEnv(options: TestCookoutOptions, webhookUrl: string): readonly (readonly [string, string])[] {
+  if (Predicate.isUndefined(options.routine)) {
+    return [];
+  }
+  return [
+    ["COOKOUT_ROUTINE_FIRE_URL", `${routineBase(options.routine, webhookUrl)}${testRoutineFirePath}`],
+    ["COOKOUT_ROUTINE_TOKEN", testRoutineToken],
+  ];
+}
+
+function serverEnv(options: TestCookoutOptions, webhookUrl: string): ConfigProvider.ConfigProvider {
   const set = Arr.flatMap(settingNames, ([option, name]) => {
     const value = options[option];
     return value === undefined ? [] : [[name, String(value)] as const];
   });
-  return ConfigProvider.fromEnv({ env: Rec.fromEntries(set) });
+  return ConfigProvider.fromEnv({ env: Rec.fromEntries([...set, ...routineEnv(options, webhookUrl)]) });
 }
 
 const clientAt =
@@ -163,6 +187,7 @@ function bootOn(options: TestCookoutOptions): Effect.Effect<Boot, never, Scope.S
     const services = yield* Layer.build(backingServices(options));
     const storage = yield* storageFor(options);
     const adminToken = yield* newToken(services);
+    const env = serverEnv(options, Context.get(services, WebhookFake).url);
     const bootAs = (adminName: string | undefined) =>
       Effect.gen(function* bootServer() {
         const named = adminName === undefined ? {} : { adminName: identityName(adminName) };
@@ -177,7 +202,7 @@ function bootOn(options: TestCookoutOptions): Effect.Effect<Boot, never, Scope.S
           server.pipe(Layer.provideMerge(storage), Layer.provideMerge(Layer.succeedContext(services))),
         );
       }).pipe(
-        Effect.provideService(ConfigProvider.ConfigProvider, serverEnv(options)),
+        Effect.provideService(ConfigProvider.ConfigProvider, env),
         Effect.catchTags({ ConfigError: Effect.die, ServeError: Effect.die, StorageUnavailable: Effect.die }),
       );
     return { adminToken, boot: Effect.orDie(bootAs(options.adminName)), bootAs };
@@ -223,3 +248,5 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
       });
     }).pipe(Effect.orDie),
   );
+
+export { testRoutineFirePath, testRoutineToken };

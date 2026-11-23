@@ -13,6 +13,7 @@ interface ReceivedCall {
 }
 
 interface Receiver {
+  readonly answerWith: (body: unknown) => Effect.Effect<void>;
   readonly calls: Effect.Effect<readonly ReceivedCall[]>;
   readonly failNext: (count: number, status: number) => Effect.Effect<void>;
   readonly url: string;
@@ -32,6 +33,13 @@ function headersFor(status: number): Readonly<Record<string, string>> {
   return {};
 }
 
+function answerFor(ok: boolean, given: Option.Option<unknown>): unknown {
+  return Option.getOrElse(
+    Option.filter(given, () => ok),
+    () => ({ ok }),
+  );
+}
+
 function nextStatus(queued: readonly number[]): readonly [number, readonly number[]] {
   const [status = OK, ...rest] = queued;
   return [status, rest];
@@ -40,6 +48,7 @@ function nextStatus(queued: readonly number[]): readonly [number, readonly numbe
 const receiver: Effect.Effect<Receiver, never, Scope.Scope> = Effect.gen(function* startReceiver() {
   const calls = yield* SubscriptionRef.make<readonly ReceivedCall[]>([]);
   const failures = yield* Ref.make<readonly number[]>([]);
+  const answer = yield* Ref.make<Option.Option<unknown>>(Option.none());
 
   const receive = Effect.gen(function* receiveCall() {
     const request = yield* HttpServerRequest.HttpServerRequest;
@@ -55,7 +64,9 @@ const receiver: Effect.Effect<Receiver, never, Scope.Scope> = Effect.gen(functio
       status,
     };
     yield* SubscriptionRef.update(calls, (before) => [...before, call]);
-    return HttpServerResponse.jsonUnsafe({ ok: status < FIRST_FAILURE }, { headers: headersFor(status), status });
+    const ok = status < FIRST_FAILURE;
+    const answered = yield* Effect.map(Ref.get(answer), (given) => answerFor(ok, given));
+    return HttpServerResponse.jsonUnsafe(answered, { headers: headersFor(status), status });
   });
 
   function failNext(count: number, status: number): Effect.Effect<void> {
@@ -74,7 +85,13 @@ const receiver: Effect.Effect<Receiver, never, Scope.Scope> = Effect.gen(functio
   const serving = HttpServer.serve(receive).pipe(Layer.provideMerge(nodeHttpServer(LISTEN)));
   const server = yield* Layer.build(serving);
   const url = yield* Effect.provideContext(serverUrl, server);
-  return { calls: SubscriptionRef.get(calls), failNext, url, waitForCalls };
+  return {
+    answerWith: (given: unknown) => Ref.set(answer, Option.some(given)),
+    calls: SubscriptionRef.get(calls),
+    failNext,
+    url,
+    waitForCalls,
+  };
 }).pipe(Effect.orDie);
 
 export { type ReceivedCall, receiver };

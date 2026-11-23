@@ -174,6 +174,12 @@ const migrations: readonly string[] = [
      last_seen_at TEXT NOT NULL
    ) STRICT;`,
   REACTIONS_MIGRATION,
+  `CREATE TABLE join_codes (
+     code_hash TEXT PRIMARY KEY,
+     agent TEXT NOT NULL REFERENCES identities (name) ON DELETE CASCADE,
+     created_at TEXT NOT NULL,
+     expires_at TEXT NOT NULL
+   ) STRICT;`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

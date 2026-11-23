@@ -1,6 +1,7 @@
 import { Command, Flag } from "effect/cli";
 import { Effect, Layer, Option, Redacted } from "effect";
 import type { IdentityName, Token } from "../../../identities/index.ts";
+import { SpawnSettings, domainLayers, openRoutes, routes } from "./route-list.ts";
 import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import {
   adminName,
@@ -12,7 +13,6 @@ import {
   port,
   publicUrl,
 } from "../../../config/server.ts";
-import { domainLayers, openRoutes, routes } from "./route-list.ts";
 import { firstAdminName, token } from "../../../identities/index.ts";
 import { httpServer, serverUrl } from "../../../http/server.ts";
 import { printLine, refused } from "./output.ts";
@@ -37,6 +37,7 @@ export const cookoutServer = ({
   httpServer(serving, { gated: routes, open: openRoutes }, requireTokenWithinLimit).pipe(
     Layer.provideMerge(adminTokenSet({ adminName: name, adminToken: admin })),
     Layer.provideMerge(domainLayers),
+    Layer.provideMerge(Layer.succeed(SpawnSettings, { adminName: name, publicUrl: serving.publicUrl ?? "" })),
   );
 
 function webFolderOf({ webFolder }: ServeLayers): Pick<Serving, "webFolder"> {

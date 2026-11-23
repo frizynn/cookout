@@ -46,6 +46,7 @@ type CredentialSource =
   | "COOKOUT_SESSION"
   | "agent session token"
   | "agent-join-request"
+  | "join-code"
   | "login"
   | "none";
 

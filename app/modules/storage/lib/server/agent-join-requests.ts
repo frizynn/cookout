@@ -91,6 +91,8 @@ function collectionOf({ created, issue, result }: Issued): AgentJoinCollection {
 
 export { GONE, PENDING, collectionOf, sessionToIssue };
 
+export type { JoinCodesSection } from "./join-codes.ts";
+
 export type {
   AgentJoinApproval,
   AgentJoinCollection,

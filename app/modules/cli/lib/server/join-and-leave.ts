@@ -4,10 +4,10 @@ import type { CallFailure, ClientWithAgentSessionState, CredentialSource, JoinPl
 import { Console, Effect, Function, Option } from "effect";
 import { answered, refused } from "./output.ts";
 import { callClient, joinPlace, withClient, withJoinClient } from "./adapters/sdk.ts";
+import { joinByBrowser, joinByCode } from "./agent-join.ts";
 import type { CommandFailed } from "./output.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import { cookoutUrl } from "../../../config/server.ts";
-import { joinByBrowser } from "./agent-join.ts";
 
 interface JoinFlags {
   readonly as: IdentityName;
@@ -17,11 +17,17 @@ interface JoinFlags {
 
 interface JoinOptions extends Omit<JoinFlags, "as"> {
   readonly as: Option.Option<IdentityName>;
+  readonly code: Option.Option<string>;
 }
 
 interface Issued {
   readonly issued: AgentSessionResponse;
   readonly source: CredentialSource;
+}
+
+interface Joining {
+  readonly command: string;
+  readonly issue: Effect.Effect<Issued, CallFailure, AgentSessionStateNeeds>;
 }
 
 type JoinAnswer = Omit<AgentSessionResponse, "agentSessionToken"> & { readonly source: CredentialSource };
@@ -33,20 +39,25 @@ const asMissing: CallFailure = {
   message: "`cookout join` needs --as <name>: an agent you own, or the token's own agent.",
 };
 
-function noHarness(as: IdentityName): CallFailure {
+const codeWithAs: CallFailure = {
+  code: "usage",
+  message: "`cookout join --code` joins the one agent the code was made for: leave out --as.",
+};
+
+function noHarness(command: string): CallFailure {
   return {
     code: "harness_missing",
     message:
       "No harness runs this process, so there is no harness session to join in. Run " +
-      `\`cookout join --as ${as} --print-env\` and run the \`export COOKOUT_SESSION=...\` line it prints instead.`,
+      `\`${command} --print-env\` and run the \`export COOKOUT_SESSION=...\` line it prints instead.`,
   };
 }
 
-function noSessionId(harness: string, as: IdentityName): CallFailure {
+function noSessionId(harness: string, command: string): CallFailure {
   return {
     code: "harness_session_missing",
     message:
-      `${harness} gives no session ID to key a join by. Run \`cookout join --as ${as} --print-env\` and run ` +
+      `${harness} gives no session ID to key a join by. Run \`${command} --print-env\` and run ` +
       "the `export COOKOUT_SESSION=...` line it prints instead.",
   };
 }
@@ -99,7 +110,7 @@ function joinedBy(source: CredentialSource): Pick<AgentSessionState, "joinedBy">
 }
 
 function issueAndKeep(
-  flags: JoinFlags,
+  joining: Joining,
   { file, url }: { readonly file: AgentSessionStateFile; readonly url: string },
 ): Effect.Effect<JoinAnswer, CallFailure, AgentSessionStateNeeds> {
   return Effect.gen(function* joinAs() {
@@ -110,7 +121,7 @@ function issueAndKeep(
     const {
       issued: { agentSessionToken, ...answer },
       source,
-    } = yield* issue(flags);
+    } = yield* joining.issue;
     yield* file.write({ ...answer, agentSessionToken, ...joinedBy(source), url });
     return { ...answer, source };
   });
@@ -118,16 +129,37 @@ function issueAndKeep(
 
 function joinIn(
   { file, place, url }: JoinPlace,
-  flags: JoinFlags,
+  joining: Joining,
 ): Effect.Effect<JoinAnswer, CallFailure, AgentSessionStateNeeds> {
   const { harness = "" } = place;
   if (harness === "") {
-    return Effect.fail(noHarness(flags.as));
+    return Effect.fail(noHarness(joining.command));
   }
   if (Option.isNone(file)) {
-    return Effect.fail(noSessionId(harness, flags.as));
+    return Effect.fail(noSessionId(harness, joining.command));
   }
-  return issueAndKeep(flags, { file: file.value, url });
+  return issueAndKeep(joining, { file: file.value, url });
+}
+
+function byCode(code: string, idleExpiry: Option.Option<string>): Joining {
+  const redeemed = Effect.flatMap(Effect.orDie(cookoutUrl), (url) => joinByCode({ code, idleExpiry, url }));
+  return {
+    command: "cookout join --code <code>",
+    issue: Effect.map(redeemed, (issued) => ({ issued, source: "join-code" as const })),
+  };
+}
+
+function joiningOf({ as, code, ...flags }: JoinOptions): Effect.Effect<Joining, CallFailure> {
+  if (Option.isSome(code)) {
+    return Option.match(as, {
+      onNone: () => Effect.succeed(byCode(code.value, flags.idleExpiry)),
+      onSome: () => Effect.fail(codeWithAs),
+    });
+  }
+  if (Option.isNone(as)) {
+    return Effect.fail(asMissing);
+  }
+  return Effect.succeed({ command: `cookout join --as ${as.value}`, issue: issue({ as: as.value, ...flags }) });
 }
 
 function leaveAndForget(opened: ClientWithAgentSessionState): Effect.Effect<LeaveResponse, CallFailure> {
@@ -140,18 +172,12 @@ function leaveAndForget(opened: ClientWithAgentSessionState): Effect.Effect<Leav
   });
 }
 
-function join({ as, ...flags }: JoinOptions): Effect.Effect<JoinAnswer, CallFailure, AgentSessionStateNeeds> {
-  if (Option.isNone(as)) {
-    return Effect.fail(asMissing);
-  }
-  return Effect.flatMap(joinPlace, (place) => joinIn(place, { as: as.value, ...flags }));
+function join(options: JoinOptions): Effect.Effect<JoinAnswer, CallFailure, AgentSessionStateNeeds> {
+  return Effect.flatMap(joiningOf(options), (joining) => Effect.flatMap(joinPlace, (place) => joinIn(place, joining)));
 }
 
-function joinForEnvironment({ as, ...flags }: JoinOptions): Effect.Effect<Issued, CallFailure, AgentSessionStateNeeds> {
-  if (Option.isNone(as)) {
-    return Effect.fail(asMissing);
-  }
-  return issue({ as: as.value, ...flags });
+function joinForEnvironment(options: JoinOptions): Effect.Effect<Issued, CallFailure, AgentSessionStateNeeds> {
+  return Effect.flatMap(joiningOf(options), (joining) => joining.issue);
 }
 
 function printExport({ issued: { agentSessionToken } }: Issued): Effect.Effect<void> {

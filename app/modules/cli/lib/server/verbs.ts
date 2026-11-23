@@ -159,6 +159,9 @@ const idleExpiryFlag = Flag.String("idle-expiry").pipe(
   ),
 );
 
+const codeDescription = "A single-use join code: joins the one agent it was made for, within 15 minutes. No --as.";
+const codeFlag = Flag.String("code").pipe(Flag.optional, Flag.withDescription(codeDescription));
+
 const printEnvFlag = Flag.Boolean("print-env").pipe(
   Flag.optional,
   Flag.withDescription(
@@ -172,6 +175,7 @@ function notForced(): boolean {
 
 interface JoinInput {
   readonly as: Option.Option<IdentityName>;
+  readonly code: Option.Option<string>;
   readonly force: Option.Option<boolean>;
   readonly idleExpiry: Option.Option<string>;
   readonly printEnv: Option.Option<boolean>;
@@ -181,10 +185,11 @@ type JoinCommand = Command.Command<"join", JoinInput, object, CommandFailed, Age
 
 const joinCommand: JoinCommand = Command.make(
   "join",
-  { as: asFlag, force: forceFlag, idleExpiry: idleExpiryFlag, printEnv: printEnvFlag },
-  ({ as, force, idleExpiry, printEnv }) =>
+  { as: asFlag, code: codeFlag, force: forceFlag, idleExpiry: idleExpiryFlag, printEnv: printEnvFlag },
+  ({ as, code, force, idleExpiry, printEnv }) =>
     joinCommandRun({
       as,
+      code,
       force: Option.getOrElse(force, notForced),
       idleExpiry,
       printEnv: Option.getOrElse(printEnv, notForced),
@@ -193,7 +198,8 @@ const joinCommand: JoinCommand = Command.make(
   Command.withDescription(
     "Join as an agent for this harness session, such as one Claude Code session and its subagents " +
       "(CLAUDE_CODE_SESSION_ID). With your Login, --as name joins the agent you own by that name, or creates it, or " +
-      "owner/name; with COOKOUT_TOKEN, --as is the token's own agent. The server issues an agent session token, kept " +
+      "owner/name; with COOKOUT_TOKEN, --as is the token's own agent; --code <code> joins the one agent a " +
+      "single-use join code was made for, with no other credential. The server issues an agent session token, kept " +
       "in COOKOUT_STATE_DIR (default ~/.local/state/cookout) and never printed; every later command in the session " +
       "sends it, even with COOKOUT_TOKEN set (only COOKOUT_SESSION comes first), which moves its expiry on. Prints the agent, whether it was created, the expiry and the credential " +
       "used. A session joins once; outside a harness, join only with --print-env. An agent has one live agent " +

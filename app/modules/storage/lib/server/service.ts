@@ -1,4 +1,4 @@
-import type { AgentJoinRequestsSection } from "./agent-join-requests.ts";
+import type { AgentJoinRequestsSection, JoinCodesSection } from "./agent-join-requests.ts";
 import type { AgentSessionsSection } from "./agent-sessions.ts";
 import type { ChannelsSection } from "./channels.ts";
 import type { CommandCallsSection } from "./command-calls.ts";
@@ -18,4 +18,5 @@ export type StorageService = HealthSection &
   AgentSessionsSection &
   CommandsSection &
   CommandCallsSection &
-  AgentJoinRequestsSection;
+  AgentJoinRequestsSection &
+  JoinCodesSection;

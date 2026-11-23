@@ -14,6 +14,7 @@ import type { IsoTime } from "../../../time/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { isIdentityName } from "../../../identities/index.ts";
+import { sqliteJoinCodes } from "./join-codes-sqlite.ts";
 import { unreadable } from "./errors.ts";
 
 const NameColumn = Schema.String.pipe(Schema.refine(isIdentityName));
@@ -141,8 +142,10 @@ function sqliteAgentJoinRequests(db: SqliteDatabase): AgentJoinRequestsSection {
   };
 }
 
-function sqliteAgentSessionSections(db: SqliteDatabase): AgentSessionsSection & AgentJoinRequestsSection {
-  return { ...sqliteAgentSessions(db), ...sqliteAgentJoinRequests(db) };
+function sqliteAgentSessionSections(
+  db: SqliteDatabase,
+): AgentSessionsSection & AgentJoinRequestsSection & ReturnType<typeof sqliteJoinCodes> {
+  return { ...sqliteAgentSessions(db), ...sqliteAgentJoinRequests(db), ...sqliteJoinCodes(db) };
 }
 
 export { sqliteAgentSessionSections };

@@ -74,4 +74,22 @@ function joinByBrowser({ as, idleExpiry, url }: JoinAsked): Effect.Effect<AgentS
   });
 }
 
-export { joinByBrowser };
+interface CodeGiven {
+  readonly url: string;
+  readonly code: string;
+  readonly idleExpiry: Option.Option<string>;
+}
+
+function joinByCode({ code, idleExpiry, url }: CodeGiven): Effect.Effect<AgentSessionResponse, CallFailure> {
+  return Effect.gen(function* redeemJoinCode() {
+    const client = yield* Effect.try({ catch: toFailure, try: () => createCookoutClient({ env: NOTHING, url }) });
+    const host = yield* machineName;
+    const request = Option.match(idleExpiry, {
+      onNone: () => ({ host, joinCode: code }),
+      onSome: (asked) => ({ host, idleExpiry: asked, joinCode: code }),
+    });
+    return yield* Effect.tryPromise({ catch: toFailure, try: () => client.redeemJoinCode(request) });
+  });
+}
+
+export { joinByBrowser, joinByCode };

@@ -10,6 +10,7 @@ import {
   AgentJoinRequestResponseSchema,
   AgentJoinRequestStartedResponseSchema,
   AgentSessionResponseSchema,
+  JoinCodeResponseSchema,
   JoinRequestSchema,
   LeaveResponseSchema,
   ListAgentSessionsResponseSchema,
@@ -85,6 +86,13 @@ export const agentSessionRoutes: readonly Route<Caller | AgentSessions>[] = [joi
 export { joinRequestRoutes, openJoinRequestRoutes } from "./lib/server/join-request-routes.ts";
 
 /**
+ * The join code routes (mattpocock/cookout#231): `joinCodeRoutes`, a human creating an agent with a single-use join
+ * code, sit behind the token gate; `openJoinCodeRoutes`, redeeming a code, need no token and sit behind the
+ * per-address request limit, since the code is the only credential a spawned session has.
+ */
+export { joinCodeRoutes, openJoinCodeRoutes } from "./lib/server/join-code-routes.ts";
+
+/**
  * The routes an agent's owner or an admin lists and revokes its agent session token with, for the server's route list.
  */
 export { ownerRoutes as agentSessionOwnerRoutes } from "./lib/server/owner-routes.ts";
@@ -95,6 +103,7 @@ export const agentSessionResponseSchemas = {
   AgentJoinRequestResponse: AgentJoinRequestResponseSchema,
   AgentJoinRequestStartedResponse: AgentJoinRequestStartedResponseSchema,
   AgentSessionResponse: AgentSessionResponseSchema,
+  JoinCodeResponse: JoinCodeResponseSchema,
   LeaveResponse: LeaveResponseSchema,
   ListAgentSessionsResponse: ListAgentSessionsResponseSchema,
   RevokeAgentSessionResponse: RevokeAgentSessionResponseSchema,

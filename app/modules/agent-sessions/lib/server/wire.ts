@@ -1,8 +1,10 @@
+import { AgentIdentitySchema, SentDescriptionSchema } from "../../../identities/server.ts";
 import type {
   AgentJoinCollectedResponse,
   AgentJoinRequestResponse,
   AgentJoinRequestStartedResponse,
   AgentSessionResponse,
+  JoinCodeResponse,
   LeaveResponse,
   ListAgentSessionsResponse,
   ListedAgentSession,
@@ -121,6 +123,23 @@ const AgentJoinRequestViewSchema = Schema.Struct({
 const AgentJoinRequestResponseSchema = matchesWire<AgentJoinRequestResponse>()(
   Schema.Struct({ agentJoinRequest: AgentJoinRequestViewSchema }),
 );
+
+const CreateJoinCodeRequestSchema = Schema.Struct({
+  description: Schema.optionalKey(SentDescriptionSchema),
+  name: IdentityNameSchema,
+});
+
+const RedeemJoinCodeRequestSchema = Schema.Struct({
+  host: Schema.optionalKey(HostSchema),
+  idleExpiry: Schema.optionalKey(IdleExpirySchema),
+  joinCode: Schema.String,
+});
+
+const JoinCodeResponseSchema = matchesWire<JoinCodeResponse>()(
+  Schema.Struct({ expiresAt: IsoTimeSchema, identity: AgentIdentitySchema, joinCode: TokenSchema }),
+);
+
+export { CreateJoinCodeRequestSchema, JoinCodeResponseSchema, RedeemJoinCodeRequestSchema };
 
 export {
   AgentJoinCollectedResponseSchema,
