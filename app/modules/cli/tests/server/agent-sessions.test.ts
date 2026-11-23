@@ -53,6 +53,16 @@ function withToken(env: Env, token: string): Env {
   return { ...env, COOKOUT_TOKEN: token };
 }
 
+function whoamiAfter(
+  wait: `${number} ${"millis" | "minutes" | "days"}`,
+  env: Env,
+): Effect.Effect<unknown, never, CommandLineNeeds> {
+  return Effect.andThen(
+    TestClock.adjust(wait),
+    Effect.map(runCookout({ args: WHOAMI, env }), ({ stdoutJson }) => stdoutJson),
+  );
+}
+
 it.effect("a join in one Claude Code session acts as the agent in that session only, until leave forgets it", () =>
   Effect.gen(function* joinInOneSession() {
     const cookout = yield* TestCookout;
@@ -163,6 +173,8 @@ it.effect("the credential is COOKOUT_TOKEN, then COOKOUT_SESSION, then the joine
       { args: WHOAMI, env: { ...first, COOKOUT_SESSION: session, COOKOUT_TOKEN: third.token } },
       { args: WHOAMI, env: { ...first, COOKOUT_SESSION: session } },
       { args: WHOAMI, env: first },
+      { args: ["leave"], env: { ...first, COOKOUT_SESSION: session } },
+      { args: WHOAMI, env: first },
     ]);
 
     expect(Arr.map(results, ({ stdoutJson }) => stdoutJson)).toMatchObject([
@@ -174,6 +186,27 @@ it.effect("the credential is COOKOUT_TOKEN, then COOKOUT_SESSION, then the joine
         source: "agent session token",
         summary: "release-bot (agent session token, joined 2 h ago)",
       },
+      { revoked: true },
+      { identity: { name: "release-bot" }, source: "agent session token" },
+    ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("whoami says how long ago this agent tool session joined", () =>
+  Effect.gen(function* joinedAgo() {
+    const cookout = yield* TestCookout;
+    const bot = yield* cookout.createIdentity("release-bot");
+    const first = claudeCode("s1", { COOKOUT_STATE_DIR: yield* freshStateFolder, COOKOUT_URL: cookout.url });
+    yield* runCookout({ args: ["join", "--as", "release-bot"], env: withToken(first, bot.token) });
+    const summaries = yield* Effect.all(
+      [whoamiAfter("0 millis", first), whoamiAfter("30 minutes", first), whoamiAfter("3 days", first)],
+      ONE_AT_A_TIME,
+    );
+
+    expect(summaries).toMatchObject([
+      { summary: "release-bot (agent session token, joined just now)" },
+      { summary: "release-bot (agent session token, joined 30 min ago)" },
+      { summary: "release-bot (agent session token, joined 3 d ago)" },
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

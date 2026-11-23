@@ -82,15 +82,15 @@ function urlIn(env: Environment): { readonly url?: string } {
   return { url };
 }
 
-function isAgentToolSessionId(value: string): value is AgentToolSessionId {
-  return value !== "";
+function isAgentToolSessionId(value: string | undefined): value is AgentToolSessionId {
+  return isSet(value);
 }
 
 function sessionIdOf(tool: string, env: Environment): { readonly sessionId?: AgentToolSessionId } {
   const values = agentTools
     .filter((markers) => markers.tool === tool)
     .flatMap((markers) => markers.sessionVariables)
-    .map((variable) => env[variable] ?? "");
+    .map((variable) => env[variable]);
   for (const value of values) {
     if (isAgentToolSessionId(value)) {
       return { sessionId: value };
