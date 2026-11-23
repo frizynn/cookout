@@ -1,10 +1,9 @@
+import type { Command, Ran, Step, Stopped } from "./merge-steps.ts";
+import { DONE, RERERE, firstStop, git, lines, run, stop, tail } from "./merge-steps.ts";
 import { readFileSync, writeFileSync } from "node:fs";
 import type { HunkResolve } from "./conflicts.ts";
 import path from "node:path";
 import { resolveHunks } from "./conflicts.ts";
-import { spawnSync } from "node:child_process";
-
-type Command = readonly string[];
 
 interface HunkRule {
   readonly file: string;
@@ -36,13 +35,6 @@ type Merged =
   | { readonly attempts: number; readonly ok: true; readonly sha: string }
   | { readonly files: readonly string[]; readonly ok: false; readonly reason: string };
 
-interface Stopped {
-  readonly files: readonly string[];
-  readonly kind: "stopped";
-  readonly reason: string;
-}
-
-type Step = { readonly kind: "done" } | Stopped;
 type Started = { readonly kind: "started"; readonly sha: string } | Stopped;
 interface Pushed {
   readonly kind: "pushed";
@@ -51,43 +43,9 @@ interface Pushed {
 
 type Attempt = { readonly kind: "moved" } | Pushed | Stopped;
 
-interface Ran {
-  readonly ok: boolean;
-  readonly output: string;
-}
-
 const LOCKFILE = "pnpm-lock.yaml";
 const NONE = 0;
 const FIRST_ATTEMPT = 1;
-const EXIT_SUCCESS = 0;
-const MAX_BUFFER = 268_435_456;
-const OUTPUT_TAIL = -40;
-const DONE: Step = { kind: "done" };
-function stop(reason: string, files: readonly string[] = []): Stopped {
-  return { files, kind: "stopped", reason };
-}
-
-function run(cwd: string, command: Command): Ran {
-  const [program = "true", ...args] = command;
-  const ran = spawnSync(program, args, { cwd, encoding: "utf8", maxBuffer: MAX_BUFFER });
-  if (ran.error instanceof Error) {
-    return { ok: false, output: ran.error.message };
-  }
-  return { ok: ran.status === EXIT_SUCCESS, output: `${ran.stdout}${ran.stderr}`.trim() };
-}
-
-function git(options: MergeOptions, ...args: readonly string[]): Ran {
-  return run(options.cwd, ["git", ...args]);
-}
-
-function tail(output: string): string {
-  return output.split("\n").slice(OUTPUT_TAIL).join("\n");
-}
-
-function lines(output: string): readonly string[] {
-  return output.split("\n").filter((line) => line.length > NONE);
-}
-
 function stepOf(result: Ran, what: string): Step {
   if (result.ok) {
     return DONE;
@@ -124,7 +82,7 @@ function regenerate(options: MergeOptions, generated: readonly string[]): Step {
   );
   for (const rule of rules) {
     options.log(`Regenerating with ${rule.command.join(" ")}`);
-    const ran = run(options.cwd, rule.command);
+    const ran = run(options.cwd, ...rule.command);
     if (!ran.ok) {
       return failed(rule.command, ran, "");
     }
@@ -135,19 +93,9 @@ function regenerate(options: MergeOptions, generated: readonly string[]): Step {
 function unresolvable(options: MergeOptions, left: readonly string[]): Stopped {
   const listed = left.map((file) => `  ${file}`).join("\n");
   return stop(
-    `ticket-${options.ticket} conflicts with v1 in files that are not generated, a migration number or the coverage floor:\n${listed}\nNothing was pushed. The merge is in progress on merge-ticket-${options.ticket}: resolve it by hand, or run git merge --abort.`,
-    left,
+    `ticket-${options.ticket} conflicts with v1 in files that are not generated, a migration number or the coverage floor:\n${listed}\nNothing was pushed. The merge is in progress on merge-ticket-${options.ticket}: resolve it by hand and commit, then run pnpm merge-ticket ${options.ticket} --continue; or run git merge --abort.`,
+    ...left,
   );
-}
-
-function firstStop(steps: readonly (() => Step)[]): Step {
-  for (const step of steps) {
-    const result = step();
-    if (result.kind === "stopped") {
-      return result;
-    }
-  }
-  return DONE;
 }
 
 function resolveConflicts(options: MergeOptions, conflicted: readonly string[]): Step {
@@ -170,12 +118,23 @@ function resolveConflicts(options: MergeOptions, conflicted: readonly string[]):
 function merge(options: MergeOptions): Step {
   const message = `Merge ticket-${options.ticket}: ${options.title} (#${options.ticket})`;
   const ticket = `ticket-${options.ticket}`;
-  const merged = git(options, "-c", "merge.conflictStyle=diff3", "merge", "-q", "--no-ff", ticket, "-m", message);
+  const merged = git(
+    options,
+    ...RERERE,
+    "-c",
+    "merge.conflictStyle=diff3",
+    "merge",
+    "-q",
+    "--no-ff",
+    ticket,
+    "-m",
+    message,
+  );
   if (merged.ok) {
     return DONE;
   }
   const conflicted = lines(git(options, "diff", "--name-only", "--diff-filter=U").output);
-  if (conflicted.length === NONE) {
+  if (conflicted.length === NONE && !git(options, "rev-parse", "-q", "--verify", "MERGE_HEAD").ok) {
     return stop(`git merge failed.\n${tail(merged.output)}`);
   }
   options.log(`Resolving conflicts in ${conflicted.join(", ")}`);
@@ -187,7 +146,7 @@ function install(options: MergeOptions, base: string): Step {
     return DONE;
   }
   options.log(`${LOCKFILE} changed: running ${options.install.join(" ")}`);
-  const installed = run(options.cwd, options.install);
+  const installed = run(options.cwd, ...options.install);
   if (installed.ok) {
     return DONE;
   }
@@ -196,7 +155,7 @@ function install(options: MergeOptions, base: string): Step {
 
 function check(options: MergeOptions): Step {
   options.log(`Running ${options.check.join(" ")}`);
-  const checked = run(options.cwd, options.check);
+  const checked = run(options.cwd, ...options.check);
   if (checked.ok) {
     return DONE;
   }
@@ -265,13 +224,77 @@ function attemptFrom(options: MergeOptions, count: number): Merged {
   return finished(outcome, count);
 }
 
-function mergeTicket(options: MergeOptions): Merged {
+function cleanTree(options: MergeOptions): Step {
   const status = git(options, "status", "--porcelain", "--untracked-files=no");
-  if (!status.ok || status.output !== "") {
-    return { files: [], ok: false, reason: `The working tree is not clean; commit first.\n${status.output}` };
+  if (status.ok && status.output === "") {
+    return DONE;
+  }
+  return stop(`The working tree is not clean; commit first.\n${status.output}`);
+}
+
+function mergeTicket(options: MergeOptions): Merged {
+  const clean = cleanTree(options);
+  if (clean.kind === "stopped") {
+    return finished(clean, NONE);
   }
   return attemptFrom(options, FIRST_ATTEMPT);
 }
 
-export type { MergeRules, Merged };
-export { mergeTicket };
+function learnResolution(options: MergeOptions): void {
+  const resolved = git(options, "rev-parse", "HEAD").output;
+  git(options, "checkout", "-q", "--detach", `${resolved}^1`);
+  git(options, ...RERERE, "merge", "-q", "--no-ff", "--no-commit", `${resolved}^2`);
+  git(options, "checkout", resolved, "--", ".");
+  git(options, ...RERERE, "rerere");
+  git(options, "merge", "--abort");
+}
+
+function regenerateChanged(options: MergeOptions, base: string): Step {
+  const changed = lines(git(options, "diff", "--name-only", base, "HEAD").output);
+  const regenerated = regenerate(
+    options,
+    changed.filter((file) => isGenerated(options, file)),
+  );
+  if (regenerated.kind === "stopped" || cleanTree(options).kind === "done") {
+    return regenerated;
+  }
+  return firstStop([
+    (): Step => stepOf(git(options, "add", "-u"), "git add -u"),
+    (): Step => stepOf(git(options, "commit", "-q", "--amend", "--no-edit"), "Committing the regenerated files"),
+  ]);
+}
+
+function continueAttempt(options: MergeOptions): Attempt {
+  const branch = `merge-ticket-${options.ticket}`;
+  const head = git(options, "rev-parse", "--abbrev-ref", "HEAD").output;
+  if (head !== branch || !git(options, "rev-parse", "-q", "--verify", "HEAD^2").ok) {
+    return stop(
+      `Nothing to continue: not on ${branch} with a merge commit at HEAD (on ${head}). Run pnpm merge-ticket ${options.ticket} first.`,
+    );
+  }
+  const base = git(options, "rev-parse", "HEAD^1").output;
+  const stepped = firstStop([
+    (): Step => cleanTree(options),
+    (): Step => regenerateChanged(options, base),
+    (): Step => install(options, base),
+    (): Step => check(options),
+  ]);
+  if (stepped.kind === "stopped") {
+    return stepped;
+  }
+  return push(options, base);
+}
+
+function continueMerge(options: MergeOptions): Merged {
+  options.log(`Attempt ${FIRST_ATTEMPT} of ${options.attempts}: checking and pushing merge-ticket-${options.ticket}`);
+  const outcome = continueAttempt(options);
+  if (outcome.kind !== "moved") {
+    return finished(outcome, FIRST_ATTEMPT);
+  }
+  options.log("v1 moved before the push; merging again with the resolution learned.");
+  learnResolution(options);
+  return attemptFrom(options, FIRST_ATTEMPT + FIRST_ATTEMPT);
+}
+
+export type { MergeOptions, MergeRules, Merged };
+export { continueMerge, mergeTicket };

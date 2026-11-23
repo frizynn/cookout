@@ -1,6 +1,6 @@
-import type { MergeRules, Merged } from "./lib/merge-ticket.ts";
+import type { MergeOptions, MergeRules, Merged } from "./lib/merge-ticket.ts";
+import { continueMerge, mergeTicket } from "./lib/merge-ticket.ts";
 import { fail } from "./lib/tools.ts";
-import { mergeTicket } from "./lib/merge-ticket.ts";
 import { spawnSync } from "node:child_process";
 
 const SCRIPT = "merge-ticket";
@@ -9,6 +9,7 @@ const NONE = 0;
 const EXIT_SUCCESS = 0;
 const ARGUMENT = 2;
 const argument = process.argv.at(ARGUMENT) ?? "";
+const resuming = process.argv.includes("--continue");
 
 function pnpm(...args: readonly string[]): readonly string[] {
   return ["pnpm", "run", "--silent", ...args];
@@ -38,10 +39,17 @@ const rules: MergeRules = {
 
 const ticket = Number(argument);
 if (!Number.isInteger(ticket) || ticket <= NONE) {
-  fail(SCRIPT, "usage: pnpm merge-ticket <N>, where ticket-N is a local branch.");
+  fail(SCRIPT, "usage: pnpm merge-ticket <N> [--continue], where ticket-N is a local branch.");
 }
 
-const merged: Merged = mergeTicket({
+function run(options: MergeOptions): Merged {
+  if (resuming) {
+    return continueMerge(options);
+  }
+  return mergeTicket(options);
+}
+
+const merged: Merged = run({
   attempts: ATTEMPTS,
   check: ["pnpm", "check"],
   cwd: process.cwd(),

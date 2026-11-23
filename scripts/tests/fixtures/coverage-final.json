@@ -1,0 +1,28 @@
+{
+  "/repo/app/changed.ts": {
+    "b": { "0": [1, 0], "1": [2, 3] },
+    "branchMap": {
+      "0": { "locations": [{ "start": { "line": 4 } }, { "start": { "line": 6 } }] },
+      "1": { "locations": [{ "start": { "line": 8 } }, { "start": { "line": 9 } }] }
+    },
+    "s": { "0": 1, "1": 0, "2": 0, "3": 5 },
+    "statementMap": {
+      "0": { "start": { "line": 1 } },
+      "1": { "start": { "line": 2 } },
+      "2": { "start": { "line": 6 } },
+      "3": { "start": { "line": 9 } }
+    }
+  },
+  "/repo/app/covered.ts": {
+    "b": { "0": [1, 1] },
+    "branchMap": { "0": { "locations": [{ "start": { "line": 1 } }, { "start": { "line": 2 } }] } },
+    "s": { "0": 1 },
+    "statementMap": { "0": { "start": { "line": 1 } } }
+  },
+  "/repo/app/unchanged.ts": {
+    "b": {},
+    "branchMap": {},
+    "s": { "0": 0 },
+    "statementMap": { "0": { "start": { "line": 3 } } }
+  }
+}
