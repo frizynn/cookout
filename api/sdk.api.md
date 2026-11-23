@@ -550,8 +550,8 @@ type CommandName = Brand<"CommandName">;
 type CommandSecret = Brand<"CommandSecret">;
 /** A JSON Schema, the rule a command's call data must follow. */
 type JsonSchema = Readonly<Record<string, JsonValue>>;
-/** A registered command as the server shows it. Its secret is never part of it. */
-interface Command {
+/** A registered command as the server shows it: one an admin added, which the server calls by webhook. Its secret is never part of it. */
+interface RegisteredCommand {
   readonly name: CommandName;
   /** The `http` or `https` URL the server posts calls to. */
   readonly url: string;
@@ -563,6 +563,12 @@ interface Command {
   readonly handler: IdentityName;
   readonly createdAt: IsoTime;
 }
+/** A built-in command (mattpocock/cookout#250, 2026-11-23): one the server handles itself, so it has no `url`. */
+interface BuiltInCommand extends Omit<RegisteredCommand, "url"> {
+  readonly builtIn: true;
+}
+/** A command as `GET /v1/commands` lists it: registered (with a `url`) or built in (with `builtIn: true`). */
+type Command = RegisteredCommand | BuiltInCommand;
 /** The body of `POST /v1/commands`. The server checks the name, URL, schema and description. */
 interface AddCommandRequest {
   readonly name: string;
@@ -572,12 +578,13 @@ interface AddCommandRequest {
 }
 /** The answer to adding a command or rotating its secret. The secret is shown this once only. */
 interface CommandWithSecretResponse {
-  readonly command: Command;
+  readonly command: RegisteredCommand;
   readonly secret: CommandSecret;
 }
 /**
- * The answer to `GET /v1/commands`: every command, sorted by name, the registered ones and those the server handles
- * itself (`/spawn-agent`), so every client discovers both the same way. A command the server handles has an empty `url`.
+ * The answer to `GET /v1/commands`: every command, sorted by name, the registered ones and the built-in ones the server
+ * handles itself (`/spawn-agent`), so every client discovers both the same way. A built-in command carries
+ * `builtIn: true` and no `url`.
  */
 interface ListCommandsResponse {
   readonly commands: readonly Command[];
@@ -895,7 +902,7 @@ interface IdentityDeletedEvent {
  */
 interface CommandEvent {
   readonly type: "command";
-  readonly command: Command;
+  readonly command: RegisteredCommand;
 }
 /**
  * An agent's agent session just changed: the agent joined or left, or its owner or an admin revoked its session.

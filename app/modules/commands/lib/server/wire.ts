@@ -1,4 +1,10 @@
-import type { CallCommandResponse, Command, CommandWithSecretResponse, ListCommandsResponse } from "../../index.ts";
+import type {
+  BuiltInCommand,
+  CallCommandResponse,
+  CommandWithSecretResponse,
+  ListCommandsResponse,
+  RegisteredCommand,
+} from "../../index.ts";
 import {
   commandDescriptionLength,
   commandNamePattern,
@@ -43,16 +49,25 @@ const SecretSchema = Schema.String.check(Schema.isPattern(commandSecretPattern))
   Schema.refine(isCommandSecret, { identifier: "CommandSecret" }),
 );
 
-export const CommandSchema = matchesWire<Command>()(
-  Schema.Struct({
-    createdAt: IsoTimeSchema,
-    description: Schema.optionalKey(DescriptionSchema),
-    handler: HandlerNameSchema,
-    name: CommandNameSchema,
-    schema: JsonSchemaSchema,
-    url: Schema.String,
-  }),
+const commandFields = {
+  createdAt: IsoTimeSchema,
+  description: Schema.optionalKey(DescriptionSchema),
+  handler: HandlerNameSchema,
+  name: CommandNameSchema,
+  schema: JsonSchemaSchema,
+};
+
+const BuiltInCommandSchema = matchesWire<BuiltInCommand>()(
+  Schema.Struct({ ...commandFields, builtIn: Schema.Literal(true) }),
 );
+
+const RegisteredCommandSchema = matchesWire<RegisteredCommand>()(
+  Schema.Struct({ ...commandFields, url: Schema.String }),
+);
+
+const ListedCommandSchema = Schema.Union([RegisteredCommandSchema, BuiltInCommandSchema]);
+
+export { RegisteredCommandSchema };
 
 export const AddCommandRequestSchema = Schema.Struct({
   description: Schema.optionalKey(DescriptionSchema),
@@ -62,11 +77,11 @@ export const AddCommandRequestSchema = Schema.Struct({
 });
 
 export const CommandWithSecretResponseSchema = matchesWire<CommandWithSecretResponse>()(
-  Schema.Struct({ command: CommandSchema, secret: SecretSchema }),
+  Schema.Struct({ command: RegisteredCommandSchema, secret: SecretSchema }),
 );
 
 export const ListCommandsResponseSchema = matchesWire<ListCommandsResponse>()(
-  Schema.Struct({ commands: Schema.Array(CommandSchema) }),
+  Schema.Struct({ commands: Schema.Array(ListedCommandSchema) }),
 );
 
 export const CallCommandRequestSchema = Schema.Struct({ channel: ChannelNameSchema, data: Schema.Json });

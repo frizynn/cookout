@@ -1,6 +1,6 @@
 import type { AgentIdentity, IdentityName } from "../../../identities/index.ts";
 import { Array as Arr, Effect, Order, Predicate, Schema } from "effect";
-import type { Command, CommandName, CommandSecret } from "../../../commands/index.ts";
+import type { CommandName, CommandSecret, RegisteredCommand } from "../../../commands/index.ts";
 import type { CommandTokensSection, MemoryCommandTokensSection } from "./command-tokens.ts";
 import type { DeliveriesSection, MemoryDeliveriesSection } from "./deliveries.ts";
 import { isCommandName, isCommandSecret } from "../../../commands/index.ts";
@@ -17,7 +17,7 @@ import { unreadable } from "./errors.ts";
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
 interface StoredCommand {
-  readonly command: Command;
+  readonly command: RegisteredCommand;
   readonly secret: CommandSecret;
 }
 
@@ -25,7 +25,7 @@ type AddCommandResult = "added" | "name_taken" | "handler_is_human";
 
 interface CommandsSection extends CommandTokensSection, DeliveriesSection {
   readonly addCommand: (stored: StoredCommand, handler: AgentIdentity) => Fails<AddCommandResult>;
-  readonly listCommands: Effect.Effect<readonly Command[], StorageUnavailable>;
+  readonly listCommands: Effect.Effect<readonly RegisteredCommand[], StorageUnavailable>;
   readonly findCommand: (name: CommandName) => Fails<StoredCommand | undefined>;
   readonly replaceCommandSecret: (name: CommandName, secret: CommandSecret) => Fails<StoredCommand | undefined>;
 }

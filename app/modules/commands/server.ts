@@ -124,4 +124,4 @@ export { SpawnSettings } from "./lib/server/spawning.ts";
 export { CommandChanges, commandChangesLayer } from "./lib/server/changes.ts";
 
 /** The Schema of a command as the server shows it, for the live stream's `command` event. */
-export { CommandSchema } from "./lib/server/wire.ts";
+export { RegisteredCommandSchema } from "./lib/server/wire.ts";
