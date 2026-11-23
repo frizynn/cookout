@@ -35,7 +35,7 @@ function rewriteLine(line: string, added: ReadonlySet<string>, renames: readonly
 }
 
 function rewriteAddedLines({ base, options, renames }: Rewrite): void {
-  const changed = lines(git(options, "diff", "--name-only", "--diff-filter=d", base, "HEAD^2").output);
+  const changed = lines(git(options, "diff", "--name-only", "--no-renames", "--diff-filter=d", base, "HEAD^2").output);
   for (const file of changed) {
     const filePath = path.join(options.cwd, file);
     const before = linesAt(options, base, file);
@@ -51,7 +51,7 @@ function renumberAdrs(options: AdrOptions): Step {
   const base = git(options, "merge-base", "HEAD^1", "HEAD^2").output;
   const v1 = lines(git(options, "ls-tree", "--name-only", "HEAD^1", "--", `${options.adrs}/`).output);
   const added = lines(
-    git(options, "diff", "--name-only", "--diff-filter=A", base, "HEAD^2", "--", options.adrs).output,
+    git(options, "diff", "--name-only", "--no-renames", "--diff-filter=A", base, "HEAD^2", "--", options.adrs).output,
   ).filter((file) => existsSync(path.join(options.cwd, file)));
   const renames = renumbering({ added, v1 });
   if (renames.length === NONE) {

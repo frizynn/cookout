@@ -57,3 +57,17 @@ it("renumbers a ticket's new ADR when it continues a merge resolved by hand", { 
     "ticket: ADR 0003, adr/0003-ticket.md",
   ]);
 });
+
+it("renumbers an ADR the ticket renamed onto a number v1 has since taken", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const { origin, other, work } = repos();
+  repo(other).push({ "docs/adr/0002-v1.md": "# v1\n" });
+  git(work, "mv", "docs/adr/0001-base.md", "docs/adr/0002-base.md");
+  repo(work).commit("the ticket", {});
+
+  const merged = repo(work).merge({});
+
+  expect(merged).toStrictEqual({ attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect(adrsOn(origin)).toStrictEqual(["docs/adr/0002-v1.md", "docs/adr/0003-base.md"]);
+});
