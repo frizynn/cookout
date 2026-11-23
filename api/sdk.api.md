@@ -149,10 +149,10 @@ type ListIdentitiesResponse = {
 interface ListIdentitiesQuery {
   readonly include?: "deactivated";
 }
-/** The answer to `POST /v1/identities/:name/deactivate`: the identity, and the names of the agents deactivated with it. */
+/** The answer to `POST /v1/identities/:name/deactivate`: the deactivated identity. */
 interface DeactivateIdentityResponse {
   readonly identity: Identity;
-  /** The agents a deactivated human owned, sorted by name; empty for an agent. */
+  /** @deprecated Always empty, since a human's agents stay active; kept one release for older clients. */
   readonly agents: readonly IdentityName[];
 }
 /**
@@ -689,8 +689,8 @@ interface MessageEvent {
 }
 /**
  * An identity just created or changed (its display name, admin flag or owner, deactivating or reactivating it), as
- * the server now shows it, sent only on the all-channels feed so every open web UI shows it at once. Deactivating a
- * human sends one for it and one for each of its agents. It has no SSE `id`.
+ * the server now shows it, sent only on the all-channels feed so every open web UI shows it at once. It has no SSE
+ * `id`.
  */
 interface IdentityEvent {
   readonly type: "identity";
@@ -813,7 +813,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "owner_deactivated", "has_messages", "owns_agents", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "agent_join_request_not_found", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "agent_join_request_not_found", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
@@ -938,14 +938,14 @@ export type CookoutClient = CallGroups & {
   readonly rotateToken: (name: string) => Promise<IdentityWithTokenResponse>;
   /**
    * `POST /v1/identities/:name/deactivate`: an admin deactivates anyone, a human their own agents (403 `not_owner`
-   * otherwise). Every token it holds fails at once, and a human's agents are deactivated with it (`agents`). Its
+   * otherwise). Every token it holds fails at once; a human's agents stay active (`agents` is always empty). Its
    * messages and name stay; the name can't be created again. The last admin is 409 `last_admin`.
    */
   readonly deactivateIdentity: (name: string) => Promise<DeactivateIdentityResponse>;
   /**
-   * `POST /v1/identities/:name/reactivate`: an admin reactivates anyone, a human their own agents. Answers a fresh
-   * token, shown this once; old tokens stay dead. 409 `not_deactivated` if it isn't, or `owner_deactivated` for an
-   * agent whose owner still is.
+   * `POST /v1/identities/:name/reactivate`: an admin reactivates anyone, a human their own agents, even while the
+   * agent's owner is Deactivated. Answers a fresh token, shown this once; old tokens stay dead. 409 `not_deactivated`
+   * if it isn't.
    */
   readonly reactivateIdentity: (name: string) => Promise<IdentityWithTokenResponse>;
   /** Admin only. Makes a human an admin and answers it; an admin stays one. An agent is 403 `human_only`. */

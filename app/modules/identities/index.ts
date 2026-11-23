@@ -151,10 +151,10 @@ export interface ListIdentitiesQuery {
   readonly include?: "deactivated";
 }
 
-/** The answer to `POST /v1/identities/:name/deactivate`: the identity, and the names of the agents deactivated with it. */
+/** The answer to `POST /v1/identities/:name/deactivate`: the deactivated identity. */
 export interface DeactivateIdentityResponse {
   readonly identity: Identity;
-  /** The agents a deactivated human owned, sorted by name; empty for an agent. */
+  /** @deprecated Always empty, since a human's agents stay active; kept one release for older clients. */
   readonly agents: readonly IdentityName[];
 }
 
@@ -191,7 +191,7 @@ export const identitiesPath = "/v1/identities";
 
 /**
  * `POST /v1/identities/:name/deactivate`: Deactivates the identity, answering `DeactivateIdentityResponse`. Every token
- * it holds fails at once; a human's agents are deactivated with it. An admin may deactivate anyone, and a human their
+ * it holds fails at once; a human's agents stay active. An admin may deactivate anyone, and a human their
  * own agents (403 `not_owner` otherwise). The last admin is refused with 409 `last_admin`. Its messages and name stay
  * (ADR 0045); only an identity no message names can be deleted instead (`identityPath`).
  */
@@ -200,8 +200,8 @@ export const identityDeactivatePath = "/v1/identities/:name/deactivate";
 /**
  * `POST /v1/identities/:name/reactivate`: undoes deactivating, answering `IdentityWithTokenResponse` with a fresh
  * token; the old tokens stay dead. An admin may reactivate anyone, and a human their own agents (403 `admin_only` or
- * `not_owner` otherwise). An identity that isn't Deactivated is 409 `not_deactivated`, and an agent whose owner still is
- * is 409 `owner_deactivated`.
+ * `not_owner` otherwise). An identity that isn't Deactivated is 409 `not_deactivated`. An agent whose owner is
+ * Deactivated can be reactivated.
  */
 export const identityReactivatePath = "/v1/identities/:name/reactivate";
 
@@ -294,7 +294,6 @@ export const identityErrorCodes = [
   "owner_not_human",
   "name_not_owned",
   "not_deactivated",
-  "owner_deactivated",
   ...identityDeletionErrorCodes,
   "login_request_not_found",
 ] as const;

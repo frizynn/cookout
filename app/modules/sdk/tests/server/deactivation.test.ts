@@ -57,26 +57,29 @@ it.effect("a deactivated name stays reserved: creating an identity with it is re
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("deactivating a human deactivates every agent they own, and no one else's", () =>
-  Effect.gen(function* cascade() {
+it.effect("deactivating a human leaves every agent they own active: its token works, it posts and it is listed", () =>
+  Effect.gen(function* agentsStayActive() {
     const cookout = yield* TestCookout;
-    yield* adaWithAgents(cookout);
-    const kept = yield* cookout.createIdentity("grace/helper", { owner: "grace" });
+    yield* cookout.createIdentity("ada", HUMAN);
+    const helper = yield* cookout.createIdentity("ada/helper", { owner: "ada" });
+    const session = yield* answer(() => helper.client.join({ as: "ada/helper" }));
     const deactivated = yield* answer(() => cookout.client.deactivateIdentity("ada"));
-    const everyone = yield* answer(() => cookout.client.listIdentities({ include: "deactivated" }));
-    const still = yield* answer(kept.client.whoami);
+    const [, token, sessionToken, posted, listed] = yield* Effect.all(
+      [
+        answer(() => helper.client.createChannel({ name: "grill" })),
+        answer(helper.client.whoami),
+        answer(cookout.clientFor(session.agentSessionToken).whoami),
+        answer(() => helper.client.createMessage({ channel: "grill", text: "still here" })),
+        answer(() => cookout.client.listIdentities()),
+      ],
+      ONE_AT_A_TIME,
+    );
 
-    expect(deactivated).toMatchObject({ agents: ["ada/helper", "release-bot"], identity: { deactivated: true } });
-    expect(Arr.map(everyone.identities, ({ deactivated: off, name }) => [name, off === true])).toStrictEqual([
-      ["ada", true],
-      ["ada/helper", true],
-      ["admin", false],
-      ["grace", false],
-      ["grace/helper", false],
-      ["release-bot", true],
-    ]);
-    expect(still.identity).toStrictEqual(kept.identity);
-  }).pipe(Effect.provide(testCookout())),
+    expect(deactivated).toMatchObject({ agents: [], identity: { deactivated: true, name: "ada" } });
+    expect([token.identity, sessionToken.identity]).toStrictEqual([helper.identity, helper.identity]);
+    expect(posted.message).toMatchObject({ author: { name: "ada/helper" }, text: "still here" });
+    expect(Arr.map(listed.identities, ({ name }) => name)).toStrictEqual(["ada/helper", "admin"]);
+  }).pipe(Effect.provide(testCookout({ secrets: "live" }))),
 );
 
 it.effect("a deactivated identity can't be mentioned, and the identity list hides it unless asked", () =>
@@ -122,14 +125,40 @@ it.effect("an agent session token from before deactivation stays dead after reac
   }).pipe(Effect.provide(testCookout({ secrets: "live" }))),
 );
 
-it.effect("reactivating an agent whose owner is deactivated is refused, and an active one is refused too", () =>
-  Effect.gen(function* reactivateRefused() {
+it.effect("an admin reactivates an agent whose owner is deactivated, and gets a fresh token", () =>
+  Effect.gen(function* reactivateOwnerless() {
+    const cookout = yield* TestCookout;
+    yield* adaWithAgents(cookout);
+    const helper = yield* cookout.createIdentity("ada/helper-2", { owner: "ada" });
+    yield* answer(() => cookout.client.deactivateIdentity("ada/helper-2"));
+    yield* answer(() => cookout.client.deactivateIdentity("ada"));
+    const reactivated = yield* answer(() => cookout.client.reactivateIdentity("ada/helper-2"));
+    const [old, fresh] = yield* Effect.all(
+      [refusal(helper.client.whoami), answer(cookout.clientFor(reactivated.token).whoami)],
+      ONE_AT_A_TIME,
+    );
+
+    expect(reactivated.identity).toStrictEqual(helper.identity);
+    expect([old, fresh.identity]).toMatchObject([{ code: "token_revoked", status: UNAUTHORIZED }, helper.identity]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("an admin transfers an agent whose owner is deactivated to another human", () =>
+  Effect.gen(function* transferOwnerless() {
     const cookout = yield* TestCookout;
     yield* adaWithAgents(cookout);
     yield* answer(() => cookout.client.deactivateIdentity("ada"));
+    const moved = yield* answer(() => cookout.client.transferAgent("release-bot", "grace"));
+
+    expect(moved.identity).toMatchObject({ kind: "agent", name: "release-bot", owner: "grace" });
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("reactivating an active identity, or one that doesn't exist, is refused", () =>
+  Effect.gen(function* reactivateRefused() {
+    const cookout = yield* TestCookout;
     const refused = yield* Effect.all(
       [
-        refusal(() => cookout.client.reactivateIdentity("ada/helper")),
         refusal(() => cookout.client.reactivateIdentity("admin")),
         refusal(() => cookout.client.reactivateIdentity("nobody")),
       ],
@@ -137,7 +166,6 @@ it.effect("reactivating an agent whose owner is deactivated is refused, and an a
     );
 
     expect(refused).toMatchObject([
-      { code: "owner_deactivated", details: { owner: "ada" }, status: CONFLICT },
       { code: "not_deactivated", status: CONFLICT },
       { code: "identity_not_found", status: NOT_FOUND },
     ]);

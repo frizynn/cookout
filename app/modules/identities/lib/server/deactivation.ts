@@ -1,5 +1,5 @@
 import { Caller, announced, issueToken, requireAdmin } from "./auth.ts";
-import type { DeactivateIdentityResponse, Identity, IdentityName, Owner } from "../../index.ts";
+import type { DeactivateIdentityResponse, Identity, IdentityName } from "../../index.ts";
 import { DeactivateIdentityResponseSchema, IdentityWithTokenResponseSchema } from "./wire.ts";
 import type {
   DeactivateIdentityResult,
@@ -39,15 +39,6 @@ function notDeactivated(name: IdentityName): Refusal {
   return { code: "not_deactivated", message: `${name} is not deactivated.`, status: CONFLICT };
 }
 
-function ownerDeactivated(name: IdentityName, owner: Owner): Refusal {
-  return {
-    code: "owner_deactivated",
-    details: { owner },
-    message: `${name}'s owner, ${owner}, is deactivated. Reactivate ${owner} first.`,
-    status: CONFLICT,
-  };
-}
-
 function ownsAgent(caller: Identity, target: Identity): boolean {
   return caller.kind === "human" && target.kind === "agent" && target.owner === caller.name;
 }
@@ -70,7 +61,7 @@ function deactivatedOrRefused(
   result: DeactivateIdentityResult,
 ): Effect.Effect<DeactivateIdentityResponse, Refusal> {
   if (result.status === "deactivated") {
-    return Effect.succeed({ agents: result.agents, identity: result.identity });
+    return Effect.succeed({ agents: [], identity: result.identity });
   }
   if (result.status === "last_admin") {
     return Effect.fail(lastAdmin(name));
@@ -85,25 +76,7 @@ function reactivatedOrRefused(name: IdentityName, result: ReactivateIdentityResu
   if (result.status === "not_deactivated") {
     return Effect.fail(notDeactivated(name));
   }
-  if (result.status === "owner_deactivated") {
-    return Effect.fail(ownerDeactivated(name, result.owner));
-  }
   return Effect.fail(identityNotFound(name));
-}
-
-function announceDeactivated(
-  answer: DeactivateIdentityResponse,
-): Effect.Effect<void, StorageUnavailable, Storage | IdentityChanges> {
-  return Effect.gen(function* announceEach() {
-    const storage = yield* Storage;
-    yield* announced(answer.identity);
-    for (const agent of answer.agents) {
-      const found = yield* storage.findIdentityByName(agent);
-      if (Predicate.isNotUndefined(found)) {
-        yield* announced(found);
-      }
-    }
-  });
 }
 
 const deactivateRoute: Route<Caller | Storage | IdentityChanges> = {
@@ -115,7 +88,7 @@ const deactivateRoute: Route<Caller | Storage | IdentityChanges> = {
       const answer = yield* Effect.flatMap(storage.deactivateIdentity(name), (result) =>
         deactivatedOrRefused(name, result),
       );
-      yield* announceDeactivated(answer);
+      yield* announced(answer.identity);
       return yield* HttpServerResponse.schemaJson(DeactivateIdentityResponseSchema)(answer);
     }),
   method: "POST",

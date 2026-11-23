@@ -127,10 +127,28 @@ it("an admin deactivates and reactivates from a profile, and the fresh token sho
   const { identity } = await clientWith(token.textContent).whoami();
 
   expect([
-    identities.filter((each) => each.name.startsWith("web-off-profile")).map((each) => each.deactivated),
+    identities.filter((each) => each.name.startsWith("web-off-profile")).map((each) => each.deactivated === true),
     identity.name,
     await profileHeading(),
-  ]).toStrictEqual([[true, true], "web-off-profile-human", "web-off-profile-human"]);
+  ]).toStrictEqual([[false, true], "web-off-profile-human", "web-off-profile-human"]);
+
+  close();
+});
+
+it("deactivating a person asks without mentioning their agents, which stay active", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { bot } = await crewOf("web-off-person");
+  const close = openAt({ client: adminClient(), hash: "#/people/web-off-person-human" });
+  fireEvent.click(await inProfile().findByRole("button", { name: "Deactivate" }));
+  const { textContent: asked } = await screen.findByRole("alertdialog", { name: "Deactivate @web-off-person-human?" });
+  fireEvent.click(inDialog().getByRole("button", { name: "Deactivate @web-off-person-human" }));
+  await waitFor(async () => {
+    await expect(profileHeading()).resolves.toBe("web-off-person-human(deactivated)");
+  });
+  const { identity } = await bot.whoami();
+
+  expect([asked.includes("agent"), identity.deactivated === true]).toStrictEqual([false, false]);
 
   close();
 });
