@@ -1,6 +1,13 @@
 import { Array as Arr, Effect, Option, Predicate, Schema } from "effect";
+import type {
+  HistoryPageRequest,
+  InboxSection,
+  Scope,
+  StoredHistoryItem,
+  StoredHistoryPage,
+  StoredInboxItem,
+} from "./inbox.ts";
 import type { InboxReason, ReadPosition } from "../../../inbox/index.ts";
-import type { InboxSection, Scope, StoredInboxItem } from "./inbox.ts";
 import type { Message, MessageId, TopLevelMessage } from "../../../messages/index.ts";
 import { followersOf, reasonsIn, scopeOf } from "./inbox.ts";
 import type { ChannelName } from "../../../channels/index.ts";
@@ -38,13 +45,18 @@ interface InboxOn {
 
 interface Reasoned {
   readonly message: Message;
+  readonly read: boolean;
   readonly reasons: readonly InboxReason[];
 }
 
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 
 const MessageIdColumn = Schema.Int.pipe(Schema.refine(isMessageId));
-const ReasonRow = Schema.Struct({ reason: Schema.Literals(inboxReasons) });
+const READ = 1;
+const UNREAD = 0;
+const ALL_IDS = Number.MAX_SAFE_INTEGER;
+const ONE_MORE = 1;
+const ReasonRow = Schema.Struct({ read: Schema.Literals([UNREAD, READ]), reason: Schema.Literals(inboxReasons) });
 const PositionRow = Schema.Struct({ message_id: MessageIdColumn });
 const FOUND = 1;
 const NOTHING_SEEN = 0;
@@ -74,9 +86,18 @@ const MOVE_THREAD_POSITION = `INSERT INTO thread_read_positions (identity_name, 
 
 function inboxSql(columns: string): string {
   return `WITH reasons (id, reason) AS (${REASONS})
-    SELECT ${columns}, reasons.reason AS reason FROM messages JOIN reasons USING (id)
+    SELECT ${columns}, reasons.reason AS reason, ${UNREAD} AS read FROM messages JOIN reasons USING (id)
     WHERE messages.author_name <> ?1 AND messages.id > ?2 AND messages.id > ${MARKER}
     ORDER BY messages.id, reasons.reason`;
+}
+
+function historySql(columns: string): string {
+  return `WITH reasons (id, reason) AS (${REASONS}),
+    page (id) AS (SELECT DISTINCT reasons.id FROM reasons JOIN messages USING (id)
+      WHERE messages.author_name <> ?1 AND reasons.id < ?2 ORDER BY reasons.id DESC LIMIT ?3)
+    SELECT ${columns}, reasons.reason AS reason, messages.id <= ${MARKER} AS read
+    FROM messages JOIN page USING (id) JOIN reasons USING (id)
+    ORDER BY messages.id DESC, reasons.reason`;
 }
 
 function positionRow(row: unknown): Fails<MessageId> {
@@ -119,8 +140,8 @@ function recordAppended({ db, message }: Appended): Fails<void> {
 function reasonedRow(reader: MessageReader, row: unknown): Fails<Reasoned> {
   return Effect.gen(function* readReasonedRow() {
     const message = yield* reader.toMessage(row);
-    const { reason } = yield* Schema.decodeUnknownEffect(ReasonRow)(row).pipe(Effect.mapError(unreadable));
-    return { message, reasons: [reason] };
+    const { read, reason } = yield* Schema.decodeUnknownEffect(ReasonRow)(row).pipe(Effect.mapError(unreadable));
+    return { message, read: read === READ, reasons: [reason] };
   });
 }
 
@@ -129,23 +150,30 @@ function grouped(rows: readonly Reasoned[]): readonly Reasoned[] {
   return Arr.flatMap(ids, (id) => {
     const same = Arr.filter(rows, (row) => row.message.id === id);
     const reasons = reasonsIn(Arr.flatMap(same, (row) => row.reasons));
-    return Option.toArray(Option.map(Arr.head(same), ({ message }) => ({ message, reasons })));
+    return Option.toArray(Option.map(Arr.head(same), ({ message, read }) => ({ message, read, reasons })));
   });
 }
 
-function withParent(reader: MessageReader, { message, reasons }: Reasoned): Fails<StoredInboxItem> {
+function withParent(reader: MessageReader, { message, read, reasons }: Reasoned): Fails<StoredHistoryItem> {
   return reader.findMessage(threadIdOf(message)).pipe(
     Effect.filterOrFail(
       (parent): parent is TopLevelMessage => Predicate.isNotUndefined(parent) && parent.kind === "top-level",
       unreadable,
     ),
-    Effect.map((parent): StoredInboxItem => {
+    Effect.map((parent): StoredHistoryItem => {
       if (message.kind === "top-level") {
-        return { message: parent, parent, reasons };
+        return { message: parent, parent, read, reasons };
       }
-      return { message, parent, reasons };
+      return { message, parent, read, reasons };
     }),
   );
+}
+
+function itemsOf(reader: MessageReader, rows: readonly unknown[]): Fails<readonly StoredHistoryItem[]> {
+  return Effect.gen(function* readItems() {
+    const reasoned = yield* Effect.forEach(rows, (row) => reasonedRow(reader, row), ONE_AT_A_TIME);
+    return yield* Effect.forEach(grouped(reasoned), (item) => withParent(reader, item), ONE_AT_A_TIME);
+  });
 }
 
 function inboxOf(
@@ -153,10 +181,21 @@ function inboxOf(
   identity: IdentityName,
   after: MessageId | typeof NOTHING_SEEN,
 ): Fails<readonly StoredInboxItem[]> {
-  return Effect.gen(function* readInbox() {
-    const rows = yield* db.all(inboxSql(reader.columns), identity, after);
-    const reasoned = yield* Effect.forEach(rows, (row) => reasonedRow(reader, row), ONE_AT_A_TIME);
-    return yield* Effect.forEach(grouped(reasoned), (item) => withParent(reader, item), ONE_AT_A_TIME);
+  return db.all(inboxSql(reader.columns), identity, after).pipe(
+    Effect.flatMap((rows) => itemsOf(reader, rows)),
+    Effect.map(Arr.map(({ message, parent, reasons }): StoredInboxItem => ({ message, parent, reasons }))),
+  );
+}
+
+function historyOf(
+  { db, reader }: InboxOn,
+  identity: IdentityName,
+  page: HistoryPageRequest,
+): Fails<StoredHistoryPage> {
+  return Effect.gen(function* readHistory() {
+    const rows = yield* db.all(historySql(reader.columns), identity, page.before ?? ALL_IDS, page.limit + ONE_MORE);
+    const items = yield* itemsOf(reader, rows);
+    return { hasMore: items.length > page.limit, items: Arr.take(items, page.limit) };
   });
 }
 
@@ -199,6 +238,7 @@ function sqliteInbox({ db, reader }: InboxOn): InboxSection {
     followThread: changeFollow(db, reader, "INSERT OR IGNORE INTO follows (identity_name, thread_id) VALUES (?, ?)"),
     listInbox: (identity) => inboxOf({ db, reader }, identity, NOTHING_SEEN),
     listInboxAfter: (identity, after) => inboxOf({ db, reader }, identity, after),
+    listInboxHistory: (identity, page) => historyOf({ db, reader }, identity, page),
     subscribeChannel: changeSubscription(
       db,
       "INSERT OR IGNORE INTO subscriptions (identity_name, channel) VALUES (?, ?)",

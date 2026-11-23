@@ -1,6 +1,13 @@
 import { Array as Arr, Effect, Option, Predicate, String as Str, pipe } from "effect";
+import type {
+  HistoryPageRequest,
+  InboxSection,
+  Scope,
+  StoredHistoryItem,
+  StoredHistoryPage,
+  StoredInboxItem,
+} from "./inbox.ts";
 import type { InboxReason, ReadPosition } from "../../../inbox/index.ts";
-import type { InboxSection, Scope, StoredInboxItem } from "./inbox.ts";
 import type { Message, MessageId, Reply, TopLevelMessage } from "../../../messages/index.ts";
 import { counted, threadIdOf } from "./messages.ts";
 import { followersOf, movedTo, scopeOf } from "./inbox.ts";
@@ -93,9 +100,9 @@ function afterAppend({ inbox, message }: Appended): MemoryInbox {
   };
 }
 
-function isUnread({ board, identity }: Reading, message: Message): boolean {
+function isRead({ board, identity }: Reading, message: Message): boolean {
   const marker = board.inbox.positions.get(keyOf(identity, scopeOf(message))) ?? NOTHING_READ;
-  return message.author.name !== identity && message.id > marker;
+  return message.id <= marker;
 }
 
 function reasonsFor(reading: Reading, message: Message): readonly InboxReason[] {
@@ -126,20 +133,38 @@ function currentParent(messages: readonly Message[], id: MessageId): TopLevelMes
   );
 }
 
-function itemFor(reading: Reading, message: Message): readonly StoredInboxItem[] {
+function historyItemFor(reading: Reading, message: Message): readonly StoredHistoryItem[] {
   const reasons = reasonsFor(reading, message);
   const parent = currentParent(reading.board.messages, threadIdOf(message));
-  if (!isUnread(reading, message) || !Arr.isReadonlyArrayNonEmpty(reasons) || Predicate.isUndefined(parent)) {
+  const isOwn = message.author.name === reading.identity;
+  if (isOwn || !Arr.isReadonlyArrayNonEmpty(reasons) || Predicate.isUndefined(parent)) {
     return [];
   }
+  const read = isRead(reading, message);
   if (message.kind === "top-level") {
-    return [{ message: parent, parent, reasons }];
+    return [{ message: parent, parent, read, reasons }];
   }
-  return [{ message, parent, reasons }];
+  return [{ message, parent, read, reasons }];
+}
+
+function historyOf(reading: Reading): readonly StoredHistoryItem[] {
+  return Arr.flatMap(reading.board.messages, (message) => historyItemFor(reading, message));
 }
 
 function inboxOf(reading: Reading): readonly StoredInboxItem[] {
-  return Arr.flatMap(reading.board.messages, (message) => itemFor(reading, message));
+  return Arr.flatMap(historyOf(reading), ({ message, parent, read, reasons }) => {
+    if (read) {
+      return [];
+    }
+    return [{ message, parent, reasons }];
+  });
+}
+
+function historyPageOf(reading: Reading, page: HistoryPageRequest): StoredHistoryPage {
+  const { before = Number.MAX_SAFE_INTEGER, limit } = page;
+  const older = Arr.filter(historyOf(reading), (item) => item.message.id < before);
+  const shown = Arr.reverse(Arr.takeRight(older, limit));
+  return { hasMore: older.length > shown.length, items: shown };
 }
 
 function findIn(board: MemoryBoard, id: MessageId): Option.Option<Message> {
@@ -236,6 +261,7 @@ function memoryInbox({ changeInbox, channelExists, read }: BoardAccess): MemoryI
     listInbox: (identity) => read((board) => inboxOf({ board, identity })),
     listInboxAfter: (identity, after) =>
       read((board) => Arr.filter(inboxOf({ board, identity }), (item) => item.message.id > after)),
+    listInboxHistory: (identity, page) => read((board) => historyPageOf({ board, identity }, page)),
     subscribeChannel: subscription(withKey),
     unfollowThread: (identity, id) => changeFound((board) => follow(withoutKey)({ board, id, identity })),
     unsubscribeChannel: subscription(withoutKey),

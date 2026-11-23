@@ -2,7 +2,8 @@
  * The inbox on the wire, shared by the server, the SDK and the web: what an
  * identity hasn't read yet and why each item is there, the ack that marks a
  * message and everything before it in its thread or channel as read,
- * following a thread and subscribing to a channel, and their paths. They
+ * the inbox history of read and unread items, following a thread and
+ * subscribing to a channel, and their paths. They
  * refuse with the message, channel and lease error codes.
  */
 import type { Channel, ChannelName } from "../channels/index.ts";
@@ -41,6 +42,28 @@ export interface InboxResponse {
   readonly items: readonly InboxItem[];
 }
 
+/** An item in the inbox history: `read` says the identity's read position for its scope is at or after it. */
+export interface InboxHistoryItem extends InboxItem {
+  readonly read: boolean;
+}
+
+/** The query of an inbox history page. With no `before`, the page is the newest items. */
+export interface InboxHistoryQuery {
+  /** Only items before this message ID: pass the last item's ID to read further back. */
+  readonly before?: number;
+  /** 1–200 items. Default 50. */
+  readonly limit?: number;
+}
+
+/**
+ * A page of the inbox history: every message in the inbox for at least one reason as things stand now, read or not,
+ * newest first, each message once. `hasMore` says older items remain after the last. Reading it changes nothing.
+ */
+export interface InboxHistoryResponse {
+  readonly items: readonly InboxHistoryItem[];
+  readonly hasMore: boolean;
+}
+
 /** The body of an ack. */
 export interface AckRequest {
   readonly messageId: MessageId;
@@ -65,6 +88,9 @@ export interface SubscriptionResponse {
 
 /** `GET /v1/inbox`: the caller's inbox. */
 export const inboxPath = "/v1/inbox";
+
+/** `GET /v1/inbox/history?before=<id>&limit=<n>`: a page of the caller's inbox history, read and unread. */
+export const inboxHistoryPath = "/v1/inbox/history";
 
 /** `POST /v1/ack`: acks a message and everything before it in its thread or channel. */
 export const ackPath = "/v1/ack";
