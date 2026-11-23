@@ -59,3 +59,22 @@ it.effect("from Claude Code, cookout posts with an agent's token and the message
     expect(posted).toMatchObject({ exitCode: 0, stdoutJson: { message: { agentTool: "claude-code" } } });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
+
+const otherTools = [
+  { markers: { CODEX_THREAD_ID: "019a-thread" }, tool: "codex" },
+  { markers: { CURSOR_AGENT: "1" }, tool: "cursor" },
+  { markers: { GEMINI_CLI: "1" }, tool: "gemini-cli" },
+  { markers: { CLINE_ACTIVE: "true" }, tool: "cline" },
+  { markers: { AI_AGENT: "opencode", OPENCODE: "1" }, tool: "opencode" },
+] as const;
+
+it.effect.each(otherTools)("from $tool, cookout refuses a human's token naming $tool", ({ markers, tool }) =>
+  Effect.gen(function* humanFromOtherTool() {
+    const refused = yield* postAs("human", markers);
+
+    expect(refused).toMatchObject({
+      exitCode: 1,
+      stderrJson: { error: { code: "agent_as_human", details: { agentTool: tool } } },
+    });
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);

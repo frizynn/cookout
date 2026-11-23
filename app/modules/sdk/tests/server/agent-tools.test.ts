@@ -31,13 +31,19 @@ function whoamiWithTool(
 }
 
 const markerSets = [
-  { markers: { CLAUDECODE: "1" }, shown: "CLAUDECODE=1" },
-  { markers: { AI_AGENT: "claude-code" }, shown: "AI_AGENT" },
+  { markers: { CLAUDECODE: "1" }, shown: "CLAUDECODE=1", tool: "claude-code" },
+  { markers: { AI_AGENT: "claude-code" }, shown: "AI_AGENT", tool: "claude-code" },
+  { markers: { CODEX_THREAD_ID: "019a-thread" }, shown: "CODEX_THREAD_ID", tool: "codex" },
+  { markers: { CODEX_CI: "1" }, shown: "CODEX_CI=1", tool: "codex" },
+  { markers: { CURSOR_AGENT: "1" }, shown: "CURSOR_AGENT", tool: "cursor" },
+  { markers: { GEMINI_CLI: "1" }, shown: "GEMINI_CLI=1", tool: "gemini-cli" },
+  { markers: { CLINE_ACTIVE: "true" }, shown: "CLINE_ACTIVE=true", tool: "cline" },
+  { markers: { AI_AGENT: "opencode", OPENCODE: "1" }, shown: "OPENCODE=1 with AI_AGENT", tool: "opencode" },
 ] as const;
 
 it.effect.each(markerSets)(
-  "a human's COOKOUT_TOKEN where $shown is set is refused with 403 agent_as_human",
-  ({ markers }) =>
+  "a human's COOKOUT_TOKEN where $shown is set is refused with 403 agent_as_human naming $tool",
+  ({ markers, tool }) =>
     Effect.gen(function* humanFromAgent() {
       const cookout = yield* TestCookout;
       const ada = yield* cookout.createIdentity("ada", { kind: "human" });
@@ -46,11 +52,11 @@ it.effect.each(markerSets)(
 
       expect(error).toMatchObject({
         code: "agent_as_human",
-        details: { agentTool: "claude-code", identity: "ada" },
+        details: { agentTool: tool, identity: "ada" },
         status: FORBIDDEN,
       });
       expect(error.message).toContain("ada");
-      expect(error.message).toContain("claude-code");
+      expect(error.message).toContain(tool);
       expect(error.message).toContain("COOKOUT_ALLOW_HUMAN=1");
     }).pipe(Effect.provide(testCookout())),
 );
