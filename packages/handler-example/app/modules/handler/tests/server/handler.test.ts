@@ -17,6 +17,8 @@ const BAD_REQUEST = 400;
 const UNAUTHORIZED = 401;
 const NOT_FOUND = 404;
 const TOO_LARGE = 413;
+const ONCE = 1;
+const TWICE = 2;
 const OVER_TWO_MEBIBYTES = 2_097_153;
 
 const call = {
@@ -43,7 +45,7 @@ function signatureOf(body: string, secret: string): Effect.Effect<string> {
   }).pipe(Effect.provide(macLayer), Effect.orDie);
 }
 
-function deliver(body: string, headers: Readonly<Record<string, string>>): Effect.Effect<Answer> {
+function deliver(body: string, headers: Readonly<Record<string, string>>, times = ONCE): Effect.Effect<Answer> {
   return Effect.gen(function* deliverWebhook() {
     const received = yield* Ref.make<readonly unknown[]>([]);
     const server = handlerServer({
@@ -55,11 +57,12 @@ function deliver(body: string, headers: Readonly<Record<string, string>>): Effec
     });
     const response = yield* Effect.gen(function* send() {
       const url = yield* handlerUrl;
-      return yield* HttpClientRequest.post(`${url}/webhook`).pipe(
+      const post = HttpClientRequest.post(`${url}/webhook`).pipe(
         HttpClientRequest.setHeaders(headers),
         HttpClientRequest.bodyText(body, "application/json"),
         HttpClient.execute,
       );
+      return yield* Effect.repeat(post, { times: times - ONCE });
     }).pipe(Effect.provide(Layer.merge(server, FetchHttpClient.layer)), Effect.scoped, Effect.orDie);
     const calls = yield* Ref.get(received);
     return { calls, status: response.status };
@@ -157,5 +160,14 @@ it.effect("a webhook body over 2 MiB gets 413 before its signature is checked, a
     const answer = yield* deliver(body, { "cookout-signature": signature });
 
     expect(answer).toStrictEqual({ calls: [], status: TOO_LARGE });
+  }),
+);
+
+it.effect("a call ID delivered again is answered 202 again and handed on each time", () =>
+  Effect.gen(function* deliveredTwice() {
+    const signature = yield* signatureOf(callBody, SECRET);
+    const answer = yield* deliver(callBody, { "cookout-signature": signature }, TWICE);
+
+    expect(answer).toStrictEqual({ calls: [call, call], status: ACCEPTED });
   }),
 );

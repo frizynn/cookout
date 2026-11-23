@@ -27,7 +27,7 @@ const isPublicUrl = Schema.makeFilter(
 const adminTokenRule = `COOKOUT_ADMIN_TOKEN must be set to a token of at least ${String(SHORTEST_ADMIN_TOKEN)} characters, such as one made by \`openssl rand -hex 32\`. It becomes the admin identity's token.`;
 
 const isStrongEnoughToken = Schema.makeFilter(
-  (adminToken: string | undefined) => (adminToken ?? "").length >= SHORTEST_ADMIN_TOKEN || adminTokenRule,
+  (adminToken: string) => adminToken.length >= SHORTEST_ADMIN_TOKEN || adminTokenRule,
 );
 
 /** `PORT`: the port `cookout serve` listens on. 0 picks a free port. */
@@ -52,10 +52,9 @@ export const publicUrl = Config.schema(Schema.String.check(isPublicUrl), "COOKOU
  * admin's only token (Matt, 2026-11-23, mattpocock/cookout#85). Unset, empty or shorter than 32 characters, serve
  * refuses to start, and the message never shows the value.
  */
-export const adminToken = Config.schema(
-  Schema.UndefinedOr(Schema.String).check(isStrongEnoughToken),
-  "COOKOUT_ADMIN_TOKEN",
-).pipe(Config.map((value) => Redacted.make(value ?? "")));
+export const adminToken = Config.schema(Schema.String.check(isStrongEnoughToken), "COOKOUT_ADMIN_TOKEN").pipe(
+  Config.map((value) => Redacted.make(value)),
+);
 
 /** `COOKOUT_DB`: the SQLite file `cookout serve` keeps its data in. */
 export const databasePath = Config.String("COOKOUT_DB").pipe(Config.withDefault("cookout.db"));

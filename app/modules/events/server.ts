@@ -67,10 +67,7 @@ const eventsRoute: Route<Needs> = {
       yield* holdStreamPlace.pipe(Scope.provide(connection));
       const streams = yield* Effect.forEach(allSources, (source) => source({ caller, lastEventId, url }), {
         concurrency: "unbounded",
-      }).pipe(
-        Scope.provide(connection),
-        Effect.onError(() => Scope.close(connection, Exit.void)),
-      );
+      }).pipe(Scope.provide(connection));
       const body = Stream.mergeAll(streams, { concurrency: "unbounded" }).pipe(
         Stream.takeUntil(isLast),
         Stream.map(sseText),

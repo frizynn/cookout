@@ -92,3 +92,19 @@ it.effect("an identity holds only so many open event streams, and closing one fr
     expect(refused).toMatchObject({ code: "too_many_streams", status: TOO_MANY });
   }).pipe(Effect.provide(testCookout({ streamsPerIdentity: ONE }))),
 );
+
+it.effect("a request without a token is refused with 401 at the token gate, and uses no identity's limit", () =>
+  Effect.gen(function* noToken() {
+    const cookout = yield* TestCookout;
+    const anonymous = cookout.clientFor();
+    const first = yield* refusal(() => anonymous.whoami());
+    const second = yield* refusal(() => anonymous.whoami());
+    const admin = yield* answer(() => cookout.client.whoami());
+
+    expect([first, second, admin]).toMatchObject([
+      { code: "token_missing", status: 401 },
+      { code: "token_missing", status: 401 },
+      { identity: { name: "admin" } },
+    ]);
+  }).pipe(Effect.provide(testCookout({ requestsPerMinute: ONE }))),
+);

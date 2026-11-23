@@ -29,7 +29,7 @@ export type TestCookoutService = {
   readonly url: string;
   readonly adminToken: Token;
   readonly client: CookoutClient;
-  readonly clientFor: (token: string | undefined, options?: Pick<CookoutClientOptions, "leaseId">) => CookoutClient;
+  readonly clientFor: (token?: string, options?: Pick<CookoutClientOptions, "leaseId">) => CookoutClient;
   readonly createIdentity: (name: string, options?: CreateTestIdentityOptions) => Effect.Effect<TestIdentity>;
   readonly startSecondServer: Effect.Effect<BootedServer>;
   readonly restart: Effect.Effect<CookoutClient>;
