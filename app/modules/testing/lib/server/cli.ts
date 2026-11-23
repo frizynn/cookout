@@ -30,6 +30,12 @@ interface DevProcess {
   readonly stop: Effect.Effect<void>;
   readonly url: string;
   readonly webhookFakeUrl: string;
+  readonly webUrl: string;
+}
+
+interface ServeWithWeb {
+  readonly database: string;
+  readonly webFolder: string;
 }
 
 interface Invocation {
@@ -55,13 +61,13 @@ interface Started<Line> {
 const EXIT_SUCCESS = 0;
 const EXIT_FAILURE = 1;
 const verbLayers: ServeLayers = { storage: () => memoryStorage };
-const serveLayers: ServeLayers = { storage: sqliteStorage };
 const isListening = Schema.is(Schema.Struct({ listening: Schema.String }));
 const isDevRunning = Schema.is(
   Schema.Struct({
     adminToken: Schema.String,
     database: Schema.String,
     url: Schema.String,
+    webUrl: Schema.String,
     webhookFakeUrl: Schema.String,
   }),
 );
@@ -151,15 +157,26 @@ function startUntil<Line>(
   });
 }
 
-function startServe(database: string): Effect.Effect<ServeProcess, never, Needs | Scope.Scope> {
+function startServeOn(database: string, layers: ServeLayers): Effect.Effect<ServeProcess, never, Needs | Scope.Scope> {
   const args = ["serve", "--port", "0", "--host", "127.0.0.1", "--db", database];
-  const serve = exitCodeAfter(runCommandLine(args, serveLayers));
+  const serve = exitCodeAfter(runCommandLine(args, layers));
   return Effect.map(startUntil(serve, isListening), ({ line, lines, stdout, stop }) => ({
     lines,
     stdout,
     stop,
     url: line.listening,
   }));
+}
+
+function startServe(database: string): Effect.Effect<ServeProcess, never, Needs | Scope.Scope> {
+  return startServeOn(database, { storage: sqliteStorage });
+}
+
+function startServeWithWeb({
+  database,
+  webFolder,
+}: ServeWithWeb): Effect.Effect<ServeProcess, never, Needs | Scope.Scope> {
+  return startServeOn(database, { storage: sqliteStorage, webFolder });
 }
 
 const devStart = exitCodeAfter(devCommandLine(["start"]));
@@ -174,6 +191,7 @@ export {
   type DevProcess,
   type Needs as CommandLineNeeds,
   type ServeProcess,
+  type ServeWithWeb,
   cliResult,
   commandLineServices,
   parseLine,
@@ -181,4 +199,5 @@ export {
   runDev,
   startDev,
   startServe,
+  startServeWithWeb,
 };

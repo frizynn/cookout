@@ -6,12 +6,14 @@ import { cookoutServer } from "../../../cli/server.ts";
 import { secretsLive } from "../../../secrets/server.ts";
 import { serverUrl } from "../../../http/server.ts";
 import { sqliteStorage } from "../../../storage/server.ts";
+import { viteDevServer } from "./web.ts";
 
 interface DevCookout {
   readonly adminToken: string;
   readonly database: string;
   readonly url: string;
   readonly webhookFakeUrl: string;
+  readonly webUrl: string;
 }
 
 type Needs = FileSystem.FileSystem | Path.Path | Scope.Scope;
@@ -34,8 +36,9 @@ function devCookout(port: number): Effect.Effect<DevCookout, never, Needs> {
     const server = yield* Layer.build(cookoutServer({ host: LOCAL, port }).pipe(Layer.provide(live)));
     const fake = yield* Layer.build(webhookFake);
     const url = yield* Effect.provideContext(serverUrl, server);
+    const webUrl = yield* viteDevServer(url);
     const { adminToken = "" } = Context.get(server, FirstBoot);
-    return { adminToken, database, url, webhookFakeUrl: Context.get(fake, WebhookFake).url };
+    return { adminToken, database, url, webUrl, webhookFakeUrl: Context.get(fake, WebhookFake).url };
   }).pipe(Effect.orDie);
 }
 

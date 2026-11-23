@@ -16,6 +16,7 @@ Run it as a background command (or in its own terminal); it runs until stopped. 
   "database": "/tmp/cookout-dev-…/cookout.db",
   "url": "http://127.0.0.1:42435",
   "webhookFakeUrl": "http://127.0.0.1:43043",
+  "webUrl": "http://127.0.0.1:5173",
   "message": "…"
 }
 ```
@@ -192,8 +193,28 @@ docker stop cookout
 docker volume rm cookout-data
 ```
 
+## Open the web UI
+
+`pnpm dev` also runs the Vite dev server for the web UI (`index.html` at the repo root, which loads `app/web.tsx`), on `127.0.0.1` and a free port. It passes `/v1` on to the dev cookout, so the page and the API share an origin. Open the start line's `webUrl` in a browser, or check it from the shell:
+
+```sh
+curl -fsS $(grep '^{' /tmp/cookout-dev.log | jq -r .webUrl)/
+curl -fsS $(grep '^{' /tmp/cookout-dev.log | jq -r .webUrl)/v1/health
+```
+
+The first prints the page's HTML, which loads `/app/web.tsx`; the second prints the cookout's health check, through Vite. Editing `app/web.tsx` reloads the page.
+
+To see the built UI as `cookout serve` serves it, build and serve the built binary:
+
+```sh
+pnpm build
+node dist/main.js serve --port 3000 --host 127.0.0.1 --db /tmp/cookout-built.db > /tmp/cookout-built.log 2>&1
+```
+
+Run the second command in the background (or its own terminal). `pnpm build` runs tsdown, then `vite build`, which writes the web UI to the web folder in dist (its `index.html` and its assets). `cookout serve` serves that `index.html` at `/` and each asset at `/assets/<file>`, without a token, so open `http://127.0.0.1:3000/`, or run `curl -fsS http://127.0.0.1:3000/`. Running `node app/main.ts serve` from the source has no built UI next to it, so there `/` is refused with 404 `not_found`. Stop it with `pkill -INT -f "[d]ist/main.js serve"`.
+
 ## Other checks
 
-- `pnpm pack:smoke` proves the published package works (CI runs it as its own job): it builds with tsdown, packs `@ai-hero/cookout`, installs the tarball in a temp directory, and drives `cookout serve`, `cookout whoami` and `@ai-hero/cookout/sdk` from there. Nothing is published.
+- `pnpm pack:smoke` proves the published package works (CI runs it as its own job): it builds with tsdown and Vite, packs `@ai-hero/cookout`, installs the tarball in a temp directory, and drives `cookout serve` (its health check and the web UI at `/`), `cookout whoami` and `@ai-hero/cookout/sdk` from there. Nothing is published.
 - The SDK's public surface is pinned by `api/sdk.api.md`. After a deliberate change to it, run `pnpm api:write` and commit the report.
 - To run the server alone on a file you keep: `node app/main.ts serve --port 3000 --db cookout.db`. On first boot it prints a one-time admin token as a JSON line.

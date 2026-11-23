@@ -11,6 +11,11 @@ import {
 import { expect, it } from "@effect/vitest";
 import { createCookoutClient } from "../../../sdk/index.ts";
 
+interface Fetched {
+  readonly status: number;
+  readonly text: string;
+}
+
 const OK = 200;
 const EXIT_SUCCESS = 0;
 const EXIT_FAILURE = 1;
@@ -42,6 +47,14 @@ function callWebhookFake(url: string): Effect.Effect<number> {
   );
 }
 
+function fetchedText(url: string): Effect.Effect<Fetched> {
+  return Effect.gen(function* fetchText() {
+    const response = yield* HttpClient.execute(HttpClientRequest.get(url));
+    const text = yield* response.text;
+    return { status: response.status, text };
+  }).pipe(Effect.provide(FetchHttpClient.layer), Effect.orDie);
+}
+
 it.effect("pnpm dev serves a fresh board and a webhook fake, and removes its database when it stops", () =>
   Effect.gen(function* devServesAndCleansUp() {
     const dev = yield* startDev;
@@ -57,6 +70,18 @@ it.effect("pnpm dev serves a fresh board and a webhook fake, and removes its dat
     expect(fakeStatus).toBe(OK);
     expect(keptWhileRunning).toBe(true);
     expect(keptAfterStop).toBe(false);
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
+it.effect("pnpm dev serves the web UI from the Vite dev server, which passes /v1 on to the cookout", () =>
+  Effect.gen(function* devServesTheWebUi() {
+    const dev = yield* startDev;
+    const page = yield* fetchedText(dev.webUrl);
+    const health = yield* fetchedText(`${dev.webUrl}/v1/health`);
+
+    expect([page.status, health.status]).toStrictEqual([OK, OK]);
+    expect(page.text).toContain('src="/app/web.tsx"');
+    expect(health.text).toContain('"status":"ok"');
   }).pipe(Effect.provide(commandLineServices)),
 );
 

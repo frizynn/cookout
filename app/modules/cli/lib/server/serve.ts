@@ -1,24 +1,32 @@
 import { Command, Flag } from "effect/cli";
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Option } from "effect";
 import { FirstBoot, firstBoot } from "../../../identities/server.ts";
+import type { Listen, Serving } from "../../../http/server.ts";
 import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import { databasePath, host, port } from "../../../config/server.ts";
 import { domainLayers, routes } from "./route-list.ts";
 import { httpServer, serverUrl } from "../../../http/server.ts";
 import type { FileSystem } from "effect";
-import type { Listen } from "../../../http/server.ts";
 import { printLine } from "./output.ts";
 import { requireTokenAndRenewLease } from "../../../leases/server.ts";
 
 export type ServeLayers = {
   readonly storage: (path: string) => Layer.Layer<Storage, StorageUnavailable, FileSystem.FileSystem>;
+  readonly webFolder?: string;
 };
 
-export const cookoutServer = (listen: Listen) =>
-  httpServer(listen, routes, requireTokenAndRenewLease).pipe(
+export const cookoutServer = (serving: Serving) =>
+  httpServer(serving, routes, requireTokenAndRenewLease).pipe(
     Layer.provideMerge(firstBoot),
     Layer.provideMerge(domainLayers),
   );
+
+function webFolderOf({ webFolder }: ServeLayers): Pick<Serving, "webFolder"> {
+  return Option.match(Option.fromNullishOr(webFolder), {
+    onNone: () => ({}),
+    onSome: (folder) => ({ webFolder: folder }),
+  });
+}
 
 const printAdminToken = Effect.gen(function* () {
   const { adminToken } = yield* FirstBoot;
@@ -34,7 +42,9 @@ const printAdminToken = Effect.gen(function* () {
 
 const runServer = (layers: ServeLayers, listen: Listen, database: string) =>
   Effect.gen(function* () {
-    const services = yield* Layer.build(cookoutServer(listen).pipe(Layer.provide(layers.storage(database))));
+    const services = yield* Layer.build(
+      cookoutServer({ ...listen, ...webFolderOf(layers) }).pipe(Layer.provide(layers.storage(database))),
+    );
     yield* printAdminToken.pipe(Effect.provideContext(services));
     const url = yield* serverUrl.pipe(Effect.provideContext(services));
     yield* printLine({ database, listening: url });
