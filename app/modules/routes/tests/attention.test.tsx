@@ -141,7 +141,7 @@ it("a For you row in the Inbox has an accent dot, not a filled block", { timeout
   const close = openAt({ client: reader, hash: "#/inbox" });
   const list = await screen.findByRole("list", { name: "For you" });
 
-  expect(accentsOf(() => within(list).getAllByRole("link"))).toStrictEqual([
+  expect(accentsOf(() => within(list).getAllByRole("listitem"))).toStrictEqual([
     "for you: false, dot: true, filled: false",
   ]);
 
