@@ -1,4 +1,4 @@
-import type { MergeRules } from "./lib/merge-ticket.ts";
+import type { MergeRules, Merged } from "./lib/merge-ticket.ts";
 import { fail } from "./lib/tools.ts";
 import { mergeTicket } from "./lib/merge-ticket.ts";
 import { spawnSync } from "node:child_process";
@@ -41,7 +41,7 @@ if (!Number.isInteger(ticket) || ticket <= NONE) {
   fail(SCRIPT, "usage: pnpm merge-ticket <N>, where ticket-N is a local branch.");
 }
 
-const merged = mergeTicket({
+const merged: Merged = mergeTicket({
   attempts: ATTEMPTS,
   check: ["pnpm", "check"],
   cwd: process.cwd(),
