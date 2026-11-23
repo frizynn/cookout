@@ -4,12 +4,20 @@ import { DaySeparator } from "./day-separator.tsx";
 import { MessageLayout } from "./message-layout.tsx";
 import type { ReactNode } from "react";
 import type { StandaloneMessageParts } from "./parts.ts";
+import { useRightClick } from "./use-right-click.ts";
 
 export function StandaloneMessage(parts: StandaloneMessageParts): ReactNode {
+  const article = useRightClick(parts.menu);
+  const handleAction = parts.onAction;
   return (
     <>
       {parts.day !== null && <DaySeparator label={parts.day} />}
-      <article aria-label={parts.label} className={messageClass(parts)} data-for-you={parts.mark === "for-you"}>
+      <article
+        aria-label={parts.label}
+        className={messageClass(parts)}
+        data-for-you={parts.mark === "for-you"}
+        ref={article}
+      >
         {parts.mark === "for-you" && <AccentDot place={dotPlace(parts.grouped)} />}
         <MessageLayout
           actionHref={parts.actionHref}
@@ -21,6 +29,7 @@ export function StandaloneMessage(parts: StandaloneMessageParts): ReactNode {
           name={parts.name}
           nameHref={parts.nameHref}
           note={parts.note}
+          onAction={handleAction}
           time={parts.time}
         >
           {parts.children}

@@ -1,12 +1,12 @@
 import type { ChannelName, Message, MessageId } from "../../sdk/index.ts";
 import type { MessageMenu, ThreadNews } from "../../unread/index.ts";
 import { markOf, threadHref, threadSummaryOf } from "./message-marks.ts";
+import { useMessageMenu, useReplyAction } from "./use-message-menu.ts";
 import { MessageData } from "./message-data.tsx";
 import { MessageItem } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
 import { ReplySummary } from "./reply-summary.tsx";
 import { useAuthor } from "./use-author.ts";
-import { useMessageMenu } from "./use-message-menu.ts";
 import { useMessageTime } from "./use-time-ago.ts";
 
 const REPLY = "Reply";
@@ -26,6 +26,7 @@ interface MessageEntryProps {
   readonly parent: Message | null;
   readonly news: ThreadNews | null;
   readonly menu: MessageMenu;
+  readonly reply: ((name: string | null) => void) | null;
 }
 
 export function MessageEntry(props: MessageEntryProps): ReactNode {
@@ -33,7 +34,8 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
   const { agent, displayName, note, profileHref } = useAuthor(message.author);
   const href = threadHref({ channel: props.channel, message });
   const summary = threadSummaryOf(message);
-  const menu = useMessageMenu({ menu: props.menu, messageId: message.id });
+  const menu = useMessageMenu({ menu: props.menu, messageId: message.id, place: "stream" });
+  const handleReply = useReplyAction({ me: props.me, message, reply: props.reply });
   return (
     <MessageItem
       actionHref={href}
@@ -47,6 +49,7 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
       name={message.author.name}
       nameHref={profileHref}
       note={note}
+      onAction={handleReply}
       time={useMessageTime(message.createdAt)}
       unreadLine={props.row.unreadLine}
     >

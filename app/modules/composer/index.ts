@@ -14,6 +14,9 @@
  * and puts the caret after it; `clear` empties the box. While there are
  * suggestions, one is `highlighted` (the first, after each edit): `highlight`
  * moves it down or up, wrapping round, and `chooseHighlighted` chooses it.
+ * `replyTo(name)` puts `@name ` at the start of the box (Reply on a thread's
+ * message), unless the text already mentions them or they are deactivated,
+ * and asks the box to take focus with the caret at the end.
  * `identities` is the identity list itself, an external store too, loaded
  * when its first reader subscribes, so a view can tell a human from an agent
  * and show each display name. With `live`, an identity that changes (its
@@ -107,6 +110,9 @@ function createDraft(list: IdentityList, sources: Sources, load: () => void): Dr
         ),
       );
     },
+    replyTo: (name) => {
+      change((snapshot) => changes.repliedTo(snapshot, name));
+    },
     snapshot: () => current,
     subscribe: listeners.add,
     unpick: () => {
@@ -165,6 +171,8 @@ export interface Draft {
   readonly choose: (name: string) => void;
   /** Chooses the highlighted suggestion, if there are any: a mention to put in, or a command to pick. */
   readonly chooseHighlighted: () => void;
+  /** Puts `@name ` at the start of the box, unless the text already mentions them or they are deactivated, and has the box take focus with the caret at the end; with `null` (replying to yourself) it only takes focus. */
+  readonly replyTo: (name: string | null) => void;
   /** Picks the named command, if the box suggests it, keeping the text for `unpick`. */
   readonly pick: (name: string) => void;
   /** Drops the picked command and keeps the text, so the box comes back as it was, its suggestions hidden and `returned` true until the next edit. */

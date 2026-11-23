@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 
 export function MessageLayout(parts: MessageLayoutParts): ReactNode {
   const { time } = parts;
+  const handleAction = parts.onAction;
   return (
     <>
       <div className="flex w-9 shrink-0 justify-center">
@@ -26,7 +27,12 @@ export function MessageLayout(parts: MessageLayoutParts): ReactNode {
         )}
         {parts.children}
       </div>
-      <HoverActions actionHref={parts.actionHref} actionLabel={parts.actionLabel} menu={parts.menu} />
+      <HoverActions
+        actionHref={parts.actionHref}
+        actionLabel={parts.actionLabel}
+        menu={parts.menu}
+        onAction={handleAction}
+      />
     </>
   );
 }

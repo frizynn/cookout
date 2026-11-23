@@ -49,6 +49,7 @@ export function MessageBox(props: MessageBoxProps): ReactNode {
         <TextArea
           caret={written.caret}
           choosing={choosing}
+          focusRequests={written.focusRequests}
           focused={props.focused}
           label={text.field}
           name="text"

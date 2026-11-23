@@ -4,6 +4,7 @@ import { MarkUnreadRefusal } from "./mark-unread-refusal.tsx";
 import { MessageEntry } from "./message-entry.tsx";
 import { MessageList } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
+import type { Reply } from "./use-message-menu.ts";
 import { streamRows } from "./stream-rows.ts";
 
 interface MessageStreamProps {
@@ -16,6 +17,7 @@ interface MessageStreamProps {
   readonly open: MessageId | null;
   readonly threads: ReadonlyMap<MessageId, ThreadNews>;
   readonly menu: MessageMenu;
+  readonly reply: Reply | null;
 }
 
 export function MessageStream(props: MessageStreamProps): ReactNode {
@@ -37,6 +39,7 @@ export function MessageStream(props: MessageStreamProps): ReactNode {
             news={props.threads.get(row.message.id) ?? null}
             open={props.open}
             parent={props.after}
+            reply={props.reply}
             row={row}
           />
         ))}

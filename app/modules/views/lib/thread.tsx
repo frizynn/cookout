@@ -46,6 +46,9 @@ export function ThreadView(props: ThreadProps): ReactNode {
   const state = useSyncExternalStore(messages.subscribe, messages.snapshot);
   const line = props.unread.newLine(channel, props.thread);
   const readPosition = useSyncExternalStore(line.subscribe, line.snapshot);
+  const draft = props.composer.draft(`${channel}/${String(props.thread)}`, () =>
+    membersOf(messages.snapshot(), props.me),
+  );
   return (
     <SidePanel
       closeHref={hrefOf({ channel, name: "channel" })}
@@ -54,15 +57,15 @@ export function ThreadView(props: ThreadProps): ReactNode {
       label={TEXT.thread}
     >
       <ScrollArea count={countOf(state)} label={TEXT.replies}>
-        <ThreadBody me={props.me} menu={props.unread.menu} state={state} readPosition={readPosition} />
+        <ThreadBody
+          me={props.me}
+          menu={props.unread.menu}
+          readPosition={readPosition}
+          reply={draft.replyTo}
+          state={state}
+        />
       </ScrollArea>
-      <ReplyFooter
-        draft={props.composer.draft(`${channel}/${String(props.thread)}`, () =>
-          membersOf(messages.snapshot(), props.me),
-        )}
-        messages={messages}
-        state={state}
-      />
+      <ReplyFooter draft={draft} messages={messages} state={state} />
     </SidePanel>
   );
 }

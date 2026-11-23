@@ -44,6 +44,7 @@ interface DraftSnapshot {
   readonly command: Command | null;
   readonly highlighted: number;
   readonly returned: boolean;
+  readonly focusRequests: number;
 }
 
 interface Sources {
@@ -56,6 +57,7 @@ const EMPTY = {
   caret: NOTHING,
   command: null,
   commands: [],
+  focusRequests: NOTHING,
   highlighted: NOTHING,
   returned: false,
   suggestions: [],
@@ -68,7 +70,30 @@ function written(sources: Sources, previous: DraftSnapshot, typed: Typed): Draft
   const { caret, text } = typed;
   const commands = commandsFor(sources.commands(), text);
   const suggestions = suggestionsFor(sources, text, caret);
-  return { caret, command: previous.command, commands, highlighted: NOTHING, returned: false, suggestions, text };
+  return {
+    caret,
+    command: previous.command,
+    commands,
+    focusRequests: previous.focusRequests,
+    highlighted: NOTHING,
+    returned: false,
+    suggestions,
+    text,
+  };
+}
+
+function mentions(text: string, name: string): boolean {
+  return new RegExp(`(?<![\\w.@-])@${name}(?![a-z0-9-])`, "u").test(text);
+}
+
+function repliedTo(sources: Sources, snapshot: DraftSnapshot, name: string | null): DraftSnapshot {
+  const deactivated = sources.identities().some((identity) => identity.name === name && identity.deactivated === true);
+  let { text } = snapshot;
+  if (name !== null && !deactivated && !mentions(text, name)) {
+    text = `@${name} ${text}`;
+  }
+  const result = written(sources, snapshot, { caret: text.length, text });
+  return { ...result, focusRequests: snapshot.focusRequests + ONE };
 }
 
 function mentioned(sources: Sources, snapshot: DraftSnapshot, name: string): DraftSnapshot {
@@ -81,7 +106,7 @@ function mentioned(sources: Sources, snapshot: DraftSnapshot, name: string): Dra
 function picked(snapshot: DraftSnapshot, commands: readonly Command[]): DraftSnapshot {
   let result = snapshot;
   for (const command of commands) {
-    result = { ...EMPTY, caret: snapshot.caret, command, text: snapshot.text };
+    result = { ...EMPTY, caret: snapshot.caret, command, focusRequests: snapshot.focusRequests, text: snapshot.text };
   }
   return result;
 }
@@ -116,6 +141,7 @@ interface Changes {
   readonly highlightMoved: (snapshot: DraftSnapshot, direction: "down" | "up") => DraftSnapshot;
   readonly dismissed: (snapshot: DraftSnapshot) => DraftSnapshot;
   readonly unpicked: (snapshot: DraftSnapshot) => DraftSnapshot;
+  readonly repliedTo: (snapshot: DraftSnapshot, name: string | null) => DraftSnapshot;
 }
 
 function changesFor(sources: Sources): Changes {
@@ -125,6 +151,7 @@ function changesFor(sources: Sources): Changes {
     highlightMoved,
     mentioned: (snapshot, name) => mentioned(sources, snapshot, name),
     picked,
+    repliedTo: (snapshot, name) => repliedTo(sources, snapshot, name),
     unpicked,
     written: (previous, typed) => written(sources, previous, typed),
   };
