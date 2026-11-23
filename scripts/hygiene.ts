@@ -59,12 +59,25 @@ const envExample = () => {
   ];
 };
 
+function readmeSettings(): readonly string[] {
+  if (!existsSync("README.md")) {
+    return ["README.md is missing."];
+  }
+  const readme = readFileSync("README.md", "utf8");
+  return [...configReads()]
+    .filter((name) => !readme.includes(`\n- \`${name}\` (`))
+    .map(
+      (name) =>
+        `config reads ${name}, but the README's Settings section has no line for it, such as "- \`${name}\` (default …): …".`,
+    );
+}
+
 const wikiCitations = () =>
   git(["grep", "-l", "-F", WIKI, "--", ".", `:!${SELF}`]).map(
     (file) => `${file} names the ${WIKI}. Cite a GitHub issue or PR instead.`,
   );
 
-const failures = [...gitlinks(), ...workspaceFile(), ...envExample(), ...wikiCitations()];
+const failures = [...gitlinks(), ...workspaceFile(), ...envExample(), ...readmeSettings(), ...wikiCitations()];
 for (const failure of failures) {
   console.error(`hygiene: ${failure}`);
 }

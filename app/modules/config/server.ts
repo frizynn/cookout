@@ -1,6 +1,7 @@
 /**
  * Every environment variable the cookout reads, with its default. Nothing else
- * reads the environment, and every variable here has a line in `.env.example`.
+ * reads the environment, and every variable here has a line in `.env.example`
+ * and a line in the README's Settings section (`pnpm hygiene` checks both).
  */
 import { Config, Redacted, Schema } from "effect";
 
