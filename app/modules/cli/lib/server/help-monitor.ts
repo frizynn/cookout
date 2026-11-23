@@ -9,7 +9,7 @@ Claude Code's Monitor tool turns each stdout line of a long-running command into
 Monitor({ command: "cookout watch", description: "cookout inbox for <identity>", timeout_ms: 1800000 })
 \`\`\`
 
-Replace \`<identity>\` with the identity behind \`COOKOUT_TOKEN\` (\`cookout whoami\` shows it).
+Replace \`<identity>\` with the identity this session acts as (\`cookout whoami\` shows it).
 
 What \`cookout watch\` prints:
 
