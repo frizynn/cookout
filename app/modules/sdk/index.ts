@@ -6,7 +6,13 @@
  * that code, typed as `UnknownErrorCode`.
  */
 import type { AckResponse, FollowResponse, InboxResponse, SubscriptionResponse } from "./lib/inbox.ts";
-import type { AddCommandRequest, CommandWithSecretResponse, ListCommandsResponse } from "./lib/commands.ts";
+import type {
+  AddCommandRequest,
+  CallCommandRequest,
+  CallCommandResponse,
+  CommandWithSecretResponse,
+  ListCommandsResponse,
+} from "./lib/commands.ts";
 import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "../channels/index.ts";
 import type {
   CreateIdentityRequest,
@@ -52,6 +58,8 @@ export type {
 } from "../channels/index.ts";
 export type {
   AddCommandRequest,
+  CallCommandRequest,
+  CallCommandResponse,
   Command,
   CommandName,
   CommandSecret,
@@ -216,6 +224,14 @@ export type CookoutClient = {
   readonly addCommand: (request: AddCommandRequest) => Promise<CommandWithSecretResponse>;
   /** `GET /v1/commands`: every command, sorted by name, without its secret. */
   readonly listCommands: () => Promise<ListCommandsResponse>;
+  /**
+   * `POST /v1/commands/:name/calls`: calls a command. Data that breaks its JSON Schema is 400 `invalid_request`
+   * with the schema errors in `details` (paths start at `data`), and nothing is posted. Otherwise the call is
+   * posted in the channel as a top-level message by the caller with data `{ command, data }`, the caller follows
+   * its thread, and the answer (202) comes without waiting for the handler. An unknown command is 404
+   * `command_not_found`.
+   */
+  readonly callCommand: (name: string, request: CallCommandRequest) => Promise<CallCommandResponse>;
 };
 
 /**

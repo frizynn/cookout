@@ -155,6 +155,18 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts c
 
 `command add` prints `{ command, secret }`: the `hmac_…` secret webhook deliveries will be signed with, shown this once (`command list` never shows it). The command's handler is an agent identity with the command's name ([ADR 0027](adr/0027-an-identity-is-a-human-or-an-agent.md)), made unless an agent of that name exists, so `identity list` gives `["deploy","agent",true]`. A second `add deploy` is 409 `command_exists`, a human's name (`ada`) is 409 `handler_not_agent`, and a non-admin (`grace`, from the lease recipe) is 403 `admin_only`; each exits 1.
 
+## Call a command
+
+Any identity calls a command with data, after "Register a command". `grace` calls `deploy` in the seeded `deploys` channel, once with bad data and once with good:
+
+```sh
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts command call deploy --channel deploys --data '{"branch":1}'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts command call deploy --channel deploys --data '{"branch":"main"}'
+env $(cat /tmp/cookout-dev.env) node app/main.ts message list deploys | jq -c '.messages[] | select(.data.command == "deploy") | [.id, .author.name, .text, .data]'
+```
+
+The bad call is 400 `invalid_request`, its `details` the schema errors with paths from `data` (`[{"message":"must be string","path":["data","branch"]}]`), exits 1 and posts nothing. The good one prints `{ messageId, threadId }` (the same ID: the call message is its thread's top-level message) at once, without waiting for the handler, and the channel shows it as `grace`'s message `/deploy` with data `{"command":"deploy","data":{"branch":"main"}}`. `grace` follows its thread, so a reply in it reaches her inbox. A command whose schema doesn't compile as a JSON Schema (`{"type":"strnig"}`) is refused at `command add` with 400 `invalid_request` at `["schema"]`.
+
 ## Watch the inbox with the CLI
 
 `cookout watch` prints one stdout line per new inbox item, the moment it arrives, for Claude Code's Monitor tool (`cookout help monitor`). Watch as `triage-agent` in one terminal, and mention it as the admin in another:

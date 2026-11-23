@@ -1,4 +1,4 @@
-import type { Command, CommandWithSecretResponse, ListCommandsResponse } from "../../index.ts";
+import type { CallCommandResponse, Command, CommandWithSecretResponse, ListCommandsResponse } from "../../index.ts";
 import {
   commandDescriptionLength,
   commandNamePattern,
@@ -8,7 +8,9 @@ import {
   isCommandSecret,
 } from "../../index.ts";
 import { identityNamePattern, isIdentityName } from "../../../identities/index.ts";
+import { ChannelNameSchema } from "../../../channels/server.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
+import { MessageIdSchema } from "../../../messages/server.ts";
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
 
@@ -65,4 +67,10 @@ export const CommandWithSecretResponseSchema = matchesWire<CommandWithSecretResp
 
 export const ListCommandsResponseSchema = matchesWire<ListCommandsResponse>()(
   Schema.Struct({ commands: Schema.Array(CommandSchema) }),
+);
+
+export const CallCommandRequestSchema = Schema.Struct({ channel: ChannelNameSchema, data: Schema.Json });
+
+export const CallCommandResponseSchema = matchesWire<CallCommandResponse>()(
+  Schema.Struct({ messageId: MessageIdSchema, threadId: MessageIdSchema }),
 );

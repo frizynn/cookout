@@ -1,12 +1,19 @@
-import type { AddCommandRequest, CommandWithSecretResponse, ListCommandsResponse } from "../../commands/index.ts";
-import { isCommandWithSecretResponse, isListCommandsResponse } from "./generated/validators.js";
+import type {
+  AddCommandRequest,
+  CallCommandRequest,
+  CallCommandResponse,
+  CommandWithSecretResponse,
+  ListCommandsResponse,
+} from "../../commands/index.ts";
+import { commandCallsPath, commandsPath } from "../../commands/index.ts";
+import { isCallCommandResponse, isCommandWithSecretResponse, isListCommandsResponse } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
-import { commandsPath } from "../../commands/index.ts";
 import { send } from "./request.ts";
 
 interface CommandCalls {
   readonly addCommand: (request: AddCommandRequest) => Promise<CommandWithSecretResponse>;
   readonly listCommands: () => Promise<ListCommandsResponse>;
+  readonly callCommand: (name: string, request: CallCommandRequest) => Promise<CallCommandResponse>;
 }
 
 function commandCalls(server: ClientConnection): CommandCalls {
@@ -20,6 +27,16 @@ function commandCalls(server: ClientConnection): CommandCalls {
       });
       return added;
     },
+    callCommand: async (name, body) => {
+      const called = await send(server, {
+        body,
+        isExpected: isCallCommandResponse,
+        method: "POST",
+        params: { name },
+        path: commandCallsPath,
+      });
+      return called;
+    },
     listCommands: async () => {
       const listed = await send(server, { isExpected: isListCommandsResponse, method: "GET", path: commandsPath });
       return listed;
@@ -27,5 +44,11 @@ function commandCalls(server: ClientConnection): CommandCalls {
   };
 }
 
-export type { AddCommandRequest, CommandWithSecretResponse, ListCommandsResponse } from "../../commands/index.ts";
+export type {
+  AddCommandRequest,
+  CallCommandRequest,
+  CallCommandResponse,
+  CommandWithSecretResponse,
+  ListCommandsResponse,
+} from "../../commands/index.ts";
 export { commandCalls };
