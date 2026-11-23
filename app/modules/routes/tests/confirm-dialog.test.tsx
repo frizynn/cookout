@@ -41,7 +41,7 @@ async function undeletableAgent(name: string): Promise<void> {
 async function askingToDeactivate(name: string, client: CookoutClient): Promise<() => void> {
   await undeletableAgent(name);
   const close = openAt({ client, hash: `#/people/${name}` });
-  fireEvent.click(await inProfile().findByRole("button", { name: "Deactivate" }));
+  fireEvent.click(await inProfile().findEnabledButton("Deactivate"));
   await screen.findByRole("alertdialog", { name: `Deactivate @${name}?` });
   return close;
 }

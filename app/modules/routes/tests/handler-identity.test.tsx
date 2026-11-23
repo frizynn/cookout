@@ -50,7 +50,7 @@ it("deactivating a handler identity warns that its command stops replying, and s
 
   await withMessage(await addCommand({ name: "web-handler-off" }), "web-handler-off");
   const close = openAt({ client: adminClient(), hash: "#/people/web-handler-off" });
-  fireEvent.click(await inProfile().findByRole("button", { name: "Deactivate" }));
+  fireEvent.click(await inProfile().findEnabledButton("Deactivate"));
   await inDialog().findByText(
     "Its tokens and sessions stop working at once and it can't post; its messages stay. You can reactivate it later. /web-handler-off will stop replying until @web-handler-off is reactivated.",
   );
@@ -87,7 +87,7 @@ it("deactivating an identity that handles no command gives no handler warning", 
   const plain = await newIdentity({ kind: "agent", name: "web-handler-none" });
   await withMessage(plain.client, "web-handler-none");
   const close = openAt({ client: adminClient(), hash: "#/people/web-handler-none" });
-  fireEvent.click(await inProfile().findByRole("button", { name: "Deactivate" }));
+  fireEvent.click(await inProfile().findEnabledButton("Deactivate"));
 
   await expect(
     inDialog().findByText(
