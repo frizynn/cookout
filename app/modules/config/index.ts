@@ -35,8 +35,33 @@ const agentTools: readonly AgentToolMarkers[] = [
   { isRunning: (env) => env["GEMINI_CLI"] === "1", tool: "gemini-cli" },
   { isRunning: (env) => env["CLINE_ACTIVE"] === "true", tool: "cline" },
   { isRunning: (env) => env["OPENCODE"] === "1", tool: "opencode" },
-  { isRunning: (env) => isSet(env["AI_AGENT"]), tool: "claude-code" },
 ];
+
+const knownAiAgentTool = /^(?<tool>claude-code|opencode)(?:_.*)?$/u;
+const disallowedInToolName = /[^a-z0-9-]+/gu;
+const longerThanToolName = /^(?<kept>[a-z0-9-]{40}).+$/u;
+const UNKNOWN_TOOL = "unknown";
+
+function toolNamedBy(value: string): string {
+  const sanitised = value
+    .replace(knownAiAgentTool, "$<tool>")
+    .replaceAll(disallowedInToolName, "-")
+    .replace(/^-+/u, "")
+    .replace(longerThanToolName, "$<kept>")
+    .replace(/-+$/u, "");
+  if (sanitised === "") {
+    return UNKNOWN_TOOL;
+  }
+  return sanitised;
+}
+
+function aiAgentToolIn(env: Environment): { readonly agentTool?: string } {
+  const value = (env["AI_AGENT"] ?? "").toLowerCase();
+  if (value === "") {
+    return NOTHING;
+  }
+  return { agentTool: toolNamedBy(value) };
+}
 
 function urlIn(env: Environment): { readonly url?: string } {
   const url = env["COOKOUT_URL"] ?? "";
@@ -61,7 +86,9 @@ export const agentToolVariables: readonly string[] = [
 
 /**
  * The agent tool `env` shows runs the process, such as `claude-code` (Claude Code sets `CLAUDECODE=1` and
- * `AI_AGENT`), `codex`, `cursor`, `gemini-cli`, `cline` or `opencode`, unless `COOKOUT_ALLOW_HUMAN=1` says a human's token is meant to be used from it. A guard against
+ * `AI_AGENT`), `codex`, `cursor`, `gemini-cli`, `cline` or `opencode`, or, with only `AI_AGENT` set, the tool its value
+ * names: `claude-code` for `claude-code_<version>_agent`, `opencode`, or else the value lowercased, with each run of
+ * other characters made `-` and cut to 40 characters (`unknown` if nothing is left), unless `COOKOUT_ALLOW_HUMAN=1` says a human's token is meant to be used from it. A guard against
  * accidents, not a security boundary (ADR 0038).
  * @param env Where the markers are read from.
  * @returns The tool's name, if one is found and not overridden.
@@ -75,7 +102,7 @@ export function agentToolIn(env: Environment): { readonly agentTool?: string } {
       return { agentTool: tool };
     }
   }
-  return NOTHING;
+  return aiAgentToolIn(env);
 }
 
 /**

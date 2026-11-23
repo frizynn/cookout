@@ -153,7 +153,7 @@ export const cookoutUrl = Config.String("COOKOUT_URL").pipe(Config.withDefault("
 export const cookoutToken = Config.String("COOKOUT_TOKEN").pipe(Config.withDefault(""));
 
 /**
- * The variables that show which agent tool runs the CLI (`CLAUDECODE` and `AI_AGENT` for Claude Code), and
+ * The variables that show which agent tool runs the CLI (such as `CLAUDECODE` for Claude Code, and `AI_AGENT`), and
  * `COOKOUT_ALLOW_HUMAN`, as one environment for `agentToolIn`. Each defaults to empty.
  */
 export const agentToolEnvironment: Config.Config<Readonly<Record<string, string>>> = Config.all(
