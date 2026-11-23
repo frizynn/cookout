@@ -219,4 +219,5 @@ export const identityErrorCodes = [
   "identity_not_found",
   "last_admin",
   "not_owner",
+  "login_request_not_found",
 ] as const;

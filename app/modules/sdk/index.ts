@@ -40,6 +40,7 @@ import type {
 } from "./lib/messages.ts";
 import { eventCalls, eventOf } from "./lib/events.ts";
 import type { HealthResponse } from "../http/index.ts";
+import type { LoginCalls } from "./lib/identities.ts";
 import { channelCalls } from "./lib/channels.ts";
 import { commandCalls } from "./lib/commands.ts";
 import { connectionFor } from "./lib/request.ts";
@@ -143,7 +144,7 @@ export type CookoutClientOptions = {
   readonly leaseId?: LeaseId;
 };
 
-export type CookoutClient = {
+export type CookoutClient = LoginCalls & {
   /** `GET /v1/health`. Resolves when the server and its storage are usable. */
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */

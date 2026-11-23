@@ -5,11 +5,11 @@
  * identity name, and timed by the Effect clock. Over one, a request is refused with 429 `rate_limited` (with
  * `details.retryAfterSeconds`) or `too_many_streams`.
  */
+import { AddressLimit, Caller } from "../identities/server.ts";
 import { Clock, Context, Effect, Layer, String as Str } from "effect";
 import type { Config, Scope } from "effect";
 import { commandCallsPerMinute, requestsPerMinute, streamsPerIdentity } from "../config/server.ts";
 import type { Bucket } from "./lib/server/bucket.ts";
-import { Caller } from "../identities/server.ts";
 import { HttpServerRequest } from "effect/http";
 import type { Identity } from "../identities/index.ts";
 import type { Refusal } from "../http/index.ts";
@@ -27,7 +27,7 @@ function rateLimited(what: string, retryAfterSeconds: number): Refusal {
   return {
     code: "rate_limited",
     details: { retryAfterSeconds },
-    message: `Too many ${what} from this identity: try again in ${String(retryAfterSeconds)} s.`,
+    message: `Too many ${what}: try again in ${String(retryAfterSeconds)} s.`,
     status: TOO_MANY_REQUESTS,
   };
 }
@@ -40,17 +40,22 @@ function tooManyStreams(most: number): Refusal {
   };
 }
 
-function bucketsOf(perMinute: number, what: string): Admit {
+function keyedBuckets(perMinute: number, what: string): (key: string) => Effect.Effect<void, Refusal> {
   const buckets = new Map<string, Bucket>();
-  return (identity) =>
+  return (key) =>
     Effect.flatMap(Clock.currentTimeMillis, (nowMillis) => {
-      const taken = take({ bucket: buckets.get(identity.name), nowMillis, perMinute });
-      buckets.set(identity.name, taken.bucket);
+      const taken = take({ bucket: buckets.get(key), nowMillis, perMinute });
+      buckets.set(key, taken.bucket);
       if (taken.admitted) {
         return Effect.void;
       }
       return Effect.fail(rateLimited(what, taken.retryAfterSeconds));
     });
+}
+
+function bucketsOf(perMinute: number, what: string): Admit {
+  const admit = keyedBuckets(perMinute, `${what} from this identity`);
+  return (identity) => admit(identity.name);
 }
 
 function streamPlaces(most: number): (identity: Identity) => Effect.Effect<void, Refusal, Scope.Scope> {
@@ -135,4 +140,12 @@ export const holdStreamPlace: Effect.Effect<void, Refusal, Caller | Limits | Sco
     const caller = yield* Caller;
     yield* limits.holdStream(caller);
   },
+);
+
+/** The per-address request limit of `COOKOUT_REQUESTS_PER_MINUTE`, for the routes that need no token, empty when the server starts. */
+export const addressLimitLayer: Layer.Layer<AddressLimit, Config.ConfigError> = Layer.effect(
+  AddressLimit,
+  Effect.map(requestsPerMinute, (perMinute) => ({
+    admit: keyedBuckets(perMinute, "requests from this address"),
+  })),
 );

@@ -1,10 +1,10 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { identityResponseSchemas, loginResponseSchemas } from "../app/modules/identities/server.ts";
 import { channelResponseSchemas } from "../app/modules/channels/server.ts";
 import { commandResponseSchemas } from "../app/modules/commands/server.ts";
 import { eventResponseSchemas } from "../app/modules/events/server.ts";
 import { generateValidators } from "./lib/validators.ts";
 import { httpResponseSchemas } from "../app/modules/http/server.ts";
-import { identityResponseSchemas } from "../app/modules/identities/server.ts";
 import { inboxResponseSchemas } from "../app/modules/inbox/server.ts";
 import { leaseResponseSchemas } from "../app/modules/leases/server.ts";
 import { messageResponseSchemas } from "../app/modules/messages/server.ts";
@@ -27,6 +27,7 @@ const generated = generateValidators({
   identities: identityResponseSchemas,
   inbox: inboxResponseSchemas,
   leases: leaseResponseSchemas,
+  logins: loginResponseSchemas,
   messages: messageResponseSchemas,
 });
 const files: readonly GeneratedFile[] = [

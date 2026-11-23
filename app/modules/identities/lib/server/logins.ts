@@ -1,0 +1,203 @@
+import { AddressLimit, lifetimeOf, loginRequestNotFound, now, requireHuman } from "./login-support.ts";
+import { Caller, credentialsOf, sentToken } from "./auth.ts";
+import {
+  CollectLoginRequestSchema,
+  LoginCollectedResponseSchema,
+  LoginRequestResponseSchema,
+  LoginRequestStartedResponseSchema,
+  LogoutResponseSchema,
+  StartLoginRequestSchema,
+} from "./login-wire.ts";
+import { Effect, Option, Predicate } from "effect";
+import { HttpServerRequest, HttpServerResponse } from "effect/http";
+import type { LoginCollection, LoginRequest, NewLoginRequest, StorageUnavailable } from "../../../storage/server.ts";
+import {
+  approvalPathOf,
+  collectLoginRequestPath,
+  isUserCode,
+  loginPath,
+  loginRequestApprovalPath,
+  loginRequestPath,
+  loginRequestSeconds,
+  loginRequestsPath,
+} from "../../../logins/index.ts";
+import type { LoginRequestStartedResponse } from "../../../logins/index.ts";
+import type { Route } from "../../../http/server.ts";
+import { Secrets } from "../../../secrets/server.ts";
+import { Storage } from "../../../storage/server.ts";
+import type { Token } from "../../index.ts";
+import { token } from "../../index.ts";
+
+type Answer = HttpServerResponse.HttpServerResponse;
+
+const CREATED = 201;
+const ACCEPTED = 202;
+const CODE_ATTEMPTS = 5;
+const LAST_ATTEMPT = 1;
+const ONE_ATTEMPT = 1;
+
+function withinAddressLimit<Value, Failure, Needs>(
+  effect: Effect.Effect<Value, Failure, Needs>,
+): Effect.Effect<
+  Value,
+  Failure | typeof loginRequestNotFound,
+  Needs | AddressLimit | HttpServerRequest.HttpServerRequest
+> {
+  return Effect.gen(function* admitAddressThenRun() {
+    const limit = yield* AddressLimit;
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    yield* limit.admit(Option.getOrElse(request.remoteAddress, () => "unknown"));
+    return yield* effect;
+  });
+}
+
+type UnnamedRequest = Omit<NewLoginRequest, "userCode">;
+
+function addWithFreeCode(attemptsLeft: number) {
+  return (request: UnnamedRequest): Effect.Effect<string, StorageUnavailable, Storage | Secrets> =>
+    Effect.gen(function* addRequest() {
+      const storage = yield* Storage;
+      const secrets = yield* Secrets;
+      const userCode = yield* secrets.newUserCode;
+      const added = yield* storage.addLoginRequest({ ...request, userCode }, request.createdAt);
+      if (added === "added") {
+        return userCode;
+      }
+      if (attemptsLeft <= LAST_ATTEMPT) {
+        return yield* Effect.die(new Error("Every user code tried was taken."));
+      }
+      return yield* addWithFreeCode(attemptsLeft - ONE_ATTEMPT)(request);
+    });
+}
+
+const newRequest = Effect.gen(function* newLoginRequest() {
+  const { host } = yield* HttpServerRequest.schemaBodyJson(StartLoginRequestSchema);
+  const secrets = yield* Secrets;
+  const requestId = yield* secrets.newToken;
+  const requestHash = yield* secrets.hashToken(requestId);
+  const { createdAt, expiresAt } = yield* lifetimeOf(loginRequestSeconds);
+  return { request: { createdAt, expiresAt, host, requestHash }, requestId };
+});
+
+const startRoute: Route<Storage | Secrets | AddressLimit> = {
+  handle: () =>
+    withinAddressLimit(
+      Effect.gen(function* startLoginRequest() {
+        const { request, requestId } = yield* newRequest;
+        const userCode = yield* addWithFreeCode(CODE_ATTEMPTS)(request);
+        const { expiresAt } = request;
+        const started: LoginRequestStartedResponse = {
+          approvalPath: approvalPathOf(userCode),
+          expiresAt,
+          requestId,
+          userCode,
+        };
+        return yield* HttpServerResponse.schemaJson(LoginRequestStartedResponseSchema)(started, { status: CREATED });
+      }),
+    ),
+  method: "POST",
+  path: loginRequestsPath,
+};
+
+const collectedResponse = HttpServerResponse.schemaJson(LoginCollectedResponseSchema);
+
+function collectionAnswer(
+  collection: LoginCollection,
+  issued: Token,
+): Effect.Effect<Answer, typeof loginRequestNotFound> {
+  if (collection.status === "pending") {
+    return Effect.orDie(collectedResponse({ status: "pending" }, { status: ACCEPTED }));
+  }
+  if (collection.status === "gone") {
+    return Effect.fail(loginRequestNotFound);
+  }
+  return Effect.orDie(collectedResponse({ identity: collection.identity, status: "approved", token: issued }));
+}
+
+const collectRoute: Route<Storage | Secrets | AddressLimit> = {
+  handle: () =>
+    withinAddressLimit(
+      Effect.gen(function* collectLoginRequest() {
+        const { requestId } = yield* HttpServerRequest.schemaBodyJson(CollectLoginRequestSchema);
+        const secrets = yield* Secrets;
+        const storage = yield* Storage;
+        const requestHash = yield* secrets.hashToken(token(requestId));
+        const issued = yield* secrets.newToken;
+        const credentialHash = yield* secrets.hashToken(issued);
+        const at = yield* now;
+        const collection = yield* storage.collectLoginRequest({ credentialHash, now: at, requestHash });
+        return yield* collectionAnswer(collection, issued);
+      }),
+    ),
+  method: "POST",
+  path: collectLoginRequestPath,
+};
+
+function codeParam(params: Readonly<Record<string, string>>): string {
+  return String(params["code"]);
+}
+
+function requestAnswer(found: LoginRequest | undefined): Effect.Effect<Answer, typeof loginRequestNotFound> {
+  if (Predicate.isUndefined(found)) {
+    return Effect.fail(loginRequestNotFound);
+  }
+  return Effect.orDie(HttpServerResponse.schemaJson(LoginRequestResponseSchema)({ loginRequest: found }));
+}
+
+const userCodeSegments = { code: isUserCode };
+
+const showRoute: Route<Caller | Storage> = {
+  handle: (params) =>
+    Effect.gen(function* showLoginRequest() {
+      yield* requireHuman;
+      const storage = yield* Storage;
+      const at = yield* now;
+      const found = yield* storage.findLoginRequest(codeParam(params), at);
+      return yield* requestAnswer(found);
+    }),
+  method: "GET",
+  path: loginRequestPath,
+  segments: userCodeSegments,
+};
+
+const approveRoute: Route<Caller | Storage> = {
+  handle: (params) =>
+    Effect.gen(function* approveLoginRequest() {
+      yield* requireHuman;
+      const caller = yield* Caller;
+      const storage = yield* Storage;
+      const at = yield* now;
+      yield* storage.approveLoginRequest(codeParam(params), caller.name, at);
+      const found = yield* storage.findLoginRequest(codeParam(params), at);
+      return yield* requestAnswer(found);
+    }),
+  method: "PUT",
+  path: loginRequestApprovalPath,
+  segments: userCodeSegments,
+};
+
+const logoutRoute: Route<Storage | Secrets> = {
+  handle: () =>
+    Effect.gen(function* revokeLogin() {
+      const request = yield* HttpServerRequest.HttpServerRequest;
+      const sent = yield* sentToken(credentialsOf(request));
+      const secrets = yield* Secrets;
+      const storage = yield* Storage;
+      const hash = yield* secrets.hashToken(sent);
+      const revoked = yield* storage.revokeLoginCredential(hash);
+      return yield* HttpServerResponse.schemaJson(LogoutResponseSchema)({ revoked });
+    }),
+  method: "DELETE",
+  path: loginPath,
+};
+
+export const openLoginRoutes: readonly Route<Storage | Secrets | AddressLimit>[] = [startRoute, collectRoute];
+
+export const loginRoutes: readonly Route<Caller | Storage | Secrets>[] = [showRoute, approveRoute, logoutRoute];
+
+export const loginResponseSchemas = {
+  LoginCollectedResponse: LoginCollectedResponseSchema,
+  LoginRequestResponse: LoginRequestResponseSchema,
+  LoginRequestStartedResponse: LoginRequestStartedResponseSchema,
+  LogoutResponse: LogoutResponseSchema,
+};

@@ -135,17 +135,30 @@ function credentialsOf({ cookies, headers }: CarriesCredentials): Credentials {
   return { authorization: headers["authorization"], sessionCookie: cookies[sessionCookieName] };
 }
 
-function commandTokenPrincipal(grant: CommandTokenGrant | undefined): Effect.Effect<Principal, Refusal> {
+function loginPrincipal(identity: Identity | undefined): Effect.Effect<Principal, Refusal> {
+  if (Predicate.isUndefined(identity)) {
+    return Effect.fail(tokenUnknown);
+  }
+  return Effect.succeed({ commandThread: Option.none(), identity });
+}
+
+function grantPrincipal(grant: CommandTokenGrant): Effect.Effect<Principal, Refusal> {
   return Effect.gen(function* checkCommandToken() {
-    if (Predicate.isUndefined(grant)) {
-      return yield* Effect.fail(tokenUnknown);
-    }
     const now = yield* DateTime.now;
     if (DateTime.isGreaterThanOrEqualTo(now, DateTime.makeUnsafe(grant.expiresAt))) {
       return yield* Effect.fail(tokenExpired);
     }
     return { commandThread: Option.some(grant.threadId), identity: grant.handler };
   });
+}
+
+function commandTokenPrincipal(storage: Storage["Service"], hash: TokenHash) {
+  return (grant: CommandTokenGrant | undefined): Effect.Effect<Principal, Refusal | StorageUnavailable> => {
+    if (Predicate.isUndefined(grant)) {
+      return Effect.flatMap(storage.findLoginCredential(hash), loginPrincipal);
+    }
+    return grantPrincipal(grant);
+  };
 }
 
 function principalOf(storage: Storage["Service"], hash: TokenHash) {
@@ -158,7 +171,7 @@ function principalOf(storage: Storage["Service"], hash: TokenHash) {
         return Effect.fail(tokenRevoked);
       }
       case "unknown": {
-        return Effect.flatMap(storage.findCommandToken(hash), commandTokenPrincipal);
+        return Effect.flatMap(storage.findCommandToken(hash), commandTokenPrincipal(storage, hash));
       }
     }
   };

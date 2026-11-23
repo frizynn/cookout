@@ -18,7 +18,7 @@ import { Context, Effect, Layer, Option, Schema } from "effect";
 import type { Credentials, IssuedToken, Principal } from "./lib/server/auth.ts";
 import type { Gate, Route } from "../http/server.ts";
 import type { IdentityName, Token } from "./index.ts";
-import { humanAdmin, identityAdminRoutes, responseSchemas } from "./lib/server/routes.ts";
+import { humanAdmin, identityAdminRoutes, loginRoutes, openLoginRoutes, responseSchemas } from "./lib/server/routes.ts";
 import { HttpServerRequest } from "effect/http";
 import type { Refusal } from "../http/index.ts";
 import { Secrets } from "../secrets/server.ts";
@@ -141,10 +141,28 @@ export function adminTokenSet(
  * UI in and out, create, list, rotate and delete, and making and removing admins. They need `Caller`, which
  * `requireToken` provides.
  */
-export const identityRoutes: readonly Route<Caller | Storage | Secrets>[] = [...callerRoutes, ...identityAdminRoutes];
+export const identityRoutes: readonly Route<Caller | Storage | Secrets>[] = [
+  ...callerRoutes,
+  ...identityAdminRoutes,
+  ...loginRoutes,
+];
+
+/**
+ * The routes that need no token: starting a login request and collecting it (ADR 0041). The server puts its
+ * per-address request limit in front of them.
+ */
+export const openIdentityRoutes: typeof openLoginRoutes = openLoginRoutes;
+
+/**
+ * The request limit of the address a request to one of `openIdentityRoutes` comes from: `Limits` provides it.
+ */
+export { AddressLimit } from "./lib/server/routes.ts";
 
 /** The response Schemas of the identity routes, for the SDK's generated validators. */
 export const identityResponseSchemas = { ...responseSchemas };
+
+/** The response Schemas of the login routes, for the SDK's generated validators. */
+export { loginResponseSchemas } from "./lib/server/routes.ts";
 
 /** Refuses with 403 `admin_only` unless `Caller` is an admin. */
 export { requireAdmin } from "./lib/server/auth.ts";

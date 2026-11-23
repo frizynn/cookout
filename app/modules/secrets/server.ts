@@ -25,6 +25,8 @@ export interface SecretsService {
    * server can later record it and let it post as the command's handler identity.
    */
   readonly newCommandToken: Effect.Effect<Token>;
+  /** A new login request's user code: two groups of four letters a person can read aloud, such as `WDJB-MJHT`. */
+  readonly newUserCode: Effect.Effect<string>;
   /** A new call ID: `call_` and 128 random bits. */
   readonly newCallId: Effect.Effect<CallId>;
   /**

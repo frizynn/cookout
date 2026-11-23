@@ -6,6 +6,7 @@ import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../../htt
 import type { IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";
 import type { AckResponse, FollowResponse, InboxHistoryResponse, InboxResponse, SubscriptionResponse } from "../../../inbox/index.ts";
 import type { LeaseResponse, LeaveResponse } from "../../../leases/index.ts";
+import type { LoginCollectedResponse, LoginRequestResponse, LoginRequestStartedResponse, LogoutResponse } from "../../../logins/index.ts";
 import type { ListMessagesResponse, MessageResponse, ThreadResponse } from "../../../messages/index.ts";
 
 export declare function isChannelResponse(data: unknown): data is ChannelResponse;
@@ -31,6 +32,10 @@ export declare function isInboxResponse(data: unknown): data is InboxResponse;
 export declare function isSubscriptionResponse(data: unknown): data is SubscriptionResponse;
 export declare function isLeaseResponse(data: unknown): data is LeaseResponse;
 export declare function isLeaveResponse(data: unknown): data is LeaveResponse;
+export declare function isLoginCollectedResponse(data: unknown): data is LoginCollectedResponse;
+export declare function isLoginRequestResponse(data: unknown): data is LoginRequestResponse;
+export declare function isLoginRequestStartedResponse(data: unknown): data is LoginRequestStartedResponse;
+export declare function isLogoutResponse(data: unknown): data is LogoutResponse;
 export declare function isListMessagesResponse(data: unknown): data is ListMessagesResponse;
 export declare function isMessageResponse(data: unknown): data is MessageResponse;
 export declare function isThreadResponse(data: unknown): data is ThreadResponse;
