@@ -1,9 +1,8 @@
-import { dotPlace, messageClass } from "./message-class.ts";
-import { AccentDot } from "./accent-dot.tsx";
 import { DaySeparator } from "./day-separator.tsx";
 import { MessageLayout } from "./message-layout.tsx";
 import type { ReactNode } from "react";
 import type { StandaloneMessageParts } from "./parts.ts";
+import { messageClass } from "./message-class.ts";
 import { useRightClick } from "./use-right-click.ts";
 
 export function StandaloneMessage(parts: StandaloneMessageParts): ReactNode {
@@ -18,7 +17,6 @@ export function StandaloneMessage(parts: StandaloneMessageParts): ReactNode {
         data-for-you={parts.mark === "for-you"}
         ref={article}
       >
-        {parts.mark === "for-you" && <AccentDot place={dotPlace(parts.grouped)} />}
         <MessageLayout
           actionHref={parts.actionHref}
           actionLabel={parts.actionLabel}

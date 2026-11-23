@@ -13,7 +13,7 @@
  * shows them (Matt, #152, 2026-11-23): for you (a mention, or a reply in a
  * thread you started) and activity (the rest). `whyOf` says why one is there,
  * `countsByChannel` counts both levels by channel, and `newsByThread` counts a
- * thread's unread replies and whether any is for you.
+ * thread's unread replies and how many of them are for you.
  * `earlier` is the read part of the inbox, for the inbox view's Earlier list:
  * when its first reader subscribes it loads the inbox history
  * (`GET /v1/inbox/history`) a page of `pageSize` items at a time (50 unless
