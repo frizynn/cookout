@@ -101,21 +101,30 @@ it.effect("the seed makes channels with top-level messages and a thread holding 
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
+type ItemShown = readonly (string | readonly string[])[];
+
+function inboxesOf(
+  cookout: TestCookoutService,
+  board: typeof SeedOutput.Type,
+): Effect.Effect<readonly (readonly [string, readonly ItemShown[]])[]> {
+  return pipe(
+    board.identities,
+    Effect.forEach(
+      ({ identity, token }) =>
+        Effect.map(
+          answer(() => cookout.clientFor(token).inbox()),
+          ({ items }) => [identity.name, Arr.map(items, ({ message, reasons }) => [message.text, reasons])] as const,
+        ),
+      { concurrency: 1 },
+    ),
+  );
+}
+
 it.effect("the seed leaves a mention, a followed thread, a subscribed channel and reactions in the inboxes", () =>
   Effect.gen(function* seededInboxes() {
     const cookout = yield* TestCookout;
     const board = yield* seeded(cookout);
-    const inboxes = yield* pipe(
-      board.identities,
-      Effect.forEach(
-        ({ identity, token }) =>
-          Effect.map(
-            answer(() => cookout.clientFor(token).inbox()),
-            ({ items }) => [identity.name, Arr.map(items, ({ message, reasons }) => [message.text, reasons])] as const,
-          ),
-        { concurrency: 1 },
-      ),
-    );
+    const inboxes = yield* inboxesOf(cookout, board);
 
     expect(inboxes).toStrictEqual([
       [
