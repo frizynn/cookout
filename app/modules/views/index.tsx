@@ -11,11 +11,14 @@
  * parent message and its replies, oldest first, with a reply box that
  * suggests identities to mention as `@` and a name are typed (the `composer`
  * store), and opening it marks the thread read; each links back up a level. A message's data is
- * shown with it, a command call's as the data it called the command with. `NotBuiltView` says
+ * shown with it, a command call's as the data it called the command with. `InboxView` lists the
+ * inbox items of whoever is logged in, oldest first, each with its reasons and a link to where it
+ * is read, after each channel's unread and mention counts (the `unread` store, live). `NotBuiltView` says
  * a route has nothing to show.
  */
 export { ChannelListView } from "./lib/channel-list.tsx";
 export { ChannelView } from "./lib/channel.tsx";
+export { InboxView } from "./lib/inbox.tsx";
 export { LoginView } from "./lib/login.tsx";
 export { NotBuiltView } from "./lib/not-built.tsx";
 export { ThreadView } from "./lib/thread.tsx";

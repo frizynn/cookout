@@ -9,6 +9,7 @@ interface InboxItems {
   readonly add: (item: InboxItem) => void;
   readonly receive: (event: CookoutEvent) => boolean;
   readonly counts: () => ReadonlyMap<string, UnreadCounts>;
+  readonly list: () => readonly InboxItem[];
 }
 
 const ONE_MORE = 1;
@@ -33,6 +34,18 @@ function counted(counts: UnreadCounts, item: InboxItem): UnreadCounts {
     return { ...counts, mentions: counts.mentions + ONE_MORE };
   }
   return { ...counts, plain: counts.plain + ONE_MORE };
+}
+
+function countsOf(items: Iterable<InboxItem>): ReadonlyMap<string, UnreadCounts> {
+  const counts = new Map<string, UnreadCounts>();
+  for (const item of items) {
+    counts.set(item.channel.name, counted(counts.get(item.channel.name) ?? NONE, item));
+  }
+  return counts;
+}
+
+function oldestFirst(items: Iterable<InboxItem>): readonly InboxItem[] {
+  return [...items].toSorted((first, second) => first.message.id - second.message.id);
 }
 
 function createInboxItems(): InboxItems {
@@ -65,13 +78,8 @@ function createInboxItems(): InboxItems {
 
   return {
     add,
-    counts: () => {
-      const counts = new Map<string, UnreadCounts>();
-      for (const item of items.values()) {
-        counts.set(item.channel.name, counted(counts.get(item.channel.name) ?? NONE, item));
-      }
-      return counts;
-    },
+    counts: () => countsOf(items.values()),
+    list: () => oldestFirst(items.values()),
     receive: (event) => {
       if (event.type === "inbox-item") {
         add(event.item);

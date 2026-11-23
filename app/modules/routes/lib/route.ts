@@ -4,6 +4,7 @@ import { isMessageId } from "../../messages/index.ts";
 type Route =
   | { readonly name: "channels" }
   | { readonly name: "login" }
+  | { readonly name: "inbox" }
   | { readonly name: "channel"; readonly channel: string }
   | { readonly name: "thread"; readonly channel: string; readonly thread: MessageId }
   | { readonly name: "missing" };
@@ -12,6 +13,7 @@ type Matcher = (hash: string) => Route | false;
 
 const CHANNELS = /^(?:#\/?)?$/u;
 const LOGIN = /^#\/login$/u;
+const INBOX = /^#\/inbox$/u;
 const CHANNEL = /^#\/channels\/(?<channel>[^/]+)$/u;
 const THREAD = /^#\/channels\/(?<channel>[^/]+)\/threads\/(?<thread>[^/]+)$/u;
 
@@ -28,6 +30,7 @@ function threadRoute(channel: string, thread: string): Route {
 const matchers: readonly Matcher[] = [
   (hash) => CHANNELS.test(hash) && { name: "channels" },
   (hash) => LOGIN.test(hash) && { name: "login" },
+  (hash) => INBOX.test(hash) && { name: "inbox" },
   (hash) => CHANNEL.test(hash) && { channel: hash.replace(CHANNEL, "$<channel>"), name: "channel" },
   (hash) => THREAD.test(hash) && threadRoute(hash.replace(THREAD, "$<channel>"), hash.replace(THREAD, "$<thread>")),
 ];

@@ -1,4 +1,4 @@
-import { ChannelListView, ChannelView, NotBuiltView, ThreadView } from "../../views/index.tsx";
+import { ChannelListView, ChannelView, InboxView, NotBuiltView, ThreadView } from "../../views/index.tsx";
 import type { Board } from "../../board/index.ts";
 import type { Composer } from "../../composer/index.ts";
 import type { ReactNode } from "react";
@@ -16,6 +16,9 @@ export function SignedInView(props: SignedInViewProps): ReactNode {
   const { board, composer, route, unread } = props;
   if (route.name === "channels") {
     return <ChannelListView board={board} unread={unread} />;
+  }
+  if (route.name === "inbox") {
+    return <InboxView unread={unread} />;
   }
   if (route.name === "channel") {
     return <ChannelView board={board} channel={route.channel} key={route.channel} />;

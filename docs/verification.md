@@ -593,3 +593,18 @@ agent-browser --session cookout open "http://127.0.0.1:3000/#/" && agent-browser
 ```
 
 The first snapshot's `Channels` list has the links `#deploys 1 unread Release announcements.` and `#general 1 unread Anything and everything.` (her seeded inbox: `[6,["subscribed-channel"]]` and `[5,["followed-thread"]]`). Without a reload, the second has `#deploys 2 unread 1 mention …`, shown as `2` and `@1`. After opening `#deploys` its link is `#deploys Release announcements.` again, while `#general` keeps `1 unread`: the channel view acks top-level messages only. After opening the thread, `#general` has no count either. A message that arrives while its channel or thread is open still counts as unread until the view is opened again (board question #467).
+
+## Read the inbox in the web UI
+
+The header's `Inbox` link (`#/inbox`) opens the logged-in human's inbox from the same query as the API (`GET /v1/inbox`, through the `unread` store): a list named `Unread by channel`, one link per channel with anything unread, sorted by name, with the same counts as the channel list; then a list named `Inbox` of the items, oldest first, each a link with its channel, its reasons (`Followed thread`, `Mention`, `Subscribed channel`), its author and its text. A reply links to its thread and a top-level message to its channel, so opening it acks it. With nothing unread it says `Nothing unread.` The counts and items follow the live stream: a read position from any session of the same identity, such as another tab acking by opening a channel, drops what it covers in every open tab without a reload. On a fresh seed of the built server ("Open the web UI" and "Log in to the web UI", logged in as `grace`), open the inbox, then open `#deploys` in a second tab and go back to the first:
+
+```sh
+agent-browser --session cookout open "http://127.0.0.1:3000/#/" && agent-browser --session cookout wait --text "#deploys" && agent-browser --session cookout click 'a[href="#/inbox"]' && agent-browser --session cookout wait --text "Unread messages" && agent-browser --session cookout snapshot
+agent-browser --session cookout screenshot --full /tmp/cookout-inbox.png
+agent-browser --session cookout tab new "http://127.0.0.1:3000/#/channels/deploys" && agent-browser --session cookout wait --text "Deployed 1.4.2."
+agent-browser --session cookout tab list
+agent-browser --session cookout tab t1 && agent-browser --session cookout wait 1000 && agent-browser --session cookout snapshot
+agent-browser --session cookout screenshot --full /tmp/cookout-inbox-after-ack.png
+```
+
+The first snapshot's `Unread by channel` has `#deploys 2 unread` and `#general 1 unread`, and its `Inbox` has `#general Followed thread @ada Thanks, both of you.`, `#deploys Subscribed channel @release-bot Deployed 1.4.2.` and `#deploys Subscribed channel @ada /rollback`. `tab list` names the first tab (`t1` here; use the ID it prints). Back in it, without a reload, `#deploys` and both its items are gone, leaving `#general 1 unread` and the reply.
