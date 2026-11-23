@@ -1,5 +1,5 @@
+import { Array as Arr, Effect, Fiber, String as Str } from "effect";
 import type { CliResult, CommandLineNeeds, CuttableLink, TestIdentity, Watched } from "../../../testing/server.ts";
-import { Effect, Fiber, String as Str } from "effect";
 import type { Message, MessageId } from "../../../messages/index.ts";
 import {
   TestCookout,
@@ -23,6 +23,9 @@ interface Posted {
 const ONE_LINE = 1;
 const TWO_LINES = 2;
 const A_WHILE = "5 seconds";
+const HEARTBEAT_INTERVAL = "15 seconds";
+const FIRST_HEARTBEAT = 1;
+const FOUR_HEARTBEATS = 4;
 const SHOWN = 120;
 const LONG = 150;
 const LONG_TEXT = `@bob look\n\nat  ${Str.repeat(LONG)("x")}`;
@@ -136,10 +139,7 @@ function watchUntilRefused(): Effect.Effect<CliResult, never, CommandLineNeeds |
     const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bob.token, COOKOUT_URL: link.url };
     const watching = yield* Effect.forkScoped(runCookout({ args: ["watch"], env }));
     yield* Effect.andThen(link.relayed(": open"), link.cut);
-    yield* Effect.andThen(
-      answer(() => cookout.client.rotateToken("bob")),
-      link.restore,
-    );
+    yield* answer(() => cookout.client.rotateToken("bob"));
     return yield* Effect.raceFirst(Fiber.join(watching), Effect.andThen(passTime, Effect.never));
   }).pipe(Effect.provide(testCookout()));
 }
@@ -151,5 +151,47 @@ it.effect("cookout watch stops at a refusal on reconnecting, instead of trying a
     expect({ exitCode, stdout }).toStrictEqual({ exitCode: 1, stdout: "" });
     expect(stderr).toContain('"reconnecting"');
     expect(stderr).toContain('"token_revoked"');
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
+function heartbeatsAfter(link: CuttableLink, count: number): Effect.Effect<void> {
+  return Effect.andThen(TestClock.adjust(HEARTBEAT_INTERVAL), link.relayed(": heartbeat", count));
+}
+
+function postAfterHeartbeats(link: CuttableLink, ann: TestIdentity): Effect.Effect<MessageId> {
+  const heartbeats = Effect.forEach(
+    Arr.range(FIRST_HEARTBEAT, FOUR_HEARTBEATS),
+    (count) => heartbeatsAfter(link, count),
+    {
+      concurrency: 1,
+      discard: true,
+    },
+  );
+  return Effect.andThen(heartbeats, mention(ann, "@bob still here"));
+}
+
+function watchThroughHeartbeats(): Effect.Effect<Watched<MessageId>, never, CommandLineNeeds | Scope.Scope> {
+  return Effect.gen(function* watchAsBob() {
+    const cookout = yield* TestCookout;
+    const link = yield* cuttableLink(cookout.url);
+    const ann = yield* cookout.createIdentity("ann");
+    const bob = yield* cookout.createIdentity("bob");
+    const folder = yield* freshStateFolder;
+    yield* answer(() => ann.client.createChannel({ name: "grill" }));
+    return yield* watchCookout({
+      args: ["watch", "--json"],
+      env: { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: bob.token, COOKOUT_URL: link.url },
+      lines: ONE_LINE,
+      whileWatching: postAfterHeartbeats(link, ann),
+    });
+  }).pipe(Effect.provide(testCookout()));
+}
+
+it.effect("cookout watch stays on its connection while heartbeats arrive, however long nothing else does", () =>
+  Effect.gen(function* watchHeartbeats() {
+    const { during: posted, stderrLines, stdoutJson } = yield* watchThroughHeartbeats();
+
+    expect(stdoutJson).toMatchObject([{ item: { message: { id: posted } } }]);
+    expect(stderrLines).toHaveLength(ONE_LINE);
   }).pipe(Effect.provide(commandLineServices)),
 );

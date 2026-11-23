@@ -239,7 +239,6 @@ function watchThroughADrop(): Effect.Effect<Watched<readonly [MessageId, Message
       yield* link.relayed(`id: ${String(before)}\n`);
       yield* link.cut;
       const whileCut = yield* mention(ann, SECOND_TEXT);
-      yield* link.restore;
       const after = yield* mention(ann, THIRD_TEXT);
       return [before, whileCut, after] as const;
     });

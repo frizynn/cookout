@@ -8,9 +8,8 @@ import type { Scope } from "effect";
 interface CuttableLink {
   readonly url: string;
   readonly cut: Effect.Effect<void>;
-  readonly restore: Effect.Effect<void>;
   readonly stall: Effect.Effect<void>;
-  readonly relayed: (text: string) => Effect.Effect<void>;
+  readonly relayed: (text: string, times?: number) => Effect.Effect<void>;
 }
 
 interface Signal {
@@ -20,7 +19,6 @@ interface Signal {
 
 interface Relay {
   readonly target: string;
-  readonly isCut: Effect.Effect<boolean>;
   readonly dropped: Effect.Effect<Effect.Effect<boolean>>;
   readonly stalled: Effect.Effect<Effect.Effect<boolean>>;
   readonly record: (text: string) => Effect.Effect<void>;
@@ -30,9 +28,8 @@ interface Relay {
 }
 
 const LISTEN = { host: "127.0.0.1", port: 0 } as const;
-const BAD_GATEWAY = 502;
+const ONCE = 1;
 const HOP_BY_HOP = ["connection", "content-length", "host", "transfer-encoding"] as const;
-const unreachable = HttpServerResponse.empty({ status: BAD_GATEWAY });
 const endToEnd = Headers.removeMany(HOP_BY_HOP);
 
 const signal: Effect.Effect<Signal> = Effect.gen(function* makeSignal() {
@@ -50,9 +47,6 @@ function relayed(
   relay: Relay,
 ): Effect.Effect<HttpServerResponse.HttpServerResponse, never, HttpServerRequest.HttpServerRequest> {
   return Effect.gen(function* relayRequest() {
-    if (yield* relay.isCut) {
-      return unreachable;
-    }
     const { headers, url } = yield* HttpServerRequest.HttpServerRequest;
     const dropped = yield* relay.dropped;
     const stalled = yield* relay.stalled;
@@ -68,7 +62,7 @@ function relayed(
       Stream.encodeText,
     );
     return HttpServerResponse.stream(body, { headers: endToEnd(answer.headers), status: answer.status });
-  }).pipe(Effect.orElseSucceed(() => unreachable));
+  }).pipe(Effect.orDie);
 }
 
 function serving(relay: Relay): Effect.Effect<string, never, Scope.Scope> {
@@ -79,10 +73,13 @@ function serving(relay: Relay): Effect.Effect<string, never, Scope.Scope> {
   }).pipe(Effect.orDie);
 }
 
+function sentAtLeast(text: string, times: number): (sent: string) => boolean {
+  return (sent) => Str.split(text)(sent).length > times;
+}
+
 function cuttableLink(target: string): Effect.Effect<CuttableLink, never, Scope.Scope> {
   return Effect.gen(function* openLink() {
     const client = yield* Effect.map(Layer.build(NodeHttpClient.layerNodeHttp), Context.get(HttpClient.HttpClient));
-    const isCut = yield* Ref.make(false);
     const drops = yield* signal;
     const stalls = yield* signal;
     const sent = yield* SubscriptionRef.make("");
@@ -90,16 +87,15 @@ function cuttableLink(target: string): Effect.Effect<CuttableLink, never, Scope.
     const relay: Relay = {
       dropped: Effect.map(drops.current, Deferred.await),
       execute: client.execute,
-      isCut: Ref.get(isCut),
       record: (text) => SubscriptionRef.update(sent, Str.concat(text)),
       stalled: Effect.map(stalls.current, Deferred.isDone),
       target,
     };
     const url = yield* serving(relay);
     return {
-      cut: Effect.andThen(Ref.set(isCut, true), drops.fire),
-      relayed: (text: string) => changes.pipe(Stream.filter(Str.includes(text)), Stream.runHead, Effect.asVoid),
-      restore: Ref.set(isCut, false),
+      cut: drops.fire,
+      relayed: (text: string, times = ONCE) =>
+        changes.pipe(Stream.filter(sentAtLeast(text, times)), Stream.runHead, Effect.asVoid),
       stall: stalls.fire,
       url,
     };
