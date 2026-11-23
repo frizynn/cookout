@@ -6,7 +6,6 @@ import {
   Deferred,
   Effect,
   Fiber,
-  Function,
   Layer,
   Option,
   Schema,
@@ -49,7 +48,6 @@ interface DevProcess {
 
 interface ServeOptions {
   readonly adminToken?: string;
-  readonly env?: Readonly<Record<string, string>>;
   readonly database: string;
   readonly webFolder?: string;
 }
@@ -88,7 +86,7 @@ interface Started<Line> {
 
 const serveAdminToken = "test-admin-token-0123456789abcdef0123456789";
 const EXIT_SUCCESS = 0;
-const verbLayers: ServeLayers = { storage: Function.constant(memoryStorage) };
+const verbLayers: ServeLayers = { storage: () => memoryStorage };
 const isListening = Schema.is(Schema.Struct({ listening: Schema.String }));
 const isDevRunning = Schema.is(
   Schema.Struct({
@@ -182,21 +180,21 @@ function startUntil<Line>(
   });
 }
 
-function serveCommandLine(options: ServeOptions): Omit<CommandLine, "console"> & Pick<ServeProcess, "adminToken"> {
-  const { adminToken = serveAdminToken, database, env = {}, ...web } = options;
+function startServe({
+  adminToken = serveAdminToken,
+  database,
+  ...web
+}: ServeOptions): Effect.Effect<ServeProcess, never, Needs | Scope.Scope> {
   const args = ["serve", "--port", "0", "--host", "127.0.0.1", "--db", database];
-  const program = exitCodeAfter(runCommandLine(args, { storage: sqliteStorage, ...web }));
-  return { adminToken, env: { COOKOUT_ADMIN_TOKEN: adminToken, ...env }, program };
-}
-
-function runServe(options: ServeOptions): Effect.Effect<CliResult, never, Needs> {
-  return captured(serveCommandLine(options));
-}
-
-function startServe(options: ServeOptions): Effect.Effect<ServeProcess, never, Needs | Scope.Scope> {
-  const { adminToken, env, program } = serveCommandLine(options);
-  const started = startUntil(program, isListening, env);
-  return Effect.map(started, ({ line, ...output }) => ({ ...output, adminToken, url: line.listening }));
+  const serve = exitCodeAfter(runCommandLine(args, { storage: sqliteStorage, ...web }));
+  const env = { COOKOUT_ADMIN_TOKEN: adminToken };
+  return Effect.map(startUntil(serve, isListening, env), ({ line, lines, stdout, stop }) => ({
+    adminToken,
+    lines,
+    stdout,
+    stop,
+    url: line.listening,
+  }));
 }
 
 interface SignallingConsole {
@@ -290,7 +288,6 @@ export {
   runCookout,
   runDev,
   startDev,
-  runServe,
   startServe,
   watchCookout,
   watched,

@@ -218,67 +218,67 @@
       {
         "object": "Schema",
         "property": "decode",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeEffect",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeExit",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeOption",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodePromise",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeResult",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeSync",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeUnknownEffect",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeUnknownExit",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeUnknownOption",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeUnknownPromise",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeUnknownResult",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       },
       {
         "object": "Schema",
         "property": "decodeUnknownSync",
-        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+        "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
       }
     ],
     "no-restricted-imports": [
@@ -989,67 +989,67 @@
           {
             "object": "Schema",
             "property": "decode",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeEffect",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeExit",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeOption",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodePromise",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeResult",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeSync",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownEffect",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownExit",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownOption",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownPromise",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownResult",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownSync",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           }
         ],
         "effecttsgo/strict-effect-provide": "off"
@@ -1590,67 +1590,67 @@
           {
             "object": "Schema",
             "property": "decode",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeEffect",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeExit",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeOption",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodePromise",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeResult",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeSync",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownEffect",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownExit",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownOption",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownPromise",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownResult",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           },
           {
             "object": "Schema",
             "property": "decodeUnknownSync",
-            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state and credentials files, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
+            "message": "Decode only at an edge (http, a module's lib/server/routes.ts, storage, config, the cli state file, and testing/lib/server/cli.ts reading what cookout serve prints). Internal data is trusted."
           }
         ],
         "effecttsgo/node-builtin-import": "off",
