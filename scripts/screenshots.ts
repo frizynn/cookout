@@ -20,6 +20,8 @@ interface Board {
   readonly url: string;
 }
 
+type Login = "admin" | "member";
+
 const ARGUMENTS_FROM = 2;
 const EXIT_FAILURE = 1;
 const EXIT_SUCCESS = 0;
@@ -109,17 +111,17 @@ function seed(url: string): Board {
   return { token: tokenOf(identities, LOGGED_IN_AS), url };
 }
 
-async function loggedIn(browser: Browser, board: Board, theme: Theme): Promise<BrowserContext> {
+async function loggedIn(browser: Browser, { token, url }: Board, theme: Theme): Promise<BrowserContext> {
   const context = await browser.newContext({
-    baseURL: board.url,
+    baseURL: url,
     storageState: {
       cookies: [],
-      origins: [{ localStorage: [{ name: "cookout-theme", value: theme }], origin: board.url }],
+      origins: [{ localStorage: [{ name: "cookout-theme", value: theme }], origin: url }],
     },
   });
   const page = await context.newPage();
   await page.goto("/");
-  await page.getByLabel("Token").fill(board.token);
+  await page.getByLabel("Token").fill(token);
   await page.getByRole("button", { name: "Log in" }).click();
   await page.getByRole("list", { name: "Channels" }).waitFor({ timeout: RENDER_MS });
   await page.close();
@@ -163,11 +165,19 @@ async function screenshot(page: Page, shot: Shot, out: string): Promise<void> {
   }
 }
 
-function shooter(contexts: ReadonlyMap<Theme, BrowserContext>, out: string): (shot: Shot) => Promise<void> {
+function loginOf(shot: Shot): Login {
+  if (shot.screen.admin === true) {
+    return "admin";
+  }
+  return "member";
+}
+
+function shooter(contexts: ReadonlyMap<string, BrowserContext>, out: string): (shot: Shot) => Promise<void> {
   return async (shot) => {
-    const context = contexts.get(shot.theme);
+    const key = `${loginOf(shot)}-${shot.theme}`;
+    const context = contexts.get(key);
     if (typeof context !== "object") {
-      throw new TypeError(`no browser for the ${shot.theme} theme`);
+      throw new TypeError(`no browser logged in as ${key}`);
     }
     await screenshot(await context.newPage(), shot, out);
   };
@@ -176,9 +186,12 @@ function shooter(contexts: ReadonlyMap<Theme, BrowserContext>, out: string): (sh
 async function shootBoard(board: Board, screens: readonly Screen[], out: string): Promise<readonly string[]> {
   const browser = await chromium.launch();
   try {
-    const contexts = new Map<Theme, BrowserContext>([
-      ["light", await loggedIn(browser, board, "light")],
-      ["dark", await loggedIn(browser, board, "dark")],
+    const admin = { token: ADMIN_TOKEN, url: board.url };
+    const contexts = new Map<string, BrowserContext>([
+      ["member-light", await loggedIn(browser, board, "light")],
+      ["member-dark", await loggedIn(browser, board, "dark")],
+      ["admin-light", await loggedIn(browser, admin, "light")],
+      ["admin-dark", await loggedIn(browser, admin, "dark")],
     ]);
     const failures = await takeScreenshots({ screens, shoot: shooter(contexts, out) });
     return failures;
