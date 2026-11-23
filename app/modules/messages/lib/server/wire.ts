@@ -96,3 +96,5 @@ export const ListMessagesResponseSchema = matchesWire<ListMessagesResponse>()(
 export const ThreadResponseSchema = matchesWire<ThreadResponse>()(
   Schema.Struct({ parent: TopLevelMessageSchema, replies: Schema.Array(ReplySchema) }),
 );
+
+export { MessageIdSchema, MessageSchema, TopLevelMessageSchema };

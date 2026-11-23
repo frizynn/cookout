@@ -1,34 +1,23 @@
 import { Command, Flag } from "effect/cli";
 import { Effect, Layer } from "effect";
-import { FirstBoot, firstBoot, identitiesLayer, identityRoutes } from "../../../identities/server.ts";
-import type { Listen, Route } from "../../../http/server.ts";
+import { FirstBoot, firstBoot } from "../../../identities/server.ts";
 import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
-import { channelRoutes, channelsLayer } from "../../../channels/server.ts";
 import { databasePath, host, port } from "../../../config/server.ts";
+import { domainLayers, routes } from "./route-list.ts";
 import { httpServer, serverUrl } from "../../../http/server.ts";
-import { leaseRoutes, leasesLayer, requireTokenAndRenewLease } from "../../../leases/server.ts";
-import { messageRoutes, messagesLayer } from "../../../messages/server.ts";
 import type { FileSystem } from "effect";
+import type { Listen } from "../../../http/server.ts";
 import { printLine } from "./output.ts";
+import { requireTokenAndRenewLease } from "../../../leases/server.ts";
 
 export type ServeLayers = {
   readonly storage: (path: string) => Layer.Layer<Storage, StorageUnavailable, FileSystem.FileSystem>;
 };
 
-type NeedsOf<Routes> = Routes extends readonly Route<infer Needs>[] ? Needs : never;
-
-type RouteNeeds =
-  | NeedsOf<typeof identityRoutes>
-  | NeedsOf<typeof channelRoutes>
-  | NeedsOf<typeof messageRoutes>
-  | NeedsOf<typeof leaseRoutes>;
-
-const routes: readonly Route<RouteNeeds>[] = [...identityRoutes, ...channelRoutes, ...messageRoutes, ...leaseRoutes];
-
 export const cookoutServer = (listen: Listen) =>
   httpServer(listen, routes, requireTokenAndRenewLease).pipe(
     Layer.provideMerge(firstBoot),
-    Layer.provideMerge(Layer.mergeAll(identitiesLayer, channelsLayer, messagesLayer, leasesLayer)),
+    Layer.provideMerge(domainLayers),
   );
 
 const printAdminToken = Effect.gen(function* () {

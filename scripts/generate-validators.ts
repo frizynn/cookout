@@ -3,6 +3,7 @@ import { channelResponseSchemas } from "../app/modules/channels/server.ts";
 import { generateValidators } from "./lib/validators.ts";
 import { httpResponseSchemas } from "../app/modules/http/server.ts";
 import { identityResponseSchemas } from "../app/modules/identities/server.ts";
+import { inboxResponseSchemas } from "../app/modules/inbox/server.ts";
 import { leaseResponseSchemas } from "../app/modules/leases/server.ts";
 import { messageResponseSchemas } from "../app/modules/messages/server.ts";
 
@@ -20,6 +21,7 @@ const generated = generateValidators({
   channels: channelResponseSchemas,
   http: httpResponseSchemas,
   identities: identityResponseSchemas,
+  inbox: inboxResponseSchemas,
   leases: leaseResponseSchemas,
   messages: messageResponseSchemas,
 });

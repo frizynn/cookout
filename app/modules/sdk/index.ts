@@ -5,6 +5,7 @@
  * with a code this SDK doesn't know (from a newer server) still fails with
  * that code, typed as `UnknownErrorCode`.
  */
+import type { AckResponse, FollowResponse, InboxResponse, SubscriptionResponse } from "./lib/inbox.ts";
 import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "../channels/index.ts";
 import type {
   CreateIdentityRequest,
@@ -34,6 +35,7 @@ import {
 } from "./lib/generated/validators.js";
 import type { HealthResponse } from "../http/index.ts";
 import { healthPath } from "../http/index.ts";
+import { inboxCalls } from "./lib/inbox.ts";
 import { leaseCalls } from "./lib/leases.ts";
 import { messageCalls } from "./lib/messages.ts";
 
@@ -77,6 +79,16 @@ export type {
   LeaseResponse,
   LeaveResponse,
 } from "../leases/index.ts";
+export type {
+  AckRequest,
+  AckResponse,
+  FollowResponse,
+  InboxItem,
+  InboxReason,
+  InboxResponse,
+  ReadPosition,
+  SubscriptionResponse,
+} from "../inbox/index.ts";
 export { CookoutError, type CookoutErrorCode, type UnknownErrorCode } from "./lib/errors.ts";
 
 export type CookoutClientOptions = {
@@ -132,6 +144,30 @@ export type CookoutClient = {
    * `lease_required` without one, `lease_lost` if it is no longer live. After a `lease_lost` the client stops sending it.
    */
   readonly leave: () => Promise<LeaveResponse>;
+  /**
+   * `GET /v1/inbox`: what the caller hasn't read, oldest first, each message once with every reason it is there
+   * (`followed-thread`, `mention`, `subscribed-channel`), its channel and its thread's top-level message. The
+   * caller's own messages never appear. Reading it changes nothing.
+   */
+  readonly inbox: () => Promise<InboxResponse>;
+  /**
+   * `POST /v1/ack`: marks the message and everything before it in its thread (for a reply) or channel (for a
+   * top-level message) as read. A read position never moves backwards. Sent without a lease ID, it is allowed only
+   * while nobody holds the lease on the caller's identity (409 `lease_required` otherwise); a stale lease ID is 409
+   * `lease_lost`. A missing message is 404 `message_not_found`.
+   */
+  readonly ack: (messageId: MessageId) => Promise<AckResponse>;
+  /**
+   * `PUT /v1/messages/:id/follow`: follows the thread holding the message, so its replies reach the inbox. Starting
+   * a thread, replying in it and being mentioned in it follow it too.
+   */
+  readonly follow: (messageId: MessageId) => Promise<FollowResponse>;
+  /** `DELETE /v1/messages/:id/follow`: stops following the thread until the caller next replies or is mentioned in it. */
+  readonly unfollow: (messageId: MessageId) => Promise<FollowResponse>;
+  /** `PUT /v1/channels/:name/subscription`: new top-level messages in the channel reach the inbox. */
+  readonly subscribe: (channel: string) => Promise<SubscriptionResponse>;
+  /** `DELETE /v1/channels/:name/subscription`: they stop reaching it. */
+  readonly unsubscribe: (channel: string) => Promise<SubscriptionResponse>;
 };
 
 /**
@@ -162,5 +198,6 @@ export function createCookoutClient(options: CookoutClientOptions = {}): Cookout
     whoami: () => getJson(server, whoamiPath, isIdentityResponse),
     ...messageCalls(server),
     ...leaseCalls(server),
+    ...inboxCalls(server),
   };
 }

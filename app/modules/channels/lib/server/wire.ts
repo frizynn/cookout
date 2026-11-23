@@ -30,3 +30,5 @@ export const ChannelResponseSchema = matchesWire<ChannelResponse>()(Schema.Struc
 export const ListChannelsResponseSchema = matchesWire<ListChannelsResponse>()(
   Schema.Struct({ channels: Schema.Array(ChannelSchema) }),
 );
+
+export { ChannelNameSchema, ChannelSchema };

@@ -130,6 +130,9 @@ export const channelRoutes: readonly Route<Channels>[] = [
   },
 ];
 
+/** The Schemas of a channel and its name, for other modules' answers that hold channels. */
+export { ChannelNameSchema, ChannelSchema } from "./lib/server/wire.ts";
+
 /** The response Schemas of the channel routes, for the SDK's generated validators. */
 export const channelResponseSchemas = {
   ChannelResponse: ChannelResponseSchema,
