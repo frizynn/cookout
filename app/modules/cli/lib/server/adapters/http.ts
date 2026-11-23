@@ -93,4 +93,4 @@ const throughProxy: Effect.Effect<void, never, Scope.Scope> = Effect.gen(functio
   );
 });
 
-export { throughProxy, toFailure, toFailureAt, unreachableMessage };
+export { throughProxy, toFailure, toFailureAt };
