@@ -43,6 +43,7 @@ interface UseAgentSession {
 type UseAgentSessionResult =
   | { readonly status: "active"; readonly identity: Identity; readonly expiresAt: IsoTime }
   | { readonly status: "revoked" }
+  | { readonly status: "deactivated" }
   | { readonly status: "expired" }
   | { readonly status: "unknown" };
 

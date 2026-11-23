@@ -52,7 +52,12 @@ interface Issue {
 const CHECK_SECONDS = 30;
 const UNAUTHORIZED = 401;
 
-const endedRefusals: Readonly<Record<"expired" | "revoked", Refusal>> = {
+const endedRefusals: Readonly<Record<"deactivated" | "expired" | "revoked", Refusal>> = {
+  deactivated: {
+    code: "token_revoked",
+    message: "This session's identity was deactivated, so none of its tokens work.",
+    status: UNAUTHORIZED,
+  },
   expired: {
     code: agentSessionExpired,
     message: "This session's agent session token expired. Join again.",
@@ -68,6 +73,9 @@ const endedRefusals: Readonly<Record<"expired" | "revoked", Refusal>> = {
 function endedRefusal(status: string): Refusal {
   if (status === "expired") {
     return endedRefusals.expired;
+  }
+  if (status === "deactivated") {
+    return endedRefusals.deactivated;
   }
   return endedRefusals.revoked;
 }

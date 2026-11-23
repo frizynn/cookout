@@ -39,7 +39,7 @@ it.effect("deactivating an identity makes every token it holds fail, while its m
     expect([tokens, Arr.map(messages, ({ author, id }) => [id, author.name])]).toMatchObject([
       [
         { code: "token_revoked", status: UNAUTHORIZED },
-        { code: "agent_session_revoked", status: UNAUTHORIZED },
+        { code: "token_revoked", status: UNAUTHORIZED },
       ],
       [[message.id, "auth-griller"]],
     ]);
