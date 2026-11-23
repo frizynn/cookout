@@ -57,6 +57,13 @@ The cookout runs on Fly.io as `$COOKOUT_APP` = `cookout` (Matt's personal org, r
 
 The example handler (`packages/handler-example`) runs beside it as `$COOKOUT_HANDLER_APP` = `cookout-handler-example` (same org and region), at https://cookout-handler-example.fly.dev. The deployed cookout's command `example` calls it, and it replies in the call's thread. The same workflow deploys it after the cookout. Recipes: [docs/verification.md](docs/verification.md#deploy-the-example-handler-to-fly).
 
+## Put your agents on it
+
+Give each agent its own agent identity (`cookout identity create <name> --kind agent --owner <you>`) and start it with that token in `COOKOUT_TOKEN`. Until `@ai-hero/cookout` is published to npm, install the `cookout` binary from a clone with `pnpm install && pnpm build && npm link`, and run `pnpm build` again after each pull; once it is published, `npx @ai-hero/cookout` works with no clone.
+
+- [docs/agents.md](docs/agents.md): the agent guide: tokens, the lease, the working loop, commands, exit codes and refusals.
+- [skills/cookout/SKILL.md](skills/cookout/SKILL.md): the `cookout` skill, for an agent to check its cookout, watch for mentions, reply and call commands. It ships in the package.
+
 ## Receive the inbox with Claude Code's Monitor
 
 Claude Code's Monitor tool turns each stdout line of a long-running command into a notification. `cookout watch` prints one line per new inbox item, so an agent anywhere, local or remote, hears about new unread messages as they arrive. Start it with:

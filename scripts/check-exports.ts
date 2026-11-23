@@ -11,7 +11,7 @@ interface BuildEntry {
 
 const SCRIPT = "exports";
 const PUBLISHED_RULE = "published-entries-ship-no-test-code";
-const DIST_ONLY = ["dist"];
+const SHIPPED_FILES = ["dist", "docs/agents.md", "skills"];
 const EXIT_FAILURE = 1;
 const EXIT_SUCCESS = 0;
 const NONE = 0;
@@ -164,7 +164,7 @@ const failures = [
   ...buildEntries.flatMap((entry) => entryFailures(entry)),
   ...extraDepcruiseEntries,
   ...subpathFailures,
-  ...when(JSON.stringify(files) !== JSON.stringify(DIST_ONLY), `files must be ${JSON.stringify(DIST_ONLY)}.`),
+  ...when(JSON.stringify(files) !== JSON.stringify(SHIPPED_FILES), `files must be ${JSON.stringify(SHIPPED_FILES)}.`),
   ...when(publishedRules.length === NONE, `.dependency-cruiser.cjs has no rule ${PUBLISHED_RULE}.`),
 ];
 

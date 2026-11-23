@@ -10,6 +10,7 @@ const walk = (dir: string, keep: (path: string) => boolean): readonly string[] =
 const docs = [
   ...["AGENTS.md", "CLAUDE.md"].filter((path) => existsSync(path)),
   ...walk("docs", (path) => path.endsWith(".md") && !path.startsWith("docs/adr/")),
+  ...walk("skills", (path) => path.endsWith(".md")),
 ];
 const source = walk("app", (path) => /\.tsx?$/u.test(path))
   .map((path) => readFileSync(path, "utf8"))

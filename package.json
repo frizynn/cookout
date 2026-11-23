@@ -11,7 +11,9 @@
     "cookout": "./dist/main.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "docs/agents.md",
+    "skills"
   ],
   "exports": {
     "./sdk": "./app/modules/sdk/index.ts"
