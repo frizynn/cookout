@@ -6,6 +6,7 @@ import type {
   InboxItem,
   InboxResponse,
   ReadPosition,
+  ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../index.ts";
 import { ChannelNameSchema, ChannelSchema } from "../../../channels/server.ts";
@@ -29,6 +30,10 @@ const InboxHistoryItemSchema = matchesWire<InboxHistoryItem>()(
 
 export const ReadPositionSchema = matchesWire<ReadPosition>()(
   Schema.Struct({ channel: ChannelNameSchema, messageId: MessageIdSchema, thread: Schema.NullOr(MessageIdSchema) }),
+);
+
+export const ReadPositionsResponseSchema = matchesWire<ReadPositionsResponse>()(
+  Schema.Struct({ readPositions: Schema.Array(ReadPositionSchema) }),
 );
 
 export const InboxItemSchema = matchesWire<InboxItem>()(Schema.Struct(inboxItemFields));

@@ -12,6 +12,7 @@ import type {
   InboxHistoryQuery,
   InboxHistoryResponse,
   InboxResponse,
+  ReadPositionsResponse,
   SubscriptionResponse,
 } from "./lib/inbox.ts";
 import type {
@@ -86,19 +87,7 @@ export type {
   TopLevelMessage,
 } from "../messages/index.ts";
 export type * from "../agent-sessions/index.ts";
-export type {
-  AckRequest,
-  AckResponse,
-  FollowResponse,
-  InboxHistoryItem,
-  InboxHistoryQuery,
-  InboxHistoryResponse,
-  InboxItem,
-  InboxReason,
-  InboxResponse,
-  ReadPosition,
-  SubscriptionResponse,
-} from "../inbox/index.ts";
+export type * from "./lib/inbox-types.ts";
 export type {
   ConnectedEvent,
   CookoutEvent,
@@ -220,6 +209,8 @@ export type CookoutClient = {
    * last item's message ID as `before` while `hasMore` is true. The caller's own messages never appear.
    */
   readonly inboxHistory: (query?: InboxHistoryQuery) => Promise<InboxHistoryResponse>;
+  /** `GET /v1/read-positions`: the caller's read positions, by channel name, each channel's own before its threads'. */
+  readonly readPositions: () => Promise<ReadPositionsResponse>;
   /**
    * `POST /v1/ack`: marks the message and everything before it in its thread (for a reply) or channel (for a
    * top-level message) as read. A read position never moves backwards. A missing message is 404 `message_not_found`.

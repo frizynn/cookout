@@ -19,16 +19,18 @@
  * given), keeping the read ones newest first and reading on until a page
  * holds one, and `loadMore` reads the next page. An item a read position
  * takes out of the counts joins it, so opening an item moves it there.
- * `newLine` is where a channel's or thread's "New" line goes: the first
- * message there that was unread when the view opened, kept while it is open.
+ * It loads the caller's read positions (`GET /v1/read-positions`) with the
+ * inbox and follows them by `read-position`. `newLine` is where a channel's or
+ * thread's "New" line goes: its read position when the view opened, so the
+ * line sits above the first message after it, kept while the view is open.
  */
 import type { ChannelName, CookoutClient, CookoutEvent, InboxItem, MessageId, Refusal } from "../sdk/index.ts";
+import { createInboxItems, readInto } from "./lib/inbox-items.ts";
 import type { Earlier } from "./lib/earlier.ts";
 import type { Live } from "../live/index.ts";
 import type { NewLine } from "./lib/new-lines.ts";
 import type { UnreadCounts } from "./lib/inbox-items.ts";
 import { createEarlier } from "./lib/earlier.ts";
-import { createInboxItems } from "./lib/inbox-items.ts";
 import { refusalOf } from "../sdk/index.ts";
 import { withNewLines } from "./lib/new-lines.ts";
 
@@ -54,9 +56,10 @@ export interface Unread {
   /** The read inbox items, newest first, a page at a time: an external store of its own. */
   readonly earlier: Earlier;
   /**
-   * Where the "New" line goes in a channel's top-level messages (`thread` is `null`) or a thread's replies: the
-   * first message there that was unread when its first reader subscribed, once the counts have loaded. It stays put
-   * while anyone reads it, though the view's own ack reads that message, and is read afresh when it is opened again.
+   * Where the "New" line goes in a channel's top-level messages (`thread` is `null`) or a thread's replies: the read
+   * position there when its first reader subscribed, once the counts have loaded, so the line sits above the first
+   * message after it; `null`, with no line, where nothing there has been read. It stays put while anyone reads it,
+   * though the view's own ack moves the read position, and is read afresh when it is opened again.
    */
   readonly newLine: (channel: ChannelName, thread: MessageId | null) => NewLine;
 }
@@ -66,7 +69,7 @@ export interface Unread {
  * a page (50 unless given), and the live stream.
  */
 export interface UnreadOptions {
-  readonly client: Pick<CookoutClient, "inbox" | "inboxHistory">;
+  readonly client: Pick<CookoutClient, "inbox" | "inboxHistory" | "readPositions">;
   readonly pageSize?: number;
   readonly live?: Live;
 }
@@ -106,8 +109,7 @@ export function createUnread(options: UnreadOptions): Unread {
       live.subscribe(receive);
     }
     try {
-      const inbox = await options.client.inbox();
-      items.addAll(inbox.items);
+      await readInto({ client: options.client, items, onRead: earlier.add });
       publish(loaded());
     } catch (error: unknown) {
       publish({ ...refusalOf(error), status: "failed" });
@@ -116,6 +118,7 @@ export function createUnread(options: UnreadOptions): Unread {
 
   return withNewLines<Pick<Unread, "earlier" | "snapshot" | "subscribe">>({
     earlier,
+    readPosition: items.readPosition,
     snapshot: () => current,
     subscribe: (listener) => {
       listeners.add(listener);

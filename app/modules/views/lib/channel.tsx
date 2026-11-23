@@ -52,7 +52,7 @@ export function ChannelView(props: ChannelProps): ReactNode {
   const description = useDescription(props.board, props.channel);
   const { subscriptions } = props.board;
   const subscribed = useSyncExternalStore(subscriptions.subscribe, subscriptions.snapshot);
-  const unreadFrom = useSyncExternalStore(props.newLine.subscribe, props.newLine.snapshot);
+  const readPosition = useSyncExternalStore(props.newLine.subscribe, props.newLine.snapshot);
   if (state.status === "failed" && state.code === "channel_not_found") {
     return <NotBuiltView description={TEXT.missing} title={TEXT.nothing} />;
   }
@@ -71,7 +71,7 @@ export function ChannelView(props: ChannelProps): ReactNode {
           messages={messages}
           open={props.open}
           state={state}
-          unreadFrom={unreadFrom}
+          readPosition={readPosition}
         />
       </ScrollArea>
       <MessageFooter

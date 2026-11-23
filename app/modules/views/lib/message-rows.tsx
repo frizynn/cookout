@@ -14,7 +14,7 @@ interface MessageRowsProps {
   readonly state: ChannelMessagesState;
   readonly me: string;
   readonly open: MessageId | null;
-  readonly unreadFrom: MessageId | null;
+  readonly readPosition: MessageId | null;
 }
 
 export function MessageRows(props: MessageRowsProps): ReactNode {
@@ -42,7 +42,7 @@ export function MessageRows(props: MessageRowsProps): ReactNode {
         me={props.me}
         messages={state.messages}
         open={props.open}
-        unreadFrom={props.unreadFrom}
+        readPosition={props.readPosition}
       />
       <ReadRefusal read={state.read} />
     </>

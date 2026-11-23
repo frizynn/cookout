@@ -11,12 +11,12 @@ import type {
 import type { InboxReason, ReadPosition } from "../../../inbox/index.ts";
 import type { Message, MessageId, TopLevelMessage } from "../../../messages/index.ts";
 import { followersOf, reasonsIn, scopeOf } from "./inbox.ts";
-import type { ChannelName } from "../../../channels/index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { inboxReasons } from "../../../inbox/index.ts";
 import { isMessageId } from "../../../messages/index.ts";
+import { readPositionsIn } from "./read-positions-sqlite.ts";
 import { threadIdOf } from "./messages.ts";
 import { unreadable } from "./errors.ts";
 
@@ -230,8 +230,8 @@ function changeFollow(db: SqliteDatabase, reader: MessageReader, sql: string) {
     );
 }
 
-function changeSubscription(db: SqliteDatabase, sql: string) {
-  return (identity: IdentityName, channel: ChannelName): Fails<boolean> =>
+function changeSubscription(db: SqliteDatabase, sql: string): InboxSection["subscribeChannel"] {
+  return (identity, channel) =>
     db.transaction(
       Effect.flatMap(db.get("SELECT 1 AS found FROM channels WHERE name = ?", channel), (row) => {
         if (!isFoundRow(row)) {
@@ -261,6 +261,7 @@ function sqliteInbox({ db, reader }: InboxOn): InboxSection {
     listInbox: (identity) => inboxOf({ db, reader }, identity, NOTHING_SEEN),
     listInboxAfter: (identity, after) => inboxOf({ db, reader }, identity, after),
     listInboxHistory: (identity, page) => historyOf({ db, reader }, identity, page),
+    listReadPositions: (identity) => readPositionsIn({ db, identity }),
     listSubscribedChannels: (identity) =>
       db
         .all(SUBSCRIBED_CHANNELS, identity)
