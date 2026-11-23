@@ -9,6 +9,7 @@ import {
   Layer,
   Option,
   Schema,
+  Stdio,
   pipe,
 } from "effect";
 import { exitCodeFor, runCookout as runCommandLine } from "../../../cli/server.ts";
@@ -20,6 +21,7 @@ import type { ServeLayers } from "../../../cli/server.ts";
 import { TestConsole } from "effect/testing";
 import { devCommandLine } from "../../../dev/server.ts";
 import { secretsTest } from "./secrets.ts";
+import { stdioWithStdin } from "./stdin.ts";
 
 interface CliResult {
   readonly exitCode: number;
@@ -55,6 +57,7 @@ interface ServeOptions {
 interface Invocation {
   readonly args: readonly string[];
   readonly env: Readonly<Record<string, string>>;
+  readonly stdin?: string;
 }
 
 type Needs = NodeServices.NodeServices | Secrets;
@@ -138,8 +141,9 @@ function captured({ env, program }: Omit<CommandLine, "console">): Effect.Effect
   });
 }
 
-function runCookout({ args, env }: Invocation): Effect.Effect<CliResult, never, Needs> {
-  return captured({ env, program: exitCodeAfter(runCommandLine(args, verbLayers)) });
+function runCookout({ args, env, stdin = "" }: Invocation): Effect.Effect<CliResult, never, Needs> {
+  const program = exitCodeAfter(runCommandLine(args, verbLayers));
+  return captured({ env, program: Effect.provideService(program, Stdio.Stdio, stdioWithStdin(stdin)) });
 }
 
 function runDev({ args, env }: Invocation): Effect.Effect<CliResult, never, Needs> {

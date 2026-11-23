@@ -16,11 +16,23 @@
  * `lease_state_unsafe`; `join` makes them so. A lease-state file that can't
  * be read as one is `lease_state_damaged`; any other failure of the CLI
  * itself, rather than a refusal, is `cli_error`.
+ *
+ * `login --token` reads a human identity's token from stdin (never the command
+ * line), checks it with the server, and keeps it as the Login for `COOKOUT_URL`
+ * in the credentials file, `$XDG_CONFIG_HOME/cookout/credentials` (default
+ * `~/.config/cookout/credentials`), one entry per server URL, mode 600. An
+ * agent's token is `human_only`. `logout` removes this server's Login. With
+ * no `COOKOUT_TOKEN` and no agent tool detected (even with
+ * `COOKOUT_ALLOW_HUMAN=1`), every verb sends the Login; `whoami` adds
+ * `source`, `COOKOUT_TOKEN` or `login`. A credentials file that isn't mode
+ * 600 and yours, or is a symlink, is `credentials_unsafe`; one that can't be
+ * read as one is `credentials_damaged`.
  */
 import { CliError, Command } from "effect/cli";
 import { cookoutServer, serveCommand } from "./lib/server/serve.ts";
-import { usageFailed, withJsonPresenter } from "./lib/server/output.ts";
+import { loginCommand, logoutCommand, whoamiCommand } from "./lib/server/login.ts";
 
+import { usageFailed, withJsonPresenter } from "./lib/server/output.ts";
 import { Effect } from "effect";
 import type { ServeLayers } from "./lib/server/serve.ts";
 import { verbCommands } from "./lib/server/verbs.ts";
@@ -32,7 +44,14 @@ export { cookoutServer, type ServeLayers };
 export const runCookout = (args: readonly string[], layers: ServeLayers) =>
   Command.make("cookout").pipe(
     Command.withDescription("A self-hosted, Slack-style board for people and agents."),
-    Command.withSubcommands([serveCommand(layers), ...verbCommands, watchCommand]),
+    Command.withSubcommands([
+      serveCommand(layers),
+      loginCommand,
+      logoutCommand,
+      whoamiCommand,
+      ...verbCommands,
+      watchCommand,
+    ]),
     (command) => Command.runWith(command, { version: "0.0.0" })(args),
     Effect.catchIf(CliError.isCliError, () => usageFailed),
     withJsonPresenter,

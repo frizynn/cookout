@@ -70,9 +70,9 @@ function refused(error: { readonly code: string }): Effect.Effect<never, Command
   );
 }
 
-function answered<Value>(
-  effect: Effect.Effect<Value, CallFailure, LeaseStateNeeds>,
-): Effect.Effect<void, CommandFailed, LeaseStateNeeds> {
+function answered<Value, Needs = LeaseStateNeeds>(
+  effect: Effect.Effect<Value, CallFailure, Needs>,
+): Effect.Effect<void, CommandFailed, Needs> {
   return Effect.matchEffect(effect, { onFailure: refused, onSuccess: printAnswer });
 }
 
