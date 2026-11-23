@@ -830,7 +830,7 @@ The call prints `{ messageId, threadId }` at once. In the background the server 
 
 ## Version a release with Changesets
 
-Changesets sets the version and CHANGELOG.md of `@ai-hero/cookout`. The private packages are never versioned, and publishing is off until Matt's OK ([ADR 0031](adr/0031-changesets-version-the-package-and-publishing-stays-off.md)). Never run `pnpm release`, `changeset publish` or `npm publish`. To prove the setup without changing anything, add a sample changeset on a throwaway branch, check the plan, version it, then discard the branch:
+Changesets sets the version and CHANGELOG.md of `@ai-hero/cookout`. The private packages are never versioned. Only CI publishes, from the Version Packages pull request ([ADR 0050](adr/0050-the-cli-is-published-to-npm.md)). Never run `pnpm release`, `changeset publish` or `npm publish`. To prove the setup without changing anything, add a sample changeset on a throwaway branch, check the plan, version it, then discard the branch:
 
 ```sh
 git checkout -b changeset-dry-run
@@ -839,15 +839,15 @@ pnpm changeset status --verbose
 pnpm run version
 cat CHANGELOG.md
 git status --short
-git checkout -- package.json
+git checkout -- package.json .changeset
 rm -f CHANGELOG.md .changeset/dry-run.md
 git checkout -
 git branch -D changeset-dry-run
 ```
 
-`pnpm changeset status --verbose` lists only `@ai-hero/cookout -> 0.1.0`, from the dry-run changeset. `pnpm run version` consumes the changeset, bumps `package.json` to 0.1.0, and writes a CHANGELOG.md with a `## 0.1.0` section under `### Minor Changes`. `git status --short` shows only `package.json` and the new CHANGELOG.md, so `packages/e2e` and `packages/handler-example` stay at 0.0.0. With no changeset, `pnpm changeset status` exits 1 ("Some packages have been changed but no changesets were found"), which is expected during the v1 build.
+`pnpm changeset status --verbose` lists only `@ai-hero/cookout -> 0.1.0`. `pnpm run version` consumes the changeset, bumps `package.json` to 0.1.0, and writes a CHANGELOG.md with a `## 0.1.0` section under `### Minor Changes`. `git status --short` shows only `package.json`, the new CHANGELOG.md and the consumed changesets (the dry run's and `.changeset/first-release.md`), so `packages/e2e` and `packages/handler-example` stay at 0.0.0. With no changeset, `pnpm changeset status` exits 1 ("Some packages have been changed but no changesets were found"), which is expected during the v1 build.
 
-The release workflow, `.github/workflows/release.yml`, passes `actionlint` (for example `docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:latest`). Its publish step is guarded by `if: false`.
+The release workflow, `.github/workflows/release.yml`, passes `actionlint` (for example `docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:latest`). Its publish step runs only when no changesets are left, and has no npm token: it publishes by trusted publishing. `npm pack --dry-run` after `pnpm build` lists what would ship: `dist`, `docs/agents.md`, `skills`, README.md and package.json.
 
 ## Reply as the handler with the command token
 

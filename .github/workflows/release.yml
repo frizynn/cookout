@@ -1,7 +1,8 @@
 name: Release
 
-# Opens or updates the "Version Packages" pull request from the changesets on main. Publishing to
-# npm is off until Matt's OK (docs/adr/0031-changesets-version-the-package-and-publishing-stays-off.md).
+# Opens or updates the "Version Packages" pull request from the changesets on main. Merging that
+# pull request publishes @ai-hero/cookout to npm by trusted publishing (OIDC), with provenance and
+# no npm token (docs/adr/0050-the-cli-is-published-to-npm.md).
 on:
   push:
     branches: [main]
@@ -9,6 +10,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  id-token: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -25,6 +27,10 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-name: release
+          registry-url: https://registry.npmjs.org
+      # Trusted publishing needs npm 11.5.1 or later; Node 22 ships npm 10.
+      - name: Upgrade npm for trusted publishing
+        run: npm install -g npm@^11.5.1
       - name: Open or update the Version Packages pull request
         id: changesets
         uses: changesets/action@v1
@@ -34,8 +40,9 @@ jobs:
           commit: Version Packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # Off until Matt's OK (ADR 0031). Switching it on is one deliberate change: remove this
-      # `if: false` guard, add the NPM_TOKEN secret as NODE_AUTH_TOKEN, and grant `id-token: write`.
+      # Runs once no changesets are left, that is on the push that merges the Version Packages pull
+      # request. `changeset publish` publishes only a version npm doesn't have yet. This step is the
+      # only publisher: passing `publish:` to the action as well would publish twice in one run.
       - name: Publish to npm
-        if: false && steps.changesets.outputs.hasChangesets == 'false'
+        if: steps.changesets.outputs.hasChangesets == 'false'
         run: pnpm release

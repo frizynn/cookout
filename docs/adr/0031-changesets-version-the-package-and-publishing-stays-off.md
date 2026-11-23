@@ -1,5 +1,7 @@
 # Changesets version the package, and publishing stays off until Matt's OK
 
+Superseded on 2026-11-23 by [ADR 0050](0050-the-cli-is-published-to-npm.md): the CLI is published to npm from CI, and the first release has its changeset.
+
 2026-11-23 (mattpocock/cookout#84). Matt, 2026-11-23: "Can you add a changesets approach to the repo in anticipation of publishing to npm?" Keeping publishing off until he says so is his standing rule. That tickets add no changesets during the v1 build is the ticket's decision, pending Matt's review.
 
 ## Context

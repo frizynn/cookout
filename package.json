@@ -18,7 +18,12 @@
   "exports": {
     "./sdk": "./app/modules/sdk/index.ts"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mattpocock/cookout.git"
+  },
   "publishConfig": {
+    "access": "public",
     "exports": {
       "./sdk": {
         "types": "./dist/sdk.d.ts",
