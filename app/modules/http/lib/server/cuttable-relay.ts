@@ -1,4 +1,4 @@
-import { Context, Effect, Layer, Stream, SubscriptionRef } from "effect";
+import { Context, Effect, Layer, Option, Stream, SubscriptionRef } from "effect";
 import {
   Headers,
   HttpClient,
@@ -34,7 +34,6 @@ type Answer = Effect.Effect<HttpServerResponse.HttpServerResponse, never, HttpSe
 
 const LOOPBACK = { host: "127.0.0.1", port: 0 } as const;
 const NO_CONTENT = 204;
-const BAD_GATEWAY = 502;
 const NOT_FORWARDED = ["connection", "content-length", "host", "origin", "transfer-encoding"] as const;
 const endToEnd = Headers.removeMany(NOT_FORWARDED);
 const controls: ReadonlyMap<string, boolean> = new Map([
@@ -72,10 +71,8 @@ function relayed(link: Link): Answer {
       yield* link.set(control);
       return HttpServerResponse.empty({ status: NO_CONTENT });
     }
-    if (!HttpMethod.isHttpMethod(method)) {
-      return HttpServerResponse.empty({ status: BAD_GATEWAY });
-    }
-    return yield* forwarded(link, method);
+    const known = yield* Effect.fromOption(Option.liftPredicate(method, HttpMethod.isHttpMethod));
+    return yield* forwarded(link, known);
   }).pipe(Effect.orDie);
 }
 
