@@ -41,7 +41,13 @@ interface CallFailure {
   readonly details?: unknown;
 }
 
-type CredentialSource = "COOKOUT_TOKEN" | "COOKOUT_SESSION" | "agent session token" | "login" | "none";
+type CredentialSource =
+  | "COOKOUT_TOKEN"
+  | "COOKOUT_SESSION"
+  | "agent session token"
+  | "agent-join-request"
+  | "login"
+  | "none";
 
 interface JoinedSession {
   readonly file: AgentSessionStateFile;

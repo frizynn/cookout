@@ -1,5 +1,5 @@
 import type { AgentSessionResponse, JoinRequest, LeaveResponse } from "../../../agent-sessions/index.ts";
-import type { AgentSessionStateFile, AgentSessionStateNeeds } from "./agent-session-state.ts";
+import type { AgentSessionState, AgentSessionStateFile, AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { CallFailure, ClientWithAgentSessionState, CredentialSource, JoinPlace } from "./adapters/sdk.ts";
 import { Console, Effect, Function, Option } from "effect";
 import { answered, refused } from "./output.ts";
@@ -25,6 +25,8 @@ interface Issued {
 }
 
 type JoinAnswer = Omit<AgentSessionResponse, "agentSessionToken"> & { readonly source: CredentialSource };
+
+const NOTHING = {};
 
 const asMissing: CallFailure = {
   code: "usage",
@@ -83,10 +85,17 @@ function issue(flags: JoinFlags): Effect.Effect<Issued, CallFailure, AgentSessio
   const byBrowser = Effect.flatMap(Effect.orDie(cookoutUrl), (url) =>
     Effect.map(joinByBrowser({ as: flags.as, idleExpiry: flags.idleExpiry, url }), (issued) => ({
       issued,
-      source: "none" as const,
+      source: "agent-join-request" as const,
     })),
   );
   return issueWithCredential(flags).pipe(Effect.catchIf(isLoginMissing, Function.constant(byBrowser)));
+}
+
+function joinedBy(source: CredentialSource): Pick<AgentSessionState, "joinedBy"> {
+  if (source === "agent-join-request") {
+    return { joinedBy: source };
+  }
+  return NOTHING;
 }
 
 function issueAndKeep(
@@ -102,7 +111,7 @@ function issueAndKeep(
       issued: { agentSessionToken, ...answer },
       source,
     } = yield* issue(flags);
-    yield* file.write({ ...answer, agentSessionToken, url });
+    yield* file.write({ ...answer, agentSessionToken, ...joinedBy(source), url });
     return { ...answer, source };
   });
 }

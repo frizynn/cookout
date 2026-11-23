@@ -1,6 +1,7 @@
 import type { ClientWithAgentSessionState, CredentialSource } from "./adapters/sdk.ts";
 import { Console, DateTime, Effect, Option } from "effect";
 import { callClient, withClient } from "./adapters/sdk.ts";
+import type { AgentSessionState } from "./agent-session-state.ts";
 import { Command } from "effect/cli";
 import type { IdentityResponse } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
@@ -35,10 +36,18 @@ function ago(milliseconds: number): string {
   return `${String(Math.floor(hours / HOURS_IN_A_DAY))} d ago`;
 }
 
-function joinedAnswer(answer: IdentityResponse, joinedAt: IsoTime, url: string): Effect.Effect<WhoamiAnswer> {
+function joinedHow({ joinedBy }: AgentSessionState): string {
+  if (joinedBy === "agent-join-request") {
+    return "agent join request";
+  }
+  return "agent session token";
+}
+
+function joinedAnswer(answer: IdentityResponse, state: AgentSessionState, url: string): Effect.Effect<WhoamiAnswer> {
+  const joinedAt = state.issuedAt;
   return Effect.map(DateTime.now, (now) => {
     const since = DateTime.toEpochMillis(now) - DateTime.toEpochMillis(DateTime.makeUnsafe(joinedAt));
-    const summary = `${answer.identity.name} (agent session token, joined ${ago(since)}) at ${url}`;
+    const summary = `${answer.identity.name} (${joinedHow(state)}, joined ${ago(since)}) at ${url}`;
     return { ...answer, joinedAt, source: "agent session token", summary, url };
   });
 }
@@ -48,7 +57,7 @@ function whoamiAnswer(
   answer: IdentityResponse,
 ): Effect.Effect<WhoamiAnswer> {
   if (Option.isSome(joined)) {
-    return joinedAnswer(answer, joined.value.state.issuedAt, url);
+    return joinedAnswer(answer, joined.value.state, url);
   }
   return Effect.succeed({ ...answer, source, summary: `${answer.identity.name} (${source}) at ${url}`, url });
 }

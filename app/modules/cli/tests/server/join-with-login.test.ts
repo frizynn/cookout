@@ -121,9 +121,20 @@ it.effect("inside Claude Code with no Login, join prints a link and code, and jo
     expect(joined.stderr).toMatch(new RegExp(`Open ${cookout.url}/#/approve-join/[A-Z0-9-]{9}, check`, "u"));
     expect(joined).toMatchObject({
       exitCode: 0,
-      stdoutJson: { created: true, expiresAt: "2026-01-08T00:00:00.000Z", identity: "triage-agent" },
+      stdoutJson: {
+        created: true,
+        expiresAt: "2026-01-08T00:00:00.000Z",
+        identity: "triage-agent",
+        source: "agent-join-request",
+      },
     });
-    expect(whoami).toMatchObject({ exitCode: 0, stdoutJson: { identity: { name: "triage-agent", owner: "ada" } } });
+    expect(whoami).toMatchObject({
+      exitCode: 0,
+      stdoutJson: {
+        identity: { name: "triage-agent", owner: "ada" },
+        summary: `triage-agent (agent join request, joined just now) at ${cookout.url}`,
+      },
+    });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
