@@ -1,6 +1,6 @@
 import type { Message, ReadReceipt } from "../../sdk/index.ts";
 import { useMessageMenu, useReplyAction } from "./use-message-menu.ts";
-import { MessageContent } from "./message-content.tsx";
+import { MessageData } from "./message-data.tsx";
 import type { MessageMenu } from "../../unread/index.ts";
 import type { ReactNode } from "react";
 import { StandaloneMessage } from "../../design-system/index.tsx";
@@ -41,10 +41,10 @@ export function StandaloneEntry(props: StandaloneEntryProps): ReactNode {
       note={note}
       presence={presence}
       onAction={handleReply}
-      time={useMessageTime(message.createdAt)}
+      time={useMessageTime({ message, parent: null, receipts: props.receipts })}
       unreadLine={false}
     >
-      <MessageContent me={props.me} message={message} parent={null} receipts={props.receipts} />
+      <MessageData me={props.me} message={message} />
     </StandaloneMessage>
   );
 }

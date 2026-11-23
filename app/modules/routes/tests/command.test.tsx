@@ -49,7 +49,7 @@ it("a command call and its result reply show their data in the thread", { timeou
   ]).toStrictEqual([
     JSON.stringify({ branch: "main" }),
     pretty({ status: "done" }),
-    [`web-show-callagentShipped main.▸ data▾ data${pretty({ status: "done" })}Not seen yet: @admin`],
+    [`web-show-callagentShipped main.▸ data▾ data${pretty({ status: "done" })}`],
   ]);
 
   close();

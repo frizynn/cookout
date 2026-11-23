@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 import type { ShownTimeParts } from "./parts.ts";
+import { Tooltip } from "./tooltip.tsx";
+
+const FOCUSABLE = 0;
 
 function shownClass(hidden: boolean): string {
   if (hidden) {
@@ -8,14 +11,23 @@ function shownClass(hidden: boolean): string {
   return "text-[11px]";
 }
 
+function linesOf(parts: ShownTimeParts): readonly string[] {
+  if (parts.receipt === null) {
+    return [parts.full];
+  }
+  return [parts.full, parts.receipt];
+}
+
 export function MessageTime(parts: ShownTimeParts): ReactNode {
   return (
-    <time
-      className={`font-mono text-muted-foreground ${shownClass(parts.hidden)}`}
-      dateTime={parts.iso}
-      title={parts.full}
-    >
-      {parts.shown}
-    </time>
+    <Tooltip lines={linesOf(parts)}>
+      <time
+        className={`rounded-sm font-mono text-muted-foreground ${shownClass(parts.hidden)}`}
+        dateTime={parts.iso}
+        tabIndex={FOCUSABLE}
+      >
+        {parts.shown}
+      </time>
+    </Tooltip>
   );
 }

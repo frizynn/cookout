@@ -2,7 +2,7 @@ import type { ChannelName, Message, MessageId, ReadReceipt } from "../../sdk/ind
 import type { MessageMenu, ThreadNews } from "../../unread/index.ts";
 import { markOf, threadHref, threadSummaryOf } from "./message-marks.ts";
 import { useMessageMenu, useReplyAction } from "./use-message-menu.ts";
-import { MessageContent } from "./message-content.tsx";
+import { MessageData } from "./message-data.tsx";
 import { MessageItem } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
 import { ReplySummary } from "./reply-summary.tsx";
@@ -52,10 +52,10 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
       note={note}
       presence={presence}
       onAction={handleReply}
-      time={useMessageTime(message.createdAt)}
+      time={useMessageTime({ message, parent: props.parent, receipts: props.receipts })}
       unreadLine={props.row.unreadLine}
     >
-      <MessageContent me={props.me} message={message} parent={props.parent} receipts={props.receipts} />
+      <MessageData me={props.me} message={message} />
       {href !== null && summary !== null && <ReplySummary href={href} news={props.news} summary={summary} />}
     </MessageItem>
   );

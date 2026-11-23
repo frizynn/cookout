@@ -137,11 +137,7 @@ it("the More actions button marks a reply unread, moving the thread's New line a
 
   fireEvent.click(first);
   await markedUnread();
-  await streamShows("Replies", [
-    "[New]",
-    `${channel}-adaNoon worksNot seen yet: @${channel}-grace`,
-    `Or oneNot seen yet: @${channel}-grace`,
-  ]);
+  await streamShows("Replies", ["[New]", `${channel}-adaNoon works`, "Or one"]);
 
   expect(screen.queryAllByRole("menu")).toStrictEqual([]);
 
