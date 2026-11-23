@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
 import { SignedInView } from "./signed-in-view.tsx";
 import type { Stores } from "./stores.ts";
+import { usePageTitle } from "../../page-title/index.ts";
 import { useSyncExternalStore } from "react";
 
 interface RouteViewProps {
@@ -14,6 +15,7 @@ interface RouteViewProps {
 export function RouteView(props: RouteViewProps): ReactNode {
   const { session } = props.stores;
   const state = useSyncExternalStore(session.subscribe, session.snapshot);
+  usePageTitle({ route: props.route, session, unread: props.stores.unread });
   if (state.status !== "logged-in") {
     return (
       <AppShell>
