@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 interface FeedRowTitleParts {
   readonly author: string;
+  readonly authorHref: string;
   readonly displayName: string | null;
   readonly note: string | null;
   readonly bold: boolean;
@@ -20,7 +21,9 @@ function weightOf(bold: boolean): string {
 export function FeedRowTitle(parts: FeedRowTitleParts): ReactNode {
   return (
     <span className="flex items-baseline gap-1.5 text-[13px]">
-      <span className={weightOf(parts.bold)}>{parts.displayName ?? parts.author}</span>
+      <a className={`relative z-10 hover:underline ${weightOf(parts.bold)}`} href={parts.authorHref}>
+        {parts.displayName ?? parts.author}
+      </a>
       {parts.displayName !== null && <span className="text-xs text-muted-foreground">{`@${parts.author}`}</span>}
       {parts.note !== null && <span className="text-xs text-muted-foreground">{parts.note}</span>}
       <span className="text-muted-foreground">{parts.action}</span>

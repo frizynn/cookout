@@ -25,8 +25,9 @@ async function subscribedReader(channel: string, ...others: readonly string[]): 
 
 function rowsOf(label: string): readonly string[] {
   const rows: string[] = [];
-  for (const link of within(screen.getByRole("list", { name: label })).getAllByRole("link")) {
-    rows.push(`${link.getAttribute("href") ?? ""} ${link.textContent}`);
+  for (const row of within(screen.getByRole("list", { name: label })).getAllByRole("listitem")) {
+    const [link = row] = within(row).getAllByRole("link");
+    rows.push(`${link.getAttribute("href") ?? ""} ${row.textContent}`);
   }
   return rows;
 }

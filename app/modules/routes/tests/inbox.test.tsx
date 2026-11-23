@@ -68,7 +68,7 @@ async function openAndComeBack(href: string): Promise<void> {
 async function timeShown(reader: CookoutClient, later: number): Promise<string> {
   vi.advanceTimersByTime(later);
   const unmount = openAt({ client: reader, hash: "#/inbox" });
-  const row = await within(await screen.findByRole("list", { name: "Activity" })).findByRole("link");
+  const row = await within(await screen.findByRole("list", { name: "Activity" })).findByRole("listitem");
   const shown = within(row).getByText(/ ago$|\d\d:\d\d$/u).textContent;
   unmount();
   return shown;
@@ -108,9 +108,11 @@ it("a live mention appears under For you, and opening it moves it to Earlier", {
   const { close, poster } = await openWatched(channel);
   const { message } = await poster.createMessage({ channel, text: `@${channel}-reader look` });
 
-  const row = await within(await screen.findByRole("list", { name: "For you" })).findByRole("link");
+  const row = await within(await screen.findByRole("list", { name: "For you" })).findByRole("link", {
+    name: /^Mentioned you/u,
+  });
 
-  expect(row.textContent).toContain("Mentioned you");
+  expect(row.getAttribute("href")).toBe(`#/channels/${channel}`);
 
   await openAndComeBack(String(row.getAttribute("href")));
 

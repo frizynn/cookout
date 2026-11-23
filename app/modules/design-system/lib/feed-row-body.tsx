@@ -1,11 +1,13 @@
 import { FeedRowTitle } from "./feed-row-title.tsx";
 import { FeedRowWhy } from "./feed-row-why.tsx";
 import type { ReactNode } from "react";
+import { useId } from "react";
 
 interface FeedRowParts {
   readonly level: "for-you" | "activity" | "read";
   readonly why: string;
   readonly author: string;
+  readonly authorHref: string;
   readonly displayName: string | null;
   readonly note: string | null;
   readonly action: string;
@@ -13,21 +15,30 @@ interface FeedRowParts {
   readonly time: string;
   readonly context: string | null;
   readonly children: ReactNode;
+  readonly href: string;
 }
 
 const DOTS = { activity: "bg-muted-foreground/60", "for-you": "bg-mention-bar", read: "hidden" } as const;
 
 export function FeedRowBody(parts: FeedRowParts): ReactNode {
+  const id = useId();
   return (
-    <span className="flex min-w-0 flex-1 flex-col">
+    <span className="flex min-w-0 flex-1 flex-col" id={id}>
       <span
         aria-hidden="true"
-        className={`absolute top-[1.35rem] left-0 h-1.5 w-1.5 rounded-full ${DOTS[parts.level]}`}
+        className={`pointer-events-none absolute top-[1.35rem] left-0 h-1.5 w-1.5 rounded-full ${DOTS[parts.level]}`}
       />
-      <FeedRowWhy level={parts.level}>{parts.why}</FeedRowWhy>
+      <a
+        aria-labelledby={id}
+        className="flex outline-none after:absolute after:inset-0 after:rounded-lg"
+        href={parts.href}
+      >
+        <FeedRowWhy level={parts.level}>{parts.why}</FeedRowWhy>
+      </a>
       <FeedRowTitle
         action={parts.action}
         author={parts.author}
+        authorHref={parts.authorHref}
         bold={parts.level !== "read"}
         channel={parts.channel}
         displayName={parts.displayName}
