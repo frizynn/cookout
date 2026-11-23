@@ -137,4 +137,4 @@ async function readInto({ client, items, onRead }: Reading): Promise<void> {
   items.addAll(inbox.items);
 }
 
-export { type UnreadCounts, createInboxItems, readInto };
+export { type InboxItems, type UnreadCounts, createInboxItems, readInto };

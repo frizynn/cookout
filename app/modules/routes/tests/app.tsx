@@ -20,6 +20,7 @@ const ONE = 1;
 type AppClient = BoardOptions["client"] &
   Pick<
     CookoutClient,
+    | "ackAll"
     | "createIdentity"
     | "deactivateIdentity"
     | "inbox"

@@ -23,16 +23,47 @@
  * inbox and follows them by `read-position`. `newLine` is where a channel's or
  * thread's "New" line goes: its read position when the view opened, so the
  * line sits above the first message after it, kept while the view is open.
+ * `markAllRead` acks the whole inbox up to the newest item the store holds
+ * (`POST /v1/inbox/ack-all`) and drops the items the read positions it moved
+ * cover, so a message that arrives meanwhile stays unread.
  */
 import type { ChannelName, CookoutClient, CookoutEvent, InboxItem, MessageId, Refusal } from "../sdk/index.ts";
+import type { InboxItems, UnreadCounts } from "./lib/inbox-items.ts";
+import type { MarkAll, MarkAllState } from "./lib/mark-all.ts";
 import { createInboxItems, readInto } from "./lib/inbox-items.ts";
 import type { Earlier } from "./lib/earlier.ts";
 import type { Live } from "../live/index.ts";
 import type { NewLine } from "./lib/new-lines.ts";
-import type { UnreadCounts } from "./lib/inbox-items.ts";
 import { createEarlier } from "./lib/earlier.ts";
+import { createMarkAll } from "./lib/mark-all.ts";
 import { refusalOf } from "../sdk/index.ts";
 import { withNewLines } from "./lib/new-lines.ts";
+
+function loadedOf(items: InboxItems, markAll: MarkAllState): UnreadState {
+  return { channels: items.counts(), items: items.list(), markAll, status: "loaded" };
+}
+
+interface Loading {
+  readonly client: UnreadOptions["client"];
+  readonly items: InboxItems;
+  readonly markAll: MarkAll;
+  readonly onRead: (item: InboxItem) => void;
+}
+
+async function loadedOrFailed({ client, items, markAll, onRead }: Loading): Promise<UnreadState> {
+  try {
+    await readInto({ client, items, onRead });
+    return loadedOf(items, markAll.state());
+  } catch (error: unknown) {
+    return { ...refusalOf(error), status: "failed" };
+  }
+}
+
+function follow(live: Live | null, onEvent: (event: CookoutEvent) => void): void {
+  if (live !== null) {
+    live.subscribe(onEvent);
+  }
+}
 
 /**
  * The counts by channel name, as far as they have loaded, and the inbox items they count, oldest first; a channel with
@@ -44,6 +75,7 @@ export type UnreadState =
       readonly status: "loaded";
       readonly channels: ReadonlyMap<ChannelName, UnreadCounts>;
       readonly items: readonly InboxItem[];
+      readonly markAll: MarkAllState;
     }
   | (Refusal & { readonly status: "failed" });
 
@@ -62,6 +94,8 @@ export interface Unread {
    * though the view's own ack moves the read position, and is read afresh when it is opened again.
    */
   readonly newLine: (channel: ChannelName, thread: MessageId | null) => NewLine;
+  /** Marks every inbox item the store holds as read, in every channel and thread, leaving any newer one unread. */
+  readonly markAllRead: () => void;
 }
 
 /**
@@ -69,7 +103,7 @@ export interface Unread {
  * a page (50 unless given), and the live stream.
  */
 export interface UnreadOptions {
-  readonly client: Pick<CookoutClient, "inbox" | "inboxHistory" | "readPositions">;
+  readonly client: Pick<CookoutClient, "ackAll" | "inbox" | "inboxHistory" | "readPositions">;
   readonly pageSize?: number;
   readonly live?: Live;
 }
@@ -93,31 +127,27 @@ export function createUnread(options: UnreadOptions): Unread {
     }
   }
 
-  function loaded(): UnreadState {
-    return { channels: items.counts(), items: items.list(), status: "loaded" };
-  }
-
-  function receive(event: CookoutEvent): void {
-    if (items.receive(event, earlier.add) && current.status === "loaded") {
-      publish(loaded());
-    }
-  }
+  const markAll = createMarkAll({
+    ...options,
+    items,
+    onChange: (state) => {
+      publish(loadedOf(items, state));
+    },
+    onRead: earlier.add,
+  });
 
   async function load(): Promise<void> {
-    const live = options.live ?? null;
-    if (live !== null) {
-      live.subscribe(receive);
-    }
-    try {
-      await readInto({ client: options.client, items, onRead: earlier.add });
-      publish(loaded());
-    } catch (error: unknown) {
-      publish({ ...refusalOf(error), status: "failed" });
-    }
+    follow(options.live ?? null, (event) => {
+      if (items.receive(event, earlier.add) && current.status === "loaded") {
+        publish(loadedOf(items, markAll.state()));
+      }
+    });
+    publish(await loadedOrFailed({ client: options.client, items, markAll, onRead: earlier.add }));
   }
 
-  return withNewLines<Pick<Unread, "earlier" | "snapshot" | "subscribe">>({
+  return withNewLines<Pick<Unread, "earlier" | "markAllRead" | "snapshot" | "subscribe">>({
     earlier,
+    markAllRead: markAll.markAllRead,
     readPosition: items.readPosition,
     snapshot: () => current,
     subscribe: (listener) => {
@@ -131,4 +161,5 @@ export function createUnread(options: UnreadOptions): Unread {
 }
 
 export type { Earlier, EarlierState } from "./lib/earlier.ts";
+export type { MarkAllState } from "./lib/mark-all.ts";
 export type { UnreadCounts } from "./lib/inbox-items.ts";
