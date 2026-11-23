@@ -200,7 +200,10 @@ export type CookoutClient = {
    * each new read position (`read-position`) the moment any session of the caller acks, so several sessions stay in
    * sync. With `allChannels`, it also sends every new message on every channel (`message`), as the web UI needs.
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
-   * a newer server, is skipped. `close` drops the connection.
+   * a newer server, is skipped. `close` drops the connection. For an agent identity the stream carries the held
+   * lease ID and keeps the lease alive while open; a stale one is refused with 409 `lease_lost`, and if another
+   * session takes the lease over (`join --force`) the iteration throws `lease_lost` (status 200, the stream's) and
+   * the client drops the lease. A human identity watches with no lease.
    */
   readonly watch: (options?: WatchOptions) => Promise<EventStream>;
   /**
