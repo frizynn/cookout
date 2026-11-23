@@ -215,3 +215,67 @@ it("a profile address with a name no identity could have says there is nothing h
 
   close();
 });
+
+async function adminOf(prefix: string): Promise<CookoutClient> {
+  const viewer = await newIdentity({ kind: "human", name: `${prefix}-viewer` });
+  await newIdentity({ kind: "human", name: `${prefix}-human` });
+  await adminClient().makeAdmin(`${prefix}-viewer`);
+  return viewer.client;
+}
+
+function rowOf(name: string): HTMLElement {
+  return within(identityList()).getByRole("link", { name: (label) => label.startsWith(name) });
+}
+
+it("an admin makes a human an admin from their profile and removes it, the tag following on profile and row", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const close = openAt({ client: await adminOf("web-people-promote"), hash: "#/people/web-people-promote-human" });
+  fireEvent.click(await within(await profile()).findByRole("button", { name: "Make admin" }));
+  const remove = await within(await profile()).findByRole("button", { name: "Remove admin" });
+  const promoted = [await profileName(), rowOf("web-people-promote-human").textContent];
+  fireEvent.click(remove);
+  await within(await profile()).findByRole("button", { name: "Make admin" });
+
+  expect([promoted, await profileName(), rowOf("web-people-promote-human").textContent]).toStrictEqual([
+    ["web-people-promote-humanadmin", "web-people-promote-humanadminHuman"],
+    "web-people-promote-human",
+    "web-people-promote-humanHuman",
+  ]);
+
+  close();
+});
+
+it("a non-admin sees no admin button, and nor does an admin on an agent's profile", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const close = openAt({ client: await crewOf("web-people-nobutton"), hash: "#/people/web-people-nobutton-boss" });
+  await profileName();
+  const asHuman = within(await profile()).queryAllByRole("button");
+  close();
+  const again = openAt({ client: adminClient(), hash: "#/people/web-people-nobutton-loner" });
+  await profileName();
+
+  expect([asHuman, within(await profile()).queryAllByRole("button")]).toStrictEqual([[], []]);
+
+  again();
+});
+
+it("a refused admin change says why and leaves the tags as they were", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const close = openAt({ client: await adminOf("web-people-refused"), hash: "#/people/web-people-refused-human" });
+  const make = await within(await profile()).findByRole("button", { name: "Make admin" });
+  await adminClient().removeAdmin("web-people-refused-viewer");
+  fireEvent.click(make);
+  const alert = await within(await profile()).findByRole("alert");
+
+  expect([alert.textContent, await profileName()]).toStrictEqual([
+    "Couldn't change admin (admin_only): Only an admin identity can do this.",
+    "web-people-refused-human",
+  ]);
+
+  close();
+});

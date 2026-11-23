@@ -17,7 +17,8 @@ import { createUnread } from "../../unread/index.ts";
 const NONE = 0;
 const ONE = 1;
 
-type AppClient = BoardOptions["client"] & Pick<CookoutClient, "inbox" | "listIdentities" | "whoami">;
+type AppClient = BoardOptions["client"] &
+  Pick<CookoutClient, "inbox" | "listIdentities" | "makeAdmin" | "removeAdmin" | "whoami">;
 
 interface BoardOpening {
   readonly hash: string;

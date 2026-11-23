@@ -35,7 +35,8 @@
  * "Nobody matches." when the filters leave none. `ProfileView` is the panel
  * beside it for one identity: its large avatar, name and tags, display name,
  * kind and owner, and when it joined, or "Unknown identity", with a link that
- * closes it. The sidebar's footer links to the logged-in human's own profile.
+ * closes it. To an admin, a human's profile has "Make admin", or "Remove
+ * admin" if it is one, and says why if the server refuses the change. The sidebar's footer links to the logged-in human's own profile.
  * `NotBuiltView` says a route has nothing to show.
  */
 export { Authors } from "./lib/authors.tsx";

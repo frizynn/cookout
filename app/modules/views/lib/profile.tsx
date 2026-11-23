@@ -9,13 +9,14 @@ const TEXT = { close: "Close profile", profile: "Profile" } as const;
 
 interface ProfileProps {
   readonly identities: Identities;
+  readonly me: IdentityName;
   readonly name: IdentityName;
 }
 
 export function ProfileView(props: ProfileProps): ReactNode {
   return (
     <SidePanel closeHref={hrefOf({ name: "people" })} closeLabel={TEXT.close} detail={props.name} label={TEXT.profile}>
-      <ProfileBody identities={props.identities} name={props.name} />
+      <ProfileBody identities={props.identities} me={props.me} name={props.name} />
     </SidePanel>
   );
 }

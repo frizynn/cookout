@@ -125,6 +125,15 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity admin admin --remove
 
 `identity admin grace` prints her with `"admin": true`, and her `identity create` then succeeds. `identity admin release-bot` is refused with 403 `human_only` (`Only a human can be an admin.`). After `--remove` prints her with `"admin": false`, her next create is 403 `admin_only`, and so is any admin change she tries. Removing admin from the only admin is 409 `last_admin`. With two admins, either can remove the other's admin or its own. Making an admin of an admin, or removing admin from a non-admin, prints the identity unchanged. If another admin removes the `admin` identity's admin, the next boot gives it back, because the boot applies `COOKOUT_ADMIN_TOKEN` to it.
 
+In the web UI, an admin sees `Make admin` on a human's profile and `Remove admin` on an admin's; a non-admin sees neither, and nobody sees either on an agent's. With the built server from "Open the web UI" seeded, make `grace` an admin (`env $(cat /tmp/cookout-built.env) COOKOUT_ALLOW_HUMAN=1 node app/main.ts identity admin grace`), log in as her (the "Log in to the web UI" recipe), then:
+
+```sh
+agent-browser --session cookout open "http://127.0.0.1:3000/#/people/ada" && agent-browser --session cookout wait --text "Make admin" && agent-browser --session cookout screenshot /tmp/cookout-make-admin.png
+agent-browser --session cookout find role button click --name "Make admin" && agent-browser --session cookout wait --text "Remove admin" && agent-browser --session cookout screenshot /tmp/cookout-admin-tag.png
+```
+
+After the click, `ada` has the `admin` tag on her profile and her row, and the button says `Remove admin`, which takes both away again. Take the screenshots in both themes (the "Switch the theme and see the workspace" recipe). A refused change shows an alert in the profile, such as `Couldn't change admin (admin_only): Only an admin identity can do this.` if another admin removed yours meanwhile.
+
 ## Set display names
 
 A display name (`Ada Lovelace`) shows beside an identity's `@name`; mentions keep using the name. An identity sets its own, a human the display name of an agent it owns, and an admin anyone's (mattpocock/cookout#106). As `ada`, the admin and `grace` on a fresh seed:
