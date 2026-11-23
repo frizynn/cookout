@@ -24,6 +24,7 @@ import type { InboxSection } from "./inbox.ts";
 import type { MemoryInbox } from "./inbox-memory.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { StorageUnavailable } from "./errors.ts";
+import { isMessageId } from "../../../messages/index.ts";
 
 interface MemoryMessages {
   readonly last: number;
@@ -137,6 +138,7 @@ function memoryMessages({ channels, identities, state }: MemoryMessagesOptions):
         return Effect.succeed(CHANNEL_NOT_FOUND);
       }),
     getThread: (id) => read((messages) => threadIn(messages, id)),
+    latestMessageId: () => readBoard(({ last }) => Option.getOrUndefined(Option.liftPredicate(last, isMessageId))),
     listChannelMessages: (channel, page) =>
       Effect.flatMap(channelExists(channel), (exists) => {
         if (exists) {

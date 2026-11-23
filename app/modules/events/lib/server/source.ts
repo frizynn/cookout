@@ -1,5 +1,5 @@
 import { Array as Arr, Effect, Option, Predicate, Queue, Schedule, Schema, String as Str, Stream, pipe } from "effect";
-import type { CookoutEvent } from "../../index.ts";
+import type { ConnectedEvent, CookoutEvent } from "../../index.ts";
 import type { Identity } from "../../../identities/index.ts";
 import type { MessageId } from "../../../messages/index.ts";
 import type { Refusal } from "../../../http/index.ts";
@@ -10,7 +10,7 @@ import { isMessageId } from "../../../messages/index.ts";
 import { refusalEvent } from "../../index.ts";
 
 interface SseEvent {
-  readonly event: CookoutEvent["type"] | typeof refusalEvent;
+  readonly event: CookoutEvent["type"] | ConnectedEvent["type"] | typeof refusalEvent;
   readonly id?: MessageId;
   readonly data: string;
 }
