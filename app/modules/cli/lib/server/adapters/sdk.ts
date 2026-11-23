@@ -16,6 +16,7 @@ type CallFailureCode =
   | LeaseStateFailure["code"]
   | LoginFailure["code"]
   | "usage"
+  | "login_request_expired"
   | "timeout"
   | "server_unreachable";
 

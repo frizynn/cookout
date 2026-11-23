@@ -43,6 +43,7 @@ export {
   runCookoutBinary,
   watchCookoutBinary,
 } from "./lib/server/process.ts";
+export { runCookoutWhile } from "./lib/server/cli-clock.ts";
 export { type IdentityFixtureOptions, identityFixture, identityName } from "./lib/server/identities.ts";
 export { type CuttableLink, cuttableLink } from "./lib/server/cuttable-link.ts";
 export { type FixedAnswer, serverAnswering } from "./lib/server/fixed-answer.ts";

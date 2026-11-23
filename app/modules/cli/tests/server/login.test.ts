@@ -1,8 +1,16 @@
+import { Array as Arr, Effect, FileSystem, Option, Path, Stdio, String as Str, Stream } from "effect";
 import type { CliResult, CommandLineNeeds, TestCookoutService, TestIdentity } from "../../../testing/server.ts";
-import { Effect, FileSystem, Path, Stdio, Stream } from "effect";
-import { TestCookout, answer, commandLineServices, runCookout, testCookout } from "../../../testing/server.ts";
+import {
+  TestCookout,
+  answer,
+  commandLineServices,
+  runCookout,
+  runCookoutWhile,
+  testCookout,
+} from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import type { Scope } from "effect";
+import { isUserCode } from "../../../logins/index.ts";
 
 const PERMISSIONS = 0o1000;
 const PRIVATE_FILE = 0o600;
@@ -30,6 +38,22 @@ function logIn(env: Env, token: string): Effect.Effect<CliResult, never, Command
 
 function run(env: Env, ...args: readonly string[]): Effect.Effect<CliResult, never, CommandLineNeeds> {
   return runCookout({ args, env });
+}
+
+const POLL_SECONDS = 2;
+const EXPIRY_SECONDS = 60;
+
+function codeIn(prompt: string): string {
+  return Option.getOrThrow(Arr.findFirst(Str.split(prompt, /[\s,]+/u), isUserCode));
+}
+
+function logInByBrowser(env: Env, ada: TestIdentity): Effect.Effect<CliResult, never, CommandLineNeeds | Scope.Scope> {
+  return runCookoutWhile({
+    args: ["login"],
+    env,
+    tickSeconds: POLL_SECONDS,
+    whileRunning: (prompt) => answer(() => ada.client.approveLogin(codeIn(prompt))),
+  });
 }
 
 const setUp: Effect.Effect<LoginSetup, never, SetupNeeds> = Effect.gen(function* makeConfigFolder() {
@@ -84,7 +108,7 @@ it.effect("the credentials file is mode 600 and keeps one Login per server, and 
 
     expect(info.mode % PERMISSIONS).toBe(PRIVATE_FILE);
     expect(results).toMatchObject([
-      { exitCode: 0, stdoutJson: { loggedOut: true, url: second.url } },
+      { exitCode: 0, stdoutJson: { loggedOut: true, revoked: false, url: second.url } },
       { exitCode: 0, stdoutJson: { identity: { name: "ada" }, source: "login" } },
       { exitCode: 1, stderrJson: { error: { code: "token_missing" } } },
       { exitCode: 0, stdoutJson: { loggedOut: false, url: second.url } },
@@ -99,7 +123,7 @@ it.effect("login --token refuses an agent's token, an unknown one or none with e
     const bot = yield* cookout.createIdentity("release-bot", { owner: "matt" });
 
     const results = yield* Effect.all(
-      [logIn(env, bot.token), logIn(env, "not-a-real-token"), logIn(env, ""), run(env, "login")],
+      [logIn(env, bot.token), logIn(env, "not-a-real-token"), logIn(env, "")],
       ONE_AT_A_TIME,
     );
     const stored = yield* Effect.orDie(fs.exists(file));
@@ -107,7 +131,6 @@ it.effect("login --token refuses an agent's token, an unknown one or none with e
     expect(results).toMatchObject([
       { exitCode: 1, stderrJson: { error: { code: "human_only" } } },
       { exitCode: 1, stderrJson: { error: { code: "token_unknown" } } },
-      { exitCode: 1, stderrJson: { error: { code: "usage" } } },
       { exitCode: 1, stderrJson: { error: { code: "usage" } } },
     ]);
     expect(stored).toBe(false);
@@ -207,5 +230,59 @@ it.effect("a credentials file that isn't one is credentials_damaged", () =>
     const whoami = yield* run(env, "whoami");
 
     expect(whoami).toMatchObject({ exitCode: 1, stderrJson: { error: { code: "credentials_damaged" } } });
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("login prints a link and a code, and once ada approves it, later commands act as ada", () =>
+  Effect.gen(function* browserLogin() {
+    const { ada, cookout, env } = yield* setUp;
+
+    const login = yield* logInByBrowser(env, ada);
+    const whoami = yield* run(env, "whoami");
+
+    expect(login).toMatchObject({ exitCode: 0, stdoutJson: { identity: { name: "ada" }, url: cookout.url } });
+    expect(login.stderr).toMatch(new RegExp(`^Open ${cookout.url}/#/approve/[A-Z0-9-]{9} and check`, "u"));
+    expect(whoami).toMatchObject({ exitCode: 0, stdoutJson: { identity: { name: "ada" }, source: "login" } });
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("an unapproved login expires after 10 minutes, and login exits 1 saying so and stores nothing", () =>
+  Effect.gen(function* browserLoginExpires() {
+    const { env, file } = yield* setUp;
+    const fs = yield* FileSystem.FileSystem;
+
+    const login = yield* runCookoutWhile({
+      args: ["login"],
+      env,
+      tickSeconds: EXPIRY_SECONDS,
+      whileRunning: Effect.succeed,
+    });
+    const stored = yield* Effect.orDie(fs.exists(file));
+
+    expect(login).toMatchObject({ exitCode: 1 });
+    expect(login.stderr).toContain('"code":"login_request_expired"');
+    expect(stored).toBe(false);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("two machines logged in by browser both act as ada, and logout revokes only its own", () =>
+  Effect.gen(function* twoMachines() {
+    const first = yield* setUp;
+    const fs = yield* FileSystem.FileSystem;
+    const otherFolder = yield* Effect.orDie(fs.makeTempDirectoryScoped({ prefix: "cookout-config-" }));
+    const second = { ...first.env, XDG_CONFIG_HOME: otherFolder };
+    yield* logInByBrowser(first.env, first.ada);
+    yield* logInByBrowser(second, first.ada);
+
+    const results = yield* Effect.all(
+      [run(first.env, "logout"), run(first.env, "whoami"), run(second, "whoami")],
+      ONE_AT_A_TIME,
+    );
+
+    expect(results).toMatchObject([
+      { exitCode: 0, stdoutJson: { loggedOut: true, revoked: true } },
+      { exitCode: 1, stderrJson: { error: { code: "token_missing" } } },
+      { exitCode: 0, stdoutJson: { identity: { name: "ada" }, source: "login" } },
+    ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

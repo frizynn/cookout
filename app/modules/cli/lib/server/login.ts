@@ -1,25 +1,22 @@
 import type { CallFailure, CredentialSource } from "./adapters/sdk.ts";
 import { Command, Flag } from "effect/cli";
-import { Effect, Stdio, String as Str, Stream } from "effect";
+import { Effect, Option, Stdio, String as Str, Stream } from "effect";
 import { callClient, toFailure, withClient } from "./adapters/sdk.ts";
-import { removeLogin, saveLogin } from "./logins.ts";
+import { logInByBrowser, revokedOnServer } from "./browser-login.ts";
+import { loginFor, removeLogin, saveLogin, serverUrl } from "./logins.ts";
 import type { CommandFailed } from "./output.ts";
 import type { IdentityResponse } from "../../../identities/index.ts";
 import type { LeaseStateNeeds } from "./lease-state.ts";
+import type { LoggedIn } from "./browser-login.ts";
 import { answered } from "./output.ts";
-import { baseUrlOf } from "../../../http/client.ts";
-import { cookoutUrl } from "../../../config/server.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
 
 type LoginNeeds = LeaseStateNeeds | Stdio.Stdio;
 
-interface LoggedIn extends IdentityResponse {
-  readonly url: string;
-}
-
 interface LoggedOut {
   readonly loggedOut: boolean;
   readonly message?: string;
+  readonly revoked?: boolean;
   readonly url: string;
 }
 
@@ -33,13 +30,6 @@ const noToken: CallFailure = {
   code: "usage",
   message: "Give the token on stdin, such as `cookout login --token < token.txt`, or paste it and press Ctrl-D.",
 };
-
-const browserNotYet: CallFailure = {
-  code: "usage",
-  message: "Approving a Login in the browser isn't built yet. Run `cookout login --token` and give a token on stdin.",
-};
-
-const serverUrl = Effect.map(Effect.orDie(cookoutUrl), baseUrlOf);
 
 const tokenFromStdin: Effect.Effect<string, CallFailure, Stdio.Stdio> = Effect.gen(function* readToken() {
   const stdio = yield* Stdio.Stdio;
@@ -72,18 +62,20 @@ const logIn: Effect.Effect<LoggedIn, CallFailure, LoginNeeds> = Effect.gen(funct
 
 const logOut: Effect.Effect<LoggedOut, CallFailure, LeaseStateNeeds> = Effect.gen(function* forgetLogin() {
   const url = yield* serverUrl;
-  const removed = yield* removeLogin(url);
-  if (!removed) {
+  const saved = yield* loginFor(url);
+  if (Option.isNone(saved)) {
     return { loggedOut: false, message: `There is no Login for ${url}.`, url };
   }
-  return { loggedOut: true, url };
+  const revoked = yield* revokedOnServer({ token: saved.value, url });
+  yield* removeLogin(url);
+  return { loggedOut: true, revoked, url };
 });
 
 function logInWith(token: boolean): Effect.Effect<LoggedIn, CallFailure, LoginNeeds> {
   if (token) {
     return logIn;
   }
-  return Effect.fail(browserNotYet);
+  return Effect.flatMap(serverUrl, logInByBrowser);
 }
 
 const tokenFlag = Flag.Boolean("token").pipe(
@@ -97,14 +89,17 @@ const loginCommand: LoginCommand = Command.make("login", { token: tokenFlag }, (
   answered(logInWith(token)),
 ).pipe(
   Command.withDescription(
-    "Keep a human identity's token as the Login for COOKOUT_URL, in $XDG_CONFIG_HOME/cookout/credentials (default " +
+    "Log this machine in to COOKOUT_URL: print a link and a code, and wait while a person approves it in the web UI. " +
+      "With --token, keep a human identity's token instead. The Login is kept in $XDG_CONFIG_HOME/cookout/credentials (default " +
       "~/.config/cookout/credentials, mode 600). With no COOKOUT_TOKEN and no agent tool, every command then acts as " +
       "that person. An agent's token is refused.",
   ),
 );
 
 const logoutCommand = Command.make("logout", {}, () => answered(logOut)).pipe(
-  Command.withDescription("Remove the Login for COOKOUT_URL from this machine."),
+  Command.withDescription(
+    "Remove the Login for COOKOUT_URL from this machine, and revoke it on the server if it came from a browser login.",
+  ),
 );
 
 const whoami = withClient((opened) =>
