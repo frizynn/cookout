@@ -45,15 +45,15 @@
  * with. `Authors` gives
  * every message under it the identity list. `InboxView` is the inbox of
  * whoever is logged in (the `unread` store), under a notice naming the open channel
- * that was just deleted elsewhere, if any (the board's `notice`, until dismissed): Unread, with its count, newest
- * first and live, or "You're all caught up."; then Earlier, the read items
- * from the inbox history, newest first, with "Load more" while older ones
- * remain and "That's everything." at the end, or "Nothing read yet.". Each
- * row is a link to where its message is read (a reply's thread or a
- * top-level message's channel), with its author, channel, a short time, a
- * reply's thread, two lines of its text with mentions styled (the reader's
- * own in the mention colour) and its reasons as badges; opening it acks it,
- * so it moves to Earlier. `PeopleView` is the directory of every
+ * that was just deleted elsewhere, if any (the board's `notice`, until dismissed): For you and Activity, each
+ * counting its rows, newest first and live, or "You're all caught up."; then Earlier, the read rows
+ * from the inbox history, newest first, with "Show 50 earlier" while older ones
+ * remain and "That's everything." at the end, or "Nothing read yet.". A row
+ * is one thread or channel (the `unread` store's `rowsOf`), a link to it,
+ * leading with its strongest reason, then its latest message's author,
+ * channel, how many of its messages are new, a short time, the thread's start
+ * and two lines of its text with mentions styled (the reader's own in the
+ * mention colour); opening it acks it, so it moves to Earlier. `PeopleView` is the directory of every
  * identity (the identity list, which any identity may read): how many there
  * are, a name filter and All / Humans / Agents chips, each counting what the
  * name filter leaves (both kept in the `layout` store), and a row per
