@@ -129,6 +129,11 @@
       white-space: pre;
     }
 
+    & pre code[data-wrap] {
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
     & pre code {
       background: none;
       padding: 0;
