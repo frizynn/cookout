@@ -221,3 +221,45 @@ it("copy token puts the new token on the clipboard", { timeout: 5000 }, async ()
 
   close();
 });
+
+it("a session not yet used shows when it joined, and Cancel keeps the agent active", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { bot, human } = await crewOf("web-mine-cancel");
+  await bot.join({ as: "web-mine-cancel-bot" });
+  const close = await openSettings(human);
+  const card = await agentCard("web-mine-cancel-bot");
+  const { textContent: line } = await within(card).findByText(/^Joined/u);
+  await press("web-mine-cancel-bot", "Deactivate");
+  await press("web-mine-cancel-bot", "Cancel");
+
+  expect([line, within(card).queryByRole("button", { name: "Deactivate @web-mine-cancel-bot" })]).toStrictEqual([
+    expect.stringMatching(/^Joined · not used yet · expires .+/u),
+    null,
+  ]);
+
+  close();
+});
+
+it("a session list the server refuses shows no session and no Revoke", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { human } = await crewOf("web-mine-unlisted");
+  const refusing: CookoutClient = {
+    ...human,
+    listAgentSessions: async () => {
+      await Promise.resolve();
+      throw new Error("offline");
+    },
+  };
+  const close = await openSettings(refusing);
+  const card = await agentCard("web-mine-unlisted-bot");
+  await within(card).findByRole("button", { name: "Rotate token" });
+
+  expect([
+    within(card).queryByText(/session/u),
+    within(card).queryByRole("button", { name: "Revoke session" }),
+  ]).toStrictEqual([null, null]);
+
+  close();
+});
