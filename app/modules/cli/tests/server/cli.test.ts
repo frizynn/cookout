@@ -222,3 +222,15 @@ it.effect("the cookout watch --json process prints one JSON line per new inbox i
     ]);
   }),
 );
+
+it.effect("cookout serve refuses a COOKOUT_PUBLIC_URL that isn't a URL before it listens", () =>
+  Effect.gen(function* refusesBadPublicUrl() {
+    const refused = yield* runCookout({
+      args: ["serve", "--port", "0", "--host", "127.0.0.1"],
+      env: { COOKOUT_PUBLIC_URL: "cookout.fly.dev" },
+    });
+
+    expect(refused).toMatchObject({ exitCode: EXIT_FAILURE, stdout: "" });
+    expect(refused.stderr).toContain("COOKOUT_PUBLIC_URL must be empty or a URL");
+  }).pipe(Effect.provide(commandLineServices)),
+);

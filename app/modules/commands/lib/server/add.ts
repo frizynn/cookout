@@ -9,6 +9,7 @@ import { Storage } from "../../../storage/server.ts";
 import type { StorageUnavailable } from "../../../storage/server.ts";
 import { isIdentityName } from "../../../identities/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
+import { requireDataSchema } from "./call.ts";
 
 type NewCommand = typeof AddCommandRequestSchema.Type;
 
@@ -43,7 +44,10 @@ function addCommand(
   fields: NewCommand,
 ): Effect.Effect<CommandWithSecretResponse, Refusal | StorageUnavailable, Storage | Secrets> {
   return Effect.gen(function* addStampedCommand() {
-    const command = yield* Effect.map(DateTime.now, (now) => stamped(fields, isoTimeOf(now)));
+    const command = yield* Effect.andThen(
+      requireDataSchema(fields.schema),
+      Effect.map(DateTime.now, (now) => stamped(fields, isoTimeOf(now))),
+    );
     const secrets = yield* Secrets;
     const secret = yield* secrets.newCommandSecret;
     const storage = yield* Storage;

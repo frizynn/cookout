@@ -12,6 +12,10 @@ pnpm check
 node app/main.ts serve --port 3000 --db cookout.db
 ```
 
+## Deployed
+
+The cookout runs on Fly.io as `$COOKOUT_APP` = `cookout` (Matt's personal org, region `lhr`), at https://cookout.fly.dev. Recipes: [docs/verification.md](docs/verification.md#deploy-it-to-fly).
+
 ## Receive the inbox with Claude Code's Monitor
 
 Claude Code's Monitor tool turns each stdout line of a long-running command into a notification. `cookout watch` prints one line per new inbox item, so an agent anywhere, local or remote, hears about new unread messages as they arrive. Start it with:

@@ -6,6 +6,10 @@
 
 type QueryValue = string | number | undefined;
 
+interface ServerSentComment {
+  readonly comment: string;
+}
+
 interface Parsed {
   readonly json?: unknown;
 }
@@ -16,7 +20,7 @@ interface Field {
 }
 
 interface Frames {
-  readonly events: readonly ServerSentEvent[];
+  readonly events: readonly ServerSentFrame[];
   readonly rest: string;
 }
 
@@ -27,6 +31,7 @@ const EVENT_END = /\r\n\r\n|\n\n|\r\r/u;
 const LINE_END = /\r\n|\n|\r/u;
 const LEADING_SPACE = /^ /u;
 const DEFAULT_EVENT = "message";
+const COMMENT_START = 1;
 
 function queryString(query: Readonly<Record<string, QueryValue>>): string {
   const search = new URLSearchParams();
@@ -63,14 +68,18 @@ function isField(line: string): boolean {
   return line !== "" && !line.startsWith(":");
 }
 
-function eventsIn(block: string): readonly ServerSentEvent[] {
-  const fields = block
-    .split(LINE_END)
-    .filter((line) => isField(line))
-    .map((line) => fieldOf(line));
+function commentsIn(lines: readonly string[]): readonly ServerSentComment[] {
+  return lines
+    .filter((line) => line.startsWith(":"))
+    .map((line) => ({ comment: line.slice(COMMENT_START).replace(LEADING_SPACE, "") }));
+}
+
+function eventsIn(block: string): readonly ServerSentFrame[] {
+  const lines = block.split(LINE_END);
+  const fields = lines.filter((line) => isField(line)).map((line) => fieldOf(line));
   const data = fields.filter(({ name }) => name === "data").map(({ value }) => value);
   if (data.length === NO_PARAMS) {
-    return [];
+    return commentsIn(lines);
   }
   const [event = DEFAULT_EVENT] = fields
     .filter(({ name }) => name === "event")
@@ -96,7 +105,7 @@ function chunksOf(reader: ReadableStreamDefaultReader<Uint8Array>): AsyncIterabl
   };
 }
 
-async function* eventsFrom(reader: ReadableStreamDefaultReader<Uint8Array>): AsyncGenerator<ServerSentEvent, void> {
+async function* eventsFrom(reader: ReadableStreamDefaultReader<Uint8Array>): AsyncGenerator<ServerSentFrame, void> {
   const decoder = new TextDecoder();
   let buffered = "";
   for await (const chunk of chunksOf(reader)) {
@@ -157,10 +166,13 @@ export interface ServerSentEvent {
   readonly data: string;
 }
 
-/** An open Server-Sent Events stream: its events in order, until the server ends it or `close` is called. */
+/** What an open stream sends: events, and the comments between them. */
+export type ServerSentFrame = ServerSentEvent | ServerSentComment;
+
+/** An open Server-Sent Events stream: its events and comments in order, until the server ends it or `close` is called. */
 export interface OpenEventStream {
   readonly ok: true;
-  readonly events: AsyncIterable<ServerSentEvent>;
+  readonly events: AsyncIterable<ServerSentFrame>;
   /** Drops the connection; the events then end. */
   readonly close: () => Promise<void>;
 }

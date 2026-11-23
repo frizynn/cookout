@@ -109,6 +109,24 @@ export const requireLeaseWhileHeld: Effect.Effect<
 > = requiringRule(() => "while-held");
 
 /**
+ * Watch's hold on the lease while its stream is open: for an agent identity that sent a lease ID, a renewal every
+ * third of the lease, so the lease never expires while the stream is open, until the lease ID is no longer the live
+ * one (`join --force` from another session); it then ends with the 409 `lease_lost` refusal the stream ends with.
+ * Otherwise it never ends and renews nothing: a human never needs the lease (ADR 0028).
+ * @internal
+ */
+export const keepRenewingSentLease: Effect.Effect<
+  Refusal,
+  StorageUnavailable,
+  Caller | Leases | HttpServerRequest.HttpServerRequest
+> = Effect.gen(function* keepRenewingLease() {
+  const caller = yield* Caller;
+  const leases = yield* Leases;
+  const sent = yield* sentLeaseId;
+  return yield* leases.keepRenewing(caller, sent);
+});
+
+/**
  * The gate every route but `/v1/health` sits behind: `requireToken`, then the renewal of the caller's lease if the
  * request carries its live lease ID. A stale lease ID renews nothing and doesn't block the request: only the actions
  * that call `requireLease` refuse it.

@@ -6,22 +6,42 @@
  * the caller's new inbox items, which the `Messages` service's hub feeds; the
  * caller's new read positions, which the `Inbox` service's hub feeds on every
  * ack from any session; and, when the request asks with `?channels=all`,
- * every new message on every channel, for the web UI. The stream starts with
- * a comment, so Node sends the headers at once and the caller knows every
- * source is listening. The route sits behind the server's token gate; the
- * lease gate comes later.
+ * every new message on every channel, for the web UI; and a comment
+ * heartbeat every 15 s, so proxies keep the connection open. On a reconnect
+ * with `Last-Event-ID`, the inbox items first replay what the caller missed.
+ * An agent's lease
+ * renewals, which keep the lease alive while the stream is open, are one
+ * more source, here because they need the request's lease ID. The stream
+ * starts with a comment, so Node sends the headers at once and the caller
+ * knows every source is listening. A source that sends a `refusal` event
+ * (`lease_lost`) ends the stream with it. The route sits behind the server's
+ * token gate, and opens only with the lease an agent's watch needs (ADR 0004,
+ * ADR 0028).
  */
+import type { Connected, EventSource } from "./lib/server/source.ts";
 import { Effect, Exit, Scope, Stream } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { InboxItemEventSchema, MessageEventSchema, ReadPositionEventSchema } from "./lib/server/wire.ts";
+import { isLast, lastEventIdIn, refusalSseEvent, sseText } from "./lib/server/source.ts";
+import { keepRenewingSentLease, requireLeaseWhileHeld } from "../leases/server.ts";
 import { Caller } from "../identities/server.ts";
+import type { Leases } from "../leases/server.ts";
 import type { Route } from "../http/server.ts";
 import type { SourceNeeds } from "./lib/server/sources.ts";
 import { eventsPath } from "./index.ts";
 import { sources } from "./lib/server/sources.ts";
-import { sseText } from "./lib/server/source.ts";
 
-type Needs = Caller | SourceNeeds;
+type LeaseNeeds = Caller | Leases | HttpServerRequest.HttpServerRequest;
+
+type Needs = SourceNeeds | LeaseNeeds;
+
+function leaseRenewals(): Connected<LeaseNeeds> {
+  return Effect.map(Effect.context<LeaseNeeds>(), (context) =>
+    Stream.fromEffect(Effect.flatMap(Effect.provideContext(keepRenewingSentLease, context), refusalSseEvent)),
+  );
+}
+
+const allSources: readonly EventSource<Needs>[] = [...sources, leaseRenewals];
 
 const SSE_HEADERS = { "cache-control": "no-cache" } as const;
 const OPENED = ": open\n\n";
@@ -29,13 +49,16 @@ const OPENED = ": open\n\n";
 const eventsRoute: Route<Needs> = {
   handle: () =>
     Effect.gen(function* openEventStream() {
+      yield* requireLeaseWhileHeld;
       const caller = yield* Caller;
-      const { url } = yield* HttpServerRequest.HttpServerRequest;
+      const { headers, url } = yield* HttpServerRequest.HttpServerRequest;
+      const lastEventId = lastEventIdIn(headers["last-event-id"]);
       const connection = yield* Scope.make();
-      const streams = yield* Effect.forEach(sources, (source) => source({ caller, url }), {
+      const streams = yield* Effect.forEach(allSources, (source) => source({ caller, lastEventId, url }), {
         concurrency: "unbounded",
       }).pipe(Scope.provide(connection));
       const body = Stream.mergeAll(streams, { concurrency: "unbounded" }).pipe(
+        Stream.takeUntil(isLast),
         Stream.map(sseText),
         Stream.prepend([OPENED]),
         Stream.encodeText,
@@ -49,7 +72,8 @@ const eventsRoute: Route<Needs> = {
 
 /**
  * The events route, for the server's route list. It needs `Caller`, which the token gate provides, and what its
- * sources need: `Inbox`, which `inboxLayer` provides, and `Messages`, which `messagesLayer` provides.
+ * sources need: `Inbox`, which `inboxLayer` provides, `Messages`, which `messagesLayer` provides, and `Leases`, which
+ * `leasesLayer` provides.
  * @internal
  */
 export const eventRoutes: readonly Route<Needs>[] = [eventsRoute];

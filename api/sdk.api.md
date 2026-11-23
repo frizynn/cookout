@@ -283,6 +283,17 @@ interface CommandWithSecretResponse {
 interface ListCommandsResponse {
   readonly commands: readonly Command[];
 }
+/** The body of a command call. The server checks `data` against the command's schema. */
+interface CallCommandRequest {
+  /** The channel the call message is posted in. */
+  readonly channel: string;
+  readonly data: JsonValue;
+}
+/** The answer to a command call (202): the call message, which is also the top-level message of its thread. */
+interface CallCommandResponse {
+  readonly messageId: MessageId;
+  readonly threadId: MessageId;
+}
 /** A new item in the caller's inbox, sent the moment another identity posts it. */
 interface InboxItemEvent {
   readonly type: "inbox-item";
@@ -305,6 +316,8 @@ interface EventStream extends AsyncIterable<CookoutEvent> {
 }
 interface WatchOptions {
   readonly allChannels?: boolean;
+  readonly lastEventId?: MessageId;
+  readonly onHeartbeat?: () => void;
 }
 /** The answer to the health check. */
 interface HealthResponse {
@@ -312,7 +325,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "lease_held", "lease_required", "lease_lost", "command_exists", "handler_not_agent", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "lease_held", "lease_required", "lease_lost", "command_exists", "handler_not_agent", "command_not_found", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 declare const brand: unique symbol;
@@ -423,7 +436,12 @@ export type CookoutClient = {
    * each new read position (`read-position`) the moment any session of the caller acks, so several sessions stay in
    * sync. With `allChannels`, it also sends every new message on every channel (`message`), as the web UI needs.
    * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
-   * a newer server, is skipped. `close` drops the connection.
+   * a newer server, is skipped. `close` drops the connection. For an agent identity the stream carries the held
+   * lease ID and keeps the lease alive while open; a stale one is refused with 409 `lease_lost`, and if another
+   * session takes the lease over (`join --force`) the iteration throws `lease_lost` (status 200, the stream's) and
+   * the client drops the lease. A human identity watches with no lease. To pick up after a dropped connection, pass
+   * the last message ID seen as `lastEventId`: the stream first replays the inbox items after it, then goes on live.
+   * The server sends a heartbeat every 15 s, which `onHeartbeat` hears while the stream is being iterated.
    */
   readonly watch: (options?: WatchOptions) => Promise<EventStream>;
   /**
@@ -434,6 +452,14 @@ export type CookoutClient = {
   readonly addCommand: (request: AddCommandRequest) => Promise<CommandWithSecretResponse>;
   /** `GET /v1/commands`: every command, sorted by name, without its secret. */
   readonly listCommands: () => Promise<ListCommandsResponse>;
+  /**
+   * `POST /v1/commands/:name/calls`: calls a command. Data that breaks its JSON Schema is 400 `invalid_request`
+   * with the schema errors in `details` (paths start at `data`), and nothing is posted. Otherwise the call is
+   * posted in the channel as a top-level message by the caller with data `{ command, data }`, the caller follows
+   * its thread, and the answer (202) comes without waiting for the handler. An unknown command is 404
+   * `command_not_found`.
+   */
+  readonly callCommand: (name: string, request: CallCommandRequest) => Promise<CallCommandResponse>;
 };
 /**
  * A client for the server at `url` with `token`, each defaulting to
@@ -441,5 +467,5 @@ export type CookoutClient = {
  * (status 0) when there is no URL.
  */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type Author, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Reply, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions };
+export { type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type Author, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelName, type ChannelResponse, type Command, type CommandName, type CommandSecret, type CommandWithSecretResponse, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type EventStream, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonSchema, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type ReadPositionEvent, type Reply, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode, type WatchOptions };
 ```

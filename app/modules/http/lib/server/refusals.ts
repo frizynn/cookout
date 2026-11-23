@@ -34,6 +34,7 @@ interface Guarded {
   readonly host: string;
   readonly method: string;
   readonly origin: string;
+  readonly publicUrl: string;
 }
 
 const FORBIDDEN = 403;
@@ -55,11 +56,6 @@ function foreignOrigin(origin: string): Refusal {
   });
 }
 
-function hostsAt(address: string): ReadonlySet<string> {
-  const listening = new URL(address);
-  return new Set([...Arr.map(LOOPBACK_NAMES, (name) => `${name}:${listening.port}`), listening.host]);
-}
-
 function hostOf(origin: string): string {
   if (!URL.canParse(origin)) {
     return "";
@@ -67,12 +63,29 @@ function hostOf(origin: string): string {
   return new URL(origin).host;
 }
 
+function publicHosts(publicUrl: string): readonly string[] {
+  const host = hostOf(publicUrl);
+  if (host === "") {
+    return [];
+  }
+  return [host];
+}
+
+function hostsAt(address: string, publicUrl: string): ReadonlySet<string> {
+  const listening = new URL(address);
+  return new Set([
+    ...Arr.map(LOOPBACK_NAMES, (name) => `${name}:${listening.port}`),
+    listening.host,
+    ...publicHosts(publicUrl),
+  ]);
+}
+
 function isForeignWrite({ method, origin }: Guarded, hosts: ReadonlySet<string>): boolean {
   return origin !== "" && !READ_METHODS.has(method) && !hosts.has(hostOf(origin));
 }
 
 function guardRefusal(request: Guarded): Option.Option<Refusal> {
-  const hosts = hostsAt(request.address);
+  const hosts = hostsAt(request.address, request.publicUrl);
   if (!hosts.has(request.host)) {
     return Option.some(foreignHost(request.host));
   }

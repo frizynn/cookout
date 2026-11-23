@@ -2,7 +2,8 @@
  * Live updates on the wire, shared by the server, the SDK and the web: the
  * events one Server-Sent Events stream sends (ADR 0002) and the stream's
  * path. Each event's SSE `event` field is its `type`, its SSE `id` is the
- * message ID, and its SSE `data` is the event as JSON.
+ * message ID, and its SSE `data` is the event as JSON. A stream that can't
+ * go on ends with one `refusal` event instead.
  */
 import type { InboxItem, ReadPosition } from "../inbox/index.ts";
 import type { Message } from "../messages/index.ts";
@@ -36,3 +37,9 @@ export const eventsPath = "/v1/events";
 
 /** The query that asks the stream for the all-channels feed: `?channels=all`. */
 export const allChannelsQuery = { channels: "all" } as const;
+
+/**
+ * The SSE `event` of the stream's last event when it can't go on, such as `lease_lost` once another session takes
+ * over the lease: it has no `id`, and its `data` is the refusal's `ErrorResponse` as JSON.
+ */
+export const refusalEvent = "refusal";
