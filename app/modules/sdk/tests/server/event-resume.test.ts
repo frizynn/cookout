@@ -70,6 +70,19 @@ it.effect("a reconnect with Last-Event-ID replays only the missed items, then li
   }).pipe(Effect.provide(testCookout())),
 );
 
+it.effect("a reconnect with Last-Event-ID that missed nothing goes straight on with live items", () =>
+  Effect.gen(function* resumeWithNothingMissed() {
+    const cookout = yield* TestCookout;
+    const { ann, bob } = yield* board(cookout);
+    const seen = yield* mentionBob(ann, "seen before the drop");
+    const events = yield* watching(bob, { lastEventId: seen });
+    const live = yield* mentionBob(ann, "live");
+    const next = yield* nextEvent(events);
+
+    expect(next).toMatchObject(itemFor(live));
+  }).pipe(Effect.provide(testCookout())),
+);
+
 it.effect("an idle stream sends a heartbeat after 15 s", () =>
   Effect.gen(function* heartbeatArrives() {
     const cookout = yield* TestCookout;
