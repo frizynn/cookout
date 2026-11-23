@@ -6,7 +6,7 @@ name: Deploy
 
 on:
   push:
-    branches: [main, ticket-64]
+    branches: [main]
   workflow_dispatch:
     inputs:
       restart:
@@ -66,7 +66,7 @@ jobs:
           cache-name: deployed
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Restart the machine
-        if: ${{ inputs.restart || github.ref == 'refs/heads/ticket-64' }}
+        if: ${{ inputs.restart }}
         run: |
           flyctl machine restart -a cookout "$(flyctl machines list -a cookout --json | jq -r '.[0].id')"
           for _ in $(seq 30); do curl -fsS "$COOKOUT_URL/v1/health" && break; sleep 2; done
