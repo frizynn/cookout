@@ -15,8 +15,7 @@ test("a person sees a call to the example command and the handler's result reply
   cookout,
   page,
 }) => {
-  test.skip(!(await cookout.exampleCommandRegistered()), `The cookout has no command ${exampleCommand}.`);
-
+  await cookout.requireExampleCommand();
   const { channel } = await cookout.createChannel("calls");
   const { identity, token } = await cookout.createHuman("person");
   const person = createCookoutClient({ token, url: cookout.url });

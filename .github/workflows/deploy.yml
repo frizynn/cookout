@@ -1,7 +1,9 @@
 # Deploy the cookout to Fly (app `cookout`, lhr) and the example handler (app
 # `cookout-handler-example`, lhr) on every push to main, after `pnpm e2e:docker` passes, then check
-# the deployed stream and that a command call gets the handler's reply. A workflow_dispatch on any
-# branch runs the same e2e and the deployed checks without deploying the cookout; `restart: true`
+# the deployed stream, that a command call gets the handler's reply, and that the full e2e suite
+# passes against the deployed URL and leaves none of its identities there. A failure in either e2e
+# stage fails the run. A workflow_dispatch on any branch runs the same e2e and the deployed checks
+# without deploying the cookout; `restart: true`
 # also restarts its machine first, and `handler: true` deploys the example handler from that branch.
 # Recipes: docs/verification.md ("Deploy it to Fly").
 name: Deploy
@@ -84,7 +86,7 @@ jobs:
     needs: [e2e-docker, deploy, deploy-handler]
     if: ${{ !cancelled() && needs.e2e-docker.result == 'success' && needs.deploy.result != 'failure' && needs.deploy-handler.result != 'failure' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       COOKOUT_URL: https://cookout.fly.dev
       COOKOUT_TOKEN: ${{ secrets.COOKOUT_E2E_ADMIN_TOKEN }}
@@ -106,8 +108,25 @@ jobs:
           flyctl machine restart -a cookout "$(flyctl machines list -a cookout --json | jq -r '.[0].id')"
           for _ in $(seq 30); do curl -fsS "$COOKOUT_URL/v1/health" && break; sleep 2; done
       - name: identity list
-        run: node app/main.ts identity list | jq -c '[.identities[].name]'
+        run: node app/main.ts identity list | jq -c '[.identities[].name]' | tee "$RUNNER_TEMP/identities-before.json"
       - name: The stream stays open for 65 s and hears heartbeats
         run: scripts/stream-check.sh 65
       - name: A call to the example handler gets its reply within 30 s
         run: scripts/handler-check.sh
+      - run: pnpm exec playwright install --with-deps --only-shell chromium
+      - name: The full e2e suite passes against the deployed cookout
+        run: pnpm --filter ./packages/e2e test
+        env:
+          COOKOUT_E2E_URL: ${{ env.COOKOUT_URL }}
+          COOKOUT_E2E_ADMIN_TOKEN: ${{ env.COOKOUT_TOKEN }}
+      # Each test deletes its own identities when it ends, passing or failing, so this runs either way.
+      - name: The e2e run left none of its identities
+        if: ${{ !cancelled() }}
+        run: |
+          node app/main.ts identity list | jq -c '[.identities[].name]' > "$RUNNER_TEMP/identities-after.json"
+          jq -e -n --slurpfile before "$RUNNER_TEMP/identities-before.json" --slurpfile after "$RUNNER_TEMP/identities-after.json" \
+            '($after[0] - $before[0]) as $left | if $left == [] then true else ("e2e left these identities on the deployed cookout: \($left)\n" | halt_error) end'
+      # v1 has no channel deletion, so every run's channels stay (11 a run, under prefix e2e-).
+      - name: e2e channels on the deployed cookout
+        if: ${{ !cancelled() }}
+        run: node app/main.ts channel list | jq '[.channels[].name | select(startswith("e2e-"))] | length'

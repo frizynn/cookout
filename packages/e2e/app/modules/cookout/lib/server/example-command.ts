@@ -6,21 +6,19 @@ const exampleCommand = "example";
 
 function noExampleCommand(url: string): string {
   return (
-    `Skipped: ${url} has no command ${exampleCommand}, so the example handler isn't reachable from it. ` +
+    `${url} has no command ${exampleCommand}, so the example handler isn't reachable from it. ` +
     "Run pnpm e2e:docker, or scripts/handler-provision.sh on the deployed cookout."
   );
 }
 
-const exampleCommandRegistered: Effect.Effect<boolean> = Effect.gen(function* listTheCommands() {
+const requireExampleCommand: Effect.Effect<void> = Effect.gen(function* listTheCommands() {
   const url = yield* e2eUrl;
   const adminToken = yield* e2eAdminToken;
   const admin = createCookoutClient({ token: Redacted.value(adminToken), url });
   const { commands } = yield* Effect.promise(() => admin.listCommands());
-  const registered = Arr.some(commands, ({ name }) => name === exampleCommand);
-  if (!registered) {
-    yield* Effect.logWarning(noExampleCommand(url));
-  }
-  return registered;
+  const missing = !Arr.some(commands, ({ name }) => name === exampleCommand);
+  const failure = new Error(noExampleCommand(url));
+  yield* Effect.when(Effect.die(failure), Effect.succeed(missing));
 }).pipe(Effect.orDie);
 
-export { exampleCommand, exampleCommandRegistered };
+export { exampleCommand, requireExampleCommand };
