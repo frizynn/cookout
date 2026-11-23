@@ -26,7 +26,7 @@ function printItems({ format, stop }: Watching): (opened: ClientWithLeaseState) 
     Effect.scoped(
       Effect.flatMap(start(opened), (first: Stream.Stream<readonly Heard[], CallFailure>) =>
         source({ first, opened }).pipe(
-          startUpLine({ format, opened }),
+          startUpLine({ format, opened, stop }),
           untilStopped(stop),
           Stream.runForEach(printEach(format)),
         ),
@@ -51,7 +51,7 @@ const jsonFlag = Flag.Boolean("json").pipe(
 
 const onceFlag = Flag.Boolean("once").pipe(
   Flag.withDefault(false),
-  Flag.withDescription("Exit 0 after printing the first new item."),
+  Flag.withDescription("Exit 0 after printing the first new item, or the start-up unread line when there is one."),
 );
 
 const untilMentionFlag = Flag.Boolean("until-mention").pipe(
@@ -80,7 +80,8 @@ export const watchCommand = Command.make(
   Command.withDescription(
     "Print one line per new inbox item as it arrives, for Claude Code's Monitor tool: " +
       "#<channel> thread:<id> @<author>: <first 120 characters> (msg <id>), after one " +
-      "<n> unread, run cookout inbox line when there are unread items. Exit codes: 0 after --once or " +
+      "<n> unread, run cookout inbox line when there are unread items. Exit codes: 0 after --once (at the " +
+      "unread line, or else the first item) or " +
       "--until-mention, 1 refused, 2 --timeout passed, 3 token invalid or deleted, 4 lease_lost (another " +
       "session ran join --force), 5 server unreachable for 5 minutes; 3, 4 and 5 print one stdout line first. " +
       "Run cookout help monitor.",

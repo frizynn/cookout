@@ -31,11 +31,14 @@ function unreadUpTo(opened: ClientWithLeaseState, latest: MessageId | null): Eff
   );
 }
 
-function sayUnread(format: Format, count: number): Effect.Effect<void> {
+function sayUnread(format: Format, count: number): Effect.Effect<boolean> {
   if (count === NO_UNREAD) {
-    return Effect.void;
+    return Effect.succeed(false);
   }
-  return printLine({ format, json: { count, type: "unread" }, text: `${String(count)} unread, run cookout inbox` });
+  return Effect.as(
+    printLine({ format, json: { count, type: "unread" }, text: `${String(count)} unread, run cookout inbox` }),
+    true,
+  );
 }
 
 function isNewerThan(counted: Option.Option<number>, { item }: InboxItemEvent): boolean {
@@ -45,11 +48,13 @@ function isNewerThan(counted: Option.Option<number>, { item }: InboxItemEvent): 
 interface Counting {
   readonly opened: ClientWithLeaseState;
   readonly format: Format;
+  readonly stop: StopCondition;
 }
 
 function startUpLine({
   format,
   opened,
+  stop,
 }: Counting): (events: Stream.Stream<Heard, CallFailure>) => Stream.Stream<InboxItemEvent, CallFailure> {
   return (events) =>
     Stream.unwrap(
@@ -60,20 +65,21 @@ function startUpLine({
             Option.isNone(already),
             Option.orElseSome(already, () => latestMessageId ?? NOTHING_POSTED),
           ]);
-          if (first) {
-            const count = yield* unreadUpTo(opened, latestMessageId);
-            yield* sayUnread(format, count);
+          if (!first) {
+            return false;
           }
+          const count = yield* unreadUpTo(opened, latestMessageId);
+          return yield* sayUnread(format, count);
         });
         function isNewer(event: InboxItemEvent): Effect.Effect<boolean> {
           return Effect.map(Ref.get(counted), (latest) => isNewerThan(latest, event));
         }
         return events.pipe(
-          Stream.tap((event) => {
+          Stream.takeUntilEffect((event) => {
             if (isInboxItem(event)) {
-              return Effect.void;
+              return Effect.succeed(false);
             }
-            return sayOnce(event);
+            return Effect.map(sayOnce(event), (said) => said && stop.once);
           }),
           Stream.filter(isInboxItem),
           Stream.filterEffect(isNewer),
