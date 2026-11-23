@@ -155,7 +155,9 @@ function inboxOn(storage: Storage["Service"], hub: AckHub): InboxService {
     history: (caller, query) => historyOf(storage, caller, query),
     inbox: (caller) => inboxOf(storage, caller),
     itemFor: (caller, id) =>
-      Effect.map(inboxOf(storage, caller), ({ items }) => Arr.filter(items, (item) => item.message.id === id)),
+      Effect.flatMap(storage.findInboxItem(caller.name, id), (stored) =>
+        withChannels(storage, Arr.fromNullishOr(stored)),
+      ),
     itemsAfter: (caller, id) =>
       Effect.flatMap(storage.listInboxAfter(caller.name, id), (stored) => withChannels(storage, stored)),
     subscribe: subscription(storage.subscribeChannel, true),
