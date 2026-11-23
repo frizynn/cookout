@@ -27,8 +27,8 @@
  * keeps the server's error code; a server that can't be reached is `unreachable`.
  */
 import type { ChannelMessages, LiveChannelMessages, MessagesClient } from "./lib/channel-messages.ts";
+import type { ChannelName, CookoutClient, MessageId } from "../sdk/index.ts";
 import type { Commands, CommandsClient } from "./lib/commands.ts";
-import type { CookoutClient, MessageId } from "../sdk/index.ts";
 import type { LiveThreadMessages, ThreadClient, ThreadMessages } from "./lib/thread-messages.ts";
 import type { Live } from "../live/index.ts";
 import type { Snapshot } from "./lib/channel-list.ts";
@@ -55,9 +55,9 @@ export interface Board {
   /** The current snapshot: a new object whenever anything in it changes, the same one until then. */
   readonly snapshot: () => Snapshot;
   /** The named channel's messages: the same store each time for one name. */
-  readonly channel: (name: string) => ChannelMessages;
+  readonly channel: (name: ChannelName) => ChannelMessages;
   /** The thread holding the message in the channel: the same store each time for one channel and ID. */
-  readonly thread: (channel: string, id: MessageId) => ThreadMessages;
+  readonly thread: (channel: ChannelName, id: MessageId) => ThreadMessages;
   /** Every registered command, sorted by name: one store, loaded when its first reader subscribes. */
   readonly commands: Commands;
 }
@@ -79,7 +79,7 @@ export interface BoardOptions {
  */
 export function createBoard(options: BoardOptions): Board {
   const { client } = options;
-  const channels = new Map<string, LiveChannelMessages>();
+  const channels = new Map<ChannelName, LiveChannelMessages>();
   const threads = new Map<string, LiveThreadMessages>();
   const list = createChannelList(client);
   const { follow, followed } = createLiveFeed({

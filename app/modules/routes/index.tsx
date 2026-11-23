@@ -3,8 +3,9 @@
  * reads the page's location hash and draws the view for it, in the design
  * system's shell: `#/` the channel list, `#/login`, `#/inbox`, `#/channels/<name>` and
  * `#/channels/<name>/threads/<id>`. Until the session is logged in, every route
- * shows the login view. Any other hash, or a thread ID that isn't a message
- * ID, says there is nothing here.
+ * shows the login view. Any other hash, a channel name that isn't a channel
+ * name, or a thread ID that isn't a message ID, says there is nothing here.
+ * The `paths` module reads the hash and builds every link's.
  */
 import { AppShell } from "../design-system/index.tsx";
 import type { Board } from "../board/index.ts";
@@ -13,7 +14,7 @@ import type { ReactNode } from "react";
 import { RouteView } from "./lib/route-view.tsx";
 import type { Session } from "../session/index.ts";
 import type { Unread } from "../unread/index.ts";
-import { routeOf } from "./lib/route.ts";
+import { routeOf } from "../paths/index.ts";
 import { useSyncExternalStore } from "react";
 
 function subscribeToHash(listener: () => void): () => void {

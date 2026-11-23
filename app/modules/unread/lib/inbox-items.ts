@@ -1,4 +1,4 @@
-import type { CookoutEvent, InboxItem, Message, MessageId, ReadPosition } from "../../sdk/index.ts";
+import type { ChannelName, CookoutEvent, InboxItem, Message, MessageId, ReadPosition } from "../../sdk/index.ts";
 
 interface UnreadCounts {
   readonly mentions: number;
@@ -8,7 +8,7 @@ interface UnreadCounts {
 interface InboxItems {
   readonly add: (item: InboxItem) => void;
   readonly receive: (event: CookoutEvent) => boolean;
-  readonly counts: () => ReadonlyMap<string, UnreadCounts>;
+  readonly counts: () => ReadonlyMap<ChannelName, UnreadCounts>;
   readonly list: () => readonly InboxItem[];
 }
 
@@ -36,8 +36,8 @@ function counted(counts: UnreadCounts, item: InboxItem): UnreadCounts {
   return { ...counts, plain: counts.plain + ONE_MORE };
 }
 
-function countsOf(items: Iterable<InboxItem>): ReadonlyMap<string, UnreadCounts> {
-  const counts = new Map<string, UnreadCounts>();
+function countsOf(items: Iterable<InboxItem>): ReadonlyMap<ChannelName, UnreadCounts> {
+  const counts = new Map<ChannelName, UnreadCounts>();
   for (const item of items) {
     counts.set(item.channel.name, counted(counts.get(item.channel.name) ?? NONE, item));
   }

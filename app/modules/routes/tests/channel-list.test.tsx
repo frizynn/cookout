@@ -169,6 +169,8 @@ it("the channel list says so when the server can't be reached", { timeout: 5000 
 
 it.each([
   { hash: "#/channels/general/threads/not-a-number", heading: "Nothing here" },
+  { hash: "#/channels/Not_A_Channel", heading: "Nothing here" },
+  { hash: "#/channels/Not_A_Channel/threads/1", heading: "Nothing here" },
   { hash: "#/no-such-page", heading: "Nothing here" },
 ] as const)("$hash shows $heading", { timeout: 5000 }, async (route) => {
   expect.hasAssertions();

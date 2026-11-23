@@ -14,7 +14,7 @@
  * error code; a server that can't be reached is `unreachable`. Alongside the
  * counts it keeps the inbox items they count, oldest first, for the inbox view.
  */
-import type { CookoutClient, CookoutEvent, InboxItem, Refusal } from "../sdk/index.ts";
+import type { ChannelName, CookoutClient, CookoutEvent, InboxItem, Refusal } from "../sdk/index.ts";
 import type { Live } from "../live/index.ts";
 import type { UnreadCounts } from "./lib/inbox-items.ts";
 import { createInboxItems } from "./lib/inbox-items.ts";
@@ -28,7 +28,7 @@ export type UnreadState =
   | { readonly status: "loading" }
   | {
       readonly status: "loaded";
-      readonly channels: ReadonlyMap<string, UnreadCounts>;
+      readonly channels: ReadonlyMap<ChannelName, UnreadCounts>;
       readonly items: readonly InboxItem[];
     }
   | (Refusal & { readonly status: "failed" });

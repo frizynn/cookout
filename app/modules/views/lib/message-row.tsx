@@ -1,7 +1,8 @@
+import type { ChannelName, TopLevelMessage } from "../../sdk/index.ts";
 import { LinkRow, Muted } from "../../design-system/index.tsx";
 import { MessageText } from "./message-text.tsx";
 import type { ReactNode } from "react";
-import type { TopLevelMessage } from "../../sdk/index.ts";
+import { hrefOf } from "../../paths/index.ts";
 
 const REPLIES: Readonly<Record<Intl.LDMLPluralRule, string>> = {
   few: "replies",
@@ -14,7 +15,7 @@ const REPLIES: Readonly<Record<Intl.LDMLPluralRule, string>> = {
 const plural = new Intl.PluralRules("en");
 
 interface MessageRowProps {
-  readonly channel: string;
+  readonly channel: ChannelName;
   readonly message: TopLevelMessage;
 }
 
@@ -25,7 +26,7 @@ function replies(count: number): string {
 export function MessageRow(props: MessageRowProps): ReactNode {
   const { channel, message } = props;
   return (
-    <LinkRow href={`#/channels/${channel}/threads/${String(message.id)}`}>
+    <LinkRow href={hrefOf({ channel, name: "thread", thread: message.id })}>
       <MessageText message={message} />
       <Muted>{replies(message.replyCount)}</Muted>
     </LinkRow>
