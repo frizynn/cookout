@@ -12,7 +12,7 @@ const TEXT = { activity: "Activity", empty: "You're all caught up.", forYou: "Fo
 
 function itemsOf(unread: UnreadState): readonly InboxItem[] {
   if (unread.status === "loaded") {
-    return unread.items;
+    return unread.inbox;
   }
   return [];
 }
@@ -38,7 +38,7 @@ export function InboxBody(props: InboxBodyProps): ReactNode {
   }
   return (
     <>
-      {unread.items.length === NONE && <FeedNote place="empty">{TEXT.empty}</FeedNote>}
+      {unread.inbox.length === NONE && <FeedNote place="empty">{TEXT.empty}</FeedNote>}
       <InboxSection forYou me={me} rows={rows} title={TEXT.forYou} />
       <InboxSection forYou={false} me={me} rows={rows} title={TEXT.activity} />
     </>
