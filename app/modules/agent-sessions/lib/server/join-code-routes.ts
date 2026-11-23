@@ -5,7 +5,7 @@ import {
   JoinCodeResponseSchema,
   RedeemJoinCodeRequestSchema,
 } from "./wire.ts";
-import { Effect, Option } from "effect";
+import { Effect, Function, Option } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import type { HumanIdentity, Identity } from "../../../identities/index.ts";
 import { joinCodesPath, redeemJoinCodePath } from "../../index.ts";
@@ -16,6 +16,7 @@ import type { Route } from "../../../http/server.ts";
 const ALL_ERRORS = { errors: "all" } as const;
 const CREATED = 201;
 const FORBIDDEN = 403;
+const UNKNOWN_ADDRESS = "unknown";
 
 const humanOnly: Refusal = {
   code: "human_only",
@@ -45,7 +46,7 @@ const redeemRoute: Route<AgentSessions | AddressLimit> = {
     Effect.gen(function* redeemJoinCodeRoute() {
       const limit = yield* AddressLimit;
       const request = yield* HttpServerRequest.HttpServerRequest;
-      yield* limit.admit(Option.getOrElse(request.remoteAddress, () => "unknown"));
+      yield* limit.admit(Option.getOrElse(request.remoteAddress, Function.constant(UNKNOWN_ADDRESS)));
       const body = yield* HttpServerRequest.schemaBodyJson(RedeemJoinCodeRequestSchema, ALL_ERRORS);
       const agentSessions = yield* AgentSessions;
       const issued = yield* agentSessions.redeemJoinCode(body);

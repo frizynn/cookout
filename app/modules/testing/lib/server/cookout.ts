@@ -70,7 +70,7 @@ export type TestCookoutOptions = {
   readonly requestsPerMinute?: number;
   readonly commandCallsPerMinute?: number;
   readonly streamsPerIdentity?: number;
-  readonly routine?: boolean;
+  readonly routine?: "fake" | "unreachable";
 };
 
 type Setting =
@@ -92,12 +92,21 @@ const testRoutineFirePath = "/v1/claude_code/routines/trig_test/fire";
 
 const testRoutineToken = "routine-test-token";
 
+const unreachableUrl = "http://127.0.0.1:1";
+
+function routineBase(routine: "fake" | "unreachable", webhookUrl: string): string {
+  if (routine === "fake") {
+    return webhookUrl;
+  }
+  return unreachableUrl;
+}
+
 function routineEnv(options: TestCookoutOptions, webhookUrl: string): readonly (readonly [string, string])[] {
-  if (options.routine !== true) {
+  if (Predicate.isUndefined(options.routine)) {
     return [];
   }
   return [
-    ["COOKOUT_ROUTINE_FIRE_URL", `${webhookUrl}${testRoutineFirePath}`],
+    ["COOKOUT_ROUTINE_FIRE_URL", `${routineBase(options.routine, webhookUrl)}${testRoutineFirePath}`],
     ["COOKOUT_ROUTINE_TOKEN", testRoutineToken],
   ];
 }

@@ -23,7 +23,7 @@ const fired = {
   type: "routine_fire",
 };
 const task = { name: "fixer", task: "  Fix the flaky login test.  " };
-const spawningCookout = testCookout({ publicUrl: BOARD, routine: true });
+const spawningCookout = testCookout({ publicUrl: BOARD, routine: "fake" });
 
 interface Spawned {
   readonly cookout: TestCookoutService;
@@ -139,6 +139,29 @@ it.effect("a fire answered with no session says so, and deactivates the new agen
       "The routine didn't start a session (the routine's answer named no session), so @fixer is deactivated.",
     );
   }).pipe(Effect.provide(spawningCookout)),
+);
+
+it.effect("a routine that can't be reached is answered in the thread, and the new agent is deactivated", () =>
+  Effect.gen(function* unreachable() {
+    const spawned = yield* spawnedBy(task);
+    const reply = yield* replyIn(spawned);
+
+    expect(reply.text).toBe(
+      "The routine didn't start a session (the routine couldn't be reached within 5 s), so @fixer is deactivated.",
+    );
+  }).pipe(Effect.provide(testCookout({ publicUrl: BOARD, routine: "unreachable" }))),
+);
+
+it.effect("every /spawn-agent reply posts as the one spawn-agent identity", () =>
+  Effect.gen(function* twoReplies() {
+    const first = yield* spawnedBy(task);
+    const again = yield* answer(() => first.ada.client.callCommand("spawn-agent", { channel: "grill", data: task }));
+    const replies = yield* Effect.all([replyIn(first), replyIn({ ...first, threadId: again.threadId })], {
+      concurrency: 1,
+    });
+
+    expect(Arr.map(replies, ({ author }) => author.name)).toStrictEqual(["spawn-agent", "spawn-agent"]);
+  }).pipe(Effect.provide(testCookout())),
 );
 
 it.effect("without the routine settings, /spawn-agent answers that spawning is not set up, and makes nothing", () =>

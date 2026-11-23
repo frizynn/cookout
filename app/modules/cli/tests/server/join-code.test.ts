@@ -78,7 +78,10 @@ it.effect("join --code --print-env prints the export, and --code with --as is re
       args: ["join", "--code", joinCode, "--as", "other"],
       env: claudeCode("s1", shared),
     });
-    const printed = yield* runCookout({ args: ["join", "--code", joinCode, "--print-env"], env: shared });
+    const printed = yield* runCookout({
+      args: ["join", "--code", joinCode, "--idle-expiry", "1d", "--print-env"],
+      env: shared,
+    });
 
     expect([withAs, printed]).toMatchObject([failedWith("usage"), succeeded]);
     expect(printed.stdout).toMatch(/^export COOKOUT_SESSION=cookout_\S+$/u);

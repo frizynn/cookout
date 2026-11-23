@@ -1,5 +1,5 @@
-import { Array as Arr, Context, DateTime, Option, Predicate, String as Str } from "effect";
 import type { CallCommandResponse, Command, JsonSchema } from "../../index.ts";
+import { Context, DateTime, Option, Predicate, String as Str } from "effect";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
 import { isCommandName, spawnAgentCommandName } from "../../index.ts";
 import type { Description } from "../../../identities/client.ts";
@@ -72,10 +72,10 @@ const spawnAgentCommand: Command = {
 };
 
 function fieldOf(data: JsonValue, key: "name" | "task"): Option.Option<string> {
-  if (!Predicate.isObject(data) || Arr.isArray(data)) {
-    return Option.none();
-  }
-  return Option.filter(Option.fromUndefinedOr(data[key]), Predicate.isString);
+  return Option.liftPredicate(data, (value) => Predicate.hasProperty(value, key)).pipe(
+    Option.map((value) => value[key]),
+    Option.filter(Predicate.isString),
+  );
 }
 
 function spawnTaskOf(data: JsonValue): Option.Option<SpawnTask> {
