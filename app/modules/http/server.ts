@@ -27,6 +27,7 @@ interface Listen {
 
 interface Serving extends Listen {
   readonly webFolder?: string;
+  readonly publicUrl?: string;
 }
 
 type NodeHttp = ReturnType<typeof NodeHttpServer.layer>;
@@ -86,14 +87,18 @@ function answerFailure(failure: unknown): Effect.Effect<HttpServerResponse.HttpS
   return respond(toRefusal(failure));
 }
 
-const guardRequest = Effect.gen(function* guardHostAndOrigin() {
-  const request = yield* HttpServerRequest.HttpServerRequest;
-  const server = yield* HttpServer.HttpServer;
-  const { host = "", origin = "" } = request.headers;
-  const address = HttpServer.formatAddress(server.address);
-  const refused = guardRefusal({ address, host, method: request.method, origin });
-  return yield* Option.match(refused, { onNone: () => Effect.void, onSome: Effect.fail });
-});
+function guardRequest(
+  publicUrl: string,
+): Effect.Effect<void, Refusal, HttpServerRequest.HttpServerRequest | HttpServer.HttpServer> {
+  return Effect.gen(function* guardHostAndOrigin() {
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const server = yield* HttpServer.HttpServer;
+    const { host = "", origin = "" } = request.headers;
+    const address = HttpServer.formatAddress(server.address);
+    const refused = guardRefusal({ address, host, method: request.method, origin, publicUrl });
+    return yield* Option.match(refused, { onNone: () => Effect.void, onSome: Effect.fail });
+  });
+}
 
 export type { Gate, Route } from "./lib/server/router.ts";
 export type { Listen, Serving };
@@ -123,10 +128,10 @@ export function nodeHttpServer(listen: Listen): NodeHttp {
  * address it took: port 0 picks a free one. With a `webFolder`, `/` answers
  * with its `index.html` and `/assets/<file>` with its `assets/<file>`, also
  * without the gate; a file the folder lacks is 404 `not_found`. Every request
- * goes through the web guards first: a `Host` that isn't the server's own is
- * refused with 421 `foreign_host`, a write from another site's `Origin` with
+ * goes through the web guards first: a `Host` that isn't the server's own
+ * (or the host of `publicUrl`) is refused with 421 `foreign_host`, a write from another site's `Origin` with
  * 403 `foreign_origin`, and every response carries a strict CSP and refuses framing.
- * @param serving The port and host to listen on, and the folder of the built web UI if it serves one.
+ * @param serving The port and host to listen on, the folder of the built web UI if it serves one, and the public URL if it has one.
  * @param routes Every route but `/v1/health`.
  * @param gate What every request to one of `routes` goes through first.
  * @returns The server, as a Layer.
@@ -136,9 +141,9 @@ export function httpServer<Needs, Provides, Requires, Fails>(
   routes: readonly Route<Needs>[],
   gate: Gate<Provides, Requires, Fails>,
 ) {
-  const { host, port } = serving;
+  const { host, port, publicUrl = "" } = serving;
   const open: readonly Route<Storage | WebNeeds>[] = [healthRoute, ...webRoutes(serving)];
-  const app = Effect.andThen(guardRequest, dispatch({ gate, gated: routes, open })).pipe(
+  const app = Effect.andThen(guardRequest(publicUrl), dispatch({ gate, gated: routes, open })).pipe(
     Effect.catch(answerFailure),
     Effect.map(HttpServerResponse.setHeaders(securityHeaders)),
     Effect.provideService(HttpIncomingMessage.MaxBodySize, maxBodySize),

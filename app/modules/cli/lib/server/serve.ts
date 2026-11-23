@@ -1,12 +1,12 @@
 import { Command, Flag } from "effect/cli";
 import { Effect, Layer, Option } from "effect";
 import { FirstBoot, firstBoot } from "../../../identities/server.ts";
-import type { Listen, Serving } from "../../../http/server.ts";
 import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
-import { databasePath, host, port } from "../../../config/server.ts";
+import { databasePath, host, port, publicUrl } from "../../../config/server.ts";
 import { domainLayers, routes } from "./route-list.ts";
 import { httpServer, serverUrl } from "../../../http/server.ts";
 import type { FileSystem } from "effect";
+import type { Serving } from "../../../http/server.ts";
 import { printLine } from "./output.ts";
 import { requireTokenAndRenewLease } from "../../../leases/server.ts";
 
@@ -40,7 +40,7 @@ const printAdminToken = Effect.gen(function* () {
   });
 });
 
-const runServer = (layers: ServeLayers, listen: Listen, database: string) =>
+const runServer = (layers: ServeLayers, listen: Omit<Serving, "webFolder">, database: string) =>
   Effect.gen(function* () {
     const services = yield* Layer.build(
       cookoutServer({ ...listen, ...webFolderOf(layers) }).pipe(Layer.provide(layers.storage(database))),
@@ -64,6 +64,10 @@ export const serveCommand = (layers: ServeLayers) =>
         Flag.withDescription("The address to listen on (COOKOUT_HOST)."),
       ),
       port: Flag.Int("port").pipe(Flag.withFallbackConfig(port), Flag.withDescription("The port to listen on (PORT).")),
+      publicUrl: Flag.String("public-url").pipe(
+        Flag.withFallbackConfig(publicUrl),
+        Flag.withDescription("The address it is deployed at, whose host it also answers (COOKOUT_PUBLIC_URL)."),
+      ),
     },
-    (flags) => runServer(layers, { host: flags.host, port: flags.port }, flags.db),
+    (flags) => runServer(layers, { host: flags.host, port: flags.port, publicUrl: flags.publicUrl }, flags.db),
   ).pipe(Command.withDescription("Start the cookout server on SQLite."));

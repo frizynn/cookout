@@ -7,6 +7,11 @@ import { Config, Schema } from "effect";
 const SHORTEST_LEASE_SECONDS = 1;
 const DEFAULT_LEASE_SECONDS = 60;
 
+const isPublicUrl = Schema.makeFilter(
+  (url: string) =>
+    url === "" || URL.canParse(url) || "COOKOUT_PUBLIC_URL must be empty or a URL such as https://cookout.fly.dev.",
+);
+
 /** `PORT`: the port `cookout serve` listens on. 0 picks a free port. */
 export const port = Config.schema(Schema.Int.check(Schema.isBetween({ maximum: 65_535, minimum: 0 })), "PORT").pipe(
   Config.withDefault(3000),
@@ -14,6 +19,15 @@ export const port = Config.schema(Schema.Int.check(Schema.isBetween({ maximum: 6
 
 /** `COOKOUT_HOST`: the address `cookout serve` listens on. */
 export const host = Config.String("COOKOUT_HOST").pipe(Config.withDefault("0.0.0.0"));
+
+/**
+ * `COOKOUT_PUBLIC_URL`: the address the cookout is deployed at, such as
+ * `https://cookout.fly.dev`. Its host is answered as well as the server's own
+ * (Matt, 2026-11-23, mattpocock/cookout#56). Empty counts as unset.
+ */
+export const publicUrl = Config.schema(Schema.String.check(isPublicUrl), "COOKOUT_PUBLIC_URL").pipe(
+  Config.withDefault(""),
+);
 
 /** `COOKOUT_DB`: the SQLite file `cookout serve` keeps its data in. */
 export const databasePath = Config.String("COOKOUT_DB").pipe(Config.withDefault("cookout.db"));

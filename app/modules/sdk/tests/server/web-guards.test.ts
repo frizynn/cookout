@@ -12,6 +12,7 @@ const UNAUTHORIZED = 401;
 const FORBIDDEN = 403;
 const MISDIRECTED = 421;
 const FOREIGN_ORIGIN = "https://elsewhere.example";
+const PUBLIC_URL = "https://cookout.example";
 const STRICT_POLICY = /^default-src 'none';.*frame-ancestors 'none'$/u;
 
 function withHost(url: string, host: string): Effect.Effect<{ readonly json: unknown; readonly status: number }> {
@@ -64,6 +65,30 @@ it.effect("a request whose Host isn't the server's own is refused with 421 forei
     expect(foreign).toMatchObject({ json: { error: { code: "foreign_host" } }, status: MISDIRECTED });
     expect(localhost.status).toBe(OK);
   }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect(
+  "the host of COOKOUT_PUBLIC_URL is answered as the server's own, for reads and for writes from its pages",
+  () =>
+    Effect.gen(function* publicHost() {
+      const cookout = yield* TestCookout;
+      const { port } = new URL(cookout.url);
+      const read = yield* withHost(cookout.url, "cookout.example");
+      const foreign = yield* withHost(cookout.url, `elsewhere.example:${port}`);
+      const write = yield* answer(() =>
+        request({
+          baseUrl: cookout.url,
+          body: { name: "general" },
+          headers: { origin: PUBLIC_URL },
+          method: "POST",
+          path: channelsPath,
+        }),
+      );
+
+      expect(read.status).toBe(OK);
+      expect(foreign.status).toBe(MISDIRECTED);
+      expect(write.json).toMatchObject({ error: { code: "token_missing" } });
+    }).pipe(Effect.provide(testCookout({ publicUrl: PUBLIC_URL }))),
 );
 
 it.effect("every response carries a strict CSP without unsafe-inline and refuses framing", () =>
