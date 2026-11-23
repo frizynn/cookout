@@ -64,7 +64,7 @@ async function readElsewhere(channel: string): Promise<CookoutClient> {
 }
 
 function postedRow(channel: string, text: string): string {
-  return `#/channels/${channel} ${channel}-posterposted in#${channel}just now${text}Channel`;
+  return `#/channels/${channel} New in #${channel}${channel}-posterposted in#${channel}just now${text}`;
 }
 
 it("earlier lists read items newest first, a page at a time, until there are no more", { timeout: 5000 }, async () => {
@@ -83,7 +83,7 @@ it("earlier lists read items newest first, a page at a time, until there are no 
   fireEvent.click(inPane().getByRole("button", { name: "Load more" }));
   await screen.findByText("That's everything.");
 
-  expect([rowsOf("Earlier"), rowsOf("Unread"), inPane().queryByRole("button", { name: "Load more" })]).toStrictEqual([
+  expect([rowsOf("Earlier"), rowsOf("Activity"), inPane().queryByRole("button", { name: "Load more" })]).toStrictEqual([
     ["Three", "Two", "One"].map((text) => postedRow(channel, text)),
     ["Six", "Five", "Four"].map((text) => postedRow(channel, text)),
     null,
@@ -137,12 +137,12 @@ it("with nothing in it, the inbox says it is all caught up and nothing is read y
   await screen.findByText("Nothing read yet.");
 
   expect(screen.getByText("You're all caught up.")).toBeDefined();
-  expect(screen.getByRole("heading", { level: 2, name: "Unread 0" })).toBeDefined();
+  expect(screen.queryByRole("list", { name: "Activity" })).toBeNull();
 
   unmount();
 });
 
-it("an item read in another session after the inbox loaded stays in Unread, not Earlier, until it hears so", {
+it("an item read in another session after the inbox loaded stays in Activity, not Earlier, until it hears so", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -151,7 +151,7 @@ it("an item read in another session after the inbox loaded stays in Unread, not 
   const unmount = openAt({ client: await readElsewhere(channel), hash: "#/inbox" });
   await screen.findByText("Nothing read yet.");
 
-  expect(rowsOf("Unread")).toStrictEqual([postedRow(channel, "One")]);
+  expect(rowsOf("Activity")).toStrictEqual([postedRow(channel, "One")]);
 
   unmount();
 });

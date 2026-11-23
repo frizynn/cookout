@@ -75,13 +75,13 @@ async function openAndComeBack(href: string): Promise<void> {
 async function timeShown(reader: CookoutClient, later: number): Promise<string> {
   vi.advanceTimersByTime(later);
   const unmount = openAt({ client: reader, hash: "#/inbox" });
-  const row = await within(await screen.findByRole("list", { name: "Unread" })).findByRole("link");
+  const row = await within(await screen.findByRole("list", { name: "Activity" })).findByRole("link");
   const shown = within(row).getByText(/ ago$/u).textContent;
   unmount();
   return shown;
 }
 
-it("the inbox lists unread items newest first, each with who posted it where, its thread and its reasons", {
+it("the inbox lists unread items for you, then activity, newest first, each with why, who posted it where and its thread", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -91,35 +91,38 @@ it("the inbox lists unread items newest first, each with who posted it where, it
   const { first, other, parent, reader, reply } = await postedIn(channel, also);
   const unmount = openAt({ client: reader, hash: "#/inbox" });
 
-  await screen.findByRole("list", { name: "Unread" });
+  await screen.findByRole("list", { name: "Activity" });
 
   await waitFor(() => {
-    expect(screen.getByRole("heading", { level: 2, name: "Unread 3" })).toBeDefined();
-    expect(rowsOf("Unread")).toStrictEqual([
-      `#/channels/${channel} ${channel}-posterposted in#${channel}just now${other.text}Channel`,
-      `#/channels/${channel}/threads/${String(parent.id)} ${channel}-posterreplied in a thread in#${channel}just nowre: Deploy at noon? The rollout notes are in the usual place and every da…${reply.text}ThreadMention`,
-      `#/channels/${also} ${channel}-posterposted in#${also}just now${first.text}Channel`,
+    expect([rowsOf("For you"), rowsOf("Activity")]).toStrictEqual([
+      [
+        `#/channels/${channel}/threads/${String(parent.id)} Mentioned you${channel}-posterreplied in a thread in#${channel}just nowre: Deploy at noon? The rollout notes are in the usual place and every da…${reply.text}`,
+      ],
+      [
+        `#/channels/${channel} New in #${channel}${channel}-posterposted in#${channel}just now${other.text}`,
+        `#/channels/${also} New in #${also}${channel}-posterposted in#${also}just now${first.text}`,
+      ],
     ]);
   });
 
   unmount();
 });
 
-it("a live mention appears at the top of Unread, and opening it moves it to Earlier", { timeout: 5000 }, async () => {
+it("a live mention appears under For you, and opening it moves it to Earlier", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
   const channel = "web-inbox-live";
   const { close, poster } = await openWatched(channel);
   const { message } = await poster.createMessage({ channel, text: `@${channel}-reader look` });
 
-  const row = await within(await screen.findByRole("list", { name: "Unread" })).findByRole("link");
+  const row = await within(await screen.findByRole("list", { name: "For you" })).findByRole("link");
 
-  expect(row.textContent).toContain("Mention");
+  expect(row.textContent).toContain("Mentioned you");
 
   await openAndComeBack(String(row.getAttribute("href")));
 
   expect([rowsOf("Earlier"), screen.getByText("You're all caught up.").tagName]).toStrictEqual([
-    [`#/channels/${channel} ${channel}-posterposted in#${channel}just now${message.text}MentionChannel`],
+    [`#/channels/${channel} Mentioned you${channel}-posterposted in#${channel}just now${message.text}`],
     "P",
   ]);
 
@@ -146,7 +149,7 @@ it("clicking a reply's row opens its thread", { timeout: 5000 }, async () => {
   const channel = "web-inbox-open";
   const { parent, reader } = await postedIn(channel, `${channel}-also`);
   const unmount = openAt({ client: reader, hash: "#/inbox" });
-  const unread = await screen.findByRole("list", { name: "Unread" });
+  const unread = await screen.findByRole("list", { name: "For you" });
 
   fireEvent.click(within(unread).getByRole("link", { name: /replied in a thread/u }));
 

@@ -21,7 +21,7 @@ async function closeBoth(unmount: () => void, stream: Promise<EventStream>): Pro
 function countsOn(channel: string): readonly (string | null)[] {
   const link = inSidebar().getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
   const counts: (string | null)[] = [];
-  for (const count of within(link).queryAllByText(/^\d+ (?:unread|mentions?)$/u)) {
+  for (const count of within(link).queryAllByText(/^\d+ (?:unread|for you)$/u)) {
     counts.push(count.textContent);
   }
   return counts;
@@ -63,7 +63,9 @@ async function postAs(client: CookoutClient, channel: string, text: string): Pro
   return message;
 }
 
-it("the channel list counts a channel's mentions apart from its other unread messages", { timeout: 5000 }, async () => {
+it("the channel list counts what is for you in a channel apart from its other unread messages", {
+  timeout: 5000,
+}, async () => {
   expect.hasAssertions();
 
   const channel = "web-unread-counts";
@@ -73,7 +75,7 @@ it("the channel list counts a channel's mentions apart from its other unread mes
   await postAs(poster, channel, "@web-unread-counts-reader can you check?");
   await postAs(poster, channel, "@web-unread-counts-reader and the rollback?");
 
-  await shownCounts(channel, ["2 unread", "2 mentions"]);
+  await shownCounts(channel, ["2 unread", "2 for you"]);
 
   await close();
 });
@@ -88,7 +90,7 @@ it("a channel's unread count rises live as messages arrive, and drops to zero on
   await postAs(poster, channel, "Deploy at noon?");
   await shownCounts(channel, ["1 unread"]);
   await postAs(poster, channel, "@web-unread-live-reader at noon?");
-  await shownCounts(channel, ["1 unread", "1 mention"]);
+  await shownCounts(channel, ["1 unread", "1 for you"]);
 
   await opened(`#/channels/${channel}`, "Deploy at noon?");
 
@@ -107,7 +109,7 @@ it("a reply's unread count drops to zero once its thread is opened, not when its
   const parent = await postAs(reader, channel, "Deploy at noon?");
   await poster.createMessage({ channel, replyTo: parent.id, text: "Noon works" });
   await opened(`#/channels/${channel}`, "1 reply");
-  await shownCounts(channel, ["1 unread"]);
+  await shownCounts(channel, ["1 for you"]);
 
   await opened(`#/channels/${channel}/threads/${String(parent.id)}`, "Noon works");
 
@@ -121,9 +123,16 @@ async function openedAndRead(hash: string, text: string, channel: string): Promi
   await shownCounts(channel, []);
 }
 
+function countOf(request: PostMessageRequest): string {
+  if ("replyTo" in request) {
+    return "1 for you";
+  }
+  return "1 unread";
+}
+
 async function postedWhileClosed(poster: CookoutClient, request: PostMessageRequest): Promise<void> {
   await poster.createMessage(request);
-  await shownCounts(request.channel, ["1 unread"]);
+  await shownCounts(request.channel, [countOf(request)]);
 }
 
 function threadOf(parent: Message): string {

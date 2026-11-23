@@ -50,7 +50,7 @@ function readUpTo(message: Message): ServerSentEvent {
 function countsOn(channel: string): readonly (string | null)[] {
   const link = inSidebar().getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
   const counts: (string | null)[] = [];
-  for (const count of within(link).queryAllByText(/^\d+ (?:unread|mentions?)$/u)) {
+  for (const count of within(link).queryAllByText(/^\d+ (?:unread|for you)$/u)) {
     counts.push(count.textContent);
   }
   return counts;

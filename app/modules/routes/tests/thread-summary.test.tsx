@@ -64,7 +64,7 @@ async function threadRepliedTo(): Promise<Replied> {
   return { ada, parent };
 }
 
-it("a message with replies shows who replied, how many and when, and the summary changes live as a reply arrives", {
+it("a message with replies shows who replied, how many, how many are new and when, and the summary changes live as a reply arrives", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -78,7 +78,7 @@ it("a message with replies shows who replied, how many and when, and the summary
       ["BS", "true"],
       ["AS", "false"],
     ],
-    text: "2 repliesLast reply just nowView thread →",
+    text: "2 replies2 new replies · replies to youLast reply just nowView thread →",
   });
 
   const { message: reply } = await ada.client.createMessage({ channel: CHANNEL, replyTo: parent.id, text: "Third" });

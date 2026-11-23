@@ -22,7 +22,7 @@ async function postedIn(channel: string, also: string): Promise<Posted> {
 function countsOn(channel: string): readonly (string | null)[] {
   const link = inSidebar().getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
   const counts: (string | null)[] = [];
-  for (const count of within(link).queryAllByText(/^\d+ (?:unread|mentions?)$/u)) {
+  for (const count of within(link).queryAllByText(/^\d+ (?:unread|for you)$/u)) {
     counts.push(count.textContent);
   }
   return counts;
@@ -34,7 +34,7 @@ it("marking all as read empties the inbox and clears the channel list's unread c
   const channel = "web-mark-all";
   const { reader } = await postedIn(channel, `${channel}-also`);
   const unmount = openAt({ client: reader, hash: "#/inbox" });
-  await screen.findByRole("heading", { level: 2, name: "Unread 3" });
+  await screen.findByRole("heading", { level: 2, name: "For you 2" });
 
   fireEvent.click(inPane().getByRole("button", { name: "Mark all as read" }));
 
@@ -52,7 +52,7 @@ it("a message that arrives after marking all as read stays unread", { timeout: 5
   const channel = "web-mark-all-later";
   const { poster, reader } = await postedIn(channel, `${channel}-also`);
   const unmount = openAt({ client: reader, hash: "#/inbox" });
-  await screen.findByRole("heading", { level: 2, name: "Unread 3" });
+  await screen.findByRole("heading", { level: 2, name: "For you 2" });
   const { message } = await poster.createMessage({ channel, text: "Arrived since" });
 
   fireEvent.click(inPane().getByRole("button", { name: "Mark all as read" }));
@@ -94,12 +94,12 @@ it("marking all as read that can't reach the server says why and leaves the inbo
     },
   };
   const unmount = openAt({ client, hash: "#/inbox" });
-  await screen.findByRole("heading", { level: 2, name: "Unread 3" });
+  await screen.findByRole("heading", { level: 2, name: "For you 2" });
 
   fireEvent.click(inPane().getByRole("button", { name: "Mark all as read" }));
   const alert = await within(screen.getByRole("main")).findByRole("alert");
 
-  expect([alert.textContent, screen.getByRole("heading", { level: 2, name: "Unread 3" }).tagName]).toStrictEqual([
+  expect([alert.textContent, screen.getByRole("heading", { level: 2, name: "For you 2" }).tagName]).toStrictEqual([
     "Couldn't mark all as read (unreachable): Error: down",
     "H2",
   ]);

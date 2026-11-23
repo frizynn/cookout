@@ -66,7 +66,7 @@ test("a channel's unread count goes up when another identity posts, then to zero
   await expect(row).toHaveAccessibleName(`#${channel}`);
 });
 
-test("a message that mentions the reader shows in the channel's mention count, apart from its unread count", async ({
+test("a message that mentions the reader shows in the channel's count for you, apart from its unread count", async ({
   page,
 }) => {
   const channel = "browser-unread-mention";
@@ -75,7 +75,7 @@ test("a message that mentions the reader shows in the channel's mention count, a
   await poster.client.createMessage({ channel, text: "Deploy at noon?" });
   await poster.client.createMessage({ channel, text: `@${channel}-reader can you check the rollout?` });
 
-  await expect(row).toHaveAccessibleName(`#${channel} 1 unread 1 mention`);
+  await expect(row).toHaveAccessibleName(`#${channel} 1 unread 1 for you`);
   await expect(row.getByText("1", { exact: true })).toBeVisible();
 });
 
