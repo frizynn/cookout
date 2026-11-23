@@ -3,17 +3,27 @@ import { isIdentityName, isOwner } from "../../../identities/index.ts";
 import { expect } from "@effect/vitest";
 import { fixtureTime } from "./time.ts";
 
-export const identityName = (value: string): IdentityName =>
-  isIdentityName(value) ? value : expect.unreachable(`${value} is not an identity name`);
+type AgentFixtureOptions = { readonly kind?: "agent"; readonly owner?: string; readonly admin?: boolean };
 
-export type IdentityFixtureOptions = { readonly owner?: string; readonly admin?: boolean };
+function nameOf(value: string): IdentityName {
+  return isIdentityName(value) ? value : expect.unreachable(`${value} is not an identity name`);
+}
 
-export const identityFixture = (name: string, options: IdentityFixtureOptions = {}): Identity => {
-  const base = { admin: options.admin ?? false, createdAt: fixtureTime, name: identityName(name) };
-  if (options.owner === undefined) {
+function agentFixture(name: string, { admin = false, owner }: AgentFixtureOptions): Identity {
+  const base = { admin, createdAt: fixtureTime, kind: "agent", name: nameOf(name) } as const;
+  if (owner === undefined) {
     return base;
   }
-  return isOwner(options.owner)
-    ? { ...base, owner: options.owner }
-    : expect.unreachable(`${options.owner} is not an owner`);
+  return isOwner(owner) ? { ...base, owner } : expect.unreachable(`${owner} is not an owner`);
+}
+
+export const identityName = nameOf;
+
+export type IdentityFixtureOptions = { readonly kind: "human"; readonly admin?: boolean } | AgentFixtureOptions;
+
+export const identityFixture = (name: string, options: IdentityFixtureOptions = {}): Identity => {
+  if (options.kind === "human") {
+    return { admin: options.admin ?? false, createdAt: fixtureTime, kind: "human", name: nameOf(name) };
+  }
+  return agentFixture(name, options);
 };

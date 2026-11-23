@@ -12,7 +12,7 @@ const EXIT_FAILURE = 1;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const succeeded = { exitCode: 0, stderr: "" };
 const verbs: readonly (readonly string[])[] = [
-  ["identity", "create", "bot", "--owner", "matt"],
+  ["identity", "create", "bot", "--kind", "agent", "--owner", "matt"],
   ["identity", "rotate", "bot"],
   ["channel", "create", "grill", "--description", "Grill it"],
   ["channel", "get", "grill"],
@@ -25,7 +25,7 @@ const verbs: readonly (readonly string[])[] = [
   ["identity", "list"],
   ["channel", "list"],
   ["message", "list", "grill"],
-  ["identity", "create", "loner"],
+  ["identity", "create", "loner", "--kind", "human"],
   ["channel", "create", "plain"],
 ];
 
@@ -39,7 +39,7 @@ it.effect("every verb passes its arguments and flags to the server and prints th
     );
 
     expect(results).toMatchObject([
-      { ...succeeded, stdoutJson: { identity: { name: "bot", owner: "matt" } } },
+      { ...succeeded, stdoutJson: { identity: { kind: "agent", name: "bot", owner: "matt" } } },
       { ...succeeded, stdoutJson: { identity: { name: "bot" } } },
       { ...succeeded, stdoutJson: { channel: { description: "Grill it", name: "grill" } } },
       { ...succeeded, stdoutJson: { channel: { name: "grill" } } },
@@ -49,10 +49,10 @@ it.effect("every verb passes its arguments and flags to the server and prints th
       { ...succeeded, stdoutJson: { parent: { id: 1 }, replies: [{ id: 2 }] } },
       { ...succeeded, stdoutJson: { identity: { name: "bot" } } },
       { ...succeeded, stdoutJson: { identity: { name: "admin" } } },
-      { ...succeeded, stdoutJson: { identities: [{ name: "admin" }] } },
+      { ...succeeded, stdoutJson: { identities: [{ kind: "human", name: "admin" }] } },
       { ...succeeded, stdoutJson: { channels: [{ name: "grill" }] } },
       { ...succeeded, stdoutJson: { messages: [{ id: 1 }] } },
-      { ...succeeded, stdoutJson: { identity: { name: "loner" } } },
+      { ...succeeded, stdoutJson: { identity: { kind: "human", name: "loner" } } },
       { ...succeeded, stdoutJson: { channel: { name: "plain" } } },
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
@@ -68,6 +68,31 @@ it.effect("a refusal is JSON on stderr, with its status, and exit code 1", () =>
       exitCode: EXIT_FAILURE,
       stderrJson: { error: { code: "identity_not_found", status: 404 } },
       stdout: "",
+    });
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("cookout identity create needs --kind human or agent, and identity list shows each kind", () =>
+  Effect.gen(function* createNeedsKind() {
+    const cookout = yield* TestCookout;
+    const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    const noKind = yield* runCookout({ args: ["identity", "create", "bot"], env });
+    const badKind = yield* runCookout({ args: ["identity", "create", "bot", "--kind", "robot"], env });
+    yield* runCookout({ args: ["identity", "create", "ada", "--kind", "human"], env });
+    yield* runCookout({ args: ["identity", "create", "bot", "--kind", "agent", "--owner", "ada"], env });
+    const listed = yield* runCookout({ args: ["identity", "list"], env });
+    const usage = { exitCode: EXIT_FAILURE, stderrJson: { error: { code: "usage" } } };
+
+    expect([noKind, badKind]).toMatchObject([usage, usage]);
+    expect(listed).toMatchObject({
+      ...succeeded,
+      stdoutJson: {
+        identities: [
+          { kind: "human", name: "ada" },
+          { kind: "human", name: "admin" },
+          { kind: "agent", name: "bot", owner: "ada" },
+        ],
+      },
     });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

@@ -33,12 +33,15 @@ it.effect("an admin creates an identity with an owner and gets its token once", 
   Effect.gen(function* createWithOwner() {
     const cookout = yield* TestCookout;
     yield* TestClock.adjust("1 second");
-    const created = yield* answer(() => cookout.client.createIdentity({ name: "auth-griller", owner: "matt" }));
+    const created = yield* answer(() =>
+      cookout.client.createIdentity({ kind: "agent", name: "auth-griller", owner: "matt" }),
+    );
     const whoami = yield* answer(cookout.clientFor(created.token).whoami);
 
     expect(created.identity).toStrictEqual({
       admin: false,
       createdAt: "2026-01-01T00:00:01.000Z",
+      kind: "agent",
       name: "auth-griller",
       owner: "matt",
     });
@@ -50,9 +53,9 @@ it.effect("an admin creates an identity with an owner and gets its token once", 
 it.effect("an admin creates an identity with no owner", () =>
   Effect.gen(function* createWithoutOwner() {
     const cookout = yield* TestCookout;
-    const created = yield* answer(() => cookout.client.createIdentity({ name: "company-bot" }));
+    const created = yield* answer(() => cookout.client.createIdentity({ kind: "agent", name: "company-bot" }));
 
-    expect(created.identity).toStrictEqual({ admin: false, createdAt: BOOT, name: "company-bot" });
+    expect(created.identity).toStrictEqual({ admin: false, createdAt: BOOT, kind: "agent", name: "company-bot" });
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -61,7 +64,7 @@ it.effect("every identity gets a different random token of at least 256 bits", (
     const cookout = yield* TestCookout;
     const created = yield* pipe(
       ["agent-0", "agent-1", "agent-2", "agent-3", "agent-4"],
-      Effect.forEach((name) => answer(() => cookout.client.createIdentity({ name })), ONE_AT_A_TIME),
+      Effect.forEach((name) => answer(() => cookout.client.createIdentity({ kind: "agent", name })), ONE_AT_A_TIME),
     );
     const tokens = [
       cookout.adminToken,
@@ -82,8 +85,8 @@ it.effect("every identity gets a different random token of at least 256 bits", (
 it.effect("a name already in use is refused with 409", () =>
   Effect.gen(function* nameInUse() {
     const cookout = yield* TestCookout;
-    yield* answer(() => cookout.client.createIdentity({ name: "twin" }));
-    const error = yield* refusal(() => cookout.client.createIdentity({ name: "twin", owner: "matt" }));
+    yield* answer(() => cookout.client.createIdentity({ kind: "agent", name: "twin" }));
+    const error = yield* refusal(() => cookout.client.createIdentity({ kind: "agent", name: "twin", owner: "matt" }));
 
     expect(error).toMatchObject({ code: "identity_exists", status: 409 });
   }).pipe(Effect.provide(testCookout())),
@@ -95,7 +98,7 @@ it.effect("identity names are 1-64 lowercase letters, digits or '-'", () =>
     const good = ["auth-griller", "a", "agent-7", Str.repeat(LONGEST)("x")];
     const created = yield* pipe(
       good,
-      Effect.forEach((name) => answer(() => cookout.client.createIdentity({ name })), ONE_AT_A_TIME),
+      Effect.forEach((name) => answer(() => cookout.client.createIdentity({ kind: "agent", name })), ONE_AT_A_TIME),
     );
 
     expect(created).toMatchObject(
@@ -112,7 +115,7 @@ it.effect("a name that breaks the naming rule is refused with 400", () =>
     const cookout = yield* TestCookout;
     const refused = yield* pipe(
       BAD_NAMES,
-      Effect.forEach((name) => refusal(() => cookout.client.createIdentity({ name })), ONE_AT_A_TIME),
+      Effect.forEach((name) => refusal(() => cookout.client.createIdentity({ kind: "agent", name })), ONE_AT_A_TIME),
     );
     const { identities } = yield* answer(() => cookout.client.listIdentities());
 
@@ -129,9 +132,9 @@ it.effect("a name that breaks the naming rule is refused with 400", () =>
 it.effect("a refused identity says, for each field, which rule it broke", () =>
   Effect.gen(function* schemaErrors() {
     const cookout = yield* TestCookout;
-    const name = yield* refusal(() => cookout.client.createIdentity({ name: "Auth" }));
+    const name = yield* refusal(() => cookout.client.createIdentity({ kind: "agent", name: "Auth" }));
     const owner = yield* refusal(() =>
-      cookout.client.createIdentity({ name: "agent", owner: Str.repeat(TOO_LONG_OWNER)("x") }),
+      cookout.client.createIdentity({ kind: "agent", name: "agent", owner: Str.repeat(TOO_LONG_OWNER)("x") }),
     );
 
     expect([name, owner]).toMatchObject([nameRefused, ownerRefused]);
@@ -146,13 +149,17 @@ it.effect("an owner is 1-100 characters", () =>
     const created = yield* pipe(
       good,
       Effect.forEach(
-        (owner, index) => answer(() => cookout.client.createIdentity({ name: `owned-${String(index)}`, owner })),
+        (owner, index) =>
+          answer(() => cookout.client.createIdentity({ kind: "agent", name: `owned-${String(index)}`, owner })),
         ONE_AT_A_TIME,
       ),
     );
     const refused = yield* pipe(
       bad,
-      Effect.forEach((owner) => refusal(() => cookout.client.createIdentity({ name: "agent", owner })), ONE_AT_A_TIME),
+      Effect.forEach(
+        (owner) => refusal(() => cookout.client.createIdentity({ kind: "agent", name: "agent", owner })),
+        ONE_AT_A_TIME,
+      ),
     );
 
     expect(created).toMatchObject(
@@ -185,17 +192,19 @@ it.effect("a body that isn't JSON is refused with 400", () =>
   }).pipe(Effect.provide([testCookout(), FetchHttpClient.layer])),
 );
 
-it.effect("any identity lists every identity and its owner, sorted by name", () =>
+it.effect("any identity lists every identity with its kind and owner, sorted by name", () =>
   Effect.gen(function* listIdentities() {
     const cookout = yield* TestCookout;
     const agent = yield* cookout.createIdentity("zed-agent", { owner: "matt" });
     yield* cookout.createIdentity("bot");
+    yield* cookout.createIdentity("matt", { kind: "human" });
     const { identities } = yield* answer(agent.client.listIdentities);
 
     expect(identities).toStrictEqual([
-      { admin: true, createdAt: BOOT, name: "admin" },
-      { admin: false, createdAt: BOOT, name: "bot" },
-      { admin: false, createdAt: BOOT, name: "zed-agent", owner: "matt" },
+      { admin: true, createdAt: BOOT, kind: "human", name: "admin" },
+      { admin: false, createdAt: BOOT, kind: "agent", name: "bot" },
+      { admin: false, createdAt: BOOT, kind: "human", name: "matt" },
+      { admin: false, createdAt: BOOT, kind: "agent", name: "zed-agent", owner: "matt" },
     ]);
   }).pipe(Effect.provide(testCookout())),
 );
@@ -235,7 +244,7 @@ it.effect("deleting an identity removes it and its token stops working", () =>
     const error = yield* refusal(agent.client.whoami);
 
     expect(deleted).toStrictEqual({ identity: agent.identity });
-    expect(listed).toStrictEqual({ identities: [{ admin: true, createdAt: BOOT, name: "admin" }] });
+    expect(listed).toStrictEqual({ identities: [{ admin: true, createdAt: BOOT, kind: "human", name: "admin" }] });
     expect(error).toMatchObject({ code: "token_revoked", status: 401 });
   }).pipe(Effect.provide(testCookout())),
 );
@@ -279,7 +288,7 @@ it.effect("a non-admin can't create, rotate or delete identities (403)", () =>
   Effect.gen(function* nonAdmin() {
     const cookout = yield* TestCookout;
     const agent = yield* cookout.createIdentity("agent");
-    const created = yield* refusal(() => agent.client.createIdentity({ name: "sneaky" }));
+    const created = yield* refusal(() => agent.client.createIdentity({ kind: "agent", name: "sneaky" }));
     const rotated = yield* refusal(() => agent.client.rotateToken("admin"));
     const deleted = yield* refusal(() => agent.client.deleteIdentity("admin"));
     const listed = yield* answer(cookout.client.listIdentities);

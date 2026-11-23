@@ -42,11 +42,11 @@ type Refused = "channel_not_found" | "reply_to_not_found" | "reply_in_other_chan
 
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
 
-function authorOf({ name, owner }: Identity): Author {
-  if (Predicate.isUndefined(owner)) {
-    return { name };
+function authorOf(identity: Identity): Author {
+  if (identity.kind === "human" || Predicate.isUndefined(identity.owner)) {
+    return { name: identity.name };
   }
-  return { name, owner };
+  return { name: identity.name, owner: identity.owner };
 }
 
 function withReplyTo(message: NewMessage, replyTo: MessageId | undefined): NewMessage {

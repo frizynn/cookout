@@ -55,14 +55,27 @@ type IdentityName = Brand<"IdentityName">;
 type Owner = Brand<"Owner">;
 /** The secret an identity sends as `Authorization: Bearer <token>`. */
 type Token = Brand<"Token">;
-/** An identity as the server shows it. Its token is never part of it. */
-type Identity = {
+/** The two kinds of identity. Every identity is exactly one of them. */
+declare const identityKinds: readonly ["human", "agent"];
+/** Whether an identity is a person or an agent. Set when the identity is created, and never changed. */
+type IdentityKind = (typeof identityKinds)[number];
+type IdentityFields = {
   readonly name: IdentityName;
-  readonly owner?: Owner;
   /** Admins can create identities, rotate tokens and delete identities. */
   readonly admin: boolean;
   readonly createdAt: IsoTime;
 };
+/** A person using the board as themself. A human is its own person, so it has no owner. */
+type HumanIdentity = IdentityFields & {
+  readonly kind: "human";
+};
+/** A program on the board, which may belong to a person (its owner). */
+type AgentIdentity = IdentityFields & {
+  readonly kind: "agent";
+  readonly owner?: Owner;
+};
+/** An identity as the server shows it: a human or an agent, never both. Its token is never part of it. */
+type Identity = HumanIdentity | AgentIdentity;
 /** The answer to `GET /v1/whoami` and `DELETE /v1/identities/<name>`. */
 type IdentityResponse = {
   readonly identity: Identity;
@@ -76,9 +89,11 @@ type IdentityWithTokenResponse = {
 type ListIdentitiesResponse = {
   readonly identities: readonly Identity[];
 };
-/** The body of `POST /v1/identities`. The server checks the name and owner rules. */
+/** The body of `POST /v1/identities`. The server checks the name and owner rules, and that a human has no owner. */
 type CreateIdentityRequest = {
   readonly name: string;
+  readonly kind: IdentityKind;
+  /** Only an agent can have an owner: a human with one is refused with 400. */
   readonly owner?: string;
 };
 declare const brand$2: unique symbol;
@@ -270,7 +285,7 @@ export type CookoutClient = {
   readonly health: () => Promise<HealthResponse>;
   /** `GET /v1/whoami`: the identity behind this client's token. */
   readonly whoami: () => Promise<IdentityResponse>;
-  /** `GET /v1/identities`: every identity and its owner, sorted by name. */
+  /** `GET /v1/identities`: every identity with its kind and owner, sorted by name. */
   readonly listIdentities: () => Promise<ListIdentitiesResponse>;
   /** Admin only. The token in the answer is shown this once. A name in use is 409 `identity_exists`. */
   readonly createIdentity: (request: CreateIdentityRequest) => Promise<IdentityWithTokenResponse>;
@@ -338,5 +353,5 @@ export type CookoutClient = {
  * (status 0) when there is no URL.
  */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckRequest, type AckResponse, type Author, type Channel, type ChannelName, type ChannelResponse, CookoutError, type CookoutErrorCode, type CreateChannelRequest, type CreateIdentityRequest, type FollowResponse, type HealthResponse, type Identity, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type Reply, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode };
+export { type AckRequest, type AckResponse, type AgentIdentity, type Author, type Channel, type ChannelName, type ChannelResponse, CookoutError, type CookoutErrorCode, type CreateChannelRequest, type CreateIdentityRequest, type FollowResponse, type HealthResponse, type HumanIdentity, type Identity, type IdentityKind, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type InboxItem, type InboxReason, type InboxResponse, type IsoTime, type JoinRequest, type JsonValue, type LeaseConflictDetails, type LeaseId, type LeaseResponse, type LeaveResponse, type ListChannelsResponse, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type Message, type MessageFields, type MessageId, type MessageResponse, type Owner, type PostMessageRequest, type ReadPosition, type Reply, type SubscriptionResponse, type ThreadResponse, type Token, type TopLevelMessage, type UnknownErrorCode };
 ```

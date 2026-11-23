@@ -1,6 +1,6 @@
-import { DateTime, Effect, Schema } from "effect";
+import { DateTime, Effect, Predicate, Schema } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import type { Identity, IdentityName } from "../../index.ts";
+import type { Identity, IdentityKind, IdentityName, Owner } from "../../index.ts";
 import {
   IdentityNameSchema,
   IdentityResponseSchema,
@@ -8,7 +8,14 @@ import {
   ListIdentitiesResponseSchema,
   OwnerSchema,
 } from "./wire.ts";
-import { firstAdminName, identitiesPath, identityPath, identityTokenPath, isIdentityName } from "../../index.ts";
+import {
+  firstAdminName,
+  identitiesPath,
+  identityKinds,
+  identityPath,
+  identityTokenPath,
+  isIdentityName,
+} from "../../index.ts";
 import { issueToken, requireAdmin } from "./auth.ts";
 import type { Caller } from "./auth.ts";
 import type { Refusal } from "../../../http/index.ts";
@@ -18,10 +25,16 @@ import { Storage } from "../../../storage/server.ts";
 import { echoed } from "../../../http/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 
+const humanHasNoOwner = Schema.makeFilter(
+  (body: { readonly kind: IdentityKind; readonly owner?: Owner }) =>
+    body.kind === "agent" || Predicate.isUndefined(body.owner) || { issue: "A human has no owner.", path: ["owner"] },
+);
+
 const CreateIdentityRequestSchema = Schema.Struct({
+  kind: Schema.Literals(identityKinds),
   name: IdentityNameSchema,
   owner: Schema.optionalKey(OwnerSchema),
-});
+}).check(humanHasNoOwner);
 
 type CreateIdentityBody = typeof CreateIdentityRequestSchema.Type;
 
@@ -53,11 +66,14 @@ function nameParam(params: Readonly<Record<string, string>>): Effect.Effect<Iden
   return Effect.fail(identityNotFound(name));
 }
 
-function newIdentity({ name, owner }: CreateIdentityBody, createdAt: Identity["createdAt"]): Identity {
-  if (typeof owner === "string") {
-    return { admin: false, createdAt, name, owner };
+function newIdentity({ kind, name, owner }: CreateIdentityBody, createdAt: Identity["createdAt"]): Identity {
+  if (kind === "human") {
+    return { admin: false, createdAt, kind, name };
   }
-  return { admin: false, createdAt, name };
+  if (typeof owner === "string") {
+    return { admin: false, createdAt, kind, name, owner };
+  }
+  return { admin: false, createdAt, kind, name };
 }
 
 const withToken = HttpServerResponse.schemaJson(IdentityWithTokenResponseSchema);
@@ -131,6 +147,7 @@ const deleteRoute: Route<Caller | Storage> = {
 export const firstAdmin: Effect.Effect<Identity> = Effect.map(DateTime.now, (now) => ({
   admin: true,
   createdAt: isoTimeOf(now),
+  kind: "human",
   name: firstAdminName,
 }));
 

@@ -70,6 +70,13 @@ const migrations: readonly string[] = [
      message_id INTEGER NOT NULL,
      PRIMARY KEY (identity_name, thread_id)
    ) STRICT, WITHOUT ROWID;`,
+  `ALTER TABLE identities ADD COLUMN kind TEXT NOT NULL DEFAULT 'agent'
+     CHECK (kind IN ('human', 'agent') AND (kind = 'agent' OR owner IS NULL));
+   UPDATE identities SET kind = 'human' WHERE admin = 1 AND owner IS NULL;
+   CREATE TRIGGER identity_kind_never_changes BEFORE UPDATE OF kind ON identities
+   BEGIN
+     SELECT RAISE(ABORT, 'An identity keeps its kind.');
+   END;`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

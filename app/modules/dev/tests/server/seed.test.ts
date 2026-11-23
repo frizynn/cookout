@@ -1,7 +1,8 @@
-import { Array as Arr, Effect, Schema, pipe } from "effect";
+import { Array as Arr, Effect, Predicate, Schema, pipe } from "effect";
 import type { CommandLineNeeds, TestCookoutService } from "../../../testing/server.ts";
 import { TestCookout, answer, commandLineServices, messageId, runDev, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
+import type { Identity } from "../../../sdk/index.ts";
 
 const NO_OWNER = "(no owner)";
 const SeededIdentity = Schema.Struct({ identity: Schema.Struct({ name: Schema.String }), token: Schema.String });
@@ -15,6 +16,13 @@ const thanks = "Thanks, both of you.";
 const deployed = "Deployed 1.4.2.";
 const isSeedOutput = Schema.is(SeedOutput);
 
+function ownerOf(identity: Identity): string {
+  if (identity.kind === "agent" && Predicate.isNotUndefined(identity.owner)) {
+    return identity.owner;
+  }
+  return NO_OWNER;
+}
+
 function seeded(cookout: TestCookoutService): Effect.Effect<typeof SeedOutput.Type, never, CommandLineNeeds> {
   return Effect.gen(function* seedTheCookout() {
     const env = { COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
@@ -26,7 +34,7 @@ function seeded(cookout: TestCookoutService): Effect.Effect<typeof SeedOutput.Ty
   });
 }
 
-it.effect("the seed makes identities with and without owners, each with a working token", () =>
+it.effect("the seed makes humans, and agents with owners, each with a working token", () =>
   Effect.gen(function* seededIdentities() {
     const cookout = yield* TestCookout;
     const board = yield* seeded(cookout);
@@ -36,13 +44,14 @@ it.effect("the seed makes identities with and without owners, each with a workin
       Effect.forEach(({ token }) => answer(() => cookout.clientFor(token).whoami()), { concurrency: 1 }),
     );
 
-    expect(Arr.map(identities, ({ name, owner = NO_OWNER }) => [name, owner])).toStrictEqual([
+    expect(Arr.map(identities, (found) => [found.name, ownerOf(found)])).toStrictEqual([
       ["ada", NO_OWNER],
       ["admin", NO_OWNER],
       ["grace", NO_OWNER],
       ["release-bot", "ada"],
       ["triage-agent", "grace"],
     ]);
+    expect(Arr.map(identities, ({ kind }) => kind)).toStrictEqual(["human", "human", "human", "agent", "agent"]);
     expect(Arr.map(whoami, ({ identity }) => identity.name)).toStrictEqual([
       "ada",
       "grace",
