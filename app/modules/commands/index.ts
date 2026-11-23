@@ -2,11 +2,11 @@
  * Commands on the wire, shared by the server, the SDK and the web: the
  * `CommandName` and `CommandSecret` brands and their checks, the command as
  * the server shows it, the request and answers of the command routes, their
- * path, and the error codes they refuse with.
+ * paths, and the error codes they refuse with.
  */
+import type { JsonValue, MessageId } from "../messages/index.ts";
 import type { IdentityName } from "../identities/index.ts";
 import type { IsoTime } from "../time/index.ts";
-import type { JsonValue } from "../messages/index.ts";
 
 declare const brand: unique symbol;
 
@@ -84,8 +84,27 @@ export interface ListCommandsResponse {
   readonly commands: readonly Command[];
 }
 
+/** The body of a command call. The server checks `data` against the command's schema. */
+export interface CallCommandRequest {
+  /** The channel the call message is posted in. */
+  readonly channel: string;
+  readonly data: JsonValue;
+}
+
+/** The answer to a command call (202): the call message, which is also the top-level message of its thread. */
+export interface CallCommandResponse {
+  readonly messageId: MessageId;
+  readonly threadId: MessageId;
+}
+
 /** `GET /v1/commands` (any identity) and `POST /v1/commands` (admin). */
 export const commandsPath = "/v1/commands";
 
-/** The codes the command routes refuse with: a name in use (409), and a name that is a human's (409). */
-export const commandErrorCodes = ["command_exists", "handler_not_agent"] as const;
+/** `POST /v1/commands/:name/calls` (any identity): call the command `name`. */
+export const commandCallsPath = "/v1/commands/:name/calls";
+
+/**
+ * The codes the command routes refuse with: a name in use (409), a name that is a human's (409), and a call to a
+ * command that doesn't exist (404).
+ */
+export const commandErrorCodes = ["command_exists", "handler_not_agent", "command_not_found"] as const;

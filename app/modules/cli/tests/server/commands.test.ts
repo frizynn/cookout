@@ -1,6 +1,7 @@
-import { Effect, FileSystem, Path } from "effect";
+import { Array as Arr, Effect, FileSystem, Path } from "effect";
 import {
   TestCookout,
+  answer,
   commandLineServices,
   freshStateFolder,
   runCookout,
@@ -8,6 +9,7 @@ import {
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import type { Scope } from "effect";
+import type { TestCookoutService } from "../../../testing/server.ts";
 
 interface SchemaFile {
   readonly file: string;
@@ -27,6 +29,20 @@ const schemaFile: Effect.Effect<SchemaFile, never, FileSystem.FileSystem | Path.
     return { file, folder };
   },
 );
+
+const callDeploy = ["command", "call", "deploy", "--channel", "grill", "--data"];
+
+function deployInGrill(
+  cookout: TestCookoutService,
+): Effect.Effect<Readonly<Record<string, string>>, never, FileSystem.FileSystem | Path.Path | Scope.Scope> {
+  return Effect.gen(function* addDeployAndGrill() {
+    const folder = yield* freshStateFolder;
+    const required = { ...schema, required: ["branch"] };
+    yield* answer(() => cookout.client.addCommand({ name: "deploy", schema: required, url }));
+    yield* answer(() => cookout.client.createChannel({ name: "grill" }));
+    return { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+  });
+}
 
 it.effect("cookout command add reads the schema file and prints the secret once; cookout command list shows it", () =>
   Effect.gen(function* addAndList() {
@@ -55,4 +71,24 @@ it.effect("cookout command add by an identity that is not an admin exits 1 with 
 
     expect(result).toMatchObject({ exitCode: 1, stderrJson: { error: { code: "admin_only" } } });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect(
+  "cookout command call reads --data as JSON and prints the call's thread; data that breaks the schema exits 1",
+  () =>
+    Effect.gen(function* callFromTheCommandLine() {
+      const cookout = yield* TestCookout;
+      const env = yield* deployInGrill(cookout);
+      const called = yield* runCookout({ args: [...callDeploy, '{"branch":"main"}'], env });
+      const refused = yield* runCookout({ args: [...callDeploy, '{"branch":1}'], env });
+      const { messages } = yield* answer(() => cookout.client.listMessages("grill"));
+
+      expect(messages).toMatchObject([{ data: { command: "deploy", data: { branch: "main" } } }]);
+      expect(called).toMatchObject({ exitCode: 0 });
+      expect([called.stdoutJson]).toStrictEqual(Arr.map(messages, ({ id }) => ({ messageId: id, threadId: id })));
+      expect(refused).toMatchObject({
+        exitCode: 1,
+        stderrJson: { error: { code: "invalid_request", details: [{ path: ["data", "branch"] }] } },
+      });
+    }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
