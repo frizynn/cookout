@@ -15,7 +15,7 @@ interface StreamRow {
 interface StreamOf {
   readonly messages: readonly Message[];
   readonly after: Message | null;
-  readonly readPosition: MessageId | null;
+  readonly readPosition: number | null;
   readonly me: string;
 }
 

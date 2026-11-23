@@ -31,8 +31,10 @@
  * position moved back (`read-position-moved-back`, from any session) replace
  * the read position there, though it was newer, take the items after it out of
  * `earlier`, read the inbox again to bring them back, and move the "New" line
- * of a view open there above the first of them. `menu` is which message's
- * actions menu is open, if any, whose Mark unread calls `markUnread`.
+ * of a view open there above the first of them, or above every message when
+ * it was a channel's first. `menu` is which message's actions menu is open, if
+ * any, whose Mark unread calls `markUnread`; its `refusal` is why the last
+ * Mark unread was refused, until the next one.
  */
 import type { ChannelName, CookoutClient, CookoutEvent, InboxItem, MessageId, Refusal } from "../sdk/index.ts";
 import type { MarkAll, MarkAllState } from "./lib/mark-all.ts";
@@ -97,13 +99,14 @@ export interface Unread {
   /**
    * Where the "New" line goes in a channel's top-level messages (`thread` is `null`) or a thread's replies: the read
    * position there when its first reader subscribed, once the counts have loaded, so the line sits above the first
-   * message after it; `null`, with no line, where nothing there has been read. It stays put while anyone reads it,
+   * message after it; `null`, with no line, where nothing there has been read; `0`, above every message, where marking
+   * a channel's first message unread left nothing read. It stays put while anyone reads it,
    * though the view's own ack moves the read position, and is read afresh when it is opened again.
    */
   readonly newLine: (channel: ChannelName, thread: MessageId | null) => NewLine;
   /** Marks every inbox item the store holds as read, in every channel and thread, leaving any newer one unread. */
   readonly markAllRead: () => void;
-  /** Marks a message, and everything after it in its thread or channel, unread again. */
+  /** Marks a message, and everything after it in its thread or channel, unread again, closing the menu; a refusal shows as `menu.refusal`. */
   readonly markUnread: (messageId: MessageId) => void;
   /** Which message's actions menu is open, if any: an external store of its own. */
   readonly menu: MessageMenu;
@@ -155,11 +158,13 @@ export function createUnread(options: UnreadOptions): Unread {
     shown.publish(await loadedOrFailed({ client: options.client, items, markAll, onRead: earlier.add }));
   }
 
+  const menu = createMessageMenu(markUnread.markUnread);
+
   return withNewLines<Pick<Unread, "earlier" | "markAllRead" | "markUnread" | "menu" | "snapshot" | "subscribe">>({
     earlier,
     markAllRead: markAll.markAllRead,
-    markUnread: markUnread.markUnread,
-    menu: createMessageMenu(markUnread.markUnread),
+    markUnread: menu.markUnread,
+    menu,
     movesBack: items.movesBack,
     readPosition: items.readPosition,
     snapshot: shown.current,

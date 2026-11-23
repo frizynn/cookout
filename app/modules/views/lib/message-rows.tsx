@@ -16,7 +16,7 @@ interface MessageRowsProps {
   readonly state: ChannelMessagesState;
   readonly me: string;
   readonly open: MessageId | null;
-  readonly readPosition: MessageId | null;
+  readonly readPosition: number | null;
   readonly unread: Unread;
 }
 

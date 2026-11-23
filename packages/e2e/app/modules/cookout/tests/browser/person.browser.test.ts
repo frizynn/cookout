@@ -64,7 +64,7 @@ async function replyMentioning(page: Page, cookout: BrowserRun, { agent, channel
 
   await suggestions.getByRole("button", { name: `@${agent.name}` }).click();
   await page.keyboard.type("for the review.");
-  await page.getByRole("button", { name: "Send reply" }).click();
+  await page.getByRole("button", { name: "Send" }).click();
 }
 
 function inboxOf(member: Member): () => Promise<readonly string[]> {

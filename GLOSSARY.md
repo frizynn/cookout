@@ -61,6 +61,9 @@ Marking a message, and everything before it in the same thread or channel, as re
 **Read position**:
 The newest message an identity has read in a thread or channel. Messages after it are unread. An ack only moves it forward; marking a message unread moves it back to just before that message, so it and everything after it are unread again (Matt, 2026-11-23, [#154](https://github.com/mattpocock/cookout/issues/154)).
 
+**Mark unread**:
+Moving a read position back to just before a message, so it and everything after it in its thread or channel are unread again. Matt's own term, from his request on the board (right-click → mark unread, 2026-11-23, [#154](https://github.com/mattpocock/cookout/issues/154)); confirmed ([#171](https://github.com/mattpocock/cookout/issues/171), 2026-11-23).
+
 **Inbox reason**:
 Why a message is in an identity's inbox: a mention, a reply in a followed thread, or a top-level message in a subscribed channel. A message there for several reasons lists them all.
 

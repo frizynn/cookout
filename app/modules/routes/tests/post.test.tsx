@@ -40,7 +40,7 @@ function typeMessage(text: string): void {
 }
 
 function sendMessage(): void {
-  fireEvent.click(inPane().getByRole("button", { name: "Send message" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Send" }));
 }
 
 async function postWithMention(): Promise<void> {
@@ -98,6 +98,24 @@ it("a refused post says so and keeps its text in the box", { timeout: 5000 }, as
     expect.stringMatching(/^Couldn't post the message \(token_revoked\)/u),
     ["adminEarlier"],
     screen.getByLabelText("Message"),
+  ]);
+
+  close();
+});
+
+it("the Send button is a paper-plane icon named Send, with a tooltip", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const poster = await newIdentity({ kind: "human", name: "web-post-icon" });
+  await channelWith("web-post-icon", "Earlier");
+  const close = openAt({ client: poster.client, hash: "#/channels/web-post-icon" });
+  await shownMessages();
+  const send = inPane().getByRole("button", { name: "Send" });
+
+  expect([send.title, send.textContent, send.querySelector("svg[aria-hidden='true']") === null]).toStrictEqual([
+    "Send",
+    "",
+    false,
   ]);
 
   close();

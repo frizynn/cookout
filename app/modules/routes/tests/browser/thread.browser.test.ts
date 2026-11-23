@@ -21,7 +21,7 @@ async function replyInThread(page: Page, channel: string, text: string): Promise
     .click();
   await page.getByRole("article").filter({ hasText: "Who's on call?" }).getByRole("link", { name: "1 reply" }).click();
   await page.getByLabel("Reply", { exact: true }).fill(text);
-  await inThread(page).getByRole("button", { name: "Send reply" }).click();
+  await inThread(page).getByRole("button", { name: "Send" }).click();
 }
 
 test("a human opens a thread, replies, and the thread leaves their inbox", async ({ page }) => {

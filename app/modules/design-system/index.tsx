@@ -91,7 +91,8 @@
  * and Shift+Enter starts a new line, and, while its owner is `choosing` from
  * suggestions, the arrow keys move the highlight, Enter or Tab picks it and
  * Escape closes the list;
- * `SubmitButton` sends it; `Suggestions` is a named list of options to pick
+ * `SubmitButton` sends it, and `SendButton` is its paper-plane icon form, named
+ * and tooltipped by `label`; `Suggestions` is a named list of options to pick
  * from under a box, such as mentions or commands (each with any muted detail
  * after it), one of them highlighted, which leaves the box focused; it sits
  * in the overlay layer, above everything else in the pane.
@@ -164,6 +165,7 @@ export { SidebarBody } from "./lib/sidebar-body.tsx";
 export { SidebarFooter } from "./lib/sidebar-footer.tsx";
 export { Skeleton } from "./lib/skeleton.tsx";
 export { Suggestions } from "./lib/suggestions.tsx";
+export { SendButton } from "./lib/send-button.tsx";
 export { SubmitButton } from "./lib/submit-button.tsx";
 export { Tag } from "./lib/tag.tsx";
 export { TextArea } from "./lib/text-area.tsx";

@@ -135,7 +135,7 @@ it("text starting with / that names no registered command posts as a message", {
   const close = await openChannel({ channel: "web-command-not-one" });
 
   type("/shrug at the build");
-  fireEvent.click(inPane().getByRole("button", { name: "Send message" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Send" }));
   await within(screen.getByRole("list", { name: "Messages" })).findByText("/shrug at the build");
   const { messages } = await adminClient().listMessages("web-command-not-one");
 

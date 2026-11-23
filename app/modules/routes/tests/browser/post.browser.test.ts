@@ -13,7 +13,7 @@ async function postWithMention(page: Page): Promise<void> {
     .getByRole("button", { name: "@browser-post-reviewer" })
     .click();
   await page.keyboard.type("look?");
-  await inPane(page).getByRole("button", { name: "Send message" }).click();
+  await inPane(page).getByRole("button", { name: "Send" }).click();
 }
 
 async function inboxesOf(mentioned: CookoutClient, poster: CookoutClient): Promise<readonly unknown[]> {

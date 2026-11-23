@@ -7,7 +7,6 @@ import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
 
 const MESSAGE_BOX = {
-  button: "Send message",
   field: "Message",
   form: "Post to the channel",
   posts: "message",
