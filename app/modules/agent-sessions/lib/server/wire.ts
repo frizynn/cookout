@@ -51,7 +51,13 @@ export const JoinRequestSchema = Schema.Struct({
 });
 
 export const AgentSessionResponseSchema = matchesWire<AgentSessionResponse>()(
-  Schema.Struct({ agentSessionToken: TokenSchema, expiresAt: IsoTimeSchema, issuedAt: IsoTimeSchema }),
+  Schema.Struct({
+    agentSessionToken: TokenSchema,
+    created: Schema.Boolean,
+    expiresAt: IsoTimeSchema,
+    identity: IdentityNameSchema,
+    issuedAt: IsoTimeSchema,
+  }),
 );
 
 export const ListAgentSessionsResponseSchema = matchesWire<ListAgentSessionsResponse>()(

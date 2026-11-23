@@ -362,7 +362,13 @@ declare const defaultIdleExpiry = "7d";
  * agent session token expires once it goes this long unused.
  */
 declare const idleExpiryPattern: RegExp;
-/** The body of `POST /v1/agent-session`. `as` must be the token's own agent: a check, not a switch. */
+/**
+ * The body of `POST /v1/agent-session`. Sent with an agent's token, `as` must be that agent: a check, not a switch.
+ * Sent with a human's token, `as` names an agent the human owns, or creates one (Matt, 2026-11-23,
+ * mattpocock/cookout#119): an agent the caller owns by that name is joined; else a free name is created, owned by
+ * the caller; else, when someone else has the name, `<caller>/<name>` is joined, or created. A human's name, or
+ * `<other>/<name>`, is refused. This is the one route a human's token may use from an agent tool.
+ */
 interface JoinRequest {
   readonly as: string;
   /** Joins even while the agent has a live agent session token, which is revoked at once. */
@@ -379,6 +385,10 @@ interface AgentSessionResponse {
   readonly issuedAt: IsoTime;
   /** Each request sent with the token moves it forward by the idle expiry. */
   readonly expiresAt: IsoTime;
+  /** The agent joined, such as `ada/triage-agent` when a human's `as: "triage-agent"` was someone else's. */
+  readonly identity: IdentityName;
+  /** Whether this join created the agent, owned by the human who joined. */
+  readonly created: boolean;
 }
 /** An agent's live agent session token as its owner sees it: when it was issued and last used, never the token. */
 interface ListedAgentSession {
@@ -417,12 +427,14 @@ declare const agentSessionRevoked = "agent_session_revoked";
 /** The 401 code for an agent session token that went unused past its expiry. */
 declare const agentSessionExpired = "agent_session_expired";
 /**
- * The codes join and leave refuse with: the 403s `not_your_identity` (join as another identity) and `identity_kind`
- * (join as a human: only agents join), the 409 `agent_session_live` (join while the agent has a live agent session
- * token), the 400s `idle_expiry_too_long` and `agent_session_required` (leave sent without an agent session token),
+ * The codes join and leave refuse with: the 403s `not_your_identity` (an agent joins as another identity),
+ * `identity_kind` (join as a human: only agents join) and `not_owner` (a human joins `<other>/<name>`; listed with
+ * the identity codes), the 409s
+ * `agent_session_live` (join while the agent has a live agent session token) and `identity_deactivated` (join a
+ * Deactivated agent), the 400s `idle_expiry_too_long` and `agent_session_required` (leave sent without an agent session token),
  * and the 401s any request sent with an ended agent session token gets.
  */
-declare const agentSessionErrorCodes: readonly ["not_your_identity", "identity_kind", "agent_session_live", "idle_expiry_too_long", "agent_session_required", "agent_session_revoked", "agent_session_expired"];
+declare const agentSessionErrorCodes: readonly ["not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "agent_session_revoked", "agent_session_expired"];
 interface AgentSessionCalls {
   readonly join: (request: JoinRequest) => Promise<AgentSessionResponse>;
   readonly leave: () => Promise<LeaveResponse>;
@@ -479,7 +491,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "owner_deactivated", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "agent_session_live", "idle_expiry_too_long", "agent_session_required", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "owner_deactivated", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */

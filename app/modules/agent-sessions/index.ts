@@ -3,8 +3,8 @@
  * requests and answers, the idle expiry's format, and the codes they refuse with. `join` issues an agent session
  * token, a bearer token that acts as the agent for one session (Matt, 2026-11-23, mattpocock/cookout#114).
  */
+import type { IdentityName, Token } from "../identities/index.ts";
 import type { IsoTime } from "../time/index.ts";
-import type { Token } from "../identities/index.ts";
 
 /** `POST /v1/agent-session` joins (issues an agent session token); `DELETE /v1/agent-session` leaves (revokes it). */
 export const agentSessionPath = "/v1/agent-session";
@@ -25,7 +25,13 @@ export const defaultIdleExpiry = "7d";
  */
 export const idleExpiryPattern = /^[1-9]\d{0,6}[smhd]$/u;
 
-/** The body of `POST /v1/agent-session`. `as` must be the token's own agent: a check, not a switch. */
+/**
+ * The body of `POST /v1/agent-session`. Sent with an agent's token, `as` must be that agent: a check, not a switch.
+ * Sent with a human's token, `as` names an agent the human owns, or creates one (Matt, 2026-11-23,
+ * mattpocock/cookout#119): an agent the caller owns by that name is joined; else a free name is created, owned by
+ * the caller; else, when someone else has the name, `<caller>/<name>` is joined, or created. A human's name, or
+ * `<other>/<name>`, is refused. This is the one route a human's token may use from an agent tool.
+ */
 export interface JoinRequest {
   readonly as: string;
   /** Joins even while the agent has a live agent session token, which is revoked at once. */
@@ -43,6 +49,10 @@ export interface AgentSessionResponse {
   readonly issuedAt: IsoTime;
   /** Each request sent with the token moves it forward by the idle expiry. */
   readonly expiresAt: IsoTime;
+  /** The agent joined, such as `ada/triage-agent` when a human's `as: "triage-agent"` was someone else's. */
+  readonly identity: IdentityName;
+  /** Whether this join created the agent, owned by the human who joined. */
+  readonly created: boolean;
 }
 
 /** An agent's live agent session token as its owner sees it: when it was issued and last used, never the token. */
@@ -90,15 +100,18 @@ export const agentSessionRevoked = "agent_session_revoked";
 export const agentSessionExpired = "agent_session_expired";
 
 /**
- * The codes join and leave refuse with: the 403s `not_your_identity` (join as another identity) and `identity_kind`
- * (join as a human: only agents join), the 409 `agent_session_live` (join while the agent has a live agent session
- * token), the 400s `idle_expiry_too_long` and `agent_session_required` (leave sent without an agent session token),
+ * The codes join and leave refuse with: the 403s `not_your_identity` (an agent joins as another identity),
+ * `identity_kind` (join as a human: only agents join) and `not_owner` (a human joins `<other>/<name>`; listed with
+ * the identity codes), the 409s
+ * `agent_session_live` (join while the agent has a live agent session token) and `identity_deactivated` (join a
+ * Deactivated agent), the 400s `idle_expiry_too_long` and `agent_session_required` (leave sent without an agent session token),
  * and the 401s any request sent with an ended agent session token gets.
  */
 export const agentSessionErrorCodes = [
   "not_your_identity",
   "identity_kind",
   "agent_session_live",
+  "identity_deactivated",
   "idle_expiry_too_long",
   "agent_session_required",
   agentSessionRevoked,

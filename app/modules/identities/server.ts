@@ -78,7 +78,8 @@ export const identitiesLayer: Layer.Layer<Identities, never, Storage | Secrets> 
  * its identity as `Caller`. Refuses
  * with 401 `token_missing`, `token_unknown`, `token_revoked` or `token_expired`. A command token gets 403
  * `outside_command_thread` on every route but `POST /v1/messages`, and its thread as `CommandThread`. A human's
- * token sent with `cookout-agent-tool` gets 403 `agent_as_human`; an agent's provides the tool as `AgentToolSent`.
+ * token sent with `cookout-agent-tool` gets 403 `agent_as_human` on every route but join (`POST /v1/agent-session`);
+ * an agent's provides the tool as `AgentToolSent`.
  */
 export const requireToken: Gate<
   Caller,
@@ -89,7 +90,7 @@ export const requireToken: Gate<
     const identities = yield* Identities;
     const request = yield* HttpServerRequest.HttpServerRequest;
     const { agentSession, commandThread, identity } = yield* identities.authenticate(credentialsOf(request));
-    const agentTool = yield* agentToolOf({ headers: request.headers, identity });
+    const agentTool = yield* agentToolOf({ headers: request.headers, identity, target: request });
     if (Option.isSome(commandThread)) {
       yield* requireCommandRoute(request);
     }

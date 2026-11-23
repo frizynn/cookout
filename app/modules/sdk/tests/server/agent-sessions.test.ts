@@ -37,7 +37,9 @@ it.effect("join issues an agent session token that acts as the agent, expiring 7
 
     expect(issued).toStrictEqual({
       agentSessionToken: issued.agentSessionToken,
+      created: false,
       expiresAt: "2026-01-08T00:00:00.000Z",
+      identity: "auth-griller",
       issuedAt: "2026-01-01T00:00:00.000Z",
     });
     expect(issued.agentSessionToken).toMatch(/^cookout_[\w-]{43}$/u);
