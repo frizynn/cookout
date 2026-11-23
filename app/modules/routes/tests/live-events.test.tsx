@@ -83,7 +83,10 @@ it("the channel view shows each new message once, and drops events that don't ma
 
   send(...garbage, sent(later), sent(later), sent(reply), sent(reply), sent(elsewhere));
 
-  await expect(shownIn("Messages")).resolves.toStrictEqual(["adminThe parent1 reply", "adminLater"]);
+  await expect(shownIn("Messages")).resolves.toStrictEqual([
+    "adminThe parent1 replyLast reply just nowView thread →",
+    "adminLater",
+  ]);
 
   close();
 });

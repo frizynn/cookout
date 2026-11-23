@@ -44,7 +44,11 @@ function initialsOf(name: string): string {
     .toUpperCase();
 }
 
-const SIZES = { large: "h-14 w-14 text-lg", small: "h-8 w-8 text-xs" } as const;
+const SIZES = {
+  large: { box: "h-14 w-14 text-lg", testId: "avatar" },
+  small: { box: "h-8 w-8 text-xs", testId: "avatar" },
+  tiny: { box: "h-5 w-5 text-[9px] ring-2 ring-background", testId: "replier-avatar" },
+} as const;
 
 function shapeOf(agent: boolean): string {
   if (agent) {
@@ -54,15 +58,16 @@ function shapeOf(agent: boolean): string {
 }
 
 export function Avatar(parts: AvatarParts): ReactNode {
+  const size = SIZES[parts.size ?? "small"];
   return (
     <span
       aria-hidden="true"
-      className={`relative inline-flex shrink-0 items-center justify-center font-semibold text-white select-none before:content-[attr(data-initials)] ${SIZES[parts.size ?? "small"]} ${shapeOf(parts.agent)} ${hueOf(parts.name)}`}
+      className={`relative inline-flex shrink-0 items-center justify-center font-semibold text-white select-none before:content-[attr(data-initials)] ${size.box} ${shapeOf(parts.agent)} ${hueOf(parts.name)}`}
       data-agent={parts.agent}
       data-initials={initialsOf(parts.name)}
-      data-testid="avatar"
+      data-testid={size.testId}
     >
-      {parts.agent && <AgentBadge />}
+      {parts.agent && parts.size !== "tiny" && <AgentBadge />}
     </span>
   );
 }

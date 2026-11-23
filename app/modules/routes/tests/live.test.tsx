@@ -51,7 +51,7 @@ it("a message posted by another identity appears in the open channel without a r
   await screen.findByText("1 reply");
 
   await expect(shownIn("Messages")).resolves.toStrictEqual([
-    "web-live-channel-posteragentDeploy at noon?1 reply",
+    "web-live-channel-posteragentDeploy at noon?1 replyLast reply just nowView thread →",
     "web-live-channel-posteragentOr at one?",
   ]);
 

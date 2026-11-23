@@ -53,7 +53,7 @@ interface SuggestionsParts {
 interface AvatarParts {
   readonly name: string;
   readonly agent: boolean;
-  readonly size?: "large" | "small";
+  readonly size?: "large" | "small" | "tiny";
 }
 
 interface TagParts {

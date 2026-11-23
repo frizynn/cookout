@@ -57,8 +57,8 @@
  * or focus. `StandaloneMessage` is one named message on its own, such as a
  * thread's parent. In a message, `MessageBody` is its text, `Mention` an
  * `@name` in it, `CallChip` a command call
- * and its data, `DataToggle` its data folded away, and `ReplyCount` a link to
- * its thread. `RepliesDivider` heads a thread's replies, `ChannelStart` says a
+ * and its data, `DataToggle` its data folded away, and `ThreadSummary` a link to
+ * its thread: its repliers' avatars, its reply count and when it was last replied to. `RepliesDivider` heads a thread's replies, `ChannelStart` says a
  * channel has nothing older, and `QuietButton` is a muted centred button,
  * such as loading older messages. `TextArea` takes focus when it first appears
  * if `focused`.
@@ -90,7 +90,7 @@ export { MessageItem } from "./lib/message-item.tsx";
 export { MessageList } from "./lib/message-list.tsx";
 export { QuietButton } from "./lib/quiet-button.tsx";
 export { RepliesDivider } from "./lib/replies-divider.tsx";
-export { ReplyCount } from "./lib/reply-count.tsx";
+export { ThreadSummary } from "./lib/thread-summary.tsx";
 export { StandaloneMessage } from "./lib/standalone-message.tsx";
 export { AppShell } from "./lib/app-shell.tsx";
 export { Badge } from "./lib/badge.tsx";

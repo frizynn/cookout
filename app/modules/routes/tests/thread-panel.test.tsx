@@ -53,13 +53,13 @@ it("following a message's reply count opens its thread in the panel, beside the 
   const parent = await threadIn("web-thread-opens");
   const close = openAt({ client: adminClient(), hash: `#/channels/${parent.channel}` });
 
-  fireEvent.click(await screen.findByRole("link", { name: "2 replies" }));
+  fireEvent.click(await screen.findByRole("link", { name: /^2 replies/u }));
   await threadPanel();
 
   expect([globalThis.location.hash, await parentShown(), await messagesIn("Messages")]).toStrictEqual([
     hashOf(parent),
     "adminThe parent",
-    ["adminThe parent2 replies"],
+    ["adminThe parent2 repliesLast reply just nowView thread →"],
   ]);
 
   close();
