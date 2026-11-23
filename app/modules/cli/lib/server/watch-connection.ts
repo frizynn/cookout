@@ -1,4 +1,4 @@
-import { Array as Arr, Cause, Duration, Effect, Exit, Option, Queue, Ref, Schedule, Stream } from "effect";
+import { Array as Arr, Cause, Duration, Effect, Exit, Option, Predicate, Queue, Ref, Schedule, Stream } from "effect";
 import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import type {
   ConnectedEvent,
@@ -20,8 +20,9 @@ const SERVER_ERROR = 500;
 const NO_STATUS = 0;
 const heartbeat: readonly Heard[] = [];
 const THREE_MISSED_HEARTBEATS = "45 seconds";
-const FIRST_RECONNECT_DELAY = "200 millis";
-const LONGEST_RECONNECT_DELAY = "10 seconds";
+const FIRST_RECONNECT_SECONDS = 1;
+const LONGEST_RECONNECT_SECONDS = Duration.toSeconds("30 seconds");
+const DOUBLING = 2;
 const GIVE_UP_AFTER = Duration.toMillis("5 minutes");
 const CLEAN_CLOSE_WAIT = "2 seconds";
 const streamEnded: CallFailure = { code: "cli_error", message: "The server ended the stream." };
@@ -106,12 +107,6 @@ function connect(
   });
 }
 
-function start(
-  opened: ClientWithAgentSessionState,
-): Effect.Effect<Stream.Stream<readonly Heard[], CallFailure>, CallFailure, Scope.Scope> {
-  return Effect.tap(connect(opened, Option.none()), () => note({ watching: `${opened.connection.url}${eventsPath}` }));
-}
-
 function isDropped({ code, status = NO_STATUS }: CallFailure): boolean {
   return code === "cli_error" || code === "unreachable" || status >= SERVER_ERROR;
 }
@@ -120,17 +115,35 @@ function keepTrying({ elapsed, input }: { readonly elapsed: number; readonly inp
   return isDropped(input) && elapsed < GIVE_UP_AFTER;
 }
 
-const reconnectBackoff = Schedule.min([
-  Schedule.exponential(FIRST_RECONNECT_DELAY),
-  Schedule.spaced(LONGEST_RECONNECT_DELAY),
-]).pipe(Schedule.jittered, Schedule.setInputType<CallFailure>(), Schedule.while(keepTrying));
-
-function sayReconnecting(failure: CallFailure): Effect.Effect<void> {
-  if (!isDropped(failure)) {
-    return Effect.void;
+function whyUnavailable({ message, status }: CallFailure): string {
+  if (Predicate.isUndefined(status)) {
+    return message;
   }
-  return note({ reconnecting: failure.message });
+  return String(status);
 }
+
+interface Retry {
+  readonly attempt: number;
+  readonly input: CallFailure;
+}
+
+function secondsBefore(attempt: number): number {
+  return Math.min(FIRST_RECONNECT_SECONDS * DOUBLING ** (attempt - FIRST_RECONNECT_SECONDS), LONGEST_RECONNECT_SECONDS);
+}
+
+function sayRetrying({ attempt, input }: Retry): Effect.Effect<Duration.Input> {
+  const seconds = secondsBefore(attempt);
+  const why = whyUnavailable(input);
+  return Effect.as(note({ reconnecting: `board unavailable (${why}), retrying in ${String(seconds)}s` }), {
+    seconds,
+  });
+}
+
+const reconnectBackoff = Schedule.forever.pipe(
+  Schedule.setInputType<CallFailure>(),
+  Schedule.while(keepTrying),
+  Schedule.modifyDelay(sayRetrying),
+);
 
 function gaveUp(url: string): (failure: CallFailure) => CallFailure {
   return (failure) => {
@@ -142,6 +155,16 @@ function gaveUp(url: string): (failure: CallFailure) => CallFailure {
     }
     return { code: "server_unreachable", message: unreachableMessage({ url, why: failure.message }) };
   };
+}
+
+function start(
+  opened: ClientWithAgentSessionState,
+): Effect.Effect<Stream.Stream<readonly Heard[], CallFailure>, CallFailure, Scope.Scope> {
+  return connect(opened, Option.none()).pipe(
+    Effect.retry(reconnectBackoff),
+    Effect.mapError(gaveUp(opened.connection.url)),
+    Effect.tap(() => note({ watching: `${opened.connection.url}${eventsPath}` })),
+  );
 }
 
 function lastSeenAfter(event: Heard): (seen: Option.Option<MessageId>) => Option.Option<MessageId> {
@@ -169,7 +192,6 @@ function source({ first, opened }: Resuming): Stream.Stream<Heard, CallFailure> 
         }),
       );
       return Stream.unwrap(next).pipe(
-        Stream.tapError(sayReconnecting),
         Stream.retry(reconnectBackoff),
         Stream.mapError(gaveUp(opened.connection.url)),
         Stream.flattenIterable,

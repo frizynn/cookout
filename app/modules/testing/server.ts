@@ -18,7 +18,8 @@
  * with its own webhook fake, `webhook`, for a command to deliver its calls to,
  * and `pendingDeliveries` reads the deliveries its storage holds as pending.
  * `cuttableLink` puts a link in front of a server that a test can cut, to
- * drop a client's connection, or take down, so every later request gets 502.
+ * drop a client's connection, take down, so every later request gets 502, or
+ * answer 502 to just its next few requests, as a deploy does.
  * `silentConnection` connects to a server and sends nothing. `cuttableRelay`,
  * from the http module, is a link a test can cut and restore, from another
  * process too, as the browser tests do.
