@@ -3,8 +3,8 @@
  * reads the page's location hash and draws the view for it, in the design
  * system's shell: `#/` the channel list, `#/login`, `#/channels/<name>` and
  * `#/channels/<name>/threads/<id>`. Until the session is logged in, every route
- * shows the login view. The thread route says it isn't built yet, and any
- * other hash says there is nothing here.
+ * shows the login view. Any other hash, or a thread ID that isn't a message
+ * ID, says there is nothing here.
  */
 import { AppShell } from "../design-system/index.tsx";
 import type { Board } from "../board/index.ts";

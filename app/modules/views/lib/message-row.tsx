@@ -1,4 +1,5 @@
 import { LinkRow, Muted } from "../../design-system/index.tsx";
+import { MessageText } from "./message-text.tsx";
 import type { ReactNode } from "react";
 import type { TopLevelMessage } from "../../sdk/index.ts";
 
@@ -25,8 +26,7 @@ export function MessageRow(props: MessageRowProps): ReactNode {
   const { channel, message } = props;
   return (
     <LinkRow href={`#/channels/${channel}/threads/${String(message.id)}`}>
-      <span className="text-xs font-semibold">{`@${message.author.name}`}</span>
-      <span className="text-sm whitespace-pre-wrap">{message.text}</span>
+      <MessageText message={message} />
       <Muted>{replies(message.replyCount)}</Muted>
     </LinkRow>
   );
