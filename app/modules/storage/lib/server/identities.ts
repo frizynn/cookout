@@ -1,7 +1,7 @@
 import type { AgentIdentity, Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
 import { Effect, Predicate, Schema } from "effect";
-import { identityKinds, isIdentityName, isOwner } from "../../../identities/index.ts";
-import { IsoTimeSchema } from "../../../time/server.ts";
+import { IdentityRow, toIdentity } from "./identity-row.ts";
+import type { FindIdentity } from "./identity-row.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { PlaceHandler } from "./commands.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
@@ -93,7 +93,10 @@ function placeHandlerIn(data: MemoryIdentities): PlaceHandler {
   };
 }
 
-type MemoryIdentitiesSection = IdentitiesSection & { readonly placeHandler: PlaceHandler };
+type MemoryIdentitiesSection = IdentitiesSection & {
+  readonly placeHandler: PlaceHandler;
+  readonly findIdentity: FindIdentity;
+};
 
 export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection => {
   const data: MemoryIdentities = { activeTokens: new Map(), identities: new Map(), revokedTokens: new Set() };
@@ -104,6 +107,7 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
     createIdentityIfNoneExist: (identity, hash) =>
       open(() => data.identities.size === 0 && (add(data, identity, hash), true)),
     deleteIdentity: (name) => open(() => remove(data, name)),
+    findIdentity: (name) => data.identities.get(name),
     findIdentityByTokenHash: (hash) => open(() => lookUp(data, hash)),
     listIdentities: () => open(() => [...data.identities.values()].sort(byName).map((found) => ({ ...found }))),
     placeHandler: placeHandlerIn(data),
@@ -120,14 +124,6 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
   };
 };
 
-const IdentityRow = Schema.Struct({
-  admin: Schema.Literals([0, 1]),
-  created_at: IsoTimeSchema,
-  kind: Schema.Literals(identityKinds),
-  name: Schema.String.pipe(Schema.refine(isIdentityName)),
-  owner: Schema.NullOr(Schema.String.pipe(Schema.refine(isOwner))),
-});
-
 const TokenRow = Schema.Struct({ name: Schema.NullOr(Schema.String), revoked: Schema.Literals([0, 1]) });
 
 const CountRow = Schema.Struct({ count: Schema.Int });
@@ -138,17 +134,6 @@ const decode =
   <S extends Schema.Decoder<unknown>>(schema: S) =>
   (row: unknown): Fails<S["Type"]> =>
     Schema.decodeUnknownEffect(schema)(row).pipe(Effect.mapError(unreadable));
-
-const toIdentity = (row: typeof IdentityRow.Type): Identity => {
-  const fields = { admin: row.admin === 1, createdAt: row.created_at, name: row.name };
-  if (row.kind === "human") {
-    return { ...fields, kind: "human" };
-  }
-  if (row.owner === null) {
-    return { ...fields, kind: "agent" };
-  }
-  return { ...fields, kind: "agent", owner: row.owner };
-};
 
 const toLookup = (row: unknown): Fails<TokenLookup> =>
   row === undefined
