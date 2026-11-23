@@ -1,10 +1,11 @@
 import type { ClientWithAgentSessionState, CredentialSource } from "./adapters/sdk.ts";
-import { DateTime, Effect, Option } from "effect";
+import { Console, DateTime, Effect, Option } from "effect";
 import { callClient, withClient } from "./adapters/sdk.ts";
 import { Command } from "effect/cli";
 import type { IdentityResponse } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { answered } from "./output.ts";
+import { cookoutToken } from "../../../config/server.ts";
 
 interface WhoamiAnswer extends IdentityResponse {
   readonly joinedAt?: IsoTime;
@@ -52,8 +53,20 @@ function whoamiAnswer(
   return Effect.succeed({ ...answer, source, summary: `${answer.identity.name} (${source}) at ${url}`, url });
 }
 
+function noteIgnoredToken({ joined }: ClientWithAgentSessionState): Effect.Effect<void> {
+  return Effect.gen(function* sayTokenIgnored() {
+    const token = yield* Effect.orDie(cookoutToken);
+    if (token === "" || Option.isNone(joined)) {
+      return;
+    }
+    yield* Console.error(`COOKOUT_TOKEN ignored: this session joined as ${joined.value.state.identity}`);
+  });
+}
+
 const whoami = withClient((opened) =>
-  Effect.flatMap(callClient((client) => client.whoami())(opened), (answer) => whoamiAnswer(opened, answer)),
+  Effect.flatMap(callClient((client) => client.whoami())(opened), (answer) =>
+    Effect.andThen(noteIgnoredToken(opened), whoamiAnswer(opened, answer)),
+  ),
 );
 
 const whoamiCommand = Command.make("whoami", {}, () => answered(whoami)).pipe(

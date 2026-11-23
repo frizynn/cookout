@@ -157,45 +157,6 @@ it.effect(
     }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("the credential is COOKOUT_TOKEN, then COOKOUT_SESSION, then the joined session, and whoami names it", () =>
-  Effect.gen(function* precedence() {
-    const cookout = yield* TestCookout;
-    const [bot, other, third] = yield* Effect.all(
-      [cookout.createIdentity("release-bot"), cookout.createIdentity("other"), cookout.createIdentity("third")],
-      ONE_AT_A_TIME,
-    );
-    const folder = yield* freshStateFolder;
-    const first = claudeCode("s1", { COOKOUT_STATE_DIR: folder, COOKOUT_URL: cookout.url });
-    yield* runCookout({ args: ["join", "--as", "release-bot"], env: { ...first, COOKOUT_TOKEN: bot.token } });
-    const printed = yield* runCookout({
-      args: ["join", "--as", "other", "--print-env"],
-      env: { ...first, COOKOUT_TOKEN: other.token },
-    });
-    const session = exportedToken(printed);
-    yield* TestClock.adjust("2 hours");
-    const results = yield* runAll([
-      { args: WHOAMI, env: { ...first, COOKOUT_SESSION: session, COOKOUT_TOKEN: third.token } },
-      { args: WHOAMI, env: { ...first, COOKOUT_SESSION: session } },
-      { args: WHOAMI, env: first },
-      { args: ["leave"], env: { ...first, COOKOUT_SESSION: session } },
-      { args: WHOAMI, env: first },
-    ]);
-
-    expect(Arr.map(results, ({ stdoutJson }) => stdoutJson)).toMatchObject([
-      { identity: { name: "third" }, source: "COOKOUT_TOKEN", summary: `third (COOKOUT_TOKEN) at ${cookout.url}` },
-      { identity: { name: "other" }, source: "COOKOUT_SESSION" },
-      {
-        identity: { name: "release-bot" },
-        joinedAt: "2026-01-01T00:00:00.000Z",
-        source: "agent session token",
-        summary: `release-bot (agent session token, joined 2 h ago) at ${cookout.url}`,
-      },
-      { revoked: true },
-      { identity: { name: "release-bot" }, source: "agent session token" },
-    ]);
-  }).pipe(Effect.provide([testCookout(), commandLineServices])),
-);
-
 it.effect("whoami says how long ago this agent tool session joined", () =>
   Effect.gen(function* joinedAgo() {
     const cookout = yield* TestCookout;

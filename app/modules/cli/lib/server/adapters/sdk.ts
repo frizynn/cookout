@@ -149,57 +149,67 @@ function joinedSessionFile(
   return Effect.asSome(agentSessionStateFile({ agentTool, sessionId, url: baseUrlOf(url) }));
 }
 
-function joinedCredential(
-  place: AgentToolSession,
-  url: string,
-): Effect.Effect<Credential, CallFailure, AgentSessionStateNeeds> {
+type Found<Value = Credential> = Effect.Effect<Value, CallFailure, AgentSessionStateNeeds>;
+
+function joinedCredential(place: AgentToolSession, url: string): Found<Option.Option<Credential>> {
   return Effect.gen(function* findJoinedSession() {
     const file = yield* joinedSessionFile(place, url);
     if (Option.isNone(file)) {
-      return yield* Effect.fail(notJoined);
+      return Option.none();
     }
     const saved = yield* file.value.read;
-    if (Option.isNone(saved)) {
-      return yield* Effect.fail(notJoined);
-    }
-    const joined = { file: file.value, state: saved.value };
-    return {
-      joined: Option.some(joined),
+    return Option.map(saved, (state) => ({
+      joined: Option.some({ file: file.value, state }),
       source: "agent session token" as const,
-      token: saved.value.agentSessionToken,
-    };
+      token: state.agentSessionToken,
+    }));
   });
 }
 
-function loginCredential(url: string): Effect.Effect<Credential, CallFailure, AgentSessionStateNeeds> {
+function loginCredential(url: string): Found {
   return Effect.map(
     loginFor(baseUrlOf(url)),
     Option.match({ onNone: () => NO_CREDENTIAL, onSome: (login) => given("login", login) }),
   );
 }
 
-function storedCredential({
-  markers,
-  url,
-}: CliEnvironment): Effect.Effect<Credential, CallFailure, AgentSessionStateNeeds> {
-  const place = agentToolSessionIn(markers);
-  if (url === "") {
-    return Effect.succeed(NO_CREDENTIAL);
-  }
-  if (Predicate.isNotUndefined(place.agentTool)) {
-    return joinedCredential(place, url);
-  }
-  return loginCredential(url);
-}
-
-function credentialFor(env: CliEnvironment): Effect.Effect<Credential, CallFailure, AgentSessionStateNeeds> {
+function tokenOr(env: CliEnvironment, otherwise: () => Found): Found {
   if (env.token !== "") {
     return Effect.succeed(given("COOKOUT_TOKEN", env.token));
   }
+  return otherwise();
+}
+
+function sessionOr(env: CliEnvironment, otherwise: () => Found): Found {
   if (env.session !== "") {
     return Effect.succeed(given("COOKOUT_SESSION", env.session));
   }
-  return storedCredential(env);
+  return otherwise();
+}
+
+function joinedOrToken(env: CliEnvironment, place: AgentToolSession): Found {
+  if (env.url === "") {
+    return tokenOr(env, () => Effect.succeed(NO_CREDENTIAL));
+  }
+  return Effect.flatMap(
+    joinedCredential(place, env.url),
+    Option.match({ onNone: () => tokenOr(env, () => Effect.fail(notJoined)), onSome: Effect.succeed }),
+  );
+}
+
+function variablesOr(env: CliEnvironment, stored: (url: string) => Found): Found {
+  if (env.url === "") {
+    return tokenOr(env, () => sessionOr(env, () => Effect.succeed(NO_CREDENTIAL)));
+  }
+  return tokenOr(env, () => sessionOr(env, () => stored(env.url)));
+}
+
+function credentialFor(env: CliEnvironment): Found {
+  const place = agentToolSessionIn(env.markers);
+  if (Predicate.isUndefined(place.agentTool)) {
+    return variablesOr(env, loginCredential);
+  }
+  return sessionOr(env, () => joinedOrToken(env, place));
 }
 
 function clientFor(
@@ -215,18 +225,14 @@ function clientFor(
 
 type Run<Value> = (client: ClientWithAgentSessionState) => Effect.Effect<Value, CallFailure>;
 
-function runWith<Value>(
-  env: CliEnvironment,
-  credential: Credential,
-  run: Run<Value>,
-): Effect.Effect<Value, CallFailure, AgentSessionStateNeeds> {
+function runWith<Value>(env: CliEnvironment, credential: Credential, run: Run<Value>): Found<Value> {
   return Effect.gen(function* runWithClient() {
     const opened = yield* clientFor(env, credential);
     return yield* run(opened).pipe(Effect.catch(onAgentSessionEnded(opened)));
   });
 }
 
-function withClient<Value>(run: Run<Value>): Effect.Effect<Value, CallFailure, AgentSessionStateNeeds> {
+function withClient<Value>(run: Run<Value>): Found<Value> {
   return Effect.gen(function* callWithClient() {
     const env = yield* cliEnvironment;
     const credential = yield* credentialFor(env);
@@ -234,24 +240,17 @@ function withClient<Value>(run: Run<Value>): Effect.Effect<Value, CallFailure, A
   });
 }
 
-function joinCredentialFor(env: CliEnvironment): Effect.Effect<Credential, CallFailure, AgentSessionStateNeeds> {
-  if (env.token !== "") {
-    return Effect.succeed(given("COOKOUT_TOKEN", env.token));
-  }
-  if (env.session !== "") {
-    return Effect.succeed(given("COOKOUT_SESSION", env.session));
-  }
-  if (env.url === "") {
-    return Effect.succeed(NO_CREDENTIAL);
-  }
-  return Effect.filterOrFail(
-    loginCredential(env.url),
-    ({ source }) => source === "login",
-    () => loginMissing,
+function joinCredentialFor(env: CliEnvironment): Found {
+  return variablesOr(env, (url) =>
+    Effect.filterOrFail(
+      loginCredential(url),
+      ({ source }) => source === "login",
+      () => loginMissing,
+    ),
   );
 }
 
-function withJoinClient<Value>(run: Run<Value>): Effect.Effect<Value, CallFailure, AgentSessionStateNeeds> {
+function withJoinClient<Value>(run: Run<Value>): Found<Value> {
   return Effect.gen(function* callWithJoinCredential() {
     const env = yield* cliEnvironment;
     const credential = yield* joinCredentialFor(env);
@@ -265,7 +264,7 @@ function callClient<Value>(
   return ({ client }) => Effect.tryPromise({ catch: toFailure, try: () => call(client) });
 }
 
-function callServer<Value>(call: Call<Value>): Effect.Effect<Value, CallFailure, AgentSessionStateNeeds> {
+function callServer<Value>(call: Call<Value>): Found<Value> {
   return withClient(callClient(call));
 }
 
