@@ -6,6 +6,7 @@ import type { CommandsSection } from "./commands.ts";
 import type { HealthSection } from "./health.ts";
 import type { IdentitySections } from "./identity-section-types.ts";
 import type { InboxSection } from "./inbox.ts";
+import type { JoinCodesSection } from "./join-codes.ts";
 import type { MessagesSection } from "./messages.ts";
 
 export type StorageService = HealthSection &
@@ -16,4 +17,5 @@ export type StorageService = HealthSection &
   AgentSessionsSection &
   CommandsSection &
   CommandCallsSection &
-  AgentJoinRequestsSection;
+  AgentJoinRequestsSection &
+  JoinCodesSection;

@@ -15,6 +15,7 @@ import type { IsoTime } from "../../../time/index.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { TokenHash } from "../../../identities/index.ts";
 import { memoryAgentSessions } from "./agent-sessions-memory.ts";
+import { memoryJoinCodes } from "./join-codes-memory.ts";
 
 interface Kept {
   readonly request: NewAgentJoinRequest;
@@ -138,10 +139,14 @@ interface MemorySectionsOptions {
 
 function memoryAgentSessionSections(
   options: MemorySectionsOptions,
-): ReturnType<typeof memoryAgentSessions> & AgentJoinRequestsSection {
+): ReturnType<typeof memoryAgentSessions> & AgentJoinRequestsSection & ReturnType<typeof memoryJoinCodes> {
   const agentSessions = memoryAgentSessions(options);
   const { issueAgentSession } = agentSessions;
-  return { ...agentSessions, ...memoryAgentJoinRequests({ issueAgentSession, state: options.state }) };
+  return {
+    ...agentSessions,
+    ...memoryAgentJoinRequests({ issueAgentSession, state: options.state }),
+    ...memoryJoinCodes({ ...options, issueAgentSession }),
+  };
 }
 
 export { memoryAgentSessionSections };
