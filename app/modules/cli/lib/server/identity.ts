@@ -52,7 +52,7 @@ const identityListCommand = Command.make(
     }
     return answer((client) => client.listIdentities());
   },
-).pipe(Command.withDescription("List every active identity with its kind and owner, sorted by name."));
+).pipe(Command.withDescription("List every active identity with its kind, owner and description, sorted by name."));
 
 const identityRotateCommand = Command.make("rotate", { name: identityName }, ({ name }) =>
   answer((client) => client.rotateToken(name)),
@@ -124,13 +124,19 @@ const identityTransferCommand = Command.make(
   ({ agent, owner }) => answer((client) => client.transferAgent(agent, owner)),
 ).pipe(Command.withDescription("Give an agent to another human (admin only). A namespaced agent can't move."));
 
-const textOrClear: CallFailure = { code: "usage", message: "Give either the display name or --clear, not both." };
+function textOrClear(what: string): CallFailure {
+  return { code: "usage", message: `Give either the ${what} or --clear, not both.` };
+}
 
-function displayNameToSend(text: Option.Option<string>, clear: boolean): Effect.Effect<string | null, CallFailure> {
+function textToSend(
+  what: string,
+  text: Option.Option<string>,
+  clear: boolean,
+): Effect.Effect<string | null, CallFailure> {
   if (!clear) {
-    return Effect.mapError(Effect.fromOption(text), () => textOrClear);
+    return Effect.mapError(Effect.fromOption(text), () => textOrClear(what));
   }
-  return Option.match(text, { onNone: () => Effect.succeed(null), onSome: () => Effect.fail(textOrClear) });
+  return Option.match(text, { onNone: () => Effect.succeed(null), onSome: () => Effect.fail(textOrClear(what)) });
 }
 
 const identityDisplayNameCommand = Command.make(
@@ -145,24 +151,50 @@ const identityDisplayNameCommand = Command.make(
   },
   ({ clear, name, text }) =>
     answered(
-      Effect.flatMap(displayNameToSend(text, clear), (displayName) =>
+      Effect.flatMap(textToSend("display name", text, clear), (displayName) =>
         callServer((client) => client.setDisplayName(name, displayName)),
       ),
     ),
 ).pipe(Command.withDescription("Set or clear a display name: your own, your agent's, or (admin) anyone's."));
 
+const identityDescribeCommand = Command.make(
+  "describe",
+  {
+    clear: Flag.Boolean("clear").pipe(Flag.withDefault(false), Flag.withDescription("Remove the description.")),
+    name: identityName,
+    text: Argument.String("description").pipe(
+      Argument.optional,
+      Argument.withDescription("What the agent handles: 1-500 characters after trimming, such as 'Ada's to-dos'."),
+    ),
+  },
+  ({ clear, name, text }) =>
+    answered(
+      Effect.flatMap(textToSend("description", text, clear), (description) =>
+        callServer((client) => client.setDescription(name, description)),
+      ),
+    ),
+).pipe(
+  Command.withDescription("Set or clear what an agent handles: your agent's, your own as an agent, or (admin) any."),
+);
+
+const identityGetCommand = Command.make("get", { name: identityName }, ({ name }) =>
+  answer((client) => client.getIdentity(name)),
+).pipe(Command.withDescription("Show one identity, with an agent's description."));
+
 const identityCommand = Command.make("identity").pipe(
   Command.withDescription(
-    "Create, list, rotate, deactivate and reactivate identities, make or remove admins, set display names, and manage agents' sessions and owners.",
+    "Create, list, get, rotate, deactivate and reactivate identities, make or remove admins, set display names and agents' descriptions, and manage agents' sessions and owners.",
   ),
   Command.withSubcommands([
     identityCreateCommand,
     identityListCommand,
+    identityGetCommand,
     identityRotateCommand,
     identityDeactivateCommand,
     identityReactivateCommand,
     identityAdminCommand,
     identityDisplayNameCommand,
+    identityDescribeCommand,
     identitySessionsCommand,
     identityTransferCommand,
   ]),
