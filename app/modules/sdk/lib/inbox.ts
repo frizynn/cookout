@@ -141,16 +141,12 @@ function inboxCalls(server: ClientConnection): InboxCalls {
 
 export type { InboxReadCalls } from "../../inbox/client.ts";
 export type {
-  AckAllRequest,
-  AckAllResponse,
   AckResponse,
   FollowResponse,
   InboxHistoryQuery,
   InboxHistoryResponse,
   InboxResponse,
   MarkUnreadResponse,
-  NudgeId,
-  NudgeResponse,
   ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../inbox/index.ts";

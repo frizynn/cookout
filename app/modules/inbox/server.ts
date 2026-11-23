@@ -175,7 +175,7 @@ export { Inbox, inboxLayer } from "./lib/server/service.ts";
  * The nudge scheduler: one fiber in its Layer's scope that raises every Nudge as it falls due, from storage, and
  * `raised`, which hears each one. A new message, a close or a reopen wakes it to look again.
  */
-export { Nudges, type RaisedNudge, nudgesLayer } from "./lib/server/nudge-scheduler.ts";
+export { Nudges, nudgesLayer } from "./lib/server/nudge-scheduler.ts";
 
 /** The Schemas of an inbox item, a read position, a moved-back one and a subscription, for the events that carry one. */
 export {

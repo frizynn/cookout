@@ -91,4 +91,4 @@ const nudgesLayer: Layer.Layer<Nudges, never, Storage | Messages> = Layer.effect
   }),
 );
 
-export { Nudges, type RaisedNudge, nudgesLayer };
+export { Nudges, nudgesLayer };

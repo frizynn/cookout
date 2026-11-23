@@ -244,14 +244,4 @@ function nudgesOn(on: NudgesOn): NudgesSection {
   };
 }
 
-export {
-  type NewNudgeRecord,
-  type NudgeIntervals,
-  type NudgeRecord,
-  type NudgeRecords,
-  type NudgeSources,
-  type NudgesOn,
-  type NudgesSection,
-  type StoredNudge,
-  nudgesOn,
-};
+export { type NudgeRecord, type NudgeRecords, type NudgeSources, type NudgesSection, type StoredNudge, nudgesOn };

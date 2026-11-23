@@ -114,4 +114,4 @@ export const SubscriptionResponseSchema = matchesWire<SubscriptionResponse>()(
 
 export { PageQuerySchema as InboxHistoryQuerySchema } from "../../../messages/server.ts";
 
-export { NudgeIdSchema, NudgeResponseSchema, NudgeSchema };
+export { NudgeResponseSchema, NudgeSchema };
