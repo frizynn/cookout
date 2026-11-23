@@ -67,6 +67,15 @@ export interface ErrorResponse {
   readonly error: Omit<ErrorBody, "code"> & { readonly code: string };
 }
 
+/** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
+export interface SchemaProblem {
+  readonly message: string;
+  readonly path: readonly (string | number)[];
+}
+
+/** The `details` of an `invalid_request` refusal: every way the request broke its schema. */
+export type SchemaProblems = readonly SchemaProblem[];
+
 /** A refusal a backend handler fails with: the HTTP status and the error body to answer with. */
 export type Refusal = ErrorBody & {
   readonly status: number;

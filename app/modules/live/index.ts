@@ -9,11 +9,10 @@
  * doesn't know, is dropped. Stores read the stream through `live`, never
  * `EventSource` directly.
  *
- * Two adapters: `eventSourceAdapter(url)` for the browser, whose `EventSource`
+ * The browser's adapter is `eventSourceAdapter(url)`, whose `EventSource`
  * sends the session cookie and reconnects on its own, picking up from the last
- * event's ID; and `watchAdapter(client)`, the test adapter, which reads the
- * stream through the SDK's `watch` with the client's token, for jsdom, which
- * has no `EventSource` and keeps no cookies.
+ * event's ID. Tests in jsdom, which has no `EventSource` and keeps no cookies,
+ * bring their own `LiveAdapter` (the testing module's `watchAdapter`).
  */
 import type { CookoutEvent, ServerSentEvent } from "../sdk/index.ts";
 import type { LiveAdapter } from "./lib/adapter.ts";
@@ -60,4 +59,4 @@ export function createLive(adapter: LiveAdapter): Live {
 }
 
 export { eventSourceAdapter } from "./lib/event-source.ts";
-export { watchAdapter } from "./lib/watch.ts";
+export type { LiveAdapter } from "./lib/adapter.ts";

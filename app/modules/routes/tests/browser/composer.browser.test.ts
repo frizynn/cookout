@@ -1,11 +1,6 @@
+import { adminClient, logIn } from "./people.ts";
 import { expect, test } from "@playwright/test";
-import type { CookoutClient } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
-import { createCookoutClient } from "../../../sdk/index.ts";
-
-function adminClient(): CookoutClient {
-  return createCookoutClient();
-}
 
 async function threadIn(channel: string): Promise<void> {
   const admin = adminClient();
@@ -14,9 +9,7 @@ async function threadIn(channel: string): Promise<void> {
 }
 
 async function openThread(page: Page, token: string, channel: string): Promise<void> {
-  await page.goto("/");
-  await page.getByLabel("Token").fill(token);
-  await page.getByRole("button", { name: "Log in" }).click();
+  await logIn({ page, token });
   await page.getByRole("link", { name: `#${channel}` }).click();
   await page.getByRole("link", { name: /Who can review this\?/u }).click();
 }

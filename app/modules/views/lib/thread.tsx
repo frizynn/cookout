@@ -1,13 +1,14 @@
 import { BackLink, Card, CardHeader, Heading } from "../../design-system/index.tsx";
+import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import type { Board } from "../../board/index.ts";
 import type { Composer } from "../../composer/index.ts";
-import type { MessageId } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
 import { ThreadBody } from "./thread-body.tsx";
+import { hrefOf } from "../../paths/index.ts";
 
 interface ThreadProps {
   readonly board: Board;
-  readonly channel: string;
+  readonly channel: ChannelName;
   readonly composer: Composer;
   readonly thread: MessageId;
 }
@@ -17,7 +18,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
   return (
     <Card>
       <CardHeader>
-        <BackLink href={`#/channels/${channel}`}>{`← #${channel}`}</BackLink>
+        <BackLink href={hrefOf({ channel, name: "channel" })}>{`← #${channel}`}</BackLink>
         <Heading>{`Thread in #${channel}`}</Heading>
       </CardHeader>
       <ThreadBody

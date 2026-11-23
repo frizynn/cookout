@@ -1,6 +1,5 @@
-import type { Board, BoardClient } from "../../board/index.ts";
+import type { Board, BoardOptions } from "../../board/index.ts";
 import type { CookoutClient, CreateIdentityRequest, EventStream, Token } from "../../sdk/index.ts";
-import { createLive, watchAdapter } from "../../live/index.ts";
 import type { Composer } from "../../composer/index.ts";
 import { CookoutApp } from "../index.tsx";
 import type { Live } from "../../live/index.ts";
@@ -9,12 +8,14 @@ import type { Unread } from "../../unread/index.ts";
 import { createBoard } from "../../board/index.ts";
 import { createComposer } from "../../composer/index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
+import { createLive } from "../../live/index.ts";
 import { createSession } from "../../session/index.ts";
 import { createUnread } from "../../unread/index.ts";
 import { inject } from "vitest";
 import { render } from "@testing-library/react";
+import { watchAdapter } from "../../testing/web.ts";
 
-type AppClient = BoardClient & Pick<CookoutClient, "inbox" | "listIdentities" | "whoami">;
+type AppClient = BoardOptions["client"] & Pick<CookoutClient, "inbox" | "listIdentities" | "whoami">;
 
 interface BoardOpening {
   readonly hash: string;

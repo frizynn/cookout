@@ -1,5 +1,6 @@
 import { Alert, CardBody, LinkList, Muted, Skeleton } from "../../design-system/index.tsx";
 import type { ChannelMessages, Commands } from "../../board/index.ts";
+import type { ChannelName } from "../../sdk/index.ts";
 import { CommandForm } from "./command-form.tsx";
 import { MessageRow } from "./message-row.tsx";
 import { Older } from "./older.tsx";
@@ -12,7 +13,7 @@ const NONE = 0;
 const TEXT = { empty: "No messages yet.", messages: "Messages" } as const;
 
 interface MessageRowsProps {
-  readonly channel: string;
+  readonly channel: ChannelName;
   readonly commands: Commands;
   readonly messages: ChannelMessages;
 }

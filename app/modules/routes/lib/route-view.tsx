@@ -2,7 +2,7 @@ import type { Board } from "../../board/index.ts";
 import type { Composer } from "../../composer/index.ts";
 import { LoginView } from "../../views/index.tsx";
 import type { ReactNode } from "react";
-import type { Route } from "./route.ts";
+import type { Route } from "../../paths/index.ts";
 import type { Session } from "../../session/index.ts";
 import { SignedInView } from "./signed-in-view.tsx";
 import type { Unread } from "../../unread/index.ts";

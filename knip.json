@@ -8,11 +8,11 @@
         "app/modules/sdk/index.ts!",
         "app/web.tsx!",
         "app/modules/testing/server.ts!",
-        "app/modules/routes/tests/app.tsx!",
+        "app/modules/testing/web.ts!",
         "app/modules/webhook-fake/server.ts!",
         "scripts/*.{ts,mjs}!"
       ],
-      "project": ["app/**/*.{ts,tsx}!", "scripts/**/*.{ts,mjs}!"],
+      "project": ["app/**/*.{ts,tsx}!", "!app/modules/*/tests/**!", "scripts/**/*.{ts,mjs}!"],
       "ignoreDependencies": ["@swc/core"]
     },
     "packages/e2e": {

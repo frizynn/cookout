@@ -1,5 +1,5 @@
 import type { CookoutClient, ServerSentEvent } from "../../sdk/index.ts";
-import type { LiveAdapter } from "./adapter.ts";
+import type { LiveAdapter } from "../../live/index.ts";
 
 async function forward(client: Pick<CookoutClient, "watch">, onEvent: (event: ServerSentEvent) => void): Promise<void> {
   const events = await client.watch({ allChannels: true });

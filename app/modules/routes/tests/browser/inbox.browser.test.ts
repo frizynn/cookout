@@ -1,33 +1,11 @@
-import type { CookoutClient, IdentityKind } from "../../../sdk/index.ts";
 import type { Locator, Page } from "@playwright/test";
+import { adminClient, logInToChannels, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
-import { createCookoutClient } from "../../../sdk/index.ts";
-
-interface Person {
-  readonly client: CookoutClient;
-  readonly token: string;
-}
+import type { Person } from "./people.ts";
 
 interface Reading {
   readonly poster: Person;
   readonly reader: Person;
-}
-
-function adminClient(): CookoutClient {
-  return createCookoutClient();
-}
-
-async function newIdentity(name: string, kind: IdentityKind): Promise<Person> {
-  const { token } = await adminClient().createIdentity({ kind, name });
-  return { client: createCookoutClient({ token }), token };
-}
-
-async function logIn(page: Page, token: string): Promise<void> {
-  await page.goto("/");
-  await page.getByLabel("Token").fill(token);
-  await page.getByRole("button", { name: "Log in" }).click();
-
-  await expect(page.getByRole("list", { name: "Channels" })).toBeVisible();
 }
 
 async function openInbox(page: Page): Promise<void> {
@@ -39,10 +17,10 @@ async function openInbox(page: Page): Promise<void> {
   await streamOpen;
 }
 
-async function subscribedReader(channel: string): Promise<Reading> {
+async function subscribedPerson(channel: string): Promise<Reading> {
   await adminClient().createChannel({ name: channel });
-  const poster = await newIdentity(`${channel}-poster`, "agent");
-  const reader = await newIdentity(`${channel}-reader`, "human");
+  const poster = await newIdentity({ kind: "agent", name: `${channel}-poster` });
+  const reader = await newIdentity({ kind: "human", name: `${channel}-reader` });
   await reader.client.subscribe(channel);
   return { poster, reader };
 }
@@ -57,10 +35,10 @@ test("the inbox lists the identity's inbox items with their reasons, and each ch
   page,
 }) => {
   const channel = "browser-inbox";
-  const { poster, reader } = await subscribedReader(channel);
+  const { poster, reader } = await subscribedPerson(channel);
   await poster.client.createMessage({ channel, text: "Deploy at noon?" });
   await poster.client.createMessage({ channel, text: `@${channel}-reader can you check the rollout?` });
-  await logIn(page, reader.token);
+  await logInToChannels({ page, token: reader.token });
 
   await page.getByRole("banner").getByRole("link", { name: "Inbox" }).click();
 
@@ -72,9 +50,9 @@ test("the inbox lists the identity's inbox items with their reasons, and each ch
 });
 
 async function inboxInSecondTab(page: Page, channel: string): Promise<Page> {
-  const { poster, reader } = await subscribedReader(channel);
+  const { poster, reader } = await subscribedPerson(channel);
   await poster.client.createMessage({ channel, text: "Deploy at noon?" });
-  await logIn(page, reader.token);
+  await logInToChannels({ page, token: reader.token });
   const second = await page.context().newPage();
   await openInbox(second);
   return second;

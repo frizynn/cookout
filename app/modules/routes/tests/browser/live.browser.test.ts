@@ -1,41 +1,20 @@
-import type { CookoutClient, IdentityKind, Message } from "../../../sdk/index.ts";
+import { adminClient, logInWithStream, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
+import type { Message } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
-import { createCookoutClient } from "../../../sdk/index.ts";
-
-interface Person {
-  readonly client: CookoutClient;
-  readonly token: string;
-}
+import type { Person } from "./people.ts";
 
 interface Posted {
   readonly parent: Message;
   readonly poster: Person;
 }
 
-function adminClient(): CookoutClient {
-  return createCookoutClient();
-}
-
-async function newIdentity(name: string, kind: IdentityKind): Promise<Person> {
-  const { token } = await adminClient().createIdentity({ kind, name });
-  return { client: createCookoutClient({ token }), token };
-}
-
-async function logInWithStream(page: Page, token: string): Promise<void> {
-  const streamOpen = page.waitForResponse((response) => response.url().includes("/v1/events"));
-  await page.goto("/");
-  await page.getByLabel("Token").fill(token);
-  await page.getByRole("button", { name: "Log in" }).click();
-  await streamOpen;
-}
-
 async function openChannel(page: Page, channel: string): Promise<Posted> {
   await adminClient().createChannel({ name: channel });
-  const poster = await newIdentity("browser-live-poster", "agent");
+  const poster = await newIdentity({ kind: "agent", name: "browser-live-poster" });
   const { message: parent } = await poster.client.createMessage({ channel, text: "Deploy at noon?" });
-  const reader = await newIdentity("browser-live-reader", "human");
-  await logInWithStream(page, reader.token);
+  const reader = await newIdentity({ kind: "human", name: "browser-live-reader" });
+  await logInWithStream({ page, token: reader.token });
   await page.getByRole("link", { name: `#${channel}` }).click();
   return { parent, poster };
 }

@@ -1,5 +1,5 @@
 import { Array as Arr, Schema } from "effect";
-import type { ErrorResponse, HealthResponse } from "../../index.ts";
+import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { matchesWire } from "../../index.ts";
 
@@ -10,6 +10,9 @@ const ErrorBodySchema = Schema.Struct({
   details: Schema.optionalKey(Schema.Unknown),
   message: Schema.String,
 });
+
+const PathPartSchema = Schema.Union([Schema.String, Schema.Finite]);
+const SchemaProblemSchema = Schema.Struct({ message: Schema.String, path: Schema.Array(PathPartSchema) });
 
 const contentSecurityPolicy = Arr.join(
   [
@@ -38,5 +41,7 @@ export const HealthResponseSchema = matchesWire<HealthResponse>()(
 );
 
 export const ErrorResponseSchema = matchesWire<ErrorResponse>()(Schema.Struct({ error: ErrorBodySchema }));
+
+export const SchemaProblemsSchema = matchesWire<SchemaProblems>()(Schema.Array(SchemaProblemSchema));
 
 export { securityHeaders };

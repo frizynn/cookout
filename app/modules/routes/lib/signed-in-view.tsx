@@ -2,7 +2,7 @@ import { ChannelListView, ChannelView, InboxView, NotBuiltView, ThreadView } fro
 import type { Board } from "../../board/index.ts";
 import type { Composer } from "../../composer/index.ts";
 import type { ReactNode } from "react";
-import type { Route } from "./route.ts";
+import type { Route } from "../../paths/index.ts";
 import type { Unread } from "../../unread/index.ts";
 
 interface SignedInViewProps {

@@ -1,4 +1,4 @@
-import type { CookoutClient, Message, ReadPosition, Reply, TopLevelMessage } from "../../sdk/index.ts";
+import type { ChannelName, CookoutClient, Message, ReadPosition, Reply, TopLevelMessage } from "../../sdk/index.ts";
 import { callFailure, notJson, parseData } from "./command-call.ts";
 import type { CallState } from "./command-call.ts";
 import type { Failure } from "./failure.ts";
@@ -40,7 +40,7 @@ type MessagesClient = Pick<CookoutClient, "ack" | "callCommand" | "listMessages"
 
 interface Channel {
   readonly client: MessagesClient;
-  readonly name: string;
+  readonly name: ChannelName;
   readonly pageSize: number;
   readonly current: () => ChannelMessagesState;
   readonly publish: (state: ChannelMessagesState) => void;
@@ -191,7 +191,7 @@ function received(loaded: Loaded, message: Message): Loaded {
 
 interface ChannelOptions {
   readonly client: MessagesClient;
-  readonly name: string;
+  readonly name: ChannelName;
   readonly pageSize: number;
 }
 

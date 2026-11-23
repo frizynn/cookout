@@ -1,4 +1,12 @@
-import type { CookoutClient, Message, MessageId, ReadPosition, Reply, TopLevelMessage } from "../../sdk/index.ts";
+import type {
+  ChannelName,
+  CookoutClient,
+  Message,
+  MessageId,
+  ReadPosition,
+  Reply,
+  TopLevelMessage,
+} from "../../sdk/index.ts";
 import type { Failure } from "./failure.ts";
 import { failure } from "./failure.ts";
 
@@ -36,7 +44,7 @@ const NONE_OPEN = 0;
 
 interface Thread {
   readonly client: ThreadClient;
-  readonly channel: string;
+  readonly channel: ChannelName;
   readonly id: MessageId;
   readonly current: () => ThreadMessagesState;
   readonly publish: (state: ThreadMessagesState) => void;
@@ -137,7 +145,7 @@ async function replyAfter(previous: Promise<void> | null, thread: Thread, reques
 
 interface ThreadOptions {
   readonly client: ThreadClient;
-  readonly channel: string;
+  readonly channel: ChannelName;
   readonly id: MessageId;
 }
 

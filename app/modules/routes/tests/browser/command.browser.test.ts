@@ -1,3 +1,4 @@
+import { adminClient, logInToChannels, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import type { CookoutClient } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
@@ -12,29 +13,12 @@ function pretty(value: unknown): string {
   return JSON.stringify(value, null, INDENT);
 }
 
-function adminClient(): CookoutClient {
-  return createCookoutClient();
-}
-
-async function newHumanToken(name: string): Promise<string> {
-  const { token } = await adminClient().createIdentity({ kind: "human", name });
-  return token;
-}
-
 async function channelWithCommand(channel: string, command: string): Promise<CookoutClient> {
   const admin = adminClient();
   await admin.createChannel({ name: channel });
   const { token } = await admin.createIdentity({ kind: "agent", name: command, owner: "admin" });
   await admin.addCommand({ name: command, schema, url: nowhere });
   return createCookoutClient({ token });
-}
-
-async function logIn(page: Page, token: string): Promise<void> {
-  await page.goto("/");
-  await page.getByLabel("Token").fill(token);
-  await page.getByRole("button", { name: "Log in" }).click();
-
-  await expect(page.getByRole("list", { name: "Channels" })).toBeVisible();
 }
 
 async function callFromTheForm(page: Page, command: string, data: string): Promise<void> {
@@ -57,7 +41,8 @@ test("a command call and its result reply show their data", async ({ page }) => 
     text: "Shipped main.",
   });
 
-  await logIn(page, await newHumanToken("browser-command-reader"));
+  const { token } = await newIdentity({ kind: "human", name: "browser-command-reader" });
+  await logInToChannels({ page, token });
   await page.goto(`/#/channels/browser-command-shows/threads/${String(threadId)}`);
 
   await expect(
@@ -71,7 +56,8 @@ test("a command call and its result reply show their data", async ({ page }) => 
 test("a person calls a command from the UI, and bad data shows the schema errors", async ({ page }) => {
   await channelWithCommand("browser-command-call", "browser-call-form");
 
-  await logIn(page, await newHumanToken("browser-command-caller"));
+  const { token } = await newIdentity({ kind: "human", name: "browser-command-caller" });
+  await logInToChannels({ page, token });
   await page.getByRole("link", { name: "#browser-command-call" }).click();
   await callFromTheForm(page, "browser-call-form", '{"branch":1}');
 

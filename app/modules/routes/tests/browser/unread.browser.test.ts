@@ -1,12 +1,7 @@
-import type { CookoutClient, IdentityKind } from "../../../sdk/index.ts";
 import type { Locator, Page } from "@playwright/test";
+import { adminClient, logInWithStream, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
-import { createCookoutClient } from "../../../sdk/index.ts";
-
-interface Person {
-  readonly client: CookoutClient;
-  readonly token: string;
-}
+import type { Person } from "./people.ts";
 
 interface Watching {
   readonly poster: Person;
@@ -14,29 +9,12 @@ interface Watching {
   readonly row: Locator;
 }
 
-function adminClient(): CookoutClient {
-  return createCookoutClient();
-}
-
-async function newIdentity(name: string, kind: IdentityKind): Promise<Person> {
-  const { token } = await adminClient().createIdentity({ kind, name });
-  return { client: createCookoutClient({ token }), token };
-}
-
-async function logInWithStream(page: Page, token: string): Promise<void> {
-  const streamOpen = page.waitForResponse((response) => response.url().includes("/v1/events"));
-  await page.goto("/");
-  await page.getByLabel("Token").fill(token);
-  await page.getByRole("button", { name: "Log in" }).click();
-  await streamOpen;
-}
-
 async function watchList(page: Page, channel: string): Promise<Watching> {
   await adminClient().createChannel({ name: channel });
-  const poster = await newIdentity(`${channel}-poster`, "agent");
-  const reader = await newIdentity(`${channel}-reader`, "human");
+  const poster = await newIdentity({ kind: "agent", name: `${channel}-poster` });
+  const reader = await newIdentity({ kind: "human", name: `${channel}-reader` });
   await reader.client.subscribe(channel);
-  await logInWithStream(page, reader.token);
+  await logInWithStream({ page, token: reader.token });
   const row = page.getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
 
   await expect(row).toBeVisible();

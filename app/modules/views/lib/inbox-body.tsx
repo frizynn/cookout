@@ -1,5 +1,6 @@
 import { Alert, CardBody, LinkList, Muted, Skeleton } from "../../design-system/index.tsx";
 import type { UnreadCounts, UnreadState } from "../../unread/index.ts";
+import type { ChannelName } from "../../sdk/index.ts";
 import { InboxItemRow } from "./inbox-item-row.tsx";
 import type { ReactNode } from "react";
 import { UnreadChannelRow } from "./unread-channel-row.tsx";
@@ -13,7 +14,7 @@ const TEXT = {
   messages: "Unread messages",
 } as const;
 
-type ChannelCounts = readonly [string, UnreadCounts];
+type ChannelCounts = readonly [ChannelName, UnreadCounts];
 
 function byName([first]: ChannelCounts, [second]: ChannelCounts): number {
   return first.localeCompare(second);

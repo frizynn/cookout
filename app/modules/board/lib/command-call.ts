@@ -1,11 +1,6 @@
+import type { JsonValue, SchemaProblem } from "../../sdk/index.ts";
 import { CookoutError } from "../../sdk/index.ts";
-import type { JsonValue } from "../../sdk/index.ts";
 import { failure } from "./failure.ts";
-
-interface SchemaProblem {
-  readonly message: string;
-  readonly path: readonly (string | number)[];
-}
 
 interface CallFailure {
   readonly status: "failed";
@@ -66,22 +61,9 @@ function notJson(command: string): CallFailure {
   return { code: "invalid_json", command, message: "The data isn't JSON.", problems: [], status: "failed" };
 }
 
-function isPathPart(value: unknown): value is string | number {
-  return typeof value === "string" || typeof value === "number";
-}
-
-function isSchemaProblem(value: unknown): value is SchemaProblem {
-  return (
-    isRecord(value) &&
-    typeof value["message"] === "string" &&
-    Array.isArray(value["path"]) &&
-    value["path"].every((part: unknown) => isPathPart(part))
-  );
-}
-
 function problemsIn(error: unknown): readonly SchemaProblem[] {
-  if (error instanceof CookoutError && Array.isArray(error.details)) {
-    return error.details.filter((detail: unknown) => isSchemaProblem(detail));
+  if (error instanceof CookoutError) {
+    return error.schemaProblems;
   }
   return [];
 }
@@ -91,4 +73,4 @@ function callFailure(refused: Refused): CallFailure {
   return { code, command: refused.command, message, problems: problemsIn(refused.error), status: "failed" };
 }
 
-export { type CallState, type SchemaProblem, callFailure, notJson, parseData };
+export { type CallState, callFailure, notJson, parseData };

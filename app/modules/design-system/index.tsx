@@ -1,10 +1,11 @@
 /**
- * The design system: shadcn/ui's components on Tailwind, monospace and dark
- * like Vercel Board. Every view builds from these and none styles itself, so
- * no component takes classes. `styles.css` is the Tailwind theme, which
+ * The design system: hand-written Tailwind components styled after shadcn/ui
+ * (its token names and its card), monospace and dark like Vercel Board
+ * (ADR 0034). Every view builds from these and none styles itself, so no
+ * component takes classes. `styles.css` is the Tailwind theme, which
  * `index.html` loads. `AppShell` is the page around every route, with links to
  * the channels and the inbox in its header; `Card`,
- * `CardHeader`, `Heading` and `Muted` are shadcn's card and its title row,
+ * `CardHeader`, `Heading` and `Muted` are a shadcn-style card and its title row,
  * `CardBody` a padded section under it; `BackLink` leads back up a level;
  * `LinkList` and `LinkRow` are a named list of links, and `ItemList` and
  * `ItemRow` a named list of plain rows; `Article` is one named item shown on
