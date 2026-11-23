@@ -96,6 +96,16 @@ function createChannels(cast: Cast): Effect.Effect<void, SeedFailure> {
   });
 }
 
+const RELEASE_NOTES =
+  "Notes for **1.4.2**:\n- the `login` test is _fixed_\n- ~~flaky~~ green\n\nDetails: https://github.com/mattpocock/cookout/issues/150";
+
+function postInGeneral(cast: Cast): Effect.Effect<void, SeedFailure> {
+  return Effect.gen(function* inGeneral() {
+    yield* post(cast.grace, { channel: "general", text: "Lunch at 12:30." });
+    yield* post(cast.ada, { channel: "general", text: RELEASE_NOTES });
+  });
+}
+
 function postConversation(cast: Cast): Effect.Effect<MessageId, SeedFailure> {
   return Effect.gen(function* conversation() {
     yield* createChannels(cast);
@@ -107,7 +117,7 @@ function postConversation(cast: Cast): Effect.Effect<MessageId, SeedFailure> {
     yield* call(() => cast.releaseBot.client.follow(opening.id));
     yield* post(cast.triageAgent, { ...thread, text: "I am. It fails about one run in ten on CI." });
     const question = yield* post(cast.grace, { ...thread, text: "@triage-agent can you post the failing run?" });
-    yield* post(cast.grace, { channel: "general", text: "Lunch at 12:30." });
+    yield* postInGeneral(cast);
     yield* post(cast.ada, { channel: "general", replyTo: question.id, text: "Thanks, both of you." });
     yield* post(cast.releaseBot, { channel: "deploys", data: { version: "1.4.2" }, text: "Deployed 1.4.2." });
     return opening.id;

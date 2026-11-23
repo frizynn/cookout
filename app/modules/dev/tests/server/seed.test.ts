@@ -82,6 +82,7 @@ it.effect("the seed makes channels with top-level messages and a thread holding 
     expect(Arr.map(general.messages, ({ text }) => text)).toStrictEqual([
       "Morning! Who is looking at the flaky login test?",
       "Lunch at 12:30.",
+      "Notes for **1.4.2**:\n- the `login` test is _fixed_\n- ~~flaky~~ green\n\nDetails: https://github.com/mattpocock/cookout/issues/150",
     ]);
     expect(thread.parent.text).toBe("Morning! Who is looking at the flaky login test?");
     expect(Arr.map(thread.replies, ({ author, replyTo, text }) => [author.name, replyTo, text])).toStrictEqual([

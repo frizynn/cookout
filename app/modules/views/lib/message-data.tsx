@@ -1,6 +1,6 @@
 import { CallChip, DataToggle, MessageBody } from "../../design-system/index.tsx";
 import type { JsonValue, Message } from "../../sdk/index.ts";
-import { MentionText } from "./mention-text.tsx";
+import { MarkdownText } from "./markdown-text.tsx";
 import type { ReactNode } from "react";
 
 const TEXT = { data: "Data" } as const;
@@ -44,7 +44,7 @@ export function MessageData(props: MessageDataProps): ReactNode {
   return (
     <>
       <MessageBody>
-        <MentionText me={props.me} message={message} />
+        <MarkdownText me={props.me} message={message} />
       </MessageBody>
       {data !== null && <DataToggle label={TEXT.data} value={data} />}
     </>

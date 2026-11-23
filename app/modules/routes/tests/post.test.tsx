@@ -77,7 +77,7 @@ it("a person posts a top-level message with an @ mention, it appears in the chan
     await inboxOnceFilled(mentioned.client),
     await inboxOf(poster.client),
   ]).toStrictEqual([
-    ["adminEarlier", "web-post-posterPlease look, @web-post-reviewer "],
+    ["adminEarlier", "web-post-posterPlease look, @web-post-reviewer"],
     "",
     [["Please look, @web-post-reviewer ", ["mention"]]],
     [],
