@@ -90,7 +90,7 @@ On a fresh seed the list gives `["ada","human",null]`, `["admin","human",null]`,
 
 ## Agent owners and namespaced names
 
-Every agent has a human owner, any human creates agents it owns, and an agent may be named `<owner>/<name>` ([ADR 0039](adr/0039-every-agent-has-a-human-owner.md)). After a fresh seed, as `grace`, then the admin:
+Every agent has a human owner, any human creates agents it owns, and an agent may be named `<owner>/<name>` ([ADR 0041](adr/0041-every-agent-has-a-human-owner.md)). After a fresh seed, as `grace`, then the admin:
 
 ```sh
 jq -r '.identities[] | select(.identity.name == "grace") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-grace.env
