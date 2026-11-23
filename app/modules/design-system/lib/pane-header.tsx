@@ -8,6 +8,7 @@ export function PaneHeader(parts: PaneHeaderParts): ReactNode {
       {parts.description !== null && parts.description !== "" && (
         <p className="truncate border-l pl-3 text-xs text-muted-foreground">{parts.description}</p>
       )}
+      <div className="ml-auto shrink-0">{parts.children}</div>
     </header>
   );
 }

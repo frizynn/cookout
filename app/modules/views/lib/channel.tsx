@@ -6,6 +6,8 @@ import { MessageFooter } from "./message-footer.tsx";
 import { MessageRows } from "./message-rows.tsx";
 import { NotBuiltView } from "./not-built.tsx";
 import type { ReactNode } from "react";
+import { SubscriptionRefusal } from "./subscription-refusal.tsx";
+import { SubscriptionToggle } from "./subscription-toggle.tsx";
 import { useSyncExternalStore } from "react";
 
 const TEXT = { missing: "No channel has this name.", nothing: "Nothing here" } as const;
@@ -42,12 +44,19 @@ export function ChannelView(props: ChannelProps): ReactNode {
   const messages = props.board.channel(props.channel);
   const state = useSyncExternalStore(messages.subscribe, messages.snapshot);
   const description = useDescription(props.board, props.channel);
+  const { subscriptions } = props.board;
+  const subscribed = useSyncExternalStore(subscriptions.subscribe, subscriptions.snapshot);
   if (state.status === "failed" && state.code === "channel_not_found") {
     return <NotBuiltView description={TEXT.missing} title={TEXT.nothing} />;
   }
   return (
     <Pane>
-      <PaneHeader description={description} title={`#${props.channel}`} />
+      <PaneHeader description={description} title={`#${props.channel}`}>
+        {subscribed.status === "loaded" && (
+          <SubscriptionToggle channel={props.channel} state={subscribed} subscriptions={subscriptions} />
+        )}
+      </PaneHeader>
+      <SubscriptionRefusal channel={props.channel} state={subscribed} />
       <ScrollArea count={countOf(state)} label={`Messages in #${props.channel}`}>
         <MessageRows channel={props.channel} messages={messages} state={state} />
       </ScrollArea>

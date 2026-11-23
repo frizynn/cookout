@@ -83,6 +83,13 @@ interface PillParts {
 interface PaneHeaderParts {
   readonly title: string;
   readonly description: string | null;
+  readonly children?: ReactNode;
+}
+
+interface PressButtonParts extends Parts {
+  readonly pressed: boolean;
+  readonly disabled: boolean;
+  readonly onClick: () => void;
 }
 
 interface SidePanelParts extends Parts {
@@ -155,6 +162,7 @@ export type {
   ChoiceGroupParts,
   NavLinkParts,
   PaneHeaderParts,
+  PressButtonParts,
   PillParts,
   SidebarParts,
   SidePanelParts,

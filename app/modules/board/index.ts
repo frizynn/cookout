@@ -26,19 +26,24 @@
  * channel or thread it belongs to (a reply also counts in its top-level
  * message's replies), so messages from others appear without a reload; a message
  * in a channel the loaded list doesn't have reloads the list, so a channel
- * created since it loaded joins it. A refusal
+ * created since it loaded joins it. `subscriptions` is the names of the channels
+ * the logged-in identity subscribes to, sorted, loaded when its first reader
+ * subscribes; `setSubscribed` subscribes to a channel or unsubscribes from it,
+ * keeping the refusal, with the channel, if the server refuses. A refusal
  * keeps the server's error code; a server that can't be reached is `unreachable`.
  */
 import type { ChannelMessages, LiveChannelMessages, MessagesClient } from "./lib/channel-messages.ts";
 import type { ChannelName, CookoutClient, MessageId } from "../sdk/index.ts";
 import type { Commands, CommandsClient } from "./lib/commands.ts";
 import type { LiveThreadMessages, ThreadClient, ThreadMessages } from "./lib/thread-messages.ts";
+import type { Subscriptions, SubscriptionsClient } from "./lib/subscriptions.ts";
 import type { Live } from "../live/index.ts";
 import type { Snapshot } from "./lib/channel-list.ts";
 import { createChannelList } from "./lib/channel-list.ts";
 import { createChannelMessages } from "./lib/channel-messages.ts";
 import { createCommands } from "./lib/commands.ts";
 import { createLiveFeed } from "./lib/live-feed.ts";
+import { createSubscriptions } from "./lib/subscriptions.ts";
 import { createThreadMessages } from "./lib/thread-messages.ts";
 
 const PAGE_SIZE = 50;
@@ -49,7 +54,11 @@ function storeIn<Messages>(stores: Map<string, Messages>, key: string, make: () 
   return messages;
 }
 
-type BoardClient = Pick<CookoutClient, "listChannels"> & CommandsClient & MessagesClient & ThreadClient;
+type BoardClient = Pick<CookoutClient, "listChannels"> &
+  CommandsClient &
+  MessagesClient &
+  SubscriptionsClient &
+  ThreadClient;
 
 /** The board store. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
 export interface Board {
@@ -63,6 +72,8 @@ export interface Board {
   readonly thread: (channel: ChannelName, id: MessageId) => ThreadMessages;
   /** Every registered command, sorted by name: one store, loaded when its first reader subscribes. */
   readonly commands: Commands;
+  /** The channels the logged-in identity subscribes to: one store, loaded when its first reader subscribes. */
+  readonly subscriptions: Subscriptions;
 }
 
 /**
@@ -100,6 +111,7 @@ export function createBoard(options: BoardOptions): Board {
       follow();
       return list.subscribe(listener);
     },
+    subscriptions: createSubscriptions(client),
     thread: (channel, id) =>
       storeIn(threads, `${channel}/${String(id)}`, () => followed(createThreadMessages({ channel, client, id }))),
   };
@@ -111,4 +123,5 @@ export type { CallState } from "./lib/command-call.ts";
 export type { SchemaProblem } from "../sdk/index.ts";
 export type { Commands } from "./lib/commands.ts";
 export type { PostState } from "./lib/failure.ts";
+export type { Subscriptions, SubscriptionsState } from "./lib/subscriptions.ts";
 export type { ThreadMessages, ThreadMessagesState } from "./lib/thread-messages.ts";
