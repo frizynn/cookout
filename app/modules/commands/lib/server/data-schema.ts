@@ -1,4 +1,4 @@
-import { Array as Arr, Result, String as Str, pipe } from "effect";
+import { Array as Arr, Option, Result, String as Str, pipe } from "effect";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import type { JsonSchema } from "../../index.ts";
 import type { JsonValue } from "../../../messages/index.ts";
@@ -43,7 +43,7 @@ function compileDataSchema(schema: JsonSchema): Result.Result<DataCheck, string>
         if (validate(data)) {
           return [];
         }
-        return Arr.map(validate.errors ?? [], dataErrorOf);
+        return Arr.map(Option.getOrElse(Option.fromNullishOr(validate.errors), Arr.empty), dataErrorOf);
       };
     },
   });
