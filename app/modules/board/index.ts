@@ -30,7 +30,12 @@
  * created since it loaded joins it. `subscriptions` is the names of the channels
  * the logged-in identity subscribes to, sorted, loaded when its first reader
  * subscribes; `setSubscribed` subscribes to a channel or unsubscribes from it,
- * keeping the refusal, with the channel, if the server refuses. A refusal
+ * keeping the refusal, with the channel, if the server refuses. `creation`
+ * is the new channel form: whether it is open and what is typed in it;
+ * `create` creates the channel as `cookout channel create` does, adds it to
+ * the loaded list, empties and closes the form and only then calls `created`,
+ * so a refused name keeps what was typed, with the refusal on the field it
+ * concerns (the description's own schema errors; anything else, the name). A refusal
  * keeps the server's error code; a server that can't be reached is `unreachable`.
  */
 import type { ChannelMessages, LiveChannelMessages, MessagesClient } from "./lib/channel-messages.ts";
@@ -38,8 +43,10 @@ import type { ChannelName, CookoutClient, MessageId } from "../sdk/index.ts";
 import type { Commands, CommandsClient } from "./lib/commands.ts";
 import type { LiveThreadMessages, ThreadClient, ThreadMessages } from "./lib/thread-messages.ts";
 import type { Subscriptions, SubscriptionsClient } from "./lib/subscriptions.ts";
+import type { ChannelCreation } from "./lib/channel-creation.ts";
 import type { Live } from "../live/index.ts";
 import type { Snapshot } from "./lib/channel-list.ts";
+import { createChannelCreation } from "./lib/channel-creation.ts";
 import { createChannelList } from "./lib/channel-list.ts";
 import { createChannelMessages } from "./lib/channel-messages.ts";
 import { createCommands } from "./lib/commands.ts";
@@ -55,7 +62,7 @@ function storeIn<Messages>(stores: Map<string, Messages>, key: string, make: () 
   return messages;
 }
 
-type BoardClient = Pick<CookoutClient, "listChannels"> &
+type BoardClient = Pick<CookoutClient, "createChannel" | "listChannels"> &
   CommandsClient &
   MessagesClient &
   SubscriptionsClient &
@@ -75,6 +82,8 @@ export interface Board {
   readonly commands: Commands;
   /** The channels the logged-in identity subscribes to: one store, loaded when its first reader subscribes. */
   readonly subscriptions: Subscriptions;
+  /** The new channel form: one store, whose channels join the loaded list. */
+  readonly creation: ChannelCreation;
 }
 
 /**
@@ -107,6 +116,7 @@ export function createBoard(options: BoardOptions): Board {
         followed(createChannelMessages({ client, name, pageSize: options.pageSize ?? PAGE_SIZE })),
       ),
     commands: createCommands(client),
+    creation: createChannelCreation({ client, put: list.put }),
     snapshot: list.snapshot,
     subscribe: (listener) => {
       follow();
@@ -118,6 +128,7 @@ export function createBoard(options: BoardOptions): Board {
   };
 }
 
+export type { ChannelCreation, ChannelCreationSnapshot, CreationState } from "./lib/channel-creation.ts";
 export type { ChannelsState } from "./lib/channel-list.ts";
 export type { ChannelMessages, ChannelMessagesState } from "./lib/channel-messages.ts";
 export type { CallState } from "./lib/command-call.ts";

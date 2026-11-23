@@ -3,6 +3,7 @@ import type { Board } from "../../board/index.ts";
 import type { ChannelName } from "../../sdk/index.ts";
 import { ChannelRows } from "./channel-rows.tsx";
 import { InboxLink } from "./inbox-link.tsx";
+import { NewChannel } from "./new-channel.tsx";
 import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
 import type { Unread } from "../../unread/index.ts";
@@ -42,6 +43,7 @@ export function SidebarLinks(props: SidebarLinksProps): ReactNode {
       </NavList>
       <NavHeading>{TEXT.channels}</NavHeading>
       <ChannelRows channels={channels} open={openChannel(route)} unread={unread} />
+      <NewChannel creation={props.board.creation} />
     </>
   );
 }
