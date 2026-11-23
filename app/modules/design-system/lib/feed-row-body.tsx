@@ -13,6 +13,7 @@ interface FeedRowParts {
   readonly action: string;
   readonly channel: string;
   readonly time: string;
+  readonly count: string | null;
   readonly context: string | null;
   readonly children: ReactNode;
   readonly href: string;
@@ -41,6 +42,7 @@ export function FeedRowBody(parts: FeedRowParts): ReactNode {
         authorHref={parts.authorHref}
         bold={parts.level !== "read"}
         channel={parts.channel}
+        count={parts.count}
         displayName={parts.displayName}
         note={parts.note}
         time={parts.time}

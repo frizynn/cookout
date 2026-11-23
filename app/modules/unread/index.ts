@@ -13,7 +13,11 @@
  * shows them (Matt, #152, 2026-11-23): for you (a mention, or a reply in a
  * thread you started) and activity (the rest). `whyOf` says why one is there,
  * `countsByChannel` counts both levels by channel, and `newsByThread` counts a
- * thread's unread replies and how many of them are for you.
+ * thread's unread replies and how many of them are for you. `rowsOf` groups
+ * items, unread or `earlier`'s, into the inbox's rows: one per thread (its
+ * replies) or channel (its top-level messages), as read positions are keyed,
+ * each with its latest item, count, level and strongest reason, newest first.
+ * Being derived from the items, the rows move with every live path above.
  * `earlier` is the read part of the inbox, for the inbox view's Earlier list:
  * when its first reader subscribes it loads the inbox history
  * (`GET /v1/inbox/history`) a page of `pageSize` items at a time (50 unless
@@ -178,5 +182,7 @@ export function createUnread(options: UnreadOptions): Unread {
 export type { Earlier, EarlierState } from "./lib/earlier.ts";
 export type { MarkAllState } from "./lib/mark-all.ts";
 export type { MessageMenu } from "./lib/message-menu.ts";
+export type { InboxRow } from "./lib/rows.ts";
+export { rowsOf } from "./lib/rows.ts";
 export type { ThreadNews, UnreadCounts, UnreadWhy } from "./lib/levels.ts";
 export { NO_COUNTS, countsByChannel, countsOf, isForYou, newsByThread, whyOf } from "./lib/levels.ts";
