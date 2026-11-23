@@ -235,6 +235,27 @@ const unreadCommand = Command.make("unread", { id: messageIdArgument }, ({ id })
   ),
 );
 
+const reactionArgument = Argument.ChoiceWithValue("reaction", [
+  ["up", "thumbs_up"],
+  ["down", "thumbs_down"],
+] as const).pipe(Argument.withDescription("up for thumbs up, down for thumbs down."));
+
+const reactCommand = Command.make("react", { id: messageIdArgument, reaction: reactionArgument }, ({ id, reaction }) =>
+  answer((client) => client.react(id, reaction)),
+).pipe(
+  Command.withDescription(
+    "Leave a thumbs up or thumbs down on a message. Its author gets an inbox item saying so. Prints the message's reactions.",
+  ),
+);
+
+const unreactCommand = Command.make(
+  "unreact",
+  { id: messageIdArgument, reaction: reactionArgument },
+  ({ id, reaction }) => answer((client) => client.unreact(id, reaction)),
+).pipe(
+  Command.withDescription("Take back your thumbs up or thumbs down on a message. Prints the message's reactions."),
+);
+
 const followCommand = Command.make("follow", { id: messageIdArgument }, ({ id }) =>
   answer((client) => client.follow(id)),
 ).pipe(Command.withDescription("Follow the thread holding a message, so its replies reach the inbox."));
@@ -261,6 +282,8 @@ export const verbCommands = [
   inboxCommand,
   ackCommand,
   unreadCommand,
+  reactCommand,
+  unreactCommand,
   followCommand,
   unfollowCommand,
   subscribeCommand,
