@@ -82,6 +82,8 @@ function mentionAcrossADrop(watching: Watching): Effect.Effect<AcrossADrop, neve
     yield* relay.relayed(ITEM, TWICE);
     const after = yield* first.post(channel, mentionOf("After", watching));
     yield* relay.relayed(ITEM, THRICE);
+    yield* relay.cut;
+    yield* relay.relayed(CONNECTED, THRICE);
     return { after, before, missed };
   });
 }
@@ -116,8 +118,8 @@ it.live(
     Effect.gen(function* watchAcrossADrop() {
       const watching = yield* secondWatching;
       const { after, before, missed } = yield* mentionAcrossADrop(watching);
-      const exited = yield* watching.deactivateTheWatcher;
       const lastEventIds = yield* watching.relay.lastEventIds;
+      const exited = yield* watching.deactivateTheWatcher;
       const from = { author: watching.first.name, channel: watching.channel };
 
       expect(exited).toMatchObject({
