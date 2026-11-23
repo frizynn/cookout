@@ -53,6 +53,9 @@ Every other verb of the CLI, and the SDK's defaults:
 - `CLINE_ACTIVE` (no default): Cline sets it to `true` in the VS Code terminals it opens; `true` makes the tool `cline`.
 - `OPENCODE` (no default): opencode sets it to `1` in the commands it runs; `1` makes the tool `opencode`.
 - `COOKOUT_ALLOW_HUMAN` (no default): `1` sends no agent tool, so a human's token works from inside an agent tool when you mean it to. The guard catches accidents; it is not a security boundary ([ADR 0038](docs/adr/0038-a-human-token-from-an-agent-tool-is-refused-unless-overridden.md)).
+- `HTTPS_PROXY` (no default): The proxy the CLI sends `https://` requests through, such as `http://proxy:3128`; `https_proxy` is read first. Unset, it falls back to `HTTP_PROXY`.
+- `HTTP_PROXY` (no default): The proxy the CLI sends `http://` requests through; `http_proxy` is read first.
+- `NO_PROXY` (no default): Hosts the CLI reaches directly, past the proxy, as a comma-separated list such as `localhost,.internal`; `no_proxy` is read first.
 
 ## Develop
 

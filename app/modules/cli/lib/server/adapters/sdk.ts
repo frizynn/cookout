@@ -6,15 +6,16 @@ import type {
 } from "../agent-session-state.ts";
 import type { AgentToolSession, CookoutConnection } from "../../../../config/index.ts";
 import type { CookoutClient, CookoutErrorCode } from "../../../../sdk/index.ts";
-import { CookoutError, createCookoutClient } from "../../../../sdk/index.ts";
 import { Effect, Option, Predicate } from "effect";
 import { agentSessionExpired, agentSessionRevoked } from "../../../../agent-sessions/index.ts";
 import { agentToolEnvironment, cookoutSession, cookoutToken } from "../../../../config/server.ts";
 import { agentToolIn, agentToolSessionIn } from "../../../../config/index.ts";
 import { boardUrlOrEmpty, loginFor } from "../logins.ts";
+import { throughProxy, toFailure, toFailureAt } from "./http.ts";
 import type { LoginFailure } from "../logins.ts";
 import { agentSessionStateFile } from "../agent-session-state.ts";
 import { baseUrlOf } from "../../../../http/client.ts";
+import { createCookoutClient } from "../../../../sdk/index.ts";
 
 type CallFailureCode =
   | CookoutErrorCode
@@ -29,6 +30,7 @@ type CallFailureCode =
   | "login_request_expired"
   | "not_a_cookout"
   | "timeout"
+  | "unreachable"
   | "server_unreachable";
 
 interface CallFailure {
@@ -67,7 +69,6 @@ interface CliEnvironment {
 
 type Call<Value> = (client: CookoutClient) => Promise<Value>;
 
-const NO_STATUS = 0;
 const NOTHING = {};
 
 const notJoined: CallFailure = {
@@ -79,25 +80,6 @@ const loginMissing: CallFailure = {
   code: "login_missing",
   message: "log in first: cookout login",
 };
-
-function statusOf(status: number): { readonly status?: number } {
-  if (status === NO_STATUS) {
-    return NOTHING;
-  }
-  return { status };
-}
-
-function toFailure(error: unknown): CallFailure {
-  if (!(error instanceof CookoutError)) {
-    return { code: "cli_error", message: String(error) };
-  }
-  const { code, details, message, status } = error;
-  const withStatus = { code, message, ...statusOf(status) };
-  if (Predicate.isUndefined(details)) {
-    return withStatus;
-  }
-  return { ...withStatus, details };
-}
 
 function isEnded(code: CallFailureCode): boolean {
   return code === agentSessionRevoked || code === agentSessionExpired;
@@ -226,10 +208,13 @@ function clientFor(
 type Run<Value> = (client: ClientWithAgentSessionState) => Effect.Effect<Value, CallFailure>;
 
 function runWith<Value>(env: CliEnvironment, credential: Credential, run: Run<Value>): Found<Value> {
-  return Effect.gen(function* runWithClient() {
-    const opened = yield* clientFor(env, credential);
-    return yield* run(opened).pipe(Effect.catch(onAgentSessionEnded(opened)));
-  });
+  return Effect.scoped(
+    Effect.gen(function* runWithClient() {
+      yield* throughProxy;
+      const opened = yield* clientFor(env, credential);
+      return yield* run(opened).pipe(Effect.catch(onAgentSessionEnded(opened)));
+    }),
+  );
 }
 
 function withClient<Value>(run: Run<Value>): Found<Value> {
@@ -261,7 +246,7 @@ function withJoinClient<Value>(run: Run<Value>): Found<Value> {
 function callClient<Value>(
   call: Call<Value>,
 ): (opened: ClientWithAgentSessionState) => Effect.Effect<Value, CallFailure> {
-  return ({ client }) => Effect.tryPromise({ catch: toFailure, try: () => call(client) });
+  return ({ client, connection }) => Effect.tryPromise({ catch: toFailureAt(connection.url), try: () => call(client) });
 }
 
 function callServer<Value>(call: Call<Value>): Found<Value> {
@@ -290,7 +275,7 @@ export {
   callClient,
   callServer,
   joinPlace,
-  toFailure,
   withClient,
   withJoinClient,
 };
+export { toFailure } from "./http.ts";
