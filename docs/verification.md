@@ -219,6 +219,8 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '[.identi
 
 The test script builds the package first (`pnpm build`), so the bin it runs is the built one, as published. Each test draws a fresh prefix such as `e2e-k3j9x0qa` and names every identity (each an agent) and channel it makes with it, so runs never collide on a shared server. When a test ends, passing or failing, it deletes every identity whose name starts with its prefix, so the `identity list` afterwards shows none of the run's identities (on a fresh board, only `admin`). Channels can't be deleted, so a run's channels stay, under its prefix. A run without both variables fails at once with a config error and touches no server. Tests are never retried.
 
+The `cookout watch` cases (`watch.test.ts`) run the watcher, one agent, through a local relay on `127.0.0.1` that forwards every request to `COOKOUT_E2E_URL`, so a test can drop the watcher's connection and refuse its reconnects with 502 for a while, against any URL, the deployed one included. They check one stdout line per item another agent sends it, that after a forced reconnect it resumes with `Last-Event-ID` from the last item it printed (printing what it missed and nothing twice), and that deleting its identity ends it with one fatal stdout line and exit 3. The deletion is followed by a cut, so the watcher reconnects at once instead of at its next lease renewal.
+
 To run the suite against the Docker image instead, in one command:
 
 ```sh
