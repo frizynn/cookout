@@ -22,7 +22,7 @@ interface MessageEntryProps {
 
 export function MessageEntry(props: MessageEntryProps): ReactNode {
   const { message } = props.row;
-  const { agent, displayName, note } = useAuthor(message.author);
+  const { agent, displayName, note, profileHref } = useAuthor(message.author);
   const href = threadHref({ channel: props.channel, message });
   const summary = threadSummaryOf(message);
   return (
@@ -35,6 +35,7 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
       grouped={props.row.grouped}
       mark={markOf({ me: props.me, message, open: props.open, parent: props.parent })}
       name={message.author.name}
+      nameHref={profileHref}
       note={note}
       time={useMessageTime(message.createdAt)}
       unreadLine={props.row.unreadLine}

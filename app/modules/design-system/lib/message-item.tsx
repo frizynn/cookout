@@ -25,6 +25,7 @@ export function MessageItem(parts: MessageItemParts): ReactNode {
           displayName={parts.displayName}
           grouped={parts.grouped}
           name={parts.name}
+          nameHref={parts.nameHref}
           note={parts.note}
           time={parts.time}
         >

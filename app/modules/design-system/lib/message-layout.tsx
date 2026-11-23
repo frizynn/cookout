@@ -19,6 +19,7 @@ export function MessageLayout(parts: MessageLayoutParts): ReactNode {
             agent={parts.agent}
             displayName={parts.displayName}
             name={parts.name}
+            nameHref={parts.nameHref}
             note={parts.note}
             time={time}
           />

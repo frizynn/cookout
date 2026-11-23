@@ -11,13 +11,17 @@
  * name, or a thread ID that isn't a message ID, says there is nothing here.
  * `#/approve/<user code>` is the approval page for a login request, a page of
  * its own outside the workspace (after the login view, if logged out), and
- * `#/approve-join/<user code>` the same for an agent join request. The
+ * `#/approve-join/<user code>` the same for an agent join request. Any
+ * workspace route's hash can end in `?profile=<name>`, which opens that
+ * identity's profile panel beside it (replacing a thread's panel); Escape or
+ * its close link closes it. Clicking a name, a message's author or an
+ * `@name`, goes there. The
  * `paths` module reads the hash and builds every link's.
  */
 import type { ReactNode } from "react";
 import { RouteView } from "./lib/route-view.tsx";
 import type { Stores } from "./lib/stores.ts";
-import { routeOf } from "../paths/index.ts";
+import { locationOf } from "../paths/index.ts";
 import { useSyncExternalStore } from "react";
 
 function subscribeToHash(listener: () => void): () => void {
@@ -41,5 +45,5 @@ export type CookoutAppProps = Stores;
  */
 export function CookoutApp(props: CookoutAppProps): ReactNode {
   const hash = useSyncExternalStore(subscribeToHash, currentHash);
-  return <RouteView route={routeOf(hash)} stores={props} />;
+  return <RouteView place={locationOf(hash)} stores={props} />;
 }
