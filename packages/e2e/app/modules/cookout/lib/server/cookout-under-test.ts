@@ -2,7 +2,7 @@ import { Array as Arr, Context, Effect, Layer, Random, Redacted, String as Str }
 import type { BinNeeds, BinResult, BinRun } from "./bin.ts";
 import type { ChannelResponse, CookoutClient, Identity, IdentityWithTokenResponse } from "@ai-hero/cookout/sdk";
 import { e2eAdminToken, e2eUrl } from "../../../config/server.ts";
-import { e2eNameStart, runPrefix, runPrefixSpace } from "./run-prefix.ts";
+import { e2eNameStart, requireRunIdentity, runPrefix, runPrefixSpace } from "./run-prefix.ts";
 import type { Config } from "effect";
 import type { JoinAgent } from "./session.ts";
 import { createCookoutClient } from "@ai-hero/cookout/sdk";
@@ -16,6 +16,7 @@ interface CookoutUnderTestService {
   readonly createAgent: (name: string) => Effect.Effect<IdentityWithTokenResponse>;
   readonly createHuman: (name: string) => Effect.Effect<IdentityWithTokenResponse>;
   readonly createChannel: (name: string) => Effect.Effect<ChannelResponse>;
+  readonly deactivateIdentity: (name: string) => Effect.Effect<void>;
   readonly runCookout: (run: BinRun) => Effect.Effect<BinResult, never, BinNeeds>;
   readonly joinAgent: JoinAgent;
 }
@@ -28,13 +29,22 @@ class CookoutUnderTest extends Context.Service<CookoutUnderTest, CookoutUnderTes
   "@ai-hero/cookout-e2e/cookout/lib/server/cookout-under-test/CookoutUnderTest",
 ) {}
 
-function removeIdentity(admin: CookoutClient, identity: Identity): Effect.Effect<void> {
-  const deleting = Effect.tryPromise({ catch: () => REFUSED, try: () => admin.deleteIdentity(identity.name) });
+function deactivateRunIdentity(admin: CookoutClient, prefix: string): (name: string) => Effect.Effect<void> {
+  return (name) =>
+    Effect.flatMap(requireRunIdentity(prefix)(name), (own) =>
+      Effect.asVoid(Effect.promise(() => admin.deactivateIdentity(own))),
+    );
+}
+
+function removeIdentity(admin: CookoutClient, prefix: string, identity: Identity): Effect.Effect<void> {
+  const deleting = Effect.flatMap(requireRunIdentity(prefix)(identity.name), (own) =>
+    Effect.tryPromise({ catch: () => REFUSED, try: () => admin.deleteIdentity(own) }),
+  );
   if (identity.deactivated === true) {
     return Effect.ignore(deleting);
   }
   return Effect.matchEffect(deleting, {
-    onFailure: () => Effect.asVoid(Effect.promise(() => admin.deactivateIdentity(identity.name))),
+    onFailure: () => deactivateRunIdentity(admin, prefix)(identity.name),
     onSuccess: () => Effect.void,
   });
 }
@@ -45,7 +55,7 @@ function removeRunIdentities(admin: CookoutClient, prefix: string): Effect.Effec
     const own = Arr.filter(identities, ({ name }) => Str.startsWith(`${prefix}-`)(name));
     const agents = Arr.filter(own, ({ kind }) => kind === "agent");
     const humans = Arr.filter(own, ({ kind }) => kind === "human");
-    yield* Effect.forEach([...agents, ...humans], (identity) => removeIdentity(admin, identity), ONE_AT_A_TIME);
+    yield* Effect.forEach([...agents, ...humans], (identity) => removeIdentity(admin, prefix, identity), ONE_AT_A_TIME);
   });
 }
 
@@ -91,6 +101,7 @@ const cookoutUnderTest: Layer.Layer<CookoutUnderTest> = Layer.effect(
       createChannel: (name: string) => Effect.promise(() => admin.createChannel({ name: `${prefix}-${name}` })),
       createHuman: (name: string) =>
         Effect.promise(() => admin.createIdentity({ kind: "human", name: `${prefix}-${name}` })),
+      deactivateIdentity: deactivateRunIdentity(admin, prefix),
       joinAgent: joinAgentWith({ createAgent, runCookout, url }),
       prefix,
       runCookout,

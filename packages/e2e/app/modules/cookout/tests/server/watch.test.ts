@@ -49,11 +49,9 @@ const secondWatching: Effect.Effect<Watching, never, CookoutUnderTest | SessionN
     const second = yield* cookout.joinAgent("watcher", relay.url);
     const watch = yield* Effect.forkScoped(second.cookout("watch"));
     yield* relay.relayed(CONNECTED);
-    const deactivateTheWatcher = Effect.promise(() => cookout.admin.deactivateIdentity(second.name)).pipe(
-      Effect.andThen(relay.cut),
-      Effect.andThen(Fiber.join(watch)),
-      Effect.map(exitedWith),
-    );
+    const deactivateTheWatcher = cookout
+      .deactivateIdentity(second.name)
+      .pipe(Effect.andThen(relay.cut), Effect.andThen(Fiber.join(watch)), Effect.map(exitedWith));
     return { channel: channel.name, deactivateTheWatcher, first, relay, second };
   },
 );
