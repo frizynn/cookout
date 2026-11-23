@@ -19,4 +19,4 @@ function useMessageTime(at: string): MessageTime & { readonly ago: string } {
   return { ...timeOf(at), ago: useTimeAgo(at) };
 }
 
-export { useMessageTime, useTimeAgo };
+export { onTick, useMessageTime, useTimeAgo };

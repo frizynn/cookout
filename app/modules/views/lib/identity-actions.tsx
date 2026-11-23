@@ -1,9 +1,7 @@
 import { ActionButtons } from "./action-buttons.tsx";
-import { ActionRefusal } from "./action-refusal.tsx";
-import { DeactivateConfirm } from "./deactivate-confirm.tsx";
-import { DeleteConfirm } from "./delete-confirm.tsx";
 import type { Identities } from "../../composer/index.ts";
 import type { Identity } from "../../sdk/index.ts";
+import { IdentityConfirm } from "./identity-confirm.tsx";
 import type { ReactNode } from "react";
 import { SessionLine } from "./session-line.tsx";
 import { TokenShown } from "./token-shown.tsx";
@@ -24,10 +22,8 @@ export function IdentityActionsView(props: IdentityActionsProps): ReactNode {
     <>
       {agent && <SessionLine actions={actions} />}
       <ActionButtons actions={actions} deletable={props.deletable} identity={identity} />
-      <DeactivateConfirm actions={actions} name={identity.name} />
-      <DeleteConfirm actions={actions} name={identity.name} />
+      <IdentityConfirm actions={actions} identity={identity} />
       <TokenShown actions={actions} />
-      <ActionRefusal actions={actions} />
       {agent && props.transfer && <TransferForm actions={actions} name={identity.name} />}
     </>
   );

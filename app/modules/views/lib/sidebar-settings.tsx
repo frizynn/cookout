@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
 import { hrefOf } from "../../paths/index.ts";
 import { useListed } from "./use-author.ts";
+import { usePresence } from "./use-presence.ts";
 
 const TEXT = { settings: "Settings" } as const;
 
@@ -23,6 +24,7 @@ export function SidebarSettings(props: SidebarSettingsProps): ReactNode {
         displayName={listed.displayName ?? null}
         href={hrefOf({ identity: identity.name, name: "profile" })}
         name={identity.name}
+        presence={usePresence(identity.name)}
       />
       <FooterLink active={route.name === "settings"} href={hrefOf({ name: "settings", section: null })}>
         {TEXT.settings}

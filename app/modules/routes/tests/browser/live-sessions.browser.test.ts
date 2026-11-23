@@ -1,7 +1,7 @@
 import type { Browser, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
-import { inPane, inProfile } from "./regions.ts";
+import { inDialog, inPane, inProfile } from "./regions.ts";
 import { logInWithStream } from "./login.ts";
 
 const owner = "browser-live-sessions-owner";
@@ -46,6 +46,7 @@ test("an admin revoking an agent's session in one browser shows at once in its o
   const adminPage = await openAs({ browser, hash: `#/people/${agent}`, token: await newAdmin() });
 
   await inProfile(adminPage).getByRole("button", { name: "Revoke session" }).click();
+  await inDialog(adminPage).getByRole("button", { name: "Revoke session" }).click();
 
   await expect(card).toContainText("No live session");
 });

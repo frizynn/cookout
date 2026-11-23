@@ -36,7 +36,14 @@ export function ThreadBody(props: ThreadBodyProps): ReactNode {
   }
   return (
     <>
-      <StandaloneEntry label={TEXT.parent} me={props.me} menu={props.menu} message={state.parent} reply={props.reply} />
+      <StandaloneEntry
+        label={TEXT.parent}
+        me={props.me}
+        menu={props.menu}
+        message={state.parent}
+        receipts={state.receipts}
+        reply={props.reply}
+      />
       <RepliesDivider>{replies(state.replies.length)}</RepliesDivider>
       {state.replies.length === NONE && (
         <CardBody>
@@ -52,6 +59,7 @@ export function ThreadBody(props: ThreadBodyProps): ReactNode {
         messages={state.replies}
         open={null}
         readPosition={props.readPosition}
+        receipts={state.receipts}
         reply={props.reply}
         threads={NO_THREADS}
       />

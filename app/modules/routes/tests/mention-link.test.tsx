@@ -23,7 +23,7 @@ async function openMentions(): Promise<() => void> {
   });
   await adminClient().deactivateIdentity(`${CHANNEL}-gone`);
   const close = openAt({ client: reader.client, hash: `#/channels/${CHANNEL}` });
-  await inPane().findByRole("link", { name: `@${CHANNEL}-gone` });
+  await screen.findByText(`@${CHANNEL}-gone`, { ignore: "a" });
   return close;
 }
 
@@ -43,11 +43,15 @@ it("clicking a mention in a message opens that identity's profile panel, deactiv
   const close = await openMentions();
 
   expect([hrefsOf(`@${CHANNEL}-reader`), document.querySelectorAll("a a").length]).toStrictEqual([
-    [`#/channels/${CHANNEL}?profile=${CHANNEL}-reader`, "https://example.com"],
+    [
+      `#/channels/${CHANNEL}?profile=${CHANNEL}-reader`,
+      "https://example.com",
+      `#/channels/${CHANNEL}?profile=${CHANNEL}-reader`,
+    ],
     NONE,
   ]);
 
-  fireEvent.click(inPane().getByRole("link", { name: `@${CHANNEL}-gone` }));
+  fireEvent.click(screen.getByText(`@${CHANNEL}-gone`, { ignore: "a" }));
   await waitFor(async () => {
     await expect(profileHeading()).resolves.toMatch(`${CHANNEL}-gone(deactivated)`);
   });

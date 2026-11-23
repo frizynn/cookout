@@ -13,6 +13,7 @@ export function Suggestions(parts: SuggestionsParts): ReactNode {
           key={each.option}
           onChoose={handleChoose}
           option={each.option}
+          presence={each.presence}
         />
       ))}
     </ul>

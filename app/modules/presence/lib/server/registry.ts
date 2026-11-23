@@ -1,10 +1,11 @@
-import { Array as Arr, DateTime, Effect, Predicate, PubSub, SynchronizedRef } from "effect";
+import { Array as Arr, DateTime, Effect, Predicate, PubSub, Stream, SynchronizedRef } from "effect";
 import type { LiveConnectionDetail, Presence } from "../../index.ts";
 import type { StorageUnavailable, StoredPresence } from "../../../storage/server.ts";
 import {
   connect,
   endBootGrace,
   endGrace,
+  forget,
   liveConnectionsIn,
   onlineAtStop,
   openBook,
@@ -12,6 +13,7 @@ import {
   release,
 } from "./book.ts";
 import type { BookState } from "./book.ts";
+import { IdentityChanges } from "../../../identities/server.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { Scope } from "effect";
@@ -42,6 +44,7 @@ interface Book {
     update: (state: BookState) => readonly [Result, BookState],
   ) => Effect.Effect<Result>;
   readonly inBackground: (effect: Effect.Effect<void>) => Effect.Effect<void>;
+  readonly forget: (identity: IdentityName) => Effect.Effect<void>;
 }
 
 const ONE_AT_A_TIME = { concurrency: 1, discard: true } as const;
@@ -130,6 +133,7 @@ function bookOf(announce: Announce, kept: readonly StoredPresence[]): Effect.Eff
     const scope = yield* Effect.scope;
     const ref = yield* SynchronizedRef.make(openBook(kept));
     return {
+      forget: (identity) => SynchronizedRef.update(ref, (state) => forget({ identity, state })),
       inBackground: (effect) => Effect.asVoid(Effect.forkIn(effect, scope)),
       modify: (identity, update) =>
         SynchronizedRef.modifyEffect(ref, (state) => {
@@ -143,7 +147,20 @@ function bookOf(announce: Announce, kept: readonly StoredPresence[]): Effect.Eff
   });
 }
 
-function openRegistry(graces: Graces): Effect.Effect<Registry, StorageUnavailable, Storage | Scope.Scope> {
+function forgetsDeleted(book: Book): Effect.Effect<void, never, IdentityChanges | Scope.Scope> {
+  return Effect.gen(function* forgetDeletedIdentities() {
+    const changes = yield* IdentityChanges;
+    const deleted = yield* changes.deleted;
+    yield* Stream.fromSubscription(deleted).pipe(
+      Stream.runForEach(({ name }) => book.forget(name)),
+      Effect.forkScoped,
+    );
+  });
+}
+
+type RegistryNeeds = Storage | IdentityChanges;
+
+function openRegistry(graces: Graces): Effect.Effect<Registry, StorageUnavailable, RegistryNeeds | Scope.Scope> {
   return Effect.gen(function* openPresenceRegistry() {
     const storage = yield* Storage;
     const hub = yield* PubSub.unbounded<Presence>();
@@ -158,6 +175,7 @@ function openRegistry(graces: Graces): Effect.Effect<Registry, StorageUnavailabl
     const wereOnline = Arr.filter(kept, ({ online }) => online);
     yield* book.inBackground(Effect.andThen(Effect.sleep(graces.bootGraceMillis), bootGraceEnds(book, wereOnline)));
     yield* Effect.addFinalizer(() => keptOnStop(book, announce));
+    yield* forgetsDeleted(book);
     return {
       changed: PubSub.subscribe(hub),
       hold: (identity, detail) => held(book, graces.graceMillis, { detail, identity }),
@@ -167,4 +185,5 @@ function openRegistry(graces: Graces): Effect.Effect<Registry, StorageUnavailabl
   });
 }
 
-export { type Registry, openRegistry };
+export { type Registry, type RegistryNeeds, openRegistry };
+export { type LiveConnection, openReplacements, watchReplacedRefusal } from "./replacement.ts";

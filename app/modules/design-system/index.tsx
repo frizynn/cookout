@@ -34,7 +34,11 @@
  * with its keyboard hint; `SidePanel` is a
  * named column on its right with a close link (the whole width on a narrow
  * screen). A name's avatar is its coloured initials, one of eight hues hashed
- * from the name, a circle for a human and a square with a badge for an agent;
+ * from the name, a circle for a human and a rounded square for an agent, with
+ * its `PresenceDot` in the corner once its presence is known: filled in the
+ * online colour while online, a hollow grey ring while offline, named for a
+ * screen reader and as a tooltip ("Offline, last seen 5 minutes ago"), as a
+ * `Suggestions` option shows it beside the name;
  * `Author` is a message's avatar and name (a display name, with the `@name`
  * muted beside it), with an `agent` tag for an agent;
  * `Tag` is one such small tag, such as `admin`. `IdentityLink` is the
@@ -44,9 +48,19 @@
  * `@name` muted beside it. `LineForm` is a named form of one labelled line of
  * text, whose text its owner holds, with a Save button (disabled while
  * saving; `submit` names its button, `Save` unless given) and anything under
- * it, such as an `Alert`. `ActionGroup` is a named group of what can be done
+ * it, such as an `Alert`. `AreaForm` is its form of a few growing lines of
+ * text, up to `limit` characters shown as a counter, where Enter starts a new
+ * line and Ctrl/Cmd+Enter saves. `ActionGroup` is a named group of what can be done
  * to one thing, `ButtonRow` puts buttons side by side, and `TokenText` shows a
  * secret, such as a fresh token, to copy.
+ * `ConfirmDialog` asks before an action, in a modal shadcn AlertDialog on
+ * Radix's primitives (ADR 0058), the one part built on a library: its title, a
+ * body naming exactly what happens, Cancel and a confirm button, in the
+ * destructive colour when the action can't be undone. It holds focus inside
+ * while open, Escape or Cancel calls `onCancel`, and focus goes back to what
+ * opened it when it closes. While `pending` both buttons are disabled and the
+ * confirm button says so; an `error` shows inside it. Its owner decides
+ * when it is `open`, so it never closes on its own.
  * `PaneHeader`'s title is mono, as a channel's name, unless `sans`. A
  * `Toolbar` under it holds a `FilterField` (a labelled box whose text its
  * owner holds) and `Chip`s, buttons pressed or not; a named `ListArea` scrolls
@@ -71,20 +85,22 @@
  * `MessageList` is a named list of `MessageItem`s: one message each, which
  * takes focus, with its avatar, name and time, or only its time on hover when
  * `grouped` under the one before; the day's separator and the "New" line above it when it starts them; a
- * mark (`for-you`, an accent dot beside it, when it mentions or answers the reader, or `open`); and an action (such as Reply: a link, or a button with `onAction`) and
+ * mark (`for-you`, the filled accent block, when it mentions or answers the reader, or `open`); and an action (such as Reply: a link, or a button with `onAction`) and
  * a More actions button shown on hover or focus. With a `menu`, right-clicking it or that button opens its actions
  * menu (the action and Mark unread), which takes focus and closes on Escape. `StandaloneMessage` is one named message on its own, such as a
  * thread's parent. In a message, `MessageBody` holds its rendered Markdown text, `Mention` an
  * `@name` in it, `CallChip` a command call
  * and its data, `DataToggle` its data folded away, and `ThreadSummary` a link to
- * its thread: its repliers' avatars, its reply count, how many replies are new (bold, after an accent dot and with why when one is for the reader) and when it was last replied to. `RepliesDivider` heads a thread's replies, `ChannelStart` says a
+ * its thread: its repliers' avatars, its reply count, how many replies are new (bold, after an accent dot and with how many are to the reader when any is) and when it was last replied to. `ReceiptLine` is a message's quiet line of
+ * read receipts, and `ReceiptName` a name in it, linking to its profile. `RepliesDivider` heads a thread's replies, `ChannelStart` says a
  * channel has nothing older, and `QuietButton` is a muted centred button,
  * such as loading older messages. `TextArea` takes focus when it first appears
  * if `focused`.
  *
  * `AppShell` is the page around the login view; `Card`, centred in a scrolling column, `CardHeader`,
  * `Heading` and `Muted` are a shadcn-style card and its title row, `CardBody`
- * a padded section under it; `LinkList` and
+ * a padded section under it; `MutedLines` is muted text that keeps its line
+ * breaks; `LinkList` and
  * `LinkRow` are a named list of links, and `ItemList` and `ItemRow` a named
  * list of plain rows; `Alert` is a refusal, read out by screen readers;
  * `Notice` is a passing word on what just happened, read out politely;
@@ -112,6 +128,7 @@
  */
 export { ActionGroup } from "./lib/action-group.tsx";
 export { Alert } from "./lib/alert.tsx";
+export { ConfirmDialog } from "./lib/confirm-dialog.tsx";
 export { ButtonRow } from "./lib/button-row.tsx";
 export { TokenText } from "./lib/token-text.tsx";
 export { CallChip } from "./lib/call-chip.tsx";
@@ -141,6 +158,7 @@ export { FeedRow } from "./lib/feed-row.tsx";
 export { FeedText } from "./lib/feed-text.tsx";
 export { Form } from "./lib/form.tsx";
 export { LineForm } from "./lib/line-form.tsx";
+export { AreaForm } from "./lib/area-form.tsx";
 export { Heading } from "./lib/heading.tsx";
 export { InputField } from "./lib/input-field.tsx";
 export { ItemList } from "./lib/item-list.tsx";
@@ -149,6 +167,9 @@ export { LinkList } from "./lib/link-list.tsx";
 export { LinkRow } from "./lib/link-row.tsx";
 export { Mention } from "./lib/mention.tsx";
 export { Muted } from "./lib/muted.tsx";
+export { MutedLines } from "./lib/muted-lines.tsx";
+export { ReceiptLine } from "./lib/receipt-line.tsx";
+export { ReceiptName } from "./lib/receipt-name.tsx";
 export { Notice } from "./lib/notice.tsx";
 export { HeadingButton } from "./lib/heading-button.tsx";
 export { NavHeading } from "./lib/nav-heading.tsx";

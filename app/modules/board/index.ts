@@ -31,7 +31,9 @@
  * one deleted elsewhere leaves it, and if the page is on it, the page goes to the
  * inbox with its name as the snapshot's `notice` until `dismissNotice`; and each
  * command registered elsewhere joins the loaded `commands`; when the stream's link comes back after being down,
- * the list reloads, since channel events can't be replayed. `subscriptions` is the names of the channels
+ * the list reloads, since channel events can't be replayed, and so does each open channel and thread, since read
+ * receipt events can't be either. Each loaded channel page and thread keeps its messages' read receipts
+ * (`receipts`), and each read receipt recorded elsewhere joins the store holding its message, as the stream sends it. `subscriptions` is the names of the channels
  * the logged-in identity subscribes to, sorted, loaded when its first reader
  * subscribes; `setSubscribed` subscribes to a channel or unsubscribes from it,
  * keeping the refusal, with the channel, if the server refuses. With `live`, a subscribe or unsubscribe from
@@ -43,7 +45,7 @@
  * concerns (the description's own schema errors; anything else, the name). A refusal
  * keeps the server's error code; a server that can't be reached is `unreachable`.
  */
-import type { ChannelMessages, LiveChannelMessages, MessagesClient } from "./lib/channel-messages.ts";
+import type { ChannelMessages, LiveChannelMessages, MessagesClient } from "./lib/channel-state.ts";
 import type { ChannelName, CookoutClient, MessageId } from "../sdk/index.ts";
 import type { Commands, CommandsClient } from "./lib/commands.ts";
 import type { LiveThreadMessages, ThreadClient, ThreadMessages } from "./lib/thread-messages.ts";
@@ -119,6 +121,7 @@ export function createBoard(options: BoardOptions): Board {
     back: list.reload,
     deleted: list.remove,
     live: options.live ?? null,
+    receiptReceivers: () => [...channels.values(), ...threads.values()],
     receivers: () => [list, ...channels.values(), ...threads.values()],
   });
   return {
@@ -148,7 +151,7 @@ export function createBoard(options: BoardOptions): Board {
 
 export type { ChannelCreation, ChannelCreationSnapshot, CreationState } from "./lib/channel-creation.ts";
 export type { ChannelsState } from "./lib/channel-list.ts";
-export type { ChannelMessages, ChannelMessagesState } from "./lib/channel-messages.ts";
+export type { ChannelMessages, ChannelMessagesState } from "./lib/channel-state.ts";
 export type { CallState } from "./lib/command-call.ts";
 export type { SchemaProblem } from "../sdk/index.ts";
 export type { Commands } from "./lib/commands.ts";

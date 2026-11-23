@@ -1,8 +1,8 @@
 import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, waitFor } from "@testing-library/react";
+import { inDialog, inProfile } from "./regions.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
-import { inProfile } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
 async function listedNames(prefix: string): Promise<readonly string[]> {
@@ -18,7 +18,7 @@ it("an admin sees Delete on the profile of an identity with no messages, and del
   await newIdentity({ kind: "agent", name: "web-delete-bot" });
   const close = openAt({ client: adminClient(), hash: "#/people/web-delete-bot" });
   fireEvent.click(await inProfile().findByRole("button", { name: "Delete" }));
-  fireEvent.click(await inProfile().findByRole("button", { name: "Delete @web-delete-bot" }));
+  fireEvent.click(await inDialog().findByRole("button", { name: "Delete @web-delete-bot" }));
   await inProfile().findByText("Unknown identity");
 
   await expect(listedNames("web-delete-bot")).resolves.toStrictEqual([]);

@@ -1,6 +1,9 @@
 import type { Command, Identity } from "../../sdk/index.ts";
+import { shownIn, usePresences } from "./use-presence.ts";
 import { useCallback, useMemo } from "react";
 import type { Draft } from "../../composer/index.ts";
+import type { PresenceShown } from "./use-presence.ts";
+import type { Presences } from "../../presence-store/index.ts";
 
 const NONE = 0;
 const SIGN = 1;
@@ -16,6 +19,7 @@ interface SuggestionsOf {
 interface Suggestion {
   readonly option: string;
   readonly detail: string | null;
+  readonly presence: PresenceShown | null;
 }
 
 interface Shown {
@@ -29,14 +33,19 @@ interface Handlers {
   readonly command: (option: string) => void;
 }
 
-function shownFor({ commands, suggestions }: SuggestionsOf, handlers: Handlers): Shown {
+function shownFor({ commands, suggestions }: SuggestionsOf, handlers: Handlers, presences: Presences): Shown {
   if (commands.length > NONE) {
-    const options = commands.map((command) => ({ detail: command.description ?? null, option: `/${command.name}` }));
+    const options = commands.map((command) => ({
+      detail: command.description ?? null,
+      option: `/${command.name}`,
+      presence: null,
+    }));
     return { label: COMMANDS, onChoose: handlers.command, options };
   }
   const options = suggestions.map((identity) => ({
     detail: identity.displayName ?? null,
     option: `@${identity.name}`,
+    presence: shownIn({ name: identity.name, presences }),
   }));
   return { label: MENTIONS, onChoose: handlers.mention, options };
 }
@@ -55,9 +64,10 @@ function useSuggestions(of: SuggestionsOf): Shown {
     },
     [draft],
   );
+  const presences = usePresences();
   return useMemo(
-    () => shownFor({ commands, draft, suggestions }, { command, mention }),
-    [command, commands, draft, mention, suggestions],
+    () => shownFor({ commands, draft, suggestions }, { command, mention }, presences),
+    [command, commands, draft, mention, presences, suggestions],
   );
 }
 

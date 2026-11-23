@@ -7,7 +7,6 @@ import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isIdentityName } from "../../../identities/index.ts";
 import { isMessageId } from "../../../messages/index.ts";
-import { openSqlite } from "./adapters/sqlite.ts";
 import { unreadable } from "./errors.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
@@ -108,12 +107,4 @@ function receiptsOf({ db, ids }: Listing): Fails<readonly ReadReceipt[]> {
   );
 }
 
-function backfillReadReceiptsAgain(path: string): Fails<void> {
-  return Effect.scoped(
-    Effect.flatMap(openSqlite(path), (db) =>
-      db.transaction(Effect.andThen(db.exec("DELETE FROM read_receipts;"), db.exec(BACKFILL_READ_RECEIPTS))),
-    ),
-  );
-}
-
-export { READ_RECEIPTS_MIGRATION, backfillReadReceiptsAgain, receiptsOf, recordReceiptsIn };
+export { READ_RECEIPTS_MIGRATION, receiptsOf, recordReceiptsIn };

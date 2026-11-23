@@ -15,8 +15,7 @@ type ActionState =
 
 interface IdentityActionsSnapshot {
   readonly action: ActionState;
-  readonly confirming: boolean;
-  readonly confirmingDelete: boolean;
+  readonly confirming: IdentityAction | null;
   readonly messages: number | null;
   readonly sessions: readonly ListedAgentSession[] | null;
   readonly token: Token | null;
@@ -40,16 +39,10 @@ interface IdentityActions {
   readonly snapshot: () => IdentityActionsSnapshot;
   readonly subscribeToSessions: (listener: () => void) => () => void;
   readonly subscribeToMessages: (listener: () => void) => () => void;
-  readonly rotate: () => void;
-  readonly revokeSession: () => void;
-  readonly askToDeactivate: () => void;
-  readonly askToDelete: () => void;
+  readonly ask: Readonly<Record<IdentityAction, () => void>>;
   readonly cancel: () => void;
-  readonly deactivate: () => void;
-  readonly delete: () => void;
-  readonly reactivate: () => void;
+  readonly confirm: () => void;
   readonly editTransfer: (text: string) => void;
-  readonly transfer: () => void;
   readonly forgetToken: () => void;
   readonly copyToken: () => void;
   readonly showToken: (token: Token) => void;
@@ -70,8 +63,7 @@ const IDLE = { status: "idle" } as const;
 
 const START: IdentityActionsSnapshot = {
   action: IDLE,
-  confirming: false,
-  confirmingDelete: false,
+  confirming: null,
   messages: null,
   sessions: null,
   token: null,
@@ -126,22 +118,10 @@ type Sessions = IdentityActionsSnapshot["sessions"];
 
 type Publish = (next: Partial<IdentityActionsSnapshot>) => void;
 
-type Edits = Pick<
-  IdentityActions,
-  "askToDeactivate" | "askToDelete" | "cancel" | "editTransfer" | "forgetToken" | "showToken"
->;
+type Edits = Pick<IdentityActions, "editTransfer" | "forgetToken" | "showToken">;
 
 function editsOf(publish: Publish): Edits {
   return {
-    askToDeactivate: () => {
-      publish({ confirming: true });
-    },
-    askToDelete: () => {
-      publish({ confirmingDelete: true });
-    },
-    cancel: () => {
-      publish({ confirming: false, confirmingDelete: false });
-    },
     editTransfer: (transferTo) => {
       publish({ transferTo });
     },
@@ -151,6 +131,30 @@ function editsOf(publish: Publish): Edits {
     showToken: (token) => {
       publish({ token });
     },
+  };
+}
+
+function asksOf(publish: Publish): IdentityActions["ask"] {
+  function askTo(action: IdentityAction): () => void {
+    return () => {
+      publish({ action: IDLE, confirming: action });
+    };
+  }
+  return {
+    deactivate: askTo("deactivate"),
+    delete: askTo("delete"),
+    reactivate: askTo("reactivate"),
+    revoke: askTo("revoke"),
+    rotate: askTo("rotate"),
+    transfer: askTo("transfer"),
+  };
+}
+
+function cancelOf(publish: Publish, snapshot: () => IdentityActionsSnapshot): () => void {
+  return () => {
+    if (snapshot().action.status !== "sending") {
+      publish({ action: IDLE, confirming: null });
+    }
   };
 }
 
@@ -223,30 +227,27 @@ function createIdentityActions(options: IdentityActionsOptions): IdentityActions
 
   async function runAfter(previous: Promise<void>, action: IdentityAction): Promise<void> {
     await previous;
-    publish({ action: { action, status: "sending" }, confirming: false, confirmingDelete: false });
+    publish({ action: { action, status: "sending" } });
     try {
-      publish({ ...(await sends[action]()), action: IDLE });
+      publish({ ...(await sends[action]()), action: IDLE, confirming: null });
     } catch (error: unknown) {
       publish({ action: { ...refusalOf(error), action, status: "failed" } });
     }
   }
 
-  function run(action: IdentityAction): () => void {
-    return () => {
-      queue = runAfter(queue, action);
-    };
-  }
-
   return {
     ...editsOf(publish),
+    ask: asksOf(publish),
+    cancel: cancelOf(publish, () => current),
+    confirm: () => {
+      const action = current.confirming;
+      if (action !== null) {
+        queue = runAfter(queue, action);
+      }
+    },
     copyToken: () => {
       copying = copyAfter(copying, current.token);
     },
-    deactivate: run("deactivate"),
-    delete: run("delete"),
-    reactivate: run("reactivate"),
-    revokeSession: run("revoke"),
-    rotate: run("rotate"),
     snapshot: () => current,
     subscribe: listeners.add,
     subscribeToMessages: loadingOnFirst(messagesOf, { add: listeners.add, options, publish }),
@@ -254,8 +255,7 @@ function createIdentityActions(options: IdentityActionsOptions): IdentityActions
       sessions.start();
       return listeners.add(listener);
     },
-    transfer: run("transfer"),
   };
 }
 
-export { type ActionsClient, type IdentityActions, createIdentityActions };
+export { type ActionsClient, type IdentityAction, type IdentityActions, createIdentityActions };

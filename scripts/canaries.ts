@@ -40,7 +40,9 @@ const nativeRules: readonly (readonly [string, string])[] = [
   ["eslint(complexity)", "complexity"],
   ["typescript(ban-ts-comment)", "ban-ts-comment"],
   ["eslint(no-restricted-globals)", "no-restricted-globals"],
+  ["eslint(no-restricted-globals)", "no-restricted-globals.confirm"],
   ["eslint(no-restricted-properties)", "no-restricted-properties"],
+  ["eslint(no-restricted-properties)", "no-restricted-properties.confirm"],
   ["eslint(no-restricted-imports)", "no-restricted-imports.effect"],
   ["eslint(no-restricted-imports)", "no-restricted-imports.sqlite"],
   ["web-rules(page-title-owner)", "page-title-owner"],
@@ -74,6 +76,7 @@ const tscCanaries: readonly Canary[] = [
 const seamCanaries: readonly Canary[] = [
   { check: "dependency-cruiser", code: "entry-points-only-from-app", file: `${ROOT}/seams/deep-import.ts` },
   { check: "dependency-cruiser", code: "sqlite-only-in-storage-adapter", file: `${ROOT}/seams/sqlite.ts` },
+  { check: "dependency-cruiser", code: "radix-only-in-design-system", file: `${ROOT}/seams/radix.ts` },
   {
     check: "dependency-cruiser",
     code: "tests-only-at-tested-interfaces",

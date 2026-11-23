@@ -1,9 +1,12 @@
+import { PresenceDot } from "./presence-dot.tsx";
+import type { PresenceShown } from "./avatar-parts.ts";
 import type { ReactNode } from "react";
 import { useCallback } from "react";
 
 interface OptionParts {
   readonly option: string;
   readonly detail: string | null;
+  readonly presence: PresenceShown | null;
   readonly highlighted: boolean;
   readonly onChoose: (option: string) => void;
 }
@@ -16,7 +19,7 @@ function optionStyle(highlighted: boolean): string {
 }
 
 export function SuggestionOption(parts: OptionParts): ReactNode {
-  const { onChoose, option } = parts;
+  const { onChoose, option, presence } = parts;
   const handleClick = useCallback(() => {
     onChoose(option);
   }, [onChoose, option]);
@@ -28,6 +31,7 @@ export function SuggestionOption(parts: OptionParts): ReactNode {
         onClick={handleClick}
         type="button"
       >
+        {presence !== null && <PresenceDot label={presence.label} online={presence.online} place="inline" />}
         <span>{option}</span>
         {parts.detail !== null && <span className="truncate text-xs text-muted-foreground">{parts.detail}</span>}
       </button>

@@ -112,7 +112,12 @@ it.effect("the thread panel doesn't repeat the parent's day for replies on it, a
 
     const shown = yield* shownTo(grace, threadOf(parent), "Replies");
 
-    expect(shown).toStrictEqual(["alanfirst", "second", "[Friday, 2 January]", "alanlater"]);
+    expect(shown).toStrictEqual([
+      "alanfirstNot seen yet: @ada",
+      "secondNot seen yet: @ada",
+      "[Friday, 2 January]",
+      "alanlaterNot seen yet: @ada",
+    ]);
   }).pipe(Effect.provide(testCookout())),
 );
 

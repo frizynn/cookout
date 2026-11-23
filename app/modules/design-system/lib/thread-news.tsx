@@ -9,7 +9,7 @@ interface ThreadNewsParts {
 export function ThreadNews(parts: ThreadNewsParts): ReactNode {
   return (
     <>
-      {parts.forYou && <AccentDot place="inline" />}
+      {parts.forYou && <AccentDot />}
       <span className="font-semibold text-foreground">{parts.children}</span>
     </>
   );

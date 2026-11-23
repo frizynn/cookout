@@ -1,7 +1,7 @@
 import { adminClient, clientWith, newIdentity } from "./identities.ts";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { expect, it, onTestFinished, vi } from "vitest";
-import { inSettings, inSidebar } from "./regions.ts";
+import { inDialog, inSettings, inSidebar } from "./regions.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
 import type { Mock } from "vitest";
 import { alertSaying } from "./alerts.ts";
@@ -36,6 +36,15 @@ async function press(name: string, button: string): Promise<void> {
   fireEvent.click(within(await agentCard(name)).getByRole("button", { name: button }));
 }
 
+async function confirmWith(button: string): Promise<void> {
+  fireEvent.click(await inDialog().findByRole("button", { name: button }));
+}
+
+async function pressAndAnswer(name: string, button: string, answer: string): Promise<void> {
+  await press(name, button);
+  await confirmWith(answer);
+}
+
 async function shownToken(name: string): Promise<string> {
   const token = await within(await agentCard(name)).findByLabelText("New Identity token");
   return token.textContent;
@@ -64,6 +73,7 @@ async function nameWith(token: string): Promise<string> {
 
 async function rotateIn(name: string): Promise<string> {
   await press(name, "Rotate token");
+  await confirmWith("Rotate token");
   const token = await shownToken(name);
   return token;
 }
@@ -91,6 +101,11 @@ async function submitIn(label: string, text: string): Promise<void> {
   fireEvent.click(within(form).getByRole("button"));
 }
 
+async function transferTo(name: string, owner: string): Promise<void> {
+  await submitIn(`Transfer @${name}`, owner);
+  await confirmWith(`Transfer to @${owner}`);
+}
+
 it("settings lists your agents with their live session, and Revoke ends it", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
@@ -99,7 +114,7 @@ it("settings lists your agents with their live session, and Revoke ends it", { t
   const close = await openSettings(human);
   const card = await agentCard("web-mine-session-bot");
   const { textContent: before } = await within(card).findByText(/^Joined from laptop/u);
-  await press("web-mine-session-bot", "Revoke session");
+  await pressAndAnswer("web-mine-session-bot", "Revoke session", "Revoke session");
   await within(card).findByText("No live session");
 
   expect([before, await refusalWith(session)]).toStrictEqual([
@@ -161,10 +176,10 @@ it("deactivate asks first, naming the agent, then marks it deactivated", { timeo
 
   const { bot, human } = await crewOf("web-mine-off");
   const close = await openSettings(human);
-  await press("web-mine-off-bot", "Deactivate");
   const card = await agentCard("web-mine-off-bot");
+  await press("web-mine-off-bot", "Deactivate");
   const refusalBefore = await refusalWith(bot);
-  await press("web-mine-off-bot", "Deactivate @web-mine-off-bot");
+  await confirmWith("Deactivate @web-mine-off-bot");
   await within(card).findByRole("button", { name: "Reactivate" });
 
   expect([refusalBefore, await refusalWith(bot), within(card).getByText("(deactivated)").textContent]).toStrictEqual([
@@ -182,12 +197,12 @@ it("an admin transfers an agent from its profile, and its owner shows at once", 
   await crewOf("web-mine-move");
   await newIdentity({ kind: "human", name: "web-mine-move-grace" });
   const panel = await profileAs(adminClient(), "web-mine-move-bot");
-  await submitIn("Transfer @web-mine-move-bot", "web-mine-move-grace");
+  await transferTo("web-mine-move-bot", "web-mine-move-grace");
   await within(panel).findByText("Agent · owned by web-mine-move-grace");
-  await submitIn("Transfer @web-mine-move-bot", "nobody-here");
+  await transferTo("web-mine-move-bot", "nobody-here");
   const alert = await alertSaying("Couldn't transfer");
 
-  expect(panel.contains(alert)).toBe(true);
+  expect(inDialog().element().contains(alert)).toBe(true);
 });
 
 it("on a profile, the owner gets the agent's actions without Transfer, and others get none", {
@@ -231,12 +246,13 @@ it("a session not yet used shows when it joined, and Cancel keeps the agent acti
   const close = await openSettings(human);
   const card = await agentCard("web-mine-cancel-bot");
   const { textContent: line } = await within(card).findByText(/^Joined/u);
-  await press("web-mine-cancel-bot", "Deactivate");
-  await press("web-mine-cancel-bot", "Cancel");
+  await pressAndAnswer("web-mine-cancel-bot", "Deactivate", "Cancel");
+  await within(card).findByRole("button", { name: "Deactivate" });
 
-  expect([line, within(card).queryByRole("button", { name: "Deactivate @web-mine-cancel-bot" })]).toStrictEqual([
+  expect([line, screen.queryByRole("alertdialog"), await refusalWith(bot)]).toStrictEqual([
     expect.stringMatching(/^Joined · not used yet · expires .+/u),
     null,
+    "accepted",
   ]);
 
   close();

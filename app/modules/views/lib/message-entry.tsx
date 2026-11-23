@@ -1,8 +1,8 @@
-import type { ChannelName, Message, MessageId } from "../../sdk/index.ts";
+import type { ChannelName, Message, MessageId, ReadReceipt } from "../../sdk/index.ts";
 import type { MessageMenu, ThreadNews } from "../../unread/index.ts";
 import { markOf, threadHref, threadSummaryOf } from "./message-marks.ts";
 import { useMessageMenu, useReplyAction } from "./use-message-menu.ts";
-import { MessageData } from "./message-data.tsx";
+import { MessageContent } from "./message-content.tsx";
 import { MessageItem } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
 import { ReplySummary } from "./reply-summary.tsx";
@@ -25,13 +25,14 @@ interface MessageEntryProps {
   readonly open: MessageId | null;
   readonly parent: Message | null;
   readonly news: ThreadNews | null;
+  readonly receipts: readonly ReadReceipt[];
   readonly menu: MessageMenu;
   readonly reply: ((name: string | null) => void) | null;
 }
 
 export function MessageEntry(props: MessageEntryProps): ReactNode {
   const { message } = props.row;
-  const { agent, displayName, note, profileHref } = useAuthor(message.author);
+  const { agent, displayName, note, presence, profileHref } = useAuthor(message.author);
   const href = threadHref({ channel: props.channel, message });
   const summary = threadSummaryOf(message);
   const menu = useMessageMenu({ menu: props.menu, messageId: message.id, place: "stream" });
@@ -49,11 +50,12 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
       name={message.author.name}
       nameHref={profileHref}
       note={note}
+      presence={presence}
       onAction={handleReply}
       time={useMessageTime(message.createdAt)}
       unreadLine={props.row.unreadLine}
     >
-      <MessageData me={props.me} message={message} />
+      <MessageContent me={props.me} message={message} parent={props.parent} receipts={props.receipts} />
       {href !== null && summary !== null && <ReplySummary href={href} news={props.news} summary={summary} />}
     </MessageItem>
   );

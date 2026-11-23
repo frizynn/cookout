@@ -27,7 +27,7 @@ export function ThreadSummary(parts: ThreadSummaryParts): ReactNode {
     >
       <span className="flex -space-x-1 *:nth-1:z-30 *:nth-2:z-20 *:nth-3:z-10">
         {parts.repliers.map((replier) => (
-          <Avatar agent={replier.agent} key={replier.name} name={replier.name} size="tiny" />
+          <Avatar agent={replier.agent} key={replier.name} name={replier.name} presence={null} size="tiny" />
         ))}
       </span>
       <span className="font-medium text-foreground">{parts.count}</span>

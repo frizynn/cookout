@@ -133,6 +133,14 @@ function endBootGrace(at: At): BookState {
   return { ...at.state, onBootGrace: withoutBootGrace(at) };
 }
 
+function forget(at: At): BookState {
+  const held = new Map(at.state.held);
+  held.delete(at.identity);
+  const lastSeen = new Map(at.state.lastSeen);
+  lastSeen.delete(at.identity);
+  return { ...at.state, held, lastSeen, onBootGrace: withoutBootGrace(at) };
+}
+
 function liveConnectionsIn(at: At): number {
   return heldBy(at).connections.size;
 }
@@ -153,6 +161,7 @@ export {
   connect,
   endBootGrace,
   endGrace,
+  forget,
   liveConnectionsIn,
   onlineAtStop,
   openBook,

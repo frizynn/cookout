@@ -42,6 +42,7 @@ export async function startWebTestCookout(): Promise<RunningWebTestCookout> {
     "env",
     [
       `COOKOUT_ADMIN_TOKEN=${adminToken}`,
+      "COOKOUT_PRESENCE_GRACE_SECONDS=0",
       process.execPath,
       "app/main.ts",
       "serve",

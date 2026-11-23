@@ -4,7 +4,7 @@ const TESTS = `^${R}/[^/]+/tests/`;
 const BACKEND = `^${R}/[^/]+/(server\\.ts$|lib/server/)`;
 const ENTRIES = String.raw`^app/(main\.ts|dev\.ts|web\.tsx)$`;
 const DEV_ENTRY = String.raw`^app/dev\.ts$`;
-const WEB = `^app/web\\.tsx$|^${R}/(design-system|session|board|unread|composer|live|layout|paths|routes|format|views)/`;
+const WEB = `^app/web\\.tsx$|^${R}/(design-system|session|board|unread|composer|live|presence-store|layout|paths|routes|format|views)/`;
 const PUBLISHED_ENTRIES = ["app/main.ts", `${R}/sdk/index.ts`];
 const PUBLISHED_SDK = `${R}/sdk/index.ts`;
 const TESTED_INTERFACES = ["sdk", "cli", "storage", "webhook-fake", "dev", "routes"];
@@ -153,6 +153,12 @@ module.exports = {
       name: "markdown-only-in-markdown-text",
       severity: "error",
       to: { path: "(^|/)node_modules/(react-markdown|remark-[^/]+|unified|micromark[^/]*|mdast-[^/]+)/" },
+    },
+    {
+      from: { pathNot: `^${R}/design-system/` },
+      name: "radix-only-in-design-system",
+      severity: "error",
+      to: { path: "(^|/)node_modules/@radix-ui/" },
     },
     {
       from: {},

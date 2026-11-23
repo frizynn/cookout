@@ -4,10 +4,12 @@ import type {
   Message,
   MessageId,
   ReadPosition,
+  ReadReceipt,
   Reply,
   TopLevelMessage,
 } from "../../sdk/index.ts";
 import type { Failure, PostState } from "./failure.ts";
+import { withHeard, withReceipts } from "./receipts.ts";
 import { failure } from "./failure.ts";
 
 type ReadState =
@@ -20,6 +22,7 @@ interface Loaded {
   readonly status: "loaded";
   readonly parent: TopLevelMessage;
   readonly replies: readonly Reply[];
+  readonly receipts: readonly ReadReceipt[];
   readonly read: ReadState;
   readonly reply: PostState;
 }
@@ -34,6 +37,8 @@ interface ThreadMessages {
 
 interface LiveThreadMessages extends ThreadMessages {
   readonly receive: (message: Message) => void;
+  readonly receiveReceipt: (receipt: ReadReceipt) => void;
+  readonly refetch: () => void;
 }
 
 type ThreadClient = Pick<CookoutClient, "ack" | "createMessage" | "getThread">;
@@ -86,8 +91,15 @@ async function ack(thread: Thread, id: MessageId): Promise<void> {
 
 async function load(thread: Thread): Promise<void> {
   try {
-    const { parent, replies } = await thread.client.getThread(thread.id);
-    const loaded: Loaded = { parent, read: { status: "none" }, replies, reply: { status: "idle" }, status: "loaded" };
+    const { parent, receipts, replies } = await thread.client.getThread(thread.id);
+    const loaded: Loaded = {
+      parent,
+      read: { status: "none" },
+      receipts,
+      replies,
+      reply: { status: "idle" },
+      status: "loaded",
+    };
     thread.publish(loaded);
     await ack(thread, latestOf(loaded));
   } catch (error: unknown) {
@@ -101,8 +113,13 @@ async function reload(thread: Thread): Promise<void> {
     return;
   }
   try {
-    const { parent, replies } = await thread.client.getThread(thread.id);
-    update(thread, (loaded) => ({ ...loaded, parent, replies }));
+    const { parent, receipts, replies } = await thread.client.getThread(thread.id);
+    update(thread, (loaded) => ({
+      ...loaded,
+      parent,
+      receipts: withReceipts({ fresh: receipts, receipts: loaded.receipts }),
+      replies,
+    }));
     await ack(thread, latestOf({ parent, replies }));
   } catch (error: unknown) {
     update(thread, (loaded) => ({ ...loaded, read: failure(error) }));
@@ -118,12 +135,21 @@ async function postReply(thread: Thread, { posted, text }: ReplyRequest): Promis
   update(thread, (loaded) => ({ ...loaded, reply: { status: "posting" } }));
   try {
     await thread.client.createMessage({ channel: thread.channel, replyTo: thread.id, text });
-    const { replies } = await thread.client.getThread(thread.id);
-    update(thread, (loaded) => ({ ...loaded, replies, reply: { status: "idle" } }));
+    const { receipts, replies } = await thread.client.getThread(thread.id);
+    update(thread, (loaded) => ({
+      ...loaded,
+      receipts: withReceipts({ fresh: receipts, receipts: loaded.receipts }),
+      replies,
+      reply: { status: "idle" },
+    }));
     posted();
   } catch (error: unknown) {
     update(thread, (loaded) => ({ ...loaded, reply: failure(error) }));
   }
+}
+
+function holds(loaded: Loaded, id: MessageId): boolean {
+  return loaded.parent.id === id || loaded.replies.some((reply) => reply.id === id);
 }
 
 async function ackAfter(previous: Promise<void> | null, thread: Thread, id: MessageId): Promise<void> {
@@ -167,6 +193,17 @@ function createThreadMessages(options: ThreadOptions): LiveThreadMessages {
       update(thread, (loaded) => received(loaded, message));
       if (state !== before && listeners.size > NONE_OPEN) {
         queue = ackAfter(queue, thread, message.id);
+      }
+    },
+    receiveReceipt: (receipt) => {
+      update(thread, (loaded) => ({
+        ...loaded,
+        receipts: withHeard({ holds: (id) => holds(loaded, id), receipt, receipts: loaded.receipts }),
+      }));
+    },
+    refetch: () => {
+      if (listeners.size > NONE_OPEN) {
+        queue = reloadAfter(queue, thread);
       }
     },
     reply: (text, posted) => {

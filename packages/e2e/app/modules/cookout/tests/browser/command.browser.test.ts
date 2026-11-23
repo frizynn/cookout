@@ -32,6 +32,7 @@ test("a person sees a call to the example command and the handler's result reply
       shownMessage({
         body: `/${exampleCommand} is done.▸ data▾ data${pretty({ received: { branch: "main" } })}`,
         header: `${exampleCommand}agent`,
+        seenBy: identity.name,
       }),
     ],
     { timeout: REPLY_WITHIN },

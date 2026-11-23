@@ -1,0 +1,128 @@
+import { adminClient, clientWith, newIdentity } from "./identities.ts";
+import { agentNamed, authorDot, offline, online, profileDot, readerOn, rowDot } from "./presence.ts";
+import { expect, it } from "vitest";
+import type { Live } from "../../live/index.ts";
+import { createLive } from "../../live/index.ts";
+import { inProfile } from "./regions.ts";
+import { openAt } from "./render.tsx";
+import { within } from "@testing-library/react";
+
+type Link = ReturnType<Live["link"]>;
+
+const SEEN = "Offline, last seen just now";
+const NO_BADGE = 0;
+
+interface Cuttable {
+  readonly live: Live;
+  readonly report: (link: Link) => void;
+}
+
+function cuttable(): Cuttable {
+  const reports: ((link: Link) => void)[] = [];
+  const live = createLive({
+    open: (_onEvent, onLink) => {
+      reports.push(onLink);
+    },
+  });
+  return {
+    live,
+    report: (link) => {
+      for (const onLink of reports) {
+        onLink(link);
+      }
+    },
+  };
+}
+
+it("an author who is watching shows an online dot, and going offline turns it into an offline ring with no reload", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const agent = await agentNamed("web-presence-author-bot");
+  await adminClient().createChannel({ name: "web-presence-author" });
+  await agent.client.createMessage({ channel: "web-presence-author", text: "Beep from the bot" });
+  const events = await agent.watch();
+  await readerOn({ hash: "#/channels/web-presence-author", reader: "web-presence-author-reader" });
+
+  await expect(authorDot({ at: "Beep from the bot", label: "Online" })).resolves.toStrictEqual(online());
+
+  await events.close();
+
+  await expect(authorDot({ at: "Beep from the bot", label: SEEN })).resolves.toStrictEqual(offline(SEEN));
+});
+
+it("a People row and the profile show an online agent's dot, and the profile how it is connected", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const agent = await agentNamed("web-presence-host-bot");
+  const { agentSessionToken } = await agent.client.join({ as: "web-presence-host-bot", host: "laptop-1" });
+  await clientWith(agentSessionToken).watch();
+  await readerOn({ hash: "#/people/web-presence-host-bot", reader: "web-presence-host-reader" });
+
+  await expect(
+    Promise.all([
+      rowDot({ at: "web-presence-host-bot", label: "Online" }),
+      profileDot("Online"),
+      inProfile().findByText("Online · watching from laptop-1"),
+    ]),
+  ).resolves.toStrictEqual([online(), online(), expect.anything()]);
+});
+
+it("once an agent goes offline, its People row and profile show the ring and its profile when it was last seen", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const agent = await agentNamed("web-presence-seen-bot");
+  const events = await agent.watch();
+  await readerOn({ hash: "#/people/web-presence-seen-bot", reader: "web-presence-seen-reader" });
+  await inProfile().findByText("Online · watching");
+  await events.close();
+
+  await expect(
+    Promise.all([
+      rowDot({ at: "web-presence-seen-bot", label: SEEN }),
+      profileDot(SEEN),
+      inProfile().findByText("Offline · last seen just now"),
+    ]),
+  ).resolves.toStrictEqual([offline(SEEN), offline(SEEN), expect.anything()]);
+});
+
+it("an agent never seen shows only that it is offline, its avatar has no badge, and its profile says it is an agent", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await agentNamed("web-presence-never-bot");
+  await readerOn({ hash: "#/people/web-presence-never-bot", reader: "web-presence-never-reader" });
+
+  await expect(profileDot("Offline")).resolves.toStrictEqual(offline());
+
+  const avatar = within(inProfile().element()).getByTestId("avatar");
+
+  expect([
+    inProfile().getByText("Offline").textContent,
+    avatar.dataset["agent"],
+    avatar.childElementCount,
+    inProfile().getByText(/^Agent · owned by admin$/u).textContent,
+  ]).toStrictEqual(["Offline", "true", NO_BADGE, "Agent · owned by admin"]);
+});
+
+it("a presence change made while the live link was down shows once it is back", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const agent = await agentNamed("web-presence-missed-bot");
+  const reader = await newIdentity({ kind: "human", name: "web-presence-missed-reader" });
+  const { live, report } = cuttable();
+  openAt({ client: reader.client, hash: "#/people", live });
+  await rowDot({ at: "web-presence-missed-bot", label: "Offline" });
+
+  report("down");
+  await agent.watch();
+  report("up");
+
+  await expect(rowDot({ at: "web-presence-missed-bot", label: "Online" })).resolves.toStrictEqual(online());
+});

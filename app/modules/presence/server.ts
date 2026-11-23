@@ -5,20 +5,22 @@
  * for as long as it is open, and the all-channels feed sends each change as a `presence` event. An identity stays
  * online for `COOKOUT_PRESENCE_GRACE_SECONDS` after its last live connection closes, and storage keeps when it was
  * last seen and whether it was online, so after a restart the identities that were online keep showing online for
- * 5 minutes, the time a `cookout watch` keeps retrying, or until they reconnect.
+ * 5 minutes, the time a `cookout watch` keeps retrying, or until they reconnect. An identity the `IdentityChanges`
+ * hub announces deleted leaves the registry, as it leaves storage. An agent holds one live connection at most
+ * (ADR "one live connection per agent"): a newer one ends the one before with `watchReplacedRefusal`.
  */
 import type { Config, PubSub, Scope } from "effect";
 import { Context, Duration, Effect, Layer } from "effect";
 import type { Identity, IdentityName } from "../identities/index.ts";
+import type { LiveConnection, Registry, RegistryNeeds } from "./lib/server/registry.ts";
 import type { LiveConnectionDetail, Presence } from "./index.ts";
+import { openRegistry, openReplacements } from "./lib/server/registry.ts";
 import { HttpServerResponse } from "effect/http";
 import { PresenceResponseSchema } from "./lib/server/wire.ts";
-import type { Registry } from "./lib/server/registry.ts";
 import type { Route } from "../http/server.ts";
 import { Storage } from "../storage/server.ts";
 import type { StorageUnavailable } from "../storage/server.ts";
 import { connectionDetail } from "./lib/server/connection.ts";
-import { openRegistry } from "./lib/server/registry.ts";
 import { presenceGraceSeconds } from "../config/server.ts";
 import { presencePath } from "./index.ts";
 
@@ -42,11 +44,15 @@ function presenceOfEach(registry: Registry, identities: readonly Identity[]): Ef
 
 /** The presence of the running server's identities. */
 export interface PresenceService {
-  /** Holds a live connection of `identity`, with how it connects, until the scope closes. */
+  /**
+   * Holds a live connection of `identity`, with how it connects, until the scope closes. An agent holds one at most,
+   * so an agent's replaces the one it held before; the answer's `replaced` succeeds once a newer one replaces this
+   * one, and never for a human's.
+   */
   readonly holdLiveConnection: (
-    identity: IdentityName,
+    identity: Identity,
     detail: LiveConnectionDetail,
-  ) => Effect.Effect<void, never, Scope.Scope>;
+  ) => Effect.Effect<LiveConnection, never, Scope.Scope>;
   /** Every identity's presence, Deactivated ones (always offline) included, sorted by name. */
   readonly everyone: Effect.Effect<readonly Presence[], StorageUnavailable>;
   /** Each identity's presence the moment it changes. */
@@ -60,7 +66,7 @@ export class PresenceRegistry extends Context.Service<PresenceRegistry, Presence
 ) {}
 
 /** `PresenceRegistry` on the running `Storage`, with the grace from `COOKOUT_PRESENCE_GRACE_SECONDS`. */
-export const presenceLayer: Layer.Layer<PresenceRegistry, Config.ConfigError | StorageUnavailable, Storage> =
+export const presenceLayer: Layer.Layer<PresenceRegistry, Config.ConfigError | StorageUnavailable, RegistryNeeds> =
   Layer.effect(
     PresenceRegistry,
     Effect.gen(function* openPresence() {
@@ -68,10 +74,12 @@ export const presenceLayer: Layer.Layer<PresenceRegistry, Config.ConfigError | S
       const graceSeconds = yield* presenceGraceSeconds;
       const graceMillis = Duration.toMillis(Duration.seconds(graceSeconds));
       const registry = yield* openRegistry({ bootGraceMillis: BOOT_GRACE, graceMillis });
+      const replacements = yield* openReplacements;
       return {
         changed: registry.changed,
         everyone: Effect.flatMap(storage.listIdentities(), (identities) => presenceOfEach(registry, identities)),
-        holdLiveConnection: registry.hold,
+        holdLiveConnection: (identity, detail) =>
+          Effect.andThen(registry.hold(identity.name, detail), replacements.take(identity)),
         liveConnections: registry.liveConnections,
       };
     }),
@@ -80,15 +88,16 @@ export const presenceLayer: Layer.Layer<PresenceRegistry, Config.ConfigError | S
 /**
  * Holds a live connection of the stream's caller until the scope closes. A stream sent with no `Authorization`
  * header (so with the web UI's session cookie) is a web tab; any other is a `cookout watch`, with the host its agent
- * session was joined from when it was sent with an agent session token whose joining client sent one.
+ * session was joined from when it was sent with an agent session token whose joining client sent one. The answer's
+ * `replaced` succeeds once a newer live connection of the same agent replaces this one.
  */
 export const holdLiveConnection = Effect.fnUntraced(function* holdCallersLiveConnection(stream: {
   readonly caller: Identity;
   readonly authorization: string | undefined;
-}): Effect.fn.Return<void, never, PresenceRegistry | Storage | Scope.Scope> {
+}): Effect.fn.Return<LiveConnection, never, PresenceRegistry | Storage | Scope.Scope> {
   const presence = yield* PresenceRegistry;
   const detail = yield* connectionDetail(stream);
-  yield* presence.holdLiveConnection(stream.caller.name, detail);
+  return yield* presence.holdLiveConnection(stream.caller, detail);
 });
 
 /** `GET /v1/presence`, for the server's route list, behind the token gate. */
@@ -107,3 +116,6 @@ export const presenceRoutes: readonly Route<PresenceRegistry>[] = [
 
 /** The Schemas of one identity's presence and of `GET /v1/presence`'s answer, for the live stream and the SDK's validators. */
 export { PresenceResponseSchema, PresenceSchema } from "./lib/server/wire.ts";
+
+/** The refusal that ends an agent's live connection when a newer one opens: `cookout watch` exits 6 on it. */
+export { watchReplacedRefusal } from "./lib/server/registry.ts";

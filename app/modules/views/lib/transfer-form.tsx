@@ -15,7 +15,7 @@ export function TransferForm(props: TransferFormProps): ReactNode {
   const { actions } = props;
   const state = useSyncExternalStore(actions.subscribe, actions.snapshot);
   const handleEdit = actions.editTransfer;
-  const handleTransfer = actions.transfer;
+  const handleTransfer = actions.ask.transfer;
   return (
     <LineForm
       field={TEXT.field}
