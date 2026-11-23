@@ -1,7 +1,7 @@
 import type { ChannelName, CookoutClient, Message, ReadPosition, Reply, TopLevelMessage } from "../../sdk/index.ts";
+import type { Failure, PostState } from "./failure.ts";
 import { callFailure, notJson, parseData } from "./command-call.ts";
 import type { CallState } from "./command-call.ts";
-import type { Failure } from "./failure.ts";
 import { failure } from "./failure.ts";
 
 type OlderState = { readonly status: "idle" } | { readonly status: "loading" } | Failure;
@@ -20,6 +20,7 @@ interface Loaded {
   readonly read: ReadState;
   readonly call: CallState;
   readonly callData: string;
+  readonly post: PostState;
 }
 
 type ChannelMessagesState = { readonly status: "loading" } | Failure | Loaded;
@@ -30,13 +31,14 @@ interface ChannelMessages {
   readonly loadOlder: () => void;
   readonly call: (command: string, data: string) => void;
   readonly editCallData: (data: string) => void;
+  readonly post: (text: string, posted: () => void) => void;
 }
 
 interface LiveChannelMessages extends ChannelMessages {
   readonly receive: (message: Message) => void;
 }
 
-type MessagesClient = Pick<CookoutClient, "ack" | "callCommand" | "listMessages">;
+type MessagesClient = Pick<CookoutClient, "ack" | "callCommand" | "createMessage" | "listMessages">;
 
 interface Channel {
   readonly client: MessagesClient;
@@ -77,6 +79,7 @@ async function loadNewest(channel: Channel): Promise<void> {
       hasMore,
       messages,
       older: { status: "idle" },
+      post: { status: "idle" },
       read: { status: "none" },
       status: "loaded",
     });
@@ -189,6 +192,22 @@ function received(loaded: Loaded, message: Message): Loaded {
   return { ...loaded, messages: [...loaded.messages, message] };
 }
 
+interface PostRequest {
+  readonly text: string;
+  readonly posted: () => void;
+}
+
+async function postMessage(channel: Channel, { posted, text }: PostRequest): Promise<void> {
+  update(channel, (loaded) => ({ ...loaded, post: { status: "posting" } }));
+  try {
+    const { message } = await channel.client.createMessage({ channel: channel.name, text });
+    update(channel, (loaded) => ({ ...received(loaded, message), post: { status: "idle" } }));
+    posted();
+  } catch (error: unknown) {
+    update(channel, (loaded) => ({ ...loaded, post: failure(error) }));
+  }
+}
+
 interface ChannelOptions {
   readonly client: MessagesClient;
   readonly name: ChannelName;
@@ -198,6 +217,11 @@ interface ChannelOptions {
 async function callAfter(previous: Promise<void> | null, channel: Channel, request: CallRequest): Promise<void> {
   await previous;
   await callCommand(channel, request);
+}
+
+async function postAfter(previous: Promise<void> | null, channel: Channel, request: PostRequest): Promise<void> {
+  await previous;
+  await postMessage(channel, request);
 }
 
 async function ackAfter(previous: Promise<void> | null, channel: Channel, message: TopLevelMessage): Promise<void> {
@@ -238,6 +262,9 @@ function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
     },
     loadOlder: () => {
       queue = loadOlderAfter(queue, channel);
+    },
+    post: (text, posted) => {
+      queue = postAfter(queue, channel, { posted, text });
     },
     receive: (message) => {
       if (message.channel !== options.name) {

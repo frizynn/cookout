@@ -7,7 +7,7 @@ import type {
   Reply,
   TopLevelMessage,
 } from "../../sdk/index.ts";
-import type { Failure } from "./failure.ts";
+import type { Failure, PostState } from "./failure.ts";
 import { failure } from "./failure.ts";
 
 type ReadState =
@@ -16,14 +16,12 @@ type ReadState =
   | { readonly status: "acked"; readonly readPosition: ReadPosition }
   | Failure;
 
-type ReplyState = { readonly status: "idle" } | { readonly status: "posting" } | Failure;
-
 interface Loaded {
   readonly status: "loaded";
   readonly parent: TopLevelMessage;
   readonly replies: readonly Reply[];
   readonly read: ReadState;
-  readonly reply: ReplyState;
+  readonly reply: PostState;
 }
 
 type ThreadMessagesState = { readonly status: "loading" } | Failure | Loaded;
@@ -188,10 +186,4 @@ function createThreadMessages(options: ThreadOptions): LiveThreadMessages {
   };
 }
 
-export {
-  type LiveThreadMessages,
-  type ThreadClient,
-  type ThreadMessages,
-  type ThreadMessagesState,
-  createThreadMessages,
-};
+export { type LiveThreadMessages, type ThreadClient, type ThreadMessages, createThreadMessages };

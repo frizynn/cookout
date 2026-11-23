@@ -492,6 +492,21 @@ agent-browser --session cookout find role button click --name "@triage-agent" &&
 
 The first snapshot shows a list named `Mention suggestions` under the box with one button, `@triage-agent`; a bare `@` lists every identity, humans and agents, sorted by name. After choosing it the list is gone, the box still has the focus, and it reads `Can @triage-agent post the run?`. An `@` straight after a letter (`me@admin`) suggests nobody. Each thread keeps its own draft.
 
+## Post a message in a channel
+
+Below a channel's messages is a message box: a form named `Post to the channel` with a `Message` text box and a `Send message` button. It posts a top-level message as the logged-in human, suggests identities to mention as the reply box does, and keeps its own draft per channel. Posting adds the message to the end of the list and clears the box; the server counts it read for its poster, so it never enters their inbox. A post the server refuses shows `Couldn't post the message (<code>): …` and keeps the text in the box. Logged in as `grace` (the "Log in to the web UI" recipe, same session):
+
+```sh
+agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" && agent-browser --session cookout click 'textarea[name=text]'
+agent-browser --session cookout keyboard type "Can @tr" && agent-browser --session cookout screenshot /tmp/cookout-channel-box.png
+agent-browser --session cookout find role button click --name "@triage-agent" && agent-browser --session cookout keyboard type "take the flaky test?"
+agent-browser --session cookout find role button click --name "Send message" && agent-browser --session cookout wait --text "take the flaky test?" && agent-browser --session cookout snapshot
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "triage-agent") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.id, .message.text, .reasons]'
+env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
+```
+
+The screenshot shows the box under the messages with a `Mention suggestions` list holding `@triage-agent`. After `Send message` the `Messages` list ends with `@grace`, `Can @triage-agent take the flaky test?` and `0 replies`, and the box is empty. `triage-agent`'s inbox ends with that message and `["mention"]` (`[9,…]` on a fresh seed with nothing posted since); `grace`'s inbox doesn't have it.
+
 ## See a command call and call a command in the web UI
 
 A message's data shows under its text as a block of JSON named `Data`. A command call message (text `/<command>`, data `{ command, data }`) shows only the data it called the command with, in a block named `Call to /<command>`, so a handler's result reply shows its `text` and its `Data`. Under a channel's messages, a form named `Call a command` has a `Command` pick of every registered command (`/<name>`), a `Data` box for JSON and a `Call` button: a good call adds the call message to the end of the channel; data the command's schema refuses shows an alert, `Couldn't call /<command> (invalid_request): …`, with a list named `Schema errors` of `<path>: <message>` rows, and posts nothing. The `Data` box keeps what was typed after a refused call, so it can be fixed and sent again; a good call empties it. With no commands registered there is no form. Logged in as `grace` (the "Log in to the web UI" recipe, same session), open the seeded call's thread, then call `rollback` with bad data and with good:

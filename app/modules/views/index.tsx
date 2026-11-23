@@ -7,10 +7,10 @@
  * its mention count after it (the `unread` store), or says why it can't; `ChannelView` shows a channel's top-level
  * messages with their reply counts, newest last, with "Load more" for older
  * ones, and viewing it marks the channel read, with a form to call a command
- * there that shows the schema errors of data the command refuses; `ThreadView` shows a thread's
- * parent message and its replies, oldest first, with a reply box that
- * suggests identities to mention as `@` and a name are typed (the `composer`
- * store), and opening it marks the thread read; each links back up a level. A message's data is
+ * there that shows the schema errors of data the command refuses, and a message box that posts a top-level
+ * message there; `ThreadView` shows a thread's parent message and its replies, oldest first, with a reply
+ * box, and opening it marks the thread read. Both boxes suggest identities to mention as `@` and a name are
+ * typed, and keep their text in a draft (the `composer` store) until a post succeeds; each links back up a level. A message's data is
  * shown with it, a command call's as the data it called the command with. `InboxView` lists the
  * inbox items of whoever is logged in, oldest first, each with its reasons and a link to where it
  * is read, after each channel's unread and mention counts (the `unread` store, live). `NotBuiltView` says
