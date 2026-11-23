@@ -1,6 +1,6 @@
 import { channelRoutes, channelsLayer } from "../../../channels/server.ts";
 import { commandRoutes, commandsLayer } from "../../../commands/server.ts";
-import { identitiesLayer, identityRoutes } from "../../../identities/server.ts";
+import { displayNameRoutes, displayNamesLayer, identitiesLayer, identityRoutes } from "../../../identities/server.ts";
 import { inboxLayer, inboxRoutes } from "../../../inbox/server.ts";
 import { leaseRoutes, leasesLayer } from "../../../leases/server.ts";
 import { messageRoutes, messagesLayer } from "../../../messages/server.ts";
@@ -13,6 +13,7 @@ type NeedsOf<Routes> = Routes extends readonly Route<infer Needs>[] ? Needs : ne
 
 type RouteNeeds =
   | NeedsOf<typeof identityRoutes>
+  | NeedsOf<typeof displayNameRoutes>
   | NeedsOf<typeof channelRoutes>
   | NeedsOf<typeof messageRoutes>
   | NeedsOf<typeof leaseRoutes>
@@ -22,6 +23,7 @@ type RouteNeeds =
 
 export const routes: readonly Route<RouteNeeds>[] = [
   ...identityRoutes,
+  ...displayNameRoutes,
   ...channelRoutes,
   ...messageRoutes,
   ...leaseRoutes,
@@ -32,6 +34,7 @@ export const routes: readonly Route<RouteNeeds>[] = [
 
 export const domainLayers = Layer.mergeAll(
   identitiesLayer,
+  displayNamesLayer,
   channelsLayer,
   messagesLayer,
   leasesLayer,

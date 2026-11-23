@@ -115,3 +115,12 @@ export const identityResponseSchemas = { ...responseSchemas };
 
 /** Refuses with 403 `admin_only` unless `Caller` is an admin. */
 export { requireAdmin } from "./lib/server/auth.ts";
+
+/**
+ * `PUT /v1/identities/:name/display-name` and the `DisplayNames` service behind it, whose `changed` hub the live
+ * stream sends on as `identity` events. The route needs `Caller`, which `requireToken` provides.
+ */
+export { DisplayNames, displayNameRoutes, displayNamesLayer } from "./lib/server/display-names.ts";
+
+/** The Schema of the identity as the server shows it, for the live stream's `identity` event. */
+export { IdentitySchema } from "./lib/server/wire.ts";

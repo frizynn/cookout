@@ -1,4 +1,5 @@
 import type { Identity, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../index.ts";
+import { Schema, SchemaTransformation } from "effect";
 import {
   displayNameLength,
   identityNamePattern,
@@ -10,7 +11,6 @@ import {
   tokenPattern,
 } from "../../index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
-import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
 
 export const IdentityNameSchema = Schema.String.check(
@@ -25,6 +25,8 @@ const DisplayNameSchema = Schema.String.check(
   Schema.isTrimmed({ message: "Use no space at either end." }),
   Schema.isBetweenLength(displayNameLength.minimum, displayNameLength.maximum, { message: "Use 1-80 characters." }),
 ).pipe(Schema.refine(isDisplayName, { identifier: "DisplayName" }));
+
+const SentDisplayNameSchema = Schema.String.pipe(Schema.decodeTo(DisplayNameSchema, SchemaTransformation.trim()));
 
 const TokenSchema = Schema.String.check(Schema.isPattern(tokenPattern)).pipe(
   Schema.refine(isToken, { identifier: "Token" }),
@@ -48,7 +50,7 @@ const AgentIdentitySchema = Schema.Struct({
   owner: Schema.optionalKey(OwnerSchema),
 });
 
-const IdentitySchema = matchesWire<Identity>()(Schema.Union([HumanIdentitySchema, AgentIdentitySchema]));
+export const IdentitySchema = matchesWire<Identity>()(Schema.Union([HumanIdentitySchema, AgentIdentitySchema]));
 
 export const IdentityResponseSchema = matchesWire<IdentityResponse>()(Schema.Struct({ identity: IdentitySchema }));
 
@@ -60,4 +62,4 @@ export const ListIdentitiesResponseSchema = matchesWire<ListIdentitiesResponse>(
   Schema.Struct({ identities: Schema.Array(IdentitySchema) }),
 );
 
-export { DisplayNameSchema };
+export { DisplayNameSchema, SentDisplayNameSchema };

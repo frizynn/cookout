@@ -9,6 +9,7 @@
  */
 import type { InboxItem, ReadPosition } from "../inbox/index.ts";
 import type { Message, MessageId } from "../messages/index.ts";
+import type { Identity } from "../identities/index.ts";
 
 /** A new item in the caller's inbox, sent the moment another identity posts it. */
 export interface InboxItemEvent {
@@ -29,6 +30,15 @@ export interface MessageEvent {
 }
 
 /**
+ * An identity whose display name has just changed, as the server now shows it, sent only on the all-channels feed so
+ * every open web UI shows the new display name at once. It has no SSE `id`.
+ */
+export interface IdentityEvent {
+  readonly type: "identity";
+  readonly identity: Identity;
+}
+
+/**
  * The stream's first word on connecting, before any item: the newest message ID on the board at that moment (null
  * before the first message). Every item the stream then sends live is newer, so a caller that resumes from this ID
  * after a drop misses nothing and repeats nothing. It has no SSE `id`.
@@ -39,7 +49,7 @@ export interface ConnectedEvent {
 }
 
 /** Any event the stream sends. */
-export type CookoutEvent = InboxItemEvent | ReadPositionEvent | MessageEvent;
+export type CookoutEvent = InboxItemEvent | ReadPositionEvent | MessageEvent | IdentityEvent;
 
 /**
  * `GET /v1/events`: the caller's Server-Sent Events stream, one per connection. With `allChannelsQuery` as its query

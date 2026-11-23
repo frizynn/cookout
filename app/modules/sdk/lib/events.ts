@@ -4,6 +4,7 @@ import { allChannelsQuery, eventsPath, refusalEvent } from "../../events/index.t
 import {
   isConnectedEvent,
   isErrorResponse,
+  isIdentityEvent,
   isInboxItemEvent,
   isMessageEvent,
   isReadPositionEvent,
@@ -56,6 +57,7 @@ function resumeHeaders({ lastEventId }: WatchOptions): Readonly<Record<string, s
 }
 
 const validators: { readonly [Type in EventType]: (data: unknown) => data is Extract<CookoutEvent, { type: Type }> } = {
+  identity: isIdentityEvent,
   "inbox-item": isInboxItemEvent,
   message: isMessageEvent,
   "read-position": isReadPositionEvent,
