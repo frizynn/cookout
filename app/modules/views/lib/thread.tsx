@@ -1,5 +1,5 @@
 import type { Board, ThreadMessagesState } from "../../board/index.ts";
-import type { ChannelName, MessageId } from "../../sdk/index.ts";
+import type { ChannelName, IdentityName, MessageId } from "../../sdk/index.ts";
 import { ScrollArea, SidePanel } from "../../design-system/index.tsx";
 import type { Composer } from "../../composer/index.ts";
 import type { ReactNode } from "react";
@@ -29,6 +29,17 @@ function countOf(state: ThreadMessagesState): number {
   return state.replies.length;
 }
 
+function isLoaded(state: ThreadMessagesState): state is Extract<ThreadMessagesState, { status: "loaded" }> {
+  return state.status === "loaded";
+}
+
+function membersOf(state: ThreadMessagesState, me: string): readonly IdentityName[] {
+  const loaded = [state].filter((each) => isLoaded(each));
+  const posts = [...loaded.map((thread) => thread.parent), ...loaded.flatMap((thread) => thread.replies)];
+  const posters = posts.map((message) => message.author.name).toReversed();
+  return [...new Set(posters)].filter((name) => name !== me);
+}
+
 export function ThreadView(props: ThreadProps): ReactNode {
   const { channel } = props;
   const messages = props.board.thread(channel, props.thread);
@@ -46,7 +57,9 @@ export function ThreadView(props: ThreadProps): ReactNode {
         <ThreadBody me={props.me} menu={props.unread.menu} state={state} readPosition={readPosition} />
       </ScrollArea>
       <ReplyFooter
-        draft={props.composer.draft(`${channel}/${String(props.thread)}`)}
+        draft={props.composer.draft(`${channel}/${String(props.thread)}`, () =>
+          membersOf(messages.snapshot(), props.me),
+        )}
         messages={messages}
         state={state}
       />
