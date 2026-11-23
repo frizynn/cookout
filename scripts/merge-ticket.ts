@@ -26,6 +26,7 @@ function titleOf(ticket: number): string {
 }
 
 const rules: MergeRules = {
+  adrs: "docs/adr",
   hunks: [
     { file: "app/modules/storage/lib/server/migrations.ts", resolve: "append" },
     { file: "vitest.config.ts", resolve: "lower" },

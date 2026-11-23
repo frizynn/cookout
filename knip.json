@@ -12,7 +12,7 @@
         "app/modules/webhook-fake/server.ts!",
         "scripts/*.{ts,mjs}!"
       ],
-      "project": ["app/**/*.{ts,tsx}!", "!app/modules/*/tests/**!", "scripts/**/*.{ts,mjs}!"],
+      "project": ["app/**/*.{ts,tsx}!", "!app/modules/*/tests/**!", "scripts/**/*.{ts,mjs}!", "!scripts/tests/**!"],
       "ignoreDependencies": ["@swc/core"]
     },
     "packages/e2e": {

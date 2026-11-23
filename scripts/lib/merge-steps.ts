@@ -46,6 +46,13 @@ function lines(output: string): readonly string[] {
   return output.split("\n").filter((line) => line.length > NONE);
 }
 
+function stepOf({ ran, what }: { readonly ran: Ran; readonly what: string }): Step {
+  if (ran.ok) {
+    return DONE;
+  }
+  return stop(`${what} failed; nothing was pushed.\n${tail(ran.output)}`);
+}
+
 function firstStop(steps: readonly (() => Step)[]): Step {
   for (const step of steps) {
     const result = step();
@@ -57,4 +64,4 @@ function firstStop(steps: readonly (() => Step)[]): Step {
 }
 
 export type { Command, Ran, Step, Stopped };
-export { DONE, RERERE, firstStop, git, lines, run, stop, tail };
+export { DONE, RERERE, firstStop, git, lines, run, stepOf, stop, tail };

@@ -1,8 +1,9 @@
 import type { Command, Ran, Step, Stopped } from "./merge-steps.ts";
-import { DONE, RERERE, firstStop, git, lines, run, stop, tail } from "./merge-steps.ts";
+import { DONE, RERERE, firstStop, git, lines, run, stepOf, stop, tail } from "./merge-steps.ts";
 import { readFileSync, writeFileSync } from "node:fs";
 import type { HunkResolve } from "./conflicts.ts";
 import path from "node:path";
+import { renumberAdrs } from "./merge-adrs.ts";
 import { resolveHunks } from "./conflicts.ts";
 
 interface HunkRule {
@@ -16,6 +17,7 @@ interface RegenerateRule {
 }
 
 interface MergeRules {
+  readonly adrs: string;
   readonly hunks: readonly HunkRule[];
   readonly regenerate: readonly RegenerateRule[];
 }
@@ -46,13 +48,6 @@ type Attempt = { readonly kind: "moved" } | Pushed | Stopped;
 const LOCKFILE = "pnpm-lock.yaml";
 const NONE = 0;
 const FIRST_ATTEMPT = 1;
-function stepOf(result: Ran, what: string): Step {
-  if (result.ok) {
-    return DONE;
-  }
-  return stop(`${what} failed; nothing was pushed.\n${tail(result.output)}`);
-}
-
 function failed(command: Command, ran: Ran, after: string): Stopped {
   return stop(`${command.join(" ")} failed; nothing was pushed.${after}\n${tail(ran.output)}`);
 }
@@ -109,8 +104,8 @@ function resolveConflicts(options: MergeOptions, conflicted: readonly string[]):
     return regenerated;
   }
   const committed = firstStop([
-    (): Step => stepOf(git(options, "add", "-u"), "git add -u"),
-    (): Step => stepOf(git(options, "commit", "-q", "--no-edit"), "Committing the resolved merge"),
+    (): Step => stepOf({ ran: git(options, "add", "-u"), what: "git add -u" }),
+    (): Step => stepOf({ ran: git(options, "commit", "-q", "--no-edit"), what: "Committing the resolved merge" }),
   ]);
   return committed;
 }
@@ -194,6 +189,7 @@ function attempt(options: MergeOptions): Attempt {
   }
   const stepped = firstStop([
     (): Step => merge(options),
+    (): Step => renumberAdrs({ adrs: options.rules.adrs, cwd: options.cwd, log: options.log }),
     (): Step => install(options, started.sha),
     (): Step => check(options),
   ]);
@@ -259,8 +255,9 @@ function regenerateChanged(options: MergeOptions, base: string): Step {
     return regenerated;
   }
   return firstStop([
-    (): Step => stepOf(git(options, "add", "-u"), "git add -u"),
-    (): Step => stepOf(git(options, "commit", "-q", "--amend", "--no-edit"), "Committing the regenerated files"),
+    (): Step => stepOf({ ran: git(options, "add", "-u"), what: "git add -u" }),
+    (): Step =>
+      stepOf({ ran: git(options, "commit", "-q", "--amend", "--no-edit"), what: "Committing the regenerated files" }),
   ]);
 }
 
@@ -275,6 +272,7 @@ function continueAttempt(options: MergeOptions): Attempt {
   const base = git(options, "rev-parse", "HEAD^1").output;
   const stepped = firstStop([
     (): Step => cleanTree(options),
+    (): Step => renumberAdrs({ adrs: options.rules.adrs, cwd: options.cwd, log: options.log }),
     (): Step => regenerateChanged(options, base),
     (): Step => install(options, base),
     (): Step => check(options),
