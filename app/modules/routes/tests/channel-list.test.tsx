@@ -1,5 +1,5 @@
 import type { CookoutClient, CreateChannelRequest, ListChannelsResponse } from "../../sdk/index.ts";
-import { adminClient, clientWith, openAt, openBoard, sessionOf } from "./app.tsx";
+import { adminClient, clientWith, openAt, openBoard, sessionOf, watched } from "./app.tsx";
 import { expect, it } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import { createBoard } from "../../board/index.ts";
@@ -42,6 +42,17 @@ function counting(client: CookoutClient): Counted {
         return answer;
       },
     },
+  };
+}
+
+async function openLive(client: CookoutClient, shown: string): Promise<() => Promise<void>> {
+  const { live, stream } = watched(client);
+  const unmount = openAt({ client, hash: "#/", live });
+  await screen.findByRole("link", { name: shown });
+  const events = await stream;
+  return async () => {
+    unmount();
+    await events.close();
   };
 }
 
@@ -124,6 +135,23 @@ it("the channel list shows the server's refusal when the token is refused", { ti
   expect(alert.textContent).toContain("token_unknown");
 
   close();
+});
+
+it("a message in a channel created after the list loaded adds that channel to the list, without a reload", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const client = await adminWithChannels({ name: "web-list-live-known" });
+  const close = await openLive(client, "#web-list-live-known");
+  await client.createChannel({ name: "web-list-live-new" });
+  await client.createMessage({ channel: "web-list-live-new", text: "Incident open" });
+
+  const added = await screen.findByRole("link", { name: "#web-list-live-new" });
+
+  expect(added.getAttribute("href")).toBe("#/channels/web-list-live-new");
+
+  await close();
 });
 
 it("the channel list says so when the server can't be reached", { timeout: 5000 }, async () => {

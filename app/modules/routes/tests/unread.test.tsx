@@ -1,4 +1,4 @@
-import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
+import type { CookoutClient, EventStream, Message, PostMessageRequest } from "../../sdk/index.ts";
 import { adminClient, newIdentity, openAt, watched } from "./app.tsx";
 import { expect, it } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
@@ -106,6 +106,57 @@ it("a reply's unread count drops to zero once its thread is opened, not when its
   await shownCounts(channel, ["1 unread"]);
 
   await opened(`#/channels/${channel}/threads/${String(parent.id)}`, "Noon works");
+
+  await shownCounts(channel, []);
+
+  await close();
+});
+
+async function openedAndRead(hash: string, text: string, channel: string): Promise<void> {
+  await opened(hash, text);
+  await shownCounts(channel, []);
+}
+
+async function postedWhileClosed(poster: CookoutClient, request: PostMessageRequest): Promise<void> {
+  await poster.createMessage(request);
+  await shownCounts(request.channel, ["1 unread"]);
+}
+
+function threadOf(parent: Message): string {
+  return `#/channels/${parent.channel}/threads/${String(parent.id)}`;
+}
+
+it("reopening a channel acks what arrived since it was last open, so its count drops back to zero", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-unread-reopen";
+  const { close, poster } = await openList(channel);
+  await postAs(poster, channel, "Deploy at noon?");
+  await openedAndRead(`#/channels/${channel}`, "Deploy at noon?", channel);
+  await postedWhileClosed(poster, { channel, text: "Or at one?" });
+
+  await opened(`#/channels/${channel}`, "Or at one?");
+
+  await shownCounts(channel, []);
+
+  await close();
+});
+
+it("reopening a thread acks the replies that arrived since it was last open, so its count drops back to zero", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-unread-reopen-thread";
+  const { close, poster, reader } = await openList(channel);
+  const parent = await postAs(reader, channel, "Deploy at noon?");
+  await poster.createMessage({ channel, replyTo: parent.id, text: "Noon works" });
+  await openedAndRead(threadOf(parent), "Noon works", channel);
+  await postedWhileClosed(poster, { channel, replyTo: parent.id, text: "One works too" });
+
+  await opened(threadOf(parent), "One works too");
 
   await shownCounts(channel, []);
 

@@ -1,0 +1,135 @@
+import type { CookoutClient, InboxResponse } from "../../sdk/index.ts";
+import { adminClient, newIdentity, openAt } from "./app.tsx";
+import { expect, it, vi } from "vitest";
+import { fireEvent, screen, within } from "@testing-library/react";
+
+const ONE_A_PAGE = 1;
+const NONE = 0;
+const FIRST = 0;
+const REST = 1;
+
+async function post(channel: string, text: string): Promise<void> {
+  await adminClient().createMessage({ channel, text });
+}
+
+async function postInOrder(channel: string, texts: readonly string[]): Promise<void> {
+  if (texts.length === NONE) {
+    return;
+  }
+  await Promise.all(
+    texts.slice(FIRST, REST).map(async (text) => {
+      await post(channel, text);
+    }),
+  );
+  await postInOrder(channel, texts.slice(REST));
+}
+
+async function channelWith(name: string, texts: readonly string[]): Promise<void> {
+  await adminClient().createChannel({ name });
+  await postInOrder(name, texts);
+}
+
+async function shownMessages(): Promise<readonly (string | null)[]> {
+  const list = await screen.findByRole("list", { name: "Messages" });
+  const shown: (string | null)[] = [];
+  for (const link of within(list).getAllByRole("link")) {
+    shown.push(link.textContent);
+  }
+  return shown;
+}
+
+async function inboxEmptied(client: CookoutClient): Promise<InboxResponse> {
+  const inbox = await vi.waitUntil(async () => {
+    const answer = await client.inbox();
+    return answer.items.length === NONE && answer;
+  });
+  return inbox;
+}
+
+async function alerted(): Promise<void> {
+  await screen.findByRole("alert");
+}
+
+async function leaveForTheList(): Promise<void> {
+  globalThis.location.hash = "#/";
+  await screen.findByRole("list", { name: "Channels" });
+}
+
+async function bothPagesLoaded(): Promise<void> {
+  await shownMessages();
+  fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+  await screen.findByText("A");
+}
+
+async function openedThenLeft(
+  client: CookoutClient,
+  channel: string,
+  settled: () => Promise<unknown>,
+): Promise<() => void> {
+  const close = openAt({ client, hash: `#/channels/${channel}` });
+  await settled();
+  await leaveForTheList();
+  return close;
+}
+
+it("reopening a channel shows what was posted while it was closed, keeping the older pages loaded", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await channelWith("web-channel-reopen", ["A", "B"]);
+  const close = openAt({ client: adminClient(), hash: "#/channels/web-channel-reopen", pageSize: ONE_A_PAGE });
+  await bothPagesLoaded();
+  await leaveForTheList();
+  await post("web-channel-reopen", "C");
+
+  globalThis.location.hash = "#/channels/web-channel-reopen";
+  await screen.findByText("C");
+
+  expect([await shownMessages(), screen.queryByRole("button", { name: "Load more" })]).toStrictEqual([
+    ["@adminA0 replies", "@adminB0 replies", "@adminC0 replies"],
+    null,
+  ]);
+
+  close();
+});
+
+it("reopening a channel that can no longer be read says so and keeps its messages shown", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await channelWith("web-channel-reopen-refused", ["Hello"]);
+  const reader = await newIdentity({ kind: "human", name: "web-channel-reopen-rotated" });
+  const close = await openedThenLeft(reader.client, "web-channel-reopen-refused", shownMessages);
+  await adminClient().rotateToken("web-channel-reopen-rotated");
+
+  globalThis.location.hash = "#/channels/web-channel-reopen-refused";
+  const alert = await screen.findByRole("alert");
+
+  expect([alert.textContent, await shownMessages()]).toStrictEqual([
+    expect.stringMatching(/^Couldn't mark the channel read \(token_revoked\)/u),
+    ["@adminHello0 replies"],
+  ]);
+
+  close();
+});
+
+it("reopening a channel that failed to load loads it again and acks it", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const reader = await newIdentity({ kind: "human", name: "web-channel-reopen-missing-reader" });
+  const close = await openedThenLeft(reader.client, "web-channel-reopen-missing", alerted);
+  await adminClient().createChannel({ name: "web-channel-reopen-missing" });
+  await reader.client.subscribe("web-channel-reopen-missing");
+  await post("web-channel-reopen-missing", "Here now");
+
+  globalThis.location.hash = "#/channels/web-channel-reopen-missing";
+
+  await expect(Promise.all([shownMessages(), inboxEmptied(reader.client)])).resolves.toStrictEqual([
+    ["@adminHere now0 replies"],
+    expect.objectContaining({ items: [] }),
+  ]);
+
+  close();
+});

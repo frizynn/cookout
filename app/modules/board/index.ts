@@ -5,50 +5,46 @@
  * channel's messages, its own store: when its first reader subscribes it loads
  * the newest page of top-level messages and acks the newest one, so viewing a
  * channel counts as reading it, and while a reader is subscribed it acks each
- * new top-level message that arrives live; `loadOlder` pages further back. `thread(channel, id)`
+ * new top-level message that arrives live; each time it is opened again (a
+ * first reader after none) it reloads the newest page, keeping older pages
+ * loaded, and acks its newest message; `loadOlder` pages further back. `thread(channel, id)`
  * is the thread's parent and replies, its own store too: when its first reader
  * subscribes it loads the thread and acks its latest message, so opening a
  * thread counts as reading it, and while a reader is subscribed it acks each
- * new reply that arrives live; `reply` posts a reply in that channel and
- * reloads the replies. `commands` is every registered command, loaded when its
+ * new reply that arrives live; each time it is opened again it reloads the
+ * thread and acks its latest message; `reply` posts a reply in that channel,
+ * reloads the replies and only then calls `posted`, so a refused reply keeps
+ * its text. `commands` is every registered command, loaded when its
  * first reader subscribes; a channel's `call` calls a command with data typed
  * as JSON, posting the call message in that channel, and keeps the schema
  * errors of data the command refuses; `editCallData` holds the data being
  * typed (`callData`), which only a successful call empties. With `live`, the board opens the live stream when any of
  * its stores is first read, and each new message on it joins the loaded
  * channel or thread it belongs to (a reply also counts in its top-level
- * message's replies), so messages from others appear without a reload. A refusal
+ * message's replies), so messages from others appear without a reload; a message
+ * in a channel the loaded list doesn't have reloads the list, so a channel
+ * created since it loaded joins it. A refusal
  * keeps the server's error code; a server that can't be reached is `unreachable`.
  */
-import type { Channel, CookoutClient, MessageId } from "../sdk/index.ts";
 import type { ChannelMessages, LiveChannelMessages, MessagesClient } from "./lib/channel-messages.ts";
 import type { Commands, CommandsClient } from "./lib/commands.ts";
+import type { CookoutClient, MessageId } from "../sdk/index.ts";
 import type { LiveThreadMessages, ThreadClient, ThreadMessages } from "./lib/thread-messages.ts";
-import type { Failure } from "./lib/failure.ts";
 import type { Live } from "../live/index.ts";
+import type { Snapshot } from "./lib/channel-list.ts";
+import { createChannelList } from "./lib/channel-list.ts";
 import { createChannelMessages } from "./lib/channel-messages.ts";
 import { createCommands } from "./lib/commands.ts";
 import { createLiveFeed } from "./lib/live-feed.ts";
 import { createThreadMessages } from "./lib/thread-messages.ts";
-import { failure } from "./lib/failure.ts";
 
 const PAGE_SIZE = 50;
-
-interface Snapshot {
-  readonly channels: ChannelsState;
-}
 
 function storeIn<Messages>(stores: Map<string, Messages>, key: string, make: () => Messages): Messages {
   const messages = stores.get(key) ?? make();
   stores.set(key, messages);
   return messages;
 }
-
-/** The channel list, as far as it has loaded. */
-export type ChannelsState =
-  | { readonly status: "loading" }
-  | { readonly status: "loaded"; readonly channels: readonly Channel[] }
-  | Failure;
 
 /** The board store. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
 export interface Board {
@@ -84,52 +80,30 @@ export interface BoardOptions {
  */
 export function createBoard(options: BoardOptions): Board {
   const { client } = options;
-  const listeners = new Set<() => void>();
   const channels = new Map<string, LiveChannelMessages>();
   const threads = new Map<string, LiveThreadMessages>();
-  let current: Snapshot = { channels: { status: "loading" } };
-  let loading: Promise<void> | null = null;
+  const list = createChannelList(client);
   const { follow, followed } = createLiveFeed({
     live: options.live ?? null,
-    receivers: () => [...channels.values(), ...threads.values()],
+    receivers: () => [list, ...channels.values(), ...threads.values()],
   });
-
-  function publish(state: ChannelsState): void {
-    current = { ...current, channels: state };
-    for (const listener of listeners) {
-      listener();
-    }
-  }
-
-  async function loadChannels(): Promise<void> {
-    try {
-      const answer = await client.listChannels();
-      publish({ channels: answer.channels, status: "loaded" });
-    } catch (error: unknown) {
-      publish(failure(error));
-    }
-  }
-
   return {
     channel: (name) =>
       storeIn(channels, name, () =>
         followed(createChannelMessages({ client, name, pageSize: options.pageSize ?? PAGE_SIZE })),
       ),
     commands: createCommands(client),
-    snapshot: () => current,
+    snapshot: list.snapshot,
     subscribe: (listener) => {
-      listeners.add(listener);
       follow();
-      loading ??= loadChannels();
-      return () => {
-        listeners.delete(listener);
-      };
+      return list.subscribe(listener);
     },
     thread: (channel, id) =>
       storeIn(threads, `${channel}/${String(id)}`, () => followed(createThreadMessages({ channel, client, id }))),
   };
 }
 
+export type { ChannelsState } from "./lib/channel-list.ts";
 export type { ChannelMessages, ChannelMessagesState } from "./lib/channel-messages.ts";
 export type { CallState, SchemaProblem } from "./lib/command-call.ts";
 export type { Commands } from "./lib/commands.ts";

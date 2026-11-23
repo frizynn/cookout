@@ -441,7 +441,7 @@ The first snapshot shows the `Log in` card with a form named `Log in`: a `Token`
 
 ## Open a channel
 
-A channel's view lists its top-level messages, oldest first, newest at the bottom, each a link to its thread with its author, its text and its reply count. It loads the newest 50; when older ones remain, a `Load more` button above them loads the 50 before. Viewing a channel acks its newest top-level message as the logged-in human (no lease), so the channel's messages leave that human's inbox; a top-level message that arrives live while the channel is open is acked as it arrives. Logged in as `grace` (the recipe above, same session), read her inbox, open `#deploys`, and read it again:
+A channel's view lists its top-level messages, oldest first, newest at the bottom, each a link to its thread with its author, its text and its reply count. It loads the newest 50; when older ones remain, a `Load more` button above them loads the 50 before. Viewing a channel acks its newest top-level message as the logged-in human (no lease), so the channel's messages leave that human's inbox; a top-level message that arrives live while the channel is open is acked as it arrives. Opening the channel again later reloads its newest page (keeping older pages already loaded) and acks its newest message again, so what arrived while it was closed is read too. Logged in as `grace` (the recipe above, same session), read her inbox, open `#deploys`, and read it again:
 
 ```sh
 env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
@@ -466,7 +466,7 @@ A channel's view has a `← Channels` link above its heading, back to the channe
 
 ## Open a thread and reply
 
-A thread's view shows its top-level message (an article named `Parent message`), then its replies, oldest first, in a list named `Replies`, then a reply box: a form named `Reply to the thread` with a `Reply` text box and a `Send reply` button. Opening a thread acks its latest message as the logged-in human (no lease), so the thread's replies leave that human's inbox; a reply that arrives live while the thread is open is acked as it arrives. Posting a reply adds it to the end of the list and clears the box. A `← #<channel>` link above the heading goes back to the channel. On a fresh seed, log in as `grace` (the "Log in to the web UI" recipe, same session), read her inbox, open the thread in `#general`, read the inbox again, then reply:
+A thread's view shows its top-level message (an article named `Parent message`), then its replies, oldest first, in a list named `Replies`, then a reply box: a form named `Reply to the thread` with a `Reply` text box and a `Send reply` button. Opening a thread acks its latest message as the logged-in human (no lease), so the thread's replies leave that human's inbox; a reply that arrives live while the thread is open is acked as it arrives. Opening the thread again later reloads it and acks its latest message again. Posting a reply adds it to the end of the list and clears the box; a reply the server refuses, or that can't reach it, shows an alert and keeps its text in the box to send again. A `← #<channel>` link above the heading goes back to the channel. On a fresh seed, log in as `grace` (the "Log in to the web UI" recipe, same session), read her inbox, open the thread in `#general`, read the inbox again, then reply:
 
 ```sh
 env $(cat /tmp/cookout-built.env) COOKOUT_TOKEN=$(jq -r '.identities[] | select(.identity.name == "grace") | .token' /tmp/cookout-built-seed.json) node app/main.ts inbox | jq -c '.items[] | [.message.id, .reasons]'
@@ -577,7 +577,7 @@ The reply is 201 with `author.name` the command's name. The top-level message an
 
 ## See messages from others arrive live
 
-The web UI keeps the all-channels feed open (`GET /v1/events?channels=all`, an `EventSource` that sends the session cookie) once a logged-in view first loads, so a message another identity posts joins the open channel or thread without a reload; a reply also bumps its top-level message's reply count in the channel. On a fresh seed of the built server ("Open the web UI" and "Log in to the web UI", logged in as `grace`), open `#general`, post as `ada` with the CLI, then open the thread and post a reply as `triage-agent`:
+The web UI keeps the all-channels feed open (`GET /v1/events?channels=all`, an `EventSource` that sends the session cookie) once a logged-in view first loads, so a message another identity posts joins the open channel or thread without a reload; a reply also bumps its top-level message's reply count in the channel. A message in a channel the loaded channel list doesn't have (one created since it loaded) reloads the list, so that channel joins it. On a fresh seed of the built server ("Open the web UI" and "Log in to the web UI", logged in as `grace`), open `#general`, post as `ada` with the CLI, then open the thread and post a reply as `triage-agent`:
 
 ```sh
 agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/general" && agent-browser --session cookout wait --text "Lunch at 12:30."

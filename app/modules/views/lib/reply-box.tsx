@@ -30,8 +30,7 @@ export function ReplyBox(props: ReplyBoxProps): ReactNode {
   const posting = reply.status === "posting";
   const handleSend = useCallback(
     (text: string) => {
-      handleReply(text);
-      draft.clear();
+      handleReply(text, draft.clear);
     },
     [draft, handleReply],
   );

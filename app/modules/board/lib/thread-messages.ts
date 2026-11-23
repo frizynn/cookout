@@ -23,7 +23,7 @@ type ThreadMessagesState = { readonly status: "loading" } | Failure | Loaded;
 interface ThreadMessages {
   readonly subscribe: (listener: () => void) => () => void;
   readonly snapshot: () => ThreadMessagesState;
-  readonly reply: (text: string) => void;
+  readonly reply: (text: string, posted: () => void) => void;
 }
 
 interface LiveThreadMessages extends ThreadMessages {
@@ -49,7 +49,7 @@ function update(thread: Thread, change: (loaded: Loaded) => Loaded): void {
   }
 }
 
-function latestOf(loaded: Loaded): MessageId {
+function latestOf(loaded: Pick<Loaded, "parent" | "replies">): MessageId {
   let latest = loaded.parent.id;
   for (const reply of loaded.replies) {
     latest = reply.id;
@@ -89,12 +89,32 @@ async function load(thread: Thread): Promise<void> {
   }
 }
 
-async function postReply(thread: Thread, text: string): Promise<void> {
+async function reload(thread: Thread): Promise<void> {
+  if (thread.current().status !== "loaded") {
+    await load(thread);
+    return;
+  }
+  try {
+    const { parent, replies } = await thread.client.getThread(thread.id);
+    update(thread, (loaded) => ({ ...loaded, parent, replies }));
+    await ack(thread, latestOf({ parent, replies }));
+  } catch (error: unknown) {
+    update(thread, (loaded) => ({ ...loaded, read: failure(error) }));
+  }
+}
+
+interface ReplyRequest {
+  readonly text: string;
+  readonly posted: () => void;
+}
+
+async function postReply(thread: Thread, { posted, text }: ReplyRequest): Promise<void> {
   update(thread, (loaded) => ({ ...loaded, reply: { status: "posting" } }));
   try {
     await thread.client.createMessage({ channel: thread.channel, replyTo: thread.id, text });
     const { replies } = await thread.client.getThread(thread.id);
     update(thread, (loaded) => ({ ...loaded, replies, reply: { status: "idle" } }));
+    posted();
   } catch (error: unknown) {
     update(thread, (loaded) => ({ ...loaded, reply: failure(error) }));
   }
@@ -105,9 +125,14 @@ async function ackAfter(previous: Promise<void> | null, thread: Thread, id: Mess
   await ack(thread, id);
 }
 
-async function replyAfter(previous: Promise<void> | null, thread: Thread, text: string): Promise<void> {
+async function reloadAfter(previous: Promise<void> | null, thread: Thread): Promise<void> {
   await previous;
-  await postReply(thread, text);
+  await reload(thread);
+}
+
+async function replyAfter(previous: Promise<void> | null, thread: Thread, request: ReplyRequest): Promise<void> {
+  await previous;
+  await postReply(thread, request);
 }
 
 interface ThreadOptions {
@@ -138,11 +163,14 @@ function createThreadMessages(options: ThreadOptions): LiveThreadMessages {
         queue = ackAfter(queue, thread, message.id);
       }
     },
-    reply: (text) => {
-      queue = replyAfter(queue, thread, text);
+    reply: (text, posted) => {
+      queue = replyAfter(queue, thread, { posted, text });
     },
     snapshot: () => state,
     subscribe: (listener) => {
+      if (listeners.size === NONE_OPEN && queue !== null) {
+        queue = reloadAfter(queue, thread);
+      }
       listeners.add(listener);
       queue ??= load(thread);
       return () => {
