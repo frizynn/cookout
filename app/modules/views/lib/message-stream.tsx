@@ -1,4 +1,4 @@
-import type { ChannelName, Message, MessageId } from "../../sdk/index.ts";
+import type { ChannelName, Message, MessageId, ReadReceipt } from "../../sdk/index.ts";
 import type { MessageMenu, ThreadNews } from "../../unread/index.ts";
 import { MarkUnreadRefusal } from "./mark-unread-refusal.tsx";
 import { MessageEntry } from "./message-entry.tsx";
@@ -12,6 +12,7 @@ interface MessageStreamProps {
   readonly messages: readonly Message[];
   readonly me: string;
   readonly readPosition: number | null;
+  readonly receipts: readonly ReadReceipt[];
   readonly after: Message | null;
   readonly channel: ChannelName | null;
   readonly open: MessageId | null;
@@ -39,6 +40,7 @@ export function MessageStream(props: MessageStreamProps): ReactNode {
             news={props.threads.get(row.message.id) ?? null}
             open={props.open}
             parent={props.after}
+            receipts={props.receipts}
             reply={props.reply}
             row={row}
           />

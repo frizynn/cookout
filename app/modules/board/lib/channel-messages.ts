@@ -1,53 +1,10 @@
-import type { CallRequest, CallState } from "./command-call.ts";
-import type { ChannelName, CookoutClient, Message, ReadPosition, Reply, TopLevelMessage } from "../../sdk/index.ts";
-import type { Failure, PostState } from "./failure.ts";
+import type { Channel, ChannelMessagesState, LiveChannelMessages, Loaded, MessagesClient } from "./channel-state.ts";
+import type { ChannelName, Message, MessageId, ReadReceipt, Reply, TopLevelMessage } from "../../sdk/index.ts";
 import { callFailure, notJson, parseData } from "./command-call.ts";
+import { withHeard, withReceipts } from "./receipts.ts";
+import type { CallRequest } from "./command-call.ts";
 import { failure } from "./failure.ts";
 import { withNewestReply } from "../../messages/index.ts";
-
-type OlderState = { readonly status: "idle" } | { readonly status: "loading" } | Failure;
-
-type ReadState =
-  | { readonly status: "none" }
-  | { readonly status: "acking" }
-  | { readonly status: "acked"; readonly readPosition: ReadPosition }
-  | Failure;
-
-interface Loaded {
-  readonly status: "loaded";
-  readonly messages: readonly TopLevelMessage[];
-  readonly hasMore: boolean;
-  readonly older: OlderState;
-  readonly read: ReadState;
-  readonly call: CallState;
-  readonly callData: string;
-  readonly post: PostState;
-}
-
-type ChannelMessagesState = { readonly status: "loading" } | Failure | Loaded;
-
-interface ChannelMessages {
-  readonly subscribe: (listener: () => void) => () => void;
-  readonly snapshot: () => ChannelMessagesState;
-  readonly loadOlder: () => void;
-  readonly call: (command: string, data: string, called: () => void) => void;
-  readonly editCallData: (data: string) => void;
-  readonly post: (text: string, posted: () => void) => void;
-}
-
-interface LiveChannelMessages extends ChannelMessages {
-  readonly receive: (message: Message) => void;
-}
-
-type MessagesClient = Pick<CookoutClient, "ack" | "callCommand" | "createMessage" | "listMessages">;
-
-interface Channel {
-  readonly client: MessagesClient;
-  readonly name: ChannelName;
-  readonly pageSize: number;
-  readonly current: () => ChannelMessagesState;
-  readonly publish: (state: ChannelMessagesState) => void;
-}
 
 const NEWEST = -1;
 const NONE_OPEN = 0;
@@ -72,7 +29,9 @@ async function ack(channel: Channel, message: TopLevelMessage): Promise<void> {
 
 async function loadNewest(channel: Channel): Promise<void> {
   try {
-    const { hasMore, messages } = await channel.client.listMessages(channel.name, { limit: channel.pageSize });
+    const { hasMore, messages, receipts } = await channel.client.listMessages(channel.name, {
+      limit: channel.pageSize,
+    });
     channel.publish({
       call: { status: "idle" },
       callData: "",
@@ -81,6 +40,7 @@ async function loadNewest(channel: Channel): Promise<void> {
       older: { status: "idle" },
       post: { status: "idle" },
       read: { status: "none" },
+      receipts,
       status: "loaded",
     });
     await Promise.all(
@@ -96,15 +56,17 @@ async function loadNewest(channel: Channel): Promise<void> {
 interface Page {
   readonly hasMore: boolean;
   readonly messages: readonly TopLevelMessage[];
+  readonly receipts: readonly ReadReceipt[];
 }
 
 function withNewest(loaded: Loaded, page: Page): Loaded {
   const oldest = Math.min(...page.messages.map((message) => message.id));
   const kept = loaded.messages.filter((message) => message.id < oldest);
+  const receipts = withReceipts({ fresh: page.receipts, receipts: loaded.receipts });
   if (kept.length === NONE_KEPT) {
-    return { ...loaded, hasMore: page.hasMore, messages: page.messages };
+    return { ...loaded, hasMore: page.hasMore, messages: page.messages, receipts };
   }
-  return { ...loaded, messages: [...kept, ...page.messages] };
+  return { ...loaded, messages: [...kept, ...page.messages], receipts };
 }
 
 async function reloadNewest(channel: Channel): Promise<void> {
@@ -139,6 +101,7 @@ async function loadOlderPage(channel: Channel): Promise<void> {
       hasMore: page.hasMore,
       messages: [...page.messages, ...loaded.messages],
       older: { status: "idle" },
+      receipts: withReceipts({ fresh: page.receipts, receipts: loaded.receipts }),
     }));
   } catch (error: unknown) {
     update(channel, (loaded) => ({ ...loaded, older: failure(error) }));
@@ -150,7 +113,13 @@ async function addNewest(channel: Channel, { called, command }: CallRequest): Pr
   update(channel, (loaded) => {
     const newest = Math.max(...loaded.messages.map((message) => message.id));
     const added = page.messages.filter((message) => message.id > newest);
-    return { ...loaded, call: { command, status: "called" }, callData: "", messages: [...loaded.messages, ...added] };
+    return {
+      ...loaded,
+      call: { command, status: "called" },
+      callData: "",
+      messages: [...loaded.messages, ...added],
+      receipts: withReceipts({ fresh: page.receipts, receipts: loaded.receipts }),
+    };
   });
   called();
 }
@@ -188,6 +157,10 @@ function received(loaded: Loaded, message: Message): Loaded {
   return { ...loaded, messages: [...loaded.messages, message] };
 }
 
+function holds(loaded: Loaded, id: MessageId): boolean {
+  return loaded.messages.some((message) => message.id === id);
+}
+
 interface PostRequest {
   readonly text: string;
   readonly posted: () => void;
@@ -210,29 +183,39 @@ interface ChannelOptions {
   readonly pageSize: number;
 }
 
-async function callAfter(previous: Promise<void> | null, channel: Channel, request: CallRequest): Promise<void> {
+async function after(previous: Promise<void> | null, step: () => Promise<void>): Promise<void> {
   await previous;
-  await callCommand(channel, request);
+  await step();
 }
 
-async function postAfter(previous: Promise<void> | null, channel: Channel, request: PostRequest): Promise<void> {
-  await previous;
-  await postMessage(channel, request);
-}
+type Enqueue = <Request>(step: (channel: Channel, request: Request) => Promise<void>, request: Request) => void;
 
-async function ackAfter(previous: Promise<void> | null, channel: Channel, message: TopLevelMessage): Promise<void> {
-  await previous;
-  await ack(channel, message);
-}
+type LiveMethods = Pick<LiveChannelMessages, "receive" | "receiveReceipt" | "refetch">;
 
-async function reloadAfter(previous: Promise<void> | null, channel: Channel): Promise<void> {
-  await previous;
-  await reloadNewest(channel);
-}
-
-async function loadOlderAfter(previous: Promise<void> | null, channel: Channel): Promise<void> {
-  await previous;
-  await loadOlderPage(channel);
+function liveMethods(channel: Channel, enqueue: Enqueue): LiveMethods {
+  return {
+    receive: (message) => {
+      if (message.channel !== channel.name) {
+        return;
+      }
+      const before = channel.current();
+      update(channel, (loaded) => received(loaded, message));
+      if (message.kind === "top-level" && channel.current() !== before && channel.open()) {
+        enqueue(ack, message);
+      }
+    },
+    receiveReceipt: (receipt) => {
+      update(channel, (loaded) => ({
+        ...loaded,
+        receipts: withHeard({ holds: (id) => holds(loaded, id), receipt, receipts: loaded.receipts }),
+      }));
+    },
+    refetch: () => {
+      if (channel.open()) {
+        enqueue(reloadNewest, null);
+      }
+    },
+  };
 }
 
 function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
@@ -242,6 +225,7 @@ function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
   const channel: Channel = {
     ...options,
     current: () => state,
+    open: () => listeners.size > NONE_OPEN,
     publish: (next) => {
       state = next;
       for (const listener of listeners) {
@@ -249,33 +233,29 @@ function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
       }
     },
   };
+  function enqueue<Request>(step: (on: Channel, request: Request) => Promise<void>, request: Request): void {
+    queue = after(queue, async () => {
+      await step(channel, request);
+    });
+  }
   return {
+    ...liveMethods(channel, enqueue),
     call: (command, data, called) => {
-      queue = callAfter(queue, channel, { called, command, data });
+      enqueue(callCommand, { called, command, data });
     },
     editCallData: (data) => {
       update(channel, (loaded) => ({ ...loaded, callData: data }));
     },
     loadOlder: () => {
-      queue = loadOlderAfter(queue, channel);
+      enqueue(loadOlderPage, null);
     },
     post: (text, posted) => {
-      queue = postAfter(queue, channel, { posted, text });
-    },
-    receive: (message) => {
-      if (message.channel !== options.name) {
-        return;
-      }
-      const before = state;
-      update(channel, (loaded) => received(loaded, message));
-      if (message.kind === "top-level" && state !== before && listeners.size > NONE_OPEN) {
-        queue = ackAfter(queue, channel, message);
-      }
+      enqueue(postMessage, { posted, text });
     },
     snapshot: () => state,
     subscribe: (listener) => {
-      if (listeners.size === NONE_OPEN && queue !== null) {
-        queue = reloadAfter(queue, channel);
+      if (!channel.open() && queue !== null) {
+        enqueue(reloadNewest, null);
       }
       listeners.add(listener);
       queue ??= loadNewest(channel);
@@ -286,10 +266,4 @@ function createChannelMessages(options: ChannelOptions): LiveChannelMessages {
   };
 }
 
-export {
-  type ChannelMessages,
-  type ChannelMessagesState,
-  type LiveChannelMessages,
-  type MessagesClient,
-  createChannelMessages,
-};
+export { createChannelMessages };
