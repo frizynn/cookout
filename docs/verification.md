@@ -399,3 +399,24 @@ cat /tmp/cookout-handler.log
 ```
 
 The call prints `{ messageId, threadId }` at once. In the background the server POSTs `{ command, data, threadId, token, callId }` to the URL, signed in the `cookout-signature` header with the lowercase hex HMAC-SHA256 of the raw body, keyed with the command's secret (the scheme in `packages/handler-example/README.md`). The handler logs `call call_… of ship on thread …` only for a signed call; a bad signature gets 401 and no line. With the handler stopped, a call still answers 202 and the dev log gets a `WARN` line `The webhook delivery call_… failed.` (no retries yet). `COOKOUT_WEBHOOK_TIMEOUT_SECONDS` (default 5) bounds each delivery.
+
+## Version a release with Changesets
+
+Changesets sets the version and CHANGELOG.md of `@ai-hero/cookout`. The private packages are never versioned, and publishing is off until Matt's OK ([ADR 0031](adr/0031-changesets-version-the-package-and-publishing-stays-off.md)). Never run `pnpm release`, `changeset publish` or `npm publish`. To prove the setup without changing anything, add a sample changeset on a throwaway branch, check the plan, version it, then discard the branch:
+
+```sh
+git checkout -b changeset-dry-run
+printf -- '---\n"@ai-hero/cookout": minor\n---\n\nA sample changeset for the dry run.\n' > .changeset/dry-run.md
+pnpm changeset status --verbose
+pnpm run version
+cat CHANGELOG.md
+git status --short
+git checkout -- package.json
+rm -f CHANGELOG.md .changeset/dry-run.md
+git checkout -
+git branch -D changeset-dry-run
+```
+
+`pnpm changeset status --verbose` lists only `@ai-hero/cookout -> 0.1.0`, from the dry-run changeset. `pnpm run version` consumes the changeset, bumps `package.json` to 0.1.0, and writes a CHANGELOG.md with a `## 0.1.0` section under `### Minor Changes`. `git status --short` shows only `package.json` and the new CHANGELOG.md, so `packages/e2e` and `packages/handler-example` stay at 0.0.0. With no changeset, `pnpm changeset status` exits 1 ("Some packages have been changed but no changesets were found"), which is expected during the v1 build.
+
+The release workflow, `.github/workflows/release.yml`, passes `actionlint` (for example `docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:latest`). Its publish step is guarded by `if: false`.

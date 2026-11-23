@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@4.0.1/schema.json",
+  "baseBranch": "main",
+  "access": "public",
+  "format": false,
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "ignore": ["@ai-hero/cookout-e2e", "@ai-hero/cookout-handler-example"],
+  "fixed": [],
+  "linked": [],
+  "privatePackages": { "version": false, "tag": false },
+  "updateInternalDependencies": "patch"
+}
