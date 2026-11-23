@@ -29,7 +29,7 @@ const asMissing: CallFailure = {
   message: "`cookout join` needs --as <name>: an agent you own, or the token's own agent.",
 };
 
-function noAgentTool(as: IdentityName): CallFailure {
+function noHarness(as: IdentityName): CallFailure {
   return {
     code: "agent_tool_missing",
     message:
@@ -38,11 +38,11 @@ function noAgentTool(as: IdentityName): CallFailure {
   };
 }
 
-function noSessionId(agentTool: string, as: IdentityName): CallFailure {
+function noSessionId(harness: string, as: IdentityName): CallFailure {
   return {
     code: "agent_tool_session_missing",
     message:
-      `${agentTool} gives no session ID to key a join by. Run \`cookout join --as ${as} --print-env\` and run ` +
+      `${harness} gives no session ID to key a join by. Run \`cookout join --as ${as} --print-env\` and run ` +
       "the `export COOKOUT_SESSION=...` line it prints instead.",
   };
 }
@@ -95,12 +95,12 @@ function joinIn(
   { file, place, url }: JoinPlace,
   flags: JoinFlags,
 ): Effect.Effect<JoinAnswer, CallFailure, AgentSessionStateNeeds> {
-  const { agentTool = "" } = place;
-  if (agentTool === "") {
-    return Effect.fail(noAgentTool(flags.as));
+  const { harness = "" } = place;
+  if (harness === "") {
+    return Effect.fail(noHarness(flags.as));
   }
   if (Option.isNone(file)) {
-    return Effect.fail(noSessionId(agentTool, flags.as));
+    return Effect.fail(noSessionId(harness, flags.as));
   }
   return issueAndKeep(flags, { file: file.value, url });
 }

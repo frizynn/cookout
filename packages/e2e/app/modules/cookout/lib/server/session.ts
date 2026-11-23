@@ -52,7 +52,7 @@ function joinAgentWith({ createAgent, runCookout, url: defaultUrl }: Joining): J
     Effect.gen(function* joinAsAgent() {
       const { identity, token } = yield* createAgent(name);
       const stateFolder = yield* freshStateFolder;
-      const inSession = { agentToolSession: stateFolder, stateFolder, url };
+      const inSession = { harnessSession: stateFolder, stateFolder, url };
       function run(...args: readonly string[]): Effect.Effect<BinResult, never, SessionNeeds> {
         return runCookout({ ...inSession, args });
       }

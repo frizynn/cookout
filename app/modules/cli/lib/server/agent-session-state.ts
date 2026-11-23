@@ -2,7 +2,7 @@ import { Effect, Equal, FileSystem, Option, Path, Random, Schema, String as Str,
 import type { IdentityName, Token } from "../../../identities/index.ts";
 import { home, stateDirectory, xdgStateHome } from "../../../config/server.ts";
 import { identityNamePattern, isIdentityName, isToken, tokenPattern } from "../../../identities/index.ts";
-import type { AgentToolSessionId } from "../../../config/index.ts";
+import type { HarnessSessionId } from "../../../config/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
@@ -21,8 +21,8 @@ interface AgentSessionStateFile {
 }
 
 interface JoinedSessionKey {
-  readonly agentTool: string;
-  readonly sessionId: AgentToolSessionId;
+  readonly harness: string;
+  readonly sessionId: HarnessSessionId;
   readonly url: string;
 }
 
@@ -165,7 +165,7 @@ function writeTo(
 }
 
 function locationOf({
-  agentTool,
+  harness,
   sessionId,
   url,
 }: JoinedSessionKey): Effect.Effect<Option.Option<AgentSessionStateLocation>, never, Needs> {
@@ -174,7 +174,7 @@ function locationOf({
     const path = yield* Path.Path;
     const secrets = yield* Secrets;
     const found = yield* stateFolder(path);
-    const digest = yield* secrets.digest(`${agentTool}\n${sessionId}\n${url}`);
+    const digest = yield* secrets.digest(`${harness}\n${sessionId}\n${url}`);
     const name = `${Str.slice(KEY_START, KEY_LENGTH)(digest)}.json`;
     return Option.map(found, (base) => {
       const folder = path.join(base, "agent-sessions");

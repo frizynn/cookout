@@ -129,7 +129,7 @@ it.effect("a second join in a joined session is refused naming the agent; --prin
 it.effect(
   "outside an agent tool, or in one with no session ID, join is refused, and --print-env prints the export",
   () =>
-    Effect.gen(function* joinOutsideAgentTool() {
+    Effect.gen(function* joinOutsideHarness() {
       const cookout = yield* TestCookout;
       const bot = yield* cookout.createIdentity("release-bot");
       const folder = yield* freshStateFolder;
@@ -177,7 +177,7 @@ it.effect("whoami says how long ago this agent tool session joined", () =>
 );
 
 it.effect("a session's agent session token revoked by another session's join --force is forgotten", () =>
-  Effect.gen(function* twoAgentToolSessions() {
+  Effect.gen(function* twoHarnessSessions() {
     const cookout = yield* TestCookout;
     const agent = yield* cookout.createIdentity("agent");
     const folder = yield* freshStateFolder;

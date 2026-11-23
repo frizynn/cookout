@@ -236,18 +236,18 @@ export const sessionPath = "/v1/session";
  * The agent tool running a client's process, such as `claude-code`: 1–40 lowercase letters, digits or `-`. The CLI
  * and the SDK send it in `cookout-agent-tool` when the process's environment shows such a tool runs it.
  */
-export type AgentTool = Brand<"AgentTool">;
+export type Harness = Brand<"AgentTool">;
 
 /** The rule every agent tool's name follows, for the backend's Schemas. */
-export const agentToolPattern = /^[a-z0-9-]{1,40}$/u;
+export const harnessPattern = /^[a-z0-9-]{1,40}$/u;
 
 /**
  * Whether `value` follows the agent tool rule; if so, it is an `AgentTool`.
  * @param value The string to check.
  * @returns Whether `value` is an `AgentTool`.
  */
-export function isAgentTool(value: string): value is AgentTool {
-  return agentToolPattern.test(value);
+export function isHarness(value: string): value is Harness {
+  return harnessPattern.test(value);
 }
 
 /**
@@ -255,7 +255,7 @@ export function isAgentTool(value: string): value is AgentTool {
  * `agent_as_human`, to catch an agent that inherited a person's token by accident; it is not a security boundary
  * (ADR 0038). A message posted with it records the tool as `agentTool`.
  */
-export const agentToolHeader = "cookout-agent-tool";
+export const harnessHeader = "cookout-agent-tool";
 
 /** The HttpOnly, SameSite=Strict cookie the web UI's requests carry instead of the bearer header. */
 export const sessionCookieName = "cookout_session";

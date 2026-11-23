@@ -10,7 +10,7 @@ const CONFLICT = 409;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 
 function fromClaudeCode(cookout: TestCookoutService, token: string): CookoutClient {
-  return createCookoutClient({ agentTool: "claude-code", env: {}, token, url: cookout.url });
+  return createCookoutClient({ env: {}, harness: "claude-code", token, url: cookout.url });
 }
 
 function humanFromClaudeCode(cookout: TestCookoutService, name: string): Effect.Effect<CookoutClient> {

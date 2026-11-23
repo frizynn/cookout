@@ -9,7 +9,7 @@
 
 type Environment = Readonly<Record<string, string | undefined>>;
 
-interface AgentToolMarkers {
+interface HarnessMarkers {
   readonly tool: string;
   readonly isRunning: (env: Environment) => boolean;
   readonly sessionVariables: readonly string[];
@@ -31,7 +31,7 @@ function isSet(value: string | undefined): boolean {
   return (value ?? "") !== "";
 }
 
-const agentTools: readonly AgentToolMarkers[] = [
+const harnesses: readonly HarnessMarkers[] = [
   {
     isRunning: (env) => env["CLAUDECODE"] === "1",
     sessionVariables: ["CLAUDE_CODE_SESSION_ID"],
@@ -48,14 +48,14 @@ const agentTools: readonly AgentToolMarkers[] = [
   { isRunning: (env) => env["OPENCODE"] === "1", sessionVariables: [], tool: "opencode" },
 ];
 
-const knownAiAgentTool = /^(?<tool>claude-code|opencode)(?:_.*)?$/u;
+const knownAiHarness = /^(?<tool>claude-code|opencode)(?:_.*)?$/u;
 const disallowedInToolName = /[^a-z0-9-]+/gu;
 const longerThanToolName = /^(?<kept>[a-z0-9-]{40}).+$/u;
 const UNKNOWN_TOOL = "unknown";
 
 function toolNamedBy(value: string): string {
   const sanitised = value
-    .replace(knownAiAgentTool, "$<tool>")
+    .replace(knownAiHarness, "$<tool>")
     .replaceAll(disallowedInToolName, "-")
     .replace(/^-+/u, "")
     .replace(longerThanToolName, "$<kept>")
@@ -66,12 +66,12 @@ function toolNamedBy(value: string): string {
   return sanitised;
 }
 
-function aiAgentToolIn(env: Environment): { readonly agentTool?: string } {
+function aiHarnessIn(env: Environment): { readonly harness?: string } {
   const value = (env["AI_AGENT"] ?? "").toLowerCase();
   if (value === "") {
     return NOTHING;
   }
-  return { agentTool: toolNamedBy(value) };
+  return { harness: toolNamedBy(value) };
 }
 
 function urlIn(env: Environment): { readonly url?: string } {
@@ -82,17 +82,17 @@ function urlIn(env: Environment): { readonly url?: string } {
   return { url };
 }
 
-function isAgentToolSessionId(value: string | undefined): value is AgentToolSessionId {
+function isHarnessSessionId(value: string | undefined): value is HarnessSessionId {
   return isSet(value);
 }
 
-function sessionIdOf(tool: string, env: Environment): { readonly sessionId?: AgentToolSessionId } {
-  const values = agentTools
+function sessionIdOf(tool: string, env: Environment): { readonly sessionId?: HarnessSessionId } {
+  const values = harnesses
     .filter((markers) => markers.tool === tool)
     .flatMap((markers) => markers.sessionVariables)
     .map((variable) => env[variable]);
   for (const value of values) {
-    if (isAgentToolSessionId(value)) {
+    if (isHarnessSessionId(value)) {
       return { sessionId: value };
     }
   }
@@ -103,15 +103,15 @@ function firstSet(values: readonly (string | undefined)[]): string {
   return values.find((value) => isSet(value)) ?? "";
 }
 
-function tokenIn(env: Environment, inAgentTool: boolean): string {
-  if (inAgentTool) {
+function tokenIn(env: Environment, inHarness: boolean): string {
+  if (inHarness) {
     return firstSet([env["COOKOUT_SESSION"], env["COOKOUT_TOKEN"]]);
   }
   return firstSet([env["COOKOUT_TOKEN"], env["COOKOUT_SESSION"]]);
 }
 
 /** Every variable `agentToolIn` reads, for a reader of the environment that must name what it reads (the CLI). */
-export const agentToolVariables: readonly string[] = [
+export const harnessVariables: readonly string[] = [
   "CLAUDECODE",
   "CODEX_THREAD_ID",
   "CODEX_CI",
@@ -133,25 +133,25 @@ export const agentToolVariables: readonly string[] = [
  * @param env Where the markers are read from.
  * @returns The tool's name, if one is found and not overridden.
  */
-export function agentToolIn(env: Environment): { readonly agentTool?: string } {
+export function harnessIn(env: Environment): { readonly harness?: string } {
   if (env[ALLOW_HUMAN] === "1") {
     return NOTHING;
   }
-  for (const { isRunning, tool } of agentTools) {
+  for (const { isRunning, tool } of harnesses) {
     if (isRunning(env)) {
-      return { agentTool: tool };
+      return { harness: tool };
     }
   }
-  return aiAgentToolIn(env);
+  return aiHarnessIn(env);
 }
 
 /** The ID an agent tool gives its session, shared by the session's subagents, such as `CLAUDE_CODE_SESSION_ID`. */
-export type AgentToolSessionId = string & { readonly [brand]: "AgentToolSessionId" };
+export type HarnessSessionId = string & { readonly [brand]: "AgentToolSessionId" };
 
 /** An agent tool session: the tool that runs the process, and its session ID if the tool gives one. */
-export interface AgentToolSession {
-  readonly agentTool?: string;
-  readonly sessionId?: AgentToolSessionId;
+export interface HarnessSession {
+  readonly harness?: string;
+  readonly sessionId?: HarnessSessionId;
 }
 
 /**
@@ -161,12 +161,12 @@ export interface AgentToolSession {
  * @param env Where the markers are read from.
  * @returns The tool and its session ID, or nothing outside an agent tool.
  */
-export function agentToolSessionIn(env: Environment): AgentToolSession {
-  const { agentTool = "" } = agentToolIn({ ...env, [ALLOW_HUMAN]: "" });
-  if (agentTool === "") {
+export function harnessSessionIn(env: Environment): HarnessSession {
+  const { harness = "" } = harnessIn({ ...env, [ALLOW_HUMAN]: "" });
+  if (harness === "") {
     return NOTHING;
   }
-  return { agentTool, ...sessionIdOf(agentTool, env) };
+  return { harness, ...sessionIdOf(harness, env) };
 }
 
 /**
@@ -176,7 +176,7 @@ export function agentToolSessionIn(env: Environment): AgentToolSession {
 export interface CookoutConnection {
   readonly url: string;
   readonly token?: string;
-  readonly agentTool?: string;
+  readonly harness?: string;
 }
 
 /**
@@ -188,9 +188,9 @@ export interface CookoutConnection {
  * @returns The URL, the token and the agent tool, each only if set.
  */
 export function readCookoutConnection(env: Environment = processEnvironment()): Partial<CookoutConnection> {
-  const token = tokenIn(env, isSet(agentToolSessionIn(env).agentTool));
+  const token = tokenIn(env, isSet(harnessSessionIn(env).harness));
   if (token === "") {
     return urlIn(env);
   }
-  return { ...urlIn(env), token, ...agentToolIn(env) };
+  return { ...urlIn(env), token, ...harnessIn(env) };
 }

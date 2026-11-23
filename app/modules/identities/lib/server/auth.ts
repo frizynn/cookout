@@ -1,5 +1,5 @@
-import type { AgentTool, Identity, IdentityName, Token, TokenHash } from "../../index.ts";
 import { Context, DateTime, Effect, Option, Predicate, String as Str } from "effect";
+import type { Harness, Identity, IdentityName, Token, TokenHash } from "../../index.ts";
 import type { StorageUnavailable, TokenLookup, UseAgentSessionResult } from "../../../storage/server.ts";
 import { agentSessionExpired, agentSessionRevoked } from "../../../agent-sessions/index.ts";
 import { sessionCookieName, token } from "../../index.ts";
@@ -59,15 +59,15 @@ const AgentSessionSent = Context.Reference<Option.Option<TokenHash>>("cookout/id
   defaultValue: Option.none,
 });
 
-const AgentToolSent = Context.Reference<Option.Option<AgentTool>>("cookout/identities/AgentToolSent", {
+const HarnessSent = Context.Reference<Option.Option<Harness>>("cookout/identities/AgentToolSent", {
   defaultValue: Option.none,
 });
 
-const NO_AGENT_TOOL = {};
+const NO_HARNESS = {};
 
-const sentAgentTool: Effect.Effect<{ readonly agentTool?: AgentTool }> = Effect.gen(function* agentToolField() {
-  const sent = yield* AgentToolSent;
-  return Option.match(sent, { onNone: () => NO_AGENT_TOOL, onSome: (agentTool) => ({ agentTool }) });
+const sentHarness: Effect.Effect<{ readonly harness?: Harness }> = Effect.gen(function* harnessField() {
+  const sent = yield* HarnessSent;
+  return Option.match(sent, { onNone: () => NO_HARNESS, onSome: (harness) => ({ harness }) });
 });
 
 interface RequestTarget {
@@ -222,16 +222,16 @@ export const issueToken: Effect.Effect<IssuedToken, never, Secrets> = Effect.gen
 export {
   AgentSessionSent,
   Caller,
-  AgentToolSent,
+  HarnessSent,
   CommandThread,
   type Credentials,
   credentialsOf,
   ownsAgent,
   requireCommandRoute,
   requireOwnerOrAdmin,
-  sentAgentTool,
+  sentHarness,
   sentToken,
 };
 export type { Principal } from "./principals.ts";
-export { agentToolOf } from "./agent-tool-guard.ts";
+export { harnessOf } from "./harness-guard.ts";
 export { IdentityChanges, announced } from "./changes.ts";

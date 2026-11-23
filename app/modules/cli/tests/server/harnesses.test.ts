@@ -29,7 +29,7 @@ it.effect("from Claude Code, cookout refuses a human's token with exit code 1 an
 
     expect(refused).toMatchObject({
       exitCode: 1,
-      stderrJson: { error: { code: "agent_as_human", details: { agentTool: "claude-code", identity: "poster" } } },
+      stderrJson: { error: { code: "agent_as_human", details: { harness: "claude-code", identity: "poster" } } },
     });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
@@ -56,7 +56,7 @@ it.effect("from Claude Code, cookout posts with an agent's token and the message
   Effect.gen(function* agentFromAgent() {
     const posted = yield* postAs("agent", { CLAUDECODE: "1" });
 
-    expect(posted).toMatchObject({ exitCode: 0, stdoutJson: { message: { agentTool: "claude-code" } } });
+    expect(posted).toMatchObject({ exitCode: 0, stdoutJson: { message: { harness: "claude-code" } } });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
@@ -74,7 +74,7 @@ it.effect.each(otherTools)("from $tool, cookout refuses a human's token naming $
 
     expect(refused).toMatchObject({
       exitCode: 1,
-      stderrJson: { error: { code: "agent_as_human", details: { agentTool: tool } } },
+      stderrJson: { error: { code: "agent_as_human", details: { harness: tool } } },
     });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

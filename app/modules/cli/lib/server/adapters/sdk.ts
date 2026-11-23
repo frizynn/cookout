@@ -4,14 +4,14 @@ import type {
   AgentSessionStateFile,
   AgentSessionStateNeeds,
 } from "../agent-session-state.ts";
-import type { AgentToolSession, CookoutConnection } from "../../../../config/index.ts";
 import type { CookoutClient, CookoutErrorCode } from "../../../../sdk/index.ts";
+import type { CookoutConnection, HarnessSession } from "../../../../config/index.ts";
 import { CookoutError, createCookoutClient } from "../../../../sdk/index.ts";
 import { Effect, Option, Predicate } from "effect";
 import { agentSessionExpired, agentSessionRevoked } from "../../../../agent-sessions/index.ts";
-import { agentToolEnvironment, cookoutSession, cookoutToken } from "../../../../config/server.ts";
-import { agentToolIn, agentToolSessionIn } from "../../../../config/index.ts";
 import { boardUrlOrEmpty, loginFor } from "../logins.ts";
+import { cookoutSession, cookoutToken, harnessEnvironment } from "../../../../config/server.ts";
+import { harnessIn, harnessSessionIn } from "../../../../config/index.ts";
 import type { LoginFailure } from "../logins.ts";
 import { agentSessionStateFile } from "../agent-session-state.ts";
 import { baseUrlOf } from "../../../../http/client.ts";
@@ -121,16 +121,16 @@ function onAgentSessionEnded({
 }
 
 const variables = Effect.orDie(
-  Effect.all({ markers: agentToolEnvironment, session: cookoutSession, token: cookoutToken }, { concurrency: 1 }),
+  Effect.all({ markers: harnessEnvironment, session: cookoutSession, token: cookoutToken }, { concurrency: 1 }),
 );
 
 const cliEnvironment = Effect.zipWith(boardUrlOrEmpty, variables, (url, found): CliEnvironment => ({ ...found, url }));
 
-function connectionFrom(url: string, token: string, agentTool: { readonly agentTool?: string }): CookoutConnection {
+function connectionFrom(url: string, token: string, harness: { readonly harness?: string }): CookoutConnection {
   if (token === "") {
     return { url: baseUrlOf(url) };
   }
-  return { ...agentTool, token, url: baseUrlOf(url) };
+  return { ...harness, token, url: baseUrlOf(url) };
 }
 
 const NO_CREDENTIAL: Credential = { joined: Option.none(), source: "none", token: "" };
@@ -140,18 +140,18 @@ function given(source: CredentialSource, token: string): Credential {
 }
 
 function joinedSessionFile(
-  { agentTool = "", sessionId }: AgentToolSession,
+  { harness = "", sessionId }: HarnessSession,
   url: string,
 ): Effect.Effect<Option.Option<AgentSessionStateFile>, never, AgentSessionStateNeeds> {
-  if (agentTool === "" || Predicate.isUndefined(sessionId)) {
+  if (harness === "" || Predicate.isUndefined(sessionId)) {
     return Effect.succeedNone;
   }
-  return Effect.asSome(agentSessionStateFile({ agentTool, sessionId, url: baseUrlOf(url) }));
+  return Effect.asSome(agentSessionStateFile({ harness, sessionId, url: baseUrlOf(url) }));
 }
 
 type Found<Value = Credential> = Effect.Effect<Value, CallFailure, AgentSessionStateNeeds>;
 
-function joinedCredential(place: AgentToolSession, url: string): Found<Option.Option<Credential>> {
+function joinedCredential(place: HarnessSession, url: string): Found<Option.Option<Credential>> {
   return Effect.gen(function* findJoinedSession() {
     const file = yield* joinedSessionFile(place, url);
     if (Option.isNone(file)) {
@@ -187,7 +187,7 @@ function sessionOr(env: CliEnvironment, otherwise: () => Found): Found {
   return otherwise();
 }
 
-function joinedOrToken(env: CliEnvironment, place: AgentToolSession): Found {
+function joinedOrToken(env: CliEnvironment, place: HarnessSession): Found {
   if (env.url === "") {
     return tokenOr(env, () => Effect.succeed(NO_CREDENTIAL));
   }
@@ -205,8 +205,8 @@ function variablesOr(env: CliEnvironment, stored: (url: string) => Found): Found
 }
 
 function credentialFor(env: CliEnvironment): Found {
-  const place = agentToolSessionIn(env.markers);
-  if (Predicate.isUndefined(place.agentTool)) {
+  const place = harnessSessionIn(env.markers);
+  if (Predicate.isUndefined(place.harness)) {
     return variablesOr(env, loginCredential);
   }
   return sessionOr(env, () => joinedOrToken(env, place));
@@ -216,7 +216,7 @@ function clientFor(
   env: CliEnvironment,
   { joined, source, token }: Credential,
 ): Effect.Effect<ClientWithAgentSessionState, CallFailure> {
-  const connection = connectionFrom(env.url, token, agentToolIn(env.markers));
+  const connection = connectionFrom(env.url, token, harnessIn(env.markers));
   return Effect.map(
     Effect.try({ catch: toFailure, try: () => createCookoutClient({ ...connection, env: NOTHING }) }),
     (client) => ({ client, connection, joined, source }),
@@ -270,13 +270,13 @@ function callServer<Value>(call: Call<Value>): Found<Value> {
 
 interface JoinPlace {
   readonly file: Option.Option<AgentSessionStateFile>;
-  readonly place: AgentToolSession;
+  readonly place: HarnessSession;
   readonly url: string;
 }
 
 const joinPlace: Effect.Effect<JoinPlace, CallFailure, AgentSessionStateNeeds> = Effect.gen(function* findJoinPlace() {
   const env = yield* cliEnvironment;
-  const place = agentToolSessionIn(env.markers);
+  const place = harnessSessionIn(env.markers);
   const file = yield* joinedSessionFile(place, env.url);
   return { file, place, url: baseUrlOf(env.url) };
 });

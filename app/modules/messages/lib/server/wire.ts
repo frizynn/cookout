@@ -6,15 +6,15 @@ import type {
   ThreadResponse,
   TopLevelMessage,
 } from "../../index.ts";
+import { channelNamePattern, isChannelName } from "../../../channels/index.ts";
 import {
-  agentToolPattern,
+  harnessPattern,
   identityNamePattern,
-  isAgentTool,
+  isHarness,
   isIdentityName,
   isOwner,
   plainNamePattern,
 } from "../../../identities/index.ts";
-import { channelNamePattern, isChannelName } from "../../../channels/index.ts";
 import { isMessageId, messageTextLength, pageSize, shownRepliers } from "../../index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
@@ -46,17 +46,15 @@ const AuthorSchema = matchesWire<Author>()(
   Schema.Struct({ name: IdentityNameSchema, owner: Schema.optionalKey(OwnerSchema) }),
 );
 
-const agentToolRule = Schema.isPattern(agentToolPattern).abort();
-const AgentToolSchema = Schema.String.check(agentToolRule).pipe(
-  Schema.refine(isAgentTool, { identifier: "AgentTool" }),
-);
+const harnessRule = Schema.isPattern(harnessPattern).abort();
+const HarnessSchema = Schema.String.check(harnessRule).pipe(Schema.refine(isHarness, { identifier: "AgentTool" }));
 
 const messageFields = {
-  agentTool: Schema.optionalKey(AgentToolSchema),
   author: AuthorSchema,
   channel: ChannelNameSchema,
   createdAt: IsoTimeSchema,
   data: Schema.optionalKey(Schema.Json),
+  harness: Schema.optionalKey(HarnessSchema),
   id: MessageIdSchema,
   mentions: Schema.Array(IdentityNameSchema),
   text: TextSchema,

@@ -2,7 +2,7 @@ import { CookoutError, isServerErrorCode } from "./errors.ts";
 import type { HttpMethod, HttpRequest, HttpResponse, OpenEventStream } from "../../http/client.ts";
 import { openEventStream, request } from "../../http/client.ts";
 import type { CookoutConnection } from "../../config/index.ts";
-import { agentToolHeader } from "../../identities/index.ts";
+import { harnessHeader } from "../../identities/index.ts";
 import { isErrorResponse } from "./generated/validators.js";
 import { readCookoutConnection } from "../../config/index.ts";
 
@@ -38,21 +38,21 @@ function tokenHeaders(token: string | undefined): Readonly<Record<string, string
   return NO_HEADERS;
 }
 
-function agentToolHeaders(agentTool: string | undefined): Readonly<Record<string, string>> {
-  if (typeof agentTool === "string") {
-    return { [agentToolHeader]: agentTool };
+function harnessHeaders(harness: string | undefined): Readonly<Record<string, string>> {
+  if (typeof harness === "string") {
+    return { [harnessHeader]: harness };
   }
   return NO_HEADERS;
 }
 
-function headersFor({ agentTool, token }: ClientConnection): Readonly<Record<string, string>> {
-  return { ...tokenHeaders(token), ...agentToolHeaders(agentTool) };
+function headersFor({ harness, token }: ClientConnection): Readonly<Record<string, string>> {
+  return { ...tokenHeaders(token), ...harnessHeaders(harness) };
 }
 
 function fromEnvironment(env: ConnectionOptions["env"], given: Partial<CookoutConnection>): Partial<CookoutConnection> {
-  const { agentTool, ...read } = readCookoutConnection(env);
-  if (typeof given.token !== "string" && typeof agentTool === "string") {
-    return { ...read, agentTool };
+  const { harness, ...read } = readCookoutConnection(env);
+  if (typeof given.token !== "string" && typeof harness === "string") {
+    return { ...read, harness };
   }
   return read;
 }
