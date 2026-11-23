@@ -30,6 +30,8 @@ function isMessageId(input: unknown): input is MessageId {
 
 const Posted = Schema.Struct({ message: Schema.Struct({ id: Schema.declare(isMessageId) }) });
 const decodePosted = Schema.decodeUnknownEffect(Posted);
+const Called = Schema.Struct({ threadId: Schema.declare(isMessageId) });
+const decodeCalled = Schema.decodeUnknownEffect(Called);
 
 function collect<Failure>(stream: Stream.Stream<Uint8Array, Failure>): Effect.Effect<string, Failure> {
   return stream.pipe(Stream.decodeText(), Stream.mkString);
@@ -72,4 +74,11 @@ function postedMessageId({ stdoutJson }: BinResult): Effect.Effect<MessageId> {
   );
 }
 
-export { type BinNeeds, type BinResult, type BinRun, freshStateFolder, postedMessageId, runBin };
+function calledThreadId({ stdoutJson }: BinResult): Effect.Effect<MessageId> {
+  return decodeCalled(stdoutJson).pipe(
+    Effect.map(({ threadId }) => threadId),
+    Effect.orDie,
+  );
+}
+
+export { type BinNeeds, type BinResult, type BinRun, calledThreadId, freshStateFolder, postedMessageId, runBin };
