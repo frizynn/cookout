@@ -68,6 +68,11 @@ function adminNameIsAgent({
   return refused(agentName);
 }
 
+function storageUnavailable({ message }: Pick<StorageUnavailable, "message">): Effect.Effect<never, CommandFailed> {
+  const unavailable = { code: "storage_unavailable", message };
+  return refused(unavailable);
+}
+
 const runServer = (layers: ServeLayers, listen: Omit<Serving, "webFolder">, database: string) =>
   Effect.gen(function* () {
     const admin = yield* adminTokenOrRefuse;
@@ -76,7 +81,7 @@ const runServer = (layers: ServeLayers, listen: Omit<Serving, "webFolder">, data
       cookoutServer({ ...listen, ...webFolderOf(layers), adminName: name, adminToken: admin }).pipe(
         Layer.provide(layers.storage(database)),
       ),
-    ).pipe(Effect.catchTag("AdminNameIsAgent", adminNameIsAgent));
+    ).pipe(Effect.catchTags({ AdminNameIsAgent: adminNameIsAgent, StorageUnavailable: storageUnavailable }));
     const url = yield* serverUrl.pipe(Effect.provideContext(services));
     yield* printLine({ database, listening: url });
     return yield* Effect.never;

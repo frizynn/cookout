@@ -149,6 +149,20 @@ it.effect("cookout serve refuses a COOKOUT_ADMIN_NAME that breaks the identity-n
   }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );
 
+it.effect("cookout serve prints why the database didn't open or migrate on stderr, and exits 1", () =>
+  Effect.gen(function* printsStorageFailure() {
+    const fs = yield* FileSystem.FileSystem;
+    const database = yield* freshDatabasePath;
+    yield* fs.writeFileString(database, "this is not a SQLite database, and no migration can run on it\n");
+    const refused = yield* runServe({ database });
+
+    expect(refused).toMatchObject({ exitCode: EXIT_FAILURE, stdout: "" });
+    expect(refused.stderrJson).toStrictEqual({
+      error: { code: "storage_unavailable", message: "file is not a database" },
+    });
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
+);
+
 it.effect("cookout serve refuses a COOKOUT_ADMIN_NAME that names an agent, naming the clash", () =>
   Effect.gen(function* refusesAgentAdminName() {
     const database = yield* freshDatabasePath;
