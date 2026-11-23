@@ -37,13 +37,13 @@ it('"Reply" on a message opens its thread in the panel with the cursor in the re
   close();
 });
 
-it("a message's reply count opens its thread with the cursor in the reply box", { timeout: 5000 }, async () => {
+it("a message's thread summary opens its thread with the cursor in the reply box", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
   await channelWith("web-reply-count-focus", ["The reply"]);
   const close = openAt({ client: adminClient(), hash: "#/channels/web-reply-count-focus" });
 
-  fireEvent.click(await screen.findByRole("link", { name: "1 reply" }));
+  fireEvent.click(await screen.findByRole("link", { name: /^1 reply/u }));
 
   await expect(focusedBox()).resolves.toBe("text");
 

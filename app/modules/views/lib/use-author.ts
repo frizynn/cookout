@@ -7,18 +7,41 @@ interface Shown {
   readonly displayName: string | null;
 }
 
-function useListed(name: string): Identity | null {
+interface Drawn {
+  readonly name: string;
+  readonly agent: boolean;
+}
+
+function useEveryListed(): readonly Identity[] {
   const identities = useContext(AuthorList);
-  const listed = useSyncExternalStore(identities.subscribe, identities.snapshot);
+  return useSyncExternalStore(identities.subscribe, identities.snapshot);
+}
+
+function listedIn(listed: readonly Identity[], name: string): Identity | null {
   return listed.find((identity) => identity.name === name) ?? null;
 }
 
-function useAuthor(author: Author): Shown {
-  const identity = useListed(author.name);
+function shownFrom(identity: Identity | null, author: Author): Shown {
   if (identity === null) {
     return { agent: "owner" in author, displayName: null };
   }
   return { agent: identity.kind === "agent", displayName: identity.displayName ?? null };
 }
 
-export { useAuthor, useListed };
+function useListed(name: string): Identity | null {
+  return listedIn(useEveryListed(), name);
+}
+
+function useAuthor(author: Author): Shown {
+  return shownFrom(useListed(author.name), author);
+}
+
+function useDrawnAuthors(authors: readonly Author[]): readonly Drawn[] {
+  const listed = useEveryListed();
+  return authors.map((author) => ({
+    agent: shownFrom(listedIn(listed, author.name), author).agent,
+    name: author.name,
+  }));
+}
+
+export { useAuthor, useDrawnAuthors, useListed };

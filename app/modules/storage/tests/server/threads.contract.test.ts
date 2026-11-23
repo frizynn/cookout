@@ -102,7 +102,16 @@ it.effect.each(storageLayers)(
 
       expect(page).toStrictEqual({
         hasMore: false,
-        messages: [{ ...first, latestReplyId: reply.id, replyCount: FIRST }, second],
+        messages: [
+          {
+            ...first,
+            latestReplyAt: reply.createdAt,
+            latestReplyId: reply.id,
+            repliers: [reply.author],
+            replyCount: FIRST,
+          },
+          second,
+        ],
       });
     }),
 );

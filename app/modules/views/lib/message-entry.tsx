@@ -1,13 +1,13 @@
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
-import { MessageItem, ReplyCount } from "../../design-system/index.tsx";
-import { markOf, replies, replyCountOf, threadHref } from "./message-marks.ts";
+import { markOf, threadHref, threadSummaryOf } from "./message-marks.ts";
 import { MessageData } from "./message-data.tsx";
+import { MessageItem } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
+import { ReplySummary } from "./reply-summary.tsx";
 import type { StreamRow } from "./stream-rows.ts";
 import { timeOf } from "../../format/index.ts";
 import { useAuthor } from "./use-author.ts";
 
-const NONE = 0;
 const REPLY = "Reply";
 
 interface MessageEntryProps {
@@ -21,7 +21,7 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
   const { message } = props.row;
   const { agent, displayName } = useAuthor(message.author);
   const href = threadHref({ channel: props.channel, message });
-  const count = replyCountOf(message);
+  const summary = threadSummaryOf(message);
   return (
     <MessageItem
       actionHref={href}
@@ -36,7 +36,7 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
       unreadLine={props.row.unreadLine}
     >
       <MessageData me={props.me} message={message} />
-      {href !== null && count > NONE && <ReplyCount href={href}>{replies(count)}</ReplyCount>}
+      {href !== null && summary !== null && <ReplySummary href={href} summary={summary} />}
     </MessageItem>
   );
 }

@@ -1,4 +1,4 @@
-import type { ChannelName, Message, MessageId } from "../../sdk/index.ts";
+import type { Author, ChannelName, Message, MessageId } from "../../sdk/index.ts";
 import { hrefOf } from "../../paths/index.ts";
 
 const NONE = 0;
@@ -45,11 +45,17 @@ function threadHref({ channel, message }: Linking): string | null {
   return hrefOf({ channel, name: "thread", thread: message.id });
 }
 
-function replyCountOf(message: Message): number {
-  if (message.kind === "top-level") {
-    return message.replyCount;
-  }
-  return NONE;
+interface ThreadSummaryOf {
+  readonly replyCount: number;
+  readonly latestReplyAt: string;
+  readonly repliers: readonly Author[];
 }
 
-export { markOf, replies, replyCountOf, threadHref };
+function threadSummaryOf(message: Message): ThreadSummaryOf | null {
+  if (message.kind !== "top-level" || message.latestReplyAt === null || message.replyCount === NONE) {
+    return null;
+  }
+  return { latestReplyAt: message.latestReplyAt, repliers: message.repliers, replyCount: message.replyCount };
+}
+
+export { type ThreadSummaryOf, markOf, replies, threadHref, threadSummaryOf };

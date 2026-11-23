@@ -31,8 +31,10 @@ it.effect.each(storageLayers)(
         data: RICH_DATA,
         id: message.id,
         kind: "top-level",
+        latestReplyAt: null,
         latestReplyId: null,
         mentions: [],
+        repliers: [],
         replyCount: ZERO,
         text: "hi",
       });
@@ -126,7 +128,13 @@ it.effect.each(storageLayers)(
 
       expect(first).toStrictEqual({ ...newMessage("grill", "first"), id: first.id, kind: "reply", replyTo: parent.id });
       expect(thread).toStrictEqual({
-        parent: { ...parent, latestReplyId: second.id, replyCount: TWO_REPLIES },
+        parent: {
+          ...parent,
+          latestReplyAt: second.createdAt,
+          latestReplyId: second.id,
+          repliers: [second.author],
+          replyCount: TWO_REPLIES,
+        },
         replies: [first, second],
       });
     }),

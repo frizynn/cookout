@@ -92,7 +92,11 @@ it.effect("a message with replies ends its group, so the next one shows its auth
 
     const shown = yield* shownTo(grace, "#/channels/replied", "Messages");
 
-    expect(shown).toStrictEqual(["[Thursday, 1 January]", "adaasked1 reply", "adaagain"]);
+    expect(shown).toStrictEqual([
+      "[Thursday, 1 January]",
+      expect.stringMatching(/^adaasked1 replyLast reply \d+d ago/u),
+      "adaagain",
+    ]);
   }).pipe(Effect.provide(testCookout())),
 );
 

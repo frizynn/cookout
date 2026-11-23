@@ -168,6 +168,13 @@ interface TopLevelMessage extends MessageFields {
   readonly replyCount: number;
   /** The newest reply in its thread, or `null` if it has none. */
   readonly latestReplyId: MessageId | null;
+  /** When the newest reply in its thread was posted, or `null` if it has none. */
+  readonly latestReplyAt: IsoTime | null;
+  /**
+   * The authors of its thread's replies, once each by name, the latest replier first: at most `shownRepliers`.
+   * Each is the author as stored on their latest reply, so a deleted replier still shows.
+   */
+  readonly repliers: readonly Author[];
 }
 /** A reply in a thread. `replyTo` is always the top-level message, even when the reply was posted to another reply. */
 interface Reply extends MessageFields {

@@ -82,7 +82,13 @@ it.effect.each(storageLayers)(
       );
       const position = yield* storage.ackMessage(nameOf("ann"), reply.id);
       const after = yield* storage.listInbox(nameOf("ann"));
-      const current = { ...parent, latestReplyId: reply.id, replyCount: ONE_REPLY };
+      const current = {
+        ...parent,
+        latestReplyAt: reply.createdAt,
+        latestReplyId: reply.id,
+        repliers: [reply.author],
+        replyCount: ONE_REPLY,
+      };
 
       expect(before).toStrictEqual([{ message: reply, parent: current, reasons: ["followed-thread"] }]);
       expect([again, own]).toStrictEqual([before, []]);
@@ -147,7 +153,13 @@ it.effect.each(storageLayers)(
       const reply = yield* appendTo(storage)(newMessage("ops", "done", { ...BOB, replyTo: parent.id }));
       yield* appendTo(storage)(newMessage("grill", "elsewhere", BOB));
       const inbox = yield* storage.listInbox(nameOf("ann"));
-      const current = { ...parent, latestReplyId: reply.id, replyCount: ONE_REPLY };
+      const current = {
+        ...parent,
+        latestReplyAt: reply.createdAt,
+        latestReplyId: reply.id,
+        repliers: [reply.author],
+        replyCount: ONE_REPLY,
+      };
 
       expect([subscribed, inbox]).toStrictEqual([
         true,

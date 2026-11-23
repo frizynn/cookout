@@ -3,6 +3,7 @@ import type { Failure, PostState } from "./failure.ts";
 import { callFailure, notJson, parseData } from "./command-call.ts";
 import type { CallState } from "./command-call.ts";
 import { failure } from "./failure.ts";
+import { withNewestReply } from "../../messages/index.ts";
 
 type OlderState = { readonly status: "idle" } | { readonly status: "loading" } | Failure;
 
@@ -49,7 +50,6 @@ interface Channel {
 }
 
 const NEWEST = -1;
-const ONE_MORE = 1;
 const NONE_OPEN = 0;
 const NONE_KEPT = 0;
 
@@ -179,7 +179,7 @@ function withReply(parent: TopLevelMessage, reply: Reply): TopLevelMessage {
   if (parent.id !== reply.replyTo || (parent.latestReplyId !== null && parent.latestReplyId >= reply.id)) {
     return parent;
   }
-  return { ...parent, latestReplyId: reply.id, replyCount: parent.replyCount + ONE_MORE };
+  return withNewestReply({ parent, reply });
 }
 
 function received(loaded: Loaded, message: Message): Loaded {
