@@ -39,11 +39,11 @@ function identitiesWithPresence(
     });
 }
 
-function identityWithPresence({ answer, opened }: Answered): Effect.Effect<IdentityResponse, CallFailure> {
-  return Effect.map(readPresence(opened), (everyone) => ({
-    ...answer,
-    identity: withPresence(everyone)(answer.identity),
-  }));
+function identityWithPresence({ answer, opened }: Answered): Effect.Effect<IdentityResponse> {
+  return readPresence(opened).pipe(
+    Effect.map((everyone) => ({ ...answer, identity: withPresence(everyone)(answer.identity) })),
+    Effect.orElseSucceed(() => answer),
+  );
 }
 
 export { identitiesWithPresence, identityWithPresence };
