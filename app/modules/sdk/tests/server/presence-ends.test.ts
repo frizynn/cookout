@@ -1,11 +1,13 @@
-import { Array as Arr, Effect, Option } from "effect";
+import { Array as Arr, Effect, Option, String as Str } from "effect";
 import type { CookoutClient, EventStream, JoinRequest, OfflineReason, Presence } from "../../index.ts";
 import type { LastEnd, TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
+import { openEventStream, request } from "../../../http/client.ts";
 import type { Scope } from "effect";
 import { TestClock } from "effect/testing";
-import { request } from "../../../http/client.ts";
+import { eventsPath } from "../../../events/index.ts";
+import { sessionPath } from "../../../identities/index.ts";
 
 const BOOT = "2026-01-01T00:00:00.000Z";
 const AGENT = "triage";
@@ -18,20 +20,14 @@ interface Board {
   readonly agent: TestIdentity;
 }
 
-interface Watching {
-  readonly session: CookoutClient;
-  readonly events: EventStream;
-}
-
 interface Ended {
   readonly presence: Presence | undefined;
   readonly end: LastEnd;
 }
 
-interface AroundTheGrace {
+interface AroundTheGrace extends Omit<Ended, "presence"> {
   readonly withinGrace: Presence | undefined;
   readonly afterGrace: Presence | undefined;
-  readonly end: LastEnd;
 }
 
 const board: Effect.Effect<Board, never, TestCookout> = Effect.gen(function* mattAndHisAgent() {
@@ -58,11 +54,30 @@ function joinedSession({ cookout, matt }: Board, asked: JoinRequest = AS_AGENT):
   );
 }
 
-function watchingAsSession(watched: Board, asked?: JoinRequest): Effect.Effect<Watching> {
+function watchingAsSession(
+  watched: Board,
+  asked?: JoinRequest,
+): Effect.Effect<{ readonly session: CookoutClient; readonly events: EventStream }> {
   return Effect.gen(function* joinThenWatch() {
     const session = yield* joinedSession(watched, asked);
     const events = yield* answer(() => session.watch());
     return { events, session };
+  });
+}
+
+function webTab(url: string, token: string): Effect.Effect<void, never, Scope.Scope> {
+  return Effect.gen(function* openWebTab() {
+    const loggedIn = yield* answer(() =>
+      request({ baseUrl: url, headers: { authorization: `Bearer ${token}` }, method: "POST", path: sessionPath }),
+    );
+    const [setCookie = ""] = loggedIn.headers.getSetCookie();
+    const cookie = Arr.headNonEmpty(Str.split("; ")(setCookie));
+    const opened = yield* answer(() =>
+      openEventStream({ baseUrl: url, headers: { cookie }, method: "GET", path: eventsPath }),
+    );
+    if (opened.ok) {
+      yield* Effect.addFinalizer(() => answer(() => opened.close()));
+    }
   });
 }
 
@@ -140,40 +155,40 @@ it.effect("leave makes an agent offline at once even after its watch has closed,
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("the owner revoking its agent's session makes the watching agent offline at once, as an expected end", () =>
-  Effect.gen(function* ownerRevokes() {
-    const watched = yield* board;
-    yield* watchingAsSession(watched);
-    yield* answer(() => watched.matt.client.revokeAgentSession(AGENT));
-    const { end, presence } = yield* endedAtOnce(watched, AGENT);
+interface Revoking {
+  readonly who: string;
+  readonly revoke: (watched: Board) => Promise<unknown>;
+  readonly unexpected: boolean;
+}
 
-    expect(presence).toStrictEqual(offline("session revoked"));
-    expect(end).toStrictEqual({ endedUnexpectedly: false, offlineReason: "session revoked" });
-  }).pipe(Effect.provide(testCookout())),
-);
+it.effect.each<Revoking>([
+  {
+    revoke: ({ matt }): Promise<unknown> => matt.client.revokeAgentSession(AGENT),
+    unexpected: false,
+    who: "its owner's revoke",
+  },
+  {
+    revoke: ({ cookout }): Promise<unknown> => cookout.client.revokeAgentSession(AGENT),
+    unexpected: true,
+    who: "an admin's revoke of someone else's agent",
+  },
+  {
+    revoke: ({ matt }): Promise<unknown> => matt.client.join({ as: AGENT, force: true }),
+    unexpected: false,
+    who: "a join --force takeover",
+  },
+])(
+  "$who makes the watching agent offline at once with session revoked, unexpected: $unexpected",
+  ({ revoke, unexpected }) =>
+    Effect.gen(function* revoked() {
+      const watched = yield* board;
+      yield* watchingAsSession(watched);
+      yield* answer(() => revoke(watched));
+      const { end, presence } = yield* endedAtOnce(watched, AGENT);
 
-it.effect("an admin revoking someone else's agent's session is recorded as an unexpected end", () =>
-  Effect.gen(function* adminRevokes() {
-    const watched = yield* board;
-    yield* watchingAsSession(watched);
-    yield* answer(() => watched.cookout.client.revokeAgentSession(AGENT));
-    const { end, presence } = yield* endedAtOnce(watched, AGENT);
-
-    expect(presence).toStrictEqual(offline("session revoked"));
-    expect(end).toStrictEqual({ endedUnexpectedly: true, offlineReason: "session revoked" });
-  }).pipe(Effect.provide(testCookout())),
-);
-
-it.effect("a join --force takeover makes the old session's watch offline at once, as an expected end", () =>
-  Effect.gen(function* takeover() {
-    const watched = yield* board;
-    yield* watchingAsSession(watched);
-    yield* answer(() => watched.matt.client.join({ as: AGENT, force: true }));
-    const { end, presence } = yield* endedAtOnce(watched, AGENT);
-
-    expect(presence).toStrictEqual(offline("session revoked"));
-    expect(end).toStrictEqual({ endedUnexpectedly: false, offlineReason: "session revoked" });
-  }).pipe(Effect.provide(testCookout())),
+      expect(presence).toStrictEqual(offline("session revoked"));
+      expect(end).toStrictEqual({ endedUnexpectedly: unexpected, offlineReason: "session revoked" });
+    }).pipe(Effect.provide(testCookout())),
 );
 
 it.effect("an agent session expiring on the test clock makes the watching agent offline at once, as unexpected", () =>
@@ -269,4 +284,16 @@ it.effect("after a restart, an identity that never reconnects reads connection l
     expect(presence).toStrictEqual(offline("connection lost"));
     expect(end).toStrictEqual({ endedUnexpectedly: true, offlineReason: "connection lost" });
   }).pipe(Effect.provide(testCookout({ storage: "sqlite" }))),
+);
+
+it.effect("a closed web tab reads offline after the grace with no reason, since a tab sends no clean close", () =>
+  Effect.gen(function* webTabCloses() {
+    const { cookout, matt } = yield* board;
+    yield* Effect.scoped(webTab(cookout.url, matt.token));
+    yield* cookout.liveConnectionsClosed("matt");
+    yield* TestClock.adjust("60 seconds");
+    const presence = yield* presenceOf(cookout.client, "matt");
+
+    expect(presence).toStrictEqual({ identity: "matt", lastSeenAt: BOOT, online: false });
+  }).pipe(Effect.provide(testCookout())),
 );

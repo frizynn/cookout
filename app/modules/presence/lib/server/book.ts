@@ -194,6 +194,13 @@ function withoutCleanClose({ connection, state }: Closing): BookState {
   return { ...state, closingCleanly: left };
 }
 
+function isWebTab(held: Held, connection: LiveConnectionId): boolean {
+  return Option.exists(
+    Option.fromNullishOr(held.connections.get(connection)),
+    ({ sentWith }) => sentWith.kind === "web",
+  );
+}
+
 function released(closing: Released, held: Held): BookState {
   const connections = new Map(held.connections);
   connections.delete(closing.connection);
@@ -201,7 +208,7 @@ function released(closing: Released, held: Held): BookState {
   if (connections.size > NONE) {
     return withHeld({ ...closing, state }, { ...held, connections });
   }
-  const clean = closing.state.closingCleanly.has(closing.connection);
+  const clean = closing.state.closingCleanly.has(closing.connection) || isWebTab(held, closing.connection);
   const grace = Option.some({ clean, closedAt: closing.closedAt, closing: closing.connection });
   return withHeld({ ...closing, state }, { ...held, connections, grace });
 }

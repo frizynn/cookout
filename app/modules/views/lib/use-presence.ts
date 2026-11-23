@@ -58,9 +58,18 @@ function connectionOf(connection: LiveConnectionDetail): string {
   return `${TEXT.watchingFrom}${host}`;
 }
 
+function offlineDetail(presence: Presence): string {
+  const reason = presence.offlineReason ?? null;
+  const text = offlineText(presence, " · ");
+  if (reason === null) {
+    return text;
+  }
+  return `${TEXT.offline}: ${reason}${text.slice(TEXT.offline.length)}`;
+}
+
 function detailOf(presence: Presence): string {
   if (!presence.online) {
-    return offlineText(presence, " · ");
+    return offlineDetail(presence);
   }
   const connection = presence.connection ?? null;
   if (connection === null) {
