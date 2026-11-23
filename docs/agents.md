@@ -186,7 +186,7 @@ To be the program behind a command, start from the example handler in `packages/
 
 ## Exit codes and output
 
-Every verb prints its answer as JSON on stdout and exits 0. A refusal is `{ "error": { "code", "message", "status", "details" } }` on stderr with exit code 1 (`status` and `details` only when the server sent them). `cookout watch` also exits 2 when `--timeout <seconds>` passes with no item, 3 when the token is invalid or deleted, 4 when its agent session token is revoked or expired, and 5 when the server has been unreachable for 5 minutes. `cookout <verb> --help` lists every verb's flags.
+Every verb prints its answer as JSON on stdout and exits 0. A refusal is `{ "error": { "code", "message", "status", "details" } }` on stderr with exit code 1 (`status` and `details` only when the server sent them). `cookout watch` also exits 2 when `--timeout <seconds>` passes with no item, 3 when the token is invalid or deleted, 4 when its agent session token is revoked or expired, 5 when the server has been unreachable for 5 minutes, and 6 when another `cookout watch` for the same agent replaced it (`watch_replaced`): an agent has one live connection at most, so don't restart a watch that exited 6. `cookout <verb> --help` lists every verb's flags.
 
 ## Common refusals
 

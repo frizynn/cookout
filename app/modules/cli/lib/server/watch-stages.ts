@@ -8,6 +8,7 @@ import type { Format } from "./watch-lines.ts";
 import type { Heard } from "./watch-connection.ts";
 import { callClient } from "./adapters/sdk.ts";
 import { isInboxItem } from "./watch-connection.ts";
+import { watchReplaced } from "../../../presence/index.ts";
 
 interface StopCondition {
   readonly once: boolean;
@@ -18,8 +19,16 @@ interface StopCondition {
 const NO_UNREAD = 0;
 const NOTHING_POSTED = 0;
 const FIRST = 1;
-const TOKEN_REFUSED: ReadonlySet<string> = new Set(["token_missing", "token_unknown", "token_revoked"]);
-const exitCodes = { agentSessionEnded: 4, timeout: 2, tokenRefused: 3, unreachable: 5 } as const;
+const exitCodes = { agentSessionEnded: 4, replaced: 6, timeout: 2, tokenRefused: 3, unreachable: 5 } as const;
+const FATAL_EXIT_CODES: ReadonlyMap<string, number> = new Map([
+  ["token_missing", exitCodes.tokenRefused],
+  ["token_unknown", exitCodes.tokenRefused],
+  ["token_revoked", exitCodes.tokenRefused],
+  [agentSessionRevoked, exitCodes.agentSessionEnded],
+  [agentSessionExpired, exitCodes.agentSessionEnded],
+  ["server_unreachable", exitCodes.unreachable],
+  [watchReplaced, exitCodes.replaced],
+]);
 
 interface Unread {
   readonly count: number;
@@ -135,16 +144,7 @@ function untilStopped(
 }
 
 function fatalExitCode(code: string): Option.Option<number> {
-  if (TOKEN_REFUSED.has(code)) {
-    return Option.some(exitCodes.tokenRefused);
-  }
-  if (code === agentSessionRevoked || code === agentSessionExpired) {
-    return Option.some(exitCodes.agentSessionEnded);
-  }
-  if (code === "server_unreachable") {
-    return Option.some(exitCodes.unreachable);
-  }
-  return Option.none();
+  return Option.fromNullishOr(FATAL_EXIT_CODES.get(code));
 }
 
 function stopped(format: Format): (failure: CallFailure) => Effect.Effect<never, CommandFailed> {
