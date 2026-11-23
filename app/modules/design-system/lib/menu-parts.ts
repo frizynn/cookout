@@ -1,15 +1,19 @@
 interface MessageMenuParts {
-  readonly open: boolean;
-  readonly onOpen: () => void;
-  readonly onClose: () => void;
   readonly onMarkUnread: () => void;
 }
 
-interface HoverActionsParts {
+interface MessageActionParts {
   readonly actionHref: string | null;
   readonly actionLabel: string;
   readonly onAction: (() => void) | null;
-  readonly menu: MessageMenuParts | null;
 }
 
-export type { HoverActionsParts, MessageMenuParts };
+type MenuChoice =
+  | { readonly label: string; readonly href: string; readonly onSelect: null }
+  | { readonly label: string; readonly href: null; readonly onSelect: () => void };
+
+interface HoverActionsParts extends MessageActionParts {
+  readonly choices: readonly MenuChoice[];
+}
+
+export type { HoverActionsParts, MenuChoice, MessageActionParts, MessageMenuParts };

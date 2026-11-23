@@ -1,4 +1,5 @@
 import { adminClient, newIdentity } from "./identities.ts";
+import { chose, pressed } from "./menus.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
@@ -72,7 +73,7 @@ async function firstMoreActions(list: string): Promise<HTMLElement> {
 }
 
 async function markedUnread(): Promise<void> {
-  fireEvent.click(await screen.findByRole("menuitem", { name: "Mark unread" }));
+  await chose("Mark unread");
 }
 
 it('right-clicking a message and choosing Mark unread moves "New" above it and puts it back in the Inbox', {
@@ -135,7 +136,7 @@ it("the More actions button marks a reply unread, moving the thread's New line a
   const close = await threadRead(channel);
   const first = await firstMoreActions("Replies");
 
-  fireEvent.click(first);
+  pressed(() => first);
   await markedUnread();
   await streamShows("Replies", [
     "[New]",
@@ -153,11 +154,11 @@ it("escape closes a message's actions menu, and so does its More actions button"
 
   const close = await channelRead("web-mark-unread-close");
   const first = await firstMoreActions("Messages");
-  fireEvent.click(first);
-  fireEvent.keyDown(await screen.findByRole("menu"), { key: "Escape" });
+  pressed(() => first);
+  fireEvent.keyDown(await screen.findByRole("menu", { name: "More actions" }), { key: "Escape" });
   const afterEscape = screen.queryAllByRole("menu");
-  fireEvent.click(first);
-  fireEvent.click(first);
+  pressed(() => first);
+  pressed(() => first);
 
   expect([afterEscape, screen.queryAllByRole("menu")]).toStrictEqual([[], []]);
 

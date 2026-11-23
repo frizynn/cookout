@@ -86,8 +86,10 @@
  * takes focus, with its avatar, name and time, or only its time on hover when
  * `grouped` under the one before; the day's separator and the "New" line above it when it starts them; a
  * mark (`for-you`, the filled accent block, when it mentions or answers the reader, or `open`); and an action (such as Reply: a link, or a button with `onAction`) and
- * a More actions button shown on hover or focus. With a `menu`, right-clicking it or that button opens its actions
- * menu (the action and Mark unread), which takes focus and closes on Escape. `StandaloneMessage` is one named message on its own, such as a
+ * a More actions button shown on hover or focus. Its `menu` gives it one actions menu (the action, then Mark
+ * unread), drawn two ways on Radix: right-clicking the message opens it as a context menu at the pointer, and the
+ * More actions button opens it as a dropdown. Radix gives both their keyboard and focus behaviour; a chosen item's
+ * action runs once the menu has closed. `StandaloneMessage` is one named message on its own, such as a
  * thread's parent. In a message, `MessageBody` holds its rendered Markdown text, `Mention` an
  * `@name` in it, `CallChip` a command call
  * and its data, `DataToggle` its data folded away, and `ThreadSummary` a link to
