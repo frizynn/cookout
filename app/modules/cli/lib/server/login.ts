@@ -1,7 +1,8 @@
 import { Command, Flag } from "effect/cli";
 import { Effect, Option, Stdio, String as Str, Stream } from "effect";
+import { boardToLogOutOf, checked, firstLineOnTerminal, givenBoard, typedOnTerminal } from "./board-url.ts";
 import { logInByBrowser, revokedOnServer } from "./browser-login.ts";
-import { loginFor, removeLogin, saveLogin, serverUrl } from "./logins.ts";
+import { loginFor, removeLogin, saveLogin } from "./logins.ts";
 import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
 import type { CommandFailed } from "./output.ts";
@@ -12,6 +13,8 @@ import { toFailure } from "./adapters/sdk.ts";
 
 type LoginNeeds = AgentSessionStateNeeds | Stdio.Stdio;
 
+const NOTHING = {};
+
 interface LoggedOut {
   readonly loggedOut: boolean;
   readonly message?: string;
@@ -19,22 +22,47 @@ interface LoggedOut {
   readonly url: string;
 }
 
-const NOTHING = {};
-
 const noToken: CallFailure = {
   code: "usage",
   message: "Give the token on stdin, such as `cookout login --token < token.txt`, or paste it and press Ctrl-D.",
 };
 
-const tokenFromStdin: Effect.Effect<string, CallFailure, Stdio.Stdio> = Effect.gen(function* readToken() {
-  const stdio = yield* Stdio.Stdio;
-  const text = yield* stdio.stdin.pipe(Stream.decodeText, Stream.mkString, Effect.mapError(toFailure));
+const stdinText: Effect.Effect<string, CallFailure, Stdio.Stdio> = Effect.flatMap(Stdio.Stdio, (stdio) =>
+  stdio.stdin.pipe(Stream.decodeText, Stream.mkString, Effect.mapError(toFailure)),
+);
+
+function tokenIn(text: string): Effect.Effect<string, CallFailure> {
   const token = Str.trim(text);
   if (token === "") {
-    return yield* Effect.fail(noToken);
+    return Effect.fail(noToken);
   }
-  return token;
-});
+  return Effect.succeed(token);
+}
+
+interface TokenOnStdin {
+  readonly text: string;
+  readonly url: string;
+}
+
+function tokenAndBoard(flag: Option.Option<string>): Effect.Effect<TokenOnStdin, CallFailure, Stdio.Stdio> {
+  return Effect.flatMap(
+    givenBoard(flag),
+    Option.match({
+      onNone: () =>
+        Effect.flatMap(typedOnTerminal, ({ rest, url }) =>
+          Effect.map(checked(url), (board) => ({ text: rest, url: board })),
+        ),
+      onSome: (given) => Effect.zipWith(checked(given), stdinText, (url, text) => ({ text, url })),
+    }),
+  );
+}
+
+function boardForBrowser(flag: Option.Option<string>): Effect.Effect<string, CallFailure, Stdio.Stdio> {
+  return Effect.flatMap(
+    givenBoard(flag),
+    Option.match({ onNone: () => Effect.flatMap(firstLineOnTerminal, checked), onSome: checked }),
+  );
+}
 
 function humanOnly(name: string): CallFailure {
   return {
@@ -43,34 +71,47 @@ function humanOnly(name: string): CallFailure {
   };
 }
 
-const logIn: Effect.Effect<LoggedIn, CallFailure, LoginNeeds> = Effect.gen(function* keepLogin() {
-  const url = yield* serverUrl;
-  const token = yield* tokenFromStdin;
-  const client = yield* Effect.try({ catch: toFailure, try: () => createCookoutClient({ env: NOTHING, token, url }) });
-  const { identity } = yield* Effect.tryPromise({ catch: toFailure, try: () => client.whoami() });
-  if (identity.kind !== "human") {
-    return yield* Effect.fail(humanOnly(identity.name));
-  }
-  yield* saveLogin({ token, url });
-  return { identity, url };
-});
+function logIn(flag: Option.Option<string>): Effect.Effect<LoggedIn, CallFailure, LoginNeeds> {
+  return Effect.gen(function* keepLogin() {
+    const { text, url } = yield* tokenAndBoard(flag);
+    const token = yield* tokenIn(text);
+    const client = yield* Effect.try({
+      catch: toFailure,
+      try: () => createCookoutClient({ env: NOTHING, token, url }),
+    });
+    const { identity } = yield* Effect.tryPromise({ catch: toFailure, try: () => client.whoami() });
+    if (identity.kind !== "human") {
+      return yield* Effect.fail(humanOnly(identity.name));
+    }
+    yield* saveLogin({ token, url });
+    return { identity, url };
+  });
+}
 
-const logOut: Effect.Effect<LoggedOut, CallFailure, AgentSessionStateNeeds> = Effect.gen(function* forgetLogin() {
-  const url = yield* serverUrl;
-  const saved = yield* loginFor(url);
-  if (Option.isNone(saved)) {
-    return { loggedOut: false, message: `There is no Login for ${url}.`, url };
-  }
-  const revoked = yield* revokedOnServer({ token: saved.value, url });
-  yield* removeLogin(url);
-  return { loggedOut: true, revoked, url };
-});
+const noBoard: LoggedOut = { loggedOut: false, message: "This machine has no default board to log out of.", url: "" };
 
-function logInWith(token: boolean): Effect.Effect<LoggedIn, CallFailure, LoginNeeds> {
+function logOut(flag: Option.Option<string>): Effect.Effect<LoggedOut, CallFailure, AgentSessionStateNeeds> {
+  return Effect.gen(function* forgetLogin() {
+    const board = yield* boardToLogOutOf(flag);
+    if (Option.isNone(board)) {
+      return noBoard;
+    }
+    const url = board.value;
+    const saved = yield* loginFor(url);
+    if (Option.isNone(saved)) {
+      return { loggedOut: false, message: `There is no Login for ${url}.`, url };
+    }
+    const revoked = yield* revokedOnServer({ token: saved.value, url });
+    yield* removeLogin(url);
+    return { loggedOut: true, revoked, url };
+  });
+}
+
+function logInWith({ token, url }: LoginFlags): Effect.Effect<LoggedIn, CallFailure, LoginNeeds> {
   if (token) {
-    return logIn;
+    return logIn(url);
   }
-  return Effect.flatMap(serverUrl, logInByBrowser);
+  return Effect.flatMap(boardForBrowser(url), logInByBrowser);
 }
 
 const tokenFlag = Flag.Boolean("token").pipe(
@@ -78,22 +119,40 @@ const tokenFlag = Flag.Boolean("token").pipe(
   Flag.withDescription("Read a human identity's token from stdin, never from the command line."),
 );
 
-type LoginCommand = Command.Command<"login", { readonly token: boolean }, object, CommandFailed, LoginNeeds>;
+interface LoginFlags {
+  readonly token: boolean;
+  readonly url: Option.Option<string>;
+}
 
-const loginCommand: LoginCommand = Command.make("login", { token: tokenFlag }, ({ token }) =>
-  answered(logInWith(token)),
-).pipe(
-  Command.withDescription(
-    "Log this machine in to COOKOUT_URL: print a link and a code, and wait while a person approves it in the web UI. " +
-      "With --token, keep a human identity's token instead. The Login is kept in $XDG_CONFIG_HOME/cookout/credentials (default " +
-      "~/.config/cookout/credentials, mode 600). With no COOKOUT_TOKEN and no agent tool, every command then acts as " +
-      "that person. An agent's token is refused.",
+const loginUrlFlag = Flag.String("url").pipe(
+  Flag.optional,
+  Flag.withDescription(
+    "The board's URL, such as https://cookout.fly.dev (a bare host means https://). Default: COOKOUT_URL, else asked for.",
   ),
 );
 
-const logoutCommand = Command.make("logout", {}, () => answered(logOut)).pipe(
+type LoginCommand = Command.Command<"login", LoginFlags, object, CommandFailed, LoginNeeds>;
+
+const loginCommand: LoginCommand = Command.make("login", { token: tokenFlag, url: loginUrlFlag }, (flags) =>
+  answered(logInWith(flags)),
+).pipe(
   Command.withDescription(
-    "Remove the Login for COOKOUT_URL from this machine, and revoke it on the server if it came from a browser login.",
+    "Log this machine in to a board: check it answers as a cookout, print a link and a code, and wait while a person " +
+      "approves it in the web UI. With --token, keep a human identity's token instead. The Login is kept in " +
+      "$XDG_CONFIG_HOME/cookout/credentials (default ~/.config/cookout/credentials, mode 600), and its board becomes " +
+      "this machine's default board, which every command uses when COOKOUT_URL is unset. With no COOKOUT_TOKEN and no " +
+      "agent tool, every command then acts as that person. An agent's token is refused.",
+  ),
+);
+
+const logoutUrlFlag = Flag.String("url").pipe(
+  Flag.optional,
+  Flag.withDescription("The board to log out of. Default: COOKOUT_URL, else this machine's default board."),
+);
+
+const logoutCommand = Command.make("logout", { url: logoutUrlFlag }, ({ url }) => logOut(url).pipe(answered)).pipe(
+  Command.withDescription(
+    "Remove this machine's Login for a board, and revoke it on the server if it came from a browser login.",
   ),
 );
 

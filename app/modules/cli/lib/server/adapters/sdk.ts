@@ -9,12 +9,12 @@ import type { CookoutClient, CookoutErrorCode } from "../../../../sdk/index.ts";
 import { CookoutError, createCookoutClient } from "../../../../sdk/index.ts";
 import { Effect, Option, Predicate } from "effect";
 import { agentSessionExpired, agentSessionRevoked } from "../../../../agent-sessions/index.ts";
-import { agentToolEnvironment, cookoutSession, cookoutToken, cookoutUrl } from "../../../../config/server.ts";
+import { agentToolEnvironment, cookoutSession, cookoutToken } from "../../../../config/server.ts";
 import { agentToolIn, agentToolSessionIn } from "../../../../config/index.ts";
+import { boardUrl, loginFor } from "../logins.ts";
 import type { LoginFailure } from "../logins.ts";
 import { agentSessionStateFile } from "../agent-session-state.ts";
 import { baseUrlOf } from "../../../../http/client.ts";
-import { loginFor } from "../logins.ts";
 
 type CallFailureCode =
   | CookoutErrorCode
@@ -26,6 +26,7 @@ type CallFailureCode =
   | "not_joined"
   | "usage"
   | "login_request_expired"
+  | "not_a_cookout"
   | "timeout"
   | "server_unreachable";
 
@@ -113,12 +114,20 @@ function onAgentSessionEnded({
     });
 }
 
-const cliEnvironment: Effect.Effect<CliEnvironment> = Effect.orDie(
-  Effect.all(
-    { markers: agentToolEnvironment, session: cookoutSession, token: cookoutToken, url: cookoutUrl },
-    { concurrency: 1 },
-  ),
+const variables = Effect.orDie(
+  Effect.all({ markers: agentToolEnvironment, session: cookoutSession, token: cookoutToken }, { concurrency: 1 }),
 );
+
+const cliEnvironment: Effect.Effect<CliEnvironment, CallFailure, AgentSessionStateNeeds> = Effect.all(
+  {
+    url: Effect.map(
+      boardUrl,
+      Option.getOrElse(() => ""),
+    ),
+    variables,
+  },
+  { concurrency: 1 },
+).pipe(Effect.map(({ url, variables: found }) => ({ ...found, url })));
 
 function connectionFrom(url: string, token: string, agentTool: { readonly agentTool?: string }): CookoutConnection {
   if (token === "") {
@@ -196,13 +205,23 @@ function credentialFor(env: CliEnvironment): Effect.Effect<Credential, CallFailu
   return storedCredential(env);
 }
 
+function withLoginHint(failure: CallFailure): CallFailure {
+  if (failure.code !== "url_missing") {
+    return failure;
+  }
+  return { ...failure, message: "Run `cookout login` to choose this machine's board, or set COOKOUT_URL." };
+}
+
 function clientFor(
   env: CliEnvironment,
   { joined, source, token }: Credential,
 ): Effect.Effect<ClientWithAgentSessionState, CallFailure> {
   const connection = connectionFrom(env.url, token, agentToolIn(env.markers));
   return Effect.map(
-    Effect.try({ catch: toFailure, try: () => createCookoutClient({ ...connection, env: NOTHING }) }),
+    Effect.try({
+      catch: (error) => withLoginHint(toFailure(error)),
+      try: () => createCookoutClient({ ...connection, env: NOTHING }),
+    }),
     (client) => ({ client, connection, joined, source }),
   );
 }
@@ -248,7 +267,7 @@ interface JoinPlace {
   readonly url: string;
 }
 
-const joinPlace: Effect.Effect<JoinPlace, never, AgentSessionStateNeeds> = Effect.gen(function* findJoinPlace() {
+const joinPlace: Effect.Effect<JoinPlace, CallFailure, AgentSessionStateNeeds> = Effect.gen(function* findJoinPlace() {
   const env = yield* cliEnvironment;
   const place = agentToolSessionIn(env.markers);
   const file = yield* joinedSessionFile(place, env.url);
