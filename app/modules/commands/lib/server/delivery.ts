@@ -11,6 +11,7 @@ import { failureReply } from "./failure-reply.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 
 interface WebhookBody {
+  readonly channel: Call["channel"];
   readonly command: CommandName;
   readonly data: Call["data"];
   readonly threadId: Call["threadId"];
@@ -40,7 +41,14 @@ class Deliveries extends Context.Service<Deliveries, DeliveriesService>()(
 ) {}
 
 function webhookBody(call: Call, token: Token, callId: CallId): WebhookBody {
-  return { callId, command: call.stored.command.name, data: call.data, threadId: call.threadId, token };
+  return {
+    callId,
+    channel: call.channel,
+    command: call.stored.command.name,
+    data: call.data,
+    threadId: call.threadId,
+    token,
+  };
 }
 
 const deliveriesLayer: Layer.Layer<Deliveries, Config.ConfigError, Secrets | Storage> = Layer.effect(
