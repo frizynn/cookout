@@ -5,7 +5,7 @@ function isMenuKey(event: Pick<KeyboardEvent, "key" | "shiftKey">): boolean {
 }
 
 export function openOnMenuKey(event: KeyboardEvent<HTMLElement>): void {
-  if (!isMenuKey(event) || !(event.target instanceof Element)) {
+  if (event.defaultPrevented || !isMenuKey(event) || !(event.target instanceof Element)) {
     return;
   }
   event.preventDefault();

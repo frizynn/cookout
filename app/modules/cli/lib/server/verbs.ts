@@ -1,14 +1,20 @@
 import { Argument, Command, Flag } from "effect/cli";
-import type { ListMessagesQuery, MessageId, PostMessageRequest } from "../../../messages/index.ts";
-import { Option, Schema } from "effect";
-import { answer, refused } from "./output.ts";
+import {
+  beforeFlag,
+  channelArgument,
+  limitFlag,
+  messageCommand,
+  messageIdArgument,
+  pageQuery,
+} from "./message-command.ts";
 import { joinCommand, leaveCommand } from "./join-command.ts";
 import { searchCommand, threadCommandFor } from "./thread.ts";
+import { Option } from "effect";
+import { answer } from "./output.ts";
 import { commandCommand } from "./command.ts";
 import { helpCommand } from "./help-monitor.ts";
 import { identityCommand } from "./identity.ts";
 import { isDeactivationOfferId } from "../../../inbox/index.ts";
-import { isMessageId } from "../../../messages/index.ts";
 
 const NOTHING = {};
 
@@ -57,95 +63,6 @@ const channelDeleteCommand = Command.make("delete", { name: Argument.String("nam
 const channelCommand = Command.make("channel").pipe(
   Command.withDescription("Create, list, get and delete channels."),
   Command.withSubcommands([channelCreateCommand, channelListCommand, channelGetCommand, channelDeleteCommand]),
-);
-
-interface PostFlags {
-  readonly channel: string;
-  readonly close: boolean;
-  readonly data: Option.Option<Schema.Json>;
-  readonly replyTo: Option.Option<number>;
-  readonly text: string;
-}
-
-interface ListFlags {
-  readonly before: Option.Option<number>;
-  readonly channel: string;
-  readonly limit: Option.Option<number>;
-}
-
-const closeWithoutReplyTo = {
-  code: "usage",
-  message: "--close closes the thread a reply joins: give it with --reply-to <message-id>.",
-};
-
-function withClose(request: PostMessageRequest, close: boolean): PostMessageRequest {
-  if (close) {
-    return { ...request, close };
-  }
-  return request;
-}
-
-function postRequest({ channel, close, data, replyTo, text }: PostFlags): Option.Option<PostMessageRequest> {
-  const withData = Option.match(data, { onNone: () => NOTHING, onSome: (value) => ({ data: value }) });
-  if (close && Option.isNone(replyTo)) {
-    return Option.none();
-  }
-  const withReplyTo = Option.match(replyTo, { onNone: () => NOTHING, onSome: (value) => ({ replyTo: value }) });
-  return Option.some(withClose({ channel, text, ...withData, ...withReplyTo }, close));
-}
-
-function pageQuery({ before, limit }: Omit<ListFlags, "channel">): ListMessagesQuery {
-  const withBefore = Option.match(before, { onNone: () => NOTHING, onSome: (value) => ({ before: value }) });
-  const withLimit = Option.match(limit, { onNone: () => NOTHING, onSome: (value) => ({ limit: value }) });
-  return { ...withBefore, ...withLimit };
-}
-
-function messageIdOf(value: number): Option.Option<MessageId> {
-  return Option.liftPredicate(value, isMessageId);
-}
-
-function notAMessageId(value: number): string {
-  return `${String(value)} is not a message ID.`;
-}
-
-const channelArgument = Argument.String("channel").pipe(Argument.withDescription("The channel's name."));
-const textArgument = Argument.String("text").pipe(Argument.withDescription("The message, 1-40,000 characters."));
-const jsonData = Flag.String("data").pipe(Flag.withSchema(Schema.fromJsonString(Schema.Json)));
-const dataFlag = jsonData.pipe(Flag.optional, Flag.withDescription("Any JSON value, for commands and agents to read."));
-const replyToFlag = Flag.Int("reply-to").pipe(
-  Flag.optional,
-  Flag.withDescription("Reply in this message's thread. A reply to a reply joins the same thread."),
-);
-const closeFlag = Flag.Boolean("close").pipe(
-  Flag.withDefault(false),
-  Flag.withDescription("With --reply-to, also close the thread, in the same step as the reply."),
-);
-const beforeFlag = Flag.Int("before").pipe(
-  Flag.optional,
-  Flag.withDescription("Only messages before this message ID."),
-);
-const limitFlag = Flag.Int("limit").pipe(Flag.optional, Flag.withDescription("1-200 messages. Default 50."));
-const messageIdArgument = Argument.Int("message-id").pipe(Argument.filterMap(messageIdOf, notAMessageId));
-
-const messagePostCommand = Command.make(
-  "post",
-  { channel: channelArgument, close: closeFlag, data: dataFlag, replyTo: replyToFlag, text: textArgument },
-  (flags) =>
-    Option.match(postRequest(flags), {
-      onNone: () => refused(closeWithoutReplyTo),
-      onSome: (request) => answer((client) => client.createMessage(request)),
-    }),
-).pipe(Command.withDescription("Post a message, or a reply with --reply-to, which --close also closes in one step."));
-
-const messageListCommand = Command.make(
-  "list",
-  { before: beforeFlag, channel: channelArgument, limit: limitFlag },
-  (flags) => answer((client) => client.listMessages(flags.channel, pageQuery(flags))),
-).pipe(Command.withDescription("List a channel's top-level messages, oldest first: the newest page, or --before."));
-
-const messageCommand = Command.make("message").pipe(
-  Command.withDescription("Post messages and page through a channel's messages."),
-  Command.withSubcommands([messagePostCommand, messageListCommand]),
 );
 
 const threadCommand = threadCommandFor(messageIdArgument);

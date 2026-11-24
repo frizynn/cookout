@@ -19,7 +19,16 @@ function stopDrag(drag: Drag | null): void {
 }
 
 function draggedWidth(edge: PanelEdgeParts, from: number, to: Spot): number {
+  if (edge.side === "right") {
+    return edge.width + to.clientX - from;
+  }
   return edge.width + from - to.clientX;
+}
+
+function closePast(edge: PanelEdgeParts, width: number): void {
+  if (edge.onClose !== null && width < edge.min) {
+    edge.onClose();
+  }
 }
 
 function startDrag(edge: PanelEdgeParts, from: number): Drag {
@@ -36,9 +45,7 @@ function startDrag(edge: PanelEdgeParts, from: number): Drag {
     "pointerup",
     (release: Spot) => {
       drag.abort();
-      if (draggedWidth(edge, from, release) < edge.min) {
-        edge.onClose();
-      }
+      closePast(edge, draggedWidth(edge, from, release));
     },
     { signal },
   );

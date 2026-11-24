@@ -17,6 +17,7 @@ import type { FindIdentity } from "./identity-row.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { PlaceHandler } from "./commands.ts";
 import type { SqlDatabase } from "./adapters/sql-database.ts";
+import { isFalse } from "./adapters/sql-database.ts";
 import { unreadable } from "./errors.ts";
 
 export type TokenLookup =
@@ -196,7 +197,7 @@ export const sqlIdentities = (db: SqlDatabase): Omit<IdentitiesSection, keyof Id
       db.run("INSERT INTO tokens (token_hash, identity_name, revoked) VALUES (?, ?, FALSE)", hash, identity.name),
     );
   const revokeTokensOfName = (name: IdentityName) =>
-    db.run("UPDATE tokens SET revoked = TRUE WHERE identity_name = ? AND revoked = FALSE", name);
+    db.run(`UPDATE tokens SET revoked = TRUE WHERE identity_name = ? AND ${isFalse[db.dialect]("revoked")}`, name);
   return {
     createIdentity: (identity, hash) =>
       db.transaction(
@@ -247,7 +248,7 @@ export const sqlIdentities = (db: SqlDatabase): Omit<IdentitiesSection, keyof Id
             return;
           }
           yield* db.run(
-            "UPDATE tokens SET revoked = TRUE WHERE identity_name = ? AND revoked = FALSE AND token_hash <> ?",
+            `UPDATE tokens SET revoked = TRUE WHERE identity_name = ? AND ${isFalse[db.dialect]("revoked")} AND token_hash <> ?`,
             identity.name,
             hash,
           );

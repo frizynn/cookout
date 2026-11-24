@@ -19,7 +19,10 @@
  * and of a channel conversation opened from the Inbox;
  * `resizeThread` sets it, kept within `threadWidths`' `min` and `max`, and
  * keeps it in the browser's storage, so a reload keeps it and the next thread
- * opens at it.
+ * opens at it. `sidebarWidth` is the width, in pixels, of the sidebar on a
+ * wide screen while it isn't collapsed; `resizeSidebar` sets it, kept within
+ * `sidebarWidths`' `min` and `max`, and keeps it in the browser's storage, so
+ * a reload keeps it.
  */
 import type { IdentityKind } from "../sdk/index.ts";
 
@@ -35,6 +38,14 @@ interface LayoutState {
   readonly identityKind: KindChoice;
   readonly showDeactivated: boolean;
   readonly threadWidth: number;
+  readonly sidebarWidth: number;
+}
+
+interface Widths {
+  readonly key: string;
+  readonly max: number;
+  readonly min: number;
+  readonly start: number;
 }
 
 interface LayoutOptions {
@@ -47,6 +58,8 @@ const COLLAPSED_KEY = "cookout-sidebar-collapsed";
 const COLLAPSED = "collapsed";
 const THREAD_WIDTH_KEY = "cookout-thread-width";
 const threadWidths = { max: 768, min: 320, start: 448, step: 32 } as const;
+const SIDEBAR_WIDTH_KEY = "cookout-sidebar-width";
+const sidebarWidths = { max: 448, min: 192, start: 256, step: 32 } as const;
 const THEME_ATTRIBUTE = "data-theme";
 const SYSTEM: ThemeChoice = "system";
 
@@ -80,29 +93,62 @@ function keepCollapsed(storage: LayoutOptions["storage"], collapsed: boolean): v
   storage.removeItem(COLLAPSED_KEY);
 }
 
-function withinBounds(width: number): number {
-  return Math.min(threadWidths.max, Math.max(threadWidths.min, Math.round(width)));
+const THREAD: Widths = { ...threadWidths, key: THREAD_WIDTH_KEY };
+const SIDEBAR: Widths = { ...sidebarWidths, key: SIDEBAR_WIDTH_KEY };
+
+function withinBounds(widths: Widths, width: number): number {
+  return Math.min(widths.max, Math.max(widths.min, Math.round(width)));
 }
 
-function storedThreadWidth(storage: LayoutOptions["storage"]): number {
-  const stored = Number(storage.getItem(THREAD_WIDTH_KEY) ?? Number.NaN);
+function storedWidth(storage: LayoutOptions["storage"], widths: Widths): number {
+  const stored = Number(storage.getItem(widths.key) ?? Number.NaN);
   if (Number.isFinite(stored)) {
-    return withinBounds(stored);
+    return withinBounds(widths, stored);
   }
-  return threadWidths.start;
+  return widths.start;
 }
 
-function threadResizer(
+interface Resizing {
+  readonly storage: LayoutOptions["storage"];
+  readonly widths: Widths;
+  readonly current: () => number;
+  readonly publish: (width: number) => void;
+}
+
+function resizer({ current, publish, storage, widths }: Resizing): (width: number) => void {
+  return (width) => {
+    const kept = withinBounds(widths, width);
+    if (kept !== current()) {
+      storage.setItem(widths.key, String(kept));
+      publish(kept);
+    }
+  };
+}
+
+type Resizers = Pick<Layout, "resizeSidebar" | "resizeThread">;
+
+function resizers(
   storage: LayoutOptions["storage"],
   publish: (next: Partial<LayoutState>) => void,
   snapshot: () => LayoutState,
-): Layout["resizeThread"] {
-  return (width) => {
-    const threadWidth = withinBounds(width);
-    if (threadWidth !== snapshot().threadWidth) {
-      storage.setItem(THREAD_WIDTH_KEY, String(threadWidth));
-      publish({ threadWidth });
-    }
+): Resizers {
+  return {
+    resizeSidebar: resizer({
+      current: () => snapshot().sidebarWidth,
+      publish: (sidebarWidth) => {
+        publish({ sidebarWidth });
+      },
+      storage,
+      widths: SIDEBAR,
+    }),
+    resizeThread: resizer({
+      current: () => snapshot().threadWidth,
+      publish: (threadWidth) => {
+        publish({ threadWidth });
+      },
+      storage,
+      widths: THREAD,
+    }),
   };
 }
 
@@ -131,6 +177,9 @@ export { themeChoices };
 /** The thread panel's widths in pixels: its narrowest and widest, the one it starts at, and one arrow key's step. */
 export { threadWidths };
 
+/** The sidebar's widths in pixels on a wide screen: its narrowest and widest, the one it starts at, and one arrow key's step. */
+export { sidebarWidths };
+
 /** One of the theme choices. */
 export type ThemeChoice = (typeof themeChoices)[number];
 
@@ -153,6 +202,8 @@ export interface Layout {
   readonly toggleCollapsed: () => void;
   /** Sets the thread panel's width, kept within `threadWidths`, and keeps it in the browser's storage. */
   readonly resizeThread: (width: number) => void;
+  /** Sets the sidebar's width on a wide screen, kept within `sidebarWidths`, and keeps it in the browser's storage. */
+  readonly resizeSidebar: (width: number) => void;
   /** Sets the text the directory filters identity names by. */
   readonly filterIdentities: (text: string) => void;
   /** Shows only identities of this kind, or every identity. */
@@ -174,8 +225,9 @@ export function createLayout(options: LayoutOptions): Layout {
     identityKind: "all",
     showDeactivated: false,
     sidebar: false,
+    sidebarWidth: storedWidth(options.storage, SIDEBAR),
     theme: storedTheme(options.storage),
-    threadWidth: storedThreadWidth(options.storage),
+    threadWidth: storedWidth(options.storage, THREAD),
   };
   keepTheme(options, current.theme);
 
@@ -197,7 +249,7 @@ export function createLayout(options: LayoutOptions): Layout {
       }
     },
     ...directoryControls(publish, () => current),
-    resizeThread: threadResizer(options.storage, publish, () => current),
+    ...resizers(options.storage, publish, () => current),
     snapshot: () => current,
     subscribe: (listener) => {
       listeners.add(listener);

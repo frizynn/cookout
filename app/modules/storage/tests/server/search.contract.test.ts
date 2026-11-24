@@ -1,6 +1,12 @@
 import { Array as Arr, Effect, Option, String as Str } from "effect";
 import type { Message, MessageId } from "../../../messages/index.ts";
-import type { NewMessage, SearchPageRequest, Storage, StorageUnavailable } from "../../../storage/server.ts";
+import type {
+  NewMessage,
+  SearchPageRequest,
+  SearchQuery,
+  Storage,
+  StorageUnavailable,
+} from "../../../storage/server.ts";
 import {
   appendTo,
   channelFixture as channel,
@@ -40,6 +46,10 @@ interface Board {
   readonly ids: (query: string) => Effect.Effect<readonly MessageId[], StorageUnavailable>;
 }
 
+function wordsOf(query: string): SearchQuery {
+  return { authors: [], channels: [], words: parseQuery(query).words };
+}
+
 function newMessage(at: NewMessage["createdAt"], text: string, options: NewMessageOptions = {}): NewMessage {
   return { ...newMessageFixture("grill", text, options), createdAt: at };
 }
@@ -55,7 +65,7 @@ function aBoard<Failure, Needs>(
     const append = appendTo(storage);
     return {
       ids: (query) =>
-        Effect.map(storage.searchMessages(parseQuery(query), EVERY), ({ results }) =>
+        Effect.map(storage.searchMessages(wordsOf(query), EVERY), ({ results }) =>
           Arr.map(results, ({ message }) => message.id),
         ),
       post: (at, text, options) => append(newMessage(at, text, options)),
@@ -146,7 +156,7 @@ it.effect.each(storageLayers)(
       const open = yield* post(WEDNESDAY, "deploy next");
       yield* post(THURSDAY, "reply in an open thread", { replyTo: open.id });
       yield* storage.closeThread(parent.id, { closedAt: FRIDAY, closedBy: ADA });
-      const page = yield* storage.searchMessages(parseQuery("deploy"), EVERY);
+      const page = yield* storage.searchMessages(wordsOf("deploy"), EVERY);
 
       expect(page).toMatchObject({
         hasMore: false,
@@ -196,7 +206,7 @@ it.effect.each(storageLayers)(
         (at) => Effect.map(post(at, "flaky test"), ({ id }) => id),
         ONE_AT_A_TIME,
       );
-      const query = parseQuery("flaky");
+      const query = wordsOf("flaky");
       const first = yield* storage.searchMessages(query, { limit: PAGE_OF_TWO });
       const second = yield* Effect.andThen(
         post(SATURDAY, "flaky again"),

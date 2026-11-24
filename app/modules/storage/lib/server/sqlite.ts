@@ -1,13 +1,9 @@
-import { Effect } from "effect";
+import { Effect, identity } from "effect";
 import type { StorageService } from "./service.ts";
 import { openMigrated } from "./migrations.ts";
-import { sqlChannels } from "./channels.ts";
-import { sqlHealth } from "./health.ts";
-import { sqlReactions } from "./reactions-sqlite.ts";
-import { sqliteAgentSessionSections } from "./agent-join-requests-sqlite.ts";
-import { sqliteCommands } from "./commands.ts";
-import { sqliteIdentitySections } from "./identity-sections.ts";
-import { sqliteMessages } from "./sqlite-messages.ts";
+import { sqlMessageReader } from "./messages-sqlite.ts";
+import { sqlStorage } from "./sql-storage.ts";
+import { sqliteSearch } from "./search-sqlite.ts";
 
 type Opened = ReturnType<typeof openMigrated>;
 
@@ -16,20 +12,21 @@ interface OpenedStorage {
   readonly storage: StorageService;
 }
 
-function openSqliteStorage(path: string): Effect.Effect<OpenedStorage, Effect.Error<Opened>, Effect.Services<Opened>> {
+interface SqliteOpening {
+  readonly path: string;
+  readonly watch?: (db: Effect.Success<Opened>) => Effect.Success<Opened>;
+}
+
+function openSqliteStorage({
+  path,
+  watch = identity,
+}: SqliteOpening): Effect.Effect<OpenedStorage, Effect.Error<Opened>, Effect.Services<Opened>> {
   return Effect.gen(function* openStorage() {
-    const db = yield* openMigrated(path);
-    const storage: StorageService = {
-      ...sqlHealth(db),
-      ...sqliteIdentitySections(db),
-      ...sqlChannels(db),
-      ...sqliteMessages(db),
-      ...sqlReactions(db),
-      ...sqliteAgentSessionSections(db),
-      ...sqliteCommands(db),
-    };
+    const migrated = yield* openMigrated(path);
+    const db = watch(migrated);
+    const storage: StorageService = { ...sqlStorage(db), ...sqliteSearch({ db, reader: sqlMessageReader(db) }) };
     return { db, storage };
   });
 }
 
-export { openSqliteStorage };
+export { openSqliteStorage, type SqliteOpening };

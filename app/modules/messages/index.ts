@@ -131,14 +131,11 @@ export interface Reply extends MessageFields {
 /** A message, tagged by `kind`. */
 export type Message = TopLevelMessage | Reply;
 
-/** The body of `POST /v1/messages`. The server checks every field. */
-export interface PostMessageRequest {
-  readonly channel: string;
-  readonly text: string;
-  readonly data?: JsonValue;
-  /** Reply to this message. A reply to a reply goes to the top-level message's thread, which `close` also closes. */
-  readonly replyTo?: number;
-  readonly close?: true;
+/** An agent's reply posted to a thread with newer replies by others, oldest first; a later release refuses it instead. */
+export interface ThreadMovedWarning {
+  readonly code: "thread_moved";
+  readonly message: string;
+  readonly details: { readonly replies: readonly Reply[] };
 }
 
 /** The answer to posting a message. */
@@ -146,6 +143,8 @@ export interface MessageResponse {
   readonly message: Message;
   /** Each `@name` in the text that names no identity, once each in the order written. They stay plain text. */
   readonly unknownMentions: readonly string[];
+  /** Only on an agent's reply to a thread that moved on since what it had seen (`seen`, or else `replyTo`). */
+  readonly warning?: ThreadMovedWarning;
 }
 
 /**

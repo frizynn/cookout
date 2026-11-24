@@ -9,16 +9,16 @@ export type {
   MessageId,
   MessageResponse,
   OpenThread,
-  PostMessageRequest,
   Reaction,
   ReactionCount,
   ReactionName,
   ReactionsResponse,
   ReadReceipt,
   Reply,
+  ThreadMovedWarning,
   ThreadResponse,
   TopLevelMessage,
   TopLevelMessageResponse,
 } from "../../messages/index.ts";
-export type { ListOpenThreadsQuery, SearchRequest } from "../../messages/client.ts";
+export type { ListOpenThreadsQuery, PostMessageRequest, SearchRequest } from "../../messages/client.ts";
 export type { SearchResponse, SearchResult } from "../../search/index.ts";

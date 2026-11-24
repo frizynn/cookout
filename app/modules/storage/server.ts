@@ -4,14 +4,16 @@
  * suite. Every method fails with `StorageUnavailable` when the store can't be used.
  */
 import { Context, Layer } from "effect";
-import type { FileSystem, Redacted } from "effect";
+import type { Effect, FileSystem, Redacted } from "effect";
 import type { FullStorage } from "./lib/server/memory-store.ts";
 import { StorageUnavailable } from "./lib/server/errors.ts";
 import { openMemoryStore } from "./lib/server/memory-store.ts";
 import { openPostgresStore } from "./lib/server/postgres-store.ts";
 import { openSqliteStore } from "./lib/server/sqlite-store.ts";
+import { sqliteQueryPlans as planSqliteQueries } from "./lib/server/query-plans-sqlite.ts";
 
 export { StorageUnavailable };
+export type { QueryPlan } from "./lib/server/query-plans-sqlite.ts";
 export type { TokenLookup } from "./lib/server/identities.ts";
 export type { SetAdminResult } from "./lib/server/identity-admins.ts";
 export type { DeactivateIdentityResult, ReactivateIdentityResult } from "./lib/server/identity-deactivations.ts";
@@ -21,7 +23,7 @@ export type { CommandTokenGrant } from "./lib/server/command-tokens.ts";
 export type { DeliveryOutcome, StoredDelivery } from "./lib/server/deliveries.ts";
 export type { NewMessage, StoredPage, StoredThread } from "./lib/server/messages.ts";
 export type { OpenThreadsPageRequest } from "./lib/server/open-threads.ts";
-export type { SearchPageRequest } from "./lib/server/search.ts";
+export type { SearchPageRequest, SearchQuery } from "./lib/server/search.ts";
 export type { AckedMessage } from "./lib/server/inbox.ts";
 export type { StoredNudge } from "./lib/server/nudges.ts";
 export type { OfferChanges, StoredDeactivationOffer } from "./lib/server/deactivation-offers.ts";
@@ -48,7 +50,21 @@ export class Storage extends Context.Service<Storage, FullStorage>()("@ai-hero/c
  * @returns The store, failing with `StorageUnavailable` if it can't be opened.
  */
 export function sqliteStorage(path: string): Layer.Layer<Storage, StorageUnavailable, FileSystem.FileSystem> {
-  return Layer.effect(Storage, openSqliteStore(path));
+  return Layer.effect(Storage, openSqliteStore({ path }));
+}
+
+/**
+ * Runs `work` on a SQLite store at `path`, then returns SQLite's query plan
+ * for each distinct statement the store ran, so a test can check a query
+ * still uses its index.
+ * @param planning The SQLite file, created if missing, and what to do with its store.
+ * @returns Each statement with the `detail` lines of its `EXPLAIN QUERY PLAN`.
+ */
+export function sqliteQueryPlans<Failure>(planning: {
+  readonly path: string;
+  readonly work: (storage: Storage["Service"]) => Effect.Effect<unknown, Failure>;
+}): ReturnType<typeof planSqliteQueries<Failure>> {
+  return planSqliteQueries(planning);
 }
 
 /**
@@ -61,8 +77,8 @@ export function sqliteStorage(path: string): Layer.Layer<Storage, StorageUnavail
  * clock and publish nothing. Migrations are Postgres's own list, applied
  * in order under an advisory lock so two processes starting together apply
  * each once; a database newer than the list fails with "Upgrade cookout".
- * Only health and the identity sections are on Postgres so far; the rest fail
- * with `StorageUnavailable`, and nothing selects this Layer at runtime yet.
+ * Every section but search is on Postgres so far; search fails with
+ * `StorageUnavailable`, and nothing selects this Layer at runtime yet.
  * @param url The database URL, kept redacted.
  * @returns The store, failing with `StorageUnavailable` if it can't be opened.
  */

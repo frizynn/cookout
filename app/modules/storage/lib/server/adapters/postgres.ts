@@ -1,5 +1,6 @@
 import {
   Array as Arr,
+  Clock,
   Effect,
   Function as Fn,
   Option,
@@ -119,7 +120,11 @@ function openPool(url: Redacted.Redacted): Effect.Effect<PgClient.PgClient, Stor
       startupParameters: { statement_timeout: STATEMENT_TIMEOUT_MS },
       types: sqliteShapedTypes(),
       url,
-    }).pipe(Effect.provideService(Reactivity.Reactivity, reactivity), Effect.mapError(unavailable));
+    }).pipe(
+      Effect.provideService(Reactivity.Reactivity, reactivity),
+      Effect.provideService(Clock.Clock, Clock.Clock.defaultValue()),
+      Effect.mapError(unavailable),
+    );
   });
 }
 

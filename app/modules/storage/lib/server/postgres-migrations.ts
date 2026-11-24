@@ -224,6 +224,7 @@ const postgresMigrations: readonly (readonly string[])[] = [
        read boolean NOT NULL
      )`,
   ],
+  ["ALTER TABLE deliveries ADD COLUMN added_order bigint GENERATED ALWAYS AS IDENTITY"],
 ];
 
 const NO_VERSION = 0;
