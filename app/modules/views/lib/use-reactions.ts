@@ -7,6 +7,8 @@ import { ReactionList } from "./reaction-list.ts";
 
 const KEYS: Readonly<Record<ReactionName, string>> = { thumbs_down: "-", thumbs_up: "+" };
 
+const IN_HOVER_BAR: Readonly<Record<ReactionName, boolean>> = { thumbs_down: false, thumbs_up: true };
+
 interface Reacting {
   readonly message: Message;
   readonly me: string;
@@ -36,6 +38,7 @@ function useReactionChoices(reacting: Reacting): readonly ReactionChoice[] {
   return useMemo(
     () =>
       reactionNames.map((reaction) => ({
+        inHoverBar: IN_HOVER_BAR[reaction],
         key: KEYS[reaction],
         onReact: () => {
           toggle(reaction);

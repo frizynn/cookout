@@ -54,6 +54,7 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
       note={note}
       presence={presence}
       onAction={handleReply}
+      replyOnHover={message.kind === "top-level"}
       threadOnHover
       time={useMessageTime({ message, parent: props.parent, receipts: props.receipts })}
       unreadLine={props.row.unreadLine}

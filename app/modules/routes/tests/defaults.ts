@@ -17,12 +17,18 @@ interface BoardStoreOpening {
   readonly client: BoardStoreClient;
   readonly live?: Live | undefined;
   readonly boardStore?: BoardStore | undefined;
+  readonly pageSize?: number | undefined;
 }
 
 export function boardStoreFor(opening: BoardStoreOpening): BoardStore {
   return (
     opening.boardStore ??
-    createBoardStore({ client: opening.client, live: opening.live ?? null, url: webTestCookout().url })
+    createBoardStore({
+      client: opening.client,
+      live: opening.live ?? null,
+      url: webTestCookout().url,
+      ...(typeof opening.pageSize === "number" && { pageSize: opening.pageSize }),
+    })
   );
 }
 
@@ -36,5 +42,7 @@ export function unreadFor(unread: Unread | undefined): Unread {
 
 export { createUnread } from "../../unread/index.ts";
 export type { BoardStore } from "../../board/index.ts";
+export type { Live } from "../../live/index.ts";
+export type { BoardStoreClient };
 export type { Unread } from "../../unread/index.ts";
 export type { Reading } from "../../unread/index.ts";

@@ -1,7 +1,7 @@
 /**
  * The design system: hand-written Tailwind components styled after shadcn/ui
  * (its token names and its card), in a Vercel-like neutral look with small
- * pops of colour (ADR 0034, ADR 0040). Every view builds from these and none
+ * pops of colour (ADR 0080). Every view builds from these and none
  * styles itself, so no component takes classes. `styles.css` is the Tailwind
  * theme, which `index.html` loads: its tokens are CSS variables, dark by
  * default, light under `data-theme="light"` on the root element, and light
@@ -75,7 +75,7 @@
  * to one thing, `ButtonRow` puts buttons side by side, and `TokenText` shows a
  * secret, such as a fresh token, to copy.
  * `ConfirmDialog` asks before an action, in a modal shadcn AlertDialog on
- * Radix's primitives (ADR 0058), the one part built on a library: its title, a
+ * Radix's primitives (ADR 0080), the one part built on a library: its title, a
  * body naming exactly what happens, Cancel and a confirm button, in the
  * destructive colour when the action can't be undone. It holds focus inside
  * while open, Escape or Cancel calls `onCancel`, and focus goes back to what
@@ -113,9 +113,11 @@
  * `MessageList` is a named list of `MessageItem`s: one message each, which
  * takes focus, with its avatar, name and time, or only its time on hover when
  * `grouped` under the one before; the day's separator and the "New" line above it when it starts them; a
- * mark (`for-you`, the filled accent block, when it mentions or answers the reader, or `open`); and an action (such as Reply: a link, or a button with `onAction`) and
- * a More actions button shown on hover or focus, after a button for each of its `menu`'s `reactions`; a reaction's
- * `key`, pressed while the message itself has focus, leaves it too. Its `menu` gives it one actions menu (the action,
+ * mark (`for-you`, the filled accent block, when it mentions or answers the reader, or `open`); and, shown on hover or
+ * focus, a "Quick actions" group of icon buttons, each with no text and named by its tooltip: a button for each of its
+ * `menu`'s `reactions` that is `inHoverBar`, then, when `replyOnHover`, its action (such as Reply: a link, or a button
+ * with `onAction`), then its thread choice when `threadOnHover`, then More actions. A reaction's
+ * `key`, pressed while the message itself has focus, leaves it too, in or out of the hover bar. Its `menu` gives it one actions menu (the action,
  * then each reaction, then Mark unread, then the thread choice, such as Close, if any), drawn two ways on Radix: right-clicking the message, or the context-menu key or Shift+F10 on it, opens it as a context menu at the pointer, and the
  * More actions button opens it as a dropdown. Every menu item draws its `icon` (a `ThreadChoice` names one too), which its type requires, before its label. An item may be `disabled`, dimmed and not chosen. Radix gives both their keyboard and focus behaviour; a chosen item's
  * action runs once the menu has closed. Mark unread's tooltip names its shortcut, `Alt-click`: an Alt-click (Option-click
@@ -137,7 +139,8 @@
  * channel has nothing older, and `QuietButton` is a muted centred button,
  * such as loading older messages. `ClosedFold` is a row of a message list standing for closed threads folded away,
  * a button on a dashed line that unfolds them; given a `day`, the day's label (a separator to a screen reader) shares
- * that line, in place of a day separator of its own beside it. `ThreadBar` is a muted bar across the top of a thread: a line of text
+ * that line, in place of a day separator of its own beside it: the label in the line's centre, the button at its right end,
+ * shortening rather than overlapping the label on a narrow line. `ThreadBar` is a muted bar across the top of a thread: a line of text
  * and one button, such as who closed it and Reopen; `QuietLink` is a muted link in such a line, such as a name
  * linking to its profile. `TextArea` takes focus when it first appears
  * if `focused`.

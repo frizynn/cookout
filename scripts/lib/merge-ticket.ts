@@ -253,7 +253,9 @@ function afterAttempt(options: MergeOptions, outcome: Attempt, count: number): M
 }
 
 function cleanedUp(options: MergeOptions, merged: Merged): Merged {
-  deleteRemoteBranch(options);
+  if (merged.ok) {
+    deleteRemoteBranch(options);
+  }
   return merged;
 }
 

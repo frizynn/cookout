@@ -48,6 +48,35 @@ it("typing @ and a prefix suggests the identities whose names start with it, hum
   close();
 });
 
+async function workersWithDisplayNames(): Promise<void> {
+  const owner = await newIdentity({ kind: "human", name: "shown-owner" });
+  await newIdentity({ kind: "agent", name: "shown-worker-1", owner: "shown-owner" });
+  await newIdentity({ kind: "agent", name: "shown-worker-2", owner: "shown-owner" });
+  await owner.client.setDisplayName("shown-worker-1", "Quokka (cloud)");
+  await owner.client.setDisplayName("shown-worker-2", "Wombat (cloud)");
+}
+
+it("typing @ and the start of a display name, in any case, suggests that identity and inserts its name", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await workersWithDisplayNames();
+  const parent = await threadIn("web-composer-display-names");
+  const close = openAt({ client: adminClient(), hash: hashOf(parent) });
+
+  const box = await typeInReply("Ping @qUOk");
+  const shown = await suggested();
+  fireEvent.click(inPane().getByRole("button", { name: /@shown-worker-1/u }));
+
+  expect([shown, box]).toStrictEqual([
+    ["@shown-worker-1Quokka (cloud)"],
+    expect.objectContaining({ value: "Ping @shown-worker-1 " }),
+  ]);
+
+  close();
+});
+
 const MEMBERS = ["@member-dot", "@member-cy", "@member-bea"];
 const FIRST = 0;
 

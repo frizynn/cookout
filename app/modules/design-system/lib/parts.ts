@@ -195,6 +195,7 @@ interface MessageLayoutParts extends Parts {
   readonly actionHref: string | null;
   readonly actionLabel: string;
   readonly onAction: (() => void) | null;
+  readonly replyOnHover: boolean;
   readonly choices: readonly MenuChoice[];
   readonly reactions: readonly ReactionChoice[];
   readonly thread: ThreadChoice | null;

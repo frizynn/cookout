@@ -1,5 +1,5 @@
 import type { IdentitySections, SectionsBesideIdentities } from "./identity-section-types.ts";
-import { memoryIdentities, sqliteIdentities } from "./identities.ts";
+import { memoryIdentities, sqlIdentities } from "./identities.ts";
 import { memoryOfflineAlerts, sqliteOfflineAlerts } from "./offline-alerts.ts";
 import { memoryPresence, sqlitePresence } from "./presence.ts";
 import { Effect } from "effect";
@@ -43,7 +43,7 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
 
 function sqliteIdentitySections(db: SqliteDatabase): IdentitySections {
   return {
-    ...sqliteIdentities(db),
+    ...sqlIdentities(db),
     ...sqliteIdentityDeletes(db),
     ...sqliteLoginRequests(db),
     ...sqlitePresence(db),

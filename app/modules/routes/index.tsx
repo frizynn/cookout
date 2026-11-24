@@ -19,12 +19,15 @@
  * its close link closes it. Clicking a name, a message's author or an
  * `@name`, goes there. The
  * `paths` module reads the hash and builds every link's.
+ * The app makes the board's old per-channel and per-thread stores, which the views still read, from `boardStore`, as
+ * thin adapters over its selectors and methods, for the last migration ticket to delete.
  */
 import type { ReactNode } from "react";
 import { RouteView } from "./lib/route-view.tsx";
 import type { Stores } from "./lib/stores.ts";
 import { locationOf } from "../paths/index.ts";
 import { useSyncExternalStore } from "react";
+import { withBoard } from "./lib/board-adapter.ts";
 
 function subscribeToHash(listener: () => void): () => void {
   globalThis.addEventListener("hashchange", listener);
@@ -38,7 +41,7 @@ function currentHash(): string {
 }
 
 /** What the web UI reads: the stores, each made with the SDK client it talks through. */
-export type CookoutAppProps = Stores;
+export type CookoutAppProps = Omit<Stores, "board">;
 
 /**
  * The whole web UI: the view for the page's location hash, redrawn when it changes.
@@ -47,5 +50,5 @@ export type CookoutAppProps = Stores;
  */
 export function CookoutApp(props: CookoutAppProps): ReactNode {
   const hash = useSyncExternalStore(subscribeToHash, currentHash);
-  return <RouteView place={locationOf(hash)} stores={props} />;
+  return <RouteView place={locationOf(hash)} stores={withBoard(props)} />;
 }

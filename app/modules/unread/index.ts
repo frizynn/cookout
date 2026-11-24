@@ -70,7 +70,7 @@
  * does once it succeeds and the fresh token shows (never after a refused one, #278), until `release` (Done): the loaded state lists it under `heldDeactivatedQuietAgents`,
  * uncounted, and its own snapshot names it in `held`, so Earlier leaves it out (#277). Only the store holding it keeps it.
  * `createReading` makes the `reading` store, beside the unread store: the Inbox's read rule, as Slack's (Matt, Inbox grilling
- * on the board, 2026-11-23; `docs/adr/0073-the-inbox-reads-a-conversation-after-2-s-on-screen.md`).
+ * on the board, 2026-11-23), so a glance, a misclick or keys moving past a row read nothing.
  * `reader(key, sources)` is the reader of one selected conversation, the same
  * store each time for one key; it starts when its first subscriber arrives and
  * starts afresh, forgetting everything, once the last one leaves, as when the

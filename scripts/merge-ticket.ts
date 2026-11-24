@@ -68,13 +68,15 @@ interface Gate {
   readonly advice: string;
   readonly args: readonly string[];
   readonly base: readonly string[];
+  readonly rerunRed: boolean;
   readonly subject: string;
   readonly vouchedBy: string;
 }
 
-function requireGreen({ advice, args, base, subject, vouchedBy }: Gate): void {
+function requireGreen(gate: Gate): void {
+  const { advice, subject } = gate;
   verdict.failingAt(`${subject}'s Check run`);
-  const step = waitForCi({ args, base, log, subject, vouchedBy });
+  const step = waitForCi({ ...gate, log });
   if (step.kind === "stopped") {
     verdict.failingAt(`${subject}'s Check run: ${failedJobsOr({ jobs: step.jobs, step: "not green" })}`);
     fail(SCRIPT, `${step.reason}\nNothing was merged. ${advice}`);
@@ -98,6 +100,7 @@ if (fixesRedV1) {
     advice: `If ticket-${ticket} is the fix for that red, run pnpm merge-ticket ${ticket} --fixes-red-v1.`,
     args: ["--branch", "v1"],
     base: [],
+    rerunRed: false,
     subject: "v1",
     vouchedBy: "merge-ticket-",
   });
@@ -106,6 +109,7 @@ requireGreen({
   advice: `Push ticket-${ticket} and wait until every job of its Check run passes.`,
   args: ["--branch", `ticket-${ticket}`, "--commit", gitOutput("rev-parse", `ticket-${ticket}`)],
   base: ["--branch", "v1", "--commit", gitOutput("merge-base", `ticket-${ticket}`, "origin/v1")],
+  rerunRed: resuming,
   subject: `ticket-${ticket}`,
   vouchedBy: "",
 });
@@ -132,8 +136,8 @@ const FAST_CHECKS = ["typecheck", "lint --base=origin/v1", "hygiene"]
   .map((script) => `pnpm run --silent ${script}`)
   .join(" && ");
 
-function ciOf(branch: string, sha: string): Step {
-  return waitForCi({ args: ["--branch", branch, "--commit", sha], base: [], log, subject: branch });
+function ciOf(branch: string, sha: string, rerunRed: boolean): Step {
+  return waitForCi({ args: ["--branch", branch, "--commit", sha], base: [], log, rerunRed, subject: branch });
 }
 
 function failedStepOf(files: readonly string[]): string {
