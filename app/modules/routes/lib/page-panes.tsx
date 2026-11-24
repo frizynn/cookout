@@ -18,6 +18,7 @@ export function PagePanes(props: PagePanesProps): ReactNode {
         board={stores.board}
         composer={stores.composer}
         me={props.me}
+        reading={stores.reading}
         selected={route.selected}
         unread={stores.unread}
       />

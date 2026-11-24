@@ -11,6 +11,7 @@ import type {
 import type { Failure, PostState } from "./failure.ts";
 import { withHeard, withReceipts } from "./receipts.ts";
 import { closedAs } from "./thread-closing.ts";
+import { createThreadReaders } from "./thread-readers.ts";
 import { failure } from "./failure.ts";
 import { withNewestReply } from "../../messages/index.ts";
 
@@ -35,6 +36,8 @@ interface ThreadMessages {
   readonly subscribe: (listener: () => void) => () => void;
   readonly snapshot: () => ThreadMessagesState;
   readonly reply: (text: string, posted: () => void) => void;
+  readonly subscribeWithoutAcking: (listener: () => void) => () => void;
+  readonly ack: (id: MessageId) => void;
 }
 
 interface LiveThreadMessages extends ThreadMessages {
@@ -46,14 +49,13 @@ interface LiveThreadMessages extends ThreadMessages {
 
 type ThreadClient = Pick<CookoutClient, "ack" | "createMessage" | "getThread">;
 
-const NONE_OPEN = 0;
-
 interface Thread {
   readonly client: ThreadClient;
   readonly channel: ChannelName;
   readonly id: MessageId;
   readonly current: () => ThreadMessagesState;
   readonly publish: (state: ThreadMessagesState) => void;
+  readonly acking: () => boolean;
 }
 
 function update(thread: Thread, change: (loaded: Loaded) => Loaded): void {
@@ -96,6 +98,12 @@ async function ack(thread: Thread, id: MessageId): Promise<void> {
   }
 }
 
+async function ackIfAcking(thread: Thread, id: MessageId): Promise<void> {
+  if (thread.acking()) {
+    await ack(thread, id);
+  }
+}
+
 async function load(thread: Thread): Promise<void> {
   try {
     const { parent, receipts, replies } = await thread.client.getThread(thread.id);
@@ -108,7 +116,7 @@ async function load(thread: Thread): Promise<void> {
       status: "loaded",
     };
     thread.publish(loaded);
-    await ack(thread, latestOf(loaded));
+    await ackIfAcking(thread, latestOf(loaded));
   } catch (error: unknown) {
     thread.publish(failure(error));
   }
@@ -127,7 +135,7 @@ async function reload(thread: Thread): Promise<void> {
       receipts: withReceipts({ fresh: receipts, receipts: loaded.receipts }),
       replies,
     }));
-    await ack(thread, latestOf({ parent, replies }));
+    await ackIfAcking(thread, latestOf({ parent, replies }));
   } catch (error: unknown) {
     update(thread, (loaded) => ({ ...loaded, read: failure(error) }));
   }
@@ -196,30 +204,42 @@ interface ThreadOptions {
 }
 
 function createThreadMessages(options: ThreadOptions): LiveThreadMessages {
-  const listeners = new Set<() => void>();
+  const readers = createThreadReaders();
   let state: ThreadMessagesState = { status: "loading" };
   let queue: Promise<void> | null = null;
   const thread: Thread = {
     ...options,
+    acking: readers.ackingSinceAsked,
     current: () => state,
     publish: (next) => {
       state = next;
-      for (const listener of listeners) {
-        listener();
-      }
+      readers.notify();
     },
   };
+  function listen(listener: () => void, acking: boolean): () => void {
+    if (!readers.any() && queue !== null) {
+      queue = reloadAfter(queue, thread);
+    }
+    readers.add(listener, acking);
+    queue ??= load(thread);
+    return () => {
+      readers.remove(listener);
+    };
+  }
   return {
     ...heardMethods(thread),
+    ack: (id) => {
+      queue = ackAfter(queue, thread, id);
+    },
     receive: (message) => {
       const before = state;
       update(thread, (loaded) => received(loaded, message));
-      if (state !== before && listeners.size > NONE_OPEN) {
+      if (state !== before && readers.acking()) {
         queue = ackAfter(queue, thread, message.id);
       }
     },
     refetch: () => {
-      if (listeners.size > NONE_OPEN) {
+      if (readers.any()) {
         queue = reloadAfter(queue, thread);
       }
     },
@@ -227,16 +247,8 @@ function createThreadMessages(options: ThreadOptions): LiveThreadMessages {
       queue = replyAfter(queue, thread, { posted, text });
     },
     snapshot: () => state,
-    subscribe: (listener) => {
-      if (listeners.size === NONE_OPEN && queue !== null) {
-        queue = reloadAfter(queue, thread);
-      }
-      listeners.add(listener);
-      queue ??= load(thread);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
+    subscribe: (listener) => listen(listener, true),
+    subscribeWithoutAcking: (listener) => listen(listener, false),
   };
 }
 

@@ -1,3 +1,4 @@
+import type { Reading, Unread } from "../../unread/index.ts";
 import { useMemo, useSyncExternalStore } from "react";
 import type { Board } from "../../board/index.ts";
 import type { Composer } from "../../composer/index.ts";
@@ -5,7 +6,6 @@ import { InboxConversation } from "./inbox-conversation.tsx";
 import { InboxList } from "./inbox-list.tsx";
 import type { InboxSelection } from "../../paths/index.ts";
 import type { ReactNode } from "react";
-import type { Unread } from "../../unread/index.ts";
 import { useInboxRows } from "./use-inbox-rows.ts";
 
 interface InboxProps {
@@ -13,6 +13,7 @@ interface InboxProps {
   readonly composer: Composer;
   readonly unread: Unread;
   readonly me: string;
+  readonly reading: Reading;
   readonly selected: InboxSelection | null;
 }
 
@@ -35,7 +36,14 @@ export function InboxView(props: InboxProps): ReactNode {
         unread={unread}
       />
       {state.status !== "loading" && (
-        <InboxConversation board={board} composer={composer} me={me} selected={selected} unread={unread} />
+        <InboxConversation
+          board={board}
+          composer={composer}
+          me={me}
+          reading={props.reading}
+          selected={selected}
+          unread={unread}
+        />
       )}
     </>
   );

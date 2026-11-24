@@ -10,8 +10,11 @@
  * time, and from a day on its date and time (`Yesterday 14:05`); `timeSince(iso)`
  * is how long it has been since then (`4 days`), as an Open threads row says
  * how long its thread has been quiet;
- * `everySecond(listener)` ticks it live. This is the web UI's one reader of
- * `Date` and its one clock.
+ * `everySecond(listener)` ticks it live. A `Clock`'s `after(millis, listener)`
+ * calls back once that much time has passed, unless the function it returns
+ * is called first: `browserClock` waits on the page's timers, and tests bring
+ * a clock they move on by hand, so time on screen passes without waiting.
+ * This is the web UI's one reader of `Date` and its one clock.
  */
 const DAY = 1;
 const SECOND = 1000;
@@ -179,3 +182,5 @@ export function everySecond(listener: () => void): () => void {
     clearInterval(ticking);
   };
 }
+
+export { type Clock, browserClock } from "./lib/browser-clock.ts";

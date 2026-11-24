@@ -4,12 +4,14 @@ import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { inConversation, inPane, inSidebar, inThread } from "./regions.ts";
 import { rowsOf, subscribedReader } from "./inbox-reader.ts";
+import { handReading } from "./hand-reading.ts";
 import { openWithClockStopped } from "./clock.ts";
 import { watched } from "./watched.ts";
 
 const NONE = 0;
 const TWO_EARLIER = ["Earlier one", "Earlier two"] as const;
 const ONE = 1;
+const READ_AFTER = 2000;
 
 interface NewsThread {
   readonly channel: string;
@@ -95,15 +97,18 @@ async function threadRowClicked(): Promise<string> {
 
 interface Watching {
   readonly thread: NewsThread;
+  readonly advance: (millis: number) => void;
   readonly close: () => Promise<void>;
 }
 
 async function watchedAt(channel: string, hashOf: (thread: NewsThread) => string): Promise<Watching> {
   const thread = await threadWithNews(channel);
   const { live, stream } = watched(thread.reader);
-  const unmount = openWithClockStopped({ client: thread.reader, hash: hashOf(thread), live });
+  const { advance, reading } = handReading();
+  const unmount = openWithClockStopped({ client: thread.reader, hash: hashOf(thread), live, reading });
   const events: EventStream = await stream;
   return {
+    advance,
     close: async () => {
       unmount();
       await events.close();
@@ -118,9 +123,10 @@ async function secondThread(thread: NewsThread): Promise<void> {
   await replied({ ...thread, parent: other }, "Pizza");
 }
 
-async function selectedAndRead(thread: NewsThread): Promise<readonly string[]> {
+async function selectedAndRead({ advance, thread }: Watching): Promise<readonly string[]> {
   fireEvent.click(await inPane().findByRole("link", { name: /Unread two/u }));
   await conversationShown();
+  advance(READ_AFTER);
   await threadReadBy(thread.reader, thread.parent);
   await waitFor(() => {
     expect(rowsAt("Activity", thread.address).filter((row) => isUnreadRow(row))).toHaveLength(NONE);
@@ -199,9 +205,10 @@ it("the selected row stays in its section, muted, once read, and moves to Earlie
 }, async () => {
   expect.hasAssertions();
 
-  const { close, thread } = await watchedAt("web-conversation-held", () => "#/inbox");
+  const watching = await watchedAt("web-conversation-held", () => "#/inbox");
+  const { close, thread } = watching;
   await secondThread(thread);
-  const held = await selectedAndRead(thread);
+  const held = await selectedAndRead(watching);
   await otherSelected(thread);
 
   expect([held.length, held.filter((row) => isUnreadRow(row)), rowsAt("Earlier", thread.address).length]).toStrictEqual(

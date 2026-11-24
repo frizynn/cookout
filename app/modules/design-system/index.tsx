@@ -36,8 +36,8 @@
  * screen). A split view, such as the inbox's, is a `ListPane` (the main column,
  * hidden on a narrow screen while `hiddenWhenNarrow`) beside a
  * `ConversationPanel`, a named column with a `BackLink` arrow (shown only on a
- * narrow screen, where the panel takes the whole width), its detail and any
- * open link, or beside a `ConversationEmpty`, a named column holding only a
+ * narrow screen, where the panel takes the whole width), its detail, its
+ * header's `actions` as small buttons, and any open link, or beside a `ConversationEmpty`, a named column holding only a
  * muted line (hidden on a narrow screen); a
  * `DividerButton` is a divider line led by a quiet button, such as one that
  * shows the replies folded under it. A name's avatar is its coloured initials, one of eight hues hashed
@@ -210,6 +210,7 @@ export { Pane } from "./lib/pane.tsx";
 export { ListPane } from "./lib/list-pane.tsx";
 export { ConversationEmpty } from "./lib/conversation-empty.tsx";
 export { ConversationPanel } from "./lib/conversation-panel.tsx";
+export type { PanelAction } from "./lib/panel-action-button.tsx";
 export { DividerButton } from "./lib/divider-button.tsx";
 export { PaneHeader } from "./lib/pane-header.tsx";
 export { Page } from "./lib/page.tsx";
