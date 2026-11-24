@@ -60,8 +60,8 @@ async function threadRepliedTo(): Promise<Replied> {
   const bot = await newIdentity({ kind: "agent", name: "bot-summary", owner: "admin" });
   await adminClient().createChannel({ name: CHANNEL });
   const { message: parent } = await adminClient().createMessage({ channel: CHANNEL, text: "The parent" });
-  await ada.client.createMessage({ channel: CHANNEL, replyTo: parent.id, text: "First" });
-  await bot.client.createMessage({ channel: CHANNEL, replyTo: parent.id, text: "Second" });
+  const { message: first } = await ada.client.createMessage({ channel: CHANNEL, replyTo: parent.id, text: "First" });
+  await bot.client.createMessage({ channel: CHANNEL, replyTo: parent.id, seen: first.id, text: "Second" });
   return { ada, parent };
 }
 

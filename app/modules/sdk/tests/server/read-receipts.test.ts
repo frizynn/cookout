@@ -55,10 +55,12 @@ it.effect("a reply has a receipt for the parent's author, but not when the autho
   Effect.gen(function* replyReceipts() {
     const { ann, bob } = yield* annAndBobInGrill;
     const { message: parent } = yield* answer(() => ann.client.createMessage({ channel: "grill", text: "plain" }));
-    yield* answer(() => ann.client.createMessage({ channel: "grill", replyTo: parent.id, text: "my own" }));
+    const { message: mine } = yield* answer(() =>
+      ann.client.createMessage({ channel: "grill", replyTo: parent.id, text: "my own" }),
+    );
     const own = yield* answer(() => ann.client.getThread(parent.id));
     const { message: reply } = yield* answer(() =>
-      bob.client.createMessage({ channel: "grill", replyTo: parent.id, text: "an answer" }),
+      bob.client.createMessage({ channel: "grill", replyTo: parent.id, seen: mine.id, text: "an answer" }),
     );
 
     const thread = yield* answer(() => ann.client.getThread(parent.id));
@@ -79,7 +81,9 @@ it.effect("replying in a thread records the replier's receipts for the replies i
     );
     yield* TestClock.adjust("1 minute");
 
-    yield* answer(() => ann.client.createMessage({ channel: "grill", replyTo: parent.id, text: "thanks" }));
+    yield* answer(() =>
+      ann.client.createMessage({ channel: "grill", replyTo: parent.id, seen: reply.id, text: "thanks" }),
+    );
     const thread = yield* answer(() => bob.client.getThread(parent.id));
 
     expect(thread.receipts).toStrictEqual([{ identity: "ann", messageId: reply.id, seen: true, seenAt: A_MINUTE_IN }]);
