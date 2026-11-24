@@ -11,16 +11,51 @@ The SDK's public surface: the built `dist/sdk.d.ts`, as consumers of the publish
  * code and message (`unreachable` unless a `CookoutError`).
  */
 /**
+ * A moment on the wire, shared by the server, the SDK and the web: the
+ * `IsoTime` brand and its check. Every timestamp the protocol carries
+ * (`createdAt`, `expiresAt`, `heldUntil`, the health check's `time`) is one.
+ */
+declare const brand$9: unique symbol;
+/** A moment as the wire writes it: ISO 8601 in UTC with milliseconds, such as `2026-01-01T00:00:00.000Z`. */
+type IsoTime = string & {
+  readonly [brand$9]: "IsoTime";
+};
+declare const brand$8: unique symbol;
+/** A channel's name: 1–80 lowercase letters, digits or `-`. Unique on a server. */
+type ChannelName = string & {
+  readonly [brand$8]: "ChannelName";
+};
+/** A channel as the server shows it. */
+interface Channel {
+  readonly name: ChannelName;
+  /** 1–500 characters. */
+  readonly description?: string;
+  readonly createdAt: IsoTime;
+}
+/** The body of `POST /v1/channels`. The server checks the name and description. */
+interface CreateChannelRequest {
+  readonly name: string;
+  readonly description?: string;
+}
+/** The answer to creating or getting a channel. */
+interface ChannelResponse {
+  readonly channel: Channel;
+}
+/** The answer to `GET /v1/channels`: every channel, sorted by name. */
+interface ListChannelsResponse {
+  readonly channels: readonly Channel[];
+}
+/**
  * The calls a client makes on one identity by its name: reading it, and setting or clearing an agent's description
  * (#189). The SDK's `CookoutClient` has them.
  */
-declare const brand$9: unique symbol;
+declare const brand$7: unique symbol;
 /**
  * An agent's description: what the agent handles, written for people and for routing, such as "Matt's to-dos, life
  * admin and voice-note follow-ups". 1–500 characters with no space at either end. A human has none.
  */
 type Description = string & {
-  readonly [brand$9]: "Description";
+  readonly [brand$7]: "Description";
 };
 /** An agent identity's fields with its description, which every caller sees. */
 type Described<Fields> = Fields & {
@@ -43,22 +78,12 @@ interface DescriptionCalls<Answer> {
    */
   readonly setDescription: (name: string, description: string | null) => Promise<Answer>;
 }
-/**
- * A moment on the wire, shared by the server, the SDK and the web: the
- * `IsoTime` brand and its check. Every timestamp the protocol carries
- * (`createdAt`, `expiresAt`, `heldUntil`, the health check's `time`) is one.
- */
-declare const brand$8: unique symbol;
-/** A moment as the wire writes it: ISO 8601 in UTC with milliseconds, such as `2026-01-01T00:00:00.000Z`. */
-type IsoTime = string & {
-  readonly [brand$8]: "IsoTime";
-};
 interface IdentityMessageCountResponse {
   readonly messages: number;
 }
-declare const brand$7: unique symbol;
+declare const brand$6: unique symbol;
 type Brand$1<Name extends string> = string & {
-  readonly [brand$7]: Name;
+  readonly [brand$6]: Name;
 };
 type IdentityFields = {
   readonly name: IdentityName;
@@ -155,9 +180,9 @@ interface SetDisplayNameRequest {
  * and the SDK send it in `cookout-harness` when the process's environment shows such a tool runs it.
  */
 type Harness = Brand$1<"Harness">;
-declare const brand$6: unique symbol;
+declare const brand$5: unique symbol;
 type DeactivationOfferId = number & {
-  readonly [brand$6]: "DeactivationOfferId";
+  readonly [brand$5]: "DeactivationOfferId";
 };
 interface DeactivationOffer {
   readonly id: DeactivationOfferId;
@@ -171,7 +196,7 @@ interface DeactivationOfferResponse {
   readonly deactivationOffer: DeactivationOffer;
 }
 type DeactivatedQuietAgentId = number & {
-  readonly [brand$6]: "DeactivatedQuietAgentId";
+  readonly [brand$5]: "DeactivatedQuietAgentId";
 };
 interface DeactivatedQuietAgent {
   readonly id: DeactivatedQuietAgentId;
@@ -182,31 +207,6 @@ interface DeactivatedQuietAgent {
 }
 interface DeactivatedQuietAgentResponse {
   readonly deactivatedQuietAgent: DeactivatedQuietAgent;
-}
-declare const brand$5: unique symbol;
-/** A channel's name: 1–80 lowercase letters, digits or `-`. Unique on a server. */
-type ChannelName = string & {
-  readonly [brand$5]: "ChannelName";
-};
-/** A channel as the server shows it. */
-interface Channel {
-  readonly name: ChannelName;
-  /** 1–500 characters. */
-  readonly description?: string;
-  readonly createdAt: IsoTime;
-}
-/** The body of `POST /v1/channels`. The server checks the name and description. */
-interface CreateChannelRequest {
-  readonly name: string;
-  readonly description?: string;
-}
-/** The answer to creating or getting a channel. */
-interface ChannelResponse {
-  readonly channel: Channel;
-}
-/** The answer to `GET /v1/channels`: every channel, sorted by name. */
-interface ListChannelsResponse {
-  readonly channels: readonly Channel[];
 }
 declare const brand$4: unique symbol;
 /**
