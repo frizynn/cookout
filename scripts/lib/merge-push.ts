@@ -26,14 +26,32 @@ function deleteRemoteBranch(options: PushOptions): void {
   }
 }
 
-function greenOnCi(options: PushOptions, sha: string): Step {
+function onOrigin(options: PushOptions, sha: string): boolean {
+  const listed = git(options, "ls-remote", "--heads", "origin", branchOf(options));
+  return listed.ok && listed.output.startsWith(`${sha}\t`);
+}
+
+function pushBranch(options: PushOptions, sha: string): Step {
   const branch = branchOf(options);
+  if (onOrigin(options, sha)) {
+    options.log(`${branch} is already at ${sha} on origin: waiting for its existing Check run, not pushing again`);
+    return DONE;
+  }
   deleteRemoteBranch(options);
   const pushed = git(options, "push", "-q", "origin", `${sha}:refs/heads/${branch}`);
   if (!pushed.ok) {
     return stop(`git push origin ${sha}:${branch} failed; nothing was pushed to v1.\n${tail(pushed.output)}`);
   }
   options.log(`Pushed ${branch} at ${sha}: waiting for its Check run`);
+  return DONE;
+}
+
+function greenOnCi(options: PushOptions, sha: string): Step {
+  const branch = branchOf(options);
+  const pushed = pushBranch(options, sha);
+  if (pushed.kind === "stopped") {
+    return pushed;
+  }
   const watched = options.ci(branch, sha);
   if (watched.kind === "stopped") {
     return stop(
