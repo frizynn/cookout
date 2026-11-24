@@ -125,6 +125,11 @@ async function render(page: Page, shot: Shot): Promise<void> {
   if (typeof shot.screen.history === "string") {
     await withOlderHistory({ history: shot.screen.history, page });
   }
+  if (shot.screen.noPresence === true) {
+    await page.route("**/v1/presence*", async (route) => {
+      await route.abort();
+    });
+  }
   if (shot.screen.liveDown === true) {
     await page.route("**/v1/events?*", async (route) => {
       await route.abort();
