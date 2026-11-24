@@ -1,7 +1,7 @@
 import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { inConversation, inPane, inThread } from "./regions.ts";
+import { inConversation, inPane, inSidebar, inThread } from "./regions.ts";
 import { rowsOf, subscribedReader } from "./inbox-reader.ts";
 import { openWithClockStopped } from "./clock.ts";
 import { watched } from "./watched.ts";
@@ -161,7 +161,12 @@ it("opening a thread row's address shows its conversation, with the row marked a
     ["Deploy at noon?", "Unread one", "Unread two"],
     "2 earlier replies",
   ]);
-  expect(currentRows("Activity")).toStrictEqual([thread.address]);
+  expect([
+    currentRows("Activity"),
+    inSidebar()
+      .getByRole("link", { name: /^Inbox/u })
+      .getAttribute("aria-current"),
+  ]).toStrictEqual([[thread.address], "page"]);
 
   unmount();
 });
