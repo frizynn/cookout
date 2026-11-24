@@ -1,5 +1,6 @@
 import type { ActionMenuParts, MenuChoice, MessageMenuParts, ReactionChoice, ThreadChoice } from "./menu-parts.ts";
 import type { AvatarParts, PresenceShown, SuggestionOptionParts } from "./avatar-parts.ts";
+import type { PanelEdgeParts } from "./panel-edge-parts.ts";
 import type { ReactNode } from "react";
 
 interface Parts {
@@ -122,6 +123,7 @@ interface SidebarParts extends Parts {
   readonly open: boolean;
   readonly collapsed: boolean;
   readonly onToggleCollapsed: () => void;
+  readonly edge: PanelEdgeParts;
 }
 
 interface NavLinkParts {

@@ -7,11 +7,15 @@ interface EdgeParts {
   readonly edge: PanelEdgeParts;
 }
 
+const WIDER_KEY = { left: "ArrowLeft", right: "ArrowRight" } as const;
+const NARROWER_KEY = { left: "ArrowRight", right: "ArrowLeft" } as const;
+const PLACE = { left: "-left-1", right: "-right-1" } as const;
+
 function keyedWidth(edge: PanelEdgeParts, key: string): number | null {
-  if (key === "ArrowLeft") {
+  if (key === WIDER_KEY[edge.side]) {
     return edge.width + edge.step;
   }
-  if (key === "ArrowRight") {
+  if (key === NARROWER_KEY[edge.side]) {
     return edge.width - edge.step;
   }
   if (key === "Home") {
@@ -43,7 +47,7 @@ export function PanelEdge(parts: EdgeParts): ReactNode {
       aria-valuemax={edge.max}
       aria-valuemin={edge.min}
       aria-valuenow={edge.width}
-      className="absolute inset-y-0 -left-1 z-30 hidden w-2 cursor-col-resize touch-none outline-none after:absolute after:inset-y-0 after:left-[3px] after:w-0.5 hover:after:bg-link focus-visible:after:bg-link md:block"
+      className={`absolute inset-y-0 ${PLACE[edge.side]} z-30 hidden w-2 cursor-col-resize touch-none outline-none after:absolute after:inset-y-0 after:left-[3px] after:w-0.5 hover:after:bg-link focus-visible:after:bg-link md:block`}
       onKeyDown={handleKeyDown}
       onPointerDown={handlePointerDown}
       role="separator"

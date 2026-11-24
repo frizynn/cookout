@@ -12,7 +12,10 @@
  * `Workspace` is the page around every route once logged in: a `Sidebar` on
  * the left (on a narrow screen, behind a button that opens and closes it),
  * which a button at its top collapses to a narrow rail holding only that
- * button on a wide screen (`collapsed`),
+ * button on a wide screen (`collapsed`), and which, not collapsed, is as wide
+ * as its `edge` says on a wide screen, its right edge a `PanelEdge` too
+ * (`side` `right`: Right and a drag right widen it, and with no `onClose` a
+ * drag past its narrowest stops there),
  * with its `SidebarBody` of links (following one, but not pressing a button, closes it on a narrow screen)
  * and its `SidebarFooter`, and a `WorkspaceMain` of the route's panes on the
  * right, in a `WorkspaceColumn` under any `StatusBar`: a named polite live
