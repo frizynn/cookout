@@ -74,6 +74,7 @@
     "local/no-overloads": "error",
     "local/sort-imports": "error",
     "web-rules/page-title-owner": "error",
+    "web-rules/keymap-owner": "error",
     "export-rules/no-internal-tag": "error",
     "sort-imports": "off",
     "typescript/ban-ts-comment": "error",
@@ -529,6 +530,12 @@
       "files": ["app/modules/page-title/**"],
       "rules": {
         "web-rules/page-title-owner": "off"
+      }
+    },
+    {
+      "files": ["app/modules/keymap/**", "app/modules/*/tests/**"],
+      "rules": {
+        "web-rules/keymap-owner": "off"
       }
     },
     {
