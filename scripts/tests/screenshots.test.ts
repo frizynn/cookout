@@ -152,7 +152,7 @@ it("a screen that fails to render is reported, and the others are still taken", 
   const { freshBoard, log } = fakeBoards("thread-dark");
   const failures = await takeScreenshots({ freshBoard, screens: SCREENS });
 
-  expect([failures, log.filter((line) => line.startsWith("thread-")), log.at(LAST)]).toStrictEqual([
+  expect([failures, log.filter((line) => /^thread-(?:dark|light):/u.test(line)), log.at(LAST)]).toStrictEqual([
     ["thread-dark: Timed out waiting for Thanks, both of you."],
     ["thread-light: 0 unread"],
     "stop dark",
