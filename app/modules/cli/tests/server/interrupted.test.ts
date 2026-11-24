@@ -37,3 +37,18 @@ it.effect("cookout serve interrupted, as SIGTERM stops it, exits 0 and prints no
     expect(stopped.stdout).not.toContain("interrupted");
   }).pipe(Effect.provide(commandLineServices)),
 );
+
+it.effect("a command that ends before a signal arrives keeps its own exit code and output", () =>
+  Effect.gen(function* endedFirst() {
+    const settled = TestClock.withLive(Effect.sleep("200 millis"));
+    const finished = yield* interruptCookout({ args: ["--version"], asked: settled, env: {} });
+    const refused = yield* interruptCookout({
+      args: ["message", "post", "grill", "done", "--close"],
+      asked: settled,
+      env: { COOKOUT_TOKEN: "cookout_x", COOKOUT_URL: "http://127.0.0.1:1/" },
+    });
+
+    expect(finished).toMatchObject({ exitCode: EXIT_SUCCESS, stderr: "" });
+    expect(refused).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "usage" } }, stdout: "" });
+  }).pipe(Effect.provide(commandLineServices)),
+);
