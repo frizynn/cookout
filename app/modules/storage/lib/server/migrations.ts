@@ -4,6 +4,7 @@ import { NUDGES_MIGRATION } from "./nudges-sqlite.ts";
 import { OFFLINE_ALERTS_MIGRATION } from "./offline-alerts.ts";
 import { REACTIONS_MIGRATION } from "./reactions-sqlite.ts";
 import { READ_RECEIPTS_MIGRATION } from "./read-receipts-sqlite.ts";
+import { SEARCH_MIGRATION } from "./search-sqlite.ts";
 import type { Scope } from "effect";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { StorageUnavailable } from "./errors.ts";
@@ -194,6 +195,7 @@ const migrations: readonly string[] = [
   `ALTER TABLE message_id_sequence ADD COLUMN latest_created_at TEXT;
    UPDATE message_id_sequence SET latest_created_at = (SELECT max(created_at) FROM messages);`,
   DEACTIVATED_QUIET_AGENTS_MIGRATION,
+  SEARCH_MIGRATION,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });
