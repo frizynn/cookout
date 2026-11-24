@@ -15,3 +15,5 @@ This supersedes ADR 0075's decision to remove `agents` now.
 ## Considered options
 
 - **Ship the removal and tell clients to upgrade with the server.** Rejected: a client older than the server breaks on a call that succeeded, and the cookout can't make every CLI upgrade at once.
+
+Superseded in part on 2026-11-24, for `agents` on deactivate, by its own second release: 0.2.1, with #279, is published, so the server no longer sends `agents` (mattpocock/cookout#242).

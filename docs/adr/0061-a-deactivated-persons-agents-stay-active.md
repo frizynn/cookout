@@ -20,3 +20,5 @@ Everything else in ADR 0045 stands: an identity is switched off, never deleted w
 Superseded in part on 2026-11-24 by [ADR 0075](0075-the-deactivate-answer-is-only-the-identity.md): the deactivate answer no longer has `agents`, now that 0.2.0 is published (mattpocock/cookout#242).
 
 Superseded in part on 2026-11-24 by [ADR 0076](0076-removing-a-response-field-takes-two-releases.md): the deactivate answer keeps `agents` until a release whose clients accept the answer without it is published (mattpocock/cookout#279).
+
+Superseded in part on 2026-11-24 by the second release in [ADR 0076](0076-removing-a-response-field-takes-two-releases.md): with 0.2.1, whose clients accept the answer without it, published, the deactivate answer no longer has `agents` (mattpocock/cookout#242).
