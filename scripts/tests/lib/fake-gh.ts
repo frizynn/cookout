@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import type { Step } from "../../lib/merge-steps.ts";
 import { ciGreen } from "../../lib/ci-gate.ts";
 import { onTestFinished } from "vitest";
@@ -12,6 +12,7 @@ const NO_WAITS = 0;
 const ONE_WAIT = 1;
 const COMPLETED = "completed";
 const RUNNING = "in_progress";
+const EXECUTABLE = 0o755;
 
 const FAKE_GH = `
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
@@ -90,7 +91,7 @@ function view({ jobs, status, url = URL }: View): unknown {
   return { jobs: jobs.map((job) => ({ ...job, databaseId: JOB_ID })), status, url };
 }
 
-function fake({ vouchedBy = "", ...responses }: Responses & { readonly vouchedBy?: string }): Fake {
+function stateDir(responses: Responses): string {
   const dir = mkdtempSync(path.join(tmpdir(), "ci-gate-"));
   onTestFinished(() => {
     rmSync(dir, { force: true, recursive: true });
@@ -98,6 +99,11 @@ function fake({ vouchedBy = "", ...responses }: Responses & { readonly vouchedBy
   writeFileSync(path.join(dir, "gh.mjs"), FAKE_GH);
   writeFileSync(path.join(dir, "state.json"), JSON.stringify(responses));
   writeFileSync(path.join(dir, "calls.log"), "");
+  return dir;
+}
+
+function fake({ vouchedBy = "", ...responses }: Responses & { readonly vouchedBy?: string }): Fake {
+  const dir = stateDir(responses);
   return {
     calls: (): readonly string[] => readFileSync(path.join(dir, "calls.log"), "utf8").trim().split("\n"),
     gate: (args, base = [], appear = NO_WAITS): Gated => {
@@ -124,6 +130,14 @@ function fake({ vouchedBy = "", ...responses }: Responses & { readonly vouchedBy
   };
 }
 
+function ghOnPath(responses: Responses): string {
+  const dir = stateDir(responses);
+  const gh = path.join(dir, "gh");
+  writeFileSync(gh, `#!/bin/sh\nexec node "${path.join(dir, "gh.mjs")}" "$@"\n`);
+  chmodSync(gh, EXECUTABLE);
+  return dir;
+}
+
 function reasonOf(step: Step): string {
   if (step.kind === "stopped") {
     return step.reason;
@@ -144,6 +158,7 @@ export {
   done,
   ended,
   fake,
+  ghOnPath,
   reasonOf,
   running,
   view,

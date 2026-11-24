@@ -1,0 +1,106 @@
+import { execFileSync, spawnSync } from "node:child_process";
+import { expect, it, onTestFinished } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { changedFiles } from "../lib/changed-files.ts";
+import path from "node:path";
+import { tmpdir } from "node:os";
+
+const FIXTURES = ".vitest";
+const PASSED = 0;
+const FAILED = 1;
+const VIOLATION = "export const total = 7 * 6;\n";
+const CLEAN = 'export const greeting = "hello";\n';
+const SETUP = [
+  ["init", "-q", "-b", "v1"],
+  ["config", "user.email", "test@example.com"],
+  ["config", "user.name", "Test"],
+  ["add", "."],
+  ["commit", "-q", "-m", "first"],
+  ["checkout", "-q", "-b", "ticket-7"],
+] as const;
+
+interface Ran {
+  readonly output: string;
+  readonly status: number | null;
+}
+
+function fixture(content: string): string {
+  mkdirSync(FIXTURES, { recursive: true });
+  const dir = mkdtempSync(path.join(FIXTURES, "lint-changed-"));
+  onTestFinished(() => {
+    rmSync(dir, { force: true, recursive: true });
+  });
+  const file = path.join(dir, "fixture.ts");
+  writeFileSync(file, content);
+  return file;
+}
+
+function node(...args: readonly string[]): Ran {
+  const ran = spawnSync("node", args, { encoding: "utf8" });
+  return { output: `${ran.stdout}${ran.stderr}`, status: ran.status };
+}
+
+function git(cwd: string, ...args: readonly string[]): void {
+  execFileSync("git", args, { cwd, stdio: "ignore" });
+}
+
+function write(dir: string, files: Readonly<Record<string, string>>): void {
+  for (const [file, content] of Object.entries(files)) {
+    writeFileSync(path.join(dir, file), content);
+  }
+}
+
+function branchRepo(): string {
+  const dir = mkdtempSync(path.join(tmpdir(), "lint-changed-"));
+  onTestFinished(() => {
+    rmSync(dir, { force: true, recursive: true });
+  });
+  write(dir, { "deleted.ts": "a\n", "kept.ts": "a\n", "unstaged.ts": "a\n" });
+  for (const args of SETUP) {
+    git(dir, ...args);
+  }
+  return dir;
+}
+
+it("lists unstaged, staged and untracked changes against the base, but not deleted files", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const dir = branchRepo();
+  write(dir, { "staged.ts": "b\n", "unstaged.ts": "b\n", "untracked.ts": "b\n" });
+  git(dir, "add", "staged.ts");
+  git(dir, "rm", "-q", "deleted.ts");
+
+  expect(changedFiles({ base: "v1", cwd: dir })).toStrictEqual({
+    ok: true,
+    value: ["staged.ts", "unstaged.ts", "untracked.ts"],
+  });
+});
+
+it("reports a violation once in the hook's format and fails as the hook does", { timeout: 60_000 }, () => {
+  expect.hasAssertions();
+
+  const file = fixture(VIOLATION);
+  const changed = node("scripts/lint-changed.ts", file);
+  const hook = node("scripts/lint-ratchet.ts", "--fix", file);
+
+  const reported = changed.output.split("\n").filter((line) => line.startsWith(`${file}:`));
+
+  expect([changed.status, hook.status, reported]).toStrictEqual([
+    FAILED,
+    FAILED,
+    [`${file}:1 eslint(no-magic-numbers) No magic number: 7`, `${file}:1 eslint(no-magic-numbers) No magic number: 6`],
+  ]);
+  expect(changed.output).toContain("2 new violations in 1 file");
+});
+
+it("passes a clean file as the hook does", { timeout: 60_000 }, () => {
+  expect.hasAssertions();
+
+  const file = fixture(CLEAN);
+  const statuses = [
+    node("scripts/lint-changed.ts", file).status,
+    node("scripts/lint-ratchet.ts", "--fix", file).status,
+  ];
+
+  expect(statuses).toStrictEqual([PASSED, PASSED]);
+});

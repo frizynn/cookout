@@ -1,11 +1,13 @@
 import type { MergeOptions, MergeRules, Merged } from "./lib/merge-ticket.ts";
 import { continueMerge, mergeTicket } from "./lib/merge-ticket.ts";
+import { failedJobsOr, mergedLine, verdictOnExit } from "./lib/verdict.ts";
 import type { Step } from "./lib/merge-steps.ts";
 import { fail } from "./lib/tools.ts";
 import { spawnSync } from "node:child_process";
 import { waitForCi } from "./lib/ci-wait.ts";
 
 const SCRIPT = "merge-ticket";
+const verdict = verdictOnExit("usage");
 const ATTEMPTS = 5;
 const NONE = 0;
 const EXIT_SUCCESS = 0;
@@ -71,8 +73,10 @@ interface Gate {
 }
 
 function requireGreen({ advice, args, base, subject, vouchedBy }: Gate): void {
+  verdict.failingAt(`${subject}'s Check run`);
   const step = waitForCi({ args, base, log, subject, vouchedBy });
   if (step.kind === "stopped") {
+    verdict.failingAt(`${subject}'s Check run: ${failedJobsOr({ jobs: step.jobs, step: "not green" })}`);
     fail(SCRIPT, `${step.reason}\nNothing was merged. ${advice}`);
   }
 }
@@ -107,6 +111,7 @@ requireGreen({
 });
 
 function migrationsBase(): string {
+  verdict.failingAt("migrations base");
   if (!reordersUndeployed) {
     return "origin/v1";
   }
@@ -128,6 +133,14 @@ function ciOf(branch: string, sha: string): Step {
   return waitForCi({ args: ["--branch", branch, "--commit", sha], base: [], log, subject: branch });
 }
 
+function failedStepOf(files: readonly string[]): string {
+  if (files.length === NONE) {
+    return "merge";
+  }
+  return `conflict in ${files.join(", ")}`;
+}
+
+verdict.failingAt("gh issue view");
 const merged: Merged = run({
   attempts: ATTEMPTS,
   check: ["sh", "-c", FAST_CHECKS],
@@ -145,9 +158,11 @@ function shaOf(outcome: Merged): string {
   if (outcome.ok) {
     return outcome.sha;
   }
+  verdict.failingAt(failedStepOf(outcome.files));
   return fail(SCRIPT, outcome.reason);
 }
 
 const sha = shaOf(merged);
 console.log(`${SCRIPT}: merged ticket-${ticket} into v1 at ${sha}, whose merge-ticket-${ticket} Check run is green.`);
 console.log(sha);
+verdict.succeedWith(mergedLine(sha));
