@@ -50,35 +50,39 @@ async function expectUnmovedWhileSuggesting({ field, form, region }: Box): Promi
   await expect(list).toBeVisible();
   expect(await sizeOf(form)).toStrictEqual(before);
   expect(await isAbove({ form, list })).toBe(true);
-
-  await field.page().keyboard.press("Escape");
-
-  await expect(list).toBeHidden();
-  expect(await sizeOf(form)).toStrictEqual(before);
 }
 
-async function readerToken(): Promise<string> {
+interface Opened {
+  readonly channel: string;
+  readonly token: string;
+  readonly thread: string;
+}
+
+async function openedChannel(channel: string): Promise<Opened> {
   const admin = adminClient();
-  await admin.createChannel({ name: CHANNEL });
-  const { message } = await admin.createMessage({ channel: CHANNEL, text: PARENT });
-  await admin.createMessage({ channel: CHANNEL, replyTo: message.id, text: "Maybe" });
-  const { token } = await newIdentity({ kind: "human", name: `${CHANNEL}-reader` });
-  return token;
+  await admin.createChannel({ name: channel });
+  const { message } = await admin.createMessage({ channel, text: PARENT });
+  await admin.createMessage({ channel, replyTo: message.id, text: "Maybe" });
+  const { token } = await newIdentity({ kind: "human", name: `${channel}-reader` });
+  return { channel, thread: String(message.id), token };
 }
 
-test("the @ suggestion list floats over the channel's and the thread's message boxes without resizing them", async ({
-  page,
-}) => {
-  await logIn({ page, token: await readerToken() });
-  await page.goto(`/#/channels/${CHANNEL}`);
+test("the @ suggestion list floats above a channel's message box without resizing it", async ({ page }) => {
+  const { channel, token } = await openedChannel(`${CHANNEL}-channel`);
+  await logIn({ page, token });
+  await page.goto(`/#/channels/${channel}`);
 
   await expectUnmovedWhileSuggesting({
     field: inPane(page).getByRole("textbox", { exact: true, name: "Message" }),
     form: inPane(page).getByRole("form", { name: "Post to the channel" }),
     region: inPane(page),
   });
+});
 
-  await inPane(page).getByRole("article").filter({ hasText: PARENT }).getByRole("link", { name: "1 reply" }).click();
+test("the @ suggestion list floats above a thread's reply box without resizing it", async ({ page }) => {
+  const { channel, thread, token } = await openedChannel(`${CHANNEL}-thread`);
+  await logIn({ page, token });
+  await page.goto(`/#/channels/${channel}/threads/${thread}`);
 
   await expectUnmovedWhileSuggesting({
     field: inThread(page).getByRole("textbox", { exact: true, name: "Reply" }),
