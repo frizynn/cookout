@@ -36,6 +36,7 @@ function headerStyle(rail: boolean): string {
 
 export function Sidebar(parts: SidebarParts): ReactNode {
   const handleToggle = parts.onToggleCollapsed;
+  const handleFollowHome = parts.onFollowHome;
   const rail = parts.collapsed && !parts.open;
   return (
     <nav
@@ -45,7 +46,15 @@ export function Sidebar(parts: SidebarParts): ReactNode {
     >
       {!rail && <PanelEdge edge={parts.edge} />}
       <div className={`flex h-14 shrink-0 items-center ${headerStyle(rail)}`}>
-        {!rail && <span className="font-mono text-sm font-semibold tracking-tight">{parts.title}</span>}
+        {!rail && (
+          <a
+            className="rounded font-mono text-sm font-semibold tracking-tight hover:text-muted-foreground"
+            href={parts.home}
+            onClick={handleFollowHome}
+          >
+            {parts.title}
+          </a>
+        )}
         <CollapseButton collapsed={rail} onClick={handleToggle} />
       </div>
       {!rail && parts.children}
