@@ -29,6 +29,10 @@ const THURSDAY = isoTime("2026-01-08T00:00:00.000Z");
 const FRIDAY = isoTime("2026-01-09T00:00:00.000Z");
 const SATURDAY = isoTime("2026-01-10T00:00:00.000Z");
 const START = 0;
+const SHORT = "Deploy: the deploy is a deploy";
+const LONG =
+  "Lunch is at noon, the coffee machine on the third floor is fixed, and the new starters arrive on " +
+  "Monday; after all that, please deploy";
 
 const TEXTS = [
   [MONDAY, "flaky flaky flaky"],
@@ -116,5 +120,35 @@ it.effect.each(storageLayers)(
       const best = yield* bestPages(everything);
 
       expect({ best, count: newest.length }).toStrictEqual({ best: newest, count: TEXTS.length });
+    }),
+);
+
+interface Ranked {
+  readonly found: Ids;
+  readonly short: MessageId;
+  readonly long: MessageId;
+}
+
+function ranked<Failure, Needs>(
+  layer: Layer.Layer<Storage, Failure, Needs>,
+): Effect.Effect<Ranked, Failure | StorageUnavailable, Needs> {
+  return Effect.gen(function* rankBoth() {
+    const { storage } = yield* openStore(layer);
+    yield* storage.createChannel(channel("grill"));
+    const append = appendTo(storage);
+    const short = yield* append(newMessage(MONDAY, SHORT));
+    const long = yield* append(newMessage(TUESDAY, LONG));
+    const found = yield* searcherOf(storage).ids(queryOf("deploy"), { limit: EVERY, offset: START, sort: "best" });
+    return { found, long: long.id, short: short.id };
+  });
+}
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): a short message all about a word ranks above a newer long one that mentions it once",
+  ({ layer }) =>
+    Effect.gen(function* rankShortFirst() {
+      const { found, long, short } = yield* ranked(layer);
+
+      expect(found).toStrictEqual([short, long]);
     }),
 );
