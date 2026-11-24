@@ -194,3 +194,43 @@ it("when the link comes back, presence is read again, so an identity that went o
     online: false,
   });
 });
+
+it("a presence read the server refuses leaves nobody's presence known", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const refused = createCookoutClient({ env: {}, token: "cookout_not_a_token", url: webTestCookout().url });
+  const answered = Promise.withResolvers<null>();
+  const client: BoardStoreOptions["client"] = {
+    presence: async () => {
+      try {
+        const answer = await refused.presence();
+        return answer;
+      } finally {
+        answered.resolve(null);
+      }
+    },
+  };
+  const { store } = opened(client);
+  await answered.promise;
+
+  expect(presences(store.snapshot()).size).toBe(NOBODY);
+});
+
+it("a link back while nobody shows presence reads it again only once a view shows it again", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const { client, reads } = counting();
+  const hand = handLive();
+  const store = createBoardStore({ client, live: createLive(hand.adapter) });
+  store.subscribeShowing("presence")(vi.fn<() => void>())();
+  hand.report("down");
+  hand.report("up");
+  const whileHidden = reads();
+  show(store);
+
+  await vi.waitFor(() => {
+    expect([whileHidden, reads()]).toStrictEqual([["presence"], ["presence", "presence"]]);
+  });
+});
