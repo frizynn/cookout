@@ -29,7 +29,7 @@ import { inboxReasons, isDeactivatedQuietAgentId, isDeactivationOfferId, isNudge
 import { isOfflineAlertId, offlineReasons } from "../../../presence/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
-import type { TriggerFailure } from "../../../presence/index.ts";
+import type { TriggerFailure } from "../../../triggers/index.ts";
 import { matchesWire } from "../../../http/index.ts";
 
 const InboxReasonSchema = Schema.Literals(inboxReasons);

@@ -1,6 +1,6 @@
 import { Array as Arr, Effect, Number as Num, Option, Order, Predicate, Schema } from "effect";
 import { FALSE, TRUE, isFalse } from "./adapters/sql-database.ts";
-import type { OfflineAlert, OfflineAlertId, OfflineReason, TriggerFailure } from "../../../presence/index.ts";
+import type { OfflineAlert, OfflineAlertId, OfflineReason } from "../../../presence/index.ts";
 import type { SqlDatabase, SqlValue } from "./adapters/sql-database.ts";
 import { isOfflineAlertId, offlineReasons } from "../../../presence/index.ts";
 import type { Fails } from "./errors.ts";
@@ -8,6 +8,7 @@ import type { IdentityName } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { MemoryState } from "./memory-state.ts";
+import type { TriggerFailure } from "../../../triggers/index.ts";
 import { isIdentityName } from "../../../identities/index.ts";
 import { isMessageId } from "../../../messages/index.ts";
 import { unreadable } from "./errors.ts";

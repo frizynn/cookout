@@ -14,7 +14,7 @@ import {
 import type { Booted, LastEnd } from "./booted.ts";
 import type { CookoutClient, Identity, Message, Token } from "../../../sdk/index.ts";
 import type { NewMessage, StorageUnavailable, StoredCommand, StoredDelivery } from "../../../storage/server.ts";
-import { backingServices, newToken, storageFor } from "./backing.ts";
+import { backingServices, newToken, scriptedTriggersIn, storageFor } from "./backing.ts";
 import { booted, lastEndOn, liveConnectionsClosedOn } from "./booted.ts";
 import { currentTime, startTestClock } from "./time.ts";
 import { identityFixture, identityName, ownedByAdminUnlessNamed, testCookoutAdminName } from "./identities.ts";
@@ -57,6 +57,7 @@ export type TestCookoutService = {
   readonly seedCommand: (stored: StoredCommand) => Effect.Effect<void>;
   readonly pendingDeliveries: Effect.Effect<readonly StoredDelivery[]>;
   readonly webhook: WebhookFake["Service"];
+  readonly triggers: ReturnType<typeof scriptedTriggersIn>;
 };
 
 export class TestCookout extends Context.Service<TestCookout, TestCookoutService>()(
@@ -74,6 +75,8 @@ export type TestCookoutOptions = {
   readonly commandCallsPerMinute?: number;
   readonly streamsPerIdentity?: number;
   readonly routine?: "fake" | "unreachable";
+  readonly triggers?: "receiver" | "scripted";
+  readonly allowLocalTriggers?: false;
 };
 
 type Setting =
@@ -114,12 +117,21 @@ function routineEnv(options: TestCookoutOptions, webhookUrl: string): readonly (
   ];
 }
 
+function localTriggers({ allowLocalTriggers }: TestCookoutOptions): readonly (readonly [string, string])[] {
+  if (allowLocalTriggers === false) {
+    return [];
+  }
+  return [["COOKOUT_ALLOW_LOCAL_TRIGGERS", "true"]];
+}
+
 function serverEnv(options: TestCookoutOptions, webhookUrl: string): ConfigProvider.ConfigProvider {
   const set = Arr.flatMap(settingNames, ([option, name]) => {
     const value = options[option];
     return value === undefined ? [] : [[name, String(value)] as const];
   });
-  return ConfigProvider.fromEnv({ env: Rec.fromEntries([...set, ...routineEnv(options, webhookUrl)]) });
+  return ConfigProvider.fromEnv({
+    env: Rec.fromEntries([...set, ...localTriggers(options), ...routineEnv(options, webhookUrl)]),
+  });
 }
 
 const clientAt =
@@ -190,6 +202,7 @@ const pendingDeliveries: Effect.Effect<readonly StoredDelivery[], never, Storage
 
 interface Boot {
   readonly adminToken: Token;
+  readonly triggers: ReturnType<typeof scriptedTriggersIn>;
   readonly boot: Effect.Effect<Booted, never, Scope.Scope>;
   readonly bootAs: (adminName: string | undefined) => Effect.Effect<Booted, AdminNameIsAgent, Scope.Scope>;
 }
@@ -217,7 +230,12 @@ function bootOn(options: TestCookoutOptions): Effect.Effect<Boot, never, Scope.S
         Effect.provideService(ConfigProvider.ConfigProvider, env),
         Effect.catchTags({ ConfigError: Effect.die, ServeError: Effect.die, StorageUnavailable: Effect.die }),
       );
-    return { adminToken, boot: Effect.orDie(bootAs(options.adminName)), bootAs };
+    return {
+      adminToken,
+      boot: Effect.orDie(bootAs(options.adminName)),
+      bootAs,
+      triggers: scriptedTriggersIn(services),
+    };
   });
 }
 
@@ -227,7 +245,7 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
     Effect.gen(function* startTestCookout() {
       yield* startTestClock;
       const scope = yield* Effect.scope;
-      const { adminToken, boot, bootAs } = yield* bootOn(options);
+      const { adminToken, boot, bootAs, triggers } = yield* bootOn(options);
       const firstScope = yield* Scope.fork(scope);
       const serverScope = yield* Ref.make(firstScope);
       const first = yield* Scope.provide(boot, firstScope);
@@ -261,6 +279,7 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
         seedMessage: (message) => onFirst(seedMessage(message)),
         startSecondServer: Effect.map(Scope.provide(boot, scope), ({ url }) => ({ url })),
         startSecondServerAs: (adminName) => Effect.map(Scope.provide(bootAs(adminName), scope), ({ url }) => ({ url })),
+        triggers,
         url: first.url,
         webhook: Context.get(first.server, WebhookFake),
       });

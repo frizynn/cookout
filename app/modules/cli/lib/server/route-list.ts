@@ -29,7 +29,7 @@ import {
   openIdentityRoutes,
   transferRoutes,
 } from "../../../identities/server.ts";
-import { liveRoutes, presenceLayer } from "./live-routes.ts";
+import { liveRoutes, mentionTriggersLayer, presenceLayer } from "./live-routes.ts";
 import { messageRoutes, messagesLayer, reactionsLayer, readReceiptsLayer } from "../../../messages/server.ts";
 import { Layer } from "effect";
 import type { Route } from "../../../http/server.ts";
@@ -89,6 +89,8 @@ export const domainLayers = Layer.mergeAll(
   Layer.provideMerge(
     Layer.mergeAll(identityChangesLayer, commandChangesLayer, readReceiptsLayer, reactionsLayer, offlineAlertsLayer),
   ),
+  (board) => Layer.provideMerge(mentionTriggersLayer, board),
 );
 
 export { SpawnSettings } from "../../../commands/server.ts";
+export { triggerCallerLive } from "./live-routes.ts";

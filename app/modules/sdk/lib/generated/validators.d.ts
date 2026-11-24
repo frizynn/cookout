@@ -9,6 +9,7 @@ import type { AckAllResponse, AckResponse, DeactivatedQuietAgentResponse, Deacti
 import type { LoginCollectedResponse, LoginRequestResponse, LoginRequestStartedResponse, LogoutResponse } from "../../../logins/index.ts";
 import type { ListMessagesResponse, MessageResponse, ReactionsResponse, ThreadResponse, TopLevelMessageResponse, ListOpenThreadsResponse } from "../../../messages/index.ts";
 import type { SearchResponse } from "../../../search/index.ts";
+import type { TriggerResponse } from "../../../triggers/index.ts";
 
 export declare function isAgentJoinCollectedResponse(data: unknown): data is AgentJoinCollectedResponse;
 export declare function isAgentJoinRequestResponse(data: unknown): data is AgentJoinRequestResponse;
@@ -77,3 +78,4 @@ export declare function isThreadResponse(data: unknown): data is ThreadResponse;
 export declare function isTopLevelMessageResponse(data: unknown): data is TopLevelMessageResponse;
 export declare function isListOpenThreadsResponse(data: unknown): data is ListOpenThreadsResponse;
 export declare function isSearchResponse(data: unknown): data is SearchResponse;
+export declare function isTriggerResponse(data: unknown): data is TriggerResponse;

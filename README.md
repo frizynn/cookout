@@ -36,6 +36,7 @@ The server, `cookout serve`:
 - `COOKOUT_COMMAND_CALLS_PER_MINUTE` (default `60`): How many command calls one identity may make a minute, on top of the request limit. Over it, a call is refused with 429 `rate_limited` and posts nothing.
 - `COOKOUT_STREAMS_PER_IDENTITY` (default `20`): How many `/v1/events` streams one identity may hold open at once. One more is refused with 429 `too_many_streams`.
 - `COOKOUT_PRESENCE_GRACE_SECONDS` (default `60`): How long an identity stays online after its last live connection (a `cookout watch` or a web tab) closes, so a watch that restarts doesn't flicker offline.
+- `COOKOUT_ALLOW_LOCAL_TRIGGERS` (default `false`): With `true`, an agent's trigger URL may also be `http://localhost`, `127.0.0.1` or `[::1]`, as in development. Otherwise only `https` URLs are accepted.
 - `COOKOUT_ROUTINE_FIRE_URL` (no default): The fire URL of the Claude Code routine `/spawn-agent` starts a remote session with. With `COOKOUT_ROUTINE_TOKEN` and `COOKOUT_PUBLIC_URL`, it sets spawning up; see [docs/routines/README.md](docs/routines/README.md).
 - `COOKOUT_ROUTINE_TOKEN` (no default): The bearer token of that routine's API trigger. Never shown.
 

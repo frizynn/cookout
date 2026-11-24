@@ -4,10 +4,10 @@
  * word the wire uses for it (the path, the event's `type`, the CLI's field) is named here once, so renaming the term
  * is one change.
  */
+import type { TriggerFailure, TriggerResult } from "../triggers/index.ts";
 import type { IdentityName } from "../identities/index.ts";
 import type { IsoTime } from "../time/index.ts";
-import type { MessageId } from "../messages/index.ts";
-import type { TriggerResult } from "../triggers/index.ts";
+import { triggerErrorCodes } from "../triggers/index.ts";
 
 declare const brand: unique symbol;
 
@@ -124,15 +124,11 @@ export interface OfflineAlert {
   readonly trigger?: TriggerFailure;
 }
 
-/** What a `trigger failed` offline alert says: the message that didn't get through, and the status or error. */
-export interface TriggerFailure {
-  readonly message: MessageId;
-  readonly status?: number;
-  readonly error?: string;
-}
-
 /** The code of a mark read naming an offline alert the caller has none of. */
 export const offlineAlertNotFound = "offline_alert_not_found";
 
-/** The codes presence ends a stream with, and the code of an offline alert not found. */
-export const presenceErrorCodes = [watchReplaced, offlineAlertNotFound] as const;
+/**
+ * The codes presence ends a stream with, the code of an offline alert not found, and the codes setting a trigger URL
+ * (which presence reports on) is refused with.
+ */
+export const presenceErrorCodes = [watchReplaced, offlineAlertNotFound, ...triggerErrorCodes] as const;

@@ -5,6 +5,7 @@
  * included. "Trigger URL" is UI copy, not a GLOSSARY.md term.
  */
 import type { IsoTime } from "../time/index.ts";
+import type { MessageId } from "../messages/index.ts";
 
 declare const brand: unique symbol;
 
@@ -19,6 +20,13 @@ const HTTP_OK_LAST = 299;
 export interface TriggerResult {
   readonly at: IsoTime;
   readonly ok: boolean;
+  readonly status?: number;
+  readonly error?: string;
+}
+
+/** What a `trigger failed` offline alert says: the message that didn't get through, and the status or error. */
+export interface TriggerFailure {
+  readonly message: MessageId;
   readonly status?: number;
   readonly error?: string;
 }
