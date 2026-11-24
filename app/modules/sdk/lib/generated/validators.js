@@ -9497,7 +9497,7 @@ return errors === 0;
 validate43.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 
 export const isPresenceEvent = validate44;
-const schema189 = {"type":"object","properties":{"presence":{"type":"object","properties":{"connection":{"anyOf":[{"type":"object","properties":{"host":{"type":"string"},"via":{"type":"string","enum":["watch"]}},"required":["via"],"additionalProperties":true},{"type":"object","properties":{"via":{"type":"string","enum":["web"]}},"required":["via"],"additionalProperties":true}]},"identity":{"$ref":"#/$defs/IdentityName"},"lastSeenAt":{"$ref":"#/$defs/IsoTime"},"offlineReason":{"type":"string","enum":["left","session revoked","session expired","token rotated","deactivated","connection lost"]},"online":{"type":"boolean"}},"required":["identity","online"],"additionalProperties":true},"type":{"type":"string","enum":["presence"]}},"required":["presence","type"],"additionalProperties":true,"$defs":{"IdentityName":{"type":"string","pattern":"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"},"IsoTime":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"}}};
+const schema189 = {"type":"object","properties":{"presence":{"type":"object","properties":{"connection":{"anyOf":[{"type":"object","properties":{"host":{"type":"string"},"via":{"type":"string","enum":["watch"]}},"required":["via"],"additionalProperties":true},{"type":"object","properties":{"via":{"type":"string","enum":["web"]}},"required":["via"],"additionalProperties":true}]},"identity":{"$ref":"#/$defs/IdentityName"},"lastSeenAt":{"$ref":"#/$defs/IsoTime"},"offlineReason":{"type":"string","enum":["left","session revoked","session expired","token rotated","deactivated","connection lost"]},"online":{"type":"boolean"},"warning":{"type":"boolean","enum":[true]}},"required":["identity","online"],"additionalProperties":true},"type":{"type":"string","enum":["presence"]}},"required":["presence","type"],"additionalProperties":true,"$defs":{"IdentityName":{"type":"string","pattern":"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"},"IsoTime":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"}}};
 const schema190 = {"type":"string","pattern":"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"};
 const schema191 = {"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"};
 
@@ -9774,6 +9774,24 @@ var valid1 = _errs27 === errors;
 else {
 var valid1 = true;
 }
+if(valid1){
+if(data0.warning !== undefined){
+let data9 = data0.warning;
+const _errs29 = errors;
+if(typeof data9 !== "boolean"){
+validate44.errors = [{instancePath:instancePath+"/presence/warning",schemaPath:"#/properties/presence/properties/warning/type",keyword:"type",params:{type: "boolean"},message:"must be boolean"}];
+return false;
+}
+if(!(data9 === true)){
+validate44.errors = [{instancePath:instancePath+"/presence/warning",schemaPath:"#/properties/presence/properties/warning/enum",keyword:"enum",params:{allowedValues: schema189.properties.presence.properties.warning.enum},message:"must be equal to one of the allowed values"}];
+return false;
+}
+var valid1 = _errs29 === errors;
+}
+else {
+var valid1 = true;
+}
+}
 }
 }
 }
@@ -9792,17 +9810,17 @@ var valid0 = true;
 }
 if(valid0){
 if(data.type !== undefined){
-let data9 = data.type;
-const _errs29 = errors;
-if(typeof data9 !== "string"){
+let data10 = data.type;
+const _errs31 = errors;
+if(typeof data10 !== "string"){
 validate44.errors = [{instancePath:instancePath+"/type",schemaPath:"#/properties/type/type",keyword:"type",params:{type: "string"},message:"must be string"}];
 return false;
 }
-if(!(data9 === "presence")){
+if(!(data10 === "presence")){
 validate44.errors = [{instancePath:instancePath+"/type",schemaPath:"#/properties/type/enum",keyword:"enum",params:{allowedValues: schema189.properties.type.enum},message:"must be equal to one of the allowed values"}];
 return false;
 }
-var valid0 = _errs29 === errors;
+var valid0 = _errs31 === errors;
 }
 else {
 var valid0 = true;
@@ -9821,7 +9839,7 @@ return errors === 0;
 validate44.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 
 export const isPresenceResponse = validate45;
-const schema192 = {"type":"object","properties":{"presence":{"type":"array","items":{"type":"object","properties":{"connection":{"anyOf":[{"type":"object","properties":{"host":{"type":"string"},"via":{"type":"string","enum":["watch"]}},"required":["via"],"additionalProperties":true},{"type":"object","properties":{"via":{"type":"string","enum":["web"]}},"required":["via"],"additionalProperties":true}]},"identity":{"$ref":"#/$defs/IdentityName"},"lastSeenAt":{"$ref":"#/$defs/IsoTime"},"offlineReason":{"type":"string","enum":["left","session revoked","session expired","token rotated","deactivated","connection lost"]},"online":{"type":"boolean"}},"required":["identity","online"],"additionalProperties":true}}},"required":["presence"],"additionalProperties":true,"$defs":{"IdentityName":{"type":"string","pattern":"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"},"IsoTime":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"}}};
+const schema192 = {"type":"object","properties":{"presence":{"type":"array","items":{"type":"object","properties":{"connection":{"anyOf":[{"type":"object","properties":{"host":{"type":"string"},"via":{"type":"string","enum":["watch"]}},"required":["via"],"additionalProperties":true},{"type":"object","properties":{"via":{"type":"string","enum":["web"]}},"required":["via"],"additionalProperties":true}]},"identity":{"$ref":"#/$defs/IdentityName"},"lastSeenAt":{"$ref":"#/$defs/IsoTime"},"offlineReason":{"type":"string","enum":["left","session revoked","session expired","token rotated","deactivated","connection lost"]},"online":{"type":"boolean"},"warning":{"type":"boolean","enum":[true]}},"required":["identity","online"],"additionalProperties":true}}},"required":["presence"],"additionalProperties":true,"$defs":{"IdentityName":{"type":"string","pattern":"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"},"IsoTime":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"}}};
 const schema193 = {"type":"string","pattern":"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"};
 const schema194 = {"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"};
 
@@ -10104,6 +10122,24 @@ var valid2 = _errs29 === errors;
 }
 else {
 var valid2 = true;
+}
+if(valid2){
+if(data1.warning !== undefined){
+let data10 = data1.warning;
+const _errs31 = errors;
+if(typeof data10 !== "boolean"){
+validate45.errors = [{instancePath:instancePath+"/presence/" + i0+"/warning",schemaPath:"#/properties/presence/items/properties/warning/type",keyword:"type",params:{type: "boolean"},message:"must be boolean"}];
+return false;
+}
+if(!(data10 === true)){
+validate45.errors = [{instancePath:instancePath+"/presence/" + i0+"/warning",schemaPath:"#/properties/presence/items/properties/warning/enum",keyword:"enum",params:{allowedValues: schema192.properties.presence.items.properties.warning.enum},message:"must be equal to one of the allowed values"}];
+return false;
+}
+var valid2 = _errs31 === errors;
+}
+else {
+var valid2 = true;
+}
 }
 }
 }

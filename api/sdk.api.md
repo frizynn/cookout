@@ -355,7 +355,9 @@ type OfflineReason = (typeof offlineReasons)[number];
 /**
  * One identity's presence. An online identity carries the detail of its most recent live connection, unless it shows
  * online only because the server just restarted (the boot grace). An offline one carries when it was last seen, unless
- * it never was, and why it went offline when the server knows. A Deactivated identity is always offline.
+ * it never was, and why it went offline when the server knows. A Deactivated identity is always offline. `warning` is
+ * the owner's warning: set only in what the agent's owner reads, while the agent is offline after an unexpected end
+ * (the end that raised an offline alert), until it next has a live connection.
  */
 interface Presence {
   readonly identity: IdentityName;
@@ -363,6 +365,7 @@ interface Presence {
   readonly connection?: LiveConnectionDetail;
   readonly lastSeenAt?: IsoTime;
   readonly offlineReason?: OfflineReason;
+  readonly warning?: true;
 }
 /** The answer to `GET /v1/presence`: every identity's presence, Deactivated ones included, sorted by name. */
 interface PresenceResponse {

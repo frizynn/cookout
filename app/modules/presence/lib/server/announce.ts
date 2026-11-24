@@ -90,10 +90,10 @@ function announced({
       const lastSeenAt = yield* lastSeenOf(is);
       yield* announce.record({ identity, lastSeenAt, online: is.online, ...endIn({ identity, state: after }) });
     }
+    yield* alerting({ alerts: announce.alerts, end: after.ends.get(identity), is, was });
     if (!samePresence(was, is)) {
       yield* announce.publish(is);
     }
-    yield* alerting({ alerts: announce.alerts, end: after.ends.get(identity), is, was });
   });
 }
 

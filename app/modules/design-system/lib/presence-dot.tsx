@@ -7,31 +7,37 @@ const PLACES = {
   inline: "size-2 self-center",
 } as const;
 
-function lookOf(online: boolean): string {
-  if (online) {
-    return "fill-online";
-  }
-  return "fill-background stroke-muted-foreground";
-}
+type Shown = "online" | "offline" | "warning";
 
-function presenceOf(online: boolean): "online" | "offline" {
+const LOOKS: Readonly<Record<Shown, string>> = {
+  offline: "fill-background stroke-muted-foreground",
+  online: "fill-online",
+  warning: "fill-background stroke-mention-bar",
+};
+
+function presenceOf({ online, warning }: PresenceDotParts): Shown {
   if (online) {
     return "online";
+  }
+  if (warning) {
+    return "warning";
   }
   return "offline";
 }
 
 export function PresenceDot(parts: PresenceDotParts): ReactNode {
+  const shown = presenceOf(parts);
   return (
     <span className={`flex shrink-0 rounded-full bg-background ${PLACES[parts.place ?? "avatar"]}`} title={parts.label}>
       <svg
         aria-label={presenceNameOf({ name: parts.name, presence: parts })}
-        className={`size-full ${lookOf(parts.online)}`}
-        data-presence={presenceOf(parts.online)}
+        className={`size-full ${LOOKS[shown]}`}
+        data-presence={shown}
         role="img"
         viewBox="0 0 12 12"
       >
         <circle cx="6" cy="6" r="4.5" strokeWidth="2.5" />
+        {shown === "warning" && <circle className="fill-mention-bar stroke-none" cx="6" cy="6" r="1.75" />}
       </svg>
     </span>
   );

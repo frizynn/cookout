@@ -37,6 +37,7 @@ export function SuggestionOption(parts: OptionParts): ReactNode {
             online={presence.online}
             place="inline"
             spoken={presence.spoken}
+            warning={presence.warning}
           />
         )}
         <span>{option}</span>

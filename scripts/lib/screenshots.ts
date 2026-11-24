@@ -1,3 +1,5 @@
+import type { Page } from "@playwright/test";
+
 type Theme = "light" | "dark";
 
 interface Screen {
@@ -48,6 +50,7 @@ const SCREENS: readonly Screen[] = [
   },
   { hash: "#/people", name: "people", text: "release-bot" },
   { hash: "#/people/release-bot", name: "profile", text: "Agent · owned by ada" },
+  { hash: "#/people/triage-agent", name: "warning", text: "Went offline unexpectedly" },
   { admin: true, hash: "#/people/release-bot", name: "admin-profile", text: "Transfer to (a human's name)" },
   { admin: true, hash: "#/people/old-deploy-bot", name: "admin-deactivated", text: "Reactivate" },
   { admin: true, click: "Deactivate", hash: "#/people/release-bot", name: "confirm", text: "reactivate it later" },
@@ -136,5 +139,26 @@ async function takeScreenshots({ screens, shoot }: TakeScreenshots): Promise<rea
   return failures;
 }
 
+const PAGE_NONE = 0;
+const PAGE_ONE = 1;
+
+interface OlderHistory {
+  readonly page: Page;
+  readonly history: NonNullable<Screen["history"]>;
+}
+
+async function withOlderHistory({ history, page }: OlderHistory): Promise<void> {
+  let pages = PAGE_NONE;
+  await page.route("**/v1/inbox/history*", async (route) => {
+    pages += PAGE_ONE;
+    if (history === "loading" && pages > PAGE_ONE) {
+      return;
+    }
+    const response = await route.fetch();
+    const body = await response.text();
+    await route.fulfill({ body: body.replace('"hasMore":false', '"hasMore":true'), response });
+  });
+}
+
 export type { Screen, Shot, Theme };
-export { screenshotOptions, takeScreenshots };
+export { screenshotOptions, takeScreenshots, withOlderHistory };

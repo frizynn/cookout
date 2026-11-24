@@ -1,6 +1,6 @@
-import { Array as Arr, Context, DateTime, Effect, Layer, Option, PubSub } from "effect";
+import { Array as Arr, Context, DateTime, Effect, Layer, Option, Predicate, PubSub } from "effect";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
-import type { OfflineAlert, OfflineAlertId, OfflineReason } from "../../../presence/index.ts";
+import type { OfflineAlert, OfflineAlertId, OfflineReason, Presence } from "../../../presence/index.ts";
 import { isOfflineAlertId, offlineAlertNotFound } from "../../../presence/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { Refusal } from "../../../http/index.ts";
@@ -26,6 +26,7 @@ interface OfflineAlertsService {
     upTo: OfflineAlertId,
   ) => Effect.Effect<readonly OfflineAlert[], StorageUnavailable>;
   readonly changed: Effect.Effect<PubSub.Subscription<OwnedAlert>, never, Scope.Scope>;
+  readonly warningsFor: (viewer: IdentityName) => Effect.Effect<(presence: Presence) => Presence, StorageUnavailable>;
 }
 
 class OfflineAlerts extends Context.Service<OfflineAlerts, OfflineAlertsService>()(
@@ -94,6 +95,27 @@ function markedRead({ publish, storage }: On, caller: Identity, asked: string): 
   });
 }
 
+function warnedAgents(alerts: readonly OfflineAlert[]): ReadonlySet<IdentityName> {
+  const stillOffline = Arr.filter(alerts, ({ backOnlineAt }) => Predicate.isUndefined(backOnlineAt));
+  return new Set(Arr.map(stillOffline, ({ agent }) => agent));
+}
+
+function warnedIn(warned: ReadonlySet<IdentityName>): (presence: Presence) => Presence {
+  return (presence) => {
+    if (presence.online || !warned.has(presence.identity)) {
+      return presence;
+    }
+    return { ...presence, warning: true };
+  };
+}
+
+function warnings(
+  storage: Storage["Service"],
+  viewer: IdentityName,
+): Effect.Effect<(presence: Presence) => Presence, StorageUnavailable> {
+  return Effect.map(storage.listOfflineAlerts(viewer), (alerts) => warnedIn(warnedAgents(alerts)));
+}
+
 function publisher(publishOne: (owned: OwnedAlert) => Effect.Effect<boolean>): Publish {
   return (owner) => (alerts) => Effect.forEach(alerts, (alert) => publishOne({ alert, owner }), ONE_AT_A_TIME);
 }
@@ -112,6 +134,7 @@ const offlineAlertsLayer: Layer.Layer<OfflineAlerts, never, Storage> = Layer.eff
         Effect.tap(storage.markOfflineAlertsRead(caller.name, upTo), on.publish(caller.name)),
       markRead: (caller, asked) => markedRead(on, caller, asked),
       raise: (agent, offlineReason) => raised(on, agent, offlineReason),
+      warningsFor: (viewer) => warnings(storage, viewer),
     } satisfies OfflineAlertsService;
   }),
 );

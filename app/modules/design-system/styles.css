@@ -5,7 +5,8 @@
  * - mention-bar, mention-bg, mention-fg, mention-ink: the accent. Messages: a filled block; summaries and rows: a dot
  *   (#209). A message that is for the reader gets the filled block (bg, with a bar on its left edge); a thread summary
  *   or Inbox row that is for the reader gets the accent dot (bar). Also the reader's own @name (fg on a faint tint),
- *   and every count badge of what is for the reader (bar, with ink text).
+ *   every count badge of what is for the reader (bar, with ink text), and the warning dot of an agent the reader owns
+ *   that went offline unexpectedly (bar: a ring with a dot in its middle).
  * - unread: the New line in a channel or thread, and nothing else.
  * - link: the focus ring only. Links, chips, statuses and other people's @names are neutral.
  * - foreground, muted-foreground: text; bold foreground is activity (unread, not for the reader).

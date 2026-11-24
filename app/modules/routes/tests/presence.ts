@@ -15,6 +15,11 @@ interface Dot {
   readonly tooltip: string;
 }
 
+interface Opening {
+  readonly client: CookoutClient;
+  readonly hash: string;
+}
+
 interface Reading {
   readonly reader: string;
   readonly hash: string;
@@ -73,11 +78,15 @@ export async function agentNamed(name: string): Promise<Watcher> {
   };
 }
 
-export async function readerOn({ hash, reader }: Reading): Promise<void> {
-  const { client } = await newIdentity({ kind: "human", name: reader });
+export async function openedBy({ client, hash }: Opening): Promise<void> {
   const { live, stream } = watched(client);
   openAt({ client, hash, live });
   await stream;
+}
+
+export async function readerOn({ hash, reader }: Reading): Promise<void> {
+  const { client } = await newIdentity({ kind: "human", name: reader });
+  await openedBy({ client, hash });
 }
 
 export async function authorDot(looking: Looking): Promise<Dot> {
@@ -106,4 +115,8 @@ export function online(): Dot {
 
 export function offline(tooltip = "Offline"): Dot {
   return { presence: "offline", tooltip };
+}
+
+export function warned(tooltip: string): Dot {
+  return { presence: "warning", tooltip };
 }
