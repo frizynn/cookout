@@ -202,6 +202,19 @@ it.effect(
     }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );
 
+it.effect("cookout serve that crashes while starting with something other than an Error prints it as a defect", () =>
+  Effect.gen(function* printsBareDefect() {
+    const database = yield* freshDatabasePath;
+    const crash = Layer.effectDiscard(Effect.die("the disk caught fire"));
+    const failed = yield* runServe({ database, storage: (path) => Layer.provide(sqliteStorage(path), crash) });
+
+    expect(failed).toMatchObject({
+      exitCode: EXIT_FAILURE,
+      stderr: "cookout serve failed to start: Defect: the disk caught fire",
+    });
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
+);
+
 it.effect("cookout serve refuses a COOKOUT_ADMIN_NAME that names an agent, naming the clash", () =>
   Effect.gen(function* refusesAgentAdminName() {
     const database = yield* freshDatabasePath;
