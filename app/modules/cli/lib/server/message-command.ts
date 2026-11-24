@@ -1,10 +1,11 @@
 import { Argument, Command, Flag } from "effect/cli";
-import { Effect, Option, Predicate, Schema } from "effect";
-import type { ListMessagesQuery, MessageId, MessageResponse } from "../../../messages/index.ts";
-import { answer, answered, printWarning, refused } from "./output.ts";
+import type { ListMessagesQuery, MessageId } from "../../../messages/index.ts";
+import { Option, Schema } from "effect";
+import { answer, answered, refused } from "./output.ts";
 import { attachFlag, postAttaching } from "./attachments.ts";
 import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { CommandFailed } from "./output.ts";
+import type { Effect } from "effect";
 import type { PostMessageRequest } from "../../../messages/client.ts";
 import { isMessageId } from "../../../messages/index.ts";
 
@@ -59,16 +60,9 @@ function postRequest({ channel, close, data, replyTo, seen, text }: PostFlags): 
   return withClose({ channel, text, ...withData, ...withReplyTo, ...withSeen }, close);
 }
 
-function warnIfMoved({ warning }: MessageResponse): Effect.Effect<void> {
-  if (Predicate.isUndefined(warning)) {
-    return Effect.void;
-  }
-  return printWarning(warning.message);
-}
-
 function posted(flags: PostFlags): Effect.Effect<void, CommandFailed, AgentSessionStateNeeds> {
   const posting = postAttaching({ files: flags.attach, request: postRequest(flags) });
-  return answered(Effect.tap(posting, warnIfMoved));
+  return answered(posting);
 }
 
 const channelArgument = Argument.String("channel").pipe(Argument.withDescription("The channel's name."));
