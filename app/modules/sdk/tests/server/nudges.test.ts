@@ -18,6 +18,7 @@ interface Closings {
   readonly open: Message;
 }
 
+const A_MOMENT = "1 millis";
 const HUMAN = { kind: "human" } as const;
 const OLDEST = 0;
 const NEWEST = 1;
@@ -39,7 +40,10 @@ const board = Effect.gen(function* openBoard() {
 
 function post(who: TestIdentity, text: string): Effect.Effect<Message> {
   return Effect.map(
-    answer(() => who.client.createMessage({ channel: "grill", text })),
+    Effect.andThen(
+      TestClock.adjust(A_MOMENT),
+      answer(() => who.client.createMessage({ channel: "grill", text })),
+    ),
     ({ message }) => message,
   );
 }

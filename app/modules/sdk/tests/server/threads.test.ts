@@ -12,7 +12,6 @@ const NOT_FOUND = 404;
 const TWO_REPLIES = 2;
 const THREE_REPLIES = 3;
 const MIDDLE = 1;
-const BOOT = "2026-01-01T00:00:00.000Z";
 const FOUR_REPLIES = 4;
 const SUMMARY = {
   latestReplyAt: "2026-01-01T00:04:00.000Z",
@@ -65,18 +64,22 @@ it.effect("a reply joins the message's thread and updates its reply count and la
     expect(first).toStrictEqual({
       author: { name: "other", owner: "admin" },
       channel: "grill",
-      createdAt: BOOT,
+      createdAt: first.createdAt,
       id: first.id,
       kind: "reply",
       mentions: [],
       replyTo: parent.id,
       text: "first",
     });
-    expect(second.id).toBeGreaterThan(first.id);
+    expect([
+      second.id > first.id,
+      first.createdAt > parent.createdAt,
+      second.createdAt > first.createdAt,
+    ]).toStrictEqual([true, true, true]);
     expect(messages).toStrictEqual([
       {
         ...parent,
-        latestReplyAt: BOOT,
+        latestReplyAt: second.createdAt,
         latestReplyId: second.id,
         repliers: [second.author, first.author],
         replyCount: TWO_REPLIES,
