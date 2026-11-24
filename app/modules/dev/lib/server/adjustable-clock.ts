@@ -106,4 +106,4 @@ function adjustableClock(): Effect.Effect<AdjustableClock, never, Scope.Scope> {
   }).pipe(Effect.orDie);
 }
 
-export { type AdjustableClock, adjustableClock };
+export { adjustableClock };
