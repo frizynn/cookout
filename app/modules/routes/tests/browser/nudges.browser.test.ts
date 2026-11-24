@@ -1,5 +1,4 @@
-import type { ClockFixtures, ClockOptions } from "./clock.ts";
-import { adminClient, newIdentity } from "./people.ts";
+import type { ClockFixtures, OwnCookout } from "./clock.ts";
 import { test as base, expect } from "@playwright/test";
 import { inPane, inThread } from "./regions.ts";
 import type { Person } from "./people.ts";
@@ -7,7 +6,7 @@ import type { TopLevelMessage } from "../../../sdk/index.ts";
 import { clockFixtures } from "./clock.ts";
 import { logIn } from "./login.ts";
 
-const test = base.extend<ClockFixtures & ClockOptions>(clockFixtures);
+const test = base.extend<ClockFixtures>(clockFixtures);
 
 const NUDGE = "Quiet for 3 days: close it, or follow up?";
 const QUIET_DAYS = 3;
@@ -17,9 +16,9 @@ interface Started {
   readonly parent: TopLevelMessage;
 }
 
-async function threadStarted(channel: string): Promise<Started> {
-  await adminClient().createChannel({ name: channel });
-  const starter = await newIdentity({ kind: "human", name: `${channel}-starter` });
+async function threadStarted(cookout: OwnCookout, channel: string): Promise<Started> {
+  await cookout.admin.createChannel({ name: channel });
+  const starter = await cookout.newIdentity({ kind: "human", name: `${channel}-starter` });
   const { message } = await starter.client.createMessage({ channel, text: "Who owns the release notes?" });
   if (message.kind !== "top-level") {
     throw new TypeError("a new message in a channel is top-level");
@@ -27,9 +26,9 @@ async function threadStarted(channel: string): Promise<Started> {
   return { parent: message, starter };
 }
 
-test("a nudge row's link opens its thread", async ({ daysPass, page }) => {
-  const started = await threadStarted("browser-nudges");
-  await daysPass(QUIET_DAYS);
+test("a nudge row's link opens its thread", async ({ ownCookout, page }) => {
+  const started = await threadStarted(ownCookout, "browser-nudges");
+  await ownCookout.daysPass(QUIET_DAYS);
   await logIn({ page, token: started.starter.token, url: "/#/inbox" });
 
   await inPane(page)

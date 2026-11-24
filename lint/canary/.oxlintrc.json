@@ -9,6 +9,10 @@
     {
       "files": ["app/modules/canary/tests/region-lookups.test.ts"],
       "rules": { "test-rules/region-lookups": "error" }
+    },
+    {
+      "files": ["app/modules/canary/tests/own-clock.test.ts"],
+      "rules": { "test-rules/own-clock": "error" }
     }
   ]
 }

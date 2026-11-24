@@ -508,6 +508,13 @@
       }
     },
     {
+      "files": ["app/modules/routes/tests/browser/**"],
+      "excludeFiles": ["app/modules/routes/tests/browser/clock.ts"],
+      "rules": {
+        "test-rules/own-clock": "error"
+      }
+    },
+    {
       "files": ["app/modules/page-title/**"],
       "rules": {
         "web-rules/page-title-owner": "off"

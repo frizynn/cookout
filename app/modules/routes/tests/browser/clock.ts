@@ -1,21 +1,42 @@
-import type { Fixtures } from "@playwright/test";
+import type { CookoutClient, CreateIdentityRequest } from "../../../sdk/index.ts";
+import type { Fixtures, PlaywrightTestArgs, PlaywrightTestOptions } from "@playwright/test";
+import type { Person } from "./people.ts";
+import { createCookoutClient } from "../../../sdk/index.ts";
 import { moveClockForward } from "../../../testing/index.ts";
+import { startDevCookout } from "../../../../../scripts/lib/dev-cookout.ts";
 
-interface ClockOptions {
-  readonly clockUrl: string;
+interface OwnCookout {
+  readonly admin: CookoutClient;
+  readonly daysPass: (days: number) => Promise<void>;
+  readonly newIdentity: (request: CreateIdentityRequest) => Promise<Person>;
+  readonly webUrl: string;
 }
 
 interface ClockFixtures {
-  readonly daysPass: (days: number) => Promise<void>;
+  readonly ownCookout: OwnCookout;
 }
 
-const clockFixtures: Fixtures<ClockFixtures & ClockOptions> = {
-  clockUrl: ["", { option: true }],
-  daysPass: async ({ clockUrl }, provide) => {
-    await provide(async (days) => {
+const clockFixtures: Fixtures<ClockFixtures, object, PlaywrightTestArgs & PlaywrightTestOptions> = {
+  baseURL: async ({ ownCookout }, provide) => {
+    await provide(ownCookout.webUrl);
+  },
+  ownCookout: async ({ request: _request }, provide) => {
+    const cookout = await startDevCookout({});
+    const { adminToken, clockUrl, webUrl } = cookout;
+    const admin = createCookoutClient({ token: adminToken, url: webUrl });
+    async function newIdentity(request: CreateIdentityRequest): Promise<Person> {
+      const { token } = await admin.createIdentity(request);
+      return { client: createCookoutClient({ token, url: webUrl }), token };
+    }
+    async function daysPass(days: number): Promise<void> {
       await moveClockForward({ clockUrl, days });
-    });
+    }
+    try {
+      await provide({ admin, daysPass, newIdentity, webUrl });
+    } finally {
+      await cookout.stop();
+    }
   },
 };
 
-export { type ClockFixtures, type ClockOptions, clockFixtures };
+export { type ClockFixtures, type OwnCookout, clockFixtures };
