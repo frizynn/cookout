@@ -11,11 +11,11 @@ import {
   Ref,
   Scope,
 } from "effect";
-import type { Booted, LastEnd } from "./booted.ts";
+import type { Booted, LastEnd, LoggedLine } from "./booted.ts";
 import type { CookoutClient, Identity, Message, Token } from "../../../sdk/index.ts";
 import type { NewMessage, StorageUnavailable, StoredCommand, StoredDelivery } from "../../../storage/server.ts";
 import { backingServices, newToken, storageFor } from "./backing.ts";
-import { booted, lastEndOn, liveConnectionsClosedOn } from "./booted.ts";
+import { booted, capturedLogs, heldAssetsOn, lastEndOn, liveConnectionsClosedOn } from "./booted.ts";
 import { currentTime, startTestClock } from "./time.ts";
 import { identityFixture, identityName, ownedByAdminUnlessNamed, testCookoutAdminName } from "./identities.ts";
 import type { AdminNameIsAgent } from "../../../identities/server.ts";
@@ -56,6 +56,8 @@ export type TestCookoutService = {
   readonly seedMessage: (message: NewMessage) => Effect.Effect<Message>;
   readonly seedCommand: (stored: StoredCommand) => Effect.Effect<void>;
   readonly pendingDeliveries: Effect.Effect<readonly StoredDelivery[]>;
+  readonly heldAssets: (ids: readonly string[]) => Effect.Effect<readonly string[]>;
+  readonly logs: Effect.Effect<readonly LoggedLine[]>;
   readonly webhook: WebhookFake["Service"];
 };
 
@@ -66,6 +68,7 @@ export class TestCookout extends Context.Service<TestCookout, TestCookoutService
 export type TestCookoutOptions = {
   readonly storage?: StorageKind;
   readonly secrets?: "test" | "live";
+  readonly assets?: "failing-removes";
   readonly maxIdleExpiry?: string;
   readonly publicUrl?: string;
   readonly adminName?: string;
@@ -190,6 +193,7 @@ const pendingDeliveries: Effect.Effect<readonly StoredDelivery[], never, Storage
 
 interface Boot {
   readonly adminToken: Token;
+  readonly logs: Effect.Effect<readonly LoggedLine[]>;
   readonly boot: Effect.Effect<Booted, never, Scope.Scope>;
   readonly bootAs: (adminName: string | undefined) => Effect.Effect<Booted, AdminNameIsAgent, Scope.Scope>;
 }
@@ -198,6 +202,7 @@ function bootOn(options: TestCookoutOptions): Effect.Effect<Boot, never, Scope.S
   return Effect.gen(function* prepareBoot() {
     const services = yield* Layer.build(backingServices(options));
     const storage = yield* storageFor(options);
+    const logs = yield* capturedLogs;
     const adminToken = yield* newToken(services);
     const env = serverEnv(options, Context.get(services, WebhookFake).url);
     const bootAs = (adminName: string | undefined) =>
@@ -211,13 +216,17 @@ function bootOn(options: TestCookoutOptions): Effect.Effect<Boot, never, Scope.S
           ...named,
         });
         return yield* booted(
-          server.pipe(Layer.provideMerge(storage), Layer.provideMerge(Layer.succeedContext(services))),
+          server.pipe(
+            Layer.provideMerge(storage),
+            Layer.provideMerge(Layer.succeedContext(services)),
+            Layer.provide(logs.layer),
+          ),
         );
       }).pipe(
         Effect.provideService(ConfigProvider.ConfigProvider, env),
         Effect.catchTags({ ConfigError: Effect.die, ServeError: Effect.die, StorageUnavailable: Effect.die }),
       );
-    return { adminToken, boot: Effect.orDie(bootAs(options.adminName)), bootAs };
+    return { adminToken, boot: Effect.orDie(bootAs(options.adminName)), bootAs, logs: logs.lines };
   });
 }
 
@@ -227,7 +236,7 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
     Effect.gen(function* startTestCookout() {
       yield* startTestClock;
       const scope = yield* Effect.scope;
-      const { adminToken, boot, bootAs } = yield* bootOn(options);
+      const { adminToken, boot, bootAs, logs } = yield* bootOn(options);
       const firstScope = yield* Scope.fork(scope);
       const serverScope = yield* Ref.make(firstScope);
       const first = yield* Scope.provide(boot, firstScope);
@@ -250,9 +259,11 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
         client: clientAt(first.url)(adminToken),
         clientFor: clientAt(first.url),
         createIdentity: (name, identityOptions = {}) => onFirst(seedIdentity(first.url)(name, identityOptions)),
+        heldAssets: heldAssetsOn(first.server),
         lastEnd: (name) => Effect.flatMap(Ref.get(running), (server) => lastEndOn({ name, server })),
         liveConnectionsClosed: (name) =>
           Effect.flatMap(Ref.get(running), (server) => liveConnectionsClosedOn({ name, server })),
+        logs,
         pendingDeliveries: onFirst(pendingDeliveries),
         restart: Effect.map(restartServerAfter(Effect.void), ({ url }) => clientAt(url)(adminToken)),
         restartServer: restartServerAfter(Effect.void),

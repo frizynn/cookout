@@ -64,10 +64,10 @@ export const openMemoryStorage: Effect.Effect<StorageService, never, Scope.Scope
             return found;
           }
           dropChannel(name);
-          const threadIds = yield* forgetChannel(name);
-          dropCommandTokens(threadIds);
+          const { attachments, messageIds } = yield* forgetChannel(name);
+          dropCommandTokens(messageIds);
           dropDeliveries(name);
-          return found;
+          return { attachments, channel: found };
         }),
     };
   },

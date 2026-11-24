@@ -40,6 +40,8 @@ const notes: Attachment = {
   size: NOTES_SIZE,
 };
 
+const kept: Attachment = { ...notes, id: attachmentId("kept-id"), name: "kept.txt" };
+
 it.effect.each(storageLayers)(
   "storage contract ($adapter): a message keeps its attachments in order wherever it is read, and each is found by ID",
   ({ layer }) =>
@@ -64,16 +66,20 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
-  "storage contract ($adapter): deleting a channel deletes its messages' attachment records",
+  "storage contract ($adapter): deleting a channel deletes its messages' attachment records and answers their IDs",
   ({ layer }) =>
     Effect.gen(function* attachmentsDeleted() {
       const { storage } = yield* openStore(layer);
       yield* storage.createChannel(channel("grill"));
-      yield* appendTo(storage)({ ...newMessage("grill", "files"), attachments: [photo] });
-      yield* storage.deleteChannel(channel("grill").name);
-      const found = yield* storage.findAttachment(photo.id);
+      yield* storage.createChannel(channel("lounge"));
+      const parent = yield* appendTo(storage)({ ...newMessage("grill", "files"), attachments: [photo] });
+      yield* appendTo(storage)({ ...newMessage("grill", "reply", { replyTo: parent.id }), attachments: [notes] });
+      yield* appendTo(storage)({ ...newMessage("lounge", "kept"), attachments: [kept] });
+      const deleted = yield* storage.deleteChannel(channel("grill").name);
+      const found = yield* Effect.forEach([photo.id, notes.id, kept.id], storage.findAttachment, { concurrency: 1 });
 
-      expect(found).toBeUndefined();
+      expect(deleted).toStrictEqual({ attachments: [photo.id, notes.id], channel: channel("grill") });
+      expect(Arr.map(found, (one) => one ?? "gone")).toStrictEqual(["gone", "gone", kept]);
     }),
 );
 
