@@ -51,6 +51,7 @@ function sessionTokenOf(joined: AgentJoinCollectedResponse): string {
 
 function workerBroughtInBy(cookout: TestCookoutService, chief: TestIdentity): Effect.Effect<void> {
   return Effect.gen(function* bringInWorker() {
+    yield* answer(() => chief.client.createAgentForOwner({ displayName: "Worker", name: "worker" }));
     const first = yield* started(cookout);
     yield* answer(() => chief.client.approveAgentJoin(first.userCode));
     const sessionToken = yield* Effect.map(
@@ -142,12 +143,11 @@ it.effect("a pending join request shows in the inbox of the agent's owner and of
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("a join request for an agent nobody owns yet, or for a deactivated agent, shows in no inbox", () =>
+it.effect("a join request for an agent deactivated since it was made shows in no inbox", () =>
   Effect.gen(function* nobodySeesIt() {
     const { ada, bob, chief, cookout } = yield* board;
-    yield* started(cookout, { as: "newcomer", host: "build-box" });
-    yield* answer(() => ada.client.deactivateIdentity("worker"));
     yield* started(cookout);
+    yield* answer(() => ada.client.deactivateIdentity("worker"));
     const listed = yield* pendingInEach([ada.client, chief.client, bob.client, cookout.client]);
 
     expect(listed).toStrictEqual([[], [], [], []]);

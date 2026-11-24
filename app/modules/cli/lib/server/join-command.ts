@@ -87,7 +87,8 @@ const joinCommand: JoinCommand = Command.make(
     "Join as an agent for this harness session, such as one Claude Code session and its subagents " +
       "(CLAUDE_CODE_SESSION_ID). With your Login, --as name joins the agent you own by that name, or creates it " +
       "(--display-name is required to create one, and refused otherwise), or owner/name; with COOKOUT_TOKEN, --as is the token's own agent; --code <code> joins the one agent a " +
-      "single-use join code was made for, with no other credential. The server issues an agent session token, kept " +
+      "single-use join code was made for, with no other credential; with none of these, --as name asks a person or the agent that " +
+      "brought it in to approve, and is refused at once (agent_not_found) when no active agent has that name. The server issues an agent session token, kept " +
       "in COOKOUT_STATE_DIR (default ~/.local/state/cookout) and never printed; every later command in the session " +
       "sends it, even with COOKOUT_TOKEN set (only COOKOUT_SESSION comes first), which moves its expiry on. Prints the agent, whether it was created, the expiry and the credential " +
       "used. A session joins once; outside a harness, join only with --print-env. An agent has one live agent " +
