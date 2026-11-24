@@ -6,6 +6,7 @@ import type {
   Message,
   MessageId,
   MovedBackReadPosition,
+  Nudge,
   OfflineAlert,
   ReadPosition,
 } from "../../sdk/index.ts";
@@ -171,13 +172,15 @@ interface Reading {
   readonly items: InboxItems;
   readonly onRead: (item: InboxItem) => void;
   readonly onAlerts: (alerts: readonly OfflineAlert[]) => void;
+  readonly onNudges: (nudges: readonly Nudge[]) => void;
 }
 
-async function readInto({ client, items, onAlerts, onRead }: Reading): Promise<void> {
+async function readInto({ client, items, onAlerts, onNudges, onRead }: Reading): Promise<void> {
   const [inbox, { readPositions }] = await Promise.all([client.inbox(), client.readPositions()]);
   items.readAll(readPositions, onRead);
   items.addAll(inbox.items);
   onAlerts(inbox.alerts);
+  onNudges(inbox.nudges);
 }
 
 export { type InboxItems, createInboxItems, readInto };
