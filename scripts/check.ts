@@ -3,6 +3,7 @@ import { browserSkip, browserTestsFor } from "./lib/browser-selection.ts";
 import type { BrowserTests } from "./lib/browser-selection.ts";
 import { SUITE_LOCK_FILE } from "./lib/machine-lock.ts";
 import { TIMINGS_DIR } from "./lib/slowest-files.ts";
+import { changedFiles } from "./lib/changed-files.ts";
 import path from "node:path";
 import { runChecks } from "./lib/check-runner.ts";
 
@@ -48,7 +49,8 @@ function selectedBrowserTests(): BrowserTests {
   if (inCi || job !== "") {
     return { all: true, reason: "" };
   }
-  return browserTestsFor({ base: "origin/v1", cwd: process.cwd() });
+  const cwd = process.cwd();
+  return browserTestsFor({ changed: changedFiles({ base: "origin/v1", cwd }), cwd });
 }
 
 const browserTests = selectedBrowserTests();

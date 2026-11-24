@@ -1,10 +1,12 @@
-import { BROWSER_TESTS, browserSkip, browserTestsFor, selectBrowserTests } from "../lib/browser-selection.ts";
+import { browserSkip, browserTestsFor } from "../lib/browser-selection.ts";
 import { expect, it, onTestFinished } from "vitest";
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { changedFiles } from "../lib/changed-files.ts";
 import path from "node:path";
 import { tmpdir } from "node:os";
 
 const ROOT = process.cwd();
+const BROWSER_TESTS = "app/modules/routes/tests/browser";
 const COMPOSER_TEST = `${BROWSER_TESTS}/composer.browser.test.ts`;
 
 function importersOf(helper: string): readonly string[] {
@@ -26,7 +28,7 @@ function emptyDirectory(): string {
 it("a branch changing one browser test runs that test alone", { timeout: 30_000 }, () => {
   expect.hasAssertions();
 
-  const selection = selectBrowserTests({ changed: [COMPOSER_TEST], cwd: ROOT });
+  const selection = browserTestsFor({ changed: { ok: true, value: [COMPOSER_TEST] }, cwd: ROOT });
 
   expect(selection).toMatchObject({ all: false, run: [COMPOSER_TEST] });
 });
@@ -34,7 +36,7 @@ it("a branch changing one browser test runs that test alone", { timeout: 30_000 
 it("a branch changing a helper runs only the browser tests that import it", { timeout: 30_000 }, () => {
   expect.hasAssertions();
 
-  const selection = selectBrowserTests({ changed: [`${BROWSER_TESTS}/relay.ts`], cwd: ROOT });
+  const selection = browserTestsFor({ changed: { ok: true, value: [`${BROWSER_TESTS}/relay.ts`] }, cwd: ROOT });
 
   expect(selection).toMatchObject({ all: false, run: importersOf("relay.ts") });
 });
@@ -44,7 +46,10 @@ it("a branch changing a view runs every browser test, since each one drives the 
 }, () => {
   expect.hasAssertions();
 
-  const selection = selectBrowserTests({ changed: ["app/modules/views/lib/login-form.tsx"], cwd: ROOT });
+  const selection = browserTestsFor({
+    changed: { ok: true, value: ["app/modules/views/lib/login-form.tsx"] },
+    cwd: ROOT,
+  });
 
   expect(selection).toStrictEqual({
     all: true,
@@ -55,8 +60,8 @@ it("a branch changing a view runs every browser test, since each one drives the 
 it("a branch changing only scripts and docs no browser test reaches runs none", { timeout: 30_000 }, () => {
   expect.hasAssertions();
 
-  const selection = selectBrowserTests({
-    changed: ["scripts/hygiene.ts", "docs/verification.md", ".changeset/quiet-otters-sing.md"],
+  const selection = browserTestsFor({
+    changed: { ok: true, value: ["scripts/hygiene.ts", "docs/verification.md", ".changeset/quiet-otters-sing.md"] },
     cwd: ROOT,
   });
 
@@ -66,7 +71,7 @@ it("a branch changing only scripts and docs no browser test reaches runs none", 
 it("a changed file outside the module graph runs every browser test", { timeout: 30_000 }, () => {
   expect.hasAssertions();
 
-  const selection = selectBrowserTests({ changed: ["scripts/hygiene.ts", "index.html"], cwd: ROOT });
+  const selection = browserTestsFor({ changed: { ok: true, value: ["scripts/hygiene.ts", "index.html"] }, cwd: ROOT });
 
   expect(selection).toStrictEqual({ all: true, reason: "the module graph doesn't hold index.html" });
 });
@@ -74,7 +79,7 @@ it("a changed file outside the module graph runs every browser test", { timeout:
 it("runs every browser test when the module graph can't be built", { timeout: 30_000 }, () => {
   expect.hasAssertions();
 
-  const selection = selectBrowserTests({ changed: [COMPOSER_TEST], cwd: emptyDirectory() });
+  const selection = browserTestsFor({ changed: { ok: true, value: [COMPOSER_TEST] }, cwd: emptyDirectory() });
 
   expect(selection).toMatchObject({ all: true });
 });
@@ -82,7 +87,7 @@ it("runs every browser test when the module graph can't be built", { timeout: 30
 it("runs every browser test when the branch's changed files can't be listed", { timeout: 30_000 }, () => {
   expect.hasAssertions();
 
-  const selection = browserTestsFor({ base: "no-such-ref", cwd: ROOT });
+  const selection = browserTestsFor({ changed: changedFiles({ base: "no-such-ref", cwd: ROOT }), cwd: ROOT });
 
   expect(selection).toMatchObject({ all: true });
 });
@@ -90,7 +95,7 @@ it("runs every browser test when the branch's changed files can't be listed", { 
 it("selects from the files the branch changed against its base", { timeout: 30_000 }, () => {
   expect.hasAssertions();
 
-  const selection = browserTestsFor({ base: "HEAD", cwd: ROOT });
+  const selection = browserTestsFor({ changed: changedFiles({ base: "HEAD", cwd: ROOT }), cwd: ROOT });
 
   expect(selection).toHaveProperty("all");
 });

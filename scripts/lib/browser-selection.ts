@@ -1,7 +1,6 @@
 import { field, list, parseJson, text } from "./json.ts";
 import type { CiOnly } from "./check-runner.ts";
 import type { Outcome } from "./tools.ts";
-import { changedFiles } from "./changed-files.ts";
 import path from "node:path";
 import { readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -11,12 +10,7 @@ type BrowserTests =
   | { readonly all: false; readonly run: readonly string[]; readonly skipped: readonly string[] };
 
 interface Changed {
-  readonly changed: readonly string[];
-  readonly cwd: string;
-}
-
-interface Branch {
-  readonly base: string;
+  readonly changed: Outcome<readonly string[]>;
   readonly cwd: string;
 }
 
@@ -115,12 +109,7 @@ function unknownChange(changed: readonly string[], graph: Graph): string {
   return "";
 }
 
-function selectBrowserTests({ changed, cwd }: Changed): BrowserTests {
-  const inputs = inputsIn(cwd);
-  if (!inputs.ok) {
-    return { all: true, reason: inputs.reason };
-  }
-  const { graph, tests } = inputs.value;
+function selected(changed: readonly string[], { graph, tests }: Inputs): BrowserTests {
   const reason = unknownChange(changed, graph);
   if (reason !== "") {
     return { all: true, reason };
@@ -132,12 +121,15 @@ function selectBrowserTests({ changed, cwd }: Changed): BrowserTests {
   return { all: false, run, skipped: tests.filter((test) => !run.includes(test)) };
 }
 
-function browserTestsFor({ base, cwd }: Branch): BrowserTests {
-  const changed = changedFiles({ base, cwd });
+function browserTestsFor({ changed, cwd }: Changed): BrowserTests {
   if (!changed.ok) {
     return { all: true, reason: changed.reason };
   }
-  return selectBrowserTests({ changed: changed.value, cwd });
+  const inputs = inputsIn(cwd);
+  if (!inputs.ok) {
+    return { all: true, reason: inputs.reason };
+  }
+  return selected(changed.value, inputs.value);
 }
 
 function browserSkip(tests: BrowserTests): readonly CiOnly[] {
@@ -156,4 +148,4 @@ function browserSkip(tests: BrowserTests): readonly CiOnly[] {
 }
 
 export type { BrowserTests };
-export { BROWSER_TESTS, browserSkip, browserTestsFor, selectBrowserTests };
+export { browserSkip, browserTestsFor };
