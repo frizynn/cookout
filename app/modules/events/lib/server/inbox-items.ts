@@ -1,12 +1,12 @@
 import { Array as Arr, Effect, Option, Stream } from "effect";
+import type { Connected, StreamRequest } from "./source.ts";
 import {
-  AutomaticDeactivationEventSchema,
+  DeactivatedQuietAgentEventSchema,
   DeactivationOfferEventSchema,
   InboxItemEventSchema,
   NudgeEventSchema,
   NudgeReadEventSchema,
 } from "./wire.ts";
-import type { Connected, StreamRequest } from "./source.ts";
 import { DeactivationOffers, Inbox, Nudges } from "../../../inbox/server.ts";
 import { Messages, Reactions } from "../../../messages/server.ts";
 import type { MessageId } from "../../../messages/index.ts";
@@ -19,7 +19,7 @@ const nudgeEvent = sseEvent(NudgeEventSchema);
 const nudgeReadEvent = sseEvent(NudgeReadEventSchema);
 
 const deactivationOfferEvent = sseEvent(DeactivationOfferEventSchema);
-const automaticDeactivationEvent = sseEvent(AutomaticDeactivationEventSchema);
+const deactivatedQuietAgentEvent = sseEvent(DeactivatedQuietAgentEventSchema);
 
 function reactionItems({ caller, lastEventId }: StreamRequest): Connected<Inbox | Reactions> {
   return Effect.gen(function* subscribeToReactionItems() {
@@ -99,17 +99,17 @@ function deactivationOffers({ caller }: StreamRequest): Connected<DeactivationOf
   });
 }
 
-function automaticDeactivations({ caller }: StreamRequest): Connected<DeactivationOffers> {
-  return Effect.gen(function* subscribeToAutomaticDeactivations() {
+function deactivatedQuietAgents({ caller }: StreamRequest): Connected<DeactivationOffers> {
+  return Effect.gen(function* subscribeToDeactivatedQuietAgents() {
     const offers = yield* DeactivationOffers;
-    const changed = yield* offers.automaticDeactivationChanged;
+    const changed = yield* offers.deactivatedQuietAgentChanged;
     return Stream.fromSubscription(changed).pipe(
       Stream.filter(({ recipient }) => recipient === caller.name),
-      Stream.mapEffect(({ automaticDeactivation }) =>
-        automaticDeactivationEvent({ automaticDeactivation, type: "automatic-deactivation" }),
+      Stream.mapEffect(({ deactivatedQuietAgent }) =>
+        deactivatedQuietAgentEvent({ deactivatedQuietAgent, type: "deactivated-quiet-agent" }),
       ),
     );
   });
 }
 
-export { automaticDeactivations, deactivationOffers, inboxItems, nudges, nudgesRead, reactionItems };
+export { deactivatedQuietAgents, deactivationOffers, inboxItems, nudges, nudgesRead, reactionItems };

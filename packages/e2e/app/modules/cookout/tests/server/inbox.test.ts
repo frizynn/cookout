@@ -71,7 +71,7 @@ it.live(
       });
       expect(firstAfter).toStrictEqual({
         alerts: [],
-        automaticDeactivations: [],
+        deactivatedQuietAgents: [],
         deactivationOffers: [],
         items: [],
         nudges: [],
@@ -103,7 +103,7 @@ it.live("an agent's ack clears its inbox items, and the next inbox run no longer
     ]);
     expect(after).toStrictEqual({
       alerts: [],
-      automaticDeactivations: [],
+      deactivatedQuietAgents: [],
       deactivationOffers: [],
       items: [],
       nudges: [],

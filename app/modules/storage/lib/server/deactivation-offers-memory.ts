@@ -1,14 +1,14 @@
 import type { ActivityRecords, DeactivationOffersSection, OfferSources } from "./deactivation-offers.ts";
 import { Array as Arr, DateTime, Effect, Option, Ref } from "effect";
-import type { AutomaticDeactivationId, DeactivationOfferId } from "../../../inbox/index.ts";
+import type { DeactivatedQuietAgentId, DeactivationOfferId } from "../../../inbox/index.ts";
 import type {
-  AutomaticDeactivationRecords,
-  AutomaticDeactivationsSection,
-  StoredAutomaticDeactivation,
-} from "./automatic-deactivations.ts";
-import { automaticDeactivationsOn, deactivatingWith } from "./automatic-deactivations.ts";
+  DeactivatedQuietAgentRecords,
+  DeactivatedQuietAgentsSection,
+  StoredDeactivatedQuietAgent,
+} from "./deactivated-quiet-agents.ts";
 import { boardOn, deactivationOffersOn } from "./deactivation-offers.ts";
-import { isAutomaticDeactivationId, isDeactivationOfferId } from "../../../inbox/index.ts";
+import { deactivatedQuietAgentsOn, deactivatingWith } from "./deactivated-quiet-agents.ts";
+import { isDeactivatedQuietAgentId, isDeactivationOfferId } from "../../../inbox/index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { OfferRecord } from "./deactivation-offer-board.ts";
@@ -25,8 +25,8 @@ interface Kept {
 const NEXT = 1;
 const EMPTY: Kept = { activity: new Map(), last: 0, offers: [] };
 
-function asEntryId(value: number): AutomaticDeactivationId {
-  return Option.getOrThrow(Option.liftPredicate(value, isAutomaticDeactivationId));
+function asEntryId(value: number): DeactivatedQuietAgentId {
+  return Option.getOrThrow(Option.liftPredicate(value, isDeactivatedQuietAgentId));
 }
 
 function asOfferId(value: number): DeactivationOfferId {
@@ -81,17 +81,17 @@ function memoryActivityRecords(): Effect.Effect<ActivityRecords, never, Scope.Sc
   });
 }
 
-function memoryAutomaticDeactivationRecords(): Effect.Effect<AutomaticDeactivationRecords, never, Scope.Scope> {
-  return Effect.gen(function* openAutomaticDeactivationRecords() {
+function memoryDeactivatedQuietAgentRecords(): Effect.Effect<DeactivatedQuietAgentRecords, never, Scope.Scope> {
+  return Effect.gen(function* openDeactivatedQuietAgentRecords() {
     const state = yield* openMemoryState;
-    const kept = yield* Ref.make<readonly StoredAutomaticDeactivation[]>([]);
+    const kept = yield* Ref.make<readonly StoredDeactivatedQuietAgent[]>([]);
     return {
-      automaticDeactivations: Effect.andThen(state.ensureOpen, Ref.get(kept)),
+      deactivatedQuietAgents: Effect.andThen(state.ensureOpen, Ref.get(kept)),
       insert: (record) =>
         Effect.andThen(
           state.ensureOpen,
           Ref.modify(kept, (all) => {
-            const stored: StoredAutomaticDeactivation = { ...record, id: asEntryId(all.length + NEXT), read: false };
+            const stored: StoredDeactivatedQuietAgent = { ...record, id: asEntryId(all.length + NEXT), read: false };
             return [stored, [...all, stored]] as const;
           }),
         ),
@@ -108,10 +108,10 @@ function memoryAutomaticDeactivationRecords(): Effect.Effect<AutomaticDeactivati
 
 function memoryDeactivationOffers(
   sources: OfferSources,
-): Effect.Effect<DeactivationOffersSection & AutomaticDeactivationsSection, never, Scope.Scope> {
+): Effect.Effect<DeactivationOffersSection & DeactivatedQuietAgentsSection, never, Scope.Scope> {
   return Effect.gen(function* openDeactivationOffers() {
     const records = yield* memoryActivityRecords();
-    const entries = yield* memoryAutomaticDeactivationRecords();
+    const entries = yield* memoryDeactivatedQuietAgentRecords();
     const on = {
       atomically: <Value, Failure>(work: Effect.Effect<Value, Failure>): Effect.Effect<Value, Failure> => work,
       records,
@@ -119,7 +119,7 @@ function memoryDeactivationOffers(
     };
     return {
       ...deactivationOffersOn(on),
-      ...automaticDeactivationsOn({
+      ...deactivatedQuietAgentsOn({
         board: boardOn(on),
         deactivate: deactivatingWith(sources.deactivateIdentity),
         records: entries,

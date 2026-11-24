@@ -3,12 +3,12 @@ import type { DeactivationOffer, DeactivationOfferId, DeactivationOfferResponse 
 import type { Identity, IdentityName } from "../../../identities/index.ts";
 import type { OfferChanges, StorageUnavailable, StoredDeactivationOffer } from "../../../storage/server.ts";
 import { deactivationOfferText, isDeactivationOfferId } from "../../index.ts";
-import type { AutomaticDeactivationsService } from "./automatic-deactivations.ts";
+import type { DeactivatedQuietAgentsService } from "./deactivated-quiet-agents.ts";
 import type { IdentityChanges } from "../../../identities/server.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Scope } from "effect";
 import { Storage } from "../../../storage/server.ts";
-import { automaticDeactivationsOn } from "./automatic-deactivations.ts";
+import { deactivatedQuietAgentsOn } from "./deactivated-quiet-agents.ts";
 import { echoed } from "../../../http/index.ts";
 
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
@@ -18,7 +18,7 @@ interface OfferChanged {
   readonly deactivationOffer: DeactivationOffer;
 }
 
-interface DeactivationOffersService extends AutomaticDeactivationsService {
+interface DeactivationOffersService extends DeactivatedQuietAgentsService {
   readonly list: (
     caller: Identity,
     which: "open" | "all",
@@ -115,9 +115,9 @@ const deactivationOffersLayer: Layer.Layer<DeactivationOffers, never, Storage | 
     const hub = yield* PubSub.unbounded<OfferChanged>();
     const publish = publishOn({ publishAll: (changed) => PubSub.publishAll(hub, changed), storage });
     const presence = yield* PubSub.sliding<true>(ONE_WAKE_IS_ENOUGH);
-    const automatic = yield* automaticDeactivationsOn(storage);
+    const deactivatedAgents = yield* deactivatedQuietAgentsOn(storage);
     return {
-      ...automatic,
+      ...deactivatedAgents,
       changed: PubSub.subscribe(hub),
       keep: (caller, asked) =>
         Effect.gen(function* keepOffer() {

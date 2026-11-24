@@ -1,5 +1,5 @@
 import { Array as Arr, DateTime, Effect, Option, String as Str } from "effect";
-import type { Storage, StorageUnavailable, StoredAutomaticDeactivation } from "../../../storage/server.ts";
+import type { Storage, StorageUnavailable, StoredDeactivatedQuietAgent } from "../../../storage/server.ts";
 import {
   appendTo,
   callId,
@@ -15,8 +15,8 @@ import {
   storageLayers,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
-import { isAutomaticDeactivationId, quietAgentDays } from "../../../inbox/index.ts";
-import type { AutomaticDeactivationId } from "../../../inbox/index.ts";
+import { isDeactivatedQuietAgentId, quietAgentDays } from "../../../inbox/index.ts";
+import type { DeactivatedQuietAgentId } from "../../../inbox/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { Layer } from "effect";
 import { TestClock } from "effect/testing";
@@ -76,7 +76,7 @@ function board<Failure, Needs>(
   });
 }
 
-function summary(entries: readonly StoredAutomaticDeactivation[]): readonly unknown[] {
+function summary(entries: readonly StoredDeactivatedQuietAgent[]): readonly unknown[] {
   return Arr.map(entries, ({ deactivatedAt, identity, read, recipients }) => ({
     deactivatedAt,
     identity,
@@ -85,7 +85,7 @@ function summary(entries: readonly StoredAutomaticDeactivation[]): readonly unkn
   }));
 }
 
-function idOf(entries: readonly StoredAutomaticDeactivation[]): AutomaticDeactivationId {
+function idOf(entries: readonly StoredDeactivatedQuietAgent[]): DeactivatedQuietAgentId {
   return Option.getOrThrow(Option.map(Arr.head(entries), ({ id }) => id));
 }
 
@@ -132,8 +132,8 @@ it.effect.each(storageLayers)(
         [
           storage.findIdentityByName(SCOUT),
           storage.raiseDueDeactivationOffers(APR_1, quietAgentDays),
-          storage.listAutomaticDeactivations(MATT),
-          storage.listAutomaticDeactivations(ADA),
+          storage.listDeactivatedQuietAgents(MATT),
+          storage.listDeactivatedQuietAgents(ADA),
           storage.nextDeactivationOfferDue(quietAgentDays),
         ],
         { concurrency: 1 },
@@ -170,13 +170,13 @@ it.effect.each(storageLayers)(
       const { storage } = yield* board(layer);
       yield* storage.deactivateIdentity(MATT);
       const deactivated = yield* storage.deactivateQuietAgents(APR_1, quietAgentDays);
-      const notMatts = yield* storage.markAutomaticDeactivationRead(MATT, idOf(deactivated));
-      const missing = yield* storage.markAutomaticDeactivationRead(
+      const notMatts = yield* storage.markDeactivatedQuietAgentRead(MATT, idOf(deactivated));
+      const missing = yield* storage.markDeactivatedQuietAgentRead(
         ADA,
-        Option.getOrThrow(Option.liftPredicate(MISSING, isAutomaticDeactivationId)),
+        Option.getOrThrow(Option.liftPredicate(MISSING, isDeactivatedQuietAgentId)),
       );
-      const read = yield* storage.markAutomaticDeactivationRead(ADA, idOf(deactivated));
-      const beas = yield* storage.listAutomaticDeactivations(BEA);
+      const read = yield* storage.markDeactivatedQuietAgentRead(ADA, idOf(deactivated));
+      const beas = yield* storage.listDeactivatedQuietAgents(BEA);
 
       expect(Arr.map(deactivated, ({ recipients }) => recipients)).toStrictEqual([[ADA, BEA]]);
       expect([notMatts, missing, read, Arr.map(beas, (entry) => entry.read)]).toMatchObject([
@@ -194,9 +194,9 @@ it.effect.each(storageLayers)(
     Effect.gen(function* readUpTo() {
       const { storage } = yield* board(layer);
       const deactivated = yield* storage.deactivateQuietAgents(APR_1, quietAgentDays);
-      const others = yield* storage.markAutomaticDeactivationsReadUpTo(ADA, idOf(deactivated));
-      const read = yield* storage.markAutomaticDeactivationsReadUpTo(MATT, idOf(deactivated));
-      const again = yield* storage.markAutomaticDeactivationsReadUpTo(MATT, idOf(deactivated));
+      const others = yield* storage.markDeactivatedQuietAgentsReadUpTo(ADA, idOf(deactivated));
+      const read = yield* storage.markDeactivatedQuietAgentsReadUpTo(MATT, idOf(deactivated));
+      const again = yield* storage.markDeactivatedQuietAgentsReadUpTo(MATT, idOf(deactivated));
 
       expect([others, Arr.map(read, ({ id, read: isRead }) => [id, isRead]), again]).toStrictEqual([
         [],
@@ -216,8 +216,8 @@ it.effect.each(storageLayers)(
       yield* storage.reactivateIdentity(SCOUT, hashOf("d"));
       const last = yield* storage.lastActivityOf(SCOUT);
       const due = yield* storage.nextDeactivationOfferDue(quietAgentDays);
-      const read = yield* storage.readAutomaticDeactivationsOf(SCOUT);
-      const again = yield* storage.readAutomaticDeactivationsOf(SCOUT);
+      const read = yield* storage.readDeactivatedQuietAgentsOf(SCOUT);
+      const again = yield* storage.readDeactivatedQuietAgentsOf(SCOUT);
 
       expect([last, due]).toStrictEqual([MAY_10, isoTime("2026-06-09T00:00:00.000Z")]);
       expect([summary(read), again]).toStrictEqual([

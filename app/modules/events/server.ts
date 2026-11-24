@@ -35,12 +35,12 @@
  */
 import {
   AgentSessionEventSchema,
-  AutomaticDeactivationEventSchema,
   ChannelDeletedEventSchema,
   ChannelEventSchema,
   CleanCloseResponseSchema,
   CommandEventSchema,
   ConnectedEventSchema,
+  DeactivatedQuietAgentEventSchema,
   DeactivationOfferEventSchema,
   IdentityDeletedEventSchema,
   IdentityEventSchema,
@@ -113,12 +113,12 @@ export const eventRoutes: readonly Route<Needs>[] = [eventsRoute, ...cleanCloseR
 /** The Schemas of the stream's events, for the SDK's generated validators. */
 export const eventResponseSchemas = {
   AgentSessionEvent: AgentSessionEventSchema,
-  AutomaticDeactivationEvent: AutomaticDeactivationEventSchema,
   ChannelDeletedEvent: ChannelDeletedEventSchema,
   ChannelEvent: ChannelEventSchema,
   CleanCloseResponse: CleanCloseResponseSchema,
   CommandEvent: CommandEventSchema,
   ConnectedEvent: ConnectedEventSchema,
+  DeactivatedQuietAgentEvent: DeactivatedQuietAgentEventSchema,
   DeactivationOfferEvent: DeactivationOfferEventSchema,
   IdentityDeletedEvent: IdentityDeletedEventSchema,
   IdentityEvent: IdentityEventSchema,

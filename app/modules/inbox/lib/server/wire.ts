@@ -2,8 +2,8 @@ import type {
   AckAllRequest,
   AckAllResponse,
   AckResponse,
-  AutomaticDeactivation,
-  AutomaticDeactivationResponse,
+  DeactivatedQuietAgent,
+  DeactivatedQuietAgentResponse,
   DeactivationOffer,
   DeactivationOfferResponse,
   FollowResponse,
@@ -25,7 +25,7 @@ import type {
 import { ChannelNameSchema, ChannelSchema } from "../../../channels/server.ts";
 import { IdentityNameSchema, IdentitySchema } from "../../../identities/server.ts";
 import { MessageIdSchema, MessageSchema, ReactionSchema, TopLevelMessageSchema } from "../../../messages/server.ts";
-import { inboxReasons, isAutomaticDeactivationId, isDeactivationOfferId, isNudgeId, nudgeKinds } from "../../index.ts";
+import { inboxReasons, isDeactivatedQuietAgentId, isDeactivationOfferId, isNudgeId, nudgeKinds } from "../../index.ts";
 import { isOfflineAlertId, offlineReasons } from "../../../presence/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
@@ -81,22 +81,22 @@ const DeactivationOfferResponseSchema = matchesWire<DeactivationOfferResponse>()
   Schema.Struct({ deactivationOffer: DeactivationOfferSchema }),
 );
 
-const AutomaticDeactivationIdSchema = Schema.Int.pipe(
-  Schema.refine(isAutomaticDeactivationId, { identifier: "AutomaticDeactivationId" }),
+const DeactivatedQuietAgentIdSchema = Schema.Int.pipe(
+  Schema.refine(isDeactivatedQuietAgentId, { identifier: "DeactivatedQuietAgentId" }),
 );
 
-const AutomaticDeactivationSchema = matchesWire<AutomaticDeactivation>()(
+const DeactivatedQuietAgentSchema = matchesWire<DeactivatedQuietAgent>()(
   Schema.Struct({
     deactivatedAt: IsoTimeSchema,
-    id: AutomaticDeactivationIdSchema,
+    id: DeactivatedQuietAgentIdSchema,
     identity: IdentitySchema,
     read: Schema.Boolean,
     text: Schema.String,
   }),
 );
 
-const AutomaticDeactivationResponseSchema = matchesWire<AutomaticDeactivationResponse>()(
-  Schema.Struct({ automaticDeactivation: AutomaticDeactivationSchema }),
+const DeactivatedQuietAgentResponseSchema = matchesWire<DeactivatedQuietAgentResponse>()(
+  Schema.Struct({ deactivatedQuietAgent: DeactivatedQuietAgentSchema }),
 );
 
 const InboxHistoryItemSchema = matchesWire<InboxHistoryItem>()(
@@ -145,7 +145,7 @@ export const InboxItemSchema = matchesWire<InboxItem>()(Schema.Struct(inboxItemF
 export const InboxHistoryResponseSchema = matchesWire<InboxHistoryResponse>()(
   Schema.Struct({
     alerts: Schema.Array(OfflineAlertSchema),
-    automaticDeactivations: Schema.Array(AutomaticDeactivationSchema),
+    deactivatedQuietAgents: Schema.Array(DeactivatedQuietAgentSchema),
     deactivationOffers: Schema.Array(DeactivationOfferSchema),
     hasMore: Schema.Boolean,
     items: Schema.Array(InboxHistoryItemSchema),
@@ -158,7 +158,7 @@ export const AckRequestSchema = Schema.Struct({ messageId: MessageIdSchema });
 export const AckAllRequestSchema = matchesWire<AckAllRequest>()(
   Schema.Struct({
     alertsUpTo: Schema.optionalKey(OfflineAlertIdSchema),
-    automaticDeactivationsUpTo: Schema.optionalKey(AutomaticDeactivationIdSchema),
+    deactivatedQuietAgentsUpTo: Schema.optionalKey(DeactivatedQuietAgentIdSchema),
     deactivationOffersUpTo: Schema.optionalKey(DeactivationOfferIdSchema),
     nudgesUpTo: Schema.optionalKey(NudgeIdSchema),
     upTo: Schema.optionalKey(MessageIdSchema),
@@ -172,7 +172,7 @@ export const AckAllResponseSchema = matchesWire<AckAllResponse>()(
 export const InboxResponseSchema = matchesWire<InboxResponse>()(
   Schema.Struct({
     alerts: Schema.Array(OfflineAlertSchema),
-    automaticDeactivations: Schema.Array(AutomaticDeactivationSchema),
+    deactivatedQuietAgents: Schema.Array(DeactivatedQuietAgentSchema),
     deactivationOffers: Schema.Array(DeactivationOfferSchema),
     items: Schema.Array(InboxItemSchema),
     nudges: Schema.Array(NudgeSchema),
@@ -192,8 +192,8 @@ export const SubscriptionResponseSchema = matchesWire<SubscriptionResponse>()(
 export { PageQuerySchema as InboxHistoryQuerySchema } from "../../../messages/server.ts";
 
 export {
-  AutomaticDeactivationResponseSchema,
-  AutomaticDeactivationSchema,
+  DeactivatedQuietAgentResponseSchema,
+  DeactivatedQuietAgentSchema,
   DeactivationOfferResponseSchema,
   DeactivationOfferSchema,
   NudgeIdSchema,

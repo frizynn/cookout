@@ -2,16 +2,16 @@
  * The inbox on the wire, shared by the server, the SDK and the web: what an identity hasn't read yet and why each item
  * is there, the ack of a message (and everything before it in its scope) or of the whole inbox, mark unread, the inbox
  * history, following a thread and subscribing to a channel, an owner's offline alerts and marking one read, Nudges,
- * Deactivation offers and Keep, Automatic deactivations and Mark read, and their paths. They refuse with the message,
- * channel, nudge, deactivation offer, automatic deactivation and agent session error codes.
+ * Deactivation offers and Keep, the entries saying an agent was deactivated after 90 days with no Activity, and Mark read, and their paths. They refuse with the message,
+ * channel, nudge, deactivation offer, deactivated quiet agent and agent session error codes.
  */
+import type { Channel, ChannelName } from "../channels/index.ts";
 import type {
-  AutomaticDeactivation,
-  AutomaticDeactivationId,
+  DeactivatedQuietAgent,
+  DeactivatedQuietAgentId,
   DeactivationOffer,
   DeactivationOfferId,
 } from "./lib/deactivation-offers.ts";
-import type { Channel, ChannelName } from "../channels/index.ts";
 import type { Message, MessageId, Reaction, TopLevelMessage } from "../messages/index.ts";
 import type { OfflineAlert, OfflineAlertId } from "../presence/index.ts";
 import type { IsoTime } from "../time/index.ts";
@@ -127,7 +127,7 @@ export interface InboxResponse {
   readonly alerts: readonly OfflineAlert[];
   readonly nudges: readonly Nudge[];
   readonly deactivationOffers: readonly DeactivationOffer[];
-  readonly automaticDeactivations: readonly AutomaticDeactivation[];
+  readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[];
 }
 
 /** An item in the inbox history: `read` says the identity's read position for its scope is at or after it. */
@@ -156,7 +156,7 @@ export interface InboxHistoryResponse {
   /** Every Nudge the caller has had, read or not, newest first, on the newest page (with no `before`) only. */
   readonly nudges: readonly InboxHistoryNudge[];
   readonly deactivationOffers: readonly DeactivationOffer[];
-  readonly automaticDeactivations: readonly AutomaticDeactivation[];
+  readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[];
 }
 
 /** The caller's read positions: one for each channel and thread it has acked in or posted to, by channel name. */
@@ -176,15 +176,15 @@ export interface AckResponse {
 
 /**
  * The body of an ack of the whole inbox, each part up to the newest the caller has seen: items up to `upTo`, offline
- * alerts up to `alertsUpTo`, Nudges up to `nudgesUpTo` and Automatic deactivations up to `automaticDeactivationsUpTo`
- * are read, and Deactivation offers up to `deactivationOffersUpTo` are cleared as Keep does. Any may go.
+ * alerts up to `alertsUpTo`, Nudges up to `nudgesUpTo` and deactivated quiet agent entries up to
+ * `deactivatedQuietAgentsUpTo` are read, and Deactivation offers up to `deactivationOffersUpTo` are cleared as Keep does.
  */
 export interface AckAllRequest {
   readonly upTo?: MessageId;
   readonly alertsUpTo?: OfflineAlertId;
   readonly nudgesUpTo?: NudgeId;
   readonly deactivationOffersUpTo?: DeactivationOfferId;
-  readonly automaticDeactivationsUpTo?: AutomaticDeactivationId;
+  readonly deactivatedQuietAgentsUpTo?: DeactivatedQuietAgentId;
 }
 
 /**
@@ -277,24 +277,24 @@ export type { OfflineAlert, OfflineAlertId } from "../presence/index.ts";
 /**
  * A Deactivation offer asks an agent's owner (all active admins if the owner is Deactivated), or about a person every
  * other active admin, whether to deactivate it after `quietDays` with no Activity; Keep, marking all as read, activity,
- * deactivation or a newer offer clears it. An Automatic deactivation tells them the cookout deactivated an agent after
- * 90 days with no Activity; Mark read, marking all as read or reactivating it reads it. Each is one shared Inbox entry.
+ * deactivation or a newer offer clears it. A deactivated quiet agent entry tells them the cookout deactivated an agent
+ * after 90 days with no Activity; Mark read, marking all as read or reactivating it reads it. Each is one shared entry.
  */
 export type {
-  AutomaticDeactivation,
-  AutomaticDeactivationId,
-  AutomaticDeactivationResponse,
+  DeactivatedQuietAgent,
+  DeactivatedQuietAgentId,
+  DeactivatedQuietAgentResponse,
   DeactivationOffer,
   DeactivationOfferId,
   DeactivationOfferResponse,
 } from "./lib/deactivation-offers.ts";
 export {
-  automaticDeactivationErrorCodes,
-  automaticDeactivationReadPath,
+  deactivatedQuietAgentErrorCodes,
+  deactivatedQuietAgentReadPath,
   deactivationOfferErrorCodes,
   deactivationOfferKeepPath,
   deactivationOfferText,
-  isAutomaticDeactivationId,
+  isDeactivatedQuietAgentId,
   isDeactivationOfferId,
   quietAgentDays,
 } from "./lib/deactivation-offers.ts";

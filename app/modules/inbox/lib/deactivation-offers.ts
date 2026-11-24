@@ -28,7 +28,7 @@ export interface DeactivationOfferResponse {
   readonly deactivationOffer: DeactivationOffer;
 }
 
-export const quietAgentDays = { automaticDeactivation: 90, offer: 30 } as const;
+export const quietAgentDays = { deactivation: 90, offer: 30 } as const;
 
 export const deactivationOfferKeepPath = "/v1/inbox/deactivation-offers/:id/keep";
 
@@ -42,28 +42,28 @@ export function deactivationOfferText({ identity, kind, quietDays }: QuietIdenti
   return `@${identity} has had no activity for ${String(quietDays)} days. Deactivate ${pronouns[kind]}?`;
 }
 
-export type AutomaticDeactivationId = number & { readonly [brand]: "AutomaticDeactivationId" };
+export type DeactivatedQuietAgentId = number & { readonly [brand]: "DeactivatedQuietAgentId" };
 
-export interface AutomaticDeactivation {
-  readonly id: AutomaticDeactivationId;
+export interface DeactivatedQuietAgent {
+  readonly id: DeactivatedQuietAgentId;
   readonly identity: Identity;
   readonly text: string;
   readonly deactivatedAt: IsoTime;
   readonly read: boolean;
 }
 
-export interface AutomaticDeactivationResponse {
-  readonly automaticDeactivation: AutomaticDeactivation;
+export interface DeactivatedQuietAgentResponse {
+  readonly deactivatedQuietAgent: DeactivatedQuietAgent;
 }
 
-export const automaticDeactivationReadPath = "/v1/inbox/automatic-deactivations/:id/read";
+export const deactivatedQuietAgentReadPath = "/v1/inbox/deactivated-quiet-agents/:id/read";
 
-export const automaticDeactivationErrorCodes = ["automatic_deactivation_not_found"] as const;
+export const deactivatedQuietAgentErrorCodes = ["deactivated_quiet_agent_not_found"] as const;
 
-export function isAutomaticDeactivationId(value: number): value is AutomaticDeactivationId {
+export function isDeactivatedQuietAgentId(value: number): value is DeactivatedQuietAgentId {
   return Number.isSafeInteger(value) && value >= LOWEST_ID;
 }
 
-export function automaticDeactivationText(agent: string): string {
-  return `@${agent} was deactivated after ${String(quietAgentDays.automaticDeactivation)} days with no activity.`;
+export function deactivatedQuietAgentText(agent: string): string {
+  return `@${agent} was deactivated after ${String(quietAgentDays.deactivation)} days with no activity.`;
 }

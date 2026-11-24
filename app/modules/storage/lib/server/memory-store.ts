@@ -1,4 +1,4 @@
-import type { AutomaticDeactivationsSection } from "./automatic-deactivations.ts";
+import type { DeactivatedQuietAgentsSection } from "./deactivated-quiet-agents.ts";
 import type { DeactivationOffersSection } from "./deactivation-offers.ts";
 import { Effect } from "effect";
 import type { NudgesSection } from "./nudges.ts";
@@ -9,7 +9,7 @@ import { memoryNudges } from "./nudges-memory.ts";
 import { openMemoryStorage } from "./memory.ts";
 import { withActivity } from "./activity.ts";
 
-type FullStorage = StorageService & NudgesSection & DeactivationOffersSection & AutomaticDeactivationsSection;
+type FullStorage = StorageService & NudgesSection & DeactivationOffersSection & DeactivatedQuietAgentsSection;
 
 const openMemoryStore: Effect.Effect<FullStorage, never, Scope.Scope> = Effect.gen(function* openMemoryStore() {
   const storage = yield* openMemoryStorage;

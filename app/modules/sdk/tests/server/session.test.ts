@@ -150,7 +150,7 @@ it.effect("a human cookie session posts and acks", () =>
     expect(acked.status).toBe(OK);
     expect(inbox.json).toStrictEqual({
       alerts: [],
-      automaticDeactivations: [],
+      deactivatedQuietAgents: [],
       deactivationOffers: [],
       items: [],
       nudges: [],

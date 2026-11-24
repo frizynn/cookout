@@ -1,35 +1,35 @@
 import { Array as Arr, Effect, Option, Predicate, PubSub } from "effect";
-import type { AutomaticDeactivation, AutomaticDeactivationId, AutomaticDeactivationResponse } from "../../index.ts";
+import type { DeactivatedQuietAgent, DeactivatedQuietAgentId, DeactivatedQuietAgentResponse } from "../../index.ts";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
 import { IdentityChanges, THE_COOKOUT } from "../../../identities/server.ts";
-import type { Storage, StorageUnavailable, StoredAutomaticDeactivation } from "../../../storage/server.ts";
-import { isAutomaticDeactivationId, quietAgentDays } from "../../index.ts";
+import type { Storage, StorageUnavailable, StoredDeactivatedQuietAgent } from "../../../storage/server.ts";
+import { isDeactivatedQuietAgentId, quietAgentDays } from "../../index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Scope } from "effect";
-import { automaticDeactivationText } from "../deactivation-offers.ts";
+import { deactivatedQuietAgentText } from "../deactivation-offers.ts";
 import { echoed } from "../../../http/index.ts";
 
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
 
-interface AutomaticDeactivationChanged {
+interface DeactivatedQuietAgentChanged {
   readonly recipient: IdentityName;
-  readonly automaticDeactivation: AutomaticDeactivation;
+  readonly deactivatedQuietAgent: DeactivatedQuietAgent;
 }
 
-interface AutomaticDeactivationsService {
-  readonly listAutomaticDeactivations: (
+interface DeactivatedQuietAgentsService {
+  readonly listDeactivatedQuietAgents: (
     caller: Identity,
     which: "unread" | "all",
-  ) => Effect.Effect<readonly AutomaticDeactivation[], StorageUnavailable>;
-  readonly markAutomaticDeactivationRead: (caller: Identity, asked: string) => Fails<AutomaticDeactivationResponse>;
-  readonly markAutomaticDeactivationsReadUpTo: (
+  ) => Effect.Effect<readonly DeactivatedQuietAgent[], StorageUnavailable>;
+  readonly markDeactivatedQuietAgentRead: (caller: Identity, asked: string) => Fails<DeactivatedQuietAgentResponse>;
+  readonly markDeactivatedQuietAgentsReadUpTo: (
     caller: Identity,
-    upTo: AutomaticDeactivationId,
+    upTo: DeactivatedQuietAgentId,
   ) => Effect.Effect<void, StorageUnavailable>;
   readonly deactivateQuietAgents: (now: IsoTime) => Effect.Effect<void, StorageUnavailable>;
-  readonly automaticDeactivationChanged: Effect.Effect<
-    PubSub.Subscription<AutomaticDeactivationChanged>,
+  readonly deactivatedQuietAgentChanged: Effect.Effect<
+    PubSub.Subscription<DeactivatedQuietAgentChanged>,
     never,
     Scope.Scope
   >;
@@ -39,7 +39,7 @@ interface On {
   readonly storage: Storage["Service"];
   readonly announce: (identity: Identity) => Effect.Effect<void>;
   readonly endTokensOf: (agent: IdentityName) => Effect.Effect<void>;
-  readonly publishAll: (changed: readonly AutomaticDeactivationChanged[]) => Effect.Effect<boolean>;
+  readonly publishAll: (changed: readonly DeactivatedQuietAgentChanged[]) => Effect.Effect<boolean>;
 }
 
 const NOT_FOUND = 404;
@@ -48,15 +48,15 @@ const ALL_TOKENS = { kind: "all" } as const;
 
 function entryNotFound(asked: string): Refusal {
   return {
-    code: "automatic_deactivation_not_found",
-    message: `You have no automatic deactivation ${echoed(asked)}.`,
+    code: "deactivated_quiet_agent_not_found",
+    message: `You have no entry ${echoed(asked)} about a deactivated quiet agent.`,
     status: NOT_FOUND,
   };
 }
 
 function shownEntry(
   storage: Storage["Service"],
-): (stored: StoredAutomaticDeactivation) => Effect.Effect<readonly AutomaticDeactivation[], StorageUnavailable> {
+): (stored: StoredDeactivatedQuietAgent) => Effect.Effect<readonly DeactivatedQuietAgent[], StorageUnavailable> {
   return ({ deactivatedAt, id, identity: name, read }) =>
     Effect.map(storage.findIdentityByName(name), (found) =>
       Arr.map(Arr.fromNullishOr(found), (identity) => ({
@@ -64,30 +64,30 @@ function shownEntry(
         id,
         identity,
         read,
-        text: automaticDeactivationText(identity.name),
+        text: deactivatedQuietAgentText(identity.name),
       })),
     );
 }
 
 function shownEntries(
   storage: Storage["Service"],
-  stored: readonly StoredAutomaticDeactivation[],
-): Effect.Effect<readonly AutomaticDeactivation[], StorageUnavailable> {
+  stored: readonly StoredDeactivatedQuietAgent[],
+): Effect.Effect<readonly DeactivatedQuietAgent[], StorageUnavailable> {
   return Effect.map(Effect.forEach(stored, shownEntry(storage), ONE_AT_A_TIME), Arr.flatten);
 }
 
 function changesFor(
   storage: Storage["Service"],
-): (entry: StoredAutomaticDeactivation) => Effect.Effect<readonly AutomaticDeactivationChanged[], StorageUnavailable> {
+): (entry: StoredDeactivatedQuietAgent) => Effect.Effect<readonly DeactivatedQuietAgentChanged[], StorageUnavailable> {
   return (entry) =>
     Effect.map(shownEntry(storage)(entry), (shown) =>
-      Arr.flatMap(shown, (automaticDeactivation) =>
-        Arr.map(entry.recipients, (recipient) => ({ automaticDeactivation, recipient })),
+      Arr.flatMap(shown, (deactivatedQuietAgent) =>
+        Arr.map(entry.recipients, (recipient) => ({ deactivatedQuietAgent, recipient })),
       ),
     );
 }
 
-function published(on: On, stored: readonly StoredAutomaticDeactivation[]): Effect.Effect<void, StorageUnavailable> {
+function published(on: On, stored: readonly StoredDeactivatedQuietAgent[]): Effect.Effect<void, StorageUnavailable> {
   return Effect.forEach(stored, changesFor(on.storage), ONE_AT_A_TIME).pipe(
     Effect.map(Arr.flatten),
     Effect.flatMap(on.publishAll),
@@ -95,7 +95,7 @@ function published(on: On, stored: readonly StoredAutomaticDeactivation[]): Effe
   );
 }
 
-function endedByTheCookout(on: On): (stored: StoredAutomaticDeactivation) => Effect.Effect<void, StorageUnavailable> {
+function endedByTheCookout(on: On): (stored: StoredDeactivatedQuietAgent) => Effect.Effect<void, StorageUnavailable> {
   return (stored) =>
     Effect.gen(function* announceDeactivation() {
       const found = yield* on.storage.findIdentityByName(stored.identity);
@@ -112,18 +112,18 @@ function deactivatedQuietAgents(on: On, now: IsoTime): Effect.Effect<void, Stora
   });
 }
 
-function markedRead(on: On, caller: Identity, asked: string): Fails<AutomaticDeactivationResponse> {
+function markedRead(on: On, caller: Identity, asked: string): Fails<DeactivatedQuietAgentResponse> {
   return Effect.gen(function* markEntryRead() {
-    const marked = yield* Option.match(Option.liftPredicate(Number(asked), isAutomaticDeactivationId), {
+    const marked = yield* Option.match(Option.liftPredicate(Number(asked), isDeactivatedQuietAgentId), {
       onNone: () => Effect.succeed(null),
-      onSome: (id) => on.storage.markAutomaticDeactivationRead(caller.name, id),
+      onSome: (id) => on.storage.markDeactivatedQuietAgentRead(caller.name, id),
     });
-    const [automaticDeactivation] = yield* shownEntries(on.storage, Arr.fromNullishOr(marked));
-    if (marked === null || Predicate.isUndefined(automaticDeactivation)) {
+    const [deactivatedQuietAgent] = yield* shownEntries(on.storage, Arr.fromNullishOr(marked));
+    if (marked === null || Predicate.isUndefined(deactivatedQuietAgent)) {
       return yield* Effect.fail(entryNotFound(asked));
     }
     yield* published(on, [marked]);
-    return { automaticDeactivation };
+    return { deactivatedQuietAgent };
   });
 }
 
@@ -131,8 +131,8 @@ function listed(
   on: On,
   caller: Identity,
   which: "unread" | "all",
-): Effect.Effect<readonly AutomaticDeactivation[], StorageUnavailable> {
-  return Effect.flatMap(on.storage.listAutomaticDeactivations(caller.name), (stored) =>
+): Effect.Effect<readonly DeactivatedQuietAgent[], StorageUnavailable> {
+  return Effect.flatMap(on.storage.listDeactivatedQuietAgents(caller.name), (stored) =>
     shownEntries(
       on.storage,
       Arr.filter(stored, (entry) => which === "all" || !entry.read),
@@ -140,12 +140,12 @@ function listed(
   );
 }
 
-function automaticDeactivationsOn(
+function deactivatedQuietAgentsOn(
   storage: Storage["Service"],
-): Effect.Effect<AutomaticDeactivationsService, never, IdentityChanges | Scope.Scope> {
-  return Effect.gen(function* openAutomaticDeactivations() {
+): Effect.Effect<DeactivatedQuietAgentsService, never, IdentityChanges | Scope.Scope> {
+  return Effect.gen(function* openDeactivatedQuietAgents() {
     const changes = yield* IdentityChanges;
-    const hub = yield* PubSub.unbounded<AutomaticDeactivationChanged>();
+    const hub = yield* PubSub.unbounded<DeactivatedQuietAgentChanged>();
     const on: On = {
       announce: changes.publish,
       endTokensOf: (agent) =>
@@ -154,17 +154,17 @@ function automaticDeactivationsOn(
       storage,
     };
     yield* changes.onReactivated((identity) =>
-      Effect.ignore(Effect.flatMap(storage.readAutomaticDeactivationsOf(identity.name), (read) => published(on, read))),
+      Effect.ignore(Effect.flatMap(storage.readDeactivatedQuietAgentsOf(identity.name), (read) => published(on, read))),
     );
     return {
-      automaticDeactivationChanged: PubSub.subscribe(hub),
       deactivateQuietAgents: (now) => deactivatedQuietAgents(on, now),
-      listAutomaticDeactivations: (caller, which) => listed(on, caller, which),
-      markAutomaticDeactivationRead: (caller, asked) => markedRead(on, caller, asked),
-      markAutomaticDeactivationsReadUpTo: (caller, upTo) =>
-        Effect.flatMap(storage.markAutomaticDeactivationsReadUpTo(caller.name, upTo), (read) => published(on, read)),
+      deactivatedQuietAgentChanged: PubSub.subscribe(hub),
+      listDeactivatedQuietAgents: (caller, which) => listed(on, caller, which),
+      markDeactivatedQuietAgentRead: (caller, asked) => markedRead(on, caller, asked),
+      markDeactivatedQuietAgentsReadUpTo: (caller, upTo) =>
+        Effect.flatMap(storage.markDeactivatedQuietAgentsReadUpTo(caller.name, upTo), (read) => published(on, read)),
     };
   });
 }
 
-export { type AutomaticDeactivationsService, automaticDeactivationsOn };
+export { type DeactivatedQuietAgentsService, deactivatedQuietAgentsOn };

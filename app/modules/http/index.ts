@@ -3,7 +3,7 @@
  * paths, the error body every refusal uses, the union of every error code, and
  * the check that ties each backend Schema to its plain-TS wire type.
  */
-import { automaticDeactivationErrorCodes, deactivationOfferErrorCodes, nudgeErrorCodes } from "../inbox/index.ts";
+import { deactivatedQuietAgentErrorCodes, deactivationOfferErrorCodes, nudgeErrorCodes } from "../inbox/index.ts";
 import type { IsoTime } from "../time/index.ts";
 import { agentSessionErrorCodes } from "../agent-sessions/index.ts";
 import { channelErrorCodes } from "../channels/index.ts";
@@ -55,7 +55,7 @@ export const errorCodes = [
   ...messageErrorCodes,
   ...nudgeErrorCodes,
   ...deactivationOfferErrorCodes,
-  ...automaticDeactivationErrorCodes,
+  ...deactivatedQuietAgentErrorCodes,
   ...agentSessionErrorCodes,
   ...commandErrorCodes,
   ...limitErrorCodes,

@@ -1,9 +1,9 @@
 import { Array as Arr, DateTime, Duration, Effect, Option } from "effect";
 import type {
-  AutomaticDeactivation,
-  AutomaticDeactivationId,
   CookoutClient,
   CookoutEvent,
+  DeactivatedQuietAgent,
+  DeactivatedQuietAgentId,
   EventStream,
 } from "../../index.ts";
 import { TestCookout, answer, refusal, testCookout, testStartTime } from "../../../testing/server.ts";
@@ -43,25 +43,25 @@ function later(wait: Wait): string {
   return DateTime.formatIso(DateTime.addDuration(DateTime.makeUnsafe(testStartTime), Duration.fromInputUnsafe(wait)));
 }
 
-function unread(client: CookoutClient): Effect.Effect<readonly AutomaticDeactivation[]> {
+function unread(client: CookoutClient): Effect.Effect<readonly DeactivatedQuietAgent[]> {
   return Effect.map(
     answer(() => client.inbox()),
-    ({ automaticDeactivations }) => automaticDeactivations,
+    ({ deactivatedQuietAgents }) => deactivatedQuietAgents,
   );
 }
 
-function entriesOnceThere(client: CookoutClient): Effect.Effect<readonly AutomaticDeactivation[]> {
+function entriesOnceThere(client: CookoutClient): Effect.Effect<readonly DeactivatedQuietAgent[]> {
   return Effect.repeat(unread(client), { until: (entries) => entries.length >= ONE });
 }
 
-function history(client: CookoutClient): Effect.Effect<readonly AutomaticDeactivation[]> {
+function history(client: CookoutClient): Effect.Effect<readonly DeactivatedQuietAgent[]> {
   return Effect.map(
     answer(() => client.inboxHistory()),
-    ({ automaticDeactivations }) => automaticDeactivations,
+    ({ deactivatedQuietAgents }) => deactivatedQuietAgents,
   );
 }
 
-function idOf(entries: readonly AutomaticDeactivation[]): AutomaticDeactivationId {
+function idOf(entries: readonly DeactivatedQuietAgent[]): DeactivatedQuietAgentId {
   return Option.getOrThrow(Option.map(Arr.head(entries), ({ id }) => id));
 }
 
@@ -84,7 +84,7 @@ function nextEntryEvent(events: AsyncIterator<CookoutEvent>): Effect.Effect<Read
     answer(() => events.next()),
     {
       until: (heard: Readonly<IteratorResult<CookoutEvent>>) =>
-        heard.done === true || heard.value.type === "automatic-deactivation",
+        heard.done === true || heard.value.type === "deactivated-quiet-agent",
     },
   );
 }
@@ -113,7 +113,7 @@ it.effect(
       ]);
       expect([entries, heard, alerts]).toMatchObject([
         [{ ...entry, text: TEXT }],
-        { value: { automaticDeactivation: entry, type: "automatic-deactivation" } },
+        { value: { deactivatedQuietAgent: entry, type: "deactivated-quiet-agent" } },
         [],
       ]);
     }).pipe(Effect.provide(testCookout())),
@@ -148,11 +148,11 @@ it.effect("the entry goes to every active admin when the owner is Deactivated, a
     yield* answer(() => cookout.client.deactivateIdentity("ada"));
     const entries = yield* Effect.andThen(quietFor("90 days"), entriesOnceThere(bob.client));
     const theirs = yield* entriesOnceThere(cookout.client);
-    const { automaticDeactivation } = yield* answer(() => bob.client.markAutomaticDeactivationRead(idOf(entries)));
+    const { deactivatedQuietAgent } = yield* answer(() => bob.client.markDeactivatedQuietAgentRead(idOf(entries)));
     const after = yield* Effect.all([unread(bob.client), unread(cookout.client)], { concurrency: 1 });
 
     expect([Arr.map(entries, ({ identity }) => identity.name), theirs]).toStrictEqual([["ada/scout"], entries]);
-    expect([automaticDeactivation.read, after]).toStrictEqual([true, [[], []]]);
+    expect([deactivatedQuietAgent.read, after]).toStrictEqual([true, [[], []]]);
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -160,11 +160,11 @@ it.effect("marking all as read covers the entry, and one the caller didn't get i
   Effect.gen(function* markAll() {
     const { ada, cookout } = yield* board;
     const entries = yield* Effect.andThen(quietFor("90 days"), entriesOnceThere(ada.client));
-    const notTheirs = yield* refusal(() => cookout.client.markAutomaticDeactivationRead(idOf(entries)));
-    yield* answer(() => ada.client.ackAll({ automaticDeactivationsUpTo: idOf(entries) }));
+    const notTheirs = yield* refusal(() => cookout.client.markDeactivatedQuietAgentRead(idOf(entries)));
+    yield* answer(() => ada.client.ackAll({ deactivatedQuietAgentsUpTo: idOf(entries) }));
     const [after, read] = yield* Effect.all([unread(ada.client), history(ada.client)], { concurrency: 1 });
 
-    expect(notTheirs).toMatchObject({ code: "automatic_deactivation_not_found", status: NOT_FOUND });
+    expect(notTheirs).toMatchObject({ code: "deactivated_quiet_agent_not_found", status: NOT_FOUND });
     expect([after, Arr.map(read, (entry) => entry.read)]).toStrictEqual([[], [true]]);
   }).pipe(Effect.provide(testCookout())),
 );

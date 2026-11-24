@@ -1,11 +1,11 @@
 import type {
   AgentSessionEvent,
-  AutomaticDeactivationEvent,
   ChannelDeletedEvent,
   ChannelEvent,
   CleanCloseResponse,
   CommandEvent,
   ConnectedEvent,
+  DeactivatedQuietAgentEvent,
   DeactivationOfferEvent,
   IdentityDeletedEvent,
   IdentityEvent,
@@ -22,8 +22,9 @@ import type {
   SubscriptionEvent,
   ThreadEvent,
 } from "../../index.ts";
+import { ChannelNameSchema, ChannelSchema } from "../../../channels/server.ts";
 import {
-  AutomaticDeactivationSchema,
+  DeactivatedQuietAgentSchema,
   DeactivationOfferSchema,
   InboxItemSchema,
   MovedBackReadPositionSchema,
@@ -33,7 +34,6 @@ import {
   ReadPositionSchema,
   SubscriptionResponseSchema,
 } from "../../../inbox/server.ts";
-import { ChannelNameSchema, ChannelSchema } from "../../../channels/server.ts";
 import { IdentityNameSchema, IdentitySchema } from "../../../identities/server.ts";
 import {
   MessageIdSchema,
@@ -62,8 +62,11 @@ export const NudgeReadEventSchema = matchesWire<NudgeReadEvent>()(
   Schema.Struct({ nudgeIds: Schema.Array(NudgeIdSchema), type: Schema.Literal("nudge-read") }),
 );
 
-export const AutomaticDeactivationEventSchema = matchesWire<AutomaticDeactivationEvent>()(
-  Schema.Struct({ automaticDeactivation: AutomaticDeactivationSchema, type: Schema.Literal("automatic-deactivation") }),
+export const DeactivatedQuietAgentEventSchema = matchesWire<DeactivatedQuietAgentEvent>()(
+  Schema.Struct({
+    deactivatedQuietAgent: DeactivatedQuietAgentSchema,
+    type: Schema.Literal("deactivated-quiet-agent"),
+  }),
 );
 
 export const DeactivationOfferEventSchema = matchesWire<DeactivationOfferEvent>()(

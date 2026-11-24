@@ -3,6 +3,7 @@ import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts
 import type {
   ConnectedEvent,
   CookoutEvent,
+  DeactivatedQuietAgentEvent,
   DeactivationOfferEvent,
   EventStream,
   InboxItemEvent,
@@ -16,7 +17,7 @@ import type { Scope } from "effect";
 import { eventsPath } from "../../../events/index.ts";
 import { note } from "./watch-lines.ts";
 
-type WatchedEvent = InboxItemEvent | NudgeEvent | DeactivationOfferEvent;
+type WatchedEvent = InboxItemEvent | NudgeEvent | DeactivationOfferEvent | DeactivatedQuietAgentEvent;
 
 type Heard = WatchedEvent | ConnectedEvent;
 
@@ -76,6 +77,9 @@ function isInboxItem(event: CookoutEvent | Heard): event is InboxItemEvent {
 function isWatched(event: CookoutEvent | Heard): event is WatchedEvent {
   if (event.type === "deactivation-offer") {
     return !event.deactivationOffer.cleared;
+  }
+  if (event.type === "deactivated-quiet-agent") {
+    return !event.deactivatedQuietAgent.read;
   }
   return event.type === "inbox-item" || event.type === "nudge";
 }
@@ -180,7 +184,7 @@ function lastSeenAfter(event: Heard): (seen: Option.Option<MessageId>) => Option
         ),
       );
   }
-  if (event.type === "nudge" || event.type === "deactivation-offer") {
+  if (event.type === "nudge" || event.type === "deactivation-offer" || event.type === "deactivated-quiet-agent") {
     return (seen) => seen;
   }
   return Option.orElse(() => Option.fromNullishOr(event.latestMessageId));

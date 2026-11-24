@@ -1,14 +1,14 @@
 import type { ActivityRecords, DeactivationOffersSection, OfferSources } from "./deactivation-offers.ts";
 import { Array as Arr, DateTime, Effect, Schema } from "effect";
 import type {
-  AutomaticDeactivationRecords,
-  AutomaticDeactivationsSection,
-  StoredAutomaticDeactivation,
-} from "./automatic-deactivations.ts";
+  DeactivatedQuietAgentRecords,
+  DeactivatedQuietAgentsSection,
+  StoredDeactivatedQuietAgent,
+} from "./deactivated-quiet-agents.ts";
 import { IsoTimeSchema, isoTimeOf } from "../../../time/server.ts";
-import { automaticDeactivationsOn, deactivatingWith } from "./automatic-deactivations.ts";
 import { boardOn, deactivationOffersOn } from "./deactivation-offers.ts";
-import { isAutomaticDeactivationId, isDeactivationOfferId } from "../../../inbox/index.ts";
+import { deactivatedQuietAgentsOn, deactivatingWith } from "./deactivated-quiet-agents.ts";
+import { isDeactivatedQuietAgentId, isDeactivationOfferId } from "../../../inbox/index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { OfferRecord } from "./deactivation-offer-board.ts";
@@ -42,7 +42,7 @@ const DEACTIVATION_OFFERS_MIGRATION = `CREATE TABLE activity (
      cleared INTEGER NOT NULL CHECK (cleared IN (0, 1))
    ) STRICT;`;
 
-const AUTOMATIC_DEACTIVATIONS_MIGRATION = `CREATE TABLE automatic_deactivations (
+const DEACTIVATED_QUIET_AGENTS_MIGRATION = `CREATE TABLE deactivated_quiet_agents (
      id INTEGER PRIMARY KEY,
      identity_name TEXT NOT NULL REFERENCES identities (name) ON DELETE CASCADE,
      recipients TEXT NOT NULL,
@@ -67,7 +67,7 @@ const OfferRow = Schema.Struct({
 
 const EntryRow = Schema.Struct({
   deactivated_at: IsoTimeSchema,
-  id: Schema.Int.pipe(Schema.refine(isAutomaticDeactivationId)),
+  id: Schema.Int.pipe(Schema.refine(isDeactivatedQuietAgentId)),
   identity_name: IdentityNameColumn,
   read: Schema.Literals([UNREAD, READ]),
   recipients: Schema.fromJsonString(Schema.Array(IdentityNameColumn)),
@@ -105,14 +105,14 @@ function offerRow(row: unknown): Fails<OfferRecord> {
   );
 }
 
-function entryRows(rows: readonly unknown[]): Fails<readonly StoredAutomaticDeactivation[]> {
+function entryRows(rows: readonly unknown[]): Fails<readonly StoredDeactivatedQuietAgent[]> {
   return Schema.decodeUnknownEffect(Schema.Array(EntryRow))(rows).pipe(
     Effect.mapBoth({
       onFailure: unreadable,
       onSuccess: (decoded) =>
         Arr.map(
           decoded,
-          (row): StoredAutomaticDeactivation => ({
+          (row): StoredDeactivatedQuietAgent => ({
             deactivatedAt: row.deactivated_at,
             id: row.id,
             identity: row.identity_name,
@@ -124,7 +124,7 @@ function entryRows(rows: readonly unknown[]): Fails<readonly StoredAutomaticDeac
   );
 }
 
-function entryRow(row: unknown): Fails<StoredAutomaticDeactivation> {
+function entryRow(row: unknown): Fails<StoredDeactivatedQuietAgent> {
   return Effect.flatMap(entryRows([row]), (records) =>
     Effect.mapError(Effect.fromOption(Arr.head(records)), unreadable),
   );
@@ -146,14 +146,14 @@ const RECORD = `INSERT INTO activity (identity_name, last_activity_at) VALUES (?
   ON CONFLICT (identity_name) DO UPDATE SET last_activity_at = max(last_activity_at, excluded.last_activity_at)`;
 const CLEAR = `UPDATE deactivation_offers SET cleared = ${String(CLEARED)} WHERE id = ?`;
 
-const INSERT_ENTRY = `INSERT INTO automatic_deactivations (identity_name, recipients, deactivated_at, read)
+const INSERT_ENTRY = `INSERT INTO deactivated_quiet_agents (identity_name, recipients, deactivated_at, read)
   VALUES (?, ?, ?, ${String(UNREAD)}) RETURNING ${ENTRY_COLUMNS}`;
-const READ_ENTRY = `UPDATE automatic_deactivations SET read = ${String(READ)} WHERE id = ?`;
+const READ_ENTRY = `UPDATE deactivated_quiet_agents SET read = ${String(READ)} WHERE id = ?`;
 
-function sqliteAutomaticDeactivationRecords(db: SqliteDatabase): AutomaticDeactivationRecords {
+function sqliteDeactivatedQuietAgentRecords(db: SqliteDatabase): DeactivatedQuietAgentRecords {
   return {
-    automaticDeactivations: Effect.flatMap(
-      db.all(`SELECT ${ENTRY_COLUMNS} FROM automatic_deactivations ORDER BY id`),
+    deactivatedQuietAgents: Effect.flatMap(
+      db.all(`SELECT ${ENTRY_COLUMNS} FROM deactivated_quiet_agents ORDER BY id`),
       entryRows,
     ),
     insert: ({ deactivatedAt, identity, recipients }) =>
@@ -201,18 +201,18 @@ interface SqliteSources {
 function sqliteDeactivationOffers({
   db,
   sources,
-}: SqliteSources): Fails<DeactivationOffersSection & AutomaticDeactivationsSection> {
+}: SqliteSources): Fails<DeactivationOffersSection & DeactivatedQuietAgentsSection> {
   return Effect.map(sinceOn(db), (since) => {
     const on = { atomically: db.transaction, records: sqliteActivityRecords(db, since), sources };
     return {
       ...deactivationOffersOn(on),
-      ...automaticDeactivationsOn({
+      ...deactivatedQuietAgentsOn({
         board: boardOn(on),
         deactivate: deactivatingWith(sources.deactivateIdentity),
-        records: sqliteAutomaticDeactivationRecords(db),
+        records: sqliteDeactivatedQuietAgentRecords(db),
       }),
     };
   });
 }
 
-export { AUTOMATIC_DEACTIVATIONS_MIGRATION, DEACTIVATION_OFFERS_MIGRATION, sqliteDeactivationOffers };
+export { DEACTIVATED_QUIET_AGENTS_MIGRATION, DEACTIVATION_OFFERS_MIGRATION, sqliteDeactivationOffers };

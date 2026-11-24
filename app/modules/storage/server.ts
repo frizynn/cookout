@@ -23,7 +23,7 @@ export type { OpenThreadsPageRequest } from "./lib/server/open-threads.ts";
 export type { AckedMessage } from "./lib/server/inbox.ts";
 export type { StoredNudge } from "./lib/server/nudges.ts";
 export type { OfferChanges, StoredDeactivationOffer } from "./lib/server/deactivation-offers.ts";
-export type { StoredAutomaticDeactivation } from "./lib/server/automatic-deactivations.ts";
+export type { StoredDeactivatedQuietAgent } from "./lib/server/deactivated-quiet-agents.ts";
 export type { StoredPresence } from "./lib/server/presence.ts";
 export type { NewCommandCall } from "./lib/server/command-calls.ts";
 export type { JoinCodeRedemption } from "./lib/server/join-codes.ts";

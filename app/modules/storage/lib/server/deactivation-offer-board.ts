@@ -6,7 +6,7 @@ import { isoTimeOf } from "../../../time/server.ts";
 
 interface QuietDays {
   readonly offer: number;
-  readonly automaticDeactivation: number;
+  readonly deactivation: number;
 }
 
 interface OfferRecord {
@@ -137,7 +137,7 @@ function nextOf({ identity, latest, quietSince }: Quiet, days: QuietDays): reado
     return [{ at: later(quietSince, days.offer), identity, quietDays: days.offer }];
   }
   const quietDays = latest.quietDays + days.offer;
-  if (identity.kind === "agent" && quietDays >= days.automaticDeactivation) {
+  if (identity.kind === "agent" && quietDays >= days.deactivation) {
     return [];
   }
   return [{ at: later(latest.raisedAt, days.offer), identity, quietDays }];
@@ -164,7 +164,7 @@ function deactivationDueOf(board: Board, days: QuietDays): (identity: Identity) 
     if (identity.kind !== "agent" || !isQuiet(board, identity)) {
       return [];
     }
-    return [{ at: later(lastActivityIn({ board, identity }), days.automaticDeactivation), identity }];
+    return [{ at: later(lastActivityIn({ board, identity }), days.deactivation), identity }];
   };
 }
 

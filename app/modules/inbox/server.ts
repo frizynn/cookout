@@ -2,7 +2,8 @@
  * The inbox on the backend: the `Inbox` service over `Storage`, and the
  * routes that read the caller's inbox, a page of its inbox history and its read positions, ack a message or the whole
  * inbox, mark a message unread or a Nudge read, follow and unfollow a
- * thread, answer Keep on a Deactivation offer, mark an Automatic deactivation read, and subscribe to and unsubscribe from a channel. Each read position an ack moves is also
+ * thread, answer Keep on a Deactivation offer, mark an entry about a deactivated quiet agent read, and subscribe to
+ * and unsubscribe from a channel. Each read position an ack moves is also
  * published to an in-process hub, which `acked` subscribes to, for live
  * updates. Routes sit
  * behind the server's token gate.
@@ -12,7 +13,7 @@ import {
   AckAllResponseSchema,
   AckRequestSchema,
   AckResponseSchema,
-  AutomaticDeactivationResponseSchema,
+  DeactivatedQuietAgentResponseSchema,
   DeactivationOfferResponseSchema,
   FollowResponseSchema,
   InboxHistoryQuerySchema,
@@ -29,7 +30,7 @@ import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import {
   ackAllPath,
   ackPath,
-  automaticDeactivationReadPath,
+  deactivatedQuietAgentReadPath,
   deactivationOfferKeepPath,
   followPath,
   inboxHistoryPath,
@@ -171,16 +172,16 @@ const keepRoute: Route<Needs> = {
   segments: { id: (segment) => DIGITS.test(segment) },
 };
 
-const automaticDeactivationReadRoute: Route<Needs> = {
+const deactivatedQuietAgentReadRoute: Route<Needs> = {
   handle: (params) =>
-    Effect.gen(function* automaticDeactivationReadRouteHandler() {
+    Effect.gen(function* deactivatedQuietAgentReadRouteHandler() {
       const caller = yield* Caller;
       const inbox = yield* Inbox;
-      const answer = yield* inbox.markAutomaticDeactivationRead(caller, String(params["id"]));
-      return yield* HttpServerResponse.schemaJson(AutomaticDeactivationResponseSchema)(answer);
+      const answer = yield* inbox.markDeactivatedQuietAgentRead(caller, String(params["id"]));
+      return yield* HttpServerResponse.schemaJson(DeactivatedQuietAgentResponseSchema)(answer);
     }),
   method: "POST",
-  path: automaticDeactivationReadPath,
+  path: deactivatedQuietAgentReadPath,
   segments: { id: (segment) => DIGITS.test(segment) },
 };
 
@@ -226,7 +227,7 @@ export { Nudges, nudgesLayer } from "./lib/server/nudge-scheduler.ts";
 
 /**
  * Deactivation offers: listed in each recipient's inbox, answered Keep, and sent to each recipient's streams as one is
- * raised or cleared. The nudge scheduler raises them. Beside them, Automatic deactivations: the nudge scheduler has it
+ * raised or cleared. The nudge scheduler raises them. Beside them, entries about deactivated quiet agents: the nudge scheduler has it
  * deactivate each agent quiet for 90 days, announcing the deactivation and ending its connections, and each entry is
  * listed in its recipients' inboxes, marked read, and sent to their streams as it is recorded or read. Reactivating the
  * agent reads its entries.
@@ -238,7 +239,7 @@ export { DeactivationOffers, deactivationOffersLayer } from "./lib/server/deacti
  * events that carry one.
  */
 export {
-  AutomaticDeactivationSchema,
+  DeactivatedQuietAgentSchema,
   DeactivationOfferSchema,
   InboxItemSchema,
   MovedBackReadPositionSchema,
@@ -263,7 +264,7 @@ export const inboxRoutes: readonly Route<Needs>[] = [
   alertReadRoute,
   nudgeReadRoute,
   keepRoute,
-  automaticDeactivationReadRoute,
+  deactivatedQuietAgentReadRoute,
   followRoute("PUT", "follow"),
   followRoute("DELETE", "unfollow"),
   subscriptionRoute("PUT", "subscribe"),
@@ -274,7 +275,7 @@ export const inboxRoutes: readonly Route<Needs>[] = [
 export const inboxResponseSchemas = {
   AckAllResponse: AckAllResponseSchema,
   AckResponse: AckResponseSchema,
-  AutomaticDeactivationResponse: AutomaticDeactivationResponseSchema,
+  DeactivatedQuietAgentResponse: DeactivatedQuietAgentResponseSchema,
   DeactivationOfferResponse: DeactivationOfferResponseSchema,
   FollowResponse: FollowResponseSchema,
   InboxHistoryResponse: InboxHistoryResponseSchema,
