@@ -62,7 +62,7 @@ const HARNESS_AND_BOARD = [
   "COOKOUT_TOKEN",
   "COOKOUT_URL",
 ];
-const DROP_DEACTIVATE_IDENTITY = path.resolve("scripts/lib/drop-deactivate-identity.ts");
+const DROP_DEACTIVATE_IDENTITY = path.resolve("scripts/drop-deactivate-identity.ts");
 const root = mkdtempSync(path.join(tmpdir(), "cookout-published-client-"));
 const install = path.join(root, "install");
 const publishedBin = path.join(install, "node_modules", ".bin", "cookout");

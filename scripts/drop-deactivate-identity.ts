@@ -1,4 +1,4 @@
-import { withoutField } from "./published-client.ts";
+import { withoutField } from "./lib/published-client.ts";
 
 const { fetch: served } = globalThis;
 
