@@ -2,8 +2,12 @@ import type { CheckRun, Job, Unreadable } from "./check-run.ts";
 import type { Command, Step, Stopped } from "./merge-steps.ts";
 import { DONE, run, stop, tail } from "./merge-steps.ts";
 import { UNVOUCHED, vouchedGreen } from "./ci-vouch.ts";
+import { described, failuresOf } from "./ci-failures.ts";
 import { field, list, parseJson } from "./json.ts";
+import type { Failure } from "./ci-failures.ts";
+import type { Polled } from "./ci-verdict.ts";
 import { readCheckRun } from "./check-run.ts";
+import { sameCommitVerdict } from "./ci-verdict.ts";
 
 interface CiGateOptions {
   readonly appear: number;
@@ -23,22 +27,18 @@ interface Watched {
   readonly runNumber: number;
 }
 
-interface Failure {
-  readonly job: Job;
-  readonly log: string;
+interface Progress {
+  readonly reran: boolean;
+  readonly waited: number;
 }
 
 const NONE = 0;
 const NO_RUN = "none";
 const NEXT = 1;
-const LOG_LINES = -20;
 const GREEN = "success";
-const FAILURE = "failure";
 const COMPLETED = "completed";
 const CANCELLED = "cancelled";
 const LIST = ["run", "list", "--workflow", "Check", "--event", "push", "--limit", "1", "--json", "databaseId"];
-const BUDGET_WARNING = /over its \S+ budget/u;
-const FAILED_CHECK = /\bFAIL\b/u;
 
 function unreadable(options: CiGateOptions, read: Unreadable): Stopped {
   return stop(`Could not read ${options.subject}'s Check run: gh ${read.args.join(" ")}\n${tail(read.output)}`);
@@ -116,27 +116,6 @@ function inheritedFrom(options: CiGateOptions, failed: readonly Job[]): string {
   return `\nThe same jobs failed on v1's Check run for ${options.subject}'s merge-base: ${base.url}\nYour base was red; merge the current green v1 into ${options.subject} (git merge origin/v1), push, and rerun merge-ticket.`;
 }
 
-function failedLog(options: CiGateOptions, runNumber: number, job: Job): string {
-  if (job.jobArg === "") {
-    return "";
-  }
-  return run(options.cwd, ...options.gh, "run", "view", String(runNumber), "--job", job.jobArg, "--log-failed").output;
-}
-
-function budgetOnly(failure: Failure): boolean {
-  return failure.job.conclusion === FAILURE && BUDGET_WARNING.test(failure.log) && !FAILED_CHECK.test(failure.log);
-}
-
-function described(failure: Failure): string {
-  const steps = failure.job.failedSteps.join(", ") || "none named";
-  const heading = `\n${failure.job.name} failed steps: ${steps}`;
-  const logged = failure.log.trim();
-  if (logged === "") {
-    return heading;
-  }
-  return `${heading}\n${logged.split("\n").slice(LOG_LINES).join("\n")}`;
-}
-
 function stateOf(job: Job): string {
   if (job.conclusion === "") {
     return job.status;
@@ -150,14 +129,6 @@ function report(options: CiGateOptions, checkRun: CheckRun): void {
   }
 }
 
-function failuresOf(options: CiGateOptions, { checkRun, runNumber }: Watched): readonly Failure[] {
-  const failures = notGreen(checkRun).map((job): Failure => ({ job, log: failedLog(options, runNumber, job) }));
-  for (const failure of failures.filter((each) => budgetOnly(each))) {
-    options.log(`WARNING: ${failure.job.name} failed only on a time budget, which never blocks (ADR 0030).`);
-  }
-  return failures.filter((failure) => !budgetOnly(failure));
-}
-
 function namesOf(checkRun: CheckRun, failed: readonly Failure[]): readonly string[] {
   const named = failed.map((failure) => `${failure.job.name} (${failure.job.conclusion})`);
   if (checkRun.status === COMPLETED && checkRun.jobs.length === NONE) {
@@ -168,7 +139,7 @@ function namesOf(checkRun: CheckRun, failed: readonly Failure[]): readonly strin
 
 function red(options: CiGateOptions, watched: Watched): Step {
   const { checkRun } = watched;
-  const failed = failuresOf(options, watched);
+  const failed = failuresOf({ ...options, jobs: notGreen(checkRun), runNumber: watched.runNumber });
   const named = namesOf(checkRun, failed);
   if (named.length === NONE) {
     return DONE;
@@ -238,17 +209,6 @@ function cancelledOnly(checkRun: CheckRun): boolean {
   return failed.length > NONE && failed.every((job) => job.conclusion === CANCELLED);
 }
 
-function settled(options: CiGateOptions, watched: Watched, waited: number): Step | "running" {
-  if (cancelledOnly(watched.checkRun) && vouched(options, watched.runNumber, NONE)) {
-    return DONE;
-  }
-  const judged = verdict(options, watched);
-  if (judged === "running" && vouched(options, watched.runNumber, waited)) {
-    return DONE;
-  }
-  return judged;
-}
-
 function supersededBy(options: CiGateOptions, { checkRun, runNumber }: Watched): number | typeof NO_RUN {
   if (!cancelledOnly(checkRun)) {
     return NO_RUN;
@@ -273,20 +233,60 @@ function current(options: CiGateOptions, runNumber: number): Watched | Stopped {
   return current(options, newer);
 }
 
-function poll(options: CiGateOptions, runNumber: number, waited: number): Step {
-  const watched = current(options, runNumber);
+function redOf(options: CiGateOptions, runNumber: number): Step {
+  const checkRun = readCheckRun({ ...options, runNumber });
+  if (checkRun.kind === "unreadable") {
+    return unreadable(options, checkRun);
+  }
+  return red(options, { checkRun, runNumber });
+}
+
+function ownVerdict(options: CiGateOptions, watched: Watched, { reran, waited }: Progress): Polled | Step {
+  const own = verdict(options, watched);
+  if (own !== "running") {
+    return own;
+  }
+  if (vouched(options, watched.runNumber, waited)) {
+    return DONE;
+  }
+  return { reran, runNumber: watched.runNumber };
+}
+
+function vouchedCancelled(options: CiGateOptions, watched: Watched): boolean {
+  return cancelledOnly(watched.checkRun) && vouched(options, watched.runNumber, NONE);
+}
+
+function advance(options: CiGateOptions, watched: Watched, progress: Progress): Polled | Step {
+  if (vouchedCancelled(options, watched)) {
+    return DONE;
+  }
+  const judged = sameCommitVerdict({ ...options, ...watched, reran: progress.reran });
+  if (judged.kind === "red") {
+    return redOf(options, judged.runNumber);
+  }
+  if (judged.kind === "next") {
+    for (const line of judged.lines) {
+      options.log(line);
+    }
+    return judged.next;
+  }
+  return ownVerdict(options, watched, progress);
+}
+
+function poll(options: CiGateOptions, polled: Polled, waited: number): Step {
+  const watched = current(options, polled.runNumber);
   if ("kind" in watched) {
     return watched;
   }
-  const judged = settled(options, watched, waited);
-  if (judged !== "running") {
-    return judged;
+  const next = advance(options, watched, { reran: polled.reran, waited });
+  if ("kind" in next) {
+    return next;
   }
   const slept = wait(options, watched.checkRun, waited);
   if (slept.kind === "stopped") {
     return slept;
   }
-  return poll(options, watched.runNumber, waited + NEXT);
+  return poll(options, next, waited + NEXT);
 }
 
 function ciGreen(options: CiGateOptions): Step {
@@ -294,7 +294,7 @@ function ciGreen(options: CiGateOptions): Step {
   if (typeof runNumber !== "number") {
     return runNumber;
   }
-  return poll(options, runNumber, NONE);
+  return poll(options, { reran: false, runNumber }, NONE);
 }
 
 export { ciGreen };

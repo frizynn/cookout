@@ -1,14 +1,18 @@
 import { ATTEMPTS, BRANCH, TICKET, git, repo, repos } from "./lib/merge-repos.ts";
 import { DONE, stop } from "../lib/merge-steps.ts";
 import { expect, it } from "vitest";
+import { readFileSync, writeFileSync } from "node:fs";
 import type { Merged } from "../lib/merge-ticket.ts";
 import type { Step } from "../lib/merge-steps.ts";
+import path from "node:path";
 
 const MERGE_BRANCH = `merge-ticket-${TICKET}`;
 const ONE_ATTEMPT = 1;
 const TWO_ATTEMPTS = 2;
 const FIRST_RUN = 1;
 const FIRST_FIELD = 0;
+const EXECUTABLE = 0o755;
+const CREATED = /^0+ \S+ refs\/heads\/merge-ticket-/u;
 
 interface FakeCi {
   readonly ci: (branch: string, sha: string) => Step;
@@ -183,4 +187,41 @@ it("pushes and watches merge-ticket-N again when continuing a merge resolved by 
     [sha],
     "v1",
   ]);
+});
+
+function recordPushes(origin: string): () => readonly string[] {
+  const pushes = path.join(origin, "pushes.log");
+  writeFileSync(pushes, "");
+  writeFileSync(path.join(origin, "hooks", "post-receive"), `#!/bin/sh\ncat >> "${pushes}"\n`, { mode: EXECUTABLE });
+  return (): readonly string[] =>
+    readFileSync(pushes, "utf8")
+      .split("\n")
+      .filter((line) => CREATED.test(line));
+}
+
+function pushedResolution(): ReturnType<typeof repos> & { readonly created: () => readonly string[] } {
+  const repositories = repos();
+  const { origin, other, work } = repositories;
+  repo(other).push({ "notes.txt": "v1\n" });
+  repo(work).commit("the ticket", { "notes.txt": "ticket\n" });
+  repo(work).merge({});
+  repo(work).resolveByHand("both\n");
+  const created = recordPushes(origin);
+  git(work, "push", "-q", "origin", `HEAD:refs/heads/${MERGE_BRANCH}`);
+  return { ...repositories, created };
+}
+
+it("waits for the existing run, without pushing again, when continuing at a commit origin already has", {
+  timeout: 10_000,
+}, () => {
+  expect.hasAssertions();
+
+  const { created, origin, other, work } = pushedResolution();
+  const { ci, green } = fakeCi({ origin, other });
+
+  const merged = repo(work).continueMerge({ ci });
+
+  const sha = git(origin, "rev-parse", "v1");
+
+  expect([merged, green, created().length]).toStrictEqual([{ attempts: ONE_ATTEMPT, ok: true, sha }, [sha], FIRST_RUN]);
 });
