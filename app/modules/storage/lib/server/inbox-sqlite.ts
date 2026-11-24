@@ -81,13 +81,22 @@ function inboxSql(columns: string, ids: "messages.id > ?2" | "messages.id = ?2")
     ORDER BY messages.id, reasons.reason`;
 }
 
+const REACTED = `SELECT DISTINCT r.message_id AS id, 'reaction' AS reason
+    FROM reactions AS r JOIN messages AS m ON m.id = r.message_id
+    WHERE m.author_name = ?1 AND r.identity_name <> ?1`;
+
+const SEEN_REACTIONS = `NOT EXISTS (SELECT 1 FROM reactions AS u
+    WHERE u.message_id = messages.id AND u.seen = 0 AND u.identity_name <> ?1)`;
+
 function historySql(columns: string): string {
   return `WITH reasons (id, reason) AS (${REASONS}),
-    page (id) AS (SELECT DISTINCT reasons.id FROM reasons JOIN messages USING (id)
-      WHERE messages.author_name <> ?1 AND reasons.id < ?2 ORDER BY reasons.id DESC LIMIT ?3)
-    SELECT ${columns}, reasons.reason AS reason, messages.id <= ${MARKER} AS read
-    FROM messages JOIN page USING (id) JOIN reasons USING (id)
-    ORDER BY messages.id DESC, reasons.reason`;
+    listed (id, reason) AS (SELECT reasons.id, reasons.reason FROM reasons JOIN messages USING (id)
+      WHERE messages.author_name <> ?1 UNION ALL ${REACTED}),
+    page (id) AS (SELECT DISTINCT id FROM listed WHERE id < ?2 ORDER BY id DESC LIMIT ?3)
+    SELECT ${columns}, listed.reason AS reason,
+      CASE WHEN listed.reason = 'reaction' THEN ${SEEN_REACTIONS} ELSE messages.id <= ${MARKER} END AS read
+    FROM messages JOIN page USING (id) JOIN listed USING (id)
+    ORDER BY messages.id DESC, listed.reason`;
 }
 
 function recordAppended({ db, message }: Appended): Fails<readonly ReadReceipt[]> {

@@ -11,13 +11,14 @@ import type {
 import { Array as Arr, Effect, Option, Predicate, pipe } from "effect";
 import type { Channel, ChannelName } from "../../../channels/index.ts";
 import type { InboxReason, MovedBackReadPosition } from "../../../inbox/index.ts";
-import type { Message, MessageId, ReadReceipt, Reply, TopLevelMessage } from "../../../messages/index.ts";
+import type { Message, MessageId, ReadReceipt } from "../../../messages/index.ts";
 import { ackAllIn, ackIn, ackMessageIn, moveBackIn, readPositionsIn, receiptsOf } from "./read-positions-memory.ts";
-import { counted, threadIdOf } from "./messages.ts";
 import { followersOf, newestPerScope, scopeOf } from "./inbox.ts";
+import { reactionHistoryFor, shownItem } from "./inbox-memory-state.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { MemoryInbox } from "./inbox-memory-state.ts";
 import type { StorageUnavailable } from "./errors.ts";
+import { threadIdOf } from "./messages.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
@@ -117,29 +118,12 @@ function reasonsFor(reading: Reading, message: Message): readonly InboxReason[] 
   );
 }
 
-function currentParent(messages: readonly Message[], id: MessageId): TopLevelMessage | undefined {
-  return pipe(
-    Arr.findFirst(messages, (found): found is TopLevelMessage => found.kind === "top-level" && found.id === id),
-    Option.map((parent) => {
-      const replies = Arr.filter(messages, (reply): reply is Reply => reply.kind === "reply" && reply.replyTo === id);
-      return counted({ parent, replies });
-    }),
-    Option.getOrUndefined,
-  );
-}
-
 function historyItemFor(reading: Reading, message: Message): readonly StoredHistoryItem[] {
-  const reasons = reasonsFor(reading, message);
-  const parent = currentParent(reading.board.messages, threadIdOf(message));
-  const isOwn = message.author.name === reading.identity;
-  if (isOwn || !Arr.isReadonlyArrayNonEmpty(reasons) || Predicate.isUndefined(parent)) {
+  if (message.author.name === reading.identity) {
     return [];
   }
-  const read = isRead(reading, message);
-  if (message.kind === "top-level") {
-    return [{ message: parent, parent, read, reasons }];
-  }
-  return [{ message, parent, read, reasons }];
+  const { board } = reading;
+  return shownItem({ board, message, read: isRead(reading, message), reasons: reasonsFor(reading, message) });
 }
 
 function historyOf(reading: Reading): readonly StoredHistoryItem[] {
@@ -155,9 +139,16 @@ function inboxOf(reading: Reading): readonly StoredInboxItem[] {
   });
 }
 
+function withReactionHistory(reading: Reading): readonly StoredHistoryItem[] {
+  return Arr.flatMap(reading.board.messages, (message) => [
+    ...historyItemFor(reading, message),
+    ...reactionHistoryFor({ ...reading, message }),
+  ]);
+}
+
 function historyPageOf(reading: Reading, page: HistoryPageRequest): StoredHistoryPage {
   const { before = Number.MAX_SAFE_INTEGER, limit } = page;
-  const older = Arr.filter(historyOf(reading), (item) => item.message.id < before);
+  const older = Arr.filter(withReactionHistory(reading), (item) => item.message.id < before);
   const shown = Arr.reverse(Arr.takeRight(older, limit));
   return { hasMore: older.length > shown.length, items: shown };
 }

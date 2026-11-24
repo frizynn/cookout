@@ -94,3 +94,22 @@ it.effect("a bad inbox history cursor or limit is refused with 400", () =>
     expect(refused).toMatchObject([invalid, invalid, invalid]);
   }).pipe(Effect.provide(testCookout())),
 );
+
+it.effect("the inbox history lists a reaction item with every other identity's reaction, read once acked", () =>
+  Effect.gen(function* historyWithReactions() {
+    const cookout = yield* TestCookout;
+    const { ann, bob } = yield* board(cookout);
+    const own = yield* post(ann, "ship it?");
+    yield* answer(() => bob.client.react(own, "thumbs_up"));
+    const mention = yield* post(bob, "@ann shipped");
+    yield* answer(() => ann.client.ack(mention));
+    const { items } = yield* answer(() => ann.client.inboxHistory());
+
+    expect(
+      Arr.map(items, (item) => [item.message.id, item.reasons, item.read, item.newReactions ?? "none"]),
+    ).toMatchObject([
+      [mention, ["mention", "subscribed-channel"], true, "none"],
+      [own, ["reaction"], true, [{ identity: "bob", messageId: own, reaction: "thumbs_up" }]],
+    ]);
+  }).pipe(Effect.provide(testCookout())),
+);

@@ -120,8 +120,8 @@ export interface InboxItem {
   readonly parent: TopLevelMessage;
   readonly message: Message;
   /**
-   * For the `reaction` reason, the reactions on the identity's own message that it hasn't acked yet, oldest first, each
-   * shown as "@name reacted with 👍". Absent for an item there for no reaction.
+   * For the `reaction` reason only, other identities' reactions on the identity's own message, oldest first, shown as
+   * "@name reacted with 👍": in the inbox the unacked ones; in the history all of them, `read` once all are acked.
    */
   readonly newReactions?: readonly Reaction[];
 }

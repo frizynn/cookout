@@ -8,6 +8,7 @@ import type {
   InboxItemEvent,
   MessageId,
   NudgeEvent,
+  Reaction,
   WatchOptions,
 } from "../../../sdk/index.ts";
 import { callClient, toFailure } from "./adapters/sdk.ts";
@@ -170,12 +171,36 @@ function start(
 
 function lastSeenAfter(event: Heard): (seen: Option.Option<MessageId>) => Option.Option<MessageId> {
   if (isInboxItem(event)) {
-    return () => Option.some(event.item.message.id);
+    const { id } = event.item.message;
+    return (seen) =>
+      Option.some(
+        Option.getOrElse(
+          Option.filter(seen, (last) => last > id),
+          () => id,
+        ),
+      );
   }
   if (event.type === "nudge" || event.type === "deactivation-offer") {
     return (seen) => seen;
   }
   return Option.orElse(() => Option.fromNullishOr(event.latestMessageId));
+}
+
+function reactionKey({ identity, messageId, reactedAt, reaction }: Reaction): string {
+  return Arr.join([String(messageId), identity, reaction, reactedAt], " ");
+}
+
+function reactionKeysOf(event: Heard): readonly string[] {
+  if (!isInboxItem(event)) {
+    return [];
+  }
+  return Arr.map(event.item.newReactions ?? [], reactionKey);
+}
+
+function withPrinted(
+  keys: readonly string[],
+): (before: ReadonlySet<string>) => readonly [boolean, ReadonlySet<string>] {
+  return (before) => [Arr.some(keys, (key) => !before.has(key)), new Set([...before, ...keys])];
 }
 
 interface Resuming {
@@ -188,6 +213,14 @@ function source({ first, opened }: Resuming): Stream.Stream<Heard, CallFailure> 
     Effect.gen(function* resumable() {
       const unused = yield* Ref.make(Option.some(first));
       const lastSeen = yield* Ref.make(Option.none<MessageId>());
+      const printed = yield* Ref.make<ReadonlySet<string>>(new Set());
+      function isUnprinted(event: Heard): Effect.Effect<boolean> {
+        const keys = reactionKeysOf(event);
+        if (!Arr.isReadonlyArrayNonEmpty(keys)) {
+          return Effect.succeed(true);
+        }
+        return Ref.modify(printed, withPrinted(keys));
+      }
       const next = Effect.flatMap(
         Ref.getAndSet(unused, Option.none()),
         Option.match({
@@ -199,6 +232,7 @@ function source({ first, opened }: Resuming): Stream.Stream<Heard, CallFailure> 
         Stream.retry(reconnectBackoff),
         Stream.flattenIterable,
         Stream.tap((event) => Ref.update(lastSeen, lastSeenAfter(event))),
+        Stream.filterEffect(isUnprinted),
       );
     }),
   );

@@ -12,17 +12,19 @@ const nudgeEvent = sseEvent(NudgeEventSchema);
 
 const deactivationOfferEvent = sseEvent(DeactivationOfferEventSchema);
 
-function reactionItems({ caller }: StreamRequest): Connected<Inbox | Reactions> {
+function reactionItems({ caller, lastEventId }: StreamRequest): Connected<Inbox | Reactions> {
   return Effect.gen(function* subscribeToReactionItems() {
     const inbox = yield* Inbox;
     const reactions = yield* Reactions;
     const changed = yield* reactions.changed;
-    return Stream.fromSubscription(changed).pipe(
+    const live = Stream.fromSubscription(changed).pipe(
       Stream.filter(({ author, notified }) => notified && author === caller.name),
       Stream.mapEffect(({ reactions: { messageId } }) => inbox.reactionItemFor(caller, messageId)),
       Stream.flattenIterable,
-      Stream.mapEffect((item) => inboxItemEvent({ item, type: "inbox-item" })),
     );
+    const missed = Stream.flattenIterable(Stream.fromEffect(inbox.reactionItems(caller)));
+    const items = Option.match(lastEventId, { onNone: () => live, onSome: () => Stream.concat(missed, live) });
+    return Stream.mapEffect(items, (item) => inboxItemEvent({ item, type: "inbox-item" }));
   });
 }
 

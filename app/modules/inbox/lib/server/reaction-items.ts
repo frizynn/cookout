@@ -70,6 +70,32 @@ function itemsWithReactions<Item extends StoredItem>({ items, storage }: Countin
   );
 }
 
+function othersOn(
+  reactions: readonly Reaction[],
+  { author, id }: { readonly author: IdentityName; readonly id: MessageId },
+): readonly Reaction[] {
+  return Arr.filter(reactions, (reaction) => reaction.messageId === id && reaction.identity !== author);
+}
+
+function withHistoryReactions<Item extends StoredItem>({
+  author,
+  items,
+  storage,
+}: ForAuthor & Counting<Item>): Fails<readonly Item[]> {
+  const reacted = Arr.filter(items, (item) => item.reasons.includes("reaction"));
+  if (!Arr.isReadonlyArrayNonEmpty(reacted)) {
+    return Effect.succeed(items);
+  }
+  return Effect.map(storage.listReactions(Arr.map(reacted, (item) => item.message.id)), (reactions) =>
+    Arr.map(items, (item) => {
+      if (!item.reasons.includes("reaction")) {
+        return item;
+      }
+      return { ...item, newReactions: othersOn(reactions, { author, id: item.message.id }) };
+    }),
+  );
+}
+
 function seenUpTo({ author, storage, upTo }: ForAuthor & { readonly upTo: MessageId }): Fails<void> {
   return Effect.flatMap(storage.listUnseenReactions(author), (reactions) => {
     const ids = Arr.map(reactions, (reaction) => reaction.messageId);
@@ -80,4 +106,4 @@ function seenUpTo({ author, storage, upTo }: ForAuthor & { readonly upTo: Messag
   });
 }
 
-export { itemsWithReactions, reactionItemFor, seenUpTo, withReactionItems };
+export { itemsWithReactions, reactionItemFor, reactionItems, seenUpTo, withHistoryReactions, withReactionItems };
