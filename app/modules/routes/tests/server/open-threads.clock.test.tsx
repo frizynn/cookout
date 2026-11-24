@@ -1,11 +1,12 @@
 import { Clock, DateTime, Effect } from "effect";
 import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
+import { inPane, inSidebar } from "../regions.ts";
 import { listShows, openLive } from "../open-threads.ts";
 import { TestClock } from "effect/testing";
 import type { TestIdentity } from "../../../testing/server.ts";
 import { clockStoppedAt } from "../clock.ts";
-import { inPane } from "../regions.ts";
+import { fireEvent } from "@testing-library/react";
 import { openAt } from "../render.tsx";
 
 const CHANNEL = "quiet";
@@ -53,6 +54,44 @@ it.effect("a close by another identity drops a row live, and a reopen brings it 
     yield* answer(() => listShows({ channel: CHANNEL, texts: ["Second.", "First."] }));
 
     yield* answer(close);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+const sameMomentThreads = Effect.gen(function* postInOneMoment() {
+  const cookout = yield* TestCookout;
+  const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+  const grace = yield* cookout.createIdentity("grace", { kind: "human" });
+  yield* answer(() => cookout.client.createChannel({ name: CHANNEL }));
+  const { message: asked } = yield* answer(() =>
+    ada.client.createMessage({ channel: CHANNEL, text: "Deploy at noon?" }),
+  );
+  yield* Effect.andThen(post(ada, "@grace can you look?"), post(ada, "Nobody asked you."));
+  yield* post(grace, "My own question.");
+  yield* answer(() => grace.client.createMessage({ channel: CHANNEL, replyTo: asked.id, text: "Yes." }));
+  return grace;
+});
+
+it.effect("the page lists the reader's open threads stalest first, though all were posted in one moment", () =>
+  Effect.gen(function* stalestFirst() {
+    const grace = yield* sameMomentThreads;
+    openAt({ client: grace.client, hash: "#/threads" });
+    yield* answer(() =>
+      listShows({ channel: CHANNEL, texts: ["@grace can you look?", "My own question.", "Deploy at noon?"] }),
+    );
+    const current = [
+      inPane().getByRole("link", { name: "Involving me" }).getAttribute("aria-current"),
+      inSidebar().getByRole("link", { name: "Open threads" }).getAttribute("aria-current"),
+    ];
+    fireEvent.click(inPane().getByRole("link", { name: "All" }));
+
+    yield* answer(() =>
+      listShows({
+        channel: CHANNEL,
+        texts: ["@grace can you look?", "Nobody asked you.", "My own question.", "Deploy at noon?"],
+      }),
+    );
+
+    expect(current).toStrictEqual(["page", "page"]);
   }).pipe(Effect.provide(testCookout())),
 );
 
