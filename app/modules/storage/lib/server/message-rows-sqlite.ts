@@ -1,5 +1,6 @@
 import { Array as Arr, Effect, Order, Predicate, Schema } from "effect";
 import type { Author, Closing, Message } from "../../../messages/index.ts";
+import type { DialectForms, SqlDatabase } from "./adapters/sql-database.ts";
 import type { Harness, IdentityName, Owner } from "../../../identities/index.ts";
 import { isHarness, isIdentityName, isOwner } from "../../../identities/index.ts";
 import { isMessageId, shownRepliers } from "../../../messages/index.ts";
@@ -50,17 +51,34 @@ interface DataField {
 const NO_DATA: DataField = {};
 const NO_HARNESS = {};
 
-const MESSAGE_COLUMNS = `id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, harness,
+const SHOWN_REPLIERS = String(shownRepliers);
+
+const SQLITE_REPLIERS = `(SELECT json_group_array(json_object('name', name, 'owner', owner, 'last', last)) FROM (
+    SELECT replies.author_name AS name, replies.author_owner AS owner, max(replies.id) AS last
+    FROM messages AS replies WHERE replies.reply_to = messages.id
+    GROUP BY replies.author_name ORDER BY last DESC LIMIT ${SHOWN_REPLIERS}
+  ))`;
+
+const POSTGRES_REPLIERS = `(SELECT coalesce(jsonb_agg(jsonb_build_object('name', name, 'owner', owner, 'last', last)), '[]')
+  FROM (SELECT name, owner, last FROM (
+    SELECT DISTINCT ON (replies.author_name) replies.author_name AS name, replies.author_owner AS owner,
+      replies.id AS last
+    FROM messages AS replies WHERE replies.reply_to = messages.id
+    ORDER BY replies.author_name, replies.id DESC
+  ) AS latest_per_replier ORDER BY last DESC LIMIT ${SHOWN_REPLIERS}) AS shown_repliers)`;
+
+const REPLIERS: DialectForms<string> = { postgres: POSTGRES_REPLIERS, sqlite: SQLITE_REPLIERS };
+
+function messageColumns(db: SqlDatabase): string {
+  const repliers = REPLIERS[db.dialect];
+  return `id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, harness,
   closed_at, closed_by,
   (SELECT count(*) FROM messages AS replies WHERE replies.reply_to = messages.id) AS reply_count,
   (SELECT max(replies.id) FROM messages AS replies WHERE replies.reply_to = messages.id) AS latest_reply_id,
   (SELECT replies.created_at FROM messages AS replies WHERE replies.reply_to = messages.id
     ORDER BY replies.id DESC LIMIT 1) AS latest_reply_at,
-  (SELECT json_group_array(json_object('name', name, 'owner', owner, 'last', last)) FROM (
-    SELECT replies.author_name AS name, replies.author_owner AS owner, max(replies.id) AS last
-    FROM messages AS replies WHERE replies.reply_to = messages.id
-    GROUP BY replies.author_name ORDER BY last DESC LIMIT ${String(shownRepliers)}
-  )) AS repliers`;
+  ${repliers} AS repliers`;
+}
 
 interface StoredAuthor {
   readonly name: IdentityName;
@@ -135,4 +153,4 @@ function dataText(message: NewMessage): Fails<string | null> {
   return Schema.encodeEffect(JsonText)(message.data).pipe(Effect.mapError(unreadable));
 }
 
-export { MESSAGE_COLUMNS, MentionsText, MessageIdColumn, dataText, toMessage };
+export { messageColumns, MentionsText, MessageIdColumn, dataText, toMessage };

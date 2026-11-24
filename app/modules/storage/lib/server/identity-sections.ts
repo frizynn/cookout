@@ -6,7 +6,7 @@ import { Effect } from "effect";
 import type { MemoryState } from "./memory-state.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { memoryLoginRequests } from "./login-requests-memory.ts";
-import { sqliteIdentityDeletes } from "./identity-owners.ts";
+import { sqlIdentityDeletes } from "./identity-owners.ts";
 import { sqliteLoginRequests } from "./login-requests-sqlite.ts";
 
 type MemoryIdentitySections = ReturnType<typeof memoryIdentities> & SectionsBesideIdentities;
@@ -44,7 +44,7 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
 function sqliteIdentitySections(db: SqliteDatabase): IdentitySections {
   return {
     ...sqlIdentities(db),
-    ...sqliteIdentityDeletes(db),
+    ...sqlIdentityDeletes(db),
     ...sqliteLoginRequests(db),
     ...sqlitePresence(db),
     ...sqliteOfflineAlerts(db),

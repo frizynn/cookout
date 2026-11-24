@@ -3,7 +3,7 @@ import type { Channel, ChannelName } from "../../../channels/index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { MemoryState } from "./memory-state.ts";
-import type { SqliteDatabase } from "./adapters/sqlite.ts";
+import type { SqlDatabase } from "./adapters/sql-database.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isChannelName } from "../../../channels/index.ts";
 import { unreadable } from "./errors.ts";
@@ -68,7 +68,7 @@ function toChannel(row: unknown): Fails<Channel> {
   );
 }
 
-function insert(db: SqliteDatabase, channel: Channel): Fails<void> {
+function insert(db: SqlDatabase, channel: Channel): Fails<void> {
   if (typeof channel.description === "string") {
     return db.run(
       "INSERT INTO channels (name, description, created_at) VALUES (?, ?, ?)",
@@ -97,7 +97,7 @@ const CHANNEL_DELETES: readonly string[] = [
   "DELETE FROM channels WHERE name = ?",
 ];
 
-function sqliteChannels(db: SqliteDatabase): ChannelsSection {
+function sqlChannels(db: SqlDatabase): ChannelsSection {
   function find(name: ChannelName): Fails<Channel | undefined> {
     return db.get(`SELECT ${CHANNEL_COLUMNS} FROM channels WHERE name = ?`, name).pipe(
       Effect.flatMap((row) => {
@@ -141,4 +141,4 @@ function sqliteChannels(db: SqliteDatabase): ChannelsSection {
   };
 }
 
-export { CHANNEL_COLUMNS, type ChannelsSection, type MemoryChannelsSection, memoryChannels, sqliteChannels, toChannel };
+export { CHANNEL_COLUMNS, type ChannelsSection, type MemoryChannelsSection, memoryChannels, sqlChannels, toChannel };
