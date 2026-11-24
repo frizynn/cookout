@@ -154,7 +154,7 @@
  * active descendant, where the arrows move it, Enter or Tab picks it and Escape closes the list; `SubmitButton` sends
  * it, and `SendButton` is its paper-plane icon form, named and tooltipped by `label`; `Suggestions` is a named listbox
  * of options under a box, such as mentions or commands (each with any muted detail), one selected, which leaves the box
- * focused even when a pointer picks one; it sits in the overlay layer, above all in the pane. `ComboboxField` is a
+ * focused even when a pointer picks one; it floats above the box, out of its layout, over all in the pane. `ComboboxField` is a
  * named search input (`box` its ID) that is a combobox controlling the listbox `list`, its option at `active` the
  * active one while `expanded`; `Listbox` is the named listbox (`list` its ID) both draw, of options in optional named
  * groups, drawn by its children, the one at `highlighted` selected (scrolled into view in the `results` look); pressing

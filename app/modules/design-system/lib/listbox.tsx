@@ -45,7 +45,8 @@ interface Drawn<Option extends ListboxOption> {
 
 const LOOKS = {
   menu: {
-    listbox: "z-50 flex flex-col rounded-md border bg-background py-1 text-sm",
+    listbox:
+      "absolute bottom-full left-0 z-50 mb-2 flex min-w-56 flex-col rounded-md border bg-background py-1 text-sm shadow-lg",
     option: "flex w-full cursor-pointer items-baseline gap-2 px-3 py-1.5 text-left text-foreground hover:bg-muted",
     scrolls: false,
   },
