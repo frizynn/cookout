@@ -286,4 +286,4 @@ function migratePostgres(db: PostgresDatabase): Effect.Effect<void, StorageUnava
   );
 }
 
-export { migratePostgres, postgresMigrations };
+export { migratePostgres };

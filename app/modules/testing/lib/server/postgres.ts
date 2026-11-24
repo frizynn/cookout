@@ -3,7 +3,6 @@ import { StorageUnavailable, postgresStorage } from "../../../storage/server.ts"
 import { PgClient } from "@effect/sql-pg";
 import { Reactivity } from "effect/reactivity";
 import type { Scope } from "effect";
-import type { Storage } from "../../../storage/server.ts";
 import { inject } from "vitest";
 
 type Run = (statement: string) => Effect.Effect<readonly unknown[], StorageUnavailable>;
@@ -123,8 +122,4 @@ const freshPostgresDatabase = scopedDatabase(TEMPLATE);
 
 const emptyPostgresDatabase = scopedDatabase(EMPTY_TEMPLATE);
 
-const freshPostgresStorage: Layer.Layer<Storage, StorageUnavailable> = Layer.unwrap(
-  Effect.map(freshPostgresDatabase, postgresStorage),
-);
-
-export { emptyPostgresDatabase, freshPostgresStorage, onPostgresDatabase };
+export { emptyPostgresDatabase, freshPostgresDatabase, onPostgresDatabase };

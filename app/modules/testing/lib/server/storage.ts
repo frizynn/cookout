@@ -1,7 +1,7 @@
 import { Context, Effect, Exit, FileSystem, Layer, Path, Predicate, Scope } from "effect";
-import { Storage, StorageUnavailable, memoryStorage, sqliteStorage } from "../../../storage/server.ts";
+import { Storage, StorageUnavailable, memoryStorage, postgresStorage, sqliteStorage } from "../../../storage/server.ts";
 import { fixtureOwnerName, identityFixture } from "./identities.ts";
-import { freshPostgresStorage } from "./postgres.ts";
+import { freshPostgresDatabase } from "./postgres.ts";
 import { inject } from "vitest";
 import { layer as nodeServices } from "@effect/platform-node/NodeServices";
 import { tokenHash } from "../../../identities/index.ts";
@@ -40,6 +40,10 @@ function withFixtureOwner<Failure>(
     ),
   );
 }
+
+const freshPostgresStorage: Layer.Layer<Storage, StorageUnavailable> = Layer.unwrap(
+  Effect.map(freshPostgresDatabase, postgresStorage),
+);
 
 const postgresLayer: StorageLayer = {
   adapter: "postgres",
