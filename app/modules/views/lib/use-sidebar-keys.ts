@@ -82,4 +82,4 @@ function useSidebarKeys(props: SidebarKeys): Said {
   return said;
 }
 
-export { type Said, useSidebarKeys };
+export { useSidebarKeys };
