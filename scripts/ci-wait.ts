@@ -8,6 +8,7 @@ const SCRIPT = "ci:wait";
 const EXIT_SUCCESS = 0;
 const NONE = 0;
 const SHORT_SHA = 12;
+const EXIT_CUT_OFF = 3;
 
 const verdict = verdictOnExit("arguments");
 const { values } = parseArgs({ options: { branch: { type: "string" }, sha: { type: "string" } } });
@@ -40,7 +41,11 @@ const step = waitForCi({
   subject: sha.slice(NONE, SHORT_SHA),
 });
 
-if (step.kind === "stopped") {
+if (step.kind === "stopped" && step.cutOff === true) {
+  verdict.failingAt(`${step.jobs.join(", ")} cut off at its time limit`);
+  console.error(`${SCRIPT}: ${step.reason}`);
+  process.exitCode = EXIT_CUT_OFF;
+} else if (step.kind === "stopped") {
   verdict.failingAt(failedJobsOr({ jobs: step.jobs, step: "waiting for the Check run" }));
   fail(SCRIPT, step.reason);
 }
