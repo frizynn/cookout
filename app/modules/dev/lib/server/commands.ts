@@ -41,11 +41,7 @@ const routineCommand = Command.make("fake-routine", {}, () =>
     yield* printLine({ ...routine, message: "The fake routine answers every fire with sessionUrl. Ctrl-C stops it." });
     return yield* Effect.never;
   }).pipe(Effect.scoped),
-).pipe(
-  Command.withDescription(
-    "Start a fake routine fire URL for COOKOUT_ROUTINE_FIRE_URL, so /spawn-agent can be tried without a real routine.",
-  ),
-);
+).pipe(Command.withDescription("Start a fake routine fire URL, so a trigger URL can be tried without a real routine."));
 
 function connection(): Effect.Effect<BoardConnection, SeedFailure> {
   return Effect.gen(function* readConnection() {

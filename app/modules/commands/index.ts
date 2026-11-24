@@ -101,9 +101,8 @@ export interface CommandWithSecretResponse {
 }
 
 /**
- * The answer to `GET /v1/commands`: every command, sorted by name, the registered ones and the built-in ones the server
- * handles itself (`/spawn-agent`), so every client discovers both the same way. A built-in command carries
- * `builtIn: true` and no `url`.
+ * The answer to `GET /v1/commands`: every command, sorted by name. The server lists no built-in command since
+ * `/spawn-agent` was removed (mattpocock/cookout#381); a built-in command would carry `builtIn: true` and no `url`.
  */
 export interface ListCommandsResponse {
   readonly commands: readonly Command[];
@@ -122,16 +121,6 @@ export interface CallCommandResponse {
   readonly threadId: MessageId;
 }
 
-/**
- * The command the server handles itself (mattpocock/cookout#231, provisional name): `/spawn-agent` with
- * `{ name, task }` creates an agent the caller owns, described by the task, and starts a remote Claude Code session
- * that joins as it, through the routine `COOKOUT_ROUTINE_FIRE_URL` names. Its replies post as the agent `spawn-agent`.
- */
-export const spawnAgentCommandName = "spawn-agent";
-
-/** The names of the built-in commands. No registered command can take one. */
-export const builtInCommandNames: readonly string[] = [spawnAgentCommandName];
-
 /** `GET /v1/commands` (any identity) and `POST /v1/commands` (admin). */
 export const commandsPath = "/v1/commands";
 
@@ -142,7 +131,7 @@ export const commandCallsPath = "/v1/commands/:name/calls";
 export const commandSecretPath = "/v1/commands/:name/secret";
 
 /**
- * The codes the command routes refuse with: a name in use, by a registered or a built-in command (409), a name that is a human's (409), and a call to, or a
+ * The codes the command routes refuse with: a name in use by a registered command (409), a name that is a human's (409), and a call to, or a
  * secret rotation of, a command that doesn't exist (404).
  */
 export const commandErrorCodes = ["command_exists", "handler_not_agent", "command_not_found"] as const;

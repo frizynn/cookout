@@ -86,21 +86,6 @@ export const adminName: Config.Config<IdentityName> = Config.schema(AdminNameSch
   Config.withDefault(firstAdminName),
 );
 
-/**
- * `COOKOUT_ROUTINE_FIRE_URL`: the fire URL of the Claude Code routine `/spawn-agent` starts a session with
- * (mattpocock/cookout#231). Empty counts as unset, and spawning is then not set up on the board.
- */
-export const routineFireUrl = Config.String("COOKOUT_ROUTINE_FIRE_URL").pipe(Config.withDefault(""));
-
-/**
- * `COOKOUT_ROUTINE_TOKEN`: the bearer token of that routine's API trigger. Empty counts as unset, and spawning is
- * then not set up on the board. Never shown.
- */
-export const routineToken = Config.String("COOKOUT_ROUTINE_TOKEN").pipe(
-  Config.withDefault(""),
-  Config.map((value) => Redacted.make(value)),
-);
-
 /** `DATABASE_URL`: the Postgres database `cookout serve` uses over `COOKOUT_DB` (#330); empty is unset. Never shown. */
 export const databaseUrl = Config.schema(Schema.Redacted(Schema.String.check(isDatabaseUrl)), "DATABASE_URL").pipe(
   Config.withDefault(Redacted.make("")),
