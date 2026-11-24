@@ -121,3 +121,20 @@ it("ignores a recorded rerere resolution of a migrations list that drops v1's en
     postgres("BASE", "SEARCH", "ATTACHMENTS"),
   ]);
 });
+
+it("merges a migrations list both sides changed apart cleanly while another file stops the merge", {
+  timeout: 10_000,
+}, () => {
+  expect.hasAssertions();
+
+  const { other, work } = onV1WithBase();
+  repo(work).commit("the ticket", { ...lists("BASE", "ATTACHMENTS"), "notes.txt": "ticket\n" });
+  repo(other).push({ [SQLITE]: `// v1\n${sqlite("BASE")}\n`, "notes.txt": "v1\n" });
+
+  const stopped = repo(work).merge({ rules: mergeRules });
+
+  expect([stopped.ok, git(work, "show", `:${SQLITE}`)]).toStrictEqual([
+    false,
+    `// v1\n${sqlite("BASE", "ATTACHMENTS")}`,
+  ]);
+});
