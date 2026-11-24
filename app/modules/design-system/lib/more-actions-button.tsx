@@ -10,6 +10,7 @@ export function MoreActionsButton(): ReactNode {
       <button
         aria-label={TEXT.label}
         className="block rounded-md border bg-background px-1.5 py-0.5 text-muted-foreground shadow-sm hover:text-foreground focus-visible:text-foreground"
+        title={TEXT.label}
         type="button"
       >
         <DotsIcon />

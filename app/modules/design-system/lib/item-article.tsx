@@ -46,6 +46,7 @@ export function ItemArticle(parts: ItemArticleParts): ReactNode {
           onAction={handleAction}
           presence={message.presence}
           reactions={message.menu.reactions}
+          replyOnHover={message.replyOnHover}
           thread={hoverThread(message)}
           time={message.time}
         >
