@@ -1,5 +1,7 @@
 import type { Check, CiOnly } from "./lib/check-runner.ts";
 import { browserSkip, browserTestsFor } from "./lib/browser-selection.ts";
+import { changedLines, unchangedSince } from "./lib/changed-lines.ts";
+import { fetchedCoverageMap, ghCli } from "./lib/coverage-map-fetch.ts";
 import type { BrowserTests } from "./lib/browser-selection.ts";
 import { SUITE_LOCK_FILE } from "./lib/machine-lock.ts";
 import { TIMINGS_DIR } from "./lib/slowest-files.ts";
@@ -44,19 +46,31 @@ function lintScript(): readonly string[] {
 }
 
 const NONE = 0;
+const V1 = "origin/v1";
 
 function selectedBrowserTests(): BrowserTests {
   if (inCi || job !== "") {
     return { all: true, reason: "" };
   }
   const cwd = process.cwd();
-  return browserTestsFor({ changed: changedFiles({ base: "origin/v1", cwd }), cwd });
+  return browserTestsFor({
+    changed: changedFiles({ base: V1, cwd }),
+    coverage: () => fetchedCoverageMap({ base: V1, cwd, gh: ghCli(cwd) }),
+    cwd,
+    history: {
+      changedLines: (file) => changedLines({ base: V1, cwd, file }),
+      unchangedSince: (commit, file) => unchangedSince({ base: V1, commit, cwd, file }),
+    },
+  });
 }
 
 const browserTests = selectedBrowserTests();
 const browserSkipped = browserSkip(browserTests);
 
 function browserScript(): readonly string[] {
+  if (inCi && shard !== "") {
+    return ["browser:coverage", `--shard=${shard}`];
+  }
   if (shard !== "") {
     return ["browser", `--shard=${shard}`];
   }
