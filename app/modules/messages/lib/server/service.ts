@@ -163,6 +163,15 @@ function withAttachments(message: NewMessage, { attachments }: StoredFiles): New
   return message;
 }
 
+function answerOf(posting: PostMessage): (result: Appended) => Fails<MessageResponse> {
+  return (result) => {
+    if (result.status === "appended") {
+      return Effect.succeed({ message: result.message, unknownMentions: unknownMentionsIn(result.message) });
+    }
+    return Effect.fail(refusalOf(result.status, posting));
+  };
+}
+
 function postWith({ append, attaching, hub }: Posting) {
   return (author: Identity, message: PostMessage): Fails<MessageResponse> =>
     Effect.gen(function* postMessage() {
@@ -173,11 +182,10 @@ function postWith({ append, attaching, hub }: Posting) {
       const files = yield* attaching.store({ attachments, text: posting.text });
       const now = yield* DateTime.now;
       const stored = withAttachments(newMessage(author, posting, isoTimeOf(now)), files);
-      const result = yield* hub.appendThenPublish(append, stored).pipe(Effect.onError(() => files.remove));
-      if (result.status === "appended") {
-        return { message: result.message, unknownMentions: unknownMentionsIn(result.message) };
-      }
-      return yield* Effect.andThen(files.remove, Effect.fail(refusalOf(result.status, posting)));
+      return yield* hub.appendThenPublish(append, stored).pipe(
+        Effect.flatMap(answerOf(posting)),
+        Effect.onError(() => files.remove),
+      );
     });
 }
 

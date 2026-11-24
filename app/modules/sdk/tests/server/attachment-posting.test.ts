@@ -1,9 +1,10 @@
-import { Array as Arr, Effect, Option } from "effect";
+import { Array as Arr, Effect, Option, Record as Rec, String as Str } from "effect";
 import type { CookoutEvent, EventStream, NewAttachment } from "../../index.ts";
 import { TestCookout, answer, newMessageFixture, refusal, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import type { Attachment } from "../../../attachments/index.ts";
+import type { HttpResponse } from "../../../http/client.ts";
 import type { Scope } from "effect";
 import { isAttachmentId } from "../../../attachments/index.ts";
 import { request } from "../../../http/client.ts";
@@ -16,6 +17,8 @@ const OVER_MAXIMUM_BYTES = 10_000_001;
 const FILL = 7;
 const ONE = 1;
 const NONE = 0;
+const OVER_A_MEBIBYTE = 1_048_577;
+const OVER_LONGEST_NAME = 256;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 
 interface Board {
@@ -156,7 +159,7 @@ it.effect.each([
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("an attachment part that is not a file is refused as unnamed", () =>
+it.effect("an attachment part that is not a file, or whose name is over 255 characters, is refused as unnamed", () =>
   Effect.gen(function* unnamedPart() {
     const cookout = yield* TestCookout;
     const { ann } = yield* board(cookout);
@@ -173,7 +176,64 @@ it.effect("an attachment part that is not a file is refused as unnamed", () =>
       }),
     );
 
+    const longName = yield* refusal(() =>
+      ann.client.createMessage({
+        attachments: [file(Str.repeat(OVER_LONGEST_NAME)("n"))],
+        channel: "grill",
+        text: "x",
+      }),
+    );
+
     expect([refused.status, refused.json]).toMatchObject([BAD_REQUEST, { error: { code: "attachment_unnamed" } }]);
+    expect(longName).toMatchObject({ code: "attachment_unnamed", status: BAD_REQUEST });
+  }).pipe(Effect.provide(testCookout())),
+);
+
+interface RawPost {
+  readonly body?: FormData;
+  readonly headers?: Readonly<Record<string, string>>;
+}
+
+function rawPost(cookout: TestCookoutService, who: TestIdentity): (sent: RawPost) => Effect.Effect<HttpResponse> {
+  return (sent) =>
+    answer(() =>
+      request({
+        ...sent,
+        baseUrl: cookout.url,
+        headers: { authorization: `Bearer ${who.token}`, ...sent.headers },
+        method: "POST",
+        path: "/v1/messages",
+      }),
+    );
+}
+
+function formOf(parts: Readonly<Record<string, string | Blob>>): FormData {
+  const form = new FormData();
+  for (const [key, value] of Rec.toEntries(parts)) {
+    form.append(key, value);
+  }
+  return form;
+}
+
+it.effect("a multipart post with no message part, a message part over 1 MiB or a broken body is refused", () =>
+  Effect.gen(function* brokenMultipart() {
+    const cookout = yield* TestCookout;
+    const { ann } = yield* board(cookout);
+    const noMessage = formOf({ attachment: new File([new Uint8Array(FILL)], "a.bin"), note: "ignored" });
+    const hugeMessage = formOf({ message: Str.repeat(OVER_A_MEBIBYTE)("x") });
+    const noBoundary = { body: formOf({ message: "{}" }), headers: { "content-type": "multipart/form-data" } };
+    const answers = yield* Effect.forEach(
+      [{ body: noMessage }, { body: hugeMessage }, noBoundary, {}],
+      rawPost(cookout, ann),
+      ONE_AT_A_TIME,
+    );
+
+    expect(Arr.map(answers, ({ json, status }) => [status, json])).toMatchObject([
+      [BAD_REQUEST, { error: { code: "invalid_request" } }],
+      [TOO_LARGE, { error: { code: "body_too_large" } }],
+      [BAD_REQUEST, { error: { code: "invalid_request" } }],
+      [BAD_REQUEST, { error: {} }],
+    ]);
   }).pipe(Effect.provide(testCookout())),
 );
 

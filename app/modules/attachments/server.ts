@@ -74,13 +74,11 @@ const attachmentNotFound: Refusal = {
   status: NOT_FOUND,
 };
 
-function tooLarge(name: string): Refusal {
-  return {
-    code: "attachment_too_large",
-    message: `${name} is over ${megabytes}: each attachment can be at most ${megabytes} (${String(attachmentLimits.maximumBytes)} bytes).`,
-    status: TOO_LARGE,
-  };
-}
+const tooLarge: Refusal = {
+  code: "attachment_too_large",
+  message: `An attachment is over ${megabytes}: each attachment can be at most ${megabytes} (${String(attachmentLimits.maximumBytes)} bytes).`,
+  status: TOO_LARGE,
+};
 
 function empty(name: string): Refusal {
   return {
@@ -108,9 +106,6 @@ function refusalOf(attachment: NewAttachment): Option.Option<Refusal> {
   if (attachment.bytes.length === NO_BYTES) {
     return Option.some(empty(attachment.name));
   }
-  if (attachment.bytes.length > attachmentLimits.maximumBytes) {
-    return Option.some(tooLarge(attachment.name));
-  }
   return Option.none();
 }
 
@@ -122,9 +117,6 @@ interface Putting {
 function postRefusal(post: Post): Option.Option<Refusal> {
   if (!hasContent(post)) {
     return Option.some(messageEmpty);
-  }
-  if (post.attachments.length > attachmentLimits.maximumCount) {
-    return Option.some(tooMany);
   }
   return Arr.findFirst(post.attachments, (attachment) => Option.isSome(refusalOf(attachment))).pipe(
     Option.flatMap(refusalOf),
@@ -219,7 +211,7 @@ const assetRoute: Route<Storage | AssetStore> = {
 };
 
 /** The refusal of a file over the size limit, for a multipart parse that stopped at the limit. */
-export const fileTooLarge: Refusal = tooLarge("An attachment");
+export const fileTooLarge: Refusal = tooLarge;
 
 /** The refusal of a part with no file name, for a multipart parse. */
 export const attachmentUnnamed: Refusal = unnamed;
@@ -243,7 +235,10 @@ export interface StoredFiles {
   readonly remove: Effect.Effect<void>;
 }
 
-/** Checks a post's text and files against the limits and the content rule, then puts the files' bytes in the asset store. */
+/**
+ * Checks a post's text and its files' names and bytes, then puts the files' bytes in the asset store. The size and
+ * count limits are the multipart parse's (`fileTooLarge`, `tooManyAttachments`), which stops at them first.
+ */
 export interface Attaching {
   readonly store: (post: Post) => Effect.Effect<StoredFiles, Refusal | StorageUnavailable>;
 }

@@ -1,10 +1,14 @@
-import { Array as Arr, Effect, Option, String as Str } from "effect";
+import { Array as Arr, Effect, Layer, Option, String as Str } from "effect";
+import { HttpServer, HttpServerResponse } from "effect/http";
 import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
+import { nodeHttpServer, serverUrl } from "../../../http/server.ts";
 import { request, requestBytes } from "../../../http/client.ts";
 import type { Attachment } from "../../index.ts";
 import type { HttpResponse } from "../../../http/client.ts";
+import { createCookoutClient } from "../../index.ts";
+import { isAttachmentId } from "../../../attachments/index.ts";
 import { sessionPath } from "../../../identities/index.ts";
 
 const FIRST = 0;
@@ -186,9 +190,13 @@ it.effect("no credentials and a wrong token are refused, and an unknown ID is 40
     const anonymous = yield* refused(cookout, attachment.id, {});
     const wrong = yield* refused(cookout, attachment.id, { authorization: "Bearer cookout_wrong" });
     const missing = yield* refused(cookout, "no-such-attachment", { authorization: `Bearer ${ann.token}` });
+    const notAnId = yield* refused(cookout, "not an id!", { authorization: `Bearer ${ann.token}` });
 
     expect([anonymous.status, wrong.status, missing.status]).toStrictEqual([UNAUTHORIZED, UNAUTHORIZED, NOT_FOUND]);
-    expect(missing.json).toMatchObject({ error: { code: "attachment_not_found" } });
+    expect([missing.json, notAnId.json]).toMatchObject([
+      { error: { code: "attachment_not_found" } },
+      { error: { code: "attachment_not_found" } },
+    ]);
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -215,4 +223,20 @@ it.effect("the session cookie a browser holds reads an attachment too", () =>
 
     expect(answered.status).toBe(OK);
   }).pipe(Effect.provide(testCookout())),
+);
+
+const bareServer = HttpServer.serve(Effect.succeed(HttpServerResponse.raw(HTML))).pipe(
+  Layer.provideMerge(nodeHttpServer({ host: "127.0.0.1", port: 0 })),
+);
+
+it.effect("from a server that sends no type and no file name, the SDK reads the bytes with both empty", () =>
+  Effect.gen(function* bareAnswer() {
+    const server = yield* Layer.build(bareServer);
+    const url = yield* Effect.provideContext(serverUrl, server);
+    const client = createCookoutClient({ env: {}, token: "cookout_any", url });
+    const id = Option.getOrThrow(Option.liftPredicate("a1", isAttachmentId));
+    const read = yield* answer(() => client.getAttachment(id));
+
+    expect(read).toStrictEqual({ bytes: HTML, contentType: "", name: "" });
+  }).pipe(Effect.scoped),
 );

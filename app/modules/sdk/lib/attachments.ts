@@ -6,19 +6,12 @@ import type { PostMessageRequest } from "../../messages/index.ts";
 import { sendForBytes } from "./request.ts";
 
 const NONE = 0;
-const NAMES = { full: /filename\*=UTF-8''(?<name>[^;]+)/iu, plain: /filename="(?<name>[^"]*)"/iu } as const;
-
-function named(which: keyof typeof NAMES, text: string): string {
-  const found = NAMES[which].exec(text);
-  if (found === null) {
-    return "";
-  }
-  const { name = "" } = found.groups ?? {};
-  return name;
-}
+const FULL_NAME = "filename*=UTF-8''";
+const LATER_PARAMETERS = /;.*$/su;
 
 function nameIn(disposition: string): string {
-  return decodeURIComponent(named("full", disposition)) || named("plain", disposition);
+  const [, encoded = ""] = disposition.split(FULL_NAME);
+  return decodeURIComponent(encoded.replace(LATER_PARAMETERS, ""));
 }
 
 export interface CreateMessageRequest extends PostMessageRequest {

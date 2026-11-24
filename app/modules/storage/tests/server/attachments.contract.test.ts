@@ -107,3 +107,16 @@ it.effect("asset store (disk): each file is named by its attachment ID alone, ne
     expect(files).toStrictEqual([notes.id]);
   }).pipe(Effect.scoped, Effect.provide(nodeServices)),
 );
+
+it.effect("asset store (disk): a put that can't be written fails as unavailable and leaves no partial file", () =>
+  Effect.gen(function* putFails() {
+    const fs = yield* FileSystem.FileSystem;
+    const folder = `${yield* freshDatabasePath}-assets`;
+    const assets = yield* Effect.provide(Effect.service(AssetStore), diskAssetStore(folder));
+    yield* fs.remove(folder, { recursive: true });
+    const failed = yield* Effect.flip(assets.put(notes.id, new Uint8Array(NOTES_SIZE).fill(BYTE)));
+    const left = yield* fs.exists(folder);
+
+    expect([failed, left]).toMatchObject([{ _tag: "StorageUnavailable" }, false]);
+  }).pipe(Effect.scoped, Effect.provide(nodeServices)),
+);

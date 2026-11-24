@@ -16,6 +16,7 @@ import { isAttachmentId } from "../../../attachments/index.ts";
 
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const FAILED = 1;
+const OVER_MAXIMUM_BYTES = 10_000_001;
 const NOTES = "the notes";
 const LOG = "a log line";
 const SHOT: Attachment = {
@@ -44,11 +45,13 @@ function desk(cookout: TestCookoutService): Effect.Effect<Desk, never, CommandLi
         ["notes.txt", NOTES],
         ["log.txt", LOG],
         ["empty.txt", ""],
+        ["big.bin", ""],
       ] as const,
       ([name, text]) => Effect.orDie(fs.writeFileString(path.join(folder, name), text)),
       ONE_AT_A_TIME,
     );
     yield* Effect.orDie(fs.makeDirectory(path.join(folder, "out")));
+    yield* Effect.orDie(fs.truncate(path.join(folder, "big.bin"), OVER_MAXIMUM_BYTES));
     const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: ann.token, COOKOUT_URL: cookout.url };
     return { ann, env, folder };
   });
@@ -103,25 +106,31 @@ it.effect("cookout reads a message with attachments and no text, which the serve
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("cookout message post refuses a missing file, an empty one and eleven files before sending anything", () =>
-  Effect.gen(function* refusedLocally() {
-    const cookout = yield* TestCookout;
-    const { ann, env, folder } = yield* desk(cookout);
-    const eleven = Array.from({ length: 11 }, () => ["--attach", `${folder}/notes.txt`]).flat();
-    const results = yield* runAll(env, [
-      ["message", "post", "grill", "hi", "--attach", `${folder}/nope.txt`],
-      ["message", "post", "grill", "hi", "--attach", `${folder}/empty.txt`],
-      ["message", "post", "grill", "hi", ...eleven],
-    ]);
-    const page = yield* answer(() => ann.client.listMessages("grill"));
+it.effect(
+  "cookout message post refuses a missing, empty, unreadable or over-size file and eleven files before sending",
+  () =>
+    Effect.gen(function* refusedLocally() {
+      const cookout = yield* TestCookout;
+      const { ann, env, folder } = yield* desk(cookout);
+      const eleven = Array.from({ length: 11 }, () => ["--attach", `${folder}/notes.txt`]).flat();
+      const results = yield* runAll(env, [
+        ["message", "post", "grill", "hi", "--attach", `${folder}/nope.txt`],
+        ["message", "post", "grill", "hi", "--attach", `${folder}/empty.txt`],
+        ["message", "post", "grill", "hi", ...eleven],
+        ["message", "post", "grill", "hi", "--attach", `${folder}/big.bin`],
+        ["message", "post", "grill", "hi", "--attach", `${folder}/out`],
+      ]);
+      const page = yield* answer(() => ann.client.listMessages("grill"));
 
-    expect(results).toMatchObject([
-      { exitCode: FAILED, stderrJson: { error: { code: "usage" } } },
-      { exitCode: FAILED, stderrJson: { error: { code: "attachment_empty" } } },
-      { exitCode: FAILED, stderrJson: { error: { code: "too_many_attachments" } } },
-    ]);
-    expect(page.messages).toStrictEqual([]);
-  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+      expect(results).toMatchObject([
+        { exitCode: FAILED, stderrJson: { error: { code: "usage" } } },
+        { exitCode: FAILED, stderrJson: { error: { code: "attachment_empty" } } },
+        { exitCode: FAILED, stderrJson: { error: { code: "too_many_attachments" } } },
+        { exitCode: FAILED, stderrJson: { error: { code: "attachment_too_large" } } },
+        { exitCode: FAILED, stderrJson: { error: { code: "usage" } } },
+      ]);
+      expect(page.messages).toStrictEqual([]);
+    }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
 it.effect(
@@ -203,4 +212,46 @@ it.effect("cookout asset get of an unknown ID is refused, and writes nothing", (
       { exitCode: FAILED, stderrJson: { error: { code: "usage" } } },
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+function inFolder(folder: string): Effect.Effect<void, never, Scope.Scope> {
+  return Effect.acquireRelease(
+    Effect.sync(() => {
+      const before = process.cwd();
+      process.chdir(folder);
+      return before;
+    }),
+    (before) =>
+      Effect.sync(() => {
+        process.chdir(before);
+      }),
+  );
+}
+
+it.effect(
+  "cookout asset get with no -o writes the attachment's name in the current folder, and fails on no folder",
+  () =>
+    Effect.gen(function* getHere() {
+      const cookout = yield* TestCookout;
+      const { ann, env, folder } = yield* desk(cookout);
+      const bytes = new TextEncoder().encode(NOTES);
+      const { message } = yield* answer(() =>
+        ann.client.createMessage({ attachments: [{ bytes, name: "notes.txt" }], channel: "grill", text: "files" }),
+      );
+      const [id = ""] = Arr.map(message.attachments ?? [], (attachment) => attachment.id);
+      yield* inFolder(`${folder}/out`);
+      const results = yield* runAll(env, [
+        ["asset", "get", id],
+        ["asset", "get", id, "-o", `${folder}/missing/notes.txt`],
+      ]);
+      const written = yield* Effect.orDie(
+        Effect.flatMap(FileSystem.FileSystem, (fs) => fs.readFileString(`${folder}/out/notes.txt`)),
+      );
+
+      expect(results).toMatchObject([
+        { exitCode: 0, stdoutJson: { path: "notes.txt" } },
+        { exitCode: FAILED, stderrJson: { error: { code: "usage" } } },
+      ]);
+      expect(written).toBe(NOTES);
+    }).pipe(Effect.scoped, Effect.provide([testCookout(), commandLineServices])),
 );

@@ -1,6 +1,6 @@
 import { Argument, Command, Flag } from "effect/cli";
-import { Array as Arr, Effect, FileSystem, Option, Path, String as Str } from "effect";
 import type { AttachmentBytes, AttachmentId, NewAttachment } from "../../../sdk/index.ts";
+import { Effect, FileSystem, Option, Path, String as Str } from "effect";
 import { answered, printLine, refused } from "./output.ts";
 import { attachmentLimits, isAttachmentId } from "../../../attachments/index.ts";
 import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
@@ -11,7 +11,7 @@ import { callServer } from "./adapters/sdk.ts";
 
 const NO_BYTES = 0;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
-const SEPARATORS = /[/\\]/u;
+const UP_TO_LAST_SEPARATOR = /^.*[/\\]/su;
 const NOT_A_NAME = new Set(["", ".", ".."]);
 
 type Local<Value> = Effect.Effect<Value, CallFailure, AgentSessionStateNeeds>;
@@ -75,11 +75,18 @@ function readAttachments(files: readonly string[]): Local<readonly NewAttachment
 }
 
 function safeName(name: string, attachmentId: AttachmentId): string {
-  const base = Option.getOrElse(Arr.last(Str.split(SEPARATORS)(name)), () => "");
+  const base = Str.replace(UP_TO_LAST_SEPARATOR, "")(name);
   if (NOT_A_NAME.has(base)) {
     return attachmentId;
   }
   return base;
+}
+
+function writeFlag(force: boolean): "w" | "wx" {
+  if (force) {
+    return "w";
+  }
+  return "wx";
 }
 
 function targetFor(chosen: string, named: string): Local<string> {
@@ -105,11 +112,15 @@ function saved({ attachmentId, force, output, read }: Download): Local<Readonly<
       Option.getOrElse(output, () => named),
       named,
     );
-    const taken = yield* fs.exists(target).pipe(Effect.orElseSucceed(() => false));
-    if (taken && !force) {
-      return yield* Effect.fail(usage(`${target} already exists: pass --force to overwrite it.`));
-    }
-    yield* fs.writeFile(target, read.bytes).pipe(Effect.mapError(() => usage(`${target} can't be written.`)));
+    yield* fs
+      .writeFile(target, read.bytes, { flag: writeFlag(force) })
+      .pipe(
+        Effect.catchReasons(
+          "PlatformError",
+          { AlreadyExists: () => Effect.fail(usage(`${target} already exists: pass --force to overwrite it.`)) },
+          () => Effect.fail(usage(`${target} can't be written.`)),
+        ),
+      );
     return { contentType: read.contentType, id: attachmentId, name: read.name, path: target, size: read.bytes.length };
   });
 }

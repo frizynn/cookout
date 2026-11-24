@@ -87,6 +87,10 @@ function withPart(
   return Effect.succeed(collected);
 }
 
+function refusedTooLarge(): Effect.Effect<never, Refusal> {
+  return Effect.fail(postTooLarge);
+}
+
 const isMultipart = Effect.map(HttpServerRequest.HttpServerRequest, (request) =>
   Str.startsWith(MULTIPART)(Str.toLowerCase(request.headers["content-type"] ?? "")),
 );
@@ -98,8 +102,8 @@ const multipartPost = Effect.gen(function* readMultipartPost() {
     Effect.catchReasons(
       "MultipartError",
       {
-        BodyTooLarge: () => Effect.fail(postTooLarge),
-        FieldTooLarge: () => Effect.fail(postTooLarge),
+        BodyTooLarge: refusedTooLarge,
+        FieldTooLarge: refusedTooLarge,
         FileTooLarge: () => Effect.fail(fileTooLarge),
       },
       () => Effect.fail(malformed),
