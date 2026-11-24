@@ -1,3 +1,4 @@
+import { field, list, parseJson } from "./json.ts";
 import type { Page } from "@playwright/test";
 
 type Theme = "light" | "dark";
@@ -11,6 +12,7 @@ interface Screen {
   readonly narrow?: boolean;
   readonly admin?: boolean;
   readonly liveDown?: boolean;
+  readonly nudge?: boolean;
   readonly history?: "more" | "loading";
 }
 
@@ -35,10 +37,12 @@ interface TakeScreenshots {
 }
 
 const THEMES: readonly Theme[] = ["light", "dark"];
+const NUDGE_TEXT = "Quiet for 3 days: close it, or follow up?";
 
 const SCREENS: readonly Screen[] = [
   { hash: "#/inbox", name: "inbox", text: "Thanks, both of you." },
   { hash: "#/inbox", history: "more", name: "inbox-more", text: "Show 50 earlier" },
+  { hash: "#/inbox", name: "inbox-nudge", nudge: true, text: NUDGE_TEXT },
   { click: "Show 50 earlier", hash: "#/inbox", history: "loading", name: "inbox-loading", text: "Loading…" },
   { hash: "#/channels/general", name: "channel", text: "Lunch at 12:30." },
   { hash: "#/channels/general/threads/1", name: "thread", text: "Thanks, both of you." },
@@ -160,5 +164,31 @@ async function withOlderHistory({ history, page }: OlderHistory): Promise<void> 
   });
 }
 
+function nudgeOn(item: unknown): unknown {
+  const parent = field(item, "parent");
+  return {
+    channel: field(item, "channel"),
+    id: 1,
+    kind: "first",
+    parent,
+    raisedAt: field(parent, "createdAt"),
+    text: NUDGE_TEXT,
+  };
+}
+
+function withNudgeIn(body: string): string {
+  const inbox = parseJson(body);
+  const [item] = list(field(inbox, "items")) ?? [];
+  const nudges = JSON.stringify([nudgeOn(item)]);
+  return body.replace('"nudges":[]', `"nudges":${nudges}`);
+}
+
+async function withNudge(page: Page): Promise<void> {
+  await page.route("**/v1/inbox", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ body: withNudgeIn(await response.text()), response });
+  });
+}
+
 export type { Screen, Shot, Theme };
-export { screenshotOptions, takeScreenshots, withOlderHistory };
+export { screenshotOptions, takeScreenshots, withNudge, withOlderHistory };
