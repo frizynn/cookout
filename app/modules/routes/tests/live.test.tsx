@@ -97,7 +97,13 @@ it("a reply that arrives in the open thread counts as read", { timeout: 5000 }, 
   await screen.findByText("Noon works");
 
   await waitFor(async () => {
-    await expect(reader.inbox()).resolves.toStrictEqual({ alerts: [], deactivationOffers: [], items: [], nudges: [] });
+    await expect(reader.inbox()).resolves.toStrictEqual({
+      alerts: [],
+      automaticDeactivations: [],
+      deactivationOffers: [],
+      items: [],
+      nudges: [],
+    });
   });
 
   await close();
