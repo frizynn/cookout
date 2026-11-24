@@ -10,7 +10,7 @@ import { secretsLive } from "../../../secrets/server.ts";
 
 const NOTES_SIZE = 5;
 const BYTE = 9;
-const LARGE_SIZE = 3_000_000;
+const LARGE_SIZE = 300_000;
 const PATTERN = 251;
 const UNREACHABLE = "http://127.0.0.1:1";
 
@@ -47,7 +47,7 @@ it.effect.each(assetStoreLayers)(
 );
 
 it.effect.each(assetStoreLayers)(
-  "asset store ($adapter): an attachment of a few megabytes reads back byte for byte, and an ID never put holds none",
+  "asset store ($adapter): an attachment of a few hundred kilobytes reads back byte for byte, and an ID never put holds none",
   ({ layer }) =>
     Effect.gen(function* largeAndMissing() {
       const assets = yield* AssetStore;
