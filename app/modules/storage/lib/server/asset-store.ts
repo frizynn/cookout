@@ -96,4 +96,4 @@ function diskAssetStore(
   return Layer.effect(AssetStore, openDiskAssets(directory));
 }
 
-export { AssetStore, diskAssetStore, memoryAssetStore };
+export { AssetStore, diskAssetStore, memoryAssetStore, missing };

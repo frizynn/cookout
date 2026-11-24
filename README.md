@@ -28,6 +28,12 @@ The server, `cookout serve`:
 - `COOKOUT_HOST` (default `0.0.0.0`): The address to listen on (`--host`).
 - `COOKOUT_DB` (default `cookout.db`): The SQLite file the data is kept in (`--db`).
 - `COOKOUT_ASSETS_DIR` (default empty): The folder attachments' bytes are kept in, one file per attachment, named by its ID. Empty means an `assets` folder beside `COOKOUT_DB` ([ADR 0084](docs/adr/0084-attachment-bytes-live-in-an-asset-store-beside-storage.md)).
+- `COOKOUT_ASSET_STORE` (default `disk`): Where attachments' bytes are kept: `disk`, in `COOKOUT_ASSETS_DIR`, or `s3`, in a private S3-compatible bucket (S3, R2 or Tigris) that the five `COOKOUT_S3_*` settings below name. Each object is keyed by its attachment ID, and the server streams it through `/v1/assets/<id>` with the same sign-in check as on disk, so the bucket is never made public. With `s3` and any of them unset, `serve` refuses to start and names it ([ADR 0085](docs/adr/0085-the-s3-asset-store-signs-its-own-requests-with-aws4fetch.md)).
+- `COOKOUT_S3_BUCKET` (no default): The bucket attachments are kept in, when `COOKOUT_ASSET_STORE` is `s3`. It is reached path-style, at `<endpoint>/<bucket>/<attachment ID>`.
+- `COOKOUT_S3_ENDPOINT` (no default): The bucket's S3 API URL, such as `https://s3.eu-west-2.amazonaws.com`, `https://<account>.r2.cloudflarestorage.com` or `https://fly.storage.tigris.dev`.
+- `COOKOUT_S3_REGION` (no default): The bucket's region, such as `eu-west-2`; `auto` on R2 and Tigris.
+- `COOKOUT_S3_ACCESS_KEY_ID` (no default): The access key ID every request to the bucket is signed with. It needs to read, write and delete the bucket's objects.
+- `COOKOUT_S3_SECRET_ACCESS_KEY` (no default): That access key's secret. Never shown.
 - `COOKOUT_PUBLIC_URL` (no default): The address it is deployed at, such as `https://cookout.fly.dev`, whose host it also answers (`--public-url`).
 - `COOKOUT_MAX_IDLE_EXPIRY` (default `90d`): The longest idle expiry `cookout join --idle-expiry` may ask for. An agent session token expires once it goes that long unused (default `7d`); each request sent with it moves its expiry on.
 - `COOKOUT_WEBHOOK_TIMEOUT_SECONDS` (default `5`): How long the server waits for a command's handler to answer one webhook delivery.

@@ -479,6 +479,14 @@ The contract files listed in `app/modules/testing/lib/server/postgres-contract-f
 node_modules/.bin/vitest run --project postgres
 ```
 
+## Run the asset store tests on S3
+
+The asset store's contract suite (`app/modules/storage/tests/server/asset-store.contract.test.ts`, on memory, disk and S3) and `app/modules/cli/tests/server/serve-s3.test.ts`, a `cookout serve` on the S3 asset store, run in Vitest's `s3` project, which needs Docker. Its global setup ([scripts/s3-test-container.ts](../scripts/s3-test-container.ts)) starts one throwaway `chrislusf/seaweedfs:4.53` container per run (label `cookout-tests=s3`), an S3-compatible server that checks each request's signature, published on a free port on 127.0.0.1. Each test gets its own bucket. The container is removed when the run ends, and a watchdog removes it if the run is killed. Without Docker, every S3 test fails with a message naming Docker; none is skipped. Nothing here reaches a real bucket. To run only them:
+
+```sh
+node_modules/.bin/vitest run --project s3
+```
+
 ## Run the end-to-end suite
 
 `packages/e2e` drives a running cookout the way its users do: through `@ai-hero/cookout/sdk`, the built `cookout` bin (each `cookout` command its own process) and the web UI in headless Chromium. It reads only `COOKOUT_E2E_URL` and `COOKOUT_E2E_ADMIN_TOKEN`, an admin's token there, so it runs against any cookout that serves the web UI: the built one, a local Docker container, or the deployed URL. The `pnpm dev` cookout from "Start it" serves only the API (its web UI is on Vite's `webUrl`), so start the built one on a fresh database and a free port instead, as a background command, then run the suite. Playwright needs Chromium once per machine (`pnpm exec playwright install chromium`):
