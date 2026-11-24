@@ -7,7 +7,6 @@ import type { ReactNode } from "react";
 import { hrefOf } from "../../paths/index.ts";
 import { useSyncExternalStore } from "react";
 
-const LAST = -1;
 const TEXT = {
   back: "Back to the inbox",
   conversation: "Conversation",
@@ -18,14 +17,14 @@ interface ChannelConversationPanelProps {
   readonly board: Board;
   readonly channel: ChannelName;
   readonly first: TopLevelMessage;
+  readonly newest: TopLevelMessage;
   readonly posts: readonly TopLevelMessage[];
   readonly me: string;
   readonly menu: MessageMenu;
 }
 
 export function ChannelConversationPanel(props: ChannelConversationPanelProps): ReactNode {
-  const { channel, first, posts } = props;
-  const newest = posts.at(LAST) ?? first;
+  const { channel, first, newest, posts } = props;
   const read = props.board.read(newest.id);
   useSyncExternalStore(read.subscribe, read.snapshot);
   const before = props.board.messageBefore({ channel, id: first.id });

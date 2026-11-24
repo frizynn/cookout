@@ -82,7 +82,7 @@ it("an inbox row marks a deactivated author (deactivated)", { timeout: 5000 }, a
 
   await waitFor(() => {
     expect(rowsOf("Activity")).toStrictEqual([
-      "#/channels/web-off-inbox New in #web-off-inboxweb-off-inbox-poster(deactivated)posted in#web-off-inboxjust nowDeployed",
+      "#/inbox/web-off-inbox New in #web-off-inboxweb-off-inbox-poster(deactivated)posted in#web-off-inboxjust nowDeployed",
     ]);
   });
 
