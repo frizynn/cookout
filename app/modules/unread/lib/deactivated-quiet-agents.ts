@@ -182,7 +182,6 @@ function createDeactivatedQuietAgents({ client, onChange }: DeactivatedQuietAgen
 export {
   type DeactivatedQuietAgents,
   type DeactivatedQuietAgentsState,
-  type ForYouEntries,
   type LiveDeactivatedQuietAgents,
   createDeactivatedQuietAgents,
 };
