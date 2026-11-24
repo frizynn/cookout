@@ -3,7 +3,6 @@ import { IdentityCardComposer, IdentityCards } from "./identity-card-parts.ts";
 import type { PersonActs, PersonKeysShared } from "./person-keys-parts.ts";
 import { useContext, useMemo, useSyncExternalStore } from "react";
 import { PersonKeys } from "./person-keys-parts.ts";
-import type { Shortcut } from "./shortcut.ts";
 
 const TEXT = { copied: "Copied", copyName: "Copy name", message: "Message", viewProfile: "View profile" } as const;
 
@@ -15,39 +14,37 @@ interface PersonMenuOf {
 interface PersonMenu extends ActionMenuParts {
   readonly buttonLabel: string;
   readonly acts: PersonActs;
+  readonly keys: PersonKeysShared;
 }
 
 interface PersonChoicesOf extends PersonMenuOf {
   readonly compose: ((name: string) => void) | null;
   readonly deactivated: boolean;
-  readonly keys: PersonKeysShared | null;
+  readonly keys: PersonKeysShared;
 }
 
 interface Choosing {
   readonly person: PersonChoicesOf;
   readonly copyName: () => void;
-  readonly message: () => void;
 }
 
-function keysOf(keys: PersonKeysShared | null, act: keyof PersonActs): { readonly keys?: Shortcut } {
-  if (keys === null) {
-    return {};
-  }
-  return { keys: keys.shortcuts[act] };
-}
-
-function messageChoices({ message, person }: Choosing): readonly MenuChoice[] {
-  if (person.compose === null) {
+function messageChoices({ person }: Choosing): readonly MenuChoice[] {
+  const { compose, name } = person;
+  if (compose === null) {
     return [];
+  }
+  const write = compose;
+  function message(): void {
+    write(name);
   }
   return [
     {
       disabled: person.deactivated,
       href: null,
       icon: "message",
+      keys: person.keys.shortcuts.message,
       label: TEXT.message,
       onSelect: message,
-      ...keysOf(person.keys, "message"),
     },
   ];
 }
@@ -63,17 +60,17 @@ function personChoices(choosing: Choosing): readonly MenuChoice[] {
     {
       href: person.profileHref,
       icon: "view-profile",
+      keys: person.keys.shortcuts.viewProfile,
       label: TEXT.viewProfile,
       onSelect: null,
-      ...keysOf(person.keys, "viewProfile"),
     },
     ...messageChoices(choosing),
     {
       href: null,
       icon: "copy-name",
+      keys: person.keys.shortcuts.copyName,
       label: TEXT.copyName,
       onSelect: choosing.copyName,
-      ...keysOf(person.keys, "copyName"),
     },
   ];
 }
@@ -86,21 +83,23 @@ function viewProfile({ target }: { readonly target: EventTarget | null }): boole
   return true;
 }
 
+function messageAct({ compose, deactivated, name }: PersonChoicesOf): () => boolean {
+  return () => {
+    if (compose === null || deactivated) {
+      return false;
+    }
+    compose(name);
+    return true;
+  };
+}
+
 function personMenuOf(person: PersonChoicesOf): PersonMenu {
   const handle = `@${person.name}`;
   let copying = Promise.resolve();
   function copyName(): void {
     copying = copyAfter(copying, handle);
-    if (person.keys !== null) {
-      person.keys.announce(`${TEXT.copied} ${handle}`);
-    }
+    person.keys.announce(`${TEXT.copied} ${handle}`);
   }
-  function message(): void {
-    if (person.compose !== null) {
-      person.compose(person.name);
-    }
-  }
-  const canMessage = person.compose !== null && !person.deactivated;
   const label = `${handle} actions`;
   return {
     acts: {
@@ -108,16 +107,12 @@ function personMenuOf(person: PersonChoicesOf): PersonMenu {
         copyName();
         return true;
       },
-      message: () => {
-        if (canMessage) {
-          message();
-        }
-        return canMessage;
-      },
+      message: messageAct(person),
       viewProfile,
     },
     buttonLabel: label,
-    choices: personChoices({ copyName, message, person }),
+    choices: personChoices({ copyName, person }),
+    keys: person.keys,
     label,
   };
 }
@@ -130,7 +125,7 @@ function usePersonMenu({ name, profileHref }: PersonMenuOf): PersonMenu | null {
   const known = card !== null;
   const deactivated = known && card.deactivated;
   return useMemo(() => {
-    if (!known) {
+    if (!known || keys === null) {
       return null;
     }
     return personMenuOf({ compose, deactivated, keys, name, profileHref });

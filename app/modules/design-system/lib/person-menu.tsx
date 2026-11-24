@@ -1,6 +1,5 @@
-import { useCallback, useContext, useRef } from "react";
+import { useCallback, useRef } from "react";
 import { ActionMenu } from "./action-menu.tsx";
-import { PersonKeys } from "./person-keys-parts.ts";
 import type { ReactNode } from "react";
 import { usePersonKeys } from "./use-person-keys.ts";
 import { usePersonMenu } from "./use-person-menu.ts";
@@ -17,7 +16,7 @@ export function PersonMenu(parts: PersonMenuParts): ReactNode {
   const menu = usePersonMenu({ name: parts.name, profileHref: parts.profileHref });
   const person = useRef<HTMLSpanElement>(null);
   const within = useCallback(() => person.current, []);
-  usePersonKeys({ keys: useContext(PersonKeys), person: menu, within });
+  usePersonKeys({ person: menu, within });
   if (menu === null) {
     return parts.children;
   }
