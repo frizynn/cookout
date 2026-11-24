@@ -1,10 +1,10 @@
 import type { AgentSessions, Sessions, SessionsClient, SessionsPart } from "./agent-sessions-part.ts";
-import type { ClientWithToken, SessionClient, SessionPart, SessionState } from "./session-part.ts";
 import type { Identities, IdentitiesClient, IdentityChange } from "./identities-slice.ts";
 import type { IdentityCalls, IdentityCallsClient } from "./identity-calls.ts";
 import type { IdentityName, Message, ReactionCount, Refusal } from "../../sdk/index.ts";
 import type { PresenceClient, Presences } from "./presence-slice.ts";
 import type { Reactions, ReactionsClient } from "./reactions-slice.ts";
+import type { SessionClient, SessionPart, SessionState } from "./session-part.ts";
 import type { Toggle, ToggleClient } from "./reaction-toggle.ts";
 import { reactionsIn, reactionsSlice } from "./reactions-slice.ts";
 import type { Live } from "../../live/index.ts";
@@ -57,7 +57,7 @@ type BoardStoreClient = IdentitiesClient &
 
 interface BoardStoreOptions {
   readonly client: BoardStoreClient;
-  readonly clientWithToken: ClientWithToken;
+  readonly url: string;
   readonly live: Live | null;
 }
 
@@ -178,7 +178,7 @@ function identityPartsOf(changed: () => void, options: BoardStoreOptions): Ident
   const { client } = options;
   return {
     identities: createPart({ changed, client, slice: identitiesSlice }),
-    session: createSessionPart({ changed, client, clientWithToken: options.clientWithToken }),
+    session: createSessionPart({ changed, client, url: options.url }),
     sessions: createSessionsPart({ changed, client }),
   };
 }

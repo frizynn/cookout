@@ -36,7 +36,7 @@ async function human(name: string): Promise<Human> {
 
 function opened(client: CookoutClient, shown = true): Opened {
   const hand = handLive();
-  const store = createBoardStore({ client, clientWithToken: clientWith, live: createLive(hand.adapter) });
+  const store = createBoardStore({ client, live: createLive(hand.adapter), url: webTestCookout().url });
   if (shown) {
     onTestFinished(store.session.subscribe(vi.fn<() => void>()));
   }

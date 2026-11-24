@@ -32,8 +32,8 @@ if (root !== null) {
   const board = createBoard({ client, live });
   const boardStore = createBoardStore({
     client,
-    clientWithToken: (token) => createCookoutClient({ env: {}, token, url }),
     live,
+    url,
   });
   const unread = createUnread({ client, live });
   const layout = createLayout({ root: globalThis.document.documentElement, storage: globalThis.localStorage });

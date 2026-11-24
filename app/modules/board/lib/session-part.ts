@@ -1,6 +1,6 @@
 import type { CookoutClient, Identity, Refusal } from "../../sdk/index.ts";
+import { createCookoutClient, refusalOf } from "../../sdk/index.ts";
 import type { Identities } from "./identities-slice.ts";
-import { refusalOf } from "../../sdk/index.ts";
 
 type SessionState =
   | { readonly status: "checking" }
@@ -9,8 +9,6 @@ type SessionState =
   | { readonly status: "logged-in"; readonly identity: Identity };
 
 type SessionClient = Pick<CookoutClient, "whoami">;
-
-type ClientWithToken = (token: string) => Pick<CookoutClient, "login">;
 
 interface SessionPart {
   readonly show: () => void;
@@ -22,7 +20,7 @@ interface SessionPart {
 
 interface SessionPartOptions {
   readonly client: SessionClient;
-  readonly clientWithToken: ClientWithToken;
+  readonly url: string;
   readonly changed: () => void;
 }
 
@@ -60,7 +58,7 @@ async function after(previous: Promise<void> | null, step: () => Promise<void>):
   await step();
 }
 
-function answersOf(held: Held, { client, clientWithToken }: Omit<SessionPartOptions, "changed">): Answers {
+function answersOf(held: Held, { client, url }: Omit<SessionPartOptions, "changed">): Answers {
   return {
     check: async () => {
       try {
@@ -76,7 +74,7 @@ function answersOf(held: Held, { client, clientWithToken }: Omit<SessionPartOpti
     logIn: async (token) => {
       held.put({ status: "logging-in" });
       try {
-        const { identity } = await clientWithToken(token).login();
+        const { identity } = await createCookoutClient({ env: {}, token, url }).login();
         held.put({ identity, status: "logged-in" });
       } catch (error: unknown) {
         held.put({ refusal: refusalOf(error), status: "logged-out" });
@@ -145,4 +143,4 @@ function createSessionPart(options: SessionPartOptions): SessionPart {
   };
 }
 
-export { type ClientWithToken, type SessionClient, type SessionPart, type SessionState, createSessionPart };
+export { type SessionClient, type SessionPart, type SessionState, createSessionPart };

@@ -31,10 +31,6 @@ function adminClient(): CookoutClient {
   return createCookoutClient({ env: {}, token: webTestCookout().adminToken, url: webTestCookout().url });
 }
 
-function clientWith(token: string): CookoutClient {
-  return createCookoutClient({ env: {}, token, url: webTestCookout().url });
-}
-
 async function agentNamed(name: string): Promise<Agent> {
   const { identity, token } = await adminClient().createIdentity({ kind: "agent", name, owner: "admin" });
   return { client: createCookoutClient({ env: {}, token, url: webTestCookout().url }), name: identity.name };
@@ -75,7 +71,7 @@ function counting(): Counting {
 
 function opened(client: PresenceClient = adminClient()): Opened {
   const hand = handLive();
-  const store = createBoardStore({ client, clientWithToken: clientWith, live: createLive(hand.adapter) });
+  const store = createBoardStore({ client, live: createLive(hand.adapter), url: webTestCookout().url });
   show(store);
   return { hand, store };
 }
@@ -152,7 +148,7 @@ it("a presence event heard while the presence is being read wins over the value 
       return answer;
     },
   };
-  const store = createBoardStore({ client, clientWithToken: clientWith, live: createLive(during.adapter) });
+  const store = createBoardStore({ client, live: createLive(during.adapter), url: webTestCookout().url });
   show(store);
 
   await expect(shown(store, { name: agent.name, online: true })).resolves.toStrictEqual({
@@ -165,7 +161,7 @@ it("presence is read only once a view shows it, and once for any number of reade
   expect.hasAssertions();
 
   const { client, reads } = counting();
-  const store = createBoardStore({ client, clientWithToken: clientWith, live: null });
+  const store = createBoardStore({ client, live: null, url: webTestCookout().url });
   onTestFinished(store.subscribe(vi.fn<() => void>()));
   const before = reads();
   show(store);
@@ -232,7 +228,7 @@ it("a link back while nobody shows presence reads it again only once a view show
 
   const { client, reads } = counting();
   const hand = handLive();
-  const store = createBoardStore({ client, clientWithToken: clientWith, live: createLive(hand.adapter) });
+  const store = createBoardStore({ client, live: createLive(hand.adapter), url: webTestCookout().url });
   store.subscribeShowing("presence")(vi.fn<() => void>())();
   hand.report("down");
   hand.report("up");

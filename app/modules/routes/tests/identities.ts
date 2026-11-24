@@ -77,7 +77,7 @@ export function adminClient(): CookoutClient {
 }
 
 export function sessionOf(client: CookoutClient): Session {
-  return createBoardStore({ client, clientWithToken: clientWith, live: null }).session;
+  return createBoardStore({ client, live: null, url: webTestCookout().url }).session;
 }
 
 export async function newIdentity(request: CreateIdentityRequest): Promise<NewIdentity> {

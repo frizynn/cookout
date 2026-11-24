@@ -1,12 +1,13 @@
 import type { Reading, Unread } from "../../unread/index.ts";
-import { adminClient, clientWith } from "./identities.ts";
 import { createReading, createUnread } from "../../unread/index.ts";
 import type { BoardStore } from "../../board/index.ts";
 import type { Live } from "../../live/index.ts";
+import { adminClient } from "./identities.ts";
 import { createBoardStore } from "../../board/index.ts";
 import { createPageFocus } from "../../page-focus/index.ts";
 import { handClock } from "./hand-clock.ts";
 import { handFocus } from "../../testing/web.ts";
+import { webTestCookout } from "../../../../scripts/web-test-server.ts";
 
 const OPTIONS = 0;
 
@@ -21,7 +22,7 @@ interface BoardStoreOpening {
 export function boardStoreFor(opening: BoardStoreOpening): BoardStore {
   return (
     opening.boardStore ??
-    createBoardStore({ client: opening.client, clientWithToken: clientWith, live: opening.live ?? null })
+    createBoardStore({ client: opening.client, live: opening.live ?? null, url: webTestCookout().url })
   );
 }
 

@@ -6,8 +6,6 @@ import { createCookoutClient } from "../../sdk/index.ts";
 const url = globalThis.location.origin;
 const client = createCookoutClient({ env: {}, url });
 
-const PresenceList = createContext<BoardStore>(
-  createBoardStore({ client, clientWithToken: (token) => createCookoutClient({ env: {}, token, url }), live: null }),
-);
+const PresenceList = createContext<BoardStore>(createBoardStore({ client, live: null, url }));
 
 export { PresenceList };

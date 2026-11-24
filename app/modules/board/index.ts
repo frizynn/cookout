@@ -92,7 +92,7 @@
  * slice's identity of that name once the slice holds one, so an `identity` event for it (a display name or admin flag
  * changed in another tab) changes it at once; until then, the server's answer. On a link back it asks again, keeping
  * whoever is logged in if the server can't be reached. `logIn` swaps a human identity's token for the session cookie
- * (`POST /v1/session`) through the client made with `clientWithToken`; a refused login (an agent's token, a bad token)
+ * (`POST /v1/session`) through a client with that token for the cookout at `url`; a refused login (an agent's token, a bad token)
  * keeps the server's error code to show.
  *
  * `createLoginApprovals` makes the store the approval page reads: for a login request's user code, the request (its
