@@ -54,18 +54,12 @@ function textsOf(terms: readonly Term[], kind: Term["kind"]): readonly string[] 
   return terms.filter((term) => term.kind === kind).map((term) => term.text);
 }
 
-/** The filters a query can hold, each typed as `<filter>:<value>`. */
-export const searchFilters = FILTERS;
-
-/** A filter a query can hold. */
-export type SearchFilter = (typeof searchFilters)[number];
-
 /**
  * A query as the server reads it. Every word must match a word of the message that equals it or starts with it. Each
  * filter keeps what was typed after `from:`, `in:`, `before:` or `after:`, without the `@` or `#`, in the order typed:
  * the server checks that each names an identity, a channel or a real `YYYY-MM-DD` day.
  */
-export interface ParsedQuery extends Readonly<Record<SearchFilter, readonly string[]>> {
+export interface ParsedQuery extends Readonly<Record<(typeof FILTERS)[number], readonly string[]>> {
   readonly words: readonly string[];
 }
 
@@ -92,7 +86,7 @@ export function parseQuery(query: string): ParsedQuery {
  * @returns Whether it has no words and no filters.
  */
 export function isEmptyQuery(parsed: ParsedQuery): boolean {
-  return [parsed.words, ...searchFilters.map((filter) => parsed[filter])].every((values) => values.length === NO_WORDS);
+  return [parsed.words, ...FILTERS.map((filter) => parsed[filter])].every((values) => values.length === NO_WORDS);
 }
 
 /** A message's text and the query it is matched against. */
