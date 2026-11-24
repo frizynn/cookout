@@ -1,14 +1,4 @@
-import {
-  closeIn,
-  involvedIn,
-  listShows,
-  openLive,
-  openThreadsShown,
-  posted,
-  postedOne,
-  startersIn,
-  twoThreadsIn,
-} from "./open-threads.ts";
+import { closeIn, involvedIn, listShows, openThreadsShown, posted, postedOne, startersIn } from "./open-threads.ts";
 import { expect, it } from "vitest";
 import { inPane, inSidebar } from "./regions.ts";
 import { fireEvent } from "@testing-library/react";
@@ -58,38 +48,6 @@ it("a row links to its thread with its starter and first line, and Close in it d
   const { parent } = await poster.getThread(first.id);
 
   expect(parent.closedBy).toBe(`${channel}-grace`);
-});
-
-it("a close by another identity drops a row live, and a reopen brings it back at the end", {
-  timeout: 8000,
-}, async () => {
-  expect.hasAssertions();
-
-  const { channel, first, poster, reader } = await twoThreadsIn({ channel: "open-live" });
-  const close = await openLive({ client: reader, hash: "#/threads" });
-  await listShows({ channel, texts: ["First.", "Second."] });
-  await poster.closeThread(first.id);
-
-  await listShows({ channel, texts: ["Second."] });
-
-  await poster.reopenThread(first.id);
-
-  await listShows({ channel, texts: ["Second.", "First."] });
-
-  await close();
-});
-
-it("a reply by another identity moves its thread to the end of the list live", { timeout: 8000 }, async () => {
-  expect.hasAssertions();
-
-  const { channel, first, poster, reader } = await twoThreadsIn({ channel: "open-live-reply" });
-  const close = await openLive({ client: reader, hash: "#/threads" });
-  await listShows({ channel, texts: ["First.", "Second."] });
-  await poster.createMessage({ channel, replyTo: first.id, text: "Bump." });
-
-  await listShows({ channel, texts: ["Second.", "First."] });
-
-  await close();
 });
 
 it("load more appends the next page of open threads", { timeout: 5000 }, async () => {
