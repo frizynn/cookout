@@ -125,7 +125,8 @@
  * reacted as its tooltip. `RepliesDivider` heads a thread's replies, `ChannelStart` says a
  * channel has nothing older, and `QuietButton` is a muted centred button,
  * such as loading older messages. `ClosedFold` is a row of a message list standing for closed threads folded away,
- * a button on a dashed line that unfolds them. `ThreadBar` is a muted bar across the top of a thread: a line of text
+ * a button on a dashed line that unfolds them; given a `day`, the day's label (a separator to a screen reader) shares
+ * that line, in place of a day separator of its own beside it. `ThreadBar` is a muted bar across the top of a thread: a line of text
  * and one button, such as who closed it and Reopen; `QuietLink` is a muted link in such a line, such as a name
  * linking to its profile. `TextArea` takes focus when it first appears
  * if `focused`.
