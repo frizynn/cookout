@@ -1,0 +1,144 @@
+/**
+ * The keymap: the one owner of the web UI's keyboard shortcuts. `KEYS`, in
+ * `lib/keys.ts`, is the one table of them: each row is a key chord, the action
+ * it does and the scope it applies in. `createKeymap` is made once in the web
+ * entry, for the browser's platform, and passed down through `CookoutApp`,
+ * whose `listen` adds the page's one key listener.
+ * A view says what an action does with `bind`: a scope, the actions it does
+ * there and, optionally, the element the scope covers (without one it covers
+ * the page while bound). On each key not already handled, the listener walks
+ * `SCOPES` from the innermost (the search box) out to `everywhere`, takes the
+ * bound scopes that cover the focused element, most recently bound first, and
+ * runs the first action whose chord matches and that says it acted, which
+ * stops the browser's own handling. Off a text field every row fires. In a
+ * text field only chords held with Ctrl, Cmd or Alt fire, and the rows of the
+ * text scopes (the search box and text box), which fire only there, so a
+ * letter typed or dictated is always typed. `Mod` is Ctrl or Cmd: either
+ * works, and on a Mac it is named Cmd (⌘, `Meta`), elsewhere Ctrl (`Control`).
+ * `shortcutOf` names an action's chords, for `aria-keyshortcuts` and for
+ * people (⌘K and ⌥ on a Mac, Ctrl+K and Alt elsewhere), so no view writes a
+ * key by hand. The browser's own keys (F6, and Ctrl or Cmd with T, W, N, L, D
+ * or P) are never bound.
+ */
+import type { Action, ActionOf, Key, Scope } from "./lib/keys.ts";
+import { KEYS, SCOPES, TEXT_SCOPES } from "./lib/keys.ts";
+import { ariaOf, chordOf, isModified, matches, shownOf } from "./lib/chords.ts";
+import type { Platform } from "./lib/chords.ts";
+
+type Act = (event: KeyboardEvent) => boolean;
+
+interface Binding<Covered extends Scope> {
+  readonly scope: Covered;
+  readonly actions: Readonly<Partial<Record<ActionOf<Covered>, Act>>>;
+  readonly within?: () => Element | null;
+}
+
+interface Shortcut {
+  readonly keys: string;
+  readonly label: string;
+}
+
+type KeyTarget = Pick<Document, "addEventListener" | "removeEventListener">;
+
+interface Keymap {
+  readonly listen: (target: KeyTarget) => () => void;
+  readonly bind: <Covered extends Scope>(binding: Binding<Covered>) => () => void;
+  readonly shortcutOf: (action: Action) => Shortcut;
+}
+
+interface Bound {
+  readonly scope: Scope;
+  readonly actions: Readonly<Partial<Record<Action, Act>>>;
+  readonly within: (() => Element | null) | null;
+}
+
+const MAC = /^(?:Mac|iPhone|iPad|iPod)/u;
+const TEXT_FIELDS: ReadonlySet<string> = new Set(["INPUT", "SELECT", "TEXTAREA"]);
+const KEY_SEPARATOR = " ";
+const LABEL_SEPARATOR = " or ";
+
+function platformOf(platform: string): Platform {
+  if (MAC.test(platform)) {
+    return "mac";
+  }
+  return "other";
+}
+
+function isTextField(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && (target.isContentEditable || TEXT_FIELDS.has(target.tagName));
+}
+
+function fires(key: Key, inTextField: boolean): boolean {
+  if (TEXT_SCOPES.has(key.scope)) {
+    return inTextField;
+  }
+  return !inTextField || isModified(chordOf(key.chord));
+}
+
+function covers(bound: Bound, target: EventTarget | null): boolean {
+  if (bound.within === null) {
+    return true;
+  }
+  const element = bound.within();
+  return element !== null && target instanceof Node && element.contains(target);
+}
+
+function passOn(): boolean {
+  return false;
+}
+
+function pressedKeys(bound: Bound, event: KeyboardEvent): readonly Key[] {
+  const inTextField = isTextField(event.target);
+  return KEYS.filter(
+    (key) => key.scope === bound.scope && fires(key, inTextField) && matches({ chord: chordOf(key.chord), event }),
+  );
+}
+
+function actOn(bound: Bound, event: KeyboardEvent): boolean {
+  return pressedKeys(bound, event).some((key) => (bound.actions[key.action] ?? passOn)(event));
+}
+
+function boundInOrder(bindings: readonly Bound[], target: EventTarget | null): readonly Bound[] {
+  const newestFirst = bindings.toReversed();
+  return SCOPES.flatMap((scope) => newestFirst.filter((bound) => bound.scope === scope && covers(bound, target)));
+}
+
+function createKeymap(options: { readonly platform: string }): Keymap {
+  const platform = platformOf(options.platform);
+  let bindings: readonly Bound[] = [];
+  function pressed(event: KeyboardEvent): void {
+    if (event.defaultPrevented || event.isComposing) {
+      return;
+    }
+    if (boundInOrder(bindings, event.target).some((bound) => actOn(bound, event))) {
+      event.preventDefault();
+    }
+  }
+  return {
+    bind: (binding) => {
+      const bound: Bound = { actions: binding.actions, scope: binding.scope, within: binding.within ?? null };
+      bindings = [...bindings, bound];
+      return () => {
+        bindings = bindings.filter((each) => each !== bound);
+      };
+    },
+    listen: (target) => {
+      target.addEventListener("keydown", pressed);
+      return () => {
+        target.removeEventListener("keydown", pressed);
+      };
+    },
+    shortcutOf: (action) => {
+      const chords = [...new Set(KEYS.filter((key) => key.action === action).map((key) => key.chord))].map((chord) =>
+        chordOf(chord),
+      );
+      return {
+        keys: chords.map((chord) => ariaOf({ chord, platform })).join(KEY_SEPARATOR),
+        label: chords.map((chord) => shownOf({ chord, platform })).join(LABEL_SEPARATOR),
+      };
+    },
+  };
+}
+
+export type { Action } from "./lib/keys.ts";
+export { type Act, type Binding, type Keymap, type Shortcut, createKeymap, isTextField };
