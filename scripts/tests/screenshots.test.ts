@@ -125,6 +125,7 @@ it("lists the standard screens in the order they are taken", { timeout: 2000 }, 
     "channel-menu",
     "person-menu",
     "thread",
+    "thread-menu",
     "receipt",
     "identity-card",
     "identity-card-person",
@@ -154,7 +155,7 @@ it("a screen that fails to render is reported, and the others are still taken", 
   const { freshBoard, log } = fakeBoards("thread-dark");
   const failures = await takeScreenshots({ freshBoard, screens: SCREENS });
 
-  expect([failures, log.filter((line) => line.startsWith("thread-")), log.at(LAST)]).toStrictEqual([
+  expect([failures, log.filter((line) => /^thread-(?:dark|light):/u.test(line)), log.at(LAST)]).toStrictEqual([
     ["thread-dark: Timed out waiting for Thanks, both of you."],
     ["thread-light: 0 unread"],
     "stop dark",
@@ -180,7 +181,7 @@ it("with no flags it takes every screen into no named folder", { timeout: 2000 }
 it("an unknown screen or flag, or a flag with no value, is refused", { timeout: 2000 }, () => {
   expect.hasAssertions();
   expect(() => screenshotOptions(["--only", "nope"])).toThrow(
-    "Unknown screen nope: pick from inbox, inbox-more, inbox-nudge, inbox-offer, inbox-deactivated, inbox-loading, inbox-thread, inbox-narrow, inbox-channel, inbox-marked, channel, channel-hover, message-menu, channel-menu, person-menu, thread, receipt, identity-card, identity-card-person, identity-card-deactivated, identity-card-no-presence, people, profile, warning, admin-profile, admin-deactivated, confirm, settings, new-channel, narrow, closed-threads, closed-thread, sidebar-narrowest, sidebar-widest, collapsed, reconnecting.",
+    "Unknown screen nope: pick from inbox, inbox-more, inbox-nudge, inbox-offer, inbox-deactivated, inbox-loading, inbox-thread, inbox-narrow, inbox-channel, inbox-marked, channel, channel-hover, message-menu, channel-menu, person-menu, thread, thread-menu, receipt, identity-card, identity-card-person, identity-card-deactivated, identity-card-no-presence, people, profile, warning, admin-profile, admin-deactivated, confirm, settings, new-channel, narrow, closed-threads, closed-thread, sidebar-narrowest, sidebar-widest, collapsed, reconnecting.",
   );
   expect(() => screenshotOptions(["--theme", "dark"])).toThrow(
     "Unknown flag --theme: use --only <screen> or --out <dir>.",
