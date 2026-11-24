@@ -35,9 +35,12 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-name: ${{ matrix.job }}
+      # No --with-deps: ubuntu-latest already has every library the headless shell needs, and
+      # --with-deps ran apt-get update and fetched 22 MB of fonts from the Ubuntu mirror, which
+      # sometimes crawled at ~100 kB/s and took 4.5 minutes (#265).
       - name: Install headless Chromium
         if: matrix.job == 'browser'
-        run: pnpm exec playwright install --with-deps --only-shell chromium
+        run: pnpm exec playwright install --only-shell chromium
       - name: pnpm check --job=${{ matrix.job }}
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -93,7 +96,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-name: e2e-docker
-      - run: pnpm exec playwright install --with-deps --only-shell chromium
+      - run: pnpm exec playwright install --only-shell chromium
       - run: pnpm e2e:docker
       - name: Upload the per-file test timings
         if: always()
