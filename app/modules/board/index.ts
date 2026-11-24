@@ -31,7 +31,7 @@
  * name as `deletedChannelNotice` until `dismissNotice`); a message in a channel the list doesn't have reads it again.
  * `commands` (`commandList`), every registered command, changed by `command` events; `subscriptions`
  * (`subscribedChannels`), the channels the logged-in identity subscribes to, sorted, changed by `subscription` events
- * and left by `channel-deleted`, with `calls.setSubscribed` keeping the server's refusal, with the channel. All three
+ * and left by `channel-deleted`, with `calls.setSubscribed` keeping the server's refusal, with the channel and the control it was asked `from`. All three
  * are read again on a link back while shown.
  *
  * Messages are one table by ID. `channelPages.subscribeShowing(name)` shows a channel's page (`channelPage(name)`):

@@ -185,12 +185,13 @@ it.effect("a section not on Postgres yet fails with StorageUnavailable", () =>
     Effect.gen(function* notYet() {
       const url = yield* emptyPostgresDatabase;
       const { close, storage } = yield* opened(url);
-      const error = yield* Effect.flip(storage.listChannels());
+      const errors = yield* Effect.all([Effect.flip(storage.listCommands), Effect.flip(storage.listPresence([]))], {
+        concurrency: 1,
+      });
       yield* close;
+      const notOnPostgres = StorageUnavailable.make({ message: "This part of the store is not on Postgres yet." });
 
-      expect(error).toStrictEqual(
-        StorageUnavailable.make({ message: "This part of the store is not on Postgres yet." }),
-      );
+      expect(errors).toStrictEqual([notOnPostgres, notOnPostgres]);
     }),
   ),
 );

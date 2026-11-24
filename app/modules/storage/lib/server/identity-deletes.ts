@@ -1,7 +1,7 @@
 import { Array as Arr, Effect, Option, Predicate, Schema, String as Str } from "effect";
 import { IDENTITY_COLUMNS, IdentityRow, toIdentity } from "./identity-row.ts";
 import type { Identity, IdentityName, TokenHash } from "../../../identities/index.ts";
-import type { SqliteDatabase } from "./adapters/sqlite.ts";
+import type { SqlDatabase } from "./adapters/sql-database.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isIdentityName } from "../../../identities/index.ts";
 import { unreadable } from "./errors.ts";
@@ -40,7 +40,7 @@ const SELECT_IDENTITY = `SELECT ${IDENTITY_COLUMNS} FROM identities WHERE name =
 
 const SELECT_OWNED = "SELECT name FROM identities WHERE kind = 'agent' AND owner = ? ORDER BY name";
 
-const COUNT_ACTIVE_ADMINS = "SELECT count(*) AS count FROM identities WHERE admin = 1 AND deactivated = 0";
+const COUNT_ACTIVE_ADMINS = "SELECT count(*) AS count FROM identities WHERE admin = TRUE AND deactivated = FALSE";
 
 const COUNT_MESSAGES = "SELECT count(*) AS count FROM messages WHERE author_name = ? OR author_owner = ?";
 
@@ -122,21 +122,21 @@ function decodeWith<Decoder extends Schema.Decoder<unknown>>(
   return (row) => Effect.mapError(Schema.decodeUnknownEffect(schema)(row), unreadable);
 }
 
-function countOf(db: SqliteDatabase, sql: string, ...params: readonly string[]): Fails<number> {
+function countOf(db: SqlDatabase, sql: string, ...params: readonly string[]): Fails<number> {
   return db.get(sql, ...params).pipe(
     Effect.flatMap(decodeWith(CountRow)),
     Effect.map((row) => row.count),
   );
 }
 
-function ownedAgents(db: SqliteDatabase, name: IdentityName): Fails<readonly IdentityName[]> {
+function ownedAgents(db: SqlDatabase, name: IdentityName): Fails<readonly IdentityName[]> {
   return db.all(SELECT_OWNED, name).pipe(
     Effect.flatMap((rows) => Effect.forEach(rows, decodeWith(OwnedRow), { concurrency: 1 })),
     Effect.map(Arr.map((row) => row.name)),
   );
 }
 
-function sqliteDeleteFound(db: SqliteDatabase, identity: Identity): Fails<DeleteIdentityResult> {
+function sqlDeleteFound(db: SqlDatabase, identity: Identity): Fails<DeleteIdentityResult> {
   return Effect.gen(function* deleteRow() {
     const check = {
       activeAdmins: yield* countOf(db, COUNT_ACTIVE_ADMINS),
@@ -153,7 +153,7 @@ function sqliteDeleteFound(db: SqliteDatabase, identity: Identity): Fails<Delete
   });
 }
 
-function sqliteIdentityDeletes(db: SqliteDatabase): IdentityDeletesSection {
+function sqlIdentityDeletes(db: SqlDatabase): IdentityDeletesSection {
   return {
     countMessagesBy: (name) => countOf(db, COUNT_MESSAGES, name, name),
     deleteIdentity: (name) =>
@@ -162,10 +162,10 @@ function sqliteIdentityDeletes(db: SqliteDatabase): IdentityDeletesSection {
           if (Predicate.isUndefined(row)) {
             return Effect.succeed<DeleteIdentityResult>({ status: "not_found" });
           }
-          return Effect.flatMap(decodeWith(IdentityRow)(row), (decoded) => sqliteDeleteFound(db, toIdentity(decoded)));
+          return Effect.flatMap(decodeWith(IdentityRow)(row), (decoded) => sqlDeleteFound(db, toIdentity(decoded)));
         }),
       ),
   };
 }
 
-export { type DeleteIdentityResult, type IdentityDeletesSection, memoryRemoveIdentity, sqliteIdentityDeletes };
+export { type DeleteIdentityResult, type IdentityDeletesSection, memoryRemoveIdentity, sqlIdentityDeletes };

@@ -136,9 +136,12 @@ function fake({ rerunRed = false, vouchedBy = "", ...responses }: FakeOptions): 
   };
 }
 
+const NO_SLEEP = "Atomics.wait = () => 'timed-out';\n";
+
 function ghOnPath(responses: Responses): string {
   const dir = stateDir(responses);
   const gh = path.join(dir, "gh");
+  writeFileSync(path.join(dir, "no-sleep.mjs"), NO_SLEEP);
   writeFileSync(gh, `#!/bin/sh\nexec node "${path.join(dir, "gh.mjs")}" "$@"\n`);
   chmodSync(gh, EXECUTABLE);
   return dir;

@@ -1,9 +1,10 @@
-import type { AckAllRequest, ChannelName, CookoutClient, InboxItem, Refusal } from "../../sdk/index.ts";
+import type { AckAllRequest, CookoutClient, InboxItem, Refusal } from "../../sdk/index.ts";
 import type { InboxItems } from "./inbox-items.ts";
 import type { LiveAlerts } from "./alerts.ts";
 import type { LiveDeactivatedQuietAgents } from "./deactivated-quiet-agents.ts";
 import type { LiveDeactivationOffers } from "./deactivation-offers.ts";
 import type { LiveNudges } from "./nudges.ts";
+import type { MarkChannel } from "./mark-channel.ts";
 import { createMarkChannel } from "./mark-channel.ts";
 import { refusalOf } from "../../sdk/index.ts";
 
@@ -17,7 +18,7 @@ type MarkAllState =
 interface MarkAll {
   readonly state: () => MarkAllState;
   readonly markAllRead: () => void;
-  readonly markChannelRead: (channel: ChannelName) => void;
+  readonly markChannel: MarkChannel;
 }
 
 interface MarkAllOptions {
@@ -121,7 +122,7 @@ function createMarkAll(options: MarkAllOptions): MarkAll {
         ...deactivatedUpToOf(options.deactivatedQuietAgents),
       });
     },
-    markChannelRead: createMarkChannel({
+    markChannel: createMarkChannel({
       client,
       items,
       onChange: () => {
