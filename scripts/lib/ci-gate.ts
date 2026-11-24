@@ -1,6 +1,7 @@
 import type { CheckRun, Job, Unreadable } from "./check-run.ts";
 import type { Command, Step, Stopped } from "./merge-steps.ts";
 import { DONE, run, stop, tail } from "./merge-steps.ts";
+import { UNVOUCHED, vouchedGreen } from "./ci-vouch.ts";
 import { field, list, parseJson } from "./json.ts";
 import { readCheckRun } from "./check-run.ts";
 
@@ -14,6 +15,7 @@ interface CiGateOptions {
   readonly polls: number;
   readonly sleep: () => void;
   readonly subject: string;
+  readonly vouchedBy: string;
 }
 
 interface Watched {
@@ -216,12 +218,34 @@ function verdict(options: CiGateOptions, watched: Watched): Step | "running" {
   return green(options, checkRun);
 }
 
+function vouched(options: CiGateOptions, runNumber: number, waited: number): boolean {
+  if (options.vouchedBy === "" || waited !== NONE) {
+    return false;
+  }
+  const voucher = vouchedGreen({ ...options, branchPrefix: options.vouchedBy, runNumber });
+  if (voucher === UNVOUCHED) {
+    return false;
+  }
+  options.log(
+    `${options.subject}'s latest Check run is still running, but ${voucher.branch}'s Check run on the same commit is green: ${voucher.checkRun.url}`,
+  );
+  return true;
+}
+
+function settled(options: CiGateOptions, watched: Watched, waited: number): Step | "running" {
+  const judged = verdict(options, watched);
+  if (judged === "running" && vouched(options, watched.runNumber, waited)) {
+    return DONE;
+  }
+  return judged;
+}
+
 function poll(options: CiGateOptions, runNumber: number, waited: number): Step {
   const checkRun = readCheckRun({ ...options, runNumber });
   if (checkRun.kind === "unreadable") {
     return unreadable(options, checkRun);
   }
-  const judged = verdict(options, { checkRun, runNumber });
+  const judged = settled(options, { checkRun, runNumber }, waited);
   if (judged !== "running") {
     return judged;
   }

@@ -89,7 +89,7 @@ function view({ jobs, status, url = URL }: View): unknown {
   return { jobs: jobs.map((job) => ({ ...job, databaseId: JOB_ID })), status, url };
 }
 
-function fake(responses: Responses): Fake {
+function fake({ vouchedBy = "", ...responses }: Responses & { readonly vouchedBy?: string }): Fake {
   const dir = mkdtempSync(path.join(tmpdir(), "ci-gate-"));
   onTestFinished(() => {
     rmSync(dir, { force: true, recursive: true });
@@ -116,6 +116,7 @@ function fake(responses: Responses): Fake {
           sleeps.push("slept");
         },
         subject: "v1",
+        vouchedBy,
       });
       return { logs, sleeps: sleeps.length, step };
     },

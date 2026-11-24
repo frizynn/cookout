@@ -8,6 +8,7 @@ const MERGE_BRANCH = `merge-ticket-${TICKET}`;
 const ONE_ATTEMPT = 1;
 const TWO_ATTEMPTS = 2;
 const FIRST_RUN = 1;
+const FIRST_FIELD = 0;
 
 interface FakeCi {
   readonly ci: (branch: string, sha: string) => Step;
@@ -85,6 +86,20 @@ it("pushes merge-ticket-N, and fast-forwards v1 to the exact commit whose Check 
     [`${MERGE_BRANCH} ${sha} ${sha}`],
     "v1",
   ]);
+});
+
+it("returns the merge once v1 is fast-forwarded, watching no Check run but merge-ticket-N's", {
+  timeout: 10_000,
+}, () => {
+  expect.hasAssertions();
+
+  const { origin, other, work } = repos();
+  repo(work).commit("the ticket", { "notes.txt": "ticket\n" });
+  const { ci, watched } = fakeCi({ origin, other });
+
+  const merged = repo(work).merge({ ci });
+
+  expect([merged.ok, watched.map((each) => each.split(" ").at(FIRST_FIELD))]).toStrictEqual([true, [MERGE_BRANCH]]);
 });
 
 it("stops on a red Check run of merge-ticket-N, pushes nothing to v1 and deletes the branch", {

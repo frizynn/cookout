@@ -6,6 +6,7 @@ interface Wait {
   readonly base: readonly string[];
   readonly log: (line: string) => void;
   readonly subject: string;
+  readonly vouchedBy?: string;
 }
 
 const WAIT_MS = 30_000;
@@ -17,7 +18,7 @@ function sleep(): void {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT)), SLEEP_SLOT, SLEEP_SLOT, WAIT_MS);
 }
 
-function waitForCi({ args, base, log, subject }: Wait): Step {
+function waitForCi({ args, base, log, subject, vouchedBy = "" }: Wait): Step {
   return ciGreen({
     appear: APPEAR_WAITS,
     args,
@@ -28,6 +29,7 @@ function waitForCi({ args, base, log, subject }: Wait): Step {
     polls: RUN_WAITS,
     sleep,
     subject,
+    vouchedBy,
   });
 }
 

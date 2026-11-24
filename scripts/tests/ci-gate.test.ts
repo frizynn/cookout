@@ -203,3 +203,67 @@ it.each<Responses & { readonly name: string }>([
     `v1's latest Check run is red: e2e-docker (failure).\n${URL}${E2E_STEPS}`,
   );
 });
+
+const MERGE_URL = "https://github.com/o/r/actions/runs/40";
+const ON_COMMIT = [
+  { databaseId: 42, headBranch: "v1" },
+  { databaseId: 40, headBranch: "merge-ticket-7" },
+];
+const V1_RUNNING = view({ jobs: [done("lint"), running("e2e-docker")], status: RUNNING });
+const HEAD = { headSha: "abc" };
+const VOUCHED_BY = "merge-ticket-";
+
+it("counts a v1 run still in progress as green when the same commit's merge-ticket run is green", {
+  timeout: 10_000,
+}, () => {
+  expect.hasAssertions();
+
+  const gh = fake({
+    list: [RUN, ON_COMMIT],
+    view: [V1_RUNNING, HEAD, view({ jobs: [done("lint"), done("e2e-docker")], status: COMPLETED, url: MERGE_URL })],
+    vouchedBy: VOUCHED_BY,
+  });
+
+  const { logs, sleeps, step } = gh.gate(["--branch", "v1"]);
+
+  expect([step, sleeps, logs]).toStrictEqual([
+    { kind: "done" },
+    NO_WAITS,
+    [
+      `v1's latest Check run is still running, but merge-ticket-7's Check run on the same commit is green: ${MERGE_URL}`,
+    ],
+  ]);
+  expect(gh.calls()).toStrictEqual([
+    "run list --workflow Check --event push --limit 1 --json databaseId --branch v1",
+    "run view 42 --json status,conclusion,url,jobs",
+    "run view 42 --json headSha",
+    "run list --workflow Check --event push --json databaseId,headBranch --commit abc",
+    "run view 40 --json status,conclusion,url,jobs",
+  ]);
+});
+
+it.each<Responses & { readonly name: string }>([
+  {
+    list: [RUN, [{ databaseId: 42, headBranch: "v1" }]],
+    name: "the commit has no merge-ticket run",
+    view: [V1_RUNNING, HEAD, V1_RUNNING],
+  },
+  {
+    list: [RUN, ON_COMMIT],
+    name: "the merge-ticket run is not green",
+    view: [V1_RUNNING, HEAD, view({ jobs: [running("e2e-docker")], status: RUNNING }), V1_RUNNING],
+  },
+  { list: [RUN, ON_COMMIT], name: "the run's commit cannot be read", view: [V1_RUNNING, "fail", V1_RUNNING] },
+  { list: [RUN, "fail"], name: "the commit's runs cannot be listed", view: [V1_RUNNING, HEAD, V1_RUNNING] },
+])("waits for a v1 run still in progress when $name", { timeout: 10_000 }, (responses) => {
+  expect.hasAssertions();
+
+  const gh = fake({ ...responses, vouchedBy: VOUCHED_BY });
+
+  const { sleeps, step } = gh.gate(["--branch", "v1"]);
+
+  expect([reasonOf(step), sleeps]).toStrictEqual([
+    `v1's latest Check run was still running after ${POLLS} waits: ${URL}`,
+    POLLS,
+  ]);
+});
