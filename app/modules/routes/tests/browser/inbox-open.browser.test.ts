@@ -64,8 +64,8 @@ async function openFromInbox(page: Page, list: string): Promise<void> {
 
 async function expectMentionShown(page: Page): Promise<void> {
   await expect(inConversation(page)).toContainText("Deploy at noon?");
-  await expect(mentionIn(page)).toBeInViewport();
   await expect(mentionIn(page)).toHaveAttribute("aria-current", "true");
+  await expect(mentionIn(page)).toBeInViewport();
 }
 
 async function shownInLight(page: Page): Promise<void> {
@@ -97,6 +97,16 @@ test("clicking a seen Inbox item shows its thread, with its message in view", as
   await shownInLight(page);
 
   await page.screenshot({ path: test.info().outputPath("inbox-open-seen-light.png") });
+});
+
+test("an Inbox thread address without a message still opens, scrolled to the newest message", async ({ page }) => {
+  const channel = "browser-inbox-open-old-link";
+  const { parent, reader } = await mentionedDeepInThread(channel);
+  await logInToChannels({ page, token: reader.token });
+  await page.goto(`/#/inbox/${channel}/${String(parent)}`);
+  const newest = inConversation(page).getByRole("article").filter({ hasText: "Step 1 done" });
+
+  await expect(newest.last()).toBeInViewport();
 });
 
 test("clicking a seen Inbox item in a Closed thread shows its thread, with its message in view", async ({ page }) => {
