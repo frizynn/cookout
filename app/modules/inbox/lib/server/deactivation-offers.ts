@@ -137,4 +137,4 @@ const deactivationOffersLayer: Layer.Layer<DeactivationOffers, never, Storage> =
   }),
 );
 
-export { DeactivationOffers, type OfferChanged, deactivationOffersLayer };
+export { DeactivationOffers, deactivationOffersLayer };

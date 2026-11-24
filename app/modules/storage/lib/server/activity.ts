@@ -50,4 +50,4 @@ function withActivity<Store extends ActivityWrites>({ record, store }: Recording
   return { ...store, ...recordingActivity(store, record) };
 }
 
-export { type ActivityWrites, type RecordActivity, withActivity };
+export { type RecordActivity, withActivity };
