@@ -1,7 +1,8 @@
 # Deploy the cookout to Fly (app `cookout`, lhr) and the example handler (app
 # `cookout-handler-example`, lhr) on every push to main, after `pnpm e2e:docker` passes, then check
 # the deployed stream, that a command call gets the handler's reply, and that the full e2e suite
-# passes against the deployed URL and leaves none of its e2e- identities there. A failure in either e2e
+# passes against the deployed URL and leaves none of its e2e- identities there, then tags the deployed
+# commit deploy/<short-sha>. A failure in either e2e
 # stage fails the run. A workflow_dispatch on any branch runs the same e2e and the deployed checks
 # without deploying the cookout; `restart: true`
 # also restarts its machine first, and `handler: true` deploys the example handler from that branch.
@@ -185,3 +186,26 @@ jobs:
           echo "### $FAILED_JOB failed on $failed, and the run $outcome to $PREVIOUS_IMAGE" >> "$GITHUB_STEP_SUMMARY"
           echo "::error::$FAILED_JOB failed on $failed, and the run $outcome to $PREVIOUS_IMAGE"
           exit 1
+
+  # Record the commit production now runs: the migrations check in `pnpm check` (hygiene) compares the
+  # migrations list with the newest deploy/* tag's (#249). Tags are only ever added, never moved or force-pushed.
+  tag-deployed:
+    needs: [deploy, deployed]
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && needs.deploy.result == 'success' && needs.deployed.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag the deployed commit deploy/<short-sha>
+        run: |
+          tag="deploy/${GITHUB_SHA::8}"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
+            echo "$tag already exists; tags are never moved."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$tag" -m "Deployed to Fly by run $GITHUB_RUN_ID" "$GITHUB_SHA"
+          git push origin "refs/tags/$tag"

@@ -16,6 +16,7 @@ interface Repos {
 interface Overrides {
   readonly check?: readonly string[];
   readonly install?: readonly string[];
+  readonly migrationsBase?: string;
 }
 
 const TICKET = 7;
@@ -25,6 +26,7 @@ const FLOOR = { base: ["90", "95"], merged: ["91", "94"], ticket: ["92", "94"], 
 
 const rules: MergeRules = {
   adrs: "docs/adr",
+  appendOnly: ["migrations.ts"],
   hunks: [
     { file: "migrations.ts", resolve: "append" },
     { file: "floor.ts", resolve: "lower" },
@@ -116,6 +118,7 @@ function optionsFor(work: string, overrides: Overrides): MergeOptions {
     log: (line): void => {
       logged.push(line);
     },
+    migrationsBase: overrides.migrationsBase ?? "origin/v1",
     rules,
     ticket: TICKET,
     title: "Add the c table",

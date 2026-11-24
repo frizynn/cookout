@@ -176,8 +176,6 @@ const migrations: readonly string[] = [
      last_seen_at TEXT NOT NULL
    ) STRICT;`,
   REACTIONS_MIGRATION,
-  `ALTER TABLE messages ADD COLUMN closed_at TEXT;
-   ALTER TABLE messages ADD COLUMN closed_by TEXT;`,
   `CREATE TABLE join_codes (
      code_hash TEXT PRIMARY KEY,
      agent TEXT NOT NULL REFERENCES identities (name) ON DELETE CASCADE,
@@ -189,6 +187,8 @@ const migrations: readonly string[] = [
   "ALTER TABLE messages ADD COLUMN reopened_at TEXT;",
   OFFLINE_ALERTS_MIGRATION,
   NUDGES_MIGRATION,
+  `ALTER TABLE messages ADD COLUMN closed_at TEXT;
+   ALTER TABLE messages ADD COLUMN closed_by TEXT;`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

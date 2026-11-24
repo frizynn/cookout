@@ -1,0 +1,7 @@
+const migrations: readonly string[] = [
+  `CREATE TABLE channels (
+     name TEXT PRIMARY KEY
+   ) STRICT;`,
+  "ALTER TABLE channels ADD COLUMN description TEXT;",
+  `ALTER TABLE presence ADD COLUMN offline_reason TEXT;`,
+];

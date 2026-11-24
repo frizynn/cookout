@@ -4,6 +4,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { adrEdits } from "./lib/adr-append-only.ts";
 import { canaryResponseSchemas } from "../lint/canary/validators/schemas.ts";
 import { generateValidators } from "./lib/validators.ts";
+import { migrationsInserted } from "./lib/migrations-append-only.ts";
 
 type Canary = { readonly check: string; readonly code: string; readonly file: string };
 
@@ -135,12 +136,31 @@ function adrsCaught(): ReadonlySet<string> {
   return new Set(edits.map(() => key(ADR_CODE, ADR_CANARY)));
 }
 
+const DEPLOYED_MIGRATIONS = `${ROOT}/migrations/deployed.txt`;
+const MIGRATIONS_CANARY = `${ROOT}/migrations/inserted-mid-list.txt`;
+const MIGRATIONS_CODE = "index 2 (schema version 3) differs";
+
+const migrationCanaries: readonly Canary[] = [{ check: "hygiene", code: MIGRATIONS_CODE, file: MIGRATIONS_CANARY }];
+
+function migrationsCaught(): ReadonlySet<string> {
+  const inserted = migrationsInserted({
+    base: readFileSync(DEPLOYED_MIGRATIONS, "utf8"),
+    baseName: "deploy/canary",
+    file: MIGRATIONS_CANARY,
+    head: readFileSync(MIGRATIONS_CANARY, "utf8"),
+  });
+  return new Set(
+    inserted.filter((reason) => reason.includes(MIGRATIONS_CODE)).map(() => key(MIGRATIONS_CODE, MIGRATIONS_CANARY)),
+  );
+}
+
 const escaped = [
   ...missing(lintCanaries, lintCaught()),
   ...missing(tscCanaries, tscCaught()),
   ...missing(seamCanaries, seamsCaught()),
   ...missing(validatorCanaries, validatorsCaught()),
   ...missing(adrCanaries, adrsCaught()),
+  ...missing(migrationCanaries, migrationsCaught()),
 ];
 for (const canary of escaped) {
   console.error(`${SCRIPT}: ${canary.check} did not report ${canary.code} for its planted violation in ${canary.file}`);

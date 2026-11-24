@@ -2,15 +2,18 @@ import { existsSync, readFileSync } from "node:fs";
 import type { SpawnSyncReturns } from "node:child_process";
 import { adrEdits } from "./lib/adr-append-only.ts";
 import { duplicateNumbers } from "./lib/adr-numbers.ts";
+import { migrationsInserted } from "./lib/migrations-append-only.ts";
 import { spawnSync } from "node:child_process";
 
 const SELF = "scripts/hygiene.ts";
 const WIKI = "personal-wiki";
 
+const GIT_OUTPUT = { encoding: "utf8", maxBuffer: 1 << 26 } as const;
+
 const failed = (run: SpawnSyncReturns<string>) => run.error !== undefined || run.status === null || run.status > 1;
 
 const git = (args: readonly string[]) => {
-  const run = spawnSync("git", args, { encoding: "utf8", maxBuffer: 1 << 26 });
+  const run = spawnSync("git", args, GIT_OUTPUT);
   if (failed(run)) {
     console.error(`hygiene: git ${args.join(" ")} failed: ${run.stderr}`);
     process.exit(1);
@@ -123,6 +126,27 @@ function appendOnlyAdrs(): readonly string[] {
   });
 }
 
+const MIGRATIONS = "app/modules/storage/lib/server/migrations.ts";
+
+function deployedMigrations(): readonly string[] {
+  const [tag = ""] = git(["tag", "--list", "deploy/*", "--sort=-creatordate"]);
+  if (tag === "") {
+    return [
+      "found no deploy/* tag, so can't check the migrations list against production's. Run git fetch --tags; the Deploy workflow tags each deployed commit deploy/<short-sha>.",
+    ];
+  }
+  const shown = spawnSync("git", ["show", `${tag}:${MIGRATIONS}`], GIT_OUTPUT);
+  if (failed(shown)) {
+    return [`git show ${tag}:${MIGRATIONS} failed: ${shown.stderr}`];
+  }
+  return migrationsInserted({
+    base: shown.stdout,
+    baseName: tag,
+    file: MIGRATIONS,
+    head: readFileSync(MIGRATIONS, "utf8"),
+  });
+}
+
 const failures = [
   ...gitlinks(),
   ...workspaceFile(),
@@ -131,6 +155,7 @@ const failures = [
   ...wikiCitations(),
   ...adrNumbers(),
   ...appendOnlyAdrs(),
+  ...deployedMigrations(),
 ];
 for (const failure of failures) {
   console.error(`hygiene: ${failure}`);
