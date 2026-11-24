@@ -151,4 +151,4 @@ function postWith(posting: Posting): (author: Identity, message: PostMessage) =>
     });
 }
 
-export { type Append, type Appended, type Hub, type PostMessage, postWith };
+export { type Appended, type Hub, type PostMessage, postWith };
