@@ -5,7 +5,7 @@ const ONE = 1;
 
 interface Slice<State, Client> {
   readonly empty: State;
-  readonly read: (client: Client) => Promise<State | null>;
+  readonly read: (client: Client, held: State) => Promise<State | null>;
   readonly apply: (state: State, event: CookoutEvent) => State;
 }
 
@@ -30,9 +30,10 @@ interface Reader {
 
 interface ReaderOptions<State, Client> extends Omit<PartOptions<State, Client>, "changed"> {
   readonly put: (loaded: State) => void;
+  readonly held: () => State;
 }
 
-function readerOf<State, Client>({ client, put, slice }: ReaderOptions<State, Client>): Reader {
+function readerOf<State, Client>({ client, held, put, slice }: ReaderOptions<State, Client>): Reader {
   const heardWhileReading = new Set<CookoutEvent[]>();
   return {
     heard: (event) => {
@@ -43,7 +44,7 @@ function readerOf<State, Client>({ client, put, slice }: ReaderOptions<State, Cl
     read: async () => {
       const heard: CookoutEvent[] = [];
       heardWhileReading.add(heard);
-      const loaded: State | null = await slice.read(client).catch(() => null);
+      const loaded: State | null = await slice.read(client, held()).catch(() => null);
       heardWhileReading.delete(heard);
       if (loaded === null) {
         return;
@@ -70,7 +71,7 @@ function createPart<State, Client>(options: PartOptions<State, Client>): Part<St
     }
   }
 
-  const { heard, read } = readerOf({ client: options.client, put, slice });
+  const { heard, read } = readerOf({ client: options.client, held: () => state, put, slice });
 
   return {
     apply: (event) => {

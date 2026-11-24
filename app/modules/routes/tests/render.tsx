@@ -1,5 +1,5 @@
 import type { AgentJoinApprovals, LoginApprovals, Session } from "../../session/index.ts";
-import type { Board, BoardOptions } from "../../board/index.ts";
+import type { Board, BoardOptions, BoardStoreClient } from "../../board/index.ts";
 import type { BoardStore, Reading, Unread } from "./defaults.ts";
 import { adminClient, anonymousClient, sessionOf } from "./identities.ts";
 import { boardStoreFor, createUnread, readingFor, unreadFor } from "./defaults.ts";
@@ -15,6 +15,7 @@ import { createLayout } from "../../layout/index.ts";
 import { onTestFinished } from "vitest";
 
 type AppClient = BoardOptions["client"] &
+  BoardStoreClient &
   Pick<
     CookoutClient,
     | "ackAll"

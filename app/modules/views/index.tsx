@@ -54,7 +54,7 @@
  * it, if the message carries an owner), and its data is folded behind a
  * toggle, a command call's shown as the command and the data it called it
  * with. `Authors` gives
- * every message under it the identity list, and `Reacting` the board's `reactions` store: a message shows its
+ * every message under it the identity list, and `Reacting` the board store's reactions: a message shows its
  * reactions as chips, each with its count, pressed when one is the reader's own and naming who reacted in its
  * tooltip; clicking a chip, its 👍 or 👎 hover button or menu item, or pressing `+` or `-` on it while focused,
  * leaves the reader's reaction or, if already left, removes it, saying why if the server refuses. `InboxView` is the inbox of
