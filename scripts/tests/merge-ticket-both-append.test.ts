@@ -1,8 +1,11 @@
+import { BRANCH, git, repo, repos } from "./lib/merge-repos.ts";
 import { expect, it } from "vitest";
-import { git, repo, repos } from "./lib/merge-repos.ts";
 import { MIGRATION_LISTS } from "../lib/migration-lists.ts";
 import type { Repos } from "./lib/merge-repos.ts";
 import { mergeRules } from "../lib/merge-rules.ts";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
 
 const [SQLITE = "", POSTGRES = ""] = MIGRATION_LISTS;
 const ONE_ATTEMPT = 1;
@@ -84,5 +87,37 @@ it("keeps v1's migrations first when v1 appends one while a merge resolved by ha
   expect(onV1(origin)).toStrictEqual([
     sqlite("BASE", "ORDER", "SEARCH", "ATTACHMENTS"),
     postgres("BASE", "ORDER", "SEARCH", "ATTACHMENTS"),
+  ]);
+});
+
+function plantWrongResolution(work: string, wrong: Readonly<Record<string, string>>): void {
+  git(work, "fetch", "-q", "origin");
+  git(work, "checkout", "-q", "-b", "plant", "origin/v1");
+  spawnSync("git", ["-c", "rerere.enabled=true", "-c", "merge.conflictStyle=diff3", "merge", "-q", BRANCH], {
+    cwd: work,
+  });
+  for (const [file, content] of Object.entries(wrong)) {
+    writeFileSync(path.join(work, file), content);
+  }
+  git(work, "-c", "rerere.enabled=true", "rerere");
+  git(work, "merge", "--abort");
+  git(work, "checkout", "-q", BRANCH);
+  git(work, "branch", "-q", "-D", "plant");
+}
+
+it("ignores a recorded rerere resolution of a migrations list that drops v1's entry", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const { origin, other, work } = onV1WithBase();
+  repo(work).commit("the ticket", lists("BASE", "ATTACHMENTS"));
+  repo(other).push(lists("BASE", "SEARCH"));
+  plantWrongResolution(work, lists("BASE", "ATTACHMENTS"));
+
+  const merged = repo(work).merge({ rules: mergeRules });
+
+  expect(merged).toStrictEqual({ attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect(onV1(origin)).toStrictEqual([
+    sqlite("BASE", "SEARCH", "ATTACHMENTS"),
+    postgres("BASE", "SEARCH", "ATTACHMENTS"),
   ]);
 });
