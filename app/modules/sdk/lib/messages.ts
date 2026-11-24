@@ -1,10 +1,9 @@
-import type { ClosedThreadCalls, OpenThreadCalls, SearchCalls } from "../../messages/client.ts";
+import type { ClosedThreadCalls, OpenThreadCalls, PostMessageRequest, SearchCalls } from "../../messages/client.ts";
 import type {
   ListMessagesQuery,
   ListMessagesResponse,
   MessageId,
   MessageResponse,
-  PostMessageRequest,
   ReactionName,
   ReactionsResponse,
   ThreadResponse,
@@ -109,9 +108,9 @@ export type {
   ListMessagesResponse,
   MessageId,
   MessageResponse,
-  PostMessageRequest,
   ReactionName,
   ReactionsResponse,
   ThreadResponse,
 } from "../../messages/index.ts";
+export type { PostMessageRequest } from "../../messages/client.ts";
 export { messageCalls };
