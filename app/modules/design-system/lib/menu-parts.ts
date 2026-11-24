@@ -24,7 +24,7 @@ interface MessageActionParts {
 
 type MenuChoice =
   | { readonly label: string; readonly href: string; readonly onSelect: null }
-  | { readonly label: string; readonly href: null; readonly onSelect: () => void };
+  | { readonly label: string; readonly href: null; readonly onSelect: () => void; readonly shortcut?: string };
 
 interface HoverActionsParts extends MessageActionParts {
   readonly choices: readonly MenuChoice[];

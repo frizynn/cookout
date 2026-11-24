@@ -4,7 +4,7 @@ import type { MessageItemParts } from "./parts.ts";
 import { MessageLayout } from "./message-layout.tsx";
 import type { ReactNode } from "react";
 import { messageClass } from "./message-class.ts";
-import { useReactionKeys } from "./use-reaction-keys.ts";
+import { useMessageArticle } from "./use-message-article.ts";
 
 const FOCUSABLE = 0;
 
@@ -21,7 +21,7 @@ export function ItemArticle(parts: ItemArticleParts): ReactNode {
     menu: message.menu,
     onAction: handleAction,
   });
-  const article = useReactionKeys(message.menu.reactions);
+  const article = useMessageArticle(message.menu);
   return (
     <MessageContextMenu choices={choices}>
       <article

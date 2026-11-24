@@ -946,6 +946,18 @@ agent-browser --session cookout open "http://127.0.0.1:3000/#/" && agent-browser
 
 The first snapshot's `Channels` list has `#deploys` and `#general` bold, each with its unread count, matching her seeded inbox (`inbox` as `grace`, as in "Open a channel"): the `deploys` top-level messages are activity, and in `#general` `ada`'s reply in the thread is activity while `mentionOfGrace` is for her, so `#general` has a pill. Without a reload, the second has `#deploys`' count up by two and a pill for the new mention. After opening `#deploys` its link is `#deploys` again, no longer bold, while `#general` keeps its count. After opening the thread, `#general` drops the reply, as the thread view acks replies only, and keeps the pill for `mentionOfGrace`, a top-level message. A message that arrives live while its channel or thread is open counts as read: the open view acks it as it arrives, so the counts in every tab stay clear (board question #467, decided 2026-11-23 in #87).
 
+### Mark a message unread
+
+Every message's actions menu (right-click the message, or its `More actions` button) has `Mark unread`, whose tooltip reads `Mark unread (Alt-click)`. It marks that message unread with everything after it in its thread or channel (`POST /v1/read-positions/unread`): the `New` line moves above it, its channel's count in the sidebar shows them, and they are back in the Inbox, in every open tab. An Alt-click (Option-click on macOS) on a message does the same at once, in a channel, the thread panel or an Inbox conversation, and focuses and selects nothing; an Alt-click on a link, button or reaction inside the message does only what that element does, and a plain click marks nothing. A refused one shows an alert saying why. Still logged in as `grace`, open `#deploys` and Alt-click its `Deployed 1.4.0.` message (agent-browser can't hold Alt through a click, so dispatch it):
+
+```sh
+agent-browser --session cookout open "http://127.0.0.1:3000/#/channels/deploys" && agent-browser --session cookout wait --text "Deployed 1.4.0."
+agent-browser --session cookout eval '[...document.querySelectorAll("article")].find((a) => a.textContent.includes("Deployed 1.4.0.")).dispatchEvent(new MouseEvent("click", { altKey: true, bubbles: true }))'
+agent-browser --session cookout wait 1000 && agent-browser --session cookout snapshot
+```
+
+The snapshot has a separator named `New` just above `Deployed 1.4.0.`, and `#deploys` in the sidebar bold with its count; `inbox` as `grace` from the CLI lists it again. `app/modules/routes/tests/alt-click-unread.test.tsx` drives the feed, the thread panel, a link and a plain click.
+
 ## See the web UI in both themes
 
 ```sh

@@ -108,7 +108,9 @@
  * `key`, pressed while the message itself has focus, leaves it too. Its `menu` gives it one actions menu (the action,
  * then each reaction, then Mark unread, then the thread choice, such as Close, if any), drawn two ways on Radix: right-clicking the message opens it as a context menu at the pointer, and the
  * More actions button opens it as a dropdown. Radix gives both their keyboard and focus behaviour; a chosen item's
- * action runs once the menu has closed. `StandaloneMessage` is one named message on its own, such as a
+ * action runs once the menu has closed. Mark unread's tooltip names its shortcut, `Alt-click`: an Alt-click (Option-click
+ * on macOS) on the message, but not on a link, button or other interactive element in it, runs Mark unread at once and
+ * focuses and selects nothing; `StandaloneMessage` does the same. `StandaloneMessage` is one named message on its own, such as a
  * thread's parent. In a message, `MessageBody` holds its rendered Markdown text, `Mention` an
  * `@name` in it, `CallChip` a command call
  * and its data, `DataToggle` its data folded away, and `ThreadSummary` a link to
