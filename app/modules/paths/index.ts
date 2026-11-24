@@ -31,12 +31,17 @@ const settingsSections = ["profile", "theme", "agents"] as const;
 
 type SettingsSection = (typeof settingsSections)[number];
 
+interface InboxSelection {
+  readonly channel: ChannelName;
+  readonly thread: MessageId;
+}
+
 type Route =
   | { readonly name: "login" }
   | { readonly name: "settings"; readonly section: SettingsSection | null }
   | { readonly name: "people" }
   | { readonly name: "profile"; readonly identity: IdentityName }
-  | { readonly name: "inbox" }
+  | { readonly name: "inbox"; readonly selected: InboxSelection | null }
   | { readonly name: "open-threads"; readonly all: boolean }
   | { readonly name: "channel"; readonly channel: ChannelName }
   | { readonly name: "thread"; readonly channel: ChannelName; readonly thread: MessageId }
@@ -52,6 +57,7 @@ type LinkedRoute = Extract<
 type Matcher = (hash: string) => Route | false;
 
 const INBOX = /^(?:#\/?|#\/inbox)?$/u;
+const INBOX_THREAD = /^#\/inbox\/(?<channel>[^/]+)\/(?<thread>[^/]+)$/u;
 const LOGIN = /^#\/login$/u;
 const SETTINGS = /^#\/settings$/u;
 const SECTION = /^#\/settings\/(?<section>[^/]+)$/u;
@@ -98,16 +104,35 @@ function approveRoute(userCode: string, name: "approve" | "approve-join" = "appr
   return { name, userCode };
 }
 
-function threadRoute(channel: string, thread: string): Route {
+function selectionOf(channel: string, thread: string): InboxSelection | null {
   const id = Number(thread);
   if (!isChannelName(channel) || !DIGITS.test(thread) || !isMessageId(id)) {
+    return null;
+  }
+  return { channel, thread: id };
+}
+
+function threadRoute(channel: string, thread: string): Route {
+  const selection = selectionOf(channel, thread);
+  if (selection === null) {
     return MISSING;
   }
-  return { channel, name: "thread", thread: id };
+  return { ...selection, name: "thread" };
+}
+
+function inboxRoute(channel: string, thread: string): Route {
+  const selected = selectionOf(channel, thread);
+  if (selected === null) {
+    return MISSING;
+  }
+  return { name: "inbox", selected };
 }
 
 const matchers: readonly Matcher[] = [
-  (hash) => INBOX.test(hash) && { name: "inbox" },
+  (hash) => INBOX.test(hash) && { name: "inbox", selected: null },
+  (hash) =>
+    INBOX_THREAD.test(hash) &&
+    inboxRoute(hash.replace(INBOX_THREAD, "$<channel>"), hash.replace(INBOX_THREAD, "$<thread>")),
   (hash) => LOGIN.test(hash) && { name: "login" },
   (hash) => SETTINGS.test(hash) && { name: "settings", section: null },
   (hash) => SECTION.test(hash) && sectionRoute(hash.replace(SECTION, "$<section>")),
@@ -139,6 +164,13 @@ function channelHref(route: Extract<Route, { readonly name: "channel" | "thread"
     return `#/channels/${route.channel}`;
   }
   return `#/channels/${route.channel}/threads/${String(route.thread)}`;
+}
+
+function inboxHref(selected: InboxSelection | null): string {
+  if (selected === null) {
+    return "#/inbox";
+  }
+  return `#/inbox/${selected.channel}/${String(selected.thread)}`;
 }
 
 function pageHref(
@@ -204,7 +236,7 @@ function routeOf(hash: string): Route {
  */
 export function hrefOf(route: LinkedRoute): string {
   if (route.name === "inbox") {
-    return "#/inbox";
+    return inboxHref(route.selected);
   }
   if (route.name === "people") {
     return "#/people";
@@ -255,4 +287,4 @@ export function closedHref(route: Route): string {
   return hrefOf(route);
 }
 
-export type { LinkedRoute, Place, Route, SettingsSection };
+export type { InboxSelection, LinkedRoute, Place, Route, SettingsSection };

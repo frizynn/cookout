@@ -46,7 +46,7 @@ function inboxBadges(): readonly string[] {
 }
 
 function threadRow({ channel, parent }: Thread, row: string): string {
-  return `#/channels/${channel}/threads/${String(parent.id)} Mentioned you${channel}-posterreplied in a thread in#${channel}${row}`;
+  return `#/inbox/${channel}/${String(parent.id)} Mentioned you${channel}-posterreplied in a thread in#${channel}${row}`;
 }
 
 async function shown(): Promise<readonly unknown[]> {

@@ -59,13 +59,18 @@
  * whoever is logged in (the `unread` store), under a notice naming the open channel
  * that was just deleted elsewhere, if any (the board's `notice`, until dismissed): For you and Activity, each
  * counting its rows, newest first and live, or "You're all caught up."; then Earlier, the read rows
- * from the inbox history, newest first, with "Show 50 earlier" while older ones
+ * from the inbox history, newest first, with "Show earlier" while older ones
  * remain and "That's everything." at the end, or "Nothing read yet.". A row
- * is one thread or channel (the `unread` store's `rowsOf`), a link to it,
- * leading with its strongest reason, then its latest message's author,
- * channel, how many of its messages are new, a short time, the thread's start
- * and two lines of its text with mentions styled (the reader's own in the
- * mention colour); opening it acks it, so it moves to Earlier. `PeopleView` is the directory of every
+ * is one thread or channel (the `unread` store's `rowsOf`), leading with its strongest reason, then its latest
+ * message's author, channel, how many of its messages are new, a short time, the thread's start and two lines of its
+ * text with mentions styled (the reader's own in the mention colour). A channel's row links to the channel, so opening
+ * it acks it and it moves to Earlier. A thread's row links to its inbox address, which selects it (`selected`): it is
+ * marked as current, and its conversation shows beside the list (the board's thread store, so opening it acks it as
+ * the thread panel does): the first message, "N earlier replies" up to the thread's "New" line (shown in place on a
+ * click, the `unread` store's `selection`), then the unread replies, live, under a header naming the channel with an
+ * "Open thread" link; "Pick a conversation" with nothing selected, and "Nothing here" for a thread that doesn't exist.
+ * The selected row, once read, stays in its section, muted, until the selection moves. On a narrow screen the
+ * conversation replaces the list, with a back arrow to the inbox. `PeopleView` is the directory of every
  * identity (the identity list, which any identity may read): how many there
  * are, a name filter and All / Humans / Agents chips, each counting what the
  * name filter leaves (both kept in the `layout` store), and a row per

@@ -19,12 +19,13 @@ interface InboxRowViewProps {
   readonly row: InboxRow;
   readonly me: string;
   readonly unread: boolean;
+  readonly current: boolean;
 }
 
-function linkOf(item: InboxItem): string {
-  const channel = item.channel.name;
-  if (item.message.kind === "reply") {
-    return hrefOf({ channel, name: "thread", thread: item.parent.id });
+function linkOf(row: InboxRow): string {
+  const channel = row.latest.channel.name;
+  if (row.thread !== null) {
+    return hrefOf({ name: "inbox", selected: { channel, thread: row.thread } });
   }
   return hrefOf({ channel, name: "channel" });
 }
@@ -95,7 +96,8 @@ export function InboxRowView(props: InboxRowViewProps): ReactNode {
       channel={item.channel.name}
       context={contextOf(item)}
       count={countOf(row, props.unread)}
-      href={linkOf(item)}
+      current={props.current}
+      href={linkOf(row)}
       level={levelOf(row, props.unread)}
       note={note}
       presence={presence}

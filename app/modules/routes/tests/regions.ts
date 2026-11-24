@@ -68,6 +68,10 @@ export function inThread(): Region {
   return regionOf(() => screen.getByRole("complementary", { name: "Thread" }));
 }
 
+export function inConversation(): Region {
+  return regionOf(() => screen.getByRole("complementary", { name: "Conversation" }));
+}
+
 export function inProfile(): Region {
   return regionOf(() => screen.getByRole("complementary", { name: "Profile" }));
 }

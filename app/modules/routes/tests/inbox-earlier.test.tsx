@@ -86,13 +86,13 @@ it("earlier lists read rows, a page at a time, merging each page into the rows i
     null,
   ]);
 
-  fireEvent.click(inPane().getByRole("button", { name: "Show 2 earlier" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Show earlier" }));
   await screen.findByText("That's everything.");
 
   expect([
     rowsOf("Earlier"),
     rowsOf("Activity"),
-    inPane().queryByRole("button", { name: "Show 2 earlier" }),
+    inPane().queryByRole("button", { name: "Show earlier" }),
   ]).toStrictEqual([[postedRow(channel, "Three")], [newRow(channel, "Six")], null]);
 
   unmount();
@@ -104,7 +104,7 @@ it("clicking Load more twice before it answers reads the next page once", { time
   const channel = "web-inbox-double-click";
   const reader = await readThenUnread(channel);
   const unmount = openWithClockStopped({ client: reader, hash: "#/inbox", pageSize: TWO_A_PAGE });
-  const more = await inPane().findByRole("button", { name: "Show 2 earlier" });
+  const more = await inPane().findByRole("button", { name: "Show earlier" });
 
   fireEvent.click(more);
   fireEvent.click(more);
@@ -127,7 +127,7 @@ it("an Earlier page that can't be read says why, at first or on Load more", { ti
     hash: "#/inbox",
     pageSize: TWO_A_PAGE,
   });
-  fireEvent.click(await inPane().findByRole("button", { name: "Show 2 earlier" }));
+  fireEvent.click(await inPane().findByRole("button", { name: "Show earlier" }));
   const more = await alertSaying("Couldn't load more (");
 
   expect([first.textContent, more.textContent]).toStrictEqual([

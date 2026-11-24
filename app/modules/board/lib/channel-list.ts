@@ -48,7 +48,7 @@ function withoutChannel(state: ChannelsState, name: ChannelName): ChannelsState 
 function leftIfOpen(name: ChannelName): boolean {
   const { route } = locationOf(globalThis.location.hash);
   if ((route.name === "channel" || route.name === "thread") && route.channel === name) {
-    globalThis.location.hash = hrefOf({ name: "inbox" });
+    globalThis.location.hash = hrefOf({ name: "inbox", selected: null });
     return true;
   }
   return false;

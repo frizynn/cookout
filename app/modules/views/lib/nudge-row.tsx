@@ -34,6 +34,7 @@ export function NudgeRow(props: NudgeRowProps): ReactNode {
       authorHref={profileHref}
       channel={nudge.channel.name}
       context={null}
+      current={false}
       count={null}
       displayName={displayName}
       href={hrefOf({ channel: nudge.channel.name, name: "thread", thread: parent.id })}

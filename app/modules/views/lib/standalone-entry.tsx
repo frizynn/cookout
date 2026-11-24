@@ -1,6 +1,6 @@
+import type { MenuClosing, Reply } from "./use-message-menu.ts";
 import type { Message, ReadReceipt } from "../../sdk/index.ts";
 import { useMessageMenu, useReplyAction } from "./use-message-menu.ts";
-import type { MenuClosing } from "./use-message-menu.ts";
 import { MessageContent } from "./message-content.tsx";
 import type { MessageMenu } from "../../unread/index.ts";
 import type { ReactNode } from "react";
@@ -19,7 +19,7 @@ interface StandaloneEntryProps {
   readonly receipts: readonly ReadReceipt[];
   readonly menu: MessageMenu;
   readonly closing: MenuClosing;
-  readonly reply: (name: string | null) => void;
+  readonly reply: Reply | null;
 }
 
 export function StandaloneEntry(props: StandaloneEntryProps): ReactNode {

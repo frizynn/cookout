@@ -24,8 +24,8 @@
  * when its first reader subscribes it loads the inbox history
  * (`GET /v1/inbox/history`) a page of `pageSize` items at a time (50 unless
  * given), keeping the read ones newest first and reading on until a page
- * holds one, and `loadMore` reads the next page; its state says the page size,
- * for the "Show 50 earlier" button. An item a read position
+ * holds one, and `loadMore` reads the next page, for the "Show earlier" button; its state says the page size.
+ * An item a read position
  * takes out of the counts joins it, so opening an item moves it there.
  * It loads the caller's read positions (`GET /v1/read-positions`) with the
  * inbox and follows them by `read-position`. `newLine` is where a channel's or
@@ -57,12 +57,12 @@
  * event closes its thread or a `message` event brings a reply in it, as the server reads it then.
  */
 import type { ChannelName, CookoutClient, MessageId } from "../sdk/index.ts";
+import type { NewLine, WithNewLines } from "./lib/new-lines.ts";
 import { follow, loadedOf, loadedOrFailed, partsOf } from "./lib/parts.ts";
 import type { Alerts } from "./lib/alerts.ts";
 import type { Earlier } from "./lib/earlier.ts";
 import type { Live } from "../live/index.ts";
 import type { MessageMenu } from "./lib/message-menu.ts";
-import type { NewLine } from "./lib/new-lines.ts";
 import type { Nudges } from "./lib/nudges.ts";
 import type { UnreadState } from "./lib/parts.ts";
 import { createMarkAll } from "./lib/mark-all.ts";
@@ -96,6 +96,12 @@ export interface Unread {
   readonly alerts: Alerts;
   /** Every Nudge of the caller's, read or not, newest first, marking one read and closing its thread: a store of its own. */
   readonly nudges: Nudges;
+  /**
+   * The Inbox's selected thread row (none for `null`): the thread's unread items as last seen while anyone reads it, kept once they are
+   * read so the row can stay in place, and whether its earlier replies are shown (`expand`). It starts afresh when it
+   * is selected again. An external store of its own.
+   */
+  readonly selection: WithNewLines<object>["selection"];
 }
 
 /**
@@ -178,6 +184,7 @@ export type { MarkAllState } from "./lib/mark-all.ts";
 export type { Alerts, AlertsState } from "./lib/alerts.ts";
 export type { Nudges, NudgesState } from "./lib/nudges.ts";
 export type { MessageMenu } from "./lib/message-menu.ts";
+export type { Selection } from "./lib/selection.ts";
 export type { InboxRow } from "./lib/rows.ts";
 export { rowsOf } from "./lib/rows.ts";
 export type { ThreadNews, UnreadCounts, UnreadWhy } from "./lib/levels.ts";

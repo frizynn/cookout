@@ -1,4 +1,5 @@
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
+import { createSelections } from "./selection.ts";
 
 const NONE = 0;
 const BEFORE_EVERY_MESSAGE = 0;
@@ -19,6 +20,7 @@ interface CountsStore {
 
 type WithNewLines<Store> = Omit<Store, "movesBack" | "readPosition"> & {
   readonly newLine: (channel: ChannelName, thread: MessageId | null) => NewLine;
+  readonly selection: ReturnType<typeof createSelections>;
 };
 
 interface NewLine {
@@ -96,8 +98,9 @@ function withNewLines<Store extends CountsStore>({
       lines.set(key, line);
       return line;
     },
+    selection: createSelections(counts),
   };
 }
 
 export { withNewLines };
-export type { NewLine };
+export type { NewLine, WithNewLines };

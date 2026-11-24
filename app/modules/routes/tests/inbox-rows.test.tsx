@@ -89,7 +89,7 @@ async function postedTwice({ channel, poster }: Started): Promise<void> {
 }
 
 function threadRow({ channel, parent }: Started, row: string): string {
-  return `#/channels/${channel}/threads/${String(parent.id)} ${row}`;
+  return `#/inbox/${channel}/${String(parent.id)} ${row}`;
 }
 
 function followedRow(thread: Started, row: string): string {
@@ -165,7 +165,7 @@ it("a live reply joins its thread's row and moves it to the top, and a reply in 
   expect([rowsOf("Activity"), rowsOf("For you")]).toStrictEqual([
     [followedRow(thread, "2 newjust nowre: Deploy at noon?Two"), channelRow(channel, "just nowLunch?")],
     [
-      `#/channels/${channel}/threads/${String(other.id)} Replied to you${channel}-posterreplied in a thread in#${channel}just nowre: Tea?Yes`,
+      `#/inbox/${channel}/${String(other.id)} Replied to you${channel}-posterreplied in a thread in#${channel}just nowre: Tea?Yes`,
     ],
   ]);
 
@@ -224,7 +224,7 @@ it("earlier groups read messages by thread or channel, and a thread across two p
   const { close } = await watching(thread.reader, TWO_A_PAGE);
   const before = rowsOf("Earlier");
 
-  fireEvent.click(inPane().getByRole("button", { name: "Show 2 earlier" }));
+  fireEvent.click(inPane().getByRole("button", { name: "Show earlier" }));
   await screen.findByText("That's everything.");
 
   expect([before, rowsOf("Earlier")]).toStrictEqual([

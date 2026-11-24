@@ -33,6 +33,7 @@ export function OpenThreadRow(props: OpenThreadRowProps): ReactNode {
       authorHref={profileHref}
       channel={message.channel}
       context={null}
+      current={false}
       count={null}
       displayName={displayName}
       href={hrefOf({ channel: message.channel, name: "thread", thread: id })}

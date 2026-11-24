@@ -110,19 +110,17 @@ test("acking in one tab moves the item from Activity to Earlier in another", asy
   await expect(rows(second, "Earlier")).toContainText(["Deploy at noon?"]);
 });
 
-test("Show 50 earlier reads the next page of what was read into the rows shown, and the end says so", async ({
-  page,
-}) => {
+test("Show earlier reads the next page of what was read into the rows shown, and the end says so", async ({ page }) => {
   await logInHavingRead(page, "browser-inbox-more");
 
   await expect(rows(page, "Earlier")).toHaveText([/Build 51 passed$/u]);
   await expect(page.getByText("That's everything.")).toBeHidden();
 
-  await inPane(page).getByRole("button", { name: "Show 50 earlier" }).click();
+  await inPane(page).getByRole("button", { name: "Show earlier" }).click();
 
   await expect(page.getByText("That's everything.")).toBeVisible();
   await expect(rows(page, "Earlier")).toHaveText([/Build 51 passed$/u]);
-  await expect(inPane(page).getByRole("button", { name: "Show 50 earlier" })).toBeHidden();
+  await expect(inPane(page).getByRole("button", { name: "Show earlier" })).toBeHidden();
 });
 
 async function replyFromElsewhere(browser: Browser, poster: Person, thread: string): Promise<void> {
