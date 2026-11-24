@@ -82,7 +82,7 @@ const raised: Effect.Effect<Raised, never, TestCookout> = Effect.gen(function* r
   const { ada, bob } = yield* board;
   yield* Effect.andThen(post(ada, "who owns the release notes?"), post(ada, "who owns the changelog?"));
   yield* post(bob, "who owns the roadmap?");
-  yield* Effect.andThen(settled, TestClock.adjust("3 days"));
+  yield* Effect.andThen(settled, TestClock.adjust("4 days"));
   const adas = yield* nudgesOnceThere(ada.client, TWO);
   const bobs = yield* nudgesOnceThere(bob.client, ONE);
   return { ada, adas, bob, bobs };
