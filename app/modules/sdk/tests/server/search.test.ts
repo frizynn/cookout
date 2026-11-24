@@ -127,7 +127,7 @@ it.effect(
   () =>
     Effect.gen(function* filterRefusals() {
       const { ann } = yield* aBoard;
-      const filters = ["from:@nobody", "in:#nowhere", "before:2026-02-30", "after:yesterday"] as const;
+      const filters = ["from:@nobody", "from:@No_Body", "in:#nowhere", "before:2026-02-30", "after:yesterday"] as const;
       const refused = yield* Effect.forEach(
         filters,
         (filter) => refusal(() => ann.client.search({ query: `deploy ${filter}` })),
@@ -139,10 +139,11 @@ it.effect(
 
       expect(refused).toMatchObject([
         { code: "unknown_identity", status: BAD_REQUEST },
+        { code: "unknown_identity", status: BAD_REQUEST },
         { code: "unknown_channel", status: BAD_REQUEST },
         { code: "invalid_date", status: BAD_REQUEST },
         { code: "invalid_date", status: BAD_REQUEST },
       ]);
-      expect(namesItsFilter).toStrictEqual([true, true, true, true]);
+      expect(namesItsFilter).toStrictEqual([true, true, true, true, true]);
     }).pipe(Effect.provide(testCookout())),
 );
