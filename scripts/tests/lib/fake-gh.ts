@@ -1,4 +1,5 @@
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { DateTime } from "effect";
 import type { Step } from "../../lib/merge-steps.ts";
 import { ciGreen } from "../../lib/ci-gate.ts";
 import { onTestFinished } from "vitest";
@@ -44,8 +45,10 @@ interface View {
 }
 
 interface Job {
+  readonly completedAt?: string;
   readonly conclusion: string;
   readonly name: string;
+  readonly startedAt?: string;
   readonly status: string;
   readonly steps: readonly { readonly conclusion: string; readonly name: string }[];
 }
@@ -87,11 +90,20 @@ function running(name: string): Job {
   return { conclusion: "", name, status: RUNNING, steps: [] };
 }
 
+const STARTED_AT = "2026-11-24T10:00:00Z";
+const MS_PER_MINUTE = 60_000;
+
+function ranFor({ job, minutes }: { readonly job: Job; readonly minutes: number }): Job {
+  const started = DateTime.toEpochMillis(DateTime.makeUnsafe(STARTED_AT));
+  const completedAt = DateTime.formatIso(DateTime.makeUnsafe(started + minutes * MS_PER_MINUTE));
+  return { ...job, completedAt, startedAt: STARTED_AT };
+}
+
 function view({ jobs, status, url = URL }: View): unknown {
   return { jobs: jobs.map((job) => ({ ...job, databaseId: JOB_ID })), status, url };
 }
 
-function stateDir(responses: Responses): string {
+function stateDir(responses: Responses, workflow = ""): string {
   const dir = mkdtempSync(path.join(tmpdir(), "ci-gate-"));
   onTestFinished(() => {
     rmSync(dir, { force: true, recursive: true });
@@ -99,16 +111,21 @@ function stateDir(responses: Responses): string {
   writeFileSync(path.join(dir, "gh.mjs"), FAKE_GH);
   writeFileSync(path.join(dir, "state.json"), JSON.stringify(responses));
   writeFileSync(path.join(dir, "calls.log"), "");
+  if (workflow !== "") {
+    mkdirSync(path.join(dir, ".github", "workflows"), { recursive: true });
+    writeFileSync(path.join(dir, ".github", "workflows", "check.yml"), workflow);
+  }
   return dir;
 }
 
 interface FakeOptions extends Responses {
   readonly rerunRed?: boolean;
   readonly vouchedBy?: string;
+  readonly workflow?: string;
 }
 
-function fake({ rerunRed = false, vouchedBy = "", ...responses }: FakeOptions): Fake {
-  const dir = stateDir(responses);
+function fake({ rerunRed = false, vouchedBy = "", workflow = "", ...responses }: FakeOptions): Fake {
+  const dir = stateDir(responses, workflow);
   return {
     calls: (): readonly string[] => readFileSync(path.join(dir, "calls.log"), "utf8").trim().split("\n"),
     gate: (args, base = [], appear = NO_WAITS): Gated => {
@@ -168,6 +185,7 @@ export {
   ended,
   fake,
   ghOnPath,
+  ranFor,
   reasonOf,
   running,
   view,
