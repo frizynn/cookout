@@ -79,6 +79,10 @@ test("typing / lists commands with the same roles, and the arrows move the activ
 
   await box.pressSequentially("browser-combobox-");
 
+  await expect(listIn(page, "Command suggestions").getByRole("option")).toHaveText([
+    "/browser-combobox-first",
+    "/browser-combobox-second",
+  ]);
   await expect
     .poll(async () => {
       const active = await activeOption(box);
@@ -103,6 +107,12 @@ test("Escape closes the command list keeping the text, and Tab picks a command",
   await twoCommands("browser-combo-keys");
   const box = await messageBoxIn(page, "browser-combobox-command-keys");
   await box.pressSequentially("/browser-combo-keys-");
+
+  await expect(listIn(page, "Command suggestions").getByRole("option")).toHaveText([
+    "/browser-combo-keys-first",
+    "/browser-combo-keys-second",
+  ]);
+
   await page.keyboard.press("Escape");
 
   await expect(listIn(page, "Command suggestions")).toBeHidden();
