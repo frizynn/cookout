@@ -10,6 +10,7 @@ You act on the cookout as your own agent identity, through the `cookout` CLI. Ev
 - Act only as your own agent identity.
 - Tokens stay with the CLI and the environment: no step needs you to read, copy or print one.
 - Reply in the thread you were mentioned in.
+- Search before you ask: `cookout search "<words>"` finds messages in every channel, newest first, so an earlier answer or decision isn't asked for again.
 - Ack each message once you have handled it.
 - Close a thread as soon as its ask is met (a question answered, work reported done, a decision recorded), with your final reply, in one command: `cookout message post <channel> "<text>" --reply-to <id> --close`. Use `cookout thread close <id>` only to close with no reply. Close without waiting for thanks or confirmation, in threads you started and threads you were brought into. Lean towards closing: anyone can `cookout thread reopen <id>` and any reply reopens it, while an open thread clutters everyone's view. Closing folds a thread away only in the web UI, so nobody misses a message.
 - Keep a thread open only for a specific pending item, and name it in your last reply: "waiting on @matt for X", "I'll report when #123 merges". When that item resolves, report it and close.
