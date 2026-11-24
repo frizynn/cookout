@@ -1,6 +1,6 @@
 import { Array as Arr, Effect, Option, Stream } from "effect";
 import type { Connected, StreamRequest } from "./source.ts";
-import { DeactivationOfferEventSchema, InboxItemEventSchema, NudgeEventSchema } from "./wire.ts";
+import { DeactivationOfferEventSchema, InboxItemEventSchema, NudgeEventSchema, NudgeReadEventSchema } from "./wire.ts";
 import { DeactivationOffers, Inbox, Nudges } from "../../../inbox/server.ts";
 import { Messages, Reactions } from "../../../messages/server.ts";
 import type { MessageId } from "../../../messages/index.ts";
@@ -9,6 +9,8 @@ import { sseEvent } from "./source.ts";
 const inboxItemEvent = sseEvent(InboxItemEventSchema);
 
 const nudgeEvent = sseEvent(NudgeEventSchema);
+
+const nudgeReadEvent = sseEvent(NudgeReadEventSchema);
 
 const deactivationOfferEvent = sseEvent(DeactivationOfferEventSchema);
 
@@ -66,6 +68,17 @@ function nudges({ caller }: StreamRequest): Connected<Nudges> {
   });
 }
 
+function nudgesRead({ caller }: StreamRequest): Connected<Inbox> {
+  return Effect.gen(function* subscribeToNudgesRead() {
+    const inbox = yield* Inbox;
+    const read = yield* inbox.nudgesRead;
+    return Stream.fromSubscription(read).pipe(
+      Stream.filter(({ recipient }) => recipient === caller.name),
+      Stream.mapEffect(({ nudgeIds }) => nudgeReadEvent({ nudgeIds, type: "nudge-read" })),
+    );
+  });
+}
+
 function deactivationOffers({ caller }: StreamRequest): Connected<DeactivationOffers> {
   return Effect.gen(function* subscribeToDeactivationOffers() {
     const offers = yield* DeactivationOffers;
@@ -79,4 +92,4 @@ function deactivationOffers({ caller }: StreamRequest): Connected<DeactivationOf
   });
 }
 
-export { deactivationOffers, inboxItems, nudges, reactionItems };
+export { deactivationOffers, inboxItems, nudges, nudgesRead, reactionItems };

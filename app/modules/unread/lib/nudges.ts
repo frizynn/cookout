@@ -100,6 +100,10 @@ function receiveIn(known: Known, event: CookoutEvent): boolean {
     known.addAll([{ ...event.nudge, read: false }]);
     return true;
   }
+  if (event.type === "nudge-read") {
+    const read = new Set(event.nudgeIds);
+    return known.readWhere(({ id }) => read.has(id));
+  }
   const thread = threadOf(event);
   if (thread === null) {
     return false;

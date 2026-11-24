@@ -6,7 +6,7 @@
  * a first `connected` event with the board's latest message ID, read once
  * every other source is listening; the
  * caller's new inbox items, which the `Messages` service's hub feeds; the
- * caller's Nudges as the `Nudges` scheduler raises them; the
+ * caller's Nudges as the `Nudges` scheduler raises them, and as the `Inbox` marks them read; the
  * caller's new read positions, which the `Inbox` service's hub feeds on every
  * ack from any session; and, when the request asks with `?channels=all`,
  * every new message on every channel, every identity created, changed or
@@ -46,6 +46,7 @@ import {
   InboxItemEventSchema,
   MessageEventSchema,
   NudgeEventSchema,
+  NudgeReadEventSchema,
   OfflineAlertEventSchema,
   PresenceEventSchema,
   PresenceResponseSchema,
@@ -122,6 +123,7 @@ export const eventResponseSchemas = {
   InboxItemEvent: InboxItemEventSchema,
   MessageEvent: MessageEventSchema,
   NudgeEvent: NudgeEventSchema,
+  NudgeReadEvent: NudgeReadEventSchema,
   OfflineAlertEvent: OfflineAlertEventSchema,
   PresenceEvent: PresenceEventSchema,
   PresenceResponse: PresenceResponseSchema,

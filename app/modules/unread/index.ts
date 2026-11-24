@@ -54,7 +54,8 @@
  * and each `nudge` event, join the loaded state beside the items, and its own snapshot, from the inbox history's first
  * page, lists them all for the Earlier list. One turns read when it is marked read (`POST /v1/inbox/nudges/:id/read`),
  * with `markAllRead`, when `close` closes its thread (`PUT` on the thread's close route), and live when a `thread`
- * event closes its thread or a `message` event brings a reply in it, as the server reads it then.
+ * event closes its thread or a `message` event brings a reply in it, as the server reads it then, or a `nudge-read`
+ * event names it, as when another page of the caller's marks it read.
  */
 import type { ChannelName, CookoutClient, MessageId } from "../sdk/index.ts";
 import type { NewLine, WithNewLines } from "./lib/new-lines.ts";

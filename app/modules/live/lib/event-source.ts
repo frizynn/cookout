@@ -19,6 +19,7 @@ const eventTypes = {
   "inbox-item": true,
   message: true,
   nudge: true,
+  "nudge-read": true,
   "offline-alert": true,
   presence: true,
   reaction: true,
