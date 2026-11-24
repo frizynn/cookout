@@ -3,9 +3,9 @@ import { DONE, RERERE, firstStop, git, lines, run, stepOf, stop, tail } from "./
 import type { FirstSide, HunkResolve } from "./conflicts.ts";
 import { asOneTicketMerge, cleanTree, messageOf } from "./merge-branch.ts";
 import { readFileSync, writeFileSync } from "node:fs";
+import { renumberAdrs, renumberOpenMerge } from "./merge-adrs.ts";
 import { appendOnlyMigrations } from "./merge-migrations.ts";
 import path from "node:path";
-import { renumberAdrs } from "./merge-adrs.ts";
 import { resolveHunks } from "./conflicts.ts";
 
 interface HunkRule {
@@ -135,7 +135,10 @@ function merge(options: MergeOptions, into: string, first: FirstSide): Step {
     return stop(`git merge failed.\n${tail(merged.output)}`);
   }
   options.log(`Resolving conflicts in ${conflicted.join(", ")}`);
-  return resolveConflicts(options, conflicted, first);
+  return firstStop([
+    (): Step => renumberOpenMerge({ adrs: options.rules.adrs, cwd: options.cwd, log: options.log }),
+    (): Step => resolveConflicts(options, conflicted, first),
+  ]);
 }
 
 function install(options: MergeOptions): Step {

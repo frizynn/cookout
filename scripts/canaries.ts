@@ -128,11 +128,13 @@ function validatorsCaught(): ReadonlySet<string> {
 
 const ADR_CANARY = `${ROOT}/adrs/edited-in-place.diff`;
 const ADR_CODE = "append-only";
+const ADR_CANARY_EDITS = "docs/adr/0048-message-text-is-markdown-rendered-by-react-markdown.md";
 
 const adrCanaries: readonly Canary[] = [{ check: "hygiene", code: ADR_CODE, file: ADR_CANARY }];
 
 function adrsCaught(): ReadonlySet<string> {
-  const edits = adrEdits({ diff: readFileSync(ADR_CANARY, "utf8"), originals: new Map() });
+  const diff = readFileSync(ADR_CANARY, "utf8");
+  const edits = adrEdits({ diff, locked: new Set([ADR_CANARY_EDITS]), originals: new Map() });
   return new Set(edits.map(() => key(ADR_CODE, ADR_CANARY)));
 }
 

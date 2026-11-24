@@ -122,6 +122,7 @@ function appendOnlyAdrs(): readonly string[] {
   const diff = git(["diff", "--no-renames", "--unified=0", "--no-color", base, "--", ADRS]);
   return adrEdits({
     diff: diff.join("\n"),
+    locked: new Set(git(["ls-tree", "--name-only", "origin/v1", "--", "docs/adr/"])),
     originals: new Map(changed.map((file) => [file, originalLines(file)])),
   });
 }
