@@ -240,3 +240,29 @@ it.effect("a refused Mark read keeps the row in For you", () =>
     ]);
   }).pipe(Effect.provide(testCookout())),
 );
+
+const TWO = 2;
+
+const twoDeactivated: Effect.Effect<TestIdentity, never, TestCookout> = Effect.gen(function* deactivateTwo() {
+  const cookout = yield* TestCookout;
+  const ada = yield* cookout.createIdentity("ada", HUMAN);
+  yield* cookout.createIdentity("triage-agent", { owner: "ada" });
+  yield* TestClock.adjust("1 minute");
+  yield* cookout.createIdentity("ada/helper", { owner: "ada" });
+  yield* Effect.andThen(quietFor("2159 hours"), quietFor("1 hour"));
+  yield* Effect.repeat(unreadIds(ada.client), { until: (ids) => ids.length >= TWO });
+  return ada;
+});
+
+it.effect("two deactivated agents give two rows, newest first", () =>
+  Effect.gen(function* twoRows() {
+    const ada = yield* twoDeactivated;
+    openAt({ client: ada.client, hash: "#/inbox" });
+    yield* answer(() => inPane().findByText(ENTRY));
+
+    expect([rowsIn(FOR_YOU), inboxCounts()]).toStrictEqual([
+      [expect.stringContaining("@ada/helper was deactivated"), expect.stringContaining(ENTRY)],
+      ["2 for you"],
+    ]);
+  }).pipe(Effect.provide(testCookout())),
+);
