@@ -54,22 +54,22 @@
  * thread's reply box suggests no commands, since a call is a top-level message.
  */
 import type { Command, Identity, IdentityName, Token } from "../sdk/index.ts";
+import type { DisplayNameDraft, TriggerSettings } from "./lib/profile-stores.ts";
 import type { DraftSnapshot, Sources } from "./lib/snapshot.ts";
 import { EMPTY, changesFor } from "./lib/snapshot.ts";
 import type { IdentityList, IdentityStore } from "./lib/identity-list.ts";
 import type { AdminChanges } from "./lib/admin-change.ts";
 import type { AgentCreation } from "./lib/agent-creation.ts";
-import type { DisplayNameDraft } from "./lib/display-name.ts";
 import type { IdentityActions } from "./lib/identity-actions.ts";
 import type { IdentityDeletion } from "./lib/identity-deletion.ts";
 import { commandList } from "../board/index.ts";
 import { createAdminChanges } from "./lib/admin-change.ts";
 import { createAgentCreation } from "./lib/agent-creation.ts";
-import { createDisplayName } from "./lib/display-name.ts";
 import { createIdentityActions } from "./lib/identity-actions.ts";
 import { createIdentityDeletion } from "./lib/identity-deletion.ts";
 import { createIdentityList } from "./lib/identity-list.ts";
 import { listenersOf } from "./lib/listeners.ts";
+import { profileStoresOf } from "./lib/profile-stores.ts";
 
 const NO_COMMANDS: readonly Command[] = [];
 const NO_MEMBERS: readonly IdentityName[] = [];
@@ -204,6 +204,8 @@ export interface Composer {
   readonly description: (name: IdentityName) => DisplayNameDraft;
   /** The identity list the suggestions come from. */
   readonly identities: Identities;
+  /** This agent's trigger URL for its owner: read when first shown, set with a write-only token, or cleared (#378). */
+  readonly trigger: (name: IdentityName) => TriggerSettings;
 }
 
 /** What the composer store needs: the board store, which holds the identities and the commands a channel's box suggests, and makes the identities' changes on the server. */
@@ -218,8 +220,6 @@ export interface ComposerOptions {
  */
 export function createComposer(options: ComposerOptions): Composer {
   const drafts = new Map<string, Draft>();
-  const displayNames = new Map<string, DisplayNameDraft>();
-  const descriptions = new Map<string, DisplayNameDraft>();
   const list = createIdentityList(options.boardStore);
   const deletion = createIdentityDeletion(options.boardStore);
   const readers = listenersOf(list.show);
@@ -232,14 +232,11 @@ export function createComposer(options: ComposerOptions): Composer {
   }
   list.onChange(readers.notify);
   return {
+    ...profileStoresOf(list),
     channelDraft: (channel) =>
       storeIn(drafts, channel, () =>
         createDraft(list, { commands: registered, identities: list.identities, members: noMembers }),
       ),
-    description: (name) =>
-      storeIn(descriptions, name, () => createDisplayName({ list, name, set: list.calls.setDescription })),
-    displayName: (name) =>
-      storeIn(displayNames, name, () => createDisplayName({ list, name, set: list.calls.setDisplayName })),
     draft: (key, members = noMembers) =>
       storeIn(drafts, key, () =>
         createDraft(list, { commands: () => NO_COMMANDS, identities: list.identities, members }),
@@ -254,6 +251,7 @@ export function createComposer(options: ComposerOptions): Composer {
   };
 }
 
-export type { DisplayNameDraft } from "./lib/display-name.ts";
+export type { DisplayNameDraft } from "./lib/profile-stores.ts";
+export { type TriggerSettings, type TriggerSnapshot, savedUrl } from "./lib/trigger-settings.ts";
 export type { AgentCreation } from "./lib/agent-creation.ts";
 export type { IdentityAction, IdentityActions, MessageCount } from "./lib/identity-actions.ts";

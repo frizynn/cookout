@@ -62,6 +62,7 @@ export async function startWebTestCookout(): Promise<RunningWebTestCookout> {
     [
       `COOKOUT_ADMIN_TOKEN=${adminToken}`,
       "COOKOUT_PRESENCE_GRACE_SECONDS=0",
+      "COOKOUT_ALLOW_LOCAL_TRIGGERS=true",
       `COOKOUT_ROUTINE_FIRE_URL=${routine.value}`,
       "COOKOUT_ROUTINE_TOKEN=web-test-routine-token",
       `COOKOUT_PUBLIC_URL=${webTestBoardUrl}`,
