@@ -6,7 +6,7 @@ const LAST = -1;
 const EMPTY = "";
 
 interface MessageBoxKeys {
-  readonly remember: (event: unknown) => void;
+  readonly remember: (target: unknown, relatedTarget: unknown) => void;
   readonly actions: Readonly<Record<"leaveTextBox" | "newestMessage", Act>>;
 }
 
@@ -46,11 +46,11 @@ function focusedOn(element: unknown): boolean {
   return globalThis.document.activeElement === element;
 }
 
-function messageOf(element: unknown): unknown {
+function placeOf(element: unknown): unknown {
   if (!(element instanceof HTMLElement)) {
     return null;
   }
-  return element.closest(MESSAGE);
+  return element.closest(MESSAGE) ?? element;
 }
 
 function createMessageBoxKeys(): MessageBoxKeys {
@@ -62,25 +62,22 @@ function createMessageBoxKeys(): MessageBoxKeys {
         if (box === null) {
           return false;
         }
-        const previous = before.get(box);
         box.blur();
-        if (!focusedOn(previous) && !focusedOn(messageOf(previous))) {
+        if (!focusedOn(before.get(box))) {
           focusedOn(newestNear(box));
         }
         return true;
       },
       newestMessage: ({ target }) => focusedOn(newestNear(emptyBoxOf(target))),
     },
-    remember: (event) => {
-      if (!(event instanceof FocusEvent)) {
-        return;
-      }
-      const box = boxOf(event.target);
+    remember: (target, relatedTarget) => {
+      const box = boxOf(target);
       if (box === null) {
         return;
       }
-      if (event.relatedTarget instanceof HTMLElement) {
-        before.set(box, event.relatedTarget);
+      const place = placeOf(relatedTarget);
+      if (place instanceof HTMLElement) {
+        before.set(box, place);
       } else {
         before.delete(box);
       }

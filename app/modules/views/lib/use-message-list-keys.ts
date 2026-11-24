@@ -8,14 +8,17 @@ export function useMessageListKeys(keymap: Keymap): void {
   useEffect(() => {
     const box = createMessageBoxKeys();
     const { document } = globalThis;
-    document.addEventListener("focusin", box.remember);
+    function remember(event: Readonly<Event>): void {
+      box.remember(event.target, Reflect.get(event, "relatedTarget"));
+    }
+    document.addEventListener("focusin", remember);
     const unbind = [
       keymap.bind({ actions: MESSAGE_LIST_ACTIONS, scope: "message list" }),
       keymap.bind({ actions: messageActions(keymap), scope: "message" }),
       keymap.bind({ actions: box.actions, scope: "text box" }),
     ];
     return (): void => {
-      document.removeEventListener("focusin", box.remember);
+      document.removeEventListener("focusin", remember);
       for (const each of unbind) {
         each();
       }
