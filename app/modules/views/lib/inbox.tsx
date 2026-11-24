@@ -6,7 +6,10 @@ import { InboxConversation } from "./inbox-conversation.tsx";
 import { InboxList } from "./inbox-list.tsx";
 import type { InboxSelection } from "../../paths/index.ts";
 import type { ReactNode } from "react";
+import { useInboxKeys } from "./use-inbox-keys.ts";
 import { useInboxRows } from "./use-inbox-rows.ts";
+
+const CONVERSATION = "Conversation";
 
 interface InboxProps {
   readonly board: Board;
@@ -24,6 +27,7 @@ export function InboxView(props: InboxProps): ReactNode {
   const { deactivationOffers, nudges } = unread;
   const { identities } = composer;
   const notices = useMemo(() => ({ deactivationOffers, identities, nudges }), [deactivationOffers, nudges, identities]);
+  useInboxKeys({ conversation: CONVERSATION, selected: selected !== null });
   return (
     <>
       <InboxList

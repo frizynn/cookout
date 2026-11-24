@@ -41,6 +41,7 @@ export function FeedRowBody(parts: FeedRowParts): ReactNode {
         aria-current={currentOf(parts.current)}
         aria-labelledby={id}
         className="flex outline-none after:absolute after:inset-0 after:rounded-lg"
+        data-feed-row=""
         href={parts.href}
       >
         <FeedRowWhy level={parts.level}>{parts.why}</FeedRowWhy>
