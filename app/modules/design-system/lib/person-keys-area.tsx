@@ -15,7 +15,7 @@ export function PersonKeysArea(parts: PersonKeysAreaParts): ReactNode {
   return (
     <PersonKeys value={shared}>
       {parts.children}
-      <output className="sr-only">{said}</output>
+      {said !== "" && <output className="sr-only">{said}</output>}
     </PersonKeys>
   );
 }
