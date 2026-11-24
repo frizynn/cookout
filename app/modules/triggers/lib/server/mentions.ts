@@ -131,10 +131,11 @@ function alerted(services: Services, settling: Settling, stored: StoredTrigger):
 
 function announced(services: Services, stored: StoredTrigger): Effect.Effect<void, StorageUnavailable> {
   return Effect.flatMap(services.storage.findIdentityByName(stored.agent), (agent) =>
-    Option.match(Option.fromUndefinedOr(agent), {
-      onNone: () => Effect.void,
-      onSome: (found) => services.changes.publish({ agent: found, trigger: shownTrigger(stored) }),
-    }),
+    Effect.forEach(
+      Option.toArray(Option.fromUndefinedOr(agent)),
+      (found) => services.changes.publish({ agent: found, trigger: shownTrigger(stored) }),
+      IN_TURN,
+    ),
   );
 }
 

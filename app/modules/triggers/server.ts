@@ -6,7 +6,9 @@
  * `Authorization: Bearer <token>` and the owner's extra headers (mattpocock/cookout#440), whose values are kept like
  * the token and never answered, in the background, through the `TriggerCaller` seam: one attempt, given up after
  * 10 s, never retried, and never holding up or failing the post. Each result is stored as the URL's last result and
- * given to presence, so the agent shows online while its last call didn't fail and Unreachable once one did. The first
+ * given to presence, so the agent shows online while its last call didn't fail and Unreachable once one did, and is
+ * published on `TriggerChanges` for the `trigger` event (mattpocock/cookout#414). The message link starts with the
+ * board's public URL, or, without one, the address the server serves on (`BoardUrl`). The first
  * failure of a streak raises one `trigger failed` offline alert in the owner's Inbox, and the next success clears it,
  * as setting or clearing the URL does. On start, presence learns which active agents have a trigger URL; a
  * Deactivated agent has none for presence until it is reactivated.
