@@ -92,6 +92,21 @@ const pausedMidRunStorage: Layer.Layer<Storage> = Layer.effect(
   })),
 ).pipe(Layer.provide(memoryStorage));
 
+function deactivatingCreator(storage: Storage["Service"], run: ScheduledRun): Effect.Effect<void> {
+  return Effect.flatMap(Effect.flatMap(storage.findScheduledMessage(run.id), Effect.fromNullishOr), ({ creator }) =>
+    Effect.asVoid(storage.deactivateIdentity(creator)),
+  ).pipe(Effect.orDie);
+}
+
+const deactivatedMidRunStorage: Layer.Layer<Storage> = Layer.effect(
+  Storage,
+  Effect.map(Storage, (storage) => ({
+    ...storage,
+    runScheduledMessage: (run: ScheduledRun): ReturnType<Storage["Service"]["runScheduledMessage"]> =>
+      Effect.andThen(deactivatingCreator(storage, run), storage.runScheduledMessage(run)),
+  })),
+).pipe(Layer.provide(memoryStorage));
+
 function freshSqliteQueryPlans<Failure>(
   work: (storage: Storage["Service"]) => Effect.Effect<unknown, Failure>,
 ): Effect.Effect<readonly QueryPlan[], Failure | StorageUnavailable, FileSystem.FileSystem | Path.Path> {
@@ -117,6 +132,7 @@ function openStore<Failure, Needs>(
 const memoryAssets = memoryAssetStore;
 
 export {
+  deactivatedMidRunStorage,
   freshDatabasePath,
   freshPostgresQueryPlans,
   freshSqliteQueryPlans,
