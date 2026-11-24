@@ -87,6 +87,7 @@
     "@changesets/cli": "^3.0.3",
     "@effect/tsgo": "0.73.2",
     "@effect/vitest": "4.1.5",
+    "@jridgewell/trace-mapping": "^0.3.31",
     "@playwright/test": "^1.65.1",
     "@radix-ui/react-alert-dialog": "^1.2.1",
     "@radix-ui/react-context-menu": "^2.4.1",
