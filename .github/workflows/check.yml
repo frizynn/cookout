@@ -1,9 +1,13 @@
 name: Check
 
+# Check runs once per commit (#483). A pull request from a branch in this repo already has its push
+# run, so each job skips on its pull_request run (no runner is taken; the tools read push runs only),
+# while a fork's pull request still runs Check. A push to main doesn't run it: main is only
+# fast-forwarded to a commit v1's push run already checked.
 on:
   pull_request:
   push:
-    branches: [main, v1, rewrite-perfect-ts, "ticket-*", "merge-ticket-*"]
+    branches: [v1, rewrite-perfect-ts, "ticket-*", "merge-ticket-*"]
 
 permissions:
   contents: read
@@ -18,6 +22,7 @@ jobs:
   check:
     name: ${{ matrix.job }}
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     timeout-minutes: 5
     strategy:
       fail-fast: false
@@ -51,6 +56,7 @@ jobs:
   browser:
     name: browser ${{ matrix.shard }}/3
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     timeout-minutes: 5
     strategy:
       fail-fast: false
@@ -96,6 +102,7 @@ jobs:
   # any screen fails, naming each one.
   screenshots:
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
@@ -120,6 +127,7 @@ jobs:
   tests:
     name: tests ${{ matrix.shard }}/2
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     timeout-minutes: 5
     strategy:
       fail-fast: false
@@ -150,6 +158,7 @@ jobs:
   # deploying main, so a ticket or v1 push that breaks it fails here instead of blocking a deploy.
   e2e-docker:
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -170,6 +179,7 @@ jobs:
   pack:
     name: pack smoke
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
@@ -183,6 +193,7 @@ jobs:
   published-client:
     name: published client
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
