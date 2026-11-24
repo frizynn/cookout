@@ -40,7 +40,7 @@ interface Settling extends Mentioned {
 
 interface Watching {
   readonly services: Services;
-  readonly publicUrl: string;
+  readonly boardUrl: Effect.Effect<string>;
   readonly posted: Effect.Effect<PubSub.Subscription<Message>, never, Scope.Scope>;
 }
 
@@ -57,9 +57,9 @@ function threadOf(message: Message): MessageId {
   return message.id;
 }
 
-function textFor(publicUrl: string, message: Message): string {
+function textFor(boardUrl: string, message: Message): string {
   const href = hrefOf({ channel: message.channel, message: message.id, name: "thread", thread: threadOf(message) });
-  return `${publicUrl}/${href}\n\n${message.text}`;
+  return `${boardUrl}/${href}\n\n${message.text}`;
 }
 
 function callable(storage: Storage["Service"], author: IdentityName) {
@@ -90,13 +90,14 @@ function resultOf(at: TriggerResult["at"], status: number): TriggerResult {
 
 function callMade(
   caller: TriggerCallerService,
-  publicUrl: string,
+  boardUrl: Effect.Effect<string>,
   { message, trigger }: Mentioned,
 ): Effect.Effect<TriggerResult> {
   return Effect.gen(function* callTrigger() {
     const now = yield* DateTime.now;
     const at = isoTimeOf(now);
-    const text = textFor(publicUrl, message);
+    const base = yield* boardUrl;
+    const text = textFor(base, message);
     return yield* caller.call({ headers: trigger.headers ?? [], text, token: trigger.token, url: trigger.url }).pipe(
       Effect.timeoutOrElse({ duration: Duration.seconds(TIMEOUT_SECONDS), orElse: () => Effect.fail(TIMED_OUT) }),
       Effect.match({
@@ -156,13 +157,13 @@ function settled(services: Services, settling: Settling): Effect.Effect<void, St
   });
 }
 
-function watchMentions({ posted, publicUrl, services }: Watching): Effect.Effect<void, never, Scope.Scope> {
+function watchMentions({ boardUrl, posted, services }: Watching): Effect.Effect<void, never, Scope.Scope> {
   return Effect.gen(function* callOnMentions() {
     const running = yield* FiberSet.make();
     const settling = yield* Semaphore.make(ONE_PERMIT);
     function callAndSettle(mentioned: Mentioned): Effect.Effect<void> {
       const unstored = `The result of a trigger call to ${mentioned.trigger.agent} wasn't stored.`;
-      return Effect.flatMap(callMade(services.caller, publicUrl, mentioned), (result) =>
+      return Effect.flatMap(callMade(services.caller, boardUrl, mentioned), (result) =>
         settling.withPermits(ONE_PERMIT)(settled(services, { ...mentioned, result })),
       ).pipe(Effect.ignore({ log: "Warn", message: unstored }));
     }

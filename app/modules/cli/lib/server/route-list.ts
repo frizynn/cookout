@@ -102,4 +102,4 @@ export const domainLayers = Layer.mergeAll(
 );
 
 export { SpawnSettings } from "../../../commands/server.ts";
-export { triggerCallerLive } from "./live-routes.ts";
+export { BoardUrl, boardUrlLayer, triggerCallerLive } from "./live-routes.ts";
