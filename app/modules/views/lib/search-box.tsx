@@ -54,7 +54,9 @@ export function SearchBox(props: SearchBoxProps): ReactNode {
         list={list}
         placeholder={`${TEXT.placeholder} (${shortcut.label})`}
       />
-      {shown && <SearchResults list={list} onChoose={handleChoose} options={options} state={state} />}
+      {shown && (
+        <SearchResults list={list} onChoose={handleChoose} options={options} search={props.search} state={state} />
+      )}
     </div>
   );
 }
