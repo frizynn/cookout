@@ -70,6 +70,12 @@ const SCREENS: readonly Screen[] = [
     text: "Marked as read",
   },
   { hash: "#/channels/general", name: "channel", text: "Lunch at 12:30." },
+  {
+    focus: 'article:has-text("Lunch at 12:30.")',
+    hash: "#/channels/general",
+    name: "channel-hover",
+    text: "Lunch at 12:30.",
+  },
   { hash: "#/channels/general/threads/1", name: "thread", text: "Thanks, both of you." },
   {
     focus: 'article:has-text("@triage-agent can you post the failing run?") time',
