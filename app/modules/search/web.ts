@@ -10,10 +10,8 @@
  * loads the next page. `open` and `close` open and close the list, keeping the query and its results.
  */
 export {
-  type Found,
   type Search,
   type SearchAnswer,
-  type SearchCall,
   type SearchState,
   createSearch,
 } from "./lib/search-store.ts";

@@ -29,6 +29,8 @@ async function openChannel(page: Page, channel: string): Promise<Locator> {
 
   await expect(message).toBeVisible();
 
+  await message.hover();
+
   return message;
 }
 

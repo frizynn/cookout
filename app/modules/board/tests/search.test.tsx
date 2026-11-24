@@ -1,5 +1,5 @@
 import type { CookoutClient, SearchRequest } from "../../sdk/index.ts";
-import type { Found, Search, SearchCall } from "../../search/web.ts";
+import type { Search, SearchState } from "../../search/web.ts";
 import { expect, it, vi } from "vitest";
 import type { BoardStore } from "../index.ts";
 import { createBoardStore } from "../index.ts";
@@ -9,7 +9,11 @@ import { createSearch } from "../../search/web.ts";
 import { handLive } from "../../testing/web.ts";
 import { webTestCookout } from "../../../../scripts/web-test-server.ts";
 
+type Found = SearchState["found"];
+type SearchCall = Parameters<typeof createSearch>[typeof FIRST]["search"];
+
 const PAGE = 2;
+const FIRST = 0;
 const NO_PAUSE = 0;
 
 function adminClient(): CookoutClient {

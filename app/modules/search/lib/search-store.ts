@@ -218,4 +218,4 @@ function createSearch(options: SearchOptions): Search {
   };
 }
 
-export { type Found, type Search, type SearchAnswer, type SearchCall, type SearchState, createSearch };
+export { type Search, type SearchAnswer, type SearchState, createSearch };
