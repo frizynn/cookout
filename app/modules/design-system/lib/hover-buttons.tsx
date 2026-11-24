@@ -8,7 +8,7 @@ export function HoverButtons(parts: HoverActionsParts): ReactNode {
   const { actionHref, choices, onAction, reactions } = parts;
   const handleAction = onAction;
   return (
-    <div className="invisible absolute top-1 right-4 flex gap-1 group-focus-within:visible group-hover:visible">
+    <div className="invisible absolute top-1 right-4 flex gap-1 group-focus-within:visible group-hover:visible has-data-[state=open]:visible">
       {reactions.map((choice) => (
         <ReactButton choice={choice} key={choice.symbol} />
       ))}

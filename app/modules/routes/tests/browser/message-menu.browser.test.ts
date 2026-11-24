@@ -105,3 +105,16 @@ test("the More actions menu takes focus, moves with the arrow keys and gives foc
 
   await expect(more).toBeFocused();
 });
+
+test("the More actions button stays shown while its menu is open, so Escape can give focus back to it", async ({
+  page,
+}) => {
+  const message = await openChannel(page, "browser-menu-shown");
+  await message.getByRole("button", { name: "More actions" }).focus();
+  await page.keyboard.press("Enter");
+
+  await expect(page.getByRole("menuitem", { name: "Reply" })).toBeFocused();
+  await expect(
+    page.getByRole("main", { includeHidden: true }).getByRole("button", { includeHidden: true, name: "More actions" }),
+  ).toBeVisible();
+});
