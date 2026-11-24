@@ -2,7 +2,7 @@
  * The inbox on the backend: the `Inbox` service over `Storage`, and the
  * routes that read the caller's inbox, a page of its inbox history and its read positions, ack a message or the whole
  * inbox, mark a message unread or a Nudge read, follow and unfollow a
- * thread, answer Keep on a Deactivation offer, and subscribe to and unsubscribe from a channel. Each read position an ack moves is also
+ * thread, answer Keep on a Deactivation offer, mark an Automatic deactivation read, and subscribe to and unsubscribe from a channel. Each read position an ack moves is also
  * published to an in-process hub, which `acked` subscribes to, for live
  * updates. Routes sit
  * behind the server's token gate.
@@ -12,6 +12,7 @@ import {
   AckAllResponseSchema,
   AckRequestSchema,
   AckResponseSchema,
+  AutomaticDeactivationResponseSchema,
   DeactivationOfferResponseSchema,
   FollowResponseSchema,
   InboxHistoryQuerySchema,
@@ -28,6 +29,7 @@ import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import {
   ackAllPath,
   ackPath,
+  automaticDeactivationReadPath,
   deactivationOfferKeepPath,
   followPath,
   inboxHistoryPath,
@@ -169,6 +171,19 @@ const keepRoute: Route<Needs> = {
   segments: { id: (segment) => DIGITS.test(segment) },
 };
 
+const automaticDeactivationReadRoute: Route<Needs> = {
+  handle: (params) =>
+    Effect.gen(function* automaticDeactivationReadRouteHandler() {
+      const caller = yield* Caller;
+      const inbox = yield* Inbox;
+      const answer = yield* inbox.markAutomaticDeactivationRead(caller, String(params["id"]));
+      return yield* HttpServerResponse.schemaJson(AutomaticDeactivationResponseSchema)(answer);
+    }),
+  method: "POST",
+  path: automaticDeactivationReadPath,
+  segments: { id: (segment) => DIGITS.test(segment) },
+};
+
 function followRoute(method: Change, change: "follow" | "unfollow"): Route<Needs> {
   return {
     handle: (params) =>
@@ -211,7 +226,10 @@ export { Nudges, nudgesLayer } from "./lib/server/nudge-scheduler.ts";
 
 /**
  * Deactivation offers: listed in each recipient's inbox, answered Keep, and sent to each recipient's streams as one is
- * raised or cleared. The nudge scheduler raises them.
+ * raised or cleared. The nudge scheduler raises them. Beside them, Automatic deactivations: the nudge scheduler has it
+ * deactivate each agent quiet for 90 days, announcing the deactivation and ending its connections, and each entry is
+ * listed in its recipients' inboxes, marked read, and sent to their streams as it is recorded or read. Reactivating the
+ * agent reads its entries.
  */
 export { DeactivationOffers, deactivationOffersLayer } from "./lib/server/deactivation-offers.ts";
 
@@ -220,6 +238,7 @@ export { DeactivationOffers, deactivationOffersLayer } from "./lib/server/deacti
  * events that carry one.
  */
 export {
+  AutomaticDeactivationSchema,
   DeactivationOfferSchema,
   InboxItemSchema,
   MovedBackReadPositionSchema,
@@ -244,6 +263,7 @@ export const inboxRoutes: readonly Route<Needs>[] = [
   alertReadRoute,
   nudgeReadRoute,
   keepRoute,
+  automaticDeactivationReadRoute,
   followRoute("PUT", "follow"),
   followRoute("DELETE", "unfollow"),
   subscriptionRoute("PUT", "subscribe"),
@@ -254,6 +274,7 @@ export const inboxRoutes: readonly Route<Needs>[] = [
 export const inboxResponseSchemas = {
   AckAllResponse: AckAllResponseSchema,
   AckResponse: AckResponseSchema,
+  AutomaticDeactivationResponse: AutomaticDeactivationResponseSchema,
   DeactivationOfferResponse: DeactivationOfferResponseSchema,
   FollowResponse: FollowResponseSchema,
   InboxHistoryResponse: InboxHistoryResponseSchema,

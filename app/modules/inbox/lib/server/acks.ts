@@ -2,6 +2,7 @@ import type {
   AckAllRequest,
   AckAllResponse,
   AckResponse,
+  AutomaticDeactivationId,
   DeactivationOfferId,
   NudgeId,
   OfflineAlert,
@@ -43,6 +44,10 @@ interface AckHubs {
   readonly offlineAlerts: OfflineAlerts["Service"];
   readonly deactivationOffers: {
     readonly keepUpTo: (caller: Identity, upTo: DeactivationOfferId) => Effect.Effect<void, StorageUnavailable>;
+    readonly markAutomaticDeactivationsReadUpTo: (
+      caller: Identity,
+      upTo: AutomaticDeactivationId,
+    ) => Effect.Effect<void, StorageUnavailable>;
   };
 }
 
@@ -89,7 +94,7 @@ function inboxAckedUpTo({ hubs, storage }: AcksOn, caller: Identity, upTo: Messa
 function nonMessagesAcked(
   { hubs, storage }: AcksOn,
   caller: Identity,
-  { deactivationOffersUpTo, nudgesUpTo }: AckAllRequest,
+  { automaticDeactivationsUpTo, deactivationOffersUpTo, nudgesUpTo }: AckAllRequest,
 ): Effect.Effect<void, StorageUnavailable> {
   return Effect.gen(function* ackNudgesAndOffers() {
     if (Predicate.isNotUndefined(nudgesUpTo)) {
@@ -100,6 +105,9 @@ function nonMessagesAcked(
     }
     if (Predicate.isNotUndefined(deactivationOffersUpTo)) {
       yield* hubs.deactivationOffers.keepUpTo(caller, deactivationOffersUpTo);
+    }
+    if (Predicate.isNotUndefined(automaticDeactivationsUpTo)) {
+      yield* hubs.deactivationOffers.markAutomaticDeactivationsReadUpTo(caller, automaticDeactivationsUpTo);
     }
   });
 }

@@ -1,4 +1,4 @@
-import { Caller, announced, issueToken, requireAdmin, tokensEnded } from "./auth.ts";
+import { Caller, announced, issueToken, reactivated, requireAdmin, tokensEnded } from "./auth.ts";
 import type { DeactivateIdentityResponse, Identity, IdentityName } from "../../index.ts";
 import { DeactivateIdentityResponseSchema, IdentityWithTokenResponseSchema } from "./wire.ts";
 import type {
@@ -119,7 +119,7 @@ const reactivateRoute: Route<Caller | Storage | Secrets | IdentityChanges> = {
       const storage = yield* Storage;
       const identity = yield* Effect.flatMap(storage.reactivateIdentity(name, hash), (result) =>
         reactivatedOrRefused(name, result),
-      ).pipe(Effect.flatMap(announced));
+      ).pipe(Effect.flatMap(announced), Effect.flatMap(reactivated));
       return yield* HttpServerResponse.schemaJson(IdentityWithTokenResponseSchema)({ identity, token });
     }),
   method: "POST",

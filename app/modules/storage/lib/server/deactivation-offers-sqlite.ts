@@ -1,13 +1,19 @@
 import type { ActivityRecords, DeactivationOffersSection, OfferSources } from "./deactivation-offers.ts";
 import { Array as Arr, DateTime, Effect, Schema } from "effect";
+import type {
+  AutomaticDeactivationRecords,
+  AutomaticDeactivationsSection,
+  StoredAutomaticDeactivation,
+} from "./automatic-deactivations.ts";
 import { IsoTimeSchema, isoTimeOf } from "../../../time/server.ts";
+import { automaticDeactivationsOn, deactivatingWith } from "./automatic-deactivations.ts";
+import { boardOn, deactivationOffersOn } from "./deactivation-offers.ts";
+import { isAutomaticDeactivationId, isDeactivationOfferId } from "../../../inbox/index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { OfferRecord } from "./deactivation-offer-board.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
-import { deactivationOffersOn } from "./deactivation-offers.ts";
-import { isDeactivationOfferId } from "../../../inbox/index.ts";
 import { isIdentityName } from "../../../identities/index.ts";
 import { unreadable } from "./errors.ts";
 
@@ -15,6 +21,8 @@ type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
 const CLEARED = 1;
 const OPEN = 0;
+const READ = 1;
+const UNREAD = 0;
 const ONLY_ROW = 1;
 
 const DEACTIVATION_OFFERS_MIGRATION = `CREATE TABLE activity (
@@ -34,6 +42,16 @@ const DEACTIVATION_OFFERS_MIGRATION = `CREATE TABLE activity (
      cleared INTEGER NOT NULL CHECK (cleared IN (0, 1))
    ) STRICT;`;
 
+const AUTOMATIC_DEACTIVATIONS_MIGRATION = `CREATE TABLE automatic_deactivations (
+     id INTEGER PRIMARY KEY,
+     identity_name TEXT NOT NULL REFERENCES identities (name) ON DELETE CASCADE,
+     recipients TEXT NOT NULL,
+     deactivated_at TEXT NOT NULL,
+     read INTEGER NOT NULL CHECK (read IN (0, 1))
+   ) STRICT;`;
+
+const ENTRY_COLUMNS = "id, identity_name, recipients, deactivated_at, read";
+
 const COLUMNS = "id, identity_name, recipients, raised_at, quiet_days, cleared";
 
 const IdentityNameColumn = Schema.String.pipe(Schema.refine(isIdentityName));
@@ -44,6 +62,14 @@ const OfferRow = Schema.Struct({
   identity_name: IdentityNameColumn,
   quiet_days: Schema.Int,
   raised_at: IsoTimeSchema,
+  recipients: Schema.fromJsonString(Schema.Array(IdentityNameColumn)),
+});
+
+const EntryRow = Schema.Struct({
+  deactivated_at: IsoTimeSchema,
+  id: Schema.Int.pipe(Schema.refine(isAutomaticDeactivationId)),
+  identity_name: IdentityNameColumn,
+  read: Schema.Literals([UNREAD, READ]),
   recipients: Schema.fromJsonString(Schema.Array(IdentityNameColumn)),
 });
 
@@ -79,6 +105,31 @@ function offerRow(row: unknown): Fails<OfferRecord> {
   );
 }
 
+function entryRows(rows: readonly unknown[]): Fails<readonly StoredAutomaticDeactivation[]> {
+  return Schema.decodeUnknownEffect(Schema.Array(EntryRow))(rows).pipe(
+    Effect.mapBoth({
+      onFailure: unreadable,
+      onSuccess: (decoded) =>
+        Arr.map(
+          decoded,
+          (row): StoredAutomaticDeactivation => ({
+            deactivatedAt: row.deactivated_at,
+            id: row.id,
+            identity: row.identity_name,
+            read: row.read === READ,
+            recipients: row.recipients,
+          }),
+        ),
+    }),
+  );
+}
+
+function entryRow(row: unknown): Fails<StoredAutomaticDeactivation> {
+  return Effect.flatMap(entryRows([row]), (records) =>
+    Effect.mapError(Effect.fromOption(Arr.head(records)), unreadable),
+  );
+}
+
 function activityRows(rows: readonly unknown[]): Fails<ReadonlyMap<IdentityName, IsoTime>> {
   return Schema.decodeUnknownEffect(Schema.Array(ActivityRow))(rows).pipe(
     Effect.mapBoth({
@@ -94,6 +145,26 @@ const INSERT = `INSERT INTO deactivation_offers (identity_name, recipients, rais
 const RECORD = `INSERT INTO activity (identity_name, last_activity_at) VALUES (?, ?)
   ON CONFLICT (identity_name) DO UPDATE SET last_activity_at = max(last_activity_at, excluded.last_activity_at)`;
 const CLEAR = `UPDATE deactivation_offers SET cleared = ${String(CLEARED)} WHERE id = ?`;
+
+const INSERT_ENTRY = `INSERT INTO automatic_deactivations (identity_name, recipients, deactivated_at, read)
+  VALUES (?, ?, ?, ${String(UNREAD)}) RETURNING ${ENTRY_COLUMNS}`;
+const READ_ENTRY = `UPDATE automatic_deactivations SET read = ${String(READ)} WHERE id = ?`;
+
+function sqliteAutomaticDeactivationRecords(db: SqliteDatabase): AutomaticDeactivationRecords {
+  return {
+    automaticDeactivations: Effect.flatMap(
+      db.all(`SELECT ${ENTRY_COLUMNS} FROM automatic_deactivations ORDER BY id`),
+      entryRows,
+    ),
+    insert: ({ deactivatedAt, identity, recipients }) =>
+      Schema.encodeEffect(RecipientsColumn)(recipients).pipe(
+        Effect.mapError(unreadable),
+        Effect.flatMap((encoded) => db.get(INSERT_ENTRY, identity, encoded, deactivatedAt)),
+        Effect.flatMap(entryRow),
+      ),
+    markRead: (ids) => Effect.forEach(ids, (id) => db.run(READ_ENTRY, id), { concurrency: 1, discard: true }),
+  };
+}
 
 function sinceOn(db: SqliteDatabase): Fails<IsoTime> {
   return Effect.gen(function* beginActivity() {
@@ -127,10 +198,21 @@ interface SqliteSources {
   readonly sources: OfferSources;
 }
 
-function sqliteDeactivationOffers({ db, sources }: SqliteSources): Fails<DeactivationOffersSection> {
-  return Effect.map(sinceOn(db), (since) =>
-    deactivationOffersOn({ atomically: db.transaction, records: sqliteActivityRecords(db, since), sources }),
-  );
+function sqliteDeactivationOffers({
+  db,
+  sources,
+}: SqliteSources): Fails<DeactivationOffersSection & AutomaticDeactivationsSection> {
+  return Effect.map(sinceOn(db), (since) => {
+    const on = { atomically: db.transaction, records: sqliteActivityRecords(db, since), sources };
+    return {
+      ...deactivationOffersOn(on),
+      ...automaticDeactivationsOn({
+        board: boardOn(on),
+        deactivate: deactivatingWith(sources.deactivateIdentity),
+        records: sqliteAutomaticDeactivationRecords(db),
+      }),
+    };
+  });
 }
 
-export { DEACTIVATION_OFFERS_MIGRATION, sqliteDeactivationOffers };
+export { AUTOMATIC_DEACTIVATIONS_MIGRATION, DEACTIVATION_OFFERS_MIGRATION, sqliteDeactivationOffers };

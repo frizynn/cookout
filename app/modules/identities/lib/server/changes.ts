@@ -12,10 +12,14 @@ interface TokensEnded {
   readonly identity: IdentityName;
   readonly tokens: EndedTokens;
   readonly cause: "left" | "revoked" | "rotated" | "deactivated";
-  readonly by: IdentityName;
+  readonly by: IdentityName | typeof THE_COOKOUT;
 }
 
 type TokensEndedHandler = (ended: TokensEnded) => Effect.Effect<void>;
+
+type ReactivatedHandler = (identity: Identity) => Effect.Effect<void>;
+
+const THE_COOKOUT = "the cookout";
 
 interface IdentityChangesService {
   readonly publish: (identity: Identity) => Effect.Effect<void>;
@@ -24,6 +28,8 @@ interface IdentityChangesService {
   readonly deleted: Effect.Effect<PubSub.Subscription<Identity>, never, Scope.Scope>;
   readonly endTokens: (ended: TokensEnded) => Effect.Effect<void>;
   readonly onTokensEnded: (handler: TokensEndedHandler) => Effect.Effect<void, never, Scope.Scope>;
+  readonly reactivated: (identity: Identity) => Effect.Effect<void>;
+  readonly onReactivated: (handler: ReactivatedHandler) => Effect.Effect<void, never, Scope.Scope>;
 }
 
 class IdentityChanges extends Context.Service<IdentityChanges, IdentityChangesService>()(
@@ -38,12 +44,18 @@ const identityChangesLayer: Layer.Layer<IdentityChanges> = Layer.effect(
     const changedHub = yield* PubSub.unbounded<Identity>();
     const deletedHub = yield* PubSub.unbounded<Identity>();
     const handlers = yield* Ref.make<ReadonlySet<TokensEndedHandler>>(new Set());
+    const onReactivation = yield* Ref.make<ReadonlySet<ReactivatedHandler>>(new Set());
     return {
       changed: PubSub.subscribe(changedHub),
       deleted: PubSub.subscribe(deletedHub),
       endTokens: (ended) =>
         Effect.flatMap(Ref.get(handlers), (held) =>
           Effect.forEach([...held], (handler) => handler(ended), EACH_IN_TURN),
+        ),
+      onReactivated: (handler) =>
+        Effect.acquireRelease(
+          Ref.update(onReactivation, (held) => new Set([...held, handler])),
+          () => Ref.update(onReactivation, (held) => new Set(Arr.filter([...held], (each) => each !== handler))),
         ),
       onTokensEnded: (handler) =>
         Effect.acquireRelease(
@@ -52,6 +64,10 @@ const identityChangesLayer: Layer.Layer<IdentityChanges> = Layer.effect(
         ),
       publish: (identity: Identity) => Effect.asVoid(PubSub.publish(changedHub, identity)),
       publishDeleted: (identity: Identity) => Effect.asVoid(PubSub.publish(deletedHub, identity)),
+      reactivated: (identity) =>
+        Effect.flatMap(Ref.get(onReactivation), (held) =>
+          Effect.forEach([...held], (handler) => handler(identity), EACH_IN_TURN),
+        ),
     };
   }),
 );
@@ -64,6 +80,10 @@ function announcedDeleted(identity: Identity): Effect.Effect<Identity, never, Id
   return Effect.flatMap(IdentityChanges, (changes) => Effect.as(changes.publishDeleted(identity), identity));
 }
 
+function reactivated(identity: Identity): Effect.Effect<Identity, never, IdentityChanges> {
+  return Effect.flatMap(IdentityChanges, (changes) => Effect.as(changes.reactivated(identity), identity));
+}
+
 function tokensEnded(ended: TokensEnded): Effect.Effect<void, never, IdentityChanges> {
   return Effect.flatMap(IdentityChanges, (changes) => changes.endTokens(ended));
 }
@@ -71,9 +91,11 @@ function tokensEnded(ended: TokensEnded): Effect.Effect<void, never, IdentityCha
 export {
   type EndedTokens,
   IdentityChanges,
+  THE_COOKOUT,
   type TokensEnded,
   announced,
   announcedDeleted,
   identityChangesLayer,
+  reactivated,
   tokensEnded,
 };

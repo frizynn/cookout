@@ -1,18 +1,19 @@
 /**
- * The inbox on the wire, shared by the server, the SDK and the web: what an
- * identity hasn't read yet and why each item is there, the ack that marks a
- * message and everything before it in its thread or channel as read, the
- * ack of the whole inbox up to the newest item the caller has seen, the
- * mark unread that moves a read position back to just before a message,
- * the inbox history of read and unread items, following a thread and subscribing to a channel, the offline alerts an
- * owner's inbox holds beside its items and marking one read, Nudges about quiet threads, Deactivation offers and Keep,
- * and their paths. They refuse with the message, channel, nudge, deactivation offer and agent session error codes.
+ * The inbox on the wire, shared by the server, the SDK and the web: what an identity hasn't read yet and why each item
+ * is there, the ack of a message (and everything before it in its scope) or of the whole inbox, mark unread, the inbox
+ * history, following a thread and subscribing to a channel, an owner's offline alerts and marking one read, Nudges,
+ * Deactivation offers and Keep, Automatic deactivations and Mark read, and their paths. They refuse with the message,
+ * channel, nudge, deactivation offer, automatic deactivation and agent session error codes.
  */
+import type {
+  AutomaticDeactivation,
+  AutomaticDeactivationId,
+  DeactivationOffer,
+  DeactivationOfferId,
+} from "./lib/deactivation-offers.ts";
 import type { Channel, ChannelName } from "../channels/index.ts";
 import type { Message, MessageId, Reaction, TopLevelMessage } from "../messages/index.ts";
 import type { OfflineAlert, OfflineAlertId } from "../presence/index.ts";
-import type { DeactivationOfferId } from "./lib/deactivation-offers.ts";
-import type { Identity } from "../identities/index.ts";
 import type { IsoTime } from "../time/index.ts";
 
 declare const brand: unique symbol;
@@ -85,25 +86,6 @@ export const nudgeReadPath = "/v1/inbox/nudges/:id/read";
 export const nudgeErrorCodes = ["nudge_not_found"] as const;
 
 /**
- * A Deactivation offer: an Inbox entry, not a message, asking an agent's owner (all active admins if the owner is
- * Deactivated), or about a person every other active admin, whether to deactivate it after `quietDays` with no Activity.
- * One entry shared by all; Keep, marking all as read, activity, deactivation or a newer offer clears it (`cleared`).
- */
-export interface DeactivationOffer {
-  readonly id: DeactivationOfferId;
-  readonly identity: Identity;
-  readonly quietDays: number;
-  readonly text: string;
-  readonly raisedAt: IsoTime;
-  readonly cleared: boolean;
-}
-
-/** The answer to Keep: the offer, now cleared. */
-export interface DeactivationOfferResponse {
-  readonly deactivationOffer: DeactivationOffer;
-}
-
-/**
  * Why an item is in the inbox: a reply in a thread the identity follows, a message that mentions it, another
  * identity's reaction on the identity's own message, or a top-level message in a channel it subscribes to.
  */
@@ -145,6 +127,7 @@ export interface InboxResponse {
   readonly alerts: readonly OfflineAlert[];
   readonly nudges: readonly Nudge[];
   readonly deactivationOffers: readonly DeactivationOffer[];
+  readonly automaticDeactivations: readonly AutomaticDeactivation[];
 }
 
 /** An item in the inbox history: `read` says the identity's read position for its scope is at or after it. */
@@ -173,6 +156,7 @@ export interface InboxHistoryResponse {
   /** Every Nudge the caller has had, read or not, newest first, on the newest page (with no `before`) only. */
   readonly nudges: readonly InboxHistoryNudge[];
   readonly deactivationOffers: readonly DeactivationOffer[];
+  readonly automaticDeactivations: readonly AutomaticDeactivation[];
 }
 
 /** The caller's read positions: one for each channel and thread it has acked in or posted to, by channel name. */
@@ -191,15 +175,16 @@ export interface AckResponse {
 }
 
 /**
- * The body of an ack of the whole inbox: every inbox item up to `upTo`, the newest the caller has seen, is read, and
- * every offline alert up to `alertsUpTo`, the newest alert it has seen, and every Nudge up to `nudgesUpTo`, the
- * newest nudge it has seen; it clears every Deactivation offer up to `deactivationOffersUpTo` as Keep does. Any may go.
+ * The body of an ack of the whole inbox, each part up to the newest the caller has seen: items up to `upTo`, offline
+ * alerts up to `alertsUpTo`, Nudges up to `nudgesUpTo` and Automatic deactivations up to `automaticDeactivationsUpTo`
+ * are read, and Deactivation offers up to `deactivationOffersUpTo` are cleared as Keep does. Any may go.
  */
 export interface AckAllRequest {
   readonly upTo?: MessageId;
   readonly alertsUpTo?: OfflineAlertId;
   readonly nudgesUpTo?: NudgeId;
   readonly deactivationOffersUpTo?: DeactivationOfferId;
+  readonly automaticDeactivationsUpTo?: AutomaticDeactivationId;
 }
 
 /**
@@ -289,12 +274,27 @@ export const subscriptionPath = "/v1/channels/:name/subscription";
 
 export type { OfflineAlert, OfflineAlertId } from "../presence/index.ts";
 
-/** A Deactivation offer's ID: a positive whole number, increasing in the order offers are raised. */
-export type { DeactivationOfferId } from "./lib/deactivation-offers.ts";
+/**
+ * A Deactivation offer asks an agent's owner (all active admins if the owner is Deactivated), or about a person every
+ * other active admin, whether to deactivate it after `quietDays` with no Activity; Keep, marking all as read, activity,
+ * deactivation or a newer offer clears it. An Automatic deactivation tells them the cookout deactivated an agent after
+ * 90 days with no Activity; Mark read, marking all as read or reactivating it reads it. Each is one shared Inbox entry.
+ */
+export type {
+  AutomaticDeactivation,
+  AutomaticDeactivationId,
+  AutomaticDeactivationResponse,
+  DeactivationOffer,
+  DeactivationOfferId,
+  DeactivationOfferResponse,
+} from "./lib/deactivation-offers.ts";
 export {
+  automaticDeactivationErrorCodes,
+  automaticDeactivationReadPath,
   deactivationOfferErrorCodes,
   deactivationOfferKeepPath,
   deactivationOfferText,
+  isAutomaticDeactivationId,
   isDeactivationOfferId,
   quietAgentDays,
 } from "./lib/deactivation-offers.ts";

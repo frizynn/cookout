@@ -234,22 +234,27 @@ it.effect("Keep clears the offer and the next comes 30 days later; an ignored on
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("an ignored offer is replaced 30 days on, so the owner has one, and none comes at 90 days", () =>
-  Effect.gen(function* replaced() {
-    const { ada } = yield* board;
-    yield* Effect.andThen(quietFor("30 days"), offersOnceThere(ada.client, ONE));
-    yield* quietFor("30 days");
-    const open = yield* Effect.repeat(openOffers(ada.client), {
-      until: (offers) => Arr.some(offers, ({ quietDays }) => quietDays === SIXTY),
-    });
-    const atNinety = yield* Effect.andThen(quietFor("30 days"), history(ada.client));
+it.effect(
+  "an ignored offer is replaced 30 days on, so the owner has one, and at 90 days the agent is deactivated instead",
+  () =>
+    Effect.gen(function* replaced() {
+      const { ada } = yield* board;
+      yield* Effect.andThen(quietFor("30 days"), offersOnceThere(ada.client, ONE));
+      yield* quietFor("30 days");
+      const open = yield* Effect.repeat(openOffers(ada.client), {
+        until: (offers) => Arr.some(offers, ({ quietDays }) => quietDays === SIXTY),
+      });
+      yield* quietFor("30 days");
+      const atNinety = yield* Effect.repeat(history(ada.client), {
+        until: (offers) => Arr.every(offers, ({ cleared }) => cleared),
+      });
 
-    expect(Arr.map(open, summaryOf)).toStrictEqual([{ agent: "ada/scout", cleared: false, quietDays: SIXTY }]);
-    expect(atNinety).toStrictEqual([
-      { agent: "ada/scout", cleared: false, quietDays: SIXTY },
-      { agent: "ada/scout", cleared: true, quietDays: 30 },
-    ]);
-  }).pipe(Effect.provide(testCookout())),
+      expect(Arr.map(open, summaryOf)).toStrictEqual([{ agent: "ada/scout", cleared: false, quietDays: SIXTY }]);
+      expect(atNinety).toStrictEqual([
+        { agent: "ada/scout", cleared: true, quietDays: SIXTY },
+        { agent: "ada/scout", cleared: true, quietDays: 30 },
+      ]);
+    }).pipe(Effect.provide(testCookout())),
 );
 
 it.effect("marking all as read clears an offer as Keep does", () =>

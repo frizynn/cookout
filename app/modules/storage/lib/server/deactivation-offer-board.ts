@@ -32,6 +32,8 @@ interface Due {
   readonly quietDays: number;
 }
 
+type DueDeactivation = Omit<Due, "quietDays">;
+
 interface Dating {
   readonly board: Board;
   readonly days: QuietDays;
@@ -48,7 +50,7 @@ interface Regarding {
   readonly identity: Identity;
 }
 
-const byAt: Order.Order<Due> = Order.mapInput(Order.String, (due: Due) => due.at);
+const byAt: Order.Order<DueDeactivation> = Order.mapInput(Order.String, (due: DueDeactivation) => due.at);
 
 function later(at: IsoTime, days: number): IsoTime {
   return isoTimeOf(DateTime.addDuration(DateTime.makeUnsafe(at), Duration.days(days)));
@@ -131,7 +133,7 @@ function latestOffer(board: Board, identity: IdentityName): OfferRecord | undefi
 }
 
 function nextOf({ identity, latest, quietSince }: Quiet, days: QuietDays): readonly Due[] {
-  if (Predicate.isUndefined(latest) || latest.raisedAt < quietSince) {
+  if (Predicate.isUndefined(latest) || latest.raisedAt <= quietSince) {
     return [{ at: later(quietSince, days.offer), identity, quietDays: days.offer }];
   }
   const quietDays = latest.quietDays + days.offer;
@@ -157,16 +159,31 @@ function dueOffers({ board, days }: Dating): readonly Due[] {
   return Arr.sort(Arr.flatMap(board.identities, dueOf(board, days)), byAt);
 }
 
+function deactivationDueOf(board: Board, days: QuietDays): (identity: Identity) => readonly DueDeactivation[] {
+  return (identity) => {
+    if (identity.kind !== "agent" || !isQuiet(board, identity)) {
+      return [];
+    }
+    return [{ at: later(lastActivityIn({ board, identity }), days.automaticDeactivation), identity }];
+  };
+}
+
+function dueDeactivations({ board, days }: Dating): readonly DueDeactivation[] {
+  return Arr.sort(Arr.flatMap(board.identities, deactivationDueOf(board, days)), byAt);
+}
+
 function nextDueIn({ board, days }: Dating): IsoTime | null {
-  const soonest = Arr.head(dueOffers({ board, days }));
+  const soonest = Arr.head(Arr.sort([...dueOffers({ board, days }), ...dueDeactivations({ board, days })], byAt));
   return Option.getOrNull(Option.map(soonest, ({ at }) => at));
 }
 
 export {
   type Board,
   type Due,
+  type DueDeactivation,
   type OfferRecord,
   type QuietDays,
+  dueDeactivations,
   dueOffers,
   isOpen,
   lastActivityIn,

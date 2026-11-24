@@ -131,7 +131,7 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
-  "storage contract ($adapter): a due offer is raised once for the owner, replaced 30 days on, and none at 90 days",
+  "storage contract ($adapter): a due offer is raised once for the owner, replaced 30 days on, and none at 90 days, when deactivation falls due instead",
   ({ layer }) =>
     Effect.gen(function* raiseAndReplace() {
       const { storage } = yield* board(layer);
@@ -156,7 +156,7 @@ it.effect.each(storageLayers)(
       expect([early, again, none, third]).toStrictEqual([
         { cleared: [], raised: [] },
         { cleared: [], raised: [] },
-        null,
+        APR_1,
         { cleared: [], raised: [] },
       ]);
       expect([summary(first.raised), summary(second.raised), summary(second.cleared)]).toStrictEqual([

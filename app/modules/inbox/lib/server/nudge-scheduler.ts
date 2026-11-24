@@ -70,6 +70,7 @@ function raiseThenWait({ offers, publish, storage, woken }: Scheduling): Effect.
     const raised = yield* storage.raiseDueNudges(now, nudgeIntervals);
     const shown = yield* Effect.forEach(raised, (stored) => announced(storage, stored), { concurrency: 1 });
     yield* publish(Arr.flatten(shown));
+    yield* offers.deactivateQuietAgents(now);
     const offered = yield* storage.raiseDueDeactivationOffers(now, quietAgentDays);
     yield* offers.publish(offered);
     const nextNudge = yield* storage.nextNudgeDue(nudgeIntervals);
