@@ -135,20 +135,11 @@ export interface Reply extends MessageFields {
 /** A message, tagged by `kind`. */
 export type Message = TopLevelMessage | Reply;
 
-/** The body of the 409 `thread_moved` refusal of an agent's reply: the thread's newer replies by others, oldest first. */
-export interface ThreadMovedWarning {
-  readonly code: "thread_moved";
-  readonly message: string;
-  readonly details: { readonly replies: readonly Reply[] };
-}
-
 /** The answer to posting a message. */
 export interface MessageResponse {
   readonly message: Message;
   /** Each `@name` in the text that names no identity, once each in the order written. They stay plain text. */
   readonly unknownMentions: readonly string[];
-  /** @deprecated Only an older server sends it: the server now refuses that reply with `thread_moved` instead. */
-  readonly warning?: ThreadMovedWarning;
 }
 
 /**

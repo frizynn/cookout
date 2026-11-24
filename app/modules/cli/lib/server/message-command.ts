@@ -81,7 +81,7 @@ const replyToFlag = Flag.Int("reply-to").pipe(
 const seenFlag = Flag.Int("seen").pipe(
   Flag.optional,
   Flag.withDescription(
-    "With --reply-to: you have read the thread up to this later message. Newer replies by others warn thread_moved.",
+    "With --reply-to: you have read the thread up to this later message. Newer replies by others get it refused with thread_moved.",
   ),
 );
 const closeFlag = Flag.Boolean("close").pipe(

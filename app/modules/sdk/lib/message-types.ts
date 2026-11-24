@@ -16,7 +16,6 @@ export type {
   ReactionsResponse,
   ReadReceipt,
   Reply,
-  ThreadMovedWarning,
   ThreadResponse,
   TopLevelMessage,
   TopLevelMessageResponse,
