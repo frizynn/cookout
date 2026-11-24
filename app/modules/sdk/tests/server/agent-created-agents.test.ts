@@ -8,6 +8,7 @@ import { request } from "../../../http/client.ts";
 
 const CREATED = 201;
 const FORBIDDEN = 403;
+const NOT_FOUND = 404;
 const BAD_REQUEST = 400;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const HUMAN = { kind: "human" } as const;
@@ -147,4 +148,36 @@ it.effect("the new agent's join request shows in its creator's inbox, and the cr
     expect(ownerInbox.agentJoinRequests).toStrictEqual(creatorInbox.agentJoinRequests);
     expect(joinedAgentOf(joined)).toBe("worker");
   }).pipe(Effect.provide(testCookout())),
+);
+
+function requestedAs(on: Board, as: string): Effect.Effect<string> {
+  return Effect.map(
+    answer(() => on.cookout.clientFor().startAgentJoin({ as, host: "build-box" })),
+    ({ userCode }) => userCode,
+  );
+}
+
+it.effect(
+  "an agent's approval is refused for an agent deleted since the request, even if a person now has its name",
+  () =>
+    Effect.gen(function* refuseDeleted() {
+      const on = yield* board;
+      yield* answer(() => on.chief.client.createAgentForOwner({ name: "worker" }));
+      yield* answer(() => on.chief.client.createAgentForOwner({ name: "helper" }));
+      const deleted = yield* requestedAs(on, "worker");
+      const renamed = yield* requestedAs(on, "helper");
+      yield* answer(() => on.cookout.client.deleteIdentity("worker"));
+      yield* answer(() => on.cookout.client.deleteIdentity("helper"));
+      yield* on.cookout.createIdentity("helper", { kind: "human" });
+      const refused = yield* Effect.forEach(
+        [deleted, renamed],
+        (code) => refusal(() => on.chief.client.approveAgentJoin(code)),
+        ONE_AT_A_TIME,
+      );
+
+      expect(refused).toMatchObject([
+        { code: "agent_not_found", status: NOT_FOUND },
+        { code: "identity_kind", status: FORBIDDEN },
+      ]);
+    }).pipe(Effect.provide(testCookout())),
 );
