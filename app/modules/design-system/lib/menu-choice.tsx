@@ -1,6 +1,7 @@
 import type { MenuChoice as Choice } from "./menu-parts.ts";
 import { MENU_ITEM } from "./menu-style.ts";
 import type { ReactNode } from "react";
+import { ShortcutTooltip } from "./shortcut-tooltip.tsx";
 import { useCallback } from "react";
 
 interface ItemShape {
@@ -34,9 +35,18 @@ export function MenuChoice(parts: MenuChoiceParts): ReactNode {
       </RadixItem>
     );
   }
-  return (
+  const item = (
     <RadixItem asChild onSelect={handleSelect}>
       <div className={MENU_ITEM}>{choice.label}</div>
     </RadixItem>
+  );
+  const shortcut = choice.shortcut ?? null;
+  if (shortcut === null) {
+    return item;
+  }
+  return (
+    <ShortcutTooltip label={choice.label} shortcut={shortcut}>
+      {item}
+    </ShortcutTooltip>
   );
 }

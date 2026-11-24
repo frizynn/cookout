@@ -1,7 +1,7 @@
 import type { MenuChoice, MessageActionParts, MessageMenuParts } from "./menu-parts.ts";
 import { useMemo } from "react";
 
-const TEXT = { markUnread: "Mark unread" } as const;
+const TEXT = { altClick: "Alt-click", markUnread: "Mark unread" } as const;
 
 interface ChoicesOf extends MessageActionParts {
   readonly menu: MessageMenuParts;
@@ -25,7 +25,7 @@ export function useMessageChoices({ actionHref, actionLabel, menu, onAction }: C
         label: `React with ${choice.symbol}`,
         onSelect: choice.onReact,
       })),
-      { href: null, label: TEXT.markUnread, onSelect: menu.onMarkUnread },
+      { href: null, label: TEXT.markUnread, onSelect: menu.onMarkUnread, shortcut: TEXT.altClick },
       ...[menu.thread]
         .filter((choice) => choice !== null)
         .map((choice) => ({ href: null, label: choice.label, onSelect: choice.onSelect })),
