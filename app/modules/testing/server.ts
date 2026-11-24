@@ -61,7 +61,7 @@ export { cuttableRelay } from "../http/server.ts";
 export { type SilentConnection, silentConnection } from "./lib/server/silent-connection.ts";
 export { type FixedAnswer, serverAnswering } from "./lib/server/fixed-answer.ts";
 export { type SilentServer, silentServer } from "./lib/server/silent-server.ts";
-export { type ForwardingProxy, forwardingProxy } from "./lib/server/forwarding-proxy.ts";
+export { type ForwardingProxy, type ForwardingProxyOptions, forwardingProxy } from "./lib/server/forwarding-proxy.ts";
 export {
   type TwoSessions,
   freshStateFolder,

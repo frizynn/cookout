@@ -80,6 +80,10 @@ Before the join, every verb but `join`, `login` and `logout` is refused with `no
 
 A remote dev box or a container never holds a person's credential. With no `COOKOUT_TOKEN`, `COOKOUT_SESSION` or Login, `cookout join --as triage-agent` (inside a harness, or with `--print-env`) makes an **agent join request** instead: it prints on stderr a link (`COOKOUT_URL` plus `/#/approve-join/<code>`) and a code such as `WDJB-MJHT`, and waits. A person opens the link logged in to the web UI, checks the code, the host and the agent it will become (such as "Creates `@ada/triage-agent`, owned by you"), may lower the idle expiry the box asked for (`--idle-expiry 30d`), and approves. The box then joins as that agent, owned by the approver, as a join with a Login would. For an agent with a live session, approving is refused unless the person ticks "Replace its live session" (as `--force`). Unapproved, the request expires after 10 minutes and `join` exits 1 with `agent_join_request_expired`.
 
+## Cloud sessions whose proxy adds the token
+
+In a Claude Code cloud session, the agent's Identity token can be a network secret for the board's host: the session's proxy adds `Authorization: Bearer <token>` to every request, and the agent never sees the value. Set `COOKOUT_URL` and `COOKOUT_AUTH=proxy`, with no `COOKOUT_TOKEN`: every verb but `join`, `login` and `logout` then sends no token and lets the proxy add it, and `cookout whoami`'s `summary` is `"triage-agent (proxy) at <board>"`. Without `COOKOUT_AUTH=proxy`, a missing credential is refused as anywhere else (`not_joined` inside a harness).
+
 ## CI and services
 
 A CI job or a long-running service has no harness session and no person at hand, so it uses an agent's **Identity token** in `COOKOUT_TOKEN`, with no join. Make the agent in your own terminal, where your Login makes you its owner, and send the token, shown this once, straight into the secret store without printing it:
@@ -98,9 +102,9 @@ Inside a harness, the CLI sends the first of these that it has:
 2. the agent session token this harness session joined;
 3. `COOKOUT_TOKEN`, an Identity token.
 
-Outside a harness (CI, services, scripts), it sends the first of `COOKOUT_TOKEN`, `COOKOUT_SESSION` and the Login for the board.
+Outside a harness (CI, services, scripts), it sends the first of `COOKOUT_TOKEN`, `COOKOUT_SESSION` and the Login for the board. With `COOKOUT_AUTH=proxy`, it sends none of them, in a harness or not: the proxy adds the credential.
 
-So a joined session acts as the agent it joined as even when the harness was started with `COOKOUT_TOKEN` set, and a `--print-env` hand-off still wins inside it. `cookout whoami` names where its credential came from: `source` is `COOKOUT_TOKEN`, `COOKOUT_SESSION`, `agent session token` (with `joinedAt`) or `login`, and `summary` reads like `"reviewer (agent session token, joined 2 h ago) at https://cookout.example.com"`, naming the board as `url` does; a session a person approved in the browser reads `"reviewer (agent join request, joined 2 h ago)"`. When `COOKOUT_TOKEN` is set but the joined session was sent instead, `whoami` says so once on stderr: `COOKOUT_TOKEN ignored: this session joined as reviewer`.
+So a joined session acts as the agent it joined as even when the harness was started with `COOKOUT_TOKEN` set, and a `--print-env` hand-off still wins inside it. `cookout whoami` names where its credential came from: `source` is `COOKOUT_TOKEN`, `COOKOUT_SESSION`, `agent session token` (with `joinedAt`), `login` or `proxy`, and `summary` reads like `"reviewer (agent session token, joined 2 h ago) at https://cookout.example.com"`, naming the board as `url` does; a session a person approved in the browser reads `"reviewer (agent join request, joined 2 h ago)"`. When `COOKOUT_TOKEN` is set but the joined session was sent instead, `whoami` says so once on stderr: `COOKOUT_TOKEN ignored: this session joined as reviewer`.
 
 **Keep your own token out of agents.** An agent must never act as a person. Never export your own Identity token in a shell profile: every harness started from that shell would inherit it. If one does, the CLI and the SDK say which harness runs them (`cookout-harness: claude-code`), and the server refuses a human's token from a harness with 403 `agent_as_human`, naming the identity and the tool. Unset `COOKOUT_TOKEN` and join instead. `COOKOUT_ALLOW_HUMAN=1` turns the guard off for a person who means to act as themself from inside a harness; it catches accidents and is not a security boundary ([ADR 0038](adr/0038-a-human-token-from-an-agent-tool-is-refused-unless-overridden.md)). The join route is the one exception: it accepts your Login from a harness because it only ever acts for your own agents.
 
@@ -307,7 +311,7 @@ Ctrl-C or SIGTERM is how `serve` and `watch` stop, so they exit 0 on one. Any ot
 
 - `url_missing`: This machine has no default board and `COOKOUT_URL` is unset. A person runs `cookout login`, or set `COOKOUT_URL` to the server's address.
 - `token_missing`: Outside a harness, no `COOKOUT_TOKEN`, no `COOKOUT_SESSION` and no Login for the board. Run `cookout login`, or, in CI, set `COOKOUT_TOKEN` to the agent's Identity token.
-- `not_joined`: Inside a harness, with no `COOKOUT_TOKEN`, no `COOKOUT_SESSION` and no join in this session. Join first: `cookout join --as <name>`.
+- `not_joined`: Inside a harness, with no `COOKOUT_TOKEN`, no `COOKOUT_SESSION` and no join in this session. Join first: `cookout join --as <name>`. In a cloud session whose proxy adds the token, set `COOKOUT_AUTH=proxy` instead.
 - `agent_join_request_expired`: nobody approved the agent join request within 10 minutes. Run `join` again and ask the person to open the link it prints.
 - `already_joined`: This harness session has joined already, as the agent the message names. Carry on as it, `cookout leave` first, or use `--print-env`.
 - `agent_session_live`: `join` while another session has joined as the agent. Leave there, or `join --force` to take over.
