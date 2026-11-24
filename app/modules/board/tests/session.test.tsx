@@ -2,6 +2,7 @@ import type { CookoutClient, CookoutEvent, Identity, IdentityName } from "../../
 import { expect, it, onTestFinished, vi } from "vitest";
 import type { BoardStore } from "../index.ts";
 import type { HandLive } from "../../testing/web.ts";
+import type { LiveAdapter } from "../../live/index.ts";
 import { createBoardStore } from "../index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
 import { createLive } from "../../live/index.ts";
@@ -37,6 +38,7 @@ async function human(name: string): Promise<Human> {
 function opened(client: CookoutClient, shown = true): Opened {
   const hand = handLive();
   const store = createBoardStore({ client, live: createLive(hand.adapter), url: webTestCookout().url });
+  onTestFinished(store.subscribeShowing("identities")(vi.fn<() => void>()));
   if (shown) {
     onTestFinished(store.session.subscribe(vi.fn<() => void>()));
   }
@@ -191,4 +193,23 @@ it("a link back while nobody shows the session doesn't read it again", { timeout
   hand.report("up");
 
   expect(whoami.mock.calls).toStrictEqual([[]]);
+});
+
+it("showing only the session does not open the live stream, so a page not yet logged in does not", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const open = vi.fn<LiveAdapter["open"]>();
+  const store = createBoardStore({
+    client: createCookoutClient({ env: {}, url: webTestCookout().url }),
+    live: createLive({ open }),
+    url: webTestCookout().url,
+  });
+  onTestFinished(store.session.subscribe(vi.fn<() => void>()));
+  await vi.waitFor(() => {
+    expect(store.session.snapshot().status).toBe("logged-out");
+  });
+
+  expect(open).not.toHaveBeenCalled();
 });

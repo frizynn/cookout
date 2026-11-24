@@ -114,15 +114,22 @@ function follower(live: Live | null, parts: readonly Followed[], backs: readonly
   };
 }
 
-function showing({ follow, part, subscribe }: Showing): Subscribe {
+function showingUnfollowed({ part, subscribe }: Omit<Showing, "follow">): Subscribe {
   return (listener) => {
-    follow();
     const unsubscribe = subscribe(listener);
     part.show();
     return () => {
       unsubscribe();
       part.hide();
     };
+  };
+}
+
+function showing({ follow, part, subscribe }: Showing): Subscribe {
+  const shown = showingUnfollowed({ part, subscribe });
+  return (listener) => {
+    follow();
+    return shown(listener);
   };
 }
 
@@ -198,7 +205,7 @@ function createBoardStore(options: BoardStoreOptions): BoardStore {
     identities: showing({ follow, part: identities, subscribe }),
     presence: showing({ follow, part: presence, subscribe }),
     reactions: showing({ follow, part: reactions, subscribe }),
-    session: showing({ follow, part: session, subscribe }),
+    session: showingUnfollowed({ part: session, subscribe }),
   };
   function snapshotOf(): BoardState {
     snapshot ??= {
