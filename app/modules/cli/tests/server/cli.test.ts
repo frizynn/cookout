@@ -96,10 +96,7 @@ it.effect("cookout identity create needs --kind human or agent, and identity lis
     const noKind = yield* runCookout({ args: ["identity", "create", "bot"], env });
     const badKind = yield* runCookout({ args: ["identity", "create", "bot", "--kind", "robot"], env });
     yield* runCookout({ args: ["identity", "create", "ada", "--kind", "human"], env });
-    yield* runCookout({
-      args: ["identity", "create", "bot", "--kind", "agent", "--owner", "ada", "--display-name", "Bot"],
-      env,
-    });
+    yield* runCookout({ args: ["identity", "create", "bot", "--kind=agent", "--owner=ada", "--display-name=B"], env });
     const listed = yield* runCookout({ args: ["identity", "list"], env });
     const usage = { exitCode: EXIT_FAILURE, stderrJson: { error: { code: "usage" } } };
 
