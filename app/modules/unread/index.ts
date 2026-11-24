@@ -55,8 +55,14 @@
  * page, lists them all for the Earlier list. One turns read when it is marked read (`POST /v1/inbox/nudges/:id/read`),
  * with `markAllRead`, when `close` closes its thread (`PUT` on the thread's close route), and live when a `thread`
  * event closes its thread or a `message` event brings a reply in it, as the server reads it then.
+ * `deactivationOffers` holds the caller's Deactivation offers the same way: the open ones, from the inbox and each
+ * `deactivation-offer` event, join the loaded state beside the items, and its own snapshot, from the inbox history's
+ * first page, lists them all, open or cleared, for the Earlier list. One is cleared when Keep answers it
+ * (`POST /v1/inbox/deactivation-offers/:id/keep`), with `markAllRead`, which clears it as Keep does (Matt, #232,
+ * 2026-11-23), and live when its event says so (another recipient's Keep, the identity's activity or deactivation).
  */
 import type { ChannelName, CookoutClient, MessageId } from "../sdk/index.ts";
+import type { DeactivationOffers, UnreadState } from "./lib/parts.ts";
 import { follow, loadedOf, loadedOrFailed, partsOf } from "./lib/parts.ts";
 import type { Alerts } from "./lib/alerts.ts";
 import type { Earlier } from "./lib/earlier.ts";
@@ -64,7 +70,6 @@ import type { Live } from "../live/index.ts";
 import type { MessageMenu } from "./lib/message-menu.ts";
 import type { NewLine } from "./lib/new-lines.ts";
 import type { Nudges } from "./lib/nudges.ts";
-import type { UnreadState } from "./lib/parts.ts";
 import { createMarkAll } from "./lib/mark-all.ts";
 import { createMarkUnread } from "./lib/mark-unread.ts";
 import { createMessageMenu } from "./lib/message-menu.ts";
@@ -96,6 +101,8 @@ export interface Unread {
   readonly alerts: Alerts;
   /** Every Nudge of the caller's, read or not, newest first, marking one read and closing its thread: a store of its own. */
   readonly nudges: Nudges;
+  /** Every Deactivation offer of the caller's, open or cleared, newest first, and answering Keep: a store of its own. */
+  readonly deactivationOffers: DeactivationOffers;
 }
 
 /**
@@ -109,6 +116,7 @@ export interface UnreadOptions {
     | "closeThread"
     | "inbox"
     | "inboxHistory"
+    | "keepDeactivationOffer"
     | "markNudgeRead"
     | "markOfflineAlertRead"
     | "markUnread"
@@ -125,7 +133,7 @@ export interface UnreadOptions {
  */
 export function createUnread(options: UnreadOptions): Unread {
   const parts = partsOf(options);
-  const { alerts, earlier, items, nudges, shown } = parts;
+  const { alerts, deactivationOffers, earlier, items, nudges, shown } = parts;
   let loading: Promise<void> | null = null;
   const markAll = createMarkAll({
     ...options,
@@ -149,10 +157,9 @@ export function createUnread(options: UnreadOptions): Unread {
   }
   const menu = createMessageMenu(markUnread.markUnread);
 
-  return withNewLines<
-    Pick<Unread, "alerts" | "earlier" | "markAllRead" | "markUnread" | "menu" | "nudges" | "snapshot" | "subscribe">
-  >({
+  return withNewLines<Omit<Unread, "newLine">>({
     alerts,
+    deactivationOffers,
     earlier,
     markAllRead: markAll.markAllRead,
     markUnread: menu.markUnread,
@@ -177,6 +184,7 @@ export type { Earlier, EarlierState } from "./lib/earlier.ts";
 export type { MarkAllState } from "./lib/mark-all.ts";
 export type { Alerts, AlertsState } from "./lib/alerts.ts";
 export type { Nudges, NudgesState } from "./lib/nudges.ts";
+export type { DeactivationOffers, DeactivationOffersState } from "./lib/deactivation-offers.ts";
 export type { MessageMenu } from "./lib/message-menu.ts";
 export type { InboxRow } from "./lib/rows.ts";
 export { rowsOf } from "./lib/rows.ts";
