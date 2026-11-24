@@ -24,7 +24,6 @@ const FIXED: Readonly<Record<Exclude<Route["name"], "channel" | "profile" | "thr
   inbox: "Inbox",
   login: "Logged in",
   missing: "Nothing here",
-  "open-threads": "Open threads",
   people: "People",
   settings: "Settings",
 };

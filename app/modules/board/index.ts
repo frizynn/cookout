@@ -61,12 +61,6 @@
  * its first), its own store: it reads it (`listMessages` with `before` and a limit of 1) when its first reader
  * subscribes, for the Inbox's channel conversation. `ack(id)` acks the message `id`, one ack at a time in the order
  * asked, for the Inbox's reader of a channel conversation; a refused ack leaves the message unread.
- *
- * `openThreads(all)` is the Open threads page's list, its own store for each of "involving me" and all: each time a
- * first reader subscribes it loads the stalest page of open threads, and `loadMore` appends the next. With `live`, a
- * `thread` event closing a listed thread drops it, one reopening a thread it doesn't list reloads the list, and a reply
- * in a listed thread moves it to the end (or out of the loaded pages, while more are still to load); a thread
- * `closing` closes drops at once. When the stream's link comes back after being down, it reloads.
  */
 import type {
   ChannelMessages,
@@ -77,7 +71,6 @@ import type {
 } from "./lib/message-stores.ts";
 import type { ChannelName, CookoutClient, MessageId } from "../sdk/index.ts";
 import type { Commands, CommandsClient } from "./lib/commands.ts";
-import type { OpenThreads, OpenThreadsClient } from "./lib/open-threads.ts";
 import type { ReactionStore, ReactionStoreOptions } from "../reaction-store/index.ts";
 import type { Subscriptions, SubscriptionsClient } from "./lib/subscriptions.ts";
 import type { ChannelCreation } from "./lib/channel-creation.ts";
@@ -88,7 +81,6 @@ import { createChannelList } from "./lib/channel-list.ts";
 import { createCommands } from "./lib/commands.ts";
 import { createLiveFeed } from "./lib/live-feed.ts";
 import { createMessageStores } from "./lib/message-stores.ts";
-import { createOpenThreadStores } from "./lib/open-threads.ts";
 import { createReactionStore } from "../reaction-store/index.ts";
 import { createSubscriptions } from "./lib/subscriptions.ts";
 
@@ -97,7 +89,6 @@ const PAGE_SIZE = 50;
 type BoardClient = Pick<CookoutClient, "createChannel" | "listChannels"> &
   CommandsClient &
   MessageStoresClient &
-  OpenThreadsClient &
   ReactionStoreOptions["client"] &
   SubscriptionsClient;
 
@@ -125,8 +116,6 @@ export interface Board {
   readonly messageBefore: (at: { readonly channel: ChannelName; readonly id: MessageId }) => MessageBefore;
   /** Acks the message, after any ack asked before it. */
   readonly ack: (id: MessageId) => void;
-  /** The open threads involving the logged-in identity, or with `all` every open thread: one store for each. */
-  readonly openThreads: (all: boolean) => OpenThreads;
   /** Empties the snapshot's `notice`. */
   readonly dismissNotice: () => void;
 }
@@ -150,8 +139,7 @@ export function createBoard(options: BoardOptions): Board {
   const { client } = options;
   const pageSize = options.pageSize ?? PAGE_SIZE;
   const live = options.live ?? null;
-  const openThreads = createOpenThreadStores({ client, live, pageSize });
-  const stores = createMessageStores({ client, closed: openThreads.receiveThread, pageSize });
+  const stores = createMessageStores({ client, pageSize });
   const list = createChannelList(client);
   const { heard, subscriptions } = createSubscriptions({ client, live });
   const { follow, followed } = createLiveFeed({
@@ -176,7 +164,6 @@ export function createBoard(options: BoardOptions): Board {
     }),
     dismissNotice: list.dismissNotice,
     messageBefore: stores.messageBefore,
-    openThreads: openThreads.of,
     reactions: createReactionStore({ client, live }),
     snapshot: list.snapshot,
     subscribe: (listener) => {
@@ -199,5 +186,4 @@ export type { PostState } from "./lib/failure.ts";
 export type { Subscriptions, SubscriptionsState } from "./lib/subscriptions.ts";
 export type { ThreadMessages, ThreadMessagesState } from "./lib/thread-messages.ts";
 export type { ThreadClosing } from "./lib/thread-closing.ts";
-export type { OpenThreads, OpenThreadsState } from "./lib/open-threads.ts";
 export type { MessageBeforeState } from "./lib/message-stores.ts";

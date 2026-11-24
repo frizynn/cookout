@@ -130,7 +130,7 @@ interface NavLinkParts {
   readonly label: string;
   readonly active: boolean;
   readonly marked: boolean;
-  readonly icon: "inbox" | "people" | "threads" | "channel";
+  readonly icon: "inbox" | "people" | "channel";
 }
 
 interface PillParts {

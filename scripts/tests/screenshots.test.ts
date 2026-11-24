@@ -134,7 +134,6 @@ it("lists the standard screens in the order they are taken", { timeout: 2000 }, 
     "narrow",
     "closed-threads",
     "closed-thread",
-    "open-threads",
     "collapsed",
     "reconnecting",
   ]);
@@ -172,7 +171,7 @@ it("with no flags it takes every screen into no named folder", { timeout: 2000 }
 it("an unknown screen or flag, or a flag with no value, is refused", { timeout: 2000 }, () => {
   expect.hasAssertions();
   expect(() => screenshotOptions(["--only", "nope"])).toThrow(
-    "Unknown screen nope: pick from inbox, inbox-more, inbox-nudge, inbox-offer, inbox-deactivated, inbox-loading, inbox-thread, inbox-narrow, inbox-channel, inbox-marked, channel, channel-hover, thread, receipt, people, profile, warning, admin-profile, admin-deactivated, confirm, settings, new-channel, narrow, closed-threads, closed-thread, open-threads, collapsed, reconnecting.",
+    "Unknown screen nope: pick from inbox, inbox-more, inbox-nudge, inbox-offer, inbox-deactivated, inbox-loading, inbox-thread, inbox-narrow, inbox-channel, inbox-marked, channel, channel-hover, thread, receipt, people, profile, warning, admin-profile, admin-deactivated, confirm, settings, new-channel, narrow, closed-threads, closed-thread, collapsed, reconnecting.",
   );
   expect(() => screenshotOptions(["--theme", "dark"])).toThrow(
     "Unknown flag --theme: use --only <screen> or --out <dir>.",
