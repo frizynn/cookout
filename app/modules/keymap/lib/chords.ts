@@ -112,4 +112,4 @@ function shownOf({ chord, platform }: Labelling): string {
   return [...[...chord.modifiers].map((modifier) => shown[modifier]), key].join(join);
 }
 
-export { type Chord, type Platform, type Pressed, ariaOf, chordOf, isModified, matches, shownOf };
+export { type Platform, ariaOf, chordOf, isModified, matches, shownOf };

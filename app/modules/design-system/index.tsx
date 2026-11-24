@@ -205,7 +205,7 @@ export {
   ListArea,
   Toolbar,
 } from "./lib/layout.ts";
-export type { PanelAction, PanelEdgeParts, Shortcut, ShortcutLinkParts } from "./lib/layout.ts";
+export type { PanelAction, PanelEdgeParts, ShortcutLinkParts } from "./lib/layout.ts";
 export {
   CallChip,
   ChannelStart,

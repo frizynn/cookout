@@ -12,7 +12,6 @@ export { ListPane } from "./list-pane.tsx";
 export { ConversationEmpty } from "./conversation-empty.tsx";
 export { ConversationPanel } from "./conversation-panel.tsx";
 export type { PanelAction } from "./panel-action-button.tsx";
-export type { Shortcut } from "./shortcut.ts";
 export type { ShortcutLinkParts } from "./shortcut-link.tsx";
 export { PaneHeader } from "./pane-header.tsx";
 export { Page } from "./page.tsx";

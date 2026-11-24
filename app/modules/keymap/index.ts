@@ -149,4 +149,4 @@ function createKeymap(options: { readonly platform: string }): Keymap {
 }
 
 export type { Action } from "./lib/keys.ts";
-export { type Act, type Binding, type Keymap, type Shortcut, createKeymap };
+export { type Act, type Keymap, createKeymap };
