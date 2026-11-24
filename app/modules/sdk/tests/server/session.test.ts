@@ -148,7 +148,7 @@ it.effect("a human cookie session posts and acks", () =>
 
     expect(posted).toMatchObject({ json: { message: { author: { name: "ada" }, text: "yes" } }, status: CREATED });
     expect(acked.status).toBe(OK);
-    expect(inbox.json).toStrictEqual({ alerts: [], items: [], nudges: [] });
+    expect(inbox.json).toStrictEqual({ alerts: [], deactivationOffers: [], items: [], nudges: [] });
   }).pipe(Effect.provide(testCookout())),
 );
 
