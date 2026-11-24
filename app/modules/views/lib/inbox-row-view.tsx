@@ -74,7 +74,7 @@ export function InboxRowView(props: InboxRowViewProps): ReactNode {
       note={note}
       presence={presence}
       time={time}
-      why={whyText(row)}
+      why={whyText({ item, why: row.why })}
     >
       <FeedText unread={props.unread}>
         <MentionText me={props.me} message={message} />

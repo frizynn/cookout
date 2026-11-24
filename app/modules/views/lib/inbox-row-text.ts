@@ -1,5 +1,5 @@
 import type { InboxItem } from "../../sdk/index.ts";
-import type { InboxRow } from "../../unread/index.ts";
+import type { UnreadWhy } from "../../unread/index.ts";
 import { plainTextOf } from "./markdown-plain-text.ts";
 import { reactionSymbols } from "../../messages/index.ts";
 
@@ -30,7 +30,12 @@ function reactedText({ newReactions = [] }: InboxItem): string {
     .join(", ");
 }
 
-function whyText({ latest: item, why }: InboxRow): string {
+interface WhyOf {
+  readonly why: UnreadWhy;
+  readonly item: InboxItem;
+}
+
+function whyText({ item, why }: WhyOf): string {
   if (why === "reacted") {
     return reactedText(item);
   }

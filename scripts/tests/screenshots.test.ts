@@ -75,6 +75,7 @@ it("takes every screen in light on a fresh board, then every screen in dark on a
     "inbox-<theme>: 1 unread",
     "inbox-more-<theme>: 1 unread",
     "inbox-loading-<theme>: 1 unread",
+    "inbox-row-menu-<theme>: 1 unread",
     "inbox-thread-<theme>: 1 unread",
     "inbox-narrow-<theme>: 0 unread",
     "inbox-channel-<theme>: 0 unread",
@@ -115,6 +116,7 @@ it("lists the standard screens in the order they are taken", { timeout: 2000 }, 
     "inbox-offer",
     "inbox-deactivated",
     "inbox-loading",
+    "inbox-row-menu",
     "inbox-thread",
     "inbox-narrow",
     "inbox-channel",
@@ -180,7 +182,7 @@ it("with no flags it takes every screen into no named folder", { timeout: 2000 }
 it("an unknown screen or flag, or a flag with no value, is refused", { timeout: 2000 }, () => {
   expect.hasAssertions();
   expect(() => screenshotOptions(["--only", "nope"])).toThrow(
-    "Unknown screen nope: pick from inbox, inbox-more, inbox-nudge, inbox-offer, inbox-deactivated, inbox-loading, inbox-thread, inbox-narrow, inbox-channel, inbox-marked, channel, channel-hover, message-menu, channel-menu, person-menu, thread, receipt, identity-card, identity-card-person, identity-card-deactivated, identity-card-no-presence, people, profile, warning, admin-profile, admin-deactivated, confirm, settings, new-channel, narrow, closed-threads, closed-thread, sidebar-narrowest, sidebar-widest, collapsed, reconnecting.",
+    "Unknown screen nope: pick from inbox, inbox-more, inbox-nudge, inbox-offer, inbox-deactivated, inbox-loading, inbox-row-menu, inbox-thread, inbox-narrow, inbox-channel, inbox-marked, channel, channel-hover, message-menu, channel-menu, person-menu, thread, receipt, identity-card, identity-card-person, identity-card-deactivated, identity-card-no-presence, people, profile, warning, admin-profile, admin-deactivated, confirm, settings, new-channel, narrow, closed-threads, closed-thread, sidebar-narrowest, sidebar-widest, collapsed, reconnecting.",
   );
   expect(() => screenshotOptions(["--theme", "dark"])).toThrow(
     "Unknown flag --theme: use --only <screen> or --out <dir>.",
