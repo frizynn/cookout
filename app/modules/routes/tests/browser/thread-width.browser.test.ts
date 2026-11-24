@@ -43,7 +43,7 @@ async function dragEdge(page: Page, by: number): Promise<void> {
 }
 
 test("dragging the thread panel's edge left widens it, and a reload keeps the width", async ({ page }) => {
-  await threadOpen(page, "browser-thread-width");
+  await threadOpen(page, "browser-resize-panel");
 
   await expect(page.getByRole("separator", { name: EDGE })).toBeVisible();
 
@@ -60,7 +60,7 @@ test("dragging the thread panel's edge left widens it, and a reload keeps the wi
 });
 
 test("dragging the thread panel's edge past its narrowest closes the thread", async ({ page }) => {
-  const message = await threadOpen(page, "browser-thread-width-close");
+  const message = await threadOpen(page, "browser-resize-panel-close");
 
   await expect(page.getByRole("separator", { name: EDGE })).toBeVisible();
 
@@ -71,7 +71,7 @@ test("dragging the thread panel's edge past its narrowest closes the thread", as
 });
 
 test("on a narrow screen the thread panel has no edge to drag", async ({ page }) => {
-  await threadOpen(page, "browser-thread-width-narrow");
+  await threadOpen(page, "browser-resize-panel-narrow");
   await page.setViewportSize(NARROW);
 
   await expect(page.getByRole("complementary", { name: "Thread" })).toContainText("Resizable parent");
