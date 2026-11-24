@@ -435,7 +435,8 @@ interface InboxItem {
   readonly message: Message;
   /**
    * For the `reaction` reason, the reactions on the identity's own message that it hasn't acked yet, oldest first, each
-   * shown as "@name reacted with 👍". Absent for an item there for no reaction.
+   * shown as "@name reacted with 👍". In the inbox history, every other identity's reaction on it, acked or not. Absent
+   * for an item there for no reaction.
    */
   readonly newReactions?: readonly Reaction[];
 }
@@ -457,7 +458,10 @@ interface InboxResponse {
   readonly alerts: readonly OfflineAlert[];
   readonly nudges: readonly Nudge[];
 }
-/** An item in the inbox history: `read` says the identity's read position for its scope is at or after it. */
+/**
+ * An item in the inbox history: `read` says the identity's read position for its scope is at or after it, or, for a
+ * reaction item (the identity's own message), that it has acked every reaction on it.
+ */
 interface InboxHistoryItem extends InboxItem {
   readonly read: boolean;
 }

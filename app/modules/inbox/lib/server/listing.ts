@@ -11,7 +11,7 @@ import type {
 } from "../../index.ts";
 import type { Storage, StorageUnavailable, StoredNudge } from "../../../storage/server.ts";
 import { isNudgeId, nudgeTexts } from "../../index.ts";
-import { itemsWithReactions, reactionItemFor, withReactionItems } from "./reaction-items.ts";
+import { itemsWithReactions, reactionItemFor, withHistoryReactions, withReactionItems } from "./reaction-items.ts";
 import type { Channel } from "../../../channels/index.ts";
 import type { Identity } from "../../../identities/index.ts";
 import type { MessageId } from "../../../messages/index.ts";
@@ -137,7 +137,8 @@ function historyOf(asking: Listing & Asking, query: HistoryQuery): Fails<InboxHi
   const { caller, storage } = asking;
   return Effect.gen(function* inboxHistory() {
     const { hasMore, items } = yield* storage.listInboxHistory(caller.name, historyPage(query));
-    const listed = yield* withChannels<StoredHistoryItem>(storage, items);
+    const reacted = yield* withHistoryReactions({ author: caller.name, items, storage });
+    const listed = yield* withChannels<StoredHistoryItem>(storage, reacted);
     const alerts = yield* alertsOnPage(asking, query);
     const nudges = yield* nudgesOnPage(asking, query);
     return { alerts, hasMore, items: listed, nudges };

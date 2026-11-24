@@ -75,22 +75,28 @@ it.effect("cookout react and unreact take up or down and print the message's rea
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("cookout inbox lists the author's reaction item, and cookout ack clears it", () =>
-  Effect.gen(function* inboxItem() {
-    const board = yield* annPosts;
-    const id = String(board.message.id);
-    yield* answer(() => board.bob.client.react(board.message.id, "thumbs_up"));
-    const results = yield* runAll(envFor(board, board.ann), [["inbox"], ["ack", id], ["inbox"]]);
+it.effect(
+  "cookout inbox lists the author's reaction item, cookout ack clears it, and the history keeps it as read",
+  () =>
+    Effect.gen(function* inboxItem() {
+      const board = yield* annPosts;
+      const id = String(board.message.id);
+      yield* answer(() => board.bob.client.react(board.message.id, "thumbs_up"));
+      const results = yield* runAll(envFor(board, board.ann), [
+        ["inbox"],
+        ["ack", id],
+        ["inbox"],
+        ["inbox", "--history"],
+      ]);
+      const bobsReaction = [{ identity: "bob", reaction: "thumbs_up" }];
 
-    expect(results).toMatchObject([
-      {
-        exitCode: 0,
-        stdoutJson: { items: [{ newReactions: [{ identity: "bob", reaction: "thumbs_up" }], reasons: ["reaction"] }] },
-      },
-      { exitCode: 0 },
-      { exitCode: 0, stdoutJson: { items: [] } },
-    ]);
-  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+      expect(results).toMatchObject([
+        { exitCode: 0, stdoutJson: { items: [{ newReactions: bobsReaction, reasons: ["reaction"] }] } },
+        { exitCode: 0 },
+        { exitCode: 0, stdoutJson: { items: [] } },
+        { exitCode: 0, stdoutJson: { items: [{ newReactions: bobsReaction, read: true, reasons: ["reaction"] }] } },
+      ]);
+    }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
 it.effect("cookout watch prints a line saying who reacted with what to the watcher's message", () =>
