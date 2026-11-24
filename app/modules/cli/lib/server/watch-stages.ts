@@ -3,11 +3,11 @@ import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts
 import { CommandFailed, refused } from "./output.ts";
 import type { ConnectedEvent, InboxItemEvent, MessageId } from "../../../sdk/index.ts";
 import { agentSessionExpired, agentSessionRevoked } from "../../../agent-sessions/index.ts";
+import { isInboxItem, whileUnavailable } from "./watch-connection.ts";
 import { note, printLine } from "./watch-lines.ts";
 import type { Format } from "./watch-lines.ts";
 import type { Heard } from "./watch-connection.ts";
 import { callClient } from "./adapters/sdk.ts";
-import { isInboxItem } from "./watch-connection.ts";
 import { watchReplaced } from "../../../presence/index.ts";
 
 interface StopCondition {
@@ -19,14 +19,13 @@ interface StopCondition {
 const NO_UNREAD = 0;
 const NOTHING_POSTED = 0;
 const FIRST = 1;
-const exitCodes = { agentSessionEnded: 4, replaced: 6, timeout: 2, tokenRefused: 3, unreachable: 5 } as const;
+const exitCodes = { agentSessionEnded: 4, replaced: 6, timeout: 2, tokenRefused: 3 } as const;
 const FATAL_EXIT_CODES: ReadonlyMap<string, number> = new Map([
   ["token_missing", exitCodes.tokenRefused],
   ["token_unknown", exitCodes.tokenRefused],
   ["token_revoked", exitCodes.tokenRefused],
   [agentSessionRevoked, exitCodes.agentSessionEnded],
   [agentSessionExpired, exitCodes.agentSessionEnded],
-  ["server_unreachable", exitCodes.unreachable],
   [watchReplaced, exitCodes.replaced],
 ]);
 
@@ -41,7 +40,7 @@ function unreadUpTo(opened: ClientWithAgentSessionState, latest: MessageId | nul
   if (latest === null) {
     return Effect.succeed(NONE_UNREAD);
   }
-  return Effect.map(callClient((client) => client.inbox())(opened), ({ items }) => {
+  return Effect.map(whileUnavailable(callClient((client) => client.inbox())(opened)), ({ items }) => {
     const unread = Arr.filter(items, ({ message }) => message.id <= latest);
     return { count: unread.length, mentioned: Arr.some(unread, ({ reasons }) => reasons.includes("mention")) };
   });

@@ -35,7 +35,6 @@ type Needs = CommandLineNeeds | Scope.Scope;
 
 const EXIT_SUCCESS = 0;
 const EXIT_TIMEOUT = 2;
-const EXIT_UNREACHABLE = 5;
 const CLEAN: LastEnd = { endedUnexpectedly: false };
 const DROPPED: LastEnd = { endedUnexpectedly: true, offlineReason: "connection lost" };
 
@@ -95,11 +94,11 @@ it.effect("cookout watch --timeout sends the clean close before it exits 2", () 
   }).pipe(Effect.provide(commandLineServices)),
 );
 
-it.effect("cookout watch sends no clean close when its link is cut and it gives up, so the end reads as a drop", () =>
+it.effect("cookout watch sends no clean close when its link is cut, so the end reads as a drop", () =>
   Effect.gen(function* cutLinkDrops() {
-    const ended = yield* watchedUntilExit(["watch"], ({ link }) => link.takeDown);
+    const ended = yield* watchedUntilExit(["watch", "--timeout", "60"], ({ link }) => link.takeDown);
 
-    expect(ended).toStrictEqual({ end: DROPPED, exitCode: EXIT_UNREACHABLE });
+    expect(ended).toStrictEqual({ end: DROPPED, exitCode: EXIT_TIMEOUT });
   }).pipe(Effect.provide(commandLineServices)),
 );
 

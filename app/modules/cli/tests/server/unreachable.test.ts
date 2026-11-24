@@ -15,7 +15,7 @@ import {
 import { expect, it } from "@effect/vitest";
 
 const TICK_SECONDS = 30;
-const EXIT_UNREACHABLE = 5;
+const EXIT_TIMEOUT = 2;
 const UNKNOWN_HOST = "http://cookout.invalid";
 const CHECK_SETTINGS = "(check COOKOUT_URL, or HTTPS_PROXY if you are behind a proxy)";
 
@@ -23,7 +23,7 @@ type Env = Readonly<Record<string, string>>;
 
 const closedPortUrl = Effect.scoped(serverAnswering({ text: "closed once the scope ends" }));
 
-it.effect("cookout watch exits 5 with the same wording when the server stops answering for 5 minutes", () =>
+it.effect("cookout watch keeps retrying, naming the URL in the same wording, when the server stops answering", () =>
   Effect.gen(function* watchServerGone() {
     const database = yield* freshDatabasePath;
     const serving = yield* Scope.make();
@@ -31,15 +31,16 @@ it.effect("cookout watch exits 5 with the same wording when the server stops ans
     const env = { COOKOUT_TOKEN: server.adminToken, COOKOUT_URL: server.url };
 
     const result = yield* runCookoutWhile({
-      args: ["watch"],
+      args: ["watch", "--timeout", "600"],
       env,
       tickSeconds: TICK_SECONDS,
       whileRunning: () => Scope.close(serving, Exit.void),
     });
 
-    expect(result.exitCode).toBe(EXIT_UNREACHABLE);
-    expect(result.stdout).toContain(`cookout watch stopped: cannot reach ${server.url}: `);
-    expect(result.stdout).toContain(`${CHECK_SETTINGS} (server_unreachable)`);
+    expect(result.exitCode).toBe(EXIT_TIMEOUT);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain(`board unavailable (cannot reach ${server.url}: `);
+    expect(result.stderr).toContain(`${CHECK_SETTINGS}), retrying in 30s`);
   }).pipe(Effect.provide(commandLineServices)),
 );
 

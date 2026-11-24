@@ -12,7 +12,6 @@ import { callClient, toFailure } from "./adapters/sdk.ts";
 import type { Scope } from "effect";
 import { eventsPath } from "../../../events/index.ts";
 import { note } from "./watch-lines.ts";
-import { unreachableMessage } from "./adapters/http.ts";
 
 type Heard = InboxItemEvent | ConnectedEvent;
 
@@ -23,7 +22,6 @@ const THREE_MISSED_HEARTBEATS = "45 seconds";
 const FIRST_RECONNECT_SECONDS = 1;
 const LONGEST_RECONNECT_SECONDS = Duration.toSeconds("30 seconds");
 const DOUBLING = 2;
-const GIVE_UP_AFTER = Duration.toMillis("5 minutes");
 const CLEAN_CLOSE_WAIT = "2 seconds";
 const streamEnded: CallFailure = { code: "cli_error", message: "The server ended the stream." };
 const heardNothing: CallFailure = { code: "cli_error", message: "Heard nothing from the server for 45 s." };
@@ -111,8 +109,8 @@ function isDropped({ code, status = NO_STATUS }: CallFailure): boolean {
   return code === "cli_error" || code === "unreachable" || status >= SERVER_ERROR;
 }
 
-function keepTrying({ elapsed, input }: { readonly elapsed: number; readonly input: CallFailure }): boolean {
-  return isDropped(input) && elapsed < GIVE_UP_AFTER;
+function keepTrying({ input }: { readonly input: CallFailure }): boolean {
+  return isDropped(input);
 }
 
 function whyUnavailable({ message, status }: CallFailure): string {
@@ -145,24 +143,16 @@ const reconnectBackoff = Schedule.forever.pipe(
   Schedule.modifyDelay(sayRetrying),
 );
 
-function gaveUp(url: string): (failure: CallFailure) => CallFailure {
-  return (failure) => {
-    if (!isDropped(failure)) {
-      return failure;
-    }
-    if (failure.code === "unreachable") {
-      return { code: "server_unreachable", message: failure.message };
-    }
-    return { code: "server_unreachable", message: unreachableMessage({ url, why: failure.message }) };
-  };
+function whileUnavailable<Value, Needs>(
+  call: Effect.Effect<Value, CallFailure, Needs>,
+): Effect.Effect<Value, CallFailure, Needs> {
+  return Effect.retry(call, reconnectBackoff);
 }
 
 function start(
   opened: ClientWithAgentSessionState,
 ): Effect.Effect<Stream.Stream<readonly Heard[], CallFailure>, CallFailure, Scope.Scope> {
-  return connect(opened, Option.none()).pipe(
-    Effect.retry(reconnectBackoff),
-    Effect.mapError(gaveUp(opened.connection.url)),
+  return whileUnavailable(connect(opened, Option.none())).pipe(
     Effect.tap(() => note({ watching: `${opened.connection.url}${eventsPath}` })),
   );
 }
@@ -193,7 +183,6 @@ function source({ first, opened }: Resuming): Stream.Stream<Heard, CallFailure> 
       );
       return Stream.unwrap(next).pipe(
         Stream.retry(reconnectBackoff),
-        Stream.mapError(gaveUp(opened.connection.url)),
         Stream.flattenIterable,
         Stream.tap((event) => Ref.update(lastSeen, lastSeenAfter(event))),
       );
@@ -201,4 +190,4 @@ function source({ first, opened }: Resuming): Stream.Stream<Heard, CallFailure> 
   );
 }
 
-export { type Heard, isInboxItem, source, start };
+export { type Heard, isInboxItem, source, start, whileUnavailable };

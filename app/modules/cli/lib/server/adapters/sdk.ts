@@ -31,8 +31,7 @@ type CallFailureCode =
   | "login_request_expired"
   | "not_a_cookout"
   | "timeout"
-  | "unreachable"
-  | "server_unreachable";
+  | "unreachable";
 
 interface CallFailure {
   readonly code: CallFailureCode;

@@ -5,7 +5,7 @@
  * for as long as it is open, and the all-channels feed sends each change as a `presence` event. An identity stays
  * online for `COOKOUT_PRESENCE_GRACE_SECONDS` after its last live connection closes, and storage keeps when it was
  * last seen and whether it was online, so after a restart the identities that were online keep showing online for
- * 5 minutes, the time a `cookout watch` keeps retrying, or until they reconnect. An identity the `IdentityChanges`
+ * 5 minutes, ample for a retrying `cookout watch` (at most 30 s between tries), or until they reconnect. An identity the `IdentityChanges`
  * hub announces deleted leaves the registry, as it leaves storage. An agent holds one live connection at most
  * (ADR "one live connection per agent"): a newer one ends the one before with `watchReplacedRefusal`.
  */
