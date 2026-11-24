@@ -41,8 +41,6 @@ interface Handling {
   readonly secret: Redacted.Redacted;
 }
 
-interface HandlerOptions extends Handling, Listen {}
-
 type Decision = "fail" | "handle" | "repeat";
 
 type Seen = ReadonlyMap<string, "failed" | "handled">;
@@ -151,12 +149,11 @@ function answer(options: Handling, receive: Receive): Answer {
   });
 }
 
-export type { HandlerOptions, Handling, Listen };
-
 /**
  * A Node HTTP server listening on `listen.host` and `listen.port` (0 for a
- * free port) with nothing served on it yet: it answers 503 until
- * `serveHandler` serves on it, and between two of those.
+ * free port) until the Layer's scope closes. It answers 503 until
+ * `serveHandler` serves on it, and between two of those; read the port it
+ * bound back with `handlerUrl`.
  * @param listen Where to listen.
  * @returns The listening server.
  */
@@ -195,18 +192,7 @@ export function serveHandler(options: Handling): Layer.Layer<never, never, HttpS
   ).pipe(Layer.provide(macLayer));
 }
 
-/**
- * The handler's server as a Layer: it listens on `options.host` and
- * `options.port` (0 for a free port) until the Layer's scope closes, and
- * stops any result reply still being posted then.
- * @param options Where to listen, the command's secret, where the cookout is, and who to tell of each call.
- * @returns The running server.
- */
-export function handlerServer(options: HandlerOptions): Layer.Layer<HttpServer.HttpServer, ServeError> {
-  return Layer.provideMerge(serveHandler(options), handlerListener(options));
-}
-
-/** The base URL a running `handlerServer` answers on, such as `http://127.0.0.1:54321`. */
+/** The base URL a running `handlerListener` answers on, such as `http://127.0.0.1:54321`. */
 export const handlerUrl: Effect.Effect<string, never, HttpServer.HttpServer> = Effect.map(
   HttpServer.HttpServer,
   (server) => HttpServer.formatAddress(server.address),
