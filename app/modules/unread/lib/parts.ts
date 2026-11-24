@@ -27,7 +27,6 @@ type UnreadState =
   | {
       readonly status: "loaded";
       readonly items: readonly InboxItem[];
-      readonly inbox: readonly InboxItem[];
       readonly alerts: readonly OfflineAlert[];
       readonly nudges: readonly Nudge[];
       readonly deactivationOffers: readonly DeactivationOffer[];
@@ -88,7 +87,6 @@ function loadedOf({ alerts, deactivatedQuietAgents, deactivationOffers, items, m
     deactivatedQuietAgents: deactivatedQuietAgents.unread(),
     deactivationOffers: deactivationOffers.open(),
     heldDeactivatedQuietAgents: deactivatedQuietAgents.forYou().held,
-    inbox: items.inbox(),
     items: items.list(),
     markAll,
     nudges: nudges.unread(),
