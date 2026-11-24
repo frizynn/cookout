@@ -207,7 +207,7 @@ interface MessageLayoutParts extends Parts {
 
 interface MessageItemParts extends Omit<MessageLayoutParts, "choices" | "reactions"> {
   readonly menu: MessageMenuParts;
-  readonly mark: "for-you" | "open" | "none";
+  readonly mark: "for-you" | "open" | "linked" | "none";
   readonly day: string | null;
   readonly unreadLine: boolean;
 }
