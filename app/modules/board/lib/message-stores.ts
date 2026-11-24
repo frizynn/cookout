@@ -3,9 +3,8 @@ import type { ClosingClient, ThreadClosing } from "./thread-closing.ts";
 import type { LiveChannelMessages, MessagesClient } from "./channel-messages.ts";
 import type { LiveThreadMessages, ThreadClient } from "./thread-messages.ts";
 import type { MessageBefore } from "./message-before.ts";
-import type { MessageRead } from "./message-read.ts";
 import { createChannelMessages } from "./channel-messages.ts";
-import { createMessageReads } from "./message-read.ts";
+import { createMessageAcks } from "./message-acks.ts";
 import { createMessagesBefore } from "./message-before.ts";
 import { createThreadClosing } from "./thread-closing.ts";
 import { createThreadMessages } from "./thread-messages.ts";
@@ -21,7 +20,7 @@ interface MessageStores {
   readonly loaded: () => readonly (LiveChannelMessages | LiveThreadMessages)[];
   readonly closing: ThreadClosing;
   readonly messageBefore: (at: { readonly channel: ChannelName; readonly id: MessageId }) => MessageBefore;
-  readonly read: (id: MessageId) => MessageRead;
+  readonly ack: (id: MessageId) => void;
 }
 
 interface MessageStoresOptions {
@@ -43,6 +42,7 @@ function createMessageStores({ client, closed, pageSize }: MessageStoresOptions)
     return [...channels.values(), ...threads.values()];
   }
   return {
+    ack: createMessageAcks(client),
     channel: (name, followed) =>
       storeIn(channels, name, () => followed(createChannelMessages({ client, name, pageSize }))),
     closing: createThreadClosing({
@@ -56,7 +56,6 @@ function createMessageStores({ client, closed, pageSize }: MessageStoresOptions)
     }),
     loaded,
     messageBefore: createMessagesBefore(client),
-    read: createMessageReads(client),
     thread: ({ channel, id }, followed) =>
       storeIn(threads, `${channel}/${String(id)}`, () => followed(createThreadMessages({ channel, client, id }))),
   };
@@ -68,5 +67,4 @@ export type { ChannelMessages } from "./channel-messages.ts";
 export type { ThreadMessages } from "./thread-messages.ts";
 export type { ThreadClosing } from "./thread-closing.ts";
 export type { MessageBefore, MessageBeforeState } from "./message-before.ts";
-export type { MessageRead } from "./message-read.ts";
 export { type MessageStoresClient, createMessageStores };

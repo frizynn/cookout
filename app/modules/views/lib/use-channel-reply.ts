@@ -1,6 +1,6 @@
 import type { Board, ThreadMessages, ThreadMessagesState } from "../../board/index.ts";
 import type { ChannelName, Message, TopLevelMessage } from "../../sdk/index.ts";
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { Composer } from "./thread-draft.ts";
 import type { Draft } from "../../composer/index.ts";
 import type { Selection } from "../../unread/index.ts";
@@ -13,6 +13,7 @@ interface ChannelReplyOf {
   readonly selection: Selection;
   readonly newest: TopLevelMessage;
   readonly me: string;
+  readonly replied: () => void;
 }
 
 interface ChannelReply {
@@ -24,11 +25,31 @@ interface ChannelReply {
   readonly onReply: (name: string | null, message: Message) => void;
 }
 
-export function useChannelReply({ board, channel, composer, me, newest, selection }: ChannelReplyOf): ChannelReply {
+export function useChannelReply({
+  board,
+  channel,
+  composer,
+  me,
+  newest,
+  replied,
+  selection,
+}: ChannelReplyOf): ChannelReply {
   const { replyPost } = useSyncExternalStore(selection.subscribe, selection.snapshot);
   const post = replyPost ?? newest;
-  const messages = board.thread(channel, post.id);
-  const state = useSyncExternalStore(messages.subscribe, messages.snapshot);
+  const thread = board.thread(channel, post.id);
+  const state = useSyncExternalStore(thread.subscribeWithoutAcking, thread.snapshot);
+  const messages = useMemo(
+    (): ThreadMessages => ({
+      ...thread,
+      reply: (text, posted) => {
+        thread.reply(text, () => {
+          posted();
+          replied();
+        });
+      },
+    }),
+    [replied, thread],
+  );
   const draft = threadDraft({ channel, composer, me, messages, thread: post.id });
   const onReply = useCallback(
     (_name: string | null, message: Message) => {

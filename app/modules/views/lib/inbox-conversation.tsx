@@ -31,6 +31,7 @@ export function InboxConversation(props: InboxConversationProps): ReactNode {
         composer={props.composer}
         key={selected.channel}
         me={props.me}
+        reading={props.reading}
         unread={props.unread}
       />
     );

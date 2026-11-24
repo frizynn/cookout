@@ -68,7 +68,7 @@ it("e reads the selected row at once, and u puts it back", { timeout: 8000 }, as
   pressed("u");
   const afterU = await unreadSettledAt({ ...selected, count: ONE });
 
-  expect([shortcutOf("Mark read"), shortcutOf("Mark unread"), before, afterE, afterU]).toStrictEqual([
+  expect([shortcutOf("Mark conversation read"), shortcutOf("Mark unread"), before, afterE, afterU]).toStrictEqual([
     "e",
     "u",
     ONE,

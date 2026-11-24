@@ -5,7 +5,7 @@ import type { Composer } from "../../composer/index.ts";
 import type { PanelAction } from "../../design-system/index.tsx";
 import type { ThreadSelection } from "../../paths/index.ts";
 
-const TEXT = { markRead: "Mark read", markUnread: "Mark unread" } as const;
+const TEXT = { markRead: "Mark read", markUnread: "Mark unread", readName: "Mark conversation read" } as const;
 
 const NONE = 0;
 const NOT_FOUND = "message_not_found";
@@ -21,7 +21,7 @@ interface ConversationProps {
 
 function actionsOf(reader: Reader): readonly PanelAction[] {
   return [
-    { label: TEXT.markRead, onAction: reader.markRead, shortcut: CONVERSATION_KEYS.read },
+    { label: TEXT.markRead, name: TEXT.readName, onAction: reader.markRead, shortcut: CONVERSATION_KEYS.read },
     { label: TEXT.markUnread, onAction: reader.markUnread, shortcut: CONVERSATION_KEYS.unread },
   ];
 }
