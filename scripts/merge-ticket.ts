@@ -1,8 +1,9 @@
-import type { MergeOptions, MergeRules, Merged } from "./lib/merge-ticket.ts";
+import type { MergeOptions, Merged } from "./lib/merge-ticket.ts";
 import { continueMerge, mergeTicket } from "./lib/merge-ticket.ts";
 import { failedJobsOr, mergedLine, verdictOnExit } from "./lib/verdict.ts";
 import type { Step } from "./lib/merge-steps.ts";
 import { fail } from "./lib/tools.ts";
+import { mergeRules } from "./lib/merge-rules.ts";
 import { spawnSync } from "node:child_process";
 import { waitForCi } from "./lib/ci-wait.ts";
 
@@ -17,10 +18,6 @@ const resuming = process.argv.includes("--continue");
 const fixesRedV1 = process.argv.includes("--fixes-red-v1");
 const reordersUndeployed = process.argv.includes("--reorders-undeployed-migrations");
 
-function pnpm(...args: readonly string[]): readonly string[] {
-  return ["pnpm", "run", "--silent", ...args];
-}
-
 function titleOf(ticket: number): string {
   const issue = spawnSync("gh", ["issue", "view", String(ticket), "--json", "title", "--jq", ".title"], {
     encoding: "utf8",
@@ -30,20 +27,6 @@ function titleOf(ticket: number): string {
   }
   return issue.stdout.trim();
 }
-
-const rules: MergeRules = {
-  adrs: "docs/adr",
-  appendOnly: ["app/modules/storage/lib/server/migrations.ts"],
-  hunks: [
-    { file: "app/modules/storage/lib/server/migrations.ts", resolve: "append" },
-    { file: "vitest.config.ts", resolve: "lower" },
-  ],
-  regenerate: [
-    { command: pnpm("validators"), files: String.raw`^app/modules/sdk/lib/generated/` },
-    { command: pnpm("api:write"), files: String.raw`^api/[^/]+\.api\.md$` },
-    { command: pnpm("lint:baseline"), files: String.raw`^lint-baseline\.json$` },
-  ],
-};
 
 const ticket = Number(argument);
 if (!Number.isInteger(ticket) || ticket <= NONE) {
@@ -156,7 +139,7 @@ const merged: Merged = run({
   install: ["pnpm", "install", "--frozen-lockfile"],
   log,
   migrationsBase: migrationsBase(),
-  rules,
+  rules: mergeRules,
   ticket,
   title: titleOf(ticket),
 });
