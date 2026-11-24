@@ -27,11 +27,15 @@ const ONE_PASS = 1;
 const FAILED = 1;
 const LINTED = /\.[cm]?[jt]sx?$/u;
 
+function lintable(file: string): boolean {
+  return LINTED.test(file);
+}
+
 function wholeRepo(ignored: readonly string[]): readonly string[] {
   const listed = spawnSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], { encoding: "utf8" });
   return listed.stdout
     .split("\n")
-    .filter((file) => LINTED.test(file) && !ignored.some((pattern) => path.matchesGlob(file, pattern)));
+    .filter((file) => lintable(file) && !ignored.some((pattern) => path.matchesGlob(file, pattern)));
 }
 
 function snapshot(files: readonly string[]): string {
@@ -122,4 +126,4 @@ export async function lintFixed(run: FixRun): Promise<Outcome<readonly Diagnosti
   return lintFixed({ ...run, passesLeft: run.passesLeft - ONE_PASS });
 }
 
-export { lint };
+export { lint, lintable };

@@ -47,6 +47,7 @@
     "fix": "knip --production --include exports,types,dependencies --fix > /dev/null; node scripts/lint-ratchet.ts --fix > /dev/null 2>&1; biome format --write . > /dev/null && node scripts/lint-ratchet.ts",
     "typecheck": "tsc --noEmit --incremental",
     "lint": "node scripts/lint-ratchet.ts",
+    "lint:changed": "node scripts/lint-changed.ts",
     "lint:baseline": "node scripts/lint-ratchet.ts --write",
     "canaries": "node scripts/canaries.ts",
     "fixers": "node scripts/check-fixers.ts",
