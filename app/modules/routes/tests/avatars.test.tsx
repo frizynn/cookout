@@ -1,6 +1,6 @@
 import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import type { Message } from "../../sdk/index.ts";
 import { openAt } from "./render.tsx";
 
@@ -28,15 +28,14 @@ function drawn(rows: () => readonly HTMLElement[]): readonly Drawn[] {
   return shown;
 }
 
-async function messageRows(): Promise<readonly Drawn[]> {
-  const list = await screen.findByRole("list", { name: "Messages" });
-  await within(list).findAllByRole("article");
+function messageRows(): readonly Drawn[] {
+  const list = screen.getByRole("list", { name: "Messages" });
   return drawn(() => within(list).getAllByRole("article"));
 }
 
-async function threadRows(): Promise<readonly Drawn[]> {
-  const panel = await screen.findByRole("complementary", { name: "Thread" });
-  const parent = await within(panel).findByRole("article", { name: "Parent message" });
+function threadRows(): readonly Drawn[] {
+  const panel = screen.getByRole("complementary", { name: "Thread" });
+  const parent = within(panel).getByRole("article", { name: "Parent message" });
   return drawn(() => [parent, ...within(within(panel).getByRole("list", { name: "Replies" })).getAllByRole("article")]);
 }
 
@@ -66,15 +65,13 @@ it("an agent's messages are drawn as an agent's and a human's as a human's, one 
   const message = await botThread();
   const close = openAt({ client: adminClient(), hash: `#/channels/web-avatars/threads/${String(message.id)}` });
 
-  await expect
-    .poll(async () => {
-      const rows = [...(await messageRows()), ...(await threadRows())];
-      return [
-        rows.map((row) => [row.agent, row.tagged]),
-        new Set(rows.filter((row) => row.tagged).map((row) => row.hue)).size,
-      ];
-    })
-    .toStrictEqual([
+  await waitFor(() => {
+    const rows = [...messageRows(), ...threadRows()];
+
+    expect([
+      rows.map((row) => [row.agent, row.tagged]),
+      new Set(rows.filter((row) => row.tagged).map((row) => row.hue)).size,
+    ]).toStrictEqual([
       [
         ["true", true],
         ["true", true],
@@ -82,6 +79,7 @@ it("an agent's messages are drawn as an agent's and a human's as a human's, one 
       ],
       ONE_COLOUR,
     ]);
+  });
 
   close();
 });
@@ -94,15 +92,12 @@ it("a deactivated author is drawn as an agent if the message carries an owner, e
   await goneAuthors();
   const close = openAt({ client: adminClient(), hash: "#/channels/web-avatars-gone" });
 
-  await expect
-    .poll(async () => {
-      const rows = await messageRows();
-      return rows.map((row) => [row.agent, row.tagged]);
-    })
-    .toStrictEqual([
+  await waitFor(() => {
+    expect(messageRows().map((row) => [row.agent, row.tagged])).toStrictEqual([
       ["true", true],
       ["false", false],
     ]);
+  });
 
   close();
 });
