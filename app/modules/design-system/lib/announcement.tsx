@@ -6,7 +6,7 @@ interface AnnouncementParts {
 
 export function Announcement(parts: AnnouncementParts): ReactNode {
   return (
-    <output aria-live="polite" className="sr-only">
+    <output aria-label="Announcements" aria-live="polite" className="sr-only">
       <span key={parts.said.count}>{parts.said.text}</span>
     </output>
   );

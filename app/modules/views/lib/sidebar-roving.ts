@@ -1,56 +1,47 @@
 import type { Act } from "../../keymap/index.ts";
 
 const SIDEBAR = "Sidebar";
-const LINKS = "a[href]";
-const CURRENT = '[aria-current="page"]';
-const ROW_BUTTONS = "li button";
+const NAV = `nav[aria-label="${SIDEBAR}"]`;
+const LINKS = `${NAV} a[href]`;
+const CURRENT = `${LINKS}[aria-current="page"]`;
+const ROW_BUTTONS = `${NAV} li button`;
 const IN_TAB_ORDER = 0;
 const OUT_OF_TAB_ORDER = -1;
 const NOT_FOUND = -1;
 const FIRST = 0;
+const LAST = 1;
 const STEPS = { next: 1, previous: -1 } as const;
-
-type Within = () => Element | null;
 
 type Chosen = () => Element | null;
 
 function sidebar(): Element | null {
-  return globalThis.document.querySelector(`nav[aria-label="${SIDEBAR}"]`);
+  return globalThis.document.querySelector(NAV);
 }
 
-function linksIn(within: Within): readonly HTMLAnchorElement[] {
-  const nav = within();
-  if (nav === null) {
-    return [];
+function linksIn(): readonly HTMLAnchorElement[] {
+  return [...globalThis.document.querySelectorAll<HTMLAnchorElement>(LINKS)];
+}
+
+function focusedAt(): number {
+  const active = globalThis.document.activeElement;
+  let at = NOT_FOUND;
+  for (const [index, link] of linksIn().entries()) {
+    if (link === active) {
+      at = index;
+    }
   }
-  return [...nav.querySelectorAll<HTMLAnchorElement>(LINKS)];
+  return at;
 }
 
-function rowButtonsIn(within: Within): readonly HTMLElement[] {
-  const nav = within();
-  if (nav === null) {
-    return [];
-  }
-  return [...nav.querySelectorAll<HTMLElement>(ROW_BUTTONS)];
-}
-
-function currentIn(within: Within): Element | null {
-  const nav = within();
-  if (nav === null) {
-    return null;
-  }
-  return nav.querySelector(`${LINKS}${CURRENT}`);
-}
-
-function stopIn(within: Within, chosen: Chosen): Element | null {
-  const links = linksIn(within);
+function stopIn(chosen: Chosen): Element | undefined {
+  const links = linksIn();
   const picked = chosen();
   for (const link of links) {
     if (link === picked) {
       return link;
     }
   }
-  return currentIn(within) ?? links[FIRST] ?? null;
+  return globalThis.document.querySelector(CURRENT) ?? links[FIRST];
 }
 
 function tabIndexOf(stop: boolean): number {
@@ -60,74 +51,51 @@ function tabIndexOf(stop: boolean): number {
   return OUT_OF_TAB_ORDER;
 }
 
-function rove(within: Within, chosen: Chosen): void {
-  const stop = stopIn(within, chosen);
-  for (const link of linksIn(within)) {
+function rove(chosen: Chosen): void {
+  const stop = stopIn(chosen);
+  for (const link of linksIn()) {
     link.tabIndex = tabIndexOf(link === stop);
   }
-  for (const button of rowButtonsIn(within)) {
+  for (const button of globalThis.document.querySelectorAll<HTMLElement>(ROW_BUTTONS)) {
     button.tabIndex = OUT_OF_TAB_ORDER;
   }
 }
 
-function focusedLink(within: Within): Element | null {
-  const active = globalThis.document.activeElement;
-  for (const link of linksIn(within)) {
-    if (link === active) {
-      return link;
-    }
-  }
-  return null;
-}
-
-function watching(within: Within, changed: () => void): () => void {
-  const observer = new MutationObserver(changed);
-  const nav = within();
-  if (nav !== null) {
-    observer.observe(nav, { attributeFilter: ["aria-current", "href"], childList: true, subtree: true });
-    nav.addEventListener("focusin", changed);
-  }
-  return () => {
-    observer.disconnect();
-    if (nav !== null) {
-      nav.removeEventListener("focusin", changed);
-    }
-  };
-}
-
-function roving(within: Within): () => void {
+function roving(): () => void {
   let chosen: Element | null = null;
   function picked(): Element | null {
     return chosen;
   }
   function changed(): void {
-    chosen = focusedLink(within) ?? chosen;
-    rove(within, picked);
+    chosen = linksIn()[focusedAt()] ?? chosen;
+    rove(picked);
   }
+  const observer = new MutationObserver(changed);
+  observer.observe(globalThis.document.body, {
+    attributeFilter: ["aria-current", "href"],
+    childList: true,
+    subtree: true,
+  });
+  globalThis.document.addEventListener("focusin", changed);
   changed();
-  return watching(within, changed);
-}
-
-function focusedAt(within: Within): number {
-  const active = globalThis.document.activeElement;
-  let at = NOT_FOUND;
-  for (const [index, link] of linksIn(within).entries()) {
-    if (link === active) {
-      at = index;
-    }
-  }
-  return at;
-}
-
-function moveFocus({ step, within }: { readonly step: keyof typeof STEPS; readonly within: Within }): Act {
   return () => {
-    const at = focusedAt(within);
+    observer.disconnect();
+    globalThis.document.removeEventListener("focusin", changed);
+  };
+}
+
+function moveFocus(step: keyof typeof STEPS): Act {
+  return () => {
+    const at = focusedAt();
     if (at === NOT_FOUND) {
       return false;
     }
-    const next = linksIn(within)[at + STEPS[step]] ?? null;
-    if (next !== null) {
-      next.focus();
+    const links = linksIn();
+    const to = Math.min(Math.max(at + STEPS[step], FIRST), links.length - LAST);
+    for (const [index, link] of links.entries()) {
+      if (index === to) {
+        link.focus();
+      }
     }
     return true;
   };

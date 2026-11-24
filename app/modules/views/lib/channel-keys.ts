@@ -1,15 +1,16 @@
-import type { Subscriptions, SubscriptionsState } from "../../board/index.ts";
 import type { Unread, UnreadCounts } from "../../unread/index.ts";
+import { hrefOf, locationOf } from "../../paths/index.ts";
+import { openChannel, steppedTo } from "./channel-order.ts";
 import type { Act } from "../../keymap/index.ts";
 import type { ChannelName } from "../../sdk/index.ts";
 import { NO_COUNTS } from "../../unread/index.ts";
 import type { Step } from "./channel-order.ts";
+import type { Subscriptions } from "../../board/index.ts";
 import { hasUnread } from "./unread-counts.ts";
-import { hrefOf } from "../../paths/index.ts";
-import { steppedTo } from "./channel-order.ts";
 
 const TEXT = {
   markedRead: (channel: ChannelName) => `#${channel} marked read`,
+  noOther: "No other channels",
   noUnread: "No unread channels",
   nothingUnread: (channel: ChannelName) => `Nothing unread in #${channel}`,
   subscribed: (channel: ChannelName) => `Subscribed to #${channel}`,
@@ -19,9 +20,7 @@ const TEXT = {
 interface ChannelKeys {
   readonly announce: (text: string) => void;
   readonly counts: ReadonlyMap<ChannelName, UnreadCounts>;
-  readonly open: ChannelName | null;
   readonly order: readonly ChannelName[];
-  readonly subscribed: SubscriptionsState;
   readonly subscriptions: Subscriptions;
   readonly unread: Unread;
 }
@@ -38,20 +37,23 @@ function opened(channel: ChannelName): true {
 interface Stepping {
   readonly keys: ChannelKeys;
   readonly step: Step;
+  readonly unreadOnly: boolean;
 }
 
-function stepTo({ keys, step }: Stepping): Act {
-  return () => {
-    const channel = steppedTo({ open: keys.open, order: keys.order, step, wanted: () => true });
-    return channel !== null && opened(channel);
-  };
+const NONE_LEFT = { false: TEXT.noOther, true: TEXT.noUnread } as const;
+
+function wantedBy({ keys, unreadOnly }: Stepping): (channel: ChannelName) => boolean {
+  const unread = unreadIn(keys);
+  return (channel) => !unreadOnly || unread(channel);
 }
 
-function stepToUnread({ keys, step }: Stepping): Act {
+function stepTo(stepping: Stepping): Act {
   return () => {
-    const channel = steppedTo({ open: keys.open, order: keys.order, step, wanted: unreadIn(keys) });
+    const { keys, step, unreadOnly } = stepping;
+    const open = openChannel(locationOf(globalThis.location.hash).route);
+    const channel = steppedTo({ open, order: keys.order, step, wanted: wantedBy(stepping) });
     if (channel === null) {
-      keys.announce(TEXT.noUnread);
+      keys.announce(NONE_LEFT[`${unreadOnly}`]);
       return true;
     }
     return opened(channel);
@@ -92,7 +94,7 @@ function subscriptionSaid(channel: ChannelName, subscribing: boolean): string {
 function toggleSubscription(keys: ChannelKeys): Act {
   return ({ target }) => {
     const channel = rowChannel(keys, target);
-    const state = keys.subscribed;
+    const state = keys.subscriptions.snapshot();
     if (channel === null || state.status !== "loaded" || state.change.status === "changing") {
       return false;
     }
@@ -103,4 +105,4 @@ function toggleSubscription(keys: ChannelKeys): Act {
   };
 }
 
-export { type ChannelKeys, markRead, stepTo, stepToUnread, toggleSubscription };
+export { type ChannelKeys, markRead, stepTo, toggleSubscription };

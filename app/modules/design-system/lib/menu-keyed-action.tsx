@@ -20,7 +20,7 @@ export function MenuKeyedAction(parts: MenuKeyedActionParts): ReactNode {
     onChoose(choice.onSelect);
   }, [choice, onChoose]);
   return (
-    <RadixItem asChild disabled={choice.disabled ?? false} onSelect={handleSelect}>
+    <RadixItem asChild disabled={choice.disabled === true} onSelect={handleSelect}>
       <div aria-keyshortcuts={keys.keys} className={MENU_ITEM}>
         {menuIcon(choice.icon)}
         {choice.label}

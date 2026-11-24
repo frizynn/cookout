@@ -29,13 +29,7 @@ export function SignedInView(props: SignedInViewProps): ReactNode {
         route={props.route}
         unread={stores.unread}
       />
-      <SidebarKeys
-        board={stores.board}
-        keymap={stores.keymap}
-        me={props.identity.name}
-        route={props.route}
-        unread={stores.unread}
-      />
+      <SidebarKeys board={stores.board} keymap={stores.keymap} me={props.identity.name} unread={stores.unread} />
       <WorkspaceBody me={props.identity.name} profile={props.profile} route={props.route} stores={stores} />
     </Workspace>
   );

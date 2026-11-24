@@ -90,11 +90,12 @@ function covers(bound: Bound, target: EventTarget | null): boolean {
 }
 
 function rowsOf(scope: Scope, actions: Readonly<Partial<Record<string, Act>>>): readonly Row[] {
-  return Object.entries(actions).flatMap(([action, act]: readonly [string, Act | undefined]) => {
+  return KEYS.filter((key) => key.scope === scope).flatMap((key) => {
+    const act = actions[key.action];
     if (typeof act !== "function") {
       return [];
     }
-    return KEYS.filter((key) => key.scope === scope && key.action === action).map((key) => ({ act, key }));
+    return [{ act, key }];
   });
 }
 
