@@ -27,9 +27,13 @@ it("alt-clicking a message in the channel feed marks it and everything after it 
   expect.hasAssertions();
 
   const { channel, close, unreadTexts } = await boardOpen("web-alt-click-feed");
-  altClicked(inFeed("Second"));
+  const { pressKeptItsDefault } = altClicked(inFeed("Second"));
   await waitFor(() => {
-    expect([newAbove("Messages"), countsOn(channel)]).toStrictEqual([expect.stringContaining("Second"), ["2 unread"]]);
+    expect([newAbove("Messages"), countsOn(channel), pressKeptItsDefault]).toStrictEqual([
+      expect.stringContaining("Second"),
+      ["2 unread"],
+      false,
+    ]);
   });
 
   await expect(unreadTexts()).resolves.toStrictEqual(["Second", "Third"]);
@@ -63,10 +67,14 @@ it("alt-clicking a link inside a message follows the link and marks nothing unre
 
   const { close, unreadTexts } = await boardOpen("web-alt-click-link");
   const before = newAbove("Messages");
-  altClicked(threadLink);
+  const { pressKeptItsDefault } = altClicked(threadLink);
   await threadMarkedByAltClick();
 
-  expect([before, newAbove("Messages")]).toStrictEqual([expect.stringContaining("First"), before]);
+  expect([before, newAbove("Messages"), pressKeptItsDefault]).toStrictEqual([
+    expect.stringContaining("First"),
+    before,
+    true,
+  ]);
   await expect(unreadTexts()).resolves.toStrictEqual(["Or one"]);
 
   await close();

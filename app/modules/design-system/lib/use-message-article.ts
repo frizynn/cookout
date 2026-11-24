@@ -6,16 +6,20 @@ import { useReactionKeys } from "./use-reaction-keys.ts";
 const INTERACTIVE =
   "a, button, input, select, textarea, summary, label, [role=button], [role=link], [role=menuitem], [tabindex], [contenteditable]";
 
-function onItself(target: EventTarget | null, article: EventTarget | null): boolean {
-  if (!(target instanceof Element) || !(article instanceof Element)) {
-    return false;
+function onItself(event: MouseEvent): boolean {
+  const inside: EventTarget[] = [];
+  for (const node of event.composedPath()) {
+    if (node === event.currentTarget) {
+      break;
+    }
+    inside.push(node);
   }
-  const hit = target.closest(INTERACTIVE);
-  return hit === null || hit === article || !article.contains(hit);
+  const interactive = new Set<EventTarget>(document.querySelectorAll(INTERACTIVE));
+  return !inside.some((node) => interactive.has(node));
 }
 
 function altClickOnItself(event: MouseEvent): boolean {
-  return event.altKey && onItself(event.target, event.currentTarget);
+  return event.altKey && onItself(event);
 }
 
 function pressed(event: MouseEvent): void {

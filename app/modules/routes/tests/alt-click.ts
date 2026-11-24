@@ -71,8 +71,11 @@ export async function boardOpen(channel: string): Promise<Board> {
   };
 }
 
-export function altClicked(element: () => HTMLElement): void {
+export function altClicked(element: () => HTMLElement): { readonly pressKeptItsDefault: boolean } {
+  const pressKeptItsDefault = fireEvent.mouseDown(element(), { altKey: true });
+  fireEvent.mouseUp(element(), { altKey: true });
   fireEvent.click(element(), { altKey: true });
+  return { pressKeptItsDefault };
 }
 
 export function newAbove(label: string): string | null {
