@@ -8,7 +8,7 @@ const READ = 0;
 const THROUGH_STOP = 1;
 const FIRST = 0;
 const LAST = -1;
-const DAYS_LATER_TAIL = -6;
+const DAYS_LATER_TAIL = -8;
 
 interface FakeBoards {
   readonly freshBoard: (theme: Theme) => Promise<ThemePass>;
@@ -81,6 +81,7 @@ it("takes every screen in light on a fresh board, then every screen in dark on a
     "inbox-marked-<theme>: 0 unread",
     "inbox-nudge-<theme>: 0 unread",
     "inbox-offer-<theme>: 0 unread",
+    "inbox-deactivated-<theme>: 0 unread",
   ]);
 });
 
@@ -98,6 +99,8 @@ it("on each theme's board it moves the clock on for the days-later screens, afte
     "inbox-nudge-<theme>: 0 unread",
     "clock moved 27 days",
     "inbox-offer-<theme>: 0 unread",
+    "clock moved 60 days",
+    "inbox-deactivated-<theme>: 0 unread",
     "stop <theme>",
   ]);
   expect(passOf(log, "dark")).toStrictEqual(passOf(log, "light"));
@@ -110,6 +113,7 @@ it("lists the standard screens in the order they are taken", { timeout: 2000 }, 
     "inbox-more",
     "inbox-nudge",
     "inbox-offer",
+    "inbox-deactivated",
     "inbox-loading",
     "inbox-thread",
     "inbox-narrow",
@@ -167,7 +171,7 @@ it("with no flags it takes every screen into no named folder", { timeout: 2000 }
 it("an unknown screen or flag, or a flag with no value, is refused", { timeout: 2000 }, () => {
   expect.hasAssertions();
   expect(() => screenshotOptions(["--only", "nope"])).toThrow(
-    "Unknown screen nope: pick from inbox, inbox-more, inbox-nudge, inbox-offer, inbox-loading, inbox-thread, inbox-narrow, inbox-channel, inbox-marked, channel, thread, receipt, people, profile, warning, admin-profile, admin-deactivated, confirm, settings, new-channel, narrow, closed-threads, closed-thread, open-threads, collapsed, reconnecting.",
+    "Unknown screen nope: pick from inbox, inbox-more, inbox-nudge, inbox-offer, inbox-deactivated, inbox-loading, inbox-thread, inbox-narrow, inbox-channel, inbox-marked, channel, thread, receipt, people, profile, warning, admin-profile, admin-deactivated, confirm, settings, new-channel, narrow, closed-threads, closed-thread, open-threads, collapsed, reconnecting.",
   );
   expect(() => screenshotOptions(["--theme", "dark"])).toThrow(
     "Unknown flag --theme: use --only <screen> or --out <dir>.",

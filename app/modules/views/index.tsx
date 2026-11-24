@@ -69,9 +69,12 @@
  * the thread panel does): the first message, "N earlier replies" up to the thread's "New" line (shown in place on a
  * click, the `unread` store's `selection`), then the unread replies, live, under a header naming the channel with an
  * "Open thread" link; "Pick a conversation" with nothing selected, and "Nothing here" for a thread that doesn't exist.
- * For you leads with a row per open Deactivation offer, its text above the agent's avatar and name (a link to its
- * profile panel), with Deactivate (through the same confirmation as the profile's) and Keep (the `unread` store's
- * `deactivationOffers`), then a row per unread Nudge; cleared offers are muted under Earlier.
+ * For you leads with a row per unread entry about an agent deactivated after 90 days with no activity, its text above
+ * the agent's avatar and name (a link to its profile panel), with Reactivate (through the same confirmation as the
+ * profile's, showing the fresh token once) and Mark read (the `unread` store's `deactivatedQuietAgents`), then a row
+ * per open Deactivation offer, laid out the same way, with Deactivate (through the same confirmation as the profile's)
+ * and Keep (the `unread` store's `deactivationOffers`), then a row per unread Nudge; read entries and cleared offers
+ * are muted under Earlier.
  * The selected row, once read, stays in its section, muted, until the selection moves. On a narrow screen the
  * conversation replaces the list, with a back arrow to the inbox. One key handler on the document works the Inbox:
  * `j`/`↓` and `k`/`↑` select the next or previous row that opens beside the list, in on-screen order (the first with

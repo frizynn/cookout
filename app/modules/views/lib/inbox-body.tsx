@@ -41,14 +41,19 @@ export function InboxBody(props: InboxBodyProps): ReactNode {
       {unread.inbox.length + besideCountOf(unread) === NONE && <FeedNote place="empty">{TEXT.empty}</FeedNote>}
       <InboxAlerts alerts={unread.alerts} onMarkRead={props.onMarkAlertRead} />
       <InboxSection
-        besides={unread.nudges.length + unread.deactivationOffers.length}
+        besides={unread.nudges.length + unread.deactivationOffers.length + unread.deactivatedQuietAgents.length}
         forYou
         me={me}
         rows={rows}
         selected={selected}
         title={TEXT.forYou}
       >
-        <ForYouNotices actions={props.notices} nudges={unread.nudges} offers={unread.deactivationOffers} />
+        <ForYouNotices
+          actions={props.notices}
+          deactivated={unread.deactivatedQuietAgents}
+          nudges={unread.nudges}
+          offers={unread.deactivationOffers}
+        />
       </InboxSection>
       <InboxSection besides={NONE} forYou={false} me={me} rows={rows} selected={selected} title={TEXT.activity} />
     </>

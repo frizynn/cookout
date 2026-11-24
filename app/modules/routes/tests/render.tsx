@@ -25,6 +25,7 @@ type AppClient = BoardOptions["client"] &
     | "inbox"
     | "inboxHistory"
     | "keepDeactivationOffer"
+    | "markDeactivatedQuietAgentRead"
     | "markNudgeRead"
     | "markOfflineAlertRead"
     | "markUnread"

@@ -1,6 +1,7 @@
 import type { AckAllRequest, CookoutClient, InboxItem, Refusal } from "../../sdk/index.ts";
 import type { InboxItems } from "./inbox-items.ts";
 import type { LiveAlerts } from "./alerts.ts";
+import type { LiveDeactivatedQuietAgents } from "./deactivated-quiet-agents.ts";
 import type { LiveDeactivationOffers } from "./deactivation-offers.ts";
 import type { LiveNudges } from "./nudges.ts";
 import { refusalOf } from "../../sdk/index.ts";
@@ -23,6 +24,7 @@ interface MarkAllOptions {
   readonly alerts: LiveAlerts;
   readonly nudges: LiveNudges;
   readonly deactivationOffers: LiveDeactivationOffers;
+  readonly deactivatedQuietAgents: LiveDeactivatedQuietAgents;
   readonly onRead: (item: InboxItem) => void;
   readonly onChange: (state: MarkAllState) => void;
 }
@@ -59,15 +61,27 @@ function offersUpToOf(offers: LiveDeactivationOffers): Pick<AckAllRequest, "deac
   return { deactivationOffersUpTo };
 }
 
+function deactivatedUpToOf(entries: LiveDeactivatedQuietAgents): Pick<AckAllRequest, "deactivatedQuietAgentsUpTo"> {
+  const deactivatedQuietAgentsUpTo = entries.newestUnread();
+  if (deactivatedQuietAgentsUpTo === null) {
+    return {};
+  }
+  return { deactivatedQuietAgentsUpTo };
+}
+
 function readNonMessages(
-  { deactivationOffers, nudges }: Pick<MarkAllOptions, "deactivationOffers" | "nudges">,
-  { deactivationOffersUpTo, nudgesUpTo }: AckAllRequest,
+  options: Pick<MarkAllOptions, "deactivatedQuietAgents" | "deactivationOffers" | "nudges">,
+  { deactivatedQuietAgentsUpTo, deactivationOffersUpTo, nudgesUpTo }: AckAllRequest,
 ): void {
+  const { deactivatedQuietAgents, deactivationOffers, nudges } = options;
   if (typeof nudgesUpTo === "number") {
     nudges.readUpTo(nudgesUpTo);
   }
   if (typeof deactivationOffersUpTo === "number") {
     deactivationOffers.clearUpTo(deactivationOffersUpTo);
+  }
+  if (typeof deactivatedQuietAgentsUpTo === "number") {
+    deactivatedQuietAgents.readUpTo(deactivatedQuietAgentsUpTo);
   }
 }
 
@@ -102,6 +116,7 @@ function createMarkAll(options: MarkAllOptions): MarkAll {
         ...alertsUpToOf(alerts),
         ...nudgesUpToOf(nudges),
         ...offersUpToOf(deactivationOffers),
+        ...deactivatedUpToOf(options.deactivatedQuietAgents),
       });
     },
     state: () => state,

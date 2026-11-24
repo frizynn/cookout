@@ -1,9 +1,8 @@
 import { Alert, FeedHeading, Skeleton } from "../../design-system/index.tsx";
-import { EarlierAlerts } from "./earlier-alerts.tsx";
 import { EarlierItems } from "./earlier-items.tsx";
 import { EarlierMore } from "./earlier-more.tsx";
-import { EarlierNudges } from "./earlier-nudges.tsx";
-import { EarlierOffers } from "./earlier-offers.tsx";
+import { EarlierNotices } from "./earlier-notices.tsx";
+import type { Identities } from "../../composer/index.ts";
 import type { InboxRows } from "./use-inbox-rows.ts";
 import type { InboxSelection } from "../../paths/index.ts";
 import type { ReactNode } from "react";
@@ -14,7 +13,8 @@ import { useSyncExternalStore } from "react";
 const TITLE = "Earlier";
 
 interface InboxEarlierProps {
-  readonly unread: Pick<Unread, "alerts" | "deactivationOffers" | "earlier" | "nudges">;
+  readonly unread: Pick<Unread, "alerts" | "deactivatedQuietAgents" | "deactivationOffers" | "earlier" | "nudges">;
+  readonly identities: Pick<Identities, "actions">;
   readonly me: string;
   readonly rows: InboxRows;
   readonly selected: InboxSelection | null;
@@ -33,9 +33,7 @@ export function InboxEarlier(props: InboxEarlierProps): ReactNode {
   return (
     <>
       <FeedHeading count={null} title={TITLE} />
-      <EarlierOffers offers={unread.deactivationOffers} />
-      <EarlierNudges nudges={unread.nudges} />
-      <EarlierAlerts alerts={unread.alerts} />
+      <EarlierNotices identities={props.identities} unread={unread} />
       <EarlierItems
         hasMore={state.hasMore}
         hidden={heldKey(props.rows)}
