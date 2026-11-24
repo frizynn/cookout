@@ -1,107 +1,34 @@
+import {
+  AGENT,
+  AT,
+  NOT_FOUND,
+  OK,
+  ONCE,
+  OTHER,
+  PUBLIC_URL,
+  SERVER_ERROR,
+  THRICE,
+  TOKEN,
+  TWICE,
+  UNREACHABLE,
+  URL_OF,
+  anyResult,
+  board,
+  failed,
+  succeeded,
+  withStatus,
+} from "./trigger-board.ts";
 import { Array as Arr, Effect, Option, String as Str } from "effect";
-import type { InboxResponse, Presence, TriggerResponse, TriggerResult } from "../../index.ts";
-import { TestCookout, answer, testCookout, triggerToken } from "../../../testing/server.ts";
-import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
+import { answer, testCookout, triggerToken } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { TestClock } from "effect/testing";
-
-const AGENT = "triage";
-const OTHER = "reviewer";
-const HUMAN = { kind: "human" } as const;
-const TOKEN = "routine-secret";
-const URL_OF = "https://routines.example.com/fire";
-const PUBLIC_URL = "https://cookout.example.com";
-const AT = "2026-01-01T00:00:00.000Z";
-const OK = 200;
-const NOT_FOUND = 404;
-const SERVER_ERROR = 503;
-const UNREACHABLE = "the trigger URL couldn't be reached";
-const ONCE = 1;
-const TWICE = 2;
-const THRICE = 3;
-
-interface Board {
-  readonly cookout: TestCookoutService;
-  readonly matt: TestIdentity;
-  readonly ada: TestIdentity;
-  readonly agent: TestIdentity;
-}
-
-const board: Effect.Effect<Board, never, TestCookout> = Effect.gen(function* boardWithATriggeredAgent() {
-  const cookout = yield* TestCookout;
-  const matt = yield* cookout.createIdentity("matt", HUMAN);
-  const ada = yield* cookout.createIdentity("ada", HUMAN);
-  const agent = yield* cookout.createIdentity(AGENT, { owner: "matt" });
-  yield* cookout.createIdentity(OTHER, { owner: "matt" });
-  yield* answer(() => matt.client.createChannel({ name: "grill" }));
-  yield* answer(() => matt.client.setTrigger(AGENT, { token: TOKEN, url: URL_OF }));
-  return { ada, agent, cookout, matt };
-});
-
-const tick = TestClock.withLive(Effect.sleep("5 millis"));
-
-function lastResultIn({ trigger }: TriggerResponse): Option.Option<TriggerResult> {
-  return Option.flatMap(Option.fromNullishOr(trigger), ({ lastResult }) => Option.fromNullishOr(lastResult));
-}
-
-function settled({ matt }: Board, matches: (result: TriggerResult) => boolean): Effect.Effect<TriggerResponse> {
-  return answer(() => matt.client.getTrigger(AGENT)).pipe(
-    Effect.tap(() => tick),
-    Effect.repeat({ until: (answered) => Option.exists(lastResultIn(answered), matches) }),
-  );
-}
-
-function anyResult(): boolean {
-  return true;
-}
-
-function failed({ ok }: TriggerResult): boolean {
-  return !ok;
-}
-
-function succeeded({ ok }: TriggerResult): boolean {
-  return ok;
-}
-
-function withStatus(status: number): (result: TriggerResult) => boolean {
-  return (result) => result.status === status;
-}
-
-function presenceOf({ matt }: Board): Effect.Effect<Option.Option<Presence>> {
-  return Effect.map(
-    answer(() => matt.client.presence()),
-    ({ presence }) => Arr.findFirst(presence, ({ identity }) => identity === AGENT),
-  );
-}
-
-function presenceUntil(on: Board, until: (presence: Presence) => boolean): Effect.Effect<Option.Option<Presence>> {
-  return presenceOf(on).pipe(
-    Effect.tap(() => tick),
-    Effect.repeat({ until: (seen) => Option.exists(seen, until) }),
-  );
-}
-
-function mention({ ada }: Board, text = `@${AGENT} look`): Effect.Effect<number> {
-  return Effect.map(
-    answer(() => ada.client.createMessage({ channel: "grill", text })),
-    ({ message }) => message.id,
-  );
-}
-
-function mentionSettling(on: Board, matches: (result: TriggerResult) => boolean): Effect.Effect<number> {
-  return Effect.tap(mention(on), () => settled(on, matches));
-}
-
-function inboxOf({ matt }: Board): Effect.Effect<InboxResponse> {
-  return answer(() => matt.client.inbox());
-}
 
 it.effect("a mention POSTs the message's link and text to the trigger URL with the token, and stores the result", () =>
   Effect.gen(function* callOnMention() {
     const on = yield* board;
-    const id = yield* Effect.map(mention(on), String);
+    const id = yield* Effect.map(on.mention(), String);
     const calls = yield* on.cookout.triggers.waitForCalls(ONCE);
-    const stored = yield* settled(on, anyResult);
+    const stored = yield* on.settled(anyResult);
 
     expect(calls).toStrictEqual([
       {
@@ -118,7 +45,7 @@ it.effect("the call goes through the HTTP client as a POST of JSON { text } with
   Effect.gen(function* realCall() {
     const on = yield* board;
     yield* answer(() => on.matt.client.setTrigger(AGENT, { token: TOKEN, url: `${on.cookout.webhook.url}/fire` }));
-    yield* mention(on);
+    yield* on.mention();
     const calls = yield* on.cookout.webhook.waitForCalls(ONCE);
     const made = Arr.map(calls, ({ body, headers, method, path }) => ({
       authorization: headers["authorization"],
@@ -144,11 +71,11 @@ it.effect(
     Effect.gen(function* noCall() {
       const on = yield* board;
       yield* answer(() => on.agent.client.createMessage({ channel: "grill", text: `@${AGENT} note to self` }));
-      yield* mention(on, `@matt @${OTHER} look`);
+      yield* on.mention(`@matt @${OTHER} look`);
       yield* answer(() => on.matt.client.clearTrigger(AGENT));
-      yield* mention(on);
+      yield* on.mention();
       yield* answer(() => on.matt.client.setTrigger(OTHER, { token: TOKEN, url: URL_OF }));
-      yield* mention(on, `@${OTHER} now`);
+      yield* on.mention(`@${OTHER} now`);
       const calls = yield* on.cookout.triggers.waitForCalls(ONCE);
 
       expect(Arr.map(calls, ({ text }) => Str.endsWith(`@${OTHER} now`)(text))).toStrictEqual([true]);
@@ -159,10 +86,10 @@ it.effect("a Deactivated agent is never called, and is called again once reactiv
   Effect.gen(function* deactivatedNotCalled() {
     const on = yield* board;
     yield* answer(() => on.matt.client.deactivateIdentity(AGENT));
-    yield* mention(on);
-    const asleep = yield* presenceOf(on);
+    yield* on.mention();
+    const asleep = yield* on.presence;
     yield* answer(() => on.matt.client.reactivateIdentity(AGENT));
-    yield* mention(on, `@${AGENT} back`);
+    yield* on.mention(`@${AGENT} back`);
     const calls = yield* on.cookout.triggers.waitForCalls(ONCE);
 
     expect(asleep).toStrictEqual(Option.some({ identity: AGENT, online: false }));
@@ -174,11 +101,11 @@ it.effect("a trigger URL that doesn't answer is given up after 10 s, and never h
   Effect.gen(function* slowUrl() {
     const on = yield* board;
     yield* on.cookout.triggers.answerNext(["no answer"]);
-    yield* mention(on);
+    yield* on.mention();
     yield* on.cookout.triggers.waitForCalls(ONCE);
     const before = yield* answer(() => on.matt.client.getTrigger(AGENT));
     yield* TestClock.adjust("10 seconds");
-    const after = yield* settled(on, anyResult);
+    const after = yield* on.settled(anyResult);
 
     expect([before, after]).toStrictEqual([
       { trigger: { url: URL_OF } },
@@ -189,14 +116,14 @@ it.effect("a trigger URL that doesn't answer is given up after 10 s, and never h
 
 const throughAStreak = Effect.gen(function* failThenSucceed() {
   const on = yield* board;
-  const waking = yield* presenceOf(on);
+  const waking = yield* on.presence;
   yield* on.cookout.triggers.answerNext([{ status: SERVER_ERROR }]);
-  yield* mentionSettling(on, failed);
-  const unreachable = yield* presenceOf(on);
-  yield* mentionSettling(on, succeeded);
-  const recovered = yield* presenceOf(on);
+  yield* on.mentionSettling(failed);
+  const unreachable = yield* on.presence;
+  yield* on.mentionSettling(succeeded);
+  const recovered = yield* on.presence;
   yield* answer(() => on.matt.client.clearTrigger(AGENT));
-  const cleared = yield* presenceOf(on);
+  const cleared = yield* on.presence;
   return Arr.getSomes([waking, unreachable, recovered, cleared]);
 });
 
@@ -218,16 +145,16 @@ it.effect(
 const liveThenGone = Effect.gen(function* joinWhileUnreachable() {
   const on = yield* board;
   yield* on.cookout.triggers.answerNext([{ error: UNREACHABLE }]);
-  yield* mentionSettling(on, failed);
+  yield* on.mentionSettling(failed);
   const joined = yield* Effect.map(
     answer(() => on.matt.client.join({ as: AGENT })),
     ({ agentSessionToken }) => on.cookout.clientFor(agentSessionToken),
   );
   const events = yield* answer(() => joined.watch());
-  const live = yield* presenceUntil(on, ({ online }) => online);
+  const live = yield* on.presenceUntil(({ online }) => online);
   yield* answer(() => joined.leave());
   yield* answer(() => events.close());
-  const left = yield* presenceUntil(on, ({ online }) => !online);
+  const left = yield* on.presenceUntil(({ online }) => !online);
   return { left: Option.getOrThrow(left), live: Option.getOrThrow(live) };
 });
 
@@ -244,12 +171,12 @@ it.effect("a live connection turns an Unreachable agent green, and it shows Unre
 const streakInboxes = Effect.gen(function* failTwiceThenSucceed() {
   const on = yield* board;
   yield* on.cookout.triggers.answerNext([{ status: NOT_FOUND }, { status: SERVER_ERROR }]);
-  const first = yield* mentionSettling(on, withStatus(NOT_FOUND));
-  yield* mentionSettling(on, withStatus(SERVER_ERROR));
-  const streak = yield* inboxOf(on);
+  const first = yield* on.mentionSettling(withStatus(NOT_FOUND));
+  yield* on.mentionSettling(withStatus(SERVER_ERROR));
+  const streak = yield* on.inbox;
   const elsewhere = yield* answer(() => on.ada.client.inbox());
-  yield* mentionSettling(on, succeeded);
-  const after = yield* inboxOf(on);
+  yield* on.mentionSettling(succeeded);
+  const after = yield* on.inbox;
   return { after, elsewhere, first, streak };
 });
 
@@ -269,9 +196,9 @@ it.effect("a new streak after a success raises a new alert", () =>
   Effect.gen(function* secondStreak() {
     const on = yield* board;
     yield* on.cookout.triggers.answerNext([{ status: SERVER_ERROR }, { status: OK }, { status: SERVER_ERROR }]);
-    yield* Effect.forEach([failed, succeeded, failed], (matches) => mentionSettling(on, matches), { concurrency: 1 });
+    yield* Effect.forEach([failed, succeeded, failed], (matches) => on.mentionSettling(matches), { concurrency: 1 });
     const calls = yield* on.cookout.triggers.calls;
-    const inbox = yield* inboxOf(on);
+    const inbox = yield* on.inbox;
 
     expect(calls).toHaveLength(THRICE);
     expect(Arr.map(inbox.alerts, ({ offlineReason }) => offlineReason)).toStrictEqual(

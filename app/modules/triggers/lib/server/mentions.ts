@@ -1,4 +1,15 @@
-import { Array as Arr, DateTime, Duration, Effect, FiberSet, Option, Predicate, Semaphore, Stream } from "effect";
+import {
+  Array as Arr,
+  DateTime,
+  Duration,
+  Effect,
+  FiberSet,
+  Option,
+  Predicate,
+  Semaphore,
+  Stream,
+  Struct,
+} from "effect";
 import type { Message, MessageId } from "../../../messages/index.ts";
 import type { PubSub, Scope } from "effect";
 import type { Storage, StorageUnavailable, StoredTrigger } from "../../../storage/server.ts";
@@ -104,14 +115,8 @@ function failedBefore(stored: StoredTrigger): boolean {
   return Option.exists(Option.fromUndefinedOr(stored.lastResult), ({ ok }) => !ok);
 }
 
-function failureOf({ message, result: { error, status } }: Settling): TriggerFailure {
-  if (Predicate.isNotUndefined(error)) {
-    return { error, message: message.id };
-  }
-  if (Predicate.isNotUndefined(status)) {
-    return { message: message.id, status };
-  }
-  return { message: message.id };
+function failureOf({ message, result }: Settling): TriggerFailure {
+  return { ...Struct.omit(result, ["at", "ok"]), message: message.id };
 }
 
 function alerted(services: Services, settling: Settling, stored: StoredTrigger): Effect.Effect<void> {

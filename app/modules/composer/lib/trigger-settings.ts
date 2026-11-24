@@ -44,6 +44,13 @@ async function cleared({ calls, name }: TriggerOptions): Promise<null> {
   return null;
 }
 
+function keptUrl(current: TriggerSnapshot, edit: "kept" | "dropped"): string | null {
+  if (edit === "kept") {
+    return current.url;
+  }
+  return null;
+}
+
 function createTriggerSettings(options: TriggerOptions): TriggerSettings {
   const { calls, name } = options;
   const listeners = listenersOf(options.show);
@@ -55,11 +62,11 @@ function createTriggerSettings(options: TriggerOptions): TriggerSettings {
     listeners.notify();
   }
 
-  async function sent(call: Promise<Trigger | null>): Promise<void> {
+  async function sent(call: Promise<Trigger | null>, edit: "kept" | "dropped"): Promise<void> {
     publish({ ...current, save: { status: "saving" } });
     try {
       const trigger = await call;
-      publish({ loaded: { status: "loaded", trigger }, save: IDLE, url: null });
+      publish({ loaded: { status: "loaded", trigger }, save: IDLE, url: keptUrl(current, edit) });
     } catch (error: unknown) {
       publish({ ...current, save: { ...refusalOf(error), status: "failed" } });
     }
@@ -67,18 +74,18 @@ function createTriggerSettings(options: TriggerOptions): TriggerSettings {
 
   return {
     clear: () => {
-      pending = sent(cleared(options));
+      pending = sent(cleared(options), "dropped");
     },
     editUrl: (url) => {
       publish({ ...current, url });
     },
     save: (token) => {
       const request = { token, url: current.url ?? savedUrl(current.loaded) };
-      pending = sent(calls.setTrigger(name, request));
+      pending = sent(calls.setTrigger(name, request), "dropped");
     },
     snapshot: () => current,
     subscribe: (listener) => {
-      pending ??= sent(calls.readTrigger(name));
+      pending ??= sent(calls.readTrigger(name), "kept");
       return listeners.add(listener);
     },
   };
