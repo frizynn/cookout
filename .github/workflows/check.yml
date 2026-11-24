@@ -117,20 +117,23 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # Two shards ran 4-5 minutes each and one was cancelled at the 5-minute limit after 284.7s of
+  # passing tests (#485), so Vitest's --shard splits the test files across 3 jobs. Each uploads its
+  # blob report, and the coverage job merges every vitest-blob-* into one run.
   tests:
-    name: tests ${{ matrix.shard }}/2
+    name: tests ${{ matrix.shard }}/3
     runs-on: ubuntu-latest
     timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
         with:
           cache-name: tests
-      - run: node scripts/check.ts --job=tests --shard=${{ matrix.shard }}/2 --ci
+      - run: node scripts/check.ts --job=tests --shard=${{ matrix.shard }}/3 --ci
       - uses: actions/upload-artifact@v4
         with:
           name: vitest-blob-${{ matrix.shard }}
