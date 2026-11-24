@@ -1,5 +1,6 @@
 import type {
   CookoutClient,
+  CookoutEvent,
   DeactivatedQuietAgent,
   DeactivationOffer,
   InboxItem,
@@ -142,6 +143,21 @@ function partsOf(options: PartsOptions): Parts {
   };
 }
 
+type Forgetting = Pick<Following, "earlier" | "items" | "nudges" | "republish">;
+
+function forgettingDeleted({ earlier, items, nudges, republish }: Forgetting): (event: CookoutEvent) => void {
+  return (event) => {
+    if (event.type !== "channel-deleted") {
+      return;
+    }
+    const { name } = event.channel;
+    items.forgetChannel(name);
+    nudges.forgetChannel(name);
+    earlier.drop((message) => message.channel === name);
+    republish();
+  };
+}
+
 function follow(following: Following): void {
   const { alerts, client, deactivatedQuietAgents, deactivationOffers, earlier, items, live, markUnread, nudges } =
     following;
@@ -160,6 +176,7 @@ function follow(following: Following): void {
       republish();
     }
   });
+  live.subscribe(forgettingDeleted({ earlier, items, nudges, republish }));
   live.onBack(
     catchingUp({
       client,
