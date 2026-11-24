@@ -7,6 +7,7 @@ interface Screen {
   readonly name: string;
   readonly hash: string;
   readonly click?: string;
+  readonly clickIn?: string;
   readonly focusTimeOf?: string;
   readonly text: string;
   readonly narrow?: boolean;
@@ -46,6 +47,13 @@ const SCREENS: readonly Screen[] = [
   { click: "Show earlier", hash: "#/inbox", history: "loading", name: "inbox-loading", text: "Loading…" },
   { hash: "#/inbox/general/1", name: "inbox-thread", text: "Thanks, both of you." },
   { hash: "#/inbox/general/1", name: "inbox-narrow", narrow: true, text: "earlier replies" },
+  {
+    click: "Mark read",
+    clickIn: 'aside[aria-label="Conversation"]',
+    hash: "#/inbox/general/1",
+    name: "inbox-marked",
+    text: "Marked as read",
+  },
   { hash: "#/channels/general", name: "channel", text: "Lunch at 12:30." },
   { hash: "#/channels/general/threads/1", name: "thread", text: "Thanks, both of you." },
   {

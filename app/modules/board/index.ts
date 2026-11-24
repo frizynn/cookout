@@ -12,7 +12,10 @@
  * subscribes it loads the thread and acks its latest message, so opening a
  * thread counts as reading it, and while a reader is subscribed it acks each
  * new reply that arrives live; each time it is opened again it reloads the
- * thread and acks its latest message; `reply` posts a reply in that channel,
+ * thread and acks its latest message. A reader that subscribes with
+ * `subscribeWithoutAcking` (the Inbox's conversation) loads, follows and
+ * reloads it the same way but acks nothing, on open or on a live reply: it
+ * calls `ack` itself when it decides the thread has been read. `reply` posts a reply in that channel,
  * reloads the replies and only then calls `posted`, so a refused reply keeps
  * its text. `commands` is every registered command, loaded when its
  * first reader subscribes (`createCommands` makes such a store alone); a channel's `call` calls a command with data typed

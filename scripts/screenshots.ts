@@ -164,7 +164,10 @@ function viewportOf(shot: Shot): typeof WIDE {
 
 async function interact(page: Page, shot: Shot): Promise<void> {
   if (typeof shot.screen.click === "string") {
-    await page.getByRole("button", { exact: true, name: shot.screen.click }).click({ timeout: RENDER_MS });
+    await page
+      .locator(shot.screen.clickIn ?? "body")
+      .getByRole("button", { exact: true, name: shot.screen.click })
+      .click({ timeout: RENDER_MS });
   }
   if (typeof shot.screen.focusTimeOf === "string") {
     await page
