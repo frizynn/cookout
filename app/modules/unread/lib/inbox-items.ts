@@ -2,6 +2,7 @@ import type {
   ChannelName,
   CookoutClient,
   CookoutEvent,
+  DeactivatedQuietAgent,
   DeactivationOffer,
   InboxItem,
   Message,
@@ -194,17 +195,21 @@ interface Reading {
   readonly onAlerts: (alerts: readonly OfflineAlert[]) => void;
   readonly onNudges: (nudges: readonly Nudge[]) => void;
   readonly onDeactivationOffers: (offers: readonly DeactivationOffer[]) => void;
+  readonly onDeactivatedQuietAgents: (entries: readonly DeactivatedQuietAgent[]) => void;
 }
 
-interface ReadInbox extends Pick<Reading, "items" | "onAlerts" | "onDeactivationOffers" | "onNudges"> {
+interface ReadInbox
+  extends Pick<Reading, "items" | "onAlerts" | "onDeactivatedQuietAgents" | "onDeactivationOffers" | "onNudges"> {
   readonly inbox: Awaited<ReturnType<Reading["client"]["inbox"]>>;
 }
 
-function readIntoItems({ inbox, items, onAlerts, onDeactivationOffers, onNudges }: ReadInbox): void {
+function readIntoItems(reading: ReadInbox): void {
+  const { inbox, items, onAlerts, onDeactivatedQuietAgents, onDeactivationOffers, onNudges } = reading;
   items.addAll(inbox.items);
   onAlerts(inbox.alerts);
   onNudges(inbox.nudges);
   onDeactivationOffers(inbox.deactivationOffers);
+  onDeactivatedQuietAgents(inbox.deactivatedQuietAgents);
 }
 
 async function readInto(reading: Reading): Promise<void> {

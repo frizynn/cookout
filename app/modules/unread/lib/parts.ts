@@ -1,18 +1,24 @@
-import type { CookoutClient, DeactivationOffer, InboxItem, Nudge, OfflineAlert, Refusal } from "../../sdk/index.ts";
+import type {
+  CookoutClient,
+  DeactivatedQuietAgent,
+  DeactivationOffer,
+  InboxItem,
+  Nudge,
+  OfflineAlert,
+  Refusal,
+} from "../../sdk/index.ts";
+import type { Notices, NoticesBeside } from "./notices.ts";
 import { catchingUp, createInboxItems, readInto } from "./inbox-items.ts";
 import type { InboxItems } from "./inbox-items.ts";
 import type { Live } from "../../live/index.ts";
 import type { LiveAlerts } from "./alerts.ts";
-import type { LiveDeactivationOffers } from "./deactivation-offers.ts";
-import type { LiveNudges } from "./nudges.ts";
 import type { MarkAllState } from "./mark-all.ts";
 import type { MarkUnread } from "./mark-unread.ts";
 import type { Notifier } from "./notifier.ts";
 import { createAlerts } from "./alerts.ts";
-import { createDeactivationOffers } from "./deactivation-offers.ts";
 import { createEarlier } from "./earlier.ts";
 import { createNotifier } from "./notifier.ts";
-import { createNudges } from "./nudges.ts";
+import { noticesOf } from "./notices.ts";
 import { refusalOf } from "../../sdk/index.ts";
 
 type UnreadState =
@@ -24,6 +30,7 @@ type UnreadState =
       readonly alerts: readonly OfflineAlert[];
       readonly nudges: readonly Nudge[];
       readonly deactivationOffers: readonly DeactivationOffer[];
+      readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[];
       readonly markAll: MarkAllState;
     }
   | (Refusal & { readonly status: "failed" });
@@ -35,6 +42,7 @@ interface PartsOptions {
     | "inbox"
     | "inboxHistory"
     | "keepDeactivationOffer"
+    | "markDeactivatedQuietAgentRead"
     | "markNudgeRead"
     | "markOfflineAlertRead"
     | "readPositions"
@@ -42,11 +50,9 @@ interface PartsOptions {
   readonly pageSize?: number;
 }
 
-interface Held {
+interface Held extends Notices {
   readonly items: InboxItems;
   readonly alerts: LiveAlerts;
-  readonly nudges: LiveNudges;
-  readonly deactivationOffers: LiveDeactivationOffers;
 }
 
 interface Parts extends Held {
@@ -72,14 +78,12 @@ interface Following extends Held {
   readonly republish: () => void;
 }
 
-type Beside =
-  | { readonly alerts: readonly OfflineAlert[] }
-  | { readonly nudges: readonly Nudge[] }
-  | { readonly deactivationOffers: readonly DeactivationOffer[] };
+type Beside = { readonly alerts: readonly OfflineAlert[] } | NoticesBeside;
 
-function loadedOf({ alerts, deactivationOffers, items, markAll, nudges }: Shown): UnreadState {
+function loadedOf({ alerts, deactivatedQuietAgents, deactivationOffers, items, markAll, nudges }: Shown): UnreadState {
   return {
     alerts: alerts.unread(),
+    deactivatedQuietAgents: deactivatedQuietAgents.unread(),
     deactivationOffers: deactivationOffers.open(),
     inbox: items.inbox(),
     items: items.list(),
@@ -90,17 +94,18 @@ function loadedOf({ alerts, deactivationOffers, items, markAll, nudges }: Shown)
 }
 
 async function loadedOrFailed(loading: Loading): Promise<UnreadState> {
-  const { alerts, client, deactivationOffers, earlier, items, markAll, nudges } = loading;
+  const { alerts, client, deactivatedQuietAgents, deactivationOffers, earlier, items, markAll, nudges } = loading;
   try {
     await readInto({
       client,
       items,
       onAlerts: alerts.addAll,
+      onDeactivatedQuietAgents: deactivatedQuietAgents.unreadAre,
       onDeactivationOffers: deactivationOffers.openAre,
       onNudges: nudges.addUnread,
       onRead: earlier.add,
     });
-    return loadedOf({ alerts, deactivationOffers, items, markAll: markAll(), nudges });
+    return loadedOf({ alerts, deactivatedQuietAgents, deactivationOffers, items, markAll: markAll(), nudges });
   } catch (error: unknown) {
     return { ...refusalOf(error), status: "failed" };
   }
@@ -123,31 +128,27 @@ function partsOf(options: PartsOptions): Parts {
         withBeside(shown, { alerts: unread });
       },
     }),
-    deactivationOffers: createDeactivationOffers({
+    ...noticesOf({
       client: options.client,
-      onChange: (open) => {
-        withBeside(shown, { deactivationOffers: open });
+      onChange: (beside) => {
+        withBeside(shown, beside);
       },
     }),
     earlier: createEarlier({ ...options, unread: items }),
     items,
-    nudges: createNudges({
-      client: options.client,
-      onChange: (unread) => {
-        withBeside(shown, { nudges: unread });
-      },
-    }),
     shown,
   };
 }
 
 function follow(following: Following): void {
-  const { alerts, client, deactivationOffers, earlier, items, live, markUnread, nudges, republish } = following;
+  const { alerts, client, deactivatedQuietAgents, deactivationOffers, earlier, items, live, markUnread, nudges } =
+    following;
+  const { republish } = following;
   if (live === null) {
     return;
   }
   live.subscribe((event) => {
-    const besides = [nudges.receive(event), deactivationOffers.receive(event)];
+    const besides = [nudges.receive(event), deactivationOffers.receive(event), deactivatedQuietAgents.receive(event)];
     if (
       markUnread.receive(event) ||
       items.receive(event, earlier.add) ||
@@ -164,6 +165,7 @@ function follow(following: Following): void {
       moveBack: markUnread.moveBack,
       onAlerts: alerts.addAll,
       onChange: republish,
+      onDeactivatedQuietAgents: deactivatedQuietAgents.unreadAre,
       onDeactivationOffers: deactivationOffers.openAre,
       onNudges: nudges.addUnread,
       onRead: earlier.add,
@@ -171,5 +173,5 @@ function follow(following: Following): void {
   );
 }
 
-export type { DeactivationOffers } from "./deactivation-offers.ts";
+export type { DeactivatedQuietAgents, DeactivationOffers } from "./notices.ts";
 export { type UnreadState, follow, loadedOf, loadedOrFailed, partsOf };

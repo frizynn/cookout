@@ -62,6 +62,11 @@
  * first page, lists them all, open or cleared, for the Earlier list. One is cleared when Keep answers it
  * (`POST /v1/inbox/deactivation-offers/:id/keep`), with `markAllRead`, which clears it as Keep does (Matt, #232,
  * 2026-11-23), and live when its event says so (another recipient's Keep, the identity's activity or deactivation).
+ * `deactivatedQuietAgents` holds the caller's Inbox entries about agents deactivated after 90 days with no Activity the
+ * same way: the unread ones, from the inbox and each `deactivated-quiet-agent` event, join the loaded state beside the
+ * items, and its own snapshot lists them all for the Earlier list. One turns read when it is marked read
+ * (`POST /v1/inbox/deactivated-quiet-agents/:id/read`), with `markAllRead`, and live when its event says so, as when
+ * the agent is reactivated in any session.
  * `createReading` makes the `reading` store, beside the unread store: the Inbox's read rule, as Slack's (Matt, Inbox grilling
  * on the board, 2026-11-23; `docs/adr/0073-the-inbox-reads-a-conversation-after-2-s-on-screen.md`).
  * `reader(key, sources)` is the reader of one selected conversation, the same
@@ -81,7 +86,7 @@
  * and tests bring a clock they move on by hand.
  */
 import type { ChannelName, CookoutClient, MessageId } from "../sdk/index.ts";
-import type { DeactivationOffers, UnreadState } from "./lib/parts.ts";
+import type { DeactivatedQuietAgents, DeactivationOffers, UnreadState } from "./lib/parts.ts";
 import type { NewLine, WithNewLines } from "./lib/new-lines.ts";
 import { follow, loadedOf, loadedOrFailed, partsOf } from "./lib/parts.ts";
 import type { Alerts } from "./lib/alerts.ts";
@@ -130,6 +135,8 @@ export interface Unread {
   readonly selection: WithNewLines<object>["selection"];
   /** Every Deactivation offer of the caller's, open or cleared, newest first, and answering Keep: a store of its own. */
   readonly deactivationOffers: DeactivationOffers;
+  /** Every Inbox entry of the caller's about a deactivated quiet agent, read or not, newest first, and marking one read. */
+  readonly deactivatedQuietAgents: DeactivatedQuietAgents;
 }
 
 /**
@@ -144,6 +151,7 @@ export interface UnreadOptions {
     | "inbox"
     | "inboxHistory"
     | "keepDeactivationOffer"
+    | "markDeactivatedQuietAgentRead"
     | "markNudgeRead"
     | "markOfflineAlertRead"
     | "markUnread"
@@ -160,7 +168,7 @@ export interface UnreadOptions {
  */
 export function createUnread(options: UnreadOptions): Unread {
   const parts = partsOf(options);
-  const { alerts, deactivationOffers, earlier, items, nudges, shown } = parts;
+  const { alerts, deactivatedQuietAgents, deactivationOffers, earlier, items, nudges, shown } = parts;
   let loading: Promise<void> | null = null;
   const markAll = createMarkAll({
     ...options,
@@ -186,6 +194,7 @@ export function createUnread(options: UnreadOptions): Unread {
 
   return withNewLines<Omit<Unread, "newLine" | "selection">>({
     alerts,
+    deactivatedQuietAgents,
     deactivationOffers,
     earlier,
     markAllRead: markAll.markAllRead,
@@ -212,6 +221,7 @@ export type { MarkAllState } from "./lib/mark-all.ts";
 export type { Alerts, AlertsState } from "./lib/alerts.ts";
 export type { Nudges, NudgesState } from "./lib/nudges.ts";
 export type { DeactivationOffers, DeactivationOffersState } from "./lib/deactivation-offers.ts";
+export type { DeactivatedQuietAgents, DeactivatedQuietAgentsState } from "./lib/deactivated-quiet-agents.ts";
 export type { MessageMenu } from "./lib/message-menu.ts";
 export type { Selection } from "./lib/selection.ts";
 export type { InboxRow } from "./lib/rows.ts";

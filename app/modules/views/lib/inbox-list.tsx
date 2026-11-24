@@ -37,7 +37,15 @@ export function InboxList(props: InboxListProps): ReactNode {
           selected={selected}
           unread={unread}
         />
-        {unread.status === "loaded" && <InboxEarlier me={me} rows={rows} selected={selected} unread={props.unread} />}
+        {unread.status === "loaded" && (
+          <InboxEarlier
+            identities={props.notices.identities}
+            me={me}
+            rows={rows}
+            selected={selected}
+            unread={props.unread}
+          />
+        )}
       </Feed>
     </ListPane>
   );

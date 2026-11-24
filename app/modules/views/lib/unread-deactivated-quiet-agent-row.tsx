@@ -1,0 +1,36 @@
+import { ButtonRow, RowButton } from "../../design-system/index.tsx";
+import type { DeactivatedQuietAgent } from "../../sdk/index.ts";
+import { DeactivatedQuietAgentRow } from "./deactivated-quiet-agent-row.tsx";
+import type { DeactivatedQuietAgents } from "../../unread/index.ts";
+import type { Identities } from "../../composer/index.ts";
+import { IdentityConfirm } from "./identity-confirm.tsx";
+import type { ReactNode } from "react";
+import { TokenShown } from "./token-shown.tsx";
+import { useCallback } from "react";
+
+const TEXT = { markRead: "Mark read", reactivate: "Reactivate" } as const;
+
+interface UnreadDeactivatedQuietAgentRowProps {
+  readonly entry: DeactivatedQuietAgent;
+  readonly entries: Pick<DeactivatedQuietAgents, "markRead">;
+  readonly identities: Pick<Identities, "actions">;
+}
+
+export function UnreadDeactivatedQuietAgentRow(props: UnreadDeactivatedQuietAgentRowProps): ReactNode {
+  const { entries, entry } = props;
+  const actions = props.identities.actions(entry.identity.name);
+  const handleReactivate = actions.ask.reactivate;
+  const handleMarkRead = useCallback(() => {
+    entries.markRead(entry.id);
+  }, [entries, entry]);
+  return (
+    <DeactivatedQuietAgentRow entry={entry}>
+      <ButtonRow>
+        <RowButton onClick={handleReactivate}>{TEXT.reactivate}</RowButton>
+        <RowButton onClick={handleMarkRead}>{TEXT.markRead}</RowButton>
+      </ButtonRow>
+      <TokenShown actions={actions} />
+      <IdentityConfirm actions={actions} identity={entry.identity} />
+    </DeactivatedQuietAgentRow>
+  );
+}

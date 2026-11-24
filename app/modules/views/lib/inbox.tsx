@@ -24,9 +24,12 @@ export function InboxView(props: InboxProps): ReactNode {
   const { board, composer, me, selected, unread } = props;
   const state = useSyncExternalStore(unread.subscribe, unread.snapshot);
   const rows = useInboxRows({ me, selected, state, unread });
-  const { deactivationOffers, nudges } = unread;
+  const { deactivatedQuietAgents, deactivationOffers, nudges } = unread;
   const { identities } = composer;
-  const notices = useMemo(() => ({ deactivationOffers, identities, nudges }), [deactivationOffers, nudges, identities]);
+  const notices = useMemo(
+    () => ({ deactivatedQuietAgents, deactivationOffers, identities, nudges }),
+    [deactivatedQuietAgents, deactivationOffers, nudges, identities],
+  );
   useInboxKeys({ conversation: CONVERSATION, selected: selected !== null });
   return (
     <>
