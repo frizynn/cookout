@@ -25,4 +25,12 @@ interface SuggestionOptionParts {
   readonly presence: PresenceShown | null;
 }
 
-export type { AvatarParts, PresenceDotParts, PresenceShown, SuggestionOptionParts };
+interface SuggestionsParts {
+  readonly list: string;
+  readonly label: string;
+  readonly options: readonly SuggestionOptionParts[];
+  readonly highlighted: number;
+  readonly onChoose: (option: string) => void;
+}
+
+export type { AvatarParts, PresenceDotParts, PresenceShown, SuggestionOptionParts, SuggestionsParts };

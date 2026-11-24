@@ -520,7 +520,11 @@
       }
     },
     {
-      "files": ["app/modules/design-system/lib/panel-edge.tsx"],
+      "files": [
+        "app/modules/design-system/lib/panel-edge.tsx",
+        "app/modules/design-system/lib/suggestions.tsx",
+        "app/modules/design-system/lib/suggestion-option.tsx"
+      ],
       "rules": {
         "jsx-a11y/prefer-tag-over-role": "off"
       }

@@ -159,11 +159,13 @@
  * as a reply, whose text and caret its owner holds, where Enter sends the form
  * and Shift+Enter starts a new line, and, while its owner is `choosing` from
  * suggestions, the arrow keys move the highlight, Enter or Tab picks it and
- * Escape closes the list;
+ * Escape closes the list, and the box is then a combobox that controls the
+ * list and names its highlighted option as the active descendant (#429);
  * `SubmitButton` sends it, and `SendButton` is its paper-plane icon form, named
  * and tooltipped by `label`; `Suggestions` is a named list of options to pick
  * from under a box, such as mentions or commands (each with any muted detail
- * after it), one of them highlighted, which leaves the box focused; it sits
+ * after it), a listbox of options with one of them selected, which leaves the
+ * box focused, even when a pointer picks one; it sits
  * in the overlay layer, above everything else in the pane.
  * `DataArea` is a labelled box to write JSON in, whose
  * text its owner holds. `PromptForm` is a named card in place of a message

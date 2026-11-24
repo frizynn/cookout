@@ -46,7 +46,7 @@ it("the @ suggestions keep the up and down arrows and Enter while they show", { 
   });
   pressed("r");
   fireEvent.change(replyBox(), { target: { value: `Ping @${channel}-po` } });
-  await inConversation().findByRole("list", { name: "Mention suggestions" });
+  await inConversation().findByRole("listbox", { name: "Mention suggestions" });
   const taken = [typedHere("ArrowDown"), typedHere("ArrowUp"), typedHere("Enter")];
 
   expect([taken, globalThis.location.hash, replyBox()]).toStrictEqual([
