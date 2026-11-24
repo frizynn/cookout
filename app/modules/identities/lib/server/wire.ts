@@ -90,7 +90,7 @@ export const ListIdentitiesResponseSchema = matchesWire<ListIdentitiesResponse>(
 );
 
 export const DeactivateIdentityResponseSchema = matchesWire<DeactivateIdentityResponse>()(
-  Schema.Struct({ agents: Schema.Array(IdentityNameSchema), identity: IdentitySchema }),
+  Schema.Struct({ identity: IdentitySchema }),
 );
 
 export const IdentityMessageCountResponseSchema = matchesWire<IdentityMessageCountResponse>()(
