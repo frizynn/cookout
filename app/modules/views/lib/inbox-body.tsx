@@ -44,7 +44,7 @@ export function InboxBody(props: InboxBodyProps): ReactNode {
       <InboxAlerts alerts={unread.alerts} onMarkRead={props.onMarkAlertRead} />
       <InboxSection
         actions={props.actions}
-        besides={unread.nudges.length + unread.deactivationOffers.length + unread.deactivatedQuietAgents.length}
+        besides={besideCountOf(unread) - unread.alerts.length}
         forYou
         uncounted={held}
         me={me}
@@ -56,6 +56,7 @@ export function InboxBody(props: InboxBodyProps): ReactNode {
           actions={props.notices}
           deactivated={unread.deactivatedQuietAgents}
           held={unread.heldDeactivatedQuietAgents}
+          joinRequests={unread.agentJoinRequests}
           nudges={unread.nudges}
           offers={unread.deactivationOffers}
         />
