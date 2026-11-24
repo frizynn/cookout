@@ -228,9 +228,15 @@ it("a deactivated identity's card says Deactivated in place of its presence, sti
   close();
 });
 
+async function chiefWithWorker(channel: string): Promise<Awaited<ReturnType<typeof newIdentity>>> {
+  const chief = await newIdentity({ kind: "agent", name: `${channel}-chief`, owner: `${channel}-owner` });
+  await chief.client.createAgentForOwner({ name: `${channel}-worker` });
+  return chief;
+}
+
 async function broughtInAuthor(channel: string): Promise<() => void> {
   const owner = await newIdentity({ kind: "human", name: `${channel}-owner` });
-  const chief = await newIdentity({ kind: "agent", name: `${channel}-chief`, owner: `${channel}-owner` });
+  const chief = await chiefWithWorker(channel);
   const started = await anonymousClient().startAgentJoin({ as: `${channel}-worker`, host: "box" });
   await chief.client.approveAgentJoin(started.userCode);
   const collected = await anonymousClient().collectAgentJoin(started.requestId);

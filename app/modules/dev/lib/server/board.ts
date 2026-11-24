@@ -204,6 +204,7 @@ function postBroughtIn(
 ): Effect.Effect<Pick<SeededMessages, "broughtInPost">, SeedFailure> {
   return Effect.gen(function* broughtIn() {
     const box = createCookoutClient({ env: {}, url });
+    yield* call(() => cast.releaseBot.client.createAgentForOwner({ name: "build-worker" }));
     const started = yield* call(() => box.startAgentJoin({ as: "build-worker", host: "build-box" }));
     yield* call(() => cast.releaseBot.client.approveAgentJoin(started.userCode));
     const collected = yield* Effect.filterOrFail(

@@ -118,7 +118,8 @@ export const agentSessionExpired = "agent_session_expired";
  * `display_name_required` (a join that would create an agent with no display name, when the request asks for one) and
  * `display_name_on_existing_agent` (a display name sent to join an agent that already exists),
  * the 403 `not_brought_in` (an agent approves a join for an existing agent it didn't bring in, #370), the 404
- * `agent_join_request_not_found` (an agent join request expired, was collected, or never existed), and the
+ * `agent_join_request_not_found` (an agent join request expired, was collected, or never existed), the 404
+ * `agent_not_found` (an agent join request names no active agent: a join request never creates one, #461), and the
  * 401s any request sent with an ended agent session token gets, and the 404 `join_code_not_found` (a join code that
  * was used, expired or never issued).
  */
@@ -134,6 +135,7 @@ export const agentSessionErrorCodes = [
   "agent_join_request_not_found",
   "join_code_not_found",
   "not_brought_in",
+  "agent_not_found",
   agentSessionRevoked,
   agentSessionExpired,
 ] as const;
@@ -154,8 +156,8 @@ export const collectAgentJoinRequestPath = "/v1/agent-join-requests/collect";
 export const agentJoinRequestPath = "/v1/agent-join-requests/:code";
 
 /**
- * `PUT /v1/agent-join-requests/:code/approval`: approves it as the caller. A human approves as before; an agent approves
- * only a join that creates an agent of its own owner, recorded as brought in by it, or rejoins one it brought in (#370).
+ * `PUT /v1/agent-join-requests/:code/approval`: approves it as the caller, joining an existing agent and never creating
+ * one (#461). A human approves for an agent they own; an agent only for an agent it brought in (#370).
  */
 export const agentJoinRequestApprovalPath = "/v1/agent-join-requests/:code/approval";
 
@@ -201,7 +203,7 @@ export interface AgentJoinRequestView {
   readonly as: string;
   /** The agent approving joins, such as `ada/triage-agent` when `triage-agent` is someone else's. */
   readonly joins: IdentityName;
-  /** Whether approving creates that agent, owned by the approver. */
+  /** Whether approving creates that agent: always `false`, since a join request never creates one (#461). */
   readonly creates: boolean;
   /** The idle expiry the box asked for (or the default); the approver may lower it, never raise it. */
   readonly idleExpiry: string;
@@ -224,7 +226,10 @@ export interface ApproveAgentJoinRequest {
 
 /** The SDK's calls for an agent join request: a box with no Login joins once a person approves in the browser. */
 export interface AgentJoinCalls {
-  /** `POST /v1/agent-join-requests` (no token): starts an agent join request, which lasts 10 minutes unapproved. */
+  /**
+   * `POST /v1/agent-join-requests` (no token): starts an agent join request, which lasts 10 minutes unapproved. It
+   * never creates an agent: a name no active agent has is 404 `agent_not_found`, and nothing is stored.
+   */
   readonly startAgentJoin: (request: StartAgentJoinRequest) => Promise<AgentJoinRequestStartedResponse>;
   /**
    * `POST /v1/agent-join-requests/collect` (no token): `pending` until a human approves, then, once, the agent
@@ -233,7 +238,7 @@ export interface AgentJoinCalls {
   readonly collectAgentJoin: (requestId: Token) => Promise<AgentJoinCollectedResponse>;
   /** `GET /v1/agent-join-requests/:code` (a human): the request, and the agent approving it would join. */
   readonly getAgentJoinRequest: (userCode: string) => Promise<AgentJoinRequestResponse>;
-  /** `PUT /v1/agent-join-requests/:code/approval` (a human): joins the agent as `join` with the caller's Login would. */
+  /** `PUT /v1/agent-join-requests/:code/approval`: joins the existing agent, as `join` with a Login would, never creating one. */
   readonly approveAgentJoin: (
     userCode: string,
     approval?: ApproveAgentJoinRequest,
