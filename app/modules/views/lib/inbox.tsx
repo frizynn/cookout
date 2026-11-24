@@ -31,9 +31,14 @@ export function InboxView(props: InboxProps): ReactNode {
       <DeletedNotice board={props.board} />
       <Feed label={TEXT.title}>
         {unread.status === "loaded" && <MarkAllFailed markAll={unread.markAll} />}
-        <InboxBody me={props.me} onMarkAlertRead={handleMarkAlertRead} unread={unread} />
+        <InboxBody me={props.me} nudges={props.unread.nudges} onMarkAlertRead={handleMarkAlertRead} unread={unread} />
         {unread.status === "loaded" && (
-          <InboxEarlier alerts={props.unread.alerts} earlier={props.unread.earlier} me={props.me} />
+          <InboxEarlier
+            alerts={props.unread.alerts}
+            earlier={props.unread.earlier}
+            me={props.me}
+            nudges={props.unread.nudges}
+          />
         )}
       </Feed>
     </Pane>

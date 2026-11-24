@@ -6,6 +6,7 @@ import type {
   Message,
   MessageId,
   MovedBackReadPosition,
+  Nudge,
   OfflineAlert,
   ReadPosition,
 } from "../../sdk/index.ts";
@@ -190,21 +191,23 @@ interface Reading {
   readonly items: InboxItems;
   readonly onRead: (item: InboxItem) => void;
   readonly onAlerts: (alerts: readonly OfflineAlert[]) => void;
+  readonly onNudges: (nudges: readonly Nudge[]) => void;
 }
 
-interface ReadInbox extends Pick<Reading, "items" | "onAlerts"> {
+interface ReadInbox extends Pick<Reading, "items" | "onAlerts" | "onNudges"> {
   readonly inbox: Awaited<ReturnType<Reading["client"]["inbox"]>>;
 }
 
-function readIntoItems({ inbox, items, onAlerts }: ReadInbox): void {
+function readIntoItems({ inbox, items, onAlerts, onNudges }: ReadInbox): void {
   items.addAll(inbox.items);
   onAlerts(inbox.alerts);
+  onNudges(inbox.nudges);
 }
 
-async function readInto({ client, items, onAlerts, onRead }: Reading): Promise<void> {
+async function readInto({ client, items, onAlerts, onNudges, onRead }: Reading): Promise<void> {
   const [inbox, { readPositions }] = await Promise.all([client.inbox(), client.readPositions()]);
   items.readAll(readPositions, onRead);
-  readIntoItems({ inbox, items, onAlerts });
+  readIntoItems({ inbox, items, onAlerts, onNudges });
 }
 
 type ByPlace = ReadonlyMap<string, MessageId>;
@@ -258,7 +261,7 @@ async function catchUp(options: CatchUpOptions): Promise<void> {
   }
   const movedOn = readPositions.filter((position) => unchanged(compared, placeOf(position)));
   items.readAll(movedOn, options.onRead);
-  readIntoItems({ inbox, items, onAlerts: options.onAlerts });
+  readIntoItems({ inbox, items, onAlerts: options.onAlerts, onNudges: options.onNudges });
 }
 
 interface CatchingUp extends CatchUpOptions {

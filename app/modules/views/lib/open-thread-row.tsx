@@ -3,9 +3,9 @@ import { useCallback, useSyncExternalStore } from "react";
 import type { OpenThread } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
 import type { ThreadClosing } from "../../board/index.ts";
+import { firstLineOf } from "./first-line.ts";
 import { hrefOf } from "../../paths/index.ts";
 import { onTick } from "./use-time-ago.ts";
-import { plainTextOf } from "./markdown-plain-text.ts";
 import { timeSince } from "../../format/index.ts";
 import { useAuthor } from "./use-author.ts";
 
@@ -14,11 +14,6 @@ const TEXT = { action: "started a thread in", close: "Close" } as const;
 interface OpenThreadRowProps {
   readonly closing: ThreadClosing;
   readonly thread: OpenThread;
-}
-
-function firstLineOf(text: string): string {
-  const [first = ""] = text.trim().split("\n");
-  return plainTextOf(first);
 }
 
 export function OpenThreadRow(props: OpenThreadRowProps): ReactNode {

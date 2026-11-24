@@ -2,7 +2,7 @@ import type { Browser, BrowserContext, Page } from "@playwright/test";
 import type { Screen, Shot, Theme } from "./lib/screenshots.ts";
 import { field, list, parseJson, text } from "./lib/json.ts";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
-import { screenshotOptions, takeScreenshots, withOlderHistory } from "./lib/screenshots.ts";
+import { screenshotOptions, takeScreenshots, withNudge, withOlderHistory } from "./lib/screenshots.ts";
 import { spawn, spawnSync } from "node:child_process";
 import { chromium } from "@playwright/test";
 import { createInterface } from "node:readline";
@@ -184,6 +184,9 @@ async function render(page: Page, shot: Shot): Promise<void> {
     await page.route("**/v1/events?*", async (route) => {
       await route.abort();
     });
+  }
+  if (shot.screen.nudge === true) {
+    await withNudge(page);
   }
   await page.goto(`/${shot.screen.hash}`);
   await interact(page, shot);

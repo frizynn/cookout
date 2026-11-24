@@ -205,4 +205,4 @@ function createEarlier(options: EarlierOptions): LiveEarlier {
   };
 }
 
-export { type Earlier, type EarlierState, type LiveEarlier, createEarlier };
+export { type Earlier, type EarlierState, createEarlier };
