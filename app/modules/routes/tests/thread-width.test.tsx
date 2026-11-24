@@ -12,6 +12,7 @@ const DRAGGED = 100;
 const PAST_THE_MINIMUM = -800;
 const PAST_THE_MAXIMUM = 1600;
 const IN_TAB_ORDER = 0;
+const SECONDARY = 2;
 
 async function threadIn(channel: string): Promise<Message> {
   const admin = adminClient();
@@ -140,6 +141,23 @@ it("a thread opened from the Inbox has the same edge, at the same width, and dra
   });
 
   expect(shown).toBe(width);
+
+  close();
+});
+
+it("other keys and a secondary-button drag leave the thread panel's width as it is", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const parent = await threadIn("web-thread-width-ignored");
+  const close = openAt({ client: adminClient(), hash: threadHash(parent) });
+  const before = await threadWidth();
+  const afterKey = pressed(["a"]);
+  fireEvent.pointerDown(edgeNow(), { button: SECONDARY, clientX: START_X });
+  fireEvent.pointerMove(globalThis.document, { clientX: START_X - DRAGGED });
+
+  expect([afterKey, widthNow()]).toStrictEqual([before, before]);
 
   close();
 });
