@@ -224,6 +224,10 @@ const postgresMigrations: readonly (readonly string[])[] = [
        read boolean NOT NULL
      )`,
   ],
+  [
+    `ALTER TABLE identities
+       ADD COLUMN brought_in_by text COLLATE "C" REFERENCES identities (name) ON DELETE SET NULL`,
+  ],
 ];
 
 const NO_VERSION = 0;

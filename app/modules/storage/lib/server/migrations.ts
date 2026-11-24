@@ -196,6 +196,7 @@ const migrations: readonly string[] = [
    UPDATE message_id_sequence SET latest_created_at = (SELECT max(created_at) FROM messages);`,
   DEACTIVATED_QUIET_AGENTS_MIGRATION,
   SEARCH_MIGRATION,
+  "ALTER TABLE identities ADD COLUMN brought_in_by TEXT;",
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });
