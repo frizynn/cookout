@@ -1,9 +1,12 @@
 import type { CookoutClient, EventStream } from "../../sdk/index.ts";
 import { adminClient, clientWith, newIdentity } from "./identities.ts";
 import { inPane, inSidebar } from "./regions.ts";
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
+import { expect } from "vitest";
 import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";
+
+const ONE_MORE = 1;
 
 interface OwnedAgent {
   readonly owner: CookoutClient;
@@ -73,9 +76,16 @@ async function inboxOfOwnerWithWatchingAgent({ client = asItIs, owner }: Opening
   };
 }
 
+function rowsShown(row: string): number {
+  return within(inPane().element()).queryAllByText(row).length;
+}
+
 async function alertRaised({ agent, row }: Pick<OwnedAgent, "agent" | "row">): Promise<void> {
+  const before = rowsShown(row);
   await adminClient().revokeAgentSession(agent);
-  await inPane().findByText(row);
+  await waitFor(() => {
+    expect(rowsShown(row)).toBe(before + ONE_MORE);
+  });
 }
 
 function inboxCounts(): readonly (string | null)[] {
