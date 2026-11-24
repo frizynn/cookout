@@ -14,7 +14,6 @@ interface Holding {
 }
 
 interface Kept {
-  readonly channel: ChannelName;
   readonly held: ReadonlySet<MessageId>;
   readonly decided: boolean;
   readonly target: MessageId | null;
@@ -75,23 +74,14 @@ function shownOf(target: MessageId | null, faded: MessageId | null): MessageId |
   return target;
 }
 
-function freshFor(channel: ChannelName): Kept {
-  return { channel, decided: false, held: new Set(), target: null };
-}
-
-function keptFor(before: Kept, channel: ChannelName): Kept {
-  if (before.channel === channel) {
-    return before;
-  }
-  return freshFor(channel);
-}
+const FRESH: Kept = { decided: false, held: new Set(), target: null };
 
 export function useHeldThreads({ channel, state, unread }: Holding): HeldThreads {
   const unreadState = useSyncExternalStore(unread.subscribe, unread.snapshot);
   const news = useMemo(() => newsOf(unreadState, channel), [unreadState, channel]);
-  const [kept, setKept] = useState<Kept>(() => freshFor(channel));
+  const [kept, setKept] = useState<Kept>(FRESH);
   const [faded, setFaded] = useState<MessageId | null>(null);
-  const next = decided({ kept: grown(keptFor(kept, channel), news ?? NO_THREADS), messages: messagesOf(state), news });
+  const next = decided({ kept: grown(kept, news ?? NO_THREADS), messages: messagesOf(state), news });
   if (next !== kept) {
     setKept(next);
   }

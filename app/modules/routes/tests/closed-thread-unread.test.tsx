@@ -1,7 +1,9 @@
 import { expect, it, onTestFinished, vi } from "vitest";
 import { feedOf, idOf, postedIn } from "./feed.ts";
+import { inPane, inSidebar } from "./regions.ts";
 import type { Posted } from "./feed.ts";
-import { inPane } from "./regions.ts";
+import { adminClient } from "./identities.ts";
+import { fireEvent } from "@testing-library/react";
 import { openAt } from "./render.tsx";
 
 const CLOSED = "Closed";
@@ -71,6 +73,19 @@ async function followedAndClosed(channel: string, texts: readonly string[]): Pro
   await posted.poster.closeThread(parent);
   await posted.poster.closeThread(idOf({ posted, text: "Done b." }));
   return posted;
+}
+
+async function closedMentionIn(posted: Posted, channel: string): Promise<void> {
+  await adminClient().createChannel({ name: channel });
+  const { message } = await posted.poster.createMessage({ channel, text: `@${posted.readerName} over here.` });
+  await posted.poster.closeThread(message.id);
+}
+
+async function highlightedSaying(text: Readonly<RegExp>): Promise<void> {
+  const article = await articleSaying(text);
+  await vi.waitFor(() => {
+    expect(article.getAttribute("aria-current")).toBe("true");
+  });
 }
 
 it("a closed thread mentioning you shows outside the fold, labelled Closed, and folds again once read", {
@@ -143,6 +158,21 @@ it("opening a channel with no closed thread unread for you scrolls to nothing", 
   await feedShows(texts, ["<1 closed thread>", mention]);
 
   expect(scrolled()).toStrictEqual([]);
+
+  close();
+});
+
+it("moving to another channel holds and highlights that channel's own closed thread", { timeout: 10_000 }, async () => {
+  expect.hasAssertions();
+
+  const mention = "@web-held-switch-grace done a.";
+  const posted = await postedIn({ channel: "web-held-switch", closed: [mention], texts: ["Open one.", mention] });
+  await closedMentionIn(posted, "web-held-switch-b");
+  const { close } = openChannel(posted);
+  await highlightedSaying(/done a\./u);
+  fireEvent.click(await inSidebar().findByRole("link", { name: /^#web-held-switch-b/u }));
+
+  await expect(highlightedSaying(/over here\./u)).resolves.toBeUndefined();
 
   close();
 });
