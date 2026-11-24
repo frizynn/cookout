@@ -7,6 +7,7 @@ import { inDialog, inPane, inSidebar } from "../regions.ts";
 import type { Scope } from "effect";
 import { TestClock } from "effect/testing";
 import type { TestIdentity } from "../../../testing/server.ts";
+import { cuttable } from "../cuttable.ts";
 import { openAt } from "../render.tsx";
 import { watched } from "../watched.ts";
 
@@ -15,6 +16,7 @@ const EARLIER = "Earlier deactivated agents";
 const FOR_YOU = "For you";
 const SETTLE = "30 millis";
 const HUMAN = { kind: "human" } as const;
+const ZERO = 0;
 
 const settled: Effect.Effect<void> = TestClock.withLive(Effect.sleep(SETTLE));
 
@@ -184,4 +186,57 @@ it.effect("reactivating the agent through the SDK clears the row live", () =>
 
     expect([rowsIn(FOR_YOU), inboxCounts(), rowsIn(EARLIER)]).toStrictEqual([[], [], [expect.stringContaining(ENTRY)]]);
   }).pipe(Effect.scoped, Effect.provide(testCookout())),
+);
+
+const deactivated: Effect.Effect<TestIdentity, never, TestCookout> = Effect.gen(function* deactivateUnwatched() {
+  const cookout = yield* TestCookout;
+  const ada = yield* cookout.createIdentity("ada", HUMAN);
+  yield* cookout.createIdentity("triage-agent", { owner: "ada" });
+  yield* Effect.andThen(quietFor("2159 hours"), quietFor("1 hour"));
+  yield* Effect.repeat(unreadIds(ada.client), { until: (ids) => ids.length > ZERO });
+  return ada;
+});
+
+function readOldest(client: CookoutClient): Effect.Effect<void> {
+  return Effect.gen(function* readFirst() {
+    const [oldest = null] = yield* unreadIds(client);
+    if (oldest !== null) {
+      yield* answer(() => client.markDeactivatedQuietAgentRead(oldest));
+    }
+  });
+}
+
+function refusingMarkRead(client: CookoutClient): CookoutClient {
+  return { ...client, markDeactivatedQuietAgentRead: () => Promise.reject(new Error("refused")) };
+}
+
+it.effect("an entry read in another session while the live link was down leaves For you once it is back", () =>
+  Effect.gen(function* readWhileDown() {
+    const ada = yield* deactivated;
+    const { live, report } = cuttable();
+    openAt({ client: ada.client, hash: "#/inbox", live });
+    yield* answer(() => inPane().findByText(ENTRY));
+    report("down");
+    yield* readOldest(ada.client);
+    report("up");
+    yield* caughtUp;
+
+    expect([rowsIn(FOR_YOU), inboxCounts()]).toStrictEqual([[], []]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a refused Mark read keeps the row in For you", () =>
+  Effect.gen(function* refusedMarkRead() {
+    const ada = yield* deactivated;
+    openAt({ client: refusingMarkRead(ada.client), hash: "#/inbox" });
+    yield* answer(() => inPane().findByText(ENTRY));
+    clickInForYou("Mark read");
+    yield* settled;
+
+    expect([rowsIn(FOR_YOU), inboxCounts(), rowsIn(EARLIER)]).toStrictEqual([
+      [expect.stringContaining(ENTRY)],
+      ["1 for you"],
+      [],
+    ]);
+  }).pipe(Effect.provide(testCookout())),
 );
