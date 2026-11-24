@@ -135,3 +135,24 @@ it.effect.each(storageLayers)("storage contract ($adapter): deleting an agent dr
     expect(listed).toStrictEqual([]);
   }),
 );
+
+const HEADERS = [
+  { name: "anthropic-version", value: "2023-06-01" },
+  { name: "x-routine-key", value: "secret" },
+];
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): a trigger URL keeps its extra headers in order, and replacing it replaces them",
+  ({ layer }) =>
+    Effect.gen(function* headersKept() {
+      const { storage } = yield* openStore(layer);
+      yield* boardOf(storage);
+      yield* storage.setTrigger(TRIAGE, { headers: HEADERS, token: FIRST_TOKEN, url: ROUTINE_URL });
+      const set = yield* storage.listTriggers([TRIAGE]);
+      yield* storage.setTrigger(TRIAGE, { headers: [], token: SECOND_TOKEN, url: ROUTINE_URL });
+      const replaced = yield* storage.findTrigger(TRIAGE);
+
+      expect(set).toStrictEqual([{ agent: TRIAGE, headers: HEADERS, token: FIRST_TOKEN, url: ROUTINE_URL }]);
+      expect(replaced).toStrictEqual({ agent: TRIAGE, token: SECOND_TOKEN, url: ROUTINE_URL });
+    }),
+);
