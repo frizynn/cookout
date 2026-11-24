@@ -1,12 +1,25 @@
 import { Array as Arr, Effect, Predicate, Schema } from "effect";
+import type { DialectForms, SqlDatabase } from "./adapters/sql-database.ts";
 import type { SearchCursor, SearchPageRequest, SearchQuery, SearchSection, StoredSearchPage } from "./search.ts";
 import type { MessageReader } from "./inbox-sqlite.ts";
 import type { SearchResult } from "../../../search/index.ts";
-import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { unreadable } from "./errors.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
+
+const POSTGRES_SEARCH_MIGRATION: readonly string[] = [
+  `CREATE FUNCTION message_search_words(message_text text) RETURNS tsvector
+     LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+     RETURN array_to_tsvector(ARRAY(
+       SELECT left(word, 500) FROM regexp_split_to_table(
+         lower(regexp_replace(normalize(message_text COLLATE pg_c_utf8, NFD),
+           '[\u0300-\u036F\u1AB0-\u1AFF\u1DC0-\u1DFF\u20D0-\u20FF\uFE20-\uFE2F]', '', 'g')),
+         '[^[:alnum:]]+') AS word
+       WHERE word <> ''
+     ))`,
+  "CREATE INDEX message_search ON messages USING gin (message_search_words(text))",
+];
 
 const SEARCH_MIGRATION = `CREATE VIRTUAL TABLE message_search USING fts5(
      text, content = 'messages', content_rowid = 'id', tokenize = 'unicode61 remove_diacritics 2'
@@ -30,7 +43,8 @@ const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const WORD_SEPARATOR = " ";
 const OPEN = 0;
 const CLOSED = 1;
-const MATCHING_WORDS = "id IN (SELECT rowid FROM message_search WHERE message_search MATCH ?)";
+const LONGEST_WORD = 500;
+const ALL_OF = " & ";
 const AND = " AND ";
 const LIST_SEPARATOR = ", ";
 const PLACEHOLDER = "?";
@@ -39,7 +53,7 @@ const NOTHING = "";
 const ClosedRow = Schema.Struct({ thread_closed: Schema.Literals([OPEN, CLOSED]) });
 
 interface SearchOptions {
-  readonly db: SqliteDatabase;
+  readonly db: SqlDatabase;
   readonly reader: MessageReader;
 }
 
@@ -52,6 +66,34 @@ interface SearchSql {
   readonly columns: string;
   readonly conditions: readonly Condition[];
 }
+
+interface WordMatching {
+  readonly sql: string;
+  readonly match: (words: readonly string[]) => string;
+}
+
+function firstCharacters(word: string): string {
+  return Arr.join(Arr.take(Arr.fromIterable(word), LONGEST_WORD), NOTHING);
+}
+
+const WORD_MATCHING: DialectForms<WordMatching> = {
+  postgres: {
+    match: (words) =>
+      Arr.join(
+        Arr.map(words, (word) => `'${firstCharacters(word)}':*`),
+        ALL_OF,
+      ),
+    sql: "message_search_words(text) @@ ?::tsquery",
+  },
+  sqlite: {
+    match: (words) =>
+      Arr.join(
+        Arr.map(words, (word) => `"${word}"*`),
+        WORD_SEPARATOR,
+      ),
+    sql: "id IN (SELECT rowid FROM message_search WHERE message_search MATCH ?)",
+  },
+};
 
 function searchSql({ columns, conditions }: SearchSql): string {
   const filters = Arr.join(
@@ -66,15 +108,11 @@ function searchSql({ columns, conditions }: SearchSql): string {
   ORDER BY created_at DESC, id DESC LIMIT ?`;
 }
 
-function wordsCondition(words: readonly string[]): readonly Condition[] {
+function wordsCondition(matching: WordMatching, words: readonly string[]): readonly Condition[] {
   if (Arr.isReadonlyArrayEmpty(words)) {
     return [];
   }
-  const match = Arr.join(
-    Arr.map(words, (word) => `"${word}"*`),
-    WORD_SEPARATOR,
-  );
-  return [{ params: [match], sql: MATCHING_WORDS }];
+  return [{ params: [matching.match(words)], sql: matching.sql }];
 }
 
 interface OneOf {
@@ -100,9 +138,9 @@ function boundCondition(sql: string, bound: string | undefined): readonly Condit
   return [{ params: [bound], sql }];
 }
 
-function conditionsOf(query: SearchQuery): readonly Condition[] {
+function conditionsOf(db: SqlDatabase, query: SearchQuery): readonly Condition[] {
   return [
-    ...wordsCondition(query.words),
+    ...wordsCondition(WORD_MATCHING[db.dialect], query.words),
     ...oneOfCondition({ column: "author_name", values: query.authors }),
     ...oneOfCondition({ column: "channel", values: query.channels }),
     ...boundCondition("created_at < ?", query.createdBefore),
@@ -134,7 +172,7 @@ interface Searching extends SearchOptions {
 }
 
 function searchPage({ db, page, query, reader }: Searching): Fails<StoredSearchPage> {
-  const conditions = conditionsOf(query);
+  const conditions = conditionsOf(db, query);
   const params = Arr.flatMap(conditions, (condition) => condition.params);
   const sql = searchSql({ columns: reader.columns, conditions });
   return db.all(sql, ...params, ...startOf(page.after), page.limit + ONE_MORE).pipe(
@@ -146,8 +184,8 @@ function searchPage({ db, page, query, reader }: Searching): Fails<StoredSearchP
   );
 }
 
-function sqliteSearch({ db, reader }: SearchOptions): SearchSection {
+function sqlSearch({ db, reader }: SearchOptions): SearchSection {
   return { searchMessages: (query, page) => searchPage({ db, page, query, reader }) };
 }
 
-export { SEARCH_MIGRATION, sqliteSearch };
+export { POSTGRES_SEARCH_MIGRATION, SEARCH_MIGRATION, sqlSearch };

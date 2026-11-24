@@ -4,6 +4,7 @@ import { postgresContractFiles } from "./app/modules/testing/lib/server/postgres
 const postgresFiles = [
   ...postgresContractFiles.map((name) => `app/modules/storage/tests/server/${name}.contract.test.ts`),
   "app/modules/storage/tests/server/postgres.test.ts",
+  "app/modules/storage/tests/server/postgres-query-plans.test.ts",
 ];
 
 export default defineConfig({
