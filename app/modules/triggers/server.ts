@@ -11,7 +11,16 @@
  * as setting or clearing the URL does. On start, presence learns which active agents have a trigger URL; a
  * Deactivated agent has none for presence until it is reactivated.
  */
-import { TriggerResponseSchema } from "./lib/server/wire.ts";
+import { TriggerEventSchema, TriggerResponseSchema } from "./lib/server/wire.ts";
+
+/** The Schema of the `trigger` event, which the event stream sends. */
+export { TriggerEventSchema } from "./lib/server/wire.ts";
+
+/**
+ * Each agent's trigger URL, as its owner reads it, the moment a call to it settles (mattpocock/cookout#414), with the
+ * agent, for the event stream to send to its owner and to the agent that brought it in.
+ */
+export { type TriggerChange, TriggerChanges, triggerChangesLayer } from "./lib/server/changes.ts";
 
 /** Calls the trigger URLs of the agents each stored message mentions, for as long as the server runs. */
 export { mentionTriggersLayer } from "./lib/server/layer.ts";
@@ -31,5 +40,5 @@ export { triggerRoutes } from "./lib/server/routes.ts";
  */
 export { type TriggerCall, TriggerCaller, type TriggerCallerService, triggerCallerLive } from "./lib/server/caller.ts";
 
-/** The response Schemas of the trigger URL routes, for the SDK's generated validators. */
-export const triggerResponseSchemas = { TriggerResponse: TriggerResponseSchema };
+/** The response Schemas of the trigger URL routes, and of the `trigger` event, for the SDK's generated validators. */
+export const triggerResponseSchemas = { TriggerEvent: TriggerEventSchema, TriggerResponse: TriggerResponseSchema };

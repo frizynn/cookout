@@ -23,6 +23,7 @@ import type { LiveConnectionId, Presence, presenceName } from "../presence/index
 import type { Message, MessageId, ReactionsResponse, ReadReceipt, TopLevelMessage } from "../messages/index.ts";
 import type { Channel } from "../channels/index.ts";
 import type { RegisteredCommand } from "../commands/index.ts";
+import type { Trigger } from "../triggers/index.ts";
 
 export type {
   LiveConnectionDetail,
@@ -227,6 +228,18 @@ export interface OfflineAlertEvent {
   readonly alert: OfflineAlert;
 }
 
+/**
+ * An agent's trigger URL as `GET /v1/identities/:name/trigger` answers it, sent the moment a call to it settles, with
+ * how that call went in `lastResult` (mattpocock/cookout#414). Sent on every stream of the agent's owner and of the
+ * agent that brought it in, the identities that may read it, so an open trigger form shows each call. It has no SSE
+ * `id`.
+ */
+export interface TriggerEvent {
+  readonly type: "trigger";
+  readonly identity: IdentityName;
+  readonly trigger: Trigger;
+}
+
 /** Any event the stream sends. */
 export type CookoutEvent =
   | InboxItemEvent
@@ -248,7 +261,8 @@ export type CookoutEvent =
   | AgentSessionEvent
   | SubscriptionEvent
   | PresenceEvent
-  | OfflineAlertEvent;
+  | OfflineAlertEvent
+  | TriggerEvent;
 
 /**
  * `GET /v1/events`: the caller's Server-Sent Events stream, one per connection. With `allChannelsQuery` as its query

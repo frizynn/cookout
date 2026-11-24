@@ -11,23 +11,15 @@ import {
   Struct,
 } from "effect";
 import type { Message, MessageId } from "../../../messages/index.ts";
-import type { PubSub, Scope } from "effect";
+import type { Services, Watching } from "./watching.ts";
 import type { Storage, StorageUnavailable, StoredTrigger } from "../../../storage/server.ts";
 import type { TriggerFailure, TriggerResult } from "../../index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
-import type { OfflineAlerts } from "../../../inbox/server.ts";
-import type { PresenceRegistry } from "../../../presence/server.ts";
-import type { TriggerCallerService } from "./caller.ts";
+import type { Scope } from "effect";
 import { hrefOf } from "../../../paths/index.ts";
 import { isOkStatus } from "../../index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
-
-interface Services {
-  readonly storage: Storage["Service"];
-  readonly presence: PresenceRegistry["Service"];
-  readonly alerts: OfflineAlerts["Service"];
-  readonly caller: TriggerCallerService;
-}
+import { shownTrigger } from "./wire.ts";
 
 interface Mentioned {
   readonly message: Message;
@@ -36,12 +28,6 @@ interface Mentioned {
 
 interface Settling extends Mentioned {
   readonly result: TriggerResult;
-}
-
-interface Watching {
-  readonly services: Services;
-  readonly boardUrl: Effect.Effect<string>;
-  readonly posted: Effect.Effect<PubSub.Subscription<Message>, never, Scope.Scope>;
 }
 
 const TIMEOUT_SECONDS = 10;
@@ -89,7 +75,7 @@ function resultOf(at: TriggerResult["at"], status: number): TriggerResult {
 }
 
 function callMade(
-  caller: TriggerCallerService,
+  caller: Services["caller"],
   boardUrl: Effect.Effect<string>,
   { message, trigger }: Mentioned,
 ): Effect.Effect<TriggerResult> {
@@ -143,6 +129,15 @@ function alerted(services: Services, settling: Settling, stored: StoredTrigger):
   return Effect.void;
 }
 
+function announced(services: Services, stored: StoredTrigger): Effect.Effect<void, StorageUnavailable> {
+  return Effect.flatMap(services.storage.findIdentityByName(stored.agent), (agent) =>
+    Option.match(Option.fromUndefinedOr(agent), {
+      onNone: () => Effect.void,
+      onSome: (found) => services.changes.publish({ agent: found, trigger: shownTrigger(stored) }),
+    }),
+  );
+}
+
 function settled(services: Services, settling: Settling): Effect.Effect<void, StorageUnavailable> {
   return Effect.gen(function* settle() {
     const { agent } = settling.trigger;
@@ -154,6 +149,7 @@ function settled(services: Services, settling: Settling): Effect.Effect<void, St
     yield* services.storage.recordTriggerResult(agent, settling.result);
     yield* services.presence.setReach(agent, Option.some({ lastResult: settling.result }));
     yield* alerted(services, settling, stored);
+    yield* announced(services, { ...stored, lastResult: settling.result });
   });
 }
 
@@ -177,4 +173,4 @@ function watchMentions({ boardUrl, posted, services }: Watching): Effect.Effect<
   });
 }
 
-export { type Services, type Watching, watchMentions };
+export { watchMentions };
