@@ -93,16 +93,6 @@ function stopIn(feed: string): number {
   return items.indexOf(current);
 }
 
-function itemOf(feed: string, target: EventTarget | null): HTMLElement | null {
-  if (!(target instanceof Element)) {
-    return null;
-  }
-  if (target.closest(feedOf(feed)) === null) {
-    return null;
-  }
-  return target.closest<HTMLElement>(ITEM);
-}
-
 function focusIf(focused: boolean, item: Readonly<Pick<HTMLElement, "focus">>): void {
   if (focused && lostFocus()) {
     item.focus();
@@ -136,21 +126,19 @@ function rovingOf(shown: Feed): Roving {
   return {
     blurred: (event) => {
       const next: unknown = Reflect.get(event, "relatedTarget");
-      if (next instanceof Node && itemOf(feed, next) === null) {
+      if (next instanceof Element && next.closest(feedOf(feed)) === null) {
         focused = false;
       }
     },
-    focused: ({ target }) => {
-      const item = itemOf(feed, target);
-      if (item === null) {
-        return;
-      }
+    focused: () => {
       for (const was of globalThis.document.querySelectorAll(`${feedOf(feed)} [${CURRENT}]`)) {
         was.removeAttribute(CURRENT);
       }
-      item.setAttribute(CURRENT, "");
-      held = true;
-      focused = true;
+      for (const item of globalThis.document.querySelectorAll(`${feedOf(feed)} ${ITEM}:focus-within`)) {
+        item.setAttribute(CURRENT, "");
+        held = true;
+        focused = true;
+      }
       place();
     },
     place,

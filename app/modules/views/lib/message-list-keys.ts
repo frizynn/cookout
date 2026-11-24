@@ -6,6 +6,7 @@ const FOLD = "article[data-closed-fold]";
 const UNKNOWN_SIZE = "-1";
 const FIRST = 0;
 const STEP = 1;
+const NOT_FOUND = -1;
 
 type Move = "first" | "last" | "next" | "previous";
 
@@ -15,17 +16,19 @@ interface Place {
   readonly at: number;
 }
 
-function placeOf(target: EventTarget | null): Place | null {
-  if (!(target instanceof Element)) {
-    return null;
-  }
-  const feed = target.closest<HTMLElement>(FEED);
-  const item = target.closest<HTMLElement>(ITEM);
-  if (feed === null || item === null || !feed.contains(item)) {
+function placeOf(): Place | null {
+  const feed = globalThis.document.querySelector<HTMLElement>(`${FEED}:focus-within`);
+  if (feed === null) {
     return null;
   }
   const items = [...feed.querySelectorAll<HTMLElement>(ITEM)];
-  return { at: items.indexOf(item), feed, items };
+  let at = NOT_FOUND;
+  for (const [index, item] of items.entries()) {
+    if (item.matches(":focus-within")) {
+      at = index;
+    }
+  }
+  return { at, feed, items };
 }
 
 function indexAfter(move: Move, at: number, count: number): number {
@@ -41,8 +44,8 @@ function indexAfter(move: Move, at: number, count: number): number {
   return at - STEP;
 }
 
-function olderButtonOf(target: EventTarget | null): HTMLButtonElement | null {
-  const place = placeOf(target);
+function olderButtonOf(): HTMLButtonElement | null {
+  const place = placeOf();
   if (
     place === null ||
     place.feed.id === "" ||
@@ -53,22 +56,22 @@ function olderButtonOf(target: EventTarget | null): HTMLButtonElement | null {
   return globalThis.document.querySelector<HTMLButtonElement>(`button[aria-controls="${place.feed.id}"]:enabled`);
 }
 
-function loadOlder(move: Move, target: EventTarget | null): void {
-  const older = olderButtonOf(target);
+function loadOlder(move: Move): void {
+  const older = olderButtonOf();
   if (move === "previous" && older !== null) {
     older.click();
   }
 }
 
 function moving(move: Move): Act {
-  return ({ target }) => {
-    const place = placeOf(target);
+  return () => {
+    const place = placeOf();
     if (place === null) {
       return false;
     }
     const item = place.items[indexAfter(move, place.at, place.items.length)] ?? null;
     if (item === null) {
-      loadOlder(move, target);
+      loadOlder(move);
     } else {
       item.focus();
     }
