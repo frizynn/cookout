@@ -150,9 +150,8 @@ function red(options: CiGateOptions, watched: Watched): Step {
     options,
     failed.map((failure) => failure.job),
   );
-  return stop(
-    `${options.subject}'s latest Check run is red: ${named.join(", ")}.\n${checkRun.url}${details}${inherited}`,
-  );
+  const reason = `${options.subject}'s latest Check run is red: ${named.join(", ")}.\n${checkRun.url}${details}${inherited}`;
+  return { ...stop(reason), jobs: named.map((name) => name.replace(/ \([^)]*\)$/u, "")) };
 }
 
 function wait(options: CiGateOptions, checkRun: CheckRun, waited: number): Step {

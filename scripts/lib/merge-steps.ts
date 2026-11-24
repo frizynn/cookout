@@ -4,6 +4,7 @@ type Command = readonly string[];
 
 interface Stopped {
   readonly files: readonly string[];
+  readonly jobs: readonly string[];
   readonly kind: "stopped";
   readonly reason: string;
 }
@@ -22,7 +23,7 @@ const DONE: Step = { kind: "done" };
 const RERERE = ["-c", "rerere.enabled=true", "-c", "rerere.autoUpdate=true"] as const;
 
 function stop(reason: string, ...files: readonly string[]): Stopped {
-  return { files, kind: "stopped", reason };
+  return { files, jobs: [], kind: "stopped", reason };
 }
 
 function run(cwd: string, ...command: Command): Ran {

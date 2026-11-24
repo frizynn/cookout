@@ -5,9 +5,10 @@ interface Verdict {
 
 const PASSED = "RESULT: PASS";
 const EXIT_SUCCESS = 0;
+const NONE = 0;
 
 function verdictLine(failed: readonly string[]): string {
-  if (failed.length === EXIT_SUCCESS) {
+  if (failed.length === NONE) {
     return PASSED;
   }
   return `RESULT: FAIL (${failed.join(", ")})`;
@@ -15,6 +16,13 @@ function verdictLine(failed: readonly string[]): string {
 
 function mergedLine(sha: string): string {
   return `RESULT: MERGED ${sha}`;
+}
+
+function failedJobsOr({ jobs, step }: { readonly jobs: readonly string[]; readonly step: string }): string {
+  if (jobs.length === NONE) {
+    return step;
+  }
+  return jobs.join(", ");
 }
 
 function verdictOnExit(firstStep: string): Verdict {
@@ -36,4 +44,4 @@ function verdictOnExit(firstStep: string): Verdict {
   };
 }
 
-export { mergedLine, verdictLine, verdictOnExit };
+export { failedJobsOr, mergedLine, verdictLine, verdictOnExit };

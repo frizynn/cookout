@@ -1,3 +1,4 @@
+import { failedJobsOr, verdictOnExit } from "./lib/verdict.ts";
 import { fail } from "./lib/tools.ts";
 import { parseArgs } from "node:util";
 import { spawnSync } from "node:child_process";
@@ -8,6 +9,7 @@ const EXIT_SUCCESS = 0;
 const NONE = 0;
 const SHORT_SHA = 12;
 
+const verdict = verdictOnExit("arguments");
 const { values } = parseArgs({ options: { branch: { type: "string" }, sha: { type: "string" } } });
 
 function head(): string {
@@ -18,6 +20,7 @@ function head(): string {
   return ran.stdout.trim();
 }
 
+verdict.failingAt("git rev-parse HEAD");
 const sha = values.sha ?? head();
 
 function branchFilter(): readonly string[] {
@@ -27,6 +30,7 @@ function branchFilter(): readonly string[] {
   return ["--branch", values.branch];
 }
 
+verdict.failingAt("waiting for the Check run");
 const step = waitForCi({
   args: [...branchFilter(), "--commit", sha],
   base: [],
@@ -37,5 +41,6 @@ const step = waitForCi({
 });
 
 if (step.kind === "stopped") {
+  verdict.failingAt(failedJobsOr({ jobs: step.jobs, step: "waiting for the Check run" }));
   fail(SCRIPT, step.reason);
 }
