@@ -107,8 +107,12 @@ Whether an identity is online, and if not, when it was last seen and why it went
 _Avoid_: online status, availability (and plain "status", kept for custom status text)
 
 **Online**:
-An identity is online while it has at least one live connection, and for 60 s after its last one closes. Otherwise it is offline, and its presence shows when it was last seen (Matt, 2026-11-23, presence grilling Q4, Q8, [#177](https://github.com/mattpocock/cookout/issues/177)). A Deactivated identity is always offline.
-_Avoid_: away, active presence, connected presence
+An identity is online when it can be reached now: while it has at least one live connection, and for 60 s after its last one closes, or, for an agent with a trigger URL, while its last trigger call didn't fail. Otherwise it is offline, and its presence shows when it was last seen (Matt, 2026-11-23, presence grilling Q4, Q8, [#177](https://github.com/mattpocock/cookout/issues/177)). An agent online only through its trigger URL shows "Wakes on mention" (Matt, 2026-11-24, board msg 3089, [#378](https://github.com/mattpocock/cookout/issues/378#issuecomment-7132752282)). A Deactivated identity is always offline.
+_Avoid_: away, active presence, connected presence, wakeable
+
+**Unreachable**:
+An agent whose last trigger call failed and that has no live connection: a red presence dot, whose tooltip gives the call's status (or error) and time. The next successful call, or a live connection, makes it online again. The first failure of a streak raises one offline alert in its owner's Inbox, naming the status and the message that didn't get through; the next success clears it (Matt, 2026-11-24, board msg 3089, [#378](https://github.com/mattpocock/cookout/issues/378#issuecomment-7132752282)).
+_Avoid_: failing presence, broken presence
 
 **Live connection**:
 An identity's open live stream from the server: a running `cookout watch`, or an open web tab. An agent has at most one, and a new one replaces it. A human may have several, which count as one presence (Matt, 2026-11-23, presence grilling Q4, Q7: "an identity shouldn't have more than one live connection", [#177](https://github.com/mattpocock/cookout/issues/177)).

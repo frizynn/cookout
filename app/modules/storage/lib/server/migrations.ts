@@ -1,11 +1,10 @@
+import { ATTACHMENTS_MIGRATION, SEARCH_MIGRATION, TRIGGERS_MIGRATION } from "./feature-migrations.ts";
 import { DEACTIVATED_QUIET_AGENTS_MIGRATION, DEACTIVATION_OFFERS_MIGRATION } from "./deactivation-offers-sqlite.ts";
 import { Effect, FileSystem, Schema } from "effect";
-import { ATTACHMENTS_MIGRATION } from "./attachments.ts";
 import { NUDGES_MIGRATION } from "./nudges-sqlite.ts";
 import { OFFLINE_ALERTS_MIGRATION } from "./offline-alerts.ts";
 import { REACTIONS_MIGRATION } from "./reactions-sqlite.ts";
 import { READ_RECEIPTS_MIGRATION } from "./read-receipts-sqlite.ts";
-import { SEARCH_MIGRATION } from "./search-sqlite.ts";
 import type { Scope } from "effect";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { StorageUnavailable } from "./errors.ts";
@@ -221,6 +220,7 @@ const migrations: readonly string[] = [
    CREATE INDEX scheduled_messages_by_channel ON scheduled_messages (channel, id);
    CREATE INDEX scheduled_messages_by_creator ON scheduled_messages (creator);
    ALTER TABLE messages ADD COLUMN scheduled_message_id INTEGER;`,
+  TRIGGERS_MIGRATION,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

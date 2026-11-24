@@ -41,9 +41,11 @@ import type { ClientConnection } from "./request.ts";
 import type { DescriptionCalls } from "../../identities/client.ts";
 import type { EventCalls } from "./events.ts";
 import type { HealthResponse } from "../../http/index.ts";
-import type { LoginCalls } from "../../logins/index.ts";
+import type { LoginCalls } from "./logins.ts";
+import type { TriggerCalls } from "./triggers.ts";
 import { healthPath } from "../../http/index.ts";
 import { loginCalls } from "./logins.ts";
+import { triggerCalls } from "./triggers.ts";
 
 interface IdentityCalls {
   readonly health: () => Promise<HealthResponse>;
@@ -227,8 +229,8 @@ function ownIdentityCalls(server: ClientConnection): IdentityCalls & IdentityDel
 
 function identityCalls(
   server: ClientConnection,
-): IdentityCalls & IdentityDeletionCalls & IdentityDescriptionCalls & LoginCalls {
-  return { ...loginCalls(server), ...ownIdentityCalls(server), ...descriptionCalls(server) };
+): IdentityCalls & IdentityDeletionCalls & IdentityDescriptionCalls & LoginCalls & TriggerCalls {
+  return { ...loginCalls(server), ...ownIdentityCalls(server), ...descriptionCalls(server), ...triggerCalls(server) };
 }
 
 type ApprovalCalls = LoginCalls & AgentJoinCalls & JoinCodeCalls;
@@ -241,5 +243,6 @@ export type CallGroups = ApprovalCalls &
   OpenThreadCalls &
   SearchCalls &
   ScheduledMessageCalls &
+  TriggerCalls &
   Pick<EventCalls, "presence">;
 export { identityCalls };

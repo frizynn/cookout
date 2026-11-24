@@ -95,6 +95,12 @@ export const routineToken = Config.String("COOKOUT_ROUTINE_TOKEN").pipe(
   Config.map((value) => Redacted.make(value)),
 );
 
+/**
+ * `COOKOUT_ALLOW_LOCAL_TRIGGERS`: when `true`, an agent's trigger URL may also be `http://localhost`, `127.0.0.1` or
+ * `[::1]`, for the dev program and tests (mattpocock/cookout#378). Otherwise only `https` URLs are accepted.
+ */
+export const allowLocalTriggers = Config.Boolean("COOKOUT_ALLOW_LOCAL_TRIGGERS").pipe(Config.withDefault(false));
+
 /** `COOKOUT_DB`: the SQLite file `cookout serve` keeps its data in. */
 export const databasePath = Config.String("COOKOUT_DB").pipe(Config.withDefault("cookout.db"));
 

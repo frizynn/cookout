@@ -13,7 +13,7 @@ import {
 import { Command, Flag } from "effect/cli";
 import { CommandFailed, printLine, refused } from "./output.ts";
 import type { IdentityName, Token } from "../../../identities/index.ts";
-import { SpawnSettings, domainLayers, openRoutes, routes } from "./route-list.ts";
+import { SpawnSettings, domainLayers, openRoutes, routes, triggerCallerLive } from "./route-list.ts";
 import {
   adminName,
   adminNameRule,
@@ -146,6 +146,7 @@ const runServer = (layers: ServeLayers, listen: Omit<Serving, "webFolder">, data
     const services = yield* Layer.build(
       cookoutServer({ ...listen, ...webFolderOf(layers), adminName: name, adminToken: admin }).pipe(
         Layer.provide(stores),
+        Layer.provide(triggerCallerLive),
       ),
     ).pipe(Effect.catchTags({ AdminNameIsAgent: adminNameIsAgent, StorageUnavailable: storageUnavailable }));
     const url = yield* serverUrl.pipe(Effect.provideContext(services));

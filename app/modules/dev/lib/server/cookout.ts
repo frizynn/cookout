@@ -6,6 +6,7 @@ import { diskAssetStore, sqliteStorage } from "../../../storage/server.ts";
 import type { Scope } from "effect";
 import { adjustableClock } from "./adjustable-clock.ts";
 import { cookoutServer } from "../../../cli/server.ts";
+import { triggerCallerLive } from "../../../triggers/server.ts";
 import { viteDevServer } from "./web.ts";
 
 interface DevCookout {
@@ -35,7 +36,7 @@ function devCookoutOn(port: number): Effect.Effect<Omit<DevCookout, "clockUrl">,
   return Effect.gen(function* startDevCookout() {
     const database = yield* databaseInTempFolder();
     const live = yield* Layer.build(
-      Layer.mergeAll(sqliteStorage(database), diskAssetStore(`${database}-assets`), secretsLive),
+      Layer.mergeAll(sqliteStorage(database), diskAssetStore(`${database}-assets`), secretsLive, triggerCallerLive),
     );
     const adminToken = yield* Context.get(live, Secrets).newToken;
     const backing = Layer.succeedContext(live);

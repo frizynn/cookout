@@ -1,6 +1,7 @@
 interface PresenceShown {
   readonly online: boolean;
   readonly warning: boolean;
+  readonly unreachable: boolean;
   readonly label: string;
   readonly spoken: string;
 }

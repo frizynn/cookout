@@ -128,6 +128,8 @@ const SCREENS: readonly Screen[] = [
   { hash: "#/people", name: "people", text: "release-bot" },
   { hash: "#/people/release-bot", name: "profile", text: "Agent · owned by ada" },
   { hash: "#/people/triage-agent", name: "warning", text: "Went offline unexpectedly" },
+  { hash: "#/people/release-bot", name: "wakes-on-mention", text: "Wakes on mention" },
+  { hash: "#/people/rollback", name: "unreachable", text: "Unreachable:" },
   { admin: true, hash: "#/people/release-bot", name: "admin-profile", text: "Transfer to (a human's name)" },
   { admin: true, hash: "#/people/old-deploy-bot", name: "admin-deactivated", text: "Reactivate" },
   { admin: true, click: "Deactivate", hash: "#/people/release-bot", name: "confirm", text: "reactivate it later" },
