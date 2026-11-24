@@ -23,4 +23,4 @@ const isFalse: DialectForms<(column: string) => string> = {
   sqlite: (column) => `${column} = 0`,
 };
 
-export { type DialectForms, isFalse, type SqlDatabase, type SqlValue };
+export { type DialectForms, isFalse, type SqlDatabase, type SqlDialect, type SqlValue };
