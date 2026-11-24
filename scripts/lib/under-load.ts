@@ -92,6 +92,23 @@ function playwrightFailures({ base, report }: Report): readonly FailedTest[] {
   return (list(field(report, "suites")) ?? []).flatMap((suite) => playwrightSuiteFailures(suite, { base, prefix: [] }));
 }
 
+function numberAt(value: unknown, key: string): number {
+  const found = field(value, key);
+  if (typeof found === "number") {
+    return found;
+  }
+  return NONE;
+}
+
+function vitestCount(report: unknown): number {
+  return numberAt(report, "numTotalTests");
+}
+
+function playwrightCount(report: unknown): number {
+  const stats = field(report, "stats");
+  return ["expected", "unexpected", "flaky", "skipped"].reduce((sum, key) => sum + numberAt(stats, key), NONE);
+}
+
 function keyOf(test: FailedTest): string {
   return `${test.file} > ${test.name}`;
 }
@@ -116,4 +133,4 @@ function failureList(tests: readonly FailedTest[]): string {
 }
 
 export type { FailedTest };
-export { failingOnlyUnderLoad, failureList, filesOf, playwrightFailures, vitestFailures };
+export { failingOnlyUnderLoad, failureList, filesOf, playwrightCount, playwrightFailures, vitestCount, vitestFailures };

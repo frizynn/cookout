@@ -1,7 +1,18 @@
 import { expect, it } from "vitest";
-import { failingOnlyUnderLoad, failureList, filesOf, playwrightFailures, vitestFailures } from "../lib/under-load.ts";
+import {
+  failingOnlyUnderLoad,
+  failureList,
+  filesOf,
+  playwrightCount,
+  playwrightFailures,
+  vitestCount,
+  vitestFailures,
+} from "../lib/under-load.ts";
 
 const ROOT = "/repo";
+const VITEST_TESTS = 7;
+const PLAYWRIGHT_TESTS = 9;
+const NONE = 0;
 
 const vitestReport = {
   testResults: [
@@ -86,4 +97,16 @@ it("a test that also failed alone is not a load failure, and one failing in two 
   expect(onlyUnderLoad).toStrictEqual([menu]);
   expect(filesOf([menu, thread, menu])).toStrictEqual(["a.test.tsx", "b.test.tsx"]);
   expect(failureList([thread])).toBe("  a.test.tsx > opens\n    late");
+});
+
+it("a report's test count is every test it ran or skipped, and nothing for a report that isn't one", {
+  timeout: 10_000,
+}, () => {
+  expect.hasAssertions();
+  expect([
+    vitestCount({ numTotalTests: VITEST_TESTS }),
+    playwrightCount({ stats: { expected: 5, flaky: 1, skipped: 2, unexpected: 1 } }),
+    vitestCount(null),
+    playwrightCount({}),
+  ]).toStrictEqual([VITEST_TESTS, PLAYWRIGHT_TESTS, NONE, NONE]);
 });

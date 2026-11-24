@@ -1,6 +1,14 @@
 import { SUITE_LOCK_FILE, holdMachineLock, waitingLine } from "./lib/machine-lock.ts";
 import { availableParallelism, tmpdir } from "node:os";
-import { failingOnlyUnderLoad, failureList, filesOf, playwrightFailures, vitestFailures } from "./lib/under-load.ts";
+import {
+  failingOnlyUnderLoad,
+  failureList,
+  filesOf,
+  playwrightCount,
+  playwrightFailures,
+  vitestCount,
+  vitestFailures,
+} from "./lib/under-load.ts";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import type { FailedTest } from "./lib/under-load.ts";
 import { once } from "node:events";
@@ -48,6 +56,7 @@ function readReport(file: string): unknown {
 interface Outcome {
   readonly failures: readonly FailedTest[];
   readonly stopped: boolean;
+  readonly tests: number;
 }
 
 interface Suite {
@@ -65,22 +74,33 @@ async function webOutcome({ directory, files }: Suite): Promise<Outcome> {
     `--outputFile=${output}`,
     ...files,
   ]);
-  return { failures: vitestFailures({ base: process.cwd(), report: readReport(output) }), stopped: ran.stopped };
+  const report = readReport(output);
+  return {
+    failures: vitestFailures({ base: process.cwd(), report }),
+    stopped: ran.stopped,
+    tests: vitestCount(report),
+  };
 }
 
 async function browserOutcome({ files }: Suite): Promise<Outcome> {
   rmSync(BROWSER_REPORT, { force: true });
   const ran = await run("node_modules/.bin/playwright", ["test", ...files]);
+  const report = readReport(BROWSER_REPORT);
   return {
-    failures: playwrightFailures({ base: BROWSER_DIR, report: readReport(BROWSER_REPORT) }),
+    failures: playwrightFailures({ base: BROWSER_DIR, report }),
     stopped: ran.stopped,
+    tests: playwrightCount(report),
   };
 }
 
-const nothingRun: Outcome = { failures: [], stopped: false };
+const nothingRun: Outcome = { failures: [], stopped: false, tests: NONE };
 
 function both(web: Outcome, browser: Outcome): Outcome {
-  return { failures: [...web.failures, ...browser.failures], stopped: web.stopped || browser.stopped };
+  return {
+    failures: [...web.failures, ...browser.failures],
+    stopped: web.stopped || browser.stopped,
+    tests: web.tests + browser.tests,
+  };
 }
 
 async function wholeSuite(directory: string): Promise<Outcome> {
@@ -115,7 +135,16 @@ async function underLoad(directory: string): Promise<Outcome> {
   }
 }
 
-function verdict(onlyUnderLoad: readonly FailedTest[], stopped: boolean): string {
+interface Verdict {
+  readonly loaded: Outcome;
+  readonly onlyUnderLoad: readonly FailedTest[];
+  readonly stopped: boolean;
+}
+
+function verdict({ loaded, onlyUnderLoad, stopped }: Verdict): string {
+  if (loaded.tests === NONE) {
+    return "RESULT: FAIL (no test ran under load: read the errors above)";
+  }
   if (stopped) {
     return `RESULT: FAIL (a run was stopped at the ${values.minutes}-minute limit)`;
   }
@@ -135,15 +164,15 @@ async function main(directory: string): Promise<boolean> {
   const loaded = await underLoad(directory);
   const files = filesOf(loaded.failures);
   console.error(
-    `${SCRIPT}: ${String(loaded.failures.length)} failed under load; rerunning their ${String(files.length)} files alone`,
+    `${SCRIPT}: ${String(loaded.failures.length)} of ${String(loaded.tests)} tests failed under load; rerunning their ${String(files.length)} files alone`,
   );
   const alone = await fileOutcomes({ directory, files });
   const onlyUnderLoad = failingOnlyUnderLoad({ alone: alone.failures, underLoad: loaded.failures });
   printList("Failed alone too, so not load", alone.failures);
   printList("Failed only under load", onlyUnderLoad);
   const stopped = loaded.stopped || alone.stopped;
-  console.log(verdict(onlyUnderLoad, stopped));
-  return stopped || loaded.failures.length > NONE;
+  console.log(verdict({ loaded, onlyUnderLoad, stopped }));
+  return stopped || loaded.failures.length > NONE || loaded.tests === NONE;
 }
 
 const release = await holdMachineLock({
