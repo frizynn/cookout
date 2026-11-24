@@ -1,5 +1,7 @@
 import { BackLink } from "./back-link.tsx";
 import { CONVERSATION_KEYS } from "./conversation-keys.ts";
+import { IdentityCardComposer } from "./identity-card-parts.ts";
+import type { IdentityCardComposerParts } from "./identity-card-parts.ts";
 import type { PanelAction } from "./panel-action-button.tsx";
 import { PanelActionButton } from "./panel-action-button.tsx";
 import type { ReactNode } from "react";
@@ -15,6 +17,7 @@ interface ConversationPanelParts {
   readonly openHref: string | null;
   readonly openLabel: string;
   readonly actions?: readonly PanelAction[];
+  readonly message?: IdentityCardComposerParts;
   readonly children: ReactNode;
 }
 
@@ -35,7 +38,7 @@ export function ConversationPanel(parts: ConversationPanelParts): ReactNode {
           <ShortcutLink href={parts.openHref} label={parts.openLabel} shortcut={CONVERSATION_KEYS.open} />
         )}
       </header>
-      {parts.children}
+      <IdentityCardComposer value={parts.message ?? null}>{parts.children}</IdentityCardComposer>
     </aside>
   );
 }

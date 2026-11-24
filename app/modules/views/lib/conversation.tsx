@@ -37,6 +37,7 @@ export function ConversationView(props: ConversationProps): ReactNode {
       backLabel={TEXT.back}
       detail={`#${channel}`}
       label={TEXT.conversation}
+      message={draft.replyTo}
       openHref={hrefOf({ channel, name: "thread", thread })}
       openLabel={TEXT.open}
     >
