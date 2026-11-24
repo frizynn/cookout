@@ -17,6 +17,7 @@ export function ConversationMissing(): ReactNode {
       detail=""
       edge={null}
       label={TEXT.conversation}
+      message={null}
       openHref={null}
       openLabel={TEXT.open}
     >
