@@ -1,11 +1,12 @@
+import { Array as Arr, Effect, Predicate } from "effect";
 import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
-import { Effect } from "effect";
 import type { MessageId } from "../../index.ts";
 
 const BAD_REQUEST = 400;
 const HUMAN = { kind: "human" } as const;
+const ONE = 1;
 
 interface Board {
   readonly ann: TestIdentity;
@@ -72,6 +73,24 @@ it.effect("an agent's reply with seen at the newest reply, or with only its own 
 
     expect(seen).not.toHaveProperty("warning");
     expect(own).not.toHaveProperty("warning");
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("of two agents replying to the same message at the same moment, exactly one is warned", () =>
+  Effect.gen(function* raceWarnsOne() {
+    const cookout = yield* TestCookout;
+    const { parent } = yield* board(cookout);
+    const pip = yield* cookout.createIdentity("pip");
+    const kit = yield* cookout.createIdentity("kit");
+    const posted = yield* Effect.all(
+      [
+        answer(() => pip.client.createMessage({ channel: "grill", replyTo: parent, text: "mine" })),
+        answer(() => kit.client.createMessage({ channel: "grill", replyTo: parent, text: "no, mine" })),
+      ],
+      { concurrency: "unbounded" },
+    );
+
+    expect(Arr.filter(posted, (answered) => Predicate.hasProperty(answered, "warning"))).toHaveLength(ONE);
   }).pipe(Effect.provide(testCookout())),
 );
 
