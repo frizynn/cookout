@@ -1,7 +1,9 @@
 import { BackLink } from "./back-link.tsx";
+import { CONVERSATION_KEYS } from "./conversation-keys.ts";
 import type { PanelAction } from "./panel-action-button.tsx";
 import { PanelActionButton } from "./panel-action-button.tsx";
 import type { ReactNode } from "react";
+import { ShortcutLink } from "./shortcut-link.tsx";
 
 const NO_ACTIONS: readonly PanelAction[] = [];
 
@@ -30,12 +32,7 @@ export function ConversationPanel(parts: ConversationPanelParts): ReactNode {
           <PanelActionButton action={action} key={action.label} />
         ))}
         {parts.openHref !== null && (
-          <a
-            className="rounded-md border px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-            href={parts.openHref}
-          >
-            {parts.openLabel}
-          </a>
+          <ShortcutLink href={parts.openHref} label={parts.openLabel} shortcut={CONVERSATION_KEYS.open} />
         )}
       </header>
       {parts.children}

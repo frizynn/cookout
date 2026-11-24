@@ -115,12 +115,8 @@ async function interact(page: Page, shot: Shot): Promise<void> {
     const scope = page.locator(shot.screen.clickIn ?? "body");
     await scope.getByRole("button", { exact: true, name: shot.screen.click }).click({ timeout: RENDER_MS });
   }
-  if (typeof shot.screen.focusTimeOf === "string") {
-    await page
-      .getByRole("article")
-      .filter({ hasText: shot.screen.focusTimeOf })
-      .locator("time")
-      .focus({ timeout: RENDER_MS });
+  if (typeof shot.screen.focus === "string") {
+    await page.locator(shot.screen.focus).first().focus({ timeout: RENDER_MS });
   }
 }
 

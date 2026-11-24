@@ -7,7 +7,7 @@ interface Screen {
   readonly hash: string;
   readonly click?: string;
   readonly clickIn?: string;
-  readonly focusTimeOf?: string;
+  readonly focus?: string;
   readonly text: string;
   readonly narrow?: boolean;
   readonly admin?: boolean;
@@ -52,7 +52,12 @@ const SCREENS: readonly Screen[] = [
   { daysLater: 3, hash: "#/inbox", name: "inbox-nudge", text: NUDGE_TEXT },
   { admin: true, daysLater: 30, hash: "#/inbox", name: "inbox-offer", text: OFFER_TEXT },
   { click: "Show earlier", hash: "#/inbox", history: "loading", name: "inbox-loading", text: "Loading…" },
-  { hash: "#/inbox/general/1", name: "inbox-thread", text: "Thanks, both of you." },
+  {
+    focus: 'a[data-feed-row][aria-current="page"]',
+    hash: "#/inbox/general/1",
+    name: "inbox-thread",
+    text: "Thanks, both of you.",
+  },
   { hash: "#/inbox/general/1", name: "inbox-narrow", narrow: true, text: "earlier replies" },
   { hash: "#/inbox/deploys", name: "inbox-channel", text: "Deployed 1.4.0." },
   {
@@ -65,7 +70,7 @@ const SCREENS: readonly Screen[] = [
   { hash: "#/channels/general", name: "channel", text: "Lunch at 12:30." },
   { hash: "#/channels/general/threads/1", name: "thread", text: "Thanks, both of you." },
   {
-    focusTimeOf: "@triage-agent can you post the failing run?",
+    focus: 'article:has-text("@triage-agent can you post the failing run?") time',
     hash: "#/channels/general/threads/1",
     name: "receipt",
     text: "Not seen yet:",

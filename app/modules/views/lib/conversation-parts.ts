@@ -1,5 +1,6 @@
 import type { Board, ThreadMessagesState } from "../../board/index.ts";
 import type { Reader, Reading, Unread } from "../../unread/index.ts";
+import { CONVERSATION_KEYS } from "../../design-system/index.tsx";
 import type { Composer } from "../../composer/index.ts";
 import type { PanelAction } from "../../design-system/index.tsx";
 import type { ThreadSelection } from "../../paths/index.ts";
@@ -20,8 +21,8 @@ interface ConversationProps {
 
 function actionsOf(reader: Reader): readonly PanelAction[] {
   return [
-    { label: TEXT.markRead, onAction: reader.markRead },
-    { label: TEXT.markUnread, onAction: reader.markUnread },
+    { label: TEXT.markRead, onAction: reader.markRead, shortcut: CONVERSATION_KEYS.read },
+    { label: TEXT.markUnread, onAction: reader.markUnread, shortcut: CONVERSATION_KEYS.unread },
   ];
 }
 
