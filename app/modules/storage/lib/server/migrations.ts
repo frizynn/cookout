@@ -8,6 +8,7 @@ import { SEARCH_MIGRATION } from "./search-sqlite.ts";
 import type { Scope } from "effect";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { StorageUnavailable } from "./errors.ts";
+import { TRIGGERS_MIGRATION } from "./triggers.ts";
 import { openSqlite } from "./adapters/sqlite.ts";
 
 const migrations: readonly string[] = [
@@ -197,6 +198,7 @@ const migrations: readonly string[] = [
   DEACTIVATED_QUIET_AGENTS_MIGRATION,
   SEARCH_MIGRATION,
   "ALTER TABLE identities ADD COLUMN brought_in_by TEXT;",
+  TRIGGERS_MIGRATION,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

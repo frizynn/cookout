@@ -1,4 +1,5 @@
 import { Array as Arr, Effect, Option, Schema } from "effect";
+import { POSTGRES_TRIGGERS_MIGRATION } from "./triggers.ts";
 import type { PostgresDatabase } from "./adapters/postgres.ts";
 import { StorageUnavailable } from "./errors.ts";
 
@@ -229,6 +230,7 @@ const postgresMigrations: readonly (readonly string[])[] = [
     `ALTER TABLE identities
        ADD COLUMN brought_in_by text COLLATE "C" REFERENCES identities (name) ON DELETE SET NULL`,
   ],
+  POSTGRES_TRIGGERS_MIGRATION,
 ];
 
 const NO_VERSION = 0;

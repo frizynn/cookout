@@ -118,3 +118,6 @@ export const presenceRoutes: readonly Route<PresenceRegistry | PresenceRouteNeed
 
 /** The Schemas of one identity's presence and of `GET /v1/presence`'s answer, for the live stream and the SDK's validators. */
 export { PresenceResponseSchema, PresenceSchema } from "./lib/server/wire.ts";
+
+/** The Schema of how a call to a trigger URL went, which an Unreachable presence and a trigger URL both carry. */
+export { TriggerResultSchema } from "./lib/server/wire.ts";

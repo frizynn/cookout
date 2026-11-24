@@ -89,4 +89,5 @@ export {
 } from "./lib/server/cookout.ts";
 export type { LastEnd } from "./lib/server/booted.ts";
 export { fixtureTime, isoTime, testStartTime } from "./lib/server/time.ts";
+export { triggerToken } from "./lib/server/triggers.ts";
 export { type BuiltWeb, builtWebFolder } from "./lib/server/web.ts";
