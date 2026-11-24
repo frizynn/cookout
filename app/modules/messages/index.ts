@@ -135,6 +135,11 @@ export interface Reply extends MessageFields {
 /** A message, tagged by `kind`. */
 export type Message = TopLevelMessage | Reply;
 
+/** The `details` of the 409 `thread_moved` refusal of an agent's reply: the thread's newer replies by others, oldest first. */
+export interface ThreadMovedDetails {
+  readonly replies: readonly Reply[];
+}
+
 /** The answer to posting a message. */
 export interface MessageResponse {
   readonly message: Message;
