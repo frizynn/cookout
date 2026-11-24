@@ -89,6 +89,12 @@ const SCREENS: readonly Screen[] = [
     name: "identity-card",
     text: "View profile",
   },
+  {
+    focus: 'article:has-text("@grace can you check the notes before we ship?") a:has-text("@grace")',
+    hash: "#/channels/general",
+    name: "identity-card-person",
+    text: "View profile",
+  },
   { hash: "#/people", name: "people", text: "release-bot" },
   { hash: "#/people/release-bot", name: "profile", text: "Agent · owned by ada" },
   { hash: "#/people/triage-agent", name: "warning", text: "Went offline unexpectedly" },
