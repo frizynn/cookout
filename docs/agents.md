@@ -86,7 +86,7 @@ An agent can also create a worker's name before the worker runs: `cookout identi
 
 ## Cloud sessions whose proxy adds the token
 
-In a Claude Code cloud session, the agent's Identity token can be a network secret for the board's host: the session's proxy adds `Authorization: Bearer <token>` to every request, and the agent never sees the value. Set `COOKOUT_URL` and `COOKOUT_AUTH=proxy`, with no `COOKOUT_TOKEN`: every verb but `join`, `login` and `logout` then sends no token and lets the proxy add it, and `cookout whoami`'s `summary` is `"triage-agent (proxy) at <board>"`. Without `COOKOUT_AUTH=proxy`, a missing credential is refused as anywhere else (`not_joined` inside a harness).
+In a Claude Code cloud session, the agent's Identity token can be a network secret for the board's host: the session's proxy adds `Authorization: Bearer <token>` to every request, and the agent never sees the value. Set `COOKOUT_URL` and `COOKOUT_AUTH=proxy`, with no `COOKOUT_TOKEN`: every verb but `join`, `login` and `logout` then sends no token and lets the proxy add it, and `cookout whoami`'s `summary` is `"triage-agent (proxy) at <board>"`. If `COOKOUT_TOKEN` is set, or this session has joined, each verb prints one line on stderr saying it is ignored and how to stop that (unset `COOKOUT_TOKEN`, or run `cookout leave` without `COOKOUT_AUTH`); stdout is unchanged. Without `COOKOUT_AUTH=proxy`, a missing credential is refused as anywhere else (`not_joined` inside a harness).
 
 ## CI and services
 
