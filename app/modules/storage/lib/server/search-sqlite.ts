@@ -1,7 +1,7 @@
 import { Array as Arr, Effect, Predicate, Schema } from "effect";
-import type { ParsedQuery, SearchResult } from "../../../search/index.ts";
-import type { SearchCursor, SearchPageRequest, SearchSection, StoredSearchPage } from "./search.ts";
+import type { SearchCursor, SearchPageRequest, SearchQuery, SearchSection, StoredSearchPage } from "./search.ts";
 import type { MessageReader } from "./inbox-sqlite.ts";
+import type { SearchResult } from "../../../search/index.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { unreadable } from "./errors.ts";
@@ -30,8 +30,11 @@ const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const WORD_SEPARATOR = " ";
 const OPEN = 0;
 const CLOSED = 1;
-const EVERY_MESSAGE = "";
-const MATCHING_WORDS = "id IN (SELECT rowid FROM message_search WHERE message_search MATCH ?) AND";
+const MATCHING_WORDS = "id IN (SELECT rowid FROM message_search WHERE message_search MATCH ?)";
+const AND = " AND ";
+const LIST_SEPARATOR = ", ";
+const PLACEHOLDER = "?";
+const NOTHING = "";
 
 const ClosedRow = Schema.Struct({ thread_closed: Schema.Literals([OPEN, CLOSED]) });
 
@@ -40,36 +43,70 @@ interface SearchOptions {
   readonly reader: MessageReader;
 }
 
-interface SearchSql {
-  readonly columns: string;
-  readonly matching: string;
+interface Condition {
+  readonly sql: string;
+  readonly params: readonly string[];
 }
 
-function searchSql({ columns, matching }: SearchSql): string {
+interface SearchSql {
+  readonly columns: string;
+  readonly conditions: readonly Condition[];
+}
+
+function searchSql({ columns, conditions }: SearchSql): string {
+  const filters = Arr.join(
+    Arr.map(conditions, ({ sql }) => `${sql}${AND}`),
+    NOTHING,
+  );
   return `SELECT ${columns},
     (SELECT thread.closed_at IS NOT NULL FROM messages AS thread
       WHERE thread.id = coalesce(messages.reply_to, messages.id)) AS thread_closed
   FROM messages
-  WHERE ${matching} (created_at, id) < (?, ?)
+  WHERE ${filters}(created_at, id) < (?, ?)
   ORDER BY created_at DESC, id DESC LIMIT ?`;
 }
 
-function sqlFor(reader: MessageReader, { words }: ParsedQuery): string {
-  if (Arr.isReadonlyArrayEmpty(words)) {
-    return searchSql({ columns: reader.columns, matching: EVERY_MESSAGE });
-  }
-  return searchSql({ columns: reader.columns, matching: MATCHING_WORDS });
-}
-
-function matchOf({ words }: ParsedQuery): readonly string[] {
+function wordsCondition(words: readonly string[]): readonly Condition[] {
   if (Arr.isReadonlyArrayEmpty(words)) {
     return [];
   }
+  const match = Arr.join(
+    Arr.map(words, (word) => `"${word}"*`),
+    WORD_SEPARATOR,
+  );
+  return [{ params: [match], sql: MATCHING_WORDS }];
+}
+
+interface OneOf {
+  readonly column: string;
+  readonly values: readonly string[];
+}
+
+function oneOfCondition({ column, values }: OneOf): readonly Condition[] {
+  if (Arr.isReadonlyArrayEmpty(values)) {
+    return [];
+  }
+  const placeholders = Arr.join(
+    Arr.map(values, () => PLACEHOLDER),
+    LIST_SEPARATOR,
+  );
+  return [{ params: values, sql: `${column} IN (${placeholders})` }];
+}
+
+function boundCondition(sql: string, bound: string | undefined): readonly Condition[] {
+  if (Predicate.isUndefined(bound)) {
+    return [];
+  }
+  return [{ params: [bound], sql }];
+}
+
+function conditionsOf(query: SearchQuery): readonly Condition[] {
   return [
-    Arr.join(
-      Arr.map(words, (word) => `"${word}"*`),
-      WORD_SEPARATOR,
-    ),
+    ...wordsCondition(query.words),
+    ...oneOfCondition({ column: "author_name", values: query.authors }),
+    ...oneOfCondition({ column: "channel", values: query.channels }),
+    ...boundCondition("created_at < ?", query.createdBefore),
+    ...boundCondition("created_at >= ?", query.createdSince),
   ];
 }
 
@@ -92,12 +129,15 @@ function resultOf(reader: MessageReader): (row: unknown) => Fails<SearchResult> 
 }
 
 interface Searching extends SearchOptions {
-  readonly query: ParsedQuery;
+  readonly query: SearchQuery;
   readonly page: SearchPageRequest;
 }
 
 function searchPage({ db, page, query, reader }: Searching): Fails<StoredSearchPage> {
-  return db.all(sqlFor(reader, query), ...matchOf(query), ...startOf(page.after), page.limit + ONE_MORE).pipe(
+  const conditions = conditionsOf(query);
+  const params = Arr.flatMap(conditions, (condition) => condition.params);
+  const sql = searchSql({ columns: reader.columns, conditions });
+  return db.all(sql, ...params, ...startOf(page.after), page.limit + ONE_MORE).pipe(
     Effect.flatMap((rows) => Effect.forEach(rows, resultOf(reader), ONE_AT_A_TIME)),
     Effect.map((results: readonly SearchResult[]) => ({
       hasMore: results.length > page.limit,

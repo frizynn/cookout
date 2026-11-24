@@ -1,33 +1,18 @@
 import { Array as Arr, Effect, Option, Predicate } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import type { ParsedQuery, SearchResponse } from "../../../search/index.ts";
 import { SearchQuerySchema, SearchResponseSchema, cursorText } from "./search-wire.ts";
-import { isEmptyQuery, parseQuery, searchPath } from "../../../search/index.ts";
-import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
 import type { SearchPageRequest } from "../../../storage/server.ts";
+import type { SearchResponse } from "../../../search/index.ts";
 import { Storage } from "../../../storage/server.ts";
 import { pageSize } from "../../index.ts";
+import { searchPath } from "../../../search/index.ts";
+import { searchQueryOf } from "./search-query.ts";
 
 const ALL_ERRORS = { errors: "all" } as const;
 const PATH_BASE = "http://cookout.invalid";
-const BAD_REQUEST = 400;
-
-const emptyQuery: Refusal = {
-  code: "empty_query",
-  message: "A search needs at least one word: letters or digits.",
-  status: BAD_REQUEST,
-};
 
 type Query = typeof SearchQuerySchema.Type;
-
-function parsedOf(query: string): Effect.Effect<ParsedQuery, Refusal> {
-  const parsed = parseQuery(query);
-  if (isEmptyQuery(parsed)) {
-    return Effect.fail(emptyQuery);
-  }
-  return Effect.succeed(parsed);
-}
 
 function pageRequest({ cursor, limit = pageSize.default }: Query): SearchPageRequest {
   if (Predicate.isUndefined(cursor)) {
@@ -53,9 +38,9 @@ const searchRoute: Route<Storage> = {
       const query = yield* HttpServerRequest.schemaSearchParams(SearchQuerySchema, ALL_ERRORS).pipe(
         Effect.provideService(HttpServerRequest.ParsedSearchParams, search),
       );
-      const parsed = yield* parsedOf(query.query);
+      const searched = yield* searchQueryOf(query.query);
       const storage = yield* Storage;
-      const stored = yield* storage.searchMessages(parsed, pageRequest(query));
+      const stored = yield* storage.searchMessages(searched, pageRequest(query));
       return yield* HttpServerResponse.schemaJson(SearchResponseSchema)({ ...stored, cursor: cursorAfter(stored) });
     }),
   method: "GET",
