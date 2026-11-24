@@ -7,6 +7,7 @@ import type { Route } from "../../paths/index.ts";
 import { SidebarLinks } from "./sidebar-links.tsx";
 import { SidebarSettings } from "./sidebar-settings.tsx";
 import type { Unread } from "../../unread/index.ts";
+import { sidebarEdge } from "./sidebar-edge.ts";
 import { useSyncExternalStore } from "react";
 
 const TEXT = { name: "cookout", sidebar: "Sidebar" } as const;
@@ -27,6 +28,7 @@ export function SidebarView(props: SidebarProps): ReactNode {
   return (
     <Sidebar
       collapsed={state.collapsed}
+      edge={sidebarEdge({ layout, width: state.sidebarWidth })}
       label={TEXT.sidebar}
       onToggleCollapsed={handleToggleCollapsed}
       open={state.sidebar}
