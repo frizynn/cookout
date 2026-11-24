@@ -1,5 +1,5 @@
 import type { CookoutClient, EventStream } from "../../sdk/index.ts";
-import { adminClient, newIdentity } from "./identities.ts";
+import { adminClient, anonymousClient, clientWith, newIdentity } from "./identities.ts";
 import { agentNamed, openedBy } from "./presence.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
@@ -224,6 +224,41 @@ it("a deactivated identity's card says Deactivated in place of its presence, sti
     message: "disabled",
     profile: `#/people/${channel}-cy`,
   });
+
+  close();
+});
+
+async function broughtInAuthor(channel: string): Promise<() => void> {
+  const owner = await newIdentity({ kind: "human", name: `${channel}-owner` });
+  const chief = await newIdentity({ kind: "agent", name: `${channel}-chief`, owner: `${channel}-owner` });
+  const started = await anonymousClient().startAgentJoin({ as: `${channel}-worker`, host: "box" });
+  await chief.client.approveAgentJoin(started.userCode);
+  const collected = await anonymousClient().collectAgentJoin(started.requestId);
+  if (collected.status !== "approved") {
+    throw new Error("The agent join request was not approved.");
+  }
+  await adminClient().createChannel({ name: channel });
+  await clientWith(collected.agentSession.agentSessionToken).createMessage({ channel, text: "Reporting in" });
+  return openAt({ client: owner.client, hash: `#/channels/${channel}` });
+}
+
+it("an agent another agent brought in has a card saying Brought in by, linking to that agent's card", {
+  timeout: 10_000,
+}, async () => {
+  expect.hasAssertions();
+
+  const channel = `${PREFIX}-brought`;
+  const close = await broughtInAuthor(channel);
+  const card = await hovered(`${channel}-worker`);
+  const bringer = within(shownCard()).getByRole("link", { name: `@${channel}-chief` });
+
+  expect(card.lines).toStrictEqual([
+    `${channel}-worker`,
+    "Offline",
+    `Agent · owned by ${channel}-owner`,
+    `Brought in by @${channel}-chief`,
+  ]);
+  expect(bringer.getAttribute("href")).toBe(`#/people/${channel}-chief`);
 
   close();
 });

@@ -223,7 +223,7 @@ export { LinkRow } from "./lib/link-row.tsx";
 export { Mention } from "./lib/mention.tsx";
 export { IdentityCard } from "./lib/identity-card.tsx";
 export { IdentityCardComposer, IdentityCards } from "./lib/identity-card-parts.ts";
-export type { IdentityCardParts, IdentityCardSource } from "./lib/identity-card-parts.ts";
+export type { IdentityCardLink, IdentityCardParts, IdentityCardSource } from "./lib/identity-card-parts.ts";
 export { Muted } from "./lib/muted.tsx";
 export { MutedLines } from "./lib/muted-lines.tsx";
 export { ReactionChip } from "./lib/reaction-chip.tsx";

@@ -1,4 +1,4 @@
-import type { IdentityCardParts, IdentityCardSource } from "../../design-system/index.tsx";
+import type { IdentityCardLink, IdentityCardParts, IdentityCardSource } from "../../design-system/index.tsx";
 import { identityList, presences } from "../../board/index.ts";
 import type { BoardStore } from "../../board/index.ts";
 import type { Identity } from "../../sdk/index.ts";
@@ -19,9 +19,21 @@ function descriptionOf(identity: Identity): string | null {
   return null;
 }
 
+function broughtInByOf(identity: Identity): IdentityCardLink | null {
+  if (identity.kind !== "agent") {
+    return null;
+  }
+  const name = identity.broughtInBy ?? null;
+  if (name === null) {
+    return null;
+  }
+  return { href: hrefOf({ identity: name, name: "profile" }), name };
+}
+
 function cardFor(boardStore: BoardStore, identity: Identity): IdentityCardParts {
   return {
     agent: identity.kind === "agent",
+    broughtInBy: broughtInByOf(identity),
     deactivated: identity.deactivated === true,
     description: descriptionOf(identity),
     displayName: identity.displayName ?? null,
