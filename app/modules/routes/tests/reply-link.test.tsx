@@ -7,6 +7,7 @@ import { openAt } from "./render.tsx";
 
 const NOT_FOUND = "That message wasn't found in this thread.";
 const FADE_MS = 4000;
+const AFTER_FADE_MS = 2500;
 
 interface Linked {
   readonly posted: Posted;
@@ -60,10 +61,19 @@ async function fadedFrom(text: string): Promise<void> {
     },
     { timeout: FADE_MS },
   );
+
+  await expect(
+    vi.waitFor(
+      () => {
+        expect(highlighted()).not.toStrictEqual([]);
+      },
+      { timeout: AFTER_FADE_MS },
+    ),
+  ).rejects.toThrow("expected [] to not strictly equal []");
 }
 
-it("a link to one reply opens its thread with that reply in view and highlighted, which fades", {
-  timeout: 10_000,
+it("a link to one reply opens its thread with that reply in view and highlighted, which fades for good", {
+  timeout: 15_000,
 }, async () => {
   expect.hasAssertions();
 
