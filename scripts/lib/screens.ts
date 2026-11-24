@@ -3,6 +3,8 @@ interface Screen {
   readonly hash: string;
   readonly click?: string;
   readonly clickIn?: string;
+  readonly choose?: string;
+  readonly fill?: readonly (readonly [label: string, value: string])[];
   readonly focus?: string;
   readonly press?: string;
   readonly text: string;
@@ -135,6 +137,19 @@ const SCREENS: readonly Screen[] = [
   { admin: true, click: "Deactivate", hash: "#/people/release-bot", name: "confirm", text: "reactivate it later" },
   { hash: "#/settings", name: "settings", text: "System" },
   { click: "New channel", hash: "#/channels/general", name: "new-channel", text: "Lowercase letters" },
+  {
+    choose: "Schedule…",
+    click: "Post later",
+    fill: [
+      ["Text", "@grace the deploy window opens now"],
+      ["Date", "2099-06-01"],
+      ["Time", "09:30"],
+      ["Time zone", "Europe/London"],
+    ],
+    hash: "#/channels/general",
+    name: "schedule",
+    text: "1 Jun 2099, 09:30",
+  },
   { click: "Open the sidebar", hash: "#/channels/general", name: "narrow", narrow: true, text: "#deploys" },
   { hash: "#/channels/deploys", name: "closed-threads", text: "2 closed threads" },
   { hash: "#/channels/deploys/threads/8", name: "closed-thread", text: "Rolled back to 1.4.1." },
