@@ -27,7 +27,7 @@ const AT_COMMIT = `CREATE CONSTRAINT TRIGGER fault AFTER INSERT ON identities DE
 const BEFORE_SEARCH = [
   "DROP INDEX message_search",
   "DROP FUNCTION message_search_words",
-  "UPDATE schema_version SET version = 2",
+  "UPDATE schema_version SET version = 3",
 ];
 const FAIL_ONCE = "IF nextval('fault_attempts') <= 1 THEN RAISE EXCEPTION 'conflict' USING ERRCODE = '40001'; END IF;";
 
