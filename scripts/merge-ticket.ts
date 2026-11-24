@@ -115,9 +115,12 @@ function migrationsBase(): string {
   if (!reordersUndeployed) {
     return "origin/v1";
   }
-  const [tag = ""] = gitOutput("tag", "--list", "deploy/*", "--sort=-creatordate").split("\n");
+  const [tag = ""] = gitOutput("tag", "--list", "deploy/*", "--merged", "origin/v1", "--sort=-creatordate").split("\n");
   if (tag === "") {
-    return fail(SCRIPT, "found no deploy/* tag to compare the migrations list with. Run git fetch --tags.");
+    return fail(
+      SCRIPT,
+      "found no deploy/* tag on origin/v1 to compare the migrations list with. Run git fetch --tags.",
+    );
   }
   log(
     `WARNING: --reorders-undeployed-migrations compares the migrations list with ${tag}'s, not v1's. Use it only for the ticket that moves a migration production hasn't run.`,
