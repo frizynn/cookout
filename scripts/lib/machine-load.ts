@@ -31,5 +31,4 @@ function loadReport(read: () => Reading): LoadReport {
   };
 }
 
-export type { Reading };
 export { loadReport, osReading };
