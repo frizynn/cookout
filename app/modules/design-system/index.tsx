@@ -75,14 +75,14 @@
  * line and Ctrl/Cmd+Enter saves. `ActionGroup` is a named group of what can be done
  * to one thing, `ButtonRow` puts buttons side by side, and `TokenText` shows a
  * secret, such as a fresh token, to copy.
- * `ConfirmDialog` asks before an action, in a modal shadcn AlertDialog on
- * Radix's primitives (ADR 0080), the one part built on a library: its title, a
- * body naming exactly what happens, Cancel and a confirm button, in the
- * destructive colour when the action can't be undone. It holds focus inside
- * while open, Escape or Cancel calls `onCancel`, and focus goes back to what
- * opened it when it closes. While `pending` both buttons are disabled and the
- * confirm button says so; an `error` shows inside it. Its owner decides
- * when it is `open`, so it never closes. `FormDialog` is a Radix modal form; `RunList`, `FieldNote`; `MoreActions`.
+ * `ConfirmDialog` asks before an action, in a modal shadcn AlertDialog on Radix's primitives (ADR 0080), the one
+ * part built on a library: its title, a body naming exactly what happens, Cancel and a confirm button, in the
+ * destructive colour when the action can't be undone. It holds focus inside while open, Escape or Cancel calls
+ * `onCancel`, and focus goes back to what opened it when it closes. While `pending` both buttons are disabled and
+ * the confirm button says so; an `error` shows inside it. Its owner decides when it is `open`, so it never closes.
+ * `FormDialog` is a Radix modal form; `RunList`, `FieldNote`; `MoreActions`. `ShortcutList` is a Radix modal of
+ * keyboard shortcuts, each group a list named by its heading, each row what a shortcut does beside its keys;
+ * Escape calls `onClose`, and focus goes back to what was focused when it opened.
  * `PaneHeader`'s title is mono, as a channel's name, unless `sans`. A
  * `Toolbar` under it holds a `FilterField` (a labelled box whose text its
  * owner holds) and `Chip`s, buttons pressed or not; a named `ListArea` scrolls
@@ -251,6 +251,7 @@ export {
   ActionGroup,
   ConfirmDialog,
   FormDialog,
+  ShortcutList,
   FieldNote,
   RunList,
   MoreActions,
