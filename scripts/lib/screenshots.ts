@@ -31,9 +31,14 @@ interface Flags {
   readonly out?: string;
 }
 
+interface ThemePass {
+  readonly shoot: (shot: Shot) => Promise<void>;
+  readonly stop: () => Promise<void>;
+}
+
 interface TakeScreenshots {
   readonly screens: readonly Screen[];
-  readonly shoot: (shot: Shot) => Promise<void>;
+  readonly freshBoard: (theme: Theme) => Promise<ThemePass>;
 }
 
 const THEMES: readonly Theme[] = ["light", "dark"];
@@ -121,7 +126,7 @@ function reasonOf(error: unknown): string {
   return String(error);
 }
 
-async function failureOf(shoot: TakeScreenshots["shoot"], shot: Shot): Promise<readonly string[]> {
+async function failureOf(shoot: ThemePass["shoot"], shot: Shot): Promise<readonly string[]> {
   try {
     await shoot(shot);
     return [];
@@ -130,7 +135,7 @@ async function failureOf(shoot: TakeScreenshots["shoot"], shot: Shot): Promise<r
   }
 }
 
-async function failuresOf(shoot: TakeScreenshots["shoot"], shots: readonly Shot[]): Promise<readonly string[]> {
+async function failuresOf(shoot: ThemePass["shoot"], shots: readonly Shot[]): Promise<readonly string[]> {
   const [shot, ...rest] = shots;
   if (typeof shot !== "object") {
     return [];
@@ -139,9 +144,30 @@ async function failuresOf(shoot: TakeScreenshots["shoot"], shots: readonly Shot[
   return [...failure, ...(await failuresOf(shoot, rest))];
 }
 
-async function takeScreenshots({ screens, shoot }: TakeScreenshots): Promise<readonly string[]> {
-  const shots = screens.flatMap((screen) => THEMES.map((theme) => ({ screen, theme })));
-  const failures = await failuresOf(shoot, shots);
+async function passFailures({ freshBoard, screens }: TakeScreenshots, theme: Theme): Promise<readonly string[]> {
+  const pass = await freshBoard(theme);
+  try {
+    const failures = await failuresOf(
+      pass.shoot,
+      screens.map((screen) => ({ screen, theme })),
+    );
+    return failures;
+  } finally {
+    await pass.stop();
+  }
+}
+
+async function themeFailures(take: TakeScreenshots, themes: readonly Theme[]): Promise<readonly string[]> {
+  const [theme, ...rest] = themes;
+  if (typeof theme !== "string") {
+    return [];
+  }
+  const failures = await passFailures(take, theme);
+  return [...failures, ...(await themeFailures(take, rest))];
+}
+
+async function takeScreenshots(take: TakeScreenshots): Promise<readonly string[]> {
+  const failures = await themeFailures(take, THEMES);
   return failures;
 }
 
@@ -192,5 +218,5 @@ async function withNudge(page: Page): Promise<void> {
   });
 }
 
-export type { Screen, Shot, Theme };
+export type { Screen, Shot, Theme, ThemePass };
 export { screenshotOptions, takeScreenshots, withNudge, withOlderHistory };
