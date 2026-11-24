@@ -10,12 +10,7 @@
  * visible and focused.
  */
 import { browserReadingTools, createReading, createUnread } from "./modules/unread/index.ts";
-import {
-  createAgentJoinApprovals,
-  createBoard,
-  createBoardStore,
-  createLoginApprovals,
-} from "./modules/board/index.ts";
+import { createAgentJoinApprovals, createBoardStore, createLoginApprovals } from "./modules/board/index.ts";
 import { createLive, eventSourceAdapter } from "./modules/live/index.ts";
 import { CookoutApp } from "./modules/routes/index.tsx";
 import { createComposer } from "./modules/composer/index.ts";
@@ -29,20 +24,14 @@ if (root !== null) {
   const url = globalThis.location.origin;
   const client = createCookoutClient({ env: {}, url });
   const live = createLive(eventSourceAdapter(url));
-  const board = createBoard({ client, live });
-  const boardStore = createBoardStore({
-    client,
-    live,
-    url,
-  });
+  const boardStore = createBoardStore({ client, live, url });
   const unread = createUnread({ client, live });
   const layout = createLayout({ root: globalThis.document.documentElement, storage: globalThis.localStorage });
   createRoot(root).render(
     <CookoutApp
       agentJoinApprovals={createAgentJoinApprovals(client)}
-      board={board}
       boardStore={boardStore}
-      composer={createComposer({ boardStore, commands: board.commands })}
+      composer={createComposer({ boardStore })}
       layout={layout}
       live={live}
       loginApprovals={createLoginApprovals(client)}

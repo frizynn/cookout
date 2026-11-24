@@ -1,16 +1,11 @@
 import type { BoardStore, IdentityCalls } from "../../board/index.ts";
-import type { Command, Identity } from "../../sdk/index.ts";
+import type { Identity } from "../../sdk/index.ts";
 import { identityList } from "../../board/index.ts";
 
 type IdentityStore = Pick<
   BoardStore,
   "identityCalls" | "snapshot" | "subscribe" | "subscribeShowing" | "subscribeShowingSessions"
 >;
-
-interface CommandList {
-  readonly subscribe: (listener: () => void) => () => void;
-  readonly snapshot: () => { readonly status: string; readonly commands?: readonly Command[] };
-}
 
 interface IdentityList {
   readonly identities: () => readonly Identity[];
@@ -21,12 +16,7 @@ interface IdentityList {
   readonly store: IdentityStore;
 }
 
-interface IdentityListOptions {
-  readonly boardStore: IdentityStore;
-  readonly commands: CommandList;
-}
-
-function createIdentityList({ boardStore, commands }: IdentityListOptions): IdentityList {
+function createIdentityList(boardStore: IdentityStore): IdentityList {
   const refreshes = new Set<() => void>();
   let seen: readonly Identity[] | null = null;
   let watchingCommands = false;
@@ -59,7 +49,7 @@ function createIdentityList({ boardStore, commands }: IdentityListOptions): Iden
     show: () => {
       if (!watchingCommands) {
         watchingCommands = true;
-        commands.subscribe(refresh);
+        boardStore.subscribeShowing("commands")(refresh);
       }
       return boardStore.subscribeShowing("identities")(() => {
         checked();
@@ -69,4 +59,4 @@ function createIdentityList({ boardStore, commands }: IdentityListOptions): Iden
   };
 }
 
-export { type CommandList, type IdentityList, type IdentityStore, createIdentityList };
+export { type IdentityList, type IdentityStore, createIdentityList };

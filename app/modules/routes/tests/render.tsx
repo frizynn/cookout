@@ -1,9 +1,9 @@
-import type { AgentJoinApprovals, Board, BoardOptions, LoginApprovals, Session } from "../../board/index.ts";
-import type { BoardStore, Reading, Unread } from "./defaults.ts";
+import type { AgentJoinApprovals, LoginApprovals, Session } from "../../board/index.ts";
+import type { BoardStore, BoardStoreClient, Live, Reading, Unread } from "./defaults.ts";
 import { adminClient, anonymousClient } from "./identities.ts";
 import { boardStoreFor, createUnread, readingFor, unreadFor } from "./defaults.ts";
 import { cleanup, render } from "@testing-library/react";
-import { createAgentJoinApprovals, createBoard, createLoginApprovals } from "../../board/index.ts";
+import { createAgentJoinApprovals, createLoginApprovals } from "../../board/index.ts";
 import type { Composer } from "../../composer/index.ts";
 import { CookoutApp } from "../index.tsx";
 import type { CookoutClient } from "../../sdk/index.ts";
@@ -12,7 +12,7 @@ import { createComposer } from "../../composer/index.ts";
 import { createLayout } from "../../layout/index.ts";
 import { onTestFinished } from "vitest";
 
-type AppClient = BoardOptions["client"] &
+type AppClient = BoardStoreClient &
   Pick<
     CookoutClient,
     | "ackAll"
@@ -46,10 +46,9 @@ type AppClient = BoardOptions["client"] &
 
 interface BoardOpening {
   readonly hash: string;
-  readonly board: Board;
   readonly composer?: Composer;
   readonly layout?: Layout;
-  readonly live?: NonNullable<BoardOptions["live"]>;
+  readonly live?: Live;
   readonly loginApprovals?: LoginApprovals;
   readonly agentJoinApprovals?: AgentJoinApprovals;
   readonly boardStore?: BoardStore;
@@ -65,7 +64,7 @@ interface Opening {
   readonly agentJoinApprovals?: AgentJoinApprovals;
   readonly pageSize?: number;
   readonly session?: Session;
-  readonly live?: NonNullable<BoardOptions["live"]>;
+  readonly live?: Live;
   readonly reading?: Reading;
 }
 
@@ -114,7 +113,7 @@ export function browserLayout(): Layout {
 export function openBoard(opening: BoardOpening): () => void {
   globalThis.location.hash = opening.hash;
   const boardStore = boardStoreFor({ boardStore: opening.boardStore, client: adminClient(), live: opening.live });
-  const composer = opening.composer ?? createComposer({ boardStore, commands: opening.board.commands });
+  const composer = opening.composer ?? createComposer({ boardStore });
   const unread = unreadFor(opening.unread);
   const layout = opening.layout ?? browserLayout();
   const { agentJoinApprovals, loginApprovals } = approvalsOf(opening);
@@ -122,7 +121,6 @@ export function openBoard(opening: BoardOpening): () => void {
   return render(
     <CookoutApp
       agentJoinApprovals={agentJoinApprovals}
-      board={opening.board}
       boardStore={boardStore}
       composer={composer}
       layout={layout}
@@ -136,12 +134,9 @@ export function openBoard(opening: BoardOpening): () => void {
 }
 
 export function openAt(opening: Opening): () => void {
-  const board = createBoard(opening);
   const boardStore = boardStoreFor(opening);
   const session = opening.session ?? boardStore.session;
   return openBoard({
-    board,
-    composer: createComposer({ boardStore, commands: board.commands }),
     hash: opening.hash,
     ...(opening.live && { live: opening.live }),
     ...(opening.loginApprovals && { loginApprovals: opening.loginApprovals }),

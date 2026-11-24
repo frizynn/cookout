@@ -47,21 +47,22 @@
  * `identities.creation` creates an agent the caller owns, whose token then
  * shows in that agent's `actions`.
  * `channelDraft(channel)`, a channel's box, also suggests the registered
- * commands (from the `commands` store given, read once the identities load)
+ * commands (from the board store's command list, read once the identities load)
  * whose names start with what follows `/` when that is the whole text;
  * choosing one makes it the draft's `command`, whose data the box prompts
  * for, until `clear`, or `unpick`, which brings back the text as it was; `dismiss` hides any suggestions until the next edit. A
  * thread's reply box suggests no commands, since a call is a top-level message.
  */
 import type { Command, Identity, IdentityName, Token } from "../sdk/index.ts";
-import type { CommandList, IdentityList, IdentityStore } from "./lib/identity-list.ts";
 import type { DraftSnapshot, Sources } from "./lib/snapshot.ts";
 import { EMPTY, changesFor } from "./lib/snapshot.ts";
+import type { IdentityList, IdentityStore } from "./lib/identity-list.ts";
 import type { AdminChanges } from "./lib/admin-change.ts";
 import type { AgentCreation } from "./lib/agent-creation.ts";
 import type { DisplayNameDraft } from "./lib/display-name.ts";
 import type { IdentityActions } from "./lib/identity-actions.ts";
 import type { IdentityDeletion } from "./lib/identity-deletion.ts";
+import { commandList } from "../board/index.ts";
 import { createAdminChanges } from "./lib/admin-change.ts";
 import { createAgentCreation } from "./lib/agent-creation.ts";
 import { createDisplayName } from "./lib/display-name.ts";
@@ -205,26 +206,29 @@ export interface Composer {
   readonly identities: Identities;
 }
 
-/** What the composer store needs: the board store, which holds the identities and makes their changes on the server, and the commands a channel's box suggests. */
+/** What the composer store needs: the board store, which holds the identities and the commands a channel's box suggests, and makes the identities' changes on the server. */
 export interface ComposerOptions {
   readonly boardStore: IdentityStore;
-  readonly commands: CommandList;
 }
 
 /**
  * Makes a composer store whose identities come from `options.boardStore`.
- * @param options The board store and the commands.
+ * @param options The board store.
  * @returns The store.
  */
 export function createComposer(options: ComposerOptions): Composer {
   const drafts = new Map<string, Draft>();
   const displayNames = new Map<string, DisplayNameDraft>();
   const descriptions = new Map<string, DisplayNameDraft>();
-  const list = createIdentityList(options);
+  const list = createIdentityList(options.boardStore);
   const deletion = createIdentityDeletion(options.boardStore);
   const readers = listenersOf(list.show);
   function registered(): readonly Command[] {
-    return options.commands.snapshot().commands ?? NO_COMMANDS;
+    const commands = commandList(options.boardStore.snapshot());
+    if (commands.status !== "loaded") {
+      return NO_COMMANDS;
+    }
+    return commands.commands;
   }
   list.onChange(readers.notify);
   return {
