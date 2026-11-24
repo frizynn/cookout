@@ -111,7 +111,11 @@
  * action runs once the menu has closed. Mark unread's tooltip names its shortcut, `Alt-click`: an Alt-click (Option-click
  * on macOS) on the message, but not on a link, button or other interactive element in it, runs Mark unread at once and
  * focuses and selects nothing; `StandaloneMessage` does the same. `StandaloneMessage` is one named message on its own, such as a
- * thread's parent. In a message, `MessageBody` holds its rendered Markdown text, `Mention` an
+ * thread's parent. A message's author name and an `@name` in its text are each an `IdentityCard`: hovering it
+ * (after a short delay) or focusing it opens a card, a Radix tooltip whose pointer can rest on it, with the
+ * identity's presence dot and words, its names, its kind (an agent's owner), any description, Deactivated, and a
+ * View profile link; pointer leave, Escape or blur closes it, and focus stays on the name. Its card comes from the
+ * `IdentityCards` source the views provide; with none, the name is drawn alone. In a message, `MessageBody` holds its rendered Markdown text, `Mention` an
  * `@name` in it, `CallChip` a command call
  * and its data, `DataToggle` its data folded away, and `ThreadSummary` a link to
  * its thread: its repliers' avatars, its reply count, how many replies are new (bold, after an accent dot and with how many are to the reader when any is) and when it was last replied to. A message's time
@@ -198,6 +202,9 @@ export { ItemRow } from "./lib/item-row.tsx";
 export { LinkList } from "./lib/link-list.tsx";
 export { LinkRow } from "./lib/link-row.tsx";
 export { Mention } from "./lib/mention.tsx";
+export { IdentityCard } from "./lib/identity-card.tsx";
+export { IdentityCards } from "./lib/identity-card-parts.ts";
+export type { IdentityCardParts, IdentityCardSource } from "./lib/identity-card-parts.ts";
 export { Muted } from "./lib/muted.tsx";
 export { MutedLines } from "./lib/muted-lines.tsx";
 export { ReactionChip } from "./lib/reaction-chip.tsx";

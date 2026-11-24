@@ -83,6 +83,12 @@ const SCREENS: readonly Screen[] = [
     name: "receipt",
     text: "Not seen yet:",
   },
+  {
+    focus: 'article:has-text("@triage-agent can you post the failing run?") a:has-text("@triage-agent")',
+    hash: "#/channels/general/threads/1",
+    name: "identity-card",
+    text: "View profile",
+  },
   { hash: "#/people", name: "people", text: "release-bot" },
   { hash: "#/people/release-bot", name: "profile", text: "Agent · owned by ada" },
   { hash: "#/people/triage-agent", name: "warning", text: "Went offline unexpectedly" },
