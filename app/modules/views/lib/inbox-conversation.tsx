@@ -1,4 +1,5 @@
 import type { Board } from "../../board/index.ts";
+import type { Composer } from "../../composer/index.ts";
 import { ConversationEmpty } from "../../design-system/index.tsx";
 import { ConversationView } from "./conversation.tsx";
 import type { InboxSelection } from "../../paths/index.ts";
@@ -9,6 +10,7 @@ const TEXT = { conversation: "Conversation", pick: "Pick a conversation" } as co
 
 interface InboxConversationProps {
   readonly board: Board;
+  readonly composer: Composer;
   readonly selected: InboxSelection | null;
   readonly unread: Unread;
   readonly me: string;
@@ -22,6 +24,7 @@ export function InboxConversation(props: InboxConversationProps): ReactNode {
   return (
     <ConversationView
       board={props.board}
+      composer={props.composer}
       key={`${selected.channel}/${String(selected.thread)}`}
       me={props.me}
       selected={selected}

@@ -3,6 +3,7 @@ import type { MessageMenu, Selection } from "../../unread/index.ts";
 import type { ThreadClosing, ThreadMessagesState } from "../../board/index.ts";
 import { ConversationReplies } from "./conversation-replies.tsx";
 import type { ReactNode } from "react";
+import type { Reply } from "./use-message-menu.ts";
 import { StandaloneEntry } from "./standalone-entry.tsx";
 
 const TEXT = { first: "First message" } as const;
@@ -14,6 +15,7 @@ interface ConversationBodyProps {
   readonly menu: MessageMenu;
   readonly closing: ThreadClosing;
   readonly selection: Selection;
+  readonly reply: Reply;
 }
 
 export function ConversationBody(props: ConversationBodyProps): ReactNode {
@@ -38,7 +40,7 @@ export function ConversationBody(props: ConversationBodyProps): ReactNode {
         menu={props.menu}
         message={state.parent}
         receipts={state.receipts}
-        reply={null}
+        reply={props.reply}
       />
       <ConversationReplies
         me={props.me}
@@ -47,6 +49,7 @@ export function ConversationBody(props: ConversationBodyProps): ReactNode {
         readPosition={props.readPosition}
         receipts={state.receipts}
         replies={state.replies}
+        reply={props.reply}
         selection={props.selection}
       />
     </>
