@@ -1,8 +1,9 @@
 import { expect, it, onTestFinished, vi } from "vitest";
 import { idOf, postedIn } from "./feed.ts";
+import { inPane, inThread } from "./regions.ts";
 import type { MessageId } from "../../sdk/index.ts";
 import type { Posted } from "./feed.ts";
-import { inThread } from "./regions.ts";
+import { fireEvent } from "@testing-library/react";
 import { openAt } from "./render.tsx";
 
 const NOT_FOUND = "That message wasn't found in this thread.";
@@ -140,6 +141,39 @@ it("a link to a reply in a closed thread opens it and highlights the reply", { t
 
   await vi.waitFor(() => {
     expect(highlighted()).toStrictEqual([article]);
+  });
+
+  close();
+});
+
+interface BoardLink extends Linked {
+  readonly url: string;
+}
+
+async function boardLinkIn(channel: string): Promise<BoardLink> {
+  const { posted, reply } = await threadWithReplies(channel, []);
+  const url = `${globalThis.location.origin}${globalThis.location.pathname}${linkTo(posted, reply)}`;
+  await posted.poster.createMessage({ channel, text: `See ${url}` });
+  return { posted, reply, url };
+}
+
+it("a link in a message to this board opens in place, opening the thread with the reply highlighted", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  scrolledIntoView();
+  const { posted, reply, url } = await boardLinkIn("web-reply-link-in-place");
+  const close = openAt({ client: posted.reader, hash: `#/channels/${posted.channel}` });
+  const link = await inPane().findByRole("link", { name: url });
+
+  expect(link.getAttribute("target")).toBe("_self");
+
+  fireEvent.click(link);
+  const article = await articleSaying("Noon works.");
+
+  await vi.waitFor(() => {
+    expect([highlighted(), globalThis.location.hash]).toStrictEqual([[article], linkTo(posted, reply)]);
   });
 
   close();
