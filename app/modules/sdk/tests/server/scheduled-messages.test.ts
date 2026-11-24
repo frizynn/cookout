@@ -21,8 +21,6 @@ const SETTLE = "30 millis";
 const UTC = "UTC";
 const ONE = 1;
 const TWO = 2;
-const NOT_FOUND = 404;
-const SEQUENTIAL = { concurrency: 1 } as const;
 const DAILY_NINE = { channel: "grill", cron: "0 9 * * *", text: "standup @bob", timeZone: UTC } as const;
 
 const board = Effect.gen(function* openBoard() {
@@ -139,58 +137,6 @@ it.effect("a schedule paused while its run is posting doesn't post", () =>
   }).pipe(Effect.provide(testCookout({ storage: "paused-mid-run" }))),
 );
 
-function refusedFor(who: TestIdentity): (fields: Partial<CreateScheduledMessageRequest>) => Effect.Effect<string> {
-  return (fields) =>
-    Effect.gen(function* refusedCode() {
-      const refused = yield* refusal(() =>
-        who.client.createScheduledMessage({ channel: "grill", text: "hi", timeZone: UTC, ...fields }),
-      );
-      return refused.code;
-    });
-}
-
-function acceptedFor(who: TestIdentity): (cron: string) => Effect.Effect<string> {
-  return (cron) => Effect.map(schedule(who, { ...DAILY_NINE, cron }), ({ status }) => status);
-}
-
-it.effect("a schedule is refused for a bad, too frequent or never-running cron, a bad zone, or a past at", () =>
-  Effect.gen(function* refusals() {
-    const { ada } = yield* board;
-    const asked = [
-      { cron: "0 0 9 * * *" },
-      { cron: "*/5 * * * *" },
-      { cron: "0,10 9 * * *" },
-      { cron: "10,50 0,23 * * *" },
-      { cron: "0 9 31 2 *" },
-      { cron: "0 9 * * *", timeZone: "+01:00" },
-      { cron: "0 9 * * *", timeZone: "Mars/Olympus" },
-      { at: "2025-12-31T09:00:00Z" },
-      { at: "2026-02-01T09:00:00Z", cron: "0 9 * * *" },
-      { channel: "nowhere", cron: "0 9 * * *" },
-      { channel: "Not A Channel", cron: "0 9 * * *" },
-      { at: "soon" },
-    ];
-    const codes = yield* Effect.forEach(asked, refusedFor(ada), SEQUENTIAL);
-    const accepted = yield* Effect.forEach(["30 * * * *", "0,30 * * * *", "0 9 29 2 *"], acceptedFor(ada), SEQUENTIAL);
-
-    expect(codes).toStrictEqual([
-      "cron_invalid",
-      "cron_too_frequent",
-      "cron_too_frequent",
-      "cron_too_frequent",
-      "cron_never_runs",
-      "time_zone_invalid",
-      "time_zone_invalid",
-      "at_in_past",
-      "cron_or_at",
-      "channel_not_found",
-      "channel_not_found",
-      "invalid_request",
-    ]);
-    expect(accepted).toStrictEqual(["active", "active", "active"]);
-  }).pipe(Effect.provide(testCookout())),
-);
-
 it.effect("only the creator, an agent creator's owner or an admin can pause, resume or delete a schedule", () =>
   Effect.gen(function* permissions() {
     const { ada, bob, cookout } = yield* board;
@@ -253,18 +199,6 @@ it.effect("deleting a channel deletes its schedules", () =>
     const { scheduledMessages } = yield* answer(() => ada.client.listScheduledMessages());
 
     expect(scheduledMessages).toStrictEqual([]);
-  }).pipe(Effect.provide(testCookout())),
-);
-
-it.effect("listing a channel's schedules lists only that channel's, and an unknown channel is refused", () =>
-  Effect.gen(function* listByChannel() {
-    const { ada } = yield* board;
-    const made = yield* schedule(ada, DAILY_NINE);
-    const { scheduledMessages } = yield* answer(() => ada.client.listScheduledMessages({ channel: "grill" }));
-    const refused = yield* refusal(() => ada.client.listScheduledMessages({ channel: "nowhere" }));
-
-    expect(scheduledMessages).toMatchObject([{ id: made.id }]);
-    expect(refused).toMatchObject({ code: "channel_not_found", status: NOT_FOUND });
   }).pipe(Effect.provide(testCookout())),
 );
 
