@@ -72,6 +72,8 @@ export {
 export { callId, secretsTest } from "./lib/server/secrets.ts";
 export { type NewMessageOptions, appendTo, messageId, newMessageFixture } from "./lib/server/messages.ts";
 export { freshDatabasePath, openStore, storageLayers } from "./lib/server/storage.ts";
+export { emptyPostgresDatabase, onPostgresDatabase } from "./lib/server/postgres.ts";
+export { postgresContractFiles } from "./lib/server/postgres-contract-files.ts";
 
 export {
   type BootedServer,
