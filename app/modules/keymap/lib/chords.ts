@@ -11,7 +11,6 @@ const MODIFIERS: ReadonlySet<string> = new Set<Modifier>(["Alt", "Control", "Mod
 const SEPARATOR = "+";
 const ONE = 1;
 const FIRST = 0;
-const LETTER = /^\p{L}$/u;
 
 type Platform = "mac" | "other";
 
@@ -53,7 +52,7 @@ function isModifier(part: string): part is Modifier {
 
 function chordOf(written: string): Chord {
   const parts = written.split(SEPARATOR);
-  const key = parts.at(-ONE) ?? written;
+  const key = written.slice(written.lastIndexOf(SEPARATOR) + ONE);
   return { key, modifiers: new Set(parts.slice(FIRST, -ONE).filter((part) => isModifier(part))) };
 }
 
@@ -73,7 +72,7 @@ function primaryHeld(chord: Chord, event: Pressed): boolean {
 }
 
 function shiftHeld(chord: Chord, event: Pressed): boolean {
-  if (isCharacter(chord.key) && !LETTER.test(chord.key)) {
+  if (isCharacter(chord.key) && !isModified(chord)) {
     return true;
   }
   return event.shiftKey === chord.modifiers.has("Shift");

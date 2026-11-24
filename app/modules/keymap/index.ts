@@ -4,8 +4,8 @@
  * it does and the scope it applies in. `createKeymap` is made once in the web
  * entry, for the browser's platform, and passed down through `CookoutApp`,
  * whose `listen` adds the page's one key listener.
- * A view says what an action does with `bind`: a scope, the actions it does
- * there and, optionally, the element the scope covers (without one it covers
+ * A view says what an action does with `bind`: a scope, what each of its
+ * actions does there and, optionally, the element the scope covers (without one it covers
  * the page while bound). On each key not already handled (nor mid-composition, nor
  * without a key, as autofill sends), the listener walks
  * `SCOPES` from the innermost (the search box) out to `everywhere`, takes the
@@ -30,7 +30,7 @@ type Act = (event: KeyboardEvent) => boolean;
 
 interface Binding<Covered extends Scope> {
   readonly scope: Covered;
-  readonly actions: Readonly<Partial<Record<ActionOf<Covered>, Act>>>;
+  readonly actions: Readonly<Record<ActionOf<Covered>, Act>>;
   readonly within?: () => Element | null;
 }
 
@@ -47,9 +47,14 @@ interface Keymap {
   readonly shortcutOf: (action: Action) => Shortcut;
 }
 
+interface Row {
+  readonly key: Key;
+  readonly act: Act;
+}
+
 interface Bound {
   readonly scope: Scope;
-  readonly actions: Readonly<Partial<Record<Action, Act>>>;
+  readonly rows: readonly Row[];
   readonly within: (() => Element | null) | null;
 }
 
@@ -84,19 +89,17 @@ function covers(bound: Bound, target: EventTarget | null): boolean {
   return element !== null && target instanceof Node && element.contains(target);
 }
 
-function passOn(): boolean {
-  return false;
-}
-
-function pressedKeys(bound: Bound, event: KeyboardEvent): readonly Key[] {
-  const inTextField = isTextField(event.target);
-  return KEYS.filter(
-    (key) => key.scope === bound.scope && fires(key, inTextField) && matches({ chord: chordOf(key.chord), event }),
+function rowsOf(scope: Scope, actions: Readonly<Record<string, Act>>): readonly Row[] {
+  return Object.entries(actions).flatMap(([action, act]: readonly [string, Act]) =>
+    KEYS.filter((key) => key.scope === scope && key.action === action).map((key) => ({ act, key })),
   );
 }
 
 function actOn(bound: Bound, event: KeyboardEvent): boolean {
-  return pressedKeys(bound, event).some((key) => (bound.actions[key.action] ?? passOn)(event));
+  const inTextField = isTextField(event.target);
+  return bound.rows.some(
+    ({ act, key }) => fires(key, inTextField) && matches({ chord: chordOf(key.chord), event }) && act(event),
+  );
 }
 
 function boundInOrder(bindings: readonly Bound[], target: EventTarget | null): readonly Bound[] {
@@ -117,7 +120,11 @@ function createKeymap(options: { readonly platform: string }): Keymap {
   }
   return {
     bind: (binding) => {
-      const bound: Bound = { actions: binding.actions, scope: binding.scope, within: binding.within ?? null };
+      const bound: Bound = {
+        rows: rowsOf(binding.scope, binding.actions),
+        scope: binding.scope,
+        within: binding.within ?? null,
+      };
       bindings = [...bindings, bound];
       return () => {
         bindings = bindings.filter((each) => each !== bound);
