@@ -10,7 +10,7 @@ import { webTestCookout } from "../../../../scripts/web-test-server.ts";
 
 const NOBODY = 0;
 
-type PresenceClient = Pick<CookoutClient, "presence">;
+type PresenceClient = CookoutClient;
 
 interface Agent {
   readonly name: IdentityName;
@@ -58,6 +58,7 @@ function counting(): Counting {
   const reads: string[] = [];
   return {
     client: {
+      ...adminClient(),
       presence: async () => {
         reads.push("presence");
         const answer = await adminClient().presence();
@@ -140,6 +141,7 @@ it("a presence event heard while the presence is being read wins over the value 
   const agent = await agentNamed("store-presence-during-bot");
   const during = handLive();
   const client: PresenceClient = {
+    ...adminClient(),
     presence: async () => {
       const answer = await adminClient().presence();
       during.send({ presence: { identity: agent.name, online: true }, type: "presence" });
@@ -203,6 +205,7 @@ it("a presence read the server refuses leaves nobody's presence known", { timeou
   const refused = createCookoutClient({ env: {}, token: "cookout_not_a_token", url: webTestCookout().url });
   const answered = Promise.withResolvers<null>();
   const client: PresenceClient = {
+    ...adminClient(),
     presence: async () => {
       try {
         const answer = await refused.presence();

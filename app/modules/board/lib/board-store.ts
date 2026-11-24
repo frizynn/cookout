@@ -1,14 +1,21 @@
+import type { Message, ReactionCount, Refusal } from "../../sdk/index.ts";
 import type { PresenceClient, Presences } from "./presence-slice.ts";
+import type { Reactions, ReactionsClient } from "./reactions-slice.ts";
+import type { Toggle, ToggleClient } from "./reaction-toggle.ts";
+import { reactionsIn, reactionsSlice } from "./reactions-slice.ts";
 import type { Live } from "../../live/index.ts";
 import type { Part } from "./slice.ts";
 import { createPart } from "./slice.ts";
+import { createReactionToggle } from "./reaction-toggle.ts";
 import { presenceSlice } from "./presence-slice.ts";
 
 interface BoardState {
   readonly presence: Presences;
+  readonly reactions: Reactions;
+  readonly reactionRefusal: Refusal | null;
 }
 
-type Shown = keyof BoardState;
+type Shown = "presence" | "reactions";
 
 type Subscribe = (listener: () => void) => () => void;
 
@@ -16,10 +23,13 @@ interface BoardStore {
   readonly subscribe: Subscribe;
   readonly snapshot: () => BoardState;
   readonly subscribeShowing: (shown: Shown) => Subscribe;
+  readonly toggle: (toggle: Toggle) => void;
 }
 
+type BoardStoreClient = PresenceClient & ReactionsClient & ToggleClient;
+
 interface BoardStoreOptions {
-  readonly client: PresenceClient;
+  readonly client: BoardStoreClient;
   readonly live: Live | null;
 }
 
@@ -86,23 +96,36 @@ function showing({ follow, part, subscribe }: Showing): Subscribe {
 function createBoardStore(options: BoardStoreOptions): BoardStore {
   const { notify, subscribe } = createListeners();
   let snapshot: BoardState | null = null;
-  const presence = createPart({
-    changed: () => {
-      snapshot = null;
-      notify();
-    },
-    client: options.client,
-    slice: presenceSlice,
+  function changed(): void {
+    snapshot = null;
+    notify();
+  }
+  const { client } = options;
+  const presence = createPart({ changed, client, slice: presenceSlice });
+  const reactions = createPart({ changed, client, slice: reactionsSlice });
+  const reactionToggle = createReactionToggle({
+    apply: reactions.apply,
+    changed,
+    client,
+    reactionsOf: (message) => reactionsIn({ held: reactions.state(), message }),
   });
-  const follow = follower(options.live, [presence]);
-  const subscribers = { presence: showing({ follow, part: presence, subscribe }) };
+  const follow = follower(options.live, [presence, reactions]);
+  const subscribers = {
+    presence: showing({ follow, part: presence, subscribe }),
+    reactions: showing({ follow, part: reactions, subscribe }),
+  };
   return {
     snapshot: () => {
-      snapshot ??= { presence: presence.state() };
+      snapshot ??= {
+        presence: presence.state(),
+        reactionRefusal: reactionToggle.refusal(),
+        reactions: reactions.state(),
+      };
       return snapshot;
     },
     subscribe,
     subscribeShowing: (shown) => subscribers[shown],
+    toggle: reactionToggle.toggle,
   };
 }
 
@@ -110,5 +133,18 @@ function presences(state: BoardState): Presences {
   return state.presence;
 }
 
-export { type BoardStore, createBoardStore, presences };
+interface MessageShown {
+  readonly state: BoardState;
+  readonly message: Message;
+}
+
+function reactionsOf({ message, state }: MessageShown): readonly ReactionCount[] {
+  return reactionsIn({ held: state.reactions, message });
+}
+
+function reactionRefusal(state: BoardState): Refusal | null {
+  return state.reactionRefusal;
+}
+
+export { type BoardStore, createBoardStore, presences, reactionRefusal, reactionsOf };
 export type { Presences } from "./presence-slice.ts";

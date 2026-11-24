@@ -10,7 +10,7 @@ import { handClock } from "./hand-clock.ts";
 import { handFocus } from "../../testing/web.ts";
 
 interface BoardStoreOpening {
-  readonly client: Pick<CookoutClient, "presence">;
+  readonly client: Pick<CookoutClient, "getThread" | "presence" | "react" | "unreact">;
   readonly live?: Live | undefined;
   readonly boardStore?: BoardStore | undefined;
 }

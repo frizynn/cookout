@@ -47,8 +47,7 @@
  * the creator, adds it to the loaded list and the subscriptions, empties and closes the form and only then calls `created`,
  * so a refused name keeps what was typed, with the refusal on the field it
  * concerns (the description's own schema errors; anything else, the name). A refusal
- * keeps the server's error code; a server that can't be reached is `unreachable`. `reactions` is the reaction store
- * (the `reaction-store` module) on the board's client and live stream.
+ * keeps the server's error code; a server that can't be reached is `unreachable`.
  *
  * Each top-level message keeps its thread's `closedAt` and `closedBy` as the server sends them. `closing` closes or
  * reopens the thread holding a message, one at a time in the order asked, and puts the server's answer into every
@@ -71,7 +70,12 @@
  * being read is applied again on what the read brings, so the event wins, and an event heard twice changes nothing.
  * When the link comes back after being down, each slice someone is showing is read again, and one nobody is showing
  * is read again when it is next shown; that is the store's one catch-up. Its slices: `presence`, every identity's
- * presence, read with `GET /v1/presence` and changed by `presence` events.
+ * presence, read with `GET /v1/presence` and changed by `presence` events; and `reactions`, read through
+ * `reactionsOf(state, message)`: a message arrives with its reactions, the slice holds each `reaction` event's
+ * reactions by message ID, and on a link back it reads again the thread of each message it holds and corrects it.
+ * `toggle` leaves the reader's reaction on a message, or removes it if the reader has already left it (toggling is
+ * the web's, Matt, 2026-11-23, mattpocock/cookout#199), one at a time in the order asked, keeping the server's
+ * answer, or its refusal (`reactionRefusal`), until the next toggle.
  */
 import type {
   ChannelMessages,
@@ -82,7 +86,6 @@ import type {
 } from "./lib/message-stores.ts";
 import type { ChannelName, CookoutClient, MessageId } from "../sdk/index.ts";
 import type { Commands, CommandsClient } from "./lib/commands.ts";
-import type { ReactionStore, ReactionStoreOptions } from "../reaction-store/index.ts";
 import type { Subscriptions, SubscriptionsClient } from "./lib/subscriptions.ts";
 import type { ChannelCreation } from "./lib/channel-creation.ts";
 import type { Live } from "../live/index.ts";
@@ -92,7 +95,6 @@ import { createChannelList } from "./lib/channel-list.ts";
 import { createCommands } from "./lib/commands.ts";
 import { createLiveFeed } from "./lib/live-feed.ts";
 import { createMessageStores } from "./lib/message-stores.ts";
-import { createReactionStore } from "../reaction-store/index.ts";
 import { createSubscriptions } from "./lib/subscriptions.ts";
 
 const PAGE_SIZE = 50;
@@ -100,7 +102,6 @@ const PAGE_SIZE = 50;
 type BoardClient = Pick<CookoutClient, "createChannel" | "listChannels"> &
   CommandsClient &
   MessageStoresClient &
-  ReactionStoreOptions["client"] &
   SubscriptionsClient;
 
 /** The board store. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
@@ -119,8 +120,6 @@ export interface Board {
   readonly subscriptions: Subscriptions;
   /** The new channel form: one store, whose channels join the loaded list. */
   readonly creation: ChannelCreation;
-  /** The reactions on messages: one store, following the live stream, which toggles the reader's own. */
-  readonly reactions: ReactionStore;
   /** Closing and reopening threads: one store, whose answers change the loaded channels and threads. */
   readonly closing: ThreadClosing;
   /** The top-level message just before `id` in `channel`: the same store each time for one channel and ID. */
@@ -175,7 +174,6 @@ export function createBoard(options: BoardOptions): Board {
     }),
     dismissNotice: list.dismissNotice,
     messageBefore: stores.messageBefore,
-    reactions: createReactionStore({ client, live }),
     snapshot: list.snapshot,
     subscribe: (listener) => {
       follow();
@@ -198,4 +196,11 @@ export type { Subscriptions, SubscriptionsState } from "./lib/subscriptions.ts";
 export type { ThreadMessages, ThreadMessagesState } from "./lib/thread-messages.ts";
 export type { ThreadClosing } from "./lib/thread-closing.ts";
 export type { MessageBeforeState } from "./lib/message-stores.ts";
-export { type BoardStore, type Presences, createBoardStore, presences } from "./lib/board-store.ts";
+export {
+  type BoardStore,
+  type Presences,
+  createBoardStore,
+  presences,
+  reactionRefusal,
+  reactionsOf,
+} from "./lib/board-store.ts";

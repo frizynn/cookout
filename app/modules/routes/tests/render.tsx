@@ -38,6 +38,8 @@ type AppClient = BoardOptions["client"] &
     | "readPositions"
     | "makeAdmin"
     | "presence"
+    | "react"
+    | "unreact"
     | "removeAdmin"
     | "setDescription"
     | "setDisplayName"
