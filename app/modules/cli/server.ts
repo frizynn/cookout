@@ -19,6 +19,9 @@
  * the agent session token in `COOKOUT_SESSION`, the agent session this harness session joined, and `COOKOUT_TOKEN`;
  * with none of them, it is refused with `not_joined`. Outside one it is the first of `COOKOUT_TOKEN`,
  * `COOKOUT_SESSION` and the Login (mattpocock/cookout#150). `whoami` says on stderr when it ignored `COOKOUT_TOKEN`.
+ * With `COOKOUT_AUTH=proxy`, a proxy adds the credential (a cloud session's network proxy adds `Authorization:
+ * Bearer`), so they send no token at all, still name the harness, and `whoami`'s `source` is `proxy`; any other
+ * `COOKOUT_AUTH` is refused with `usage` (mattpocock/cookout#340).
  *
  * `join` runs inside a harness session (Claude Code's `CLAUDE_CODE_SESSION_ID`, which its subagents share) and
  * keeps the agent session token it was issued in a state file for that session and server, under
