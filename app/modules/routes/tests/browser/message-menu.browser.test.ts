@@ -89,6 +89,12 @@ test("right-clicking a message by the window's right edge opens its menu leftwar
   ]);
 });
 
+async function downTo(page: Page, name: string): Promise<void> {
+  await page.keyboard.press("ArrowDown");
+
+  await expect(page.getByRole("menuitem", { name })).toBeFocused();
+}
+
 test("the More actions menu takes focus, moves with the arrow keys and gives focus back on Escape", async ({
   page,
 }) => {
@@ -100,9 +106,8 @@ test("the More actions menu takes focus, moves with the arrow keys and gives foc
 
   await expect(page.getByRole("menuitem", { name: "Reply" })).toBeFocused();
 
-  await page.keyboard.press("ArrowDown");
-
-  await expect(page.getByRole("menuitem", { name: "React with 👍" })).toBeFocused();
+  await downTo(page, "Open thread");
+  await downTo(page, "React with 👍");
 
   await page.keyboard.press("Escape");
 
