@@ -1,7 +1,7 @@
 import type { Board, ThreadMessagesState } from "../../board/index.ts";
 import type { Reader, Reading, Unread } from "../../unread/index.ts";
-import type { Composer } from "../../composer/index.ts";
 import { CONVERSATION_KEYS } from "../../design-system/index.tsx";
+import type { Composer } from "../../composer/index.ts";
 import type { PanelAction } from "../../design-system/index.tsx";
 import type { ThreadSelection } from "../../paths/index.ts";
 

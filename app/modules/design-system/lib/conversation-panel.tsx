@@ -1,7 +1,7 @@
 import { BackLink } from "./back-link.tsx";
+import { CONVERSATION_KEYS } from "./conversation-keys.ts";
 import type { PanelAction } from "./panel-action-button.tsx";
 import { PanelActionButton } from "./panel-action-button.tsx";
-import { CONVERSATION_KEYS } from "./conversation-keys.ts";
 import type { ReactNode } from "react";
 import { ShortcutLink } from "./shortcut-link.tsx";
 
