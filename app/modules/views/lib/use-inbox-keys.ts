@@ -90,10 +90,6 @@ function leaveTextBox({ target }: KeyboardEvent): boolean {
   return true;
 }
 
-function passOn(): boolean {
-  return false;
-}
-
 function back(selected: boolean): Act {
   return () => {
     if (!selected || !isNarrowWindow()) {
@@ -131,7 +127,7 @@ function useInboxKeys(keys: InboxKeys): void {
       },
       scope: "inbox",
     });
-    const unbindTextBox = keymap.bind({ actions: { leaveTextBox, newestMessage: passOn }, scope: "text box" });
+    const unbindTextBox = keymap.bind({ actions: { leaveTextBox }, scope: "text box" });
     return (): void => {
       unbindRows();
       unbindTextBox();
