@@ -1,4 +1,4 @@
-import { Array as Arr, Effect } from "effect";
+import { Array as Arr, Effect, Function } from "effect";
 import type {
   CookoutClient,
   CreateIdentityRequest,
@@ -188,6 +188,14 @@ function callCommand(
   });
 }
 
+type Collected = Awaited<ReturnType<CookoutClient["collectAgentJoin"]>>;
+
+type Approved = Extract<Collected, { readonly status: "approved" }>;
+
+function isApproved(collected: Collected): collected is Approved {
+  return collected.status === "approved";
+}
+
 const notApproved: SeedFailure = { code: "not_approved", message: "release-bot's approval of build-worker was lost." };
 
 function postBroughtIn(
@@ -198,10 +206,11 @@ function postBroughtIn(
     const box = createCookoutClient({ env: {}, url });
     const started = yield* call(() => box.startAgentJoin({ as: "build-worker", host: "build-box" }));
     yield* call(() => cast.releaseBot.client.approveAgentJoin(started.userCode));
-    const collected = yield* call(() => box.collectAgentJoin(started.requestId));
-    if (collected.status !== "approved") {
-      return yield* Effect.fail(notApproved);
-    }
+    const collected = yield* Effect.filterOrFail(
+      call(() => box.collectAgentJoin(started.requestId)),
+      isApproved,
+      Function.constant(notApproved),
+    );
     const worker = clientAt(url, collected.agentSession.agentSessionToken);
     const posted = yield* call(() => worker.createMessage({ channel: "deploys", text: "Picked up the 1.4.1 build." }));
     return { broughtInPost: posted.message.id };

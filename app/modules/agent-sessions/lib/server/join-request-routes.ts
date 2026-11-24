@@ -7,7 +7,7 @@ import {
   CollectAgentJoinRequestSchema,
   StartAgentJoinRequestSchema,
 } from "./wire.ts";
-import { Effect, Option } from "effect";
+import { Effect, Function, Option } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import {
   agentJoinRequestApprovalPath,
@@ -31,7 +31,7 @@ function withinAddressLimit<Value, Failure, Needs>(
   return Effect.gen(function* admitAddressThenRun() {
     const limit = yield* AddressLimit;
     const request = yield* HttpServerRequest.HttpServerRequest;
-    yield* limit.admit(Option.getOrElse(request.remoteAddress, () => "unknown"));
+    yield* limit.admit(Option.getOrElse(request.remoteAddress, Function.constant("unknown")));
     return yield* effect;
   });
 }
