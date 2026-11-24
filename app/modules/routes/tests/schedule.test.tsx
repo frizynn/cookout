@@ -17,7 +17,7 @@ async function openChannel(channel: string, text: string): Promise<() => void> {
   await adminClient().createChannel({ name: channel });
   const close = openAt({ client: adminClient(), hash: `#/channels/${channel}` });
   fireEvent.change(await screen.findByLabelText("Message"), { target: { value: text } });
-  pressed(() => inPane().getByRole("button", { name: "More ways to send" }));
+  pressed(() => inPane().getByRole("button", { name: "Post later" }));
   await chose("Schedule…");
   await screen.findByRole("dialog", { name: TITLE });
   return close;
@@ -172,7 +172,7 @@ it("a thread's reply box can't schedule, since every run posts at the top level"
   });
   await inThread().findByRole("textbox", { name: "Reply" });
 
-  expect(inThread().queryByRole("button", { name: "More ways to send" })).toBeNull();
+  expect(inThread().queryByRole("button", { name: "Post later" })).toBeNull();
 
   close();
 });

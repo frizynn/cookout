@@ -90,9 +90,7 @@ export {
   createChannelCreation,
 } from "./lib/channel-creation.ts";
 export {
-  type PreviewState,
   type ScheduleKind,
-  type ScheduleSaveState,
   type Scheduling,
   type SchedulingSnapshot,
   createScheduling,

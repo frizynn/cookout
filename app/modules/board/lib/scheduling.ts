@@ -80,5 +80,5 @@ function createScheduling(options: SchedulingOptions): Scheduling {
   };
 }
 
-export type { PreviewState, ScheduleKind, ScheduleSaveState, SchedulingSnapshot } from "./scheduling-previews.ts";
+export type { ScheduleKind, SchedulingSnapshot } from "./scheduling-previews.ts";
 export { type Scheduling, createScheduling };

@@ -137,7 +137,7 @@ const SCREENS: readonly Screen[] = [
   { click: "New channel", hash: "#/channels/general", name: "new-channel", text: "Lowercase letters" },
   {
     choose: "Schedule…",
-    click: "More ways to send",
+    click: "Post later",
     fill: [
       ["Text", "@grace the deploy window opens now"],
       ["Date", "2099-06-01"],

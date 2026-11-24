@@ -180,10 +180,8 @@ function createSaving(held: Held): (saved: () => void) => void {
 
 export {
   type Held,
-  type PreviewState,
   type Previews,
   type ScheduleKind,
-  type ScheduleSaveState,
   type SchedulingOptions,
   type SchedulingSnapshot,
   closedIn,

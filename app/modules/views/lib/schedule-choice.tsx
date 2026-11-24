@@ -3,7 +3,7 @@ import { MoreActions } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 
-const TEXT = { label: "More ways to send", schedule: "Schedule…" } as const;
+const TEXT = { label: "Post later", schedule: "Schedule…" } as const;
 
 interface ScheduleChoiceProps {
   readonly onSchedule: () => void;
