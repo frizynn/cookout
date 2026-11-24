@@ -1,4 +1,15 @@
-import { Array as Arr, Effect, Option, Predicate, Ref, Schedule, Schema, Semaphore, String as Str } from "effect";
+import {
+  Array as Arr,
+  Effect,
+  Function as Fn,
+  Option,
+  Predicate,
+  Ref,
+  Schedule,
+  Schema,
+  Semaphore,
+  String as Str,
+} from "effect";
 import type { Redacted, Scope } from "effect";
 import { SqlClient, SqlError } from "effect/sql";
 import type { SqlDatabase, SqlValue } from "./sql-database.ts";
@@ -39,12 +50,14 @@ const retryable = new WeakSet<StorageUnavailable>();
 
 const isStorageUnavailable = Schema.is(StorageUnavailable);
 
+const hasMessage = Schema.is(Schema.Struct({ message: Schema.String }));
+
 function messageOf(error: SqlFailure): string {
   const { cause } = error.reason;
-  if (Predicate.isError(cause)) {
-    return cause.message;
-  }
-  return error.message;
+  return Option.liftPredicate(cause, hasMessage).pipe(
+    Option.map(({ message }) => message),
+    Option.getOrElse(Fn.constant(error.message)),
+  );
 }
 
 function unavailable(error: SqlFailure): StorageUnavailable {

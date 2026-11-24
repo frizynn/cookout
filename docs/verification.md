@@ -467,6 +467,14 @@ env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -X POST -H "Origin: https://elsew
 env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -H "Host: elsewhere.example" "$COOKOUT_URL/v1/health"'
 ```
 
+## Run the storage tests on Postgres
+
+The contract files listed in `app/modules/testing/lib/server/postgres-contract-files.ts`, and `app/modules/storage/tests/server/postgres.test.ts`, run in Vitest's `postgres` project, which needs Docker. Its global setup ([scripts/postgres-test-container.ts](../scripts/postgres-test-container.ts)) starts one throwaway `postgres:18-alpine` container per run (label `cookout-tests=postgres`), published on a free port on 127.0.0.1 that Docker picks, so it never touches a database already running on the machine. Each test gets its own database, cloned from a migrated template. The container is removed when the run ends, and a watchdog removes it if the run is killed. Without Docker, every Postgres test fails with a message naming Docker; none is skipped. To run only them:
+
+```sh
+node_modules/.bin/vitest run --project postgres
+```
+
 ## Run the end-to-end suite
 
 `packages/e2e` drives a running cookout the way its users do: through `@ai-hero/cookout/sdk`, the built `cookout` bin (each `cookout` command its own process) and the web UI in headless Chromium. It reads only `COOKOUT_E2E_URL` and `COOKOUT_E2E_ADMIN_TOKEN`, an admin's token there, so it runs against any cookout that serves the web UI: the built one, a local Docker container, or the deployed URL. The `pnpm dev` cookout from "Start it" serves only the API (its web UI is on Vite's `webUrl`), so start the built one on a fresh database and a free port instead, as a background command, then run the suite. Playwright needs Chromium once per machine (`pnpm exec playwright install chromium`):

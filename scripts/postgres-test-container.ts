@@ -11,9 +11,10 @@ const WATCH_SECONDS = 2;
 const NO_ATTEMPTS_LEFT = 0;
 const ONE_ATTEMPT = 1;
 
-type PostgresContainer =
-  | { readonly status: "running"; readonly url: string }
-  | { readonly status: "unavailable"; readonly reason: string };
+interface PostgresContainer {
+  readonly url: string;
+  readonly reason: string;
+}
 
 declare module "vitest" {
   interface ProvidedContext {
@@ -120,9 +121,9 @@ async function run(): Promise<string> {
 
 export async function setup(project: TestProject): Promise<void> {
   try {
-    project.provide("postgres", { status: "running", url: await run() });
+    project.provide("postgres", { reason: "", url: await run() });
   } catch (error) {
-    project.provide("postgres", { reason: reasonOf(error), status: "unavailable" });
+    project.provide("postgres", { reason: reasonOf(error), url: "" });
   }
 }
 

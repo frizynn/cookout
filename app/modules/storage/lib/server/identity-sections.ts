@@ -4,7 +4,7 @@ import { memoryOfflineAlerts, sqliteOfflineAlerts } from "./offline-alerts.ts";
 import { memoryPresence, sqlitePresence } from "./presence.ts";
 import { Effect } from "effect";
 import type { MemoryState } from "./memory-state.ts";
-import type { SqlDatabase } from "./adapters/sql-database.ts";
+import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import { memoryLoginRequests } from "./login-requests-memory.ts";
 import { sqliteIdentityDeletes } from "./identity-owners.ts";
 import { sqliteLoginRequests } from "./login-requests-sqlite.ts";
@@ -41,7 +41,7 @@ function memoryIdentitySections(state: MemoryState): MemoryIdentitySections {
   };
 }
 
-function sqliteIdentitySections(db: SqlDatabase): IdentitySections {
+function sqliteIdentitySections(db: SqliteDatabase): IdentitySections {
   return {
     ...sqlIdentities(db),
     ...sqliteIdentityDeletes(db),

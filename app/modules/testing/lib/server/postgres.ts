@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, Layer, Redacted, Schema } from "effect";
+import { Array as Arr, Effect, Function as Fn, Layer, Option, Redacted, Schema, String as Str } from "effect";
 import { StorageUnavailable, postgresStorage } from "../../../storage/server.ts";
 import { PgClient } from "@effect/sql-pg";
 import { Reactivity } from "effect/reactivity";
@@ -18,16 +18,13 @@ const BUILDING_TEMPLATE = "cookout_template_building";
 const EMPTY_TEMPLATE = "template0";
 const DATABASE_NUMBERS = "cookout_test_databases";
 const TEMPLATE_LOCK = 3_310_331;
-const FIRST_ROW = 0;
 
 const NumberRow = Schema.Struct({ number: Schema.String });
 
 const containerUrl: Effect.Effect<string, StorageUnavailable> = Effect.suspend(() => {
-  const container = inject("postgres");
-  if (container.status === "unavailable") {
-    return Effect.fail(StorageUnavailable.make({ message: container.reason }));
-  }
-  return Effect.succeed(container.url);
+  const { reason, url } = inject("postgres");
+  const unavailable = StorageUnavailable.make({ message: reason });
+  return Option.liftPredicate(url, Str.isNonEmpty).pipe(Effect.fromOption, Effect.mapError(Fn.constant(unavailable)));
 });
 
 function databaseUrl(server: string, database: string): Redacted.Redacted {
@@ -36,18 +33,14 @@ function databaseUrl(server: string, database: string): Redacted.Redacted {
   return Redacted.make(url.toString());
 }
 
-function failed({ message }: { readonly message: string }): StorageUnavailable {
-  return StorageUnavailable.make({ message });
-}
-
 function connect(url: Redacted.Redacted): Effect.Effect<Run, StorageUnavailable, Scope.Scope> {
   return Effect.gen(function* connectOnce() {
     const reactivity = yield* Reactivity.make;
     const sql = yield* PgClient.makeClient({ url }).pipe(
       Effect.provideService(Reactivity.Reactivity, reactivity),
-      Effect.mapError(failed),
+      Effect.orDie,
     );
-    return (statement: string) => Effect.mapError(sql.unsafe(statement), failed);
+    return (statement: string) => Effect.orDie(sql.unsafe(statement));
   });
 }
 
@@ -82,18 +75,14 @@ function buildTemplate(run: Run): Effect.Effect<void, StorageUnavailable> {
 
 const isNumberRow = Schema.is(NumberRow);
 
-const noDatabaseNumber = StorageUnavailable.make({ message: "Postgres gave no number for a test database." });
-
-function nameOf(rows: readonly unknown[]): Effect.Effect<string, StorageUnavailable> {
-  const row = Arr.getUnsafe(rows, FIRST_ROW);
-  if (isNumberRow(row)) {
-    return Effect.succeed(`cookout_test_${row.number}`);
-  }
-  return Effect.fail(noDatabaseNumber);
-}
-
-function nextDatabaseName(run: Run): Effect.Effect<string, StorageUnavailable> {
-  return Effect.flatMap(run(`SELECT nextval('${DATABASE_NUMBERS}')::text AS number`), nameOf);
+function nextDatabaseName(run: Run): Effect.Effect<string> {
+  return run(`SELECT nextval('${DATABASE_NUMBERS}')::text AS number`).pipe(
+    Effect.map(Arr.filter(isNumberRow)),
+    Effect.map(Arr.head),
+    Effect.flatMap(Effect.fromOption),
+    Effect.orDie,
+    Effect.map(({ number }) => `cookout_test_${number}`),
+  );
 }
 
 function ensureTemplate(run: Run): Effect.Effect<void, StorageUnavailable> {
