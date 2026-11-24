@@ -12,15 +12,7 @@ import { Array as Arr, Effect, Option, Predicate, Ref, pipe } from "effect";
 import type { Author, Message, MessageId, TopLevelMessage } from "../../../messages/index.ts";
 import { EMPTY_INBOX, memoryReactions, withoutChannel, withoutIdentity } from "./inbox-memory-state.ts";
 import { afterAppend, memoryInbox } from "./inbox-memory.ts";
-import {
-  asMessageId,
-  isPlaced,
-  placeIn,
-  placed,
-  stampedNoEarlierThan,
-  threadIdOf,
-  withKnownMentions,
-} from "./messages.ts";
+import { asMessageId, isPlaced, placeIn, placed, stampedAfter, threadIdOf, withKnownMentions } from "./messages.ts";
 import { current, findMessage, memoryThreads, reopenedBy, repliesTo } from "./threads-memory.ts";
 import type { IdentitiesSection } from "./identities.ts";
 import type { MemoryChannelsSection } from "./channels.ts";
@@ -70,7 +62,7 @@ function append(data: MemoryMessages, appending: Mentioning): readonly [AppendMe
     return [placement, data];
   }
   const last = data.last + NEXT;
-  const message = stampedNoEarlierThan({ latest: data.latestAt, message: withKnownMentions(appending) });
+  const message = stampedAfter({ latest: data.latestAt, message: withKnownMentions(appending) });
   const stored = placed({ id: asMessageId(last), message, placement });
   const [reopenedParent, { messages }] = reopenedBy({
     data: { ...data, messages: [...data.messages, stored] },

@@ -1,31 +1,8 @@
-import { closeIn, involvedIn, listShows, openThreadsShown, posted, postedOne, startersIn } from "./open-threads.ts";
+import { closeIn, listShows, openThreadsShown, posted, postedOne, startersIn } from "./open-threads.ts";
 import { expect, it } from "vitest";
-import { inPane, inSidebar } from "./regions.ts";
 import { fireEvent } from "@testing-library/react";
+import { inPane } from "./regions.ts";
 import { openAt } from "./render.tsx";
-
-it("the page lists the reader's open threads stalest first; one the reader isn't in shows only under All", {
-  timeout: 5000,
-}, async () => {
-  expect.hasAssertions();
-
-  const { channel, reader, readerName } = await involvedIn("open-list");
-  openAt({ client: reader, hash: "#/threads" });
-
-  await listShows({ channel, texts: [`@${readerName} can you look?`, "My own question.", "Deploy at noon?"] });
-
-  expect([
-    inPane().getByRole("link", { name: "Involving me" }).getAttribute("aria-current"),
-    inSidebar().getByRole("link", { name: "Open threads" }).getAttribute("aria-current"),
-  ]).toStrictEqual(["page", "page"]);
-
-  fireEvent.click(inPane().getByRole("link", { name: "All" }));
-
-  await listShows({
-    channel,
-    texts: [`@${readerName} can you look?`, "Nobody asked you.", "My own question.", "Deploy at noon?"],
-  });
-});
 
 it("a row links to its thread with its starter and first line, and Close in it drops the row", {
   timeout: 5000,

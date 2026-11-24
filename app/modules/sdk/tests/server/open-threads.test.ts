@@ -99,8 +99,8 @@ it.effect(
       );
       const [mine, all] = yield* Effect.all([openIds(ann), openIds(ann, ALL)], ONE_AT_A_TIME);
 
-      expect(mine).toStrictEqual([started, replied, mentioned, mentionedInReply]);
-      expect(all).toStrictEqual([started, replied, mentioned, mentionedInReply, others]);
+      expect(mine).toStrictEqual([started, mentioned, replied, mentionedInReply]);
+      expect(all).toStrictEqual([started, mentioned, replied, mentionedInReply, others]);
     }).pipe(Effect.provide(testCookout())),
 );
 

@@ -1,4 +1,4 @@
-import { Array as Arr, Option, Predicate } from "effect";
+import { Array as Arr, DateTime, Option, Predicate } from "effect";
 import type {
   Closing,
   ListMessagesResponse,
@@ -9,13 +9,14 @@ import type {
   ThreadResponse,
   TopLevelMessage,
 } from "../../../messages/index.ts";
+import type { Duration, Effect } from "effect";
 import { isMessageId, withNewestReply } from "../../../messages/index.ts";
 import type { ChannelName } from "../../../channels/index.ts";
-import type { Effect } from "effect";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { OpenThreadsSection } from "./open-threads.ts";
 import type { StorageUnavailable } from "./errors.ts";
+import { isoTimeOf } from "../../../time/server.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
@@ -139,9 +140,15 @@ interface Stamping {
   readonly latest: Option.Option<IsoTime>;
 }
 
-function stampedNoEarlierThan({ latest, message }: Stamping): NewMessage {
+const STAMP_GAP: Duration.Input = "1 millis";
+
+function justAfter(time: IsoTime): IsoTime {
+  return isoTimeOf(DateTime.addDuration(DateTime.makeUnsafe(time), STAMP_GAP));
+}
+
+function stampedAfter({ latest, message }: Stamping): NewMessage {
   return Option.match(
-    Option.filter(latest, (time) => time > message.createdAt),
+    Option.filter(Option.map(latest, justAfter), (time) => time > message.createdAt),
     {
       onNone: () => message,
       onSome: (createdAt) => ({ ...message, createdAt }),
@@ -182,7 +189,7 @@ export {
   isPlaced,
   placeIn,
   placed,
-  stampedNoEarlierThan,
+  stampedAfter,
   threadIdOf,
   withKnownMentions,
 };
