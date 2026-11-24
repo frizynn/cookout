@@ -7,10 +7,9 @@ export function IdentityCardFacts(parts: IdentityCardBoxParts): ReactNode {
   const { card } = parts;
   return (
     <>
-      <p className="font-semibold">{card.displayName ?? card.name}</p>
-      {card.displayName !== null && <p className="text-xs text-muted-foreground">{`@${card.name}`}</p>}
-      {card.description !== null && <p className="whitespace-pre-line">{card.description}</p>}
+      {card.presence !== null && <p className="text-xs text-muted-foreground">{card.presence.label}</p>}
       <p className="text-xs text-muted-foreground">{card.kind}</p>
+      {card.description !== null && <p className="whitespace-pre-line">{card.description}</p>}
       {card.deactivated && <p className="text-xs font-medium text-muted-foreground">{TEXT.deactivated}</p>}
     </>
   );

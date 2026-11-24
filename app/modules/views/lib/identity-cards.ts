@@ -26,6 +26,7 @@ function descriptionOf(identity: Identity): string | null {
 
 function cardFor(lists: Lists, identity: Identity): IdentityCardParts {
   return {
+    agent: identity.kind === "agent",
     deactivated: identity.deactivated === true,
     description: descriptionOf(identity),
     displayName: identity.displayName ?? null,
