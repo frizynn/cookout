@@ -17,7 +17,7 @@ interface ConversationPanelParts {
   readonly openHref: string | null;
   readonly openLabel: string;
   readonly actions?: readonly PanelAction[];
-  readonly message?: IdentityCardComposerParts;
+  readonly message: IdentityCardComposerParts;
   readonly children: ReactNode;
 }
 
@@ -38,7 +38,7 @@ export function ConversationPanel(parts: ConversationPanelParts): ReactNode {
           <ShortcutLink href={parts.openHref} label={parts.openLabel} shortcut={CONVERSATION_KEYS.open} />
         )}
       </header>
-      <IdentityCardComposer value={parts.message ?? null}>{parts.children}</IdentityCardComposer>
+      <IdentityCardComposer value={parts.message}>{parts.children}</IdentityCardComposer>
     </aside>
   );
 }

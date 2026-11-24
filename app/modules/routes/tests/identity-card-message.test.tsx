@@ -142,3 +142,32 @@ it("pressing Escape inside a card closes it and returns focus to the name", { ti
 
   opened.close();
 });
+
+interface InThread extends Opened {
+  readonly panel: HTMLElement;
+}
+
+async function openedInThread(channel: string): Promise<InThread> {
+  const author = `${channel}-author`;
+  const poster = await newIdentity({ kind: "human", name: author });
+  const reader = await newIdentity({ kind: "human", name: `${channel}-reader` });
+  await adminClient().createChannel({ name: channel });
+  const { message } = await poster.client.createMessage({ channel, text: "Hello" });
+  const close = openAt({ client: reader.client, hash: `#/channels/${channel}/threads/${String(message.id)}` });
+  const panel = await screen.findByRole("complementary", { name: "Thread" });
+  return { author, close, panel };
+}
+
+it("in a thread panel, the card's Message puts @name in the thread's reply box", { timeout: 10_000 }, async () => {
+  expect.hasAssertions();
+
+  const { author, close, panel } = await openedInThread(`${PREFIX}-thread`);
+  fireEvent.pointerMove(await within(panel).findByRole("link", { name: author }), { pointerType: "mouse" });
+  fireEvent.click(within(await screen.findByRole("dialog", { name: author })).getByRole("button", { name: "Message" }));
+
+  await waitFor(() => {
+    expect(within(panel).getByRole("textbox", { name: "Reply" })).toHaveProperty("value", `@${author} `);
+  });
+
+  close();
+});

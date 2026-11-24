@@ -16,6 +16,7 @@ export function ConversationMissing(): ReactNode {
       backLabel={TEXT.back}
       detail=""
       label={TEXT.conversation}
+      message={null}
       openHref={null}
       openLabel={TEXT.open}
     >

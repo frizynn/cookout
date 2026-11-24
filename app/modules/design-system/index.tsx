@@ -38,7 +38,8 @@
  * `ConversationPanel`, a named column with a `BackLink` arrow (shown only on a
  * narrow screen, where the panel takes the whole width), its detail, its
  * header's `actions` as small buttons (each naming its key in `aria-keyshortcuts` and a tooltip), and any open link (naming its key, `CONVERSATION_KEYS.open`, in
- * `aria-keyshortcuts` and a tooltip; `CONVERSATION_KEYS` also holds the keys for Mark read and Mark unread), or beside
+ * `aria-keyshortcuts` and a tooltip; `CONVERSATION_KEYS` also holds the keys for Mark read and Mark unread), its
+ * `message` being what an identity card's Message does in it (an `IdentityCardComposer`), or beside
  * a `ConversationEmpty`, a named column holding only a
  * muted line (hidden on a narrow screen); a
  * `DividerButton` is a divider line led by a quiet button, such as one that
@@ -112,10 +113,17 @@
  * on macOS) on the message, but not on a link, button or other interactive element in it, runs Mark unread at once and
  * focuses and selects nothing; `StandaloneMessage` does the same. `StandaloneMessage` is one named message on its own, such as a
  * thread's parent. A message's author name and an `@name` in its text are each an `IdentityCard`: hovering it
- * (after a short delay) or focusing it opens a card, a Radix tooltip whose pointer can rest on it. The card leads
- * with a header like `Profile`'s: the identity's large `Avatar` (with its presence dot, and none when its presence
- * isn't known) beside its shown name, its `@name` handle and an agent's tag. Below come its presence words, its kind
- * (an agent's owner), any description, Deactivated, and a View profile link; pointer leave, Escape or blur closes it, and focus stays on the name. Its card comes from the
+ * (after a short delay) or focusing it opens a card, a Radix tooltip whose pointer can rest on it, opening beside
+ * the name (to its right, or its left without room) and sliding to stay inside the window. The card, a labelled
+ * non-modal `dialog` about 256 px wide, leads with a large square tile of the identity's avatar colour and initials
+ * (greyed when deactivated) with an Agent chip on an agent's. Below come its shown name, large and bold, its `@name`
+ * handle when it has a display name, its presence dot and words (none when its presence isn't known) or, when
+ * deactivated, a red Deactivated, its kind (an agent's owner), any description (muted, with a left rule), and two
+ * buttons: Message, which closes the card and calls the nearest `IdentityCardComposer` with the name (disabled when
+ * deactivated or with no composer), and View profile, a link. Pointer leave, Escape or blur of the name closes it.
+ * Tab on the focused name moves focus into the card; there, Escape or Tab past either end closes it and puts focus
+ * back on the name, where it stays closed until the name loses focus, and while focus is inside, pointer leave
+ * doesn't close it. Its card comes from the
  * `IdentityCards` source the views provide; with none, the name is drawn alone. In a message, `MessageBody` holds its rendered Markdown text, `Mention` an
  * `@name` in it, `CallChip` a command call
  * and its data, `DataToggle` its data folded away, and `ThreadSummary` a link to
