@@ -15,6 +15,12 @@ interface ListParts extends Parts {
   readonly label: string;
 }
 
+interface FeedParts extends ListParts {
+  readonly feed?: string;
+  readonly more: boolean;
+  readonly busy: boolean;
+}
+
 interface ButtonParts extends Parts {
   readonly disabled?: boolean;
   readonly onClick: () => void;
@@ -74,6 +80,7 @@ interface IdentityRowParts {
   readonly active: boolean;
   readonly detail: string;
   readonly note: string | null;
+  readonly tabbable: boolean;
   readonly children?: ReactNode;
 }
 
@@ -284,6 +291,7 @@ export type {
   DataBlockParts,
   FormParts,
   LinkParts,
+  FeedParts,
   ListParts,
   Parts,
   SkeletonParts,

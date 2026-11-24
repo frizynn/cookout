@@ -1,13 +1,10 @@
 /**
- * The design system: hand-written Tailwind components styled after shadcn/ui
- * (its token names and its card), in a Vercel-like neutral look with small
- * pops of colour (ADR 0080). Every view builds from these and none
- * styles itself, so no component takes classes. `styles.css` is the Tailwind
- * theme, which `index.html` loads: its tokens are CSS variables, dark by
- * default, light under `data-theme="light"` on the root element, and light
- * under `prefers-color-scheme: light` unless `data-theme="dark"`; components
- * read tokens, never raw colours. Text and the UI are sans, times and channel
- * names mono.
+ * The design system: hand-written Tailwind components styled after shadcn/ui (its token names and its card), in a
+ * Vercel-like neutral look with small pops of colour (ADR 0080). Every view builds from these and none styles
+ * itself, so no component takes classes. `styles.css` is the Tailwind theme, which `index.html` loads: its tokens
+ * are CSS variables, dark by default, light under `data-theme="light"` on the root element, and light under
+ * `prefers-color-scheme: light` unless `data-theme="dark"`; components read tokens, never raw colours. Text and the
+ * UI are sans, times and channel names mono.
  *
  * `Workspace` is the page around every route once logged in: a `Sidebar` on
  * the left (on a narrow screen, behind a button that opens and closes it),
@@ -24,16 +21,17 @@
  * an icon and any `Pill` after it: a count read out by its label, loud (the
  * unread colour), quiet, or unseen (read out only); a `menu` is its `ActionMenu`.
  * `ActionMenu` is a menu outside a message: right-clicking its children, or Shift+F10 or the menu key in them, opens
- * its `choices` as a context menu named by its `label`; a More actions button (or `buttonLabel`), shown on hover or
- * focus (`inline`: before a name), opens them as a dropdown. `PersonMenu` is a name's. `NavHeading` heads a
- * `NavList` of links, with any `HeadingButton` on its line, a plus named by
- * its label that starts something new, such as a channel; in the footer, `FooterLink` is a link
- * with a gear, such as Settings, highlighted when open. `Pane` is
+ * its `choices` (each showing any `keys` it has) as a context menu named by its `label`; a More actions button (or
+ * `buttonLabel`), shown on hover or focus (`inline`: before a name), opens them as a dropdown. `PersonMenu` is a
+ * name's; under a `PersonKeysArea`, its keys (View profile, Message, Copy name, which a polite status announces) act
+ * on the name while focus is in it. `NavHeading` heads a `NavList` of links, with any `HeadingButton` on its line, a
+ * plus named by its label that starts something new, such as a channel; in the footer, `FooterLink` is a link with a
+ * gear, such as Settings, highlighted when open. `Pane` is
  * the main column, with a `PaneHeader` (title, description and any action on
  * its right, such as a `PressButton`, a button that is on or off), a
  * named `Page` that scrolls a centred column of `PageSection`s, each headed by
  * a link to itself, its heading focused when `focused` (such as Settings,
- * where `ChoiceGroup` picks one of a few choices), a
+ * where `ChoiceGroup` is a radio group of a few choices), a
  * named `ScrollArea` that stays scrolled to the end as what it counts grows, unless
  * scrolled up, and anything under it, such as a message box in a `BoxFrame`
  * with its keyboard hint; `SidePanel` is a
@@ -111,8 +109,8 @@
  * `empty`, or that it has reached the `end`; `MoreButton` is a quiet
  * full-width row under a list that loads more of it, with a spinner while
  * `loading`.
- * `MessageList` is a named list of `MessageItem`s: one message each, which
- * takes focus, with its avatar, name and time, or only its time on hover when
+ * `MessageList` is a named `feed` of `MessageItem`s (`aria-busy` while `busy`; `aria-setsize` -1 while `more`) with one Tab stop: the item
+ * focused last or the newest (see its ADR); `feed` is its element ID. A `MessageItem` is an `article` labelled by its author and time, which takes focus, with its avatar, name and time, or only its time on hover when
  * `grouped` under the one before; the day's separator and the "New" line above it when it starts them; a
  * mark (`for-you`, the filled accent block, when it mentions or answers the reader, or `open`); and, shown on hover or
  * focus, a "Quick actions" group of icon buttons, each with no text and named by its tooltip: a button for each of its
@@ -137,9 +135,9 @@
  * takes focus, and hovering or focusing it opens a tooltip with the full date and time and, when the message has one, its read receipt. `ReactionChips` is a message's named row of
  * `ReactionChip`s, each a reaction and its count, pressed (in the accent) when one is the reader's own, with who
  * reacted as its tooltip. `RepliesDivider` heads a thread's replies, `ChannelStart` says a
- * channel has nothing older, and `QuietButton` is a muted centred button,
- * such as loading older messages. `ClosedFold` is a row of a message list standing for closed threads folded away,
- * a button on a dashed line that unfolds them; given a `day`, the day's label (a separator to a screen reader) shares
+ * channel has nothing older, and `QuietButton` is a muted centred button, naming what it `controls`,
+ * such as loading older messages. `ClosedFold` is an item of a message list standing for closed threads folded away,
+ * an `article` named by its button on a dashed line that unfolds them; given a `day`, the day's label (a separator to a screen reader) shares
  * that line, in place of a day separator of its own beside it: the label in the line's centre, the button at its right end,
  * shortening rather than overlapping the label on a narrow line. `ThreadBar` is a muted bar across the top of a thread: a line of text
  * and one icon button named by its tooltip, such as who closed it and Reopen thread; `QuietLink` is a muted link in such a line, such as a name
@@ -215,12 +213,14 @@ export {
   Mention,
   IdentityCard,
   PersonMenu,
+  PersonKeysArea,
   IdentityCardComposer,
   IdentityCards,
   ReactionChip,
   ReactionChips,
 } from "./lib/messages.ts";
 export type {
+  PersonKeysSource,
   IdentityCardLink,
   IdentityCardParts,
   IdentityCardSource,
