@@ -1,4 +1,6 @@
-import type { PageFocusAdapter } from "../../page-focus/index.ts";
+import type { createPageFocus } from "../../page-focus/index.ts";
+
+type PageFocusAdapter = Parameters<typeof createPageFocus>[number];
 
 interface HandFocus {
   readonly adapter: PageFocusAdapter;

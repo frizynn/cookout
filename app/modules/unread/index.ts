@@ -70,7 +70,7 @@
  * the conversation unread from its first message that was unread when the
  * reader started, or from its newest if none was, and holds the read rule off
  * (`held`) until the reader starts afresh. Time passes on the `Clock` it is
- * made with: `browserReading()` uses `browserClock` and the document's focus,
+ * made with: `browserReadingTools()` are `browserClock` and the document's focus,
  * and tests bring a clock they move on by hand.
  */
 import type { ChannelName, CookoutClient, MessageId } from "../sdk/index.ts";
@@ -207,5 +207,5 @@ export { rowsOf } from "./lib/rows.ts";
 export type { ThreadNews, UnreadCounts, UnreadWhy } from "./lib/levels.ts";
 export { NO_COUNTS, countsByChannel, countsOf, newsByThread } from "./lib/levels.ts";
 export { type Reading, createReading } from "./lib/reading.ts";
-export { browserReading } from "./lib/browser-reading.ts";
-export type { Newest, Reader, ReaderSources, ReaderState, ReaderTools } from "./lib/reader.ts";
+export { browserReadingTools } from "./lib/browser-reading.ts";
+export type { Newest, Reader, ReaderSources } from "./lib/reader.ts";

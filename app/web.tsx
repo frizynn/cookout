@@ -9,7 +9,7 @@
  * The Inbox's read rule counts time on the page's timers while the page is
  * visible and focused.
  */
-import { browserReading, createUnread } from "./modules/unread/index.ts";
+import { browserReadingTools, createReading, createUnread } from "./modules/unread/index.ts";
 import { createAgentJoinApprovals, createLoginApprovals, createSession } from "./modules/session/index.ts";
 import { createLive, eventSourceAdapter } from "./modules/live/index.ts";
 import { CookoutApp } from "./modules/routes/index.tsx";
@@ -42,7 +42,7 @@ if (root !== null) {
       live={live}
       loginApprovals={createLoginApprovals(client)}
       presence={createPresenceStore({ client, live })}
-      reading={browserReading()}
+      reading={createReading(browserReadingTools())}
       session={session}
       unread={unread}
     />,

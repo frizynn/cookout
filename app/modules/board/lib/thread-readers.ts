@@ -40,4 +40,4 @@ function createThreadReaders(): ThreadReaders {
   };
 }
 
-export { type ThreadReaders, createThreadReaders };
+export { createThreadReaders };

@@ -206,4 +206,4 @@ function createReader(making: ReaderMaking): Reader {
   };
 }
 
-export { type Newest, type Reader, type ReaderSources, type ReaderState, type ReaderTools, createReader };
+export { type Newest, type Reader, type ReaderSources, type ReaderTools, createReader };

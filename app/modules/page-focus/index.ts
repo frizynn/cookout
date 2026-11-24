@@ -10,5 +10,5 @@
  * really gains or loses focus, bring their own adapter.
  */
 
-export { type PageFocus, type PageFocusAdapter, createPageFocus } from "./lib/page-focus.ts";
+export { type PageFocus, createPageFocus } from "./lib/page-focus.ts";
 export { documentFocusAdapter } from "./lib/document.ts";
