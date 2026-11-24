@@ -57,6 +57,9 @@ const browserTests = selectedBrowserTests();
 const browserSkipped = browserSkip(browserTests);
 
 function browserScript(): readonly string[] {
+  if (shard !== "") {
+    return ["browser", `--shard=${shard}`];
+  }
   if (browserTests.all) {
     return ["browser"];
   }

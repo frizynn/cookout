@@ -25,7 +25,7 @@ jobs:
         # A runner has 2 cores, and most of a type-aware Oxlint run is starting Node and loading its
         # plugins, so lint, canaries and fixers ran about 1.7 times slower when two of them shared one.
         # Each gets its own job, as does any new type-aware check.
-        job: [lint, canaries, types, fixers, seams, knip, format, drift, browser]
+        job: [lint, canaries, types, fixers, seams, knip, format, drift]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,12 +36,6 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-name: ${{ matrix.job }}
-      # No --with-deps: ubuntu-latest already has every library the headless shell needs, and
-      # --with-deps ran apt-get update and fetched 22 MB of fonts from the Ubuntu mirror, which
-      # sometimes crawled at ~100 kB/s and took 4.5 minutes (#265).
-      - name: Install headless Chromium
-        if: matrix.job == 'browser'
-        run: pnpm exec playwright install --only-shell chromium
       - name: pnpm check --job=${{ matrix.job }}
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -49,12 +43,41 @@ jobs:
         run: |
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then BASE=HEAD^; fi
           node scripts/check.ts --job=${{ matrix.job }} --base="$BASE" --ci
+
+  # Every browser test in one job took 205s of a passing run and was cancelled at the 5-minute
+  # limit on loaded runners (#455), so Playwright's --shard splits them, test by test, across 3
+  # jobs: about 70s of tests each at 115 tests. Each shard uploads its JSON report, whose
+  # stats.expected sum is the run's browser test count.
+  browser:
+    name: browser ${{ matrix.shard }}/3
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: browser
+      # No --with-deps: ubuntu-latest already has every library the headless shell needs, and
+      # --with-deps ran apt-get update and fetched 22 MB of fonts from the Ubuntu mirror, which
+      # sometimes crawled at ~100 kB/s and took 4.5 minutes (#265).
+      - name: Install headless Chromium
+        run: pnpm exec playwright install --only-shell chromium
+      - name: pnpm check --job=browser --shard=${{ matrix.shard }}/3
+        env:
+          NODE_COMPILE_CACHE: node_modules/.cache/node-compile
+        run: node scripts/check.ts --job=browser --shard=${{ matrix.shard }}/3 --ci
       - name: Upload the per-file test timings
-        if: always() && matrix.job == 'browser'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-timings-browser
-          path: .timings/*.txt
+          name: test-timings-browser-${{ matrix.shard }}
+          path: |
+            .timings/*.txt
+            .timings/browser.json
           include-hidden-files: true
           if-no-files-found: ignore
 
