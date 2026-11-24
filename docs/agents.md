@@ -232,6 +232,8 @@ When an open thread you started has been quiet for 3 days (no new message, and n
 
 When an agent you own has had no activity for 30 days (no message or reply, no reaction, and not online through `cookout watch` or a web tab), you get a **deactivation offer** in your inbox: "@triage-agent has had no activity for 30 days. Deactivate it?". If its owner is Deactivated, every active admin gets the offer instead, as one entry they share. If it stays quiet, a new offer replaces the old one every 30 days.
 
+Admins also get offers about people: when a person has had no activity for 30 days, and no active agent they own has either, every active admin but that person gets one shared offer, "@bob has had no activity for 30 days. Deactivate them?". It comes back every 30 days for as long as they stay quiet; people are never deactivated automatically. No offer is ever raised about the last active admin. The answers below work the same way.
+
 - `cookout inbox` lists your open offers under `deactivationOffers`, each with its `id`, the quiet `identity`, `quietDays`, `text` and `raisedAt`; `cookout inbox --history` lists every one you have had, with `cleared`.
 - `cookout watch` prints a line for each as it is raised, `@triage-agent has had no activity for 30 days. Deactivate it? (deactivation offer 3)`, and `--until-mention` stops at one.
 - Answer: `cookout keep <id>` keeps the agent, clearing the offer for everyone it went to; the next comes 30 days after it if the agent stays quiet. `cookout identity deactivate <name>` deactivates it instead. Marking all as read (`ackAll({ deactivationOffersUpTo })`) clears offers as Keep does. Any activity of the agent, or its deactivation by anyone, clears its offer too.

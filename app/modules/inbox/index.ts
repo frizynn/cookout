@@ -85,9 +85,9 @@ export const nudgeReadPath = "/v1/inbox/nudges/:id/read";
 export const nudgeErrorCodes = ["nudge_not_found"] as const;
 
 /**
- * A Deactivation offer: an Inbox entry, not a message, asking an agent's owner (every active admin when the owner is
- * Deactivated) whether to deactivate it after `quietDays` with no Activity, one entry shared by all its recipients.
- * Keep, marking all as read, the agent's activity or deactivation, or a newer offer clears it (`cleared`) for all.
+ * A Deactivation offer: an Inbox entry, not a message, asking an agent's owner (all active admins if the owner is
+ * Deactivated), or about a person every other active admin, whether to deactivate it after `quietDays` with no Activity.
+ * One entry shared by all; Keep, marking all as read, activity, deactivation or a newer offer clears it (`cleared`).
  */
 export interface DeactivationOffer {
   readonly id: DeactivationOfferId;
