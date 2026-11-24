@@ -1,5 +1,6 @@
 import type { MergeOptions, MergeRules, Merged } from "./lib/merge-ticket.ts";
 import { continueMerge, mergeTicket } from "./lib/merge-ticket.ts";
+import type { Step } from "./lib/merge-steps.ts";
 import { fail } from "./lib/tools.ts";
 import { spawnSync } from "node:child_process";
 import { waitForCi } from "./lib/ci-wait.ts";
@@ -116,9 +117,18 @@ function migrationsBase(): string {
   return tag;
 }
 
+const FAST_CHECKS = ["typecheck", "lint --base=origin/v1", "hygiene"]
+  .map((script) => `pnpm run --silent ${script}`)
+  .join(" && ");
+
+function ciOf(branch: string, sha: string): Step {
+  return waitForCi({ args: ["--branch", branch, "--commit", sha], base: [], log, subject: branch });
+}
+
 const merged: Merged = run({
   attempts: ATTEMPTS,
-  check: ["pnpm", "check"],
+  check: ["sh", "-c", FAST_CHECKS],
+  ci: ciOf,
   cwd: process.cwd(),
   install: ["pnpm", "install", "--frozen-lockfile"],
   log,
