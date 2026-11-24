@@ -92,6 +92,26 @@ const pausedMidRunStorage: Layer.Layer<Storage> = Layer.effect(
   })),
 ).pipe(Layer.provide(memoryStorage));
 
+const EDITED_TEXT = "edited mid-run";
+
+function editingText(storage: Storage["Service"], run: ScheduledRun): Effect.Effect<void> {
+  return Effect.flatMap(Effect.flatMap(storage.findScheduledMessage(run.id), Effect.fromNullishOr), (schedule) =>
+    Effect.when(
+      Effect.asVoid(storage.editScheduledMessage(run.id, { ...schedule, text: EDITED_TEXT }, run.due)),
+      Effect.succeed(schedule.text !== EDITED_TEXT),
+    ),
+  ).pipe(Effect.asVoid, Effect.orDie);
+}
+
+const editedMidRunStorage: Layer.Layer<Storage> = Layer.effect(
+  Storage,
+  Effect.map(Storage, (storage) => ({
+    ...storage,
+    runScheduledMessage: (run: ScheduledRun): ReturnType<Storage["Service"]["runScheduledMessage"]> =>
+      Effect.andThen(editingText(storage, run), storage.runScheduledMessage(run)),
+  })),
+).pipe(Layer.provide(memoryStorage));
+
 function deactivatingCreator(storage: Storage["Service"], run: ScheduledRun): Effect.Effect<void> {
   return Effect.flatMap(Effect.flatMap(storage.findScheduledMessage(run.id), Effect.fromNullishOr), ({ creator }) =>
     Effect.asVoid(storage.deactivateIdentity(creator)),
@@ -133,6 +153,7 @@ const memoryAssets = memoryAssetStore;
 
 export {
   deactivatedMidRunStorage,
+  editedMidRunStorage,
   freshDatabasePath,
   freshPostgresQueryPlans,
   freshSqliteQueryPlans,

@@ -41,6 +41,8 @@ type NewScheduledMessage = Pick<
   "channel" | "creator" | "text" | "cron" | "at" | "timeZone" | "createdAt"
 >;
 
+type ScheduledEdit = Pick<StoredScheduledMessage, "text" | "cron" | "at" | "timeZone">;
+
 interface ScheduledRun {
   readonly id: ScheduledMessageId;
   readonly runsFrom: IsoTime;
@@ -59,6 +61,7 @@ interface ScheduledMessagesSection {
   readonly listScheduledMessages: (channel?: ChannelName) => Fails<readonly StoredScheduledMessage[]>;
   readonly pauseScheduledMessage: (id: ScheduledMessageId, at: IsoTime) => Fails<Found>;
   readonly resumeScheduledMessage: (id: ScheduledMessageId, at: IsoTime) => Fails<Found>;
+  readonly editScheduledMessage: (id: ScheduledMessageId, edit: ScheduledEdit, at: IsoTime) => Fails<Found>;
   readonly deleteScheduledMessage: (id: ScheduledMessageId, at: IsoTime) => Fails<Found>;
   readonly runScheduledMessage: (run: ScheduledRun) => Fails<ScheduledRunResult>;
 }
@@ -110,6 +113,27 @@ function resumed(schedule: StoredScheduledMessage, at: IsoTime): StoredScheduled
     return schedule;
   }
   return { ...schedule, pausedBecause: null, runsFrom: at, status: "active", updatedAt: at };
+}
+
+function retimed(schedule: StoredScheduledMessage, edit: ScheduledEdit): boolean {
+  return schedule.cron !== edit.cron || schedule.at !== edit.at || schedule.timeZone !== edit.timeZone;
+}
+
+function statusAfterEdit(schedule: StoredScheduledMessage, edit: ScheduledEdit): ScheduledMessageStatus {
+  if (schedule.status === "finished" && retimed(schedule, edit)) {
+    return "active";
+  }
+  return schedule.status;
+}
+
+function editedTo(edit: ScheduledEdit): Change {
+  return (schedule, at) => ({
+    ...schedule,
+    ...edit,
+    runsFrom: at,
+    status: statusAfterEdit(schedule, edit),
+    updatedAt: at,
+  });
 }
 
 function pausedForDeactivation(schedule: StoredScheduledMessage): StoredScheduledMessage {
@@ -202,6 +226,7 @@ function scheduledMessagesOn(on: ScheduledMessagesOn): ScheduledMessagesSection 
         }),
       ),
     deleteScheduledMessage: deleteWith(on),
+    editScheduledMessage: (id, edit, at) => changeWith(on, editedTo(edit))(id, at),
     findScheduledMessage: on.records.find,
     listScheduledMessages: on.records.list,
     pauseScheduledMessage: changeWith(on, paused),

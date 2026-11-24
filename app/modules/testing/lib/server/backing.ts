@@ -3,6 +3,7 @@ import { Context, Effect, Layer } from "effect";
 import type { FileSystem, Path, Scope } from "effect";
 import {
   deactivatedMidRunStorage,
+  editedMidRunStorage,
   freshDatabasePath,
   memoryAssets,
   pausedMidRunStorage,
@@ -16,7 +17,7 @@ import { layer as nodeServices } from "@effect/platform-node/NodeServices";
 import { secretsOf } from "./secrets.ts";
 import { webhookFake } from "../../../webhook-fake/server.ts";
 
-type StorageKind = "memory" | "unusable" | "sqlite" | "paused-mid-run" | "deactivated-mid-run";
+type StorageKind = "memory" | "unusable" | "sqlite" | "paused-mid-run" | "deactivated-mid-run" | "edited-mid-run";
 
 interface BackingOptions {
   readonly storage?: StorageKind;
@@ -36,20 +37,19 @@ function sqliteStores(database: string): Layer.Layer<Stores> {
   return Layer.merge(sqliteStorage(database), assets).pipe(Layer.provide(nodeServices), Layer.orDie);
 }
 
+const sharedLayers: Readonly<Record<Exclude<StorageKind, "sqlite">, Layer.Layer<Storage>>> = {
+  "deactivated-mid-run": deactivatedMidRunStorage,
+  "edited-mid-run": editedMidRunStorage,
+  memory: memoryStorage,
+  "paused-mid-run": pausedMidRunStorage,
+  unusable: unusableStorage,
+};
+
 function storageOf(kind: StorageKind | undefined): StorageFactory {
   if (kind === "sqlite") {
     return Effect.map(freshDatabasePath, sqliteStores);
   }
-  if (kind === "unusable") {
-    return sharedStore(unusableStorage);
-  }
-  if (kind === "paused-mid-run") {
-    return sharedStore(pausedMidRunStorage);
-  }
-  if (kind === "deactivated-mid-run") {
-    return sharedStore(deactivatedMidRunStorage);
-  }
-  return sharedStore(memoryStorage);
+  return sharedStore(sharedLayers[kind ?? "memory"]);
 }
 
 function storageFor(options: BackingOptions): Effect.Effect<Layer.Layer<Stores>, never, Scope.Scope> {
