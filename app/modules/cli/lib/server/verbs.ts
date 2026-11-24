@@ -2,7 +2,7 @@ import { Argument, Command, Flag } from "effect/cli";
 import type { ListMessagesQuery, MessageId, PostMessageRequest } from "../../../messages/index.ts";
 import { Option, Schema } from "effect";
 import { answer, refused } from "./output.ts";
-import { joinCommand, leaveCommand } from "./join-command.ts";
+import { approveJoinCommand, joinCommand, leaveCommand } from "./join-command.ts";
 import { searchCommand, threadCommandFor } from "./thread.ts";
 import { commandCommand } from "./command.ts";
 import { helpCommand } from "./help-monitor.ts";
@@ -238,6 +238,7 @@ export const verbCommands = [
   searchCommand,
   joinCommand,
   leaveCommand,
+  approveJoinCommand,
   inboxCommand,
   ackCommand,
   keepCommand,

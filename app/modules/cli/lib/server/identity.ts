@@ -81,7 +81,7 @@ const identityDeactivateCommand = Command.make("deactivate", { name: identityNam
   answered(deactivation(name)),
 ).pipe(
   Command.withDescription(
-    "Deactivate an identity (admin, or a human for their own agents). Its tokens stop working, and its messages and name stay; a human's agents stay active. On a command's handler it warns on stderr that the command stops replying.",
+    "Deactivate an identity (admin, a human for their own agents, or an agent for the agents it brought in). Its tokens stop working, and its messages and name stay; a human's agents stay active. On a command's handler it warns on stderr that the command stops replying.",
   ),
 );
 
@@ -134,7 +134,8 @@ const identitySessionsCommand = Command.make(
   },
 ).pipe(
   Command.withDescription(
-    "List an agent's live agent session (issued, last used, expiry, host), or revoke it with --revoke. Owner or admin.",
+    "List an agent's live agent session (issued, last used, expiry, host), or revoke it with --revoke. Owner or " +
+      "admin; --revoke also the agent that brought it in.",
   ),
 );
 
