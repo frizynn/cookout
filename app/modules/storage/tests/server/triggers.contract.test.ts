@@ -156,3 +156,28 @@ it.effect.each(storageLayers)(
       expect(replaced).toStrictEqual({ agent: TRIAGE, token: SECOND_TOKEN, url: ROUTINE_URL });
     }),
 );
+
+const DEPLOY = nameOf("deploy");
+const DEPLOY_HASH = "c";
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): trigger URLs list by agent name, and a failed result with no status reads back so",
+  ({ layer }) =>
+    Effect.gen(function* listedInOrder() {
+      const { storage } = yield* openStore(layer);
+      yield* boardOf(storage);
+      yield* storage.createIdentity(
+        identity("deploy", { owner: "ada" }),
+        tokenHash(Str.repeat(HASH_LENGTH)(DEPLOY_HASH)),
+      );
+      yield* storage.setTrigger(TRIAGE, { headers: HEADERS, token: FIRST_TOKEN, url: ROUTINE_URL });
+      yield* storage.setTrigger(DEPLOY, { token: SECOND_TOKEN, url: OTHER_URL });
+      yield* storage.recordTriggerResult(DEPLOY, { at: FAILED_AT, ok: false });
+      const listed = yield* storage.listTriggers([TRIAGE, DEPLOY]);
+
+      expect(listed).toStrictEqual([
+        { agent: DEPLOY, lastResult: { at: FAILED_AT, ok: false }, token: SECOND_TOKEN, url: OTHER_URL },
+        { agent: TRIAGE, headers: HEADERS, token: FIRST_TOKEN, url: ROUTINE_URL },
+      ]);
+    }),
+);
