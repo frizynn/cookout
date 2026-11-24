@@ -82,12 +82,16 @@ function viewProfileAct(profileHref: string): () => boolean {
   };
 }
 
-function messageAct({ compose, deactivated, name }: PersonChoicesOf): () => boolean {
+function messageAct({ compose, deactivated, name }: PersonChoicesOf): PersonActs["message"] {
+  if (compose === null) {
+    return null;
+  }
+  const write = compose;
   return () => {
-    if (compose === null || deactivated) {
+    if (deactivated) {
       return false;
     }
-    compose(name);
+    write(name);
     return true;
   };
 }

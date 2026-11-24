@@ -11,7 +11,7 @@
  * - `NavLink` is one link in the sidebar, bold when it has something new (`marked`), highlighted when it is the open item, with an icon and any `Pill` after it; a `menu` is its `ActionMenu`.
  * - `Pill` is a count read out by its label, loud (the unread colour), quiet, or unseen (read out only).
  * - `ActionMenu` is a menu outside a message: right-clicking its children, or Shift+F10 or the menu key in them, opens its `choices` (each showing any `keys` it has) as a context menu named by its `label`; a More actions button (or `buttonLabel`), shown on hover or focus (`inline`: before a name), opens them as a dropdown.
- * - `PersonMenu` is a name's `ActionMenu`; under a `PersonKeysArea`, its keys (View profile, Message, Copy name, which a polite status announces) act on the name while focus is in it.
+ * - `PersonMenu` is a name's `ActionMenu`; under a `PersonKeysArea`, its keys (View profile, Message, Copy name, which a polite status announces) act on the name while focus is in it; Message, its menu item and its key, only under an `IdentityCardComposer`, where there is a message box to mention them in.
  * - `NavHeading` heads a `NavList` of links, with any `HeadingButton` on its line.
  * - `NavList` is a list of links under a `NavHeading`.
  * - `HeadingButton` is a plus named by its label that starts something new, such as a channel.
