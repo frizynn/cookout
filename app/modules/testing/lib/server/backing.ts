@@ -1,6 +1,11 @@
 import { Context, Effect, Layer } from "effect";
 import type { FileSystem, Path, Scope } from "effect";
-import { ScriptedTriggers, scriptedTriggers, unusedScriptedTriggers } from "./triggers.ts";
+import {
+  ScriptedTriggers,
+  scriptedTriggers,
+  unusedScriptedTriggers,
+  webhookFake,
+} from "../../../webhook-fake/server.ts";
 import { freshDatabasePath, unusableStorage } from "./storage.ts";
 import { memoryStorage, sqliteStorage } from "../../../storage/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
@@ -11,7 +16,6 @@ import type { WebhookFake } from "../../../webhook-fake/server.ts";
 import { layer as nodeServices } from "@effect/platform-node/NodeServices";
 import { secretsOf } from "./secrets.ts";
 import { triggerCallerLive } from "../../../triggers/server.ts";
-import { webhookFake } from "../../../webhook-fake/server.ts";
 
 type StorageKind = "memory" | "unusable" | "sqlite";
 

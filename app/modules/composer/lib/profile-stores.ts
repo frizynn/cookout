@@ -28,6 +28,6 @@ function profileStoresOf(list: IdentityList): ProfileStores {
   };
 }
 
-export { type ProfileStores, profileStoresOf };
+export { profileStoresOf };
 export type { DisplayNameDraft } from "./display-name.ts";
 export type { TriggerSettings } from "./trigger-settings.ts";

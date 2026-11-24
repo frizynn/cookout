@@ -76,4 +76,4 @@ const mentionTriggersLayer = Layer.effect(
   }),
 );
 
-export { MentionTriggers, mentionTriggersLayer };
+export { mentionTriggersLayer };

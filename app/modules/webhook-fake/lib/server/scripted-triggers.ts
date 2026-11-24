@@ -13,7 +13,7 @@ interface ScriptedTriggersService {
 }
 
 class ScriptedTriggers extends Context.Service<ScriptedTriggers, ScriptedTriggersService>()(
-  "@ai-hero/cookout/testing/lib/server/triggers/ScriptedTriggers",
+  "@ai-hero/cookout/webhook-fake/lib/server/scripted-triggers/ScriptedTriggers",
 ) {}
 
 const OK: ScriptedAnswer = { status: 200 };

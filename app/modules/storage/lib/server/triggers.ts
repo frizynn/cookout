@@ -169,7 +169,6 @@ const POSTGRES_TRIGGERS_MIGRATION: readonly string[] = [
 ];
 
 export {
-  type NewTrigger,
   POSTGRES_TRIGGERS_MIGRATION,
   type StoredTrigger,
   TRIGGERS_MIGRATION,

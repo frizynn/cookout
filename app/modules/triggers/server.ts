@@ -13,7 +13,7 @@
 import { TriggerResponseSchema } from "./lib/server/wire.ts";
 
 /** Calls the trigger URLs of the agents each stored message mentions, for as long as the server runs. */
-export { MentionTriggers, mentionTriggersLayer } from "./lib/server/layer.ts";
+export { mentionTriggersLayer } from "./lib/server/layer.ts";
 
 /** The routes that read, set and clear an agent's trigger URL, for the server's route list. */
 export { triggerRoutes } from "./lib/server/routes.ts";

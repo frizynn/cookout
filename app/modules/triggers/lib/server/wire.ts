@@ -3,7 +3,7 @@ import { Schema } from "effect";
 import { TriggerResultSchema } from "../../../presence/server.ts";
 import { matchesWire } from "../../../http/index.ts";
 
-export const TriggerSchema = matchesWire<Trigger>()(
+const TriggerSchema = matchesWire<Trigger>()(
   Schema.Struct({ lastResult: Schema.optionalKey(TriggerResultSchema), url: Schema.String }),
 );
 
