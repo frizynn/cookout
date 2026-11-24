@@ -1,128 +1,180 @@
+import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { adminClient } from "./identities.ts";
+import { fireEvent, getDefaultNormalizer, screen, within } from "@testing-library/react";
+import { messagesIn } from "./messages.ts";
 import { openAt } from "./render.tsx";
 
-interface Opened {
-  readonly channel: string;
-  readonly close: () => void;
+const KEEP_SPACES = { normalizer: getDefaultNormalizer({ trim: false }) };
+
+async function openChannel(channel: string): Promise<() => void> {
+  await adminClient().createChannel({ name: channel });
+  const close = openAt({ client: adminClient(), hash: `#/channels/${channel}` });
+  await screen.findByLabelText("Message");
+  return close;
 }
 
-async function opened(channel: string): Promise<Opened> {
-  const admin = adminClient();
-  await admin.createChannel({ name: channel });
-  const { message } = await admin.createMessage({ channel, text: "The parent." });
-  await admin.createMessage({ channel, replyTo: message.id, text: "An answer." });
-  const close = openAt({ client: admin, hash: `#/channels/${channel}` });
-  return { channel, close };
+function type(text: string): void {
+  fireEvent.change(screen.getByLabelText("Message"), { target: { value: text } });
 }
 
-async function channelMessage(): Promise<HTMLElement> {
-  const feed = await screen.findByRole("feed", { name: "Messages" });
-  const text = await within(feed).findByText("The parent.");
-  const article = text.closest("article");
-  if (article === null) {
-    throw new TypeError("The parent is in no message");
+function press(key: string, shiftKey = false): boolean {
+  return fireEvent.keyDown(screen.getByLabelText("Message"), { key, shiftKey });
+}
+
+async function twoToMention(): Promise<void> {
+  await newIdentity({ kind: "human", name: "keys-first" });
+  await newIdentity({ kind: "agent", name: "keys-second" });
+}
+
+async function suggest(text: string): Promise<void> {
+  type(text);
+  await screen.findByRole("listbox", { name: "Mention suggestions" });
+}
+
+function pressEach(keys: readonly string[]): void {
+  for (const key of keys) {
+    press(key);
   }
-  return article;
 }
 
-function thread(): HTMLElement {
-  return screen.getByRole("complementary", { name: "Thread" });
+async function shownMessages(): Promise<readonly string[]> {
+  const shown = await messagesIn("Messages");
+  return shown;
 }
 
-function pressedOn(key: string): boolean {
-  const focused = globalThis.document.activeElement ?? globalThis.document.body;
-  return !fireEvent.keyDown(focused, { key });
+function highlighted(): string | null {
+  const list = screen.getByRole("listbox", { name: "Mention suggestions" });
+  return within(list).getByRole("option", { selected: true }).textContent;
 }
 
-async function focusedOn(find: () => HTMLElement): Promise<boolean> {
-  await waitFor(() => {
-    expect(document.activeElement).toBe(find());
-  });
-  return true;
-}
-
-function replyBox(): HTMLElement {
-  return within(thread()).getByRole("textbox", { name: "Reply" });
-}
-
-function threadParent(): HTMLElement {
-  return within(thread()).getByRole("article", { name: "Parent message" });
-}
-
-async function pressedThenOn(key: string, find: () => HTMLElement): Promise<readonly boolean[]> {
-  const pressed = pressedOn(key);
-  const reached = await focusedOn(find);
-  return [pressed, reached];
-}
-
-async function leftWithNoChannelMessage(): Promise<boolean> {
-  const feed = await screen.findByRole("feed", { name: "Messages" });
-  for (const article of within(feed).getAllByRole("article")) {
-    article.setAttribute("aria-current", "false");
-  }
-  threadParent().focus();
-  return pressedOn("ArrowLeft");
-}
-
-function pressedOffThePanel(message: () => HTMLElement): readonly boolean[] {
-  within(message()).getByRole("link", { name: "Reply" }).focus();
-  const onLink = pressedOn("r");
-  message().focus();
-  return [onLink, pressedOn("ArrowLeft")];
-}
-
-it("r on a focused message opens its thread with the cursor in the reply box, and again with it open", {
-  timeout: 5000,
-}, async () => {
+it("pressing Enter in the message box sends the message and empties the box", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const { close } = await opened("web-message-keys-reply");
-  const message = await channelMessage();
-  message.focus();
-  const first = await pressedThenOn("r", replyBox);
-  message.focus();
+  const close = await openChannel("web-keys-enter");
+  type("Sent with Enter");
+  press("Enter");
+  await within(screen.getByRole("feed", { name: "Messages" })).findByText("Sent with Enter");
 
-  expect([...first, ...(await pressedThenOn("r", replyBox))]).toStrictEqual([true, true, true, true]);
-
-  close();
-});
-
-it("t opens the thread on its top-level message, ← goes back to the channel message, and t again refocuses it", {
-  timeout: 5000,
-}, async () => {
-  expect.hasAssertions();
-
-  const { close } = await opened("web-message-keys-open");
-  const message = await channelMessage();
-  message.focus();
-  const opening = await pressedThenOn("t", threadParent);
-  const back = await pressedThenOn("ArrowLeft", () => message);
-  const again = await pressedThenOn("t", threadParent);
-
-  expect([...opening, ...back, ...again]).toStrictEqual([true, true, true, true, true, true]);
-
-  close();
-});
-
-it("the message keys leave a key alone off a message, off the thread panel and with no control to press", {
-  timeout: 5000,
-}, async () => {
-  expect.hasAssertions();
-
-  const { close } = await opened("web-message-keys-alone");
-  const message = await channelMessage();
-  const [onLink, leftOutside] = pressedOffThePanel(() => message);
-  await pressedThenOn("t", threadParent);
-  const openOnParent = pressedOn("t");
-
-  expect([onLink, leftOutside, openOnParent, await leftWithNoChannelMessage()]).toStrictEqual([
-    false,
-    false,
-    false,
-    false,
+  expect([await shownMessages(), screen.queryByDisplayValue("Sent with Enter")]).toStrictEqual([
+    ["adminSent with Enter"],
+    null,
   ]);
+
+  close();
+});
+
+it("pressing Shift+Enter sends nothing and leaves the key to start a new line", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const close = await openChannel("web-keys-shift-enter");
+  type("First line");
+  press("a");
+  const notPrevented = press("Enter", true);
+
+  expect([notPrevented, await shownMessages(), screen.queryByDisplayValue("First line")]).toStrictEqual([
+    true,
+    [],
+    screen.getByLabelText("Message"),
+  ]);
+
+  close();
+});
+
+it("while suggestions show, the arrows move the highlight and Enter picks it instead of sending", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await twoToMention();
+  const close = await openChannel("web-keys-pick");
+  await suggest("Ping @keys-");
+  const first = highlighted();
+  pressEach(["ArrowDown", "ArrowDown", "Shift", "ArrowUp"]);
+  const moved = highlighted();
+  press("Enter");
+
+  expect([
+    first,
+    moved,
+    screen.queryByDisplayValue("Ping @keys-second ", KEEP_SPACES),
+    screen.queryByRole("listbox", { name: "Mention suggestions" }),
+    await shownMessages(),
+  ]).toStrictEqual(["@keys-first", "@keys-second", screen.getByLabelText("Message"), null, []]);
+
+  close();
+});
+
+async function twoCommands(prefix: string): Promise<void> {
+  const schema = { properties: { branch: { type: "string" } }, type: "object" } as const;
+  await Promise.all(
+    [`${prefix}-first`, `${prefix}-second`].map(async (name) => {
+      await newIdentity({ kind: "agent", name, owner: "admin" });
+      await adminClient().addCommand({ name, schema, url: "http://127.0.0.1:9/command" });
+    }),
+  );
+}
+
+async function suggestCommands(text: string): Promise<void> {
+  type(text);
+  await screen.findByRole("listbox", { name: "Command suggestions" });
+}
+
+function highlightedCommand(): string | null {
+  const list = screen.getByRole("listbox", { name: "Command suggestions" });
+  return within(list).getByRole("option", { selected: true }).textContent;
+}
+
+it("while command suggestions show, the arrows move the highlight and Tab picks it", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  await twoCommands("keys-tab");
+  const close = await openChannel("web-keys-command-tab");
+  await suggestCommands("/keys-tab-");
+  const first = highlightedCommand();
+  press("ArrowUp");
+  const moved = highlightedCommand();
+  const prevented = !press("Tab");
+
+  expect([first, moved, prevented, screen.queryByRole("form", { name: "Call /keys-tab-second" })]).toStrictEqual([
+    "/keys-tab-first",
+    "/keys-tab-second",
+    true,
+    screen.getByRole("form", { name: "Call /keys-tab-second" }),
+  ]);
+
+  close();
+});
+
+it("while command suggestions show, Enter picks the highlighted command and sends nothing", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await twoCommands("keys-enter");
+  const close = await openChannel("web-keys-command-enter");
+  await suggestCommands("/keys-enter-");
+  press("Enter");
+
+  expect([await shownMessages(), screen.queryByRole("form", { name: "Call /keys-enter-first" })]).toStrictEqual([
+    [],
+    screen.getByRole("form", { name: "Call /keys-enter-first" }),
+  ]);
+
+  close();
+});
+
+it("escape closes the command suggestions, so Enter sends the text as a message", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  await twoCommands("keys-escape");
+  const close = await openChannel("web-keys-command-escape");
+  await suggestCommands("/keys-escape-f");
+  press("Escape");
+  const closed = screen.queryByRole("listbox", { name: "Command suggestions" });
+  press("Enter");
+  await within(screen.getByRole("feed", { name: "Messages" })).findByText("/keys-escape-f");
+
+  expect([closed, await shownMessages()]).toStrictEqual([null, ["admin/keys-escape-f"]]);
 
   close();
 });
