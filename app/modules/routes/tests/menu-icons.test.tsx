@@ -6,7 +6,7 @@ import { postedIn } from "./feed.ts";
 import { pressed } from "./menus.ts";
 
 const TEXTS = ["Before.", "Deploy?", "After."] as const;
-const REACTIONS = ["React with 👍", "React with 👎"] as const;
+const REACTIONS = ["React with 👍+", "React with 👎-"] as const;
 const ICON_FIRST = ':scope > svg[aria-hidden="true"]:first-child';
 
 type Shown = readonly (readonly [string, boolean])[];

@@ -4,6 +4,7 @@ import { MessageHeader } from "./message-header.tsx";
 import type { MessageLayoutParts } from "./parts.ts";
 import { MessageTime } from "./message-time.tsx";
 import type { ReactNode } from "react";
+import { ReactionKeys } from "./reaction-keys.tsx";
 
 export function MessageLayout(parts: MessageLayoutParts): ReactNode {
   const { time } = parts;
@@ -38,6 +39,7 @@ export function MessageLayout(parts: MessageLayoutParts): ReactNode {
         replyOnHover={parts.replyOnHover}
         thread={parts.thread}
       />
+      <ReactionKeys reactions={parts.reactions} />
     </>
   );
 }
