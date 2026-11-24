@@ -10,6 +10,7 @@ import type {
 } from "./messages.ts";
 import { Array as Arr, Effect, Option, Predicate, Ref, pipe } from "effect";
 import type { Author, Message, MessageId, TopLevelMessage } from "../../../messages/index.ts";
+import type { DeletedChannel, MemoryChannelsSection } from "./channels.ts";
 import { EMPTY_INBOX, memoryReactions, withoutChannel, withoutIdentity } from "./inbox-memory-state.ts";
 import { afterAppend, memoryInbox } from "./inbox-memory.ts";
 import {
@@ -24,7 +25,6 @@ import {
 } from "./messages.ts";
 import { current, findMessage, memoryThreads, repliesTo, threadChangedBy } from "./threads-memory.ts";
 import type { IdentitiesSection } from "./identities.ts";
-import type { MemoryChannelsSection } from "./channels.ts";
 import type { MemoryInbox } from "./inbox-memory-state.ts";
 import type { MemoryInboxSection } from "./inbox-memory.ts";
 import type { MemoryState } from "./memory-state.ts";
@@ -125,11 +125,16 @@ function pageIn(messages: readonly Message[], channel: ChannelName, page: Channe
 type MemoryMessagesSection = MessagesSection &
   MemoryInboxSection &
   ReturnType<typeof memoryReactions> & {
-    readonly forgetChannel: (channel: ChannelName) => Fails<ReadonlySet<MessageId>>;
+    readonly forgetChannel: (channel: ChannelName) => Fails<ForgottenChannel>;
     readonly forgetIdentity: (identity: Author["name"]) => Fails<void>;
     readonly countMessagesBy: (identity: Author["name"]) => Fails<number>;
     readonly markMessagesOf: (schedule: ScheduledMessageId) => Fails<void>;
   };
+
+interface ForgottenChannel {
+  readonly messageIds: ReadonlySet<MessageId>;
+  readonly attachments: DeletedChannel["attachments"];
+}
 
 function markedDeleted(schedule: ScheduledMessageId): (message: Message) => Message {
   return (message) => {
@@ -147,14 +152,15 @@ function withScheduleDeleted(schedule: ScheduledMessageId) {
   ];
 }
 
-function withoutMessagesIn(
-  data: MemoryMessages,
-  channel: ChannelName,
-): readonly [ReadonlySet<MessageId>, MemoryMessages] {
+function withoutMessagesIn(data: MemoryMessages, channel: ChannelName): readonly [ForgottenChannel, MemoryMessages] {
   const gone = Arr.filter(data.messages, (message) => message.channel === channel);
   const kept = Arr.filter(data.messages, (message) => message.channel !== channel);
   const ids = new Set(Arr.map(gone, (message) => message.id));
-  return [ids, { ...data, inbox: withoutChannel({ channel, ids, inbox: data.inbox }), messages: kept }];
+  const attachments = Arr.flatMap(gone, (message) => Arr.map(message.attachments ?? [], ({ id }) => id));
+  return [
+    { attachments, messageIds: ids },
+    { ...data, inbox: withoutChannel({ channel, ids, inbox: data.inbox }), messages: kept },
+  ];
 }
 
 function namesAuthor(identity: Author["name"]): (message: Message) => boolean {

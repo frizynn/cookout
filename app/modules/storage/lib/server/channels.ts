@@ -1,10 +1,12 @@
 import { Array as Arr, Effect, Order, Schema } from "effect";
 import type { Channel, ChannelName } from "../../../channels/index.ts";
+import type { AttachmentId } from "../../../attachments/index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { MemoryState } from "./memory-state.ts";
 import type { SqlDatabase } from "./adapters/sql-database.ts";
 import type { StorageUnavailable } from "./errors.ts";
+import { isAttachmentId } from "../../../attachments/index.ts";
 import { isChannelName } from "../../../channels/index.ts";
 import { unreadable } from "./errors.ts";
 
@@ -14,7 +16,12 @@ interface ChannelsSection {
   readonly createChannel: (channel: Channel, creator?: IdentityName) => Fails<"created" | "name_taken">;
   readonly listChannels: () => Fails<readonly Channel[]>;
   readonly findChannel: (name: ChannelName) => Fails<Channel | undefined>;
-  readonly deleteChannel: (name: ChannelName) => Fails<Channel | undefined>;
+  readonly deleteChannel: (name: ChannelName) => Fails<DeletedChannel | undefined>;
+}
+
+interface DeletedChannel {
+  readonly channel: Channel;
+  readonly attachments: readonly AttachmentId[];
 }
 
 type MemoryChannelsSection = Omit<ChannelsSection, "deleteChannel"> & {
@@ -82,6 +89,11 @@ function insert(db: SqlDatabase, channel: Channel): Fails<void> {
 
 const IN_CHANNEL = "SELECT id FROM messages WHERE channel = ?";
 
+const ATTACHMENTS_IN_CHANNEL = `SELECT id FROM attachments WHERE message_id IN (${IN_CHANNEL})
+  ORDER BY message_id, position`;
+
+const AttachmentIdRow = Schema.Struct({ id: Schema.String.pipe(Schema.refine(isAttachmentId)) });
+
 const CHANNEL_DELETES: readonly string[] = [
   `DELETE FROM message_mentions WHERE message_id IN (${IN_CHANNEL})`,
   `DELETE FROM read_receipts WHERE message_id IN (${IN_CHANNEL})`,
@@ -98,6 +110,18 @@ const CHANNEL_DELETES: readonly string[] = [
   "DELETE FROM messages WHERE channel = ?",
   "DELETE FROM channels WHERE name = ?",
 ];
+
+function toAttachmentId(row: unknown): Fails<AttachmentId> {
+  return Schema.decodeUnknownEffect(AttachmentIdRow)(row).pipe(
+    Effect.mapBoth({ onFailure: unreadable, onSuccess: ({ id }) => id }),
+  );
+}
+
+function attachmentsIn(db: SqlDatabase, name: ChannelName): Fails<readonly AttachmentId[]> {
+  return db
+    .all(ATTACHMENTS_IN_CHANNEL, name)
+    .pipe(Effect.flatMap((rows) => Effect.forEach(rows, toAttachmentId, { concurrency: 1 })));
+}
 
 function sqlChannels(db: SqlDatabase): ChannelsSection {
   function find(name: ChannelName): Fails<Channel | undefined> {
@@ -129,10 +153,12 @@ function sqlChannels(db: SqlDatabase): ChannelsSection {
       db.transaction(
         Effect.gen(function* deleteChannel() {
           const found = yield* find(name);
-          if (typeof found === "object") {
-            yield* Effect.forEach(CHANNEL_DELETES, (sql) => db.run(sql, name), { concurrency: 1, discard: true });
+          if (typeof found !== "object") {
+            return found;
           }
-          return found;
+          const attachments = yield* attachmentsIn(db, name);
+          yield* Effect.forEach(CHANNEL_DELETES, (sql) => db.run(sql, name), { concurrency: 1, discard: true });
+          return { attachments, channel: found };
         }),
       ),
     findChannel: find,
@@ -143,4 +169,12 @@ function sqlChannels(db: SqlDatabase): ChannelsSection {
   };
 }
 
-export { CHANNEL_COLUMNS, type ChannelsSection, type MemoryChannelsSection, memoryChannels, sqlChannels, toChannel };
+export {
+  CHANNEL_COLUMNS,
+  type ChannelsSection,
+  type DeletedChannel,
+  type MemoryChannelsSection,
+  memoryChannels,
+  sqlChannels,
+  toChannel,
+};
