@@ -58,12 +58,12 @@ const playwrightReport = {
   ],
 };
 
-it("a Vitest report's failed tests are listed by file, and a file that failed outside a test is listed too", {
+it("a Vitest report's failed tests are listed by file with their message but not its stack, and a file that failed outside a test is listed too", {
   timeout: 10_000,
 }, () => {
   expect.hasAssertions();
   expect(vitestFailures({ base: ROOT, report: vitestReport })).toStrictEqual([
-    { file: "app/thread.test.tsx", name: "a reply shows", reason: "AssertionError: expected 1 | at thread.test.tsx:4" },
+    { file: "app/thread.test.tsx", name: "a reply shows", reason: "AssertionError: expected 1" },
     { file: "app/broken.test.tsx", name: "(the file failed outside any test)", reason: "Cannot find module" },
   ]);
 });

@@ -24,7 +24,7 @@ function reasonOf(message: string): string {
     .replaceAll(ANSI, "")
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => line.length > NONE)
+    .filter((line) => line.length > NONE && !line.startsWith("at "))
     .slice(NONE, REASON_LINES)
     .join(" | ");
 }
