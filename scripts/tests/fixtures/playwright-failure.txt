@@ -1,0 +1,39 @@
+
+Running 3 tests using 3 workers
+
+  ✓  1 [chromium] › post.browser.test.ts:8:1 › a post shows in the channel (1.4s)
+  ✘  2 [chromium] › login.browser.test.ts:5:1 › a person logs in with a token (10.3s)
+  ✘  3 [chromium] › thread.browser.test.ts:9:1 › a reply opens the thread (10.2s)
+
+
+  1) [chromium] › login.browser.test.ts:5:1 › a person logs in with a token ────────────────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'general' })
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 10000ms
+      - waiting for getByRole('heading', { name: 'general' })
+
+
+       6 |   await page.goto("/login");
+       7 |   await page.getByLabel("Token").fill(token);
+    >  8 |   await expect(page.getByRole("heading", { name: "general" })).toBeVisible();
+         |                                                                ^
+       9 | });
+      10 |
+      11 | test("a bad token is refused", async ({ page }) => {
+        at /repo/app/modules/routes/tests/browser/login.browser.test.ts:8:64
+
+  2) [chromium] › thread.browser.test.ts:9:1 › a reply opens the thread ──────────────────────────
+
+    Error: page.click: Test timeout of 30000ms exceeded.
+
+  2 failed
+    [chromium] › login.browser.test.ts:5:1 › a person logs in with a token
+    [chromium] › thread.browser.test.ts:9:1 › a reply opens the thread
+  1 passed (12.1s)

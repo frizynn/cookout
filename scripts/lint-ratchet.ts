@@ -1,13 +1,13 @@
+import { above, grownReport, tally } from "./lib/lint-report.ts";
 import { counts, field, list, parseJson, text } from "./lib/json.ts";
-import { describe, fail, oxlint, unwrap } from "./lib/tools.ts";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { fail, oxlint, unwrap } from "./lib/tools.ts";
 import { lintFixed, repoFixRun } from "./lib/fix-until-stable.ts";
+import type { Counts } from "./lib/lint-report.ts";
 import type { Diagnostic } from "./lib/tools.ts";
 import { matchesGlob } from "node:path";
 import { rulesOn } from "./lib/rules-on.ts";
 import { spawnSync } from "node:child_process";
-
-type Counts = Readonly<Record<string, number>>;
 
 const SCRIPT = "lint-ratchet";
 const BASELINE = "lint-baseline.json";
@@ -15,17 +15,8 @@ const args = process.argv.slice(2);
 const files = args.filter((arg) => !arg.startsWith("--"));
 const writing = args.includes("--write");
 const fixing = args.includes("--fix");
+const withCounts = args.includes("--counts");
 const base = args.find((arg) => arg.startsWith("--base="))?.slice("--base=".length) ?? "HEAD";
-
-const keyOf = (diagnostic: Diagnostic) => `${diagnostic.filename} ${diagnostic.code}`;
-
-const tally = (diagnostics: readonly Diagnostic[]): Counts => {
-  const totals = new Map<string, number>();
-  for (const diagnostic of diagnostics) {
-    totals.set(keyOf(diagnostic), (totals.get(keyOf(diagnostic)) ?? 0) + 1);
-  }
-  return Object.fromEntries([...totals].sort(([a], [b]) => a.localeCompare(b)));
-};
 
 const ignorePatterns = (): readonly string[] => {
   const patterns = list(field(parseJson(readFileSync(".oxlintrc.json", "utf8")), "ignorePatterns"));
@@ -46,9 +37,6 @@ const baselineAtBase = (): Counts => {
   const shown = git(["show", `${base}:${BASELINE}`]);
   return shown.status === 0 ? readCounts(shown.stdout, `${BASELINE} at ${base}`) : {};
 };
-
-const above = (current: Counts, limit: Counts) =>
-  Object.entries(current).filter(([key, count]) => count > (limit[key] ?? 0));
 
 const rulesOnAt = (ref: string): ReadonlySet<string> => {
   const shown = git(["show", `${ref}:.oxlintrc.json`]);
@@ -107,18 +95,14 @@ if (!existsSync(BASELINE)) {
 }
 const baseline = readCounts(readFileSync(BASELINE, "utf8"), BASELINE);
 
-const raised = raisedOnRulesAlreadyOn(above(baseline, baselineAtBase()));
+const raised = raisedOnRulesAlreadyOn(above({ current: baseline, limit: baselineAtBase() }));
 for (const [key, count] of raised) {
   console.error(`${BASELINE} raises ${key} to ${count} over ${base}, a rule already on there. Fix the code instead.`);
 }
 
-const grown = above(current, baseline);
-const grownKeys = new Set(grown.map(([key]) => key));
-for (const diagnostic of diagnostics.filter((d) => grownKeys.has(keyOf(d)))) {
-  console.error(describe(diagnostic));
-}
-for (const [key, count] of grown) {
-  console.error(`${key}: ${count}, baseline ${baseline[key] ?? 0}`);
+const grown = grownReport({ baseline, diagnostics, withCounts });
+for (const line of grown) {
+  console.error(line);
 }
 
 process.exitCode = raised.length + grown.length > 0 ? 1 : 0;

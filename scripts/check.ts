@@ -1,5 +1,6 @@
 import type { FileTiming, ReportFile } from "./lib/slowest-files.ts";
 import { TIMINGS_DIR, readTimings, saveFullList, slowestNames, slowestSummary } from "./lib/slowest-files.ts";
+import { firstError } from "./lib/first-error.ts";
 import { holdMachineLock } from "./lib/machine-lock.ts";
 import { once } from "node:events";
 import os from "node:os";
@@ -184,6 +185,15 @@ function warnOverBudget(outcome: Outcome): void {
   console.error(`warning: ${warning}`);
 }
 
+function reportFirstError(output: string): void {
+  const excerpt = firstError(output);
+  if (excerpt.length === NONE) {
+    return;
+  }
+  console.log("     First error:");
+  console.log(excerpt.join("\n").replaceAll(/^/gmu, "       "));
+}
+
 function report(outcome: Outcome): void {
   const { budget, name } = outcome.check;
   console.log(`${statusOf(outcome)} ${name} (${outcome.seconds.toFixed(DECIMALS)}s, budget ${String(budget)}s)`);
@@ -191,6 +201,7 @@ function report(outcome: Outcome): void {
     console.log(slowestSummary({ label: name, timings: outcome.timings }).replaceAll(/^/gmu, "     "));
   }
   if (outcome.code !== EXIT_SUCCESS) {
+    reportFirstError(outcome.output);
     console.log(outcome.output.trimEnd().replaceAll(/^/gmu, "     "));
   }
   if (overBudget(outcome)) {
