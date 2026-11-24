@@ -7,6 +7,7 @@ import type {
   ReactionsResponse,
   ReadReceipt,
   Reply,
+  ThreadMovedWarning,
   ThreadResponse,
   TopLevelMessage,
   TopLevelMessageResponse,
@@ -101,6 +102,12 @@ const ReplySchema = matchesWire<Reply>()(
 
 const MessageSchema = Schema.Union([TopLevelMessageSchema, ReplySchema]);
 
+const MovedRepliesSchema = Schema.Struct({ replies: Schema.Array(ReplySchema) });
+
+const ThreadMovedWarningSchema = matchesWire<ThreadMovedWarning>()(
+  Schema.Struct({ code: Schema.Literal("thread_moved"), details: MovedRepliesSchema, message: Schema.String }),
+);
+
 const pageLimit = Schema.isBetween({ maximum: pageSize.maximum, minimum: pageSize.minimum });
 const LimitSchema = Schema.Int.check(pageLimit);
 const decodesToLimit = Schema.decodeTo(LimitSchema);
@@ -113,6 +120,7 @@ export const PostMessageRequestSchema = Schema.Struct({
   close: Schema.optionalKey(Schema.Literal(true)),
   data: Schema.optionalKey(Schema.Json),
   replyTo: Schema.optionalKey(MessageIdSchema),
+  seen: Schema.optionalKey(MessageIdSchema),
   text: TextSchema,
 });
 
@@ -122,7 +130,11 @@ export const ListMessagesQuerySchema = Schema.Struct({
 });
 
 export const MessageResponseSchema = matchesWire<MessageResponse>()(
-  Schema.Struct({ message: MessageSchema, unknownMentions: Schema.Array(Schema.String) }),
+  Schema.Struct({
+    message: MessageSchema,
+    unknownMentions: Schema.Array(Schema.String),
+    warning: Schema.optionalKey(ThreadMovedWarningSchema),
+  }),
 );
 
 export const ReadReceiptSchema = matchesWire<ReadReceipt>()(

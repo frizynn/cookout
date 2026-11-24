@@ -1,4 +1,4 @@
-import type { Appended, Hub } from "./service.ts";
+import type { Appended, Hub } from "./posting.ts";
 import { Effect, Layer, PubSub, Semaphore } from "effect";
 import { Messages, ONE_AT_A_TIME, messagesOn } from "./service.ts";
 import { closedThreadsOn, threadHub } from "./closed-threads.ts";

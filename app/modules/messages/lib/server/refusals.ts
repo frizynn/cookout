@@ -45,6 +45,12 @@ const closeWithoutReplyTo: Refusal = {
   status: BAD_REQUEST,
 };
 
+const seenWithoutReplyTo: Refusal = {
+  code: "invalid_request",
+  message: "seen says how far you have read a thread: send it with replyTo.",
+  status: BAD_REQUEST,
+};
+
 const closeWithCommandToken: Refusal = {
   code: "outside_command_thread",
   message: "A command token can only reply in its call's thread, not close it.",
@@ -58,4 +64,5 @@ export {
   reactionNotFound,
   replyInOtherChannel,
   replyOutsideCommandThread,
+  seenWithoutReplyTo,
 };

@@ -8,7 +8,7 @@
  * server's token gate.
  */
 import { Caller, CommandThread, sentHarness } from "../identities/server.ts";
-import { Effect, Option } from "effect";
+import { Effect, Option, Predicate } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import {
   ListMessagesQuerySchema,
@@ -41,6 +41,13 @@ function threadIdOf(asked: string): Effect.Effect<MessageId, Refusal> {
   return Effect.fail(messageNotFound(asked));
 }
 
+function seenOnReply(body: typeof PostMessageRequestSchema.Type): typeof PostMessageRequestSchema.Type {
+  if (Predicate.isUndefined(body.replyTo)) {
+    return body;
+  }
+  return { ...body, seen: body.seen ?? body.replyTo };
+}
+
 const postRoute: Route<Caller | Messages> = {
   handle: () =>
     Effect.gen(function* postMessageRoute() {
@@ -48,7 +55,7 @@ const postRoute: Route<Caller | Messages> = {
       const caller = yield* Caller;
       const messages = yield* Messages;
       const thread = yield* CommandThread;
-      const posting = { ...body, ...(yield* sentHarness) };
+      const posting = { ...seenOnReply(body), ...(yield* sentHarness) };
       const posted = yield* Option.match(thread, {
         onNone: () => messages.post(caller, posting),
         onSome: (threadId) => messages.postInThread(caller, posting, threadId),

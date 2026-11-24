@@ -1,8 +1,8 @@
 /**
  * The calls a client makes to close and reopen a thread (#216), to list open threads (#219) and to search messages
- * (#320), and the answers they share. The SDK's `CookoutClient` has them.
+ * (#320), and the answers they share. The SDK's `CookoutClient` has them. Also the body of posting a message (#342).
  */
-import type { ListOpenThreadsResponse, MessageId, TopLevelMessageResponse } from "./index.ts";
+import type { JsonValue, ListOpenThreadsResponse, MessageId, TopLevelMessageResponse } from "./index.ts";
 import type { SearchResponse } from "../search/index.ts";
 
 /** Closing and reopening the thread holding a message. */
@@ -68,4 +68,19 @@ export interface SearchCalls {
    * the next page. A query with no words is 400 `empty_query`; a command token is 403 `outside_command_thread`.
    */
   readonly search: (request: SearchRequest) => Promise<SearchResponse>;
+}
+
+/** The body of `POST /v1/messages`. The server checks every field. */
+export interface PostMessageRequest {
+  readonly channel: string;
+  readonly text: string;
+  readonly data?: JsonValue;
+  /** Reply to this message. A reply to a reply goes to the top-level message's thread, which `close` also closes. */
+  readonly replyTo?: number;
+  readonly close?: true;
+  /**
+   * With `replyTo`: the caller has read the thread up to this message, later than `replyTo`. `replyTo` alone says it
+   * has read up to `replyTo`. An agent's reply to a thread with newer replies by anyone else warns `thread_moved`.
+   */
+  readonly seen?: number;
 }
