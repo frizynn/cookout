@@ -118,8 +118,12 @@
  * joins or creates, the host, the code, the idle expiry to keep or lower, and
  * whether to replace the agent's live session.
  * `SearchBox` is the search box atop the workspace column, on the `search` store: the keymap's `openSearch` (Ctrl+K,
- * ⌘K on a Mac, its placeholder naming it) focuses it from anywhere; typing lists the matching messages under it, newest first, each word matching the query highlighted; Up,
- * Down and Enter open one in its thread, and Escape or clicking away closes the list and gives focus back.
+ * ⌘K on a Mac, its placeholder naming it) focuses it from anywhere. It is a combobox over a listbox of named groups:
+ * with nothing typed, the places (Inbox, People, Settings); as you type, the places, channels (by name) and people (by
+ * name or Display name, five of each at most) that contain what you typed, from what the board and directory already
+ * hold, then the matching messages, newest first, each word matching the query highlighted. The first is highlighted;
+ * Up, Down and Enter (or pressing one) open a place, a channel, a profile or a message in its thread, and Escape or
+ * clicking away closes the list and gives focus back.
  */
 export { AgentJoinApprovalView } from "./lib/agent-join-approval.tsx";
 export { Authors } from "./lib/authors.tsx";
