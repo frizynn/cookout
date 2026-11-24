@@ -9,10 +9,10 @@ import type { TestIdentity } from "../../../testing/server.ts";
 import { openAt } from "../render.tsx";
 import { watched } from "../watched.ts";
 
-const NUDGE = "Quiet for 3 days: close it, or follow up?";
 const SETTLE = "30 millis";
 const HUMAN = { kind: "human" } as const;
 const TWO = 2;
+const NONE = 0;
 
 const settled: Effect.Effect<void> = TestClock.withLive(Effect.sleep(SETTLE));
 
@@ -27,28 +27,42 @@ function pageOpenFor(who: TestIdentity): Effect.Effect<void, never, Scope.Scope>
   });
 }
 
-function textsOf(elements: Iterable<Readonly<{ textContent: string }>>): readonly string[] {
-  const texts: string[] = [];
-  for (const element of elements) {
-    texts.push(element.textContent);
+function pagesShowing(name: string): number {
+  return screen.queryAllByRole("list", { name }).length;
+}
+
+function earlierNudgesPerPage(): readonly number[] {
+  const counts: number[] = [];
+  for (const list of screen.getAllByRole("list", { name: "Earlier nudges" })) {
+    counts.push(within(list).getAllByRole("listitem").length);
   }
-  return texts;
+  return counts;
+}
+
+function twoNudgesOneRead(ada: TestIdentity): Effect.Effect<void> {
+  return Effect.gen(function* nudgeTwiceReadOne() {
+    yield* answer(() => ada.client.createMessage({ channel: "grill", text: "Who owns the release notes?" }));
+    yield* TestClock.adjust("1 minute");
+    yield* answer(() => ada.client.createMessage({ channel: "grill", text: "Who owns the changelog?" }));
+    yield* Effect.andThen(Effect.andThen(settled, TestClock.adjust("3 days")), settled);
+    const { nudges } = yield* Effect.repeat(
+      answer(() => ada.client.inbox()),
+      { until: (inbox) => inbox.nudges.length >= TWO },
+    );
+    const [oldest = null] = nudges;
+    if (oldest !== null) {
+      yield* answer(() => ada.client.markNudgeRead(oldest.id));
+    }
+  });
 }
 
 const twoPagesNudged: Effect.Effect<void, never, TestCookout | Scope.Scope> = Effect.gen(function* nudgeAdaTwice() {
   const cookout = yield* TestCookout;
   const ada = yield* cookout.createIdentity("ada", HUMAN);
   yield* answer(() => ada.client.createChannel({ name: "grill" }));
-  yield* answer(() => ada.client.createMessage({ channel: "grill", text: "Who owns the release notes?" }));
+  yield* twoNudgesOneRead(ada);
   yield* Effect.andThen(pageOpenFor(ada), pageOpenFor(ada));
-  yield* answer(() => screen.findAllByText("Nothing read yet."));
-  yield* Effect.andThen(Effect.andThen(settled, TestClock.adjust("3 days")), settled);
-  yield* answer(() => screen.findAllByText(NUDGE));
 });
-
-function earlierInEveryPage(): readonly string[] {
-  return textsOf(screen.getAllByRole("list", { name: "Earlier nudges" }));
-}
 
 function clickMarkReadInFirstPage(): void {
   const [firstPane = null] = screen.getAllByRole("main");
@@ -60,19 +74,18 @@ function clickMarkReadInFirstPage(): void {
 it.effect("a nudge marked read in one page leaves For you in the person's other page too, with no reload", () =>
   Effect.gen(function* markedReadElsewhere() {
     yield* twoPagesNudged;
+    yield* answer(() =>
+      waitFor(() => {
+        expect([pagesShowing("For you"), pagesShowing("Earlier nudges")]).toStrictEqual([TWO, TWO]);
+      }),
+    );
     clickMarkReadInFirstPage();
-    const caughtUp = yield* answer(() =>
+    yield* answer(() =>
       waitFor(() => {
         expect(screen.queryAllByText("You're all caught up.")).toHaveLength(TWO);
-
-        return TWO;
       }),
     );
 
-    expect([caughtUp, screen.queryAllByRole("list", { name: "For you" }), earlierInEveryPage()]).toStrictEqual([
-      TWO,
-      [],
-      [expect.stringContaining(NUDGE), expect.stringContaining(NUDGE)],
-    ]);
+    expect([pagesShowing("For you"), earlierNudgesPerPage()]).toStrictEqual([NONE, [TWO, TWO]]);
   }).pipe(Effect.scoped, Effect.provide(testCookout())),
 );
