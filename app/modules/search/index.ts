@@ -1,8 +1,10 @@
 /**
  * Search, shared by the server, the SDK and the web: the one rule for what a
  * word is, the parser that reads a query as typed, the answer of the search
- * route, its path and the error codes it refuses with. The storage Layers match
- * with the same word rule, so what the web highlights is what the server found.
+ * route, its path and the error codes it refuses with. A word is a run of
+ * letters and digits, without case or accents: punctuation, `@` and `#` separate
+ * words, so `**Café**` is the word `cafe`. The storage Layers match with the same
+ * word rule, so what the web highlights is what the server found.
  */
 import type { Message } from "../messages/index.ts";
 
@@ -11,13 +13,7 @@ const MARKS = /\p{M}/gu;
 const NO_MARKS = "";
 const NO_WORDS = 0;
 
-/**
- * The words of `text`: each run of letters and digits, lower-cased and without accents, in order. Everything else
- * (spaces, Markdown punctuation, `@`, `#`) separates words, so `**Café**` is the word `cafe`.
- * @param text The text to split.
- * @returns Its words, as search compares them.
- */
-export function wordsOf(text: string): readonly string[] {
+function wordsOf(text: string): readonly string[] {
   const plain = text.normalize("NFD").replaceAll(MARKS, NO_MARKS).toLowerCase();
   return plain.match(WORD) ?? [];
 }
