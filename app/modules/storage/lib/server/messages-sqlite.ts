@@ -8,28 +8,26 @@ import type {
   ThreadResponse,
   TopLevelMessage,
 } from "../../../messages/index.ts";
-import { MESSAGE_COLUMNS, MentionsText, MessageIdColumn, dataText, toMessage } from "./message-rows-sqlite.ts";
+import { MESSAGE_COLUMNS, MentionsText, dataText, toMessage } from "./message-rows-sqlite.ts";
 import { isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
+import { latestOf, stampedIn, takeId } from "./message-sequence-sqlite.ts";
 import { recordAppended, sqliteInbox } from "./inbox-sqlite.ts";
 import { reopenedBy, sqliteClosedThreads } from "./closed-threads-sqlite.ts";
-import type { ChannelName } from "../../../channels/index.ts";
 import type { CommandCallsSection } from "./command-calls.ts";
 import type { MessageReader } from "./inbox-sqlite.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
-import { isMessageId } from "../../../messages/index.ts";
 import { sqliteCommandCalls } from "./command-calls.ts";
 import { unreadable } from "./errors.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
+type ChannelName = NewMessage["channel"];
 type Page = Omit<ListMessagesResponse, "receipts">;
 
 const FOUND = 1;
 const ONE_MORE = 1;
 const ALL_IDS = Number.MAX_SAFE_INTEGER;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
-
-const SequenceRow = Schema.Struct({ last_id: MessageIdColumn });
 
 const isFoundRow = Schema.is(Schema.Struct({ found: Schema.Literal(FOUND) }));
 
@@ -57,22 +55,6 @@ function find(db: SqliteDatabase, id: MessageId): Fails<Message | undefined> {
 
 function channelExists(db: SqliteDatabase, channel: ChannelName): Fails<boolean> {
   return db.get("SELECT 1 AS found FROM channels WHERE name = ?", channel).pipe(Effect.map(isFoundRow));
-}
-
-function takeId(db: SqliteDatabase): Fails<MessageId> {
-  return db.get("UPDATE message_id_sequence SET last_id = last_id + 1 WHERE only_row = 1 RETURNING last_id").pipe(
-    Effect.flatMap((row) => Schema.decodeUnknownEffect(SequenceRow)(row).pipe(Effect.mapError(unreadable))),
-    Effect.map((row) => row.last_id),
-  );
-}
-
-const LatestRow = Schema.Struct({ last_id: Schema.Int });
-
-function latestOf(db: SqliteDatabase): Fails<MessageId | undefined> {
-  return db.get("SELECT last_id FROM message_id_sequence WHERE only_row = 1").pipe(
-    Effect.flatMap((row) => Schema.decodeUnknownEffect(LatestRow)(row).pipe(Effect.mapError(unreadable))),
-    Effect.map(({ last_id: last }) => Option.getOrUndefined(Option.liftPredicate(last, isMessageId))),
-  );
 }
 
 function placementOf(db: SqliteDatabase, { channel, replyTo }: NewMessage): Fails<Placement> {
@@ -123,8 +105,8 @@ function appendInChannel(db: SqliteDatabase, message: NewMessage): Fails<AppendM
     }
     const data = yield* dataText(message);
     const known = yield* knownNames(db, message.mentions);
-    const mentioning = withKnownMentions({ known, message });
-    const id = yield* takeId(db);
+    const mentioning = yield* stampedIn({ db, message: withKnownMentions({ known, message }) });
+    const id = yield* takeId({ db, message: mentioning });
     const stored = placed({ id, message: mentioning, placement });
     const [receipts, reopened] = yield* Effect.andThen(insert(db, stored, data), afterInsert(db, stored));
     return { message: stored, receipts, reopened, status: "appended" } as const;
