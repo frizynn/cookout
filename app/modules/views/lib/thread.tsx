@@ -1,6 +1,7 @@
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import type { Board } from "../../board/index.ts";
 import type { Composer } from "./thread-draft.ts";
+import type { PanelEdgeParts } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
 import { ReplyFooter } from "./reply-footer.tsx";
 import { SidePanel } from "../../design-system/index.tsx";
@@ -17,6 +18,7 @@ interface ThreadProps {
   readonly board: Board;
   readonly channel: ChannelName;
   readonly composer: Composer;
+  readonly edge: PanelEdgeParts;
   readonly thread: MessageId;
   readonly linked: MessageId | null;
   readonly unread: Unread;
@@ -35,6 +37,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
       closeHref={hrefOf({ channel, name: "channel" })}
       closeLabel={TEXT.close}
       detail={`#${channel}`}
+      edge={props.edge}
       label={TEXT.thread}
     >
       {state.status === "loaded" && <ThreadClosingBar closing={props.board.closing} parent={state.parent} />}

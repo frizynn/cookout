@@ -5,6 +5,8 @@ import type { Composer } from "../../composer/index.ts";
 import { ConversationEmpty } from "../../design-system/index.tsx";
 import { ConversationView } from "./conversation.tsx";
 import type { InboxSelection } from "../../paths/index.ts";
+import type { PanelEdgeParts } from "../../design-system/index.tsx";
+
 import type { ReactNode } from "react";
 
 const TEXT = { conversation: "Conversation", pick: "Pick a conversation" } as const;
@@ -12,6 +14,7 @@ const TEXT = { conversation: "Conversation", pick: "Pick a conversation" } as co
 interface InboxConversationProps {
   readonly board: Board;
   readonly composer: Composer;
+  readonly edge: PanelEdgeParts;
   readonly selected: InboxSelection | null;
   readonly unread: Unread;
   readonly reading: Reading;
@@ -41,6 +44,7 @@ export function InboxConversation(props: InboxConversationProps): ReactNode {
       board={props.board}
       composer={props.composer}
       key={`${selected.channel}/${String(selected.thread)}`}
+      edge={props.edge}
       me={props.me}
       reading={props.reading}
       selected={selected}

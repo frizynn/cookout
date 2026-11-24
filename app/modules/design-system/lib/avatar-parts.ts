@@ -7,7 +7,7 @@ interface PresenceShown {
 
 interface PresenceDotParts extends PresenceShown {
   readonly name: string;
-  readonly place?: "avatar" | "inline";
+  readonly place?: "avatar" | "card" | "inline";
 }
 
 interface AvatarParts {

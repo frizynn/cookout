@@ -21,6 +21,7 @@ export type { CommandTokenGrant } from "./lib/server/command-tokens.ts";
 export type { DeliveryOutcome, StoredDelivery } from "./lib/server/deliveries.ts";
 export type { NewMessage, StoredPage, StoredThread } from "./lib/server/messages.ts";
 export type { OpenThreadsPageRequest } from "./lib/server/open-threads.ts";
+export type { SearchPageRequest } from "./lib/server/search.ts";
 export type { AckedMessage } from "./lib/server/inbox.ts";
 export type { StoredNudge } from "./lib/server/nudges.ts";
 export type { OfferChanges, StoredDeactivationOffer } from "./lib/server/deactivation-offers.ts";

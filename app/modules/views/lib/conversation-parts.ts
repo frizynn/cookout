@@ -1,8 +1,8 @@
 import type { Board, ThreadMessagesState } from "../../board/index.ts";
+import type { PanelAction, PanelEdgeParts } from "../../design-system/index.tsx";
 import type { Reader, Reading, Unread } from "../../unread/index.ts";
 import { CONVERSATION_KEYS } from "../../design-system/index.tsx";
 import type { Composer } from "../../composer/index.ts";
-import type { PanelAction } from "../../design-system/index.tsx";
 import type { ThreadSelection } from "../../paths/index.ts";
 
 const TEXT = { markRead: "Mark read", markUnread: "Mark unread", readName: "Mark conversation read" } as const;
@@ -13,6 +13,7 @@ const NOT_FOUND = "message_not_found";
 interface ConversationProps {
   readonly board: Board;
   readonly composer: Composer;
+  readonly edge: PanelEdgeParts;
   readonly selected: ThreadSelection;
   readonly unread: Unread;
   readonly reading: Reading;

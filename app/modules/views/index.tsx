@@ -36,7 +36,10 @@
  * beside it: a bar with Close or, while the thread is closed, "Closed by @name
  * 5m ago" and Reopen, then the thread's parent message, its reply count, and its replies,
  * oldest first, with a reply box that takes focus when the panel opens and a
- * link that closes it, and opening it marks the thread read. Opened by a link to
+ * link that closes it, and opening it marks the thread read. Its `edge`, and that of
+ * an Inbox thread's conversation, is the panel's draggable left edge on a wide screen,
+ * which the routes size from the layout store's `threadWidth` and which closes the
+ * thread when dragged past its narrowest. Opened by a link to
  * one of its messages (`linked`), it scrolls that message into view and
  * highlights it for about 2 s, or says the message wasn't found. A refused close or
  * reopen says why. In both,
@@ -53,7 +56,10 @@
  * as an agent if the identity list says so (or, for an author no longer in
  * it, if the message carries an owner), and its data is folded behind a
  * toggle, a command call's shown as the command and the data it called it
- * with. `Authors` gives
+ * with. A message's name opens its identity card, whose Message puts `@name `
+ * in the box of the pane the name is in (the channel's message box, or the thread's or
+ * conversation's reply box) and focuses it; `ThreadCardComposer` names a thread's
+ * reply box for the cards drawn under it. `Authors` gives
  * every message under it the identity list, and `Reacting` the board store's reactions: a message shows its
  * reactions as chips, each with its count, pressed when one is the reader's own and naming who reacted in its
  * tooltip; clicking a chip, its 👍 or 👎 hover button or menu item, or pressing `+` or `-` on it while focused,
@@ -123,4 +129,5 @@ export { ProfileView } from "./lib/profile.tsx";
 export { ReconnectingView } from "./lib/reconnecting.tsx";
 export { SettingsView } from "./lib/settings.tsx";
 export { SidebarView } from "./lib/sidebar.tsx";
+export { ThreadCardComposer } from "./lib/thread-card-composer.tsx";
 export { ThreadView } from "./lib/thread.tsx";

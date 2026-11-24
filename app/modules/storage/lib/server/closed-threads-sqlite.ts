@@ -6,10 +6,14 @@ import type { MessageReader } from "./inbox-sqlite.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { sqliteOpenThreads } from "./open-threads-sqlite.ts";
+import { sqliteSearch } from "./search-sqlite.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
-type ClosedThreadsSection = Pick<MessagesSection, "closeThread" | "reopenThread" | "listOpenThreads">;
+type ClosedThreadsSection = Pick<
+  MessagesSection,
+  "closeThread" | "reopenThread" | "listOpenThreads" | "searchMessages"
+>;
 
 interface ClosedThreadsOptions {
   readonly db: SqliteDatabase;
@@ -77,6 +81,7 @@ function sqliteClosedThreads(options: ClosedThreadsOptions): ClosedThreadsSectio
   const { db } = options;
   return {
     ...sqliteOpenThreads(options),
+    ...sqliteSearch(options),
     closeThread: (id, { closedAt, closedBy }) =>
       changeThread(options, id, (parent) => db.get(CLOSE, closedAt, closedBy, parent)),
     reopenThread: (id, reopenedAt) => changeThread(options, id, (parent) => db.get(REOPEN_AT, reopenedAt, parent)),

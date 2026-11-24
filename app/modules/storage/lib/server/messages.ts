@@ -15,6 +15,7 @@ import type { ChannelName } from "../../../channels/index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { OpenThreadsSection } from "./open-threads.ts";
+import type { SearchSection } from "./search.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 
@@ -82,7 +83,7 @@ interface ThreadStateChange {
   readonly parent: TopLevelMessage;
 }
 
-interface MessagesSection extends OpenThreadsSection {
+interface MessagesSection extends OpenThreadsSection, SearchSection {
   readonly appendMessage: (message: NewMessage) => Fails<AppendMessageResult>;
   readonly listChannelMessages: (channel: ChannelName, page: ChannelPageRequest) => Fails<StoredPage | undefined>;
   readonly getThread: (id: MessageId) => Fails<StoredThread | undefined>;

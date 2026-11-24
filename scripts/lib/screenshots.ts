@@ -12,6 +12,7 @@ interface Screen {
   readonly narrow?: boolean;
   readonly admin?: boolean;
   readonly liveDown?: boolean;
+  readonly noPresence?: boolean;
   readonly daysLater?: number;
   readonly history?: "more" | "loading";
 }
@@ -84,6 +85,14 @@ const SCREENS: readonly Screen[] = [
     name: "message-menu",
     text: "Mark unread",
   },
+  {
+    click: "More actions",
+    clickIn: 'nav li:has(a[href="#/channels/deploys"])',
+    focus: 'nav a[href="#/channels/deploys"]',
+    hash: "#/channels/general",
+    name: "channel-menu",
+    text: "Mark all as read",
+  },
   { hash: "#/channels/general/threads/1", name: "thread", text: "Thanks, both of you." },
   {
     focus: 'article:has-text("@triage-agent can you post the failing run?") time',
@@ -101,6 +110,19 @@ const SCREENS: readonly Screen[] = [
     focus: 'article:has-text("@grace can you check the notes before we ship?") a:has-text("@grace")',
     hash: "#/channels/general",
     name: "identity-card-person",
+    text: "View profile",
+  },
+  {
+    focus: 'article:has-text("Deployed 1.4.0.") header a',
+    hash: "#/channels/deploys",
+    name: "identity-card-deactivated",
+    text: "View profile",
+  },
+  {
+    focus: 'article:has-text("@grace can you check the notes before we ship?") a:has-text("@grace")',
+    hash: "#/channels/general",
+    name: "identity-card-no-presence",
+    noPresence: true,
     text: "View profile",
   },
   { hash: "#/people", name: "people", text: "release-bot" },

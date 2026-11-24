@@ -1,5 +1,5 @@
+import type { ActionMenuParts, MenuChoice, MessageMenuParts, ReactionChoice, ThreadChoice } from "./menu-parts.ts";
 import type { AvatarParts, PresenceShown, SuggestionOptionParts } from "./avatar-parts.ts";
-import type { MenuChoice, MessageMenuParts, ReactionChoice, ThreadChoice } from "./menu-parts.ts";
 import type { ReactNode } from "react";
 
 interface Parts {
@@ -131,6 +131,7 @@ interface NavLinkParts {
   readonly active: boolean;
   readonly marked: boolean;
   readonly icon: "inbox" | "people" | "channel";
+  readonly menu?: ActionMenuParts;
 }
 
 interface PillParts {
@@ -150,13 +151,6 @@ interface PressButtonParts extends Parts {
   readonly pressed: boolean;
   readonly disabled: boolean;
   readonly onClick: () => void;
-}
-
-interface SidePanelParts extends Parts {
-  readonly label: string;
-  readonly detail: string;
-  readonly closeHref: string;
-  readonly closeLabel: string;
 }
 
 interface ChoiceParts {
@@ -285,7 +279,6 @@ export type {
   PressButtonParts,
   PillParts,
   SidebarParts,
-  SidePanelParts,
   WorkspaceParts,
   DataAreaParts,
   DataBlockParts,
