@@ -1,5 +1,6 @@
 interface AdrDiff {
   readonly diff: string;
+  readonly locked: ReadonlySet<string>;
   readonly originals: ReadonlyMap<string, readonly string[]>;
 }
 
@@ -66,13 +67,16 @@ function editsOf({ file, lines, original }: Change): readonly string[] {
   ];
 }
 
-function adrEdits({ diff, originals }: AdrDiff): readonly string[] {
+function adrEdits({ diff, locked, originals }: AdrDiff): readonly string[] {
   return diff
     .split(FILE_START)
     .slice(AFTER_HEADER)
     .flatMap((chunk) => {
       const lines = chunk.split("\n");
       const [file = ""] = lines;
+      if (!locked.has(file)) {
+        return [];
+      }
       return editsOf({ file, lines: lines.slice(AFTER_HEADER), original: new Set(originals.get(file)) });
     });
 }
