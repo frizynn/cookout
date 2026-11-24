@@ -25,7 +25,7 @@ interface Offered {
 
 const settled: Effect.Effect<void> = TestClock.withLive(Effect.sleep(SETTLE));
 
-function quietFor(wait: "1 days" | "29 days"): Effect.Effect<void> {
+function quietFor(wait: "1 hour" | "719 hours"): Effect.Effect<void> {
   return Effect.andThen(Effect.andThen(settled, TestClock.adjust(wait)), settled);
 }
 
@@ -46,9 +46,9 @@ const offeredLive: Effect.Effect<Offered, never, TestCookout | Scope.Scope> = Ef
   const ada = yield* cookout.createIdentity("ada", HUMAN);
   const scout = yield* cookout.createIdentity("ada/scout", { owner: "ada" });
   yield* answer(() => ada.client.createChannel({ name: "grill" }));
-  yield* quietFor("29 days");
+  yield* quietFor("719 hours");
   yield* inboxOpenFor(ada.client);
-  yield* quietFor("1 days");
+  yield* quietFor("1 hour");
   yield* answer(() => inPane().findByText(OFFER));
   return { ada, scout };
 });
@@ -59,10 +59,10 @@ const offeredToAdmins: Effect.Effect<TestIdentity, never, TestCookout | Scope.Sc
     yield* cookout.createIdentity("bob", HUMAN);
     const cy = yield* cookout.createIdentity("cy", ADMIN);
     yield* answer(() => cy.client.createChannel({ name: "grill" }));
-    yield* quietFor("29 days");
+    yield* quietFor("719 hours");
     yield* answer(() => cy.client.createMessage({ channel: "grill", text: "Still here" }));
     yield* inboxOpenFor(cookout.client);
-    yield* quietFor("1 days");
+    yield* quietFor("1 hour");
     yield* answer(() => inPane().findByText(PERSON_OFFER));
     return cy;
   },
@@ -237,7 +237,7 @@ const twoOffered: Effect.Effect<TestIdentity, never, TestCookout> = Effect.gen(f
   yield* TestClock.adjust("1 minute");
   yield* cookout.createIdentity("ada/helper", { owner: "ada" });
   yield* answer(() => ada.client.setDisplayName("ada/helper", "Helper"));
-  yield* Effect.andThen(quietFor("29 days"), quietFor("1 days"));
+  yield* Effect.andThen(quietFor("719 hours"), quietFor("1 hour"));
   yield* Effect.repeat(openOfferIds(ada.client), { until: (ids) => ids.length >= TWO });
   return ada;
 });

@@ -14,6 +14,8 @@ const NUDGE = "Quiet for 3 days: close it, or follow up?";
 const SETTLE = "30 millis";
 const HUMAN = { kind: "human" } as const;
 const TWO = 2;
+const BEFORE_THE_INBOX_OPENS = "71 hours";
+const WHILE_IT_IS_OPEN = "1 hour";
 
 interface Nudged {
   readonly ada: TestIdentity;
@@ -35,6 +37,16 @@ function inboxOpenFor(who: TestIdentity, client: CookoutClient = who.client): Ef
   });
 }
 
+function quietForThreeDaysWith(
+  inboxOpen: Effect.Effect<void, never, Scope.Scope>,
+): Effect.Effect<void, never, Scope.Scope> {
+  return Effect.gen(function* passThreeDays() {
+    yield* TestClock.adjust(BEFORE_THE_INBOX_OPENS);
+    yield* inboxOpen;
+    yield* Effect.andThen(Effect.andThen(settled, TestClock.adjust(WHILE_IT_IS_OPEN)), settled);
+  });
+}
+
 const nudgedLive: Effect.Effect<Nudged, never, TestCookout | Scope.Scope> = Effect.gen(function* nudgeAda() {
   const cookout = yield* TestCookout;
   const ada = yield* cookout.createIdentity("ada", HUMAN);
@@ -43,8 +55,7 @@ const nudgedLive: Effect.Effect<Nudged, never, TestCookout | Scope.Scope> = Effe
   const { message: thread } = yield* answer(() =>
     ada.client.createMessage({ channel: "grill", text: "Who owns the release notes?\nAnd the changelog?" }),
   );
-  yield* inboxOpenFor(ada);
-  yield* Effect.andThen(Effect.andThen(settled, TestClock.adjust("3 days")), settled);
+  yield* quietForThreeDaysWith(inboxOpenFor(ada));
   yield* answer(() => inPane().findByText(NUDGE));
   return { ada, bob, thread };
 });
@@ -93,8 +104,7 @@ const twoNudgedWithCloseRefused: Effect.Effect<TestIdentity, never, TestCookout 
     yield* answer(() => ada.client.createMessage({ channel: "grill", text: "Who owns the release notes?" }));
     yield* TestClock.adjust("1 minute");
     yield* answer(() => ada.client.createMessage({ channel: "grill", text: "Who owns the changelog?" }));
-    yield* inboxOpenFor(ada, refusingClose(ada.client));
-    yield* Effect.andThen(Effect.andThen(settled, TestClock.adjust("3 days")), settled);
+    yield* quietForThreeDaysWith(inboxOpenFor(ada, refusingClose(ada.client)));
     yield* answer(() => inPane().findByText("Who owns the release notes?"));
     return ada;
   },
