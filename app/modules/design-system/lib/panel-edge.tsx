@@ -43,7 +43,7 @@ export function PanelEdge(parts: EdgeParts): ReactNode {
       aria-valuemax={edge.max}
       aria-valuemin={edge.min}
       aria-valuenow={edge.width}
-      className="absolute inset-y-0 -left-1 z-30 hidden w-2 cursor-col-resize touch-none outline-none after:absolute after:inset-y-0 after:left-[3px] after:w-0.5 hover:after:bg-ring focus-visible:after:bg-ring md:block"
+      className="absolute inset-y-0 -left-1 z-30 hidden w-2 cursor-col-resize touch-none outline-none after:absolute after:inset-y-0 after:left-[3px] after:w-0.5 hover:after:bg-link focus-visible:after:bg-link md:block"
       onKeyDown={handleKeyDown}
       onPointerDown={handlePointerDown}
       role="separator"
