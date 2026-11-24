@@ -1,10 +1,12 @@
-import type { ScriptCoverage, Span } from "../lib/page-coverage.ts";
-import { coverageMapOf, parseCoverageMap, testCoverageFrom, testsReaching } from "../lib/browser-coverage.ts";
+import { coverageMapFrom, coverageMapOf, testCoverageFrom, testsReaching } from "../lib/browser-coverage.ts";
 import { expect, it } from "vitest";
 import type { CoverageMap } from "../lib/browser-coverage.ts";
 import type { Outcome } from "../lib/tools.ts";
+import type { Span } from "../lib/page-coverage.ts";
 import { pageCoverage } from "../lib/page-coverage.ts";
 import { transformWithOxc } from "vite";
+
+type ScriptCoverage = Parameters<typeof pageCoverage> extends readonly [readonly (infer Script)[]] ? Script : never;
 
 const VIEW = "app/modules/views/lib/panel.tsx";
 const LINES = [
@@ -170,7 +172,7 @@ it("reads back the map it wrote, and refuses one that isn't a coverage map", { t
   expect.hasAssertions();
 
   const map = await panelMap();
-  const read = [parseCoverageMap(structuredClone(map)), parseCoverageMap({ commit: "abc123" })];
+  const read = [coverageMapFrom(JSON.stringify(map)), coverageMapFrom(JSON.stringify({ commit: "abc123" }))];
 
   expect(read).toStrictEqual([
     { ok: true, value: map },

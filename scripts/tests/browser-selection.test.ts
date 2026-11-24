@@ -3,7 +3,6 @@ import { expect, it, onTestFinished } from "vitest";
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import type { CoverageMap } from "../lib/browser-coverage.ts";
 import type { Outcome } from "../lib/tools.ts";
-import type { Selecting } from "../lib/browser-selection.ts";
 import type { Span } from "../lib/page-coverage.ts";
 import { changedFiles } from "../lib/changed-files.ts";
 import path from "node:path";
@@ -19,6 +18,8 @@ const LOGIN_FORM_START = 13;
 const LOGIN_FORM_END = 38;
 const IN_LOGIN_FORM = 20;
 const LOGIN_FORM: Span = [LOGIN_FORM_START, LOGIN_FORM_END];
+type Selecting = Parameters<typeof browserTestsFor> extends readonly [infer Selection] ? Selection : never;
+
 const NO_MAP: Outcome<CoverageMap> = { ok: false, reason: "no map in this test" };
 
 interface Branch {

@@ -1,10 +1,10 @@
 import { chromium, test } from "@playwright/test";
-import type { Outcome } from "./tools.ts";
+import type { Outcome } from "./lib/tools.ts";
 import type { Page } from "@playwright/test";
-import type { PageCoverage } from "./page-coverage.ts";
-import type { TestCoverage } from "./browser-coverage.ts";
+import type { PageCoverage } from "./lib/page-coverage.ts";
+import type { TestCoverage } from "./lib/browser-coverage.ts";
 import { appendFileSync } from "node:fs";
-import { pageCoverage } from "./page-coverage.ts";
+import { pageCoverage } from "./lib/page-coverage.ts";
 import path from "node:path";
 
 interface Recording {

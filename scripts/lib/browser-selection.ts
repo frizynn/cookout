@@ -251,5 +251,5 @@ function browserSkip(tests: BrowserTests): readonly CiOnly[] {
   ];
 }
 
-export type { BrowserTests, History, Selecting };
+export type { BrowserTests };
 export { browserSkip, browserTestsFor };

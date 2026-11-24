@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import type { RelayOptions } from "./app/modules/routes/tests/browser/relay.ts";
-import { recordBrowserCoverage } from "./scripts/lib/browser-coverage-recorder.ts";
+import { recordBrowserCoverage } from "./scripts/browser-coverage-recorder.ts";
 
 const coverageRecords = process.env["COOKOUT_BROWSER_COVERAGE"] ?? "";
 if (coverageRecords !== "") {

@@ -146,5 +146,5 @@ function pageCoverage(scripts: readonly ScriptCoverage[]): Outcome<PageCoverage>
   return { ok: true, value: Object.fromEntries(served.flatMap((entry) => okEntry(entry))) };
 }
 
-export type { FileCoverage, PageCoverage, ScriptCoverage, Span };
+export type { FileCoverage, PageCoverage, Span };
 export { okEntry, pageCoverage };

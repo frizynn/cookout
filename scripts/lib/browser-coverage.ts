@@ -193,4 +193,4 @@ function coverageMapFrom(source: string): Outcome<CoverageMap> {
 }
 
 export type { CoverageMap, TestCoverage };
-export { coverageMapFrom, coverageMapOf, parseCoverageMap, testCoverageFrom, testsReaching };
+export { coverageMapFrom, coverageMapOf, testCoverageFrom, testsReaching };
