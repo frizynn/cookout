@@ -60,11 +60,11 @@ function deactivateOne(
     Effect.gen(function* deactivateQuietAgent() {
       const recipients = recipientsOf({ board, identity: agent });
       const deactivated = yield* on.deactivate(agent.name);
-      if (!deactivated) {
-        return [];
-      }
-      const recorded = yield* on.records.insert({ deactivatedAt: now, identity: agent.name, recipients });
-      return [recorded];
+      return yield* Effect.forEach(
+        Arr.filter([agent], () => deactivated),
+        ({ name }) => on.records.insert({ deactivatedAt: now, identity: name, recipients }),
+        ONE_AT_A_TIME,
+      );
     });
 }
 

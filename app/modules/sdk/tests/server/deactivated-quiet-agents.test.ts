@@ -6,6 +6,7 @@ import type {
   DeactivatedQuietAgentId,
   EventStream,
 } from "../../index.ts";
+import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { TestCookout, answer, refusal, testCookout, testStartTime } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import type { Scope } from "effect";
@@ -161,12 +162,19 @@ it.effect("marking all as read covers the entry, and one the caller didn't get i
     const { ada, cookout } = yield* board;
     const entries = yield* Effect.andThen(quietFor("90 days"), entriesOnceThere(ada.client));
     const notTheirs = yield* refusal(() => cookout.client.markDeactivatedQuietAgentRead(idOf(entries)));
+    const zero = yield* HttpClientRequest.post(`${cookout.url}/v1/inbox/deactivated-quiet-agents/0/read`).pipe(
+      HttpClientRequest.setHeader("authorization", `Bearer ${ada.token}`),
+      HttpClient.execute,
+    );
     yield* answer(() => ada.client.ackAll({ deactivatedQuietAgentsUpTo: idOf(entries) }));
     const [after, read] = yield* Effect.all([unread(ada.client), history(ada.client)], { concurrency: 1 });
 
-    expect(notTheirs).toMatchObject({ code: "deactivated_quiet_agent_not_found", status: NOT_FOUND });
+    expect([notTheirs, zero.status]).toMatchObject([
+      { code: "deactivated_quiet_agent_not_found", status: NOT_FOUND },
+      NOT_FOUND,
+    ]);
     expect([after, Arr.map(read, (entry) => entry.read)]).toStrictEqual([[], [true]]);
-  }).pipe(Effect.provide(testCookout())),
+  }).pipe(Effect.provide([testCookout(), FetchHttpClient.layer])),
 );
 
 it.effect("reactivating reads the entry, gives a fresh token, and the next offer comes 30 days later", () =>
