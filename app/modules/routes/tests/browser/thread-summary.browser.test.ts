@@ -43,7 +43,7 @@ async function openSummary(page: Page, channel: string): Promise<Locator> {
 test("hovering a thread's summary keeps its last reply text, adds an arrow, and never makes it narrower", async ({
   page,
 }) => {
-  const link = await openSummary(page, "browser-thread-summary");
+  const link = await openSummary(page, "browser-reply-arrow");
   const atRest = await lookOf(link);
   await link.hover();
 
