@@ -43,6 +43,7 @@ type MenuChoice =
 interface ActionMenuParts {
   readonly choices: readonly MenuChoice[];
   readonly label: string;
+  readonly buttonLabel?: string;
 }
 
 interface HoverActionsParts extends MessageActionParts {

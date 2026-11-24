@@ -23,8 +23,9 @@
  * unread colour), quiet, or unseen (read out only); given a `menu`, it is an `ActionMenu`'s target.
  * `ActionMenu` is the one way to give something outside a message an actions menu: it wraps its children so that
  * right-clicking them, or pressing the context-menu key or Shift+F10 on what has focus in them, opens its `choices`
- * as a context menu named by its `label`, and a More actions button, shown on hover or focus at their right, opens
- * the same menu as a dropdown. `NavHeading` heads a
+ * as a context menu named by its `label`, and a More actions button (or `buttonLabel`), shown on hover or focus at
+ * their right (`inline`: after a name), opens it as a dropdown. `PersonMenu` is a name's: View profile, Message, Copy
+ * name. `NavHeading` heads a
  * `NavList` of links, with any `HeadingButton` on its line, a plus named by
  * its label that starts something new, such as a channel; in the footer, `FooterLink` is a link
  * with a gear, such as Settings, highlighted when open. `Pane` is
@@ -220,6 +221,7 @@ export { LinkList } from "./lib/link-list.tsx";
 export { LinkRow } from "./lib/link-row.tsx";
 export { Mention } from "./lib/mention.tsx";
 export { IdentityCard } from "./lib/identity-card.tsx";
+export { PersonMenu } from "./lib/person-menu.tsx";
 export { IdentityCardComposer, IdentityCards } from "./lib/identity-card-parts.ts";
 export type { IdentityCardParts, IdentityCardSource } from "./lib/identity-card-parts.ts";
 export { Muted } from "./lib/muted.tsx";

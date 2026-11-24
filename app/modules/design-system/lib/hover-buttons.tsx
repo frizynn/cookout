@@ -5,7 +5,7 @@ import { MoreActions } from "./more-actions.tsx";
 import { ReactButton } from "./react-button.tsx";
 import type { ReactNode } from "react";
 
-const TEXT = { label: "Quick actions" } as const;
+const TEXT = { label: "Quick actions", more: "More actions" } as const;
 
 export function HoverButtons(parts: HoverActionsParts): ReactNode {
   const { actionHref, choices, onAction, reactions, thread } = parts;
@@ -24,7 +24,7 @@ export function HoverButtons(parts: HoverActionsParts): ReactNode {
         <MessageAction actionHref={actionHref} actionLabel={parts.actionLabel} onAction={handleAction} />
       )}
       {thread !== null && <HoverThread thread={thread} />}
-      <MoreActions choices={choices} />
+      <MoreActions choices={choices} label={TEXT.more} />
     </fieldset>
   );
 }
