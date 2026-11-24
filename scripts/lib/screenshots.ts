@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { broughtInCard } from "./screenshot-brought-in.ts";
 
 type Theme = "light" | "dark";
 
@@ -119,12 +120,7 @@ const SCREENS: readonly Screen[] = [
     name: "identity-card-deactivated",
     text: "View profile",
   },
-  {
-    focus: 'article:has-text("Picked up the 1.4.1 build.") header a',
-    hash: "#/channels/deploys",
-    name: "identity-card-brought-in",
-    text: "Brought in by",
-  },
+  broughtInCard,
   {
     focus: 'article:has-text("@grace can you check the notes before we ship?") a:has-text("@grace")',
     hash: "#/channels/general",
