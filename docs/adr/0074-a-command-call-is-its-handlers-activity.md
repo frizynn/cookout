@@ -12,3 +12,5 @@ A command's handler is an agent. Activity (`GLOSSARY.md`) is posting, reacting o
 ## Considered options
 
 - **Only the handler's own posts, reactions and presence count.** Rejected for now: it deactivates working webhook handlers. It is what Matt may still choose.
+
+2026-11-24: Matt approved this rule; it is no longer an assumption.
