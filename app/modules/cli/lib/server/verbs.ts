@@ -6,6 +6,7 @@ import { answer } from "./output.ts";
 import { commandCommand } from "./command.ts";
 import { helpCommand } from "./help-monitor.ts";
 import { identityCommand } from "./identity.ts";
+import { isDeactivationOfferId } from "../../../inbox/index.ts";
 import { isMessageId } from "../../../messages/index.ts";
 import { threadCommandFor } from "./thread.ts";
 
@@ -145,6 +146,21 @@ const ackCommand = Command.make("ack", { id: messageIdArgument }, ({ id }) => an
   Command.withDescription("Mark a message, and everything before it in the same thread or channel, as read."),
 );
 
+const offerIdArgument = Argument.Int("deactivation-offer-id").pipe(
+  Argument.filterMap(
+    (value) => Option.liftPredicate(value, isDeactivationOfferId),
+    (value) => `${String(value)} is not a deactivation offer ID.`,
+  ),
+);
+
+const keepCommand = Command.make("keep", { id: offerIdArgument }, ({ id }) =>
+  answer((client) => client.keepDeactivationOffer(id)),
+).pipe(
+  Command.withDescription(
+    "Answer Keep on an offer to deactivate a quiet agent: it leaves the inbox of everyone it went to, and the next comes 30 days later if the agent stays quiet. To deactivate instead, run cookout identity deactivate.",
+  ),
+);
+
 const unreadCommand = Command.make("unread", { id: messageIdArgument }, ({ id }) =>
   answer((client) => client.markUnread(id)),
 ).pipe(
@@ -199,6 +215,7 @@ export const verbCommands = [
   leaveCommand,
   inboxCommand,
   ackCommand,
+  keepCommand,
   unreadCommand,
   reactCommand,
   unreactCommand,

@@ -40,11 +40,15 @@ function unreadUpTo(opened: ClientWithAgentSessionState, latest: MessageId | nul
   if (latest === null) {
     return Effect.succeed(NONE_UNREAD);
   }
-  return Effect.map(whileUnavailable(callClient((client) => client.inbox())(opened)), ({ items, nudges }) => {
-    const unread = Arr.filter(items, ({ message }) => message.id <= latest);
-    const mentioned = Arr.some(unread, ({ reasons }) => reasons.includes("mention"));
-    return { count: unread.length + nudges.length, mentioned: mentioned || Arr.isReadonlyArrayNonEmpty(nudges) };
-  });
+  return Effect.map(
+    whileUnavailable(callClient((client) => client.inbox())(opened)),
+    ({ deactivationOffers, items, nudges }) => {
+      const unread = Arr.filter(items, ({ message }) => message.id <= latest);
+      const mentioned = Arr.some(unread, ({ reasons }) => reasons.includes("mention"));
+      const asking = [...nudges, ...deactivationOffers];
+      return { count: unread.length + asking.length, mentioned: mentioned || Arr.isReadonlyArrayNonEmpty(asking) };
+    },
+  );
 }
 
 function sayUnread(format: Format, { count }: Unread): Effect.Effect<void> {
@@ -62,7 +66,7 @@ function stopsAtStartUp(stop: StopCondition, { count, mentioned }: Unread): bool
 }
 
 function isNewerThan(counted: Option.Option<number>, event: WatchedEvent): boolean {
-  if (event.type === "nudge") {
+  if (event.type !== "inbox-item") {
     return true;
   }
   const { item } = event;
@@ -117,7 +121,7 @@ function startUpLine({
 }
 
 function stopsUntilMention(event: WatchedEvent): boolean {
-  return event.type === "nudge" || event.item.reasons.includes("mention");
+  return event.type !== "inbox-item" || event.item.reasons.includes("mention");
 }
 
 function wanted(
