@@ -47,8 +47,8 @@
  * hidden on a narrow screen while `hiddenWhenNarrow`) beside a
  * `ConversationPanel`, a named column with a `BackLink` arrow (shown only on a
  * narrow screen, where the panel takes the whole width), its detail, its
- * header's `actions` as small buttons (each naming its key in `aria-keyshortcuts` and a tooltip), and any open link (naming its key, `CONVERSATION_KEYS.open`, in
- * `aria-keyshortcuts` and a tooltip; `CONVERSATION_KEYS` also holds the keys for Mark read and Mark unread), its
+ * header's `actions` as small buttons and any `open` link, each naming its `Shortcut` (its keys as the keymap names
+ * them) in `aria-keyshortcuts` and a tooltip, its
  * `message` being what an identity card's Message does in it (an `IdentityCardComposer`), or beside
  * a `ConversationEmpty`, a named column holding only a
  * muted line (hidden on a narrow screen); a
@@ -189,7 +189,6 @@ export {
   ListPane,
   ConversationEmpty,
   ConversationPanel,
-  CONVERSATION_KEYS,
   PaneHeader,
   Page,
   PageSection,
@@ -206,7 +205,7 @@ export {
   ListArea,
   Toolbar,
 } from "./lib/layout.ts";
-export type { PanelAction, PanelEdgeParts } from "./lib/layout.ts";
+export type { PanelAction, PanelEdgeParts, ShortcutLinkParts } from "./lib/layout.ts";
 export {
   CallChip,
   ChannelStart,

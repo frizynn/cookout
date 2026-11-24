@@ -18,7 +18,8 @@
  * workspace route's hash can end in `?profile=<name>`, which opens that
  * identity's profile panel beside it (replacing a thread's panel); Escape or
  * its close link closes it. Clicking a name, a message's author or an
- * `@name`, goes there. The
+ * `@name`, goes there. `keymap` owns every keyboard shortcut: the app adds its one key listener to the page while
+ * drawn. The
  * `paths` module reads the hash and builds every link's.
  * The app makes the board's old per-channel and per-thread stores, which the views still read, from `boardStore`, as
  * thin adapters over its selectors and methods, for the last migration ticket to delete.
@@ -27,6 +28,7 @@ import type { ReactNode } from "react";
 import { RouteView } from "./lib/route-view.tsx";
 import type { Stores } from "./lib/stores.ts";
 import { locationOf } from "../paths/index.ts";
+import { useKeymapListener } from "./lib/use-keymap-listener.ts";
 import { useSyncExternalStore } from "react";
 import { withBoard } from "./lib/board-adapter.ts";
 
@@ -51,5 +53,6 @@ export type CookoutAppProps = Omit<Stores, "board">;
  */
 export function CookoutApp(props: CookoutAppProps): ReactNode {
   const hash = useSyncExternalStore(subscribeToHash, currentHash);
+  useKeymapListener(props.keymap);
   return <RouteView place={locationOf(hash)} stores={withBoard(props)} />;
 }
