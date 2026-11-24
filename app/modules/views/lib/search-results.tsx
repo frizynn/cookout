@@ -1,12 +1,14 @@
+import type { Search, SearchState } from "../../search/web.ts";
 import type { BoxOption } from "./search-options.ts";
 import type { ReactNode } from "react";
 import { SearchResultRows } from "./search-result-rows.tsx";
-import type { SearchState } from "../../search/web.ts";
+import { SearchSortChoice } from "./search-sort-choice.tsx";
 
 const TEXT = { none: "No messages match.", searching: "Searching…" } as const;
 const NONE = 0;
 
 interface SearchResultsProps {
+  readonly search: Search;
   readonly state: SearchState;
   readonly options: readonly BoxOption[];
   readonly list: string;
@@ -33,6 +35,7 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
   const handleChoose = props.onChoose;
   return (
     <div className="absolute inset-x-4 top-full z-30 mt-1 max-h-[60vh] overflow-y-auto rounded-lg border bg-background p-1 shadow-lg">
+      {state.found.status !== "idle" && <SearchSortChoice search={props.search} state={state} />}
       <SearchResultRows
         highlighted={state.highlighted}
         list={props.list}

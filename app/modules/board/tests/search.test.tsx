@@ -129,7 +129,9 @@ it("loading more adds the next page, and moving onto the last result loaded load
   await shownTexts(shown, ["Dingopage 5", "Dingopage 4", "Dingopage 3", "Dingopage 2", "Dingopage 1"]);
 });
 
-it("a query with neither words nor filters asks nothing, and closing keeps the query", { timeout: 5000 }, () => {
+it("a query with neither words nor filters asks nothing, even sorted again, and closing keeps the query", {
+  timeout: 5000,
+}, () => {
   expect.hasAssertions();
 
   const search = vi.fn<SearchCall>();
@@ -137,10 +139,12 @@ it("a query with neither words nor filters asks nothing, and closing keeps the q
 
   shown.edit("   ");
   shown.move("down");
+  shown.sortBy("best");
+  shown.sortBy("best");
   shown.close();
 
   expect([search.mock.calls, shown.snapshot()]).toStrictEqual([
     [],
-    { found: { status: "idle" }, highlighted: 0, open: false, query: "   " },
+    { found: { status: "idle" }, highlighted: 0, open: false, query: "   ", sort: "best" },
   ]);
 });

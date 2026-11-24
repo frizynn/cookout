@@ -1,5 +1,5 @@
 import type { Refusal, SearchRequest } from "../../sdk/index.ts";
-import type { SearchResponse, SearchResult } from "../index.ts";
+import type { SearchResponse, SearchResult, SearchSort } from "../index.ts";
 import { isEmptyQuery, parseQuery } from "../index.ts";
 
 type SearchAnswer = { readonly page: SearchResponse } | { readonly refusal: Refusal };
@@ -19,6 +19,7 @@ type Found =
 
 interface SearchState {
   readonly query: string;
+  readonly sort: SearchSort;
   readonly open: boolean;
   readonly found: Found;
   readonly highlighted: number;
@@ -30,6 +31,7 @@ interface Search {
   readonly subscribe: (listener: () => void) => () => void;
   readonly snapshot: () => SearchState;
   readonly edit: (query: string) => void;
+  readonly sortBy: (sort: SearchSort) => void;
   readonly open: () => void;
   readonly close: () => void;
   readonly loadMore: () => void;
@@ -51,6 +53,7 @@ const STEPS: Readonly<Record<Direction, number>> = { down: ONE, up: -ONE };
 
 interface Asked {
   readonly query: string;
+  readonly sort: SearchSort;
   readonly cursor: string | null;
   readonly limit: number | null;
 }
@@ -58,6 +61,7 @@ interface Asked {
 function requestOf(asked: Asked): SearchRequest {
   return {
     query: asked.query,
+    sort: asked.sort,
     ...(asked.cursor !== null && { cursor: asked.cursor }),
     ...(asked.limit !== null && { limit: asked.limit }),
   };
@@ -104,7 +108,7 @@ interface Held {
 
 function heldState(): Held {
   const listeners = new Set<() => void>();
-  let state: SearchState = { found: IDLE, highlighted: FIRST, open: false, query: "" };
+  let state: SearchState = { found: IDLE, highlighted: FIRST, open: false, query: "", sort: "newest" };
   return {
     set: (next) => {
       state = { ...state, ...next };
@@ -138,8 +142,8 @@ function asking(held: Held, options: SearchOptions): Asking {
   async function ask(cursor: string | null): Promise<void> {
     latest += ONE;
     const mine = latest;
-    const { found, query } = held.state();
-    const answer = await options.search(requestOf({ cursor, limit: options.limit ?? null, query }));
+    const { found, query, sort } = held.state();
+    const answer = await options.search(requestOf({ cursor, limit: options.limit ?? null, query, sort }));
     if (mine === latest) {
       held.set({ found: foundAfter(resultsOf(found), answer) });
     }
@@ -165,27 +169,61 @@ function loaderOf(held: Held, asker: Asking): () => void {
   };
 }
 
+interface FirstPage {
+  readonly stop: () => void;
+  readonly later: () => void;
+  readonly now: () => void;
+}
+
+function firstPageOf(asker: Asking, pause: number): FirstPage {
+  let waiting: ReturnType<typeof globalThis.setTimeout> | null = null;
+  function now(): void {
+    asker.ask(null);
+  }
+  return {
+    later: () => {
+      waiting = globalThis.setTimeout(now, pause);
+    },
+    now,
+    stop: () => {
+      if (waiting !== null) {
+        globalThis.clearTimeout(waiting);
+      }
+      asker.drop();
+    },
+  };
+}
+
+function sorterOf(held: Held, firstPage: FirstPage): Search["sortBy"] {
+  return (sort) => {
+    const { query, sort: sorted } = held.state();
+    if (sort === sorted) {
+      return;
+    }
+    firstPage.stop();
+    const found = foundWhileEditing(query);
+    held.set({ found, highlighted: FIRST, sort });
+    if (found === SEARCHING) {
+      firstPage.now();
+    }
+  };
+}
+
 function createSearch(options: SearchOptions): Search {
   const held = heldState();
   const asker = asking(held, options);
   const loadMore = loaderOf(held, asker);
-  let waiting: ReturnType<typeof globalThis.setTimeout> | null = null;
-  function firstPage(): void {
-    asker.ask(null);
-  }
+  const firstPage = firstPageOf(asker, options.pause ?? PAUSE_MS);
   return {
     close: () => {
       held.set({ highlighted: FIRST, open: false });
     },
     edit: (query) => {
-      if (waiting !== null) {
-        globalThis.clearTimeout(waiting);
-      }
-      asker.drop();
+      firstPage.stop();
       const found = foundWhileEditing(query);
       held.set({ found, highlighted: FIRST, open: true, query });
       if (found === SEARCHING) {
-        waiting = globalThis.setTimeout(firstPage, options.pause ?? PAUSE_MS);
+        firstPage.later();
       }
     },
     loadMore,
@@ -201,6 +239,7 @@ function createSearch(options: SearchOptions): Search {
       held.set({ open: true });
     },
     snapshot: held.state,
+    sortBy: sorterOf(held, firstPage),
     subscribe: held.subscribe,
   };
 }
