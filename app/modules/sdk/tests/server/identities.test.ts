@@ -222,11 +222,11 @@ it.effect("rotating the token of a missing identity is a 404", () =>
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("an agent can't create, rotate or deactivate identities (403)", () =>
+it.effect("an agent can't create a human, rotate or deactivate identities (403)", () =>
   Effect.gen(function* nonAdmin() {
     const cookout = yield* TestCookout;
     const agent = yield* cookout.createIdentity("agent");
-    const created = yield* refusal(() => agent.client.createIdentity({ kind: "agent", name: "sneaky" }));
+    const created = yield* refusal(() => agent.client.createIdentity({ kind: "human", name: "sneaky" }));
     const rotated = yield* refusal(() => agent.client.rotateToken("admin"));
     const deactivated = yield* refusal(() => agent.client.deactivateIdentity("admin"));
     const listed = yield* answer(cookout.client.listIdentities);

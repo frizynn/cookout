@@ -1,6 +1,6 @@
 import { Array as Arr, Effect, Predicate } from "effect";
 import { Caller, announced, issueToken, requireAdmin, requireOwnerOrAdmin, tokensEnded } from "./auth.ts";
-import { CreateIdentityRequestSchema, createIdentity, humanCaller } from "./create.ts";
+import { CreateIdentityRequestSchema, createAgentByAgent, createIdentity } from "./create.ts";
 import {
   DeactivateIdentityResponseSchema,
   IdentityMessageCountResponseSchema,
@@ -57,8 +57,13 @@ const withToken = HttpServerResponse.schemaJson(IdentityWithTokenResponseSchema)
 const createRoute: Route<Caller | Storage | Secrets | IdentityChanges> = {
   handle: () =>
     Effect.gen(function* createIdentityRoute() {
-      const caller = yield* humanCaller;
+      const caller = yield* Caller;
       const body = yield* HttpServerRequest.schemaBodyJson(CreateIdentityRequestSchema);
+      if (caller.kind === "agent") {
+        const brought = yield* createAgentByAgent({ body, caller });
+        yield* announced(brought.identity);
+        return yield* HttpServerResponse.schemaJson(IdentityResponseSchema)(brought, { status: CREATED });
+      }
       const created = yield* createIdentity({ body, caller });
       yield* announced(created.identity);
       return yield* withToken(created, { status: CREATED });
