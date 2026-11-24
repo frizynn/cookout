@@ -61,8 +61,8 @@ export function sqliteStorage(path: string): Layer.Layer<Storage, StorageUnavail
  * clock and publish nothing. Migrations are Postgres's own list, applied
  * in order under an advisory lock so two processes starting together apply
  * each once; a database newer than the list fails with "Upgrade cookout".
- * Only health and the identity sections are on Postgres so far; the rest fail
- * with `StorageUnavailable`, and nothing selects this Layer at runtime yet.
+ * Every section but search is on Postgres so far; search fails with
+ * `StorageUnavailable`, and nothing selects this Layer at runtime yet.
  * @param url The database URL, kept redacted.
  * @returns The store, failing with `StorageUnavailable` if it can't be opened.
  */

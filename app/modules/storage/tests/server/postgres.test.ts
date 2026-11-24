@@ -10,6 +10,7 @@ import {
 import { expect, it } from "@effect/vitest";
 import { NodeServices } from "@effect/platform-node";
 import type { Redacted } from "effect";
+import { parseQuery } from "../../../search/index.ts";
 import { tokenHash } from "../../../identities/index.ts";
 
 const HASH_LENGTH = 64;
@@ -76,7 +77,7 @@ it.effect("a database at a newer schema version than this cookout fails with Sto
 
       expect(error).toStrictEqual(
         StorageUnavailable.make({
-          message: "The database is at schema version 1000, newer than this cookout (1). Upgrade cookout.",
+          message: "The database is at schema version 1000, newer than this cookout (2). Upgrade cookout.",
         }),
       );
     }),
@@ -185,13 +186,12 @@ it.effect("a section not on Postgres yet fails with StorageUnavailable", () =>
     Effect.gen(function* notYet() {
       const url = yield* emptyPostgresDatabase;
       const { close, storage } = yield* opened(url);
-      const errors = yield* Effect.all([Effect.flip(storage.listCommands), Effect.flip(storage.listPresence([]))], {
-        concurrency: 1,
-      });
+      const error = yield* Effect.flip(storage.searchMessages(parseQuery("deploy"), { limit: 1 }));
       yield* close;
-      const notOnPostgres = StorageUnavailable.make({ message: "This part of the store is not on Postgres yet." });
 
-      expect(errors).toStrictEqual([notOnPostgres, notOnPostgres]);
+      expect(error).toStrictEqual(
+        StorageUnavailable.make({ message: "This part of the store is not on Postgres yet." }),
+      );
     }),
   ),
 );

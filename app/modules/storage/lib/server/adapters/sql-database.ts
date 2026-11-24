@@ -23,4 +23,13 @@ const isFalse: DialectForms<(column: string) => string> = {
   sqlite: (column) => `${column} = 0`,
 };
 
-export { type DialectForms, isFalse, type SqlDatabase, type SqlValue };
+const isTrue: DialectForms<(column: string) => string> = {
+  postgres: (column) => column,
+  sqlite: (column) => `${column} = 1`,
+};
+
+const TRUE: DialectForms<string> = { postgres: "TRUE", sqlite: "1" };
+
+const FALSE: DialectForms<string> = { postgres: "FALSE", sqlite: "0" };
+
+export { type DialectForms, FALSE, isFalse, isTrue, type SqlDatabase, type SqlValue, TRUE };

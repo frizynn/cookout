@@ -15,6 +15,7 @@ interface DatabaseStatements {
 const TEMPLATE = "cookout_template";
 const BUILDING_TEMPLATE = "cookout_template_building";
 const EMPTY_TEMPLATE = "template0";
+const FORGET_WHEN_NUDGES_AND_ACTIVITY_BEGAN = ["DELETE FROM nudges_since", "DELETE FROM activity_since"];
 const DATABASE_NUMBERS = "cookout_test_databases";
 const TEMPLATE_LOCK = 3_310_331;
 
@@ -66,8 +67,9 @@ function buildTemplate(run: Run): Effect.Effect<void, StorageUnavailable> {
     yield* run(`DROP DATABASE IF EXISTS ${BUILDING_TEMPLATE} WITH (FORCE)`);
     yield* run(`CREATE DATABASE ${BUILDING_TEMPLATE}`);
     const server = yield* containerUrl;
-    const template = postgresStorage(databaseUrl(server, BUILDING_TEMPLATE));
-    yield* Effect.scoped(Layer.build(template));
+    const url = databaseUrl(server, BUILDING_TEMPLATE);
+    yield* Effect.scoped(Layer.build(postgresStorage(url)));
+    yield* onPostgresDatabase({ statements: FORGET_WHEN_NUDGES_AND_ACTIVITY_BEGAN, url });
     yield* run(`ALTER DATABASE ${BUILDING_TEMPLATE} RENAME TO ${TEMPLATE}`);
   });
 }
