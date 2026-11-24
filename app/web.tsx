@@ -29,8 +29,8 @@ if (root !== null) {
     clientWithToken: (token) => createCookoutClient({ env: {}, token, url }),
   });
   const live = createLive(eventSourceAdapter(url));
-  const board = createBoard({ client, live });
   const boardStore = createBoardStore({ client, live });
+  const board = createBoard(boardStore);
   const unread = createUnread({ client, live });
   const layout = createLayout({ root: globalThis.document.documentElement, storage: globalThis.localStorage });
   createRoot(root).render(

@@ -2,6 +2,7 @@ import type { AgentSessions, Sessions, SessionsClient, SessionsPart } from "./ag
 import type { Identities, IdentitiesClient, IdentityChange } from "./identities-slice.ts";
 import type { IdentityCalls, IdentityCallsClient } from "./identity-calls.ts";
 import type { IdentityName, Message, ReactionCount, Refusal } from "../../sdk/index.ts";
+import type { OwnClient, OwnShowing, OwnState } from "./own-showing.ts";
 import type { PresenceClient, Presences } from "./presence-slice.ts";
 import type { Reactions, ReactionsClient } from "./reactions-slice.ts";
 import type { Toggle, ToggleClient } from "./reaction-toggle.ts";
@@ -9,13 +10,14 @@ import { reactionsIn, reactionsSlice } from "./reactions-slice.ts";
 import type { Live } from "../../live/index.ts";
 import type { Part } from "./slice.ts";
 import { createIdentityCalls } from "./identity-calls.ts";
+import { createOwn } from "./own-showing.ts";
 import { createPart } from "./slice.ts";
 import { createReactionToggle } from "./reaction-toggle.ts";
 import { createSessionsPart } from "./agent-sessions-part.ts";
 import { identitiesSlice } from "./identities-slice.ts";
 import { presenceSlice } from "./presence-slice.ts";
 
-interface BoardState {
+interface BoardState extends OwnState {
   readonly presence: Presences;
   readonly reactions: Reactions;
   readonly reactionRefusal: Refusal | null;
@@ -23,11 +25,11 @@ interface BoardState {
   readonly agentSessions: AgentSessions;
 }
 
-type Shown = "identities" | "presence" | "reactions";
+type Shown = "channels" | "commands" | "identities" | "presence" | "reactions" | "subscriptions";
 
 type Subscribe = (listener: () => void) => () => void;
 
-interface BoardStore {
+interface BoardStore extends OwnShowing {
   readonly subscribe: Subscribe;
   readonly snapshot: () => BoardState;
   readonly subscribeShowing: (shown: Shown) => Subscribe;
@@ -36,7 +38,8 @@ interface BoardStore {
   readonly identityCalls: IdentityCalls;
 }
 
-type BoardStoreClient = IdentitiesClient &
+type BoardStoreClient = OwnClient &
+  IdentitiesClient &
   IdentityCallsClient &
   PresenceClient &
   ReactionsClient &
@@ -46,7 +49,10 @@ type BoardStoreClient = IdentitiesClient &
 interface BoardStoreOptions {
   readonly client: BoardStoreClient;
   readonly live: Live | null;
+  readonly pageSize?: number;
 }
+
+const PAGE_SIZE = 50;
 
 interface Listeners {
   readonly subscribe: Subscribe;
@@ -164,27 +170,30 @@ function identityPartsOf(changed: () => void, client: BoardStoreClient): Identit
   };
 }
 
-function createBoardStore(options: BoardStoreOptions): BoardStore {
+function createBoardStore({ client, live, pageSize = PAGE_SIZE }: BoardStoreOptions): BoardStore {
   const { notify, subscribe } = createListeners();
   let snapshot: BoardState | null = null;
   function changed(): void {
     snapshot = null;
     notify();
   }
-  const { client } = options;
   const presence = createPart({ changed, client, slice: presenceSlice });
   const { reactionToggle, reactions } = reactionPartsOf(changed, client);
   const { identities, sessions } = identityPartsOf(changed, client);
-  const follow = follower(options.live, [presence, reactions, identities, sessions]);
+  const own = createOwn({ changed, client, pageSize });
+  const follow = follower(live, [own.parts, presence, reactions, identities, sessions]);
   const subscribers = {
+    ...own.subscribers({ follow, subscribe }),
     identities: showing({ follow, part: identities, subscribe }),
     presence: showing({ follow, part: presence, subscribe }),
     reactions: showing({ follow, part: reactions, subscribe }),
   };
   return {
+    ...own.showing({ follow, subscribe }),
     identityCalls: createIdentityCalls({ client, identities, sessions }),
     snapshot: () => {
       snapshot ??= {
+        ...own.state(),
         agentSessions: sessions.state(),
         identities: identities.state(),
         presence: presence.state(),
@@ -210,7 +219,7 @@ interface MessageShown {
 }
 
 function reactionsOf({ message, state }: MessageShown): readonly ReactionCount[] {
-  return reactionsIn({ held: state.reactions, message });
+  return reactionsIn({ held: state.reactions, message: state.messages.table.get(message.id) ?? message });
 }
 
 function reactionRefusal(state: BoardState): Refusal | null {
@@ -236,6 +245,7 @@ function agentSessions(agent: IdentityName): (state: BoardState) => Sessions {
 
 export type { IdentityCalls } from "./identity-calls.ts";
 export {
+  type BoardState,
   type BoardStore,
   agentSessions,
   createBoardStore,
@@ -246,3 +256,4 @@ export {
   reactionsOf,
 };
 export type { Presences } from "./presence-slice.ts";
+export type { BoardStoreClient };

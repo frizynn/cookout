@@ -3,7 +3,7 @@ import { adminClient, clientWith, sessionOf } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import { openAt, openBoard } from "./render.tsx";
-import { createBoard } from "../../board/index.ts";
+import { createBoardStore } from "../../board/index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
 import { inSidebar } from "./regions.ts";
 import { watched } from "./watched.ts";
@@ -159,7 +159,11 @@ it("coming back to the channel list shows the channels already loaded, without a
 
   const client = await adminWithChannels({ name: "web-loaded-once" });
   const counted = counting(client);
-  const opening = { board: createBoard({ client: counted.client }), hash: "#/", session: sessionOf(client) };
+  const opening = {
+    boardStore: createBoardStore({ client: counted.client, live: null }),
+    hash: "#/",
+    session: sessionOf(client),
+  };
   const closeFirst = openBoard(opening);
   await inSidebar().findByRole("link", { name: "#web-loaded-once" });
   closeFirst();
