@@ -73,4 +73,4 @@ function createAgentJoinRequests({ client, onChange }: AgentJoinRequestsOptions)
   };
 }
 
-export { type AgentJoinRequests, type AgentJoinRequestsState, type LiveAgentJoinRequests, createAgentJoinRequests };
+export { type AgentJoinRequests, type LiveAgentJoinRequests, createAgentJoinRequests };

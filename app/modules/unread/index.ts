@@ -245,7 +245,7 @@ export type { UnreadState } from "./lib/parts.ts";
 export type { Earlier, EarlierState } from "./lib/earlier.ts";
 export type { MarkAllState } from "./lib/mark-all.ts";
 export type { Alerts, AlertsState } from "./lib/alerts.ts";
-export type { AgentJoinRequests, AgentJoinRequestsState } from "./lib/agent-join-requests.ts";
+export type { AgentJoinRequests } from "./lib/agent-join-requests.ts";
 export type { Nudges, NudgesState } from "./lib/nudges.ts";
 export type { DeactivationOffers, DeactivationOffersState } from "./lib/deactivation-offers.ts";
 export type { DeactivatedQuietAgents, DeactivatedQuietAgentsState } from "./lib/deactivated-quiet-agents.ts";
