@@ -27,6 +27,7 @@ const TUESDAY = isoTime("2026-01-06T00:00:00.000Z");
 const WEDNESDAY = isoTime("2026-01-07T00:00:00.000Z");
 const THURSDAY = isoTime("2026-01-08T00:00:00.000Z");
 const FRIDAY = isoTime("2026-01-09T00:00:00.000Z");
+const SATURDAY = isoTime("2026-01-10T00:00:00.000Z");
 const START = 0;
 
 const TEXTS = [
@@ -35,6 +36,7 @@ const TEXTS = [
   [WEDNESDAY, "flaky deploy"],
   [THURSDAY, "nothing to see"],
   [FRIDAY, "is the flaky test fixed, or is it still flaky on the main branch?"],
+  [SATURDAY, "🎉 !!"],
 ] as const;
 
 type Ids = readonly MessageId[];
@@ -105,7 +107,7 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
-  "storage contract ($adapter): best match of a query with no words lists its matches newest first",
+  "storage contract ($adapter): best match of a query with no words lists its matches newest first, wordless ones too",
   ({ layer }) =>
     Effect.gen(function* bestMatchNoWords() {
       const { bestPages, ids } = yield* aBoard(layer);
