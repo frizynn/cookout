@@ -6,6 +6,7 @@ interface ComboboxFieldParts {
   readonly placeholder: string;
   readonly keys: string;
   readonly list: string;
+  readonly box: string;
   readonly expanded: boolean;
   readonly active: number | null;
   readonly defaultValue: string;
@@ -35,6 +36,7 @@ export function ComboboxField(parts: ComboboxFieldParts): ReactNode {
       autoComplete="off"
       className="h-8 w-full rounded-md border bg-surface px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-muted-foreground"
       defaultValue={parts.defaultValue}
+      id={parts.box}
       placeholder={parts.placeholder}
       role="combobox"
       spellCheck={false}

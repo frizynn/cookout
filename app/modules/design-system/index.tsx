@@ -157,7 +157,7 @@
  * picks it and Escape closes the list; `SubmitButton` sends it, and `SendButton` is its paper-plane icon form, named
  * and tooltipped by `label`; `Suggestions` is a named list of options to pick from under a box, such as mentions or
  * commands (each with any muted detail after it), one of them highlighted, which leaves the box focused; it sits in the
- * overlay layer, above everything else in the pane. `ComboboxField` is a named search input that is a combobox controlling the listbox `list`, its option at `active` the active one while `expanded`; `ResultList` is a named listbox (`list` its ID) of named
+ * overlay layer, above everything else in the pane. `ComboboxField` is a named search input (`box` its ID) that is a combobox controlling the listbox `list`, its option at `active` the active one while `expanded`; `ResultList` is a named listbox (`list` its ID) of named
  * `ResultGroup`s of `ResultOption`s, each a label, any muted detail and its children, highlighted (and scrolled into
  * view) when `highlighted`, its `id` for a box's `aria-activedescendant`; pressing one calls `onChoose` with its
  * `href`, leaving the box focused. `DataArea` is a labelled box to write JSON in, whose text its owner holds.

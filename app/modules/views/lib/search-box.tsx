@@ -37,14 +37,16 @@ function useOptions(props: SearchBoxProps, state: SearchState): readonly BoxOpti
 export function SearchBox(props: SearchBoxProps): ReactNode {
   const shortcut = props.keymap.shortcutOf("openSearch");
   const list = useId();
+  const field = useId();
   const state = useSyncExternalStore(props.search.subscribe, props.search.snapshot);
   const options = useOptions(props, state);
   const shown = state.open && (options.length > NONE || state.found.status !== "idle");
-  const { area, choose: handleChoose } = useSearchBox(props);
+  const { area, choose: handleChoose } = useSearchBox({ ...props, box: field });
   return (
     <div className="relative shrink-0 border-b px-4 py-2" ref={area}>
       <ComboboxField
         active={activeOf(state, options)}
+        box={field}
         defaultValue={state.query}
         expanded={shown}
         keys={shortcut.keys}

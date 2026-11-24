@@ -1,12 +1,14 @@
 import { expect, it, onTestFinished, vi } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { idOf, postedIn } from "./feed.ts";
 import { inSearchResults, inThread } from "./regions.ts";
+import { adminClient } from "./identities.ts";
 import { openAt } from "./render.tsx";
 
 const RESULTS = { name: "Search results" } as const;
 const BOX = { name: "Search" } as const;
 const BOTH = 2;
+const ONE = 1;
 
 interface Opened {
   readonly close: () => void;
@@ -243,4 +245,52 @@ it("the box is a combobox controlling a listbox of named groups, its active opti
   expect([first, second, activeOptionName()]).toStrictEqual(["Inbox", "People", "Inbox"]);
 
   opened.close();
+});
+
+function optionTexts(group: string): readonly string[] {
+  const texts: string[] = [];
+  for (const option of within(inSearchResults().getByRole("group", { name: group })).getAllByRole("option")) {
+    texts.push(option.textContent);
+  }
+  return texts;
+}
+
+async function jumpsFor(query: string): Promise<readonly (readonly string[])[]> {
+  fireEvent.input(await searchBox(), { target: { value: query } });
+  await inSearchResults().findByRole("group", { name: "People" });
+  return [optionTexts("Channels"), optionTexts("People")];
+}
+
+async function byDisplayName(): Promise<readonly string[]> {
+  fireEvent.input(await searchBox(), { target: { value: "jumpsworth" } });
+  return vi.waitFor(() => {
+    const people = optionTexts("People");
+
+    expect(people).toHaveLength(ONE);
+
+    return people;
+  });
+}
+
+it("typing lists the channels and people whose name or Display name holds it, and pressing one opens it", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const posted = await postedIn({ channel: "web-search-jumps", closed: [], texts: ["Hello"] });
+  await adminClient().setDisplayName("web-search-jumps-ada", "Ada Jumpsworth");
+  const close = openAt({ client: posted.reader, hash: "#/inbox" });
+  const byName = await jumpsFor("WEB-SEARCH-JUMPS");
+  const named = await byDisplayName();
+  fireEvent.input(await searchBox(), { target: { value: "web-search-jumps" } });
+  fireEvent.mouseDown(await inSearchResults().findByRole("option", { name: "#web-search-jumps" }));
+
+  expect([byName, named, globalThis.location.hash, screen.queryByRole("listbox", RESULTS)]).toStrictEqual([
+    [["#web-search-jumps"], ["Ada Jumpsworthweb-search-jumps-ada", "web-search-jumps-grace"]],
+    ["Ada Jumpsworthweb-search-jumps-ada"],
+    "#/channels/web-search-jumps",
+    null,
+  ]);
+
+  close();
 });

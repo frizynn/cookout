@@ -18,6 +18,7 @@ interface SearchBox {
 
 interface SearchBoxStores {
   readonly board: Board;
+  readonly box: string;
   readonly identities: Identities;
   readonly keymap: Keymap;
   readonly search: Search;
@@ -27,23 +28,15 @@ interface Place {
   readonly search: Search;
   readonly options: () => readonly BoxOption[];
   readonly area: () => HTMLDivElement | null;
-  readonly box: () => HTMLInputElement | null;
+  readonly box: () => Element | null;
   readonly back: () => unknown;
   readonly remember: (element: unknown) => void;
 }
 
 type Listener = (event: Readonly<Event>) => void;
 
-function boxIn(area: () => HTMLDivElement | null): HTMLInputElement | null {
-  const element = area();
-  if (element === null) {
-    return null;
-  }
-  return element.querySelector("input");
-}
-
-function present<Element>(element: Element | null): readonly Element[] {
-  return [element].filter((each): each is Element => each !== null);
+function inputs(element: unknown): readonly HTMLInputElement[] {
+  return [element].filter((each): each is HTMLInputElement => each instanceof HTMLInputElement);
 }
 
 function focusable(element: unknown): readonly HTMLElement[] {
@@ -58,7 +51,7 @@ function isInside(place: Place, event: Readonly<Event>): boolean {
 function goBack(place: Place): void {
   const before = place.back();
   place.remember(null);
-  for (const box of present(place.box())) {
+  for (const box of inputs(place.box())) {
     box.blur();
   }
   for (const element of focusable(before)) {
@@ -110,7 +103,7 @@ function bindOpen(place: Place, keymap: Keymap): () => void {
   return keymap.bind({
     actions: {
       openSearch: () => {
-        for (const box of present(place.box())) {
+        for (const box of inputs(place.box())) {
           box.focus();
           box.select();
         }
@@ -124,7 +117,7 @@ function bindOpen(place: Place, keymap: Keymap): () => void {
 
 function typedOf(place: Place): Listener {
   return (event) => {
-    for (const box of present(place.box())) {
+    for (const box of inputs(place.box())) {
       if (box === event.target) {
         place.search.edit(box.value);
       }
@@ -186,14 +179,14 @@ function listen(place: Place, keymap: Keymap): () => void {
   };
 }
 
-function useSearchBox({ board, identities, keymap, search }: SearchBoxStores): SearchBox {
+function useSearchBox({ board, box, identities, keymap, search }: SearchBoxStores): SearchBox {
   const area = useRef<HTMLDivElement>(null);
   const back = useRef<unknown>(null);
   const place = useCallback(
     (): Place => ({
       area: () => area.current,
       back: () => back.current,
-      box: () => boxIn(() => area.current),
+      box: () => globalThis.document.querySelector(`[id="${box}"]`),
       options: () =>
         boxOptionsOf({
           channels: board.snapshot().channels,
@@ -205,7 +198,7 @@ function useSearchBox({ board, identities, keymap, search }: SearchBoxStores): S
       },
       search,
     }),
-    [board, identities, search],
+    [board, box, identities, search],
   );
   useEffect(() => listen(place(), keymap), [keymap, place]);
   const choose = useCallback(
