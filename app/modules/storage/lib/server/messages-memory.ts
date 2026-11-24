@@ -44,6 +44,8 @@ interface MemoryMessagesOptions {
   readonly state: MemoryState;
 }
 
+type ScheduledMessageId = NonNullable<Message["scheduledMessage"]>["id"];
+
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
 type ChannelName = NewMessage["channel"];
@@ -126,11 +128,28 @@ type MemoryMessagesSection = MessagesSection &
     readonly forgetChannel: (channel: ChannelName) => Fails<ForgottenChannel>;
     readonly forgetIdentity: (identity: Author["name"]) => Fails<void>;
     readonly countMessagesBy: (identity: Author["name"]) => Fails<number>;
+    readonly markMessagesOf: (schedule: ScheduledMessageId) => Fails<void>;
   };
 
 interface ForgottenChannel {
   readonly messageIds: ReadonlySet<MessageId>;
   readonly attachments: DeletedChannel["attachments"];
+}
+
+function markedDeleted(schedule: ScheduledMessageId): (message: Message) => Message {
+  return (message) => {
+    if (Predicate.isUndefined(message.scheduledMessage) || message.scheduledMessage.id !== schedule) {
+      return message;
+    }
+    return { ...message, scheduledMessage: { deleted: true, id: schedule } };
+  };
+}
+
+function withScheduleDeleted(schedule: ScheduledMessageId) {
+  return (data: MemoryMessages): readonly [true, MemoryMessages] => [
+    true,
+    { ...data, messages: Arr.map(data.messages, markedDeleted(schedule)) },
+  ];
 }
 
 function withoutMessagesIn(data: MemoryMessages, channel: ChannelName): readonly [ForgottenChannel, MemoryMessages] {
@@ -201,6 +220,7 @@ function memoryMessages({ channels, identities, state }: MemoryMessagesOptions):
         }
         return Effect.undefined;
       }),
+    markMessagesOf: (schedule) => Effect.asVoid(change(withScheduleDeleted(schedule))),
   };
 }
 
