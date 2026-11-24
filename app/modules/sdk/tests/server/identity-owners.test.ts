@@ -30,29 +30,31 @@ it.effect("any human creates an agent it owns, sees its token once, and the list
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("a non-admin human naming another owner, or creating a human, is refused with 403, as is any agent", () =>
-  Effect.gen(function* refusedCreates() {
-    const cookout = yield* TestCookout;
-    yield* cookout.createIdentity("ada", HUMAN);
-    const grace = yield* cookout.createIdentity("grace", HUMAN);
-    const agent = yield* cookout.createIdentity("helper", { owner: "grace" });
-    const refused = yield* Effect.all(
-      [
-        refusal(() => grace.client.createIdentity({ kind: "agent", name: "spy", owner: "ada" })),
-        refusal(() => grace.client.createIdentity({ kind: "human", name: "eve" })),
-        refusal(() => agent.client.createIdentity({ kind: "agent", name: "minion" })),
-      ],
-      ONE_AT_A_TIME,
-    );
-    const { identities } = yield* answer(cookout.client.listIdentities);
+it.effect(
+  "a non-admin human naming another owner, or creating a human, is refused with 403, as is an agent creating a human",
+  () =>
+    Effect.gen(function* refusedCreates() {
+      const cookout = yield* TestCookout;
+      yield* cookout.createIdentity("ada", HUMAN);
+      const grace = yield* cookout.createIdentity("grace", HUMAN);
+      const agent = yield* cookout.createIdentity("helper", { owner: "grace" });
+      const refused = yield* Effect.all(
+        [
+          refusal(() => grace.client.createIdentity({ kind: "agent", name: "spy", owner: "ada" })),
+          refusal(() => grace.client.createIdentity({ kind: "human", name: "eve" })),
+          refusal(() => agent.client.createIdentity({ kind: "human", name: "minion" })),
+        ],
+        ONE_AT_A_TIME,
+      );
+      const { identities } = yield* answer(cookout.client.listIdentities);
 
-    expect(refused).toMatchObject([
-      { code: "admin_only", status: FORBIDDEN },
-      { code: "admin_only", status: FORBIDDEN },
-      { code: "human_only", status: FORBIDDEN },
-    ]);
-    expect(Arr.map(identities, ({ name }) => name)).toStrictEqual(["ada", "admin", "grace", "helper"]);
-  }).pipe(Effect.provide(testCookout())),
+      expect(refused).toMatchObject([
+        { code: "admin_only", status: FORBIDDEN },
+        { code: "admin_only", status: FORBIDDEN },
+        { code: "human_only", status: FORBIDDEN },
+      ]);
+      expect(Arr.map(identities, ({ name }) => name)).toStrictEqual(["ada", "admin", "grace", "helper"]);
+    }).pipe(Effect.provide(testCookout())),
 );
 
 it.effect("an admin creates an agent owned by any human, and an owner who is no human is refused with 400", () =>

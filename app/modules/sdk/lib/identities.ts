@@ -1,3 +1,4 @@
+import type { AgentCreationCalls, DescriptionCalls } from "../../identities/client.ts";
 import type { AgentJoinCalls, JoinCodeCalls } from "../../agent-sessions/index.ts";
 import type {
   AttachmentCalls,
@@ -38,7 +39,6 @@ import {
   isListIdentitiesResponse,
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
-import type { DescriptionCalls } from "../../identities/client.ts";
 import type { EventCalls } from "./events.ts";
 import type { HealthResponse } from "../../http/index.ts";
 import type { LoginCalls } from "./logins.ts";
@@ -88,6 +88,20 @@ function setDisplayNameCall(server: ClientConnection): IdentityCalls["setDisplay
       path: identityDisplayNamePath,
     });
     return answer;
+  };
+}
+
+function agentCreationCalls(server: ClientConnection): AgentCreationCalls<IdentityResponse> {
+  return {
+    createAgentForOwner: async (request) => {
+      const { identity } = await send(server, {
+        body: { ...request, kind: "agent" },
+        isExpected: isIdentityResponse,
+        method: "POST",
+        path: identitiesPath,
+      });
+      return { identity };
+    },
   };
 }
 
@@ -229,13 +243,26 @@ function ownIdentityCalls(server: ClientConnection): IdentityCalls & IdentityDel
 
 function identityCalls(
   server: ClientConnection,
-): IdentityCalls & IdentityDeletionCalls & IdentityDescriptionCalls & LoginCalls & TriggerCalls {
-  return { ...loginCalls(server), ...ownIdentityCalls(server), ...descriptionCalls(server), ...triggerCalls(server) };
+): IdentityCalls &
+  IdentityDeletionCalls &
+  IdentityDescriptionCalls &
+  IdentityAgentCreationCalls &
+  LoginCalls &
+  TriggerCalls {
+  return {
+    ...agentCreationCalls(server),
+    ...loginCalls(server),
+    ...ownIdentityCalls(server),
+    ...descriptionCalls(server),
+    ...triggerCalls(server),
+  };
 }
 
 type ApprovalCalls = LoginCalls & AgentJoinCalls & JoinCodeCalls;
 type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
+type IdentityAgentCreationCalls = AgentCreationCalls<IdentityResponse>;
 export type CallGroups = ApprovalCalls &
+  IdentityAgentCreationCalls &
   AttachmentCalls &
   IdentityDeletionCalls &
   IdentityDescriptionCalls &
