@@ -18,7 +18,7 @@
  * calls `ack` itself when it decides the thread has been read. `reply` posts a reply in that channel,
  * reloads the replies and only then calls `posted`, so a refused reply keeps
  * its text. `commands` is every registered command, loaded when its
- * first reader subscribes (`createCommands` makes such a store alone); a channel's `call` calls a command with data typed
+ * first reader subscribes; a channel's `call` calls a command with data typed
  * as JSON, posting the call message in that channel, and keeps the schema
  * errors of data the command refuses; `editCallData` holds the data being
  * typed (`callData`), which only a successful call empties, and only then
@@ -70,12 +70,21 @@
  * being read is applied again on what the read brings, so the event wins, and an event heard twice changes nothing.
  * When the link comes back after being down, each slice someone is showing is read again, and one nobody is showing
  * is read again when it is next shown; that is the store's one catch-up. Its slices: `presence`, every identity's
- * presence, read with `GET /v1/presence` and changed by `presence` events; and `reactions`, read through
+ * presence, read with `GET /v1/presence`, changed by `presence` events and left by `identity-deleted`;
+ * `reactions`, read through
  * `reactionsOf(state, message)`: a message arrives with its reactions, the slice holds each `reaction` event's
  * reactions by message ID, and on a link back it reads again the thread of each message it holds and corrects it.
  * `toggle` leaves the reader's reaction on a message, or removes it if the reader has already left it (toggling is
  * the web's, Matt, 2026-11-23, mattpocock/cookout#199), one at a time in the order asked, keeping the server's
- * answer, or its refusal (`reactionRefusal`), until the next toggle.
+ * answer, or its refusal (`reactionRefusal`), until the next toggle;
+ * `identities`, every identity, deactivated ones too, sorted by name (`identityList`), read with
+ * `GET /v1/identities`, changed by `identity` events and left by `identity-deleted`, whose names
+ * `deletedIdentities` keeps until an identity of that name comes back; and each agent's sessions
+ * (`agentSessions(agent)(state)`: `null` until read, or if the server refuses), shown with
+ * `subscribeShowingSessions(agent)` and read again on an `agent-session` or `identity` event for that agent, on a
+ * link back, and once one of them expires, all through the store's one stream listener. `identityCalls` makes the
+ * web's identity changes on the server (admin, display name, description, a new agent, and the identity actions) and
+ * puts each answer in the slices at once; a refusal rejects its promise and changes nothing.
  */
 import type {
   ChannelMessages,
@@ -190,7 +199,6 @@ export type { ChannelMessages, ChannelMessagesState } from "./lib/channel-messag
 export type { CallState } from "./lib/command-call.ts";
 export type { SchemaProblem } from "../sdk/index.ts";
 export type { Commands } from "./lib/commands.ts";
-export { createCommands } from "./lib/commands.ts";
 export type { PostState } from "./lib/failure.ts";
 export type { Subscriptions, SubscriptionsState } from "./lib/subscriptions.ts";
 export type { ThreadMessages, ThreadMessagesState } from "./lib/thread-messages.ts";
@@ -198,8 +206,12 @@ export type { ThreadClosing } from "./lib/thread-closing.ts";
 export type { MessageBeforeState } from "./lib/message-stores.ts";
 export {
   type BoardStore,
+  type IdentityCalls,
   type Presences,
+  agentSessions,
   createBoardStore,
+  deletedIdentities,
+  identityList,
   presences,
   reactionRefusal,
   reactionsOf,

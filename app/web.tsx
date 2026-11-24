@@ -30,14 +30,15 @@ if (root !== null) {
   });
   const live = createLive(eventSourceAdapter(url));
   const board = createBoard({ client, live });
+  const boardStore = createBoardStore({ client, live });
   const unread = createUnread({ client, live });
   const layout = createLayout({ root: globalThis.document.documentElement, storage: globalThis.localStorage });
   createRoot(root).render(
     <CookoutApp
       agentJoinApprovals={createAgentJoinApprovals(client)}
       board={board}
-      boardStore={createBoardStore({ client, live })}
-      composer={createComposer({ client, commands: board.commands, live })}
+      boardStore={boardStore}
+      composer={createComposer({ boardStore, commands: board.commands })}
       layout={layout}
       live={live}
       loginApprovals={createLoginApprovals(client)}
