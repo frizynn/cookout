@@ -1,15 +1,13 @@
-import type { AgentJoinApprovals, LoginApprovals, Session } from "../../session/index.ts";
-import type { Board, BoardOptions } from "../../board/index.ts";
+import type { AgentJoinApprovals, Board, BoardOptions, LoginApprovals, Session } from "../../board/index.ts";
 import type { BoardStore, Reading, Unread } from "./defaults.ts";
-import { adminClient, anonymousClient, sessionOf } from "./identities.ts";
+import { adminClient, anonymousClient } from "./identities.ts";
 import { boardStoreFor, createUnread, readingFor, unreadFor } from "./defaults.ts";
 import { cleanup, render } from "@testing-library/react";
-import { createAgentJoinApprovals, createLoginApprovals } from "../../session/index.ts";
+import { createAgentJoinApprovals, createBoard, createLoginApprovals } from "../../board/index.ts";
 import type { Composer } from "../../composer/index.ts";
 import { CookoutApp } from "../index.tsx";
 import type { CookoutClient } from "../../sdk/index.ts";
 import type { Layout } from "../../layout/index.ts";
-import { createBoard } from "../../board/index.ts";
 import { createComposer } from "../../composer/index.ts";
 import { createLayout } from "../../layout/index.ts";
 import { onTestFinished } from "vitest";
@@ -138,9 +136,9 @@ export function openBoard(opening: BoardOpening): () => void {
 }
 
 export function openAt(opening: Opening): () => void {
-  const session = opening.session ?? sessionOf(opening.client);
   const board = createBoard(opening);
   const boardStore = boardStoreFor(opening);
+  const session = opening.session ?? boardStore.session;
   return openBoard({
     board,
     composer: createComposer({ boardStore, commands: board.commands }),

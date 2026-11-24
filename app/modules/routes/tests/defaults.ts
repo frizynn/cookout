@@ -1,8 +1,8 @@
 import type { Reading, Unread } from "../../unread/index.ts";
+import { adminClient, clientWith } from "./identities.ts";
 import { createReading, createUnread } from "../../unread/index.ts";
 import type { BoardStore } from "../../board/index.ts";
 import type { Live } from "../../live/index.ts";
-import { adminClient } from "./identities.ts";
 import { createBoardStore } from "../../board/index.ts";
 import { createPageFocus } from "../../page-focus/index.ts";
 import { handClock } from "./hand-clock.ts";
@@ -19,7 +19,10 @@ interface BoardStoreOpening {
 }
 
 export function boardStoreFor(opening: BoardStoreOpening): BoardStore {
-  return opening.boardStore ?? createBoardStore({ client: opening.client, live: opening.live ?? null });
+  return (
+    opening.boardStore ??
+    createBoardStore({ client: opening.client, clientWithToken: clientWith, live: opening.live ?? null })
+  );
 }
 
 export function readingFor(reading: Reading | undefined): Reading {

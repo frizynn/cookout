@@ -17,6 +17,10 @@ function adminClient(): CookoutClient {
   return createCookoutClient({ env: {}, token: webTestCookout().adminToken, url: webTestCookout().url });
 }
 
+function clientWith(token: string): CookoutClient {
+  return createCookoutClient({ env: {}, token, url: webTestCookout().url });
+}
+
 interface Human {
   readonly name: IdentityName;
   readonly client: CookoutClient;
@@ -40,7 +44,7 @@ async function postedIn(channel: string): Promise<Message> {
 
 function opened(client: CookoutClient = adminClient()): Opened {
   const hand = handLive();
-  const store = createBoardStore({ client, live: createLive(hand.adapter) });
+  const store = createBoardStore({ client, clientWithToken: clientWith, live: createLive(hand.adapter) });
   const unsubscribe = store.subscribeShowing("reactions")(vi.fn<() => void>());
   onTestFinished(unsubscribe);
   return { hand, store };
@@ -158,6 +162,7 @@ it("a reaction event heard while reactions are read again wins over the value re
   const during = handLive();
   const store = createBoardStore({
     client: { ...adminClient(), getThread: sendingWhileRead(during, reactionEvent(message, [bob.name])) },
+    clientWithToken: clientWith,
     live: createLive(during.adapter),
   });
   onTestFinished(store.subscribeShowing("reactions")(vi.fn<() => void>()));

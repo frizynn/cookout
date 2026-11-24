@@ -26,6 +26,10 @@ function adminClient(): CookoutClient {
   return createCookoutClient({ env: {}, token: webTestCookout().adminToken, url: webTestCookout().url });
 }
 
+function clientWith(token: string): CookoutClient {
+  return createCookoutClient({ env: {}, token, url: webTestCookout().url });
+}
+
 async function agentNamed(name: string): Promise<Identity> {
   const { identity } = await adminClient().createIdentity({ kind: "agent", name, owner: "admin" });
   return identity;
@@ -42,7 +46,7 @@ function show(store: BoardStore, shown: "identities" | "presence"): void {
 
 function opened(client: CookoutClient = adminClient()): Opened {
   const hand = handLive();
-  const store = createBoardStore({ client, live: createLive(hand.adapter) });
+  const store = createBoardStore({ client, clientWithToken: clientWith, live: createLive(hand.adapter) });
   show(store, "identities");
   return { hand, store };
 }
@@ -159,7 +163,7 @@ it("an identity event heard while the identities are being read wins over the va
       return answer;
     },
   };
-  const store = createBoardStore({ client, live: createLive(during.adapter) });
+  const store = createBoardStore({ client, clientWithToken: clientWith, live: createLive(during.adapter) });
   show(store, "identities");
 
   await expect(listed(store, agent.name)).resolves.toMatchObject({ displayName: "Heard Meanwhile" });
@@ -189,7 +193,11 @@ it("identities are read only once a view shows them, and once for any number of 
     const answer = await adminClient().listIdentities(options);
     return answer;
   });
-  const store = createBoardStore({ client: { ...adminClient(), listIdentities }, live: null });
+  const store = createBoardStore({
+    client: { ...adminClient(), listIdentities },
+    clientWithToken: clientWith,
+    live: null,
+  });
   onTestFinished(store.subscribe(vi.fn<() => void>()));
   const before = listIdentities.mock.calls.length;
   show(store, "identities");

@@ -3,8 +3,11 @@ import { createBoardStore } from "../../board/index.ts";
 import { createContext } from "react";
 import { createCookoutClient } from "../../sdk/index.ts";
 
-const client = createCookoutClient({ env: {}, url: globalThis.location.origin });
+const url = globalThis.location.origin;
+const client = createCookoutClient({ env: {}, url });
 
-const ReactionList = createContext<BoardStore>(createBoardStore({ client, live: null }));
+const ReactionList = createContext<BoardStore>(
+  createBoardStore({ client, clientWithToken: (token) => createCookoutClient({ env: {}, token, url }), live: null }),
+);
 
 export { ReactionList };
