@@ -1,5 +1,6 @@
 import type {
   AgentSessionEvent,
+  AutomaticDeactivationEvent,
   ChannelDeletedEvent,
   ChannelEvent,
   CleanCloseResponse,
@@ -21,8 +22,8 @@ import type {
   SubscriptionEvent,
   ThreadEvent,
 } from "../../index.ts";
-import { ChannelNameSchema, ChannelSchema } from "../../../channels/server.ts";
 import {
+  AutomaticDeactivationSchema,
   DeactivationOfferSchema,
   InboxItemSchema,
   MovedBackReadPositionSchema,
@@ -32,6 +33,7 @@ import {
   ReadPositionSchema,
   SubscriptionResponseSchema,
 } from "../../../inbox/server.ts";
+import { ChannelNameSchema, ChannelSchema } from "../../../channels/server.ts";
 import { IdentityNameSchema, IdentitySchema } from "../../../identities/server.ts";
 import {
   MessageIdSchema,
@@ -58,6 +60,10 @@ export const NudgeEventSchema = matchesWire<NudgeEvent>()(
 
 export const NudgeReadEventSchema = matchesWire<NudgeReadEvent>()(
   Schema.Struct({ nudgeIds: Schema.Array(NudgeIdSchema), type: Schema.Literal("nudge-read") }),
+);
+
+export const AutomaticDeactivationEventSchema = matchesWire<AutomaticDeactivationEvent>()(
+  Schema.Struct({ automaticDeactivation: AutomaticDeactivationSchema, type: Schema.Literal("automatic-deactivation") }),
 );
 
 export const DeactivationOfferEventSchema = matchesWire<DeactivationOfferEvent>()(

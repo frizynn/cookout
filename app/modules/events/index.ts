@@ -8,6 +8,7 @@
  * instead.
  */
 import type {
+  AutomaticDeactivation,
   DeactivationOffer,
   InboxItem,
   MovedBackReadPosition,
@@ -55,6 +56,16 @@ export interface NudgeEvent {
 export interface NudgeReadEvent {
   readonly type: "nudge-read";
   readonly nudgeIds: readonly NudgeId[];
+}
+
+/**
+ * An Automatic deactivation of the caller's as it now stands: sent when the cookout deactivates the agent and again
+ * when the entry is read (by Mark read, by marking all as read, or by reactivating the agent), on every stream of each
+ * of its recipients, `cookout watch` included. It has no SSE `id`.
+ */
+export interface AutomaticDeactivationEvent {
+  readonly type: "automatic-deactivation";
+  readonly automaticDeactivation: AutomaticDeactivation;
 }
 
 /**
@@ -221,6 +232,7 @@ export type CookoutEvent =
   | NudgeEvent
   | NudgeReadEvent
   | DeactivationOfferEvent
+  | AutomaticDeactivationEvent
   | ReadPositionEvent
   | ReadPositionMovedBackEvent
   | MessageEvent

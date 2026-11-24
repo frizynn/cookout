@@ -10,6 +10,7 @@ interface SentEvent {
 
 const eventTypes = {
   "agent-session": true,
+  "automatic-deactivation": true,
   channel: true,
   "channel-deleted": true,
   command: true,

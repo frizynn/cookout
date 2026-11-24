@@ -1,6 +1,10 @@
 import type { DeactivationOfferCalls, NudgeCalls } from "../../inbox/client.ts";
-import { deactivationOfferKeepPath, nudgeReadPath } from "../../inbox/index.ts";
-import { isDeactivationOfferResponse, isNudgeResponse } from "./generated/validators.js";
+import { automaticDeactivationReadPath, deactivationOfferKeepPath, nudgeReadPath } from "../../inbox/index.ts";
+import {
+  isAutomaticDeactivationResponse,
+  isDeactivationOfferResponse,
+  isNudgeResponse,
+} from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import { send } from "./request.ts";
 
@@ -25,6 +29,16 @@ function deactivationOfferCalls(server: ClientConnection): DeactivationOfferCall
         path: deactivationOfferKeepPath,
       });
       return kept;
+    },
+    markAutomaticDeactivationRead: async (entryId) => {
+      const params = { id: String(entryId) };
+      const read = await send(server, {
+        isExpected: isAutomaticDeactivationResponse,
+        method: "POST",
+        params,
+        path: automaticDeactivationReadPath,
+      });
+      return read;
     },
   };
 }

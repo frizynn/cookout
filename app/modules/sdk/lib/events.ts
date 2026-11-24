@@ -5,6 +5,7 @@ import { allChannelsQuery, eventsPath, liveConnectionPath, refusalEvent } from "
 import { getJson, openEvents, send } from "./request.ts";
 import {
   isAgentSessionEvent,
+  isAutomaticDeactivationEvent,
   isChannelDeletedEvent,
   isChannelEvent,
   isCleanCloseResponse,
@@ -84,6 +85,7 @@ function resumeHeaders({ lastEventId }: WatchOptions): Readonly<Record<string, s
 
 const validators: { readonly [Type in EventType]: (data: unknown) => data is Extract<CookoutEvent, { type: Type }> } = {
   "agent-session": isAgentSessionEvent,
+  "automatic-deactivation": isAutomaticDeactivationEvent,
   channel: isChannelEvent,
   "channel-deleted": isChannelDeletedEvent,
   command: isCommandEvent,

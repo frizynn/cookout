@@ -245,9 +245,7 @@ it.effect(
         until: (offers) => Arr.some(offers, ({ quietDays }) => quietDays === SIXTY),
       });
       yield* quietFor("30 days");
-      const atNinety = yield* Effect.repeat(history(ada.client), {
-        until: (offers) => Arr.every(offers, ({ cleared }) => cleared),
-      });
+      const atNinety = yield* Effect.repeat(history(ada.client), { until: Arr.every(({ cleared }) => cleared) });
 
       expect(Arr.map(open, summaryOf)).toStrictEqual([{ agent: "ada/scout", cleared: false, quietDays: SIXTY }]);
       expect(atNinety).toStrictEqual([
