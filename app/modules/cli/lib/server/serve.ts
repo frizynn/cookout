@@ -6,6 +6,7 @@ import {
   Function,
   Layer,
   Option,
+  Path,
   Predicate,
   Redacted,
   Schema,
@@ -13,6 +14,7 @@ import {
 } from "effect";
 import { Command, Flag } from "effect/cli";
 import { CommandFailed, printLine, refused } from "./output.ts";
+import type { Config, FileSystem } from "effect";
 import type { IdentityName, Token } from "../../../identities/index.ts";
 import { SpawnSettings, domainLayers, openRoutes, routes } from "./route-list.ts";
 import type { Storage, StorageSetting, StorageUnavailable } from "../../../storage/server.ts";
@@ -21,18 +23,18 @@ import {
   adminNameRule,
   adminToken,
   adminTokenRule,
+  assetsDirectory,
   databasePath,
   databaseUrl,
   host,
   port,
   publicUrl,
 } from "../../../config/server.ts";
+import { diskAssetStore, shownDatabase, storageSetting, withoutDatabaseSecret } from "../../../storage/server.ts";
 import { firstAdminName, token } from "../../../identities/index.ts";
 import { httpServer, serverUrl } from "../../../http/server.ts";
-import { shownDatabase, storageSetting, withoutDatabaseSecret } from "../../../storage/server.ts";
 
 import type { AdminNameIsAgent } from "../../../identities/server.ts";
-import type { FileSystem } from "effect";
 import type { Serving } from "../../../http/server.ts";
 import { adminTokenSet } from "../../../identities/server.ts";
 import { requireTokenWithinLimit } from "./gate.ts";
@@ -148,15 +150,27 @@ function failedToStart(
   };
 }
 
+function assetsBeside(database: string): Effect.Effect<string, Config.ConfigError, Path.Path> {
+  return Effect.gen(function* assetsFolder() {
+    const chosen = yield* assetsDirectory;
+    const path = yield* Path.Path;
+    if (chosen === "") {
+      return path.join(path.dirname(database), "assets");
+    }
+    return chosen;
+  });
+}
+
 const startOn = Effect.fnUntraced(function* startOnStorage(
   layers: ServeLayers,
   listen: Omit<Serving, "webFolder">,
-  setting: StorageSetting,
+  { assets, setting }: { readonly assets: string; readonly setting: StorageSetting },
 ) {
   const admin = yield* adminTokenOrRefuse;
   const name = yield* adminNameOrRefuse;
+  const stores = Layer.merge(layers.storage(setting), diskAssetStore(assets));
   const server = cookoutServer({ ...listen, ...webFolderOf(layers), adminName: name, adminToken: admin });
-  const services = yield* Layer.build(Layer.provide(server, layers.storage(setting))).pipe(
+  const services = yield* Layer.build(Layer.provide(server, stores)).pipe(
     Effect.catchTags({ AdminNameIsAgent: adminNameIsAgent, StorageUnavailable: storageUnavailable(setting) }),
   );
   const url = yield* serverUrl.pipe(Effect.provideContext(services));
@@ -167,7 +181,8 @@ const runServer = (layers: ServeLayers, listen: Omit<Serving, "webFolder">, path
   Effect.gen(function* () {
     const url = yield* databaseUrl.pipe(Effect.catchCause(failedToStart(Function.identity)));
     const setting = storageSetting({ path, url });
-    yield* Effect.catchCause(startOn(layers, listen, setting), failedToStart(withoutDatabaseSecret(setting)));
+    const started = Effect.flatMap(assetsBeside(path), (assets) => startOn(layers, listen, { assets, setting }));
+    yield* Effect.catchCause(started, failedToStart(withoutDatabaseSecret(setting)));
   }).pipe(Effect.andThen(Effect.never), Effect.scoped);
 
 export const serveCommand = (layers: ServeLayers) =>

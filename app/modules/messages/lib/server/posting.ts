@@ -1,4 +1,5 @@
 import { Array as Arr, DateTime, Effect, Option, Predicate, String as Str, pipe } from "effect";
+import type { Attaching, Post, StoredFiles } from "../../../attachments/server.ts";
 import type { Author, JsonValue, Message, MessageId, MessageResponse, Reply } from "../../index.ts";
 import type { Harness, Identity } from "../../../identities/index.ts";
 import type { NewMessage, Storage, StorageUnavailable } from "../../../storage/server.ts";
@@ -6,7 +7,7 @@ import type { PubSub, Scope } from "effect";
 import { closeWithoutReplyTo, messageNotFound, replyInOtherChannel, seenWithoutReplyTo } from "./refusals.ts";
 import { movedSince, threadMovedWarning } from "./thread-moved.ts";
 import type { ChannelName } from "../../../channels/index.ts";
-import type { Refusal } from "../../../http/index.ts";
+import type { Refusal } from "./refusals.ts";
 import { channelNotFound } from "../../../channels/server.ts";
 import { isIdentityName } from "../../../identities/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
@@ -20,6 +21,7 @@ interface PostMessage {
   readonly close?: true;
   readonly harness?: Harness;
   readonly seen?: MessageId;
+  readonly attachments?: Post["attachments"];
 }
 
 type Refused = "channel_not_found" | "reply_to_not_found" | "reply_in_other_channel";
@@ -100,7 +102,15 @@ type Appended = Effect.Success<ReturnType<Append>>;
 interface Posting {
   readonly hub: Hub;
   readonly append: Append;
+  readonly attaching: Attaching;
   readonly storage: Storage["Service"];
+}
+
+function withAttachments(message: NewMessage, { attachments }: StoredFiles): NewMessage {
+  if (Arr.isReadonlyArrayNonEmpty(attachments)) {
+    return { ...message, attachments };
+  }
+  return message;
 }
 
 function unfitRefusal({ close, replyTo, seen }: PostMessage): Option.Option<Refusal> {
@@ -115,6 +125,8 @@ function unfitRefusal({ close, replyTo, seen }: PostMessage): Option.Option<Refu
 
 type Moved = Appended & { readonly moved: readonly Reply[] };
 
+type AppendedMoved = Extract<Moved, { readonly status: "appended" }>;
+
 function appendNoting({ append, storage }: Posting, author: Identity, message: PostMessage) {
   return (stored: NewMessage): Fails<Moved> =>
     Effect.zipWith(
@@ -124,17 +136,22 @@ function appendNoting({ append, storage }: Posting, author: Identity, message: P
     );
 }
 
-function answerTo(posting: Posting, message: PostMessage): (result: Moved) => Fails<MessageResponse> {
+function appendedOr(message: PostMessage): (result: Moved) => Fails<AppendedMoved> {
   return (result) => {
     if (result.status !== "appended") {
       return Effect.fail(refusalOf(result.status, message));
     }
-    return Effect.map(threadMovedWarning({ moved: result.moved, storage: posting.storage }), (warned) => ({
+    return Effect.succeed(result);
+  };
+}
+
+function answerTo(posting: Posting): (result: AppendedMoved) => Fails<MessageResponse> {
+  return (result) =>
+    Effect.map(threadMovedWarning({ moved: result.moved, storage: posting.storage }), (warned) => ({
       message: result.message,
       unknownMentions: unknownMentionsIn(result.message),
       ...warned,
     }));
-  };
 }
 
 function postWith(posting: Posting): (author: Identity, message: PostMessage) => Fails<MessageResponse> {
@@ -144,10 +161,15 @@ function postWith(posting: Posting): (author: Identity, message: PostMessage) =>
       if (Option.isSome(unfit)) {
         return yield* Effect.fail(unfit.value);
       }
+      const { attachments = [], ...rest } = message;
+      const files = yield* posting.attaching.store({ attachments, text: rest.text });
       const now = yield* DateTime.now;
-      const stored = newMessage(author, message, isoTimeOf(now));
-      const result = yield* posting.hub.appendThenPublish(appendNoting(posting, author, message), stored);
-      return yield* answerTo(posting, message)(result);
+      const stored = withAttachments(newMessage(author, rest, isoTimeOf(now)), files);
+      const result = yield* posting.hub.appendThenPublish(appendNoting(posting, author, rest), stored).pipe(
+        Effect.flatMap(appendedOr(rest)),
+        Effect.onError(() => files.remove),
+      );
+      return yield* answerTo(posting)(result);
     });
 }
 

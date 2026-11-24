@@ -15,15 +15,15 @@ The SDK's public surface: the built `dist/sdk.d.ts`, as consumers of the publish
  * `IsoTime` brand and its check. Every timestamp the protocol carries
  * (`createdAt`, `expiresAt`, `heldUntil`, the health check's `time`) is one.
  */
-declare const brand$9: unique symbol;
+declare const brand$10: unique symbol;
 /** A moment as the wire writes it: ISO 8601 in UTC with milliseconds, such as `2026-01-01T00:00:00.000Z`. */
 type IsoTime = string & {
-  readonly [brand$9]: "IsoTime";
+  readonly [brand$10]: "IsoTime";
 };
-declare const brand$8: unique symbol;
+declare const brand$9: unique symbol;
 /** A channel's name: 1–80 lowercase letters, digits or `-`. Unique on a server. */
 type ChannelName = string & {
-  readonly [brand$8]: "ChannelName";
+  readonly [brand$9]: "ChannelName";
 };
 /** A channel as the server shows it. */
 interface Channel {
@@ -49,13 +49,13 @@ interface ListChannelsResponse {
  * The calls a client makes on one identity by its name: reading it, and setting or clearing an agent's description
  * (#189). The SDK's `CookoutClient` has them.
  */
-declare const brand$7: unique symbol;
+declare const brand$8: unique symbol;
 /**
  * An agent's description: what the agent handles, written for people and for routing, such as "Matt's to-dos, life
  * admin and voice-note follow-ups". 1–500 characters with no space at either end. A human has none.
  */
 type Description = string & {
-  readonly [brand$7]: "Description";
+  readonly [brand$8]: "Description";
 };
 /** An agent identity's fields with its description, which every caller sees. */
 type Described<Fields> = Fields & {
@@ -81,9 +81,9 @@ interface DescriptionCalls<Answer> {
 interface IdentityMessageCountResponse {
   readonly messages: number;
 }
-declare const brand$6: unique symbol;
+declare const brand$7: unique symbol;
 type Brand$1<Name extends string> = string & {
-  readonly [brand$6]: Name;
+  readonly [brand$7]: Name;
 };
 type IdentityFields = {
   readonly name: IdentityName;
@@ -180,9 +180,9 @@ interface SetDisplayNameRequest {
  * and the SDK send it in `cookout-harness` when the process's environment shows such a tool runs it.
  */
 type Harness = Brand$1<"Harness">;
-declare const brand$5: unique symbol;
+declare const brand$6: unique symbol;
 type DeactivationOfferId = number & {
-  readonly [brand$5]: "DeactivationOfferId";
+  readonly [brand$6]: "DeactivationOfferId";
 };
 interface DeactivationOffer {
   readonly id: DeactivationOfferId;
@@ -196,7 +196,7 @@ interface DeactivationOfferResponse {
   readonly deactivationOffer: DeactivationOffer;
 }
 type DeactivatedQuietAgentId = number & {
-  readonly [brand$5]: "DeactivatedQuietAgentId";
+  readonly [brand$6]: "DeactivatedQuietAgentId";
 };
 interface DeactivatedQuietAgent {
   readonly id: DeactivatedQuietAgentId;
@@ -207,6 +207,47 @@ interface DeactivatedQuietAgent {
 }
 interface DeactivatedQuietAgentResponse {
   readonly deactivatedQuietAgent: DeactivatedQuietAgent;
+}
+/**
+ * Attachments on the wire, shared by the server, the SDK and the CLI: the `AttachmentId` brand and its check, an
+ * attachment as a message lists it, the limits a post is held to, and the path that serves an attachment's bytes. An
+ * attachment is any file, fixed when its message is posted (Matt,
+ * 2026-11-24, board thread 2905, msgs 2906, 2997 and 3032).
+ */
+declare const brand$5: unique symbol;
+/** An attachment's ID: opaque and random, so it gives away nothing about how many the board holds. */
+type AttachmentId = string & {
+  readonly [brand$5]: "AttachmentId";
+};
+/** The image types an attachment is detected as, from its first bytes. */
+type ImageContentType = "image/png" | "image/jpeg" | "image/gif" | "image/webp";
+/** What every attachment that isn't one of the four image types is served as. */
+declare const opaqueContentType = "application/octet-stream";
+/** An attachment's content type: a detected image type, or `application/octet-stream` for anything else. */
+type AttachmentContentType = ImageContentType | typeof opaqueContentType;
+/** One attachment, as every message that has some lists it, in posting order. */
+interface Attachment {
+  readonly id: AttachmentId;
+  /** The name it was posted with. Display only: it never decides a path, a content type or how it is served. */
+  readonly name: string;
+  /** Its size in bytes. */
+  readonly size: number;
+  readonly contentType: AttachmentContentType;
+  /** Whether its content is a PNG, JPEG, GIF or WebP image, whatever its name says. */
+  readonly image: boolean;
+}
+/** The attachments on a message, as `MessageFields` carries them. */
+interface WithAttachments {
+  /**
+   * The files posted with the message, in posting order, wherever the message is returned, live `message` events
+   * included. Absent when it has none. They never change once posted.
+   */
+  readonly attachments?: readonly Attachment[];
+}
+/** One file to attach to a post: the name to show and its bytes. */
+interface NewAttachment {
+  readonly name: string;
+  readonly bytes: Uint8Array;
 }
 declare const brand$4: unique symbol;
 /**
@@ -226,11 +267,11 @@ interface Author {
   readonly owner?: Owner;
 }
 /** The fields every message has, top-level or reply. */
-interface MessageFields {
+interface MessageFields extends WithAttachments {
   readonly id: MessageId;
   readonly channel: ChannelName;
   readonly author: Author;
-  /** Plain text, 1–40,000 characters. */
+  /** Plain text, up to 40,000 characters. Empty only on a message posted with attachments and no text. */
   readonly text: string;
   /** Any JSON value, for commands and agents to read. Absent when none was sent. */
   readonly data?: JsonValue;
@@ -938,6 +979,106 @@ interface AgentSessionCalls extends AgentJoinCalls, JoinCodeCalls {
   readonly listAgentSessions: (agent: string) => Promise<ListAgentSessionsResponse>;
   readonly revokeAgentSession: (agent: string) => Promise<RevokeAgentSessionResponse>;
 }
+/** One search result: the message as a channel listing or thread shows it, and whether its thread is Closed. */
+interface SearchResult {
+  readonly message: Message;
+  readonly threadClosed: boolean;
+}
+/** A page of search results, newest first; `cursor` is null on the last page. */
+interface SearchResponse {
+  readonly results: readonly SearchResult[];
+  readonly hasMore: boolean;
+  readonly cursor: string | null;
+}
+/** An attachment's bytes, as `GET /v1/assets/:id` serves them. */
+interface AttachmentBytes {
+  readonly bytes: Uint8Array;
+  /** The type it is served as: a detected image type, or `application/octet-stream`. */
+  readonly contentType: string;
+  /** The name it was posted with, for display only: reduce it to a safe base name before writing a file by it. */
+  readonly name: string;
+}
+/** Reading an attachment's bytes. */
+interface AttachmentCalls {
+  /**
+   * `GET /v1/assets/:id`: an attachment's bytes, for any signed-in identity. An unknown ID is 404
+   * `attachment_not_found`.
+   */
+  readonly getAttachment: (id: AttachmentId) => Promise<AttachmentBytes>;
+}
+/** Closing and reopening the thread holding a message. */
+interface ClosedThreadCalls {
+  /**
+   * `PUT /v1/messages/:id/closed`: closes the thread holding the message (any message in it) and answers its top-level
+   * message, now with `closedAt` and `closedBy`. Any identity may close any thread; closing a closed one keeps its
+   * first closer and time. Closing hides nothing from the API: the inbox, history and `watch` list it as before. A
+   * missing message is 404 `message_not_found`.
+   */
+  readonly closeThread: (messageId: MessageId) => Promise<TopLevelMessageResponse>;
+  /**
+   * `DELETE /v1/messages/:id/closed`: reopens the thread holding the message and answers its top-level message, now
+   * without `closedAt` and `closedBy`. Reopening an open thread changes nothing; a reply in a closed thread reopens it
+   * too. A missing message is 404 `message_not_found`.
+   */
+  readonly reopenThread: (messageId: MessageId) => Promise<TopLevelMessageResponse>;
+}
+/** The query of an Open threads page. With no `cursor`, the page starts at the stalest open thread. */
+interface ListOpenThreadsQuery {
+  /** Every open thread on the board, not only the ones involving the caller. */
+  readonly all?: boolean;
+  /** Only threads after this point: pass the previous page's `cursor` to read on. */
+  readonly cursor?: string;
+  /** 1–200 threads. Default 50. */
+  readonly limit?: number;
+}
+/** Listing open threads. */
+interface OpenThreadCalls {
+  /**
+   * `GET /v1/threads/open`: a page of open threads, stalest first by last activity, ties by ID. Without `all`, only
+   * the threads involving the caller; pass the answer's `cursor` to read the next page.
+   */
+  readonly listOpenThreads: (query?: ListOpenThreadsQuery) => Promise<ListOpenThreadsResponse>;
+}
+/** A search: the query as typed, and which page of its results. */
+interface SearchRequest {
+  /**
+   * The query as typed. Each word matches a word that equals it or starts with it; every word must match. The
+   * `from:@name`, `in:#channel`, `before:YYYY-MM-DD` and `after:YYYY-MM-DD` filters narrow it, `@` and `#` optional.
+   */
+  readonly query: string;
+  /** Only results after this point: pass the previous page's `cursor` to read on. */
+  readonly cursor?: string;
+  /** 1–200 results. Default 50. */
+  readonly limit?: number;
+}
+/** Searching messages. */
+interface SearchCalls {
+  /**
+   * `GET /v1/search?q=<query>`: a page of the messages and replies in every channel whose text matches the query,
+   * newest first, Closed threads included, each with whether its thread is Closed. Pass the answer's `cursor` to read
+   * the next page. A query with neither words nor filters is 400 `empty_query`; a filter naming no identity, no channel
+   * or no real day is 400 `unknown_identity`, `unknown_channel` or `invalid_date`; a command token is 403
+   * `outside_command_thread`.
+   */
+  readonly search: (request: SearchRequest) => Promise<SearchResponse>;
+}
+/** The body of `POST /v1/messages`. The server checks every field. */
+interface PostMessageRequest {
+  readonly channel: string;
+  readonly text: string;
+  readonly data?: JsonValue;
+  /** Reply to this message. A reply to a reply goes to the top-level message's thread, which `close` also closes. */
+  readonly replyTo?: number;
+  readonly close?: true;
+  /**
+   * With `replyTo`: the caller has read the thread up to this message, later than `replyTo`. `replyTo` alone says it
+   * has read up to `replyTo`. An agent's reply to a thread with newer replies by anyone else warns `thread_moved`.
+   */
+  readonly seen?: number;
+}
+interface CreateMessageRequest extends PostMessageRequest {
+  readonly attachments?: readonly NewAttachment[];
+}
 /** A new item in the caller's inbox, sent the moment another identity posts it. */
 interface InboxItemEvent {
   readonly type: "inbox-item";
@@ -1145,94 +1286,13 @@ interface EventCalls {
   readonly watch: (options?: WatchOptions) => Promise<EventStream>;
   readonly presence: () => Promise<PresenceResponse>;
 }
-/** One search result: the message as a channel listing or thread shows it, and whether its thread is Closed. */
-interface SearchResult {
-  readonly message: Message;
-  readonly threadClosed: boolean;
-}
-/** A page of search results, newest first; `cursor` is null on the last page. */
-interface SearchResponse {
-  readonly results: readonly SearchResult[];
-  readonly hasMore: boolean;
-  readonly cursor: string | null;
-}
-/** Closing and reopening the thread holding a message. */
-interface ClosedThreadCalls {
-  /**
-   * `PUT /v1/messages/:id/closed`: closes the thread holding the message (any message in it) and answers its top-level
-   * message, now with `closedAt` and `closedBy`. Any identity may close any thread; closing a closed one keeps its
-   * first closer and time. Closing hides nothing from the API: the inbox, history and `watch` list it as before. A
-   * missing message is 404 `message_not_found`.
-   */
-  readonly closeThread: (messageId: MessageId) => Promise<TopLevelMessageResponse>;
-  /**
-   * `DELETE /v1/messages/:id/closed`: reopens the thread holding the message and answers its top-level message, now
-   * without `closedAt` and `closedBy`. Reopening an open thread changes nothing; a reply in a closed thread reopens it
-   * too. A missing message is 404 `message_not_found`.
-   */
-  readonly reopenThread: (messageId: MessageId) => Promise<TopLevelMessageResponse>;
-}
-/** The query of an Open threads page. With no `cursor`, the page starts at the stalest open thread. */
-interface ListOpenThreadsQuery {
-  /** Every open thread on the board, not only the ones involving the caller. */
-  readonly all?: boolean;
-  /** Only threads after this point: pass the previous page's `cursor` to read on. */
-  readonly cursor?: string;
-  /** 1–200 threads. Default 50. */
-  readonly limit?: number;
-}
-/** Listing open threads. */
-interface OpenThreadCalls {
-  /**
-   * `GET /v1/threads/open`: a page of open threads, stalest first by last activity, ties by ID. Without `all`, only
-   * the threads involving the caller; pass the answer's `cursor` to read the next page.
-   */
-  readonly listOpenThreads: (query?: ListOpenThreadsQuery) => Promise<ListOpenThreadsResponse>;
-}
-/** A search: the query as typed, and which page of its results. */
-interface SearchRequest {
-  /**
-   * The query as typed. Each word matches a word that equals it or starts with it; every word must match. The
-   * `from:@name`, `in:#channel`, `before:YYYY-MM-DD` and `after:YYYY-MM-DD` filters narrow it, `@` and `#` optional.
-   */
-  readonly query: string;
-  /** Only results after this point: pass the previous page's `cursor` to read on. */
-  readonly cursor?: string;
-  /** 1–200 results. Default 50. */
-  readonly limit?: number;
-}
-/** Searching messages. */
-interface SearchCalls {
-  /**
-   * `GET /v1/search?q=<query>`: a page of the messages and replies in every channel whose text matches the query,
-   * newest first, Closed threads included, each with whether its thread is Closed. Pass the answer's `cursor` to read
-   * the next page. A query with neither words nor filters is 400 `empty_query`; a filter naming no identity, no channel
-   * or no real day is 400 `unknown_identity`, `unknown_channel` or `invalid_date`; a command token is 403
-   * `outside_command_thread`.
-   */
-  readonly search: (request: SearchRequest) => Promise<SearchResponse>;
-}
-/** The body of `POST /v1/messages`. The server checks every field. */
-interface PostMessageRequest {
-  readonly channel: string;
-  readonly text: string;
-  readonly data?: JsonValue;
-  /** Reply to this message. A reply to a reply goes to the top-level message's thread, which `close` also closes. */
-  readonly replyTo?: number;
-  readonly close?: true;
-  /**
-   * With `replyTo`: the caller has read the thread up to this message, later than `replyTo`. `replyTo` alone says it
-   * has read up to `replyTo`. An agent's reply to a thread with newer replies by anyone else warns `thread_moved`.
-   */
-  readonly seen?: number;
-}
 /** The answer to the health check. */
 interface HealthResponse {
   readonly status: "ok";
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "attachment_too_large", "too_many_attachments", "attachment_empty", "attachment_unnamed", "message_empty", "attachment_not_found", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
@@ -1297,7 +1357,7 @@ interface IdentityDeletionCalls {
 }
 type ApprovalCalls = LoginCalls & AgentJoinCalls & JoinCodeCalls;
 type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
-type CallGroups = ApprovalCalls & IdentityDeletionCalls & IdentityDescriptionCalls & ClosedThreadCalls & OpenThreadCalls & SearchCalls & Pick<EventCalls, "presence">;
+type CallGroups = ApprovalCalls & AttachmentCalls & IdentityDeletionCalls & IdentityDescriptionCalls & ClosedThreadCalls & OpenThreadCalls & SearchCalls & Pick<EventCalls, "presence">;
 declare const brand: unique symbol;
 type UnknownErrorCode = string & {
   readonly [brand]: "UnknownErrorCode";
@@ -1391,9 +1451,9 @@ export type CookoutClient = CallGroups & Pick<ReturnType<typeof inboxCalls>, "ke
   /**
    * `POST /v1/messages`: a top-level message, or a reply with `replyTo` (a reply to a reply joins the parent's thread).
    * A missing channel or message is 404; replying in another channel is 400 `reply_in_other_channel`. With `close`,
-   * the reply also closes its thread in one step.
+   * the reply also closes its thread.
    */
-  readonly createMessage: (request: PostMessageRequest) => Promise<MessageResponse>;
+  readonly createMessage: (post: CreateMessageRequest) => Promise<MessageResponse>;
   /**
    * `GET /v1/channels/:name/messages`: the channel's top-level messages, oldest first: the newest `limit` (default 50),
    * or those before `before`. Page back by passing the first message's ID as `before` while `hasMore` is true.
@@ -1521,5 +1581,5 @@ export type CookoutClient = CallGroups & Pick<ReturnType<typeof inboxCalls>, "ke
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Author, type BuiltInCommand, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type CleanCloseResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type CreateJoinCodeRequest, type DeactivateIdentityResponse, type DeactivatedQuietAgent, type DeactivatedQuietAgentEvent, type DeactivatedQuietAgentId, type DeactivatedQuietAgentResponse, type DeactivationOffer, type DeactivationOfferEvent, type DeactivationOfferId, type DeactivationOfferResponse, type Description, type DescriptionCalls, type DisplayName, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type InboxHistoryItem, type InboxHistoryNudge, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinCodeCalls, type JoinCodeResponse, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListOpenThreadsQuery, type ListOpenThreadsResponse, type ListedAgentSession, type LiveConnectionDetail, type LiveConnectionId, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type Nudge, type NudgeEvent, type NudgeId, type NudgeKind, type NudgeReadEvent, type NudgeResponse, type OfflineAlert, type OfflineAlertEvent, type OfflineAlertId, type OfflineAlertResponse, type OfflineReason, type OpenThread, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type Reaction, type ReactionCount, type ReactionEvent, type ReactionName, type ReactionsResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type RedeemJoinCodeRequest, type Refusal, type RegisteredCommand, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type SearchRequest, type SearchResponse, type SearchResult, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadEvent, type ThreadMovedWarning, type ThreadResponse, type Token, type TopLevelMessage, type TopLevelMessageResponse, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type joinCodeLifetimeMinutes, type joinCodesPath, type liveConnectionPath, type redeemJoinCodePath, type refusalEvent, refusalOf };
+export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Attachment, type AttachmentBytes, type AttachmentContentType, type AttachmentId, type Author, type BuiltInCommand, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type CleanCloseResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateChannelRequest, type CreateIdentityRequest, type CreateJoinCodeRequest, type CreateMessageRequest, type DeactivateIdentityResponse, type DeactivatedQuietAgent, type DeactivatedQuietAgentEvent, type DeactivatedQuietAgentId, type DeactivatedQuietAgentResponse, type DeactivationOffer, type DeactivationOfferEvent, type DeactivationOfferId, type DeactivationOfferResponse, type Description, type DescriptionCalls, type DisplayName, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type ImageContentType, type InboxHistoryItem, type InboxHistoryNudge, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinCodeCalls, type JoinCodeResponse, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListOpenThreadsQuery, type ListOpenThreadsResponse, type ListedAgentSession, type LiveConnectionDetail, type LiveConnectionId, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type NewAttachment, type Nudge, type NudgeEvent, type NudgeId, type NudgeKind, type NudgeReadEvent, type NudgeResponse, type OfflineAlert, type OfflineAlertEvent, type OfflineAlertId, type OfflineAlertResponse, type OfflineReason, type OpenThread, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type Reaction, type ReactionCount, type ReactionEvent, type ReactionName, type ReactionsResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type RedeemJoinCodeRequest, type Refusal, type RegisteredCommand, type Reply, type RevokeAgentSessionResponse, type SchemaProblem, type SearchRequest, type SearchResponse, type SearchResult, type ServerSentEvent, type SetDisplayNameRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadEvent, type ThreadMovedWarning, type ThreadResponse, type Token, type TopLevelMessage, type TopLevelMessageResponse, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type joinCodeLifetimeMinutes, type joinCodesPath, type liveConnectionPath, type redeemJoinCodePath, type refusalEvent, refusalOf };
 ```

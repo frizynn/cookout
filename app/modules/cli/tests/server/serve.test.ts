@@ -33,7 +33,10 @@ function filesNextTo(database: string): Effect.Effect<StoredFiles, never, FileSy
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const folder = path.dirname(database);
-    const files = yield* fs.readDirectory(folder);
+    const entries = yield* fs.readDirectory(folder, { recursive: true });
+    const files = yield* Effect.filter(entries, (entry) =>
+      Effect.map(fs.stat(path.join(folder, entry)), (info) => info.type === "File"),
+    );
     const contents = yield* Effect.forEach(files, (file) => fs.readFileString(path.join(folder, file), "latin1"), {
       concurrency: 1,
     });

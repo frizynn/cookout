@@ -2,6 +2,7 @@ import { Context, Effect, Exit, FileSystem, Layer, Path, Scope } from "effect";
 import {
   Storage,
   StorageUnavailable,
+  memoryAssetStore,
   memoryStorage,
   postgresQueryPlans,
   postgresStorage,
@@ -96,4 +97,14 @@ function openStore<Failure, Needs>(
   });
 }
 
-export { freshDatabasePath, freshPostgresQueryPlans, freshSqliteQueryPlans, openStore, storageLayers, unusableStorage };
+const memoryAssets = memoryAssetStore;
+
+export {
+  freshDatabasePath,
+  freshPostgresQueryPlans,
+  freshSqliteQueryPlans,
+  memoryAssets,
+  openStore,
+  storageLayers,
+  unusableStorage,
+};

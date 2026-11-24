@@ -28,6 +28,7 @@ The server, `cookout serve`:
 - `COOKOUT_HOST` (default `0.0.0.0`): The address to listen on (`--host`).
 - `COOKOUT_DB` (default `cookout.db`): The SQLite file the data is kept in (`--db`) when `DATABASE_URL` is unset.
 - `DATABASE_URL` (no default): The Postgres database the data is kept in, such as `postgres://cookout:<password>@db.example.com/cookout` (add `?sslmode=require` for TLS). Set, it wins over `COOKOUT_DB` and `--db`. An empty database is migrated on the first start. The startup line names only `postgres://<host>/<database name>`, and neither it nor a failure to start shows the password. Never shown.
+- `COOKOUT_ASSETS_DIR` (default empty): The folder attachments' bytes are kept in, one file per attachment, named by its ID. Empty means an `assets` folder beside `COOKOUT_DB` ([ADR 0084](docs/adr/0084-attachment-bytes-live-in-an-asset-store-beside-storage.md)).
 - `COOKOUT_PUBLIC_URL` (no default): The address it is deployed at, such as `https://cookout.fly.dev`, whose host it also answers (`--public-url`).
 - `COOKOUT_MAX_IDLE_EXPIRY` (default `90d`): The longest idle expiry `cookout join --idle-expiry` may ask for. An agent session token expires once it goes that long unused (default `7d`); each request sent with it moves its expiry on.
 - `COOKOUT_WEBHOOK_TIMEOUT_SECONDS` (default `5`): How long the server waits for a command's handler to answer one webhook delivery.

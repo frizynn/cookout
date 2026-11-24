@@ -1,5 +1,6 @@
 import { DEACTIVATED_QUIET_AGENTS_MIGRATION, DEACTIVATION_OFFERS_MIGRATION } from "./deactivation-offers-sqlite.ts";
 import { Effect, FileSystem, Schema } from "effect";
+import { ATTACHMENTS_MIGRATION } from "./attachments.ts";
 import { NUDGES_MIGRATION } from "./nudges-sqlite.ts";
 import { OFFLINE_ALERTS_MIGRATION } from "./offline-alerts.ts";
 import { REACTIONS_MIGRATION } from "./reactions-sqlite.ts";
@@ -197,6 +198,7 @@ const migrations: readonly string[] = [
   DEACTIVATED_QUIET_AGENTS_MIGRATION,
   SEARCH_MIGRATION,
   "ALTER TABLE identities ADD COLUMN brought_in_by TEXT;",
+  ATTACHMENTS_MIGRATION,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

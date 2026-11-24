@@ -47,10 +47,10 @@ async function startedThread({ channel, poster, reader, text }: Starting): Promi
   const { message: parent } = await poster.createMessage({ channel, text });
   await reader.follow(parent.id);
   await reader.ack(parent.id);
-  const thread = { address: `#/inbox/${channel}/${String(parent.id)}`, channel, parent, poster, reader };
-  await replied({ text: `${FIRST_REPLY} in ${text}`, thread });
-  await replied({ text: `${SECOND_REPLY} in ${text}`, thread });
-  return thread;
+  const started = { address: `#/inbox/${channel}/${String(parent.id)}`, channel, parent, poster, reader };
+  const first = await replied({ text: `${FIRST_REPLY} in ${text}`, thread: started });
+  await replied({ text: `${SECOND_REPLY} in ${text}`, thread: started });
+  return { ...started, address: `${started.address}/messages/${String(first.id)}` };
 }
 
 async function threadToRead(channel: string): Promise<ReadThread> {

@@ -14,6 +14,14 @@ import { postgresQueryPlans as planPostgresQueries } from "./lib/server/query-pl
 import { sqliteQueryPlans as planSqliteQueries } from "./lib/server/query-plans-sqlite.ts";
 
 export { StorageUnavailable };
+
+/**
+ * The asset store: an attachment's bytes, put, read and removed by attachment ID only, beside `Storage`, which holds
+ * each attachment's metadata. Callers never see a path. `diskAssetStore` keeps each attachment as one file named by
+ * its ID, written to a partial file first and renamed into place, so a crash never leaves half a file under an ID;
+ * `memoryAssetStore` holds them in this process only.
+ */
+export { AssetStore, diskAssetStore, memoryAssetStore } from "./lib/server/asset-store.ts";
 export type { QueryPlan } from "./lib/server/query-plans-sqlite.ts";
 export type { TokenLookup } from "./lib/server/identities.ts";
 export type { SetAdminResult } from "./lib/server/identity-admins.ts";

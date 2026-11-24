@@ -120,8 +120,10 @@ interface WorkspaceParts extends Parts {
 interface SidebarParts extends Parts {
   readonly label: string;
   readonly title: string;
+  readonly home: string;
   readonly open: boolean;
   readonly collapsed: boolean;
+  readonly onFollowHome: () => void;
   readonly onToggleCollapsed: () => void;
   readonly edge: PanelEdgeParts;
 }
