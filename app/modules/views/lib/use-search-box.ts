@@ -25,6 +25,11 @@ interface Place {
 
 type Listener = (event: Readonly<Event>) => void;
 
+interface Press {
+  readonly key: string;
+  readonly shortcut: boolean;
+}
+
 function searchHrefOf({ message }: SearchResult): string {
   if (message.kind === "reply") {
     return hrefOf({ channel: message.channel, message: message.id, name: "thread", thread: message.replyTo });
@@ -46,6 +51,13 @@ function isShortcut(event: Readonly<Event>): boolean {
     (event.ctrlKey || event.metaKey) &&
     !event.altKey
   );
+}
+
+function pressOf(event: Readonly<Event>): Press {
+  if (!(event instanceof KeyboardEvent) || event.isComposing) {
+    return { key: "", shortcut: false };
+  }
+  return { key: event.key, shortcut: isShortcut(event) };
 }
 
 function isInside(place: Place, event: Readonly<Event>): boolean {
@@ -97,7 +109,7 @@ function boxKeys(place: Place): Readonly<Partial<Record<string, () => void>>> {
 function shortcutOf(place: Place): Listener {
   return (event) => {
     const box = place.box();
-    if (box !== null && isShortcut(event)) {
+    if (box !== null && pressOf(event).shortcut) {
       event.preventDefault();
       box.focus();
       box.select();
@@ -106,17 +118,10 @@ function shortcutOf(place: Place): Listener {
   };
 }
 
-function keyOf(event: Readonly<Event>): string | null {
-  if (!(event instanceof KeyboardEvent) || event.isComposing) {
-    return null;
-  }
-  return event.key;
-}
-
 function pressedOf(place: Place): Listener {
   const keys = boxKeys(place);
   return (event) => {
-    const action = keys[keyOf(event) ?? ""] ?? null;
+    const action = keys[pressOf(event).key] ?? null;
     if (action !== null && event.target === place.box()) {
       event.preventDefault();
       action();
@@ -165,21 +170,28 @@ function scrolledOf(place: Place): Listener {
   };
 }
 
-function listen(place: Place): () => void {
-  const listening: readonly (readonly [string, Listener])[] = [
-    ["keydown", shortcutOf(place)],
-    ["keydown", pressedOf(place)],
-    ["focusin", focusedOf(place)],
-    ["pointerdown", pointedOf(place)],
-    ["click", clickedOf(place)],
-    ["scroll", scrolledOf(place)],
-  ];
-  for (const [type, listener] of listening) {
-    globalThis.document.addEventListener(type, listener, CAPTURE);
-  }
+function on<Type extends keyof DocumentEventMap>(
+  type: Type,
+  listener: (event: Readonly<DocumentEventMap[Type]>) => void,
+): () => void {
+  globalThis.document.addEventListener(type, listener, CAPTURE);
   return () => {
-    for (const [type, listener] of listening) {
-      globalThis.document.removeEventListener(type, listener, CAPTURE);
+    globalThis.document.removeEventListener(type, listener, CAPTURE);
+  };
+}
+
+function listen(place: Place): () => void {
+  const stops = [
+    on("keydown", shortcutOf(place)),
+    on("keydown", pressedOf(place)),
+    on("focusin", focusedOf(place)),
+    on("pointerdown", pointedOf(place)),
+    on("click", clickedOf(place)),
+    on("scroll", scrolledOf(place)),
+  ];
+  return () => {
+    for (const stop of stops) {
+      stop();
     }
   };
 }

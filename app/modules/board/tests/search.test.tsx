@@ -113,7 +113,7 @@ it("loading more adds the next page, and moving onto the last result loaded load
   expect.hasAssertions();
 
   await postedIn("bs-search-pages", ["Dingopage 1", "Dingopage 2", "Dingopage 3", "Dingopage 4", "Dingopage 5"]);
-  const shown = createSearch({ limit: PAGE, pause: NO_PAUSE, search: opened().calls.search });
+  const shown = createSearch({ limit: PAGE, search: opened().calls.search });
   shown.edit("dingopage");
   await shownTexts(shown, ["Dingopage 5", "Dingopage 4"]);
   shown.loadMore();
