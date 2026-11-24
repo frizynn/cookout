@@ -123,9 +123,9 @@ async function liveMentionListFor(prefix: string): Promise<Watching> {
 
 async function renamedLive(ada: CookoutClient, name: string): Promise<void> {
   await ada.setDisplayName(name, "Ada Lovelace");
-  const messages = screen.getByRole("list", { name: "Messages" });
+  const messages = screen.getByRole("feed", { name: "Messages" });
   await waitFor(() => {
-    expect(within(messages).getByRole("listitem").textContent).toMatch(/Ada Lovelace/u);
+    expect(within(messages).getByRole("article").textContent).toMatch(/Ada Lovelace/u);
   });
 }
 
