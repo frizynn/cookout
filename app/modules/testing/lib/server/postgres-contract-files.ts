@@ -8,6 +8,7 @@ export const postgresContractFiles: readonly string[] = [
   "descriptions",
   "channels",
   "messages",
+  "attachments",
   "message-ids",
   "message-times",
   "threads",
