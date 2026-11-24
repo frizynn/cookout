@@ -75,12 +75,11 @@ function personChoices(choosing: Choosing): readonly MenuChoice[] {
   ];
 }
 
-function viewProfile({ target }: { readonly target: EventTarget | null }): boolean {
-  if (!(target instanceof HTMLAnchorElement)) {
-    return false;
-  }
-  target.click();
-  return true;
+function viewProfileAct(profileHref: string): () => boolean {
+  return () => {
+    globalThis.location.assign(profileHref);
+    return true;
+  };
 }
 
 function messageAct({ compose, deactivated, name }: PersonChoicesOf): () => boolean {
@@ -108,7 +107,7 @@ function personMenuOf(person: PersonChoicesOf): PersonMenu {
         return true;
       },
       message: messageAct(person),
-      viewProfile,
+      viewProfile: viewProfileAct(person.profileHref),
     },
     buttonLabel: label,
     choices: personChoices({ copyName, person }),

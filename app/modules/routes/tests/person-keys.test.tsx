@@ -63,13 +63,17 @@ it("in the People list only one row is a Tab stop, and ↑/↓ move between rows
   const before = [rowOf(first).tabIndex, rowOf(second).tabIndex];
   rowOf(first).focus();
   const moves = [pressed("ArrowUp"), pressed("ArrowDown"), pressed("ArrowDown")];
-  const after = [rowOf(first).tabIndex, rowOf(second).tabIndex];
-  fireEvent.keyDown(inPane().getByRole("button", { name: `@${second} actions` }), { key: "ArrowUp" });
+  inPane()
+    .getByRole("button", { name: `@${second} actions` })
+    .focus();
+  const offRow = pressed("ArrowUp");
+  rowOf(second).focus();
 
-  expect([before, moves, after, pressed("ArrowUp")]).toStrictEqual([
+  expect([before, moves, [rowOf(first).tabIndex, rowOf(second).tabIndex], offRow, pressed("ArrowUp")]).toStrictEqual([
     [TAB_STOP, NO_TAB_STOP],
     [`#/people/${first}`, `#/people/${second}`, `#/people/${second}`],
     [NO_TAB_STOP, TAB_STOP],
+    null,
     `#/people/${first}`,
   ]);
 
@@ -83,7 +87,6 @@ it("enter on a People row opens its profile, which then holds the row's Tab stop
   rowOf(first).focus();
   pressed("ArrowDown");
   pressed("ArrowUp");
-  fireEvent.keyDown(inPane().getByRole("button", { name: `@${first} actions` }), { key: "Enter" });
   const hashBefore = globalThis.location.hash;
   pressed("Enter");
 
@@ -116,21 +119,44 @@ it("c on a People row copies @name and says so, and m does nothing where there i
   close();
 });
 
-async function deactivatedAuthorIn(channel: string): Promise<{ readonly author: string; readonly close: () => void }> {
+interface Authored {
+  readonly author: string;
+  readonly close: () => void;
+  readonly name: HTMLElement;
+}
+
+async function authorIn(channel: string, deactivated: boolean): Promise<Authored> {
   const author = `${channel}-author`;
   const poster = await newIdentity({ kind: "human", name: author });
   const reader = await newIdentity({ kind: "human", name: `${channel}-reader` });
   await adminClient().createChannel({ name: channel });
-  await poster.client.createMessage({ channel, text: "Goodbye" });
-  await adminClient().deactivateIdentity(author);
-  return { author, close: openAt({ client: reader.client, hash: `#/channels/${channel}` }) };
+  await poster.client.createMessage({ channel, text: "Hello" });
+  if (deactivated) {
+    await adminClient().deactivateIdentity(author);
+  }
+  const close = openAt({ client: reader.client, hash: `#/channels/${channel}` });
+  const name = await within(await screen.findByRole("list", { name: "Messages" })).findByRole("link", { name: author });
+  return { author, close, name };
 }
+
+it("m on a message's author puts @author in the message box", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { author, close, name } = await authorIn("web-person-keys-message", false);
+  name.focus();
+  pressed("m");
+
+  await waitFor(() => {
+    expect(screen.getByRole("textbox", { name: "Message" })).toHaveProperty("value", `@${author} `);
+  });
+
+  close();
+});
 
 it("m on a deactivated author leaves the message box empty", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const { author, close } = await deactivatedAuthorIn("web-person-keys-deactivated");
-  const name = await within(await screen.findByRole("list", { name: "Messages" })).findByRole("link", { name: author });
+  const { close, name } = await authorIn("web-person-keys-deactivated", true);
   name.focus();
   pressed("m");
 

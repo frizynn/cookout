@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import type { IdentityName } from "../../sdk/index.ts";
 
 const PEOPLE = 'ul[aria-label="Identities"]';
-const ROWS = ":scope > li a[href]";
+const ROWS = `${PEOPLE} > li a[href]`;
 const STEPS = { next: 1, previous: -1 } as const;
 const FIRST = 0;
 const NOT_FOUND = -1;
@@ -36,23 +36,18 @@ function peopleList(): Element | null {
 }
 
 function rows(): readonly Element[] {
-  const list = peopleList();
-  if (list === null) {
-    return [];
-  }
-  return [...list.querySelectorAll(ROWS)];
+  return [...globalThis.document.querySelectorAll(ROWS)];
 }
 
 function beside(by: number): number {
-  const focused = globalThis.document.activeElement;
-  if (focused === null) {
-    return NOT_FOUND;
+  let at = 0;
+  for (const row of rows()) {
+    if (row.matches(":focus")) {
+      return at + by;
+    }
+    at += STEPS.next;
   }
-  const at = rows().indexOf(focused);
-  if (at === NOT_FOUND) {
-    return NOT_FOUND;
-  }
-  return at + by;
+  return NOT_FOUND;
 }
 
 function step({ moved, open, shown }: Stepping, by: number): Act {
