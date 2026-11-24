@@ -80,6 +80,26 @@ it("in the People list only one row is a Tab stop, and ↑/↓ move between rows
   close();
 });
 
+it("when the filter hides the row an arrow moved to, the first row shown takes the Tab stop", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const { close, first, second } = await peopleOf("web-people-keys-hidden");
+  rowOf(first).focus();
+  pressed("ArrowDown");
+  fireEvent.change(screen.getByRole("textbox", { name: "Filter by name" }), { target: { value: first } });
+
+  await waitFor(() => {
+    expect([
+      rowOf(first).tabIndex,
+      inPane().queryByRole("link", { name: new RegExp(`^${second}`, "u") }),
+    ]).toStrictEqual([TAB_STOP, null]);
+  });
+
+  close();
+});
+
 it("enter on a People row opens its profile, which then holds the row's Tab stop", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
