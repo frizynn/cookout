@@ -168,6 +168,7 @@ const SCREENS: readonly Screen[] = [
     text: "Lunch at 12:30.",
   },
   { click: "Collapse sidebar", hash: "#/channels/general", name: "collapsed", text: "Lunch at 12:30." },
+  { focus: "main a", hash: "#/inbox", name: "shortcut-list", press: "?", text: "Keyboard shortcuts" },
   { hash: "#/channels/general", liveDown: true, name: "reconnecting", text: "Reconnecting…" },
 ];
 
