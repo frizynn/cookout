@@ -1,4 +1,4 @@
-import type { EventStream, Message } from "../../../sdk/index.ts";
+import type { CookoutClient, EventStream, Message } from "../../../sdk/index.ts";
 import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
@@ -13,6 +13,7 @@ import { watched } from "../watched.ts";
 const NUDGE = "Quiet for 3 days: close it, or follow up?";
 const SETTLE = "30 millis";
 const HUMAN = { kind: "human" } as const;
+const TWO = 2;
 
 interface Nudged {
   readonly ada: TestIdentity;
@@ -22,10 +23,10 @@ interface Nudged {
 
 const settled: Effect.Effect<void> = TestClock.withLive(Effect.sleep(SETTLE));
 
-function inboxOpenFor(who: TestIdentity): Effect.Effect<void, never, Scope.Scope> {
+function inboxOpenFor(who: TestIdentity, client: CookoutClient = who.client): Effect.Effect<void, never, Scope.Scope> {
   return Effect.gen(function* openInbox() {
     const { live, stream } = watched(who.client);
-    openAt({ client: who.client, hash: "#/inbox", live });
+    openAt({ client, hash: "#/inbox", live });
     yield* Effect.acquireRelease(
       answer(() => stream),
       (events: EventStream) => answer(() => events.close()),
@@ -76,6 +77,28 @@ function earlierNudges(): readonly string[] {
 function clickInForYou(name: string): void {
   fireEvent.click(within(screen.getByRole("list", { name: "For you" })).getByRole("button", { name }));
 }
+
+function refusingClose(client: CookoutClient): CookoutClient {
+  return {
+    ...client,
+    closeThread: () => Promise.reject(new Error("refused")),
+  };
+}
+
+const twoNudgedWithCloseRefused: Effect.Effect<TestIdentity, never, TestCookout | Scope.Scope> = Effect.gen(
+  function* nudgeTwice() {
+    const cookout = yield* TestCookout;
+    const ada = yield* cookout.createIdentity("ada", HUMAN);
+    yield* answer(() => ada.client.createChannel({ name: "grill" }));
+    yield* answer(() => ada.client.createMessage({ channel: "grill", text: "Who owns the release notes?" }));
+    yield* TestClock.adjust("1 minute");
+    yield* answer(() => ada.client.createMessage({ channel: "grill", text: "Who owns the changelog?" }));
+    yield* inboxOpenFor(ada, refusingClose(ada.client));
+    yield* Effect.andThen(Effect.andThen(settled, TestClock.adjust("3 days")), settled);
+    yield* answer(() => inPane().findByText("Who owns the release notes?"));
+    return ada;
+  },
+);
 
 const caughtUp = answer(() => inPane().findByText("You're all caught up."));
 
@@ -162,6 +185,26 @@ it.effect("a reply by someone else in the thread clears the nudge row live", () 
     expect([forYouRows(), earlierNudges()]).toStrictEqual([
       [expect.not.stringContaining(NUDGE)],
       [expect.stringContaining(NUDGE)],
+    ]);
+  }).pipe(Effect.scoped, Effect.provide(testCookout())),
+);
+
+it.effect("two quiet threads give two nudge rows, newest first, and a refused Close keeps the row unread", () =>
+  Effect.gen(function* refusedClose() {
+    const ada = yield* twoNudgedWithCloseRefused;
+    const [newest = null] = within(screen.getByRole("list", { name: "For you" })).getAllByRole("button", {
+      name: "Close",
+    });
+    if (newest !== null) {
+      fireEvent.click(newest);
+    }
+    yield* settled;
+    const { nudges } = yield* answer(() => ada.client.inbox());
+
+    expect([forYouRows(), inboxCounts(), nudges.length]).toStrictEqual([
+      [expect.stringContaining("Who owns the changelog?"), expect.stringContaining("Who owns the release notes?")],
+      ["2 for you"],
+      TWO,
     ]);
   }).pipe(Effect.scoped, Effect.provide(testCookout())),
 );
