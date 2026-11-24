@@ -1,86 +1,34 @@
 import { Array as Arr, Effect, Option } from "effect";
-import type { CookoutClient, DeactivatedQuietAgentId, EventStream } from "../../../sdk/index.ts";
+import {
+  EARLIER,
+  ENTRY,
+  FOR_YOU,
+  HUMAN,
+  buttonsIn,
+  caughtUp,
+  clickInForYou,
+  deactivatedLiveIn,
+  inboxCounts,
+  quietFor,
+  readOldest,
+  rowsIn,
+  settled,
+  unreadIds,
+} from "./deactivated-quiet-agents.ts";
 import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
-import { inDialog, inPane, inSidebar } from "../regions.ts";
+import { inDialog, inPane } from "../regions.ts";
+import type { CookoutClient } from "../../../sdk/index.ts";
 import type { Scope } from "effect";
 import { TestClock } from "effect/testing";
 import type { TestIdentity } from "../../../testing/server.ts";
 import { cuttable } from "../cuttable.ts";
 import { openAt } from "../render.tsx";
-import { watched } from "../watched.ts";
 
-const ENTRY = "@triage-agent was deactivated after 90 days with no activity.";
-const EARLIER = "Earlier deactivated agents";
-const FOR_YOU = "For you";
-const SETTLE = "30 millis";
-const HUMAN = { kind: "human" } as const;
 const ZERO = 0;
 
-const settled: Effect.Effect<void> = TestClock.withLive(Effect.sleep(SETTLE));
-
-function quietFor(wait: "1 hour" | "2159 hours"): Effect.Effect<void> {
-  return Effect.andThen(Effect.andThen(settled, TestClock.adjust(wait)), settled);
-}
-
-function inboxOpenFor(client: CookoutClient): Effect.Effect<void, never, Scope.Scope> {
-  return Effect.gen(function* openInbox() {
-    const { live, stream } = watched(client);
-    openAt({ client, hash: "#/inbox", live });
-    yield* Effect.acquireRelease(
-      answer(() => stream),
-      (events: EventStream) => answer(() => events.close()),
-    );
-    yield* answer(() => screen.findByText("Nothing read yet."));
-  });
-}
-
-const deactivatedLive: Effect.Effect<TestIdentity, never, TestCookout | Scope.Scope> = Effect.gen(
-  function* deactivateQuietAgent() {
-    const cookout = yield* TestCookout;
-    const ada = yield* cookout.createIdentity("ada", HUMAN);
-    yield* cookout.createIdentity("triage-agent", { owner: "ada" });
-    yield* answer(() => ada.client.createChannel({ name: "grill" }));
-    yield* quietFor("2159 hours");
-    yield* inboxOpenFor(ada.client);
-    yield* quietFor("1 hour");
-    yield* answer(() => inPane().findByText(ENTRY));
-    return ada;
-  },
-);
-
-function textsOf(elements: Iterable<Readonly<{ textContent: string }>>): readonly string[] {
-  const texts: string[] = [];
-  for (const element of elements) {
-    texts.push(element.textContent);
-  }
-  return texts;
-}
-
-function inboxCounts(): readonly string[] {
-  const link = inSidebar().getByRole("link", { name: /^Inbox/u });
-  return textsOf(within(link).queryAllByText(/^\d+ (?:unread|for you)$/u));
-}
-
-function rowsIn(label: string): readonly string[] {
-  const list = screen.queryByRole("list", { name: label });
-  if (list === null) {
-    return [];
-  }
-  return textsOf(within(list).getAllByRole("listitem"));
-}
-
-function clickInForYou(name: string): void {
-  fireEvent.click(within(screen.getByRole("list", { name: FOR_YOU })).getByRole("button", { name }));
-}
-
-function unreadIds(client: CookoutClient): Effect.Effect<readonly DeactivatedQuietAgentId[]> {
-  return Effect.map(
-    answer(() => client.inbox()),
-    ({ deactivatedQuietAgents }) => Arr.map(deactivatedQuietAgents, ({ id }) => id),
-  );
-}
+const deactivatedLive = deactivatedLiveIn((client) => client);
 
 function activeOf(client: CookoutClient): Effect.Effect<Option.Option<boolean>> {
   return Effect.map(
@@ -92,8 +40,6 @@ function activeOf(client: CookoutClient): Effect.Effect<Option.Option<boolean>> 
       ),
   );
 }
-
-const caughtUp = answer(() => inPane().findByText("You're all caught up."));
 
 it.effect("after 90 quiet days the owner's inbox shows the entry under For you and counts it, with no reload", () =>
   Effect.gen(function* entryShows() {
@@ -113,10 +59,6 @@ it.effect("after 90 quiet days the owner's inbox shows the entry under For you a
     ]);
   }).pipe(Effect.scoped, Effect.provide(testCookout())),
 );
-
-function buttonsIn(label: string): readonly string[] {
-  return textsOf(within(screen.getByRole("list", { name: label })).getAllByRole("button"));
-}
 
 function reactivatedInRow(client: CookoutClient): Effect.Effect<HTMLElement> {
   return Effect.gen(function* reactivateInRow() {
@@ -223,15 +165,6 @@ const deactivated: Effect.Effect<TestIdentity, never, TestCookout> = Effect.gen(
   return ada;
 });
 
-function readOldest(client: CookoutClient): Effect.Effect<void> {
-  return Effect.gen(function* readFirst() {
-    const [oldest = null] = yield* unreadIds(client);
-    if (oldest !== null) {
-      yield* answer(() => client.markDeactivatedQuietAgentRead(oldest));
-    }
-  });
-}
-
 function refusingMarkRead(client: CookoutClient): CookoutClient {
   return { ...client, markDeactivatedQuietAgentRead: () => Promise.reject(new Error("refused")) };
 }
@@ -291,4 +224,45 @@ it.effect("two deactivated agents give two rows, newest first", () =>
       ["2 for you"],
     ]);
   }).pipe(Effect.provide(testCookout())),
+);
+
+function refusingReactivate(client: CookoutClient): CookoutClient {
+  return { ...client, reactivateIdentity: () => Promise.reject(new Error("refused")) };
+}
+
+const REFUSED = /^Couldn't reactivate/u;
+
+const reactivateRefused: Effect.Effect<TestIdentity, never, TestCookout | Scope.Scope> = Effect.gen(
+  function* refuseReactivate() {
+    const ada = yield* deactivatedLiveIn(refusingReactivate);
+    clickInForYou("Reactivate");
+    const confirm = yield* answer(() => inDialog().findByRole("button", { name: "Reactivate @triage-agent" }));
+    fireEvent.click(confirm);
+    yield* answer(() => inDialog().findByText(REFUSED));
+    fireEvent.click(inDialog().getByRole("button", { name: "Cancel" }));
+    yield* settled;
+    return ada;
+  },
+);
+
+it.effect("a refused Reactivate shows its error on the row and keeps Reactivate, so the owner can try again", () =>
+  Effect.gen(function* refusedReactivate() {
+    yield* reactivateRefused;
+
+    expect([rowsIn(FOR_YOU), buttonsIn(FOR_YOU), inboxCounts()]).toStrictEqual([
+      [expect.stringMatching(/^@triage-agent was deactivated.*Couldn't reactivate/u)],
+      ["Reactivate", "Mark read"],
+      ["1 for you"],
+    ]);
+  }).pipe(Effect.scoped, Effect.provide(testCookout())),
+);
+
+it.effect("after a refused Reactivate, the row leaves For you once the entry is read elsewhere", () =>
+  Effect.gen(function* refusedThenReadElsewhere() {
+    const ada = yield* reactivateRefused;
+    yield* readOldest(ada.client);
+    yield* caughtUp;
+
+    expect([rowsIn(FOR_YOU), inboxCounts(), rowsIn(EARLIER)]).toStrictEqual([[], [], [expect.stringContaining(ENTRY)]]);
+  }).pipe(Effect.scoped, Effect.provide(testCookout())),
 );

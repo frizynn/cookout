@@ -1,14 +1,27 @@
 import { ButtonRow, RowButton } from "../../design-system/index.tsx";
+import type { Identities, IdentityActions } from "../../composer/index.ts";
 import { useCallback, useMemo } from "react";
 import type { DeactivatedQuietAgent } from "../../sdk/index.ts";
 import { DeactivatedQuietAgentRow } from "./deactivated-quiet-agent-row.tsx";
 import type { DeactivatedQuietAgents } from "../../unread/index.ts";
-import type { Identities } from "../../composer/index.ts";
 import { IdentityConfirm } from "./identity-confirm.tsx";
 import type { ReactNode } from "react";
+import { ReactivateRefusal } from "./reactivate-refusal.tsx";
 import { TokenShown } from "./token-shown.tsx";
 
 const TEXT = { markRead: "Mark read", reactivate: "Reactivate" } as const;
+
+function holdOnceReactivated(actions: Pick<IdentityActions, "snapshot" | "subscribe">, hold: () => void): void {
+  const stop = actions.subscribe(() => {
+    const { action, confirming, token } = actions.snapshot();
+    if (action.status === "failed" || confirming === null) {
+      stop();
+    }
+    if (confirming === null && token !== null) {
+      hold();
+    }
+  });
+}
 
 interface UnreadDeactivatedQuietAgentRowProps {
   readonly entry: DeactivatedQuietAgent;
@@ -23,8 +36,10 @@ export function UnreadDeactivatedQuietAgentRow(props: UnreadDeactivatedQuietAgen
     () => ({
       ...shared,
       confirm: (): void => {
-        entries.hold(entry.id);
         shared.confirm();
+        holdOnceReactivated(shared, () => {
+          entries.hold(entry.id);
+        });
       },
       forgetToken: (): void => {
         shared.forgetToken();
@@ -46,6 +61,7 @@ export function UnreadDeactivatedQuietAgentRow(props: UnreadDeactivatedQuietAgen
           <RowButton onClick={handleMarkRead}>{TEXT.markRead}</RowButton>
         </ButtonRow>
       )}
+      <ReactivateRefusal actions={actions} />
       <TokenShown actions={actions} />
       <IdentityConfirm actions={actions} identity={entry.identity} />
     </DeactivatedQuietAgentRow>

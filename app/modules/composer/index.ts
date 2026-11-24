@@ -41,7 +41,8 @@
  * first (`ask.rotate()` and so on puts it in `confirming`), runs on `confirm`
  * and stays `confirming` while it runs and if the server refuses it, so the
  * question stays open with the refusal kept as `action`; it closes once the
- * action succeeds, or on `cancel`, which does nothing while it runs.
+ * action succeeds, or on `cancel`, which does nothing while it runs and keeps a refusal as `action` until the next ask,
+ * so a row can still show it (#278).
  * Each answer goes in the identity list at once, and a fresh token is in its
  * snapshot until `forgetToken` (`copyToken` puts it on the clipboard).
  * `identities.creation` creates an agent the caller owns, whose token then
