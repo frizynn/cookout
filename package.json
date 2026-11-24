@@ -39,6 +39,7 @@
     "api:write": "node scripts/api-report.ts --write",
     "exports": "node scripts/check-exports.ts",
     "pack:smoke": "node scripts/pack-smoke.ts",
+    "published-client": "node scripts/published-client.ts",
     "changeset": "changeset",
     "version": "changeset version",
     "release": "pnpm build && changeset publish",
