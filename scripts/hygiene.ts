@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { MIGRATION_LISTS } from "./lib/migration-lists.ts";
 import type { SpawnSyncReturns } from "node:child_process";
 import { adrEdits } from "./lib/adr-append-only.ts";
 import { duplicateNumbers } from "./lib/adr-numbers.ts";
@@ -127,7 +128,23 @@ function appendOnlyAdrs(): readonly string[] {
   });
 }
 
-const MIGRATIONS = "app/modules/storage/lib/server/migrations.ts";
+function headList(file: string): string {
+  if (!existsSync(file)) {
+    return "";
+  }
+  return readFileSync(file, "utf8");
+}
+
+function deployedList(tag: string, file: string): readonly string[] {
+  if (!git(["ls-tree", "--name-only", tag, "--", file]).includes(file)) {
+    return [];
+  }
+  const shown = spawnSync("git", ["show", `${tag}:${file}`], GIT_OUTPUT);
+  if (failed(shown)) {
+    return [`git show ${tag}:${file} failed: ${shown.stderr}`];
+  }
+  return migrationsInserted({ base: shown.stdout, baseName: tag, file, head: headList(file) });
+}
 
 function deployedMigrations(): readonly string[] {
   const [tag = ""] = git(["tag", "--list", "deploy/*", "--merged", "HEAD", "--sort=-creatordate"]);
@@ -136,16 +153,7 @@ function deployedMigrations(): readonly string[] {
       "found no deploy/* tag that HEAD contains, so can't check the migrations list against production's. Run git fetch --tags; the Deploy workflow tags each deployed commit deploy/<short-sha>.",
     ];
   }
-  const shown = spawnSync("git", ["show", `${tag}:${MIGRATIONS}`], GIT_OUTPUT);
-  if (failed(shown)) {
-    return [`git show ${tag}:${MIGRATIONS} failed: ${shown.stderr}`];
-  }
-  return migrationsInserted({
-    base: shown.stdout,
-    baseName: tag,
-    file: MIGRATIONS,
-    head: readFileSync(MIGRATIONS, "utf8"),
-  });
+  return MIGRATION_LISTS.flatMap((file) => deployedList(tag, file));
 }
 
 const failures = [
