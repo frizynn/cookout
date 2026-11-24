@@ -63,12 +63,12 @@ const SETTINGS = /^#\/settings$/u;
 const SECTION = /^#\/settings\/(?<section>[^/]+)$/u;
 const PEOPLE = /^#\/people$/u;
 const OPEN_THREADS = /^#\/threads(?:\/all)?$/u;
-const PROFILE = /^#\/people\/(?<identity>[^/]+)$/u;
+const PROFILE = /^#\/people\/(?<identity>[^/]+(?:\/[^/]+)?)$/u;
 const CHANNEL = /^#\/channels\/(?<channel>[^/]+)$/u;
 const THREAD = /^#\/channels\/(?<channel>[^/]+)\/threads\/(?<thread>[^/]+)$/u;
 
-const PROFILE_QUERY = /\?profile=(?<profile>[^/?]*)$/u;
-const WITH_PROFILE = /^.*\?profile=(?<profile>[^/?]*)$/u;
+const PROFILE_QUERY = /\?profile=(?<profile>[^/?]*(?:\/[^/?]*)?)$/u;
+const WITH_PROFILE = /^.*\?profile=(?<profile>[^/?]*(?:\/[^/?]*)?)$/u;
 const APPROVE = /^#\/approve\/(?<code>[^/]+)$/u;
 const APPROVE_JOIN = /^#\/approve-join\/(?<code>[^/]+)$/u;
 const DIGITS = /^\d+$/u;

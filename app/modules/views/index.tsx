@@ -69,6 +69,9 @@
  * the thread panel does): the first message, "N earlier replies" up to the thread's "New" line (shown in place on a
  * click, the `unread` store's `selection`), then the unread replies, live, under a header naming the channel with an
  * "Open thread" link; "Pick a conversation" with nothing selected, and "Nothing here" for a thread that doesn't exist.
+ * For you leads with a row per open Deactivation offer, its text above the agent's avatar and name (a link to its
+ * profile panel), with Deactivate (through the same confirmation as the profile's) and Keep (the `unread` store's
+ * `deactivationOffers`), then a row per unread Nudge; cleared offers are muted under Earlier.
  * The selected row, once read, stays in its section, muted, until the selection moves. On a narrow screen the
  * conversation replaces the list, with a back arrow to the inbox. `PeopleView` is the directory of every
  * identity (the identity list, which any identity may read): how many there

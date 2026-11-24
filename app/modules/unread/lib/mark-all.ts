@@ -1,6 +1,7 @@
 import type { AckAllRequest, CookoutClient, InboxItem, Refusal } from "../../sdk/index.ts";
 import type { InboxItems } from "./inbox-items.ts";
 import type { LiveAlerts } from "./alerts.ts";
+import type { LiveDeactivationOffers } from "./deactivation-offers.ts";
 import type { LiveNudges } from "./nudges.ts";
 import { refusalOf } from "../../sdk/index.ts";
 
@@ -21,6 +22,7 @@ interface MarkAllOptions {
   readonly items: InboxItems;
   readonly alerts: LiveAlerts;
   readonly nudges: LiveNudges;
+  readonly deactivationOffers: LiveDeactivationOffers;
   readonly onRead: (item: InboxItem) => void;
   readonly onChange: (state: MarkAllState) => void;
 }
@@ -49,13 +51,28 @@ function nudgesUpToOf(nudges: LiveNudges): Pick<AckAllRequest, "nudgesUpTo"> {
   return { nudgesUpTo };
 }
 
-function readNudges(nudges: LiveNudges, { nudgesUpTo }: AckAllRequest): void {
+function offersUpToOf(offers: LiveDeactivationOffers): Pick<AckAllRequest, "deactivationOffersUpTo"> {
+  const deactivationOffersUpTo = offers.newestOpen();
+  if (deactivationOffersUpTo === null) {
+    return {};
+  }
+  return { deactivationOffersUpTo };
+}
+
+function readNonMessages(
+  { deactivationOffers, nudges }: Pick<MarkAllOptions, "deactivationOffers" | "nudges">,
+  { deactivationOffersUpTo, nudgesUpTo }: AckAllRequest,
+): void {
   if (typeof nudgesUpTo === "number") {
     nudges.readUpTo(nudgesUpTo);
   }
+  if (typeof deactivationOffersUpTo === "number") {
+    deactivationOffers.clearUpTo(deactivationOffersUpTo);
+  }
 }
 
-function createMarkAll({ alerts, client, items, nudges, onChange, onRead }: MarkAllOptions): MarkAll {
+function createMarkAll(options: MarkAllOptions): MarkAll {
+  const { alerts, client, deactivationOffers, items, nudges, onChange, onRead } = options;
   let state: MarkAllState = { status: "idle" };
   let queue: Promise<void> = Promise.resolve();
 
@@ -71,7 +88,7 @@ function createMarkAll({ alerts, client, items, nudges, onChange, onRead }: Mark
       const { alerts: read, readPositions } = await client.ackAll(request);
       items.readAll(readPositions, onRead);
       alerts.addAll(read);
-      readNudges(nudges, request);
+      readNonMessages(options, request);
       change({ status: "idle" });
     } catch (error: unknown) {
       change({ ...refusalOf(error), status: "failed" });
@@ -80,7 +97,12 @@ function createMarkAll({ alerts, client, items, nudges, onChange, onRead }: Mark
 
   return {
     markAllRead: () => {
-      queue = markAfter(queue, { ...upToOf(items), ...alertsUpToOf(alerts), ...nudgesUpToOf(nudges) });
+      queue = markAfter(queue, {
+        ...upToOf(items),
+        ...alertsUpToOf(alerts),
+        ...nudgesUpToOf(nudges),
+        ...offersUpToOf(deactivationOffers),
+      });
     },
     state: () => state,
   };

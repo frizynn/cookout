@@ -1,6 +1,7 @@
 import type { Unread, UnreadState } from "../../unread/index.ts";
 import { Button } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
+import { besideCountOf } from "./beside-count.ts";
 
 const NONE = 0;
 
@@ -18,9 +19,7 @@ export function MarkAllRead(props: MarkAllReadProps): ReactNode {
   const handleClick = props.unread.markAllRead;
   return (
     <Button
-      disabled={
-        state.inbox.length + state.alerts.length + state.nudges.length === NONE || state.markAll.status === "marking"
-      }
+      disabled={state.inbox.length + besideCountOf(state) === NONE || state.markAll.status === "marking"}
       onClick={handleClick}
     >
       {TEXT.markAll}

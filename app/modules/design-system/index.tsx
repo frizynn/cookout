@@ -90,7 +90,10 @@
  * two lines, and any `RowButton`, a small button raised above the row's link. A `for-you` row has an accent dot and why,
  * a bold name and bright text; an `activity` row has a muted dot and why, a
  * bold name and bright text; a `read` one is muted. A `current` row, the one
- * whose conversation is shown, is highlighted and its link marked as the current page. `Mention` is
+ * whose conversation is shown, is highlighted and its link marked as the current page. A `FeedNoticeRow` sits in
+ * a `FeedList` for an Inbox entry about an identity rather than a message: its
+ * why, then the identity's avatar and name (a link to `href`) and a short
+ * time, then any buttons; `for-you` or `read` as a `FeedRow`. `Mention` is
  * an `@` mention in a message's text, in the mention colour when it is the
  * reader's own (`mine`). `FeedNote` is a muted line in a feed: why a part is
  * `empty`, or that it has reached the `end`; `MoreButton` is a quiet
@@ -179,6 +182,7 @@ export { Feed } from "./lib/feed.tsx";
 export { FeedHeading } from "./lib/feed-heading.tsx";
 export { FeedList } from "./lib/feed-list.tsx";
 export { FeedNote } from "./lib/feed-note.tsx";
+export { FeedNoticeRow } from "./lib/feed-notice-row.tsx";
 export { FeedRow } from "./lib/feed-row.tsx";
 export { FeedText } from "./lib/feed-text.tsx";
 export { Form } from "./lib/form.tsx";

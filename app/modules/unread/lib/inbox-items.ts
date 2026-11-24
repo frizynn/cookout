@@ -2,6 +2,7 @@ import type {
   ChannelName,
   CookoutClient,
   CookoutEvent,
+  DeactivationOffer,
   InboxItem,
   Message,
   MessageId,
@@ -192,22 +193,25 @@ interface Reading {
   readonly onRead: (item: InboxItem) => void;
   readonly onAlerts: (alerts: readonly OfflineAlert[]) => void;
   readonly onNudges: (nudges: readonly Nudge[]) => void;
+  readonly onDeactivationOffers: (offers: readonly DeactivationOffer[]) => void;
 }
 
-interface ReadInbox extends Pick<Reading, "items" | "onAlerts" | "onNudges"> {
+interface ReadInbox extends Pick<Reading, "items" | "onAlerts" | "onDeactivationOffers" | "onNudges"> {
   readonly inbox: Awaited<ReturnType<Reading["client"]["inbox"]>>;
 }
 
-function readIntoItems({ inbox, items, onAlerts, onNudges }: ReadInbox): void {
+function readIntoItems({ inbox, items, onAlerts, onDeactivationOffers, onNudges }: ReadInbox): void {
   items.addAll(inbox.items);
   onAlerts(inbox.alerts);
   onNudges(inbox.nudges);
+  onDeactivationOffers(inbox.deactivationOffers);
 }
 
-async function readInto({ client, items, onAlerts, onNudges, onRead }: Reading): Promise<void> {
+async function readInto(reading: Reading): Promise<void> {
+  const { client, items, onRead } = reading;
   const [inbox, { readPositions }] = await Promise.all([client.inbox(), client.readPositions()]);
   items.readAll(readPositions, onRead);
-  readIntoItems({ inbox, items, onAlerts, onNudges });
+  readIntoItems({ ...reading, inbox });
 }
 
 type ByPlace = ReadonlyMap<string, MessageId>;
@@ -261,7 +265,7 @@ async function catchUp(options: CatchUpOptions): Promise<void> {
   }
   const movedOn = readPositions.filter((position) => unchanged(compared, placeOf(position)));
   items.readAll(movedOn, options.onRead);
-  readIntoItems({ inbox, items, onAlerts: options.onAlerts, onNudges: options.onNudges });
+  readIntoItems({ ...options, inbox });
 }
 
 interface CatchingUp extends CatchUpOptions {

@@ -1,3 +1,4 @@
+import type { ComponentProps, ReactNode } from "react";
 import { Feed, ListPane } from "../../design-system/index.tsx";
 import type { Unread, UnreadState } from "../../unread/index.ts";
 import type { Board } from "../../board/index.ts";
@@ -7,7 +8,6 @@ import { InboxHeader } from "./inbox-header.tsx";
 import type { InboxRows } from "./use-inbox-rows.ts";
 import type { InboxSelection } from "../../paths/index.ts";
 import { MarkAllFailed } from "./mark-all-failed.tsx";
-import type { ReactNode } from "react";
 
 const TITLE = "Inbox";
 
@@ -18,6 +18,7 @@ interface InboxListProps {
   readonly rows: InboxRows;
   readonly me: string;
   readonly selected: InboxSelection | null;
+  readonly notices: ComponentProps<typeof InboxBody>["notices"];
 }
 
 export function InboxList(props: InboxListProps): ReactNode {
@@ -30,22 +31,13 @@ export function InboxList(props: InboxListProps): ReactNode {
         {unread.status === "loaded" && <MarkAllFailed markAll={unread.markAll} />}
         <InboxBody
           me={me}
-          nudges={props.unread.nudges}
+          notices={props.notices}
           onMarkAlertRead={handleMarkAlertRead}
           rows={rows}
           selected={selected}
           unread={unread}
         />
-        {unread.status === "loaded" && (
-          <InboxEarlier
-            alerts={props.unread.alerts}
-            earlier={props.unread.earlier}
-            rows={rows}
-            me={me}
-            nudges={props.unread.nudges}
-            selected={selected}
-          />
-        )}
+        {unread.status === "loaded" && <InboxEarlier me={me} rows={rows} selected={selected} unread={props.unread} />}
       </Feed>
     </ListPane>
   );

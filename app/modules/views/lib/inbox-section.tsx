@@ -2,10 +2,7 @@ import { FeedHeading, FeedList } from "../../design-system/index.tsx";
 import { InboxRowView } from "./inbox-row-view.tsx";
 import type { InboxRows } from "./use-inbox-rows.ts";
 import type { InboxSelection } from "../../paths/index.ts";
-import type { Nudge } from "../../sdk/index.ts";
-import type { Nudges } from "../../unread/index.ts";
 import type { ReactNode } from "react";
-import { UnreadNudgeRow } from "./unread-nudge-row.tsx";
 import { isSelected } from "./use-inbox-rows.ts";
 
 const NONE = 0;
@@ -16,23 +13,21 @@ interface InboxSectionProps {
   readonly selected: InboxSelection | null;
   readonly forYou: boolean;
   readonly me: string;
-  readonly nudges: readonly Nudge[];
-  readonly nudgeActions: Pick<Nudges, "close" | "markRead">;
+  readonly besides: number;
+  readonly children?: ReactNode;
 }
 
 export function InboxSection(props: InboxSectionProps): ReactNode {
-  const { me, nudgeActions, nudges, selected } = props;
+  const { me, selected } = props;
   const { held } = props.rows;
   const rows = props.rows.rows.filter((row) => row.forYou === props.forYou);
-  const count = rows.length + nudges.length;
+  const count = rows.length + props.besides;
   return (
     count > NONE && (
       <>
         <FeedHeading count={count} title={props.title} />
         <FeedList label={props.title}>
-          {nudges.map((nudge) => (
-            <UnreadNudgeRow key={`nudge ${String(nudge.id)}`} nudge={nudge} nudges={nudgeActions} />
-          ))}
+          {props.children}
           {rows.map((row) => (
             <InboxRowView
               key={row.key}
