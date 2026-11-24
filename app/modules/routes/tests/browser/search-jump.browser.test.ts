@@ -79,11 +79,18 @@ for (const [at, place] of PLACES.entries()) {
   test(`with nothing typed the box lists Inbox, People and Settings, and Enter opens ${place}`, async ({ page }) => {
     const opened = await openedOn(page, `browser-jump-place-${place.toLowerCase()}`);
     await page.goto(`/#/channels/browser-jump-place-${place.toLowerCase()}/threads/${String(opened.thread)}`);
+
+    await expect(page.getByRole("textbox", REPLY)).toBeFocused();
+
     await page.keyboard.press("Control+k");
 
+    await expect(page.getByRole("combobox", BOX)).toBeFocused();
     await expect(results(page).getByRole("group", { name: "Places" }).getByRole("option")).toHaveText([...PLACES]);
 
     await pressedDown(page, at);
+
+    await expect(results(page).getByRole("option", { selected: true })).toHaveText(place);
+
     await page.keyboard.press("Enter");
 
     await expect(page).toHaveURL(new RegExp(`#/${place.toLowerCase()}$`, "u"));
