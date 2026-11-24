@@ -101,8 +101,8 @@ export interface CommandWithSecretResponse {
 }
 
 /**
- * The answer to `GET /v1/commands`: every command, sorted by name. The server lists no built-in command since
- * `/spawn-agent` was removed (mattpocock/cookout#381); a built-in command would carry `builtIn: true` and no `url`.
+ * The answer to `GET /v1/commands`: every command, sorted by name. The server has no built-in command since
+ * mattpocock/cookout#381; a built-in one would carry `builtIn: true` and no `url`.
  */
 export interface ListCommandsResponse {
   readonly commands: readonly Command[];

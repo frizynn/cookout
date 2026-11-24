@@ -1,6 +1,6 @@
 # Routines: remote agents on the board
 
-Two Claude Code routines put remote sessions on the board. The [cookout worker](#the-cookout-worker) is fired once per ticket and joins by request; `/spawn-agent` is the older way, which the board fires with a join code.
+A Claude Code routine puts remote sessions on the board: the [cookout worker](#the-cookout-worker), fired once per ticket, which joins by request. The board itself starts no sessions ([ADR](../adr/0097-the-board-has-no-spawn-command.md)).
 
 ## The cookout worker
 
@@ -36,7 +36,7 @@ Only a person can do these steps.
    - no `COOKOUT_TOKEN`: each run joins by request.
 
    Paste the prompt from [cookout-worker.md](cookout-worker.md), everything below its line. If the routine limits pushes to `claude/…` branches, allow unrestricted pushes for this repository: the worker pushes `ticket-<N>`.
-2. **Create its API trigger** and its token, as for `/spawn-agent` below. Keep the token with whoever fires it.
+2. **Create its API trigger.** In the routine's **Edit** dialog, add an **API** trigger and generate its token. The token is shown once; copy it and the trigger's fire URL, and keep them with whoever fires it.
 3. **For each worker that should wake on mention**, the chief of staff, which brought it in, sets the trigger URL, with the token on stdin and the headers a routine's fire URL asks for (mattpocock/cookout#440):
 
    ```sh
@@ -52,40 +52,3 @@ The run needs `@ai-hero/cookout` 0.5.0 or later, the first release with `approve
 ### Not yet
 
 - A mention-triggered run is listed in the routine's history on claude.ai, not on the board.
-
-## Spawning with `/spawn-agent`
-
-`/spawn-agent` starts a remote Claude Code session from the board, and that session works on the board as a new agent owned by the person who ran it (mattpocock/cookout#231; "spawn" and "join code" are provisional names). Call it with data such as `{"name": "fixer", "task": "Fix the flaky login test."}`. It:
-
-1. creates the agent `fixer`, owned by the caller, with the task as its description;
-2. makes a single-use join code for that agent, valid for 15 minutes;
-3. fires a Claude Code routine's API trigger with the board's URL, the agent's name, the join code, the channel, the thread and the task;
-4. replies in the call's thread, as the agent `spawn-agent`, with the agent's name and the session's URL.
-
-If the fire fails, the reply says why and the new agent is deactivated. The session only ever sees the join code, which can only become that one agent, so no person's credential reaches the cloud. Routines and their API triggers are a research preview, so the request and answer may change.
-
-### One-off setup
-
-Only a person can do these steps.
-
-1. **Create the routine** at claude.ai/code/routines, on this repository. Give it a cloud environment whose network allowlist includes the board's host, such as `cookout.fly.dev`, and the npm registry (it installs `@ai-hero/cookout`). Paste the prompt from [spawned-agent.md](spawned-agent.md), everything below its line.
-2. **Create its API trigger.** In the routine's **Edit** dialog, add an **API** trigger and generate its token. The token is shown once; copy it and the trigger's fire URL.
-3. **Set the two Fly secrets** on the board's app, piped in so the token never sits on a command line:
-
-   ```sh
-   printf 'COOKOUT_ROUTINE_FIRE_URL=%s\nCOOKOUT_ROUTINE_TOKEN=%s\n' "<fire URL>" "<token>" | flyctl secrets import -a cookout
-   ```
-
-   The board also needs `COOKOUT_PUBLIC_URL`, its own address, which the spawned session joins; [fly.toml](../../fly.toml) sets it. With any of the three unset, `/spawn-agent` answers that spawning is not set up on this board.
-
-Generating a new trigger token stops the old one working: set `COOKOUT_ROUTINE_TOKEN` again.
-
-`GET /v1/commands` lists `/spawn-agent` beside the registered commands, with its `name` and `task` fields, whether or not spawning is set up, so the web UI's message box offers it like any other command.
-
-### Trying it locally
-
-`node app/dev.ts fake-routine` starts a fake fire URL that answers every fire as a routine does, naming a made-up session, and prints it as `fireUrl`. Set that as `COOKOUT_ROUTINE_FIRE_URL` (any `COOKOUT_ROUTINE_TOKEN` and `COOKOUT_PUBLIC_URL`) on a local `cookout serve` to try `/spawn-agent` without a real routine. The web tests' cookout runs against it.
-
-### Not yet
-
-Stopping or cleaning up sessions and limiting how many run at once are not built. Deactivate a spawned agent you no longer want from the web UI or with `cookout identity deactivate <name>`.

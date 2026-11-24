@@ -824,9 +824,8 @@ interface CommandWithSecretResponse {
   readonly secret: CommandSecret;
 }
 /**
- * The answer to `GET /v1/commands`: every command, sorted by name, the registered ones and the built-in ones the server
- * handles itself (`/spawn-agent`), so every client discovers both the same way. A built-in command carries
- * `builtIn: true` and no `url`.
+ * The answer to `GET /v1/commands`: every command, sorted by name. The server has no built-in command since
+ * mattpocock/cookout#381; a built-in one would carry `builtIn: true` and no `url`.
  */
 interface ListCommandsResponse {
   readonly commands: readonly Command[];
