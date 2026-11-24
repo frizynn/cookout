@@ -36,7 +36,8 @@
  * `thread` events keep each item's `parent` current, so its `closedAt` follows
  * a close or reopen live.
  * `markChannelRead` acks one channel's items, the newest in its top-level messages and in each of its threads
- * (`POST /v1/ack`), and drops the items the read positions it moved cover, as `markAllRead` does.
+ * (`POST /v1/ack`), and drops the items the read positions it moved cover, as `markAllRead` does; `markChannel` holds
+ * why the last one failed, with its channel, until the next one starts.
  * `markAllRead` acks the whole inbox up to the newest item the store holds
  * (`POST /v1/inbox/ack-all`) and drops the items the read positions it moved
  * cover, so a message that arrives meanwhile stays unread. `markUnread` marks
@@ -88,7 +89,7 @@
  * and tests bring a clock they move on by hand.
  */
 import type { ChannelName, CookoutClient, MessageId } from "../sdk/index.ts";
-import type { DeactivatedQuietAgents, DeactivationOffers, UnreadState } from "./lib/parts.ts";
+import type { DeactivatedQuietAgents, DeactivationOffers, MarkChannel, UnreadState } from "./lib/parts.ts";
 import type { NewLine, WithNewLines } from "./lib/new-lines.ts";
 import { follow, loadedOf, loadedOrFailed, partsOf } from "./lib/parts.ts";
 import type { Alerts } from "./lib/alerts.ts";
@@ -124,6 +125,8 @@ export interface Unread {
    * by acking the newest of them in each place (`POST /v1/ack`), as reading each to the bottom does.
    */
   readonly markChannelRead: (channel: ChannelName) => void;
+  /** Why the last `markChannelRead` failed, with its channel, until the next one starts: an external store of its own. */
+  readonly markChannel: MarkChannel;
   /** Marks a message, and everything after it in its thread or channel, unread again; a refusal shows as `menu.refusal`. */
   readonly markUnread: (messageId: MessageId) => void;
   /** What a message's actions menu needs: Mark unread, and why the last one was refused. An external store of its own. */
@@ -206,7 +209,8 @@ export function createUnread(options: UnreadOptions): Unread {
     deactivationOffers,
     earlier,
     markAllRead: markAll.markAllRead,
-    markChannelRead: markAll.markChannelRead,
+    markChannel: markAll.markChannel,
+    markChannelRead: markAll.markChannel.markChannelRead,
     markUnread: menu.markUnread,
     menu,
     movesBack: items.movesBack,
@@ -227,6 +231,7 @@ export function createUnread(options: UnreadOptions): Unread {
 export type { UnreadState } from "./lib/parts.ts";
 export type { Earlier, EarlierState } from "./lib/earlier.ts";
 export type { MarkAllState } from "./lib/mark-all.ts";
+export type { MarkChannel, MarkChannelRefusal } from "./lib/mark-channel.ts";
 export type { Alerts, AlertsState } from "./lib/alerts.ts";
 export type { Nudges, NudgesState } from "./lib/nudges.ts";
 export type { DeactivationOffers, DeactivationOffersState } from "./lib/deactivation-offers.ts";

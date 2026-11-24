@@ -1,9 +1,9 @@
+import type { AskedFrom, SubscriptionsState } from "./subscriptions-slice.ts";
 import type { ChannelMessagesState, MessageBeforeState, ThreadMessagesState } from "./message-selectors.ts";
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import type { ChannelsState, CommandsState } from "./listed-slices.ts";
 import type { ChannelCreation } from "./channel-creation.ts";
 import type { ClosingRefusal } from "./thread-closing.ts";
-import type { SubscriptionsState } from "./subscriptions-slice.ts";
 import type { ThreadPlace } from "./threads-part.ts";
 
 type Subscribe = (listener: () => void) => () => void;
@@ -39,7 +39,7 @@ interface Commands {
 interface Subscriptions {
   readonly subscribe: Subscribe;
   readonly snapshot: () => SubscriptionsState;
-  readonly setSubscribed: (channel: ChannelName, subscribed: boolean) => void;
+  readonly setSubscribed: (channel: ChannelName, subscribed: boolean, from: AskedFrom) => void;
 }
 
 interface ThreadClosing {
