@@ -67,7 +67,7 @@
  * items, and its own snapshot lists them all for the Earlier list. One turns read when it is marked read
  * (`POST /v1/inbox/deactivated-quiet-agents/:id/read`), with `markAllRead`, and live when its event says so, as when
  * the agent is reactivated in any session. `hold` keeps one in For you even once it is read, as Reactivate in its row
- * does while the fresh token shows, until `release` (Done): the loaded state lists it under `heldDeactivatedQuietAgents`,
+ * does once it succeeds and the fresh token shows (never after a refused one, #278), until `release` (Done): the loaded state lists it under `heldDeactivatedQuietAgents`,
  * uncounted, and its own snapshot names it in `held`, so Earlier leaves it out (#277). Only the store holding it keeps it.
  * `createReading` makes the `reading` store, beside the unread store: the Inbox's read rule, as Slack's (Matt, Inbox grilling
  * on the board, 2026-11-23; `docs/adr/0073-the-inbox-reads-a-conversation-after-2-s-on-screen.md`).

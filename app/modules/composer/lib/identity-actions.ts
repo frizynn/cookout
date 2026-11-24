@@ -146,7 +146,7 @@ function asksOf(publish: Publish): IdentityActions["ask"] {
 function cancelOf(publish: Publish, snapshot: () => IdentityActionsSnapshot): () => void {
   return () => {
     if (snapshot().action.status !== "sending") {
-      publish({ action: IDLE, confirming: null });
+      publish({ confirming: null });
     }
   };
 }
