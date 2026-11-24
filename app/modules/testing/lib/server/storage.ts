@@ -1,6 +1,14 @@
 import { Context, Effect, Exit, FileSystem, Layer, Path, Predicate, Scope } from "effect";
-import { Storage, StorageUnavailable, memoryStorage, postgresStorage, sqliteStorage } from "../../../storage/server.ts";
+import {
+  Storage,
+  StorageUnavailable,
+  memoryStorage,
+  postgresStorage,
+  sqliteQueryPlans,
+  sqliteStorage,
+} from "../../../storage/server.ts";
 import { fixtureOwnerName, identityFixture } from "./identities.ts";
+import type { QueryPlan } from "../../../storage/server.ts";
 import { freshPostgresDatabase } from "./postgres.ts";
 import { inject } from "vitest";
 import { layer as nodeServices } from "@effect/platform-node/NodeServices";
@@ -73,6 +81,12 @@ const unusableStorage: Layer.Layer<Storage> = Layer.effect(
   })),
 ).pipe(Layer.provide(memoryStorage));
 
+function freshSqliteQueryPlans<Failure>(
+  work: (storage: Storage["Service"]) => Effect.Effect<unknown, Failure>,
+): Effect.Effect<readonly QueryPlan[], Failure | StorageUnavailable, FileSystem.FileSystem | Path.Path> {
+  return Effect.scoped(Effect.flatMap(freshDatabasePath, (path) => sqliteQueryPlans({ path, work })));
+}
+
 function openStore<Failure, Needs>(
   layer: Layer.Layer<Storage, Failure, Needs>,
 ): Effect.Effect<OpenStore, Failure, Needs> {
@@ -83,4 +97,4 @@ function openStore<Failure, Needs>(
   });
 }
 
-export { freshDatabasePath, openStore, storageLayers, unusableStorage };
+export { freshDatabasePath, freshSqliteQueryPlans, openStore, storageLayers, unusableStorage };

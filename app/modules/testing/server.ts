@@ -3,7 +3,8 @@
  * `startDev` and `startFakeRoutine` run the dev program's commands (ADR 0079) in process. It builds the test
  * Layers (a cookout on port 0 with memory storage and test secrets, its
  * admin on a token it makes and identities seeded through `Storage`, both storage
- * Layers on fresh stores, a store that is unusable). It runs `cookout`
+ * Layers on fresh stores, a store that is unusable). `freshSqliteQueryPlans` runs work on a fresh
+ * SQLite store and returns the query plan of each statement it ran. It runs `cookout`
  * command lines in the test's own process, `serve` included, with their
  * output captured, and runs the `cookout` binary as a process only where a
  * test is about the process itself, since each spawn costs a cold start;
@@ -71,7 +72,7 @@ export {
 } from "./lib/server/agent-sessions.ts";
 export { callId, secretsTest } from "./lib/server/secrets.ts";
 export { type NewMessageOptions, appendTo, messageId, newMessageFixture } from "./lib/server/messages.ts";
-export { freshDatabasePath, openStore, storageLayers } from "./lib/server/storage.ts";
+export { freshDatabasePath, freshSqliteQueryPlans, openStore, storageLayers } from "./lib/server/storage.ts";
 export { emptyPostgresDatabase, onPostgresDatabase } from "./lib/server/postgres.ts";
 export { postgresContractFiles } from "./lib/server/postgres-contract-files.ts";
 

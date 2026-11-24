@@ -1,10 +1,9 @@
 import { Array as Arr, DateTime, Effect, String as Str } from "effect";
 import type { QueryPlan, Storage, StorageUnavailable } from "../../server.ts";
 import { expect, it } from "@effect/vitest";
-import { freshDatabasePath, identityFixture, isoTime } from "../../../testing/server.ts";
+import { freshSqliteQueryPlans, identityFixture, isoTime } from "../../../testing/server.ts";
 import { NodeServices } from "@effect/platform-node";
 import type { TokenHash } from "../../../identities/index.ts";
-import { sqliteQueryPlans } from "../../server.ts";
 import { tokenHash } from "../../../identities/index.ts";
 
 interface Session {
@@ -59,11 +58,10 @@ function scansATokenTable({ plan }: QueryPlan): boolean {
 
 it.effect("on SQLite, every token and agent session lookup and revoke that filters on revoked uses an index", () =>
   Effect.gen(function* plans() {
-    const path = yield* freshDatabasePath;
-    const planned = yield* sqliteQueryPlans({ path, work: revokeAndLookUpTokens });
+    const planned = yield* freshSqliteQueryPlans(revokeAndLookUpTokens);
     const filtering = Arr.filter(planned, filtersOnRevoked);
 
     expect(filtering.length).toBeGreaterThan(NONE);
     expect(Arr.filter(filtering, scansATokenTable)).toStrictEqual([]);
-  }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  }).pipe(Effect.provide(NodeServices.layer)),
 );
