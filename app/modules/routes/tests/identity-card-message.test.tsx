@@ -20,9 +20,19 @@ interface Box {
   readonly text: string | null;
 }
 
+async function cardName(author: string, region: () => HTMLElement): Promise<HTMLElement> {
+  const name = await waitFor(() => {
+    const link = within(region()).getByRole("link", { name: author });
+
+    expect(link.dataset).toHaveProperty("identityCard");
+
+    return link;
+  });
+  return name;
+}
+
 async function authorName(author: string): Promise<HTMLElement> {
-  const messages = await screen.findByRole("list", { name: "Messages" });
-  const name = await within(messages).findByRole("link", { name: author });
+  const name = await cardName(author, () => screen.getByRole("list", { name: "Messages" }));
   return name;
 }
 
@@ -162,7 +172,7 @@ it("in a thread panel, the card's Message puts @name in the thread's reply box",
   expect.hasAssertions();
 
   const { author, close, panel } = await openedInThread(`${PREFIX}-thread`);
-  fireEvent.pointerMove(await within(panel).findByRole("link", { name: author }), { pointerType: "mouse" });
+  fireEvent.pointerMove(await cardName(author, () => panel), { pointerType: "mouse" });
   fireEvent.click(within(await screen.findByRole("dialog", { name: author })).getByRole("button", { name: "Message" }));
 
   await waitFor(() => {
