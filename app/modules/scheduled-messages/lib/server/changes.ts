@@ -71,9 +71,8 @@ function editWith(on: ScheduledOn): Editing {
       const stored = yield* found(on.storage, id);
       yield* allowed(on.storage, caller, stored.creator);
       const edited = yield* editedIn({ asked, storage: on.storage, stored });
-      const kept = yield* Effect.mapError(Effect.fromNullishOr(edited), () => scheduledMessageNotFound(String(id)));
       yield* on.wake;
-      return yield* shownWith(on.storage)(kept);
+      return yield* shownWith(on.storage)({ ...stored, ...edited });
     });
 }
 
