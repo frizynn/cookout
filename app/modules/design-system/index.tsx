@@ -38,7 +38,7 @@
  * `ConversationPanel`, a named column with a `BackLink` arrow (shown only on a
  * narrow screen, where the panel takes the whole width), its detail and any
  * open link, or beside a `ConversationEmpty`, a named column holding only a
- * muted line (hidden on a narrow screen while `hiddenWhenNarrow`); a
+ * muted line (hidden on a narrow screen); a
  * `DividerButton` is a divider line led by a quiet button, such as one that
  * shows the replies folded under it. A name's avatar is its coloured initials, one of eight hues hashed
  * from the name, a circle for a human and a rounded square for an agent, with

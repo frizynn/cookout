@@ -1,4 +1,5 @@
-import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
+import type { CookoutClient, EventStream, Message, MessageId } from "../../sdk/index.ts";
+import { adminClient, anonymousClient, sessionOf } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { inConversation, inPane, inSidebar, inThread } from "./regions.ts";
@@ -7,6 +8,7 @@ import { openWithClockStopped } from "./clock.ts";
 import { watched } from "./watched.ts";
 
 const NONE = 0;
+const TWO_EARLIER = ["Earlier one", "Earlier two"] as const;
 const ONE = 1;
 
 interface NewsThread {
@@ -26,14 +28,22 @@ async function replied(thread: Omit<NewsThread, "address">, text: string): Promi
   return message;
 }
 
-async function threadWithNews(channel: string, start = "Deploy at noon?"): Promise<NewsThread> {
+async function earlierReplies(thread: Omit<NewsThread, "address">, texts: readonly string[]): Promise<MessageId> {
+  const [first = "", ...rest] = texts;
+  const { id } = await replied(thread, first);
+  if (rest.length === NONE) {
+    return id;
+  }
+  const last = await earlierReplies(thread, rest);
+  return last;
+}
+
+async function threadWithNews(channel: string, earlierOnes: readonly string[] = TWO_EARLIER): Promise<NewsThread> {
   const { poster, reader } = await subscribedReader(channel);
-  const { message: parent } = await poster.createMessage({ channel, text: start });
+  const { message: parent } = await poster.createMessage({ channel, text: "Deploy at noon?" });
   await reader.follow(parent.id);
   const thread = { channel, parent, poster, reader };
-  await replied(thread, "Earlier one");
-  const read = await replied(thread, "Earlier two");
-  await reader.ack(read.id);
+  await reader.ack(await earlierReplies(thread, earlierOnes));
   await replied(thread, "Unread one");
   await replied(thread, "Unread two");
   return { ...thread, address: `#/inbox/${channel}/${String(parent.id)}` };
@@ -204,9 +214,9 @@ it("the selected row stays in its section, muted, once read, and moves to Earlie
 it("open thread goes to the thread's channel with its panel open", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const thread = await threadWithNews("web-conversation-open");
+  const thread = await threadWithNews("web-conversation-open", ["Earlier one"]);
   const unmount = openWithClockStopped({ client: thread.reader, hash: thread.address });
-  await conversationShown();
+  await inConversation().findByRole("button", { name: "1 earlier reply" });
   fireEvent.click(inConversation().getByRole("link", { name: "Open thread" }));
   await inThread().findByText("Unread two");
 
@@ -224,6 +234,32 @@ it("an unknown thread's address says there is nothing there, beside the list", {
   const list = await inPane().findByRole("list", { name: "Activity" });
 
   expect([nothing.textContent, list.tagName]).toStrictEqual(["Nothing here", "UL"]);
+
+  unmount();
+});
+
+it("a thread address that isn't a message ID is no page", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const unmount = openWithClockStopped({ client: adminClient(), hash: "#/inbox/general/first" });
+  const missing = await inPane().findByText("No page has this address.");
+
+  expect(missing.textContent).toBe("No page has this address.");
+
+  unmount();
+});
+
+it("a conversation that can't be read says why", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const unmount = openWithClockStopped({
+    client: anonymousClient(),
+    hash: "#/inbox/general/1",
+    session: sessionOf(adminClient()),
+  });
+  const alert = await inConversation().findByRole("alert");
+
+  expect(alert.textContent).toMatch(/^Couldn't load the thread \(\w+\): /u);
 
   unmount();
 });

@@ -17,11 +17,7 @@ interface InboxConversationProps {
 export function InboxConversation(props: InboxConversationProps): ReactNode {
   const { selected } = props;
   if (selected === null) {
-    return (
-      <ConversationEmpty hiddenWhenNarrow label={TEXT.conversation}>
-        {TEXT.pick}
-      </ConversationEmpty>
-    );
+    return <ConversationEmpty label={TEXT.conversation}>{TEXT.pick}</ConversationEmpty>;
   }
   return (
     <ConversationView
