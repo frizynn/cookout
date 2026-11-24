@@ -1,26 +1,22 @@
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 import type { Screen, Shot, Theme, ThemePass } from "./lib/screenshots.ts";
 import { field, list, parseJson, text } from "./lib/json.ts";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
-import { screenshotOptions, takeScreenshots, withInboxEntries, withOlderHistory } from "./lib/screenshots.ts";
-import { spawn, spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync } from "node:fs";
+import { screenshotOptions, takeScreenshots, withOlderHistory } from "./lib/screenshots.ts";
+import type { DevCookout } from "./lib/dev-cookout.ts";
 import { chromium } from "@playwright/test";
-import { createInterface } from "node:readline";
 import { dropWatch } from "./lib/dropped-watch.ts";
-import { once } from "node:events";
+import { moveClockForward } from "../app/modules/testing/index.ts";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
+import { startDevCookout } from "./lib/dev-cookout.ts";
 import { tmpdir } from "node:os";
-
-interface Server {
-  readonly stop: () => Promise<void>;
-  readonly url: string;
-}
 
 interface Board {
   readonly closed: readonly number[];
   readonly dropped: string;
   readonly token: string;
-  readonly url: string;
+  readonly server: DevCookout;
 }
 
 type Login = "admin" | "member";
@@ -33,61 +29,12 @@ const MAX_BUFFER = 67_108_864;
 const RENDER_MS = 15_000;
 const WIDE = { height: 800, width: 1280 };
 const NARROW = { height: 900, width: 600 };
-const ADMIN_TOKEN = "screenshots-admin-token-0123456789abcdef0123456789";
 const LOGGED_IN_AS = "grace";
 const DROPPED_AGENT = "triage-agent";
 const CLOSED_IN_DEPLOYS = ["deployed", "rollbackCall"] as const;
 
 function withEnv(variables: Readonly<Record<string, string>>, args: readonly string[]): string[] {
   return [...Object.entries(variables).map(([name, value]: readonly [string, string]) => `${name}=${value}`), ...args];
-}
-
-function build(): void {
-  const run = spawnSync("pnpm", ["-s", "build"], { encoding: "utf8", maxBuffer: MAX_BUFFER });
-  if (run.status !== EXIT_SUCCESS) {
-    throw new Error(`pnpm build failed:\n${run.stdout}${run.stderr}`);
-  }
-}
-
-async function listeningUrl(lines: AsyncIterable<string>): Promise<string> {
-  for await (const line of lines) {
-    const url = text(field(parseJson(line), "listening"));
-    if (typeof url === "string") {
-      return url;
-    }
-  }
-  throw new Error("cookout serve stopped before printing its address");
-}
-
-async function startServer(database: string): Promise<Server> {
-  const server = spawn(
-    "env",
-    withEnv({ COOKOUT_ADMIN_TOKEN: ADMIN_TOKEN, COOKOUT_PRESENCE_GRACE_SECONDS: "1" }, [
-      process.execPath,
-      "dist/main.js",
-      "serve",
-      "--port",
-      "0",
-      "--host",
-      "127.0.0.1",
-      "--db",
-      database,
-    ]),
-    { stdio: ["ignore", "pipe", "ignore"] },
-  );
-  async function stop(): Promise<void> {
-    if (server.exitCode === null) {
-      server.kill("SIGINT");
-      await once(server, "exit");
-    }
-  }
-  try {
-    const url = await listeningUrl(createInterface({ input: server.stdout }));
-    return { stop, url };
-  } catch (error) {
-    await stop();
-    throw error;
-  }
 }
 
 function tokenOf(identities: readonly unknown[], name: string): string {
@@ -99,10 +46,10 @@ function tokenOf(identities: readonly unknown[], name: string): string {
   return token;
 }
 
-function seed(url: string): Board {
+function seed(server: DevCookout): Board {
   const run = spawnSync(
     "env",
-    withEnv({ COOKOUT_ALLOW_HUMAN: "1", COOKOUT_TOKEN: ADMIN_TOKEN, COOKOUT_URL: url }, [
+    withEnv({ COOKOUT_ALLOW_HUMAN: "1", COOKOUT_TOKEN: server.adminToken, COOKOUT_URL: server.url }, [
       process.execPath,
       "app/dev.ts",
       "seed",
@@ -116,16 +63,16 @@ function seed(url: string): Board {
   const identities = list(field(seeded, "identities")) ?? [];
   const closed = CLOSED_IN_DEPLOYS.map((name) => field(field(seeded, "messages"), name));
   const tokens = { dropped: tokenOf(identities, DROPPED_AGENT), token: tokenOf(identities, LOGGED_IN_AS) };
-  return { closed: closed.filter((id) => typeof id === "number"), ...tokens, url };
+  return { closed: closed.filter((id) => typeof id === "number"), ...tokens, server };
 }
 
-function closeThreads({ closed, token, url }: Board): void {
+function closeThreads({ closed, server, token }: Board): void {
   for (const id of closed) {
     const run = spawnSync(
       "env",
-      withEnv({ COOKOUT_ALLOW_HUMAN: "1", COOKOUT_TOKEN: token, COOKOUT_URL: url }, [
+      withEnv({ COOKOUT_ALLOW_HUMAN: "1", COOKOUT_TOKEN: token, COOKOUT_URL: server.url }, [
         process.execPath,
-        "dist/main.js",
+        "app/main.ts",
         "thread",
         "close",
         String(id),
@@ -138,7 +85,8 @@ function closeThreads({ closed, token, url }: Board): void {
   }
 }
 
-async function loggedIn(browser: Browser, { token, url }: Board, theme: Theme): Promise<BrowserContext> {
+async function loggedIn(browser: Browser, { server, token }: Board, theme: Theme): Promise<BrowserContext> {
+  const url = server.webUrl;
   const context = await browser.newContext({
     baseURL: url,
     storageState: {
@@ -185,7 +133,6 @@ async function render(page: Page, shot: Shot): Promise<void> {
       await route.abort();
     });
   }
-  await withInboxEntries({ page, screen: shot.screen });
   await page.goto(`/${shot.screen.hash}`);
   await interact(page, shot);
   await page.getByText(shot.screen.text).first().waitFor({ timeout: RENDER_MS });
@@ -219,18 +166,31 @@ function loginOf(shot: Shot): Login {
   return "member";
 }
 
-type NewPage = (login: Login) => Promise<Page>;
+type NewPage = (shot: Shot) => Promise<Page>;
 
 function shooter(newPage: NewPage, out: string): (shot: Shot) => Promise<void> {
   return async (shot) => {
-    await screenshot(await newPage(loginOf(shot)), shot, out);
+    await screenshot(await newPage(shot), shot, out);
   };
 }
 
+function boardFor(board: Board, login: Login): Board {
+  if (login === "admin") {
+    return { ...board, token: board.server.adminToken };
+  }
+  return board;
+}
+
 async function loggedInBoth(browser: Browser, board: Board, theme: Theme): Promise<NewPage> {
-  const admin = await loggedIn(browser, { ...board, token: ADMIN_TOKEN }, theme);
+  const admin = await loggedIn(browser, boardFor(board, "admin"), theme);
   const member = await loggedIn(browser, board, theme);
-  return async (login) => {
+  return async (shot) => {
+    const login = loginOf(shot);
+    if (typeof shot.screen.daysLater === "number") {
+      const fresh = await loggedIn(browser, boardFor(board, login), theme);
+      const page = await fresh.newPage();
+      return page;
+    }
     const page = await { admin, member }[login].newPage();
     return page;
   };
@@ -246,32 +206,28 @@ function report(failures: readonly string[], out: string): void {
   }
 }
 
-async function prepared(url: string): Promise<Board> {
-  const board = seed(url);
+async function prepared(server: DevCookout): Promise<Board> {
+  const board = seed(server);
   closeThreads(board);
-  await dropWatch({ adminToken: ADMIN_TOKEN, agent: DROPPED_AGENT, agentToken: board.dropped, url });
+  const { adminToken, url } = server;
+  await dropWatch({ adminToken, agent: DROPPED_AGENT, agentToken: board.dropped, url });
   return board;
+}
+
+function clockMover(clockUrl: string): ThemePass["moveClock"] {
+  return async (days) => {
+    await moveClockForward({ clockUrl, days });
+  };
 }
 
 function freshBoards(browser: Browser, out: string): (theme: Theme) => Promise<ThemePass> {
   return async (theme) => {
-    const folder = mkdtempSync(path.join(tmpdir(), "cookout-screenshots-db-"));
-    function removeFolder(): void {
-      rmSync(folder, { force: true, recursive: true });
-    }
-    const server = await startServer(path.join(folder, "cookout.db")).catch((error: unknown) => {
-      removeFolder();
-      throw error;
-    });
-    async function stop(): Promise<void> {
-      await server.stop();
-      removeFolder();
-    }
+    const server = await startDevCookout({ COOKOUT_PRESENCE_GRACE_SECONDS: "1" });
     try {
-      const newPage = await loggedInBoth(browser, await prepared(server.url), theme);
-      return { shoot: shooter(newPage, out), stop };
+      const newPage = await loggedInBoth(browser, await prepared(server), theme);
+      return { moveClock: clockMover(server.clockUrl), shoot: shooter(newPage, out), stop: server.stop };
     } catch (error) {
-      await stop();
+      await server.stop();
       throw error;
     }
   };
@@ -291,7 +247,6 @@ async function main(): Promise<void> {
   const options = screenshotOptions(process.argv.slice(ARGUMENTS_FROM));
   const out = options.out ?? mkdtempSync(path.join(tmpdir(), "cookout-screenshots-"));
   mkdirSync(out, { recursive: true });
-  build();
   report(await shootFreshBoards(options.screens, out), out);
 }
 

@@ -1,12 +1,16 @@
+import type { ClockFixtures, ClockOptions } from "./clock.ts";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inPane, inThread } from "./regions.ts";
-import type { Page } from "@playwright/test";
 import type { Person } from "./people.ts";
 import type { TopLevelMessage } from "../../../sdk/index.ts";
+import { clockFixtures } from "./clock.ts";
 import { logIn } from "./login.ts";
 
+const test = base.extend<ClockFixtures & ClockOptions>(clockFixtures);
+
 const NUDGE = "Quiet for 3 days: close it, or follow up?";
+const QUIET_DAYS = 3;
 
 interface Started {
   readonly starter: Person;
@@ -23,20 +27,9 @@ async function threadStarted(channel: string): Promise<Started> {
   return { parent: message, starter };
 }
 
-async function nudgedOn(page: Page, { parent, starter }: Started): Promise<void> {
-  const { channels } = await starter.client.listChannels();
-  const channel = channels.find(({ name }) => name === parent.channel);
-  const nudge = { channel, id: 1, kind: "first", parent, raisedAt: parent.createdAt, text: NUDGE };
-  await page.route("**/v1/inbox", async (route) => {
-    const response = await route.fetch();
-    const body = await response.text();
-    await route.fulfill({ body: body.replace('"nudges":[]', `"nudges":[${JSON.stringify(nudge)}]`), response });
-  });
-}
-
-test("a nudge row's link opens its thread", async ({ page }) => {
+test("a nudge row's link opens its thread", async ({ daysPass, page }) => {
   const started = await threadStarted("browser-nudges");
-  await nudgedOn(page, started);
+  await daysPass(QUIET_DAYS);
   await logIn({ page, token: started.starter.token, url: "/#/inbox" });
 
   await inPane(page)

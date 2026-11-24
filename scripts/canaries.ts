@@ -81,6 +81,11 @@ const seamCanaries: readonly Canary[] = [
   { check: "dependency-cruiser", code: "radix-only-in-design-system", file: `${ROOT}/seams/radix.ts` },
   {
     check: "dependency-cruiser",
+    code: "serve-never-reaches-the-adjustable-clock",
+    file: `${ROOT}/seams/app/main.ts`,
+  },
+  {
+    check: "dependency-cruiser",
     code: "tests-only-at-tested-interfaces",
     file: `${ROOT}/seams/app/modules/http/tests/server/health.test.ts`,
   },

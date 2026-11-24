@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Schema } from "effect";
+import { Array as Arr, Effect, FileSystem, Schema } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import {
   answer,
@@ -9,9 +9,12 @@ import {
   startDev,
   startFakeRoutine,
 } from "../../../testing/server.ts";
+import { clockForwardPath, relayCutPath, relayRestorePath } from "../../../http/index.ts";
 import { expect, it } from "@effect/vitest";
-import { relayCutPath, relayRestorePath } from "../../../http/index.ts";
+import type { CookoutClient } from "../../../sdk/index.ts";
+import type { DevProcess } from "../../../testing/server.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
+import { moveClockForward } from "../../../testing/index.ts";
 
 interface Fetched {
   readonly status: number;
@@ -23,6 +26,9 @@ const NO_CONTENT = 204;
 const EXIT_SUCCESS = 0;
 const EXIT_FAILURE = 1;
 const THREE_REPLIES = 3;
+const NOT_FOUND = 404;
+const QUIET_DAYS = 3;
+const NONE = 0;
 const SeededToken = Schema.Struct({ token: Schema.String });
 const SeedOutput = Schema.Struct({ identities: Schema.NonEmptyArray(SeededToken), thread: Schema.Finite });
 const ThreadParent = Schema.Struct({ text: Schema.String });
@@ -212,5 +218,50 @@ it.effect("the dev program's fake routine answers a fire as a routine does, nami
 
     expect(routine.fireUrl).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/v1\/claude_code\/routines\/.+\/fire$/u);
     expect(answered).toMatchObject({ claude_code_session_url: routine.sessionUrl, type: "routine_fire" });
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
+function threadStartedOn(dev: DevProcess): Effect.Effect<CookoutClient> {
+  return Effect.gen(function* startThread() {
+    const admin = createCookoutClient({ env: {}, token: dev.adminToken, url: dev.url });
+    yield* answer(() => admin.createChannel({ name: "release" }));
+    const { token } = yield* answer(() => admin.createIdentity({ kind: "human", name: "ada" }));
+    const ada = createCookoutClient({ env: {}, token, url: dev.url });
+    yield* answer(() => ada.createMessage({ channel: "release", text: "Who owns the release notes?" }));
+    return ada;
+  });
+}
+
+it.effect(
+  "pnpm dev's clock moves forward when told, and the nudge job raises a nudge for a thread quiet that long",
+  () =>
+    Effect.gen(function* devClockMovesForward() {
+      const dev = yield* startDev;
+      const ada = yield* threadStartedOn(dev);
+      const before = yield* answer(() => ada.inbox());
+      yield* Effect.promise(() => moveClockForward({ clockUrl: dev.clockUrl, days: QUIET_DAYS }));
+      const after = yield* Effect.repeat(
+        answer(() => ada.inbox()),
+        { until: ({ nudges }) => nudges.length > NONE },
+      );
+
+      expect(before.nudges).toStrictEqual([]);
+      expect(Arr.map(after.nudges, ({ text }) => text)).toStrictEqual(["Quiet for 3 days: close it, or follow up?"]);
+    }).pipe(Effect.provide(commandLineServices)),
+);
+
+it.effect("pnpm dev's clock refuses a move backwards, and answers 404 off its one path", () =>
+  Effect.gen(function* devClockRefuses() {
+    const dev = yield* startDev;
+    const backwards = yield* Effect.flip(
+      Effect.tryPromise({
+        catch: String,
+        try: () => moveClockForward({ clockUrl: dev.clockUrl, days: -1 }),
+      }),
+    );
+    const elsewhere = yield* fetchedText(`${dev.clockUrl}${clockForwardPath}`);
+
+    expect(backwards).toContain("did not move forward");
+    expect(elsewhere.status).toBe(NOT_FOUND);
   }).pipe(Effect.provide(commandLineServices)),
 );

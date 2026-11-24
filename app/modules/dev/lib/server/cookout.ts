@@ -1,14 +1,16 @@
-import { Context, Effect, FileSystem, Layer, Path } from "effect";
+import { Clock, Context, Effect, FileSystem, Layer, Path } from "effect";
 import { Secrets, secretsLive } from "../../../secrets/server.ts";
 import { WebhookFake, webhookFake } from "../../../webhook-fake/server.ts";
 import { cuttableRelay, serverUrl } from "../../../http/server.ts";
 import type { Scope } from "effect";
+import { adjustableClock } from "./adjustable-clock.ts";
 import { cookoutServer } from "../../../cli/server.ts";
 import { sqliteStorage } from "../../../storage/server.ts";
 import { viteDevServer } from "./web.ts";
 
 interface DevCookout {
   readonly adminToken: string;
+  readonly clockUrl: string;
   readonly database: string;
   readonly relayUrl: string;
   readonly url: string;
@@ -29,7 +31,7 @@ function databaseInTempFolder(): Effect.Effect<string, never, Needs> {
   });
 }
 
-function devCookout(port: number): Effect.Effect<DevCookout, never, Needs> {
+function devCookoutOn(port: number): Effect.Effect<Omit<DevCookout, "clockUrl">, never, Needs> {
   return Effect.gen(function* startDevCookout() {
     const database = yield* databaseInTempFolder();
     const live = yield* Layer.build(Layer.mergeAll(sqliteStorage(database), secretsLive));
@@ -49,6 +51,14 @@ function devCookout(port: number): Effect.Effect<DevCookout, never, Needs> {
       webhookFakeUrl: Context.get(fake, WebhookFake).url,
     };
   }).pipe(Effect.orDie);
+}
+
+function devCookout(port: number): Effect.Effect<DevCookout, never, Needs> {
+  return Effect.gen(function* startOnAdjustableClock() {
+    const { clock, url } = yield* adjustableClock();
+    const dev = yield* Effect.provideService(devCookoutOn(port), Clock.Clock, clock);
+    return { ...dev, clockUrl: url };
+  });
 }
 
 export { devCookout };

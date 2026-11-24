@@ -1,4 +1,3 @@
-import { field, list, parseJson } from "./json.ts";
 import type { Page } from "@playwright/test";
 
 type Theme = "light" | "dark";
@@ -12,8 +11,7 @@ interface Screen {
   readonly narrow?: boolean;
   readonly admin?: boolean;
   readonly liveDown?: boolean;
-  readonly nudge?: boolean;
-  readonly offer?: boolean;
+  readonly daysLater?: number;
   readonly history?: "more" | "loading";
 }
 
@@ -33,6 +31,7 @@ interface Flags {
 }
 
 interface ThemePass {
+  readonly moveClock: (days: number) => Promise<void>;
   readonly shoot: (shot: Shot) => Promise<void>;
   readonly stop: () => Promise<void>;
 }
@@ -44,14 +43,13 @@ interface TakeScreenshots {
 
 const THEMES: readonly Theme[] = ["light", "dark"];
 const NUDGE_TEXT = "Quiet for 3 days: close it, or follow up?";
-const OFFER_TEXT = "@release-bot has had no activity for 30 days. Deactivate it?";
-const OFFER_RAISED_AT = "2026-01-31T09:00:00.000Z";
+const OFFER_TEXT = "has had no activity for 30 days.";
 
 const SCREENS: readonly Screen[] = [
   { hash: "#/inbox", name: "inbox", text: "Thanks, both of you." },
   { hash: "#/inbox", history: "more", name: "inbox-more", text: "Show earlier" },
-  { hash: "#/inbox", name: "inbox-nudge", nudge: true, text: NUDGE_TEXT },
-  { admin: true, hash: "#/inbox", name: "inbox-offer", offer: true, text: OFFER_TEXT },
+  { daysLater: 3, hash: "#/inbox", name: "inbox-nudge", text: NUDGE_TEXT },
+  { admin: true, daysLater: 30, hash: "#/inbox", name: "inbox-offer", text: OFFER_TEXT },
   { click: "Show earlier", hash: "#/inbox", history: "loading", name: "inbox-loading", text: "Loading…" },
   { hash: "#/inbox/general/1", name: "inbox-thread", text: "Thanks, both of you." },
   { hash: "#/inbox/general/1", name: "inbox-narrow", narrow: true, text: "earlier replies" },
@@ -81,6 +79,7 @@ const SCREENS: readonly Screen[] = [
 ];
 
 const NONE = 0;
+const NOW = 0;
 
 function screenNamed(name: string): Screen {
   const screen = SCREENS.find((candidate) => candidate.name === name);
@@ -140,22 +139,34 @@ async function failureOf(shoot: ThemePass["shoot"], shot: Shot): Promise<readonl
   }
 }
 
-async function failuresOf(shoot: ThemePass["shoot"], shots: readonly Shot[]): Promise<readonly string[]> {
+interface Taking {
+  readonly moved: number;
+  readonly pass: ThemePass;
+}
+
+function daysLaterOf(shot: Shot): number {
+  return shot.screen.daysLater ?? NOW;
+}
+
+async function failuresOf({ moved, pass }: Taking, shots: readonly Shot[]): Promise<readonly string[]> {
   const [shot, ...rest] = shots;
   if (typeof shot !== "object") {
     return [];
   }
-  const failure = await failureOf(shoot, shot);
-  return [...failure, ...(await failuresOf(shoot, rest))];
+  const daysLater = daysLaterOf(shot);
+  if (daysLater > moved) {
+    await pass.moveClock(daysLater - moved);
+  }
+  const failure = await failureOf(pass.shoot, shot);
+  return [...failure, ...(await failuresOf({ moved: Math.max(moved, daysLater), pass }, rest))];
 }
 
 async function passFailures({ freshBoard, screens }: TakeScreenshots, theme: Theme): Promise<readonly string[]> {
   const pass = await freshBoard(theme);
   try {
-    const failures = await failuresOf(
-      pass.shoot,
-      screens.map((screen) => ({ screen, theme })),
-    );
+    const shots: readonly Shot[] = screens.map((screen) => ({ screen, theme }));
+    const soonestFirst = shots.toSorted((left, right) => daysLaterOf(left) - daysLaterOf(right));
+    const failures = await failuresOf({ moved: NOW, pass }, soonestFirst);
     return failures;
   } finally {
     await pass.stop();
@@ -197,57 +208,5 @@ async function withOlderHistory({ history, page }: OlderHistory): Promise<void> 
   });
 }
 
-function nudgeOn(item: unknown): unknown {
-  const parent = field(item, "parent");
-  return {
-    channel: field(item, "channel"),
-    id: 1,
-    kind: "first",
-    parent,
-    raisedAt: field(parent, "createdAt"),
-    text: NUDGE_TEXT,
-  };
-}
-
-function withNudgeIn(body: string): string {
-  const inbox = parseJson(body);
-  const [item] = list(field(inbox, "items")) ?? [];
-  const nudges = JSON.stringify([nudgeOn(item)]);
-  return body.replace('"nudges":[]', `"nudges":${nudges}`);
-}
-
-function withOfferIn(body: string): string {
-  const raisedAt = OFFER_RAISED_AT;
-  const identity = { admin: false, createdAt: raisedAt, kind: "agent", name: "release-bot", owner: "ada" };
-  const offer = { cleared: false, id: 1, identity, quietDays: 30, raisedAt, text: OFFER_TEXT };
-  return body.replace('"deactivationOffers":[]', `"deactivationOffers":${JSON.stringify([offer])}`);
-}
-
-function withEntriesIn(screen: Screen, body: string): string {
-  let changed = body;
-  if (screen.nudge === true) {
-    changed = withNudgeIn(changed);
-  }
-  if (screen.offer === true) {
-    changed = withOfferIn(changed);
-  }
-  return changed;
-}
-
-interface InboxEntries {
-  readonly page: Page;
-  readonly screen: Screen;
-}
-
-async function withInboxEntries({ page, screen }: InboxEntries): Promise<void> {
-  if (screen.nudge !== true && screen.offer !== true) {
-    return;
-  }
-  await page.route("**/v1/inbox", async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({ body: withEntriesIn(screen, await response.text()), response });
-  });
-}
-
 export type { Screen, Shot, Theme, ThemePass };
-export { screenshotOptions, takeScreenshots, withInboxEntries, withOlderHistory };
+export { screenshotOptions, takeScreenshots, withOlderHistory };

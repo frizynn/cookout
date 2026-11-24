@@ -8,6 +8,7 @@ const READ = 0;
 const THROUGH_STOP = 1;
 const FIRST = 0;
 const LAST = -1;
+const DAYS_LATER_TAIL = -6;
 
 interface FakeBoards {
   readonly freshBoard: (theme: Theme) => Promise<ThemePass>;
@@ -25,6 +26,10 @@ function fakeBoards(broken: string): FakeBoards {
     let unread = SEEDED_UNREAD;
     log.push(`seed ${theme}`);
     return {
+      moveClock: async (days): Promise<void> => {
+        await Promise.resolve();
+        log.push(`clock moved ${String(days)} days`);
+      },
       shoot: async (shot): Promise<void> => {
         await Promise.resolve();
         const name = `${shot.screen.name}-${shot.theme}`;
@@ -69,13 +74,32 @@ it("takes every screen in light on a fresh board, then every screen in dark on a
   expect(passOf(log, "light").filter((line) => line.startsWith("inbox"))).toStrictEqual([
     "inbox-<theme>: 1 unread",
     "inbox-more-<theme>: 1 unread",
-    "inbox-nudge-<theme>: 1 unread",
-    "inbox-offer-<theme>: 1 unread",
     "inbox-loading-<theme>: 1 unread",
     "inbox-thread-<theme>: 1 unread",
     "inbox-narrow-<theme>: 0 unread",
     "inbox-channel-<theme>: 0 unread",
+    "inbox-nudge-<theme>: 0 unread",
+    "inbox-offer-<theme>: 0 unread",
   ]);
+});
+
+it("on each theme's board it moves the clock on for the days-later screens, after every other screen", {
+  timeout: 2000,
+}, async () => {
+  expect.hasAssertions();
+
+  const { freshBoard, log } = fakeBoards("");
+  await takeScreenshots({ freshBoard, screens: SCREENS });
+
+  expect(passOf(log, "light").slice(DAYS_LATER_TAIL)).toStrictEqual([
+    "reconnecting-<theme>: 0 unread",
+    "clock moved 3 days",
+    "inbox-nudge-<theme>: 0 unread",
+    "clock moved 27 days",
+    "inbox-offer-<theme>: 0 unread",
+    "stop <theme>",
+  ]);
+  expect(passOf(log, "dark")).toStrictEqual(passOf(log, "light"));
 });
 
 it("lists the standard screens in the order they are taken", { timeout: 2000 }, () => {
@@ -147,4 +171,21 @@ it("an unknown screen or flag, or a flag with no value, is refused", { timeout: 
     "Unknown flag --theme: use --only <screen> or --out <dir>.",
   );
   expect(() => screenshotOptions(["--out"])).toThrow("--out needs a value.");
+});
+
+it("with no days-later screen picked, the clock never moves", { timeout: 2000 }, async () => {
+  expect.hasAssertions();
+
+  const { freshBoard, log } = fakeBoards("");
+  const { screens } = screenshotOptions(["--only", "thread"]);
+  await takeScreenshots({ freshBoard, screens });
+
+  expect(log).toStrictEqual([
+    "seed light",
+    "thread-light: 1 unread",
+    "stop light",
+    "seed dark",
+    "thread-dark: 1 unread",
+    "stop dark",
+  ]);
 });
