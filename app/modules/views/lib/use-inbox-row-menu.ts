@@ -24,6 +24,16 @@ function openHrefOf({ channel, message, parent }: InboxItem): string {
   return hrefOf({ channel: channel.name, name: "channel" });
 }
 
+function oldestOf(row: InboxRow): InboxItem {
+  let oldest = row.latest;
+  for (const item of row.items) {
+    if (item.message.id < oldest.message.id) {
+      oldest = item;
+    }
+  }
+  return oldest;
+}
+
 interface ReadChoiceOf extends InboxRowMenuOf {
   readonly actions: InboxRowActions;
 }
@@ -39,13 +49,12 @@ function readChoice({ actions, row, unread }: ReadChoiceOf): MenuChoice {
       },
     };
   }
-  const [first] = row.items;
   return {
     href: null,
     icon: "mark-unread",
     label: TEXT.markUnread,
     onSelect: () => {
-      actions.markUnread((first ?? row.latest).message.id);
+      actions.markUnread(oldestOf(row).message.id);
     },
   } as const;
 }
