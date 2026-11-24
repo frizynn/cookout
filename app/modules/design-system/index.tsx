@@ -82,7 +82,7 @@
  * while open, Escape or Cancel calls `onCancel`, and focus goes back to what
  * opened it when it closes. While `pending` both buttons are disabled and the
  * confirm button says so; an `error` shows inside it. Its owner decides
- * when it is `open`, so it never closes on its own.
+ * when it is `open`, so it never closes. `FormDialog` is a Radix modal form; `RunList`, `FieldNote`; `MoreActions`.
  * `PaneHeader`'s title is mono, as a channel's name, unless `sans`. A
  * `Toolbar` under it holds a `FilterField` (a labelled box whose text its
  * owner holds) and `Chip`s, buttons pressed or not; a named `ListArea` scrolls
@@ -169,8 +169,8 @@
  * text its owner holds. `PromptForm` is a named card in place of a message
  * box that asks for a command's data, titled, with a Cancel and a submit
  * button, its first field focused, and Escape anywhere in it calls
- * `onEscape`; in it `InputField` (text, a number or an
- * integer), `PickField` (one of a list, or none) and `CheckField` (a checkbox)
+ * `onEscape`; in it `InputField` (text, a number, an
+ * integer, a date or a time), `PickField` (one of a list, or none) and `CheckField` (a checkbox)
  * are labelled fields whose value their owner holds, each marked when
  * required, with its help text and any error under it, both read out as its
  * description.
@@ -251,6 +251,10 @@ export {
 export {
   ActionGroup,
   ConfirmDialog,
+  FormDialog,
+  FieldNote,
+  RunList,
+  MoreActions,
   ButtonRow,
   TokenText,
   QuietButton,
