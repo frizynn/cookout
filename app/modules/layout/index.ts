@@ -14,7 +14,11 @@
  * directory of identities: the text a name must contain, and `all`, `human`
  * or `agent`; `filterIdentities` and `showKind` set them. `showDeactivated`
  * is whether it lists Deactivated identities too, which `toggleDeactivated`
- * flips.
+ * flips. `threadWidth` is the width, in pixels, of the open thread panel on a
+ * wide screen, whether the thread was opened from a channel or the Inbox;
+ * `resizeThread` sets it, kept within `threadWidths`' `min` and `max`, and
+ * keeps it in the browser's storage, so a reload keeps it and the next thread
+ * opens at it.
  */
 import type { IdentityKind } from "../sdk/index.ts";
 
@@ -29,6 +33,7 @@ interface LayoutState {
   readonly identityFilter: string;
   readonly identityKind: KindChoice;
   readonly showDeactivated: boolean;
+  readonly threadWidth: number;
 }
 
 interface LayoutOptions {
@@ -39,6 +44,8 @@ interface LayoutOptions {
 const THEME_KEY = "cookout-theme";
 const COLLAPSED_KEY = "cookout-sidebar-collapsed";
 const COLLAPSED = "collapsed";
+const THREAD_WIDTH_KEY = "cookout-thread-width";
+const threadWidths = { max: 768, min: 320, start: 448, step: 32 } as const;
 const THEME_ATTRIBUTE = "data-theme";
 const SYSTEM: ThemeChoice = "system";
 
@@ -72,6 +79,32 @@ function keepCollapsed(storage: LayoutOptions["storage"], collapsed: boolean): v
   storage.removeItem(COLLAPSED_KEY);
 }
 
+function withinBounds(width: number): number {
+  return Math.min(threadWidths.max, Math.max(threadWidths.min, Math.round(width)));
+}
+
+function storedThreadWidth(storage: LayoutOptions["storage"]): number {
+  const stored = Number(storage.getItem(THREAD_WIDTH_KEY) ?? Number.NaN);
+  if (Number.isFinite(stored)) {
+    return withinBounds(stored);
+  }
+  return threadWidths.start;
+}
+
+function threadResizer(
+  storage: LayoutOptions["storage"],
+  publish: (next: Partial<LayoutState>) => void,
+  snapshot: () => LayoutState,
+): Layout["resizeThread"] {
+  return (width) => {
+    const threadWidth = withinBounds(width);
+    if (threadWidth !== snapshot().threadWidth) {
+      storage.setItem(THREAD_WIDTH_KEY, String(threadWidth));
+      publish({ threadWidth });
+    }
+  };
+}
+
 type DirectoryControls = Pick<Layout, "filterIdentities" | "showKind" | "toggleDeactivated">;
 
 function directoryControls(
@@ -94,6 +127,9 @@ function directoryControls(
 /** The themes a person can choose: `system` follows the operating system's setting. */
 export { themeChoices };
 
+/** The thread panel's widths in pixels: its narrowest and widest, the one it starts at, and one arrow key's step. */
+export { threadWidths };
+
 /** One of the theme choices. */
 export type ThemeChoice = (typeof themeChoices)[number];
 
@@ -114,6 +150,8 @@ export interface Layout {
   readonly closeSidebar: () => void;
   /** Collapses the sidebar to a narrow rail on a wide screen, or expands it, and keeps the choice in the browser's storage. */
   readonly toggleCollapsed: () => void;
+  /** Sets the thread panel's width, kept within `threadWidths`, and keeps it in the browser's storage. */
+  readonly resizeThread: (width: number) => void;
   /** Sets the text the directory filters identity names by. */
   readonly filterIdentities: (text: string) => void;
   /** Shows only identities of this kind, or every identity. */
@@ -136,6 +174,7 @@ export function createLayout(options: LayoutOptions): Layout {
     showDeactivated: false,
     sidebar: false,
     theme: storedTheme(options.storage),
+    threadWidth: storedThreadWidth(options.storage),
   };
   keepTheme(options, current.theme);
 
@@ -157,6 +196,7 @@ export function createLayout(options: LayoutOptions): Layout {
       }
     },
     ...directoryControls(publish, () => current),
+    resizeThread: threadResizer(options.storage, publish, () => current),
     snapshot: () => current,
     subscribe: (listener) => {
       listeners.add(listener);
