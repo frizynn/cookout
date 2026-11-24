@@ -1,0 +1,75 @@
+import type { InboxRow, Unread, UnreadState } from "../../unread/index.ts";
+import { useMemo, useSyncExternalStore } from "react";
+import type { InboxItem } from "../../sdk/index.ts";
+import type { InboxSelection } from "../../paths/index.ts";
+import { rowsOf } from "../../unread/index.ts";
+
+interface InboxRows {
+  readonly rows: readonly InboxRow[];
+  readonly held: InboxRow | null;
+}
+
+interface RowsOf {
+  readonly unread: Unread;
+  readonly state: UnreadState;
+  readonly me: string;
+  readonly selected: InboxSelection | null;
+}
+
+function itemsOf(unread: UnreadState): readonly InboxItem[] {
+  if (unread.status === "loaded") {
+    return unread.inbox;
+  }
+  return [];
+}
+
+interface Choice {
+  readonly row: InboxRow;
+  readonly selected: InboxSelection | null;
+}
+
+function isSelected({ row, selected }: Choice): boolean {
+  return selected !== null && row.thread === selected.thread && row.latest.channel.name === selected.channel;
+}
+
+interface Holding {
+  readonly rows: readonly InboxRow[];
+  readonly kept: readonly InboxItem[];
+  readonly me: string;
+  readonly selected: InboxSelection | null;
+}
+
+function heldOf({ kept, me, rows, selected }: Holding): InboxRow | null {
+  if (rows.some((row) => isSelected({ row, selected }))) {
+    return null;
+  }
+  return rowsOf({ items: kept, me }).find((row) => isSelected({ row, selected })) ?? null;
+}
+
+function shownWith(rows: readonly InboxRow[], held: InboxRow | null): InboxRows {
+  if (held === null) {
+    return { held, rows };
+  }
+  return {
+    held,
+    rows: [...rows, held].toSorted((first, second) => second.latest.message.id - first.latest.message.id),
+  };
+}
+
+function useInboxRows({ me, selected, state, unread }: RowsOf): InboxRows {
+  const selection = unread.selection(selected);
+  const { items: kept } = useSyncExternalStore(selection.subscribe, selection.snapshot);
+  return useMemo(() => {
+    const rows = rowsOf({ items: itemsOf(state), me });
+    return shownWith(rows, heldOf({ kept, me, rows, selected }));
+  }, [kept, me, selected, state]);
+}
+
+function heldKey(rows: InboxRows): string | null {
+  if (rows.held === null) {
+    return null;
+  }
+  return rows.held.key;
+}
+
+export { type InboxRows, heldKey, isSelected, useInboxRows };

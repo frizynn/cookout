@@ -1,0 +1,224 @@
+import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
+import { expect, it } from "vitest";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { inConversation, inPane, inThread } from "./regions.ts";
+import { rowsOf, subscribedReader } from "./inbox-reader.ts";
+import { openWithClockStopped } from "./clock.ts";
+import { watched } from "./watched.ts";
+
+const NONE = 0;
+const ONE = 1;
+
+interface NewsThread {
+  readonly channel: string;
+  readonly poster: CookoutClient;
+  readonly reader: CookoutClient;
+  readonly parent: Message;
+  readonly address: string;
+}
+
+async function replied(thread: Omit<NewsThread, "address">, text: string): Promise<Message> {
+  const { message } = await thread.poster.createMessage({
+    channel: thread.channel,
+    replyTo: thread.parent.id,
+    text,
+  });
+  return message;
+}
+
+async function threadWithNews(channel: string, start = "Deploy at noon?"): Promise<NewsThread> {
+  const { poster, reader } = await subscribedReader(channel);
+  const { message: parent } = await poster.createMessage({ channel, text: start });
+  await reader.follow(parent.id);
+  const thread = { channel, parent, poster, reader };
+  await replied(thread, "Earlier one");
+  const read = await replied(thread, "Earlier two");
+  await reader.ack(read.id);
+  await replied(thread, "Unread one");
+  await replied(thread, "Unread two");
+  return { ...thread, address: `#/inbox/${channel}/${String(parent.id)}` };
+}
+
+function shownTexts(): readonly string[] {
+  return ["Deploy at noon?", "Earlier one", "Earlier two", "Unread one", "Unread two"].filter(
+    (text) => within(inConversation().element()).queryByText(text) !== null,
+  );
+}
+
+async function conversationShown(): Promise<readonly string[]> {
+  await inConversation().findByText("Unread two");
+  return shownTexts();
+}
+
+async function threadReadBy(reader: CookoutClient, parent: Message): Promise<void> {
+  await waitFor(async () => {
+    const inbox = await reader.inbox();
+
+    expect(inbox.items.filter((item) => item.message.kind === "reply" && item.parent.id === parent.id)).toHaveLength(
+      NONE,
+    );
+  });
+}
+
+function currentRows(label: string): readonly string[] {
+  const hrefs: string[] = [];
+  for (const link of within(screen.getByRole("list", { name: label })).getAllByRole("link", { current: "page" })) {
+    hrefs.push(link.getAttribute("href") ?? "");
+  }
+  return hrefs;
+}
+
+function rowsAt(label: string, address: string): readonly string[] {
+  return rowsOf(label).filter((row) => row.startsWith(address));
+}
+
+function isUnreadRow(row: string): boolean {
+  return row.includes("2 new");
+}
+
+async function threadRowClicked(): Promise<string> {
+  const activity = await screen.findByRole("list", { name: "Activity" });
+  const empty = await inConversation().findByText("Pick a conversation");
+  fireEvent.click(within(activity).getByRole("link", { name: /New reply in a thread you follow/u }));
+  return empty.textContent;
+}
+
+interface Watching {
+  readonly thread: NewsThread;
+  readonly close: () => Promise<void>;
+}
+
+async function watchedAt(channel: string, hashOf: (thread: NewsThread) => string): Promise<Watching> {
+  const thread = await threadWithNews(channel);
+  const { live, stream } = watched(thread.reader);
+  const unmount = openWithClockStopped({ client: thread.reader, hash: hashOf(thread), live });
+  const events: EventStream = await stream;
+  return {
+    close: async () => {
+      unmount();
+      await events.close();
+    },
+    thread,
+  };
+}
+
+async function secondThread(thread: NewsThread): Promise<void> {
+  const { message: other } = await thread.poster.createMessage({ channel: thread.channel, text: "Lunch?" });
+  await thread.reader.follow(other.id);
+  await replied({ ...thread, parent: other }, "Pizza");
+}
+
+async function selectedAndRead(thread: NewsThread): Promise<readonly string[]> {
+  fireEvent.click(await inPane().findByRole("link", { name: /Unread two/u }));
+  await conversationShown();
+  await threadReadBy(thread.reader, thread.parent);
+  await waitFor(() => {
+    expect(rowsAt("Activity", thread.address).filter((row) => isUnreadRow(row))).toHaveLength(NONE);
+  });
+  return rowsAt("Activity", thread.address);
+}
+
+async function otherSelected(thread: NewsThread): Promise<void> {
+  fireEvent.click(inPane().getByRole("link", { name: /Pizza/u }));
+  await inConversation().findByText("Lunch?");
+  await waitFor(() => {
+    expect(rowsAt("Activity", thread.address)).toHaveLength(NONE);
+  });
+}
+
+it("clicking a thread row shows its first message, how many replies were read, and the unread ones in full", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const thread = await threadWithNews("web-conversation");
+  const unmount = openWithClockStopped({ client: thread.reader, hash: "#/inbox" });
+  const empty = await threadRowClicked();
+  const shown = await conversationShown();
+  fireEvent.click(inConversation().getByRole("button", { name: "2 earlier replies" }));
+  await inConversation().findByText("Earlier one");
+
+  expect([empty, globalThis.location.hash, shown, shownTexts()]).toStrictEqual([
+    "Pick a conversation",
+    thread.address,
+    ["Deploy at noon?", "Unread one", "Unread two"],
+    ["Deploy at noon?", "Earlier one", "Earlier two", "Unread one", "Unread two"],
+  ]);
+
+  unmount();
+});
+
+it("opening a thread row's address shows its conversation, with the row marked as current", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const thread = await threadWithNews("web-conversation-address");
+  const unmount = openWithClockStopped({ client: thread.reader, hash: thread.address });
+  const shown = await conversationShown();
+
+  expect([shown, inConversation().getByRole("button", { name: "2 earlier replies" }).textContent]).toStrictEqual([
+    ["Deploy at noon?", "Unread one", "Unread two"],
+    "2 earlier replies",
+  ]);
+  expect(currentRows("Activity")).toStrictEqual([thread.address]);
+
+  unmount();
+});
+
+it("a reply posted by someone else appears live in the open conversation", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { close, thread } = await watchedAt("web-conversation-live", (each) => each.address);
+  await conversationShown();
+  await replied(thread, "Arrived live");
+  const arrived = await inConversation().findByText("Arrived live");
+
+  expect(arrived.textContent).toBe("Arrived live");
+
+  await close();
+});
+
+it("the selected row stays in its section, muted, once read, and moves to Earlier when another row is selected", {
+  timeout: 8000,
+}, async () => {
+  expect.hasAssertions();
+
+  const { close, thread } = await watchedAt("web-conversation-held", () => "#/inbox");
+  await secondThread(thread);
+  const held = await selectedAndRead(thread);
+  await otherSelected(thread);
+
+  expect([held.length, held.filter((row) => isUnreadRow(row)), rowsAt("Earlier", thread.address).length]).toStrictEqual(
+    [ONE, [], ONE],
+  );
+
+  await close();
+});
+
+it("open thread goes to the thread's channel with its panel open", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const thread = await threadWithNews("web-conversation-open");
+  const unmount = openWithClockStopped({ client: thread.reader, hash: thread.address });
+  await conversationShown();
+  fireEvent.click(inConversation().getByRole("link", { name: "Open thread" }));
+  await inThread().findByText("Unread two");
+
+  expect(globalThis.location.hash).toBe(`#/channels/${thread.channel}/threads/${String(thread.parent.id)}`);
+
+  unmount();
+});
+
+it("an unknown thread's address says there is nothing there, beside the list", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const thread = await threadWithNews("web-conversation-unknown");
+  const unmount = openWithClockStopped({ client: thread.reader, hash: `#/inbox/${thread.channel}/999999` });
+  const nothing = await inConversation().findByText("Nothing here");
+  const list = await inPane().findByRole("list", { name: "Activity" });
+
+  expect([nothing.textContent, list.tagName]).toStrictEqual(["Nothing here", "UL"]);
+
+  unmount();
+});

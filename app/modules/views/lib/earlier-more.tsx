@@ -4,22 +4,22 @@ import type { ReactNode } from "react";
 
 const NONE = 0;
 
-const TEXT = { end: "That's everything.", loading: "Loading…" } as const;
+const TEXT = { end: "That's everything.", loading: "Loading…", more: "Show earlier" } as const;
 
 interface EarlierMoreProps {
   readonly earlier: Earlier;
   readonly state: Extract<EarlierState, { readonly status: "loaded" }>;
 }
 
-function labelOf(loading: boolean, pageSize: number): string {
+function labelOf(loading: boolean): string {
   if (loading) {
     return TEXT.loading;
   }
-  return `Show ${String(pageSize)} earlier`;
+  return TEXT.more;
 }
 
 export function EarlierMore(props: EarlierMoreProps): ReactNode {
-  const { hasMore, items, more, pageSize } = props.state;
+  const { hasMore, items, more } = props.state;
   const loading = more.status === "loading";
   const handleLoadMore = props.earlier.loadMore;
   if (!hasMore) {
@@ -28,7 +28,7 @@ export function EarlierMore(props: EarlierMoreProps): ReactNode {
   return (
     <>
       <MoreButton loading={loading} onClick={handleLoadMore}>
-        {labelOf(loading, pageSize)}
+        {labelOf(loading)}
       </MoreButton>
       {more.status === "failed" && <Alert>{`Couldn't load more (${more.code}): ${more.message}`}</Alert>}
     </>

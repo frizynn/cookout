@@ -16,7 +16,7 @@ export function InboxLink(props: InboxLinkProps): ReactNode {
   return (
     <NavLink
       active={props.active}
-      href={hrefOf({ name: "inbox" })}
+      href={hrefOf({ name: "inbox", selected: null })}
       icon="inbox"
       label={TEXT.inbox}
       marked={hasUnread(props.counts)}

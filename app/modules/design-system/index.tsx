@@ -33,7 +33,14 @@
  * scrolled up, and anything under it, such as a message box in a `BoxFrame`
  * with its keyboard hint; `SidePanel` is a
  * named column on its right with a close link (the whole width on a narrow
- * screen). A name's avatar is its coloured initials, one of eight hues hashed
+ * screen). A split view, such as the inbox's, is a `ListPane` (the main column,
+ * hidden on a narrow screen while `hiddenWhenNarrow`) beside a
+ * `ConversationPanel`, a named column with a `BackLink` arrow (shown only on a
+ * narrow screen, where the panel takes the whole width), its detail and any
+ * open link, or beside a `ConversationEmpty`, a named column holding only a
+ * muted line (hidden on a narrow screen while `hiddenWhenNarrow`); a
+ * `DividerButton` is a divider line led by a quiet button, such as one that
+ * shows the replies folded under it. A name's avatar is its coloured initials, one of eight hues hashed
  * from the name, a circle for a human and a rounded square for an agent, with
  * its `PresenceDot` in the corner once its presence is known: filled in the
  * online colour while online, a hollow grey ring while offline, a ring in the
@@ -82,7 +89,8 @@
  * `context` line (a reply's thread), then what it holds: its `FeedText`, up to
  * two lines, and any `RowButton`, a small button raised above the row's link. A `for-you` row has an accent dot and why,
  * a bold name and bright text; an `activity` row has a muted dot and why, a
- * bold name and bright text; a `read` one is muted. `Mention` is
+ * bold name and bright text; a `read` one is muted. A `current` row, the one
+ * whose conversation is shown, is highlighted and its link marked as the current page. `Mention` is
  * an `@` mention in a message's text, in the mention colour when it is the
  * reader's own (`mine`). `FeedNote` is a muted line in a feed: why a part is
  * `empty`, or that it has reached the `end`; `MoreButton` is a quiet
@@ -195,6 +203,10 @@ export { NavHeading } from "./lib/nav-heading.tsx";
 export { NavLink } from "./lib/nav-link.tsx";
 export { NavList } from "./lib/nav-list.tsx";
 export { Pane } from "./lib/pane.tsx";
+export { ListPane } from "./lib/list-pane.tsx";
+export { ConversationEmpty } from "./lib/conversation-empty.tsx";
+export { ConversationPanel } from "./lib/conversation-panel.tsx";
+export { DividerButton } from "./lib/divider-button.tsx";
 export { PaneHeader } from "./lib/pane-header.tsx";
 export { Page } from "./lib/page.tsx";
 export { PageSection } from "./lib/page-section.tsx";

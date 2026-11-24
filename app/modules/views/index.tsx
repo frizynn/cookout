@@ -59,7 +59,7 @@
  * whoever is logged in (the `unread` store), under a notice naming the open channel
  * that was just deleted elsewhere, if any (the board's `notice`, until dismissed): For you and Activity, each
  * counting its rows, newest first and live, or "You're all caught up."; then Earlier, the read rows
- * from the inbox history, newest first, with "Show 50 earlier" while older ones
+ * from the inbox history, newest first, with "Show earlier" while older ones
  * remain and "That's everything." at the end, or "Nothing read yet.". A row
  * is one thread or channel (the `unread` store's `rowsOf`), a link to it,
  * leading with its strongest reason, then its latest message's author,

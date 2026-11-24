@@ -19,6 +19,10 @@ export function inThread(page: Page): Locator {
   return page.getByRole("complementary", { name: "Thread" });
 }
 
+export function inConversation(page: Page): Locator {
+  return page.getByRole("complementary", { name: "Conversation" });
+}
+
 export function inProfile(page: Page): Locator {
   return page.getByRole("complementary", { name: "Profile" });
 }
