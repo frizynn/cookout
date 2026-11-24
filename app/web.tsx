@@ -27,7 +27,7 @@ if (root !== null) {
   const client = createCookoutClient({ env: {}, url });
   const live = createLive(eventSourceAdapter(url));
   const boardStore = createBoardStore({ client, live, url });
-  const unread = createUnread({ client, live });
+  const unread = createUnread({ boardStore });
   const layout = createLayout({ root: globalThis.document.documentElement, storage: globalThis.localStorage });
   createRoot(root).render(
     <CookoutApp

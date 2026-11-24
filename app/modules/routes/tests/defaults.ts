@@ -2,7 +2,6 @@ import type { Reading, Unread } from "../../unread/index.ts";
 import { createReading, createUnread } from "../../unread/index.ts";
 import type { BoardStore } from "../../board/index.ts";
 import type { Live } from "../../live/index.ts";
-import { adminClient } from "./identities.ts";
 import { createBoardStore } from "../../board/index.ts";
 import { createPageFocus } from "../../page-focus/index.ts";
 import { handClock } from "./hand-clock.ts";
@@ -20,7 +19,7 @@ interface BoardStoreOpening {
   readonly pageSize?: number | undefined;
 }
 
-export function boardStoreFor(opening: BoardStoreOpening): BoardStore {
+function boardStoreFor(opening: BoardStoreOpening): BoardStore {
   return (
     opening.boardStore ??
     createBoardStore({
@@ -32,12 +31,17 @@ export function boardStoreFor(opening: BoardStoreOpening): BoardStore {
   );
 }
 
-export function readingFor(reading: Reading | undefined): Reading {
+function readingFor(reading: Reading | undefined): Reading {
   return reading ?? createReading({ clock: handClock().clock, page: createPageFocus(handFocus().adapter) });
 }
 
-export function unreadFor(unread: Unread | undefined): Unread {
-  return unread ?? createUnread({ client: adminClient() });
+interface UnreadOpening {
+  readonly unread: Unread | undefined;
+  readonly boardStore: BoardStore;
+}
+
+function unreadFor({ boardStore, unread }: UnreadOpening): Unread {
+  return unread ?? createUnread({ boardStore });
 }
 
 export { createKeymap } from "../../keymap/index.ts";
@@ -47,3 +51,4 @@ export type { Live } from "../../live/index.ts";
 export type { BoardStoreClient };
 export type { Unread } from "../../unread/index.ts";
 export type { Reading } from "../../unread/index.ts";
+export { boardStoreFor, readingFor, unreadFor };
