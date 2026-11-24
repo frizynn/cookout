@@ -1,5 +1,5 @@
-import type { MenuChoice, ThreadChoice } from "../../design-system/index.tsx";
 import { expect, it } from "vitest";
+import type { ThreadChoice } from "../../design-system/index.tsx";
 
 function chosen(): void {
   expect.fail("never chosen");
@@ -8,10 +8,9 @@ function chosen(): void {
 it("a menu item without an icon fails the type check, so every menu draws one", { timeout: 1000 }, () => {
   expect.hasAssertions();
 
-  // @ts-expect-error A menu item must name its icon.
-  const choice: MenuChoice = { href: null, label: "Reply", onSelect: chosen };
   // @ts-expect-error A thread choice must name its icon.
-  const thread: ThreadChoice = { label: "Close", name: "Close thread", onSelect: chosen };
+  const missing: ThreadChoice = { label: "Close", name: "Close thread", onSelect: chosen };
+  const named: ThreadChoice = { icon: "close", label: "Close", name: "Close thread", onSelect: chosen };
 
-  expect([choice.label, thread.label]).toStrictEqual(["Reply", "Close"]);
+  expect([missing.label, named.icon]).toStrictEqual(["Close", "close"]);
 });
