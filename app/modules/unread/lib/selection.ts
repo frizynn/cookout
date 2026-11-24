@@ -1,16 +1,18 @@
-import type { ChannelName, InboxItem, MessageId } from "../../sdk/index.ts";
+import type { ChannelName, InboxItem, Message, MessageId } from "../../sdk/index.ts";
 
 const NONE = 0;
 
 interface SelectionState {
   readonly items: readonly InboxItem[];
   readonly expanded: boolean;
+  readonly replyPost: Message | null;
 }
 
 interface Selection {
   readonly subscribe: (listener: () => void) => () => void;
   readonly snapshot: () => SelectionState;
   readonly expand: () => void;
+  readonly chooseReplyPost: (post: Message) => void;
 }
 
 interface Scope {
@@ -25,7 +27,7 @@ interface ItemsStore {
     | { readonly status: string };
 }
 
-const EMPTY: SelectionState = { expanded: false, items: [] };
+const EMPTY: SelectionState = { expanded: false, items: [], replyPost: null };
 
 function inThread(item: InboxItem, thread: MessageId | null): boolean {
   if (thread === null) {
@@ -75,6 +77,9 @@ function createSelection(store: ItemsStore, scope: Scope | null): Selection {
   }
 
   return {
+    chooseReplyPost: (post) => {
+      publish({ ...state, replyPost: post });
+    },
     expand: () => {
       publish({ ...state, expanded: true });
     },

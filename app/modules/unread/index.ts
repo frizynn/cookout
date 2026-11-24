@@ -106,7 +106,8 @@ export interface Unread {
   /**
    * The Inbox's selected row (none for `null`): a thread's unread items, or a channel's unread top-level ones (`thread`
    * is `null`), each kept from when it is first seen while anyone reads it, read or not, so the row can stay in place
-   * and its conversation keeps every post, and whether a thread's earlier replies are shown (`expand`). It starts afresh when it
+   * and its conversation keeps every post, whether a thread's earlier replies are shown (`expand`), and which post a
+   * channel conversation's box replies to (`chooseReplyPost`; `null` for its newest). It starts afresh when it
    * is selected again. An external store of its own.
    */
   readonly selection: WithNewLines<object>["selection"];

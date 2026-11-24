@@ -20,7 +20,7 @@ interface MenuOf {
   readonly closing: ThreadClosing | null;
 }
 
-type Reply = (name: string | null) => void;
+type Reply = (name: string | null, message: Message) => void;
 
 interface ReplyOf {
   readonly reply: Reply | null;
@@ -77,7 +77,7 @@ function useReplyAction({ me, message, reply }: ReplyOf): (() => void) | null {
       return null;
     }
     return () => {
-      reply(mentionFor(message, me));
+      reply(mentionFor(message, me), message);
     };
   }, [me, message, reply]);
 }

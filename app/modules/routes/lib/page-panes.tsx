@@ -16,7 +16,7 @@ export function PagePanes(props: PagePanesProps): ReactNode {
     return (
       <InboxView
         board={stores.board}
-        identities={stores.composer.identities}
+        composer={stores.composer}
         me={props.me}
         selected={route.selected}
         unread={stores.unread}

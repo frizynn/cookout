@@ -1,6 +1,7 @@
 import type { ChannelName, TopLevelMessage } from "../../sdk/index.ts";
 import type { Board } from "../../board/index.ts";
 import { ChannelConversationPanel } from "./channel-conversation-panel.tsx";
+import type { Composer } from "../../composer/index.ts";
 import { ConversationMissing } from "./conversation-missing.tsx";
 import type { ReactNode } from "react";
 import type { Unread } from "../../unread/index.ts";
@@ -13,6 +14,7 @@ interface Ends {
 
 interface ChannelConversationProps {
   readonly board: Board;
+  readonly composer: Composer;
   readonly channel: ChannelName;
   readonly unread: Unread;
   readonly me: string;
@@ -47,11 +49,13 @@ export function ChannelConversation(props: ChannelConversationProps): ReactNode 
     <ChannelConversationPanel
       board={props.board}
       channel={channel}
+      composer={props.composer}
       first={ends.first}
       newest={ends.newest}
       me={props.me}
       menu={props.unread.menu}
       posts={posts}
+      selection={props.unread.selection({ channel, thread: null })}
     />
   );
 }

@@ -4,6 +4,7 @@ import { useMemo, useSyncExternalStore } from "react";
 import { DividerButton } from "../../design-system/index.tsx";
 import { MessageStream } from "./message-stream.tsx";
 import type { ReactNode } from "react";
+import type { Reply as ReplyAction } from "./use-message-menu.ts";
 
 const NONE = 0;
 const LAST = -1;
@@ -22,6 +23,7 @@ interface ConversationRepliesProps {
   readonly me: string;
   readonly menu: MessageMenu;
   readonly selection: Selection;
+  readonly reply: ReplyAction;
 }
 
 function earlierText(count: number): string {
@@ -61,7 +63,7 @@ export function ConversationReplies(props: ConversationRepliesProps): ReactNode 
           open={null}
           readPosition={null}
           receipts={receipts}
-          reply={null}
+          reply={props.reply}
           threads={NO_THREADS}
         />
       )}
@@ -75,7 +77,7 @@ export function ConversationReplies(props: ConversationRepliesProps): ReactNode 
         open={null}
         readPosition={null}
         receipts={receipts}
-        reply={null}
+        reply={props.reply}
         threads={NO_THREADS}
       />
     </>

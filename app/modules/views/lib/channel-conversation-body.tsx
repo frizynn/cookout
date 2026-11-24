@@ -1,33 +1,21 @@
 import { CardBody, Skeleton } from "../../design-system/index.tsx";
-import type { MessageId, TopLevelMessage } from "../../sdk/index.ts";
-import type { MessageMenu, ThreadNews } from "../../unread/index.ts";
+import type { Message, ReadReceipt, Reply, TopLevelMessage } from "../../sdk/index.ts";
 import { ChannelConversationFailed } from "./channel-conversation-failed.tsx";
+import { ChannelPostStreams } from "./channel-post-streams.tsx";
 import type { MessageBeforeState } from "../../board/index.ts";
-import { MessageStream } from "./message-stream.tsx";
+import type { MessageMenu } from "../../unread/index.ts";
 import type { ReactNode } from "react";
-
-const POSTS = "Posts";
-const NO_THREADS: ReadonlyMap<MessageId, ThreadNews> = new Map();
+import type { Reply as ReplyAction } from "./use-message-menu.ts";
 
 interface ChannelConversationBodyProps {
   readonly state: MessageBeforeState;
   readonly posts: readonly TopLevelMessage[];
   readonly me: string;
   readonly menu: MessageMenu;
-}
-
-function shownOf(before: TopLevelMessage | null, posts: readonly TopLevelMessage[]): readonly TopLevelMessage[] {
-  if (before === null) {
-    return posts;
-  }
-  return [before, ...posts];
-}
-
-function idOf(message: TopLevelMessage | null): MessageId | null {
-  if (message === null) {
-    return null;
-  }
-  return message.id;
+  readonly post: Message;
+  readonly replies: readonly Reply[];
+  readonly replyReceipts: readonly ReadReceipt[];
+  readonly reply: ReplyAction;
 }
 
 export function ChannelConversationBody(props: ChannelConversationBodyProps): ReactNode {
@@ -44,18 +32,16 @@ export function ChannelConversationBody(props: ChannelConversationBodyProps): Re
     return <ChannelConversationFailed refusal={state} />;
   }
   return (
-    <MessageStream
-      after={null}
-      channel={null}
-      label={POSTS}
+    <ChannelPostStreams
+      before={state.message}
       me={props.me}
       menu={props.menu}
-      messages={shownOf(state.message, props.posts)}
-      open={null}
-      readPosition={idOf(state.message)}
+      post={props.post}
+      posts={props.posts}
       receipts={state.receipts}
-      reply={null}
-      threads={NO_THREADS}
+      replies={props.replies}
+      reply={props.reply}
+      replyReceipts={props.replyReceipts}
     />
   );
 }

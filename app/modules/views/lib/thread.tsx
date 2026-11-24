@@ -1,16 +1,17 @@
 import type { Board, ThreadMessagesState } from "../../board/index.ts";
-import type { ChannelName, IdentityName, MessageId } from "../../sdk/index.ts";
+import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import { ScrollArea, SidePanel } from "../../design-system/index.tsx";
-import type { Composer } from "../../composer/index.ts";
+import type { Composer } from "./thread-draft.ts";
 import type { ReactNode } from "react";
 import { ReplyFooter } from "./reply-footer.tsx";
 import { ThreadBody } from "./thread-body.tsx";
 import { ThreadClosingBar } from "./thread-closing-bar.tsx";
 import type { Unread } from "../../unread/index.ts";
 import { hrefOf } from "../../paths/index.ts";
+import { threadDraft } from "./thread-draft.ts";
 import { useSyncExternalStore } from "react";
 
-const TEXT = { close: "Close panel", replies: "The thread's messages", thread: "Thread" } as const;
+const TEXT = { close: "Close panel", replies: "The thread's messages", reply: "Reply", thread: "Thread" } as const;
 
 const NONE = 0;
 
@@ -30,26 +31,13 @@ function countOf(state: ThreadMessagesState): number {
   return state.replies.length;
 }
 
-function isLoaded(state: ThreadMessagesState): state is Extract<ThreadMessagesState, { status: "loaded" }> {
-  return state.status === "loaded";
-}
-
-function membersOf(state: ThreadMessagesState, me: string): readonly IdentityName[] {
-  const loaded = [state].filter((each) => isLoaded(each));
-  const posts = [...loaded.map((thread) => thread.parent), ...loaded.flatMap((thread) => thread.replies)];
-  const posters = posts.map((message) => message.author.name).toReversed();
-  return [...new Set(posters)].filter((name) => name !== me);
-}
-
 export function ThreadView(props: ThreadProps): ReactNode {
   const { channel } = props;
   const messages = props.board.thread(channel, props.thread);
   const state = useSyncExternalStore(messages.subscribe, messages.snapshot);
   const line = props.unread.newLine(channel, props.thread);
   const readPosition = useSyncExternalStore(line.subscribe, line.snapshot);
-  const draft = props.composer.draft(`${channel}/${String(props.thread)}`, () =>
-    membersOf(messages.snapshot(), props.me),
-  );
+  const draft = threadDraft({ channel, composer: props.composer, me: props.me, messages, thread: props.thread });
   return (
     <SidePanel
       closeHref={hrefOf({ channel, name: "channel" })}
@@ -68,7 +56,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
           state={state}
         />
       </ScrollArea>
-      <ReplyFooter draft={draft} messages={messages} state={state} />
+      <ReplyFooter draft={draft} field={TEXT.reply} focused messages={messages} state={state} />
     </SidePanel>
   );
 }

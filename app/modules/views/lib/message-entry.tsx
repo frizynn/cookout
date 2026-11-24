@@ -1,8 +1,8 @@
 import type { ChannelName, Message, MessageId, ReadReceipt } from "../../sdk/index.ts";
+import type { MenuClosing, Reply } from "./use-message-menu.ts";
 import type { MessageMenu, ThreadNews } from "../../unread/index.ts";
 import { markOf, threadHref, threadSummaryOf } from "./message-marks.ts";
 import { useMessageMenu, useReplyAction } from "./use-message-menu.ts";
-import type { MenuClosing } from "./use-message-menu.ts";
 import { MessageContent } from "./message-content.tsx";
 import { MessageItem } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
@@ -29,7 +29,7 @@ interface MessageEntryProps {
   readonly receipts: readonly ReadReceipt[];
   readonly menu: MessageMenu;
   readonly closing: MenuClosing;
-  readonly reply: ((name: string | null) => void) | null;
+  readonly reply: Reply | null;
 }
 
 export function MessageEntry(props: MessageEntryProps): ReactNode {
