@@ -221,7 +221,6 @@ export { MutedLines } from "./lib/muted-lines.tsx";
 export { ReactionChip } from "./lib/reaction-chip.tsx";
 export { ReactionChips } from "./lib/reaction-chips.tsx";
 export type { ActionMenuParts, MenuChoice, ReactionChoice, ThreadChoice } from "./lib/menu-parts.ts";
-export { ActionMenu } from "./lib/action-menu.tsx";
 export { QuietLink } from "./lib/quiet-link.tsx";
 export { Notice } from "./lib/notice.tsx";
 export { HeadingButton } from "./lib/heading-button.tsx";
