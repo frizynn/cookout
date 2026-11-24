@@ -134,3 +134,39 @@ it.effect.each(storageLayers)(
       ]);
     }),
 );
+
+function bobAndAnnReact(storage: Storage["Service"]): Effect.Effect<Message, StorageUnavailable> {
+  return Effect.gen(function* reactToAnn() {
+    const append = appendTo(storage);
+    const reacted = yield* append(newMessage("grill", "ship it?", ANN));
+    const selfReacted = yield* append(newMessage("grill", "own", ANN));
+    const reaction = { reactedAt: fixtureTime, reaction: "thumbs_up" } as const;
+    yield* storage.addReaction({ ...reaction, identity: nameOf("bob"), messageId: reacted.id, notifiesAuthor: true });
+    yield* storage.addReaction({
+      ...reaction,
+      identity: nameOf("ann"),
+      messageId: selfReacted.id,
+      notifiesAuthor: false,
+    });
+    return reacted;
+  });
+}
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): the inbox history lists one's own message another identity reacted to, read once seen",
+  ({ layer }) =>
+    Effect.gen(function* historyListsReactionItems() {
+      const storage = yield* storeWithAnnSubscribed(layer);
+      const reacted = yield* bobAndAnnReact(storage);
+      const before = yield* storage.listInboxHistory(nameOf("ann"), ALL);
+      yield* storage.markReactionsSeen(nameOf("ann"), [reacted.id]);
+      const after = yield* storage.listInboxHistory(nameOf("ann"), ALL);
+      const inbox = yield* storage.listInbox(nameOf("ann"));
+
+      expect([listed(before.items), listed(after.items), inbox]).toStrictEqual([
+        [[reacted.id, ["reaction"], false]],
+        [[reacted.id, ["reaction"], true]],
+        [],
+      ]);
+    }),
+);

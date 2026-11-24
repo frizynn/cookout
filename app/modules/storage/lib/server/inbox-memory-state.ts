@@ -1,9 +1,12 @@
-import { Array as Arr, Effect, Option, String as Str } from "effect";
-import type { Message, MessageId, Reaction, ReadReceipt } from "../../../messages/index.ts";
+import { Array as Arr, Effect, Option, Predicate, String as Str, pipe } from "effect";
+import type { Message, MessageId, Reaction, ReadReceipt, Reply, TopLevelMessage } from "../../../messages/index.ts";
 import type { NewReaction, ReactionKey, ReactionsSection } from "./reactions.ts";
+import { counted, threadIdOf } from "./messages.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
+import type { InboxReason } from "../../../inbox/index.ts";
 import type { StorageUnavailable } from "./errors.ts";
+import type { StoredHistoryItem } from "./inbox.ts";
 import { sortedReactions } from "./reactions.ts";
 
 interface MemoryInbox {
@@ -130,6 +133,14 @@ function unseenFor(board: MemoryBoard, author: IdentityName): readonly StoredRea
   return Arr.filter(board.inbox.reactions, (stored) => !stored.seen && own.has(stored.messageId));
 }
 
+function othersReactionsSeen(inbox: MemoryInbox, author: IdentityName, id: MessageId): Option.Option<boolean> {
+  const others = Arr.filter(inbox.reactions, (stored) => stored.messageId === id && stored.identity !== author);
+  if (!Arr.isReadonlyArrayNonEmpty(others)) {
+    return Option.none();
+  }
+  return Option.some(Arr.every(others, (stored) => stored.seen));
+}
+
 function markSeen(board: MemoryBoard, author: IdentityName, ids: readonly MessageId[]): MemoryInbox {
   const own = authoredBy(board, author);
   const marked = new Set(Arr.filter(ids, (id) => own.has(id)));
@@ -140,6 +151,51 @@ function markSeen(board: MemoryBoard, author: IdentityName, ids: readonly Messag
     return stored;
   });
   return { ...board.inbox, reactions };
+}
+
+interface Shown {
+  readonly board: MemoryBoard;
+  readonly message: Message;
+  readonly read: boolean;
+  readonly reasons: readonly InboxReason[];
+}
+
+interface Reacting {
+  readonly board: MemoryBoard;
+  readonly identity: IdentityName;
+  readonly message: Message;
+}
+
+function currentParent(messages: readonly Message[], id: MessageId): TopLevelMessage | undefined {
+  return pipe(
+    Arr.findFirst(messages, (found): found is TopLevelMessage => found.kind === "top-level" && found.id === id),
+    Option.map((parent) => {
+      const replies = Arr.filter(messages, (reply): reply is Reply => reply.kind === "reply" && reply.replyTo === id);
+      return counted({ parent, replies });
+    }),
+    Option.getOrUndefined,
+  );
+}
+
+function shownItem({ board, message, read, reasons }: Shown): readonly StoredHistoryItem[] {
+  const parent = currentParent(board.messages, threadIdOf(message));
+  if (!Arr.isReadonlyArrayNonEmpty(reasons) || Predicate.isUndefined(parent)) {
+    return [];
+  }
+  if (message.kind === "top-level") {
+    return [{ message: parent, parent, read, reasons }];
+  }
+  return [{ message, parent, read, reasons }];
+}
+
+function reactionHistoryFor({ board, identity, message }: Reacting): readonly StoredHistoryItem[] {
+  if (message.author.name !== identity) {
+    return [];
+  }
+  return Option.match(othersReactionsSeen(board.inbox, identity, message.id), {
+    onNone: () => [],
+    onSome: (read) => shownItem({ board, message, read, reasons: ["reaction"] }),
+  });
 }
 
 function memoryReactions({ changeInbox, read }: MemoryReactionsAccess): ReactionsSection {
@@ -157,4 +213,12 @@ function memoryReactions({ changeInbox, read }: MemoryReactionsAccess): Reaction
   };
 }
 
-export { EMPTY_INBOX, type MemoryInbox, memoryReactions, withoutChannel, withoutIdentity };
+export {
+  EMPTY_INBOX,
+  type MemoryInbox,
+  memoryReactions,
+  reactionHistoryFor,
+  shownItem,
+  withoutChannel,
+  withoutIdentity,
+};
