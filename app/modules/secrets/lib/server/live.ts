@@ -62,7 +62,7 @@ function asCommandSecret(value: string): CommandSecret {
 const liveSecrets: LiveSecrets = {
   digest: (text) => Effect.sync(() => sha256(text)),
   hashToken: (issued) => Effect.sync(() => tokenHash(sha256(issued))),
-  newAttachmentId: Effect.sync(() => asAttachmentId(randomBytes(ATTACHMENT_ID_BYTES).toString("base64url"))),
+  newAttachmentId: Effect.sync(() => asAttachmentId(randomBytes(ATTACHMENT_ID_BYTES).toString("hex"))),
   newCallId: Effect.sync(() => asCallId(`call_${randomBytes(CALL_ID_BYTES).toString("base64url")}`)),
   newCommandSecret: Effect.sync(() => asCommandSecret(`hmac_${randomBytes(SECRET_BYTES).toString("base64url")}`)),
   newCommandToken: Effect.sync(newToken),

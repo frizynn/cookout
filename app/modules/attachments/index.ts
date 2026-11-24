@@ -10,7 +10,10 @@ declare const brand: unique symbol;
 /** An attachment's ID: opaque and random, so it gives away nothing about how many the board holds. */
 export type AttachmentId = string & { readonly [brand]: "AttachmentId" };
 
-/** The rule every attachment ID follows: 1 to 64 base64url characters, so an ID can never name another path. */
+/**
+ * The rule every attachment ID follows: 1 to 64 base64url characters, so an ID can never name another path. The
+ * server makes new ones in hex, so none starts with `-` and reads as a flag on a command line.
+ */
 export const attachmentIdPattern = /^[A-Za-z0-9_-]{1,64}$/u;
 
 /**
