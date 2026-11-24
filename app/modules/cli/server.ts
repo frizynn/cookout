@@ -6,6 +6,10 @@
  * from the caller: `serve` issues tokens with it, and `join`
  * names its agent session state file with it.
  *
+ * Any other failure before `serve` is listening, such as a port in use or a bad setting, prints one stderr line,
+ * `cookout serve failed to start: <tag>: <message>`, plus the first stack frame for a defect, and exits 1
+ * (mattpocock/cookout#261). A bad setting's line names the variable and its rule, never its value.
+ *
  * Every verb but `serve`, `join`, `login` and `logout` sends one credential. Inside a harness it is the first of:
  * the agent session token in `COOKOUT_SESSION`, the agent session this harness session joined, and `COOKOUT_TOKEN`;
  * with none of them, it is refused with `not_joined`. Outside one it is the first of `COOKOUT_TOKEN`,

@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, FileSystem, Path, Schema, String as Str } from "effect";
+import { Array as Arr, Effect, FileSystem, Layer, Path, Schema, String as Str } from "effect";
 import {
   answer,
   commandLineServices,
@@ -13,6 +13,7 @@ import { expect, it } from "@effect/vitest";
 import { NodeServices } from "@effect/platform-node";
 import { createCookoutClient } from "../../../sdk/index.ts";
 import { secretsLive } from "../../../secrets/server.ts";
+import { sqliteStorage } from "../../../storage/server.ts";
 
 interface StoredFiles {
   readonly files: readonly string[];
@@ -159,6 +160,57 @@ it.effect("cookout serve prints why the database didn't open or migrate on stder
     expect(refused).toMatchObject({ exitCode: EXIT_FAILURE, stdout: "" });
     expect(refused.stderrJson).toStrictEqual({
       error: { code: "storage_unavailable", message: "file is not a database" },
+    });
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
+);
+
+it.effect("cookout serve on a port already in use prints why it failed to start on stderr, and exits 1", () =>
+  Effect.gen(function* printsPortInUse() {
+    const first = yield* startServe({ database: yield* freshDatabasePath });
+    const taken = Number(new URL(first.url).port);
+    const failed = yield* runServe({ database: yield* freshDatabasePath, port: taken });
+
+    expect(failed).toMatchObject({ exitCode: EXIT_FAILURE, stdout: "" });
+    expect(failed.stderr).toMatch(/^cookout serve failed to start: ServeError: .*EADDRINUSE/v);
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
+);
+
+it.effect("cookout serve with a bad setting prints which one on stderr without its value, and exits 1", () =>
+  Effect.gen(function* printsBadSetting() {
+    const database = yield* freshDatabasePath;
+    const failed = yield* runServe({ database, env: { COOKOUT_WEBHOOK_TIMEOUT_SECONDS: "soon-ish" } });
+
+    expect(failed).toMatchObject({ exitCode: EXIT_FAILURE, stdout: "" });
+    expect(failed.stderr).toMatch(/^cookout serve failed to start: ConfigError: .*COOKOUT_WEBHOOK_TIMEOUT_SECONDS/v);
+    expect(failed.stderr).not.toContain("soon-ish");
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
+);
+
+it.effect(
+  "cookout serve that crashes while starting prints the defect's message and first stack frame, and exits 1",
+  () =>
+    Effect.gen(function* printsDefect() {
+      const database = yield* freshDatabasePath;
+      const crash = Layer.effectDiscard(Effect.die(new Error("the disk caught fire")));
+      const failed = yield* runServe({ database, storage: (path) => Layer.provide(sqliteStorage(path), crash) });
+
+      expect(failed).toMatchObject({ exitCode: EXIT_FAILURE, stdout: "" });
+      expect(failed.stderr).toMatch(
+        /^cookout serve failed to start: Error: the disk caught fire \(at .*serve\.test\.ts/v,
+      );
+      expect(failed.stderr).not.toContain("\n");
+    }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
+);
+
+it.effect("cookout serve that crashes while starting with something other than an Error prints it as a defect", () =>
+  Effect.gen(function* printsBareDefect() {
+    const database = yield* freshDatabasePath;
+    const crash = Layer.effectDiscard(Effect.die("the disk caught fire"));
+    const failed = yield* runServe({ database, storage: (path) => Layer.provide(sqliteStorage(path), crash) });
+
+    expect(failed).toMatchObject({
+      exitCode: EXIT_FAILURE,
+      stderr: "cookout serve failed to start: Defect: the disk caught fire",
     });
   }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );

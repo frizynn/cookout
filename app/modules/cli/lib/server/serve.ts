@@ -1,5 +1,17 @@
+import {
+  Array as Arr,
+  Cause,
+  Console,
+  Effect,
+  Layer,
+  Option,
+  Predicate,
+  Redacted,
+  Schema,
+  String as Str,
+} from "effect";
 import { Command, Flag } from "effect/cli";
-import { Effect, Layer, Option, Redacted } from "effect";
+import { CommandFailed, printLine, refused } from "./output.ts";
 import type { IdentityName, Token } from "../../../identities/index.ts";
 import { SpawnSettings, domainLayers, openRoutes, routes } from "./route-list.ts";
 import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
@@ -15,10 +27,8 @@ import {
 } from "../../../config/server.ts";
 import { firstAdminName, token } from "../../../identities/index.ts";
 import { httpServer, serverUrl } from "../../../http/server.ts";
-import { printLine, refused } from "./output.ts";
 
 import type { AdminNameIsAgent } from "../../../identities/server.ts";
-import type { CommandFailed } from "./output.ts";
 import type { FileSystem } from "effect";
 import type { Serving } from "../../../http/server.ts";
 import { adminTokenSet } from "../../../identities/server.ts";
@@ -73,6 +83,60 @@ function storageUnavailable({ message }: Pick<StorageUnavailable, "message">): E
   return refused(unavailable);
 }
 
+const isCommandFailed = Schema.is(CommandFailed);
+const lineBreaks = /\s*\n\s*/gv;
+const serveFailed = Effect.fail(CommandFailed.make({ code: "serve_failed" }));
+
+function textProperty(failure: unknown, key: string): Option.Option<string> {
+  if (!Predicate.hasProperty(failure, key)) {
+    return Option.none();
+  }
+  const value: unknown = failure[key];
+  return Option.liftPredicate(value, Predicate.isString);
+}
+
+function messageOf(failure: unknown): string {
+  const message = Option.filter(textProperty(failure, "message"), Str.isNonEmpty);
+  if (Option.isSome(message)) {
+    return message.value;
+  }
+  if (Predicate.hasProperty(failure, "cause") && Predicate.isNotNullish(failure.cause)) {
+    return messageOf(failure.cause);
+  }
+  return String(failure);
+}
+
+function tagOf(failure: unknown): string {
+  const tag = Option.orElse(textProperty(failure, "_tag"), () => textProperty(failure, "name"));
+  return Option.getOrElse(tag, () => "Defect");
+}
+
+function firstStackFrame(failure: unknown): string {
+  const lines = Str.split(
+    Option.getOrElse(textProperty(failure, "stack"), () => ""),
+    "\n",
+  );
+  const frame = Arr.findFirst(lines, (line) => Str.startsWith("at ")(Str.trimStart(line)));
+  return Option.match(frame, { onNone: () => "", onSome: (line) => ` (${Str.trim(line)})` });
+}
+
+function startFailureLine(cause: Cause.Cause<unknown>): string {
+  const failure = Cause.squash(cause);
+  let line = `cookout serve failed to start: ${tagOf(failure)}: ${messageOf(failure)}`;
+  if (!Cause.hasFails(cause)) {
+    line += firstStackFrame(failure);
+  }
+  return Str.replaceAll(lineBreaks, " ")(line);
+}
+
+function failedToStart<Failure>(cause: Cause.Cause<Failure>): Effect.Effect<never, Failure | CommandFailed> {
+  const alreadyPrinted = Cause.hasInterruptsOnly(cause) || isCommandFailed(Cause.squash(cause));
+  if (alreadyPrinted) {
+    return Effect.failCause(cause);
+  }
+  return Console.error(startFailureLine(cause)).pipe(Effect.andThen(serveFailed));
+}
+
 const runServer = (layers: ServeLayers, listen: Omit<Serving, "webFolder">, database: string) =>
   Effect.gen(function* () {
     const admin = yield* adminTokenOrRefuse;
@@ -84,8 +148,7 @@ const runServer = (layers: ServeLayers, listen: Omit<Serving, "webFolder">, data
     ).pipe(Effect.catchTags({ AdminNameIsAgent: adminNameIsAgent, StorageUnavailable: storageUnavailable }));
     const url = yield* serverUrl.pipe(Effect.provideContext(services));
     yield* printLine({ database, listening: url });
-    return yield* Effect.never;
-  }).pipe(Effect.scoped);
+  }).pipe(Effect.catchCause(failedToStart), Effect.andThen(Effect.never), Effect.scoped);
 
 export const serveCommand = (layers: ServeLayers) =>
   Command.make(

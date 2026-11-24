@@ -43,6 +43,8 @@ interface ServeOptions {
   readonly adminToken?: string;
   readonly env?: Readonly<Record<string, string>>;
   readonly database: string;
+  readonly port?: number;
+  readonly storage?: ServeLayers["storage"];
   readonly webFolder?: string;
 }
 
@@ -80,6 +82,7 @@ interface Started<Line> {
 
 const serveAdminToken = "test-admin-token-0123456789abcdef0123456789";
 const EXIT_SUCCESS = 0;
+const ANY_FREE_PORT = 0;
 const verbLayers: ServeLayers = { storage: Function.constant(memoryStorage) };
 const isListening = Schema.is(Schema.Struct({ listening: Schema.String }));
 const parseJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown));
@@ -165,8 +168,8 @@ function startUntil<Line>(
 }
 
 function serveCommandLine(options: ServeOptions): Omit<CommandLine, "console"> & Pick<ServeProcess, "adminToken"> {
-  const { adminToken = serveAdminToken, database, env = {}, ...web } = options;
-  const args = ["serve", "--port", "0", "--host", "127.0.0.1", "--db", database];
+  const { adminToken = serveAdminToken, database, env = {}, port = ANY_FREE_PORT, ...web } = options;
+  const args = ["serve", "--port", String(port), "--host", "127.0.0.1", "--db", database];
   const program = exitCodeAfter(runCommandLine(args, { storage: sqliteStorage, ...web }));
   return { adminToken, env: { COOKOUT_ADMIN_TOKEN: adminToken, ...env }, program };
 }
