@@ -52,7 +52,8 @@
  * meanwhile applied again, so the event wins. `calls.close` and `calls.reopen` close or reopen a thread, one at a time
  * in the order asked, applying the answer as a `thread` event, or keeping the refusal (`closingRefusal`) until the next;
  * `calls.createChannel` creates a channel and puts it in the list and the subscriptions; `calls.ack` acks a message,
- * one ack at a time in the order asked.
+ * one ack at a time in the order asked; `calls.search` runs a search and answers its page, or the server's refusal,
+ * without keeping it, for the `search` store.
  *
  * `Board` and its parts are the old per-channel and per-thread stores the views still read; the routes module makes them
  * as thin adapters over the store's selectors and methods, for the last migration ticket to delete.
