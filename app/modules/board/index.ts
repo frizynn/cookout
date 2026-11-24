@@ -71,7 +71,15 @@
  * being read is applied again on what the read brings, so the event wins, and an event heard twice changes nothing.
  * When the link comes back after being down, each slice someone is showing is read again, and one nobody is showing
  * is read again when it is next shown; that is the store's one catch-up. Its slices: `presence`, every identity's
- * presence, read with `GET /v1/presence` and changed by `presence` events.
+ * presence, read with `GET /v1/presence`, changed by `presence` events and left by `identity-deleted`;
+ * `identities`, every identity, deactivated ones too, sorted by name (`identityList`), read with
+ * `GET /v1/identities`, changed by `identity` events and left by `identity-deleted`, whose names
+ * `deletedIdentities` keeps until an identity of that name comes back; and each agent's sessions
+ * (`agentSessions(agent)(state)`: `null` until read, or if the server refuses), shown with
+ * `subscribeShowingSessions(agent)` and read again on an `agent-session` or `identity` event for that agent, on a
+ * link back, and once one of them expires, all through the store's one stream listener. `identityCalls` makes the
+ * web's identity changes on the server (admin, display name, description, a new agent, and the identity actions) and
+ * puts each answer in the slices at once; a refusal rejects its promise and changes nothing.
  */
 import type {
   ChannelMessages,
@@ -198,4 +206,14 @@ export type { Subscriptions, SubscriptionsState } from "./lib/subscriptions.ts";
 export type { ThreadMessages, ThreadMessagesState } from "./lib/thread-messages.ts";
 export type { ThreadClosing } from "./lib/thread-closing.ts";
 export type { MessageBeforeState } from "./lib/message-stores.ts";
-export { type BoardStore, type Presences, createBoardStore, presences } from "./lib/board-store.ts";
+export {
+  type BoardStore,
+  type BoardStoreClient,
+  type IdentityCalls,
+  type Presences,
+  agentSessions,
+  createBoardStore,
+  deletedIdentities,
+  identityList,
+  presences,
+} from "./lib/board-store.ts";
