@@ -6,12 +6,13 @@ import type { ReactNode } from "react";
 
 interface MoreActionsParts {
   readonly choices: readonly MenuChoice[];
+  readonly label: string;
 }
 
 export function MoreActions(parts: MoreActionsParts): ReactNode {
   return (
     <Root>
-      <MoreActionsButton />
+      <MoreActionsButton label={parts.label} />
       <Portal>
         <MoreActionsContent choices={parts.choices} />
       </Portal>
