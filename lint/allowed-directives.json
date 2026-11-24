@@ -3,5 +3,10 @@
     "file": "scripts/lib/validators.ts",
     "directive": "oxlint-disable-next-line typescript/no-deprecated",
     "reason": "ajv 8 marks `unicode` deprecated but still honours `unicode: false`, which compiles minLength and maxLength to `.length` (UTF-16, as Effect's length checks count) instead of a `require(\"ajv/dist/runtime/ucs2length\")` that crashes the ESM build (#33)."
+  },
+  {
+    "file": "scripts/drop-deactivate-identity.ts",
+    "directive": "oxlint-disable-next-line typescript/prefer-readonly-parameter-types",
+    "reason": "The published-client canary replaces globalThis.fetch with a wrapper of the same signature, and fetch's RequestInit can't be marked readonly (#282)."
   }
 ]

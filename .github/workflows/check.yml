@@ -118,6 +118,19 @@ jobs:
           cache-name: pack
       - run: pnpm run --silent pack:smoke
 
+  # The newest @ai-hero/cookout on npm drives a dev cookout from this commit, so removing a response
+  # field that the published client still requires fails here (docs/verification.md).
+  published-client:
+    name: published client
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: published-client
+      - run: pnpm run --silent published-client
+
   coverage:
     runs-on: ubuntu-latest
     timeout-minutes: 5
