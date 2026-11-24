@@ -1,38 +1,32 @@
-const FOCUSABLE = "a[href], button:not(:disabled)";
+const FOCUSABLE = ["a[href]", "button:not(:disabled)"] as const;
 const FIRST = 0;
+const ONE = 1;
 const LAST = -1;
 
 interface CardFocus {
   readonly mark: string;
   readonly allows: (open: boolean) => boolean;
   readonly blurred: () => void;
-  readonly enter: () => boolean;
+  readonly enter: () => void;
   readonly backToName: () => void;
   readonly holdsFocus: () => boolean;
   readonly atEdge: (backwards: boolean) => boolean;
 }
 
-function boxOf(mark: string): Element | null {
-  return globalThis.document.querySelector(`[data-identity-card-box="${mark}"]`);
+function boxOf(mark: string): string {
+  return `[data-identity-card-box="${mark}"]`;
 }
 
-function stopsIn(mark: string): readonly Element[] {
-  const box = boxOf(mark);
-  if (box === null) {
-    return [];
-  }
-  return [...box.querySelectorAll(FOCUSABLE)];
+function stopsIn(mark: string): readonly HTMLElement[] {
+  const selector = FOCUSABLE.map((stop) => `${boxOf(mark)} ${stop}`).join(", ");
+  return [...globalThis.document.querySelectorAll<HTMLElement>(selector)];
 }
 
 function holds(mark: string): boolean {
-  const box = boxOf(mark);
-  if (box === null) {
-    return false;
-  }
-  return box.contains(globalThis.document.activeElement);
+  return globalThis.document.querySelector(`${boxOf(mark)}:focus-within`) !== null;
 }
 
-function edgeOf(mark: string, backwards: boolean): Element | undefined {
+function edgeOf(mark: string, backwards: boolean): HTMLElement | undefined {
   if (backwards) {
     return stopsIn(mark).at(FIRST);
   }
@@ -61,14 +55,11 @@ function createCardFocus(mark: string): CardFocus {
       keptClosed = false;
     },
     enter: () => {
-      const first = stopsIn(mark).at(FIRST);
-      if (!(first instanceof HTMLElement)) {
-        return false;
+      for (const first of stopsIn(mark).slice(FIRST, ONE)) {
+        entering = true;
+        first.focus();
+        entering = false;
       }
-      entering = true;
-      first.focus();
-      entering = false;
-      return true;
     },
     holdsFocus: () => holds(mark),
     mark,

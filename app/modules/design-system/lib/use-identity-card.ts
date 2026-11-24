@@ -75,8 +75,9 @@ function useIdentityCard(shown: Shown): IdentityCardState {
   );
   const onTriggerKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      if (event.key === TAB && !event.shiftKey && open && focus.enter()) {
+      if (event.key === TAB && !event.shiftKey && open) {
         event.preventDefault();
+        focus.enter();
       }
     },
     [focus, open],
