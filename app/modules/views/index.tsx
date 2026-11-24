@@ -128,7 +128,11 @@
  * clicking away closes the list and gives focus back.
  * `MessageListKeys` binds the keymap's message list keys once for the page: in a channel's, a thread's or a
  * conversation's message list, ↑/↓ and k/j move one message, Home and End go to the first and last loaded, ↑ past
- * the oldest loads older messages with focus kept, and Enter on a fold of closed threads unfolds it.
+ * the oldest loads older messages with focus kept, and Enter on a fold of closed threads unfolds it. It binds the
+ * message keys too, which on a focused message press its own control named by the key's `aria-keyshortcuts`: R its
+ * Reply (opening its thread with the cursor in the reply box), → T or Enter its Open thread (focus on the thread's
+ * top-level message, which the thread opens linked to); pressed again with that thread already open, they focus the
+ * reply box or the top-level message. ← on a message in the thread panel focuses its channel message.
  * `ShortcutListView` is the list of every keyboard shortcut, generated from the keymap and grouped by where each
  * applies: the keymap's `openShortcutList` (`?` off a text box, Ctrl/Cmd+/ anywhere) opens it, and Escape closes
  * it with focus back where it was.

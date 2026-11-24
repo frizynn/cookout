@@ -107,13 +107,11 @@ it("enter on a fold of closed threads unfolds it and focuses what was folded, an
   });
   const close = openAt({ client: reader, hash: `#/channels/${channel}` });
   await focusOn("Open one.");
-  const enterOnMessage = pressedOn("Enter");
   const fold = await focusedAfter("ArrowUp");
   const unfolded = await unfoldedByEnter();
   leftTheList();
 
-  expect([enterOnMessage, fold, unfolded, pressedOn("Home")]).toStrictEqual([
-    false,
+  expect([fold, unfolded, pressedOn("Home")]).toStrictEqual([
     "Today1 closed thread",
     expect.stringContaining("Done a."),
     false,

@@ -6,17 +6,13 @@
  * `prefers-color-scheme: light` unless `data-theme="dark"`; components read tokens, never raw colours. Text and the
  * UI are sans, times and channel names mono.
  *
- * `Workspace` is the page around every route once logged in: a `Sidebar` on
- * the left (on a narrow screen, behind a button that opens and closes it),
- * which a button at its top collapses to a narrow rail holding only that
- * button on a wide screen (`collapsed`), and, given an `edge`, is as wide as
- * it says, its right edge a `PanelEdge` (`side` `right`; no `onClose`, so a
- * drag stops at its narrowest),
- * with its `SidebarBody` of links (following one, but not pressing a button, closes it on a narrow screen)
- * and its `SidebarFooter`, and a `WorkspaceMain` of the route's panes on the
- * right, in a `WorkspaceColumn` under any `StatusBar`: a named polite live
- * region that shows its text in a bar, in the attention colours, only while
- * `shown`, such as "Reconnecting…". In the sidebar, `NavLink` is one link, bold when
+ * `Workspace` is the page around every route once logged in: a `Sidebar` on the left (on a narrow screen, behind a
+ * button that opens and closes it), which a button at its top collapses to a narrow rail holding only that button on a
+ * wide screen (`collapsed`), and, given an `edge`, is as wide as it says, its right edge a `PanelEdge` (`side` `right`;
+ * no `onClose`, so a drag stops at its narrowest), with its `SidebarBody` of links (following one, but not pressing a
+ * button, closes it on a narrow screen) and its `SidebarFooter`, and a `WorkspaceMain` of the route's panes on the
+ * right, in a `WorkspaceColumn` under any `StatusBar`: a named polite live region that shows its text in a bar, in the
+ * attention colours, only while `shown`, such as "Reconnecting…". In the sidebar, `NavLink` is one link, bold when
  * it has something new (`marked`), highlighted when it is the open item, with
  * an icon and any `Pill` after it: a count read out by its label, loud (the
  * unread colour), quiet, or unseen (read out only); a `menu` is its `ActionMenu`.
@@ -115,14 +111,15 @@
  * mark (`for-you`, the filled accent block, when it mentions or answers the reader, or `open`); and, shown on hover or
  * focus, a "Quick actions" group of icon buttons, each with no text and named by its tooltip: a button for each of its
  * `menu`'s `reactions` that is `inHoverBar`, then, when `replyOnHover`, its action (such as Reply: a link, or a button
- * with `onAction`), then its thread choice when `threadOnHover`, then More actions. A reaction's
+ * with `onAction`), then, given a `threadHref`, an Open thread link, then its thread choice when `threadOnHover`, then
+ * More actions; under `MessageKeys`, Reply and Open thread name their shortcuts in `aria-keyshortcuts`. A reaction's
  * `key`, pressed while the message itself has focus, leaves it too, in or out of the hover bar. Its `menu` gives it one actions menu (the action,
- * then each reaction, then Mark unread, then the thread choice, such as Close, if any), drawn two ways on Radix: right-clicking the message, or the context-menu key or Shift+F10 on it, opens it as a context menu at the pointer, and the
+ * then Open thread, each showing its shortcut, then each reaction, then Mark unread, then the thread choice, such as Close, if any), drawn two ways on Radix: right-clicking the message, or the context-menu key or Shift+F10 on it, opens it as a context menu at the pointer, and the
  * More actions button opens it as a dropdown. Every menu item draws its `icon` (a `ThreadChoice` names one too), which its type requires, before its label. An item may be `disabled`, dimmed and not chosen. Radix gives both their keyboard and focus behaviour; a chosen item's
  * action runs once the menu has closed. Mark unread's tooltip names its shortcut, `Alt-click`: an Alt-click (Option-click
  * on macOS) on the message, but not on a link, button or other interactive element in it, runs Mark unread at once and
  * focuses and selects nothing; `StandaloneMessage` does the same. `StandaloneMessage` is one named message on its own, such as a
- * thread's parent. A message's author name and an `@name` in its text are each an `IdentityCard`: hovering it
+ * thread's parent, which takes focus while linked. A message's author name and an `@name` in its text are each an `IdentityCard`: hovering it
  * (after a short delay) or focusing it opens a card, a Radix tooltip beside the name, kept inside the window: a
  * labelled `dialog` led by a square avatar tile (grey when deactivated; an Agent chip on an agent's), then its name,
  * `@name` handle, presence or a red Deactivated, kind, description, and Message (calls the nearest
@@ -214,6 +211,7 @@ export {
   IdentityCard,
   PersonMenu,
   PersonKeysArea,
+  MessageKeys,
   IdentityCardComposer,
   IdentityCards,
   ReactionChip,
@@ -221,6 +219,7 @@ export {
 } from "./lib/messages.ts";
 export type {
   PersonKeysSource,
+  MessageShortcuts,
   IdentityCardLink,
   IdentityCardParts,
   IdentityCardSource,

@@ -14,6 +14,8 @@ export { IdentityCard } from "./identity-card.tsx";
 export { PersonMenu } from "./person-menu.tsx";
 export { PersonKeysArea } from "./person-keys-area.tsx";
 export type { PersonKeysSource } from "./person-keys-parts.ts";
+export { MessageKeys } from "./message-keys-parts.ts";
+export type { MessageShortcuts } from "./message-keys-parts.ts";
 export { IdentityCardComposer, IdentityCards } from "./identity-card-parts.ts";
 export type { IdentityCardLink, IdentityCardParts, IdentityCardSource } from "./identity-card-parts.ts";
 export { ReactionChip } from "./reaction-chip.tsx";

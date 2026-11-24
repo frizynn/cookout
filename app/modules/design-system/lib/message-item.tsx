@@ -1,6 +1,6 @@
 import { DaySeparator } from "./day-separator.tsx";
 import { ItemArticle } from "./item-article.tsx";
-import type { MessageItemParts } from "./parts.ts";
+import type { MessageItemParts } from "./message-parts.ts";
 import { NewLine } from "./new-line.tsx";
 import type { ReactNode } from "react";
 

@@ -32,6 +32,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
   const line = props.unread.newLine(channel, props.thread);
   const readPosition = useSyncExternalStore(line.subscribe, line.snapshot);
   const header = useThreadHeader({ channel, closing: props.board.closing, menu: props.unread.menu, state });
+  const reading = props.linked === props.thread;
   const draft = threadDraft({ channel, composer: props.composer, me: props.me, messages, thread: props.thread });
   return (
     <SidePanel
@@ -52,7 +53,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
         reply={draft.replyTo}
         state={state}
       />
-      <ReplyFooter draft={draft} field={TEXT.reply} focused messages={messages} state={state} />
+      <ReplyFooter draft={draft} field={TEXT.reply} focused={!reading} messages={messages} state={state} />
     </SidePanel>
   );
 }

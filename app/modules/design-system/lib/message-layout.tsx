@@ -1,7 +1,7 @@
 import { Avatar } from "./avatar.tsx";
 import { HoverButtons } from "./hover-buttons.tsx";
 import { MessageHeader } from "./message-header.tsx";
-import type { MessageLayoutParts } from "./parts.ts";
+import type { MessageLayoutParts } from "./message-parts.ts";
 import { MessageTime } from "./message-time.tsx";
 import type { ReactNode } from "react";
 
@@ -37,6 +37,7 @@ export function MessageLayout(parts: MessageLayoutParts): ReactNode {
         reactions={parts.reactions}
         replyOnHover={parts.replyOnHover}
         thread={parts.thread}
+        threadHref={parts.threadHref}
       />
     </>
   );

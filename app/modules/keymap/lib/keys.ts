@@ -4,6 +4,7 @@ const SCOPES = [
   "person",
   "people list",
   "profile panel",
+  "message",
   "message list",
   "inbox",
   "everywhere",
@@ -16,6 +17,7 @@ const TEXT_SCOPES: ReadonlySet<Scope> = new Set(["search box", "text box"]);
 const GROUPS: Readonly<Record<Scope, string>> = {
   everywhere: "Everywhere",
   inbox: "Inbox row",
+  message: "Message",
   "message list": "Message list",
   "people list": "People list",
   person: "Person",
@@ -39,6 +41,11 @@ const KEYS = [
   { action: "nextPerson", chord: "ArrowDown", does: "Next person", scope: "people list" },
   { action: "previousPerson", chord: "ArrowUp", does: "Previous person", scope: "people list" },
   { action: "closeProfile", chord: "Escape", does: "Close the profile", scope: "profile panel" },
+  { action: "replyToMessage", chord: "r", does: "Reply in its thread", scope: "message" },
+  { action: "openThread", chord: "ArrowRight", does: "Open its thread", scope: "message" },
+  { action: "openThread", chord: "t", does: "Open its thread", scope: "message" },
+  { action: "openThread", chord: "Enter", does: "Open its thread", scope: "message" },
+  { action: "backToChannel", chord: "ArrowLeft", does: "Back to the thread's channel message", scope: "message" },
   { action: "nextMessage", chord: "j", does: "Next message", scope: "message list" },
   { action: "nextMessage", chord: "ArrowDown", does: "Next message", scope: "message list" },
   {
