@@ -15,7 +15,8 @@
  * or `agent`; `filterIdentities` and `showKind` set them. `showDeactivated`
  * is whether it lists Deactivated identities too, which `toggleDeactivated`
  * flips. `threadWidth` is the width, in pixels, of the open thread panel on a
- * wide screen, whether the thread was opened from a channel or the Inbox;
+ * wide screen, whether the thread was opened from a channel or the Inbox,
+ * and of a channel conversation opened from the Inbox;
  * `resizeThread` sets it, kept within `threadWidths`' `min` and `max`, and
  * keeps it in the browser's storage, so a reload keeps it and the next thread
  * opens at it.

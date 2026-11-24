@@ -32,6 +32,7 @@ export function InboxConversation(props: InboxConversationProps): ReactNode {
         board={props.board}
         channel={selected.channel}
         composer={props.composer}
+        edge={props.edge}
         key={selected.channel}
         me={props.me}
         reading={props.reading}

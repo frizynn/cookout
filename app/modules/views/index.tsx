@@ -37,7 +37,7 @@
  * 5m ago" and Reopen, then the thread's parent message, its reply count, and its replies,
  * oldest first, with a reply box that takes focus when the panel opens and a
  * link that closes it, and opening it marks the thread read. Its `edge`, and that of
- * an Inbox thread's conversation, is the panel's draggable left edge on a wide screen,
+ * every conversation beside the Inbox, a thread's or a channel's, is the panel's draggable left edge on a wide screen,
  * which the routes size from the layout store's `threadWidth` and which closes the
  * thread when dragged past its narrowest. Opened by a link to
  * one of its messages (`linked`), it scrolls that message into view and
