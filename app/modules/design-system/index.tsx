@@ -162,7 +162,8 @@
  * active one while `expanded`; `ResultList` is a named listbox (`list` its ID) of named `ResultGroup`s of
  * `ResultOption`s, each a label, any muted detail and its children, highlighted (and scrolled into view) when
  * `highlighted`; pressing one calls `onChoose` with its `href`, leaving the box focused. `DataArea` is a labelled box
- * to write JSON in, whose text its owner holds. `PromptForm` is a named card in place of a message box that asks for a
+ * to write JSON in, `LinesArea` an optional one for lines (`name: value` headers), whose text its owner holds.
+ * `PromptForm` is a named card in place of a message box that asks for a
  * command's data, titled, with a Cancel and a submit button, its first field focused, and Escape anywhere in it calls
  * `onEscape`; in it `InputField` (text, a number, an integer, a date or a time), `PickField` (one of a list, or none)
  * and `CheckField` (a checkbox) are labelled fields whose value their owner holds, each marked when required, with its
@@ -255,6 +256,7 @@ export {
   CheckField,
   ChoiceGroup,
   DataArea,
+  LinesArea,
   Form,
   LineForm,
   AreaForm,
