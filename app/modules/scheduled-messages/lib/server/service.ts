@@ -102,4 +102,4 @@ function scheduledMessagesOn(on: ScheduledOn): ScheduledMessagesService {
   };
 }
 
-export { ScheduledMessages, type ScheduledMessagesService, scheduledMessagesOn };
+export { ScheduledMessages, scheduledMessagesOn };

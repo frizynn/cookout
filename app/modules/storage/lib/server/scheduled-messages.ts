@@ -217,7 +217,6 @@ export {
   type ScheduledMessagesSection,
   type ScheduledRecords,
   type ScheduledRun,
-  type ScheduledRunResult,
   type StoredScheduledMessage,
   pausedForDeactivation,
   scheduledMessagesOn,

@@ -1,11 +1,5 @@
 import { Effect, String as Str } from "effect";
-import type {
-  NewScheduledMessage,
-  ScheduledRunResult,
-  Storage,
-  StorageUnavailable,
-  StoredScheduledMessage,
-} from "../../../storage/server.ts";
+import type { Storage, StorageUnavailable, StoredScheduledMessage } from "../../../storage/server.ts";
 import {
   channelFixture as channel,
   channelName,
@@ -20,6 +14,11 @@ import { expect, it } from "@effect/vitest";
 import type { Layer } from "effect";
 import type { Message } from "../../../messages/index.ts";
 import { tokenHash } from "../../../identities/index.ts";
+
+type NewScheduledMessage = Storage["Service"]["createScheduledMessage"] extends (schedule: infer New) => unknown
+  ? New
+  : never;
+type ScheduledRunResult = Effect.Success<ReturnType<Storage["Service"]["runScheduledMessage"]>>;
 
 const HASH_LENGTH = 64;
 const CREATED = isoTime("2026-01-05T08:00:00.000Z");

@@ -27,9 +27,7 @@ export type { SearchPageRequest, SearchQuery } from "./lib/server/search.ts";
 export type { AckedMessage } from "./lib/server/inbox.ts";
 export type { StoredNudge } from "./lib/server/nudges.ts";
 export type {
-  NewScheduledMessage,
   ScheduledRun,
-  ScheduledRunResult,
   StoredScheduledMessage,
 } from "./lib/server/scheduled-messages.ts";
 export type { OfferChanges, StoredDeactivationOffer } from "./lib/server/deactivation-offers.ts";

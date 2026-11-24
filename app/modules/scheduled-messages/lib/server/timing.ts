@@ -194,4 +194,4 @@ function isLate({ due, now }: { readonly due: IsoTime; readonly now: IsoTime }):
   return millisOf(now) - millisOf(due) >= scheduleTiming.lateMinutes * MS_IN_MINUTE;
 }
 
-export { type Refused, type Timing, isLate, latestDue, millisOf, runsAfter, timingOf };
+export { type Refused, isLate, latestDue, millisOf, runsAfter, timingOf };

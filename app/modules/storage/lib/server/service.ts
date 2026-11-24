@@ -8,7 +8,7 @@ import type { HealthSection } from "./health.ts";
 import type { IdentitySections } from "./identity-section-types.ts";
 import type { InboxSection } from "./inbox.ts";
 
-export type BoardStorage = HealthSection &
+type BoardStorage = HealthSection &
   IdentitySections &
   ChannelsSection &
   MessageSections &
