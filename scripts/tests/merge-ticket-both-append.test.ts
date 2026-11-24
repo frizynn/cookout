@@ -1,6 +1,7 @@
 import { BRANCH, git, repo, repos } from "./lib/merge-repos.ts";
 import { expect, it } from "vitest";
 import { MIGRATION_LISTS } from "../lib/migration-lists.ts";
+import type { Merged } from "../lib/merge-ticket.ts";
 import type { Repos } from "./lib/merge-repos.ts";
 import { mergeRules } from "../lib/merge-rules.ts";
 import path from "node:path";
@@ -88,6 +89,54 @@ it("keeps v1's migrations first when v1 appends one while a merge resolved by ha
     sqlite("BASE", "ORDER", "SEARCH", "ATTACHMENTS"),
     postgres("BASE", "ORDER", "SEARCH", "ATTACHMENTS"),
   ]);
+});
+
+function refusedFiles(merged: Merged): readonly string[] {
+  if (merged.ok) {
+    return [];
+  }
+  return merged.files;
+}
+
+function stopOnNotes({ other, work }: Pick<Repos, "other" | "work">): boolean {
+  repo(work).commit("the ticket", { ...lists("BASE", "ATTACHMENTS"), "notes.txt": "ticket\n" });
+  repo(other).push({ "notes.txt": "v1\n" });
+  return repo(work).merge({ rules: mergeRules }).ok;
+}
+
+it("catches up with a v1 that gained a migration after the merge stopped, without reporting it dropped", {
+  timeout: 10_000,
+}, () => {
+  expect.hasAssertions();
+
+  const { origin, other, work } = onV1WithBase();
+  const stopped = stopOnNotes({ other, work });
+  repo(work).resolveByHand("both\n");
+  repo(other).push(lists("BASE", "ORDER"));
+  git(work, "fetch", "-q", "origin");
+
+  const merged = repo(work).continueMerge({ rules: mergeRules });
+
+  expect([stopped, merged.ok]).toStrictEqual([false, true]);
+  expect(onV1(origin)).toStrictEqual([
+    sqlite("BASE", "ORDER", "ATTACHMENTS"),
+    postgres("BASE", "ORDER", "ATTACHMENTS"),
+  ]);
+});
+
+it("refuses to continue a merge whose resolution by hand drops v1's migration", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const { origin, other, work } = onV1WithBase();
+  repo(other).push(lists("BASE", "ORDER"));
+  const stopped = stopOnNotes({ other, work });
+  repo(work).resolveByHand("both\n", lists("BASE", "ATTACHMENTS"));
+  const before = git(origin, "rev-parse", "v1");
+
+  const merged = repo(work).continueMerge({ rules: mergeRules });
+
+  expect([stopped, merged.ok, git(origin, "rev-parse", "v1")]).toStrictEqual([false, false, before]);
+  expect(refusedFiles(merged)).toStrictEqual([POSTGRES, SQLITE].toSorted());
 });
 
 function plantWrongResolution(work: string, wrong: Readonly<Record<string, string>>): void {
