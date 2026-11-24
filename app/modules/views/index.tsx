@@ -78,7 +78,8 @@
  * nothing selected), by its address, focusing it and stopping at the ends; `Enter` or `r` focuses the conversation's
  * reply box; `Esc` in a text field returns focus to the selected row, keeping what was typed, and elsewhere, on a narrow
  * window, goes back to the list; `e`, `u` and `o` press the conversation's control naming that key in
- * `aria-keyshortcuts` (the Open link's tooltip names it too). It leaves alone presses in a text field other than `Esc`,
+ * `aria-keyshortcuts` (Mark read, Mark unread and the Open link, whose tooltips name it too). It leaves alone
+ * presses in a text field other than `Esc`,
  * presses with Ctrl, Alt or Meta held, and presses another handler already took. `PeopleView` is the directory of every
  * identity (the identity list, which any identity may read): how many there
  * are, a name filter and All / Humans / Agents chips, each counting what the
