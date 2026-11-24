@@ -21,3 +21,5 @@ Playwright's `--only-changed` was the other built-in choice, but it follows only
 This widens the departure from "CI runs exactly the local check script" that the e2e decision began: a green local `pnpm check` no longer promises every browser test passes. CI still runs every browser test on every ticket and merge push before anything lands on v1, so a break in a skipped test shows in `pnpm ci:wait` after the push.
 
 Because every browser test drives the whole served cookout, a branch changing any source the cookout serves (a view, a route, the server) still runs every browser test locally. Only branches outside the served cookout save the run.
+
+Superseded in part on 2026-11-24 by [ADR 0096](0096-a-local-check-picks-browser-tests-from-ci-s-recorded-coverage.md): a change to a file of the served app (a view) now runs only the browser tests whose recorded coverage reaches it, and every one only when the map is missing or stale (mattpocock/cookout#444).
