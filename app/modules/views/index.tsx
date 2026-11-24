@@ -120,6 +120,9 @@
  * `SearchBox` is the search box atop the workspace column, on the `search` store: the keymap's `openSearch` (Ctrl+K,
  * ⌘K on a Mac, its placeholder naming it) focuses it from anywhere; typing lists the matching messages under it, newest first, each word matching the query highlighted; Up,
  * Down and Enter open one in its thread, and Escape or clicking away closes the list and gives focus back.
+ * `MessageListKeys` binds the keymap's message list keys once for the page: in a channel's, a thread's or a
+ * conversation's message list, ↑/↓ and k/j move one message, Home and End go to the first and last loaded, ↑ past
+ * the oldest loads older messages with focus kept, and Enter on a fold of closed threads unfolds it.
  * `ShortcutListView` is the list of every keyboard shortcut, generated from the keymap and grouped by where each
  * applies: the keymap's `openShortcutList` (`?` off a text box, Ctrl/Cmd+/ anywhere) opens it, and Escape closes
  * it with focus back where it was.
@@ -129,6 +132,7 @@ export { Authors } from "./lib/authors.tsx";
 export { Reacting } from "./lib/reacting.tsx";
 export { ChannelView } from "./lib/channel.tsx";
 export { InboxView } from "./lib/inbox.tsx";
+export { MessageListKeys } from "./lib/message-list-keys-view.tsx";
 export { LoginApprovalView } from "./lib/login-approval.tsx";
 export { IdentityDeletedNotice } from "./lib/identity-deleted-notice.tsx";
 export { LoginView } from "./lib/login.tsx";

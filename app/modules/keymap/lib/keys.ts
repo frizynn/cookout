@@ -1,4 +1,4 @@
-const SCOPES = ["search box", "text box", "profile panel", "inbox", "everywhere"] as const;
+const SCOPES = ["search box", "text box", "profile panel", "message list", "inbox", "everywhere"] as const;
 
 type Scope = (typeof SCOPES)[number];
 
@@ -7,6 +7,7 @@ const TEXT_SCOPES: ReadonlySet<Scope> = new Set(["search box", "text box"]);
 const GROUPS: Readonly<Record<Scope, string>> = {
   everywhere: "Everywhere",
   inbox: "Inbox row",
+  "message list": "Message list",
   "profile panel": "Profile panel",
   "search box": "Search box",
   "text box": "Message box",
@@ -22,6 +23,23 @@ const KEYS = [
   { action: "closeSearch", chord: "Escape", does: "Close the search box", scope: "search box" },
   { action: "leaveTextBox", chord: "Escape", does: "Leave the box, keeping what you typed", scope: "text box" },
   { action: "closeProfile", chord: "Escape", does: "Close the profile", scope: "profile panel" },
+  { action: "nextMessage", chord: "j", does: "Next message", scope: "message list" },
+  { action: "nextMessage", chord: "ArrowDown", does: "Next message", scope: "message list" },
+  {
+    action: "previousMessage",
+    chord: "k",
+    does: "Previous message, loading older ones past the oldest",
+    scope: "message list",
+  },
+  {
+    action: "previousMessage",
+    chord: "ArrowUp",
+    does: "Previous message, loading older ones past the oldest",
+    scope: "message list",
+  },
+  { action: "firstMessage", chord: "Home", does: "First loaded message", scope: "message list" },
+  { action: "lastMessage", chord: "End", does: "Last message", scope: "message list" },
+  { action: "unfoldClosed", chord: "Enter", does: "Unfold the closed threads", scope: "message list" },
   { action: "nextRow", chord: "j", does: "Next row", scope: "inbox" },
   { action: "nextRow", chord: "ArrowDown", does: "Next row", scope: "inbox" },
   { action: "previousRow", chord: "k", does: "Previous row", scope: "inbox" },
