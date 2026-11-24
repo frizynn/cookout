@@ -84,6 +84,14 @@ const SCREENS: readonly Screen[] = [
     name: "message-menu",
     text: "Mark unread",
   },
+  {
+    click: "More actions",
+    clickIn: 'nav li:has(a[href="#/channels/deploys"])',
+    focus: 'nav a[href="#/channels/deploys"]',
+    hash: "#/channels/general",
+    name: "channel-menu",
+    text: "Mark all as read",
+  },
   { hash: "#/channels/general/threads/1", name: "thread", text: "Thanks, both of you." },
   {
     focus: 'article:has-text("@triage-agent can you post the failing run?") time',

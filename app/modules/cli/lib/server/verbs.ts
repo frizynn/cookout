@@ -3,12 +3,12 @@ import type { ListMessagesQuery, MessageId, PostMessageRequest } from "../../../
 import { Option, Schema } from "effect";
 import { answer, refused } from "./output.ts";
 import { joinCommand, leaveCommand } from "./join-command.ts";
+import { searchCommand, threadCommandFor } from "./thread.ts";
 import { commandCommand } from "./command.ts";
 import { helpCommand } from "./help-monitor.ts";
 import { identityCommand } from "./identity.ts";
 import { isDeactivationOfferId } from "../../../inbox/index.ts";
 import { isMessageId } from "../../../messages/index.ts";
-import { threadCommandFor } from "./thread.ts";
 
 const NOTHING = {};
 
@@ -235,6 +235,7 @@ export const verbCommands = [
   channelCommand,
   messageCommand,
   threadCommand,
+  searchCommand,
   joinCommand,
   leaveCommand,
   inboxCommand,
