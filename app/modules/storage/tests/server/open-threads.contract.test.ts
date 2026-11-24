@@ -81,7 +81,7 @@ it.effect.each(storageLayers)(
         hasMore: false,
         threads: [
           { lastActivityAt: TUESDAY, message: { id: second.id } },
-          { lastActivityAt: TUESDAY, message: { id: sameDay.id } },
+          { lastActivityAt: sameDay.createdAt, message: { id: sameDay.id } },
           { lastActivityAt: FRIDAY, message: { id: first.id, replyCount: 1 } },
         ],
       });
@@ -124,7 +124,7 @@ it.effect.each(storageLayers)(
         ONE_AT_A_TIME,
       );
 
-      expect(idsOf(mine)).toStrictEqual([started.id, replied.id, mentioned.id, mentionedInReply.id]);
+      expect(idsOf(mine)).toStrictEqual([started.id, mentioned.id, replied.id, mentionedInReply.id]);
       expect(idsOf(all)).toContain(other.id);
     }),
 );
@@ -138,7 +138,7 @@ it.effect.each(storageLayers)(
       const second = yield* post(MONDAY, "second");
       const third = yield* post(TUESDAY, "third");
       const firstPage = yield* storage.listOpenThreads(ADA, { all: true, limit: PAGE_OF_TWO });
-      const after = { id: second.id, lastActivityAt: MONDAY };
+      const after = { id: second.id, lastActivityAt: second.createdAt };
       const lastPage = yield* storage.listOpenThreads(ADA, { after, all: true, limit: PAGE_OF_TWO });
 
       expect([idsOf(firstPage), firstPage.hasMore]).toStrictEqual([[first.id, second.id], true]);

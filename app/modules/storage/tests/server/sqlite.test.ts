@@ -4,7 +4,6 @@ import {
   appendTo,
   channelFixture,
   commandFixture,
-  fixtureTime,
   freshDatabasePath,
   handlerFixture,
   identityFixture,
@@ -205,7 +204,7 @@ it.effect("message IDs keep increasing after the database is reopened", () =>
   }).pipe(Effect.provide(NodeServices.layer)),
 );
 
-it.effect("a message is never stamped earlier than the latest one, even after the database is reopened", () =>
+it.effect("a message is stamped after the latest one, even after the database is reopened", () =>
   Effect.gen(function* timesAfterReopen() {
     const path = yield* freshDatabasePath;
     yield* postTwo(path);
@@ -213,7 +212,7 @@ it.effect("a message is never stamped earlier than the latest one, even after th
     const earlier = { ...newMessageFixture("grill", "third"), createdAt: isoTime("2025-12-31T23:59:59.000Z") };
     const next = yield* appendTo(storage)(earlier);
 
-    expect(next.createdAt).toBe(fixtureTime);
+    expect(next.createdAt).toBe(isoTime("2026-01-01T00:00:00.002Z"));
   }).pipe(Effect.provide(NodeServices.layer)),
 );
 

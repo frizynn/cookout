@@ -6,7 +6,7 @@ import type { NewMessage } from "./messages.ts";
 import type { SqliteDatabase } from "./adapters/sqlite.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isMessageId } from "../../../messages/index.ts";
-import { stampedNoEarlierThan } from "./messages.ts";
+import { stampedAfter } from "./messages.ts";
 import { unreadable } from "./errors.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
@@ -26,7 +26,7 @@ interface Appending {
 function stampedIn({ db, message }: Appending): Fails<NewMessage> {
   return db.get("SELECT latest_created_at FROM message_id_sequence WHERE only_row = 1").pipe(
     Effect.flatMap((row) => Schema.decodeUnknownEffect(LatestStampRow)(row).pipe(Effect.mapError(unreadable))),
-    Effect.map((row) => stampedNoEarlierThan({ latest: Option.fromNullishOr(row.latest_created_at), message })),
+    Effect.map((row) => stampedAfter({ latest: Option.fromNullishOr(row.latest_created_at), message })),
   );
 }
 

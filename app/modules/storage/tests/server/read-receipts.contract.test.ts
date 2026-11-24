@@ -19,6 +19,7 @@ import { tokenHash } from "../../../identities/index.ts";
 const HASH_LENGTH = 64;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const LATER = isoTime("2026-01-01T00:05:00.000Z");
+const THANKS_AT = isoTime("2026-01-01T00:00:00.002Z");
 const ANN = { author: { name: "ann" } } as const;
 const BOB = { author: { name: "bob" } } as const;
 const PEOPLE = [
@@ -83,9 +84,9 @@ it.effect.each(storageLayers)(
         ackedAll: [{ identity: "bob", messageId: mention.id, seen: true, seenAt: LATER }],
         kept: [
           { identity: "bob", messageId: mention.id, seen: true, seenAt: LATER },
-          { identity: "ann", messageId: reply.id, seen: true, seenAt: fixtureTime },
+          { identity: "ann", messageId: reply.id, seen: true, seenAt: THANKS_AT },
         ],
-        posted: { receipts: [{ identity: "ann", messageId: reply.id, seen: true, seenAt: fixtureTime }] },
+        posted: { receipts: [{ identity: "ann", messageId: reply.id, seen: true, seenAt: THANKS_AT }] },
       });
     }),
 );

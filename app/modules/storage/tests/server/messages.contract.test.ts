@@ -126,7 +126,13 @@ it.effect.each(storageLayers)(
       const second = yield* appendTo(storage)(newMessage("grill", "second", { replyTo: parent.id }));
       const thread = yield* storage.getThread(parent.id);
 
-      expect(first).toStrictEqual({ ...newMessage("grill", "first"), id: first.id, kind: "reply", replyTo: parent.id });
+      expect(first).toStrictEqual({
+        ...newMessage("grill", "first"),
+        createdAt: first.createdAt,
+        id: first.id,
+        kind: "reply",
+        replyTo: parent.id,
+      });
       expect(thread).toStrictEqual({
         parent: {
           ...parent,
