@@ -5,9 +5,9 @@ import { mkdirSync, mkdtempSync } from "node:fs";
 import { screenshotOptions, takeScreenshots, withOlderHistory } from "./lib/screenshots.ts";
 import type { DevCookout } from "./lib/dev-cookout.ts";
 import { chromium } from "@playwright/test";
-import { dropWatch } from "./lib/dropped-watch.ts";
 import { moveClockForward } from "../app/modules/testing/index.ts";
 import path from "node:path";
+import { setScreenPresences } from "./lib/screen-triggers.ts";
 import { spawnSync } from "node:child_process";
 import { startDevCookout } from "./lib/dev-cookout.ts";
 import { tmpdir } from "node:os";
@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 interface Board {
   readonly closed: readonly number[];
   readonly dropped: string;
+  readonly owner: string;
   readonly token: string;
   readonly server: DevCookout;
 }
@@ -31,6 +32,7 @@ const WIDE = { height: 800, width: 1280 };
 const NARROW = { height: 900, width: 600 };
 const LOGGED_IN_AS = "grace";
 const DROPPED_AGENT = "triage-agent";
+const TRIGGER_OWNER = "ada";
 const CLOSED_IN_DEPLOYS = ["deployed", "rollbackCall"] as const;
 
 function withEnv(variables: Readonly<Record<string, string>>, args: readonly string[]): string[] {
@@ -62,7 +64,11 @@ function seed(server: DevCookout): Board {
   const seeded = parseJson(run.stdout);
   const identities = list(field(seeded, "identities")) ?? [];
   const closed = CLOSED_IN_DEPLOYS.map((name) => field(field(seeded, "messages"), name));
-  const tokens = { dropped: tokenOf(identities, DROPPED_AGENT), token: tokenOf(identities, LOGGED_IN_AS) };
+  const tokens = {
+    dropped: tokenOf(identities, DROPPED_AGENT),
+    owner: tokenOf(identities, TRIGGER_OWNER),
+    token: tokenOf(identities, LOGGED_IN_AS),
+  };
   return { closed: closed.filter((id) => typeof id === "number"), ...tokens, server };
 }
 
@@ -215,7 +221,13 @@ async function prepared(server: DevCookout): Promise<Board> {
   const board = seed(server);
   closeThreads(board);
   const { adminToken, url } = server;
-  await dropWatch({ adminToken, agent: DROPPED_AGENT, agentToken: board.dropped, url });
+  await setScreenPresences({
+    adminToken,
+    dropped: DROPPED_AGENT,
+    droppedToken: board.dropped,
+    ownerToken: board.owner,
+    url,
+  });
   return board;
 }
 
