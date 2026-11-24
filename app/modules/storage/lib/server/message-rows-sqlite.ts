@@ -1,4 +1,5 @@
 import { Array as Arr, Effect, Order, Predicate, Schema } from "effect";
+import { AttachmentsColumn, attachmentsColumn, attachmentsField } from "./attachments.ts";
 import type { Author, Closing, Message } from "../../../messages/index.ts";
 import type { DialectForms, SqlDatabase } from "./adapters/sql-database.ts";
 import type { Harness, IdentityName, Owner } from "../../../identities/index.ts";
@@ -24,6 +25,7 @@ const RepliersColumn = Schema.fromJsonString(Schema.Array(ReplierCell));
 const latestFirst = Order.flip(Order.mapInput(Order.Number, (cell: typeof ReplierCell.Type) => cell.last));
 
 const MessageRow = Schema.Struct({
+  attachments: AttachmentsColumn,
   author_name: IdentityNameColumn,
   author_owner: Schema.NullOr(OwnerColumn),
   channel: Schema.String.pipe(Schema.refine(isChannelName)),
@@ -77,7 +79,8 @@ function messageColumns(db: SqlDatabase): string {
   (SELECT max(replies.id) FROM messages AS replies WHERE replies.reply_to = messages.id) AS latest_reply_id,
   (SELECT replies.created_at FROM messages AS replies WHERE replies.reply_to = messages.id
     ORDER BY replies.id DESC LIMIT 1) AS latest_reply_at,
-  ${repliers} AS repliers`;
+  ${repliers} AS repliers,
+  ${attachmentsColumn(db)} AS attachments`;
 }
 
 interface StoredAuthor {
@@ -117,7 +120,14 @@ function messageOf(row: MessageRowType, data: DataField): Message {
     createdAt: row.created_at,
     id: row.id,
   };
-  const content = { ...fields, ...harnessOf(row), ...data, mentions: row.mentions, text: row.text };
+  const content = {
+    ...fields,
+    ...harnessOf(row),
+    ...data,
+    ...attachmentsField(row.attachments),
+    mentions: row.mentions,
+    text: row.text,
+  };
   if (Predicate.isNull(row.reply_to)) {
     const replies = {
       latestReplyAt: row.latest_reply_at,

@@ -99,6 +99,13 @@ export const routineToken = Config.String("COOKOUT_ROUTINE_TOKEN").pipe(
 export const databasePath = Config.String("COOKOUT_DB").pipe(Config.withDefault("cookout.db"));
 
 /**
+ * `COOKOUT_ASSETS_DIR`: the folder `cookout serve` keeps attachments' bytes in, one file per attachment, named by its
+ * ID. Empty counts as unset, which is an `assets` folder beside `COOKOUT_DB`, so on Fly they stay on the `/data`
+ * volume with the database.
+ */
+export const assetsDirectory = Config.String("COOKOUT_ASSETS_DIR").pipe(Config.withDefault(""));
+
+/**
  * `COOKOUT_MAX_IDLE_EXPIRY`: the longest idle expiry `join --idle-expiry` may ask for, such as `90d` (Matt,
  * 2026-11-23, mattpocock/cookout#114). An agent session token expires once it goes that long unused.
  */

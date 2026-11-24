@@ -9,6 +9,7 @@ import type {
   TopLevelMessage,
 } from "../../../messages/index.ts";
 import { MentionsText, dataText, messageColumns, toMessage } from "./message-rows-sqlite.ts";
+import { insertAttachments, sqlAttachments } from "./attachments.ts";
 import { isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
 import { latestOf, stampedIn, takeId } from "./message-sequence-sqlite.ts";
 import { recordAppended, sqlInbox } from "./inbox-sqlite.ts";
@@ -107,9 +108,9 @@ function appendInChannel(db: SqlDatabase, message: NewMessage): Fails<AppendMess
     const mentioning = yield* stampedIn({ db, message: withKnownMentions({ known, message }) });
     const id = yield* takeId({ db, message: mentioning });
     const stored = placed({ id, message: mentioning, placement });
-    const [receipts, threadChanged] = yield* Effect.andThen(
-      insert(db, stored, data),
-      afterInsert(db, stored, message.close),
+    const [receipts, threadChanged] = yield* insert(db, stored, data).pipe(
+      Effect.andThen(insertAttachments(db)(stored)),
+      Effect.andThen(afterInsert(db, stored, message.close)),
     );
     return { message: stored, receipts, status: "appended", threadChanged } as const;
   });
@@ -167,6 +168,7 @@ function sqlMessages(db: SqlDatabase): SharedMessagesSection {
   return {
     ...sqlInbox({ db, reader: sqlMessageReader(db) }),
     ...sqlClosedThreads({ db, reader: sqlMessageReader(db) }),
+    ...sqlAttachments(db),
     appendMessage: (message) => db.transaction(append(db, message)),
     getThread: (id) => threadOf(db, id),
     latestMessageId: latestOf(db),

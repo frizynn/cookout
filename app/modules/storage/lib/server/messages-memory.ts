@@ -12,7 +12,16 @@ import { Array as Arr, Effect, Option, Predicate, Ref, pipe } from "effect";
 import type { Author, Message, MessageId, TopLevelMessage } from "../../../messages/index.ts";
 import { EMPTY_INBOX, memoryReactions, withoutChannel, withoutIdentity } from "./inbox-memory-state.ts";
 import { afterAppend, memoryInbox } from "./inbox-memory.ts";
-import { asMessageId, isPlaced, placeIn, placed, stampedAfter, threadIdOf, withKnownMentions } from "./messages.ts";
+import {
+  asMessageId,
+  attachmentIn,
+  isPlaced,
+  placeIn,
+  placed,
+  stampedAfter,
+  threadIdOf,
+  withKnownMentions,
+} from "./messages.ts";
 import { current, findMessage, memoryThreads, repliesTo, threadChangedBy } from "./threads-memory.ts";
 import type { IdentitiesSection } from "./identities.ts";
 import type { MemoryChannelsSection } from "./channels.ts";
@@ -173,6 +182,7 @@ function memoryMessages({ channels, identities, state }: MemoryMessagesOptions):
         return Effect.succeed(CHANNEL_NOT_FOUND);
       }),
     countMessagesBy: (identity) => read((messages) => Arr.filter(messages, namesAuthor(identity)).length),
+    findAttachment: (id) => read(attachmentIn(id)),
     forgetChannel: (channel) => change((data) => withoutMessagesIn(data, channel)),
     forgetIdentity: (identity) =>
       Effect.asVoid(change((data) => [true, { ...data, inbox: withoutIdentity({ identity, inbox: data.inbox }) }])),
