@@ -1,5 +1,5 @@
 import { Array as Arr, Cause, Effect, Option } from "effect";
-import { exitCodeFor, printLine } from "./output.ts";
+import { exitCodeFor, printErrorLine } from "./output.ts";
 
 const STOPPED_BY_A_SIGNAL: ReadonlySet<string> = new Set(["serve", "watch"]);
 const EXIT_SUCCESS = 0;
@@ -39,7 +39,7 @@ function sayInterrupted(args: readonly string[]): Effect.Effect<void> {
   if (stopsByASignal(args)) {
     return Effect.void;
   }
-  return printLine(interrupted);
+  return printErrorLine(interrupted);
 }
 
 export { exitCodeAfterFailure, sayInterrupted };

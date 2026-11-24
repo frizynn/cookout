@@ -8,21 +8,23 @@ const EXIT_SUCCESS = 0;
 const SERVE_ADMIN_TOKEN = "test-admin-token-0123456789abcdef0123456789";
 const ANY_FREE_PORT = "0";
 
-it.effect("a command interrupted while it waits for the server prints interrupted on stdout and exits 1", () =>
-  Effect.gen(function* interruptedPost() {
-    const server = yield* silentServer();
-    const stopped = yield* interruptCookout({
-      args: ["message", "post", "grill", "done", "--reply-to", "1", "--close"],
-      asked: server.asked,
-      env: { COOKOUT_TOKEN: "cookout_x", COOKOUT_URL: server.url },
-    });
+it.effect(
+  "a command interrupted while it waits for the server prints interrupted on stderr, nothing on stdout, and exits 1",
+  () =>
+    Effect.gen(function* interruptedPost() {
+      const server = yield* silentServer();
+      const stopped = yield* interruptCookout({
+        args: ["message", "post", "grill", "done", "--reply-to", "1", "--close"],
+        asked: server.asked,
+        env: { COOKOUT_TOKEN: "cookout_x", COOKOUT_URL: server.url },
+      });
 
-    expect(stopped).toMatchObject({
-      exitCode: EXIT_FAILURE,
-      stderr: "",
-      stdoutJson: { error: { code: "interrupted" } },
-    });
-  }).pipe(Effect.provide(commandLineServices)),
+      expect(stopped).toMatchObject({
+        exitCode: EXIT_FAILURE,
+        stderrJson: { error: { code: "interrupted" } },
+        stdout: "",
+      });
+    }).pipe(Effect.provide(commandLineServices)),
 );
 
 it.effect("cookout serve interrupted, as SIGTERM stops it, exits 0 and prints no error", () =>
