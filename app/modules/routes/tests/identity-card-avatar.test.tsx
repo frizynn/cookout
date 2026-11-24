@@ -7,6 +7,7 @@ const NAME = "ada";
 
 const CARD: IdentityCardParts = {
   agent: false,
+  broughtInBy: null,
   deactivated: false,
   description: null,
   displayName: null,

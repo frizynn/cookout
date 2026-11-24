@@ -228,6 +228,7 @@ export {
   ReactionChips,
 } from "./lib/messages.ts";
 export type {
+  IdentityCardLink,
   IdentityCardParts,
   IdentityCardSource,
   ActionMenuParts,

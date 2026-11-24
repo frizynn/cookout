@@ -2,6 +2,11 @@ import type { KeyboardEvent, ReactNode } from "react";
 import type { PresenceShown } from "./avatar-parts.ts";
 import { createContext } from "react";
 
+interface IdentityCardLink {
+  readonly name: string;
+  readonly href: string;
+}
+
 interface IdentityCardParts {
   readonly name: string;
   readonly agent: boolean;
@@ -11,6 +16,7 @@ interface IdentityCardParts {
   readonly description: string | null;
   readonly deactivated: boolean;
   readonly profileHref: string;
+  readonly broughtInBy: IdentityCardLink | null;
 }
 
 interface IdentityCardSource {
@@ -65,6 +71,7 @@ export type {
   IdentityCardBoxParts,
   IdentityCardComposerParts,
   IdentityCardControl,
+  IdentityCardLink,
   IdentityCardParts,
   IdentityCardShownParts,
   IdentityCardSource,

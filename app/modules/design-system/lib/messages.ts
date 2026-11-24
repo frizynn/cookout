@@ -13,7 +13,7 @@ export { Mention } from "./mention.tsx";
 export { IdentityCard } from "./identity-card.tsx";
 export { PersonMenu } from "./person-menu.tsx";
 export { IdentityCardComposer, IdentityCards } from "./identity-card-parts.ts";
-export type { IdentityCardParts, IdentityCardSource } from "./identity-card-parts.ts";
+export type { IdentityCardLink, IdentityCardParts, IdentityCardSource } from "./identity-card-parts.ts";
 export { ReactionChip } from "./reaction-chip.tsx";
 export { ReactionChips } from "./reaction-chips.tsx";
 export type { ActionMenuParts, MenuChoice, ReactionChoice, ThreadChoice } from "./menu-parts.ts";

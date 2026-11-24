@@ -105,6 +105,12 @@ const SCREENS: readonly Screen[] = [
     text: "View profile",
   },
   {
+    focus: 'article:has-text("Picked up the 1.4.1 build.") header a',
+    hash: "#/channels/deploys",
+    name: "identity-card-brought-in",
+    text: "Brought in by",
+  },
+  {
     focus: 'article:has-text("@grace can you check the notes before we ship?") a:has-text("@grace")',
     hash: "#/channels/general",
     name: "identity-card-no-presence",

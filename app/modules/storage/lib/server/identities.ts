@@ -173,6 +173,13 @@ const toLookup = (row: unknown): Fails<TokenLookup> =>
               })),
       );
 
+function broughtInByOf(identity: Identity): IdentityName | null {
+  if (identity.kind === "agent") {
+    return identity.broughtInBy ?? null;
+  }
+  return null;
+}
+
 export const sqlIdentities = (db: SqlDatabase): Omit<IdentitiesSection, keyof IdentityDeletesSection> => {
   const count = (sql: string, ...params: readonly string[]) =>
     db.get(sql, ...params).pipe(
@@ -186,13 +193,15 @@ export const sqlIdentities = (db: SqlDatabase): Omit<IdentitiesSection, keyof Id
   const insert = (identity: Identity, hash: TokenHash) =>
     Effect.andThen(
       db.run(
-        "INSERT INTO identities (name, kind, owner, admin, created_at, display_name) VALUES (?, ?, ?, ?, ?, ?)",
+        `INSERT INTO identities (name, kind, owner, admin, created_at, display_name, brought_in_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         identity.name,
         identity.kind,
         identity.kind === "agent" ? identity.owner : null,
         identity.admin ? 1 : 0,
         identity.createdAt,
         identity.displayName ?? null,
+        broughtInByOf(identity),
       ),
       db.run("INSERT INTO tokens (token_hash, identity_name, revoked) VALUES (?, ?, FALSE)", hash, identity.name),
     );
