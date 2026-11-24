@@ -36,6 +36,12 @@ export const relayRestorePath = "/__relay/restore";
  */
 export const relayOpenPath = "/__relay/open";
 
+/**
+ * The path a `POST` to, with `{ days }`, moves the dev program's adjustable clock that many days forward, for a
+ * browser test or screenshot that needs days to pass. `serve` has no such clock.
+ */
+export const clockForwardPath = "/__clock/forward";
+
 /** The answer to the health check. */
 export interface HealthResponse {
   readonly status: "ok";

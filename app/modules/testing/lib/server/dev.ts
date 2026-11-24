@@ -5,6 +5,7 @@ import { startDevCommand } from "./cli.ts";
 
 const DevStartLine = Schema.Struct({
   adminToken: Schema.String,
+  clockUrl: Schema.String,
   database: Schema.String,
   relayUrl: Schema.String,
   url: Schema.String,
