@@ -123,7 +123,7 @@ function isOpen({ board, record }: { readonly board: Board; readonly record: Off
   if (record.cleared || !isQuiet(board, identity)) {
     return false;
   }
-  return lastActivityIn({ board, identity }) <= record.raisedAt;
+  return lastActivityIn({ board, identity }) < record.raisedAt;
 }
 
 function latestOffer(board: Board, identity: IdentityName): OfferRecord | undefined {

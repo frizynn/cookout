@@ -259,3 +259,19 @@ it.effect.each(storageLayers)(
       expect([since, due]).toStrictEqual([JAN_10, FEB_9]);
     }),
 );
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): an agent's activity at the moment its offer is raised clears the offer",
+  ({ layer }) =>
+    Effect.gen(function* clearedAtTheSameMoment() {
+      yield* TestClock.setTime(DateTime.toEpochMillis(DateTime.makeUnsafe(CREATED)));
+      const { postAt, storage } = yield* board(layer);
+      const { raised } = yield* storage.raiseDueDeactivationOffers(JAN_31, quietAgentDays);
+      yield* postAt(JAN_31);
+      const open = yield* storage.listDeactivationOffers(MATT, "open");
+      const settled = yield* storage.raiseDueDeactivationOffers(JAN_31, quietAgentDays);
+
+      expect([Arr.map(raised, ({ raisedAt }) => raisedAt), open]).toStrictEqual([[JAN_31], []]);
+      expect(Arr.map(settled.cleared, ({ id }) => id)).toStrictEqual([idOf(raised)]);
+    }),
+);
