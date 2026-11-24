@@ -48,7 +48,10 @@ interface SearchFlags {
 }
 
 const queryArgument = Argument.String("query").pipe(
-  Argument.withDescription("The words to find. Each matches a word it equals or starts; every word must match."),
+  Argument.withDescription(
+    "The words to find, each matching a word it equals or starts, and any of from:@name, in:#channel, " +
+      "before:YYYY-MM-DD and after:YYYY-MM-DD.",
+  ),
 );
 const searchCursorFlag = Flag.String("cursor").pipe(
   Flag.optional,

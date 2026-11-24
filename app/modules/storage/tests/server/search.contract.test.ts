@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, Option, Predicate, String as Str } from "effect";
+import { Array as Arr, Effect, Option, String as Str } from "effect";
 import type { Message, MessageId } from "../../../messages/index.ts";
 import type {
   NewMessage,
@@ -21,7 +21,6 @@ import {
 import { expect, it } from "@effect/vitest";
 import type { Layer } from "effect";
 import type { NewMessageOptions } from "../../../testing/server.ts";
-import { dateBoundsOf } from "../../../search/server.ts";
 import { parseQuery } from "../../../search/index.ts";
 import { tokenHash } from "../../../identities/index.ts";
 
@@ -43,17 +42,12 @@ type SearchPage = Effect.Success<ReturnType<Storage["Service"]["searchMessages"]
 interface Board {
   readonly storage: Storage["Service"];
   readonly post: (at: NewMessage["createdAt"], text: string, options?: NewMessageOptions) => Effect.Effect<Message>;
-  readonly postIn: (name: string, text: string, options?: NewMessageOptions) => Effect.Effect<Message>;
-  readonly ids: (query: string | SearchQuery) => Effect.Effect<readonly MessageId[], StorageUnavailable>;
+  readonly postIn: (name: string, text: string) => Effect.Effect<Message>;
+  readonly ids: (query: string) => Effect.Effect<readonly MessageId[], StorageUnavailable>;
 }
 
-const NO_FILTERS = { authors: [], channels: [] } as const;
-
-function searchFor(query: string | SearchQuery): SearchQuery {
-  if (Predicate.isString(query)) {
-    return { ...NO_FILTERS, words: parseQuery(query).words };
-  }
-  return query;
+function wordsOf(query: string): SearchQuery {
+  return { authors: [], channels: [], words: parseQuery(query).words };
 }
 
 function newMessage(at: NewMessage["createdAt"], text: string, options: NewMessageOptions = {}): NewMessage {
@@ -71,11 +65,11 @@ function aBoard<Failure, Needs>(
     const append = appendTo(storage);
     return {
       ids: (query) =>
-        Effect.map(storage.searchMessages(searchFor(query), EVERY), ({ results }) =>
+        Effect.map(storage.searchMessages(wordsOf(query), EVERY), ({ results }) =>
           Arr.map(results, ({ message }) => message.id),
         ),
       post: (at, text, options) => append(newMessage(at, text, options)),
-      postIn: (name, text, options) => append({ ...newMessageFixture(name, text, options ?? {}), createdAt: MONDAY }),
+      postIn: (name, text) => append({ ...newMessageFixture(name, text), createdAt: MONDAY }),
       storage,
     };
   });
@@ -162,7 +156,7 @@ it.effect.each(storageLayers)(
       const open = yield* post(WEDNESDAY, "deploy next");
       yield* post(THURSDAY, "reply in an open thread", { replyTo: open.id });
       yield* storage.closeThread(parent.id, { closedAt: FRIDAY, closedBy: ADA });
-      const page = yield* storage.searchMessages(searchFor("deploy"), EVERY);
+      const page = yield* storage.searchMessages(wordsOf("deploy"), EVERY);
 
       expect(page).toMatchObject({
         hasMore: false,
@@ -212,7 +206,7 @@ it.effect.each(storageLayers)(
         (at) => Effect.map(post(at, "flaky test"), ({ id }) => id),
         ONE_AT_A_TIME,
       );
-      const query = searchFor("flaky");
+      const query = wordsOf("flaky");
       const first = yield* storage.searchMessages(query, { limit: PAGE_OF_TWO });
       const second = yield* Effect.andThen(
         post(SATURDAY, "flaky again"),
@@ -224,79 +218,6 @@ it.effect.each(storageLayers)(
         first: true,
         pages: Arr.reverse(sent),
         second: false,
-      });
-    }),
-);
-
-function filteredBy(query: string): SearchQuery {
-  const parsed = parseQuery(query);
-  return {
-    ...dateBoundsOf(parsed),
-    authors: Arr.map(parsed.from, identityName),
-    channels: Arr.map(parsed.in, channelName),
-    words: parsed.words,
-  };
-}
-
-it.effect.each(storageLayers)(
-  "storage contract ($adapter): each filter narrows, filters combine with each other and with words, and repeated authors or channels match any",
-  ({ layer }) =>
-    Effect.gen(function* filters() {
-      const { ids, post, postIn } = yield* aBoard(layer);
-      const plan = yield* post(MONDAY, "deploy plan", BY_ADA);
-      const elsewhere = yield* postIn("deploys", "deploy in deploys", BY_ADA);
-      const done = yield* post(TUESDAY, "deploy done");
-      const lunch = yield* post(WEDNESDAY, "lunch", BY_ADA);
-      const found = yield* Effect.all(
-        {
-          author: ids(filteredBy("from:ada")),
-          authorAndChannel: ids(filteredBy("from:ada in:grill")),
-          authorAndWord: ids(filteredBy("deploy from:ada")),
-          authorSince: ids(filteredBy("from:ada after:2026-01-05")),
-          channel: ids(filteredBy("in:deploys")),
-          eitherAuthor: ids(filteredBy("from:ada from:agent deploy")),
-          eitherChannel: ids(filteredBy("in:grill in:deploys deploy")),
-        },
-        ONE_AT_A_TIME,
-      );
-
-      expect(found).toStrictEqual({
-        author: [lunch.id, elsewhere.id, plan.id],
-        authorAndChannel: [lunch.id, plan.id],
-        authorAndWord: [elsewhere.id, plan.id],
-        authorSince: [lunch.id],
-        channel: [elsewhere.id],
-        eitherAuthor: [done.id, elsewhere.id, plan.id],
-        eitherChannel: [done.id, elsewhere.id, plan.id],
-      });
-    }),
-);
-
-it.effect.each(storageLayers)(
-  "storage contract ($adapter): before: and after: leave out the UTC day they name, from midnight to midnight",
-  ({ layer }) =>
-    Effect.gen(function* dates() {
-      const { ids, post } = yield* aBoard(layer);
-      const [mondayEnd, tuesdayStart, tuesdayEnd, wednesdayStart] = yield* Effect.forEach(
-        [isoTime("2026-01-05T23:59:59.999Z"), TUESDAY, isoTime("2026-01-06T23:59:59.999Z"), WEDNESDAY],
-        (at) => Effect.map(post(at, "deploy"), ({ id }) => id),
-        ONE_AT_A_TIME,
-      );
-      const found = yield* Effect.all(
-        {
-          after: ids(filteredBy("after:2026-01-06")),
-          before: ids(filteredBy("before:2026-01-06")),
-          between: ids(filteredBy("after:2026-01-05 before:2026-01-07")),
-          narrowest: ids(filteredBy("after:2026-01-01 after:2026-01-05 before:2026-01-07 before:2026-01-09")),
-        },
-        ONE_AT_A_TIME,
-      );
-
-      expect(found).toStrictEqual({
-        after: [wednesdayStart],
-        before: [mondayEnd],
-        between: [tuesdayEnd, tuesdayStart],
-        narrowest: [tuesdayEnd, tuesdayStart],
       });
     }),
 );

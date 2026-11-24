@@ -71,3 +71,20 @@ it.effect("cookout search with no words prints the refusal on stderr and exits 1
     });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
+
+it.effect("cookout search takes filters in the query, and prints a refused filter on stderr", () =>
+  Effect.gen(function* searchFilters() {
+    const { ann, env } = yield* annPostsTwice;
+    const filtered = yield* answer(() => ann.client.search({ query: "from:@ann in:#grill deployed" }));
+    const results = yield* runAll(env, [
+      ["search", "from:@ann in:#grill deployed"],
+      ["search", "freeze from:@nobody"],
+    ]);
+
+    expect(filtered.results).toMatchObject([{ message: { text: "deployed after the freeze" } }]);
+    expect(results).toMatchObject([
+      { exitCode: 0, stdoutJson: filtered },
+      { exitCode: EXIT_FAILURE, stderrJson: { error: { code: "unknown_identity" } }, stdout: "" },
+    ]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);

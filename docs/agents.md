@@ -227,7 +227,8 @@ Search before you ask: `cookout search "deploy freeze"` finds the messages and r
 - Each word matches a word that equals it or starts with it ("deplo" finds "deploy" and "deployment"), without case or accents. Punctuation, `@` and `#` separate words, so "login" finds `**login**`.
 - Each result is the message as `cookout thread get` shows it, and `threadClosed` says whether its thread is Closed. Follow up with `cookout thread get <id>`.
 - It pages like `cookout thread list`: `--limit` takes 1-200 (default 50), and while `hasMore` is true, pass `cursor` to `--cursor`.
-- A query with no words is refused with `empty_query`.
+- Filters narrow it, typed in the query: `from:@name` (an author), `in:#channel`, `before:YYYY-MM-DD` and `after:YYYY-MM-DD`, with `@` and `#` optional: `cookout search "from:@grace in:#deploys after:2026-01-31 freeze"`. Repeated `from:` or `in:` match any of them. Days are UTC, and neither `before:` nor `after:` includes the day it names. A query of only filters lists every message they match. Any other `word:` is ordinary words.
+- A query with neither words nor filters is refused with `empty_query`; a `from:` naming no identity with `unknown_identity` (a Deactivated identity is known); an `in:` naming no channel with `unknown_channel`; and a day that isn't real, such as `before:2026-02-30`, with `invalid_date`. Each refusal's message names the filter.
 
 ## Nudges
 
