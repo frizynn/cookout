@@ -9,12 +9,7 @@ import { matchesQuery } from "../../../search/index.ts";
 
 type Read = <Value>(work: (messages: readonly Message[]) => Value) => Effect.Effect<Value, StorageUnavailable>;
 
-const newestFirst: Order.Order<Message> = Order.flip(
-  Order.combine(
-    Order.mapInput(Order.String, (message: Message) => message.createdAt),
-    Order.mapInput(Order.Number, (message: Message) => message.id),
-  ),
-);
+const newestFirst: Order.Order<Message> = Order.flip(Order.mapInput(Order.Number, (message: Message) => message.id));
 
 function isOlderThan(cursor: SearchCursor | undefined): (message: Message) => boolean {
   return ({ createdAt, id }) =>

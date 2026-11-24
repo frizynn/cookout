@@ -113,6 +113,17 @@ it.effect.each(storageLayers)(
     }),
 );
 
+it.effect.each(storageLayers)("storage contract ($adapter): a query with no words finds every message", ({ layer }) =>
+  Effect.gen(function* noWords() {
+    const { ids, post } = yield* aBoard(layer);
+    const first = yield* post(MONDAY, "first");
+    const reply = yield* post(TUESDAY, "a reply", { replyTo: first.id });
+    const found = yield* ids("");
+
+    expect(found).toStrictEqual([reply.id, first.id]);
+  }),
+);
+
 it.effect.each(storageLayers)("storage contract ($adapter): every word of a query must match", ({ layer }) =>
   Effect.gen(function* everyWord() {
     const { ids, post } = yield* aBoard(layer);

@@ -31,7 +31,7 @@ const SearchCursorSchema = Schema.String.pipe(
 const SearchQuerySchema = Schema.Struct({
   cursor: Schema.optionalKey(SearchCursorSchema),
   limit: ListMessagesQuerySchema.fields.limit,
-  query: Schema.optionalKey(Schema.String),
+  query: Schema.String,
 }).pipe(Schema.encodeKeys({ query: searchQueryParam }));
 
 const SearchResultSchema = matchesWire<SearchResult>()(

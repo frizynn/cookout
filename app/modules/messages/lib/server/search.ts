@@ -12,7 +12,6 @@ import { pageSize } from "../../index.ts";
 const ALL_ERRORS = { errors: "all" } as const;
 const PATH_BASE = "http://cookout.invalid";
 const BAD_REQUEST = 400;
-const NO_QUERY = "";
 
 const emptyQuery: Refusal = {
   code: "empty_query",
@@ -22,8 +21,8 @@ const emptyQuery: Refusal = {
 
 type Query = typeof SearchQuerySchema.Type;
 
-function parsedOf(query: string | undefined): Effect.Effect<ParsedQuery, Refusal> {
-  const parsed = parseQuery(query ?? NO_QUERY);
+function parsedOf(query: string): Effect.Effect<ParsedQuery, Refusal> {
+  const parsed = parseQuery(query);
   if (isEmptyQuery(parsed)) {
     return Effect.fail(emptyQuery);
   }
