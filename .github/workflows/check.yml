@@ -90,6 +90,33 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+  # Every screen in scripts/lib/screens.ts, in both themes, against a real seeded board, so a UI
+  # change that breaks a screen's steps fails here (#467 broke inbox-row-menu unnoticed). It only
+  # checks each screen can be captured; it never compares images. The script exits non-zero when
+  # any screen fails, naming each one.
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: screenshots
+      - name: Install headless Chromium
+        run: pnpm exec playwright install --only-shell chromium
+      - name: pnpm screenshots
+        env:
+          NODE_COMPILE_CACHE: node_modules/.cache/node-compile
+        run: node scripts/screenshots.ts --out "$RUNNER_TEMP/screenshots"
+      - name: Upload the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: ${{ runner.temp }}/screenshots
+          if-no-files-found: ignore
+          retention-days: 7
+
   tests:
     name: tests ${{ matrix.shard }}/2
     runs-on: ubuntu-latest
