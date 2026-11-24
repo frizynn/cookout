@@ -10,10 +10,9 @@
  * visible and focused.
  */
 import { browserReadingTools, createReading, createUnread } from "./modules/unread/index.ts";
-import { createAgentJoinApprovals, createLoginApprovals, createSession } from "./modules/session/index.ts";
+import { createAgentJoinApprovals, createBoardStore, createLoginApprovals } from "./modules/board/index.ts";
 import { createLive, eventSourceAdapter } from "./modules/live/index.ts";
 import { CookoutApp } from "./modules/routes/index.tsx";
-import { createBoardStore } from "./modules/board/index.ts";
 import { createComposer } from "./modules/composer/index.ts";
 import { createCookoutClient } from "./modules/sdk/index.ts";
 import { createLayout } from "./modules/layout/index.ts";
@@ -24,12 +23,8 @@ const root = document.querySelector("#root");
 if (root !== null) {
   const url = globalThis.location.origin;
   const client = createCookoutClient({ env: {}, url });
-  const session = createSession({
-    client,
-    clientWithToken: (token) => createCookoutClient({ env: {}, token, url }),
-  });
   const live = createLive(eventSourceAdapter(url));
-  const boardStore = createBoardStore({ client, live });
+  const boardStore = createBoardStore({ client, live, url });
   const unread = createUnread({ client, live });
   const layout = createLayout({ root: globalThis.document.documentElement, storage: globalThis.localStorage });
   createRoot(root).render(
@@ -41,7 +36,7 @@ if (root !== null) {
       live={live}
       loginApprovals={createLoginApprovals(client)}
       reading={createReading(browserReadingTools())}
-      session={session}
+      session={boardStore.session}
       unread={unread}
     />,
   );

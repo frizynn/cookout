@@ -56,6 +56,21 @@
  *
  * `Board` and its parts are the old per-channel and per-thread stores the views still read; the routes module makes them
  * as thin adapters over the store's selectors and methods, for the last migration ticket to delete.
+ *
+ * The board store's `session` is whether the person at the browser is logged in, and as whom, shown with
+ * `subscribeShowing("session")` (or `session.subscribe`): it asks the server who the page's client is (`whoami`,
+ * which a browser answers with the session cookie); no cookie is simply logged out. Its identity is the identities
+ * slice's identity of that name once the slice holds one, so an `identity` event for it (a display name or admin flag
+ * changed in another tab) changes it at once; until then, the server's answer. On a link back it asks again, keeping
+ * whoever is logged in if the server can't be reached. `logIn` swaps a human identity's token for the session cookie
+ * (`POST /v1/session`) through a client with that token for the cookout at `url`; a refused login (an agent's token, a bad token)
+ * keeps the server's error code to show.
+ *
+ * `createLoginApprovals` makes the store the approval page reads: for a login request's user code, the request (its
+ * host and when it expires) once the page subscribes, or why it can't be shown, and `approve`, which approves it as
+ * whoever is logged in so the terminal that started it finishes logging in. `createAgentJoinApprovals` does the same
+ * for an agent join request: the agent it would join or create for the person viewing it, an idle expiry they may
+ * lower, and whether to replace the agent's live session.
  */
 export type {
   Board,
@@ -83,6 +98,7 @@ export {
   type BoardStore,
   type IdentityCalls,
   type Presences,
+  type Session,
   agentSessions,
   createBoardStore,
   deletedIdentities,
@@ -101,3 +117,16 @@ export {
   subscribedChannels,
   threadOf,
 } from "./lib/board-selectors.ts";
+export {
+  type LoginApproval,
+  type LoginApprovalState,
+  type LoginApprovals,
+  type LoginRequest,
+  createLoginApprovals,
+} from "./lib/login-approval.ts";
+export {
+  type AgentJoinApproval,
+  type AgentJoinApprovalState,
+  type AgentJoinApprovals,
+  createAgentJoinApprovals,
+} from "./lib/agent-join-approval.ts";

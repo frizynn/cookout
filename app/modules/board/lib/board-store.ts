@@ -1,6 +1,12 @@
-import type { AgentSessions, Sessions, SessionsClient, SessionsPart } from "./agent-sessions-part.ts";
-import type { Identities, IdentitiesClient, IdentityChange } from "./identities-slice.ts";
-import type { IdentityCalls, IdentityCallsClient } from "./identity-calls.ts";
+import type {
+  AgentSessions,
+  Identities,
+  IdentityCalls,
+  IdentityParts,
+  IdentityPartsClient,
+  SessionState,
+  Sessions,
+} from "./identity-parts.ts";
 import type { IdentityName, Message, ReactionCount, Refusal } from "../../sdk/index.ts";
 import type { OwnClient, OwnShowing, OwnState } from "./own-showing.ts";
 import type { PresenceClient, Presences } from "./presence-slice.ts";
@@ -9,12 +15,10 @@ import type { Toggle, ToggleClient } from "./reaction-toggle.ts";
 import { reactionsIn, reactionsSlice } from "./reactions-slice.ts";
 import type { Live } from "../../live/index.ts";
 import type { Part } from "./slice.ts";
-import { createIdentityCalls } from "./identity-calls.ts";
 import { createOwn } from "./own-showing.ts";
 import { createPart } from "./slice.ts";
 import { createReactionToggle } from "./reaction-toggle.ts";
-import { createSessionsPart } from "./agent-sessions-part.ts";
-import { identitiesSlice } from "./identities-slice.ts";
+import { identityPartsOf } from "./identity-parts.ts";
 import { presenceSlice } from "./presence-slice.ts";
 
 interface BoardState extends OwnState {
@@ -23,9 +27,10 @@ interface BoardState extends OwnState {
   readonly reactionRefusal: Refusal | null;
   readonly identities: Identities;
   readonly agentSessions: AgentSessions;
+  readonly session: SessionState;
 }
 
-type Shown = "channels" | "commands" | "identities" | "presence" | "reactions" | "subscriptions";
+type Shown = "channels" | "commands" | "identities" | "presence" | "reactions" | "session" | "subscriptions";
 
 type Subscribe = (listener: () => void) => () => void;
 
@@ -36,18 +41,21 @@ interface BoardStore extends OwnShowing {
   readonly toggle: (toggle: Toggle) => void;
   readonly subscribeShowingSessions: (agent: IdentityName) => Subscribe;
   readonly identityCalls: IdentityCalls;
+  readonly logIn: (token: string) => void;
+  readonly session: Session;
 }
 
-type BoardStoreClient = OwnClient &
-  IdentitiesClient &
-  IdentityCallsClient &
-  PresenceClient &
-  ReactionsClient &
-  SessionsClient &
-  ToggleClient;
+interface Session {
+  readonly subscribe: Subscribe;
+  readonly snapshot: () => SessionState;
+  readonly logIn: (token: string) => void;
+}
+
+type BoardStoreClient = OwnClient & IdentityPartsClient & PresenceClient & ReactionsClient & ToggleClient;
 
 interface BoardStoreOptions {
   readonly client: BoardStoreClient;
+  readonly url: string;
   readonly live: Live | null;
   readonly pageSize?: number;
 }
@@ -84,7 +92,7 @@ function createListeners(): Listeners {
 
 type Followed = Pick<Part<unknown>, "apply" | "back">;
 
-function follower(live: Live | null, parts: readonly Followed[]): () => void {
+function follower(live: Live | null, parts: readonly Followed[], backs: readonly (() => void)[]): () => void {
   let following = false;
   return () => {
     if (following || live === null) {
@@ -100,13 +108,15 @@ function follower(live: Live | null, parts: readonly Followed[]): () => void {
       for (const part of parts) {
         part.back();
       }
+      for (const back of backs) {
+        back();
+      }
     });
   };
 }
 
-function showing({ follow, part, subscribe }: Showing): Subscribe {
+function showingUnfollowed({ part, subscribe }: Omit<Showing, "follow">): Subscribe {
   return (listener) => {
-    follow();
     const unsubscribe = subscribe(listener);
     part.show();
     return () => {
@@ -116,9 +126,17 @@ function showing({ follow, part, subscribe }: Showing): Subscribe {
   };
 }
 
+function showing({ follow, part, subscribe }: Showing): Subscribe {
+  const shown = showingUnfollowed({ part, subscribe });
+  return (listener) => {
+    follow();
+    return shown(listener);
+  };
+}
+
 function sessionsShowing(
   follow: () => void,
-  part: SessionsPart,
+  part: IdentityParts["sessions"],
   subscribe: Subscribe,
 ): (agent: IdentityName) => Subscribe {
   const subscribers = new Map<IdentityName, Subscribe>();
@@ -158,50 +176,58 @@ function reactionPartsOf(changed: () => void, client: BoardStoreClient): Reactio
   return { reactionToggle, reactions };
 }
 
-interface IdentityParts {
-  readonly identities: Part<Identities, IdentityChange>;
-  readonly sessions: SessionsPart;
+interface Parts extends IdentityParts, ReactionParts {
+  readonly presence: Part<Presences>;
+  readonly own: ReturnType<typeof createOwn>;
 }
 
-function identityPartsOf(changed: () => void, client: BoardStoreClient): IdentityParts {
+function partsOf(changed: () => void, options: BoardStoreOptions): Parts {
+  const { client, pageSize = PAGE_SIZE, url } = options;
   return {
-    identities: createPart({ changed, client, slice: identitiesSlice }),
-    sessions: createSessionsPart({ changed, client }),
+    ...reactionPartsOf(changed, client),
+    ...identityPartsOf({ changed, client, url }),
+    own: createOwn({ changed, client, pageSize }),
+    presence: createPart({ changed, client, slice: presenceSlice }),
   };
 }
 
-function createBoardStore({ client, live, pageSize = PAGE_SIZE }: BoardStoreOptions): BoardStore {
+function createBoardStore(options: BoardStoreOptions): BoardStore {
   const { notify, subscribe } = createListeners();
   let snapshot: BoardState | null = null;
   function changed(): void {
     snapshot = null;
     notify();
   }
-  const presence = createPart({ changed, client, slice: presenceSlice });
-  const { reactionToggle, reactions } = reactionPartsOf(changed, client);
-  const { identities, sessions } = identityPartsOf(changed, client);
-  const own = createOwn({ changed, client, pageSize });
-  const follow = follower(live, [own.parts, presence, reactions, identities, sessions]);
+  const { identities, identityCalls, own, presence, reactionToggle, reactions, session, sessions } = partsOf(
+    changed,
+    options,
+  );
+  const follow = follower(options.live, [own.parts, presence, reactions, identities, sessions], [session.back]);
   const subscribers = {
     ...own.subscribers({ follow, subscribe }),
     identities: showing({ follow, part: identities, subscribe }),
     presence: showing({ follow, part: presence, subscribe }),
     reactions: showing({ follow, part: reactions, subscribe }),
+    session: showingUnfollowed({ part: session, subscribe }),
   };
+  function snapshotOf(): BoardState {
+    snapshot ??= {
+      ...own.state(),
+      agentSessions: sessions.state(),
+      identities: identities.state(),
+      presence: presence.state(),
+      reactionRefusal: reactionToggle.refusal(),
+      reactions: reactions.state(),
+      session: session.shown(identities.state()),
+    };
+    return snapshot;
+  }
   return {
     ...own.showing({ follow, subscribe }),
-    identityCalls: createIdentityCalls({ client, identities, sessions }),
-    snapshot: () => {
-      snapshot ??= {
-        ...own.state(),
-        agentSessions: sessions.state(),
-        identities: identities.state(),
-        presence: presence.state(),
-        reactionRefusal: reactionToggle.refusal(),
-        reactions: reactions.state(),
-      };
-      return snapshot;
-    },
+    identityCalls,
+    logIn: session.logIn,
+    session: { logIn: session.logIn, snapshot: () => snapshotOf().session, subscribe: subscribers.session },
+    snapshot: snapshotOf,
     subscribe,
     subscribeShowing: (shown) => subscribers[shown],
     subscribeShowingSessions: sessionsShowing(follow, sessions, subscribe),
@@ -243,10 +269,11 @@ function agentSessions(agent: IdentityName): (state: BoardState) => Sessions {
   return sessionsIn;
 }
 
-export type { IdentityCalls } from "./identity-calls.ts";
+export type { IdentityCalls } from "./identity-parts.ts";
 export {
   type BoardState,
   type BoardStore,
+  type Session,
   agentSessions,
   createBoardStore,
   deletedIdentities,

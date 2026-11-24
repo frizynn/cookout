@@ -40,7 +40,7 @@ async function postedIn(channel: string): Promise<Message> {
 
 function opened(client: CookoutClient = adminClient()): Opened {
   const hand = handLive();
-  const store = createBoardStore({ client, live: createLive(hand.adapter) });
+  const store = createBoardStore({ client, live: createLive(hand.adapter), url: webTestCookout().url });
   const unsubscribe = store.subscribeShowing("reactions")(vi.fn<() => void>());
   onTestFinished(unsubscribe);
   return { hand, store };
@@ -159,6 +159,7 @@ it("a reaction event heard while reactions are read again wins over the value re
   const store = createBoardStore({
     client: { ...adminClient(), getThread: sendingWhileRead(during, reactionEvent(message, [bob.name])) },
     live: createLive(during.adapter),
+    url: webTestCookout().url,
   });
   onTestFinished(store.subscribeShowing("reactions")(vi.fn<() => void>()));
   during.send(reactionEvent(message, [me]));

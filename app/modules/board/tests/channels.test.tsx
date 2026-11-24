@@ -23,7 +23,7 @@ function refusedClient(): CookoutClient {
 
 function opened(client: CookoutClient = adminClient()): Opened {
   const hand = handLive();
-  const store = createBoardStore({ client, live: createLive(hand.adapter) });
+  const store = createBoardStore({ client, live: createLive(hand.adapter), url: webTestCookout().url });
   for (const shown of ["channels", "commands", "subscriptions"] as const) {
     onTestFinished(store.subscribeShowing(shown)(vi.fn<() => void>()));
   }

@@ -35,6 +35,8 @@
  * A closed thread's items stay in `items`, listed and counted like any other;
  * `thread` events keep each item's `parent` current, so its `closedAt` follows
  * a close or reopen live.
+ * `markChannelRead` acks one channel's items, the newest in its top-level messages and in each of its threads
+ * (`POST /v1/ack`), and drops the items the read positions it moved cover, as `markAllRead` does.
  * `markAllRead` acks the whole inbox up to the newest item the store holds
  * (`POST /v1/inbox/ack-all`) and drops the items the read positions it moved
  * cover, so a message that arrives meanwhile stays unread. `markUnread` marks
@@ -117,6 +119,11 @@ export interface Unread {
   readonly newLine: (channel: ChannelName, thread: MessageId | null) => NewLine;
   /** Marks every inbox item the store holds as read, in every channel and thread, leaving any newer one unread. */
   readonly markAllRead: () => void;
+  /**
+   * Marks every inbox item the store holds from one channel as read, its top-level messages and its threads' replies,
+   * by acking the newest of them in each place (`POST /v1/ack`), as reading each to the bottom does.
+   */
+  readonly markChannelRead: (channel: ChannelName) => void;
   /** Marks a message, and everything after it in its thread or channel, unread again; a refusal shows as `menu.refusal`. */
   readonly markUnread: (messageId: MessageId) => void;
   /** What a message's actions menu needs: Mark unread, and why the last one was refused. An external store of its own. */
@@ -146,6 +153,7 @@ export interface Unread {
 export interface UnreadOptions {
   readonly client: Pick<
     CookoutClient,
+    | "ack"
     | "ackAll"
     | "closeThread"
     | "inbox"
@@ -198,6 +206,7 @@ export function createUnread(options: UnreadOptions): Unread {
     deactivationOffers,
     earlier,
     markAllRead: markAll.markAllRead,
+    markChannelRead: markAll.markChannelRead,
     markUnread: menu.markUnread,
     menu,
     movesBack: items.movesBack,

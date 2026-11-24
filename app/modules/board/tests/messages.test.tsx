@@ -17,6 +17,7 @@ import { channelPage, createBoardStore, messageBeforeOf, threadOf } from "../ind
 import { expect, it, vi } from "vitest";
 import { createLive } from "../../live/index.ts";
 import { handLive } from "../../testing/web.ts";
+import { webTestCookout } from "../../../../scripts/web-test-server.ts";
 
 const SMALL_PAGE = 2;
 
@@ -121,6 +122,7 @@ it("a thread event heard while the channel page is read wins over what the read 
       },
     },
     live: createLive(hand.adapter),
+    url: webTestCookout().url,
   });
   const page = await channelShown({ channel: parent.channel, store });
 

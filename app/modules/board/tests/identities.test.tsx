@@ -42,7 +42,7 @@ function show(store: BoardStore, shown: "identities" | "presence"): void {
 
 function opened(client: CookoutClient = adminClient()): Opened {
   const hand = handLive();
-  const store = createBoardStore({ client, live: createLive(hand.adapter) });
+  const store = createBoardStore({ client, live: createLive(hand.adapter), url: webTestCookout().url });
   show(store, "identities");
   return { hand, store };
 }
@@ -159,7 +159,7 @@ it("an identity event heard while the identities are being read wins over the va
       return answer;
     },
   };
-  const store = createBoardStore({ client, live: createLive(during.adapter) });
+  const store = createBoardStore({ client, live: createLive(during.adapter), url: webTestCookout().url });
   show(store, "identities");
 
   await expect(listed(store, agent.name)).resolves.toMatchObject({ displayName: "Heard Meanwhile" });
@@ -189,7 +189,11 @@ it("identities are read only once a view shows them, and once for any number of 
     const answer = await adminClient().listIdentities(options);
     return answer;
   });
-  const store = createBoardStore({ client: { ...adminClient(), listIdentities }, live: null });
+  const store = createBoardStore({
+    client: { ...adminClient(), listIdentities },
+    live: null,
+    url: webTestCookout().url,
+  });
   onTestFinished(store.subscribe(vi.fn<() => void>()));
   const before = listIdentities.mock.calls.length;
   show(store, "identities");

@@ -4,6 +4,7 @@ import { presenceNameOf } from "./presence-name.ts";
 
 const PLACES = {
   avatar: "absolute -right-0.5 -bottom-0.5 size-3 ring-2 ring-background",
+  card: "size-2.5",
   inline: "size-2 self-center",
 } as const;
 

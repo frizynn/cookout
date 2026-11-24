@@ -20,4 +20,5 @@ export type {
   TopLevelMessage,
   TopLevelMessageResponse,
 } from "../../messages/index.ts";
-export type { ListOpenThreadsQuery } from "../../messages/client.ts";
+export type { ListOpenThreadsQuery, SearchRequest } from "../../messages/client.ts";
+export type { SearchResponse, SearchResult } from "../../search/index.ts";

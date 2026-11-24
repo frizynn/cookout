@@ -68,6 +68,7 @@ export function ChannelConversationPanel(props: ChannelConversationPanelProps): 
       detail={`#${channel}`}
       edge={null}
       label={TEXT.conversation}
+      message={reply.draft.replyTo}
       openHref={hrefOf({ channel, name: "channel" })}
       openLabel={`Open in #${channel}`}
     >

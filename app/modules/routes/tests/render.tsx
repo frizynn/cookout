@@ -1,9 +1,9 @@
-import type { AgentJoinApprovals, LoginApprovals, Session } from "../../session/index.ts";
+import type { AgentJoinApprovals, LoginApprovals, Session } from "../../board/index.ts";
 import type { BoardStore, BoardStoreClient, Live, Reading, Unread } from "./defaults.ts";
-import { adminClient, anonymousClient, sessionOf } from "./identities.ts";
+import { adminClient, anonymousClient } from "./identities.ts";
 import { boardStoreFor, createUnread, readingFor, unreadFor } from "./defaults.ts";
 import { cleanup, render } from "@testing-library/react";
-import { createAgentJoinApprovals, createLoginApprovals } from "../../session/index.ts";
+import { createAgentJoinApprovals, createLoginApprovals } from "../../board/index.ts";
 import type { Composer } from "../../composer/index.ts";
 import { CookoutApp } from "../index.tsx";
 import type { CookoutClient } from "../../sdk/index.ts";
@@ -134,8 +134,8 @@ export function openBoard(opening: BoardOpening): () => void {
 }
 
 export function openAt(opening: Opening): () => void {
-  const session = opening.session ?? sessionOf(opening.client);
   const boardStore = boardStoreFor(opening);
+  const session = opening.session ?? boardStore.session;
   return openBoard({
     hash: opening.hash,
     ...(opening.live && { live: opening.live }),

@@ -12,6 +12,7 @@ import { identityErrorCodes } from "../identities/index.ts";
 import { limitErrorCodes } from "../limits/index.ts";
 import { messageErrorCodes } from "../messages/index.ts";
 import { presenceErrorCodes } from "../presence/index.ts";
+import { searchErrorCodes } from "../search/index.ts";
 
 type Same<Left, Right> = [Left] extends [Right] ? ([Right] extends [Left] ? true : false) : false;
 type SameShape<Left, Right> = Same<Left, Right> extends true ? Same<keyof Left, keyof Right> : false;
@@ -60,6 +61,7 @@ export const errorCodes = [
   ...commandErrorCodes,
   ...limitErrorCodes,
   ...presenceErrorCodes,
+  ...searchErrorCodes,
   "not_found",
   "method_not_allowed",
   "invalid_path",

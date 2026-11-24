@@ -1,4 +1,5 @@
 import { Alert, NavList, Skeleton } from "../../design-system/index.tsx";
+import type { ChannelActions } from "./use-channel-menu.ts";
 import type { ChannelName } from "../../sdk/index.ts";
 import { ChannelRow } from "./channel-row.tsx";
 import type { ChannelsState } from "../../board/index.ts";
@@ -9,6 +10,7 @@ import type { UnreadCounts } from "../../unread/index.ts";
 const TEXT = { channels: "Channels" } as const;
 
 interface ChannelRowsProps {
+  readonly actions: ChannelActions;
   readonly channels: ChannelsState;
   readonly open: ChannelName | null;
   readonly counts: ReadonlyMap<ChannelName, UnreadCounts>;
@@ -33,6 +35,7 @@ export function ChannelRows(props: ChannelRowsProps): ReactNode {
         .toSorted((first, second) => first.name.localeCompare(second.name))
         .map((channel) => (
           <ChannelRow
+            actions={props.actions}
             channel={channel.name}
             counts={counts.get(channel.name) ?? NO_COUNTS}
             key={channel.name}

@@ -20,7 +20,11 @@
  * `shown`, such as "Reconnecting…". In the sidebar, `NavLink` is one link, bold when
  * it has something new (`marked`), highlighted when it is the open item, with
  * an icon and any `Pill` after it: a count read out by its label, loud (the
- * unread colour), quiet, or unseen (read out only); `NavHeading` heads a
+ * unread colour), quiet, or unseen (read out only); given a `menu`, it is an `ActionMenu`'s target.
+ * `ActionMenu` is the one way to give something outside a message an actions menu: it wraps its children so that
+ * right-clicking them, or pressing the context-menu key or Shift+F10 on what has focus in them, opens its `choices`
+ * as a context menu named by its `label`, and a More actions button, shown on hover or focus at their right, opens
+ * the same menu as a dropdown. `NavHeading` heads a
  * `NavList` of links, with any `HeadingButton` on its line, a plus named by
  * its label that starts something new, such as a channel; in the footer, `FooterLink` is a link
  * with a gear, such as Settings, highlighted when open. `Pane` is
@@ -43,7 +47,8 @@
  * `ConversationPanel`, a named column with a `BackLink` arrow (shown only on a
  * narrow screen, where the panel takes the whole width), its detail, its
  * header's `actions` as small buttons (each naming its key in `aria-keyshortcuts` and a tooltip), and any open link (naming its key, `CONVERSATION_KEYS.open`, in
- * `aria-keyshortcuts` and a tooltip; `CONVERSATION_KEYS` also holds the keys for Mark read and Mark unread), or beside
+ * `aria-keyshortcuts` and a tooltip; `CONVERSATION_KEYS` also holds the keys for Mark read and Mark unread), its
+ * `message` being what an identity card's Message does in it (an `IdentityCardComposer`), or beside
  * a `ConversationEmpty`, a named column holding only a
  * muted line (hidden on a narrow screen); a
  * `DividerButton` is a divider line led by a quiet button, such as one that
@@ -111,16 +116,17 @@
  * mark (`for-you`, the filled accent block, when it mentions or answers the reader, or `open`); and an action (such as Reply: a link, or a button with `onAction`) and
  * a More actions button shown on hover or focus, after a button for each of its `menu`'s `reactions`; a reaction's
  * `key`, pressed while the message itself has focus, leaves it too. Its `menu` gives it one actions menu (the action,
- * then each reaction, then Mark unread, then the thread choice, such as Close, if any), drawn two ways on Radix: right-clicking the message opens it as a context menu at the pointer, and the
- * More actions button opens it as a dropdown. Every menu item draws its `icon` (a `ThreadChoice` names one too), which its type requires, before its label. Radix gives both their keyboard and focus behaviour; a chosen item's
+ * then each reaction, then Mark unread, then the thread choice, such as Close, if any), drawn two ways on Radix: right-clicking the message, or the context-menu key or Shift+F10 on it, opens it as a context menu at the pointer, and the
+ * More actions button opens it as a dropdown. Every menu item draws its `icon` (a `ThreadChoice` names one too), which its type requires, before its label. An item may be `disabled`, dimmed and not chosen. Radix gives both their keyboard and focus behaviour; a chosen item's
  * action runs once the menu has closed. Mark unread's tooltip names its shortcut, `Alt-click`: an Alt-click (Option-click
  * on macOS) on the message, but not on a link, button or other interactive element in it, runs Mark unread at once and
  * focuses and selects nothing; `StandaloneMessage` does the same. `StandaloneMessage` is one named message on its own, such as a
  * thread's parent. A message's author name and an `@name` in its text are each an `IdentityCard`: hovering it
- * (after a short delay) or focusing it opens a card, a Radix tooltip whose pointer can rest on it. The card leads
- * with a header like `Profile`'s: the identity's large `Avatar` (with its presence dot, and none when its presence
- * isn't known) beside its shown name, its `@name` handle and an agent's tag. Below come its presence words, its kind
- * (an agent's owner), any description, Deactivated, and a View profile link; pointer leave, Escape or blur closes it, and focus stays on the name. Its card comes from the
+ * (after a short delay) or focusing it opens a card, a Radix tooltip beside the name, kept inside the window: a
+ * labelled `dialog` led by a square avatar tile (grey when deactivated; an Agent chip on an agent's), then its name,
+ * `@name` handle, presence or a red Deactivated, kind, description, and Message (calls the nearest
+ * `IdentityCardComposer`; disabled when deactivated or with none) and View profile. Tab on the name moves into it;
+ * Escape or Tab past either end closes it, focus back on the name. Its card comes from the
  * `IdentityCards` source the views provide; with none, the name is drawn alone. In a message, `MessageBody` holds its rendered Markdown text, `Mention` an
  * `@name` in it, `CallChip` a command call
  * and its data, `DataToggle` its data folded away, and `ThreadSummary` a link to
@@ -210,13 +216,13 @@ export { LinkList } from "./lib/link-list.tsx";
 export { LinkRow } from "./lib/link-row.tsx";
 export { Mention } from "./lib/mention.tsx";
 export { IdentityCard } from "./lib/identity-card.tsx";
-export { IdentityCards } from "./lib/identity-card-parts.ts";
+export { IdentityCardComposer, IdentityCards } from "./lib/identity-card-parts.ts";
 export type { IdentityCardParts, IdentityCardSource } from "./lib/identity-card-parts.ts";
 export { Muted } from "./lib/muted.tsx";
 export { MutedLines } from "./lib/muted-lines.tsx";
 export { ReactionChip } from "./lib/reaction-chip.tsx";
 export { ReactionChips } from "./lib/reaction-chips.tsx";
-export type { ReactionChoice, ThreadChoice } from "./lib/menu-parts.ts";
+export type { ActionMenuParts, MenuChoice, ReactionChoice, ThreadChoice } from "./lib/menu-parts.ts";
 export { QuietLink } from "./lib/quiet-link.tsx";
 export { Notice } from "./lib/notice.tsx";
 export { HeadingButton } from "./lib/heading-button.tsx";

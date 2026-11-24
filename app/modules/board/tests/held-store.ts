@@ -64,7 +64,7 @@ interface Opening {
 
 function opened({ client = adminClient(), pageSize = PAGE_SIZE }: Opening = {}): Opened {
   const hand = handLive();
-  const store = createBoardStore({ client, live: createLive(hand.adapter), pageSize });
+  const store = createBoardStore({ client, live: createLive(hand.adapter), pageSize, url: webTestCookout().url });
   return { hand, store };
 }
 
