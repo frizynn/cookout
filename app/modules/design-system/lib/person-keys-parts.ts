@@ -30,4 +30,4 @@ interface PersonKeysShared extends PersonKeysSource {
 const PersonKeys = createContext<PersonKeysShared | null>(null);
 
 export { PersonKeys };
-export type { BoundPerson, PersonActs, PersonKeysShared, PersonKeysSource };
+export type { PersonActs, PersonKeysShared, PersonKeysSource };
