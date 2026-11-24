@@ -2,6 +2,7 @@ import type { CookoutClient, EventStream } from "../../sdk/index.ts";
 import { adminClient, clientWith, newIdentity } from "./identities.ts";
 import { inPane, inSidebar } from "./regions.ts";
 import { screen, waitFor, within } from "@testing-library/react";
+import type { Live } from "../../live/index.ts";
 import { expect } from "vitest";
 import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";
@@ -19,6 +20,12 @@ interface OwnedAgent {
 interface Opening {
   readonly owner: string;
   readonly client?: (owner: CookoutClient) => CookoutClient;
+  readonly live?: Live;
+}
+
+interface Linked {
+  readonly live: Live;
+  readonly streams: Promise<readonly EventStream[]>;
 }
 
 async function connectedWatch(client: CookoutClient): Promise<EventStream> {
@@ -49,15 +56,27 @@ function asItIs(owner: CookoutClient): CookoutClient {
   return owner;
 }
 
-async function inboxOfOwnerWithWatchingAgent({ client = asItIs, owner }: Opening): Promise<OwnedAgent> {
+async function streamsOf(stream: Promise<EventStream>): Promise<readonly EventStream[]> {
+  return [await stream];
+}
+
+function linked(owner: CookoutClient, live: Live | null): Linked {
+  if (live !== null) {
+    return { live, streams: Promise.resolve([]) };
+  }
+  const watching = watched(owner);
+  return { live: watching.live, streams: streamsOf(watching.stream) };
+}
+
+async function inboxOfOwnerWithWatchingAgent({ client = asItIs, live, owner }: Opening): Promise<OwnedAgent> {
   const human = await newIdentity({ kind: "human", name: owner });
   const agent = `${owner}-agent`;
   await human.client.createIdentity({ kind: "agent", name: agent });
   const watches = [await joinedWatch(human.client, agent)];
-  const { live, stream } = watched(human.client);
-  const unmount = openAt({ client: client(human.client), hash: "#/inbox", live });
+  const link = linked(human.client, live ?? null);
+  const unmount = openAt({ client: client(human.client), hash: "#/inbox", live: link.live });
   await screen.findByText("You're all caught up.");
-  watches.push(await stream);
+  watches.push(...(await link.streams));
   return {
     agent,
     close: async () => {
