@@ -28,11 +28,6 @@ interface Builds {
   readonly outDirs: readonly string[];
 }
 
-interface Built {
-  readonly entries: readonly string[];
-  readonly paths: readonly string[];
-}
-
 const PACKAGE = "@ai-hero/cookout";
 const CHANGESET = /^\.changeset\/(?!README\.md$)[^/]+\.md$/u;
 const SCRIPT = /\.(?:[cm]?js|tsx?)$/u;
@@ -105,18 +100,15 @@ function readFile(file: string): string | undefined {
 }
 
 function strings(value: unknown): readonly string[] {
-  if (typeof value === "string") {
-    return [path.posix.normalize(value)];
-  }
   if (typeof value === "object" && value !== null) {
     return Object.values(value).flatMap((entry) => strings(entry));
   }
-  return [];
+  return [text(value) ?? ""].filter((found) => found !== "").map((found) => path.posix.normalize(found));
 }
 
 async function builds(): Promise<Builds> {
   const { default: config } = await import("../../tsdown.config.ts");
-  const each: readonly unknown[] = list(config) ?? [config];
+  const each = list(config) ?? [];
   return {
     entries: each.flatMap((build) => strings(field(build, "entry"))),
     outDirs: each.flatMap((build) => strings(field(build, "outDir"))),
@@ -127,23 +119,15 @@ function isUnder(file: string, entry: string): boolean {
   return file === entry || file.startsWith(`${entry}/`);
 }
 
-function builtFrom(files: readonly string[], { entries, outDirs }: Builds): Built {
-  if (files.some((entry) => outDirs.includes(entry))) {
-    return { entries: [...entries, WEB_PAGE], paths: [PUBLIC] };
-  }
-  return { entries: [], paths: [] };
-}
-
 async function packageShips(): Promise<(file: string) => boolean> {
   const manifest = parseJson(readFile("package.json") ?? "");
-  const files = (list(field(manifest, "files")) ?? []).flatMap((entry) => strings(text(entry)));
-  const all = await builds();
-  const built = builtFrom(files, all);
-  const listed = [...files.filter((entry) => !all.outDirs.includes(entry)), ...built.paths];
+  const files = strings(field(manifest, "files"));
+  const { entries, outDirs } = await builds();
+  const listed = [...files.filter((entry) => !outDirs.includes(entry)), PUBLIC];
   const exported = strings(field(manifest, "exports"));
-  const sources = shippedSources({ entries: [...built.entries, ...exported], read: (file) => readFile(file) });
+  const sources = shippedSources({ entries: [...entries, WEB_PAGE, ...exported], read: (file) => readFile(file) });
   return (file) => file === API_REPORT || sources.has(file) || listed.some((entry) => isUnder(file, entry));
 }
 
-export { changesetMissing, packageShips, shippedSources };
+export { changesetMissing, packageShips };
 export type { Change };

@@ -1,4 +1,4 @@
-import { changesetMissing, packageShips, shippedSources } from "../lib/changesets.ts";
+import { changesetMissing, packageShips } from "../lib/changesets.ts";
 import { expect, it } from "vitest";
 
 const SHIPPED: ReadonlySet<string> = new Set(["app/main.ts", "docs/agents.md"]);
@@ -80,37 +80,6 @@ it("passes a release, which consumes changesets, with no new one", { timeout: 10
   expect(changesetMissing({ changes, ships })).toStrictEqual([]);
 });
 
-it("ships every file the build entries reach through relative imports, and the web page's assets", {
-  timeout: 1000,
-}, () => {
-  expect.hasAssertions();
-
-  const files: ReadonlyMap<string, string> = new Map([
-    ["app/main.ts", 'import { run } from "./modules/cli/server.ts";\nimport { Effect } from "effect";'],
-    ["app/modules/cli/server.ts", 'export * from "../sdk/index.ts";\nconst lazy = () => import("./lazy.ts");'],
-    ["app/modules/cli/lazy.ts", 'import pkg from "../../../package.json" with { type: "json" };'],
-    ["app/modules/sdk/index.ts", "export const sdk = 1;"],
-    ["app/modules/cli/tests/server/cli.test.ts", 'import "../../server.ts";'],
-    ["package.json", "{}"],
-    ["index.html", '<script src="/assets/theme.js"></script><script type="module" src="/app/web.tsx"></script>'],
-    ["public/assets/theme.js", ""],
-    ["app/web.tsx", 'import { sdk } from "./modules/sdk/index.ts";'],
-  ]);
-
-  const shipped = shippedSources({ entries: ["app/main.ts", "index.html"], read: (file) => files.get(file) });
-
-  expect([...shipped].toSorted()).toStrictEqual([
-    "app/main.ts",
-    "app/modules/cli/lazy.ts",
-    "app/modules/cli/server.ts",
-    "app/modules/sdk/index.ts",
-    "app/web.tsx",
-    "index.html",
-    "package.json",
-    "public/assets/theme.js",
-  ]);
-});
-
 it("ships the package's CLI, SDK, web UI, listed files and API report, and not its tests or dev tools", {
   timeout: 5000,
 }, async () => {
@@ -123,6 +92,10 @@ it("ships the package's CLI, SDK, web UI, listed files and API report, and not i
       "app/main.ts",
       "app/modules/sdk/index.ts",
       "app/web.tsx",
+      "app/modules/sdk/lib/generated/validators.js",
+      "package.json",
+      "public/assets/theme.js",
+      "public/assets/og-card.png",
       "api/sdk.api.md",
       "docs/agents.md",
       "skills/cookout/SKILL.md",
@@ -130,5 +103,5 @@ it("ships the package's CLI, SDK, web UI, listed files and API report, and not i
       "app/modules/sdk/tests/server/sdk.test.ts",
       "scripts/check.ts",
     ].map((file) => shipsInThePackage(file)),
-  ).toStrictEqual([true, true, true, true, true, true, false, false, false]);
+  ).toStrictEqual([true, true, true, true, true, true, true, true, true, true, false, false, false]);
 });
