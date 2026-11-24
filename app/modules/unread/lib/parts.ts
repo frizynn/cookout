@@ -31,6 +31,7 @@ type UnreadState =
       readonly nudges: readonly Nudge[];
       readonly deactivationOffers: readonly DeactivationOffer[];
       readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[];
+      readonly heldDeactivatedQuietAgents: readonly DeactivatedQuietAgent[];
       readonly markAll: MarkAllState;
     }
   | (Refusal & { readonly status: "failed" });
@@ -85,6 +86,7 @@ function loadedOf({ alerts, deactivatedQuietAgents, deactivationOffers, items, m
     alerts: alerts.unread(),
     deactivatedQuietAgents: deactivatedQuietAgents.unread(),
     deactivationOffers: deactivationOffers.open(),
+    heldDeactivatedQuietAgents: deactivatedQuietAgents.forYou().held,
     inbox: items.inbox(),
     items: items.list(),
     markAll,

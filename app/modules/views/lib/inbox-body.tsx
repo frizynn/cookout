@@ -36,13 +36,15 @@ export function InboxBody(props: InboxBodyProps): ReactNode {
   if (unread.status === "failed") {
     return <Alert>{`Couldn't load the inbox (${unread.code}): ${unread.message}`}</Alert>;
   }
+  const held = unread.heldDeactivatedQuietAgents.length;
   return (
     <>
-      {unread.inbox.length + besideCountOf(unread) === NONE && <FeedNote place="empty">{TEXT.empty}</FeedNote>}
+      {unread.inbox.length + besideCountOf(unread) + held === NONE && <FeedNote place="empty">{TEXT.empty}</FeedNote>}
       <InboxAlerts alerts={unread.alerts} onMarkRead={props.onMarkAlertRead} />
       <InboxSection
         besides={unread.nudges.length + unread.deactivationOffers.length + unread.deactivatedQuietAgents.length}
         forYou
+        uncounted={held}
         me={me}
         rows={rows}
         selected={selected}
@@ -51,11 +53,20 @@ export function InboxBody(props: InboxBodyProps): ReactNode {
         <ForYouNotices
           actions={props.notices}
           deactivated={unread.deactivatedQuietAgents}
+          held={unread.heldDeactivatedQuietAgents}
           nudges={unread.nudges}
           offers={unread.deactivationOffers}
         />
       </InboxSection>
-      <InboxSection besides={NONE} forYou={false} me={me} rows={rows} selected={selected} title={TEXT.activity} />
+      <InboxSection
+        besides={NONE}
+        forYou={false}
+        me={me}
+        rows={rows}
+        selected={selected}
+        title={TEXT.activity}
+        uncounted={NONE}
+      />
     </>
   );
 }

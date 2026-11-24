@@ -15,7 +15,10 @@ interface Notices {
 type NoticesBeside =
   | { readonly nudges: readonly Nudge[] }
   | { readonly deactivationOffers: readonly DeactivationOffer[] }
-  | { readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[] };
+  | {
+      readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[];
+      readonly heldDeactivatedQuietAgents: readonly DeactivatedQuietAgent[];
+    };
 
 type NoticesClient = Pick<
   CookoutClient,
@@ -31,8 +34,8 @@ function noticesOf({ client, onChange }: NoticesOptions): Notices {
   return {
     deactivatedQuietAgents: createDeactivatedQuietAgents({
       client,
-      onChange: (unread) => {
-        onChange({ deactivatedQuietAgents: unread });
+      onChange: ({ held, unread }) => {
+        onChange({ deactivatedQuietAgents: unread, heldDeactivatedQuietAgents: held });
       },
     }),
     deactivationOffers: createDeactivationOffers({

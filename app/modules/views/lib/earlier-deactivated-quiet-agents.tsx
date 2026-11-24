@@ -19,7 +19,7 @@ function readOf(state: DeactivatedQuietAgentsState): readonly DeactivatedQuietAg
   if (state.status !== "loaded") {
     return [];
   }
-  return state.deactivatedQuietAgents.filter(({ read }) => read);
+  return state.deactivatedQuietAgents.filter(({ id, read }) => read && !state.held.includes(id));
 }
 
 export function EarlierDeactivatedQuietAgents(props: EarlierDeactivatedQuietAgentsProps): ReactNode {

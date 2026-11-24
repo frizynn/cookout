@@ -114,35 +114,61 @@ it.effect("after 90 quiet days the owner's inbox shows the entry under For you a
   }).pipe(Effect.scoped, Effect.provide(testCookout())),
 );
 
-it.effect("Reactivate in the row asks first, shows a fresh token once, reactivates the agent and moves the row", () =>
-  Effect.gen(function* reactivateInRow() {
-    const ada = yield* deactivatedLive;
+function buttonsIn(label: string): readonly string[] {
+  return textsOf(within(screen.getByRole("list", { name: label })).getAllByRole("button"));
+}
+
+function reactivatedInRow(client: CookoutClient): Effect.Effect<HTMLElement> {
+  return Effect.gen(function* reactivateInRow() {
     clickInForYou("Reactivate");
     const confirm = yield* answer(() => inDialog().findByRole("button", { name: "Reactivate @triage-agent" }));
     fireEvent.click(confirm);
     const token = yield* answer(() => inPane().findByRole("button", { name: "Copy token" }));
-    yield* caughtUp;
+    yield* Effect.repeat(unreadIds(client), { until: (ids) => ids.length === ZERO });
+    yield* settled;
+    return token;
+  });
+}
+
+it.effect("Reactivate in the row asks first, shows a fresh token once and keeps the row in For you, uncounted", () =>
+  Effect.gen(function* reactivateInRow() {
+    const ada = yield* deactivatedLive;
+    const token = yield* reactivatedInRow(ada.client);
     const active = yield* activeOf(ada.client);
-    const shown = rowsIn(EARLIER);
-    fireEvent.click(inPane().getByRole("button", { name: "Done" }));
 
     expect([
       token.textContent,
       active,
       rowsIn(FOR_YOU),
+      buttonsIn(FOR_YOU),
       inboxCounts(),
-      shown,
-      inPane().queryByRole("button", { name: "Copy token" }),
+      screen.getByRole("heading", { level: 2, name: /^For you/u }).textContent,
       rowsIn(EARLIER),
     ]).toStrictEqual([
       "Copy token",
       Option.some(true),
+      [expect.stringMatching(/^@triage-agent was deactivated.*cookout_test_\w+Copy it now: it isn't shown again/u)],
+      ["Copy token", "Done"],
       [],
+      "For you",
       [],
-      [expect.stringMatching(/cookout_test_\w+Copy it now: it isn't shown again/u)],
-      null,
-      [expect.stringContaining(ENTRY)],
     ]);
+  }).pipe(Effect.scoped, Effect.provide(testCookout())),
+);
+
+it.effect("Done after Reactivate moves the row to Earlier without the token", () =>
+  Effect.gen(function* doneAfterReactivate() {
+    const ada = yield* deactivatedLive;
+    yield* reactivatedInRow(ada.client);
+    clickInForYou("Done");
+    yield* caughtUp;
+
+    expect([
+      rowsIn(FOR_YOU),
+      inboxCounts(),
+      rowsIn(EARLIER),
+      inPane().queryByRole("button", { name: "Copy token" }),
+    ]).toStrictEqual([[], [], [expect.stringContaining(ENTRY)], null]);
   }).pipe(Effect.scoped, Effect.provide(testCookout())),
 );
 
@@ -178,7 +204,7 @@ it.effect("Mark all as read reads the entry, moving it to Earlier", () =>
   }).pipe(Effect.scoped, Effect.provide(testCookout())),
 );
 
-it.effect("reactivating the agent through the SDK clears the row live", () =>
+it.effect("a second tab drops the row from For you as soon as another session's Reactivate reads the entry", () =>
   Effect.gen(function* reactivateElsewhere() {
     const ada = yield* deactivatedLive;
     yield* answer(() => ada.client.reactivateIdentity("triage-agent"));
