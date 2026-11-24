@@ -6,6 +6,7 @@ const PRESENCE_GRACE_SECONDS = "2";
 
 interface DevCookout {
   readonly adminToken: string;
+  readonly clockUrl: string;
   readonly relayUrl: string;
   readonly webUrl: string;
 }
@@ -19,11 +20,20 @@ function fieldsOf(line: string): Readonly<Record<string, unknown>> {
   }
 }
 
+function devCookoutIn(line: string): DevCookout | null {
+  const { adminToken, clockUrl, relayUrl, webUrl } = fieldsOf(line);
+  const urls = typeof clockUrl === "string" && typeof relayUrl === "string" && typeof webUrl === "string";
+  if (typeof adminToken === "string" && urls) {
+    return { adminToken, clockUrl, relayUrl, webUrl };
+  }
+  return null;
+}
+
 async function startLine(lines: AsyncIterable<string>): Promise<DevCookout> {
   for await (const line of lines) {
-    const { adminToken, relayUrl, webUrl } = fieldsOf(line);
-    if (typeof adminToken === "string" && typeof relayUrl === "string" && typeof webUrl === "string") {
-      return { adminToken, relayUrl, webUrl };
+    const cookout = devCookoutIn(line);
+    if (cookout !== null) {
+      return cookout;
     }
   }
   throw new Error("app/dev.ts start stopped before printing its start line");
@@ -39,6 +49,7 @@ async function setup(): Promise<() => Promise<void>> {
   process.env["COOKOUT_URL"] = cookout.webUrl;
   process.env["COOKOUT_ALLOW_HUMAN"] = "1";
   process.env["COOKOUT_RELAY_URL"] = cookout.relayUrl;
+  process.env["COOKOUT_CLOCK_URL"] = cookout.clockUrl;
   return async () => {
     dev.kill("SIGINT");
     await once(dev, "exit");
