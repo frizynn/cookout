@@ -7,7 +7,9 @@
  * names its agent session state file with it.
  *
  * Ctrl-C or SIGTERM is how `serve` and `watch` stop, so they exit 0 on one. Any other verb so interrupted prints
- * `{ error: { code: "interrupted" } }` on stdout and exits 1, never exit 0 with no output (mattpocock/cookout#297).
+ * `{ error: { code: "interrupted" } }` on stderr, as every refusal is, and exits 1, never exit 0 with no output
+ * (mattpocock/cookout#297, mattpocock/cookout#299). A stopped `watch` waits at most 2 s for its clean close, and
+ * never for a connection it is still opening, so it exits promptly even when the board has stopped answering.
  *
  * Any other failure before `serve` is listening, such as a port in use or a bad setting, prints one stderr line,
  * `cookout serve failed to start: <tag>: <message>`, plus the first stack frame for a defect, and exits 1
