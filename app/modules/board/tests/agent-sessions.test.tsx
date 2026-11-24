@@ -56,7 +56,7 @@ function show(store: BoardStore, agent: IdentityName): void {
 
 function unshown(client: CookoutClient = adminClient()): Opened {
   const hand = handLive();
-  return { hand, store: createBoardStore({ client, live: createLive(hand.adapter) }) };
+  return { hand, store: createBoardStore({ client, live: createLive(hand.adapter), url: webTestCookout().url }) };
 }
 
 function opened(agent: IdentityName, client: CookoutClient = adminClient()): Opened {
@@ -178,7 +178,7 @@ it("opening and closing a profile many times leaves one stream listener for agen
   const agent = await agentNamed("store-sessions-listener-bot");
   const live = createLive(handLive().adapter);
   const subscribe = vi.fn<Live["subscribe"]>(live.subscribe);
-  const store = createBoardStore({ client: adminClient(), live: { ...live, subscribe } });
+  const store = createBoardStore({ client: adminClient(), live: { ...live, subscribe }, url: webTestCookout().url });
   for (let opening = NONE; opening < OPENINGS; opening += ONE) {
     store.subscribeShowingSessions(agent.name)(vi.fn<() => void>())();
   }

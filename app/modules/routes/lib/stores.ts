@@ -1,5 +1,4 @@
-import type { AgentJoinApprovals, LoginApprovals, Session } from "../../session/index.ts";
-import type { Board, BoardStore } from "../../board/index.ts";
+import type { AgentJoinApprovals, Board, BoardStore, LoginApprovals, Session } from "../../board/index.ts";
 import type { Reading, Unread } from "../../unread/index.ts";
 import type { Composer } from "../../composer/index.ts";
 import type { Layout } from "../../layout/index.ts";
