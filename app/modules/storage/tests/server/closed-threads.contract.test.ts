@@ -1,7 +1,10 @@
-import { Array as Arr, Effect, Option, Predicate } from "effect";
+import { Array as Arr, Effect, Option, Predicate, String as Str } from "effect";
+import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import {
   appendTo,
   channelFixture as channel,
+  fixtureTime,
+  identityFixture as identity,
   identityName,
   isoTime,
   messageId,
@@ -10,15 +13,44 @@ import {
   storageLayers,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
-import type { StorageUnavailable } from "../../../storage/server.ts";
+import type { Layer } from "effect";
+import type { MessageId } from "../../../messages/index.ts";
+import { tokenHash } from "../../../identities/index.ts";
 
 const MISSING = 999_999;
+const HASH_LENGTH = 64;
 const GRILL = channel("grill").name;
 const PAGE = { limit: 10 } as const;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const firstClosing = { closedAt: isoTime("2026-01-02T00:00:00.000Z"), closedBy: identityName("ada") };
 const reopenedAt = isoTime("2026-01-04T00:00:00.000Z");
 const laterClosing = { closedAt: isoTime("2026-01-03T00:00:00.000Z"), closedBy: identityName("grace") };
+
+type Store = Storage["Service"];
+
+type ReactionKey = Parameters<Store["removeReaction"]>[number];
+
+function bobsThumbsUp(id: MessageId): ReactionKey {
+  return { identity: identityName("bob"), messageId: id, reaction: "thumbs_up" };
+}
+
+function closedThreadWithReply<Failure, Needs>(
+  layer: Layer.Layer<Storage, Failure, Needs>,
+): Effect.Effect<
+  { readonly parent: MessageId; readonly reply: MessageId; readonly storage: Store },
+  Failure | StorageUnavailable,
+  Needs
+> {
+  return Effect.gen(function* openClosedThread() {
+    const { storage } = yield* openStore(layer);
+    yield* storage.createChannel(channel("grill"));
+    yield* storage.createIdentity(identity("bob"), tokenHash(Str.repeat(HASH_LENGTH)("b")));
+    const parent = yield* appendTo(storage)(newMessage("grill", "parent"));
+    const reply = yield* appendTo(storage)(newMessage("grill", "reply", { replyTo: parent.id }));
+    yield* storage.closeThread(parent.id, firstClosing);
+    return { parent: parent.id, reply: reply.id, storage };
+  });
+}
 
 function present<Value>(
   found: Effect.Effect<Value | undefined, StorageUnavailable>,
@@ -99,5 +131,32 @@ it.effect.each(storageLayers)(
       );
 
       expect(Arr.filter(missing, Predicate.isNotUndefined)).toStrictEqual([]);
+    }),
+);
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): adding or removing a reaction in a closed thread leaves it closed by its first closer",
+  ({ layer }) =>
+    Effect.gen(function* reactionKeepsClosed() {
+      const { parent: parentId, reply, storage } = yield* closedThreadWithReply(layer);
+      const ids = [parentId, reply];
+      const reacted = yield* Effect.forEach(
+        ids,
+        (id) => storage.addReaction({ ...bobsThumbsUp(id), notifiesAuthor: true, reactedAt: fixtureTime }),
+        ONE_AT_A_TIME,
+      );
+      const afterAdding = yield* present(storage.getThread(parentId));
+      const removed = yield* Effect.forEach(ids, (id) => storage.removeReaction(bobsThumbsUp(id)), ONE_AT_A_TIME);
+      const [afterRemoving, page] = yield* Effect.all(
+        [present(storage.getThread(parentId)), present(storage.listChannelMessages(GRILL, PAGE))],
+        ONE_AT_A_TIME,
+      );
+
+      expect([reacted, removed]).toStrictEqual([
+        [true, true],
+        [true, true],
+      ]);
+      expect(afterAdding.parent).toMatchObject({ ...firstClosing, id: parentId });
+      expect([afterRemoving.parent, page.messages]).toStrictEqual([afterAdding.parent, [afterAdding.parent]]);
     }),
 );
