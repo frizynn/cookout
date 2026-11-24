@@ -1,5 +1,5 @@
 import type { ScriptCoverage, Span } from "../lib/page-coverage.ts";
-import { coverageMapOf, parseCoverageMap, testsReaching } from "../lib/browser-coverage.ts";
+import { coverageMapOf, parseCoverageMap, testCoverageFrom, testsReaching } from "../lib/browser-coverage.ts";
 import { expect, it } from "vitest";
 import type { CoverageMap } from "../lib/browser-coverage.ts";
 import type { Outcome } from "../lib/tools.ts";
@@ -175,5 +175,24 @@ it("reads back the map it wrote, and refuses one that isn't a coverage map", { t
   expect(read).toStrictEqual([
     { ok: true, value: map },
     { ok: false, reason: "the coverage map isn't one this check can read" },
+  ]);
+});
+
+it("reads back each page's coverage record, and counts an unreadable one as incomplete", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const files = valueOf(pageCoverage([await servedView({ hidden: 0, shown: 1 })]));
+  const lines = [
+    JSON.stringify({ files, test: "a.browser.test.ts" }),
+    JSON.stringify({ incomplete: "a page opened outside a test", test: "" }),
+    JSON.stringify({ files: { [VIEW]: { called: "all" } }, test: "b.browser.test.ts" }),
+  ];
+
+  expect(lines.map((line) => testCoverageFrom(line))).toStrictEqual([
+    { files, test: "a.browser.test.ts" },
+    { incomplete: "a page opened outside a test", test: "" },
+    { incomplete: "its coverage record couldn't be read", test: "b.browser.test.ts" },
   ]);
 });

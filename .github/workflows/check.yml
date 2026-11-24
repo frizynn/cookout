@@ -57,6 +57,16 @@ jobs:
           path: .timings/*.txt
           include-hidden-files: true
           if-no-files-found: ignore
+      # A local pnpm check fetches the newest of these on its base to pick the browser tests a branch reaches (#444).
+      - name: Upload the browser coverage map
+        if: matrix.job == 'browser'
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-coverage-map
+          path: .browser-coverage/map.json
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 30
 
   tests:
     name: tests ${{ matrix.shard }}/2

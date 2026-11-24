@@ -71,6 +71,7 @@
     "coverage:raise": "vitest run --coverage --coverage.thresholds.autoUpdate=true",
     "test:watch": "vitest",
     "browser": "playwright test",
+    "browser:coverage": "COOKOUT_BROWSER_COVERAGE=.browser-coverage/records node scripts/browser-coverage.ts",
     "screenshots": "node scripts/screenshots.ts"
   },
   "dependencies": {

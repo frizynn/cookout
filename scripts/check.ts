@@ -68,6 +68,9 @@ const browserTests = selectedBrowserTests();
 const browserSkipped = browserSkip(browserTests);
 
 function browserScript(): readonly string[] {
+  if (inCi) {
+    return ["browser:coverage"];
+  }
   if (browserTests.all) {
     return ["browser"];
   }

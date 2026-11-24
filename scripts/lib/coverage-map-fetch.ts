@@ -28,7 +28,7 @@ interface Recording {
 const ARTIFACT = "browser-coverage-map";
 const MAP_FILE = "map.json";
 const CACHE = "cookout-browser-coverage";
-const LISTING = `repos/{owner}/{repo}/actions/artifacts?name=${ARTIFACT}&per_page=50`;
+const LISTING = `repos/{owner}/{repo}/actions/artifacts?name=${ARTIFACT}&per_page=100`;
 const GH_TIMEOUT_MS = 60_000;
 const EXIT_SUCCESS = 0;
 const NONE = 0;

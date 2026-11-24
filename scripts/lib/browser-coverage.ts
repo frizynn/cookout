@@ -165,9 +165,32 @@ function parseCoverageMap(json: unknown): Outcome<CoverageMap> {
   return { ok: true, value: { commit, files: files.value, tests: tests.value } };
 }
 
+function fileCoverageFrom(value: unknown): Outcome<FileCoverage> {
+  const called = spansFrom(field(value, "called"));
+  const functions = spansFrom(field(value, "functions"));
+  if (!called.ok || !functions.ok) {
+    return { ok: false, reason: "not a file's coverage" };
+  }
+  return { ok: true, value: { called: called.value, functions: functions.value } };
+}
+
+function testCoverageFrom(line: string): TestCoverage {
+  const json = parseJson(line);
+  const test = text(field(json, "test")) ?? "";
+  const incomplete = text(field(json, "incomplete")) ?? "";
+  if (incomplete !== "") {
+    return { incomplete, test };
+  }
+  const files = recordFrom(field(json, "files"), fileCoverageFrom);
+  if (!files.ok) {
+    return { incomplete: "its coverage record couldn't be read", test };
+  }
+  return { files: files.value, test };
+}
+
 function coverageMapFrom(source: string): Outcome<CoverageMap> {
   return parseCoverageMap(parseJson(source));
 }
 
 export type { CoverageMap, TestCoverage };
-export { coverageMapFrom, coverageMapOf, parseCoverageMap, testsReaching };
+export { coverageMapFrom, coverageMapOf, parseCoverageMap, testCoverageFrom, testsReaching };
