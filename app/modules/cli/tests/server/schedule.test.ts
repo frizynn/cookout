@@ -70,3 +70,31 @@ it.effect("cookout schedule pause, resume and delete change a Scheduled message 
     expect(badId.exitCode).not.toBe(EXIT_SUCCESS);
   }).pipe(Effect.provide(services)),
 );
+
+const adminRunsAfterAdaIsDeactivated: Effect.Effect<Run, never, TestCookoutTag | CommandLineNeeds | Scope.Scope> =
+  Effect.gen(function* deactivateAda() {
+    const cookout = yield* TestCookout;
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    yield* answer(() => ada.client.createChannel({ name: "grill" }));
+    yield* answer(() =>
+      ada.client.createScheduledMessage({ channel: "grill", cron: "0 9 * * 1-5", text: "standup", timeZone: "UTC" }),
+    );
+    yield* answer(() => cookout.client.deactivateIdentity("ada"));
+    const folder = yield* freshStateFolder;
+    const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: cookout.adminToken, COOKOUT_URL: cookout.url };
+    return (args) => runCookout({ args, env });
+  });
+
+it.effect("cookout schedule list and get show why a Deactivated creator's schedule is paused", () =>
+  Effect.gen(function* deactivatedCreator() {
+    const run = yield* adminRunsAfterAdaIsDeactivated;
+    const listed = yield* run(["schedule", "list"]);
+    const shown = yield* run(["schedule", "get", FIRST_ID]);
+
+    expect(listed).toMatchObject({ stdoutJson: { scheduledMessages: [{ pausedBecause: "creator_deactivated" }] } });
+    expect(shown).toMatchObject({
+      exitCode: EXIT_SUCCESS,
+      stdoutJson: { scheduledMessage: { pausedBecause: "creator_deactivated", status: "paused" } },
+    });
+  }).pipe(Effect.provide(services)),
+);

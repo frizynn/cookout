@@ -51,6 +51,10 @@ const listCommand = Command.make(
     ),
 ).pipe(Command.withDescription("List every Scheduled message, or one channel's."));
 
+const getCommand = Command.make("get", { id: scheduleIdArgument }, ({ id }) =>
+  answer((client) => client.getScheduledMessage(id)),
+).pipe(Command.withDescription("Show one Scheduled message: its timing, next runs, last run and why it is paused."));
+
 const pauseCommand = Command.make("pause", { id: scheduleIdArgument }, ({ id }) =>
   answer((client) => client.pauseScheduledMessage(id)),
 ).pipe(Command.withDescription("Pause a Scheduled message: yours, an agent's you own, or any as an admin."));
@@ -64,8 +68,8 @@ const deleteCommand = Command.make("delete", { id: scheduleIdArgument }, ({ id }
 ).pipe(Command.withDescription("Delete a Scheduled message. The messages it posted stay."));
 
 const scheduleCommand = Command.make("schedule").pipe(
-  Command.withDescription("Create, list, pause, resume and delete Scheduled messages."),
-  Command.withSubcommands([createCommand, listCommand, pauseCommand, resumeCommand, deleteCommand]),
+  Command.withDescription("Create, list, show, pause, resume and delete Scheduled messages."),
+  Command.withSubcommands([createCommand, listCommand, getCommand, pauseCommand, resumeCommand, deleteCommand]),
 );
 
 export { scheduleCommand };

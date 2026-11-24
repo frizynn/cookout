@@ -21,6 +21,7 @@ const SETTLE = "30 millis";
 const UTC = "UTC";
 const ONE = 1;
 const TWO = 2;
+const CONFLICT = 409;
 const DAILY_NINE = { channel: "grill", cron: "0 9 * * *", text: "standup @bob", timeZone: UTC } as const;
 
 const board = Effect.gen(function* openBoard() {
@@ -157,20 +158,68 @@ it.effect("only the creator, an agent creator's owner or an admin can pause, res
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("deactivating the creator pauses its schedules, and resuming waits for it to be reactivated", () =>
-  Effect.gen(function* deactivation() {
+it.effect(
+  "deactivating the creator pauses its schedules, nothing posts when they fall due, and resuming is refused",
+  () =>
+    Effect.gen(function* deactivation() {
+      const { ada, cookout } = yield* board;
+      const made = yield* schedule(ada, DAILY_NINE);
+      yield* answer(() => cookout.client.deactivateIdentity("ada"));
+      const paused = yield* shown(cookout.client, made);
+      const refused = yield* refusal(() => cookout.client.resumeScheduledMessage(made.id));
+      const posted = yield* Effect.andThen(quietFor("10 hours"), grillTexts(cookout.client));
+
+      expect(paused).toMatchObject({ nextRuns: [], pausedBecause: "creator_deactivated", status: "paused" });
+      expect([refused.status, refused.code]).toStrictEqual([CONFLICT, "creator_deactivated"]);
+      expect(posted).toStrictEqual([]);
+    }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("reactivating the creator leaves its schedules paused, and a manager can resume them then", () =>
+  Effect.gen(function* reactivation() {
     const { ada, cookout } = yield* board;
     const made = yield* schedule(ada, DAILY_NINE);
     yield* answer(() => cookout.client.deactivateIdentity("ada"));
-    const paused = yield* shown(cookout.client, made);
-    const refused = yield* refusal(() => cookout.client.resumeScheduledMessage(made.id));
-    yield* quietFor("10 hours");
+    yield* answer(() => cookout.client.reactivateIdentity("ada"));
+    const stillPaused = yield* shown(cookout.client, made);
+    const { scheduledMessage: resumed } = yield* answer(() => cookout.client.resumeScheduledMessage(made.id));
+    const posted = yield* Effect.andThen(quietFor("9 hours"), grillTexts(cookout.client));
+
+    expect([stillPaused, resumed]).toMatchObject([
+      { pausedBecause: "creator_deactivated", status: "paused" },
+      { status: "active" },
+    ]);
+    expect(resumed).not.toHaveProperty("pausedBecause");
+    expect(posted).toMatchObject([{ author: { name: "ada" }, scheduledMessage: { id: made.id } }]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("an agent's schedules keep posting when its owner is Deactivated", () =>
+  Effect.gen(function* agentKeepsRunning() {
+    const { cookout } = yield* board;
+    const bot = yield* cookout.createIdentity("ada-bot", { owner: "ada" });
+    const made = yield* schedule(bot, DAILY_NINE);
+    yield* answer(() => cookout.client.deactivateIdentity("ada"));
+    const after = yield* shown(cookout.client, made);
+    const posted = yield* Effect.andThen(quietFor("9 hours"), grillTexts(cookout.client));
+
+    expect(after).toMatchObject({ status: "active" });
+    expect(posted).toMatchObject([{ author: { name: "ada-bot" }, scheduledMessage: { id: made.id } }]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a run due as its creator is Deactivated doesn't post as the Deactivated identity", () =>
+  Effect.gen(function* deactivatedMidRun() {
+    const { ada, cookout } = yield* board;
+    const made = yield* schedule(ada, DAILY_NINE);
+    yield* quietFor("9 hours");
+    const after = yield* shown(cookout.client, made);
     const posted = yield* grillTexts(cookout.client);
 
-    expect(paused).toMatchObject({ nextRuns: [], pausedBecause: "creator_deactivated", status: "paused" });
-    expect(refused.code).toBe("creator_deactivated");
+    expect(after).toMatchObject({ pausedBecause: "creator_deactivated", status: "paused" });
+    expect(after).not.toHaveProperty("lastRun");
     expect(posted).toStrictEqual([]);
-  }).pipe(Effect.provide(testCookout())),
+  }).pipe(Effect.provide(testCookout({ storage: "deactivated-mid-run" }))),
 );
 
 it.effect("a paused schedule doesn't catch up its missed runs, and deleting one marks what it posted", () =>

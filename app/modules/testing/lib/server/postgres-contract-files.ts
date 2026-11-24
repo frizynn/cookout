@@ -47,4 +47,5 @@ export const postgresContractFiles: readonly string[] = [
   "search",
   "search-filters",
   "scheduled-messages",
+  "scheduled-message-deactivations",
 ];

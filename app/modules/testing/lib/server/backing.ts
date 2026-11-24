@@ -1,8 +1,14 @@
 import type { AssetStore, Storage } from "../../../storage/server.ts";
 import { Context, Effect, Layer } from "effect";
 import type { FileSystem, Path, Scope } from "effect";
+import {
+  deactivatedMidRunStorage,
+  freshDatabasePath,
+  memoryAssets,
+  pausedMidRunStorage,
+  unusableStorage,
+} from "./storage.ts";
 import { diskAssetStore, memoryStorage, sqliteStorage } from "../../../storage/server.ts";
-import { freshDatabasePath, memoryAssets, pausedMidRunStorage, unusableStorage } from "./storage.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import type { Token } from "../../../identities/index.ts";
 import type { WebhookFake } from "../../../webhook-fake/server.ts";
@@ -10,7 +16,7 @@ import { layer as nodeServices } from "@effect/platform-node/NodeServices";
 import { secretsOf } from "./secrets.ts";
 import { webhookFake } from "../../../webhook-fake/server.ts";
 
-type StorageKind = "memory" | "unusable" | "sqlite" | "paused-mid-run";
+type StorageKind = "memory" | "unusable" | "sqlite" | "paused-mid-run" | "deactivated-mid-run";
 
 interface BackingOptions {
   readonly storage?: StorageKind;
@@ -39,6 +45,9 @@ function storageOf(kind: StorageKind | undefined): StorageFactory {
   }
   if (kind === "paused-mid-run") {
     return sharedStore(pausedMidRunStorage);
+  }
+  if (kind === "deactivated-mid-run") {
+    return sharedStore(deactivatedMidRunStorage);
   }
   return sharedStore(memoryStorage);
 }
