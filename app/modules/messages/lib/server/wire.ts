@@ -7,7 +7,6 @@ import type {
   ReactionsResponse,
   ReadReceipt,
   Reply,
-  ThreadMovedWarning,
   ThreadResponse,
   TopLevelMessage,
   TopLevelMessageResponse,
@@ -135,12 +134,6 @@ const ReplySchema = matchesWire<Reply>()(
 
 const MessageSchema = Schema.Union([TopLevelMessageSchema, ReplySchema]);
 
-const MovedRepliesSchema = Schema.Struct({ replies: Schema.Array(ReplySchema) });
-
-const ThreadMovedWarningSchema = matchesWire<ThreadMovedWarning>()(
-  Schema.Struct({ code: Schema.Literal("thread_moved"), details: MovedRepliesSchema, message: Schema.String }),
-);
-
 const pageLimit = Schema.isBetween({ maximum: pageSize.maximum, minimum: pageSize.minimum });
 const LimitSchema = Schema.Int.check(pageLimit);
 const decodesToLimit = Schema.decodeTo(LimitSchema);
@@ -171,7 +164,6 @@ export const MessageResponseSchema = matchesWire<MessageResponse>()(
   Schema.Struct({
     message: MessageSchema,
     unknownMentions: Schema.Array(Schema.String),
-    warning: Schema.optionalKey(ThreadMovedWarningSchema),
   }),
 );
 
