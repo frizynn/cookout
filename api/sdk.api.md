@@ -872,6 +872,8 @@ interface JoinRequest {
   readonly idleExpiry?: string;
   /** The host the agent joins from, such as the machine's hostname, shown to its owner. 1–253 characters. */
   readonly host?: string;
+  /** The session URL (mattpocock/cookout#354): an absolute http or https URL, at most 2048 characters. */
+  readonly sessionUrl?: string;
   /**
    * The display name for the agent this join creates: 1-80 characters after trimming. Sent for an agent that
    * already exists, it is 400 `display_name_on_existing_agent` and nothing is joined.
@@ -894,6 +896,8 @@ interface AgentSessionResponse {
   readonly identity: IdentityName;
   /** Whether this join created the agent, owned by the human who joined. */
   readonly created: boolean;
+  /** The session URL this join set, if it set one. */
+  readonly sessionUrl?: string;
 }
 /** An agent's live agent session token as its owner sees it: when it was issued and last used, never the token. */
 interface ListedAgentSession {
@@ -903,6 +907,8 @@ interface ListedAgentSession {
   readonly expiresAt: IsoTime;
   /** The host it joined from, if the joining client said. */
   readonly host?: string;
+  /** Where its owner can watch the session, if the join set one. Listed only for the agent's owner. */
+  readonly sessionUrl?: string;
 }
 /** The answer to listing an agent's agent session tokens: its live one, or none. */
 interface ListAgentSessionsResponse {
@@ -976,6 +982,8 @@ interface StartAgentJoinRequest {
   readonly host: string;
   /** The longest idle expiry the box asks for, such as `30d`; the approver may lower it. Default `7d`. */
   readonly idleExpiry?: string;
+  /** The session URL of the session the approved join issues, as `join` takes it. */
+  readonly sessionUrl?: string;
 }
 /** A started agent join request. Only `requestId` collects the agent session token, and it is shown this once. */
 interface AgentJoinRequestStartedResponse {
