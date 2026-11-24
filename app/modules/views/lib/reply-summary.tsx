@@ -12,11 +12,13 @@ interface ReplySummaryProps {
   readonly news: ThreadNews | null;
 }
 
+const VIEW_THREAD = "View thread";
+
 function labelOf(count: string, fresh: NewsText | null, last: string): string {
   if (fresh === null) {
-    return `${count}, ${last}`;
+    return `${count}, ${last}, ${VIEW_THREAD}`;
   }
-  return `${count}, ${fresh.text}, ${last}`;
+  return `${count}, ${fresh.text}, ${last}, ${VIEW_THREAD}`;
 }
 
 export function ReplySummary({ href, news, summary }: ReplySummaryProps): ReactNode {

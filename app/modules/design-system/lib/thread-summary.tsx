@@ -16,7 +16,7 @@ interface ThreadSummaryParts {
   readonly news: { readonly text: string; readonly forYou: boolean } | null;
 }
 
-const VIEW_THREAD = "View thread →";
+const OPENS = " →";
 
 export function ThreadSummary(parts: ThreadSummaryParts): ReactNode {
   return (
@@ -32,11 +32,9 @@ export function ThreadSummary(parts: ThreadSummaryParts): ReactNode {
       </span>
       <span className="font-medium text-foreground">{parts.count}</span>
       {parts.news !== null && <ThreadNews forYou={parts.news.forYou}>{parts.news.text}</ThreadNews>}
-      <span className="text-muted-foreground group-hover/thread:hidden group-focus-visible/thread:hidden">
+      <span className="text-muted-foreground">
         {parts.last}
-      </span>
-      <span className="hidden text-muted-foreground group-hover/thread:inline group-focus-visible/thread:inline">
-        {VIEW_THREAD}
+        <span className="hidden group-hover/thread:inline group-focus-visible/thread:inline">{OPENS}</span>
       </span>
     </a>
   );

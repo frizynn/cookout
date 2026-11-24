@@ -86,7 +86,7 @@ it("the channel view shows the channel's top-level messages, oldest first, with 
       .getByRole("link", { name: /^2 replies/u })
       .getAttribute("href"),
   ]).toStrictEqual([
-    ["adminFirst2 repliesLast reply just nowView thread →", "adminSecond", "Third"],
+    ["adminFirst2 repliesLast reply just now →", "adminSecond", "Third"],
     `#/channels/web-channel-shows/threads/${String(parent.id)}`,
   ]);
 
@@ -100,7 +100,7 @@ it("a message with one reply says 1 reply", { timeout: 5000 }, async () => {
   await threadWithReplies("web-channel-one-reply", ONE_A_PAGE);
   const close = openWithClockStopped({ client: adminClient(), hash: "#/channels/web-channel-one-reply" });
 
-  await expect(shownMessages()).resolves.toStrictEqual(["adminFirst1 replyLast reply just nowView thread →"]);
+  await expect(shownMessages()).resolves.toStrictEqual(["adminFirst1 replyLast reply just now →"]);
 
   close();
 });
