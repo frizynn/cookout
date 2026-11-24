@@ -1,7 +1,8 @@
-import type { MergeOptions, MergeRules, Merged } from "../../lib/merge-ticket.ts";
+import type { MergeOptions, Merged } from "../../lib/merge-ticket.ts";
 import { continueMerge, mergeTicket } from "../../lib/merge-ticket.ts";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { DONE } from "../../lib/merge-steps.ts";
+import type { MergeRules } from "../../lib/merge-resolve.ts";
 import type { Step } from "../../lib/merge-steps.ts";
 import { execFileSync } from "node:child_process";
 import { onTestFinished } from "vitest";
@@ -19,6 +20,7 @@ interface Overrides {
   readonly check?: readonly string[];
   readonly ci?: (branch: string, sha: string, rerunRed: boolean) => Step;
   readonly install?: readonly string[];
+  readonly log?: (line: string) => void;
   readonly migrationsBase?: string;
   readonly rules?: MergeRules;
 }
