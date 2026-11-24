@@ -1,6 +1,6 @@
 import type { Live } from "../../live/index.ts";
 import type { ReactNode } from "react";
-import { StatusBar } from "../../design-system/index.tsx";
+import { StatusBar } from "../../design-system/layout.tsx";
 import { useSyncExternalStore } from "react";
 
 const TEXT = { label: "Live link", reconnecting: "Reconnecting…" } as const;

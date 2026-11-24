@@ -3,7 +3,7 @@ import { DisplayNames } from "./display-names.tsx";
 import type { IdentityName } from "../../sdk/index.ts";
 import type { Layout } from "../../layout/index.ts";
 import { MyAgents } from "./my-agents.tsx";
-import { PageSection } from "../../design-system/index.tsx";
+import { PageSection } from "../../design-system/layout.tsx";
 import type { ReactNode } from "react";
 import type { SettingsSection } from "../../paths/index.ts";
 import { ThemeChoice } from "./theme-choice.tsx";

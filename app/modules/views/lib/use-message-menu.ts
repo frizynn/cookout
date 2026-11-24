@@ -1,4 +1,4 @@
-import type { ReactionChoice, ThreadChoice } from "../../design-system/index.tsx";
+import type { ReactionChoice, ThreadChoice } from "../../design-system/messages.tsx";
 import type { Message } from "../../sdk/index.ts";
 import type { MessageMenu } from "../../unread/index.ts";
 import type { ThreadClosing } from "../../board/index.ts";

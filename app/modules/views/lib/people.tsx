@@ -1,6 +1,7 @@
-import { Chip, FilterField, Pane, PaneHeader, Toolbar } from "../../design-system/index.tsx";
+import { Chip, FilterField } from "../../design-system/controls.tsx";
 import type { Identity, IdentityName } from "../../sdk/index.ts";
 import type { KindChoice, Layout } from "../../layout/index.ts";
+import { Pane, PaneHeader, Toolbar } from "../../design-system/layout.tsx";
 import type { Identities } from "../../composer/index.ts";
 import type { Keymap } from "../../keymap/index.ts";
 import { KindFilter } from "./kind-filter.tsx";

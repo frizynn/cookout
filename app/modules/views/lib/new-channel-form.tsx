@@ -1,5 +1,5 @@
 import type { ChannelCreation, ChannelCreationSnapshot, CreationState } from "../../board/index.ts";
-import { InputField, PromptForm } from "../../design-system/index.tsx";
+import { InputField, PromptForm } from "../../design-system/controls.tsx";
 import type { ChannelName } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
 import { hrefOf } from "../../paths/index.ts";

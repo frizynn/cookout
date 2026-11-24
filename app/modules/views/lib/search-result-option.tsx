@@ -1,7 +1,7 @@
 import type { BoxOption } from "./search-options.ts";
 import type { ParsedQuery } from "../../search/index.ts";
 import type { ReactNode } from "react";
-import { ResultOption } from "../../design-system/index.tsx";
+import { ResultOption } from "../../design-system/controls.tsx";
 import { SearchResultRow } from "./search-result-row.tsx";
 
 interface SearchResultOptionProps {

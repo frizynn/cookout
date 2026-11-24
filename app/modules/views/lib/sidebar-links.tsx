@@ -1,4 +1,4 @@
-import { NavHeading, NavLink, NavList } from "../../design-system/index.tsx";
+import { NavHeading, NavLink, NavList } from "../../design-system/layout.tsx";
 import { useMemo, useSyncExternalStore } from "react";
 import type { Board } from "../../board/index.ts";
 import { ChannelRows } from "./channel-rows.tsx";

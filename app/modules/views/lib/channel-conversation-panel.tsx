@@ -1,8 +1,8 @@
 import type { Board, ThreadMessagesState } from "../../board/index.ts";
 import type { ChannelName, ReadReceipt, Reply, TopLevelMessage } from "../../sdk/index.ts";
-import { ConversationPanel, ScrollArea } from "../../design-system/index.tsx";
+import { ConversationPanel, ScrollArea } from "../../design-system/layout.tsx";
 import type { MessageMenu, Reader, Selection } from "../../unread/index.ts";
-import type { PanelAction, PanelEdgeParts, ShortcutLinkParts } from "../../design-system/index.tsx";
+import type { PanelAction, PanelEdgeParts, ShortcutLinkParts } from "../../design-system/layout.tsx";
 import { ChannelConversationBody } from "./channel-conversation-body.tsx";
 import type { Composer } from "./use-channel-reply.ts";
 import type { ReactNode } from "react";

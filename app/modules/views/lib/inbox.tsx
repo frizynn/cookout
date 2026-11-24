@@ -6,7 +6,7 @@ import { InboxConversation } from "./inbox-conversation.tsx";
 import type { InboxKeys } from "./use-inbox-keys.ts";
 import { InboxList } from "./inbox-list.tsx";
 import type { InboxSelection } from "../../paths/index.ts";
-import type { PanelEdgeParts } from "../../design-system/index.tsx";
+import type { PanelEdgeParts } from "../../design-system/layout.tsx";
 import type { ReactNode } from "react";
 import { useInboxKeys } from "./use-inbox-keys.ts";
 import { useInboxRows } from "./use-inbox-rows.ts";

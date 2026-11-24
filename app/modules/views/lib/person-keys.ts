@@ -1,4 +1,4 @@
-import type { MessageShortcuts, PersonKeysSource } from "../../design-system/index.tsx";
+import type { MessageShortcuts, PersonKeysSource } from "../../design-system/messages.tsx";
 import type { Keymap } from "../../keymap/index.ts";
 
 function personKeysOf(keymap: Keymap): PersonKeysSource {

@@ -1,5 +1,6 @@
-import { Button, ButtonRow, Muted, TokenText } from "../../design-system/index.tsx";
+import { Button, ButtonRow, TokenText } from "../../design-system/controls.tsx";
 import type { IdentityActions } from "../../composer/index.ts";
+import { Muted } from "../../design-system/content.tsx";
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
 

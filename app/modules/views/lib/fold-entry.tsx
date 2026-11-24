@@ -1,5 +1,5 @@
 import type { ChannelMessages } from "../../board/index.ts";
-import { ClosedFold } from "../../design-system/index.tsx";
+import { ClosedFold } from "../../design-system/messages.tsx";
 import type { Fold } from "./closed-folds.ts";
 import type { MessageId } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
