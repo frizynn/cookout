@@ -56,16 +56,13 @@ function clockAhead(ahead: Ahead): Clock.Clock {
   function nowNanos(): bigint {
     return live.nanos() + offsetNanos();
   }
-  function monotonicNanos(): bigint {
-    return live.monotonicNanos() + offsetNanos();
-  }
   return {
     currentTimeMillis: Effect.sync(nowMillis),
     currentTimeMillisUnsafe: nowMillis,
     currentTimeNanos: Effect.sync(nowNanos),
     currentTimeNanosUnsafe: nowNanos,
-    monotonicTimeNanos: Effect.sync(monotonicNanos),
-    monotonicTimeNanosUnsafe: monotonicNanos,
+    monotonicTimeNanos: Effect.sync(live.monotonicNanos),
+    monotonicTimeNanosUnsafe: live.monotonicNanos,
     sleep: flow(Duration.toMillis, (millis) => Effect.suspend(() => sleepUntil(ahead, nowMillis() + millis))),
   };
 }
@@ -89,7 +86,7 @@ function adjustableClock(): Effect.Effect<AdjustableClock, never, Scope.Scope> {
     const ahead: Ahead = {
       live: {
         millis: () => clock.currentTimeMillisUnsafe(),
-        monotonicNanos: () => clock.monotonicTimeNanosUnsafe(),
+        monotonicNanos: clock.monotonicTimeNanosUnsafe.bind(clock),
         nanos: () => clock.currentTimeNanosUnsafe(),
         sleepMillis: (millis) => clock.sleep(Duration.millis(millis)),
       },
