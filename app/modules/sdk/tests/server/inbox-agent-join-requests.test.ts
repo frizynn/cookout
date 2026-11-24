@@ -231,3 +231,16 @@ it.effect("the owner's stream hears the pending join requests as one starts, is 
     ]);
   }).pipe(Effect.scoped, Effect.provide(testCookout())),
 );
+
+it.effect("a stream hears only the join requests its caller may approve", () =>
+  Effect.gen(function* heardOnlyOwn() {
+    const { bob, cookout } = yield* board;
+    yield* cookout.createIdentity("bob/scout", { owner: "bob" });
+    const events = yield* watching(bob.client);
+    yield* started(cookout);
+    const own = yield* started(cookout, { as: "bob/scout", host: "bob-box" });
+    const heard = yield* nextJoinRequestsEvent(events);
+
+    expect(heard).toMatchObject({ agentJoinRequests: [{ host: "bob-box", userCode: own.userCode }] });
+  }).pipe(Effect.scoped, Effect.provide(testCookout())),
+);

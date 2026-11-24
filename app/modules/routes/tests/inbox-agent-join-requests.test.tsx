@@ -43,6 +43,21 @@ function forYou(): HTMLElement {
   return screen.getByRole("list", { name: "For you" });
 }
 
+async function refusedApprove(): Promise<string> {
+  fireEvent.click(within(forYou()).getByRole("button", { name: "Approve" }));
+  const refused = await alertSaying("Couldn't approve");
+  await waitFor(() => {
+    expect(within(forYou()).getAllByRole("listitem")).toHaveLength(ONE_ROW);
+  });
+  return refused.textContent;
+}
+
+async function anotherAsks(opened: Opened): Promise<void> {
+  const another = `${opened.agent}-two`;
+  await opened.owner.client.createIdentity({ kind: "agent", name: another });
+  await asked(another);
+}
+
 it("a pending join request for an agent you own shows under For you, counted, and Approve approves it", {
   timeout: 5000,
 }, async () => {
@@ -68,7 +83,7 @@ it("a pending join request for an agent you own shows under For you, counted, an
   expect(collected).toMatchObject({ agentSession: { identity: opened.agent }, status: "approved" });
 });
 
-it("an Approve the approve-join rules refuse says why in the row, and the row stays", {
+it("an Approve the approve-join rules refuse says why in the row, and it stays as other requests arrive", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -76,12 +91,11 @@ it("an Approve the approve-join rules refuse says why in the row, and the row st
   const opened = await inboxOpenFor("web-join-inbox-live");
   await opened.owner.client.join({ as: opened.agent });
   await asked(opened.agent);
-  fireEvent.click(within(forYou()).getByRole("button", { name: "Approve" }));
-  const refused = await alertSaying("Couldn't approve");
-  await waitFor(() => {
-    expect(within(forYou()).getAllByRole("listitem")).toHaveLength(ONE_ROW);
-  });
+  const refused = await refusedApprove();
+  await anotherAsks(opened);
+  const stillRefused = await alertSaying("Couldn't approve");
   await opened.close();
 
-  expect(refused.textContent).toMatch(/^Couldn't approve \(agent_session_live\): /u);
+  expect(refused).toMatch(/^Couldn't approve \(agent_session_live\): /u);
+  expect(stillRefused.textContent).toBe(refused);
 });
