@@ -4,6 +4,7 @@ import { agentSessions, createBoardStore } from "../index.ts";
 import { expect, it, onTestFinished, vi } from "vitest";
 import type { HandLive } from "../../testing/web.ts";
 import type { Live } from "../../live/index.ts";
+import type { Mock } from "vitest";
 import { createCookoutClient } from "../../sdk/index.ts";
 import { createLive } from "../../live/index.ts";
 import { handLive } from "../../testing/web.ts";
@@ -13,6 +14,7 @@ const OPENINGS = 20;
 const NONE = 0;
 const ONE = 1;
 const TWO = 2;
+const PAST_A_TICK = 1200;
 
 interface Agent {
   readonly name: IdentityName;
@@ -35,6 +37,12 @@ async function agentNamed(name: string): Promise<Agent> {
 
 async function join(agent: Agent): Promise<void> {
   await agent.client.join({ as: agent.name, host: "store-box" });
+}
+
+async function joinedAgent(name: string): Promise<Agent> {
+  const agent = await agentNamed(name);
+  await join(agent);
+  return agent;
 }
 
 async function listedFor(name: string): Promise<ListAgentSessionsResponse> {
@@ -121,6 +129,18 @@ it("when the link comes back, an agent's sessions are read again, so one it join
   await expect(sessionCount(store, agent.name, ONE)).resolves.toBeUndefined();
 });
 
+function refusingAfterFirst(): Mock<CookoutClient["listAgentSessions"]> {
+  const listAgentSessions = vi.fn<CookoutClient["listAgentSessions"]>().mockRejectedValue(new Error("unreachable"));
+  return listAgentSessions.mockImplementationOnce(listedFor);
+}
+
+function fakeTicks(): void {
+  vi.useFakeTimers({ toFake: ["setInterval"] });
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+}
+
 it("an event or a link back while nobody shows an agent's sessions reads nothing", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
@@ -185,17 +205,19 @@ it("once one of an agent's sessions expires, its sessions are read again", { tim
   await expect(sessionCount(store, agent.name, NONE)).resolves.toBeUndefined();
 });
 
-it("an agent's sessions the server refuses to list on a read again are unknown", { timeout: 5000 }, async () => {
+it("an agent's sessions the server refuses to list on a read again are unknown, and not read again each second", {
+  timeout: 5000,
+}, async () => {
   expect.hasAssertions();
 
-  const agent = await agentNamed("store-sessions-refused-bot");
-  await join(agent);
-  const listAgentSessions = vi.fn<CookoutClient["listAgentSessions"]>().mockRejectedValue(new Error("unreachable"));
-  listAgentSessions.mockImplementationOnce(listedFor);
+  const agent = await joinedAgent("store-sessions-refused-bot");
+  const listAgentSessions = refusingAfterFirst();
+  fakeTicks();
   const { hand, store } = opened(agent.name, { ...adminClient(), listAgentSessions });
   await sessionCount(store, agent.name, ONE);
   hand.send({ agent: agent.name, type: "agent-session" });
+  await sessionCount(store, agent.name, null);
+  vi.advanceTimersByTime(PAST_A_TICK);
 
-  await expect(sessionCount(store, agent.name, null)).resolves.toBeUndefined();
-  expect(listAgentSessions).toHaveBeenCalledTimes(TWO);
+  expect([countOf(store, agent.name), listAgentSessions.mock.calls.length]).toStrictEqual([null, TWO]);
 });
