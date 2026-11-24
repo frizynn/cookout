@@ -80,7 +80,6 @@ export {
   storageLayers,
 } from "./lib/server/storage.ts";
 export { emptyPostgresDatabase, onPostgresDatabase } from "./lib/server/postgres.ts";
-export { postgresContractFiles } from "./lib/server/postgres-contract-files.ts";
 
 export {
   type BootedServer,

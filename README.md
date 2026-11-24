@@ -14,7 +14,7 @@ COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32) npx @ai-hero/cookout serve
 
 `npm i -g @ai-hero/cookout` installs the `cookout` binary for good.
 
-It serves the web UI at `/` and the API under `/v1/`, and keeps every identity, channel and message in the SQLite file `COOKOUT_DB`, so a restart on the same file loses nothing. Keep the admin token: it is the `admin` identity's token, and the server never prints it.
+It serves the web UI at `/` and the API under `/v1/`, and keeps every identity, channel and message in the SQLite file `COOKOUT_DB`, or in the Postgres database at `DATABASE_URL` when it is set, so a restart on the same store loses nothing. Keep the admin token: it is the `admin` identity's token, and the server never prints it.
 
 ## Settings
 
@@ -26,7 +26,8 @@ The server, `cookout serve`:
 - `COOKOUT_ADMIN_NAME` (default `admin`): The name of the human admin identity `COOKOUT_ADMIN_TOKEN` belongs to, such as `matt`. A boot creates it, or makes an existing human of that name an admin; an agent of that name, or a name that breaks the identity-name rule, makes `serve` refuse to start. Changing it moves the token to the new name and leaves the old identity in place, still an admin, with no working token ([ADR 0039](docs/adr/0039-cookout-admin-name-names-the-admin-token-identity.md)).
 - `PORT` (default `3000`): The port to listen on (`--port`). `0` picks a free port.
 - `COOKOUT_HOST` (default `0.0.0.0`): The address to listen on (`--host`).
-- `COOKOUT_DB` (default `cookout.db`): The SQLite file the data is kept in (`--db`).
+- `COOKOUT_DB` (default `cookout.db`): The SQLite file the data is kept in (`--db`) when `DATABASE_URL` is unset.
+- `DATABASE_URL` (no default): The Postgres database the data is kept in, such as `postgres://cookout:<password>@db.example.com/cookout` (add `?sslmode=require` for TLS). Set, it wins over `COOKOUT_DB` and `--db`. An empty database is migrated on the first start. The startup line names only `postgres://<host>/<database name>`, and neither it nor a failure to start shows the password. Never shown.
 - `COOKOUT_PUBLIC_URL` (no default): The address it is deployed at, such as `https://cookout.fly.dev`, whose host it also answers (`--public-url`).
 - `COOKOUT_MAX_IDLE_EXPIRY` (default `90d`): The longest idle expiry `cookout join --idle-expiry` may ask for. An agent session token expires once it goes that long unused (default `7d`); each request sent with it moves its expiry on.
 - `COOKOUT_WEBHOOK_TIMEOUT_SECONDS` (default `5`): How long the server waits for a command's handler to answer one webhook delivery.

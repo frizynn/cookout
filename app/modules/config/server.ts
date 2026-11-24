@@ -23,6 +23,19 @@ const DEFAULT_STREAMS_PER_IDENTITY = 20;
 const DEFAULT_PRESENCE_GRACE_SECONDS = 60;
 const SHORTEST_PRESENCE_GRACE_SECONDS = 0;
 
+const DATABASE_PROTOCOLS: readonly string[] = ["postgres:", "postgresql:"];
+
+function isPostgresUrl(url: string): boolean {
+  return URL.canParse(url) && Arr.contains(DATABASE_PROTOCOLS, new URL(url).protocol);
+}
+
+const isDatabaseUrl = Schema.makeFilter(
+  (url: string) =>
+    url === "" ||
+    isPostgresUrl(url) ||
+    "DATABASE_URL must be empty or a Postgres URL such as postgres://user:password@host/database.",
+);
+
 const isPublicUrl = Schema.makeFilter(
   (url: string) =>
     url === "" || URL.canParse(url) || "COOKOUT_PUBLIC_URL must be empty or a URL such as https://cookout.fly.dev.",
@@ -95,7 +108,15 @@ export const routineToken = Config.String("COOKOUT_ROUTINE_TOKEN").pipe(
   Config.map((value) => Redacted.make(value)),
 );
 
-/** `COOKOUT_DB`: the SQLite file `cookout serve` keeps its data in. */
+/**
+ * `DATABASE_URL`: the Postgres database `cookout serve` keeps its data in, kept redacted from the moment it is read.
+ * Set, it wins over `COOKOUT_DB` (mattpocock/cookout#330); empty counts as unset. Never shown.
+ */
+export const databaseUrl = Config.schema(Schema.Redacted(Schema.String.check(isDatabaseUrl)), "DATABASE_URL").pipe(
+  Config.withDefault(Redacted.make("")),
+);
+
+/** `COOKOUT_DB`: the SQLite file `cookout serve` keeps its data in when `DATABASE_URL` is unset. */
 export const databasePath = Config.String("COOKOUT_DB").pipe(Config.withDefault("cookout.db"));
 
 /**

@@ -1,4 +1,4 @@
-import { Array as Arr, Effect, FileSystem, String as Str } from "effect";
+import { Array as Arr, Effect, String as Str } from "effect";
 import { StorageUnavailable, postgresStorage } from "../../server.ts";
 import {
   appendTo,
@@ -8,10 +8,8 @@ import {
   newMessageFixture,
   onPostgresDatabase,
   openStore,
-  postgresContractFiles,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
-import { NodeServices } from "@effect/platform-node";
 import type { Redacted } from "effect";
 import { tokenHash } from "../../../identities/index.ts";
 
@@ -207,17 +205,4 @@ it.effect("the search migration finds every message stored before search existed
       expect(Arr.map(results, ({ message }) => message.id)).toStrictEqual([said.id]);
     }),
   ),
-);
-
-it.effect("every contract file the postgres project runs exists", () =>
-  Effect.gen(function* contractFilesExist() {
-    const fs = yield* FileSystem.FileSystem;
-    const exists = yield* Effect.forEach(
-      postgresContractFiles,
-      (name) => fs.exists(`app/modules/storage/tests/server/${name}.contract.test.ts`),
-      { concurrency: "unbounded" },
-    );
-
-    expect(exists).not.toContain(false);
-  }).pipe(Effect.provide(NodeServices.layer)),
 );
