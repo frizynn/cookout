@@ -4,6 +4,7 @@ import { createContext } from "react";
 
 interface IdentityCardParts {
   readonly name: string;
+  readonly agent: boolean;
   readonly displayName: string | null;
   readonly presence: PresenceShown | null;
   readonly kind: string;

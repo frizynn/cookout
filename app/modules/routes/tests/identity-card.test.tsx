@@ -9,6 +9,7 @@ import { openAt } from "./render.tsx";
 const PREFIX = "web-card";
 
 interface Card {
+  readonly avatar: { readonly agent: string | null; readonly presence: string | null } | null;
   readonly lines: readonly string[];
   readonly profile: string | null;
 }
@@ -24,6 +25,22 @@ async function authorName(name: string): Promise<HTMLElement> {
   return link;
 }
 
+function cardDot(): string | null {
+  const dot = screen.getByRole("tooltip").querySelector<HTMLElement>("[data-presence]");
+  if (dot === null) {
+    return null;
+  }
+  return dot.dataset["presence"] ?? null;
+}
+
+function cardAvatar(): Card["avatar"] {
+  const avatar = screen.getByRole("tooltip").querySelector<HTMLElement>('[data-testid="avatar"]');
+  if (avatar === null) {
+    return null;
+  }
+  return { agent: avatar.dataset["agent"] ?? null, presence: cardDot() };
+}
+
 async function cardOf(trigger: () => HTMLElement): Promise<Card> {
   const card = await screen.findByRole("tooltip");
   await waitFor(() => {
@@ -33,7 +50,11 @@ async function cardOf(trigger: () => HTMLElement): Promise<Card> {
   for (const line of card.querySelectorAll("p")) {
     lines.push(line.textContent);
   }
-  return { lines, profile: within(card).getByRole("link", { name: "View profile" }).getAttribute("href") };
+  return {
+    avatar: cardAvatar(),
+    lines,
+    profile: within(card).getByRole("link", { name: "View profile" }).getAttribute("href"),
+  };
 }
 
 async function hovered(name: string): Promise<Card> {
@@ -85,7 +106,7 @@ async function onlineAgent(channel: string): Promise<EventStream> {
   return events;
 }
 
-it("hovering an agent author's name opens a card with its presence, name, description, owner and a link to its profile in People", {
+it("hovering an agent author's name opens a card led by its avatar, with its presence, name, owner, description and a link to its profile in People", {
   timeout: 10_000,
 }, async () => {
   expect.hasAssertions();
@@ -95,14 +116,18 @@ it("hovering an agent author's name opens a card with its presence, name, descri
   const events = await onlineAgent(channel);
 
   await expect(hovered("Mail Bot")).resolves.toStrictEqual({
-    lines: ["Online", "Mail Bot", `@${bot}`, "Reads the mail", `Agent · owned by ${channel}-owner`],
+    avatar: { agent: "true", presence: "online" },
+    lines: ["Mail Botagent", `@${bot}`, "Online", `Agent · owned by ${channel}-owner`, "Reads the mail"],
     profile: `#/people/${bot}`,
   });
 
   await events.close();
 
   await waitFor(() => {
-    expect(screen.getByRole("tooltip").textContent).toMatch(/^Offline/u);
+    expect([cardDot(), screen.getByRole("tooltip").textContent]).toStrictEqual([
+      "offline",
+      expect.stringMatching(/Offline/u),
+    ]);
   });
 
   fireEvent.click(within(screen.getByRole("tooltip")).getByRole("link", { name: "View profile" }));
@@ -110,7 +135,7 @@ it("hovering an agent author's name opens a card with its presence, name, descri
   await expect(profileHeading()).resolves.toMatch(`Mail Bot@${bot}`);
 });
 
-it("hovering a person's name opens a card with their presence, name and profile link, and no owner", {
+it("hovering a person's name opens a card led by their round avatar, with their presence, name and profile link, and no owner", {
   timeout: 10_000,
 }, async () => {
   expect.hasAssertions();
@@ -120,7 +145,8 @@ it("hovering a person's name opens a card with their presence, name and profile 
   const close = await postedBy(channel, ann.client);
 
   await expect(hovered(`${channel}-ann`)).resolves.toStrictEqual({
-    lines: ["Offline", `${channel}-ann`, "Human"],
+    avatar: { agent: "false", presence: "offline" },
+    lines: [`${channel}-ann`, "Offline", "Human"],
     profile: `#/people/${channel}-ann`,
   });
 
@@ -136,7 +162,8 @@ it("focusing an @mention opens its card, and Escape closes it", { timeout: 10_00
   mention.focus();
 
   await expect(cardOf(() => mention)).resolves.toStrictEqual({
-    lines: ["Offline", `${channel}-reader`, "Human"],
+    avatar: { agent: "false", presence: "offline" },
+    lines: [`${channel}-reader`, "Offline", "Human"],
     profile: `#/people/${channel}-reader`,
   });
 
@@ -149,7 +176,7 @@ it("focusing an @mention opens its card, and Escape closes it", { timeout: 10_00
   close();
 });
 
-it("a deactivated identity's card says Deactivated", { timeout: 10_000 }, async () => {
+it("a deactivated identity's card says Deactivated and still shows its avatar", { timeout: 10_000 }, async () => {
   expect.hasAssertions();
 
   const channel = `${PREFIX}-gone`;
@@ -157,7 +184,8 @@ it("a deactivated identity's card says Deactivated", { timeout: 10_000 }, async 
   const close = await deactivatedAuthor(channel, cy.client);
 
   await expect(hovered(`${channel}-cy`)).resolves.toStrictEqual({
-    lines: ["Offline", `${channel}-cy`, "Human", "Deactivated"],
+    avatar: { agent: "false", presence: "offline" },
+    lines: [`${channel}-cy`, "Offline", "Human", "Deactivated"],
     profile: `#/people/${channel}-cy`,
   });
 
