@@ -106,7 +106,7 @@ if (fixesRedV1) {
   });
 }
 requireGreen({
-  advice: `Push ticket-${ticket} and wait until every job of its Check run passes. If the failure looks flaky, run pnpm merge-ticket ${ticket} --continue: it reruns ticket-${ticket}'s failed jobs once.`,
+  advice: `Push ticket-${ticket} and wait until every job of its Check run passes.`,
   args: ["--branch", `ticket-${ticket}`, "--commit", gitOutput("rev-parse", `ticket-${ticket}`)],
   base: ["--branch", "v1", "--commit", gitOutput("merge-base", `ticket-${ticket}`, "origin/v1")],
   rerunRed: resuming,
