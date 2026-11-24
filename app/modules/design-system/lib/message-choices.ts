@@ -1,4 +1,5 @@
-import type { MenuChoice, MessageActionParts, MessageMenuParts } from "./menu-parts.ts";
+import type { MenuChoice, MessageActionParts, MessageMenuParts, ThreadChoice } from "./menu-parts.ts";
+import type { MessageItemParts } from "./parts.ts";
 import { useMemo } from "react";
 
 const TEXT = { markUnread: "Mark unread" } as const;
@@ -14,6 +15,13 @@ function actionOf(parts: MessageActionParts): readonly MenuChoice[] {
   return [parts.onAction]
     .filter((action) => action !== null)
     .map((action) => ({ href: null, label: parts.actionLabel, onSelect: action }));
+}
+
+export function hoverThread(parts: Pick<MessageItemParts, "menu" | "threadOnHover">): ThreadChoice | null {
+  if (!parts.threadOnHover) {
+    return null;
+  }
+  return parts.menu.thread;
 }
 
 export function useMessageChoices({ actionHref, actionLabel, menu, onAction }: ChoicesOf): readonly MenuChoice[] {

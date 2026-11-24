@@ -6,6 +6,7 @@ interface ReactionChoice {
 
 interface ThreadChoice {
   readonly label: string;
+  readonly name: string;
   readonly onSelect: () => void;
 }
 
@@ -28,6 +29,7 @@ type MenuChoice =
 interface HoverActionsParts extends MessageActionParts {
   readonly choices: readonly MenuChoice[];
   readonly reactions: readonly ReactionChoice[];
+  readonly thread: ThreadChoice | null;
 }
 
 export type { HoverActionsParts, MenuChoice, MessageActionParts, MessageMenuParts, ReactionChoice, ThreadChoice };

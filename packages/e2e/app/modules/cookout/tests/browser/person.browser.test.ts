@@ -45,7 +45,8 @@ async function openQuestion(page: Page, row: Locator): Promise<void> {
     .getByRole("article")
     .filter({ hasText: /Can you review the deploy/u });
   await question.hover();
-  await question.getByRole("link", { name: "Reply" }).click();
+  await question.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Reply" }).click();
 }
 
 async function leaveForTheInbox(page: Page): Promise<void> {

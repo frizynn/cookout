@@ -5,7 +5,7 @@ import type { ThreadClosing } from "../../board/index.ts";
 import { useMemo } from "react";
 import { useReactionChoices } from "./use-reactions.ts";
 
-const TEXT = { close: "Close", reopen: "Reopen" } as const;
+const TEXT = { close: "Close", closeThread: "Close thread", reopen: "Reopen", reopenThread: "Reopen thread" } as const;
 
 interface MenuParts {
   readonly onMarkUnread: () => void;
@@ -36,6 +36,7 @@ function threadChoice(closing: ThreadClosing | null, message: Message): ThreadCh
   if ("closedAt" in message) {
     return {
       label: TEXT.reopen,
+      name: TEXT.reopenThread,
       onSelect: () => {
         closing.reopen(id);
       },
@@ -43,6 +44,7 @@ function threadChoice(closing: ThreadClosing | null, message: Message): ThreadCh
   }
   return {
     label: TEXT.close,
+    name: TEXT.closeThread,
     onSelect: () => {
       closing.close(id);
     },

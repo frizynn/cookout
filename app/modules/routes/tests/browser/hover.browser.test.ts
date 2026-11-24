@@ -1,6 +1,7 @@
 import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import { inPane } from "./regions.ts";
 import { logIn } from "./login.ts";
 
 async function openChannel(page: Page, channel: string): Promise<void> {
@@ -11,34 +12,45 @@ async function openChannel(page: Page, channel: string): Promise<void> {
   await page.goto(`/#/channels/${channel}`);
 }
 
-test("hovering a message shows its Reply button, which opens the thread with the cursor in the reply box", async ({
-  page,
-}) => {
+test("hovering a thread in the channel shows its Close button, which closes the thread", async ({ page }) => {
   await openChannel(page, "browser-hover");
   const message = page.getByRole("list", { name: "Messages" }).getByRole("article");
-  const reply = message.getByRole("link", { name: "Reply" });
+  const closeThread = message.getByRole("button", { name: "Close thread" });
 
-  await expect(reply).toBeHidden();
+  await expect(closeThread).toBeHidden();
 
   await expect(async () => {
     await message.hover();
 
-    await expect(reply).toBeVisible({ timeout: 1000 });
+    await expect(closeThread).toBeVisible({ timeout: 1000 });
   }).toPass();
 
-  await reply.click();
+  await expect(closeThread).toHaveText("Close");
+  await expect(message.getByRole("link", { name: "Reply" })).toBeHidden();
 
-  await expect(page.getByLabel("Reply", { exact: true })).toBeFocused();
+  await closeThread.click();
+
+  await expect(inPane(page).getByRole("button", { name: "1 closed thread" })).toBeVisible();
 });
 
-test("tabbing to a message shows its Reply button", async ({ page }) => {
+test("tabbing to a thread in the channel shows its Close button", async ({ page }) => {
   await openChannel(page, "browser-tab");
   const message = page.getByRole("list", { name: "Messages" }).getByRole("article");
-  const reply = message.getByRole("link", { name: "Reply" });
+  const closeThread = message.getByRole("button", { name: "Close thread" });
 
-  await expect(reply).toBeHidden();
+  await expect(closeThread).toBeHidden();
 
   await message.focus();
 
-  await expect(reply).toBeVisible();
+  await expect(closeThread).toBeVisible();
+});
+
+test("Reply in a thread's More actions menu opens the thread with the cursor in the reply box", async ({ page }) => {
+  await openChannel(page, "browser-hover-reply");
+  const message = page.getByRole("list", { name: "Messages" }).getByRole("article");
+  await message.hover();
+  await message.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Reply" }).click();
+
+  await expect(page.getByLabel("Reply", { exact: true })).toBeFocused();
 });
