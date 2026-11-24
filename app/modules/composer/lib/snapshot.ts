@@ -49,6 +49,7 @@ interface DraftSnapshot {
   readonly command: Command | null;
   readonly highlighted: number;
   readonly returned: boolean;
+  readonly dismissed: boolean;
   readonly focusRequests: number;
 }
 
@@ -62,6 +63,7 @@ const EMPTY = {
   caret: NOTHING,
   command: null,
   commands: [],
+  dismissed: false,
   focusRequests: NOTHING,
   highlighted: NOTHING,
   returned: false,
@@ -79,6 +81,7 @@ function written(sources: Sources, previous: DraftSnapshot, typed: Typed): Draft
     caret,
     command: previous.command,
     commands,
+    dismissed: false,
     focusRequests: previous.focusRequests,
     highlighted: NOTHING,
     returned: false,
@@ -131,7 +134,23 @@ function highlightMoved(snapshot: DraftSnapshot, direction: "down" | "up"): Draf
 }
 
 function dismissed(snapshot: DraftSnapshot): DraftSnapshot {
-  return { ...snapshot, commands: [], highlighted: NOTHING, suggestions: [] };
+  return { ...snapshot, commands: [], dismissed: true, highlighted: NOTHING, suggestions: [] };
+}
+
+function optionNames(snapshot: DraftSnapshot): readonly string[] {
+  return [
+    ...snapshot.commands.map((command) => command.name),
+    ...snapshot.suggestions.map((identity) => identity.name),
+  ];
+}
+
+function refreshed(sources: Sources, snapshot: DraftSnapshot): DraftSnapshot {
+  if (snapshot.dismissed) {
+    return snapshot;
+  }
+  const result = written(sources, snapshot, snapshot);
+  const kept = optionNames(result).indexOf(optionNames(snapshot)[snapshot.highlighted] ?? "");
+  return { ...result, highlighted: Math.max(NOTHING, kept), returned: snapshot.returned };
 }
 
 function unpicked(snapshot: DraftSnapshot): DraftSnapshot {
@@ -147,6 +166,7 @@ interface Changes {
   readonly dismissed: (snapshot: DraftSnapshot) => DraftSnapshot;
   readonly unpicked: (snapshot: DraftSnapshot) => DraftSnapshot;
   readonly repliedTo: (snapshot: DraftSnapshot, name: string | null) => DraftSnapshot;
+  readonly refreshed: (snapshot: DraftSnapshot) => DraftSnapshot;
 }
 
 function changesFor(sources: Sources): Changes {
@@ -156,6 +176,7 @@ function changesFor(sources: Sources): Changes {
     highlightMoved,
     mentioned: (snapshot, name) => mentioned(sources, snapshot, name),
     picked,
+    refreshed: (snapshot) => refreshed(sources, snapshot),
     repliedTo: (snapshot, name) => repliedTo(sources, snapshot, name),
     unpicked,
     written: (previous, typed) => written(sources, previous, typed),

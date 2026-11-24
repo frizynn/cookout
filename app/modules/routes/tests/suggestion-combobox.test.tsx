@@ -1,7 +1,9 @@
+import type { CookoutClient, EventStream } from "../../sdk/index.ts";
 import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { openAt } from "./render.tsx";
+import { watched } from "./watched.ts";
 
 const MENTIONS = { name: "Mention suggestions" };
 
@@ -81,4 +83,77 @@ it("with no suggestions showing, the message box is a plain text box again", { t
   ]).toStrictEqual([null, null, null]);
 
   close();
+});
+
+interface Watching {
+  readonly ada: CookoutClient;
+  readonly close: () => Promise<void>;
+}
+
+interface Crew {
+  readonly ada: CookoutClient;
+  readonly reader: CookoutClient;
+}
+
+async function crewIn(prefix: string): Promise<Crew> {
+  const ada = await newIdentity({ kind: "human", name: `${prefix}-ada` });
+  await newIdentity({ kind: "human", name: `${prefix}-alan` });
+  const reader = await newIdentity({ kind: "human", name: `${prefix}-reader` });
+  await adminClient().createChannel({ name: prefix });
+  await ada.client.createMessage({ channel: prefix, text: "Deployed" });
+  return { ada: ada.client, reader: reader.client };
+}
+
+async function liveMentionListFor(prefix: string): Promise<Watching> {
+  const { ada, reader } = await crewIn(prefix);
+  const { live, stream } = watched(reader);
+  const unmount = openAt({ client: reader, hash: `#/channels/${prefix}`, live });
+  await screen.findByText("Deployed");
+  const events: EventStream = await stream;
+  type(`Ping @${prefix}-a`);
+  await screen.findByRole("listbox", MENTIONS);
+  return {
+    ada,
+    close: async () => {
+      unmount();
+      await events.close();
+    },
+  };
+}
+
+async function renamedLive(ada: CookoutClient, name: string): Promise<void> {
+  await ada.setDisplayName(name, "Ada Lovelace");
+  const messages = screen.getByRole("feed", { name: "Messages" });
+  await waitFor(() => {
+    expect(within(messages).getByRole("article").textContent).toMatch(/Ada Lovelace/u);
+  });
+}
+
+it("an identity changing elsewhere keeps the arrowed-to option active", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { ada, close } = await liveMentionListFor("web-combobox-live-arrowed");
+  press("ArrowDown");
+  await renamedLive(ada, "web-combobox-live-arrowed-ada");
+
+  expect(comboboxNow()).toStrictEqual({
+    active: true,
+    chosen: "@web-combobox-live-arrowed-alan",
+    controls: true,
+    expanded: "true",
+  });
+
+  await close();
+});
+
+it("an identity changing elsewhere leaves a list closed with Escape closed", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { ada, close } = await liveMentionListFor("web-combobox-live-closed");
+  press("Escape");
+  await renamedLive(ada, "web-combobox-live-closed-ada");
+
+  expect(screen.queryByRole("listbox", MENTIONS)).toBeNull();
+
+  await close();
 });
