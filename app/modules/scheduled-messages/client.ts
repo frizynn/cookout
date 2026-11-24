@@ -1,12 +1,16 @@
 /**
- * The calls a client makes on Scheduled messages (#387): create, list, get, pause, resume and delete. The SDK's
+ * The calls a client makes on Scheduled messages (#387, #389): create, list, get, edit, preview, pause, resume and
+ * delete. The SDK's
  * `CookoutClient` has them.
  */
 import type {
   CreateScheduledMessageRequest,
+  EditScheduledMessageRequest,
   ListScheduledMessagesQuery,
   ListScheduledMessagesResponse,
+  PreviewScheduledMessageQuery,
   ScheduledMessageId,
+  ScheduledMessagePreviewResponse,
   ScheduledMessageResponse,
 } from "./index.ts";
 
@@ -22,6 +26,21 @@ export interface ScheduledMessageCalls {
   readonly listScheduledMessages: (query?: ListScheduledMessagesQuery) => Promise<ListScheduledMessagesResponse>;
   /** `GET /v1/scheduled-messages/:id`. A missing one is 404 `scheduled_message_not_found`. */
   readonly getScheduledMessage: (id: ScheduledMessageId) => Promise<ScheduledMessageResponse>;
+  /**
+   * `PATCH /v1/scheduled-messages/:id`: changes its text, its cron or `at`, or its time zone, for its future runs only:
+   * its next run counts from now, and what it already posted stays. A finished one-off schedule given a future `at` or
+   * a cron runs again. Refused as create refuses, and 403 `not_owner` for anyone but its creator, an agent creator's
+   * owner or an admin.
+   */
+  readonly editScheduledMessage: (
+    id: ScheduledMessageId,
+    request: EditScheduledMessageRequest,
+  ) => Promise<ScheduledMessageResponse>;
+  /**
+   * `GET /v1/scheduled-messages/preview`: the next 3 runs a schedule with this cron or `at` and time zone would have,
+   * or the refusal create would give.
+   */
+  readonly previewScheduledMessage: (query: PreviewScheduledMessageQuery) => Promise<ScheduledMessagePreviewResponse>;
   /** `POST /v1/scheduled-messages/:id/pause`: its creator, an agent creator's owner or an admin (403 `not_owner`). */
   readonly pauseScheduledMessage: (id: ScheduledMessageId) => Promise<ScheduledMessageResponse>;
   /**

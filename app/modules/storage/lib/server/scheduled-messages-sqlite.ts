@@ -53,7 +53,7 @@ const INSERT = `INSERT INTO scheduled_messages
 const FIND = `SELECT ${COLUMNS} FROM scheduled_messages WHERE id = ? AND deleted_at IS NULL`;
 const LIST_ALL = `SELECT ${COLUMNS} FROM scheduled_messages WHERE deleted_at IS NULL ORDER BY id`;
 const LIST_CHANNEL = `SELECT ${COLUMNS} FROM scheduled_messages WHERE deleted_at IS NULL AND channel = ? ORDER BY id`;
-const SAVE = `UPDATE scheduled_messages SET status = ?, paused_because = ?, runs_from = ?, last_run_due = ?,
+const SAVE = `UPDATE scheduled_messages SET text = ?, cron = ?, run_at = ?, time_zone = ?, status = ?, paused_because = ?, runs_from = ?, last_run_due = ?,
   last_run_outcome = ?, last_run_message = ?, updated_at = ? WHERE id = ?`;
 const CHANNEL_EXISTS = "SELECT 1 AS found FROM channels WHERE name = ?";
 const MARK_DELETED = "UPDATE scheduled_messages SET deleted_at = ? WHERE id = ?";
@@ -147,8 +147,20 @@ function sqlRecords(db: SqlDatabase): ScheduledRecords {
       return Effect.flatMap(db.all(LIST_CHANNEL, channel), scheduleRows);
     },
     markDeleted: (id, at) => db.run(MARK_DELETED, at, id),
-    save: ({ id, lastRun, pausedBecause, runsFrom, status, updatedAt }) =>
-      db.run(SAVE, status, pausedBecause, runsFrom, ...lastRunColumns(lastRun), updatedAt, id),
+    save: ({ at, cron, id, lastRun, pausedBecause, runsFrom, status, text, timeZone, updatedAt }) =>
+      db.run(
+        SAVE,
+        text,
+        cron,
+        at,
+        timeZone,
+        status,
+        pausedBecause,
+        runsFrom,
+        ...lastRunColumns(lastRun),
+        updatedAt,
+        id,
+      ),
   };
 }
 

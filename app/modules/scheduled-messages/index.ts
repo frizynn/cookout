@@ -96,12 +96,37 @@ export interface CreateScheduledMessageRequest {
   readonly timeZone: string;
 }
 
+/**
+ * The body of `PATCH /v1/scheduled-messages/:id`: what to change. Giving `cron` or `at` replaces the timing; giving
+ * only `timeZone` reads the current timing in it. The channel can't change.
+ */
+export interface EditScheduledMessageRequest {
+  readonly text?: string;
+  readonly cron?: string;
+  /** An ISO 8601 date and time, read in `timeZone` (or the current one) when it has no offset. */
+  readonly at?: string;
+  readonly timeZone?: string;
+}
+
+/** The query of `GET /v1/scheduled-messages/preview`: exactly one of `cron` and `at`, and a time zone. */
+export interface PreviewScheduledMessageQuery {
+  readonly cron?: string;
+  readonly at?: string;
+  readonly timeZone: string;
+}
+
+/** The answer to `GET /v1/scheduled-messages/preview`: the next runs a schedule with that timing would have. */
+export interface ScheduledMessagePreviewResponse {
+  /** At most `scheduleTiming.shownRuns`, soonest first. */
+  readonly nextRuns: readonly IsoTime[];
+}
+
 /** The query of `GET /v1/scheduled-messages`: only one channel's schedules. */
 export interface ListScheduledMessagesQuery {
   readonly channel?: string;
 }
 
-/** The answer to creating, getting, pausing, resuming or deleting a Scheduled message. */
+/** The answer to creating, getting, editing, pausing, resuming or deleting a Scheduled message. */
 export interface ScheduledMessageResponse {
   readonly scheduledMessage: ScheduledMessage;
 }
@@ -114,7 +139,10 @@ export interface ListScheduledMessagesResponse {
 /** `POST` creates a Scheduled message, for any identity; `GET` lists them, for any identity. */
 export const scheduledMessagesPath = "/v1/scheduled-messages";
 
-/** `GET` shows one Scheduled message; `DELETE` deletes it. */
+/** `GET` answers the next runs of a cron or `at` in a time zone, or the refusal create would give. */
+export const scheduledMessagePreviewPath = "/v1/scheduled-messages/preview";
+
+/** `GET` shows one Scheduled message; `PATCH` edits it, changing its future runs only; `DELETE` deletes it. */
 export const scheduledMessagePath = "/v1/scheduled-messages/:id";
 
 /** `POST` pauses a Scheduled message. */

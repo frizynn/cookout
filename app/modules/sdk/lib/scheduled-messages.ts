@@ -4,10 +4,15 @@ import type {
   ScheduledMessageResponse,
 } from "../../scheduled-messages/index.ts";
 import { getJson, send } from "./request.ts";
-import { isListScheduledMessagesResponse, isScheduledMessageResponse } from "./generated/validators.js";
+import {
+  isListScheduledMessagesResponse,
+  isScheduledMessagePreviewResponse,
+  isScheduledMessageResponse,
+} from "./generated/validators.js";
 import {
   scheduledMessagePath,
   scheduledMessagePausePath,
+  scheduledMessagePreviewPath,
   scheduledMessageResumePath,
   scheduledMessagesPath,
 } from "../../scheduled-messages/index.ts";
@@ -57,19 +62,41 @@ function scheduledMessageCalls(server: ClientConnection): ScheduledMessageCalls 
       return created;
     },
     deleteScheduledMessage: changeCall(server, scheduledMessagePath, "DELETE"),
+    editScheduledMessage: async (id, body) => {
+      const edited = await send(server, {
+        body,
+        isExpected: isScheduledMessageResponse,
+        method: "PATCH",
+        params: { id: String(id) },
+        path: scheduledMessagePath,
+      });
+      return edited;
+    },
     getScheduledMessage: changeCall(server, scheduledMessagePath, "GET"),
     listScheduledMessages: listCall(server),
     pauseScheduledMessage: changeCall(server, scheduledMessagePausePath, "POST"),
+    previewScheduledMessage: async (query) => {
+      const previewed = await send(server, {
+        isExpected: isScheduledMessagePreviewResponse,
+        method: "GET",
+        path: scheduledMessagePreviewPath,
+        query: { ...query },
+      });
+      return previewed;
+    },
     resumeScheduledMessage: changeCall(server, scheduledMessageResumePath, "POST"),
   };
 }
 
 export type {
   CreateScheduledMessageRequest,
+  EditScheduledMessageRequest,
   ListScheduledMessagesQuery,
   ListScheduledMessagesResponse,
+  PreviewScheduledMessageQuery,
   ScheduledMessage,
   ScheduledMessageId,
+  ScheduledMessagePreviewResponse,
   ScheduledMessageResponse,
   ScheduledMessageRun,
 } from "../../scheduled-messages/index.ts";

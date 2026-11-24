@@ -2,6 +2,7 @@ import { AuthorSchema, MessageIdSchema, ScheduledMessageIdSchema, TextSchema } f
 import type {
   ListScheduledMessagesResponse,
   ScheduledMessage,
+  ScheduledMessagePreviewResponse,
   ScheduledMessageResponse,
   ScheduledMessageRun,
 } from "../../index.ts";
@@ -46,6 +47,23 @@ export const CreateScheduledMessageRequestSchema = Schema.Struct({
   text: TextSchema,
   timeZone: Schema.String,
 });
+
+export const EditScheduledMessageRequestSchema = Schema.Struct({
+  at: Schema.optionalKey(Schema.String),
+  cron: Schema.optionalKey(Schema.String),
+  text: Schema.optionalKey(TextSchema),
+  timeZone: Schema.optionalKey(Schema.String),
+});
+
+export const PreviewScheduledMessageQuerySchema = Schema.Struct({
+  at: Schema.optionalKey(Schema.String),
+  cron: Schema.optionalKey(Schema.String),
+  timeZone: Schema.String,
+});
+
+export const ScheduledMessagePreviewResponseSchema = matchesWire<ScheduledMessagePreviewResponse>()(
+  Schema.Struct({ nextRuns: Schema.Array(IsoTimeSchema) }),
+);
 
 export const ListScheduledMessagesQuerySchema = Schema.Struct({ channel: Schema.optionalKey(Schema.String) });
 
