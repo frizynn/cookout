@@ -67,6 +67,7 @@
     "test:shard": "vitest run --coverage --reporter=blob --reporter=default --coverage.thresholds.statements=0 --coverage.thresholds.branches=0 --coverage.thresholds.functions=0 --coverage.thresholds.lines=0",
     "test:merge": "vitest run --merge-reports --coverage",
     "coverage:changed": "node scripts/coverage-changed.ts",
+    "under-load": "node scripts/under-load.ts",
     "coverage:raise": "vitest run --coverage --coverage.thresholds.autoUpdate=true",
     "test:watch": "vitest",
     "browser": "playwright test",
