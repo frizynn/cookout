@@ -13,19 +13,18 @@ interface SearchBoxProps {
 export function SearchBox(props: SearchBoxProps): ReactNode {
   const { search } = props;
   const state = useSyncExternalStore(search.subscribe, search.snapshot);
-  const { area, box, handleChange } = useSearchBox(search);
+  const { area, box } = useSearchBox(search);
   return (
     <div className="relative shrink-0 border-b px-4 py-2" ref={area}>
       <input
         aria-label={TEXT.label}
         autoComplete="off"
         className="h-8 w-full rounded-md border bg-surface px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-muted-foreground"
-        onChange={handleChange}
         placeholder={TEXT.placeholder}
         ref={box}
         spellCheck={false}
         type="search"
-        value={state.query}
+        defaultValue={state.query}
       />
       {state.open && state.found.status !== "idle" && <SearchResults state={state} />}
     </div>

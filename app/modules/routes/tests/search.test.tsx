@@ -28,7 +28,7 @@ function scrollingIntoView(): void {
 }
 
 async function typed(query: string): Promise<void> {
-  fireEvent.change(await screen.findByRole("searchbox", { name: "Search" }), { target: { value: query } });
+  fireEvent.input(await screen.findByRole("searchbox", { name: "Search" }), { target: { value: query } });
 }
 
 function rowsNow(): readonly Row[] {

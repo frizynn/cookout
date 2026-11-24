@@ -6,6 +6,7 @@ import { openAt } from "./render.tsx";
 
 const RESULTS = { name: "Search results" } as const;
 const BOX = { name: "Search" } as const;
+const BOTH = 2;
 
 interface Opened {
   readonly close: () => void;
@@ -36,7 +37,7 @@ async function searchBox(): Promise<HTMLElement> {
 }
 
 async function typed(query: string): Promise<void> {
-  fireEvent.change(await searchBox(), { target: { value: query } });
+  fireEvent.input(await searchBox(), { target: { value: query } });
   await inSearchResults().findByRole("link", { name: /Kudukey deploy/u });
 }
 
@@ -124,6 +125,44 @@ it("down, Up and Enter open the highlighted result; Enter with none highlighted,
   opened.close();
 });
 
+async function focusedFromNowhere(): Promise<HTMLElement> {
+  const box = await searchBox();
+  box.focus();
+  box.blur();
+  fireEvent.focusIn(box);
+  return box;
+}
+
+async function touchedInside(): Promise<void> {
+  const link = await inSearchResults().findByRole("link", { name: /Kudukey deploy/u });
+  const box = screen.getByRole("searchbox", BOX);
+  link.focus();
+  fireEvent.pointerDown(box);
+  fireEvent.click(box);
+  fireEvent.click(globalThis.document.body);
+  fireEvent.scroll(globalThis.document);
+  fireEvent.scroll(globalThis.document.body);
+}
+
+it("focusing a result, pressing or clicking in the box, and scrolling or typing elsewhere keep the list as it is", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const opened = await openedOnThread("web-search-inside");
+  const reply = await inThread().findByRole("textbox", { name: "Reply" });
+  await typed("kudukey web search inside");
+  await touchedInside();
+  fireEvent.input(reply, { target: { value: "Elsewhere" } });
+
+  expect([
+    inSearchResults().getAllByRole("link", { name: /Kudukey/u }).length,
+    screen.getByRole("searchbox", BOX),
+  ]).toStrictEqual([BOTH, expect.objectContaining({ value: "kudukey web search inside" })]);
+
+  opened.close();
+});
+
 it("pressing outside closes the list, focusing the box opens it again, and Escape then just leaves the box", {
   timeout: 5000,
 }, async () => {
@@ -132,8 +171,7 @@ it("pressing outside closes the list, focusing the box opens it again, and Escap
   const opened = await openedOnThread("web-search-outside");
   await typed("kudukey web search outside");
   const closed = pressedOutside();
-  const box = await searchBox();
-  box.focus();
+  const box = await focusedFromNowhere();
   const reopened = await screen.findByRole("list", RESULTS);
   pressed("Escape");
 
