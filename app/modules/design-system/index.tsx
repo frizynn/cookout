@@ -109,8 +109,8 @@
  * `empty`, or that it has reached the `end`; `MoreButton` is a quiet
  * full-width row under a list that loads more of it, with a spinner while
  * `loading`.
- * `MessageList` is a named list of `MessageItem`s: one message each, which
- * takes focus, with its avatar, name and time, or only its time on hover when
+ * `MessageList` is a named `feed` of `MessageItem`s (`aria-busy` while `busy`; `aria-setsize` -1 while `more`) with one Tab stop: the item
+ * focused last or the newest (see its ADR); `feed` is its element ID. A `MessageItem` is an `article` labelled by its author and time, which takes focus, with its avatar, name and time, or only its time on hover when
  * `grouped` under the one before; the day's separator and the "New" line above it when it starts them; a
  * mark (`for-you`, the filled accent block, when it mentions or answers the reader, or `open`); and, shown on hover or
  * focus, a "Quick actions" group of icon buttons, each with no text and named by its tooltip: a button for each of its
@@ -135,9 +135,9 @@
  * takes focus, and hovering or focusing it opens a tooltip with the full date and time and, when the message has one, its read receipt. `ReactionChips` is a message's named row of
  * `ReactionChip`s, each a reaction and its count, pressed (in the accent) when one is the reader's own, with who
  * reacted as its tooltip. `RepliesDivider` heads a thread's replies, `ChannelStart` says a
- * channel has nothing older, and `QuietButton` is a muted centred button,
- * such as loading older messages. `ClosedFold` is a row of a message list standing for closed threads folded away,
- * a button on a dashed line that unfolds them; given a `day`, the day's label (a separator to a screen reader) shares
+ * channel has nothing older, and `QuietButton` is a muted centred button, naming what it `controls`,
+ * such as loading older messages. `ClosedFold` is an item of a message list standing for closed threads folded away,
+ * an `article` named by its button on a dashed line that unfolds them; given a `day`, the day's label (a separator to a screen reader) shares
  * that line, in place of a day separator of its own beside it: the label in the line's centre, the button at its right end,
  * shortening rather than overlapping the label on a narrow line. `ThreadBar` is a muted bar across the top of a thread: a line of text
  * and one icon button named by its tooltip, such as who closed it and Reopen thread; `QuietLink` is a muted link in such a line, such as a name
