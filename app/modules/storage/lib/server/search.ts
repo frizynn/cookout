@@ -44,4 +44,4 @@ interface SearchSection {
   readonly searchMessages: (query: SearchQuery, page: SearchPageRequest) => Fails<StoredSearchPage>;
 }
 
-export type { NewestPageRequest, SearchCursor, SearchPageRequest, SearchQuery, SearchSection, StoredSearchPage };
+export type { SearchCursor, SearchPageRequest, SearchQuery, SearchSection, StoredSearchPage };
