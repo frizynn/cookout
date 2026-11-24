@@ -6,7 +6,8 @@
  * whose `listen` adds the page's one key listener.
  * A view says what an action does with `bind`: a scope, the actions it does
  * there and, optionally, the element the scope covers (without one it covers
- * the page while bound). On each key not already handled, the listener walks
+ * the page while bound). On each key not already handled (nor mid-composition, nor
+ * without a key, as autofill sends), the listener walks
  * `SCOPES` from the innermost (the search box) out to `everywhere`, takes the
  * bound scopes that cover the focused element, most recently bound first, and
  * runs the first action whose chord matches and that says it acted, which
@@ -107,7 +108,7 @@ function createKeymap(options: { readonly platform: string }): Keymap {
   const platform = platformOf(options.platform);
   let bindings: readonly Bound[] = [];
   function pressed(event: KeyboardEvent): void {
-    if (event.defaultPrevented || event.isComposing) {
+    if (event.defaultPrevented || event.isComposing || typeof Reflect.get(event, "key") !== "string") {
       return;
     }
     if (boundInOrder(bindings, event.target).some((bound) => actOn(bound, event))) {
@@ -141,4 +142,4 @@ function createKeymap(options: { readonly platform: string }): Keymap {
 }
 
 export type { Action } from "./lib/keys.ts";
-export { type Act, type Binding, type Keymap, type Shortcut, createKeymap, isTextField };
+export { type Act, type Binding, type Keymap, type Shortcut, createKeymap };
