@@ -53,7 +53,7 @@ export type { StoredPresence } from "./lib/server/presence.ts";
 export type { StoredTrigger } from "./lib/server/triggers.ts";
 export type { NewCommandCall } from "./lib/server/command-calls.ts";
 export type { JoinCodeRedemption } from "./lib/server/join-codes.ts";
-export type { AgentAt, UseAgentSessionResult } from "./lib/server/agent-sessions.ts";
+export type { AgentAt, StoredAgentSession, UseAgentSessionResult } from "./lib/server/agent-sessions.ts";
 export type { TransferAgentResult } from "./lib/server/identity-admins.ts";
 export type { LoginCollection, LoginRequest, NewLoginRequest } from "./lib/server/login-requests.ts";
 export type {

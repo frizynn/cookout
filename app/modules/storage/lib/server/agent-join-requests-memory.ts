@@ -100,7 +100,7 @@ function collectFrom(requests: Requests, issueAgentSession: AgentSessionsSection
         return Effect.succeed(GONE);
       }
       const { approval, request } = taken;
-      const issue = sessionToIssue({ approval, collect, host: request.host });
+      const issue = sessionToIssue({ approval, collect, host: request.host, sessionUrl: request.sessionUrl ?? null });
       return Effect.map(issueAgentSession(issue), (result) =>
         collectionOf({ created: approval.created, issue, result }),
       );

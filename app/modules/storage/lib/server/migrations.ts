@@ -227,6 +227,8 @@ const migrations: readonly string[] = [
    ALTER TABLE messages ADD COLUMN scheduled_message_id INTEGER;`,
   TRIGGERS_MIGRATION,
   TRIGGER_HEADERS_MIGRATION,
+  `ALTER TABLE agent_session_tokens ADD COLUMN session_url TEXT;
+   ALTER TABLE agent_join_requests ADD COLUMN session_url TEXT;`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

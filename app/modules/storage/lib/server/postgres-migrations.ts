@@ -242,6 +242,10 @@ const postgresMigrations: readonly (readonly string[])[] = [
   POSTGRES_SCHEDULED_MESSAGES_MIGRATION,
   POSTGRES_TRIGGERS_MIGRATION,
   POSTGRES_TRIGGER_HEADERS_MIGRATION,
+  [
+    'ALTER TABLE agent_session_tokens ADD COLUMN session_url text COLLATE "C"',
+    'ALTER TABLE agent_join_requests ADD COLUMN session_url text COLLATE "C"',
+  ],
 ];
 
 const NEXT_VERSION = 1;
