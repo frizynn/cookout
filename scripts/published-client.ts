@@ -1,12 +1,13 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { fail, unwrap } from "./lib/tools.ts";
 import { field, parseJson, text } from "./lib/json.ts";
-import { spawn, spawnSync } from "node:child_process";
 import type { DevCookout } from "./lib/dev-cookout.ts";
 import { optedOutSteps } from "./lib/published-client.ts";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { startDevCookout } from "./lib/dev-cookout.ts";
 import { tmpdir } from "node:os";
+import { watchConnected } from "./lib/connected-watch.ts";
 
 type Env = Readonly<Record<string, string>>;
 
@@ -36,7 +37,8 @@ const CACHE = "node_modules/.cache/published-client";
 const MAX_BUFFER = 67_108_864;
 const EXIT_SUCCESS = 0;
 const WATCH_TIMEOUT_SECONDS = "30";
-const POST_AFTER_SECONDS = "3";
+const NOTE_TIMEOUT_MS = 30_000;
+const MS_PER_SECOND = 1000;
 const CHANNEL = "compat";
 const AGENT = "compat-agent";
 const CANARY_AGENT = "compat-canary";
@@ -183,19 +185,21 @@ function postAndRead(board: Board): void {
   step("ack", board.agent, ["ack", reply]);
 }
 
-function watch(board: Board): void {
-  const post = envArgs({
-    args: ["message", "post", CHANNEL, `@${AGENT} watch this`],
-    bin: currentBin,
-    env: board.admin,
-  });
-  const later = spawn("sh", ["-c", `sleep ${POST_AFTER_SECONDS} && exec env "$@"`, "sh", ...post], {
-    cwd: install,
-    stdio: "ignore",
-  });
+async function watch(board: Board): Promise<void> {
   const args = ["watch", "--once", "--json", "--timeout", WATCH_TIMEOUT_SECONDS];
-  const answer = cli({ args, bin: binFor("watch"), env: board.agent });
-  later.kill();
+  const post = ["message", "post", CHANNEL, `@${AGENT} watch this`];
+  const answer = await watchConnected({
+    argv: ["env", ...envArgs({ args, bin: binFor("watch"), env: board.agent })],
+    cwd: install,
+    noteTimeoutMs: NOTE_TIMEOUT_MS,
+    onConnected: () => {
+      run("env", envArgs({ args: post, bin: currentBin, env: board.admin }), install);
+    },
+  });
+  if (!answer.connected) {
+    const waited = `${String(NOTE_TIMEOUT_MS / MS_PER_SECOND)} s`;
+    refuse(`watch: cookout ${args.join(" ")} printed no watching note on stderr within ${waited}:\n${answer.output}`);
+  }
   passed("watch", answer, args);
   if (!answer.stdout.includes('"type":"inbox-item"')) {
     refuse(`watch: cookout ${args.join(" ")} exited before the mention arrived:\n${answer.output}`);
@@ -220,9 +224,9 @@ function canary(board: Board): void {
   console.log("ok   canary: a deactivate answer without identity fails the published cookout with bad_response");
 }
 
-function drive(board: Board): void {
+async function drive(board: Board): Promise<void> {
   postAndRead(board);
-  watch(board);
+  await watch(board);
   callCommand(board);
   step("deactivate", board.admin, ["identity", "deactivate", AGENT]);
   step("reactivate", board.admin, ["identity", "reactivate", AGENT]);
@@ -236,7 +240,7 @@ async function main(): Promise<void> {
   optedOut = unwrap(SCRIPT, optedOutSteps({ optOuts, steps: STEPS, version }));
   const cookout = await startDevCookout({});
   try {
-    drive(join(setUp(cookout)));
+    await drive(join(setUp(cookout)));
   } catch (error) {
     await cookout.stop();
     fail(SCRIPT, String(error));
