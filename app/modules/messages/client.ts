@@ -5,6 +5,8 @@
 import type { JsonValue, ListOpenThreadsResponse, MessageId, TopLevelMessageResponse } from "./index.ts";
 import type { SearchResponse } from "../search/index.ts";
 
+export type { ScheduledMessageCalls } from "../scheduled-messages/client.ts";
+
 /** Closing and reopening the thread holding a message. */
 export interface ClosedThreadCalls {
   /**

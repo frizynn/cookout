@@ -1,5 +1,5 @@
 import { Context, Effect, Predicate } from "effect";
-import type { Hub, PostMessage } from "./posting.ts";
+import type { Hub, PostMessage, ScheduledRunParts } from "./posting.ts";
 import type {
   ListMessagesResponse,
   ListOpenThreadsResponse,
@@ -14,6 +14,7 @@ import type {
 import type { NewCommandCall, OpenThreadsPageRequest, Storage, StorageUnavailable } from "../../../storage/server.ts";
 import type { PubSub, Scope } from "effect";
 import { closeWithCommandToken, messageNotFound, replyOutsideCommandThread } from "./refusals.ts";
+import { postScheduledWith, postWith } from "./posting.ts";
 import { react, shownPage, shownThread, unreact } from "./reactions.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { Identity } from "../../../identities/index.ts";
@@ -22,7 +23,6 @@ import type { Refusal } from "../../../http/index.ts";
 import { channelNotFound } from "../../../channels/server.ts";
 import { isChannelName } from "../../../channels/index.ts";
 import { pageSize } from "../../index.ts";
-import { postWith } from "./posting.ts";
 
 interface PageQuery {
   readonly before?: MessageId;
@@ -99,6 +99,7 @@ function messagesOn({ hub, reactions, storage }: MessagesOn): Omit<MessagesServi
         }
         return yield* post(author, message);
       }),
+    postScheduled: postScheduledWith({ hub, storage }),
     posted: hub.subscribe,
     react: (caller, id, reaction) => react({ asked: { caller, id, reaction }, hub: reactions, storage }),
     thread: (id) =>
@@ -127,6 +128,7 @@ export interface MessagesService {
   readonly post: (author: Identity, message: PostMessage) => Fails<MessageResponse>;
   readonly postCommandCall: (author: Identity, message: PostMessage, call: CallParts) => Fails<MessageResponse>;
   readonly postInThread: (author: Identity, message: PostMessage, threadId: MessageId) => Fails<MessageResponse>;
+  readonly postScheduled: (author: Identity, message: PostMessage, run: ScheduledRunParts) => Fails<MessageResponse>;
   readonly thread: (id: MessageId) => Fails<ThreadResponse>;
   readonly page: (channel: string, query: PageQuery) => Fails<ListMessagesResponse>;
   readonly posted: Effect.Effect<PubSub.Subscription<Message>, never, Scope.Scope>;
