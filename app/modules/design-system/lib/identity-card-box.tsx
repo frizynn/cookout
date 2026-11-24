@@ -10,7 +10,7 @@ const TEXT = { viewProfile: "View profile" } as const;
 export function IdentityCardBox(parts: IdentityCardBoxParts): ReactNode {
   const { card } = parts;
   return (
-    <Content asChild sideOffset={OFFSET_PX}>
+    <Content asChild side="bottom" sideOffset={OFFSET_PX}>
       <div className="z-50 flex w-64 flex-col gap-1 rounded-lg border bg-card p-3 text-sm text-foreground shadow-md">
         {card.presence !== null && <IdentityCardPresence name={card.name} presence={card.presence} />}
         <IdentityCardFacts card={card} />
