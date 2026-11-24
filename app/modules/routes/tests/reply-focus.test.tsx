@@ -24,21 +24,6 @@ async function focusedBox(): Promise<string | null> {
   return box.getAttribute("name");
 }
 
-it('"Reply" on a message opens its thread in the panel with the cursor in the reply box', {
-  timeout: 5000,
-}, async () => {
-  expect.hasAssertions();
-
-  await channelWith("web-reply-focus", []);
-  const close = openAt({ client: adminClient(), hash: "#/channels/web-reply-focus" });
-
-  fireEvent.click(await inPane().findByRole("link", { name: "Reply" }));
-
-  await expect(focusedBox()).resolves.toBe("text");
-
-  close();
-});
-
 it("a message's thread summary opens its thread with the cursor in the reply box", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 

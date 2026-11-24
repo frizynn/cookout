@@ -1,9 +1,9 @@
+import { hoverThread, useMessageChoices } from "./message-choices.ts";
 import { MessageContextMenu } from "./message-context-menu.tsx";
 import { MessageLayout } from "./message-layout.tsx";
 import type { ReactNode } from "react";
 import type { StandaloneMessageParts } from "./parts.ts";
 import { messageClass } from "./message-class.ts";
-import { useMessageChoices } from "./message-choices.ts";
 import { useReactionKeys } from "./use-reaction-keys.ts";
 
 interface StandaloneArticleParts {
@@ -41,6 +41,7 @@ export function StandaloneArticle(parts: StandaloneArticleParts): ReactNode {
           onAction={handleAction}
           presence={message.presence}
           reactions={message.menu.reactions}
+          thread={hoverThread(message)}
           time={message.time}
         >
           {message.children}

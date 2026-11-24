@@ -16,7 +16,8 @@ async function openThread(page: Page, token: string, channel: string): Promise<v
     .getByRole("link", { name: `#${channel}` })
     .click();
   await page.getByRole("article").hover();
-  await inPane(page).getByRole("link", { name: "Reply" }).click();
+  await inPane(page).getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Reply" }).click();
 }
 
 async function mentionerAndReviewers(): Promise<string> {

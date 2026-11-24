@@ -1,5 +1,5 @@
 import type { HoverActionsParts } from "./menu-parts.ts";
-import { MessageAction } from "./message-action.tsx";
+import { HoverLead } from "./hover-lead.tsx";
 import { MoreActions } from "./more-actions.tsx";
 import { ReactButton } from "./react-button.tsx";
 import type { ReactNode } from "react";
@@ -12,7 +12,12 @@ export function HoverButtons(parts: HoverActionsParts): ReactNode {
       {reactions.map((choice) => (
         <ReactButton choice={choice} key={choice.symbol} />
       ))}
-      <MessageAction actionHref={actionHref} actionLabel={parts.actionLabel} onAction={handleAction} />
+      <HoverLead
+        actionHref={actionHref}
+        actionLabel={parts.actionLabel}
+        onAction={handleAction}
+        thread={parts.thread}
+      />
       <MoreActions choices={choices} />
     </div>
   );
