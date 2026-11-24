@@ -1,5 +1,5 @@
+import type { AgentIdentity, Identity, IdentityName } from "../../../identities/index.ts";
 import { Array as Arr, DateTime, Duration, Option, Order, Predicate } from "effect";
-import type { Identity, IdentityName } from "../../../identities/index.ts";
 import type { DeactivationOfferId } from "../../../inbox/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
@@ -28,7 +28,7 @@ interface Board {
 
 interface Due {
   readonly at: IsoTime;
-  readonly agent: Identity;
+  readonly agent: AgentIdentity;
   readonly quietDays: number;
 }
 
@@ -38,7 +38,7 @@ interface Dating {
 }
 
 interface Quiet {
-  readonly agent: Identity;
+  readonly agent: AgentIdentity;
   readonly quietSince: IsoTime;
   readonly latest: OfferRecord | undefined;
 }
@@ -123,10 +123,13 @@ function nextDueIn({ board, days }: Dating): IsoTime | null {
   return Option.getOrNull(Option.map(soonest, ({ at }) => at));
 }
 
-function recipientsOf({ agent, board }: { readonly board: Board; readonly agent: Identity }): readonly IdentityName[] {
-  if (agent.kind !== "agent") {
-    return [];
-  }
+function recipientsOf({
+  agent,
+  board,
+}: {
+  readonly board: Board;
+  readonly agent: AgentIdentity;
+}): readonly IdentityName[] {
   const owner = identityIn(board, agent.owner);
   if (Predicate.isNotUndefined(owner) && isActive(owner)) {
     return [owner.name];

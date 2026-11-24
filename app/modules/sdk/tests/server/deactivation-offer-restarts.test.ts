@@ -1,5 +1,6 @@
 import { Array as Arr, DateTime, Duration, Effect } from "effect";
 import type { CookoutClient, DeactivationOffer } from "../../index.ts";
+import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { TestCookout, answer, isoTime, testCookout, testStartTime } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { TestClock } from "effect/testing";
@@ -10,6 +11,7 @@ type Wait = `${number} days` | `${number} millis`;
 
 const HUMAN = { kind: "human" } as const;
 const ONE = 1;
+const NOT_FOUND = 404;
 const SETTLE = "30 millis";
 const JUST_UNDER_THIRTY_DAYS = "2591999999 millis";
 const LONG_AGO = isoTime("2024-11-27T00:00:00.000Z");
@@ -89,4 +91,17 @@ it.effect("identities that exist when activity began raise no offer for 30 days 
     expect(justUnder).toStrictEqual([]);
     expect(offers).toMatchObject([{ identity: { name: "ada/old" }, raisedAt: later("30 days") }]);
   }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("keeping deactivation offer 0 is refused as an offer the caller doesn't have", () =>
+  Effect.gen(function* offerZero() {
+    const { ada, cookout } = yield* board;
+    const response = yield* HttpClientRequest.post(`${cookout.url}/v1/inbox/deactivation-offers/0/keep`).pipe(
+      HttpClientRequest.setHeader("authorization", `Bearer ${ada.token}`),
+      HttpClient.execute,
+    );
+    const json = yield* response.json;
+
+    expect([response.status, json]).toMatchObject([NOT_FOUND, { error: { code: "deactivation_offer_not_found" } }]);
+  }).pipe(Effect.provide([testCookout(), FetchHttpClient.layer])),
 );
