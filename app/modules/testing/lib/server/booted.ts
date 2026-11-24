@@ -1,5 +1,6 @@
-import { Array as Arr, Context, Effect, Layer, Logger, MutableList, Option, Schedule, Stream } from "effect";
+import { Array as Arr, Context, Effect, Layer, Logger, MutableList, Schedule, Stream } from "effect";
 import { AssetStore, Storage } from "../../../storage/server.ts";
+import type { AttachmentId } from "../../../attachments/index.ts";
 import type { HttpServer } from "effect/http";
 import type { Identities } from "../../../identities/server.ts";
 import { PresenceRegistry } from "../../../presence/server.ts";
@@ -8,7 +9,6 @@ import type { StoredPresence } from "../../../storage/server.ts";
 import { TestClock } from "effect/testing";
 import type { WebhookFake } from "../../../webhook-fake/server.ts";
 import { identityName } from "./identities.ts";
-import { isAttachmentId } from "../../../attachments/index.ts";
 import { serverUrl } from "../../../http/server.ts";
 
 type BootedContext = Context.Context<Storage | AssetStore | Identities | WebhookFake | PresenceRegistry>;
@@ -59,15 +59,9 @@ const capturedLogs: Effect.Effect<CapturedLogs> = Effect.sync(() => {
   };
 });
 
-function heldAssetsOn(server: BootedContext): (ids: readonly string[]) => Effect.Effect<readonly string[]> {
+function heldAssetsOn(server: BootedContext): (ids: readonly AttachmentId[]) => Effect.Effect<readonly AttachmentId[]> {
   const assets = Context.get(server, AssetStore);
-  return (ids) =>
-    Effect.filter(ids, (id) =>
-      Option.match(Option.liftPredicate(id, isAttachmentId), {
-        onNone: () => Effect.succeed(false),
-        onSome: (known) => Effect.isSuccess(Stream.runDrain(assets.read(known))),
-      }),
-    );
+  return (ids) => Effect.filter(ids, (id) => Effect.isSuccess(Stream.runDrain(assets.read(id))));
 }
 
 function liveConnectionsClosedOn({
