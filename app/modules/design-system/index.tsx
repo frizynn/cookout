@@ -142,7 +142,7 @@
  * a button on a dashed line that unfolds them; given a `day`, the day's label (a separator to a screen reader) shares
  * that line, in place of a day separator of its own beside it: the label in the line's centre, the button at its right end,
  * shortening rather than overlapping the label on a narrow line. `ThreadBar` is a muted bar across the top of a thread: a line of text
- * and one button, such as who closed it and Reopen; `QuietLink` is a muted link in such a line, such as a name
+ * and one icon button named by its tooltip, such as who closed it and Reopen thread; `QuietLink` is a muted link in such a line, such as a name
  * linking to its profile. `TextArea` takes focus when it first appears
  * if `focused`.
  *

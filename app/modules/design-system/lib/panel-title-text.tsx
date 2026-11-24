@@ -18,7 +18,7 @@ function tabIndexOf(focusable: boolean): number {
 
 export function PanelTitleText(parts: PanelTitleTextParts): ReactNode {
   return (
-    <div className="flex flex-1 items-center gap-2">
+    <div className="flex flex-1 items-baseline gap-2">
       <h2 className="rounded-sm text-sm font-semibold" tabIndex={tabIndexOf(parts.focusable)}>
         {parts.label}
       </h2>
