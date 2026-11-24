@@ -4,13 +4,24 @@ import { createNotifier } from "./notifier.ts";
 
 type DeactivatedQuietAgentsState =
   | { readonly status: "loading" }
-  | { readonly status: "loaded"; readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[] }
+  | {
+      readonly status: "loaded";
+      readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[];
+      readonly held: readonly DeactivatedQuietAgentId[];
+    }
   | { readonly status: "failed" };
 
 interface DeactivatedQuietAgents {
   readonly subscribe: (listener: () => void) => () => void;
   readonly snapshot: () => DeactivatedQuietAgentsState;
   readonly markRead: (id: DeactivatedQuietAgentId) => void;
+  readonly hold: (id: DeactivatedQuietAgentId) => void;
+  readonly release: (id: DeactivatedQuietAgentId) => void;
+}
+
+interface ForYouEntries {
+  readonly unread: readonly DeactivatedQuietAgent[];
+  readonly held: readonly DeactivatedQuietAgent[];
 }
 
 interface LiveDeactivatedQuietAgents extends DeactivatedQuietAgents {
@@ -18,17 +29,21 @@ interface LiveDeactivatedQuietAgents extends DeactivatedQuietAgents {
   readonly unreadAre: (entries: readonly DeactivatedQuietAgent[]) => void;
   readonly receive: (event: CookoutEvent) => boolean;
   readonly unread: () => readonly DeactivatedQuietAgent[];
+  readonly forYou: () => ForYouEntries;
   readonly newestUnread: () => DeactivatedQuietAgentId | null;
 }
 
 interface DeactivatedQuietAgentsOptions {
   readonly client: Pick<CookoutClient, "inboxHistory" | "markDeactivatedQuietAgentRead">;
-  readonly onChange: (unread: readonly DeactivatedQuietAgent[]) => void;
+  readonly onChange: (forYou: ForYouEntries) => void;
 }
 
 interface Known {
   readonly addAll: (entries: readonly DeactivatedQuietAgent[]) => void;
+  readonly hold: (id: DeactivatedQuietAgentId) => void;
+  readonly release: (id: DeactivatedQuietAgentId) => void;
   readonly unread: () => readonly DeactivatedQuietAgent[];
+  readonly forYou: () => ForYouEntries;
   readonly historyRead: () => void;
 }
 
@@ -55,22 +70,38 @@ function knownEntries(
   onChange: DeactivatedQuietAgentsOptions["onChange"],
 ): Known {
   const known = new Map<DeactivatedQuietAgentId, DeactivatedQuietAgent>();
+  const held = new Set<DeactivatedQuietAgentId>();
   let loaded = false;
   function unread(): readonly DeactivatedQuietAgent[] {
     return newestFirst(known.values()).filter(({ read }) => !read);
+  }
+  function forYou(): ForYouEntries {
+    return { held: newestFirst(known.values()).filter(({ id, read }) => read && held.has(id)), unread: unread() };
+  }
+  function changed(): void {
+    if (loaded) {
+      shown.publish({ deactivatedQuietAgents: newestFirst(known.values()), held: [...held], status: "loaded" });
+    }
+    onChange(forYou());
   }
   return {
     addAll: (entries) => {
       for (const entry of entries) {
         known.set(entry.id, entry);
       }
-      if (loaded) {
-        shown.publish({ deactivatedQuietAgents: newestFirst(known.values()), status: "loaded" });
-      }
-      onChange(unread());
+      changed();
     },
+    forYou,
     historyRead: () => {
       loaded = true;
+    },
+    hold: (id) => {
+      held.add(id);
+      changed();
+    },
+    release: (id) => {
+      held.delete(id);
+      changed();
     },
     unread,
   };
@@ -122,6 +153,8 @@ function createDeactivatedQuietAgents({ client, onChange }: DeactivatedQuietAgen
   }
 
   return {
+    forYou: known.forYou,
+    hold: known.hold,
     markRead: reading(client, known),
     newestUnread: () => newestIdOf(known.unread()),
     readUpTo: (id) => {
@@ -133,6 +166,7 @@ function createDeactivatedQuietAgents({ client, onChange }: DeactivatedQuietAgen
       );
     },
     receive: (event) => receiveIn(known, event),
+    release: known.release,
     snapshot: shown.current,
     subscribe: (listener) => {
       loading ??= readHistory();
