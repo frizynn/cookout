@@ -118,7 +118,8 @@ export const agentSessionExpired = "agent_session_expired";
  * `display_name_required` (a join that would create an agent with no display name, when the request asks for one) and
  * `display_name_on_existing_agent` (a display name sent to join an agent that already exists),
  * the 403 `not_brought_in` (an agent approves a join for an existing agent it didn't bring in, #370), the 404
- * `agent_join_request_not_found` (an agent join request expired, was collected, or never existed), and the
+ * `agent_join_request_not_found` (an agent join request expired, was collected, or never existed), the 404
+ * `agent_not_found` (an agent join request names no active agent: a join request never creates one, #461), and the
  * 401s any request sent with an ended agent session token gets, and the 404 `join_code_not_found` (a join code that
  * was used, expired or never issued).
  */
@@ -134,6 +135,7 @@ export const agentSessionErrorCodes = [
   "agent_join_request_not_found",
   "join_code_not_found",
   "not_brought_in",
+  "agent_not_found",
   agentSessionRevoked,
   agentSessionExpired,
 ] as const;
