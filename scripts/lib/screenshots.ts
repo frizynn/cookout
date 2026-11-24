@@ -56,7 +56,7 @@ const SCREENS: readonly Screen[] = [
   { hash: "#/inbox/general/1", name: "inbox-narrow", narrow: true, text: "earlier replies" },
   { hash: "#/inbox/deploys", name: "inbox-channel", text: "Deployed 1.4.0." },
   {
-    click: "Mark read",
+    click: "Mark conversation read",
     clickIn: 'aside[aria-label="Conversation"]',
     hash: "#/inbox/general/1",
     name: "inbox-marked",

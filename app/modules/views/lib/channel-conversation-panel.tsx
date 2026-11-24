@@ -1,10 +1,12 @@
 import type { Board, ThreadMessagesState } from "../../board/index.ts";
 import type { ChannelName, ReadReceipt, Reply, TopLevelMessage } from "../../sdk/index.ts";
 import { ConversationPanel, ScrollArea } from "../../design-system/index.tsx";
-import type { MessageMenu, Selection } from "../../unread/index.ts";
+import type { MessageMenu, Reader, Selection } from "../../unread/index.ts";
 import { ChannelConversationBody } from "./channel-conversation-body.tsx";
 import type { Composer } from "./use-channel-reply.ts";
+import type { PanelAction } from "../../design-system/index.tsx";
 import type { ReactNode } from "react";
+import { ReadNote } from "./read-note.tsx";
 import { ReplyFooter } from "./reply-footer.tsx";
 import { hrefOf } from "../../paths/index.ts";
 import { useChannelReply } from "./use-channel-reply.ts";
@@ -26,6 +28,8 @@ interface ChannelConversationPanelProps {
   readonly posts: readonly TopLevelMessage[];
   readonly me: string;
   readonly menu: MessageMenu;
+  readonly reader: Reader;
+  readonly actions: readonly PanelAction[];
 }
 
 interface ThreadReplies {
@@ -43,9 +47,7 @@ function repliesOf(state: ThreadMessagesState): ThreadReplies {
 }
 
 export function ChannelConversationPanel(props: ChannelConversationPanelProps): ReactNode {
-  const { channel, first, newest, posts } = props;
-  const read = props.board.read(newest.id);
-  useSyncExternalStore(read.subscribe, read.snapshot);
+  const { channel, first, newest, posts, reader } = props;
   const before = props.board.messageBefore({ channel, id: first.id });
   const state = useSyncExternalStore(before.subscribe, before.snapshot);
   const reply = useChannelReply({
@@ -54,11 +56,13 @@ export function ChannelConversationPanel(props: ChannelConversationPanelProps): 
     composer: props.composer,
     me: props.me,
     newest,
+    replied: reader.markRead,
     selection: props.selection,
   });
   const thread = repliesOf(reply.state);
   return (
     <ConversationPanel
+      actions={props.actions}
       backHref={hrefOf({ name: "inbox", selected: null })}
       backLabel={TEXT.back}
       detail={`#${channel}`}
@@ -66,6 +70,7 @@ export function ChannelConversationPanel(props: ChannelConversationPanelProps): 
       openHref={hrefOf({ channel, name: "channel" })}
       openLabel={`Open in #${channel}`}
     >
+      <ReadNote reader={reader} />
       <ScrollArea count={posts.length} label={TEXT.messages}>
         <ChannelConversationBody
           me={props.me}

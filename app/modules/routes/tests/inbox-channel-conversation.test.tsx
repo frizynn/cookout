@@ -40,14 +40,6 @@ async function channelRowClicked(channel: string): Promise<void> {
   await inConversation().findByText("New two");
 }
 
-async function channelRead(reader: CookoutClient, channel: string): Promise<void> {
-  await waitFor(async () => {
-    const inbox = await reader.inbox();
-
-    expect(inbox.items.filter((item) => item.channel.name === channel)).toStrictEqual([]);
-  });
-}
-
 async function firstPostsNew(channel: string): Promise<NewsChannel> {
   const { poster, reader } = await subscribedReader(channel);
   const news = { channel, poster, reader };
@@ -71,14 +63,13 @@ async function openLive(news: NewsChannel): Promise<() => Promise<void>> {
   const unmount = openWithClockStopped({ client: news.reader, hash: `#/inbox/${news.channel}`, live });
   const events: EventStream = await stream;
   await inConversation().findByText("Old post");
-  await channelRead(news.reader, news.channel);
   return async () => {
     unmount();
     await events.close();
   };
 }
 
-it("selecting a channel row shows its new posts and the one message before them, and reads them", {
+it("selecting a channel row shows its new posts and the one message before them", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -87,7 +78,6 @@ it("selecting a channel row shows its new posts and the one message before them,
   const unmount = openWithClockStopped({ client: news.reader, hash: "#/inbox" });
   await channelRowClicked(news.channel);
   await inConversation().findByText("Old post");
-  await channelRead(news.reader, news.channel);
 
   expect([globalThis.location.hash, shownTexts()]).toStrictEqual([
     `#/inbox/${news.channel}`,
@@ -103,7 +93,6 @@ it("a channel whose first message is new shows no message before it", { timeout:
   const { channel, reader } = await firstPostsNew("web-channel-conversation-first");
   const unmount = openWithClockStopped({ client: reader, hash: `#/inbox/${channel}` });
   await inConversation().findByText("New two");
-  await channelRead(reader, channel);
 
   expect([shownTexts(), within(inConversation().element()).queryAllByRole("progressbar")]).toStrictEqual([
     ["New one", "New two"],

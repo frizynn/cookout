@@ -40,7 +40,7 @@ async function noteShown(): Promise<string> {
 }
 
 async function markedRead(): Promise<string> {
-  clicked("Mark read");
+  clicked("Mark conversation read");
   const note = await noteShown();
   return note;
 }
@@ -74,7 +74,7 @@ it("mark read reads the row at once, and Undo brings it back unread", { timeout:
   const thread = await threadToRead("web-mark-read-undo");
   const opened = await openReading({ hash: thread.address, thread });
   await shown(LATEST);
-  clicked("Mark read");
+  clicked("Mark conversation read");
   const read = [await readAtLast(thread), await noteShown()];
   clicked("Undo");
 
@@ -145,7 +145,7 @@ it("mark read and Mark unread on a conversation that couldn't load change nothin
     session: sessionOf(adminClient()),
   });
   await inConversation().findByRole("alert");
-  clicked("Mark read");
+  clicked("Mark conversation read");
   clicked("Mark unread");
 
   expect(inConversation().element().textContent).not.toContain(MARKED);

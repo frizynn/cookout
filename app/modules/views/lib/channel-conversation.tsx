@@ -1,11 +1,13 @@
 import type { ChannelName, TopLevelMessage } from "../../sdk/index.ts";
+import type { Reading, Unread } from "../../unread/index.ts";
 import type { Board } from "../../board/index.ts";
 import { ChannelConversationPanel } from "./channel-conversation-panel.tsx";
 import type { Composer } from "../../composer/index.ts";
 import { ConversationMissing } from "./conversation-missing.tsx";
 import type { ReactNode } from "react";
-import type { Unread } from "../../unread/index.ts";
+import { actionsOf } from "./conversation-parts.ts";
 import { useChannelPosts } from "./use-channel-posts.ts";
+import { useChannelReader } from "./use-channel-reader.ts";
 
 interface Ends {
   readonly first: TopLevelMessage;
@@ -17,6 +19,7 @@ interface ChannelConversationProps {
   readonly composer: Composer;
   readonly channel: ChannelName;
   readonly unread: Unread;
+  readonly reading: Reading;
   readonly me: string;
 }
 
@@ -38,6 +41,7 @@ function endsOf(posts: readonly TopLevelMessage[]): Ends | null {
 export function ChannelConversation(props: ChannelConversationProps): ReactNode {
   const { channel } = props;
   const posts = useChannelPosts({ channel, me: props.me, unread: props.unread });
+  const reader = useChannelReader({ ...props, channel });
   if (posts === null) {
     return null;
   }
@@ -47,6 +51,7 @@ export function ChannelConversation(props: ChannelConversationProps): ReactNode 
   }
   return (
     <ChannelConversationPanel
+      actions={actionsOf(reader)}
       board={props.board}
       channel={channel}
       composer={props.composer}
@@ -55,6 +60,7 @@ export function ChannelConversation(props: ChannelConversationProps): ReactNode 
       me={props.me}
       menu={props.unread.menu}
       posts={posts}
+      reader={reader}
       selection={props.unread.selection({ channel, thread: null })}
     />
   );
