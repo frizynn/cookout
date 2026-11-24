@@ -107,7 +107,7 @@ export interface PostMessageRequest {
   readonly close?: true;
   /**
    * With `replyTo`: the caller has read the thread up to this message, later than `replyTo`. `replyTo` alone says it
-   * has read up to `replyTo`. An agent's reply to a thread with newer replies by anyone else warns `thread_moved`.
+   * has read up to `replyTo`. An agent's reply to a thread with newer replies by anyone else is refused `thread_moved`.
    */
   readonly seen?: number;
 }
