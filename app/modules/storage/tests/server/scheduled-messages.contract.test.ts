@@ -1,4 +1,4 @@
-import { Effect, String as Str } from "effect";
+import { Effect, Option, String as Str } from "effect";
 import type { Storage, StorageUnavailable, StoredScheduledMessage } from "../../../storage/server.ts";
 import {
   channelFixture as channel,
@@ -13,6 +13,7 @@ import {
 import { expect, it } from "@effect/vitest";
 import type { Layer } from "effect";
 import type { Message } from "../../../messages/index.ts";
+import { isScheduledMessageId } from "../../../scheduled-messages/index.ts";
 import { tokenHash } from "../../../identities/index.ts";
 
 type NewScheduledMessage = Storage["Service"]["createScheduledMessage"] extends (schedule: infer New) => unknown
@@ -25,6 +26,8 @@ const CREATED = isoTime("2026-01-05T08:00:00.000Z");
 const NINE = isoTime("2026-01-05T09:00:00.000Z");
 const LATER = isoTime("2026-01-05T09:30:00.000Z");
 const ADA = identityName("ada");
+const MISSING_ID = 999;
+const MISSING = Option.getOrThrow(Option.liftPredicate(MISSING_ID, isScheduledMessageId));
 
 const WEEKDAYS: NewScheduledMessage = {
   at: null,
@@ -207,5 +210,83 @@ it.effect.each(storageLayers)(
       expect(other).toBeDefined();
       expect(paused).toMatchObject({ pausedBecause: "creator_deactivated", status: "paused" });
       expect(listed).toMatchObject([{ id: schedule.id }]);
+    }),
+);
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): changing a missing or already-changed schedule changes nothing",
+  ({ layer }) =>
+    Effect.gen(function* unchanged() {
+      const { schedule, storage } = yield* grill(layer);
+      const resumedActive = yield* storage.resumeScheduledMessage(schedule.id, LATER);
+      const paused = yield* storage.pauseScheduledMessage(schedule.id, NINE);
+      const bobs = yield* storage.createScheduledMessage({ ...WEEKDAYS, creator: identityName("bob") });
+      yield* storage.deactivateIdentity(ADA);
+      const afterDeactivation = yield* storage.listScheduledMessages();
+      const [pausedMissing, resumedMissing] = yield* Effect.all(
+        [storage.pauseScheduledMessage(MISSING, LATER), storage.resumeScheduledMessage(MISSING, LATER)],
+        { concurrency: 1 },
+      );
+
+      expect(resumedActive).toStrictEqual(schedule);
+      expect(afterDeactivation).toStrictEqual([paused, bobs]);
+      expect([pausedMissing ?? null, resumedMissing ?? null]).toStrictEqual([null, null]);
+    }),
+);
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): a run whose message can't be appended leaves the schedule as it was",
+  ({ layer }) =>
+    Effect.gen(function* notAppended() {
+      const { schedule, storage } = yield* grill(layer);
+      const result = yield* storage.runScheduledMessage({
+        due: NINE,
+        finished: false,
+        id: schedule.id,
+        message: newMessageFixture("gone", "standup", { author: { name: "ada" } }),
+        runsFrom: CREATED,
+      });
+      const after = yield* storage.findScheduledMessage(schedule.id);
+
+      expect(result).toStrictEqual({ status: "channel_not_found" });
+      expect(after).toStrictEqual(schedule);
+    }),
+);
+
+function creatorDeleted(storage: Storage["Service"]): Effect.Effect<void, StorageUnavailable> {
+  return Effect.gen(function* deleteCy() {
+    yield* storage.createIdentity(identityFixture("cy", { kind: "human" }), tokenHash(Str.repeat(HASH_LENGTH)("c")));
+    yield* storage.createScheduledMessage({ ...WEEKDAYS, creator: identityName("cy") });
+    yield* storage.deleteIdentity(identityName("cy"));
+  });
+}
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): deleting one schedule marks only its own posts, and deleting a creator drops theirs",
+  ({ layer }) =>
+    Effect.gen(function* ownPosts() {
+      const { schedule, storage } = yield* grill(layer);
+      const other = yield* Effect.flatMap(
+        storage.createScheduledMessage({ ...WEEKDAYS, channel: channelName("other") }),
+        Effect.fromNullishOr,
+      );
+      const otherPost = newMessageFixture("other", "standup", { author: { name: "ada" } });
+      yield* storage.runScheduledMessage({
+        due: NINE,
+        finished: false,
+        id: other.id,
+        message: otherPost,
+        runsFrom: CREATED,
+      });
+      yield* storage.deleteScheduledMessage(schedule.id, LATER);
+      yield* creatorDeleted(storage);
+      const listed = yield* storage.listScheduledMessages();
+      const page = yield* Effect.flatMap(
+        storage.listChannelMessages(channelName("other"), { limit: 10 }),
+        Effect.fromNullishOr,
+      );
+
+      expect(listed).toMatchObject([{ id: other.id }]);
+      expect(page.messages).toMatchObject([{ scheduledMessage: { deleted: false, id: other.id } }]);
     }),
 );

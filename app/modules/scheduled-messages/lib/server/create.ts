@@ -43,4 +43,13 @@ function createdBy(creating: Creating): Fails<StoredScheduledMessage> {
   );
 }
 
-export { type NewScheduledMessageRequest, createdBy };
+function channelKnown({ channel, storage }: Pick<Creating, "storage"> & { readonly channel: string }): Fails<void> {
+  if (!isChannelName(channel)) {
+    return Effect.fail(channelNotFound(channel));
+  }
+  return Effect.flatMap(storage.findChannel(channel), (known) =>
+    Effect.asVoid(Effect.mapError(Effect.fromNullishOr(known), () => channelNotFound(channel))),
+  );
+}
+
+export { type NewScheduledMessageRequest, channelKnown, createdBy };

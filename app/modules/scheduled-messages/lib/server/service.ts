@@ -3,11 +3,11 @@ import { Caller, requireOwnerOrAdmin } from "../../../identities/server.ts";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
 import type { ScheduledMessage, ScheduledMessageId } from "../../index.ts";
 import type { Storage, StorageUnavailable, StoredScheduledMessage } from "../../../storage/server.ts";
+import { channelKnown, createdBy } from "./create.ts";
 import { creatorDeactivated, scheduledMessageNotFound } from "./refusals.ts";
 import type { NewScheduledMessageRequest } from "./create.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { Storage as StorageService } from "../../../storage/server.ts";
-import { createdBy } from "./create.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 import { shownWith } from "./shown.ts";
 
@@ -84,7 +84,11 @@ function listWith(storage: Storage["Service"]): ScheduledMessagesService["list"]
       storage.listScheduledMessages(),
       Arr.filter((schedule) => Predicate.isUndefined(channel) || schedule.channel === channel),
     );
-    return Effect.flatMap(listed, Effect.forEach(shownWith(storage), SEQUENTIAL));
+    const shown = Effect.flatMap(listed, Effect.forEach(shownWith(storage), SEQUENTIAL));
+    if (Predicate.isUndefined(channel)) {
+      return shown;
+    }
+    return Effect.andThen(channelKnown({ channel, storage }), shown);
   };
 }
 

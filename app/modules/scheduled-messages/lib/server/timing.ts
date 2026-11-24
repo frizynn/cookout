@@ -46,7 +46,6 @@ const MS_IN_DAY = MS_IN_MINUTE * MINUTES_IN_DAY;
 const WALK_START = DateTime.toEpochMillis(DateTime.makeUnsafe("2024-01-01T00:00:00.000Z"));
 const JUST_AFTER = 1;
 const NONE = 0;
-const FIRST = 0;
 const NEXT = 1;
 const NEVER = Number.POSITIVE_INFINITY;
 const ZONE_NAME = /^[A-Za-z]/u;
@@ -61,22 +60,22 @@ function isoAt(millis: number): IsoTime {
   return isoTimeOf(DateTime.makeUnsafe(millis));
 }
 
-function everyOr(set: ReadonlySet<number>, size: number): readonly number[] {
-  if (set.size > NONE) {
-    return Arr.sort(set, Order.Number);
-  }
-  return Arr.makeBy(size, (index) => index);
+function everyOr(set: ReadonlySet<number>, size: number): Arr.NonEmptyReadonlyArray<number> {
+  return Arr.match(Arr.sort(set, Order.Number), {
+    onEmpty: () => Arr.makeBy(size, (index) => index),
+    onNonEmpty: (sorted: Arr.NonEmptyReadonlyArray<number>) => sorted,
+  });
 }
 
-function timesOfDay(cron: Cron.Cron): readonly number[] {
+function timesOfDay(cron: Cron.Cron): Arr.NonEmptyReadonlyArray<number> {
   const minutes = everyOr(cron.minutes, MINUTES_IN_HOUR);
   return Arr.flatMap(everyOr(cron.hours, HOURS_IN_DAY), (hour) =>
     Arr.map(minutes, (minute) => hour * MINUTES_IN_HOUR + minute),
   );
 }
 
-function shortestInDay(times: readonly number[]): number {
-  const gaps = Arr.map(Arr.drop(times, NEXT), (time, index) => time - (times[index] ?? time));
+function shortestInDay(times: Arr.NonEmptyReadonlyArray<number>): number {
+  const gaps = Arr.zipWith(Arr.drop(times, NEXT), times, (time, previous) => time - previous);
   return Math.min(NEVER, ...gaps);
 }
 
@@ -90,19 +89,17 @@ function walkDays(cron: Cron.Cron, firstTime: number): DayWalk {
   };
 }
 
-function acrossMidnight(walk: DayWalk, times: readonly number[]): number {
+function acrossMidnight(walk: DayWalk, times: Arr.NonEmptyReadonlyArray<number>): number {
   if (!walk.onConsecutiveDays) {
     return NEVER;
   }
-  const first = times[FIRST] ?? NONE;
-  const last = Option.getOrElse(Arr.last(times), () => first);
-  return MINUTES_IN_DAY - last + first;
+  return MINUTES_IN_DAY - Arr.lastNonEmpty(times) + Arr.headNonEmpty(times);
 }
 
 function frequencyOf(expression: string): Result.Result<void, Refused> {
   const cron = Cron.parseUnsafe(expression, "UTC");
   const times = timesOfDay(cron);
-  const walk = walkDays(cron, times[FIRST] ?? NONE);
+  const walk = walkDays(cron, Arr.headNonEmpty(times));
   if (!walk.runs) {
     return Result.fail("cron_never_runs");
   }

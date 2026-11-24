@@ -1,7 +1,15 @@
-import type { CookoutClient, CreateScheduledMessageRequest, Message, ScheduledMessage } from "../../index.ts";
+import type {
+  CookoutClient,
+  CookoutEvent,
+  CreateScheduledMessageRequest,
+  EventStream,
+  Message,
+  ScheduledMessage,
+} from "../../index.ts";
 import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { Effect } from "effect";
+import type { Scope } from "effect";
 import { TestClock } from "effect/testing";
 import type { TestIdentity } from "../../../testing/server.ts";
 import { createCookoutClient } from "../../index.ts";
@@ -13,6 +21,7 @@ const SETTLE = "30 millis";
 const UTC = "UTC";
 const ONE = 1;
 const TWO = 2;
+const NOT_FOUND = 404;
 const SEQUENTIAL = { concurrency: 1 } as const;
 const DAILY_NINE = { channel: "grill", cron: "0 9 * * *", text: "standup @bob", timeZone: UTC } as const;
 
@@ -71,6 +80,32 @@ it.effect("a recurring schedule posts as its creator at each run, marked, and it
   }).pipe(Effect.provide(testCookout())),
 );
 
+function watching(who: TestIdentity): Effect.Effect<AsyncIterator<CookoutEvent>, never, Scope.Scope> {
+  return Effect.map(
+    Effect.acquireRelease(
+      answer(() => who.client.watch()),
+      (events: EventStream) => answer(() => events.close()),
+    ),
+    (events) => events[Symbol.asyncIterator](),
+  );
+}
+
+it.effect("a scheduled post's mention reaches the Inbox with the mention reason and arrives on the live stream", () =>
+  Effect.gen(function* scheduledMention() {
+    const { ada, bob } = yield* board;
+    const events = yield* watching(bob);
+    yield* schedule(ada, DAILY_NINE);
+    yield* quietFor("9 hours");
+    const event = yield* answer(() => events.next());
+    const { items } = yield* answer(() => bob.client.inbox());
+
+    expect(items).toMatchObject([{ message: { scheduledMessage: { deleted: false } }, reasons: ["mention"] }]);
+    expect(event).toMatchObject({
+      value: { item: { message: { text: "standup @bob" }, reasons: ["mention"] }, type: "inbox-item" },
+    });
+  }).pipe(Effect.scoped, Effect.provide(testCookout())),
+);
+
 it.effect("a one-off schedule posts once at its moment, read in its time zone, then is finished", () =>
   Effect.gen(function* oneOff() {
     const { ada } = yield* board;
@@ -88,6 +123,20 @@ it.effect("a one-off schedule posts once at its moment, read in its time zone, t
     expect(after).toMatchObject({ lastRun: { outcome: "posted" }, nextRuns: [], status: "finished" });
     expect(posted).toMatchObject([{ text: "lunch" }]);
   }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a schedule paused while its run is posting doesn't post", () =>
+  Effect.gen(function* pausedMidRun() {
+    const { ada } = yield* board;
+    const made = yield* schedule(ada, DAILY_NINE);
+    yield* quietFor("9 hours");
+    const after = yield* shown(ada.client, made);
+    const posted = yield* grillTexts(ada.client);
+
+    expect(after.status).toBe("paused");
+    expect(after).not.toHaveProperty("lastRun");
+    expect(posted).toStrictEqual([]);
+  }).pipe(Effect.provide(testCookout({ storage: "paused-mid-run" }))),
 );
 
 function refusedFor(who: TestIdentity): (fields: Partial<CreateScheduledMessageRequest>) => Effect.Effect<string> {
@@ -204,6 +253,18 @@ it.effect("deleting a channel deletes its schedules", () =>
     const { scheduledMessages } = yield* answer(() => ada.client.listScheduledMessages());
 
     expect(scheduledMessages).toStrictEqual([]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("listing a channel's schedules lists only that channel's, and an unknown channel is refused", () =>
+  Effect.gen(function* listByChannel() {
+    const { ada } = yield* board;
+    const made = yield* schedule(ada, DAILY_NINE);
+    const { scheduledMessages } = yield* answer(() => ada.client.listScheduledMessages({ channel: "grill" }));
+    const refused = yield* refusal(() => ada.client.listScheduledMessages({ channel: "nowhere" }));
+
+    expect(scheduledMessages).toMatchObject([{ id: made.id }]);
+    expect(refused).toMatchObject({ code: "channel_not_found", status: NOT_FOUND });
   }).pipe(Effect.provide(testCookout())),
 );
 

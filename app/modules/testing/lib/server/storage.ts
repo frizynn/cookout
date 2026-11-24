@@ -1,4 +1,5 @@
 import { Context, Effect, Exit, FileSystem, Layer, Path, Predicate, Scope } from "effect";
+import type { QueryPlan, ScheduledRun } from "../../../storage/server.ts";
 import {
   Storage,
   StorageUnavailable,
@@ -8,7 +9,6 @@ import {
   sqliteStorage,
 } from "../../../storage/server.ts";
 import { fixtureOwnerName, identityFixture } from "./identities.ts";
-import type { QueryPlan } from "../../../storage/server.ts";
 import { freshPostgresDatabase } from "./postgres.ts";
 import { inject } from "vitest";
 import { layer as nodeServices } from "@effect/platform-node/NodeServices";
@@ -81,6 +81,15 @@ const unusableStorage: Layer.Layer<Storage> = Layer.effect(
   })),
 ).pipe(Layer.provide(memoryStorage));
 
+const pausedMidRunStorage: Layer.Layer<Storage> = Layer.effect(
+  Storage,
+  Effect.map(Storage, (storage) => ({
+    ...storage,
+    runScheduledMessage: (run: ScheduledRun): ReturnType<Storage["Service"]["runScheduledMessage"]> =>
+      Effect.andThen(storage.pauseScheduledMessage(run.id, run.due), storage.runScheduledMessage(run)),
+  })),
+).pipe(Layer.provide(memoryStorage));
+
 function freshSqliteQueryPlans<Failure>(
   work: (storage: Storage["Service"]) => Effect.Effect<unknown, Failure>,
 ): Effect.Effect<readonly QueryPlan[], Failure | StorageUnavailable, FileSystem.FileSystem | Path.Path> {
@@ -97,4 +106,4 @@ function openStore<Failure, Needs>(
   });
 }
 
-export { freshDatabasePath, freshSqliteQueryPlans, openStore, storageLayers, unusableStorage };
+export { freshDatabasePath, freshSqliteQueryPlans, openStore, pausedMidRunStorage, storageLayers, unusableStorage };
