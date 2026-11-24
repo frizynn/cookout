@@ -4,6 +4,7 @@ import { clockStoppedAt, openWithClockStopped } from "./clock.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { rowsOf, subscribedReader } from "./inbox-reader.ts";
+import { inConversation } from "./regions.ts";
 import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";
 
@@ -58,9 +59,11 @@ async function openWatched(channel: string): Promise<OpenInbox> {
   };
 }
 
-async function openAndComeBack(href: string): Promise<void> {
+async function readAndComeBack(href: string): Promise<void> {
   globalThis.location.hash = href;
   await screen.findByRole("list", { name: "Posts" });
+  fireEvent.click(inConversation().getByRole("button", { name: "Mark conversation read" }));
+  await inConversation().findByText("Marked as read");
   globalThis.location.hash = "#/inbox";
   await screen.findByRole("list", { name: "Earlier" });
 }
@@ -101,7 +104,7 @@ it("the inbox lists unread items for you, then activity, newest first, each with
   unmount();
 });
 
-it("a live mention appears under For you, and opening it moves it to Earlier", { timeout: 5000 }, async () => {
+it("a live mention appears under For you, and reading it moves it to Earlier", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
   const channel = "web-inbox-live";
@@ -114,7 +117,7 @@ it("a live mention appears under For you, and opening it moves it to Earlier", {
 
   expect(row.getAttribute("href")).toBe(`#/inbox/${channel}`);
 
-  await openAndComeBack(String(row.getAttribute("href")));
+  await readAndComeBack(String(row.getAttribute("href")));
 
   expect([rowsOf("Earlier"), screen.getByText("You're all caught up.").tagName]).toStrictEqual([
     [`#/inbox/${channel} Mentioned you${channel}-posterposted in#${channel}just now${message.text}`],

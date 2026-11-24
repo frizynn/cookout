@@ -1,8 +1,10 @@
 import { channelToRead, channelUnreadAtLast, noteShown, openChannelReading } from "./channel-reading.ts";
 import { expect, it } from "vitest";
 import { fireEvent, waitFor } from "@testing-library/react";
+import { adminClient } from "./identities.ts";
 import { clicked } from "./reading.ts";
 import { inConversation } from "./regions.ts";
+import { openWithClockStopped } from "./clock.ts";
 
 const TWO = 2;
 const NONE = 0;
@@ -94,4 +96,22 @@ it("a reply of your own from a channel conversation's box reads its row at once,
   expect([await channelUnreadAtLast({ count: NONE, news }), await noteShown()]).toStrictEqual([NONE, MARKED]);
 
   await opened.close();
+});
+
+it("mark read on a channel deleted while its conversation is open still shows the note, and the page carries on", {
+  timeout: 8000,
+}, async () => {
+  expect.hasAssertions();
+
+  const news = await channelToRead("web-channel-read-deleted");
+  const unmount = openWithClockStopped({ client: news.reader, hash: `#/inbox/${news.channel}` });
+  await inConversation().findByText("New two");
+  await adminClient().deleteChannel(news.channel);
+  clicked(MARK_READ);
+  const note = await noteShown();
+  clicked("Mark unread");
+
+  expect([note, await news.reader.inbox().then(({ items }) => items.length)]).toStrictEqual([MARKED, NONE]);
+
+  unmount();
 });
