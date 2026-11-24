@@ -1,8 +1,8 @@
 import type { AssetStore, Storage } from "../../../storage/server.ts";
 import { Context, Effect, Layer } from "effect";
 import type { FileSystem, Path, Scope } from "effect";
-import { diskAssetStore, memoryAssetStore, memoryStorage, sqliteStorage } from "../../../storage/server.ts";
-import { freshDatabasePath, unusableStorage } from "./storage.ts";
+import { diskAssetStore, memoryStorage, sqliteStorage } from "../../../storage/server.ts";
+import { freshDatabasePath, memoryAssets, unusableStorage } from "./storage.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import type { Token } from "../../../identities/index.ts";
 import type { WebhookFake } from "../../../webhook-fake/server.ts";
@@ -22,7 +22,7 @@ type Stores = Storage | AssetStore;
 type StorageFactory = Effect.Effect<Layer.Layer<Stores>, never, FileSystem.FileSystem | Path.Path | Scope.Scope>;
 
 function sharedStore(layer: Layer.Layer<Storage>): StorageFactory {
-  return Effect.map(Layer.build(Layer.merge(layer, memoryAssetStore)), (store) => Layer.succeedContext(store));
+  return Effect.map(Layer.build(Layer.merge(layer, memoryAssets)), (store) => Layer.succeedContext(store));
 }
 
 function sqliteStores(database: string): Layer.Layer<Stores> {

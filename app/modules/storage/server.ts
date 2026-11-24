@@ -20,7 +20,7 @@ export { StorageUnavailable };
  * its ID, written to a partial file first and renamed into place, so a crash never leaves half a file under an ID;
  * `memoryAssetStore` holds them in this process only.
  */
-export { AssetStore, type AssetStoreService, diskAssetStore, memoryAssetStore } from "./lib/server/asset-store.ts";
+export { AssetStore, diskAssetStore, memoryAssetStore } from "./lib/server/asset-store.ts";
 export type { QueryPlan } from "./lib/server/query-plans-sqlite.ts";
 export type { TokenLookup } from "./lib/server/identities.ts";
 export type { SetAdminResult } from "./lib/server/identity-admins.ts";

@@ -112,7 +112,6 @@ export type {
   ListMessagesResponse,
   MessageId,
   MessageResponse,
-  PostMessageRequest,
   ReactionName,
   ReactionsResponse,
   ThreadResponse,
