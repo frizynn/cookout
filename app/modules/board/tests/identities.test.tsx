@@ -1,7 +1,7 @@
-import type { BoardStore, BoardStoreClient } from "../index.ts";
 import type { CookoutClient, Identity, IdentityName } from "../../sdk/index.ts";
 import { createBoardStore, deletedIdentities, identityList, presences } from "../index.ts";
 import { expect, it, onTestFinished, vi } from "vitest";
+import type { BoardStore } from "../index.ts";
 import type { HandLive } from "../../testing/web.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
 import { createLive } from "../../live/index.ts";
@@ -40,7 +40,7 @@ function show(store: BoardStore, shown: "identities" | "presence"): void {
   onTestFinished(store.subscribeShowing(shown)(vi.fn<() => void>()));
 }
 
-function opened(client: BoardStoreClient = adminClient()): Opened {
+function opened(client: CookoutClient = adminClient()): Opened {
   const hand = handLive();
   const store = createBoardStore({ client, live: createLive(hand.adapter) });
   show(store, "identities");
@@ -151,7 +151,7 @@ it("an identity event heard while the identities are being read wins over the va
 
   const agent = await agentNamed("store-identities-during-bot");
   const during = handLive();
-  const client: BoardStoreClient = {
+  const client: CookoutClient = {
     ...adminClient(),
     listIdentities: async (options) => {
       const answer = await adminClient().listIdentities(options);

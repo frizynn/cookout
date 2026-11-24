@@ -173,14 +173,6 @@ function agentSessions(agent: IdentityName): (state: BoardState) => Sessions {
   return sessionsIn;
 }
 
-export {
-  type BoardStore,
-  type BoardStoreClient,
-  agentSessions,
-  createBoardStore,
-  deletedIdentities,
-  identityList,
-  presences,
-};
+export { type BoardStore, agentSessions, createBoardStore, deletedIdentities, identityList, presences };
 export type { IdentityCalls } from "./identity-calls.ts";
 export type { Presences } from "./presence-slice.ts";

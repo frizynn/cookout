@@ -1,7 +1,7 @@
-import type { BoardStore, BoardStoreClient } from "../index.ts";
 import type { CookoutClient, IdentityName, ListAgentSessionsResponse } from "../../sdk/index.ts";
 import { agentSessions, createBoardStore } from "../index.ts";
 import { expect, it, onTestFinished, vi } from "vitest";
+import type { BoardStore } from "../index.ts";
 import type { HandLive } from "../../testing/web.ts";
 import type { Live } from "../../live/index.ts";
 import type { Mock } from "vitest";
@@ -54,12 +54,12 @@ function show(store: BoardStore, agent: IdentityName): void {
   onTestFinished(store.subscribeShowingSessions(agent)(vi.fn<() => void>()));
 }
 
-function unshown(client: BoardStoreClient = adminClient()): Opened {
+function unshown(client: CookoutClient = adminClient()): Opened {
   const hand = handLive();
   return { hand, store: createBoardStore({ client, live: createLive(hand.adapter) }) };
 }
 
-function opened(agent: IdentityName, client: BoardStoreClient = adminClient()): Opened {
+function opened(agent: IdentityName, client: CookoutClient = adminClient()): Opened {
   const found = unshown(client);
   show(found.store, agent);
   return found;
