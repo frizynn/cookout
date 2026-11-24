@@ -16,6 +16,9 @@
  * and puts the caret after it; `clear` empties the box. While there are
  * suggestions, one is `highlighted` (the first, after each edit): `highlight`
  * moves it down or up, wrapping round, and `chooseHighlighted` chooses it.
+ * When the identities or commands change, the suggestions are read again, but the highlighted
+ * one stays highlighted while still listed, and suggestions `dismiss` hid stay hidden, so a change
+ * elsewhere never moves what the keys act on.
  * `replyTo(name)` puts `@name ` at the start of the box (Reply on a thread's
  * message), unless the text already mentions them or they are deactivated,
  * and asks the box to take focus with the caret at the end.
@@ -89,7 +92,7 @@ function createDraft(list: IdentityList, sources: Sources): Draft {
   }
 
   list.onChange(() => {
-    change((snapshot) => changes.written(snapshot, snapshot));
+    change(changes.refreshed);
   });
   return {
     choose: (name) => {
