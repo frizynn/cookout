@@ -43,6 +43,16 @@ function hashOf(letter: string): ReturnType<typeof tokenHash> {
   return tokenHash(Str.repeat(HASH_LENGTH)(letter));
 }
 
+function everyPersonOnline(storage: Storage["Service"]): Effect.Effect<void, StorageUnavailable> {
+  return Effect.flatMap(storage.listIdentities(), (identities) =>
+    Effect.forEach(
+      Arr.filter(identities, ({ kind }) => kind === "human"),
+      ({ name }) => storage.recordPresence({ identity: name, lastSeenAt: CREATED, online: true }),
+      { concurrency: 1, discard: true },
+    ),
+  );
+}
+
 function board<Failure, Needs>(
   layer: Layer.Layer<Storage, Failure, Needs>,
 ): Effect.Effect<Board, Failure | StorageUnavailable, Needs> {
@@ -52,6 +62,7 @@ function board<Failure, Needs>(
     yield* storage.createIdentity(identityFixture("ada", { admin: true, kind: "human" }), hashOf("a"));
     yield* storage.createIdentity(identityFixture("bea", { admin: true, kind: "human" }), hashOf("b"));
     yield* storage.createIdentity(identityFixture("matt/scout", { owner: "matt" }), hashOf("c"));
+    yield* everyPersonOnline(storage);
     const append = appendTo(storage);
     const byScout = { author: { name: "matt/scout", owner: "matt" } } as const;
     return {

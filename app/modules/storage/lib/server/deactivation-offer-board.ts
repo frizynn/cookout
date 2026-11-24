@@ -1,5 +1,5 @@
-import type { AgentIdentity, Identity, IdentityName } from "../../../identities/index.ts";
 import { Array as Arr, DateTime, Duration, Option, Order, Predicate } from "effect";
+import type { Identity, IdentityName } from "../../../identities/index.ts";
 import type { DeactivationOfferId } from "../../../inbox/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
@@ -28,7 +28,7 @@ interface Board {
 
 interface Due {
   readonly at: IsoTime;
-  readonly agent: AgentIdentity;
+  readonly identity: Identity;
   readonly quietDays: number;
 }
 
@@ -38,9 +38,14 @@ interface Dating {
 }
 
 interface Quiet {
-  readonly agent: AgentIdentity;
+  readonly identity: Identity;
   readonly quietSince: IsoTime;
   readonly latest: OfferRecord | undefined;
+}
+
+interface Regarding {
+  readonly board: Board;
+  readonly identity: Identity;
 }
 
 const byAt: Order.Order<Due> = Order.mapInput(Order.String, (due: Due) => due.at);
@@ -60,7 +65,7 @@ function isActive(identity: Identity): boolean {
   return identity.deactivated !== true;
 }
 
-function lastActivityIn({
+function ownLastActivityIn({
   board,
   identity,
 }: {
@@ -71,17 +76,51 @@ function lastActivityIn({
   return laterOf(laterOf(identity.createdAt, board.since), recorded);
 }
 
+function activeAgentsOf({ board, identity }: Regarding): readonly Identity[] {
+  if (identity.kind !== "human") {
+    return [];
+  }
+  return Arr.filter(
+    board.identities,
+    (each) => each.kind === "agent" && each.owner === identity.name && isActive(each),
+  );
+}
+
+function lastActivityIn(regarding: Regarding): IsoTime {
+  return Arr.reduce(activeAgentsOf(regarding), ownLastActivityIn(regarding), (latest, agent) =>
+    laterOf(latest, ownLastActivityIn({ board: regarding.board, identity: agent })),
+  );
+}
+
 function identityIn(board: Board, name: IdentityName): Identity | undefined {
   return Arr.findFirst(board.identities, (identity) => identity.name === name).pipe(Option.getOrUndefined);
 }
 
-function isQuietAgent(board: Board, identity: Identity | undefined): identity is Identity {
-  return Predicate.isNotUndefined(identity) && isActive(identity) && !board.online.has(identity.name);
+function recipientsOf({ board, identity }: Regarding): readonly IdentityName[] {
+  if (identity.kind === "agent") {
+    const owner = identityIn(board, identity.owner);
+    if (Predicate.isNotUndefined(owner) && isActive(owner)) {
+      return [owner.name];
+    }
+  }
+  const admins = Arr.filter(board.identities, (each) => each.admin && isActive(each) && each.name !== identity.name);
+  return Arr.map(admins, ({ name }) => name);
+}
+
+function isQuiet(board: Board, identity: Identity | undefined): identity is Identity {
+  if (
+    Predicate.isUndefined(identity) ||
+    !isActive(identity) ||
+    Arr.isReadonlyArrayEmpty(recipientsOf({ board, identity }))
+  ) {
+    return false;
+  }
+  return !Arr.some([identity, ...activeAgentsOf({ board, identity })], ({ name }) => board.online.has(name));
 }
 
 function isOpen({ board, record }: { readonly board: Board; readonly record: OfferRecord }): boolean {
   const identity = identityIn(board, record.identity);
-  if (record.cleared || !isQuietAgent(board, identity)) {
+  if (record.cleared || !isQuiet(board, identity)) {
     return false;
   }
   return lastActivityIn({ board, identity }) <= record.raisedAt;
@@ -91,24 +130,24 @@ function latestOffer(board: Board, identity: IdentityName): OfferRecord | undefi
   return Arr.findLast(board.offers, (record) => record.identity === identity).pipe(Option.getOrUndefined);
 }
 
-function nextOf({ agent, latest, quietSince }: Quiet, days: QuietDays): readonly Due[] {
+function nextOf({ identity, latest, quietSince }: Quiet, days: QuietDays): readonly Due[] {
   if (Predicate.isUndefined(latest) || latest.raisedAt < quietSince) {
-    return [{ agent, at: later(quietSince, days.offer), quietDays: days.offer }];
+    return [{ at: later(quietSince, days.offer), identity, quietDays: days.offer }];
   }
   const quietDays = latest.quietDays + days.offer;
-  if (quietDays >= days.automaticDeactivation) {
+  if (identity.kind === "agent" && quietDays >= days.automaticDeactivation) {
     return [];
   }
-  return [{ agent, at: later(latest.raisedAt, days.offer), quietDays }];
+  return [{ at: later(latest.raisedAt, days.offer), identity, quietDays }];
 }
 
-function dueOf(board: Board, days: QuietDays): (agent: Identity) => readonly Due[] {
-  return (agent) => {
-    if (agent.kind !== "agent" || !isQuietAgent(board, agent)) {
+function dueOf(board: Board, days: QuietDays): (identity: Identity) => readonly Due[] {
+  return (identity) => {
+    if (!isQuiet(board, identity)) {
       return [];
     }
     return nextOf(
-      { agent, latest: latestOffer(board, agent.name), quietSince: lastActivityIn({ board, identity: agent }) },
+      { identity, latest: latestOffer(board, identity.name), quietSince: lastActivityIn({ board, identity }) },
       days,
     );
   };
@@ -121,21 +160,6 @@ function dueOffers({ board, days }: Dating): readonly Due[] {
 function nextDueIn({ board, days }: Dating): IsoTime | null {
   const soonest = Arr.head(dueOffers({ board, days }));
   return Option.getOrNull(Option.map(soonest, ({ at }) => at));
-}
-
-function recipientsOf({
-  agent,
-  board,
-}: {
-  readonly board: Board;
-  readonly agent: AgentIdentity;
-}): readonly IdentityName[] {
-  const owner = identityIn(board, agent.owner);
-  if (Predicate.isNotUndefined(owner) && isActive(owner)) {
-    return [owner.name];
-  }
-  const admins = Arr.filter(board.identities, (identity) => identity.admin && isActive(identity));
-  return Arr.map(admins, ({ name }) => name);
 }
 
 export {

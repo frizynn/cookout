@@ -1,5 +1,5 @@
-import type { CommandLineNeeds, TestCookoutService } from "../../../testing/server.ts";
-import { Effect, Fiber, Layer } from "effect";
+import { Array as Arr, Effect, Fiber, Layer } from "effect";
+import type { CommandLineNeeds, TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import {
   TestCookout,
   answer,
@@ -14,6 +14,7 @@ import type { Scope } from "effect";
 import { TestClock } from "effect/testing";
 
 interface Board {
+  readonly ada: TestIdentity;
   readonly cookout: TestCookoutService;
   readonly env: Readonly<Record<string, string>>;
 }
@@ -37,7 +38,7 @@ const adaOwnsAQuietAgent: Effect.Effect<Board, never, TestCookout | CommandLineN
     const folder = yield* freshStateFolder;
     const env = { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: ada.token, COOKOUT_URL: cookout.url };
     yield* Effect.andThen(settled, TestClock.adjust(ALMOST_THIRTY_DAYS));
-    return { cookout, env };
+    return { ada, cookout, env };
   },
 );
 
@@ -48,17 +49,22 @@ const lastQuietSecond: Effect.Effect<void> = Effect.andThen(
 
 it.effect("cookout inbox prints the caller's open deactivation offers, and cookout keep clears one", () =>
   Effect.gen(function* inboxAndKeep() {
-    const { env } = yield* adaOwnsAQuietAgent;
+    const { ada, env } = yield* adaOwnsAQuietAgent;
     yield* lastQuietSecond;
     const listed = yield* runCookout({ args: ["inbox"], env });
-    const kept = yield* runCookout({ args: ["keep", "1"], env });
+    const { deactivationOffers } = yield* answer(() => ada.client.inbox());
+    const id = String(Arr.map(deactivationOffers, (offer) => offer.id));
+    const kept = yield* runCookout({ args: ["keep", id], env });
     const notAnId = yield* runCookout({ args: ["keep", "0"], env });
 
     expect(listed).toMatchObject({
       exitCode: EXIT_SUCCESS,
       stdoutJson: { deactivationOffers: [{ identity: { name: "ada/scout" }, text: OFFER_TEXT }] },
     });
-    expect(kept).toMatchObject({ exitCode: EXIT_SUCCESS, stdoutJson: { deactivationOffer: { cleared: true, id: 1 } } });
+    expect(kept).toMatchObject({
+      exitCode: EXIT_SUCCESS,
+      stdoutJson: { deactivationOffer: { cleared: true, id: Number(id) } },
+    });
     expect(notAnId.exitCode).not.toBe(EXIT_SUCCESS);
   }).pipe(Effect.provide(services)),
 );
