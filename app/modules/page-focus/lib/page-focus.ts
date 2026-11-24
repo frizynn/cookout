@@ -25,12 +25,7 @@ function createPageFocus(adapter: PageFocusAdapter): PageFocus {
   }
 
   return {
-    focused: () => {
-      if (stop === null) {
-        last = adapter.focused();
-      }
-      return last;
-    },
+    focused: adapter.focused,
     subscribe: (listener) => {
       if (stop === null) {
         last = adapter.focused();

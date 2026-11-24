@@ -1,3 +1,4 @@
+import { adminClient, anonymousClient, sessionOf } from "./identities.ts";
 import {
   clicked,
   openReading,
@@ -13,6 +14,7 @@ import {
 import { expect, it } from "vitest";
 import type { ReadThread } from "./reading.ts";
 import { inConversation } from "./regions.ts";
+import { openAt } from "./render.tsx";
 import { waitFor } from "@testing-library/react";
 
 const ONE = 1;
@@ -132,4 +134,21 @@ it("a row marked unread is read 2 s after it is selected again later", { timeout
   await expect(opened.readAfter(READ_AFTER)).resolves.toBe(NONE);
 
   await opened.close();
+});
+
+it("mark read and Mark unread on a conversation that couldn't load change nothing", { timeout: 8000 }, async () => {
+  expect.hasAssertions();
+
+  const unmount = openAt({
+    client: anonymousClient(),
+    hash: "#/inbox/general/1",
+    session: sessionOf(adminClient()),
+  });
+  await inConversation().findByRole("alert");
+  clicked("Mark read");
+  clicked("Mark unread");
+
+  expect(inConversation().element().textContent).not.toContain(MARKED);
+
+  unmount();
 });

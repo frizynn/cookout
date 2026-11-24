@@ -91,6 +91,20 @@ it.each(UNFOCUSINGS)(
   },
 );
 
+it("a focus event while the page is already focused doesn't restart the count", { timeout: 8000 }, async () => {
+  expect.hasAssertions();
+
+  const thread = await threadToRead("web-read-rule-refocus");
+  const opened = await openReading({ hash: thread.address, thread });
+  await shown(LATEST);
+  opened.advance(A_SECOND);
+  opened.page.focus();
+
+  await expect(opened.readAfter(A_SECOND)).resolves.toBe(NONE);
+
+  await opened.close();
+});
+
 it("a reply arriving live in the open conversation is read 2 s after it arrives", { timeout: 8000 }, async () => {
   expect.hasAssertions();
 

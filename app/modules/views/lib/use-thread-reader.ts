@@ -1,10 +1,9 @@
 import type { Board, ThreadMessages, ThreadMessagesState } from "../../board/index.ts";
-import type { InboxItem, MessageId } from "../../sdk/index.ts";
+import type { InboxItem, Message, MessageId } from "../../sdk/index.ts";
 import type { Newest, Reader, ReaderSources, Reading, Selection, Unread } from "../../unread/index.ts";
 import type { InboxSelection } from "../../paths/index.ts";
 import { useSyncExternalStore } from "react";
 
-const LAST = -1;
 const FIRST = 0;
 
 interface ThreadReading {
@@ -19,7 +18,10 @@ function newestOf(state: ThreadMessagesState, me: string): Newest | null {
   if (state.status !== "loaded") {
     return null;
   }
-  const newest = state.replies.at(LAST) ?? state.parent;
+  let newest: Message = state.parent;
+  for (const reply of state.replies) {
+    newest = reply;
+  }
   return { id: newest.id, mine: newest.author.name === me };
 }
 

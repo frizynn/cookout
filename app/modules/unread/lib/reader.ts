@@ -69,12 +69,14 @@ function idOf(newest: Newest | null): MessageId | null {
   return newest.id;
 }
 
-function ackNewest(run: Run): void {
+function ackNewest(run: Run): boolean {
   const seen = run.seen.current();
-  if (seen.newest !== null) {
-    run.seen.publish({ ...seen, acked: seen.newest.id });
-    run.sources.ack(seen.newest.id);
+  if (seen.newest === null) {
+    return false;
   }
+  run.seen.publish({ ...seen, acked: seen.newest.id });
+  run.sources.ack(seen.newest.id);
+  return true;
 }
 
 function canRead(run: Run): boolean {
@@ -93,7 +95,9 @@ function arm(run: Run): void {
 
 function markRead(run: Run): void {
   run.reading.cancel();
-  ackNewest(run);
+  if (!ackNewest(run)) {
+    return;
+  }
   run.note.start(NOTE_MILLIS, () => {
     run.state.publish({ ...run.state.current(), marked: false });
   });
