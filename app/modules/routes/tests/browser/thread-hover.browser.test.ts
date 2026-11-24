@@ -37,7 +37,7 @@ async function hoverReply(message: Locator): Promise<void> {
 }
 
 test("a thread reply's hover Reply mentions its author once, keeping the draft", async ({ page }) => {
-  const channel = "browser-thread-hover-reply";
+  const channel = "browser-panel-hover-reply";
   await openThread({ channel, page });
   const box = inThread(page).getByLabel("Reply", { exact: true });
   await box.fill("works for me");
@@ -52,7 +52,7 @@ test("a thread reply's hover Reply mentions its author once, keeping the draft",
 });
 
 test("hover Reply on your own thread reply mentions nobody and focuses the reply box", async ({ page }) => {
-  await openThread({ channel: "browser-thread-hover-own", page });
+  await openThread({ channel: "browser-panel-hover-own", page });
   const box = inThread(page).getByLabel("Reply", { exact: true });
   await hoverReply(replyNamed(page, "Or one"));
 
@@ -61,7 +61,7 @@ test("hover Reply on your own thread reply mentions nobody and focuses the reply
 });
 
 test("tabbing to a thread reply shows its hover Reply", async ({ page }) => {
-  await openThread({ channel: "browser-thread-hover-tab", page });
+  await openThread({ channel: "browser-panel-hover-tab", page });
   const message = replyNamed(page, "Noon works");
   const reply = message.getByRole("button", { name: "Reply" });
 
@@ -98,7 +98,7 @@ async function threadHoverBarIn({ page, theme }: Shot): Promise<void> {
 }
 
 test("a thread reply's hover bar draws 👍, Reply and More actions in both themes", async ({ page }) => {
-  await openThread({ channel: "browser-thread-hover-bar", page });
+  await openThread({ channel: "browser-panel-hover-bar", page });
   await threadHoverBarIn({ page, theme: "dark" });
   await threadHoverBarIn({ page, theme: "light" });
 });
