@@ -54,10 +54,16 @@ function isModifier(part: string): part is Modifier {
   return MODIFIERS.has(part);
 }
 
+function keyOf(written: string): string {
+  if (written.endsWith(SEPARATOR)) {
+    return SEPARATOR;
+  }
+  return written.slice(written.lastIndexOf(SEPARATOR) + ONE);
+}
+
 function chordOf(written: string): Chord {
   const parts = written.split(SEPARATOR);
-  const key = written.slice(written.lastIndexOf(SEPARATOR) + ONE);
-  return { key, modifiers: new Set(parts.slice(FIRST, -ONE).filter((part) => isModifier(part))) };
+  return { key: keyOf(written), modifiers: new Set(parts.slice(FIRST, -ONE).filter((part) => isModifier(part))) };
 }
 
 function isCharacter(key: string): boolean {

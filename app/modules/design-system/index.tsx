@@ -115,8 +115,8 @@
  * mark (`for-you`, the filled accent block, when it mentions or answers the reader, or `open`); and, shown on hover or
  * focus, a "Quick actions" group of icon buttons, each with no text and named by its tooltip: a button for each of its
  * `menu`'s `reactions` that is `inHoverBar`, then, when `replyOnHover`, its action (such as Reply: a link, or a button
- * with `onAction`), then its thread choice when `threadOnHover`, then More actions. A reaction's
- * `key`, pressed while the message itself has focus, leaves it too, in or out of the hover bar. Its `menu` gives it one actions menu (the action,
+ * with `onAction`), then its thread choice when `threadOnHover`, then More actions. Each reaction's button has its `key` as `aria-keyshortcuts`
+ * for the keymap to press; one not in the hover bar gets a `hidden` one (its menu item shows the key). Its `menu` gives it one actions menu (the action,
  * then each reaction, then Mark unread, then the thread choice, such as Close, if any), drawn two ways on Radix: right-clicking the message, or the context-menu key or Shift+F10 on it, opens it as a context menu at the pointer, and the
  * More actions button opens it as a dropdown. Every menu item draws its `icon` (a `ThreadChoice` names one too), which its type requires, before its label. An item may be `disabled`, dimmed and not chosen. Radix gives both their keyboard and focus behaviour; a chosen item's
  * action runs once the menu has closed. Mark unread's tooltip names its shortcut, `Alt-click`: an Alt-click (Option-click
