@@ -59,6 +59,7 @@ const DROP_ROWS = [
   "DELETE FROM thread_read_positions WHERE identity_name = ?",
   "DELETE FROM read_receipts WHERE identity_name = ?",
   "DELETE FROM reactions WHERE identity_name = ?",
+  "UPDATE identities SET brought_in_by = NULL WHERE brought_in_by = ?",
   "DELETE FROM identities WHERE name = ?",
 ] as const;
 
@@ -92,6 +93,15 @@ function dropTokensOf(activeTokens: Map<TokenHash, IdentityName>, name: Identity
   }
 }
 
+function forgetBringer(identities: Map<IdentityName, Identity>, name: IdentityName): void {
+  for (const found of identities.values()) {
+    if (found.kind === "agent" && found.broughtInBy === name) {
+      const { broughtInBy: _forgotten, ...rest } = found;
+      identities.set(found.name, rest);
+    }
+  }
+}
+
 function memoryRemoveIdentity({
   activeTokens,
   identities,
@@ -111,6 +121,7 @@ function memoryRemoveIdentity({
     return Option.getOrElse(deleteRefusal({ activeAdmins, agents, identity, messages }), () => {
       dropTokensOf(activeTokens, name);
       identities.delete(name);
+      forgetBringer(identities, name);
       return { identity: { ...identity }, status: "deleted" } as const;
     });
   };
