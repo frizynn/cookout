@@ -231,7 +231,6 @@ export function createUnread(options: UnreadOptions): Unread {
 export type { UnreadState } from "./lib/parts.ts";
 export type { Earlier, EarlierState } from "./lib/earlier.ts";
 export type { MarkAllState } from "./lib/mark-all.ts";
-export type { MarkChannel, MarkChannelRefusal } from "./lib/mark-channel.ts";
 export type { Alerts, AlertsState } from "./lib/alerts.ts";
 export type { Nudges, NudgesState } from "./lib/nudges.ts";
 export type { DeactivationOffers, DeactivationOffersState } from "./lib/deactivation-offers.ts";

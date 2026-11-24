@@ -75,4 +75,4 @@ function createMarkChannel(options: MarkChannelOptions): MarkChannel {
   };
 }
 
-export { type MarkChannel, type MarkChannelRefusal, createMarkChannel };
+export { type MarkChannel, createMarkChannel };
