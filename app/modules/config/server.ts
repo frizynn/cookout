@@ -106,6 +106,43 @@ export const databasePath = Config.String("COOKOUT_DB").pipe(Config.withDefault(
 export const assetsDirectory = Config.String("COOKOUT_ASSETS_DIR").pipe(Config.withDefault(""));
 
 /**
+ * `COOKOUT_ASSET_STORE`: where `cookout serve` keeps attachments' bytes, `disk` (in `COOKOUT_ASSETS_DIR`) or `s3` (in
+ * the S3-compatible bucket the `COOKOUT_S3_*` settings name). Empty counts as unset, which is `disk`, so the live
+ * board on Fly keeps them on its volume (Matt, 2026-11-24, mattpocock/cookout#375). Anything else, serve refuses to
+ * start.
+ */
+export const assetStoreKind = Config.schema(Schema.Literals(["", "disk", "s3"]), "COOKOUT_ASSET_STORE").pipe(
+  Config.withDefault(""),
+);
+
+/** Why `cookout serve` refused `COOKOUT_ASSET_STORE`. */
+export const assetStoreRule = "COOKOUT_ASSET_STORE must be disk or s3, or empty for disk.";
+
+/**
+ * The settings an `s3` asset store needs, each required once `COOKOUT_ASSET_STORE` is `s3` and empty counting as
+ * unset: `COOKOUT_S3_BUCKET` (the bucket, never made public), `COOKOUT_S3_ENDPOINT` (its S3 API URL, such as
+ * `https://<account>.r2.cloudflarestorage.com`), `COOKOUT_S3_REGION` (`auto` on R2 and Tigris),
+ * `COOKOUT_S3_ACCESS_KEY_ID` and `COOKOUT_S3_SECRET_ACCESS_KEY`. Every value is redacted, so none is ever shown.
+ */
+export const s3SettingNames = {
+  accessKeyId: "COOKOUT_S3_ACCESS_KEY_ID",
+  bucket: "COOKOUT_S3_BUCKET",
+  endpoint: "COOKOUT_S3_ENDPOINT",
+  region: "COOKOUT_S3_REGION",
+  secretAccessKey: "COOKOUT_S3_SECRET_ACCESS_KEY",
+} as const;
+
+/** The `COOKOUT_S3_*` settings, each redacted and empty when unset. */
+export const s3Settings = Config.all(
+  Rec.map(s3SettingNames, (name) =>
+    Config.String(name).pipe(
+      Config.withDefault(""),
+      Config.map((value) => Redacted.make(value)),
+    ),
+  ),
+);
+
+/**
  * `COOKOUT_MAX_IDLE_EXPIRY`: the longest idle expiry `join --idle-expiry` may ask for, such as `90d` (Matt,
  * 2026-11-23, mattpocock/cookout#114). An agent session token expires once it goes that long unused.
  */

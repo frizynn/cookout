@@ -22,6 +22,13 @@ export { StorageUnavailable };
  * `memoryAssetStore` holds them in this process only.
  */
 export { AssetStore, diskAssetStore, memoryAssetStore } from "./lib/server/asset-store.ts";
+
+/**
+ * The S3-compatible asset store (S3, R2 or Tigris): one private object per attachment, keyed by its ID alone, in the
+ * bucket `S3Bucket` names, each request signed with its credentials.
+ */
+export { s3AssetStore } from "./lib/server/asset-store-s3.ts";
+export type { S3Bucket } from "./lib/server/asset-store-s3.ts";
 export type { QueryPlan } from "./lib/server/query-plans-sqlite.ts";
 export type { TokenLookup } from "./lib/server/identities.ts";
 export type { SetAdminResult } from "./lib/server/identity-admins.ts";

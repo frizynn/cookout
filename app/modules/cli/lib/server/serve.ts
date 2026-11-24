@@ -5,7 +5,6 @@ import {
   Effect,
   Layer,
   Option,
-  Path,
   Predicate,
   Redacted,
   Schema,
@@ -13,16 +12,13 @@ import {
 } from "effect";
 import { Command, Flag } from "effect/cli";
 import { CommandFailed, printLine, refused } from "./output.ts";
-import type { Config, FileSystem } from "effect";
 import type { IdentityName, Token } from "../../../identities/index.ts";
 import { SpawnSettings, domainLayers, openRoutes, routes } from "./route-list.ts";
-import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import {
   adminName,
   adminNameRule,
   adminToken,
   adminTokenRule,
-  assetsDirectory,
   databasePath,
   host,
   port,
@@ -30,15 +26,16 @@ import {
 } from "../../../config/server.ts";
 import { firstAdminName, token } from "../../../identities/index.ts";
 import { httpServer, serverUrl } from "../../../http/server.ts";
-
 import type { AdminNameIsAgent } from "../../../identities/server.ts";
+import type { ServeStorage } from "./serve-stores.ts";
+
 import type { Serving } from "../../../http/server.ts";
 import { adminTokenSet } from "../../../identities/server.ts";
-import { diskAssetStore } from "../../../storage/server.ts";
+import { chosenAssetStore } from "./serve-stores.ts";
 import { requireTokenWithinLimit } from "./gate.ts";
 
 export type ServeLayers = {
-  readonly storage: (path: string) => Layer.Layer<Storage, StorageUnavailable, FileSystem.FileSystem>;
+  readonly storage: ServeStorage;
   readonly webFolder?: string;
 };
 
@@ -81,7 +78,7 @@ function adminNameIsAgent({
   return refused(agentName);
 }
 
-function storageUnavailable({ message }: Pick<StorageUnavailable, "message">): Effect.Effect<never, CommandFailed> {
+function storageUnavailable({ message }: { readonly message: string }): Effect.Effect<never, CommandFailed> {
   const unavailable = { code: "storage_unavailable", message };
   return refused(unavailable);
 }
@@ -140,23 +137,12 @@ function failedToStart<Failure>(cause: Cause.Cause<Failure>): Effect.Effect<neve
   return Console.error(startFailureLine(cause)).pipe(Effect.andThen(serveFailed));
 }
 
-function assetsBeside(database: string): Effect.Effect<string, Config.ConfigError, Path.Path> {
-  return Effect.gen(function* assetsFolder() {
-    const chosen = yield* assetsDirectory;
-    const path = yield* Path.Path;
-    if (chosen === "") {
-      return path.join(path.dirname(database), "assets");
-    }
-    return chosen;
-  });
-}
-
 const runServer = (layers: ServeLayers, listen: Omit<Serving, "webFolder">, database: string) =>
   Effect.gen(function* () {
     const admin = yield* adminTokenOrRefuse;
     const name = yield* adminNameOrRefuse;
-    const assets = yield* assetsBeside(database);
-    const stores = Layer.merge(layers.storage(database), diskAssetStore(assets));
+    const assets = yield* chosenAssetStore(database);
+    const stores = Layer.merge(layers.storage(database), assets);
     const services = yield* Layer.build(
       cookoutServer({ ...listen, ...webFolderOf(layers), adminName: name, adminToken: admin }).pipe(
         Layer.provide(stores),
