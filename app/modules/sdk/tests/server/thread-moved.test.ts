@@ -53,9 +53,15 @@ it.effect("an agent's reply to a reply counts only the replies after that reply"
     const { ann, bot, parent } = yield* board(cookout);
     const first = yield* reply(ann, parent, "on it");
     const second = yield* reply(ann, parent, "done");
+    const third = yield* reply(ann, parent, "merged");
     const posted = yield* answer(() => bot.client.createMessage({ channel: "grill", replyTo: first, text: "thanks" }));
 
-    expect(posted).toMatchObject({ warning: { details: { replies: [{ id: second }] } } });
+    expect(posted).toMatchObject({
+      warning: {
+        details: { replies: [{ id: second }, { id: third }] },
+        message: "The thread has 2 newer replies you haven't seen. Read them before you post again.",
+      },
+    });
   }).pipe(Effect.provide(testCookout())),
 );
 
