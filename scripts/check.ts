@@ -1,4 +1,4 @@
-import type { Check } from "./lib/check-runner.ts";
+import type { Check, CiOnly } from "./lib/check-runner.ts";
 import { SUITE_LOCK_FILE } from "./lib/machine-lock.ts";
 import { TIMINGS_DIR } from "./lib/slowest-files.ts";
 import path from "node:path";
@@ -79,4 +79,8 @@ function commandOf({ script, ...check }: Scripted): Check {
 
 const checks: readonly Check[] = scripted.map((check) => commandOf(check));
 
-process.exitCode = await runChecks({ checks, inCi, job, lockFile: SUITE_LOCK_FILE });
+const ciOnly: readonly CiOnly[] = [
+  { ciJob: "e2e-docker", command: "pnpm e2e:docker", name: "the e2e suite (packages/e2e on the Docker image)" },
+];
+
+process.exitCode = await runChecks({ checks, ciOnly, inCi, job, lockFile: SUITE_LOCK_FILE });
