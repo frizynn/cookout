@@ -17,6 +17,7 @@ interface InboxItems {
   readonly moveBack: (position: MovedBackReadPosition) => void;
   readonly movesBack: (channel: ChannelName, thread: MessageId | null) => number;
   readonly readPosition: (channel: ChannelName, thread: MessageId | null) => MessageId | null;
+  readonly readPositions: () => readonly ReadPosition[];
   readonly receive: (event: CookoutEvent, onRead: (item: InboxItem) => void) => boolean;
   readonly list: () => readonly InboxItem[];
   readonly inbox: () => readonly InboxItem[];
@@ -43,6 +44,8 @@ function oldestFirst(items: Iterable<InboxItem>): readonly InboxItem[] {
 }
 
 type Positions = Map<string, MessageId>;
+
+type Places = Map<string, Pick<ReadPosition, "channel" | "thread">>;
 
 const NO_MOVES = 0;
 const ONE_MORE = 1;
@@ -81,6 +84,17 @@ interface Moved {
   readonly moves: Map<string, number>;
 }
 
+function positionsIn(positions: Positions, places: Places): readonly ReadPosition[] {
+  const all: ReadPosition[] = [];
+  for (const [scope, place] of places) {
+    const messageId = positions.get(scope) ?? null;
+    if (messageId !== null) {
+      all.push({ ...place, messageId });
+    }
+  }
+  return all;
+}
+
 function moveBackIn({ moves, positions }: Moved, { channel, messageId, thread }: MovedBackReadPosition): void {
   const scope = scopeOf(channel, thread);
   positions.delete(scope);
@@ -95,12 +109,14 @@ interface ReadingIn {
   readonly acked: readonly ReadPosition[];
   readonly items: Map<MessageId, InboxItem>;
   readonly positions: Positions;
+  readonly places: Places;
   readonly onRead: (item: InboxItem) => void;
 }
 
-function readIn({ acked, all, items, onRead, positions }: ReadingIn): void {
+function readIn({ acked, all, items, onRead, places, positions }: ReadingIn): void {
   for (const position of all) {
     moveTo(positions, position);
+    places.set(scopeOf(position.channel, position.thread), { channel: position.channel, thread: position.thread });
   }
   for (const [id, item] of items) {
     if (isReadIn({ acked, positions }, item)) {
@@ -110,17 +126,17 @@ function readIn({ acked, all, items, onRead, positions }: ReadingIn): void {
   }
 }
 
-interface Receiving extends Pick<ReadingIn, "items" | "onRead" | "positions"> {
+interface Receiving extends Pick<ReadingIn, "items" | "onRead" | "places" | "positions"> {
   readonly addAll: (all: readonly InboxItem[]) => void;
 }
 
-function receiveIn({ addAll, items, onRead, positions }: Receiving, event: CookoutEvent): boolean {
+function receiveIn({ addAll, items, onRead, places, positions }: Receiving, event: CookoutEvent): boolean {
   if (event.type === "inbox-item") {
     addAll([event.item]);
     return true;
   }
   if (event.type === "read-position") {
-    readIn({ acked: [event.readPosition], all: [event.readPosition], items, onRead, positions });
+    readIn({ acked: [event.readPosition], all: [event.readPosition], items, onRead, places, positions });
     return true;
   }
   if (event.type === "thread") {
@@ -132,6 +148,7 @@ function receiveIn({ addAll, items, onRead, positions }: Receiving, event: Cooko
 function createInboxItems(): InboxItems {
   const items = new Map<MessageId, InboxItem>();
   const positions: Positions = new Map();
+  const places: Places = new Map();
   const moved: Moved = { moves: new Map(), positions };
 
   function isRead(message: Message): boolean {
@@ -147,7 +164,7 @@ function createInboxItems(): InboxItems {
   }
 
   function read(all: readonly ReadPosition[], onRead: (item: InboxItem) => void): void {
-    readIn({ acked: [], all, items, onRead, positions });
+    readIn({ acked: [], all, items, onRead, places, positions });
   }
 
   return {
@@ -157,12 +174,14 @@ function createInboxItems(): InboxItems {
     isRead,
     list: () => oldestFirst(items.values()),
     moveBack: (position) => {
+      places.set(scopeOf(position.channel, position.thread), { channel: position.channel, thread: position.thread });
       moveBackIn(moved, position);
     },
     movesBack: (channel, thread) => moved.moves.get(scopeOf(channel, thread)) ?? NO_MOVES,
     readAll: read,
     readPosition: (channel, thread) => positions.get(scopeOf(channel, thread)) ?? null,
-    receive: (event, onRead) => receiveIn({ addAll, items, onRead, positions }, event),
+    readPositions: () => positionsIn(positions, places),
+    receive: (event, onRead) => receiveIn({ addAll, items, onRead, places, positions }, event),
   };
 }
 
@@ -173,11 +192,89 @@ interface Reading {
   readonly onAlerts: (alerts: readonly OfflineAlert[]) => void;
 }
 
-async function readInto({ client, items, onAlerts, onRead }: Reading): Promise<void> {
-  const [inbox, { readPositions }] = await Promise.all([client.inbox(), client.readPositions()]);
-  items.readAll(readPositions, onRead);
+interface ReadInbox extends Pick<Reading, "items" | "onAlerts"> {
+  readonly inbox: Awaited<ReturnType<Reading["client"]["inbox"]>>;
+}
+
+function readIntoItems({ inbox, items, onAlerts }: ReadInbox): void {
   items.addAll(inbox.items);
   onAlerts(inbox.alerts);
 }
 
-export { type InboxItems, createInboxItems, readInto };
+async function readInto({ client, items, onAlerts, onRead }: Reading): Promise<void> {
+  const [inbox, { readPositions }] = await Promise.all([client.inbox(), client.readPositions()]);
+  items.readAll(readPositions, onRead);
+  readIntoItems({ inbox, items, onAlerts });
+}
+
+type ByPlace = ReadonlyMap<string, MessageId>;
+
+interface CatchUpOptions extends Reading {
+  readonly moveBack: (position: MovedBackReadPosition) => void;
+}
+
+interface Compared {
+  readonly before: ByPlace;
+  readonly now: ByPlace;
+  readonly server: ByPlace;
+}
+
+function placeOf({ channel, thread }: Pick<ReadPosition, "channel" | "thread">): string {
+  return `${channel}/${String(thread)}`;
+}
+
+function byPlace(all: readonly ReadPosition[]): ByPlace {
+  return new Map(all.map((position) => [placeOf(position), position.messageId]));
+}
+
+function unchanged({ before, now }: Compared, place: string): boolean {
+  return (before.get(place) ?? null) === (now.get(place) ?? null);
+}
+
+function isBehind(server: MessageId | null, held: MessageId): boolean {
+  return server === null || server < held;
+}
+
+function movedBack(compared: Compared, held: readonly ReadPosition[]): readonly MovedBackReadPosition[] {
+  const moved: MovedBackReadPosition[] = [];
+  for (const { channel, messageId, thread } of held) {
+    const place = placeOf({ channel, thread });
+    const server = compared.server.get(place) ?? null;
+    if (unchanged(compared, place) && isBehind(server, messageId)) {
+      moved.push({ channel, messageId: server, thread });
+    }
+  }
+  return moved;
+}
+
+async function catchUp(options: CatchUpOptions): Promise<void> {
+  const { items } = options;
+  const before = byPlace(items.readPositions());
+  const [inbox, { readPositions }] = await Promise.all([options.client.inbox(), options.client.readPositions()]);
+  const held = items.readPositions();
+  const compared: Compared = { before, now: byPlace(held), server: byPlace(readPositions) };
+  for (const position of movedBack(compared, held)) {
+    options.moveBack(position);
+  }
+  const movedOn = readPositions.filter((position) => unchanged(compared, placeOf(position)));
+  items.readAll(movedOn, options.onRead);
+  readIntoItems({ inbox, items, onAlerts: options.onAlerts });
+}
+
+interface CatchingUp extends CatchUpOptions {
+  readonly onChange: () => void;
+}
+
+function catchingUp(options: CatchingUp): () => void {
+  let queue: Promise<void> = Promise.resolve();
+  async function after(previous: Promise<void>): Promise<void> {
+    await previous;
+    await Promise.allSettled([catchUp(options)]);
+    options.onChange();
+  }
+  return () => {
+    queue = after(queue);
+  };
+}
+
+export { type InboxItems, catchingUp, createInboxItems, readInto };

@@ -13,8 +13,11 @@
  * coming back `up`. `link` is the link as last reported (`up` until it is
  * reported down), and `subscribeToLink` calls its listener on each change, so
  * a view can show that the page may be stale. `onBack` calls its listener each
- * time the link comes back after being down, so stores whose events can't be
- * replayed (the identity directory, the channel list) can fetch again.
+ * time the link comes back after being down, so every store that shows what
+ * the stream tells it (the identity directory, the channel list, open channels
+ * and threads, the unread store) can read again what it missed: the web
+ * doesn't rely on the stream replaying anything (ADR
+ * `docs/adr/0068-a-page-catches-up-by-reading-again.md`).
  *
  * The browser's adapter is `eventSourceAdapter(url)`, whose `EventSource`
  * sends the session cookie and reconnects on its own, picking up from the last

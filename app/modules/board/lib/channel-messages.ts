@@ -5,6 +5,7 @@ import { withHeard, withReceipts } from "./receipts.ts";
 import type { CallRequest } from "./command-call.ts";
 import { closedAs } from "./thread-closing.ts";
 import { failure } from "./failure.ts";
+import { newestSince } from "./newest-page.ts";
 import { withNewestReply } from "../../messages/index.ts";
 
 const NEWEST = -1;
@@ -72,12 +73,13 @@ function withNewest(loaded: Loaded, page: Page): Loaded {
 }
 
 async function reloadNewest(channel: Channel): Promise<void> {
-  if (channel.current().status !== "loaded") {
+  const current = channel.current();
+  if (current.status !== "loaded") {
     await loadNewest(channel);
     return;
   }
   try {
-    const page = await channel.client.listMessages(channel.name, { limit: channel.pageSize });
+    const page = await newestSince({ ...channel, shown: current.messages });
     update(channel, (loaded) => withNewest(loaded, page));
     await Promise.all(
       page.messages.slice(NEWEST).map(async (newest) => {

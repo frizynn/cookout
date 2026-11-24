@@ -16,6 +16,7 @@ type OnRefused = (refusal: Refusal) => void;
 interface MarkUnread {
   readonly markUnread: (messageId: MessageId, onRefused: OnRefused) => void;
   readonly receive: (event: CookoutEvent) => boolean;
+  readonly moveBack: (position: MovedBackReadPosition) => void;
 }
 
 interface MarkUnreadOptions {
@@ -85,6 +86,7 @@ function createMarkUnread({ client, dropRead, items, onChange }: MarkUnreadOptio
         await markThenReadAgain({ client, messageId, onRefused });
       });
     },
+    moveBack,
     receive: (event) => {
       if (event.type !== "read-position-moved-back") {
         return false;
@@ -96,4 +98,4 @@ function createMarkUnread({ client, dropRead, items, onChange }: MarkUnreadOptio
   };
 }
 
-export { createMarkUnread };
+export { type MarkUnread, createMarkUnread };

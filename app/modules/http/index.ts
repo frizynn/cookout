@@ -30,6 +30,12 @@ export const relayCutPath = "/__relay/cut";
 /** The path a `POST` to restores a cut `cuttableRelay`: the requests it held go through, and new ones too. */
 export const relayRestorePath = "/__relay/restore";
 
+/**
+ * The path a `POST` to opens another `cuttableRelay` to the same server, answering `{ url }`: one that is cut and
+ * restored on its own, so tests running at once each cut only their own link.
+ */
+export const relayOpenPath = "/__relay/open";
+
 /** The answer to the health check. */
 export interface HealthResponse {
   readonly status: "ok";

@@ -1,4 +1,4 @@
-import { Context, Effect, Layer, Option, Stream, SubscriptionRef } from "effect";
+import { Context, Effect, Layer, Option, Scope, Stream, SubscriptionRef } from "effect";
 import {
   Headers,
   HttpClient,
@@ -9,8 +9,7 @@ import {
   HttpServerResponse,
 } from "effect/http";
 import type { HttpClientError, HttpClientResponse, HttpServerError } from "effect/http";
-import { relayCutPath, relayRestorePath } from "../../index.ts";
-import type { Scope } from "effect";
+import { relayCutPath, relayOpenPath, relayRestorePath } from "../../index.ts";
 import { layerNodeHttp as nodeHttpClient } from "@effect/platform-node/NodeHttpClient";
 import { layer as nodeHttpLayer } from "@effect/platform-node/NodeHttpServer";
 import { serverDroppingSilentConnections } from "./node-http-server.ts";
@@ -23,6 +22,7 @@ interface CuttableRelay {
 
 interface Link {
   readonly target: string;
+  readonly open: Effect.Effect<string>;
   readonly set: (up: boolean) => Effect.Effect<void>;
   readonly when: (up: boolean) => Effect.Effect<void>;
   readonly execute: (
@@ -71,6 +71,9 @@ function relayed(link: Link): Answer {
       yield* link.set(control);
       return HttpServerResponse.empty({ status: NO_CONTENT });
     }
+    if (method === "POST" && url === relayOpenPath) {
+      return HttpServerResponse.jsonUnsafe({ url: yield* link.open });
+    }
     const known = yield* Effect.fromOption(Option.liftPredicate(method, HttpMethod.isHttpMethod));
     return yield* forwarded(link, known);
   }).pipe(Effect.orDie);
@@ -78,15 +81,16 @@ function relayed(link: Link): Answer {
 
 function cuttableRelay(target: string): Effect.Effect<CuttableRelay, never, Scope.Scope> {
   return Effect.gen(function* openRelay() {
+    const scope = yield* Effect.scope;
     const client = yield* Effect.map(Layer.build(nodeHttpClient), Context.get(HttpClient.HttpClient));
     const up = yield* SubscriptionRef.make(true);
-    const changes = SubscriptionRef.changes(up);
     const link: Link = {
       execute: client.execute,
+      open: Effect.map(Scope.provide(cuttableRelay(target), scope), (opened) => opened.url),
       set: (now) => SubscriptionRef.set(up, now),
       target,
       when: (wanted) =>
-        changes.pipe(
+        SubscriptionRef.changes(up).pipe(
           Stream.filter((now) => now === wanted),
           Stream.runHead,
           Effect.asVoid,

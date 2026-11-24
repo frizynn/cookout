@@ -31,8 +31,9 @@
  * one deleted elsewhere leaves it, and if the page is on it, the page goes to the
  * inbox with its name as the snapshot's `notice` until `dismissNotice`; and each
  * command registered elsewhere joins the loaded `commands`; when the stream's link comes back after being down,
- * the list reloads, since channel events can't be replayed, and so does each open channel and thread, since read
- * receipt events can't be either. Each loaded channel page and thread keeps its messages' read receipts
+ * the list reloads, and so does each open channel (paging back until it reaches the messages it shows) and thread,
+ * acking its newest message, since the stream replays none of what it missed (ADR
+ * `docs/adr/0068-a-page-catches-up-by-reading-again.md`). Each loaded channel page and thread keeps its messages' read receipts
  * (`receipts`), and each read receipt recorded elsewhere joins the store holding its message, as the stream sends it. `subscriptions` is the names of the channels
  * the logged-in identity subscribes to, sorted, loaded when its first reader
  * subscribes; `setSubscribed` subscribes to a channel or unsubscribes from it,
