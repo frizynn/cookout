@@ -184,6 +184,7 @@ export { ChannelStart } from "./lib/channel-start.tsx";
 export { DataToggle } from "./lib/data-toggle.tsx";
 export { MessageBody } from "./lib/message-body.tsx";
 export { MessageItem } from "./lib/message-item.tsx";
+export { FeedRowClosed } from "./lib/feed-row-closed.tsx";
 export { MessageList } from "./lib/message-list.tsx";
 export { QuietButton } from "./lib/quiet-button.tsx";
 export { ClosedFold } from "./lib/closed-fold.tsx";

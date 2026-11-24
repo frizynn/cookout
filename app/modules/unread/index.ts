@@ -15,7 +15,9 @@
  * shows them (Matt, #152, 2026-11-23): for you (a mention, or a reply in a
  * thread you started) and activity (the rest). A row says why it is there,
  * `countsByChannel` counts both levels by channel, and `newsByThread` counts a
- * thread's unread replies and how many of them are for you. `rowsOf` groups
+ * thread's unread replies and how many of them are for you. `threadsWithNews` lists, oldest first, the top-level
+ * messages of a channel's threads with an item there for some reason besides a subscribed channel (a mention, a
+ * reply in a thread you follow, a reaction): what keeps a closed thread out of the channel's fold (#349). `rowsOf` groups
  * items, unread or `earlier`'s, into the inbox's rows: one per thread (its
  * replies) or channel (its top-level messages), as read positions are keyed,
  * each with its latest item, count, level and strongest reason, newest first; `rowKey` is the key of a
@@ -236,7 +238,7 @@ export type { Selection } from "./lib/selection.ts";
 export type { InboxRow } from "./lib/rows.ts";
 export { rowKey, rowsOf } from "./lib/rows.ts";
 export type { ThreadNews, UnreadCounts, UnreadWhy } from "./lib/levels.ts";
-export { NO_COUNTS, countsByChannel, countsOf, newsByThread } from "./lib/levels.ts";
+export { NO_COUNTS, countsByChannel, countsOf, newsByThread, threadsWithNews } from "./lib/levels.ts";
 export { type Reading, createReading } from "./lib/reading.ts";
 export { browserReadingTools } from "./lib/browser-reading.ts";
 export type { Newest, Reader, ReaderSources } from "./lib/reader.ts";
