@@ -65,4 +65,4 @@ async function watchConnected({ argv, cwd, noteTimeoutMs, onConnected }: Watch):
   return { ...heard, output: `${printed}${heard.notes}`, status: await status, stdout: printed };
 }
 
-export { isWatching, watchConnected };
+export { watchConnected };

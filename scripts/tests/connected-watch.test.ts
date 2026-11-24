@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { isWatching, watchConnected } from "../lib/connected-watch.ts";
+import { watchConnected } from "../lib/connected-watch.ts";
 
 const NOTE = JSON.stringify({ watching: "http://127.0.0.1:1/v1/events" });
 const NOTE_TIMEOUT_MS = 200;
@@ -7,15 +7,6 @@ const NOTE_TIMEOUT_MS = 200;
 function node(source: string): readonly string[] {
   return [process.execPath, "--input-type=module", "-e", source];
 }
-
-it("only a watching note with a URL counts as connected", { timeout: 1000 }, () => {
-  expect.hasAssertions();
-
-  expect(isWatching(NOTE)).toBe(true);
-  expect(isWatching('{"unread":1}')).toBe(false);
-  expect(isWatching('{"watching":true}')).toBe(false);
-  expect(isWatching("not json")).toBe(false);
-});
 
 it("runs the connected step once the note is printed, then waits for the watch to finish", {
   timeout: 5000,
@@ -37,12 +28,14 @@ it("runs the connected step once the note is printed, then waits for the watch t
   expect(watched.output).toContain(NOTE);
 });
 
-it("stops a watch that prints no note before the timeout, without the connected step", { timeout: 5000 }, async () => {
+it("stops a watch that prints no watching URL before the timeout, without the connected step", {
+  timeout: 5000,
+}, async () => {
   expect.hasAssertions();
 
   const steps: string[] = [];
   const watched = await watchConnected({
-    argv: node(`console.error('{"unread":1}'); setInterval(() => {}, 1000);`),
+    argv: node(`console.error('{"unread":1}\\n{"watching":true}\\nnot json'); setInterval(() => {}, 1000);`),
     cwd: ".",
     noteTimeoutMs: NOTE_TIMEOUT_MS,
     onConnected: () => {
@@ -51,5 +44,5 @@ it("stops a watch that prints no note before the timeout, without the connected 
   });
 
   expect(steps).toStrictEqual([]);
-  expect(watched).toMatchObject({ connected: false, notes: '{"unread":1}', status: null });
+  expect(watched).toMatchObject({ connected: false, notes: '{"unread":1}\n{"watching":true}\nnot json', status: null });
 });
