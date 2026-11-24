@@ -1,26 +1,22 @@
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 import type { Screen, Shot, Theme } from "./lib/screenshots.ts";
 import { field, list, parseJson, text } from "./lib/json.ts";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
-import { screenshotOptions, takeScreenshots, withNudge, withOlderHistory } from "./lib/screenshots.ts";
-import { spawn, spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync } from "node:fs";
+import { screenshotOptions, takeScreenshots, withOlderHistory } from "./lib/screenshots.ts";
+import type { DevCookout } from "./lib/dev-cookout.ts";
 import { chromium } from "@playwright/test";
-import { createInterface } from "node:readline";
 import { dropWatch } from "./lib/dropped-watch.ts";
-import { once } from "node:events";
+import { moveClockForward } from "../app/modules/testing/index.ts";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
+import { startDevCookout } from "./lib/dev-cookout.ts";
 import { tmpdir } from "node:os";
-
-interface Server {
-  readonly stop: () => Promise<void>;
-  readonly url: string;
-}
 
 interface Board {
   readonly closed: readonly number[];
   readonly dropped: string;
   readonly token: string;
-  readonly url: string;
+  readonly server: DevCookout;
 }
 
 type Login = "admin" | "member";
@@ -33,61 +29,12 @@ const MAX_BUFFER = 67_108_864;
 const RENDER_MS = 15_000;
 const WIDE = { height: 800, width: 1280 };
 const NARROW = { height: 900, width: 600 };
-const ADMIN_TOKEN = "screenshots-admin-token-0123456789abcdef0123456789";
 const LOGGED_IN_AS = "grace";
 const DROPPED_AGENT = "triage-agent";
 const CLOSED_IN_DEPLOYS = ["deployed", "rollbackCall"] as const;
 
 function withEnv(variables: Readonly<Record<string, string>>, args: readonly string[]): string[] {
   return [...Object.entries(variables).map(([name, value]: readonly [string, string]) => `${name}=${value}`), ...args];
-}
-
-function build(): void {
-  const run = spawnSync("pnpm", ["-s", "build"], { encoding: "utf8", maxBuffer: MAX_BUFFER });
-  if (run.status !== EXIT_SUCCESS) {
-    throw new Error(`pnpm build failed:\n${run.stdout}${run.stderr}`);
-  }
-}
-
-async function listeningUrl(lines: AsyncIterable<string>): Promise<string> {
-  for await (const line of lines) {
-    const url = text(field(parseJson(line), "listening"));
-    if (typeof url === "string") {
-      return url;
-    }
-  }
-  throw new Error("cookout serve stopped before printing its address");
-}
-
-async function startServer(database: string): Promise<Server> {
-  const server = spawn(
-    "env",
-    withEnv({ COOKOUT_ADMIN_TOKEN: ADMIN_TOKEN, COOKOUT_PRESENCE_GRACE_SECONDS: "1" }, [
-      process.execPath,
-      "dist/main.js",
-      "serve",
-      "--port",
-      "0",
-      "--host",
-      "127.0.0.1",
-      "--db",
-      database,
-    ]),
-    { stdio: ["ignore", "pipe", "ignore"] },
-  );
-  async function stop(): Promise<void> {
-    if (server.exitCode === null) {
-      server.kill("SIGINT");
-      await once(server, "exit");
-    }
-  }
-  try {
-    const url = await listeningUrl(createInterface({ input: server.stdout }));
-    return { stop, url };
-  } catch (error) {
-    await stop();
-    throw error;
-  }
 }
 
 function tokenOf(identities: readonly unknown[], name: string): string {
@@ -99,10 +46,10 @@ function tokenOf(identities: readonly unknown[], name: string): string {
   return token;
 }
 
-function seed(url: string): Board {
+function seed(server: DevCookout): Board {
   const run = spawnSync(
     "env",
-    withEnv({ COOKOUT_ALLOW_HUMAN: "1", COOKOUT_TOKEN: ADMIN_TOKEN, COOKOUT_URL: url }, [
+    withEnv({ COOKOUT_ALLOW_HUMAN: "1", COOKOUT_TOKEN: server.adminToken, COOKOUT_URL: server.url }, [
       process.execPath,
       "app/dev.ts",
       "seed",
@@ -116,16 +63,16 @@ function seed(url: string): Board {
   const identities = list(field(seeded, "identities")) ?? [];
   const closed = CLOSED_IN_DEPLOYS.map((name) => field(field(seeded, "messages"), name));
   const tokens = { dropped: tokenOf(identities, DROPPED_AGENT), token: tokenOf(identities, LOGGED_IN_AS) };
-  return { closed: closed.filter((id) => typeof id === "number"), ...tokens, url };
+  return { closed: closed.filter((id) => typeof id === "number"), ...tokens, server };
 }
 
-function closeThreads({ closed, token, url }: Board): void {
+function closeThreads({ closed, server, token }: Board): void {
   for (const id of closed) {
     const run = spawnSync(
       "env",
-      withEnv({ COOKOUT_ALLOW_HUMAN: "1", COOKOUT_TOKEN: token, COOKOUT_URL: url }, [
+      withEnv({ COOKOUT_ALLOW_HUMAN: "1", COOKOUT_TOKEN: token, COOKOUT_URL: server.url }, [
         process.execPath,
-        "dist/main.js",
+        "app/main.ts",
         "thread",
         "close",
         String(id),
@@ -138,7 +85,8 @@ function closeThreads({ closed, token, url }: Board): void {
   }
 }
 
-async function loggedIn(browser: Browser, { token, url }: Board, theme: Theme): Promise<BrowserContext> {
+async function loggedIn(browser: Browser, { server, token }: Board, theme: Theme): Promise<BrowserContext> {
+  const url = server.webUrl;
   const context = await browser.newContext({
     baseURL: url,
     storageState: {
@@ -185,9 +133,6 @@ async function render(page: Page, shot: Shot): Promise<void> {
       await route.abort();
     });
   }
-  if (shot.screen.nudge === true) {
-    await withNudge(page);
-  }
   await page.goto(`/${shot.screen.hash}`);
   await interact(page, shot);
   await page.getByText(shot.screen.text).first().waitFor({ timeout: RENDER_MS });
@@ -221,28 +166,58 @@ function loginOf(shot: Shot): Login {
   return "member";
 }
 
-function shooter(contexts: ReadonlyMap<string, BrowserContext>, out: string): (shot: Shot) => Promise<void> {
+interface Shooting {
+  readonly board: Board;
+  readonly browser: Browser;
+  readonly contexts: ReadonlyMap<string, BrowserContext>;
+  readonly out: string;
+}
+
+function boardFor(board: Board, login: Login): Board {
+  if (login === "admin") {
+    return { ...board, token: board.server.adminToken };
+  }
+  return board;
+}
+
+async function contextFor({ board, browser, contexts }: Shooting, shot: Shot): Promise<BrowserContext> {
+  if (typeof shot.screen.daysLater === "number") {
+    const fresh = await loggedIn(browser, boardFor(board, loginOf(shot)), shot.theme);
+    return fresh;
+  }
+  const key = `${loginOf(shot)}-${shot.theme}`;
+  const context = contexts.get(key);
+  if (typeof context !== "object") {
+    throw new TypeError(`no browser logged in as ${key}`);
+  }
+  return context;
+}
+
+function shooter(shooting: Shooting): (shot: Shot) => Promise<void> {
   return async (shot) => {
-    const key = `${loginOf(shot)}-${shot.theme}`;
-    const context = contexts.get(key);
-    if (typeof context !== "object") {
-      throw new TypeError(`no browser logged in as ${key}`);
-    }
-    await screenshot(await context.newPage(), shot, out);
+    const context = await contextFor(shooting, shot);
+    await screenshot(await context.newPage(), shot, shooting.out);
   };
 }
 
 async function shootBoard(board: Board, screens: readonly Screen[], out: string): Promise<readonly string[]> {
   const browser = await chromium.launch();
   try {
-    const admin = { ...board, token: ADMIN_TOKEN };
+    const admin = boardFor(board, "admin");
     const contexts = new Map<string, BrowserContext>([
       ["member-light", await loggedIn(browser, board, "light")],
       ["member-dark", await loggedIn(browser, board, "dark")],
       ["admin-light", await loggedIn(browser, admin, "light")],
       ["admin-dark", await loggedIn(browser, admin, "dark")],
     ]);
-    const failures = await takeScreenshots({ screens, shoot: shooter(contexts, out) });
+    const { clockUrl } = board.server;
+    const failures = await takeScreenshots({
+      moveClock: async (days) => {
+        await moveClockForward({ clockUrl, days });
+      },
+      screens,
+      shoot: shooter({ board, browser, contexts, out }),
+    });
     return failures;
   } finally {
     await browser.close();
@@ -259,26 +234,22 @@ function report(failures: readonly string[], out: string): void {
   }
 }
 
-async function prepared(url: string): Promise<Board> {
-  const board = seed(url);
+async function prepared(server: DevCookout): Promise<Board> {
+  const board = seed(server);
   closeThreads(board);
-  await dropWatch({ adminToken: ADMIN_TOKEN, agent: DROPPED_AGENT, agentToken: board.dropped, url });
+  const { adminToken, url } = server;
+  await dropWatch({ adminToken, agent: DROPPED_AGENT, agentToken: board.dropped, url });
   return board;
 }
 
 async function shootFreshBoard(screens: readonly Screen[], out: string): Promise<readonly string[]> {
-  const folder = mkdtempSync(path.join(tmpdir(), "cookout-screenshots-db-"));
+  const server = await startDevCookout({ COOKOUT_PRESENCE_GRACE_SECONDS: "1" });
   try {
-    const server = await startServer(path.join(folder, "cookout.db"));
-    try {
-      const board = await prepared(server.url);
-      const failures = await shootBoard(board, screens, out);
-      return failures;
-    } finally {
-      await server.stop();
-    }
+    const board = await prepared(server);
+    const failures = await shootBoard(board, screens, out);
+    return failures;
   } finally {
-    rmSync(folder, { force: true, recursive: true });
+    await server.stop();
   }
 }
 
@@ -286,7 +257,6 @@ async function main(): Promise<void> {
   const options = screenshotOptions(process.argv.slice(ARGUMENTS_FROM));
   const out = options.out ?? mkdtempSync(path.join(tmpdir(), "cookout-screenshots-"));
   mkdirSync(out, { recursive: true });
-  build();
   report(await shootFreshBoard(options.screens, out), out);
 }
 

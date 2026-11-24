@@ -16,6 +16,7 @@ function recordingShooter(note: (name: string) => void, broken: string): (shot: 
 }
 
 interface Recorder {
+  readonly moveClock: (days: number) => Promise<void>;
   readonly note: (name: string) => void;
   readonly taken: readonly string[];
 }
@@ -23,6 +24,10 @@ interface Recorder {
 function recorder(): Recorder {
   const taken: string[] = [];
   return {
+    moveClock: async (days): Promise<void> => {
+      await Promise.resolve();
+      taken.push(`clock moved ${String(days)} days`);
+    },
     note: (name): void => {
       taken.push(name);
     },
@@ -30,19 +35,30 @@ function recorder(): Recorder {
   };
 }
 
+const DAYS_LATER = "inbox-nudge";
+
 function pairs(): readonly string[] {
-  return SCREENS.flatMap((screen) => [`${screen.name}-light`, `${screen.name}-dark`]);
+  return SCREENS.filter(({ name }) => name !== DAYS_LATER).flatMap((screen) => [
+    `${screen.name}-light`,
+    `${screen.name}-dark`,
+  ]);
 }
 
-it("takes each standard screen in light and then in dark before the next screen", { timeout: 2000 }, async () => {
+function inOrder(): readonly string[] {
+  return [...pairs(), "clock moved 3 days", `${DAYS_LATER}-light`, `${DAYS_LATER}-dark`];
+}
+
+it("takes each standard screen in light and then in dark before the next, and moves the clock for the days-later ones last", {
+  timeout: 2000,
+}, async () => {
   expect.hasAssertions();
 
-  const { note, taken } = recorder();
-  const failures = await takeScreenshots({ screens: SCREENS, shoot: recordingShooter(note, "") });
+  const { moveClock, note, taken } = recorder();
+  const failures = await takeScreenshots({ moveClock, screens: SCREENS, shoot: recordingShooter(note, "") });
 
   expect([failures, taken, SCREENS.map((screen) => screen.name)]).toStrictEqual([
     [],
-    pairs(),
+    inOrder(),
     [
       "inbox",
       "inbox-more",
@@ -72,12 +88,12 @@ it("takes each standard screen in light and then in dark before the next screen"
 it("a screen that fails to render is reported, and the others are still taken", { timeout: 2000 }, async () => {
   expect.hasAssertions();
 
-  const { note, taken } = recorder();
-  const failures = await takeScreenshots({ screens: SCREENS, shoot: recordingShooter(note, "thread-dark") });
+  const { moveClock, note, taken } = recorder();
+  const failures = await takeScreenshots({ moveClock, screens: SCREENS, shoot: recordingShooter(note, "thread-dark") });
 
   expect([failures, taken]).toStrictEqual([
     ["thread-dark: Timed out waiting for Thanks, both of you."],
-    pairs().filter((name) => name !== "thread-dark"),
+    inOrder().filter((name) => name !== "thread-dark"),
   ]);
 });
 
@@ -106,4 +122,14 @@ it("an unknown screen or flag, or a flag with no value, is refused", { timeout: 
     "Unknown flag --theme: use --only <screen> or --out <dir>.",
   );
   expect(() => screenshotOptions(["--out"])).toThrow("--out needs a value.");
+});
+
+it("with no days-later screen picked, the clock never moves", { timeout: 2000 }, async () => {
+  expect.hasAssertions();
+
+  const { moveClock, note, taken } = recorder();
+  const { screens } = screenshotOptions(["--only", "thread"]);
+  await takeScreenshots({ moveClock, screens, shoot: recordingShooter(note, "") });
+
+  expect(taken).toStrictEqual(["thread-light", "thread-dark"]);
 });

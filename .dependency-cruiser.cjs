@@ -4,6 +4,7 @@ const TESTS = `^${R}/[^/]+/tests/`;
 const BACKEND = `^${R}/[^/]+/(server\\.ts$|lib/server/)`;
 const ENTRIES = String.raw`^app/(main\.ts|dev\.ts|web\.tsx)$`;
 const DEV_ENTRY = String.raw`^app/dev\.ts$`;
+const SCREENSHOTS = String.raw`^scripts/screenshots\.ts$`;
 const WEB = `^app/web\\.tsx$|^${R}/(design-system|session|board|unread|composer|live|presence-store|layout|paths|routes|format|views)/`;
 const PUBLISHED_ENTRIES = ["app/main.ts", `${R}/sdk/index.ts`];
 const PUBLISHED_SDK = `${R}/sdk/index.ts`;
@@ -108,10 +109,16 @@ module.exports = {
       to: { path: `^${R}/[^/]+/lib/server/` },
     },
     {
-      from: { pathNot: [TESTS, `^${R}/testing/`, `^${R}/dev/`, DEV_ENTRY] },
+      from: { pathNot: [TESTS, `^${R}/testing/`, `^${R}/dev/`, DEV_ENTRY, SCREENSHOTS] },
       name: "testing-only-from-tests",
       severity: "error",
       to: { path: `^${R}/testing/` },
+    },
+    {
+      from: { path: SCREENSHOTS },
+      name: "screenshots-move-the-clock-only",
+      severity: "error",
+      to: { path: `^${R}/testing/`, pathNot: exactly(`${R}/testing/index.ts`) },
     },
     {
       from: { pathNot: [TESTS, `^${R}/testing/`, `^${R}/webhook-fake/`, `^${R}/dev/`] },
