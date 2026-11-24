@@ -6,12 +6,13 @@ import { MessageStream } from "./message-stream.tsx";
 import type { ReactNode } from "react";
 import type { Reply } from "./use-message-menu.ts";
 import { StandaloneEntry } from "./standalone-entry.tsx";
+import { THREAD_PANEL } from "./thread-panel.ts";
 import { replies } from "./message-marks.ts";
 
 const NONE = 0;
 const NO_THREADS: ReadonlyMap<MessageId, ThreadNews> = new Map();
 
-const TEXT = { empty: "No replies yet.", parent: "Parent message", replies: "Replies" } as const;
+const TEXT = { empty: "No replies yet.", parent: THREAD_PANEL.parent, replies: "Replies" } as const;
 
 interface ThreadBodyProps {
   readonly state: ThreadMessagesState;

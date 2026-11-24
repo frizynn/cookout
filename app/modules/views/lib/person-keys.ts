@@ -1,5 +1,5 @@
+import type { MessageShortcuts, PersonKeysSource } from "../../design-system/index.tsx";
 import type { Keymap } from "../../keymap/index.ts";
-import type { PersonKeysSource } from "../../design-system/index.tsx";
 
 function personKeysOf(keymap: Keymap): PersonKeysSource {
   return {
@@ -17,4 +17,8 @@ function personKeysOf(keymap: Keymap): PersonKeysSource {
   };
 }
 
-export { personKeysOf };
+function messageShortcutsOf(keymap: Keymap): MessageShortcuts {
+  return { openThread: keymap.shortcutOf("openThread"), reply: keymap.shortcutOf("replyToMessage") };
+}
+
+export { messageShortcutsOf, personKeysOf };

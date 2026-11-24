@@ -1,4 +1,5 @@
 import type { HoverActionsParts } from "./menu-parts.ts";
+import { HoverOpenThread } from "./hover-open-thread.tsx";
 import { HoverThread } from "./hover-thread.tsx";
 import { MessageAction } from "./message-action.tsx";
 import { MoreActions } from "./more-actions.tsx";
@@ -8,7 +9,7 @@ import type { ReactNode } from "react";
 const TEXT = { label: "Quick actions", more: "More actions" } as const;
 
 export function HoverButtons(parts: HoverActionsParts): ReactNode {
-  const { actionHref, choices, onAction, reactions, thread } = parts;
+  const { actionHref, choices, onAction, reactions, thread, threadHref } = parts;
   const handleAction = onAction;
   return (
     <fieldset
@@ -23,6 +24,7 @@ export function HoverButtons(parts: HoverActionsParts): ReactNode {
       {parts.replyOnHover && (
         <MessageAction actionHref={actionHref} actionLabel={parts.actionLabel} onAction={handleAction} />
       )}
+      {threadHref !== null && <HoverOpenThread href={threadHref} />}
       {thread !== null && <HoverThread thread={thread} />}
       <MoreActions choices={choices} label={TEXT.more} />
     </fieldset>

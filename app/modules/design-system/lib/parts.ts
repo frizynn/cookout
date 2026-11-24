@@ -1,5 +1,5 @@
-import type { ActionMenuParts, MenuChoice, MessageMenuParts, ReactionChoice, ThreadChoice } from "./menu-parts.ts";
 import type { AvatarParts, PresenceShown } from "./avatar-parts.ts";
+import type { ActionMenuParts } from "./menu-parts.ts";
 import type { PanelEdgeParts } from "./panel-edge-parts.ts";
 import type { ReactNode } from "react";
 
@@ -189,36 +189,6 @@ interface MessageTimeParts {
   readonly receipt: string | null;
 }
 
-interface MessageLayoutParts extends Parts {
-  readonly name: string;
-  readonly nameHref: string;
-  readonly displayName: string | null;
-  readonly note: string | null;
-  readonly agent: boolean;
-  readonly presence: PresenceShown | null;
-  readonly grouped: boolean;
-  readonly time: MessageTimeParts;
-  readonly actionHref: string | null;
-  readonly actionLabel: string;
-  readonly onAction: (() => void) | null;
-  readonly replyOnHover: boolean;
-  readonly choices: readonly MenuChoice[];
-  readonly reactions: readonly ReactionChoice[];
-  readonly thread: ThreadChoice | null;
-}
-
-interface MessageItemParts extends Omit<MessageLayoutParts, "choices" | "reactions" | "thread"> {
-  readonly menu: MessageMenuParts;
-  readonly threadOnHover: boolean;
-  readonly mark: "for-you" | "open" | "linked" | "none";
-  readonly day: string | null;
-  readonly unreadLine: boolean;
-}
-
-interface StandaloneMessageParts extends MessageItemParts {
-  readonly label: string;
-}
-
 interface MentionParts extends Parts {
   readonly mine: boolean;
 }
@@ -273,12 +243,10 @@ export type {
   CallChipParts,
   ChannelStartParts,
   MentionParts,
+  MessageTimeParts,
   MessageHeaderParts,
-  MessageLayoutParts,
-  MessageItemParts,
   ShownTimeParts,
   SeparatorParts,
-  StandaloneMessageParts,
   ButtonParts,
   ChoiceGroupParts,
   NavLinkParts,

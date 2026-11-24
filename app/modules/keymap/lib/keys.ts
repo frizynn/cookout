@@ -66,6 +66,11 @@ const KEYS = [
   { action: "closeProfile", chord: "Escape", does: "Close the profile", scope: "profile panel" },
   { action: "toggleThumbsUp", chord: "+", does: "React with 👍, or take it back", scope: "message" },
   { action: "toggleThumbsDown", chord: "-", does: "React with 👎, or take it back", scope: "message" },
+  { action: "replyToMessage", chord: "r", does: "Reply in its thread", scope: "message" },
+  { action: "openThread", chord: "ArrowRight", does: "Open its thread", scope: "message" },
+  { action: "openThread", chord: "t", does: "Open its thread", scope: "message" },
+  { action: "openThread", chord: "Enter", does: "Open its thread", scope: "message" },
+  { action: "backToChannel", chord: "ArrowLeft", does: "Back to the thread's channel message", scope: "message" },
   { action: "nextMessage", chord: "j", does: "Next message", scope: "message list" },
   { action: "nextMessage", chord: "ArrowDown", does: "Next message", scope: "message list" },
   {
