@@ -7,6 +7,7 @@ import { inDialog, inPane, inProfile, inSidebar } from "../regions.ts";
 import type { Scope } from "effect";
 import { TestClock } from "effect/testing";
 import type { TestIdentity } from "../../../testing/server.ts";
+import { cuttable } from "../cuttable.ts";
 import { openAt } from "../render.tsx";
 import { watched } from "../watched.ts";
 
@@ -225,4 +226,71 @@ it.effect(
         [expect.stringContaining(OFFER)],
       ]);
     }).pipe(Effect.scoped, Effect.provide(testCookout())),
+);
+
+const TWO = 2;
+const HELPER_OFFER = "@ada/helper has had no activity for 30 days. Deactivate it?";
+
+const twoOffered: Effect.Effect<TestIdentity, never, TestCookout> = Effect.gen(function* offerTwice() {
+  const cookout = yield* TestCookout;
+  const ada = yield* cookout.createIdentity("ada", HUMAN);
+  yield* cookout.createIdentity("ada/scout", { owner: "ada" });
+  yield* TestClock.adjust("1 minute");
+  yield* cookout.createIdentity("ada/helper", { owner: "ada" });
+  yield* answer(() => ada.client.setDisplayName("ada/helper", "Helper"));
+  yield* Effect.andThen(quietFor("29 days"), quietFor("1 days"));
+  yield* Effect.repeat(openOfferIds(ada.client), { until: (ids) => ids.length >= TWO });
+  return ada;
+});
+
+function keepOldest(client: CookoutClient): Effect.Effect<void> {
+  return Effect.gen(function* keepFirst() {
+    const [oldest = null] = yield* openOfferIds(client);
+    if (oldest !== null) {
+      yield* answer(() => client.keepDeactivationOffer(oldest));
+    }
+  });
+}
+
+function refusingKeep(client: CookoutClient): CookoutClient {
+  return { ...client, keepDeactivationOffer: () => Promise.reject(new Error("refused")) };
+}
+
+it.effect(
+  "two offers give two rows, newest first, and the older kept while the live link was down leaves once it is back",
+  () =>
+    Effect.gen(function* keptWhileDown() {
+      const ada = yield* twoOffered;
+      const { live, report } = cuttable();
+      openAt({ client: ada.client, hash: "#/inbox", live });
+      yield* answer(() => inPane().findByText("Helper"));
+      const before = forYouRows();
+      report("down");
+      yield* keepOldest(ada.client);
+      report("up");
+      yield* earlierShown;
+
+      expect([before, forYouRows(), earlierOffers()]).toStrictEqual([
+        [expect.stringMatching(/^@ada\/helper .*Helper@ada\/helper/u), expect.stringContaining(OFFER)],
+        [expect.stringContaining(HELPER_OFFER)],
+        [expect.stringContaining(OFFER)],
+      ]);
+    }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("a refused Keep keeps the offer row open", () =>
+  Effect.gen(function* refusedKeep() {
+    const ada = yield* twoOffered;
+    openAt({ client: refusingKeep(ada.client), hash: "#/inbox" });
+    yield* answer(() => inPane().findByText(OFFER));
+    const [first = null] = within(screen.getByRole("list", { name: "For you" })).getAllByRole("button", {
+      name: "Keep",
+    });
+    if (first !== null) {
+      fireEvent.click(first);
+    }
+    yield* settled;
+
+    expect([forYouRows().length, inboxCounts(), earlierOffers()]).toStrictEqual([TWO, ["2 for you"], []]);
+  }).pipe(Effect.provide(testCookout())),
 );
