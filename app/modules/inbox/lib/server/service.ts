@@ -15,7 +15,7 @@ import type {
   ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../index.ts";
-import type { Acked, Fails, Hub } from "./acks.ts";
+import type { Acked, Fails, Hub, NudgesRead } from "./acks.ts";
 import { Context, Effect, Layer, PubSub } from "effect";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
 import { acksOn, orMessageNotFound } from "./acks.ts";
@@ -42,6 +42,7 @@ interface MovedBack {
 
 interface Hubs {
   readonly acked: Hub<Acked>;
+  readonly nudgesRead: Hub<NudgesRead>;
   readonly readReceipts: ReadReceipts["Service"];
   readonly movedBack: Hub<MovedBack>;
   readonly subscriptions: Hub<SubscriptionChanged>;
@@ -64,6 +65,7 @@ interface InboxService {
   readonly acked: Effect.Effect<PubSub.Subscription<Acked>, never, Scope.Scope>;
   readonly markUnread: (caller: Identity, id: MessageId) => Fails<MarkUnreadResponse>;
   readonly movedBack: Effect.Effect<PubSub.Subscription<MovedBack>, never, Scope.Scope>;
+  readonly nudgesRead: Effect.Effect<PubSub.Subscription<NudgesRead>, never, Scope.Scope>;
   readonly subscriptionChanged: Effect.Effect<PubSub.Subscription<SubscriptionChanged>, never, Scope.Scope>;
   readonly follow: (caller: Identity, asked: string) => Fails<FollowResponse>;
   readonly unfollow: (caller: Identity, asked: string) => Fails<FollowResponse>;
@@ -80,14 +82,19 @@ interface InboxOn {
 
 function inboxOn(on: InboxOn): InboxService {
   const { hubs, storage } = on;
-  const { acked: hub, deactivationOffers, movedBack, offlineAlerts, subscriptions } = hubs;
+  const { acked: hub, deactivationOffers, movedBack, nudgesRead, offlineAlerts, subscriptions } = hubs;
+  const listing = listingOn({ deactivationOffers, offlineAlerts, storage });
   return {
     ...acksOn(on),
-    ...listingOn({ deactivationOffers, offlineAlerts, storage }),
+    ...listing,
     acked: hub.subscribe,
     follow: following({ change: storage.followThread, isFollowing: true }),
     keepDeactivationOffer: deactivationOffers.keep,
     markAlertRead: (caller, asked) => Effect.map(offlineAlerts.markRead(caller, asked), (alert) => ({ alert })),
+    markNudgeRead: (caller, asked) =>
+      Effect.tap(listing.markNudgeRead(caller, asked), ({ nudge }) =>
+        nudgesRead.publish({ nudgeIds: [nudge.id], recipient: caller.name }),
+      ),
     markUnread: (caller, id) =>
       Effect.gen(function* markUnread() {
         const moved = yield* storage.moveReadPositionBack(caller.name, id);
@@ -96,6 +103,7 @@ function inboxOn(on: InboxOn): InboxService {
         return { readPosition };
       }),
     movedBack: movedBack.subscribe,
+    nudgesRead: nudgesRead.subscribe,
     readPositions: (caller) =>
       Effect.map(storage.listReadPositions(caller.name), (readPositions) => ({ readPositions })),
     subscribe: subscription({ change: storage.subscribeChannel, hub: subscriptions, subscribed: true }),
@@ -121,9 +129,10 @@ const inboxLayer: Layer.Layer<Inbox, never, Storage | ReadReceipts | OfflineAler
     const deactivationOffers = yield* DeactivationOffers;
     const acked = yield* hubOf<Acked>();
     const movedBack = yield* hubOf<MovedBack>();
+    const nudgesRead = yield* hubOf<NudgesRead>();
     const subscriptions = yield* hubOf<SubscriptionChanged>();
     return inboxOn({
-      hubs: { acked, deactivationOffers, movedBack, offlineAlerts, readReceipts, subscriptions },
+      hubs: { acked, deactivationOffers, movedBack, nudgesRead, offlineAlerts, readReceipts, subscriptions },
       storage,
     });
   }),

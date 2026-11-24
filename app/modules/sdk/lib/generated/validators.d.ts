@@ -2,7 +2,7 @@
 import type { AgentJoinCollectedResponse, AgentJoinRequestResponse, AgentJoinRequestStartedResponse, AgentSessionResponse, JoinCodeResponse, LeaveResponse, ListAgentSessionsResponse, RevokeAgentSessionResponse } from "../../../agent-sessions/index.ts";
 import type { ChannelResponse, ListChannelsResponse } from "../../../channels/index.ts";
 import type { CallCommandResponse, CommandWithSecretResponse, ListCommandsResponse } from "../../../commands/index.ts";
-import type { AgentSessionEvent, ChannelDeletedEvent, ChannelEvent, CleanCloseResponse, CommandEvent, ConnectedEvent, DeactivationOfferEvent, IdentityDeletedEvent, IdentityEvent, InboxItemEvent, MessageEvent, NudgeEvent, OfflineAlertEvent, PresenceEvent, PresenceResponse, ReactionEvent, ReadPositionEvent, ReadPositionMovedBackEvent, ReadReceiptEvent, SubscriptionEvent, ThreadEvent } from "../../../events/index.ts";
+import type { AgentSessionEvent, ChannelDeletedEvent, ChannelEvent, CleanCloseResponse, CommandEvent, ConnectedEvent, DeactivationOfferEvent, IdentityDeletedEvent, IdentityEvent, InboxItemEvent, MessageEvent, NudgeEvent, NudgeReadEvent, OfflineAlertEvent, PresenceEvent, PresenceResponse, ReactionEvent, ReadPositionEvent, ReadPositionMovedBackEvent, ReadReceiptEvent, SubscriptionEvent, ThreadEvent } from "../../../events/index.ts";
 import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../../http/index.ts";
 import type { DeactivateIdentityResponse, IdentityMessageCountResponse, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";
 import type { AckAllResponse, AckResponse, DeactivationOfferResponse, FollowResponse, InboxHistoryResponse, InboxResponse, MarkUnreadResponse, NudgeResponse, OfflineAlertResponse, ReadPositionsResponse, SubscriptionResponse } from "../../../inbox/index.ts";
@@ -34,6 +34,7 @@ export declare function isIdentityEvent(data: unknown): data is IdentityEvent;
 export declare function isInboxItemEvent(data: unknown): data is InboxItemEvent;
 export declare function isMessageEvent(data: unknown): data is MessageEvent;
 export declare function isNudgeEvent(data: unknown): data is NudgeEvent;
+export declare function isNudgeReadEvent(data: unknown): data is NudgeReadEvent;
 export declare function isOfflineAlertEvent(data: unknown): data is OfflineAlertEvent;
 export declare function isPresenceEvent(data: unknown): data is PresenceEvent;
 export declare function isPresenceResponse(data: unknown): data is PresenceResponse;

@@ -215,12 +215,16 @@ export { Nudges, nudgesLayer } from "./lib/server/nudge-scheduler.ts";
  */
 export { DeactivationOffers, deactivationOffersLayer } from "./lib/server/deactivation-offers.ts";
 
-/** The Schemas of an inbox item, a read position, a moved-back one and a subscription, for the events that carry one. */
+/**
+ * The Schemas of an inbox item, a Nudge and its ID, a read position, a moved-back one and a subscription, for the
+ * events that carry one.
+ */
 export {
   DeactivationOfferSchema,
   InboxItemSchema,
   MovedBackReadPositionSchema,
   OfflineAlertSchema,
+  NudgeIdSchema,
   NudgeSchema,
   ReadPositionSchema,
   SubscriptionResponseSchema,

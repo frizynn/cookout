@@ -39,7 +39,7 @@ interface NudgesSection {
   readonly raiseDueNudges: (now: IsoTime, intervals: NudgeIntervals) => Fails<readonly StoredNudge[]>;
   readonly listNudges: (recipient: IdentityName, which: "unread" | "all") => Fails<readonly StoredNudge[]>;
   readonly markNudgeRead: (recipient: IdentityName, id: NudgeId) => Fails<StoredNudge | null>;
-  readonly markNudgesReadUpTo: (recipient: IdentityName, upTo: NudgeId) => Fails<void>;
+  readonly markNudgesReadUpTo: (recipient: IdentityName, upTo: NudgeId) => Fails<readonly NudgeId[]>;
 }
 
 type NudgeSources = Pick<MessagesSection, "getThread" | "listOpenThreads"> &
@@ -212,13 +212,11 @@ function markOne(on: NudgesOn, recipient: IdentityName, id: NudgeId): Fails<Stor
   });
 }
 
-function markUpTo(on: NudgesOn, recipient: IdentityName, upTo: NudgeId): Fails<void> {
+function markUpTo(on: NudgesOn, recipient: IdentityName, upTo: NudgeId): Fails<readonly NudgeId[]> {
   return Effect.flatMap(on.records.ofRecipient(recipient), (owned) => {
     const unread = Arr.filter(owned, (record) => !record.read && record.id <= upTo);
-    return on.records.markRead(
-      recipient,
-      Arr.map(unread, (record) => record.id),
-    );
+    const ids = Arr.map(unread, (record) => record.id);
+    return Effect.as(on.records.markRead(recipient, ids), ids);
   });
 }
 

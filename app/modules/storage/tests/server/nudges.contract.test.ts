@@ -126,7 +126,7 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
-  "storage contract ($adapter): nudges are listed per recipient, and read one at a time or up to one",
+  "storage contract ($adapter): nudges are listed per recipient, and read one at a time or up to one, which names those it read",
   ({ layer }) =>
     Effect.gen(function* listAndRead() {
       const { post, storage } = yield* grill(layer);
@@ -138,11 +138,16 @@ it.effect.each(storageLayers)(
       const marked = yield* Effect.map(storage.markNudgeRead(ADA, oldest), (nudge) =>
         Option.exists(Option.fromNullishOr(nudge), ({ read }) => read),
       );
-      yield* storage.markNudgesReadUpTo(ADA, middle);
+      const readUpTo = yield* storage.markNudgesReadUpTo(ADA, middle);
       const unread = yield* storage.listNudges(ADA, "unread");
       const all = yield* storage.listNudges(ADA, "all");
 
-      expect([others, marked, readStates(unread)]).toStrictEqual([[[], null], true, [{ id: newest, read: false }]]);
+      expect([others, marked, readUpTo, readStates(unread)]).toStrictEqual([
+        [[], null],
+        true,
+        [middle],
+        [{ id: newest, read: false }],
+      ]);
       expect(readStates(all)).toStrictEqual([
         { id: oldest, read: true },
         { id: middle, read: true },

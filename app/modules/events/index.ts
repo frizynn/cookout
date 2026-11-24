@@ -12,6 +12,7 @@ import type {
   InboxItem,
   MovedBackReadPosition,
   Nudge,
+  NudgeId,
   OfflineAlert,
   ReadPosition,
   SubscriptionResponse,
@@ -44,6 +45,16 @@ export interface InboxItemEvent {
 export interface NudgeEvent {
   readonly type: "nudge";
   readonly nudge: Nudge;
+}
+
+/**
+ * Nudges of the caller's just marked read, by `POST /v1/inbox/nudges/:id/read` or by `ackAll`'s `nudgesUpTo` (Mark all
+ * as read), named by ID. Sent on every stream of the caller, so a nudge read in one session leaves the unread inbox of
+ * the others. `cookout watch` ignores it. It has no SSE `id`.
+ */
+export interface NudgeReadEvent {
+  readonly type: "nudge-read";
+  readonly nudgeIds: readonly NudgeId[];
 }
 
 /**
@@ -208,6 +219,7 @@ export interface OfflineAlertEvent {
 export type CookoutEvent =
   | InboxItemEvent
   | NudgeEvent
+  | NudgeReadEvent
   | DeactivationOfferEvent
   | ReadPositionEvent
   | ReadPositionMovedBackEvent

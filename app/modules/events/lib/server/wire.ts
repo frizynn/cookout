@@ -11,6 +11,7 @@ import type {
   InboxItemEvent,
   MessageEvent,
   NudgeEvent,
+  NudgeReadEvent,
   OfflineAlertEvent,
   PresenceEvent,
   ReactionEvent,
@@ -25,6 +26,7 @@ import {
   DeactivationOfferSchema,
   InboxItemSchema,
   MovedBackReadPositionSchema,
+  NudgeIdSchema,
   NudgeSchema,
   OfflineAlertSchema,
   ReadPositionSchema,
@@ -52,6 +54,10 @@ export const InboxItemEventSchema = matchesWire<InboxItemEvent>()(
 
 export const NudgeEventSchema = matchesWire<NudgeEvent>()(
   Schema.Struct({ nudge: NudgeSchema, type: Schema.Literal("nudge") }),
+);
+
+export const NudgeReadEventSchema = matchesWire<NudgeReadEvent>()(
+  Schema.Struct({ nudgeIds: Schema.Array(NudgeIdSchema), type: Schema.Literal("nudge-read") }),
 );
 
 export const DeactivationOfferEventSchema = matchesWire<DeactivationOfferEvent>()(

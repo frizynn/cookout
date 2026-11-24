@@ -3,11 +3,12 @@ import type {
   AckAllResponse,
   AckResponse,
   DeactivationOfferId,
+  NudgeId,
   OfflineAlert,
   ReadPosition,
 } from "../../index.ts";
 import type { AckedMessage, Storage, StorageUnavailable } from "../../../storage/server.ts";
-import { DateTime, Effect, Predicate } from "effect";
+import { Array as Arr, DateTime, Effect, Predicate } from "effect";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
 import type { PubSub, Scope } from "effect";
 import type { MessageId } from "../../../messages/index.ts";
@@ -25,6 +26,11 @@ interface Acked {
   readonly readPosition: ReadPosition;
 }
 
+interface NudgesRead {
+  readonly recipient: IdentityName;
+  readonly nudgeIds: readonly NudgeId[];
+}
+
 interface Hub<Value> {
   readonly publish: (value: Value) => Effect.Effect<boolean>;
   readonly subscribe: Effect.Effect<PubSub.Subscription<Value>, never, Scope.Scope>;
@@ -32,6 +38,7 @@ interface Hub<Value> {
 
 interface AckHubs {
   readonly acked: Hub<Acked>;
+  readonly nudgesRead: Hub<NudgesRead>;
   readonly readReceipts: ReadReceipts["Service"];
   readonly offlineAlerts: OfflineAlerts["Service"];
   readonly deactivationOffers: {
@@ -86,7 +93,10 @@ function nonMessagesAcked(
 ): Effect.Effect<void, StorageUnavailable> {
   return Effect.gen(function* ackNudgesAndOffers() {
     if (Predicate.isNotUndefined(nudgesUpTo)) {
-      yield* storage.markNudgesReadUpTo(caller.name, nudgesUpTo);
+      const nudgeIds = yield* storage.markNudgesReadUpTo(caller.name, nudgesUpTo);
+      if (Arr.isReadonlyArrayNonEmpty(nudgeIds)) {
+        yield* hubs.nudgesRead.publish({ nudgeIds, recipient: caller.name });
+      }
     }
     if (Predicate.isNotUndefined(deactivationOffersUpTo)) {
       yield* hubs.deactivationOffers.keepUpTo(caller, deactivationOffersUpTo);
@@ -124,4 +134,4 @@ function acksOn(on: AcksOn): AckCalls {
   };
 }
 
-export { type Acked, type Fails, type Hub, acksOn, orMessageNotFound };
+export { type Acked, type Fails, type Hub, type NudgesRead, acksOn, orMessageNotFound };
