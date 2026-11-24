@@ -185,4 +185,4 @@ function itemsApplied(applying: Applying): InboxEntries {
   return readApplied(applying);
 }
 
-export { earlierApplied, earlierWithPage, isReaction, itemsApplied, withItems, withRead };
+export { earlierApplied, earlierWithPage, itemsApplied, withItems, withRead };

@@ -130,7 +130,7 @@ export {
   reactionsOf,
 } from "./lib/part-selectors.ts";
 export type { BoardState } from "./lib/board-store.ts";
-export type { InboxCalls, MarkAllState, MarkChannelRefusal } from "./lib/inbox-calls.ts";
+export type { MarkAllState, MarkChannelRefusal } from "./lib/inbox-calls.ts";
 export {
   type AlertsShown,
   type EarlierShown,

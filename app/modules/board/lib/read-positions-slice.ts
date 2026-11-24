@@ -173,7 +173,6 @@ function behindOnServer({ held, server }: Comparing): readonly MovedBackReadPosi
 
 export {
   NO_READ_POSITIONS,
-  type Place,
   type ReadPositions,
   behindOnServer,
   isReadAt,
