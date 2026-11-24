@@ -40,4 +40,4 @@ function createKeymapStore(platform: Platform): KeymapStore {
   };
 }
 
-export { type KeymapState, type KeymapStore, createKeymapStore };
+export { type KeymapStore, createKeymapStore };

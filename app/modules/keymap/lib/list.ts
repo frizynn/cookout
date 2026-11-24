@@ -39,4 +39,4 @@ function shortcutListOf(platform: Platform): readonly ListedGroup[] {
     .filter(({ shortcuts }) => shortcuts.length > NONE);
 }
 
-export { type Listed, type ListedGroup, shortcutListOf };
+export { type ListedGroup, shortcutListOf };
