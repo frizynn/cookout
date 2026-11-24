@@ -1,87 +1,124 @@
+import type { Shot, Theme, ThemePass } from "../lib/screenshots.ts";
 import { expect, it } from "vitest";
 import { screenshotOptions, takeScreenshots } from "../lib/screenshots.ts";
-import type { Shot } from "../lib/screenshots.ts";
 
 const SCREENS = screenshotOptions([]).screens;
+const SEEDED_UNREAD = 1;
+const READ = 0;
+const THROUGH_STOP = 1;
+const FIRST = 0;
+const LAST = -1;
 
-function recordingShooter(note: (name: string) => void, broken: string): (shot: Shot) => Promise<void> {
-  return async (shot) => {
+interface FakeBoards {
+  readonly freshBoard: (theme: Theme) => Promise<ThemePass>;
+  readonly log: readonly string[];
+}
+
+function opensThread(shot: Shot): boolean {
+  return shot.screen.hash.includes("/threads/") || shot.screen.hash.startsWith("#/inbox/");
+}
+
+function fakeBoards(broken: string): FakeBoards {
+  const log: string[] = [];
+  async function freshBoard(theme: Theme): Promise<ThemePass> {
     await Promise.resolve();
-    const name = `${shot.screen.name}-${shot.theme}`;
-    if (name === broken) {
-      throw new Error("Timed out waiting for Thanks, both of you.");
-    }
-    note(name);
-  };
+    let unread = SEEDED_UNREAD;
+    log.push(`seed ${theme}`);
+    return {
+      shoot: async (shot): Promise<void> => {
+        await Promise.resolve();
+        const name = `${shot.screen.name}-${shot.theme}`;
+        if (name === broken) {
+          throw new Error("Timed out waiting for Thanks, both of you.");
+        }
+        log.push(`${name}: ${String(unread)} unread`);
+        if (opensThread(shot)) {
+          unread = READ;
+        }
+      },
+      stop: async (): Promise<void> => {
+        await Promise.resolve();
+        log.push(`stop ${theme}`);
+      },
+    };
+  }
+  return { freshBoard, log };
 }
 
-interface Recorder {
-  readonly note: (name: string) => void;
-  readonly taken: readonly string[];
+function passOf(log: readonly string[], theme: Theme): readonly string[] {
+  const start = log.indexOf(`seed ${theme}`);
+  const end = log.indexOf(`stop ${theme}`);
+  return log.slice(start, end + THROUGH_STOP).map((line) => line.replaceAll(theme, "<theme>"));
 }
 
-function recorder(): Recorder {
-  const taken: string[] = [];
-  return {
-    note: (name): void => {
-      taken.push(name);
-    },
-    taken,
-  };
-}
-
-function pairs(): readonly string[] {
-  return SCREENS.flatMap((screen) => [`${screen.name}-light`, `${screen.name}-dark`]);
-}
-
-it("takes each standard screen in light and then in dark before the next screen", { timeout: 2000 }, async () => {
+it("takes every screen in light on a fresh board, then every screen in dark on another", {
+  timeout: 2000,
+}, async () => {
   expect.hasAssertions();
 
-  const { note, taken } = recorder();
-  const failures = await takeScreenshots({ screens: SCREENS, shoot: recordingShooter(note, "") });
+  const { freshBoard, log } = fakeBoards("");
+  const failures = await takeScreenshots({ freshBoard, screens: SCREENS });
 
-  expect([failures, taken, SCREENS.map((screen) => screen.name)]).toStrictEqual([
+  expect([failures, log.at(FIRST), log.at(LAST), log.indexOf("stop light") < log.indexOf("seed dark")]).toStrictEqual([
     [],
-    pairs(),
-    [
-      "inbox",
-      "inbox-more",
-      "inbox-nudge",
-      "inbox-offer",
-      "inbox-loading",
-      "inbox-thread",
-      "inbox-narrow",
-      "inbox-channel",
-      "channel",
-      "thread",
-      "receipt",
-      "people",
-      "profile",
-      "warning",
-      "admin-profile",
-      "admin-deactivated",
-      "confirm",
-      "settings",
-      "new-channel",
-      "narrow",
-      "closed-threads",
-      "closed-thread",
-      "open-threads",
-      "collapsed",
-      "reconnecting",
-    ],
+    "seed light",
+    "stop dark",
+    true,
+  ]);
+  expect(passOf(log, "dark")).toStrictEqual(passOf(log, "light"));
+  expect(passOf(log, "light").filter((line) => line.startsWith("inbox"))).toStrictEqual([
+    "inbox-<theme>: 1 unread",
+    "inbox-more-<theme>: 1 unread",
+    "inbox-nudge-<theme>: 1 unread",
+    "inbox-offer-<theme>: 1 unread",
+    "inbox-loading-<theme>: 1 unread",
+    "inbox-thread-<theme>: 1 unread",
+    "inbox-narrow-<theme>: 0 unread",
+    "inbox-channel-<theme>: 0 unread",
+  ]);
+});
+
+it("lists the standard screens in the order they are taken", { timeout: 2000 }, () => {
+  expect.hasAssertions();
+  expect(SCREENS.map((screen) => screen.name)).toStrictEqual([
+    "inbox",
+    "inbox-more",
+    "inbox-nudge",
+    "inbox-offer",
+    "inbox-loading",
+    "inbox-thread",
+    "inbox-narrow",
+    "inbox-channel",
+    "channel",
+    "thread",
+    "receipt",
+    "people",
+    "profile",
+    "warning",
+    "admin-profile",
+    "admin-deactivated",
+    "confirm",
+    "settings",
+    "new-channel",
+    "narrow",
+    "closed-threads",
+    "closed-thread",
+    "open-threads",
+    "collapsed",
+    "reconnecting",
   ]);
 });
 
 it("a screen that fails to render is reported, and the others are still taken", { timeout: 2000 }, async () => {
   expect.hasAssertions();
 
-  const { note, taken } = recorder();
-  const failures = await takeScreenshots({ screens: SCREENS, shoot: recordingShooter(note, "thread-dark") });
+  const { freshBoard, log } = fakeBoards("thread-dark");
+  const failures = await takeScreenshots({ freshBoard, screens: SCREENS });
 
-  expect([failures, taken]).toStrictEqual([
+  expect([failures, log.filter((line) => line.startsWith("thread-")), log.at(LAST)]).toStrictEqual([
     ["thread-dark: Timed out waiting for Thanks, both of you."],
-    pairs().filter((name) => name !== "thread-dark"),
+    ["thread-light: 0 unread"],
+    "stop dark",
   ]);
 });
 

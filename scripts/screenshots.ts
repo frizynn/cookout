@@ -1,5 +1,5 @@
 import type { Browser, BrowserContext, Page } from "@playwright/test";
-import type { Screen, Shot, Theme } from "./lib/screenshots.ts";
+import type { Screen, Shot, Theme, ThemePass } from "./lib/screenshots.ts";
 import { field, list, parseJson, text } from "./lib/json.ts";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { screenshotOptions, takeScreenshots, withInboxEntries, withOlderHistory } from "./lib/screenshots.ts";
@@ -219,32 +219,21 @@ function loginOf(shot: Shot): Login {
   return "member";
 }
 
-function shooter(contexts: ReadonlyMap<string, BrowserContext>, out: string): (shot: Shot) => Promise<void> {
+type NewPage = (login: Login) => Promise<Page>;
+
+function shooter(newPage: NewPage, out: string): (shot: Shot) => Promise<void> {
   return async (shot) => {
-    const key = `${loginOf(shot)}-${shot.theme}`;
-    const context = contexts.get(key);
-    if (typeof context !== "object") {
-      throw new TypeError(`no browser logged in as ${key}`);
-    }
-    await screenshot(await context.newPage(), shot, out);
+    await screenshot(await newPage(loginOf(shot)), shot, out);
   };
 }
 
-async function shootBoard(board: Board, screens: readonly Screen[], out: string): Promise<readonly string[]> {
-  const browser = await chromium.launch();
-  try {
-    const admin = { ...board, token: ADMIN_TOKEN };
-    const contexts = new Map<string, BrowserContext>([
-      ["member-light", await loggedIn(browser, board, "light")],
-      ["member-dark", await loggedIn(browser, board, "dark")],
-      ["admin-light", await loggedIn(browser, admin, "light")],
-      ["admin-dark", await loggedIn(browser, admin, "dark")],
-    ]);
-    const failures = await takeScreenshots({ screens, shoot: shooter(contexts, out) });
-    return failures;
-  } finally {
-    await browser.close();
-  }
+async function loggedInBoth(browser: Browser, board: Board, theme: Theme): Promise<NewPage> {
+  const admin = await loggedIn(browser, { ...board, token: ADMIN_TOKEN }, theme);
+  const member = await loggedIn(browser, board, theme);
+  return async (login) => {
+    const page = await { admin, member }[login].newPage();
+    return page;
+  };
 }
 
 function report(failures: readonly string[], out: string): void {
@@ -264,19 +253,37 @@ async function prepared(url: string): Promise<Board> {
   return board;
 }
 
-async function shootFreshBoard(screens: readonly Screen[], out: string): Promise<readonly string[]> {
-  const folder = mkdtempSync(path.join(tmpdir(), "cookout-screenshots-db-"));
-  try {
-    const server = await startServer(path.join(folder, "cookout.db"));
-    try {
-      const board = await prepared(server.url);
-      const failures = await shootBoard(board, screens, out);
-      return failures;
-    } finally {
-      await server.stop();
+function freshBoards(browser: Browser, out: string): (theme: Theme) => Promise<ThemePass> {
+  return async (theme) => {
+    const folder = mkdtempSync(path.join(tmpdir(), "cookout-screenshots-db-"));
+    function removeFolder(): void {
+      rmSync(folder, { force: true, recursive: true });
     }
+    const server = await startServer(path.join(folder, "cookout.db")).catch((error: unknown) => {
+      removeFolder();
+      throw error;
+    });
+    async function stop(): Promise<void> {
+      await server.stop();
+      removeFolder();
+    }
+    try {
+      const newPage = await loggedInBoth(browser, await prepared(server.url), theme);
+      return { shoot: shooter(newPage, out), stop };
+    } catch (error) {
+      await stop();
+      throw error;
+    }
+  };
+}
+
+async function shootFreshBoards(screens: readonly Screen[], out: string): Promise<readonly string[]> {
+  const browser = await chromium.launch();
+  try {
+    const failures = await takeScreenshots({ freshBoard: freshBoards(browser, out), screens });
+    return failures;
   } finally {
-    rmSync(folder, { force: true, recursive: true });
+    await browser.close();
   }
 }
 
@@ -285,7 +292,7 @@ async function main(): Promise<void> {
   const out = options.out ?? mkdtempSync(path.join(tmpdir(), "cookout-screenshots-"));
   mkdirSync(out, { recursive: true });
   build();
-  report(await shootFreshBoard(options.screens, out), out);
+  report(await shootFreshBoards(options.screens, out), out);
 }
 
 await main();
