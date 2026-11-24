@@ -20,7 +20,11 @@
  * `shown`, such as "Reconnecting…". In the sidebar, `NavLink` is one link, bold when
  * it has something new (`marked`), highlighted when it is the open item, with
  * an icon and any `Pill` after it: a count read out by its label, loud (the
- * unread colour), quiet, or unseen (read out only); `NavHeading` heads a
+ * unread colour), quiet, or unseen (read out only); given a `menu`, it is an `ActionMenu`'s target.
+ * `ActionMenu` is the one way to give something outside a message an actions menu: it wraps its children so that
+ * right-clicking them, or pressing the context-menu key or Shift+F10 on what has focus in them, opens its `choices`
+ * as a context menu named by its `label`, and a More actions button, shown on hover or focus at their right, opens
+ * the same menu as a dropdown. `NavHeading` heads a
  * `NavList` of links, with any `HeadingButton` on its line, a plus named by
  * its label that starts something new, such as a channel; in the footer, `FooterLink` is a link
  * with a gear, such as Settings, highlighted when open. `Pane` is
@@ -111,8 +115,8 @@
  * mark (`for-you`, the filled accent block, when it mentions or answers the reader, or `open`); and an action (such as Reply: a link, or a button with `onAction`) and
  * a More actions button shown on hover or focus, after a button for each of its `menu`'s `reactions`; a reaction's
  * `key`, pressed while the message itself has focus, leaves it too. Its `menu` gives it one actions menu (the action,
- * then each reaction, then Mark unread, then the thread choice, such as Close, if any), drawn two ways on Radix: right-clicking the message opens it as a context menu at the pointer, and the
- * More actions button opens it as a dropdown. Every menu item draws its `icon` (a `ThreadChoice` names one too), which its type requires, before its label. Radix gives both their keyboard and focus behaviour; a chosen item's
+ * then each reaction, then Mark unread, then the thread choice, such as Close, if any), drawn two ways on Radix: right-clicking the message, or the context-menu key or Shift+F10 on it, opens it as a context menu at the pointer, and the
+ * More actions button opens it as a dropdown. Every menu item draws its `icon` (a `ThreadChoice` names one too), which its type requires, before its label. An item may be `disabled`, dimmed and not chosen. Radix gives both their keyboard and focus behaviour; a chosen item's
  * action runs once the menu has closed. Mark unread's tooltip names its shortcut, `Alt-click`: an Alt-click (Option-click
  * on macOS) on the message, but not on a link, button or other interactive element in it, runs Mark unread at once and
  * focuses and selects nothing; `StandaloneMessage` does the same. `StandaloneMessage` is one named message on its own, such as a
@@ -216,7 +220,7 @@ export { Muted } from "./lib/muted.tsx";
 export { MutedLines } from "./lib/muted-lines.tsx";
 export { ReactionChip } from "./lib/reaction-chip.tsx";
 export { ReactionChips } from "./lib/reaction-chips.tsx";
-export type { ReactionChoice, ThreadChoice } from "./lib/menu-parts.ts";
+export type { ActionMenuParts, MenuChoice, ReactionChoice, ThreadChoice } from "./lib/menu-parts.ts";
 export { QuietLink } from "./lib/quiet-link.tsx";
 export { Notice } from "./lib/notice.tsx";
 export { HeadingButton } from "./lib/heading-button.tsx";
