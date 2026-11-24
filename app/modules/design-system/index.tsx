@@ -1,13 +1,10 @@
 /**
- * The design system: hand-written Tailwind components styled after shadcn/ui
- * (its token names and its card), in a Vercel-like neutral look with small
- * pops of colour (ADR 0080). Every view builds from these and none
- * styles itself, so no component takes classes. `styles.css` is the Tailwind
- * theme, which `index.html` loads: its tokens are CSS variables, dark by
- * default, light under `data-theme="light"` on the root element, and light
- * under `prefers-color-scheme: light` unless `data-theme="dark"`; components
- * read tokens, never raw colours. Text and the UI are sans, times and channel
- * names mono.
+ * The design system: hand-written Tailwind components styled after shadcn/ui (its token names and its card), in a
+ * Vercel-like neutral look with small pops of colour (ADR 0080). Every view builds from these and none styles
+ * itself, so no component takes classes. `styles.css` is the Tailwind theme, which `index.html` loads: its tokens
+ * are CSS variables, dark by default, light under `data-theme="light"` on the root element, and light under
+ * `prefers-color-scheme: light` unless `data-theme="dark"`; components read tokens, never raw colours. Text and the
+ * UI are sans, times and channel names mono.
  *
  * `Workspace` is the page around every route once logged in: a `Sidebar` on
  * the left (on a narrow screen, behind a button that opens and closes it),
@@ -24,16 +21,17 @@
  * an icon and any `Pill` after it: a count read out by its label, loud (the
  * unread colour), quiet, or unseen (read out only); a `menu` is its `ActionMenu`.
  * `ActionMenu` is a menu outside a message: right-clicking its children, or Shift+F10 or the menu key in them, opens
- * its `choices` as a context menu named by its `label`; a More actions button (or `buttonLabel`), shown on hover or
- * focus (`inline`: before a name), opens them as a dropdown. `PersonMenu` is a name's. `NavHeading` heads a
- * `NavList` of links, with any `HeadingButton` on its line, a plus named by
- * its label that starts something new, such as a channel; in the footer, `FooterLink` is a link
- * with a gear, such as Settings, highlighted when open. `Pane` is
+ * its `choices` (each showing any `keys` it has) as a context menu named by its `label`; a More actions button (or
+ * `buttonLabel`), shown on hover or focus (`inline`: before a name), opens them as a dropdown. `PersonMenu` is a
+ * name's; under a `PersonKeysArea`, its keys (View profile, Message, Copy name, which a polite status announces) act
+ * on the name while focus is in it. `NavHeading` heads a `NavList` of links, with any `HeadingButton` on its line, a
+ * plus named by its label that starts something new, such as a channel; in the footer, `FooterLink` is a link with a
+ * gear, such as Settings, highlighted when open. `Pane` is
  * the main column, with a `PaneHeader` (title, description and any action on
  * its right, such as a `PressButton`, a button that is on or off), a
  * named `Page` that scrolls a centred column of `PageSection`s, each headed by
  * a link to itself, its heading focused when `focused` (such as Settings,
- * where `ChoiceGroup` picks one of a few choices), a
+ * where `ChoiceGroup` is a radio group of a few choices), a
  * named `ScrollArea` that stays scrolled to the end as what it counts grows, unless
  * scrolled up, and anything under it, such as a message box in a `BoxFrame`
  * with its keyboard hint; `SidePanel` is a
@@ -159,9 +157,9 @@
  * of options under a box, such as mentions or commands (each with any muted detail), one selected, which leaves the box
  * focused even when a pointer picks one; it sits in the overlay layer, above all in the pane. `ComboboxField` is a
  * named search input (`box` its ID) that is a combobox controlling the listbox `list`, its option at `active` the
- * active one while `expanded`; `ResultList` is a named listbox (`list` its ID) of named `ResultGroup`s of
- * `ResultOption`s, each a label, any muted detail and its children, highlighted (and scrolled into view) when
- * `highlighted`; pressing one calls `onChoose` with its `href`, leaving the box focused. `DataArea` is a labelled box
+ * active one while `expanded`; `Listbox` is the named listbox (`list` its ID) both draw, of options in optional named
+ * groups, drawn by its children, the one at `highlighted` selected (scrolled into view in the `results` look); pressing
+ * one calls `onChoose` with its `value`, leaving the box focused; `ResultOption` is a result's label, detail and children. `DataArea` is a labelled box
  * to write JSON in, `LinesArea` an optional one for lines (`name: value` headers), whose text its owner holds.
  * `PromptForm` is a named card in place of a message box that asks for a
  * command's data, titled, with a Cancel and a submit button, its first field focused, and Escape anywhere in it calls
@@ -215,12 +213,14 @@ export {
   Mention,
   IdentityCard,
   PersonMenu,
+  PersonKeysArea,
   IdentityCardComposer,
   IdentityCards,
   ReactionChip,
   ReactionChips,
 } from "./lib/messages.ts";
 export type {
+  PersonKeysSource,
   IdentityCardLink,
   IdentityCardParts,
   IdentityCardSource,
@@ -267,8 +267,9 @@ export {
   PromptForm,
   Suggestions,
   ComboboxField,
-  ResultGroup,
-  ResultList,
+  Listbox,
+  type ListboxGroup,
+  type ListboxOption,
   ResultOption,
   SendButton,
   SubmitButton,
