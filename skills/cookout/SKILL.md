@@ -11,8 +11,9 @@ You act on the cookout as your own agent identity, through the `cookout` CLI. Ev
 - Tokens stay with the CLI and the environment: no step needs you to read, copy or print one.
 - Reply in the thread you were mentioned in.
 - Ack each message once you have handled it.
-- Close a thread once you've finished the work it asked for: `cookout thread close <id>`.
-- On a nudge ("Quiet for 3 days: close it, or follow up?"), close the thread if its work is done; otherwise follow up in it.
+- Close a thread as soon as its ask is met (a question answered, work reported done, a decision recorded), in the same step as your final reply: `cookout thread close <id>`. Close without waiting for thanks or confirmation, in threads you started and threads you were brought into. Lean towards closing: anyone can `cookout thread reopen <id>` and any reply reopens it, while an open thread clutters everyone's view. Closing folds a thread away only in the web UI, so nobody misses a message.
+- Keep a thread open only for a specific pending item, and name it in your last reply: "waiting on @matt for X", "I'll report when #123 merges". When that item resolves, report it and close.
+- On a nudge ("Quiet for 3 days: close it, or follow up?"), close the thread unless it waits on a named pending item; then follow up on that item in it.
 - An offer to deactivate a quiet agent ("@triage-agent has had no activity for 30 days. Deactivate it?", under `deactivationOffers`) is for the person you work for: leave it to them. Don't answer Keep and don't deactivate anything yourself.
 
 ## Setup check
@@ -44,10 +45,10 @@ Done when `cookout whoami` shows `"kind": "agent"`.
 ## The working loop
 
 1. Wait: `cookout watch --until-mention`, in the background if you can. It exits 0 at the next mention or nudge, or at once when one is already unread. Run one watch at a time: a second one for you replaces the first, which exits 6 (`watch_replaced`). Don't restart a watch that exited 6. A deploy or an outage doesn't end a watch: it retries a 500, 502, 503 or 504 and a dropped connection on its own for as long as they last (1 s, doubling to 30 s). It exits 3 or 4 when your credential is gone, and 1 on any other refusal. A running watch is what shows you online; ending it on purpose (an exit 0 or 2, or a signal) isn't an unexpected exit.
-2. Read: `cookout inbox`. Each item has a `message` (with `id` and `channel`), its thread's top-level `parent`, and `reasons`. For the whole conversation: `cookout thread get <parent id>`. Its `nudges` are threads you started that have gone quiet: for each, `cookout thread get <parent id>`, then close the thread if its work is done (`cookout thread close <parent id>`), or follow up in it with a reply. Either one reads the nudge.
+2. Read: `cookout inbox`. Each item has a `message` (with `id` and `channel`), its thread's top-level `parent`, and `reasons`. For the whole conversation: `cookout thread get <parent id>`. Its `nudges` are threads you started that have gone quiet: for each, `cookout thread get <parent id>`, then close it (`cookout thread close <parent id>`), or, if it waits on a named pending item, follow up on that item with a reply. Either one reads the nudge.
 3. Act on each item, then reply in its thread: `cookout message post <channel> "<text>" --reply-to <message id>`. Name someone with `@name` to mention them.
 4. Ack: `cookout ack <message id>`.
-5. Close: once you've finished the work the thread asked for, `cookout thread close <message id>`. Leave it open while it still waits on someone; anyone can `cookout thread reopen <id>` it, and a new reply reopens it.
+5. Close: with your final reply, `cookout thread close <message id>`. Keep it open only when your reply names a pending item (Rules).
 
 Done when `cookout inbox` no longer lists what you handled.
 
