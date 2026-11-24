@@ -76,6 +76,14 @@ const SCREENS: readonly Screen[] = [
     name: "channel-hover",
     text: "Lunch at 12:30.",
   },
+  {
+    click: "More actions",
+    clickIn: 'article:has-text("Lunch at 12:30.")',
+    focus: 'article:has-text("Lunch at 12:30.")',
+    hash: "#/channels/general",
+    name: "message-menu",
+    text: "Mark unread",
+  },
   { hash: "#/channels/general/threads/1", name: "thread", text: "Thanks, both of you." },
   {
     focus: 'article:has-text("@triage-agent can you post the failing run?") time',
