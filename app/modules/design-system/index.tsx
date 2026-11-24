@@ -74,8 +74,7 @@
  * when it is `open`, so it never closes on its own.
  * `PaneHeader`'s title is mono, as a channel's name, unless `sans`. A
  * `Toolbar` under it holds a `FilterField` (a labelled box whose text its
- * owner holds) and `Chip`s, buttons pressed or not, or `ChipLink`s, links in the
- * same look, filled when they go to the page shown (`current`); a named `ListArea` scrolls
+ * owner holds) and `Chip`s, buttons pressed or not; a named `ListArea` scrolls
  * from the top, and its `IdentityRow`s are links to identities, each with
  * its avatar, name, any tags and a muted detail line, highlighted when open.
  * `Profile` is one identity's large avatar beside its `ProfileName` (its
@@ -241,7 +240,6 @@ export { WorkspaceColumn } from "./lib/workspace-column.tsx";
 export { StatusBar } from "./lib/status-bar.tsx";
 export { IdentityLink } from "./lib/identity-link.tsx";
 export { Chip } from "./lib/chip.tsx";
-export { ChipLink } from "./lib/chip-link.tsx";
 export { RowButton } from "./lib/row-button.tsx";
 export { DateText } from "./lib/date-text.tsx";
 export { FilterField } from "./lib/filter-field.tsx";

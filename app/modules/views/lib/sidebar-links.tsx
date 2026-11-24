@@ -14,7 +14,6 @@ import { useSyncExternalStore } from "react";
 
 const TEXT = {
   channels: "Channels",
-  openThreads: "Open threads",
   people: "People & agents",
   views: "Views",
 } as const;
@@ -42,13 +41,6 @@ export function SidebarLinks(props: SidebarLinksProps): ReactNode {
     <>
       <NavList label={TEXT.views}>
         <InboxLink active={route.name === "inbox"} counts={counts.inbox} />
-        <NavLink
-          active={route.name === "open-threads"}
-          href={hrefOf({ all: false, name: "open-threads" })}
-          icon="threads"
-          label={TEXT.openThreads}
-          marked={false}
-        />
         <NavLink
           active={route.name === "people" || route.name === "profile"}
           href={hrefOf({ name: "people" })}

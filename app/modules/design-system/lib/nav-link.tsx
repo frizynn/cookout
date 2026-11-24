@@ -17,11 +17,6 @@ const ICONS = {
       />
     </svg>
   ),
-  threads: (
-    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.6" viewBox="0 0 16 16">
-      <path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z" strokeLinejoin="round" />
-    </svg>
-  ),
 } as const;
 
 function linkStyle(parts: NavLinkParts): string {
@@ -34,7 +29,7 @@ function linkStyle(parts: NavLinkParts): string {
   return "text-muted-foreground hover:bg-hover hover:text-foreground";
 }
 
-const FONTS = { channel: "font-mono", inbox: "", people: "", threads: "" } as const;
+const FONTS = { channel: "font-mono", inbox: "", people: "" } as const;
 
 function textStyle(parts: NavLinkParts): string {
   const font = FONTS[parts.icon];

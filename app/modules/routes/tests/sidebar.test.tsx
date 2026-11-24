@@ -119,3 +119,33 @@ it("the People & agents link goes to the directory of identities", { timeout: 50
 
   close();
 });
+
+it("the sidebar has no Open threads link", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const close = openAt({ client: adminClient(), hash: "#/" });
+  await screen.findByRole("heading", { level: 1, name: "Inbox" });
+
+  expect([
+    inSidebar().queryByRole("link", { name: /Open threads/u }),
+    inSidebar().element().textContent.includes("Open threads"),
+  ]).toStrictEqual([null, false]);
+
+  close();
+});
+
+it.each(["#/threads", "#/threads/all"])(
+  "an old Open threads link, %s, opens the inbox",
+  { timeout: 5000 },
+  async (hash) => {
+    expect.hasAssertions();
+
+    const close = openAt({ client: adminClient(), hash });
+
+    const heading = await screen.findByRole("heading", { level: 1, name: "Inbox" });
+
+    expect([heading.textContent, inboxLink().getAttribute("aria-current")]).toStrictEqual(["Inbox", "page"]);
+
+    close();
+  },
+);

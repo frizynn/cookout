@@ -1,4 +1,4 @@
-import type { ChannelName, MessageId, TopLevelMessage } from "../../sdk/index.ts";
+import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import type { ClosingClient, ThreadClosing } from "./thread-closing.ts";
 import type { LiveChannelMessages, MessagesClient } from "./channel-messages.ts";
 import type { LiveThreadMessages, ThreadClient } from "./thread-messages.ts";
@@ -26,7 +26,6 @@ interface MessageStores {
 interface MessageStoresOptions {
   readonly client: ClosingClient & MessagesClient & ThreadClient;
   readonly pageSize: number;
-  readonly closed: (parent: TopLevelMessage) => void;
 }
 
 function storeIn<Messages>(stores: Map<string, Messages>, key: string, make: () => Messages): Messages {
@@ -35,7 +34,7 @@ function storeIn<Messages>(stores: Map<string, Messages>, key: string, make: () 
   return messages;
 }
 
-function createMessageStores({ client, closed, pageSize }: MessageStoresOptions): MessageStores {
+function createMessageStores({ client, pageSize }: MessageStoresOptions): MessageStores {
   const channels = new Map<ChannelName, LiveChannelMessages>();
   const threads = new Map<string, LiveThreadMessages>();
   function loaded(): readonly (LiveChannelMessages | LiveThreadMessages)[] {
@@ -50,7 +49,6 @@ function createMessageStores({ client, closed, pageSize }: MessageStoresOptions)
         for (const store of loaded()) {
           store.receiveThread(parent);
         }
-        closed(parent);
       },
       client,
     }),

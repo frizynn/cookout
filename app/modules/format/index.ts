@@ -7,9 +7,7 @@
  * `millisOf(iso)` its milliseconds, to tell how far apart two times are, and
  * `isPast(iso)` whether the current time has reached it.
  * `timeAgo(iso)` is how long ago a time was (`5 minutes ago`), by the current
- * time, and from a day on its date and time (`Yesterday 14:05`); `timeSince(iso)`
- * is how long it has been since then (`4 days`), as an Open threads row says
- * how long its thread has been quiet;
+ * time, and from a day on its date and time (`Yesterday 14:05`);
  * `everySecond(listener)` ticks it live. A `Clock`'s `after(millis, listener)`
  * calls back once that much time has passed, unless the function it returns
  * is called first: `browserClock` waits on the page's timers, and tests bring
@@ -34,7 +32,6 @@ const hourMinute = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle
 const TEXT = {
   justNow: "just now",
   today: "Today",
-  underAMinute: "under a minute",
   yesterday: "Yesterday",
 } as const;
 
@@ -43,13 +40,6 @@ function counted(count: number, unit: string): string {
     return `1 ${unit} ago`;
   }
   return `${String(count)} ${unit}s ago`;
-}
-
-function amountOf(count: number, unit: string): string {
-  if (count === ONE) {
-    return `1 ${unit}`;
-  }
-  return `${String(count)} ${unit}s`;
 }
 
 function dated(at: Date): string {
@@ -150,25 +140,6 @@ export function timeAgo(iso: string): string {
     return `${String(Math.floor(seconds / TEN_SECONDS) * TEN_SECONDS)} seconds ago`;
   }
   return minutesAgo(Math.floor(seconds / SECONDS_IN_MINUTE), at);
-}
-
-/**
- * How long it has been since a time, by the current time, in whole minutes, hours or days.
- * @param iso The ISO time.
- * @returns `under a minute`, `1 minute`, `5 minutes`, `2 hours`, `1 day` or `4 days`.
- */
-export function timeSince(iso: string): string {
-  const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / SECOND / SECONDS_IN_MINUTE);
-  if (minutes < ONE) {
-    return TEXT.underAMinute;
-  }
-  if (minutes < MINUTES_IN_HOUR) {
-    return amountOf(minutes, "minute");
-  }
-  if (minutes < MINUTES_IN_DAY) {
-    return amountOf(Math.floor(minutes / MINUTES_IN_HOUR), "hour");
-  }
-  return amountOf(Math.floor(minutes / MINUTES_IN_DAY), "day");
 }
 
 /**

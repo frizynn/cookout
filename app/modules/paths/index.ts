@@ -6,13 +6,14 @@
  * `#/people` the people and agents, `#/people/<name>` the same with that
  * identity's profile open, `#/settings` the settings page and
  * `#/settings/<section>` the same with the focus on that section (`profile`,
- * `theme` or `agents`), `#/threads` the open threads involving the reader and
- * `#/threads/all` every open thread, `#/channels/<name>`,
+ * `theme` or `agents`), `#/channels/<name>`,
  * `#/channels/<name>/threads/<id>`, `#/approve/<user code>` the approval
  * page for a login request and `#/approve-join/<user code>` for an agent join request); a channel name
  * that isn't a `ChannelName`, an identity name that isn't an `IdentityName`,
  * a thread ID that isn't a message ID, a section the settings page doesn't
- * have, or any other hash is `missing`. `hrefOf(route)` builds the hash a link to a route
+ * have, or any other hash is `missing`, except that `#/threads` and
+ * `#/threads/all`, where the removed Open threads page was, open the inbox.
+ * `hrefOf(route)` builds the hash a link to a route
  * goes to, so no view writes a path by hand.
  *
  * Any of those hashes can end in `?profile=<name>`: the same page with that
@@ -46,7 +47,6 @@ type Route =
   | { readonly name: "people" }
   | { readonly name: "profile"; readonly identity: IdentityName }
   | { readonly name: "inbox"; readonly selected: InboxSelection | null }
-  | { readonly name: "open-threads"; readonly all: boolean }
   | { readonly name: "channel"; readonly channel: ChannelName }
   | { readonly name: "thread"; readonly channel: ChannelName; readonly thread: MessageId }
   | { readonly name: "approve"; readonly userCode: string }
@@ -55,7 +55,7 @@ type Route =
 
 type LinkedRoute = Extract<
   Route,
-  { readonly name: "inbox" | "open-threads" | "people" | "profile" | "settings" | "channel" | "thread" }
+  { readonly name: "inbox" | "people" | "profile" | "settings" | "channel" | "thread" }
 >;
 
 type Matcher = (hash: string) => Route | false;
@@ -66,7 +66,7 @@ const LOGIN = /^#\/login$/u;
 const SETTINGS = /^#\/settings$/u;
 const SECTION = /^#\/settings\/(?<section>[^/]+)$/u;
 const PEOPLE = /^#\/people$/u;
-const OPEN_THREADS = /^#\/threads(?:\/all)?$/u;
+const OLD_OPEN_THREADS = /^#\/threads(?:\/all)?$/u;
 const PROFILE = /^#\/people\/(?<identity>[^/]+(?:\/[^/]+)?)$/u;
 const CHANNEL = /^#\/channels\/(?<channel>[^/]+)$/u;
 const THREAD = /^#\/channels\/(?<channel>[^/]+)\/threads\/(?<thread>[^/]+)$/u;
@@ -144,7 +144,7 @@ const matchers: readonly Matcher[] = [
   (hash) => SETTINGS.test(hash) && { name: "settings", section: null },
   (hash) => SECTION.test(hash) && sectionRoute(hash.replace(SECTION, "$<section>")),
   (hash) => PEOPLE.test(hash) && { name: "people" },
-  (hash) => OPEN_THREADS.test(hash) && { all: hash.endsWith("/all"), name: "open-threads" },
+  (hash) => OLD_OPEN_THREADS.test(hash) && { name: "inbox", selected: null },
   (hash) => PROFILE.test(hash) && profileRoute(hash.replace(PROFILE, "$<identity>")),
   (hash) => APPROVE.test(hash) && approveRoute(hash.replace(APPROVE, "$<code>")),
   (hash) => APPROVE_JOIN.test(hash) && approveRoute(hash.replace(APPROVE_JOIN, "$<code>"), "approve-join"),
@@ -157,13 +157,6 @@ function settingsHref(section: SettingsSection | null): string {
     return "#/settings";
   }
   return `#/settings/${section}`;
-}
-
-function openThreadsHref(all: boolean): string {
-  if (all) {
-    return "#/threads/all";
-  }
-  return "#/threads";
 }
 
 function channelHref(route: Extract<Route, { readonly name: "channel" | "thread" }>): string {
@@ -183,12 +176,7 @@ function inboxHref(selected: InboxSelection | null): string {
   return `#/inbox/${selected.channel}/${String(selected.thread)}`;
 }
 
-function pageHref(
-  route: Extract<Route, { readonly name: "open-threads" | "settings" | "channel" | "thread" }>,
-): string {
-  if (route.name === "open-threads") {
-    return openThreadsHref(route.all);
-  }
+function pageHref(route: Extract<Route, { readonly name: "settings" | "channel" | "thread" }>): string {
   if (route.name === "settings") {
     return settingsHref(route.section);
   }
