@@ -2,8 +2,8 @@ import type { Board, ThreadMessagesState } from "../../board/index.ts";
 import { ConversationPanel, ScrollArea } from "../../design-system/index.tsx";
 import { ConversationBody } from "./conversation-body.tsx";
 import { ConversationMissing } from "./conversation-missing.tsx";
-import type { InboxSelection } from "../../paths/index.ts";
 import type { ReactNode } from "react";
+import type { ThreadSelection } from "../../paths/index.ts";
 import type { Unread } from "../../unread/index.ts";
 import { hrefOf } from "../../paths/index.ts";
 import { useSyncExternalStore } from "react";
@@ -20,7 +20,7 @@ const NOT_FOUND = "message_not_found";
 
 interface ConversationProps {
   readonly board: Board;
-  readonly selected: InboxSelection;
+  readonly selected: ThreadSelection;
   readonly unread: Unread;
   readonly me: string;
 }

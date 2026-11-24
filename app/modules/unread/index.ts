@@ -18,7 +18,8 @@
  * thread's unread replies and how many of them are for you. `rowsOf` groups
  * items, unread or `earlier`'s, into the inbox's rows: one per thread (its
  * replies) or channel (its top-level messages), as read positions are keyed,
- * each with its latest item, count, level and strongest reason, newest first.
+ * each with its latest item, count, level and strongest reason, newest first; `rowKey` is the key of a
+ * thread's row or a channel's.
  * Being derived from the items, the rows move with every live path above.
  * `earlier` is the read part of the inbox, for the inbox view's Earlier list:
  * when its first reader subscribes it loads the inbox history
@@ -97,8 +98,9 @@ export interface Unread {
   /** Every Nudge of the caller's, read or not, newest first, marking one read and closing its thread: a store of its own. */
   readonly nudges: Nudges;
   /**
-   * The Inbox's selected thread row (none for `null`): the thread's unread items as last seen while anyone reads it, kept once they are
-   * read so the row can stay in place, and whether its earlier replies are shown (`expand`). It starts afresh when it
+   * The Inbox's selected row (none for `null`): a thread's unread items, or a channel's unread top-level ones (`thread`
+   * is `null`), each kept from when it is first seen while anyone reads it, read or not, so the row can stay in place
+   * and its conversation keeps every post, and whether a thread's earlier replies are shown (`expand`). It starts afresh when it
    * is selected again. An external store of its own.
    */
   readonly selection: WithNewLines<object>["selection"];
@@ -186,6 +188,6 @@ export type { Nudges, NudgesState } from "./lib/nudges.ts";
 export type { MessageMenu } from "./lib/message-menu.ts";
 export type { Selection } from "./lib/selection.ts";
 export type { InboxRow } from "./lib/rows.ts";
-export { rowsOf } from "./lib/rows.ts";
+export { rowKey, rowsOf } from "./lib/rows.ts";
 export type { ThreadNews, UnreadCounts, UnreadWhy } from "./lib/levels.ts";
 export { NO_COUNTS, countsByChannel, countsOf, newsByThread } from "./lib/levels.ts";

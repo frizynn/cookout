@@ -15,7 +15,7 @@ interface Selection {
 
 interface Scope {
   readonly channel: ChannelName;
-  readonly thread: MessageId;
+  readonly thread: MessageId | null;
 }
 
 interface ItemsStore {
@@ -27,13 +27,20 @@ interface ItemsStore {
 
 const EMPTY: SelectionState = { expanded: false, items: [] };
 
+function inThread(item: InboxItem, thread: MessageId | null): boolean {
+  if (thread === null) {
+    return item.message.kind === "top-level" && !item.reasons.includes("reaction");
+  }
+  return item.message.kind === "reply" && item.parent.id === thread;
+}
+
 function inScope(item: InboxItem, scope: Scope | null): boolean {
-  return (
-    scope !== null &&
-    item.message.kind === "reply" &&
-    item.parent.id === scope.thread &&
-    item.channel.name === scope.channel
-  );
+  return scope !== null && item.channel.name === scope.channel && inThread(item, scope.thread);
+}
+
+function joined(kept: readonly InboxItem[], unread: readonly InboxItem[]): readonly InboxItem[] {
+  const fresh = unread.filter((item) => !kept.some((each) => each.message.id === item.message.id));
+  return [...kept, ...fresh].toSorted((first, second) => first.message.id - second.message.id);
 }
 
 function idsOf(items: readonly InboxItem[]): string {
@@ -61,7 +68,7 @@ function createSelection(store: ItemsStore, scope: Scope | null): Selection {
   }
 
   function take(): void {
-    const items = unreadIn(store, scope);
+    const items = joined(state.items, unreadIn(store, scope));
     if (items.length > NONE && idsOf(items) !== idsOf(state.items)) {
       publish({ ...state, items });
     }

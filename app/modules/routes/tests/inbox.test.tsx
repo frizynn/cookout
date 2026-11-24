@@ -60,7 +60,7 @@ async function openWatched(channel: string): Promise<OpenInbox> {
 
 async function openAndComeBack(href: string): Promise<void> {
   globalThis.location.hash = href;
-  await screen.findByRole("list", { name: "Messages" });
+  await screen.findByRole("list", { name: "Posts" });
   globalThis.location.hash = "#/inbox";
   await screen.findByRole("list", { name: "Earlier" });
 }
@@ -92,8 +92,8 @@ it("the inbox lists unread items for you, then activity, newest first, each with
         `#/inbox/${channel}/${String(parent.id)} Mentioned you${channel}-posterreplied in a thread in#${channel}just nowre: Deploy at noon? The rollout notes are in the usual place and every da…${reply.text}`,
       ],
       [
-        `#/channels/${channel} New in #${channel}${channel}-posterposted in#${channel}just now${other.text}`,
-        `#/channels/${also} New in #${also}${channel}-posterposted in#${also}just now${first.text}`,
+        `#/inbox/${channel} New in #${channel}${channel}-posterposted in#${channel}just now${other.text}`,
+        `#/inbox/${also} New in #${also}${channel}-posterposted in#${also}just now${first.text}`,
       ],
     ]);
   });
@@ -112,12 +112,12 @@ it("a live mention appears under For you, and opening it moves it to Earlier", {
     name: /^Mentioned you/u,
   });
 
-  expect(row.getAttribute("href")).toBe(`#/channels/${channel}`);
+  expect(row.getAttribute("href")).toBe(`#/inbox/${channel}`);
 
   await openAndComeBack(String(row.getAttribute("href")));
 
   expect([rowsOf("Earlier"), screen.getByText("You're all caught up.").tagName]).toStrictEqual([
-    [`#/channels/${channel} Mentioned you${channel}-posterposted in#${channel}just now${message.text}`],
+    [`#/inbox/${channel} Mentioned you${channel}-posterposted in#${channel}just now${message.text}`],
     "P",
   ]);
 

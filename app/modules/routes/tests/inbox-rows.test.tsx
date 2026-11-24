@@ -98,7 +98,7 @@ function followedRow(thread: Started, row: string): string {
 }
 
 function channelRow(channel: string, row: string): string {
-  return `#/channels/${channel} New in #${channel}${channel}-posterposted in#${channel}${row}`;
+  return `#/inbox/${channel} New in #${channel}${channel}-posterposted in#${channel}${row}`;
 }
 
 it("unread replies in one thread share one row, and new posts in one channel share another", {

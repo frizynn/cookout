@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { hrefOf } from "../../paths/index.ts";
 import { plainTextOf } from "./markdown-plain-text.ts";
 import { reactionSymbols } from "../../messages/index.ts";
+import { rowKey } from "../../unread/index.ts";
 import { useAuthor } from "./use-author.ts";
 import { useTimeAgo } from "./use-time-ago.ts";
 
@@ -26,6 +27,9 @@ function linkOf(row: InboxRow): string {
   const channel = row.latest.channel.name;
   if (row.thread !== null) {
     return hrefOf({ name: "inbox", selected: { channel, thread: row.thread } });
+  }
+  if (row.key === rowKey({ channel, thread: null })) {
+    return hrefOf({ name: "inbox", selected: { channel, thread: null } });
   }
   return hrefOf({ channel, name: "channel" });
 }
