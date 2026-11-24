@@ -22,21 +22,16 @@ function readInt8(bytes: Bytes): Result.Result<number, PgTypes.CodecError> {
 
 const JSONB_VERSION = 1;
 const JSONB_TEXT_START = 1;
-const fromUtf8 = new TextDecoder();
-const toUtf8 = new TextEncoder();
+const toText = new TextDecoder();
+const toBytes = new TextEncoder();
 
-function readJsonbText(bytes: Bytes): Result.Result<string, PgTypes.CodecError> {
-  if (bytes[FIRST_BYTE] !== JSONB_VERSION) {
-    return Result.fail(new PgTypes.CodecError({ message: "Unsupported jsonb version byte" }));
-  }
-  return Result.succeed(fromUtf8.decode(bytes.subarray(JSONB_TEXT_START)));
+function readJsonb(bytes: Bytes): Result.Result<string, PgTypes.CodecError> {
+  return Result.succeed(toText.decode(bytes.subarray(JSONB_TEXT_START)));
 }
 
-function writeJsonbText(text: string): Result.Result<Uint8Array, PgTypes.CodecError> {
-  return Result.succeed(Uint8Array.of(JSONB_VERSION, ...toUtf8.encode(text)));
+function jsonbAsText(): PgTypes.Codec<string> {
+  return { decode: readJsonb, encode: (text) => Result.succeed(Uint8Array.of(JSONB_VERSION, ...toBytes.encode(text))) };
 }
-
-const jsonbAsText: PgTypes.Codec<string> = { decode: readJsonbText, encode: writeJsonbText };
 
 function readBool(bytes: Bytes): Result.Result<number, PgTypes.CodecError> {
   if (bytes[FIRST_BYTE] === FALSE_BYTE) {
@@ -49,6 +44,6 @@ export function sqliteShapedTypes(): PgTypes.Registry {
   const types = PgTypes.makeRegistry();
   types.register(PgTypes.OID.int8, readAs(PgTypes.OID.int8, readInt8));
   types.register(PgTypes.OID.bool, readAs(PgTypes.OID.bool, readBool));
-  types.register(PgTypes.OID.jsonb, jsonbAsText);
+  types.register(PgTypes.OID.jsonb, jsonbAsText());
   return types;
 }
