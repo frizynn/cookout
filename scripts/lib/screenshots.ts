@@ -46,6 +46,7 @@ const SCREENS: readonly Screen[] = [
   { click: "Show earlier", hash: "#/inbox", history: "loading", name: "inbox-loading", text: "Loading…" },
   { hash: "#/inbox/general/1", name: "inbox-thread", text: "Thanks, both of you." },
   { hash: "#/inbox/general/1", name: "inbox-narrow", narrow: true, text: "earlier replies" },
+  { hash: "#/inbox/deploys", name: "inbox-channel", text: "Deployed 1.4.0." },
   { hash: "#/channels/general", name: "channel", text: "Lunch at 12:30." },
   { hash: "#/channels/general/threads/1", name: "thread", text: "Thanks, both of you." },
   {

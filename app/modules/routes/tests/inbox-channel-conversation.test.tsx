@@ -1,4 +1,4 @@
-import type { CookoutClient, EventStream } from "../../sdk/index.ts";
+import type { CookoutClient, EventStream, MessageId } from "../../sdk/index.ts";
 import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
@@ -15,19 +15,19 @@ interface NewsChannel {
   readonly reader: CookoutClient;
 }
 
-async function posted(news: NewsChannel, text: string): Promise<void> {
-  await news.poster.createMessage({ channel: news.channel, text });
+async function posted(news: NewsChannel, text: string): Promise<MessageId> {
+  const { message } = await news.poster.createMessage({ channel: news.channel, text });
+  return message.id;
 }
 
-async function channelWithNews(channel: string): Promise<NewsChannel> {
+async function channelWithNews(channel: string): Promise<NewsChannel & { readonly newest: MessageId }> {
   const { poster, reader } = await subscribedReader(channel);
   const news = { channel, poster, reader };
   await posted(news, "Oldest");
   const { message: old } = await poster.createMessage({ channel, text: "Old post" });
   await reader.ack(old.id);
   await posted(news, "New one");
-  await posted(news, "New two");
-  return news;
+  return { ...news, newest: await posted(news, "New two") };
 }
 
 function shownTexts(): readonly string[] {
@@ -170,6 +170,23 @@ it("a deleted channel's address says there is nothing there, beside the list", {
   const empty = await inPane().findByText("You're all caught up.");
 
   expect([nothing.textContent, empty.textContent]).toStrictEqual(["Nothing here", "You're all caught up."]);
+
+  unmount();
+});
+
+it("a read channel row selected from Earlier shows every read post it holds", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const news = await channelWithNews("web-channel-conversation-earlier");
+  await news.reader.ack(news.newest);
+  const unmount = openWithClockStopped({ client: news.reader, hash: "#/inbox" });
+  const earlier = await screen.findByRole("list", { name: "Earlier" });
+  fireEvent.click(within(earlier).getByRole("link", { name: /New two/u }));
+  await inConversation().findByText("Oldest");
+
+  expect(shownTexts()).toStrictEqual(["Oldest", "Old post", "New one", "New two"]);
 
   unmount();
 });
