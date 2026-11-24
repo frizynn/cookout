@@ -223,3 +223,17 @@ it("subscribe and Unsubscribe in a channel's menu flip the subscription, as the 
 
   close();
 });
+
+it("shift+F10 on a message opens its actions menu, as on a channel", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-message-menu-key";
+  const { poster, reader } = await subscribedReader(channel);
+  await poster.createMessage({ channel, text: "Deploy?" });
+  const close = openAt({ client: reader, hash: `#/channels/${channel}` });
+  fireEvent.keyDown(await inPane().findByRole("article"), { key: "F10", shiftKey: true });
+
+  await expect(screen.findByRole("menu", { name: "Message actions" })).resolves.toHaveProperty("tagName", "DIV");
+
+  close();
+});
