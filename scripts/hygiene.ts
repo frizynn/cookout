@@ -130,10 +130,10 @@ function appendOnlyAdrs(): readonly string[] {
 const MIGRATIONS = "app/modules/storage/lib/server/migrations.ts";
 
 function deployedMigrations(): readonly string[] {
-  const [tag = ""] = git(["tag", "--list", "deploy/*", "--sort=-creatordate"]);
+  const [tag = ""] = git(["tag", "--list", "deploy/*", "--merged", "HEAD", "--sort=-creatordate"]);
   if (tag === "") {
     return [
-      "found no deploy/* tag, so can't check the migrations list against production's. Run git fetch --tags; the Deploy workflow tags each deployed commit deploy/<short-sha>.",
+      "found no deploy/* tag that HEAD contains, so can't check the migrations list against production's. Run git fetch --tags; the Deploy workflow tags each deployed commit deploy/<short-sha>.",
     ];
   }
   const shown = spawnSync("git", ["show", `${tag}:${MIGRATIONS}`], GIT_OUTPUT);
