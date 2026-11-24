@@ -256,4 +256,3 @@ export {
   reactionsOf,
 };
 export type { Presences } from "./presence-slice.ts";
-export type { BoardStoreClient };

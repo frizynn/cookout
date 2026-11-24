@@ -1,85 +1,30 @@
-import type { ChannelMessagesState, MessageBeforeState, ThreadMessagesState } from "./message-selectors.ts";
+import type {
+  Board,
+  BoardSnapshot,
+  BoardStore,
+  ChannelMessages,
+  MessageBefore,
+  ThreadMessages,
+} from "../../board/index.ts";
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
-import type { ChannelsState, CommandsState } from "./listed-slices.ts";
 import {
   channelList,
   channelPage,
   closingRefusal,
   commandList,
+  createChannelCreation,
   deletedChannelNotice,
   messageBeforeOf,
   subscribedChannels,
   threadOf,
-} from "./board-selectors.ts";
-import type { BoardStore } from "./board-store.ts";
-import type { ChannelCreation } from "./channel-creation.ts";
-import type { ClosingRefusal } from "./thread-closing.ts";
-import type { SubscriptionsState } from "./subscriptions-slice.ts";
-import type { ThreadPlace } from "./threads-part.ts";
-import { createChannelCreation } from "./channel-creation.ts";
-
-type Subscribe = (listener: () => void) => () => void;
+} from "../../board/index.ts";
+import type { Stores } from "./stores.ts";
 
 const NONE = 0;
 
-interface Snapshot {
-  readonly channels: ChannelsState;
-  readonly notice: ChannelName | null;
-}
-
-interface ChannelMessages {
-  readonly subscribe: Subscribe;
-  readonly snapshot: () => ChannelMessagesState;
-  readonly loadOlder: () => void;
-  readonly call: (command: string, data: string, called: () => void) => void;
-  readonly editCallData: (data: string) => void;
-  readonly post: (text: string, posted: () => void) => void;
-  readonly showClosed: (run: readonly MessageId[], count: number) => void;
-}
-
-interface ThreadMessages {
-  readonly subscribe: Subscribe;
-  readonly snapshot: () => ThreadMessagesState;
-  readonly reply: (text: string, posted: () => void) => void;
-  readonly subscribeWithoutAcking: Subscribe;
-  readonly ack: (id: MessageId) => void;
-}
-
-interface Commands {
-  readonly subscribe: Subscribe;
-  readonly snapshot: () => CommandsState;
-}
-
-interface Subscriptions {
-  readonly subscribe: Subscribe;
-  readonly snapshot: () => SubscriptionsState;
-  readonly setSubscribed: (channel: ChannelName, subscribed: boolean) => void;
-}
-
-interface ThreadClosing {
-  readonly subscribe: Subscribe;
-  readonly refusal: () => ClosingRefusal | null;
-  readonly close: (messageId: MessageId) => void;
-  readonly reopen: (messageId: MessageId) => void;
-}
-
-interface MessageBefore {
-  readonly subscribe: Subscribe;
-  readonly snapshot: () => MessageBeforeState;
-}
-
-interface Board {
-  readonly subscribe: Subscribe;
-  readonly snapshot: () => Snapshot;
-  readonly channel: (name: ChannelName) => ChannelMessages;
-  readonly thread: (channel: ChannelName, id: MessageId) => ThreadMessages;
-  readonly commands: Commands;
-  readonly subscriptions: Subscriptions;
-  readonly creation: ChannelCreation;
-  readonly closing: ThreadClosing;
-  readonly messageBefore: (at: ThreadPlace) => MessageBefore;
-  readonly ack: (id: MessageId) => void;
-  readonly dismissNotice: () => void;
+interface ThreadPlace {
+  readonly channel: ChannelName;
+  readonly id: MessageId;
 }
 
 function madeOnce<Key, Made>(keyOf: (key: Key) => string, make: (key: Key) => Made): (key: Key) => Made {
@@ -95,8 +40,8 @@ function placeKey({ channel, id }: ThreadPlace): string {
   return `${channel}/${String(id)}`;
 }
 
-function listSnapshot(store: BoardStore): () => Snapshot {
-  const last: Snapshot[] = [];
+function listBoardSnapshot(store: BoardStore): () => BoardSnapshot {
+  const last: BoardSnapshot[] = [];
   return () => {
     const state = store.snapshot();
     const channels = channelList(state);
@@ -171,7 +116,7 @@ function createBoard(store: BoardStore): Board {
     creation: createChannelCreation({ createChannel: store.calls.createChannel }),
     dismissNotice: store.dismissNotice,
     messageBefore: madeOnce(placeKey, (place: ThreadPlace) => beforeIn(store, place)),
-    snapshot: listSnapshot(store),
+    snapshot: listBoardSnapshot(store),
     subscribe: store.subscribeShowing("channels"),
     subscriptions: {
       setSubscribed: store.calls.setSubscribed,
@@ -182,14 +127,20 @@ function createBoard(store: BoardStore): Board {
   };
 }
 
-export {
-  type Board,
-  type ChannelMessages,
-  type Commands,
-  type MessageBefore,
-  type Snapshot,
-  type Subscriptions,
-  type ThreadClosing,
-  type ThreadMessages,
-  createBoard,
-};
+const boards = new WeakMap<BoardStore, Board>();
+
+const made = new WeakMap<Omit<Stores, "board">, Stores>();
+
+function boardFor(store: BoardStore): Board {
+  const board = boards.get(store) ?? createBoard(store);
+  boards.set(store, board);
+  return board;
+}
+
+function withBoard(stores: Omit<Stores, "board">): Stores {
+  const found = made.get(stores) ?? { ...stores, board: boardFor(stores.boardStore) };
+  made.set(stores, found);
+  return found;
+}
+
+export { withBoard };

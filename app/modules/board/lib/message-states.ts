@@ -44,7 +44,6 @@ const LOADING = { status: "loading" } as const;
 export {
   type BeforeState,
   LOADING,
-  type OlderState,
   type PageLoaded,
   type PageState,
   type ReadState,

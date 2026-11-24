@@ -192,4 +192,4 @@ function heldTopLevel({ held, id }: { readonly held: MessagesHeld; readonly id: 
   return topLevelIn(held, id);
 }
 
-export { type Fresh, type MessagesHeld, NOTHING_HELD, appliedToMessages, heldTopLevel, withEntry, withFresh };
+export { type MessagesHeld, NOTHING_HELD, appliedToMessages, heldTopLevel, withEntry, withFresh };

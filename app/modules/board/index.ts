@@ -54,20 +54,25 @@
  * `calls.createChannel` creates a channel and puts it in the list and the subscriptions; `calls.ack` acks a message,
  * one ack at a time in the order asked.
  *
- * `createBoard(store)` makes the old per-channel and per-thread stores the views still read, as thin adapters over the
- * store's selectors and methods, for the last migration ticket to delete.
+ * `Board` and its parts are the old per-channel and per-thread stores the views still read; the routes module makes them
+ * as thin adapters over the store's selectors and methods, for the last migration ticket to delete.
  */
+export type {
+  Board,
+  BoardSnapshot,
+  ChannelMessages,
+  Commands,
+  MessageBefore,
+  Subscriptions,
+  ThreadClosing,
+  ThreadMessages,
+} from "./lib/board-interface.ts";
 export {
-  type Board,
-  type ChannelMessages,
-  type Commands,
-  type MessageBefore,
-  type Subscriptions,
-  type ThreadClosing,
-  type ThreadMessages,
-  createBoard,
-} from "./lib/board-adapter.ts";
-export type { ChannelCreation, ChannelCreationSnapshot, CreationState } from "./lib/channel-creation.ts";
+  type ChannelCreation,
+  type ChannelCreationSnapshot,
+  type CreationState,
+  createChannelCreation,
+} from "./lib/channel-creation.ts";
 export type { ChannelsState } from "./lib/listed-slices.ts";
 export type { ChannelMessagesState, MessageBeforeState, ThreadMessagesState } from "./lib/message-selectors.ts";
 export type { CallState } from "./lib/command-call.ts";
@@ -76,7 +81,6 @@ export type { PostState } from "./lib/failure.ts";
 export type { SubscriptionsState } from "./lib/subscriptions-slice.ts";
 export {
   type BoardStore,
-  type BoardStoreClient,
   type IdentityCalls,
   type Presences,
   agentSessions,

@@ -154,4 +154,4 @@ function threadOps(at: ThreadAt): ThreadOps {
   };
 }
 
-export { type ReplyRequest, type ThreadAt, type ThreadOps, type ThreadsClient, threadOps };
+export { type ReplyRequest, type ThreadOps, type ThreadsClient, threadOps };

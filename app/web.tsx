@@ -11,9 +11,9 @@
  */
 import { browserReadingTools, createReading, createUnread } from "./modules/unread/index.ts";
 import { createAgentJoinApprovals, createLoginApprovals, createSession } from "./modules/session/index.ts";
-import { createBoard, createBoardStore } from "./modules/board/index.ts";
 import { createLive, eventSourceAdapter } from "./modules/live/index.ts";
 import { CookoutApp } from "./modules/routes/index.tsx";
+import { createBoardStore } from "./modules/board/index.ts";
 import { createComposer } from "./modules/composer/index.ts";
 import { createCookoutClient } from "./modules/sdk/index.ts";
 import { createLayout } from "./modules/layout/index.ts";
@@ -30,15 +30,13 @@ if (root !== null) {
   });
   const live = createLive(eventSourceAdapter(url));
   const boardStore = createBoardStore({ client, live });
-  const board = createBoard(boardStore);
   const unread = createUnread({ client, live });
   const layout = createLayout({ root: globalThis.document.documentElement, storage: globalThis.localStorage });
   createRoot(root).render(
     <CookoutApp
       agentJoinApprovals={createAgentJoinApprovals(client)}
-      board={board}
       boardStore={boardStore}
-      composer={createComposer({ boardStore, commands: board.commands })}
+      composer={createComposer({ boardStore })}
       layout={layout}
       live={live}
       loginApprovals={createLoginApprovals(client)}

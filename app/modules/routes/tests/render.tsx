@@ -1,15 +1,13 @@
 import type { AgentJoinApprovals, LoginApprovals, Session } from "../../session/index.ts";
-import type { BoardStore, Live, Reading, Unread } from "./defaults.ts";
+import type { BoardStore, BoardStoreClient, Live, Reading, Unread } from "./defaults.ts";
 import { adminClient, anonymousClient, sessionOf } from "./identities.ts";
 import { boardStoreFor, createUnread, readingFor, unreadFor } from "./defaults.ts";
 import { cleanup, render } from "@testing-library/react";
 import { createAgentJoinApprovals, createLoginApprovals } from "../../session/index.ts";
-import type { BoardStoreClient } from "../../board/index.ts";
 import type { Composer } from "../../composer/index.ts";
 import { CookoutApp } from "../index.tsx";
 import type { CookoutClient } from "../../sdk/index.ts";
 import type { Layout } from "../../layout/index.ts";
-import { createBoard } from "../../board/index.ts";
 import { createComposer } from "../../composer/index.ts";
 import { createLayout } from "../../layout/index.ts";
 import { onTestFinished } from "vitest";
@@ -115,8 +113,7 @@ export function browserLayout(): Layout {
 export function openBoard(opening: BoardOpening): () => void {
   globalThis.location.hash = opening.hash;
   const boardStore = boardStoreFor({ boardStore: opening.boardStore, client: adminClient(), live: opening.live });
-  const board = createBoard(boardStore);
-  const composer = opening.composer ?? createComposer({ boardStore, commands: board.commands });
+  const composer = opening.composer ?? createComposer({ boardStore });
   const unread = unreadFor(opening.unread);
   const layout = opening.layout ?? browserLayout();
   const { agentJoinApprovals, loginApprovals } = approvalsOf(opening);
@@ -124,7 +121,6 @@ export function openBoard(opening: BoardOpening): () => void {
   return render(
     <CookoutApp
       agentJoinApprovals={agentJoinApprovals}
-      board={board}
       boardStore={boardStore}
       composer={composer}
       layout={layout}
