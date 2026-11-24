@@ -2,9 +2,9 @@ import type { Command, Ran, Step, Stopped } from "./merge-steps.ts";
 import { DONE, RERERE, firstStop, git, lines, run, stepOf, stop, tail } from "./merge-steps.ts";
 import { asOneTicketMerge, cleanTree, messageOf } from "./merge-branch.ts";
 import { readFileSync, writeFileSync } from "node:fs";
+import { renumberAdrs, renumberOpenMerge } from "./merge-adrs.ts";
 import type { HunkResolve } from "./conflicts.ts";
 import path from "node:path";
-import { renumberAdrs } from "./merge-adrs.ts";
 import { resolveHunks } from "./conflicts.ts";
 
 interface HunkRule {
@@ -132,7 +132,10 @@ function merge(options: MergeOptions, into: string): Step {
     return stop(`git merge failed.\n${tail(merged.output)}`);
   }
   options.log(`Resolving conflicts in ${conflicted.join(", ")}`);
-  return resolveConflicts(options, conflicted);
+  return firstStop([
+    (): Step => renumberOpenMerge({ adrs: options.rules.adrs, cwd: options.cwd, log: options.log }),
+    (): Step => resolveConflicts(options, conflicted),
+  ]);
 }
 
 function install(options: MergeOptions): Step {
