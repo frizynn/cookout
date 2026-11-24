@@ -1,8 +1,9 @@
 /**
- * The calls a client makes to close and reopen a thread (#216) and to list open threads (#219), and the answers they
- * share. The SDK's `CookoutClient` has them.
+ * The calls a client makes to close and reopen a thread (#216), to list open threads (#219) and to search messages
+ * (#320), and the answers they share. The SDK's `CookoutClient` has them.
  */
 import type { ListOpenThreadsResponse, MessageId, TopLevelMessageResponse } from "./index.ts";
+import type { SearchResponse } from "../search/index.ts";
 
 /** Closing and reopening the thread holding a message. */
 export interface ClosedThreadCalls {
@@ -44,4 +45,27 @@ export interface OpenThreadCalls {
    * the threads involving the caller; pass the answer's `cursor` to read the next page.
    */
   readonly listOpenThreads: (query?: ListOpenThreadsQuery) => Promise<ListOpenThreadsResponse>;
+}
+
+/** The name of the search route's query parameter that holds the query as typed. */
+export const searchQueryParam = "q";
+
+/** A search: the query as typed, and which page of its results. */
+export interface SearchRequest {
+  /** The query as typed. Each word matches a word that equals it or starts with it; every word must match. */
+  readonly query: string;
+  /** Only results after this point: pass the previous page's `cursor` to read on. */
+  readonly cursor?: string;
+  /** 1–200 results. Default 50. */
+  readonly limit?: number;
+}
+
+/** Searching messages. */
+export interface SearchCalls {
+  /**
+   * `GET /v1/search?q=<query>`: a page of the messages and replies in every channel whose text matches the query,
+   * newest first, Closed threads included, each with whether its thread is Closed. Pass the answer's `cursor` to read
+   * the next page. A query with no words is 400 `empty_query`; a command token is 403 `outside_command_thread`.
+   */
+  readonly search: (request: SearchRequest) => Promise<SearchResponse>;
 }

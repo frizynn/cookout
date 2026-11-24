@@ -1,4 +1,4 @@
-import type { ClosedThreadCalls, OpenThreadCalls } from "../../messages/client.ts";
+import type { ClosedThreadCalls, OpenThreadCalls, SearchCalls } from "../../messages/client.ts";
 import type {
   ListMessagesQuery,
   ListMessagesResponse,
@@ -16,14 +16,16 @@ import {
   isListOpenThreadsResponse,
   isMessageResponse,
   isReactionsResponse,
+  isSearchResponse,
   isThreadResponse,
   isTopLevelMessageResponse,
 } from "./generated/validators.js";
+import { openThreadsPath, searchQueryParam } from "../../messages/client.ts";
 import type { ClientConnection } from "./request.ts";
-import { openThreadsPath } from "../../messages/client.ts";
+import { searchPath } from "../../search/index.ts";
 import { send } from "./request.ts";
 
-interface MessageCalls extends ClosedThreadCalls, OpenThreadCalls {
+interface MessageCalls extends ClosedThreadCalls, OpenThreadCalls, SearchCalls {
   readonly createMessage: (request: PostMessageRequest) => Promise<MessageResponse>;
   readonly listMessages: (channel: string, query?: ListMessagesQuery) => Promise<ListMessagesResponse>;
   readonly getThread: (messageId: MessageId) => Promise<ThreadResponse>;
@@ -89,6 +91,15 @@ function messageCalls(server: ClientConnection): MessageCalls {
     },
     react: reactionCall(server, "PUT"),
     reopenThread: closedCall(server, "DELETE"),
+    search: async ({ cursor, limit, query }) => {
+      const page = await send(server, {
+        isExpected: isSearchResponse,
+        method: "GET",
+        path: searchPath,
+        query: { cursor, limit, [searchQueryParam]: query },
+      });
+      return page;
+    },
     unreact: reactionCall(server, "DELETE"),
   };
 }

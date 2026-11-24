@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { identityResponseSchemas, loginResponseSchemas } from "../app/modules/identities/server.ts";
+import { messageResponseSchemas, searchResponseSchemas } from "../app/modules/messages/server.ts";
 import { agentSessionResponseSchemas } from "../app/modules/agent-sessions/server.ts";
 import { channelResponseSchemas } from "../app/modules/channels/server.ts";
 import { commandResponseSchemas } from "../app/modules/commands/server.ts";
@@ -7,7 +8,6 @@ import { eventResponseSchemas } from "../app/modules/events/server.ts";
 import { generateValidators } from "./lib/validators.ts";
 import { httpResponseSchemas } from "../app/modules/http/server.ts";
 import { inboxResponseSchemas } from "../app/modules/inbox/server.ts";
-import { messageResponseSchemas } from "../app/modules/messages/server.ts";
 
 interface GeneratedFile {
   readonly contents: string;
@@ -29,6 +29,7 @@ const generated = generateValidators({
   inbox: inboxResponseSchemas,
   logins: loginResponseSchemas,
   messages: messageResponseSchemas,
+  search: searchResponseSchemas,
 });
 const files: readonly GeneratedFile[] = [
   { contents: generated.javascript, path: `${OUT_DIR}/validators.js` },

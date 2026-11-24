@@ -1,7 +1,7 @@
 /**
  * Messages on the backend: the `Messages` service over `Storage`, and the
- * routes that post a message, get a thread from any message in it and page
- * back through a channel. `Messages` also publishes each message the moment
+ * routes that post a message, get a thread from any message in it, page
+ * back through a channel and search every channel by words. `Messages` also publishes each message the moment
  * it is stored to an in-process hub, which `posted` subscribes to, for live
  * updates. The author's name and owner are copied onto each
  * message, so they survive the identity being deleted. Routes sit behind the
@@ -19,8 +19,9 @@ import {
   ThreadResponseSchema,
   TopLevelMessageResponseSchema,
 } from "./lib/server/wire.ts";
-import { ListOpenThreadsResponseSchema, openThreadRoutes } from "./lib/server/open-threads.ts";
 import { channelMessagesPath, closedPath, isMessageId, messagesPath, reactionPath, threadPath } from "./index.ts";
+import { listingResponseSchemas, listingRoutes } from "./lib/server/listings.ts";
+import type { ListingNeeds } from "./lib/server/listings.ts";
 import type { MessageId } from "./index.ts";
 import { Messages } from "./lib/server/service.ts";
 import type { Refusal } from "../http/index.ts";
@@ -152,10 +153,10 @@ export {
 export { ListMessagesQuerySchema as PageQuerySchema } from "./lib/server/wire.ts";
 
 /**
- * The message routes, for the server's route list. They need `Caller`, which the token gate provides, and `Messages`,
- * which `messagesLayer` provides.
+ * The message routes, for the server's route list. They need `Caller`, which the token gate provides, `Messages`,
+ * which `messagesLayer` provides, and `Storage`.
  */
-export const messageRoutes: readonly Route<Caller | Messages>[] = [
+export const messageRoutes: readonly Route<ListingNeeds>[] = [
   postRoute,
   threadRoute,
   pageRoute,
@@ -163,15 +164,21 @@ export const messageRoutes: readonly Route<Caller | Messages>[] = [
   reactionRoute("DELETE", (messages) => messages.unreact),
   closeRoute,
   reopenRoute,
-  ...openThreadRoutes,
+  ...listingRoutes,
 ];
+
+/**
+ * The response Schemas of the search route, for the SDK's generated validators. They are their own group, since the
+ * answer's types live in the search module.
+ */
+export { searchResponseSchemas } from "./lib/server/listings.ts";
 
 /** The response Schemas of the message routes, for the SDK's generated validators. */
 export const messageResponseSchemas = {
   ListMessagesResponse: ListMessagesResponseSchema,
-  ListOpenThreadsResponse: ListOpenThreadsResponseSchema,
   MessageResponse: MessageResponseSchema,
   ReactionsResponse: ReactionsResponseSchema,
   ThreadResponse: ThreadResponseSchema,
   TopLevelMessageResponse: TopLevelMessageResponseSchema,
+  ...listingResponseSchemas,
 };
