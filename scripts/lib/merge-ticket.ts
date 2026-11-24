@@ -1,7 +1,9 @@
+import type { Attempt, PushOptions, Pushed } from "./merge-push.ts";
 import type { Command, Ran, Step, Stopped } from "./merge-steps.ts";
 import { DONE, RERERE, firstStop, git, lines, run, stepOf, stop, tail } from "./merge-steps.ts";
 import type { FirstSide, HunkResolve } from "./conflicts.ts";
 import { asOneTicketMerge, cleanTree, messageOf } from "./merge-branch.ts";
+import { branchOf, deleteRemoteBranch, push } from "./merge-push.ts";
 import { readFileSync, writeFileSync } from "node:fs";
 import { appendOnlyMigrations } from "./merge-migrations.ts";
 import path from "node:path";
@@ -25,7 +27,7 @@ interface MergeRules {
   readonly regenerate: readonly RegenerateRule[];
 }
 
-interface MergeOptions {
+interface MergeOptions extends PushOptions {
   readonly attempts: number;
   readonly check: Command;
   readonly cwd: string;
@@ -42,16 +44,11 @@ type Merged =
   | { readonly files: readonly string[]; readonly ok: false; readonly reason: string };
 
 type Started = { readonly kind: "started"; readonly sha: string } | Stopped;
-interface Pushed {
-  readonly kind: "pushed";
-  readonly sha: string;
-}
-
-type Attempt = { readonly kind: "moved" } | Pushed | Stopped;
 
 const LOCKFILE = "pnpm-lock.yaml";
 const NONE = 0;
 const FIRST_ATTEMPT = 1;
+
 function failed(command: Command, ran: Ran, after: string): Stopped {
   return stop(`${command.join(" ")} failed; nothing was pushed.${after}\n${tail(ran.output)}`);
 }
@@ -165,24 +162,12 @@ function startFromV1(options: MergeOptions): Started {
   if (!fetched.ok) {
     return stop(`git fetch failed.\n${tail(fetched.output)}`);
   }
-  const branch = `merge-ticket-${options.ticket}`;
+  const branch = branchOf(options);
   const checkedOut = git(options, "checkout", "-q", "-B", branch, "origin/v1");
   if (!checkedOut.ok) {
     return stop(`Could not create ${branch} from origin/v1.\n${tail(checkedOut.output)}`);
   }
   return { kind: "started", sha: git(options, "rev-parse", "origin/v1").output };
-}
-
-function push(options: MergeOptions, base: string): Attempt {
-  const pushed = git(options, "push", "-q", "origin", "HEAD:v1");
-  if (pushed.ok) {
-    return { kind: "pushed", sha: git(options, "rev-parse", "HEAD").output };
-  }
-  git(options, "fetch", "-q", "origin");
-  if (git(options, "rev-parse", "origin/v1").output === base) {
-    return stop(`git push origin HEAD:v1 failed.\n${tail(pushed.output)}`);
-  }
-  return { kind: "moved" };
 }
 
 function attempt(options: MergeOptions): Attempt {
@@ -200,7 +185,7 @@ function attempt(options: MergeOptions): Attempt {
   if (stepped.kind === "stopped") {
     return stepped;
   }
-  return push(options, started.sha);
+  return push({ base: started.sha, options });
 }
 
 function finished(outcome: Pushed | Stopped, count: number): Merged {
@@ -237,7 +222,7 @@ function checkAndPush(options: MergeOptions, base: string): Attempt {
   if (stepped.kind === "stopped") {
     return stepped;
   }
-  return push(options, base);
+  return push({ base, options });
 }
 
 function retry(options: MergeOptions): Attempt {
@@ -264,17 +249,22 @@ function afterAttempt(options: MergeOptions, outcome: Attempt, count: number): M
   return afterAttempt(options, retry(options), next);
 }
 
+function cleanedUp(options: MergeOptions, merged: Merged): Merged {
+  deleteRemoteBranch(options);
+  return merged;
+}
+
 function mergeTicket(options: MergeOptions): Merged {
   const clean = cleanTree(options);
   if (clean.kind === "stopped") {
     return finished(clean, NONE);
   }
   options.log(`Attempt ${FIRST_ATTEMPT} of ${options.attempts}: merging ticket-${options.ticket} into origin/v1`);
-  return afterAttempt(options, attempt(options), FIRST_ATTEMPT);
+  return cleanedUp(options, afterAttempt(options, attempt(options), FIRST_ATTEMPT));
 }
 
 function continueAttempt(options: MergeOptions): Attempt {
-  const branch = `merge-ticket-${options.ticket}`;
+  const branch = branchOf(options);
   const head = git(options, "rev-parse", "--abbrev-ref", "HEAD").output;
   if (head !== branch || !git(options, "rev-parse", "-q", "--verify", "HEAD^2").ok) {
     return stop(
@@ -290,7 +280,7 @@ function continueAttempt(options: MergeOptions): Attempt {
 
 function continueMerge(options: MergeOptions): Merged {
   options.log(`Attempt ${FIRST_ATTEMPT} of ${options.attempts}: checking and pushing merge-ticket-${options.ticket}`);
-  return afterAttempt(options, continueAttempt(options), FIRST_ATTEMPT);
+  return cleanedUp(options, afterAttempt(options, continueAttempt(options), FIRST_ATTEMPT));
 }
 
 export type { MergeOptions, MergeRules, Merged };

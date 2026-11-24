@@ -1,6 +1,8 @@
 import type { MergeOptions, MergeRules, Merged } from "../../lib/merge-ticket.ts";
 import { continueMerge, mergeTicket } from "../../lib/merge-ticket.ts";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { DONE } from "../../lib/merge-steps.ts";
+import type { Step } from "../../lib/merge-steps.ts";
 import { execFileSync } from "node:child_process";
 import { onTestFinished } from "vitest";
 import path from "node:path";
@@ -15,6 +17,7 @@ interface Repos {
 
 interface Overrides {
   readonly check?: readonly string[];
+  readonly ci?: (branch: string, sha: string) => Step;
   readonly install?: readonly string[];
   readonly migrationsBase?: string;
 }
@@ -113,6 +116,7 @@ function optionsFor(work: string, overrides: Overrides): MergeOptions {
   return {
     attempts: ATTEMPTS,
     check: overrides.check ?? ["true"],
+    ci: overrides.ci ?? ((): Step => DONE),
     cwd: work,
     install: overrides.install ?? ["true"],
     log: (line): void => {

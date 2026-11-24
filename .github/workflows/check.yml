@@ -3,7 +3,7 @@ name: Check
 on:
   pull_request:
   push:
-    branches: [main, v1, rewrite-perfect-ts, "ticket-*"]
+    branches: [main, v1, rewrite-perfect-ts, "ticket-*", "merge-ticket-*"]
 
 permissions:
   contents: read
