@@ -7,8 +7,14 @@ interface InboxRow {
   readonly thread: MessageId | null;
   readonly items: readonly InboxItem[];
   readonly latest: InboxItem;
+  readonly reason: InboxItem;
   readonly count: number;
   readonly forYou: boolean;
+  readonly why: UnreadWhy;
+}
+
+interface Reason {
+  readonly item: InboxItem;
   readonly why: UnreadWhy;
 }
 
@@ -30,6 +36,7 @@ const STRENGTH: readonly UnreadWhy[] = [
   "subscribed-channel",
 ];
 const NO_ITEMS: readonly InboxItem[] = [];
+const FIRST = 0;
 
 interface RowPlace {
   readonly channel: ChannelName;
@@ -60,12 +67,13 @@ function threadOf(item: InboxItem): MessageId | null {
   return null;
 }
 
-function strongest(group: Group, me: string): UnreadWhy {
-  let best = whyOf({ item: group.latest, me });
+function strongest(group: Group, me: string): Reason {
+  const first = group.items.at(FIRST) ?? group.latest;
+  let best: Reason = { item: first, why: whyOf({ item: first, me }) };
   for (const item of group.items) {
     const why = whyOf({ item, me });
-    if (STRENGTH.indexOf(why) < STRENGTH.indexOf(best)) {
-      best = why;
+    if (STRENGTH.indexOf(why) < STRENGTH.indexOf(best.why)) {
+      best = { item, why };
     }
   }
   return best;
@@ -73,14 +81,16 @@ function strongest(group: Group, me: string): UnreadWhy {
 
 function rowOf(key: string, group: Group, me: string): InboxRow {
   const { items, latest } = group;
+  const reason = strongest(group, me);
   return {
     count: items.length,
     forYou: items.some((item) => isForYou({ item, me })),
     items,
     key,
     latest,
+    reason: reason.item,
     thread: threadOf(latest),
-    why: strongest(group, me),
+    why: reason.why,
   };
 }
 
