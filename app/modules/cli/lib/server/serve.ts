@@ -5,6 +5,7 @@ import {
   Effect,
   Layer,
   Option,
+  Path,
   Predicate,
   Redacted,
   Schema,
@@ -12,6 +13,7 @@ import {
 } from "effect";
 import { Command, Flag } from "effect/cli";
 import { CommandFailed, printLine, refused } from "./output.ts";
+import type { Config, FileSystem } from "effect";
 import type { IdentityName, Token } from "../../../identities/index.ts";
 import { SpawnSettings, domainLayers, openRoutes, routes } from "./route-list.ts";
 import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
@@ -20,6 +22,7 @@ import {
   adminNameRule,
   adminToken,
   adminTokenRule,
+  assetsDirectory,
   databasePath,
   host,
   port,
@@ -29,9 +32,9 @@ import { firstAdminName, token } from "../../../identities/index.ts";
 import { httpServer, serverUrl } from "../../../http/server.ts";
 
 import type { AdminNameIsAgent } from "../../../identities/server.ts";
-import type { FileSystem } from "effect";
 import type { Serving } from "../../../http/server.ts";
 import { adminTokenSet } from "../../../identities/server.ts";
+import { diskAssetStore } from "../../../storage/server.ts";
 import { requireTokenWithinLimit } from "./gate.ts";
 
 export type ServeLayers = {
@@ -137,13 +140,26 @@ function failedToStart<Failure>(cause: Cause.Cause<Failure>): Effect.Effect<neve
   return Console.error(startFailureLine(cause)).pipe(Effect.andThen(serveFailed));
 }
 
+function assetsBeside(database: string): Effect.Effect<string, Config.ConfigError, Path.Path> {
+  return Effect.gen(function* assetsFolder() {
+    const chosen = yield* assetsDirectory;
+    const path = yield* Path.Path;
+    if (chosen === "") {
+      return path.join(path.dirname(database), "assets");
+    }
+    return chosen;
+  });
+}
+
 const runServer = (layers: ServeLayers, listen: Omit<Serving, "webFolder">, database: string) =>
   Effect.gen(function* () {
     const admin = yield* adminTokenOrRefuse;
     const name = yield* adminNameOrRefuse;
+    const assets = yield* assetsBeside(database);
+    const stores = Layer.merge(layers.storage(database), diskAssetStore(assets));
     const services = yield* Layer.build(
       cookoutServer({ ...listen, ...webFolderOf(layers), adminName: name, adminToken: admin }).pipe(
-        Layer.provide(layers.storage(database)),
+        Layer.provide(stores),
       ),
     ).pipe(Effect.catchTags({ AdminNameIsAgent: adminNameIsAgent, StorageUnavailable: storageUnavailable }));
     const url = yield* serverUrl.pipe(Effect.provideContext(services));

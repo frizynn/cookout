@@ -1,4 +1,5 @@
 import { Array as Arr, Effect, Option, Schema } from "effect";
+import { POSTGRES_ATTACHMENTS_MIGRATION } from "./attachments.ts";
 import type { PostgresDatabase } from "./adapters/postgres.ts";
 import { StorageUnavailable } from "./errors.ts";
 
@@ -224,6 +225,7 @@ const postgresMigrations: readonly (readonly string[])[] = [
        read boolean NOT NULL
      )`,
   ],
+  POSTGRES_ATTACHMENTS_MIGRATION,
 ];
 
 const NO_VERSION = 0;

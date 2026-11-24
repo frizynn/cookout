@@ -1,5 +1,5 @@
 import type { AgentJoinCalls, JoinCodeCalls } from "../../agent-sessions/index.ts";
-import type { ClosedThreadCalls, OpenThreadCalls, SearchCalls } from "../../messages/client.ts";
+import type { AttachmentCalls, ClosedThreadCalls, OpenThreadCalls, SearchCalls } from "../../messages/client.ts";
 import type {
   CreateIdentityRequest,
   DeactivateIdentityResponse,
@@ -228,6 +228,7 @@ function identityCalls(
 type ApprovalCalls = LoginCalls & AgentJoinCalls & JoinCodeCalls;
 type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
 export type CallGroups = ApprovalCalls &
+  AttachmentCalls &
   IdentityDeletionCalls &
   IdentityDescriptionCalls &
   ClosedThreadCalls &

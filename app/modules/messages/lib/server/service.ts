@@ -1,4 +1,5 @@
 import { Array as Arr, Context, DateTime, Effect, Option, Predicate, String as Str, pipe } from "effect";
+import type { Attaching, Post, StoredFiles } from "../../../attachments/server.ts";
 import type {
   Author,
   JsonValue,
@@ -32,7 +33,7 @@ import { mentionPattern, pageSize } from "../../index.ts";
 import { react, shownPage, shownThread, unreact } from "./reactions.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { Reactions } from "./reactions.ts";
-import type { Refusal } from "../../../http/index.ts";
+import type { Refusal } from "./refusals.ts";
 import { channelNotFound } from "../../../channels/server.ts";
 import { isChannelName } from "../../../channels/index.ts";
 import { isIdentityName } from "../../../identities/index.ts";
@@ -45,6 +46,7 @@ interface PostMessage {
   readonly replyTo?: MessageId;
   readonly close?: true;
   readonly harness?: Harness;
+  readonly attachments?: Post["attachments"];
 }
 
 interface PageQuery {
@@ -148,19 +150,34 @@ type Appended = Effect.Success<ReturnType<Append>>;
 
 const ONE_AT_A_TIME = 1;
 
-function postWith(hub: Hub, append: Append): (author: Identity, message: PostMessage) => Fails<MessageResponse> {
-  return (author, message) =>
+interface Posting {
+  readonly hub: Hub;
+  readonly append: Append;
+  readonly attaching: Attaching;
+}
+
+function withAttachments(message: NewMessage, { attachments }: StoredFiles): NewMessage {
+  if (Arr.isReadonlyArrayNonEmpty(attachments)) {
+    return { ...message, attachments };
+  }
+  return message;
+}
+
+function postWith({ append, attaching, hub }: Posting) {
+  return (author: Identity, message: PostMessage): Fails<MessageResponse> =>
     Effect.gen(function* postMessage() {
       if (Predicate.isNotUndefined(message.close) && Predicate.isUndefined(message.replyTo)) {
         return yield* Effect.fail(closeWithoutReplyTo);
       }
+      const { attachments = [], ...posting } = message;
+      const files = yield* attaching.store({ attachments, text: posting.text });
       const now = yield* DateTime.now;
-      const stored = newMessage(author, message, isoTimeOf(now));
-      const result = yield* hub.appendThenPublish(append, stored);
+      const stored = withAttachments(newMessage(author, posting, isoTimeOf(now)), files);
+      const result = yield* hub.appendThenPublish(append, stored).pipe(Effect.onError(() => files.remove));
       if (result.status === "appended") {
         return { message: result.message, unknownMentions: unknownMentionsIn(result.message) };
       }
-      return yield* Effect.fail(refusalOf(result.status, message));
+      return yield* Effect.andThen(files.remove, Effect.fail(refusalOf(result.status, posting)));
     });
 }
 
@@ -168,12 +185,13 @@ interface MessagesOn {
   readonly storage: Storage["Service"];
   readonly hub: Hub;
   readonly reactions: Reactions["Service"];
+  readonly attaching: Attaching;
 }
 
 type ThreadChangeCalls = "closeThread" | "reopenThread" | "threadChanged" | "listOpenThreads";
 
-function messagesOn({ hub, reactions, storage }: MessagesOn): Omit<MessagesService, ThreadChangeCalls> {
-  const post = postWith(hub, storage.appendMessage);
+function messagesOn({ attaching, hub, reactions, storage }: MessagesOn): Omit<MessagesService, ThreadChangeCalls> {
+  const post = postWith({ append: storage.appendMessage, attaching, hub });
   return {
     latestId: storage.latestMessageId,
     page: (channel, query) =>
@@ -189,7 +207,10 @@ function messagesOn({ hub, reactions, storage }: MessagesOn): Omit<MessagesServi
       }),
     post,
     postCommandCall: (author, message, call) =>
-      postWith(hub, (stored) => storage.appendCommandCall({ ...call, message: stored }))(author, message),
+      postWith({ append: (stored) => storage.appendCommandCall({ ...call, message: stored }), attaching, hub })(
+        author,
+        message,
+      ),
     postInThread: (author, message, threadId) =>
       Effect.gen(function* postInCommandThread() {
         const { channel, close, replyTo } = message;

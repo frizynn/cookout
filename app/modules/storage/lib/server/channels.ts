@@ -86,6 +86,7 @@ const CHANNEL_DELETES: readonly string[] = [
   `DELETE FROM message_mentions WHERE message_id IN (${IN_CHANNEL})`,
   `DELETE FROM read_receipts WHERE message_id IN (${IN_CHANNEL})`,
   `DELETE FROM reactions WHERE message_id IN (${IN_CHANNEL})`,
+  `DELETE FROM attachments WHERE message_id IN (${IN_CHANNEL})`,
   `DELETE FROM follows WHERE thread_id IN (${IN_CHANNEL})`,
   `DELETE FROM thread_read_positions WHERE thread_id IN (${IN_CHANNEL})`,
   `DELETE FROM command_tokens WHERE thread_id IN (${IN_CHANNEL})`,

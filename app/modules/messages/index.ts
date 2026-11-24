@@ -1,12 +1,12 @@
 /**
- * Messages and threads on the wire, shared by the server, the SDK and the web:
- * the `MessageId` brand and its check, `Message` as a union tagged by `kind`,
- * the requests and answers of posting, threads and channel pages, their
- * paths, and the error codes they refuse with.
+ * Messages and threads on the wire, shared by the server, the SDK and the web: the `MessageId` brand and its check,
+ * `Message` as a union tagged by `kind`, the requests and answers of posting, threads and channel pages, their paths,
+ * and the error codes they refuse with.
  */
 import type { Harness, IdentityName, Owner } from "../identities/index.ts";
 import type { ChannelName } from "../channels/index.ts";
 import type { IsoTime } from "../time/index.ts";
+import type { WithAttachments } from "../attachments/index.ts";
 
 declare const brand: unique symbol;
 
@@ -42,11 +42,11 @@ export interface Author {
 }
 
 /** The fields every message has, top-level or reply. */
-export interface MessageFields {
+export interface MessageFields extends WithAttachments {
   readonly id: MessageId;
   readonly channel: ChannelName;
   readonly author: Author;
-  /** Plain text, 1–40,000 characters. */
+  /** Plain text, up to 40,000 characters. Empty only on a message posted with attachments and no text. */
   readonly text: string;
   /** Any JSON value, for commands and agents to read. Absent when none was sent. */
   readonly data?: JsonValue;

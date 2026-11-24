@@ -11,6 +11,12 @@ import type {
   TopLevelMessage,
   TopLevelMessageResponse,
 } from "../../index.ts";
+import {
+  attachmentIdPattern,
+  imageContentTypes,
+  isAttachmentId,
+  opaqueContentType,
+} from "../../../attachments/index.ts";
 import { channelNamePattern, isChannelName } from "../../../channels/index.ts";
 import {
   harnessPattern,
@@ -21,6 +27,7 @@ import {
   plainNamePattern,
 } from "../../../identities/index.ts";
 import { isMessageId, messageTextLength, pageSize, reactionNames, shownRepliers } from "../../index.ts";
+import type { Attachment } from "../../../attachments/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
@@ -46,6 +53,23 @@ const MessageIdSchema = Schema.Int.check(positive).pipe(Schema.refine(isMessageI
 
 const textRule = Schema.isBetweenLength(messageTextLength.minimum, messageTextLength.maximum);
 const TextSchema = Schema.String.check(textRule);
+const ShownTextSchema = Schema.String.check(Schema.isMaxLength(messageTextLength.maximum));
+
+const AttachmentIdSchema = Schema.String.check(Schema.isPattern(attachmentIdPattern)).pipe(
+  Schema.refine(isAttachmentId, { identifier: "AttachmentId" }),
+);
+const AttachmentContentTypeSchema = Schema.Literals([...imageContentTypes, opaqueContentType]);
+const AttachmentSizeSchema = Schema.Int.check(Schema.isGreaterThanOrEqualTo(LOWEST_ID));
+
+const AttachmentSchema = matchesWire<Attachment>()(
+  Schema.Struct({
+    contentType: AttachmentContentTypeSchema,
+    id: AttachmentIdSchema,
+    image: Schema.Boolean,
+    name: Schema.String,
+    size: AttachmentSizeSchema,
+  }),
+);
 
 const AuthorSchema = matchesWire<Author>()(
   Schema.Struct({ name: IdentityNameSchema, owner: Schema.optionalKey(OwnerSchema) }),
@@ -67,6 +91,7 @@ const ReactionCountSchema = matchesWire<ReactionCount>()(
 );
 
 const messageFields = {
+  attachments: Schema.optionalKey(Schema.Array(AttachmentSchema)),
   author: AuthorSchema,
   channel: ChannelNameSchema,
   createdAt: IsoTimeSchema,
@@ -75,7 +100,7 @@ const messageFields = {
   id: MessageIdSchema,
   mentions: Schema.Array(IdentityNameSchema),
   reactions: Schema.optionalKey(Schema.Array(ReactionCountSchema)),
-  text: TextSchema,
+  text: ShownTextSchema,
 };
 
 const ReplyCountSchema = Schema.Int.check(Schema.isGreaterThanOrEqualTo(NO_REPLIES));
@@ -114,6 +139,11 @@ export const PostMessageRequestSchema = Schema.Struct({
   data: Schema.optionalKey(Schema.Json),
   replyTo: Schema.optionalKey(MessageIdSchema),
   text: TextSchema,
+});
+
+export const PostWithAttachmentsRequestSchema = Schema.Struct({
+  ...PostMessageRequestSchema.fields,
+  text: Schema.optionalKey(ShownTextSchema),
 });
 
 export const ListMessagesQuerySchema = Schema.Struct({
