@@ -1,5 +1,5 @@
 import { Alert, BoxFrame, Form, SendButton, Suggestions, TextArea } from "../../design-system/index.tsx";
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useId, useSyncExternalStore } from "react";
 import type { Draft } from "../../composer/index.ts";
 import type { PostState } from "../../board/index.ts";
 import type { ReactNode } from "react";
@@ -45,6 +45,7 @@ export function MessageBox(props: MessageBoxProps): ReactNode {
   const shown = useSuggestions({ commands: written.commands, draft, suggestions: written.suggestions });
   const choosing = shown.options.length > NONE;
   const handleChoose = shown.onChoose;
+  const list = useId();
   return (
     <BoxFrame>
       <Form field="text" label={text.form} onSubmit={handleSend}>
@@ -53,7 +54,9 @@ export function MessageBox(props: MessageBoxProps): ReactNode {
           choosing={choosing}
           focusRequests={written.focusRequests}
           focused={props.focused}
+          highlighted={written.highlighted}
           label={text.field}
+          list={list}
           name="text"
           onClose={handleClose}
           onEdit={handleEdit}
@@ -65,6 +68,7 @@ export function MessageBox(props: MessageBoxProps): ReactNode {
           <Suggestions
             highlighted={written.highlighted}
             label={shown.label}
+            list={list}
             onChoose={handleChoose}
             options={shown.options}
           />

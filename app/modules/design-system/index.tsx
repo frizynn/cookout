@@ -158,13 +158,13 @@
  * input in it, such as a token, `TextArea` a labelled box to write in, such
  * as a reply, whose text and caret its owner holds, where Enter sends the form
  * and Shift+Enter starts a new line, and, while its owner is `choosing` from
- * suggestions, the arrow keys move the highlight, Enter or Tab picks it and
- * Escape closes the list;
- * `SubmitButton` sends it, and `SendButton` is its paper-plane icon form, named
- * and tooltipped by `label`; `Suggestions` is a named list of options to pick
- * from under a box, such as mentions or commands (each with any muted detail
- * after it), one of them highlighted, which leaves the box focused; it sits
- * in the overlay layer, above everything else in the pane.
+ * suggestions, is a combobox naming the highlighted option as its active
+ * descendant, where the arrows move it, Enter or Tab picks it and Escape
+ * closes the list; `SubmitButton` sends it, and `SendButton` is its
+ * paper-plane icon form, named and tooltipped by `label`; `Suggestions` is a
+ * named listbox of options under a box, such as mentions or commands (each
+ * with any muted detail), one selected, which leaves the box focused even when
+ * a pointer picks one; it sits in the overlay layer, above all in the pane.
  * `DataArea` is a labelled box to write JSON in, whose
  * text its owner holds. `PromptForm` is a named card in place of a message
  * box that asks for a command's data, titled, with a Cancel and a submit
