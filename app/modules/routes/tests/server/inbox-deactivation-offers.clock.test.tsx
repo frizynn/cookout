@@ -3,7 +3,7 @@ import type { CookoutClient, DeactivationOfferId, EventStream } from "../../../s
 import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
-import { inDialog, inPane, inSidebar } from "../regions.ts";
+import { inDialog, inPane, inProfile, inSidebar } from "../regions.ts";
 import type { Scope } from "effect";
 import { TestClock } from "effect/testing";
 import type { TestIdentity } from "../../../testing/server.ts";
@@ -125,6 +125,19 @@ it.effect("after 30 quiet days the owner's inbox shows the offer under For you a
       [expect.stringMatching(/@ada\/scout has had no activity for 30 days\. Deactivate it\?.*ada\/scout/u)],
       ["1 for you"],
       "#/inbox?profile=ada/scout",
+    ]);
+  }).pipe(Effect.scoped, Effect.provide(testCookout())),
+);
+
+it.effect("the name in an offer row opens the agent's profile panel beside the inbox", () =>
+  Effect.gen(function* nameOpensProfile() {
+    yield* offeredLive;
+    fireEvent.click(within(screen.getByRole("list", { name: "For you" })).getByRole("link", { name: "ada/scout" }));
+    const heading = yield* answer(() => inProfile().findByRole("heading", { name: /ada\/scout/u }));
+
+    expect([globalThis.location.hash, heading.textContent]).toStrictEqual([
+      "#/inbox?profile=ada/scout",
+      expect.stringContaining("ada/scout"),
     ]);
   }).pipe(Effect.scoped, Effect.provide(testCookout())),
 );
