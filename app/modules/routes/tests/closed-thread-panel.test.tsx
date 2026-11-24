@@ -1,11 +1,11 @@
 import { expect, it, vi } from "vitest";
 import { feedOf, idOf, postedIn } from "./feed.ts";
+import { fireEvent, within } from "@testing-library/react";
 import { inPane, inThread } from "./regions.ts";
 import type { Posted } from "./feed.ts";
 import { adminClient } from "./identities.ts";
 import { alertSaying } from "./alerts.ts";
 import { chose } from "./menus.ts";
-import { fireEvent } from "@testing-library/react";
 import { openAt } from "./render.tsx";
 
 const CLOSED_JUST_NOW = /^Closed by @[\w-]+ (?:just now|\d+ seconds ago)$/u;
@@ -46,6 +46,26 @@ async function closedBarText(name: string): Promise<string> {
 async function closedByOf(posted: Posted): Promise<string | null> {
   const { parent } = await posted.poster.getThread(idOf({ posted, text: "Deploy?" }));
   return parent.closedBy ?? null;
+}
+
+function articleIn(text: string): HTMLElement {
+  const article = inThread().getByText(text).closest("article");
+  if (article === null) {
+    throw new TypeError(`"${text}" is in no article`);
+  }
+  return article;
+}
+
+async function toggleThumbsUp(text: string, chip: string): Promise<void> {
+  fireEvent.click(within(articleIn(text)).getByRole("button", { name: "React with 👍" }));
+  await within(articleIn(text)).findByRole("button", { name: chip });
+}
+
+async function takeBackThumbsUp(text: string): Promise<void> {
+  fireEvent.click(within(articleIn(text)).getByRole("button", { name: "👍 1" }));
+  await vi.waitFor(() => {
+    expect(within(articleIn(text)).queryByRole("button", { name: "👍 1" })).toBeNull();
+  });
 }
 
 interface Opened {
@@ -155,6 +175,25 @@ it("a refused close says why", { timeout: 5000 }, async () => {
 
   expect(alert.textContent).toMatch(/^Couldn't close the thread \(message_not_found\): /u);
   expect(inThread().queryByRole("button", { name: "Reopen" })).toBeNull();
+
+  close();
+});
+
+it("reacting in a closed thread's panel, and taking the reaction back, keeps the thread folded and closed", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const { close, posted } = await openedClosed("web-closed-react");
+  await toggleThumbsUp("Deploy?", "👍 1");
+  await toggleThumbsUp("Noon works.", "👍 1");
+  await feedShows(["Before.", "<1 closed thread>", "After."]);
+  await takeBackThumbsUp("Noon works.");
+
+  await feedShows(["Before.", "<1 closed thread>", "After."]);
+
+  await expect(closedByOf(posted)).resolves.toBe(`${posted.channel}-ada`);
+  expect(inThread().getByRole("button", { name: "Reopen" }).textContent).toBe("Reopen");
 
   close();
 });
