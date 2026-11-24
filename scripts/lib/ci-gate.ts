@@ -1,6 +1,7 @@
 import type { CheckRun, Job, Unreadable } from "./check-run.ts";
 import type { Command, Step, Stopped } from "./merge-steps.ts";
 import { DONE, run, stop, tail } from "./merge-steps.ts";
+import { UNVOUCHED, vouchedGreen } from "./ci-vouch.ts";
 import { field, list, parseJson } from "./json.ts";
 import { readCheckRun } from "./check-run.ts";
 
@@ -14,6 +15,7 @@ interface CiGateOptions {
   readonly polls: number;
   readonly sleep: () => void;
   readonly subject: string;
+  readonly vouchedBy: string;
 }
 
 interface Watched {
@@ -33,6 +35,7 @@ const LOG_LINES = -20;
 const GREEN = "success";
 const FAILURE = "failure";
 const COMPLETED = "completed";
+const CANCELLED = "cancelled";
 const LIST = ["run", "list", "--workflow", "Check", "--event", "push", "--limit", "1", "--json", "databaseId"];
 const BUDGET_WARNING = /over its \S+ budget/u;
 const FAILED_CHECK = /\bFAIL\b/u;
@@ -216,20 +219,74 @@ function verdict(options: CiGateOptions, watched: Watched): Step | "running" {
   return green(options, checkRun);
 }
 
-function poll(options: CiGateOptions, runNumber: number, waited: number): Step {
+function vouched(options: CiGateOptions, runNumber: number, waited: number): boolean {
+  if (options.vouchedBy === "" || waited !== NONE) {
+    return false;
+  }
+  const voucher = vouchedGreen({ ...options, branchPrefix: options.vouchedBy, runNumber });
+  if (voucher === UNVOUCHED) {
+    return false;
+  }
+  options.log(
+    `${options.subject}'s latest Check run is still running or was cancelled, but ${voucher.branch}'s Check run on the same commit is green: ${voucher.checkRun.url}`,
+  );
+  return true;
+}
+
+function cancelledOnly(checkRun: CheckRun): boolean {
+  const failed = notGreen(checkRun);
+  return failed.length > NONE && failed.every((job) => job.conclusion === CANCELLED);
+}
+
+function settled(options: CiGateOptions, watched: Watched, waited: number): Step | "running" {
+  if (cancelledOnly(watched.checkRun) && vouched(options, watched.runNumber, NONE)) {
+    return DONE;
+  }
+  const judged = verdict(options, watched);
+  if (judged === "running" && vouched(options, watched.runNumber, waited)) {
+    return DONE;
+  }
+  return judged;
+}
+
+function supersededBy(options: CiGateOptions, { checkRun, runNumber }: Watched): number | typeof NO_RUN {
+  if (!cancelledOnly(checkRun)) {
+    return NO_RUN;
+  }
+  const latest = findRun(options, [...LIST, ...options.args]);
+  if (typeof latest !== "number" || latest === runNumber) {
+    return NO_RUN;
+  }
+  return latest;
+}
+
+function current(options: CiGateOptions, runNumber: number): Watched | Stopped {
   const checkRun = readCheckRun({ ...options, runNumber });
   if (checkRun.kind === "unreadable") {
     return unreadable(options, checkRun);
   }
-  const judged = verdict(options, { checkRun, runNumber });
+  const newer = supersededBy(options, { checkRun, runNumber });
+  if (newer === NO_RUN) {
+    return { checkRun, runNumber };
+  }
+  options.log(`${options.subject}'s Check run ${runNumber} was cancelled by a newer run: reading run ${newer}.`);
+  return current(options, newer);
+}
+
+function poll(options: CiGateOptions, runNumber: number, waited: number): Step {
+  const watched = current(options, runNumber);
+  if ("kind" in watched) {
+    return watched;
+  }
+  const judged = settled(options, watched, waited);
   if (judged !== "running") {
     return judged;
   }
-  const slept = wait(options, checkRun, waited);
+  const slept = wait(options, watched.checkRun, waited);
   if (slept.kind === "stopped") {
     return slept;
   }
-  return poll(options, runNumber, waited + NEXT);
+  return poll(options, watched.runNumber, waited + NEXT);
 }
 
 function ciGreen(options: CiGateOptions): Step {

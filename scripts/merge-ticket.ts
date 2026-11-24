@@ -67,10 +67,11 @@ interface Gate {
   readonly args: readonly string[];
   readonly base: readonly string[];
   readonly subject: string;
+  readonly vouchedBy: string;
 }
 
-function requireGreen({ advice, args, base, subject }: Gate): void {
-  const step = waitForCi({ args, base, log, subject });
+function requireGreen({ advice, args, base, subject, vouchedBy }: Gate): void {
+  const step = waitForCi({ args, base, log, subject, vouchedBy });
   if (step.kind === "stopped") {
     fail(SCRIPT, `${step.reason}\nNothing was merged. ${advice}`);
   }
@@ -94,6 +95,7 @@ if (fixesRedV1) {
     args: ["--branch", "v1"],
     base: [],
     subject: "v1",
+    vouchedBy: "merge-ticket-",
   });
 }
 requireGreen({
@@ -101,6 +103,7 @@ requireGreen({
   args: ["--branch", `ticket-${ticket}`, "--commit", gitOutput("rev-parse", `ticket-${ticket}`)],
   base: ["--branch", "v1", "--commit", gitOutput("merge-base", `ticket-${ticket}`, "origin/v1")],
   subject: `ticket-${ticket}`,
+  vouchedBy: "",
 });
 
 function migrationsBase(): string {
@@ -146,13 +149,5 @@ function shaOf(outcome: Merged): string {
 }
 
 const sha = shaOf(merged);
-log(`merged ticket-${ticket} into v1 at ${sha}; waiting for its v1 Check run.`);
-const watched = waitForCi({ args: ["--branch", "v1", "--commit", sha], base: [], log, subject: "v1's merge" });
-if (watched.kind === "stopped") {
-  fail(
-    SCRIPT,
-    `${watched.reason}\nticket-${ticket} is merged into v1 at ${sha}, but v1 is not green. Fix v1 before anything else merges.`,
-  );
-}
-console.log(`${SCRIPT}: merged ticket-${ticket} into v1 at ${sha}, and its v1 Check run is green.`);
+console.log(`${SCRIPT}: merged ticket-${ticket} into v1 at ${sha}, whose merge-ticket-${ticket} Check run is green.`);
 console.log(sha);
