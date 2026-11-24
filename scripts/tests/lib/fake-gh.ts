@@ -63,6 +63,7 @@ interface Fake {
 interface Responses {
   readonly list: readonly unknown[];
   readonly log?: readonly string[];
+  readonly rerun?: readonly string[];
   readonly view: readonly unknown[];
 }
 

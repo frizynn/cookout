@@ -2,7 +2,9 @@ import type { CheckRun, Job, Unreadable } from "./check-run.ts";
 import type { Command, Step, Stopped } from "./merge-steps.ts";
 import { DONE, run, stop, tail } from "./merge-steps.ts";
 import { field, list, parseJson } from "./json.ts";
+import type { Polled } from "./ci-verdict.ts";
 import { readCheckRun } from "./check-run.ts";
+import { sameCommitVerdict } from "./ci-verdict.ts";
 
 interface CiGateOptions {
   readonly appear: number;
@@ -216,20 +218,50 @@ function verdict(options: CiGateOptions, watched: Watched): Step | "running" {
   return green(options, checkRun);
 }
 
-function poll(options: CiGateOptions, runNumber: number, waited: number): Step {
+function redOf(options: CiGateOptions, runNumber: number): Step {
   const checkRun = readCheckRun({ ...options, runNumber });
   if (checkRun.kind === "unreadable") {
     return unreadable(options, checkRun);
   }
-  const judged = verdict(options, { checkRun, runNumber });
-  if (judged !== "running") {
-    return judged;
+  return red(options, { checkRun, runNumber });
+}
+
+function ownVerdict(options: CiGateOptions, watched: Watched, reran: boolean): Polled | Step {
+  const own = verdict(options, watched);
+  if (own === "running") {
+    return { reran, runNumber: watched.runNumber };
+  }
+  return own;
+}
+
+function advance(options: CiGateOptions, watched: Watched, reran: boolean): Polled | Step {
+  const judged = sameCommitVerdict({ ...options, ...watched, reran });
+  if (judged.kind === "red") {
+    return redOf(options, judged.runNumber);
+  }
+  if (judged.kind === "next") {
+    for (const line of judged.lines) {
+      options.log(line);
+    }
+    return judged.next;
+  }
+  return ownVerdict(options, watched, reran);
+}
+
+function poll(options: CiGateOptions, polled: Polled, waited: number): Step {
+  const checkRun = readCheckRun({ ...options, runNumber: polled.runNumber });
+  if (checkRun.kind === "unreadable") {
+    return unreadable(options, checkRun);
+  }
+  const next = advance(options, { checkRun, runNumber: polled.runNumber }, polled.reran);
+  if ("kind" in next) {
+    return next;
   }
   const slept = wait(options, checkRun, waited);
   if (slept.kind === "stopped") {
     return slept;
   }
-  return poll(options, runNumber, waited + NEXT);
+  return poll(options, next, waited + NEXT);
 }
 
 function ciGreen(options: CiGateOptions): Step {
@@ -237,7 +269,7 @@ function ciGreen(options: CiGateOptions): Step {
   if (typeof runNumber !== "number") {
     return runNumber;
   }
-  return poll(options, runNumber, NONE);
+  return poll(options, { reran: false, runNumber }, NONE);
 }
 
 export { ciGreen };
