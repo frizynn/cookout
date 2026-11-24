@@ -4,10 +4,10 @@ import { DONE, run, stop, tail } from "./merge-steps.ts";
 import { UNVOUCHED, vouchedGreen } from "./ci-vouch.ts";
 import { described, failuresOf, reportJobs } from "./ci-failures.ts";
 import { field, list, parseJson } from "./json.ts";
+import { readCheckRun, redJobs } from "./check-run.ts";
 import type { Failure } from "./ci-failures.ts";
 import type { Polled } from "./ci-verdict.ts";
 import type { Refused } from "./ci-rerun.ts";
-import { readCheckRun } from "./check-run.ts";
 import { retriedOnce } from "./ci-rerun.ts";
 import { sameCommitVerdict } from "./ci-verdict.ts";
 
@@ -38,7 +38,6 @@ interface Progress {
 const NONE = 0;
 const NO_RUN = "none";
 const NEXT = 1;
-const GREEN = "success";
 const COMPLETED = "completed";
 const CANCELLED = "cancelled";
 const LIST = ["run", "list", "--workflow", "Check", "--event", "push", "--limit", "1", "--json", "databaseId"];
@@ -89,7 +88,7 @@ function awaitRun(options: CiGateOptions, waited: number): number | Stopped {
 }
 
 function notGreen(checkRun: CheckRun): readonly Job[] {
-  return checkRun.jobs.filter((job) => job.status === COMPLETED && job.conclusion !== GREEN);
+  return redJobs(checkRun);
 }
 
 function baseRun(options: CiGateOptions): CheckRun | typeof NO_RUN {

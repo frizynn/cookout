@@ -9,6 +9,11 @@ const FAILED_RUN = view({
 });
 const RERUNNING = view({ jobs: [done("lint"), running("e2e-docker")], status: RUNNING });
 const GREEN_RUN = view({ jobs: [done("lint"), done("e2e-docker")], status: COMPLETED });
+const SKIPPED = { conclusion: "skipped", name: "coverage", status: COMPLETED, steps: [] };
+const SKIPPED_AFTER_FAILURE = view({
+  jobs: [ended({ conclusion: "failure", failedStep: "pnpm check", name: "e2e-docker" }), SKIPPED],
+  status: COMPLETED,
+});
 const RERUN_LINE = "v1's Check run 42 is red: rerunning its failed jobs once, in case they were flaky: e2e-docker.";
 
 function reruns(calls: readonly string[]): readonly string[] {
@@ -76,4 +81,31 @@ it("refuses a red run without rerunning it when not asked to", { timeout: 10_000
     `v1's latest Check run is red: e2e-docker (failure).\n${URL}${E2E_STEPS}`,
     [],
   ]);
+});
+
+it("names only the failed job, not one skipped because it depended on it", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const gh = fake({ list: [RUN, []], view: [SKIPPED_AFTER_FAILURE] });
+
+  const { step } = gh.gate(ARGS);
+
+  expect(reasonOf(step)).toBe(`v1's latest Check run is red: e2e-docker (failure).\n${URL}${E2E_STEPS}`);
+  expect(step).toMatchObject({ jobs: ["e2e-docker"] });
+});
+
+it("waits for the rerun while a job skipped on the red attempt still reads as skipped", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const rerunning = view({ jobs: [running("e2e-docker"), SKIPPED], status: RUNNING });
+  const gh = fake({
+    list: [RUN, []],
+    rerun: [""],
+    rerunRed: true,
+    view: [SKIPPED_AFTER_FAILURE, rerunning, GREEN_RUN],
+  });
+
+  const { sleeps, step } = gh.gate(ARGS);
+
+  expect([reasonOf(step), reruns(gh.calls()), sleeps]).toStrictEqual(["green", ["run rerun 42 --failed"], TWO]);
 });
