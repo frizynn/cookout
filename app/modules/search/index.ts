@@ -4,7 +4,8 @@
  * route, its path and the error codes it refuses with. A word is a run of
  * letters and digits, without case or accents: punctuation, `@` and `#` separate
  * words, so `**Café**` is the word `cafe`. The storage Layers match with the same
- * word rule, so what the web highlights is what the server found.
+ * word rule, so what the web highlights is what the server found. A query also
+ * holds the `from:`, `in:`, `before:` and `after:` filters.
  */
 import type { Message } from "../messages/index.ts";
 
@@ -18,33 +19,86 @@ function wordsOf(text: string): readonly string[] {
   return plain.match(WORD) ?? [];
 }
 
-/** A query as the server reads it. Every word must match a word of the message that equals it or starts with it. */
-export interface ParsedQuery {
+const SPACES = /\s+/u;
+const FILTERS = ["from", "in", "before", "after"] as const;
+const WORDS = "words";
+const SIGILS: Readonly<Record<(typeof FILTERS)[number], RegExp>> = {
+  after: /^/u,
+  before: /^/u,
+  from: /^@/u,
+  in: /^#/u,
+};
+
+interface Term {
+  readonly kind: (typeof FILTERS)[number] | typeof WORDS;
+  readonly text: string;
+}
+
+function asFilter(text: string): (filter: (typeof FILTERS)[number]) => readonly Term[] {
+  return (filter) => {
+    const prefix = `${filter}:`;
+    const bare = text.slice(prefix.length).replace(SIGILS[filter], NO_MARKS);
+    if (!text.startsWith(prefix) || bare.length === NO_WORDS) {
+      return [];
+    }
+    return [{ kind: filter, text: bare }];
+  };
+}
+
+function termOf(text: string): Term {
+  const [term = { kind: WORDS, text }] = FILTERS.flatMap(asFilter(text));
+  return term;
+}
+
+function textsOf(terms: readonly Term[], kind: Term["kind"]): readonly string[] {
+  return terms.filter((term) => term.kind === kind).map((term) => term.text);
+}
+
+/** The filters a query can hold, each typed as `<filter>:<value>`. */
+export const searchFilters = FILTERS;
+
+/** A filter a query can hold. */
+export type SearchFilter = (typeof searchFilters)[number];
+
+/**
+ * A query as the server reads it. Every word must match a word of the message that equals it or starts with it. Each
+ * filter keeps what was typed after `from:`, `in:`, `before:` or `after:`, without the `@` or `#`, in the order typed:
+ * the server checks that each names an identity, a channel or a real `YYYY-MM-DD` day.
+ */
+export interface ParsedQuery extends Readonly<Record<SearchFilter, readonly string[]>> {
   readonly words: readonly string[];
 }
 
 /**
- * Reads a query as typed. For now a query is only words.
+ * Reads a query as typed: `from:@name`, `in:#channel`, `before:YYYY-MM-DD` and `after:YYYY-MM-DD` are filters, with
+ * `@` and `#` optional, and the rest is words. An unknown `word:` is ordinary words.
  * @param query The query as typed.
- * @returns The query's words.
+ * @returns The query's words and filters.
  */
 export function parseQuery(query: string): ParsedQuery {
-  return { words: wordsOf(query) };
+  const terms = query.split(SPACES).map((text) => termOf(text));
+  return {
+    after: textsOf(terms, "after"),
+    before: textsOf(terms, "before"),
+    from: textsOf(terms, "from"),
+    in: textsOf(terms, "in"),
+    words: textsOf(terms, WORDS).flatMap((text) => wordsOf(text)),
+  };
 }
 
 /**
- * Whether a parsed query asks for nothing, which the server refuses as `empty_query`.
+ * Whether a parsed query asks for nothing, neither words nor filters, which the server refuses as `empty_query`.
  * @param parsed The parsed query.
- * @returns Whether it has no words.
+ * @returns Whether it has no words and no filters.
  */
 export function isEmptyQuery(parsed: ParsedQuery): boolean {
-  return parsed.words.length === NO_WORDS;
+  return [parsed.words, ...searchFilters.map((filter) => parsed[filter])].every((values) => values.length === NO_WORDS);
 }
 
 /** A message's text and the query it is matched against. */
 export interface Matching {
   readonly text: string;
-  readonly query: ParsedQuery;
+  readonly query: Pick<ParsedQuery, "words">;
 }
 
 /**
@@ -74,4 +128,4 @@ export interface SearchResponse {
 export const searchPath = "/v1/search";
 
 /** The codes the search route refuses with. */
-export const searchErrorCodes = ["empty_query"] as const;
+export const searchErrorCodes = ["empty_query", "unknown_identity", "unknown_channel", "invalid_date"] as const;
