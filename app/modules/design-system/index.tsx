@@ -146,34 +146,26 @@
  * linking to its profile. `TextArea` takes focus when it first appears
  * if `focused`.
  *
- * `AppShell` is the page around the login view; `Card`, centred in a scrolling column, `CardHeader`,
- * `Heading` and `Muted` are a shadcn-style card and its title row, `CardBody`
- * a padded section under it; `MutedLines` is muted text that keeps its line
- * breaks; `LinkList` and
- * `LinkRow` are a named list of links, and `ItemList` and `ItemRow` a named
- * list of plain rows; `Alert` is a refusal, read out by screen readers;
- * `Notice` is a passing word on what just happened, read out politely;
- * `Skeleton` stands in while something loads. `Form` hands one field's value
- * to `onSubmit` without reloading the page; `TextField` is a labelled secret
- * input in it, such as a token, `TextArea` a labelled box to write in, such
- * as a reply, whose text and caret its owner holds, where Enter sends the form
- * and Shift+Enter starts a new line, and, while its owner is `choosing` from
- * suggestions, the arrow keys move the highlight, Enter or Tab picks it and
- * Escape closes the list;
- * `SubmitButton` sends it, and `SendButton` is its paper-plane icon form, named
- * and tooltipped by `label`; `Suggestions` is a named list of options to pick
- * from under a box, such as mentions or commands (each with any muted detail
- * after it), one of them highlighted, which leaves the box focused; it sits
- * in the overlay layer, above everything else in the pane.
- * `DataArea` is a labelled box to write JSON in, whose
- * text its owner holds. `PromptForm` is a named card in place of a message
- * box that asks for a command's data, titled, with a Cancel and a submit
- * button, its first field focused, and Escape anywhere in it calls
- * `onEscape`; in it `InputField` (text, a number, an
- * integer, a date or a time), `PickField` (one of a list, or none) and `CheckField` (a checkbox)
- * are labelled fields whose value their owner holds, each marked when
- * required, with its help text and any error under it, both read out as its
- * description.
+ * `AppShell` is the page around the login view; `Card`, centred in a scrolling column, `CardHeader`, `Heading` and
+ * `Muted` are a shadcn-style card and its title row, `CardBody` a padded section under it; `MutedLines` is muted text
+ * that keeps its line breaks; `LinkList` and `LinkRow` are a named list of links, and `ItemList` and `ItemRow` a named
+ * list of plain rows; `Alert` is a refusal, read out by screen readers; `Notice` is a passing word on what just
+ * happened, read out politely; `Skeleton` stands in while something loads. `Form` hands one field's value to `onSubmit`
+ * without reloading the page; `TextField` is a labelled secret input in it, such as a token, `TextArea` a labelled box
+ * to write in, such as a reply, whose text and caret its owner holds, where Enter sends the form and Shift+Enter starts
+ * a new line, and, while its owner is `choosing` from suggestions, the arrow keys move the highlight, Enter or Tab
+ * picks it and Escape closes the list; `SubmitButton` sends it, and `SendButton` is its paper-plane icon form, named
+ * and tooltipped by `label`; `Suggestions` is a named list of options to pick from under a box, such as mentions or
+ * commands (each with any muted detail after it), one of them highlighted, which leaves the box focused; it sits in the
+ * overlay layer, above everything else in the pane. `ComboboxField` is a named search input that is a combobox controlling the listbox `list`, its option at `active` the active one while `expanded`; `ResultList` is a named listbox (`list` its ID) of named
+ * `ResultGroup`s of `ResultOption`s, each a label, any muted detail and its children, highlighted (and scrolled into
+ * view) when `highlighted`, its `id` for a box's `aria-activedescendant`; pressing one calls `onChoose` with its
+ * `href`, leaving the box focused. `DataArea` is a labelled box to write JSON in, whose text its owner holds.
+ * `PromptForm` is a named card in place of a message box that asks for a command's data, titled, with a Cancel and a
+ * submit button, its first field focused, and Escape anywhere in it calls `onEscape`; in it `InputField` (text, a
+ * number, an integer, a date or a time), `PickField` (one of a list, or none) and `CheckField` (a checkbox) are
+ * labelled fields whose value their owner holds, each marked when required, with its help text and any error under it,
+ * both read out as its description.
  */
 export {
   AppShell,
@@ -270,6 +262,10 @@ export {
   PickField,
   PromptForm,
   Suggestions,
+  ComboboxField,
+  ResultGroup,
+  ResultList,
+  ResultOption,
   SendButton,
   SubmitButton,
   TextArea,

@@ -32,17 +32,17 @@ async function openedOnThread(channel: string): Promise<Opened> {
 }
 
 async function searchBox(): Promise<HTMLElement> {
-  const box = await screen.findByRole("searchbox", BOX);
+  const box = await screen.findByRole("combobox", BOX);
   return box;
 }
 
 async function typed(query: string): Promise<void> {
   fireEvent.input(await searchBox(), { target: { value: query } });
-  await inSearchResults().findByRole("link", { name: /Kudukey deploy/u });
+  await inSearchResults().findByRole("option", { name: /Kudukey deploy/u });
 }
 
 function pressed(key: string, options: { readonly isComposing?: boolean } = {}): boolean {
-  return fireEvent.keyDown(screen.getByRole("searchbox", BOX), { key, ...options });
+  return fireEvent.keyDown(screen.getByRole("combobox", BOX), { key, ...options });
 }
 
 function pressedAll(keys: readonly string[]): void {
@@ -52,15 +52,14 @@ function pressedAll(keys: readonly string[]): void {
 }
 
 function ignoredPresses(): void {
-  const box = screen.getByRole("searchbox", BOX);
-  pressed("Enter");
+  const box = screen.getByRole("combobox", BOX);
   fireEvent(box, new Event("keydown", { bubbles: true }));
   pressed("Enter", { isComposing: true });
 }
 
 function pressedOutside(): HTMLElement | null {
   fireEvent.pointerDown(globalThis.document.body);
-  return screen.queryByRole("list", RESULTS);
+  return screen.queryByRole("listbox", RESULTS);
 }
 
 it("off a Mac, Ctrl+K focuses the search box from a message box, preventing the browser's own, and Cmd+K doesn't", {
@@ -96,7 +95,7 @@ it("on a Mac, the search box names ⌘K in its placeholder and aria-keyshortcuts
   const box = await searchBox();
 
   expect([box.getAttribute("placeholder"), box.getAttribute("aria-keyshortcuts")]).toStrictEqual([
-    "Search messages (⌘K)",
+    "Go to or search (⌘K)",
     "Meta+K",
   ]);
 
@@ -113,7 +112,7 @@ it("escape closes the list and gives focus back to the message box it came from"
   await typed("kudukey web search escape");
   const handled = !pressed("Escape");
 
-  expect([handled, screen.queryByRole("list", RESULTS), globalThis.document.activeElement]).toStrictEqual([
+  expect([handled, screen.queryByRole("listbox", RESULTS), globalThis.document.activeElement]).toStrictEqual([
     true,
     null,
     reply,
@@ -122,7 +121,7 @@ it("escape closes the list and gives focus back to the message box it came from"
   opened.close();
 });
 
-it("down, Up and Enter open the highlighted result; Enter with none highlighted, or mid-composition, does nothing", {
+it("down, Up and Enter open the highlighted result; a key without a key, or Enter mid-composition, does nothing", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -151,8 +150,8 @@ async function focusedFromNowhere(): Promise<HTMLElement> {
 }
 
 async function touchedInside(): Promise<void> {
-  const link = await inSearchResults().findByRole("link", { name: /Kudukey deploy/u });
-  const box = screen.getByRole("searchbox", BOX);
+  const link = await inSearchResults().findByRole("option", { name: /Kudukey deploy/u });
+  const box = screen.getByRole("combobox", BOX);
   link.focus();
   fireEvent.pointerDown(box);
   fireEvent.click(box);
@@ -173,8 +172,8 @@ it("focusing a result, pressing or clicking in the box, and scrolling or typing 
   fireEvent.input(reply, { target: { value: "Elsewhere" } });
 
   expect([
-    inSearchResults().getAllByRole("link", { name: /Kudukey/u }).length,
-    screen.getByRole("searchbox", BOX),
+    inSearchResults().getAllByRole("option", { name: /Kudukey/u }).length,
+    screen.getByRole("combobox", BOX),
   ]).toStrictEqual([BOTH, expect.objectContaining({ value: "kudukey web search inside" })]);
 
   opened.close();
@@ -189,10 +188,59 @@ it("pressing outside closes the list, focusing the box opens it again, and Escap
   await typed("kudukey web search outside");
   const closed = pressedOutside();
   const box = await focusedFromNowhere();
-  const reopened = await screen.findByRole("list", RESULTS);
+  const reopened = await screen.findByRole("listbox", RESULTS);
   pressed("Escape");
 
   expect([closed, reopened.isConnected, globalThis.document.activeElement === box]).toStrictEqual([null, false, false]);
+
+  opened.close();
+});
+
+function activeOptionName(): string | null {
+  const box = screen.getByRole("combobox", BOX);
+  const active = box.getAttribute("aria-activedescendant") ?? "";
+  const option = globalThis.document.querySelector(`[id="${active}"][aria-selected="true"]`);
+  if (option === null) {
+    return null;
+  }
+  return option.textContent;
+}
+
+interface Combobox {
+  readonly controls: boolean;
+  readonly expanded: string | null;
+  readonly groups: readonly (string | null)[];
+}
+
+async function comboboxOpened(): Promise<Combobox> {
+  const box = await searchBox();
+  box.focus();
+  const listbox = await screen.findByRole("listbox", RESULTS);
+  const groups: (string | null)[] = [];
+  for (const group of inSearchResults().getAllByRole("group")) {
+    groups.push(group.getAttribute("aria-label"));
+  }
+  return {
+    controls: box.getAttribute("aria-controls") === listbox.id,
+    expanded: box.getAttribute("aria-expanded"),
+    groups,
+  };
+}
+
+it("the box is a combobox controlling a listbox of named groups, its active option following Down and Up", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const opened = await openedOnThread("web-search-combobox");
+  const combobox = await comboboxOpened();
+  const first = activeOptionName();
+  pressed("ArrowDown");
+  const second = activeOptionName();
+  pressed("ArrowUp");
+
+  expect(combobox).toStrictEqual({ controls: true, expanded: "true", groups: ["Places"] });
+  expect([first, second, activeOptionName()]).toStrictEqual(["Inbox", "People", "Inbox"]);
 
   opened.close();
 });

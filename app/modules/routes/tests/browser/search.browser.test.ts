@@ -73,7 +73,7 @@ test("ctrl+K focuses the search box from a message box, with the browser's own s
   await page.evaluate(recordingShortcut);
   await page.keyboard.press("Control+k");
 
-  await expect(page.getByRole("searchbox", BOX)).toBeFocused();
+  await expect(page.getByRole("combobox", BOX)).toBeFocused();
   await expect(page.locator("body")).toHaveAttribute("data-shortcut-prevented", "true");
 });
 
@@ -81,8 +81,8 @@ test("Inbox keys typed in the search box change nothing in the Inbox", async ({ 
   const selected = await selectedInInbox(page, "browser-search-letters");
   await searched(page, "jkeu");
 
-  await expect(page.getByRole("searchbox", BOX)).toHaveValue("jkeu");
-  await expect(page.getByRole("searchbox", BOX)).toBeFocused();
+  await expect(page.getByRole("combobox", BOX)).toHaveValue("jkeu");
+  await expect(page.getByRole("combobox", BOX)).toBeFocused();
 
   expect(page.url()).toBe(selected);
 });
@@ -92,11 +92,11 @@ test("Escape closes the list, gives focus back, and the Inbox's selected row sta
   const selected = await selectedInInbox(page, channel);
   await searched(page, `pangolinkey ${channel}`);
 
-  await expect(page.getByRole("list", RESULTS)).toBeVisible();
+  await expect(page.getByRole("listbox", RESULTS)).toBeVisible();
 
   await page.keyboard.press("Escape");
 
-  await expect(page.getByRole("list", RESULTS)).toBeHidden();
+  await expect(page.getByRole("listbox", RESULTS)).toBeHidden();
   await expect(inPane(page).locator(`a[data-feed-row][href="${new URL(selected).hash}"]`)).toBeFocused();
 
   expect(page.url()).toBe(selected);
@@ -108,12 +108,14 @@ test("Down, Up and Enter open the highlighted result", async ({ page }) => {
   await page.goto("/#/inbox");
   await searched(page, `pangolinkey ${channel}`);
 
-  await expect(page.getByRole("list", RESULTS).getByRole("listitem")).toHaveCount(BOTH);
+  await expect(
+    page.getByRole("listbox", RESULTS).getByRole("group", { name: "Messages" }).getByRole("option"),
+  ).toHaveCount(BOTH);
 
   await pressed(page, ["ArrowDown", "ArrowDown", "ArrowUp", "Enter"]);
 
   await expect(page).toHaveURL(
     new RegExp(`#/channels/${channel}/threads/${String(opened.thread)}/messages/${String(opened.reply)}$`, "u"),
   );
-  await expect(page.getByRole("list", RESULTS)).toBeHidden();
+  await expect(page.getByRole("listbox", RESULTS)).toBeHidden();
 });
