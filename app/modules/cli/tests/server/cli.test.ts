@@ -62,7 +62,7 @@ it.effect("every verb passes its arguments and flags to the server and prints th
       { ...succeeded, stdoutJson: { message: { id: 2, replyTo: 1 } } },
       { ...succeeded, stdoutJson: { hasMore: false, messages: [{ id: 1 }] } },
       { ...succeeded, stdoutJson: { parent: { id: 1 }, replies: [{ id: 2 }] } },
-      { ...succeeded, stdoutJson: { agents: [], identity: { deactivated: true, name: "bot" } } },
+      { ...succeeded, stdoutJson: { identity: { deactivated: true, name: "bot" } } },
       { ...succeeded, stdoutJson: { identity: { name: "admin" } } },
       { ...succeeded, stdoutJson: { identities: [{ kind: "human", name: "admin" }] } },
       { ...succeeded, stdoutJson: { channels: [{ name: "grill" }] } },
