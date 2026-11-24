@@ -12,8 +12,8 @@ import type {
   OfflineAlert,
   ReadPosition,
 } from "../../sdk/index.ts";
-import { openOnly, reparent } from "./closed-threads.ts";
 import { forgetChannelIn } from "./deleted-channels.ts";
+import { reparent } from "./closed-threads.ts";
 
 interface InboxItems {
   readonly addAll: (all: readonly InboxItem[]) => void;
@@ -25,7 +25,6 @@ interface InboxItems {
   readonly receive: (event: CookoutEvent, onRead: (item: InboxItem) => void) => boolean;
   readonly forgetChannel: (channel: ChannelName) => void;
   readonly list: () => readonly InboxItem[];
-  readonly inbox: () => readonly InboxItem[];
   readonly has: (id: MessageId) => boolean;
   readonly isRead: (message: Message) => boolean;
 }
@@ -178,7 +177,6 @@ function createInboxItems(): InboxItems {
       forgetChannelIn({ channel, items, places, positions });
     },
     has: (id) => items.has(id),
-    inbox: () => openOnly(oldestFirst(items.values())),
     isRead,
     list: () => oldestFirst(items.values()),
     moveBack: (position) => {

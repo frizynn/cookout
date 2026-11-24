@@ -86,7 +86,7 @@
  * each a link over the whole row (named by its text) leading with why it is
  * there (`why`), then a message with its author's avatar and name (its own
  * link, to `authorHref`, above the row's), what they did (`action`) and in which channel, a
- * short time, any `count` of how many of its messages are new ("3 new") and any
+ * short time, a `Closed` marker when it is `closed` (its thread is closed), any `count` of how many of its messages are new ("3 new") and any
  * `context` line (a reply's thread), then what it holds: its `FeedText`, up to
  * two lines, and any `RowButton`, a small button raised above the row's link. A `for-you` row has an accent dot and why,
  * a bold name and bright text; an `activity` row has a muted dot and why, a
