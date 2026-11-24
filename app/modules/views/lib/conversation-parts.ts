@@ -3,7 +3,7 @@ import type { PanelAction, PanelEdgeParts } from "../../design-system/index.tsx"
 import type { Reader, Reading, Unread } from "../../unread/index.ts";
 import { CONVERSATION_KEYS } from "../../design-system/index.tsx";
 import type { Composer } from "../../composer/index.ts";
-import type { ThreadSelection } from "../../paths/index.ts";
+import type { InboxThreadSelection } from "../../paths/index.ts";
 
 const TEXT = { markRead: "Mark read", markUnread: "Mark unread", readName: "Mark conversation read" } as const;
 
@@ -14,7 +14,7 @@ interface ConversationProps {
   readonly board: Board;
   readonly composer: Composer;
   readonly edge: PanelEdgeParts;
-  readonly selected: ThreadSelection;
+  readonly selected: InboxThreadSelection;
   readonly unread: Unread;
   readonly reading: Reading;
   readonly me: string;

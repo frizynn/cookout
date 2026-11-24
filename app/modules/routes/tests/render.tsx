@@ -4,6 +4,7 @@ import { adminClient, anonymousClient } from "./identities.ts";
 import { boardStoreFor, createUnread, readingFor, unreadFor } from "./defaults.ts";
 import { cleanup, render } from "@testing-library/react";
 import { createAgentJoinApprovals, createLoginApprovals } from "../../board/index.ts";
+import { onTestFinished, vi } from "vitest";
 import type { Composer } from "../../composer/index.ts";
 import { CookoutApp } from "../index.tsx";
 import type { CookoutClient } from "../../sdk/index.ts";
@@ -12,7 +13,6 @@ import type { Search } from "../../search/web.ts";
 import { createComposer } from "../../composer/index.ts";
 import { createLayout } from "../../layout/index.ts";
 import { createSearch } from "../../search/web.ts";
-import { onTestFinished } from "vitest";
 
 type AppClient = BoardStoreClient &
   Pick<
@@ -110,6 +110,16 @@ function approvalsOf(opening: BoardOpening): Approvals {
   };
 }
 
+function scrollingStubbed(): void {
+  if ("scrollIntoView" in Element.prototype) {
+    return;
+  }
+  Object.defineProperty(Element.prototype, "scrollIntoView", { configurable: true, value: vi.fn<() => void>() });
+  onTestFinished(() => {
+    Reflect.deleteProperty(Element.prototype, "scrollIntoView");
+  });
+}
+
 const SEARCH_PAUSE_MS = 10;
 
 function searchFor(boardStore: BoardStore, { searchLimit }: Pick<Opening, "searchLimit">): Search {
@@ -125,6 +135,7 @@ export function browserLayout(): Layout {
 }
 
 export function openBoard(opening: BoardOpening): () => void {
+  scrollingStubbed();
   globalThis.location.hash = opening.hash;
   const boardStore = boardStoreFor({ boardStore: opening.boardStore, client: adminClient(), live: opening.live });
   const composer = opening.composer ?? createComposer({ boardStore });
