@@ -12,11 +12,11 @@ interface PanelTitleParts {
 export function PanelTitle(parts: PanelTitleParts): ReactNode {
   const { menu } = parts;
   if (menu === null) {
-    return <PanelTitleText detail={parts.detail} label={parts.label} />;
+    return <PanelTitleText detail={parts.detail} focusable={false} label={parts.label} />;
   }
   return (
     <ActionMenu choices={menu.choices} label={menu.label}>
-      <PanelTitleText detail={parts.detail} label={parts.label} />
+      <PanelTitleText detail={parts.detail} focusable label={parts.label} />
     </ActionMenu>
   );
 }

@@ -111,15 +111,15 @@ const KEYS = [
 const THREE_ITEMS = 3;
 
 it.each(KEYS)(
-  "%s on the focused More actions button in a thread's header opens its actions menu",
+  "%s on a thread's focused header opens its actions menu",
   { timeout: 5000 },
   async (_name, key, shiftKey) => {
     expect.hasAssertions();
 
     const { close } = await openThread(`web-thread-menu-key-${key.toLowerCase()}`);
-    const button = headerMoreActions();
-    button.focus();
-    fireEvent.keyDown(button, { key, shiftKey });
+    const heading = within(header()).getByRole("heading", { name: "Thread" });
+    heading.focus();
+    fireEvent.keyDown(heading, { key, shiftKey });
 
     await expect(menuItems(MENU)).resolves.toHaveLength(THREE_ITEMS);
 

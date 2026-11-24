@@ -97,7 +97,7 @@ const SCREENS: readonly Screen[] = [
   {
     click: "More actions",
     clickIn: 'aside[aria-label="Thread"] header',
-    focus: 'aside[aria-label="Thread"] header button',
+    focus: 'aside[aria-label="Thread"] header h2[tabindex="0"]',
     hash: "#/channels/general/threads/1",
     name: "thread-menu",
     text: "Copy link",
