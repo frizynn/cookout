@@ -198,12 +198,4 @@ export type { Subscriptions, SubscriptionsState } from "./lib/subscriptions.ts";
 export type { ThreadMessages, ThreadMessagesState } from "./lib/thread-messages.ts";
 export type { ThreadClosing } from "./lib/thread-closing.ts";
 export type { MessageBeforeState } from "./lib/message-stores.ts";
-export {
-  type BoardState,
-  type BoardStore,
-  type BoardStoreOptions,
-  type Presences,
-  type Shown,
-  createBoardStore,
-  presences,
-} from "./lib/board-store.ts";
+export { type BoardStore, type Presences, createBoardStore, presences } from "./lib/board-store.ts";

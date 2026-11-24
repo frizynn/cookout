@@ -1,7 +1,7 @@
-import type { BoardStore, BoardStoreOptions } from "../index.ts";
 import type { CookoutClient, IdentityName, Presence } from "../../sdk/index.ts";
 import { createBoardStore, presences } from "../index.ts";
 import { expect, it, onTestFinished, vi } from "vitest";
+import type { BoardStore } from "../index.ts";
 import type { HandLive } from "../../testing/web.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
 import { createLive } from "../../live/index.ts";
@@ -9,6 +9,8 @@ import { handLive } from "../../testing/web.ts";
 import { webTestCookout } from "../../../../scripts/web-test-server.ts";
 
 const NOBODY = 0;
+
+type PresenceClient = Pick<CookoutClient, "presence">;
 
 interface Agent {
   readonly name: IdentityName;
@@ -48,7 +50,7 @@ function show(store: BoardStore): void {
 }
 
 interface Counting {
-  readonly client: BoardStoreOptions["client"];
+  readonly client: PresenceClient;
   readonly reads: () => readonly string[];
 }
 
@@ -66,7 +68,7 @@ function counting(): Counting {
   };
 }
 
-function opened(client: BoardStoreOptions["client"] = adminClient()): Opened {
+function opened(client: PresenceClient = adminClient()): Opened {
   const hand = handLive();
   const store = createBoardStore({ client, live: createLive(hand.adapter) });
   show(store);
@@ -137,7 +139,7 @@ it("a presence event heard while the presence is being read wins over the value 
 
   const agent = await agentNamed("store-presence-during-bot");
   const during = handLive();
-  const client: BoardStoreOptions["client"] = {
+  const client: PresenceClient = {
     presence: async () => {
       const answer = await adminClient().presence();
       during.send({ presence: { identity: agent.name, online: true }, type: "presence" });
@@ -200,7 +202,7 @@ it("a presence read the server refuses leaves nobody's presence known", { timeou
 
   const refused = createCookoutClient({ env: {}, token: "cookout_not_a_token", url: webTestCookout().url });
   const answered = Promise.withResolvers<null>();
-  const client: BoardStoreOptions["client"] = {
+  const client: PresenceClient = {
     presence: async () => {
       try {
         const answer = await refused.presence();

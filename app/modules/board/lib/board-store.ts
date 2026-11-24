@@ -110,5 +110,5 @@ function presences(state: BoardState): Presences {
   return state.presence;
 }
 
-export { type BoardState, type BoardStore, type BoardStoreOptions, type Shown, createBoardStore, presences };
+export { type BoardStore, createBoardStore, presences };
 export type { Presences } from "./presence-slice.ts";
