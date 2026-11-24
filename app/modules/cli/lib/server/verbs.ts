@@ -111,7 +111,7 @@ function notAMessageId(value: number): string {
 const channelArgument = Argument.String("channel").pipe(Argument.withDescription("The channel's name."));
 const textArgument = Argument.String("text").pipe(
   Argument.withDefault(""),
-  Argument.withDescription("The message, up to 40,000 characters. Only a message with --attach may leave it out."),
+  Argument.withDescription("The message, up to 40,000 characters."),
 );
 const jsonData = Flag.String("data").pipe(Flag.withSchema(Schema.fromJsonString(Schema.Json)));
 const dataFlag = jsonData.pipe(Flag.optional, Flag.withDescription("Any JSON value, for commands and agents to read."));

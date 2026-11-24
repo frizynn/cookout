@@ -6,7 +6,6 @@
  */
 
 declare const brand: unique symbol;
-const NONE = 0;
 
 /** An attachment's ID: opaque and random, so it gives away nothing about how many the board holds. */
 export type AttachmentId = string & { readonly [brand]: "AttachmentId" };
@@ -72,13 +71,15 @@ export const attachmentLimits = { maximumBytes: 10_000_000, maximumCount: 10 } a
 export const attachmentNameMaximumLength = 255;
 
 /**
- * Whether a message with this text and this many attachments may be posted: it needs text, at least one attachment,
- * or both (Matt, 2026-11-24, board msg 3043). This is the one place the rule lives.
+ * Whether a message may be posted with this text and these attachments. For now it needs text, attachments or not:
+ * clients first learn to read a message with attachments and no text, and #398 lets one be posted in the release after
+ * (Decision (2026-11-24), following ADR 0076; Matt's rule from board msg 3043 is text, attachments, or both). This is
+ * the one place the rule lives.
  * @param message The message's text, empty when none was given, and its attachments.
  * @returns Whether the message has something in it.
  */
 export function hasContent(message: { readonly text: string; readonly attachments: readonly unknown[] }): boolean {
-  return message.text !== "" || message.attachments.length > NONE;
+  return message.text !== "";
 }
 
 /** `GET /v1/assets/:id`: an attachment's bytes, to any signed-in identity. */

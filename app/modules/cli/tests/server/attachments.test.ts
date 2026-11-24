@@ -5,16 +5,26 @@ import {
   answer,
   commandLineServices,
   freshStateFolder,
+  newMessageFixture,
   runCookout,
   testCookout,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
+import type { Attachment } from "../../../attachments/index.ts";
 import type { Scope } from "effect";
+import { isAttachmentId } from "../../../attachments/index.ts";
 
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const FAILED = 1;
 const NOTES = "the notes";
 const LOG = "a log line";
+const SHOT: Attachment = {
+  contentType: "application/octet-stream",
+  id: Option.getOrThrow(Option.liftPredicate("shot-id", isAttachmentId)),
+  image: false,
+  name: "shot.bin",
+  size: NOTES.length,
+};
 
 interface Desk {
   readonly ann: TestIdentity;
@@ -59,15 +69,37 @@ it.effect("cookout message post --attach, repeated, posts each file by its base 
     const cookout = yield* TestCookout;
     const { env, folder } = yield* desk(cookout);
     const [posted] = yield* runAll(env, [
-      ["message", "post", "grill", "--attach", `${folder}/notes.txt`, "--attach", `${folder}/log.txt`],
+      ["message", "post", "grill", "files", "--attach", `${folder}/notes.txt`, "--attach", `${folder}/log.txt`],
     ]);
 
     expect(posted).toMatchObject({
       exitCode: 0,
       stdoutJson: {
-        message: { attachments: [{ name: "notes.txt", size: NOTES.length }, { name: "log.txt" }], text: "" },
+        message: { attachments: [{ name: "notes.txt", size: NOTES.length }, { name: "log.txt" }], text: "files" },
       },
     });
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("cookout reads a message with attachments and no text, which the server won't take a post of yet", () =>
+  Effect.gen(function* attachmentsOnly() {
+    const cookout = yield* TestCookout;
+    const { env, folder } = yield* desk(cookout);
+    const stored = yield* cookout.seedMessage({
+      ...newMessageFixture("grill", "", { author: { name: "ann" } }),
+      attachments: [SHOT],
+    });
+    const results = yield* runAll(env, [
+      ["message", "post", "grill", "--attach", `${folder}/notes.txt`],
+      ["message", "list", "grill"],
+      ["thread", "get", String(stored.id)],
+    ]);
+
+    expect(results).toMatchObject([
+      { exitCode: FAILED, stderrJson: { error: { code: "message_empty" } } },
+      { exitCode: 0, stdoutJson: { messages: [{ attachments: [SHOT], text: "" }] } },
+      { exitCode: 0, stdoutJson: { parent: { attachments: [SHOT], text: "" } } },
+    ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
@@ -100,7 +132,7 @@ it.effect(
       const { ann, env, folder } = yield* desk(cookout);
       const bytes = new TextEncoder().encode(NOTES);
       const { message } = yield* answer(() =>
-        ann.client.createMessage({ attachments: [{ bytes, name: "notes.txt" }], channel: "grill", text: "" }),
+        ann.client.createMessage({ attachments: [{ bytes, name: "notes.txt" }], channel: "grill", text: "files" }),
       );
       const [id = ""] = Arr.map(message.attachments ?? [], (attachment) => attachment.id);
       const target = `${folder}/copy.txt`;
@@ -136,7 +168,8 @@ it.effect("cookout asset get into a folder keeps only a safe base name: a hostil
     const bytes = new TextEncoder().encode(LOG);
     const posted = yield* Effect.forEach(
       ["../../escape.txt", String.raw`..\..\win.txt`, ".."],
-      (name) => answer(() => ann.client.createMessage({ attachments: [{ bytes, name }], channel: "grill", text: "" })),
+      (name) =>
+        answer(() => ann.client.createMessage({ attachments: [{ bytes, name }], channel: "grill", text: "files" })),
       ONE_AT_A_TIME,
     );
     const ids = Arr.flatMap(posted, ({ message }) => Arr.map(message.attachments ?? [], (attachment) => attachment.id));
