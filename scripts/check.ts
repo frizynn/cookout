@@ -2,6 +2,7 @@ import type { Check, CiOnly } from "./lib/check-runner.ts";
 import { browserSkip, browserTestsFor } from "./lib/browser-selection.ts";
 import { changedLines, unchangedSince } from "./lib/changed-lines.ts";
 import { fetchedCoverageMap, ghCli } from "./lib/coverage-map-fetch.ts";
+import { loadReport, osReading } from "./lib/machine-load.ts";
 import type { BrowserTests } from "./lib/browser-selection.ts";
 import { SUITE_LOCK_FILE } from "./lib/machine-lock.ts";
 import { TIMINGS_DIR } from "./lib/slowest-files.ts";
@@ -17,6 +18,12 @@ function option(name: string): string {
   const prefix = `--${name}=`;
   const found = process.argv.find((arg) => arg.startsWith(prefix)) ?? "";
   return found.slice(prefix.length);
+}
+
+const load = loadReport(osReading);
+console.log(load.line);
+if (load.warning !== "") {
+  console.error(load.warning);
 }
 
 const job = option("job");
