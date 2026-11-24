@@ -1,7 +1,8 @@
 /**
- * The SDK's call that marks one Nudge read. Its wire types and path are in `index.ts`.
+ * The SDK's calls that mark one Nudge read and answer Keep on a Deactivation offer. Their wire types and paths are in
+ * `index.ts`.
  */
-import type { NudgeId, NudgeResponse } from "./index.ts";
+import type { DeactivationOfferId, DeactivationOfferResponse, NudgeId, NudgeResponse } from "./index.ts";
 
 /** The SDK's call on a Nudge. */
 export interface NudgeCalls {
@@ -11,4 +12,15 @@ export interface NudgeCalls {
    * new message, and with `ackAll({ nudgesUpTo })`.
    */
   readonly markNudgeRead: (nudgeId: NudgeId) => Promise<NudgeResponse>;
+}
+
+/** The SDK's call on a Deactivation offer. */
+export interface DeactivationOfferCalls {
+  /**
+   * `POST /v1/inbox/deactivation-offers/:id/keep`: answers Keep on one of the caller's Deactivation offers, clearing it
+   * for every recipient, and answers it. The next comes 30 days after it if the agent stays quiet. An offer the caller
+   * didn't get, or one that doesn't exist, is 404 `deactivation_offer_not_found`. To deactivate instead, call
+   * `deactivateIdentity`.
+   */
+  readonly keepDeactivationOffer: (offerId: DeactivationOfferId) => Promise<DeactivationOfferResponse>;
 }

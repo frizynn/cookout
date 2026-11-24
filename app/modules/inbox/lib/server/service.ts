@@ -1,7 +1,9 @@
 import type {
   AckAllRequest,
   AckAllResponse,
+  AckRequest,
   AckResponse,
+  DeactivationOfferResponse,
   FollowResponse,
   InboxHistoryResponse,
   InboxItem,
@@ -16,24 +18,22 @@ import type {
 import type { Acked, Fails, Hub } from "./acks.ts";
 import { Context, Effect, Layer, PubSub } from "effect";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
-import { ReadReceipts, messageNotFound } from "../../../messages/server.ts";
 import { acksOn, orMessageNotFound } from "./acks.ts";
-import type { MessageId } from "../../../messages/index.ts";
+import { following, subscription } from "./subscriptions.ts";
+import { DeactivationOffers } from "./deactivation-offers.ts";
 import { OfflineAlerts } from "./offline-alerts.ts";
+import { ReadReceipts } from "../../../messages/server.ts";
 import type { Scope } from "effect";
 import { Storage } from "../../../storage/server.ts";
-import type { StorageUnavailable } from "../../../storage/server.ts";
 import type { SubscriptionChanged } from "./subscriptions.ts";
-import { isMessageId } from "../../../messages/index.ts";
 import { listingOn } from "./listing.ts";
-import { subscription } from "./subscriptions.ts";
 
 interface HistoryQuery {
   readonly before?: MessageId;
   readonly limit?: number;
 }
 
-type FollowChange = (identity: IdentityName, id: MessageId) => Effect.Effect<MessageId | undefined, StorageUnavailable>;
+type MessageId = AckRequest["messageId"];
 
 interface MovedBack {
   readonly identity: IdentityName;
@@ -46,6 +46,7 @@ interface Hubs {
   readonly movedBack: Hub<MovedBack>;
   readonly subscriptions: Hub<SubscriptionChanged>;
   readonly offlineAlerts: OfflineAlerts["Service"];
+  readonly deactivationOffers: DeactivationOffers["Service"];
 }
 
 interface InboxService {
@@ -58,6 +59,7 @@ interface InboxService {
   readonly ackAll: (caller: Identity, request: AckAllRequest) => Fails<AckAllResponse>;
   readonly markAlertRead: (caller: Identity, asked: string) => Fails<OfflineAlertResponse>;
   readonly markNudgeRead: (caller: Identity, asked: string) => Fails<NudgeResponse>;
+  readonly keepDeactivationOffer: (caller: Identity, asked: string) => Fails<DeactivationOfferResponse>;
   readonly readPositions: (caller: Identity) => Fails<ReadPositionsResponse>;
   readonly acked: Effect.Effect<PubSub.Subscription<Acked>, never, Scope.Scope>;
   readonly markUnread: (caller: Identity, id: MessageId) => Fails<MarkUnreadResponse>;
@@ -71,23 +73,6 @@ interface InboxService {
 
 class Inbox extends Context.Service<Inbox, InboxService>()("@ai-hero/cookout/inbox/lib/server/service/Inbox") {}
 
-function messageIdOf(asked: string): Fails<MessageId> {
-  const id = Number(asked);
-  if (isMessageId(id)) {
-    return Effect.succeed(id);
-  }
-  return Effect.fail(messageNotFound(asked));
-}
-
-function following(change: FollowChange, isFollowing: boolean) {
-  return (caller: Identity, asked: string): Fails<FollowResponse> =>
-    Effect.gen(function* changeFollow() {
-      const id = yield* messageIdOf(asked);
-      const thread = yield* Effect.flatMap(change(caller.name, id), orMessageNotFound<MessageId>(asked));
-      return { following: isFollowing, thread };
-    });
-}
-
 interface InboxOn {
   readonly storage: Storage["Service"];
   readonly hubs: Hubs;
@@ -95,12 +80,13 @@ interface InboxOn {
 
 function inboxOn(on: InboxOn): InboxService {
   const { hubs, storage } = on;
-  const { acked: hub, movedBack, offlineAlerts, subscriptions } = hubs;
+  const { acked: hub, deactivationOffers, movedBack, offlineAlerts, subscriptions } = hubs;
   return {
     ...acksOn(on),
-    ...listingOn({ offlineAlerts, storage }),
+    ...listingOn({ deactivationOffers, offlineAlerts, storage }),
     acked: hub.subscribe,
-    follow: following(storage.followThread, true),
+    follow: following({ change: storage.followThread, isFollowing: true }),
+    keepDeactivationOffer: deactivationOffers.keep,
     markAlertRead: (caller, asked) => Effect.map(offlineAlerts.markRead(caller, asked), (alert) => ({ alert })),
     markUnread: (caller, id) =>
       Effect.gen(function* markUnread() {
@@ -114,7 +100,7 @@ function inboxOn(on: InboxOn): InboxService {
       Effect.map(storage.listReadPositions(caller.name), (readPositions) => ({ readPositions })),
     subscribe: subscription({ change: storage.subscribeChannel, hub: subscriptions, subscribed: true }),
     subscriptionChanged: subscriptions.subscribe,
-    unfollow: following(storage.unfollowThread, false),
+    unfollow: following({ change: storage.unfollowThread, isFollowing: false }),
     unsubscribe: subscription({ change: storage.unsubscribeChannel, hub: subscriptions, subscribed: false }),
   };
 }
@@ -126,16 +112,20 @@ function hubOf<Value>(): Effect.Effect<Hub<Value>> {
   });
 }
 
-const inboxLayer: Layer.Layer<Inbox, never, Storage | ReadReceipts | OfflineAlerts> = Layer.effect(
+const inboxLayer: Layer.Layer<Inbox, never, Storage | ReadReceipts | OfflineAlerts | DeactivationOffers> = Layer.effect(
   Inbox,
   Effect.gen(function* inboxOnStorage() {
     const storage = yield* Storage;
     const readReceipts = yield* ReadReceipts;
     const offlineAlerts = yield* OfflineAlerts;
+    const deactivationOffers = yield* DeactivationOffers;
     const acked = yield* hubOf<Acked>();
     const movedBack = yield* hubOf<MovedBack>();
     const subscriptions = yield* hubOf<SubscriptionChanged>();
-    return inboxOn({ hubs: { acked, movedBack, offlineAlerts, readReceipts, subscriptions }, storage });
+    return inboxOn({
+      hubs: { acked, deactivationOffers, movedBack, offlineAlerts, readReceipts, subscriptions },
+      storage,
+    });
   }),
 );
 

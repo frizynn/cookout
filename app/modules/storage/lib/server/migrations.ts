@@ -1,4 +1,5 @@
 import { Effect, FileSystem, Schema } from "effect";
+import { DEACTIVATION_OFFERS_MIGRATION } from "./deactivation-offers-sqlite.ts";
 import { NUDGES_MIGRATION } from "./nudges-sqlite.ts";
 import { OFFLINE_ALERTS_MIGRATION } from "./offline-alerts.ts";
 import { REACTIONS_MIGRATION } from "./reactions-sqlite.ts";
@@ -189,6 +190,7 @@ const migrations: readonly string[] = [
   NUDGES_MIGRATION,
   `ALTER TABLE messages ADD COLUMN closed_at TEXT;
    ALTER TABLE messages ADD COLUMN closed_by TEXT;`,
+  DEACTIVATION_OFFERS_MIGRATION,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

@@ -2,7 +2,7 @@
  * The inbox on the backend: the `Inbox` service over `Storage`, and the
  * routes that read the caller's inbox, a page of its inbox history and its read positions, ack a message or the whole
  * inbox, mark a message unread or a Nudge read, follow and unfollow a
- * thread, and subscribe to and unsubscribe from a channel. Each read position an ack moves is also
+ * thread, answer Keep on a Deactivation offer, and subscribe to and unsubscribe from a channel. Each read position an ack moves is also
  * published to an in-process hub, which `acked` subscribes to, for live
  * updates. Routes sit
  * behind the server's token gate.
@@ -12,6 +12,7 @@ import {
   AckAllResponseSchema,
   AckRequestSchema,
   AckResponseSchema,
+  DeactivationOfferResponseSchema,
   FollowResponseSchema,
   InboxHistoryQuerySchema,
   InboxHistoryResponseSchema,
@@ -27,6 +28,7 @@ import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import {
   ackAllPath,
   ackPath,
+  deactivationOfferKeepPath,
   followPath,
   inboxHistoryPath,
   inboxPath,
@@ -154,6 +156,19 @@ const nudgeReadRoute: Route<Needs> = {
   segments: { id: (segment) => DIGITS.test(segment) },
 };
 
+const keepRoute: Route<Needs> = {
+  handle: (params) =>
+    Effect.gen(function* keepDeactivationOfferRouteHandler() {
+      const caller = yield* Caller;
+      const inbox = yield* Inbox;
+      const answer = yield* inbox.keepDeactivationOffer(caller, String(params["id"]));
+      return yield* HttpServerResponse.schemaJson(DeactivationOfferResponseSchema)(answer);
+    }),
+  method: "POST",
+  path: deactivationOfferKeepPath,
+  segments: { id: (segment) => DIGITS.test(segment) },
+};
+
 function followRoute(method: Change, change: "follow" | "unfollow"): Route<Needs> {
   return {
     handle: (params) =>
@@ -194,8 +209,15 @@ export { OfflineAlerts, offlineAlertsLayer } from "./lib/server/offline-alerts.t
  */
 export { Nudges, nudgesLayer } from "./lib/server/nudge-scheduler.ts";
 
+/**
+ * Deactivation offers: listed in each recipient's inbox, answered Keep, and sent to each recipient's streams as one is
+ * raised or cleared. The nudge scheduler raises them.
+ */
+export { DeactivationOffers, deactivationOffersLayer } from "./lib/server/deactivation-offers.ts";
+
 /** The Schemas of an inbox item, a read position, a moved-back one and a subscription, for the events that carry one. */
 export {
+  DeactivationOfferSchema,
   InboxItemSchema,
   MovedBackReadPositionSchema,
   OfflineAlertSchema,
@@ -217,6 +239,7 @@ export const inboxRoutes: readonly Route<Needs>[] = [
   markUnreadRoute,
   alertReadRoute,
   nudgeReadRoute,
+  keepRoute,
   followRoute("PUT", "follow"),
   followRoute("DELETE", "unfollow"),
   subscriptionRoute("PUT", "subscribe"),
@@ -227,6 +250,7 @@ export const inboxRoutes: readonly Route<Needs>[] = [
 export const inboxResponseSchemas = {
   AckAllResponse: AckAllResponseSchema,
   AckResponse: AckResponseSchema,
+  DeactivationOfferResponse: DeactivationOfferResponseSchema,
   FollowResponse: FollowResponseSchema,
   InboxHistoryResponse: InboxHistoryResponseSchema,
   InboxResponse: InboxResponseSchema,

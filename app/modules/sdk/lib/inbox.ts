@@ -11,6 +11,7 @@ import type {
   ReadPositionsResponse,
   SubscriptionResponse,
 } from "../../inbox/index.ts";
+import type { DeactivationOfferCalls, NudgeCalls } from "../../inbox/client.ts";
 import {
   ackAllPath,
   ackPath,
@@ -21,6 +22,7 @@ import {
   readPositionsPath,
   subscriptionPath,
 } from "../../inbox/index.ts";
+import { deactivationOfferCalls, nudgeCalls } from "./nudges.ts";
 import {
   isAckAllResponse,
   isAckResponse,
@@ -33,8 +35,6 @@ import {
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import type { MessageId } from "../../messages/index.ts";
-import type { NudgeCalls } from "../../inbox/client.ts";
-import { nudgeCalls } from "./nudges.ts";
 import { offlineAlertCalls } from "./offline-alerts.ts";
 import { send } from "./request.ts";
 
@@ -127,8 +127,13 @@ function readingCalls(server: ClientConnection): InboxCalls {
   };
 }
 
-function inboxCalls(server: ClientConnection): InboxCalls & OfflineAlertCalls & NudgeCalls {
-  return { ...readingCalls(server), ...offlineAlertCalls(server), ...nudgeCalls(server) };
+function inboxCalls(server: ClientConnection): InboxCalls & OfflineAlertCalls & NudgeCalls & DeactivationOfferCalls {
+  return {
+    ...readingCalls(server),
+    ...offlineAlertCalls(server),
+    ...nudgeCalls(server),
+    ...deactivationOfferCalls(server),
+  };
 }
 
 export type {

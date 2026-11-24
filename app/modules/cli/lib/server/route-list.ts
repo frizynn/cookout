@@ -11,6 +11,13 @@ import {
 import { channelRoutes, channelsLayer } from "../../../channels/server.ts";
 import { commandChangesLayer, commandRoutes, commandsLayer } from "../../../commands/server.ts";
 import {
+  deactivationOffersLayer,
+  inboxLayer,
+  inboxRoutes,
+  nudgesLayer,
+  offlineAlertsLayer,
+} from "../../../inbox/server.ts";
+import {
   deactivationRoutes,
   deletionRoutes,
   descriptionRoutes,
@@ -22,7 +29,6 @@ import {
   openIdentityRoutes,
   transferRoutes,
 } from "../../../identities/server.ts";
-import { inboxLayer, inboxRoutes, nudgesLayer, offlineAlertsLayer } from "../../../inbox/server.ts";
 import { liveRoutes, presenceLayer } from "./live-routes.ts";
 import { messageRoutes, messagesLayer, reactionsLayer, readReceiptsLayer } from "../../../messages/server.ts";
 import { Layer } from "effect";
@@ -81,7 +87,14 @@ export const domainLayers = Layer.mergeAll(
 ).pipe(
   Layer.provideMerge(Layer.mergeAll(messagesLayer, agentSessionsLayer)),
   Layer.provideMerge(
-    Layer.mergeAll(identityChangesLayer, commandChangesLayer, readReceiptsLayer, reactionsLayer, offlineAlertsLayer),
+    Layer.mergeAll(
+      identityChangesLayer,
+      commandChangesLayer,
+      readReceiptsLayer,
+      reactionsLayer,
+      offlineAlertsLayer,
+      deactivationOffersLayer,
+    ),
   ),
 );
 

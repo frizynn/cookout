@@ -4,13 +4,15 @@
  * message and everything before it in its thread or channel as read, the
  * ack of the whole inbox up to the newest item the caller has seen, the
  * mark unread that moves a read position back to just before a message,
- * the inbox history of read and unread items, following a thread and
- * subscribing to a channel, the offline alerts an owner's inbox holds beside its items and marking one read, Nudges
- * about quiet threads, and their paths. They refuse with the message, channel, nudge and agent session error codes.
+ * the inbox history of read and unread items, following a thread and subscribing to a channel, the offline alerts an
+ * owner's inbox holds beside its items and marking one read, Nudges about quiet threads, Deactivation offers and Keep,
+ * and their paths. They refuse with the message, channel, nudge, deactivation offer and agent session error codes.
  */
 import type { Channel, ChannelName } from "../channels/index.ts";
 import type { Message, MessageId, Reaction, TopLevelMessage } from "../messages/index.ts";
 import type { OfflineAlert, OfflineAlertId } from "../presence/index.ts";
+import type { DeactivationOfferId } from "./lib/deactivation-offers.ts";
+import type { Identity } from "../identities/index.ts";
 import type { IsoTime } from "../time/index.ts";
 
 declare const brand: unique symbol;
@@ -83,6 +85,25 @@ export const nudgeReadPath = "/v1/inbox/nudges/:id/read";
 export const nudgeErrorCodes = ["nudge_not_found"] as const;
 
 /**
+ * A Deactivation offer: an Inbox entry, not a message, asking an agent's owner (every active admin when the owner is
+ * Deactivated) whether to deactivate it after `quietDays` with no Activity, one entry shared by all its recipients.
+ * Keep, marking all as read, the agent's activity or deactivation, or a newer offer clears it (`cleared`) for all.
+ */
+export interface DeactivationOffer {
+  readonly id: DeactivationOfferId;
+  readonly identity: Identity;
+  readonly quietDays: number;
+  readonly text: string;
+  readonly raisedAt: IsoTime;
+  readonly cleared: boolean;
+}
+
+/** The answer to Keep: the offer, now cleared. */
+export interface DeactivationOfferResponse {
+  readonly deactivationOffer: DeactivationOffer;
+}
+
+/**
  * Why an item is in the inbox: a reply in a thread the identity follows, a message that mentions it, another
  * identity's reaction on the identity's own message, or a top-level message in a channel it subscribes to.
  */
@@ -123,6 +144,7 @@ export interface InboxResponse {
   readonly items: readonly InboxItem[];
   readonly alerts: readonly OfflineAlert[];
   readonly nudges: readonly Nudge[];
+  readonly deactivationOffers: readonly DeactivationOffer[];
 }
 
 /** An item in the inbox history: `read` says the identity's read position for its scope is at or after it. */
@@ -150,6 +172,7 @@ export interface InboxHistoryResponse {
   readonly hasMore: boolean;
   /** Every Nudge the caller has had, read or not, newest first, on the newest page (with no `before`) only. */
   readonly nudges: readonly InboxHistoryNudge[];
+  readonly deactivationOffers: readonly DeactivationOffer[];
 }
 
 /** The caller's read positions: one for each channel and thread it has acked in or posted to, by channel name. */
@@ -170,12 +193,13 @@ export interface AckResponse {
 /**
  * The body of an ack of the whole inbox: every inbox item up to `upTo`, the newest the caller has seen, is read, and
  * every offline alert up to `alertsUpTo`, the newest alert it has seen, and every Nudge up to `nudgesUpTo`, the
- * newest nudge it has seen. Any may be left out.
+ * newest nudge it has seen; it clears every Deactivation offer up to `deactivationOffersUpTo` as Keep does. Any may go.
  */
 export interface AckAllRequest {
   readonly upTo?: MessageId;
   readonly alertsUpTo?: OfflineAlertId;
   readonly nudgesUpTo?: NudgeId;
+  readonly deactivationOffersUpTo?: DeactivationOfferId;
 }
 
 /**
@@ -264,3 +288,13 @@ export const followPath = "/v1/messages/:id/follow";
 export const subscriptionPath = "/v1/channels/:name/subscription";
 
 export type { OfflineAlert, OfflineAlertId } from "../presence/index.ts";
+
+/** A Deactivation offer's ID: a positive whole number, increasing in the order offers are raised. */
+export type { DeactivationOfferId } from "./lib/deactivation-offers.ts";
+export {
+  deactivationOfferErrorCodes,
+  deactivationOfferKeepPath,
+  deactivationOfferText,
+  isDeactivationOfferId,
+  quietAgentDays,
+} from "./lib/deactivation-offers.ts";
