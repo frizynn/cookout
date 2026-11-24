@@ -175,105 +175,121 @@
  * required, with its help text and any error under it, both read out as its
  * description.
  */
-export { ActionGroup } from "./lib/action-group.tsx";
-export { Alert } from "./lib/alert.tsx";
-export { ConfirmDialog } from "./lib/confirm-dialog.tsx";
-export { ButtonRow } from "./lib/button-row.tsx";
-export { TokenText } from "./lib/token-text.tsx";
-export { CallChip } from "./lib/call-chip.tsx";
-export { ChannelStart } from "./lib/channel-start.tsx";
-export { DataToggle } from "./lib/data-toggle.tsx";
-export { MessageBody } from "./lib/message-body.tsx";
-export { MessageItem } from "./lib/message-item.tsx";
-export { FeedRowClosed } from "./lib/feed-row-closed.tsx";
-export { MessageList } from "./lib/message-list.tsx";
-export { QuietButton } from "./lib/quiet-button.tsx";
-export { ClosedFold } from "./lib/closed-fold.tsx";
-export { ThreadBar } from "./lib/thread-bar.tsx";
-export { MoreButton } from "./lib/more-button.tsx";
-export { RepliesDivider } from "./lib/replies-divider.tsx";
-export { ThreadSummary } from "./lib/thread-summary.tsx";
-export { StandaloneMessage } from "./lib/standalone-message.tsx";
-export { AppShell } from "./lib/app-shell.tsx";
-export { BoxFrame } from "./lib/box-frame.tsx";
-export { Button } from "./lib/button.tsx";
-export { Card } from "./lib/card.tsx";
-export { CheckField } from "./lib/check-field.tsx";
-export { CardBody } from "./lib/card-body.tsx";
-export { CardHeader } from "./lib/card-header.tsx";
-export { ChoiceGroup } from "./lib/choice-group.tsx";
-export { DataArea } from "./lib/data-area.tsx";
-export { Feed } from "./lib/feed.tsx";
-export { FeedHeading } from "./lib/feed-heading.tsx";
-export { FeedList } from "./lib/feed-list.tsx";
-export { FeedNote } from "./lib/feed-note.tsx";
-export { FeedNoticeRow } from "./lib/feed-notice-row.tsx";
-export { FeedRow } from "./lib/feed-row.tsx";
-export { FeedText } from "./lib/feed-text.tsx";
-export { Form } from "./lib/form.tsx";
-export { LineForm } from "./lib/line-form.tsx";
-export { AreaForm } from "./lib/area-form.tsx";
-export { Heading } from "./lib/heading.tsx";
-export { InputField } from "./lib/input-field.tsx";
-export { ItemList } from "./lib/item-list.tsx";
-export { ItemRow } from "./lib/item-row.tsx";
-export { LinkList } from "./lib/link-list.tsx";
-export { LinkRow } from "./lib/link-row.tsx";
-export { Mention } from "./lib/mention.tsx";
-export { IdentityCard } from "./lib/identity-card.tsx";
-export { PersonMenu } from "./lib/person-menu.tsx";
-export { IdentityCardComposer, IdentityCards } from "./lib/identity-card-parts.ts";
-export type { IdentityCardParts, IdentityCardSource } from "./lib/identity-card-parts.ts";
-export { Muted } from "./lib/muted.tsx";
-export { MutedLines } from "./lib/muted-lines.tsx";
-export { ReactionChip } from "./lib/reaction-chip.tsx";
-export { ReactionChips } from "./lib/reaction-chips.tsx";
-export type { ActionMenuParts, MenuChoice, ReactionChoice, ThreadChoice } from "./lib/menu-parts.ts";
-export { QuietLink } from "./lib/quiet-link.tsx";
-export { Notice } from "./lib/notice.tsx";
-export { HeadingButton } from "./lib/heading-button.tsx";
-export { NavHeading } from "./lib/nav-heading.tsx";
-export { NavLink } from "./lib/nav-link.tsx";
-export { NavList } from "./lib/nav-list.tsx";
-export { Pane } from "./lib/pane.tsx";
-export { ListPane } from "./lib/list-pane.tsx";
-export { ConversationEmpty } from "./lib/conversation-empty.tsx";
-export { ConversationPanel } from "./lib/conversation-panel.tsx";
-export type { PanelAction } from "./lib/panel-action-button.tsx";
-export { CONVERSATION_KEYS } from "./lib/conversation-keys.ts";
-export { DividerButton } from "./lib/divider-button.tsx";
-export { PaneHeader } from "./lib/pane-header.tsx";
-export { Page } from "./lib/page.tsx";
-export { PageSection } from "./lib/page-section.tsx";
-export { FooterLink } from "./lib/footer-link.tsx";
-export { PressButton } from "./lib/press-button.tsx";
-export { PickField } from "./lib/pick-field.tsx";
-export { Pill } from "./lib/pill.tsx";
-export { PromptForm } from "./lib/prompt-form.tsx";
-export { SidePanel } from "./lib/side-panel.tsx";
-export type { PanelEdgeParts } from "./lib/panel-edge-parts.ts";
-export { ScrollArea } from "./lib/scroll-area.tsx";
-export { Sidebar } from "./lib/sidebar.tsx";
-export { SidebarBody } from "./lib/sidebar-body.tsx";
-export { SidebarFooter } from "./lib/sidebar-footer.tsx";
-export { Skeleton } from "./lib/skeleton.tsx";
-export { Suggestions } from "./lib/suggestions.tsx";
-export { SendButton } from "./lib/send-button.tsx";
-export { SubmitButton } from "./lib/submit-button.tsx";
-export { Tag } from "./lib/tag.tsx";
-export { TextArea } from "./lib/text-area.tsx";
-export { TextField } from "./lib/text-field.tsx";
-export { Workspace } from "./lib/workspace.tsx";
-export { WorkspaceMain } from "./lib/workspace-main.tsx";
-export { WorkspaceColumn } from "./lib/workspace-column.tsx";
-export { StatusBar } from "./lib/status-bar.tsx";
-export { IdentityLink } from "./lib/identity-link.tsx";
-export { Chip } from "./lib/chip.tsx";
-export { RowButton } from "./lib/row-button.tsx";
-export { DateText } from "./lib/date-text.tsx";
-export { FilterField } from "./lib/filter-field.tsx";
-export { IdentityRow } from "./lib/identity-row.tsx";
-export { ListArea } from "./lib/list-area.tsx";
-export { Profile } from "./lib/profile.tsx";
-export { ProfileName } from "./lib/profile-name.tsx";
-export { Toolbar } from "./lib/toolbar.tsx";
+export {
+  AppShell,
+  BoxFrame,
+  Card,
+  CardBody,
+  CardHeader,
+  HeadingButton,
+  NavHeading,
+  NavLink,
+  NavList,
+  Pane,
+  ListPane,
+  ConversationEmpty,
+  ConversationPanel,
+  CONVERSATION_KEYS,
+  PaneHeader,
+  Page,
+  PageSection,
+  FooterLink,
+  SidePanel,
+  ScrollArea,
+  Sidebar,
+  SidebarBody,
+  SidebarFooter,
+  Workspace,
+  WorkspaceMain,
+  WorkspaceColumn,
+  StatusBar,
+  ListArea,
+  Toolbar,
+} from "./lib/layout.ts";
+export type { PanelAction, PanelEdgeParts } from "./lib/layout.ts";
+export {
+  CallChip,
+  ChannelStart,
+  DataToggle,
+  MessageBody,
+  MessageItem,
+  MessageList,
+  ClosedFold,
+  ThreadBar,
+  RepliesDivider,
+  ThreadSummary,
+  StandaloneMessage,
+  Mention,
+  IdentityCard,
+  PersonMenu,
+  IdentityCardComposer,
+  IdentityCards,
+  ReactionChip,
+  ReactionChips,
+} from "./lib/messages.ts";
+export type {
+  IdentityCardParts,
+  IdentityCardSource,
+  ActionMenuParts,
+  MenuChoice,
+  ReactionChoice,
+  ThreadChoice,
+} from "./lib/messages.ts";
+export {
+  FeedRowClosed,
+  MoreButton,
+  Feed,
+  FeedHeading,
+  FeedList,
+  FeedNote,
+  FeedNoticeRow,
+  FeedRow,
+  FeedText,
+  RowButton,
+} from "./lib/feed-rows.ts";
+export {
+  ActionGroup,
+  ConfirmDialog,
+  ButtonRow,
+  TokenText,
+  QuietButton,
+  Button,
+  CheckField,
+  ChoiceGroup,
+  DataArea,
+  Form,
+  LineForm,
+  AreaForm,
+  InputField,
+  DividerButton,
+  PressButton,
+  PickField,
+  PromptForm,
+  Suggestions,
+  SendButton,
+  SubmitButton,
+  TextArea,
+  TextField,
+  Chip,
+  FilterField,
+} from "./lib/controls.ts";
+export {
+  Alert,
+  Heading,
+  ItemList,
+  ItemRow,
+  LinkList,
+  LinkRow,
+  Muted,
+  MutedLines,
+  QuietLink,
+  Notice,
+  Pill,
+  Skeleton,
+  Tag,
+  IdentityLink,
+  DateText,
+  IdentityRow,
+  Profile,
+  ProfileName,
+} from "./lib/content.ts";

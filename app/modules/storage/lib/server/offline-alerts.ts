@@ -1,4 +1,5 @@
 import { Array as Arr, Effect, Number as Num, Option, Order, Predicate, Schema } from "effect";
+import { FALSE, TRUE, isFalse } from "./adapters/sql-database.ts";
 import type { OfflineAlert, OfflineAlertId, OfflineReason } from "../../../presence/index.ts";
 import { isOfflineAlertId, offlineReasons } from "../../../presence/index.ts";
 import type { Fails } from "./errors.ts";
@@ -6,7 +7,7 @@ import type { IdentityName } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { MemoryState } from "./memory-state.ts";
-import type { SqliteDatabase } from "./adapters/sqlite.ts";
+import type { SqlDatabase } from "./adapters/sql-database.ts";
 import { isIdentityName } from "../../../identities/index.ts";
 import { unreadable } from "./errors.ts";
 
@@ -152,7 +153,7 @@ function firstOf(alerts: readonly OfflineAlert[]): Fails<OfflineAlert> {
 
 const COLUMNS = "id, agent_name, offline_reason, raised_at, read, back_online_at";
 
-function sqliteOfflineAlerts(db: SqliteDatabase): OfflineAlertsSection {
+function sqlOfflineAlerts(db: SqlDatabase): OfflineAlertsSection {
   return {
     listOfflineAlerts: (owner) =>
       Effect.flatMap(db.all(`SELECT ${COLUMNS} FROM offline_alerts WHERE owner_name = ? ORDER BY id`, owner), alertsOf),
@@ -168,13 +169,17 @@ function sqliteOfflineAlerts(db: SqliteDatabase): OfflineAlertsSection {
       ).pipe(Effect.map(sortedById)),
     markOfflineAlertRead: (owner, id) =>
       Effect.flatMap(
-        db.all(`UPDATE offline_alerts SET read = 1 WHERE owner_name = ? AND id = ? RETURNING ${COLUMNS}`, owner, id),
+        db.all(
+          `UPDATE offline_alerts SET read = ${TRUE[db.dialect]} WHERE owner_name = ? AND id = ? RETURNING ${COLUMNS}`,
+          owner,
+          id,
+        ),
         alertsOf,
       ).pipe(Effect.map((alerts) => Option.getOrNull(Arr.head(alerts)))),
     markOfflineAlertsRead: (owner, upTo) =>
       Effect.flatMap(
         db.all(
-          `UPDATE offline_alerts SET read = 1 WHERE owner_name = ? AND id <= ? AND read = 0 RETURNING ${COLUMNS}`,
+          `UPDATE offline_alerts SET read = ${TRUE[db.dialect]} WHERE owner_name = ? AND id <= ? AND ${isFalse[db.dialect]("read")} RETURNING ${COLUMNS}`,
           owner,
           upTo,
         ),
@@ -184,7 +189,7 @@ function sqliteOfflineAlerts(db: SqliteDatabase): OfflineAlertsSection {
       Effect.flatMap(
         db.all(
           `INSERT INTO offline_alerts (agent_name, owner_name, offline_reason, raised_at, read)
-           VALUES (?, ?, ?, ?, 0) RETURNING ${COLUMNS}`,
+           VALUES (?, ?, ?, ?, ${FALSE[db.dialect]}) RETURNING ${COLUMNS}`,
           agent,
           owner,
           offlineReason,
@@ -206,4 +211,4 @@ const OFFLINE_ALERTS_MIGRATION = `CREATE TABLE offline_alerts (
    ) STRICT;
    CREATE INDEX offline_alerts_by_owner ON offline_alerts (owner_name, id);`;
 
-export { type OfflineAlertsSection, OFFLINE_ALERTS_MIGRATION, memoryOfflineAlerts, sqliteOfflineAlerts };
+export { type OfflineAlertsSection, OFFLINE_ALERTS_MIGRATION, memoryOfflineAlerts, sqlOfflineAlerts };
