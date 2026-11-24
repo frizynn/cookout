@@ -96,6 +96,7 @@ const missingSections: MissingSections = {
   revokeAgentSession: notYet,
   revokeLiveAgentSession: notYet,
   revokeLoginCredential: notYet,
+  searchMessages: notYet,
   subscribeChannel: notYet,
   unfollowThread: notYet,
   unsubscribeChannel: notYet,
