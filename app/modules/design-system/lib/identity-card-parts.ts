@@ -7,6 +7,11 @@ interface IdentityCardLink {
   readonly href: string;
 }
 
+interface IdentityCardSession {
+  readonly href: string;
+  readonly host: string;
+}
+
 interface IdentityCardParts {
   readonly name: string;
   readonly agent: boolean;
@@ -22,6 +27,8 @@ interface IdentityCardParts {
 interface IdentityCardSource {
   readonly subscribe: (listener: () => void) => () => void;
   readonly cardOf: (name: string) => IdentityCardParts | null;
+  readonly sessionOf: (name: string) => IdentityCardSession | null;
+  readonly subscribeSession: (name: string) => (listener: () => void) => () => void;
 }
 
 interface IdentityCardTriggerParts {
@@ -53,6 +60,10 @@ function noCard(): IdentityCardParts | null {
   return null;
 }
 
+function noSession(): IdentityCardSession | null {
+  return null;
+}
+
 const listeners = new Set<() => void>();
 
 function subscribe(listener: () => void): () => void {
@@ -62,7 +73,16 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
-const IdentityCards = createContext<IdentityCardSource>({ cardOf: noCard, subscribe });
+function subscribeSession(): (listener: () => void) => () => void {
+  return subscribe;
+}
+
+const IdentityCards = createContext<IdentityCardSource>({
+  cardOf: noCard,
+  sessionOf: noSession,
+  subscribe,
+  subscribeSession,
+});
 
 const IdentityCardComposer = createContext<IdentityCardComposerParts>(null);
 
@@ -73,6 +93,7 @@ export type {
   IdentityCardControl,
   IdentityCardLink,
   IdentityCardParts,
+  IdentityCardSession,
   IdentityCardShownParts,
   IdentityCardSource,
   IdentityCardTriggerParts,

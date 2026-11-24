@@ -100,7 +100,7 @@ const SCREENS: readonly Screen[] = [
     focus: 'article:has-text("@triage-agent can you post the failing run?") a:has-text("@triage-agent")',
     hash: "#/channels/general/threads/1",
     name: "identity-card",
-    text: "View profile",
+    text: "Open session",
   },
   {
     focus: 'article:has-text("@grace can you check the notes before we ship?") a:has-text("@grace")',
