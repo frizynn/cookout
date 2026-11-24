@@ -12,6 +12,7 @@ export { Button } from "./button.tsx";
 export { CheckField } from "./check-field.tsx";
 export { ChoiceGroup } from "./choice-group.tsx";
 export { DataArea } from "./data-area.tsx";
+export { LinesArea } from "./lines-area.tsx";
 export { Form } from "./form.tsx";
 export { LineForm } from "./line-form.tsx";
 export { AreaForm } from "./area-form.tsx";
