@@ -36,7 +36,6 @@ const STRENGTH: readonly UnreadWhy[] = [
   "subscribed-channel",
 ];
 const NO_ITEMS: readonly InboxItem[] = [];
-const FIRST = 0;
 
 interface RowPlace {
   readonly channel: ChannelName;
@@ -68,11 +67,10 @@ function threadOf(item: InboxItem): MessageId | null {
 }
 
 function strongest(group: Group, me: string): Reason {
-  const first = group.items.at(FIRST) ?? group.latest;
-  let best: Reason = { item: first, why: whyOf({ item: first, me }) };
-  for (const item of group.items) {
+  let best: Reason = { item: group.latest, why: whyOf({ item: group.latest, me }) };
+  for (const item of group.items.toReversed()) {
     const why = whyOf({ item, me });
-    if (STRENGTH.indexOf(why) < STRENGTH.indexOf(best.why)) {
+    if (STRENGTH.indexOf(why) <= STRENGTH.indexOf(best.why)) {
       best = { item, why };
     }
   }
