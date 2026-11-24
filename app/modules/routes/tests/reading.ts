@@ -113,9 +113,9 @@ function rowsAt({ label, thread }: RowLookup): readonly string[] {
   if (list === null) {
     return rows;
   }
-  for (const link of within(list).getAllByRole("link")) {
-    if (link.getAttribute("href") === thread.address) {
-      rows.push(link.textContent);
+  for (const row of within(list).getAllByRole("listitem")) {
+    if (row.querySelector(`a[href="${thread.address}"]`) !== null) {
+      rows.push(row.textContent);
     }
   }
   return rows;
