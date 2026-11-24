@@ -107,7 +107,7 @@
  * a More actions button shown on hover or focus, after a button for each of its `menu`'s `reactions`; a reaction's
  * `key`, pressed while the message itself has focus, leaves it too. Its `menu` gives it one actions menu (the action,
  * then each reaction, then Mark unread, then the thread choice, such as Close, if any), drawn two ways on Radix: right-clicking the message opens it as a context menu at the pointer, and the
- * More actions button opens it as a dropdown. Radix gives both their keyboard and focus behaviour; a chosen item's
+ * More actions button opens it as a dropdown. Every menu item draws its `icon`, a `MenuIcon` its type requires, before its label. Radix gives both their keyboard and focus behaviour; a chosen item's
  * action runs once the menu has closed. Mark unread's tooltip names its shortcut, `Alt-click`: an Alt-click (Option-click
  * on macOS) on the message, but not on a link, button or other interactive element in it, runs Mark unread at once and
  * focuses and selects nothing; `StandaloneMessage` does the same. `StandaloneMessage` is one named message on its own, such as a
@@ -209,7 +209,8 @@ export { Muted } from "./lib/muted.tsx";
 export { MutedLines } from "./lib/muted-lines.tsx";
 export { ReactionChip } from "./lib/reaction-chip.tsx";
 export { ReactionChips } from "./lib/reaction-chips.tsx";
-export type { ReactionChoice, ThreadChoice } from "./lib/menu-parts.ts";
+export type { MenuChoice, ReactionChoice, ThreadChoice } from "./lib/menu-parts.ts";
+export type { MenuIcon } from "./lib/menu-icons.ts";
 export { QuietLink } from "./lib/quiet-link.tsx";
 export { Notice } from "./lib/notice.tsx";
 export { HeadingButton } from "./lib/heading-button.tsx";

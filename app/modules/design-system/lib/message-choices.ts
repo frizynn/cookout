@@ -10,11 +10,11 @@ interface ChoicesOf extends MessageActionParts {
 
 function actionOf(parts: MessageActionParts): readonly MenuChoice[] {
   if (parts.actionHref !== null) {
-    return [{ href: parts.actionHref, label: parts.actionLabel, onSelect: null }];
+    return [{ href: parts.actionHref, icon: "reply", label: parts.actionLabel, onSelect: null }];
   }
   return [parts.onAction]
     .filter((action) => action !== null)
-    .map((action) => ({ href: null, label: parts.actionLabel, onSelect: action }));
+    .map((action) => ({ href: null, icon: "reply", label: parts.actionLabel, onSelect: action }));
 }
 
 export function hoverThread(parts: Pick<MessageItemParts, "menu" | "threadOnHover">): ThreadChoice | null {
@@ -28,15 +28,18 @@ export function useMessageChoices({ actionHref, actionLabel, menu, onAction }: C
   return useMemo(
     () => [
       ...actionOf({ actionHref, actionLabel, onAction }),
-      ...menu.reactions.map((choice) => ({
-        href: null,
-        label: `React with ${choice.symbol}`,
-        onSelect: choice.onReact,
-      })),
-      { href: null, label: TEXT.markUnread, onSelect: menu.onMarkUnread, shortcut: TEXT.altClick },
+      ...menu.reactions.map(
+        (choice): MenuChoice => ({
+          href: null,
+          icon: "react",
+          label: `React with ${choice.symbol}`,
+          onSelect: choice.onReact,
+        }),
+      ),
+      { href: null, icon: "mark-unread", label: TEXT.markUnread, onSelect: menu.onMarkUnread, shortcut: TEXT.altClick },
       ...[menu.thread]
         .filter((choice) => choice !== null)
-        .map((choice) => ({ href: null, label: choice.label, onSelect: choice.onSelect })),
+        .map((choice) => ({ href: null, icon: choice.icon, label: choice.label, onSelect: choice.onSelect })),
     ],
     [actionHref, actionLabel, menu, onAction],
   );
