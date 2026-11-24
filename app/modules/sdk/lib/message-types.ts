@@ -22,7 +22,7 @@ export type {
   TopLevelMessageResponse,
 } from "../../messages/index.ts";
 export type { ListOpenThreadsQuery, PostMessageRequest, SearchRequest } from "../../messages/client.ts";
-export type { SearchResponse, SearchResult } from "../../search/index.ts";
+export type { SearchResponse, SearchResult, SearchSort } from "../../search/index.ts";
 export type {
   Attachment,
   AttachmentContentType,

@@ -21,10 +21,19 @@ interface SearchCursor {
   readonly id: MessageId;
 }
 
-interface SearchPageRequest {
+interface NewestPageRequest {
+  readonly sort?: "newest";
   readonly after?: SearchCursor;
   readonly limit: number;
 }
+
+interface BestPageRequest {
+  readonly sort: "best";
+  readonly offset: number;
+  readonly limit: number;
+}
+
+type SearchPageRequest = NewestPageRequest | BestPageRequest;
 
 interface StoredSearchPage {
   readonly results: readonly SearchResult[];
@@ -35,4 +44,4 @@ interface SearchSection {
   readonly searchMessages: (query: SearchQuery, page: SearchPageRequest) => Fails<StoredSearchPage>;
 }
 
-export type { SearchCursor, SearchPageRequest, SearchQuery, SearchSection, StoredSearchPage };
+export type { NewestPageRequest, SearchCursor, SearchPageRequest, SearchQuery, SearchSection, StoredSearchPage };

@@ -2,7 +2,7 @@ import { Array as Arr, Effect, Option, String as Str } from "effect";
 import type { Message, MessageId } from "../../../messages/index.ts";
 import type {
   NewMessage,
-  SearchPageRequest,
+  NewestPageRequest,
   SearchQuery,
   Storage,
   StorageUnavailable,
@@ -77,7 +77,7 @@ function aBoard<Failure, Needs>(
   });
 }
 
-function afterLastOf(page: SearchPage): Pick<SearchPageRequest, "after"> {
+function afterLastOf(page: SearchPage): Pick<NewestPageRequest, "after"> {
   return Option.match(Arr.last(page.results), {
     onNone: () => ({}),
     onSome: ({ message }) => ({ after: { createdAt: message.createdAt, id: message.id } }),
