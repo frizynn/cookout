@@ -8,19 +8,16 @@ type SessionSource = Pick<IdentityCardSource, "sessionOf" | "subscribeSession">;
 
 const NO_SESSIONS: readonly ListedAgentSession[] = [];
 
-function viewerOf(boardStore: BoardStore): string | null {
-  const { session } = boardStore.snapshot();
-  if (session.status !== "logged-in") {
-    return null;
-  }
-  return session.identity.name;
-}
-
 function ownedAgent(boardStore: BoardStore, name: string): IdentityName | null {
-  const viewer = viewerOf(boardStore);
+  const state = boardStore.snapshot();
+  const { session } = state;
   const agent =
-    identityList(boardStore.snapshot()).find(
-      (listed) => listed.name === name && listed.kind === "agent" && listed.owner === viewer,
+    identityList(state).find(
+      (listed) =>
+        listed.name === name &&
+        listed.kind === "agent" &&
+        session.status === "logged-in" &&
+        listed.owner === session.identity.name,
     ) ?? null;
   if (agent === null) {
     return null;
@@ -61,7 +58,7 @@ export function createIdentityCardSessions(boardStore: BoardStore): SessionSourc
       drawn.set(href, shown);
       return shown;
     },
-    subscribeSession: (name) => (listener) => {
+    subscribeSession: (listener, name) => {
       const stops = [
         boardStore.subscribeShowing("session")(listener),
         boardStore.subscribeShowing("identities")(listener),

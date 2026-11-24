@@ -28,7 +28,7 @@ interface IdentityCardSource {
   readonly subscribe: (listener: () => void) => () => void;
   readonly cardOf: (name: string) => IdentityCardParts | null;
   readonly sessionOf: (name: string) => IdentityCardSession | null;
-  readonly subscribeSession: (name: string) => (listener: () => void) => () => void;
+  readonly subscribeSession: (listener: () => void, name: string) => () => void;
 }
 
 interface IdentityCardTriggerParts {
@@ -56,11 +56,7 @@ interface IdentityCardShownParts {
   readonly card: IdentityCardParts;
 }
 
-function noCard(): IdentityCardParts | null {
-  return null;
-}
-
-function noSession(): IdentityCardSession | null {
+function nothing(): null {
   return null;
 }
 
@@ -73,15 +69,11 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
-function subscribeSession(): (listener: () => void) => () => void {
-  return subscribe;
-}
-
 const IdentityCards = createContext<IdentityCardSource>({
-  cardOf: noCard,
-  sessionOf: noSession,
+  cardOf: nothing,
+  sessionOf: nothing,
   subscribe,
-  subscribeSession,
+  subscribeSession: subscribe,
 });
 
 const IdentityCardComposer = createContext<IdentityCardComposerParts>(null);

@@ -1,4 +1,4 @@
-import { useContext, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useContext, useSyncExternalStore } from "react";
 import type { IdentityCardShownParts } from "./identity-card-parts.ts";
 import { IdentityCards } from "./identity-card-parts.ts";
 import type { ReactNode } from "react";
@@ -8,7 +8,10 @@ const OPEN_SESSION = "Open session ↗";
 export function IdentityCardSessionLink(parts: IdentityCardShownParts): ReactNode {
   const { name } = parts.card;
   const source = useContext(IdentityCards);
-  const subscribeToSession = useMemo(() => source.subscribeSession(name), [source, name]);
+  const subscribeToSession = useCallback(
+    (listener: () => void) => source.subscribeSession(listener, name),
+    [source, name],
+  );
   const session = useSyncExternalStore(subscribeToSession, () => source.sessionOf(name));
   if (session === null) {
     return null;

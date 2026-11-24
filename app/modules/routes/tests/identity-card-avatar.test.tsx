@@ -25,7 +25,7 @@ function sourceOf(card: IdentityCardParts): IdentityCardSource {
       listeners.delete(listener);
     };
   }
-  return { cardOf: () => card, sessionOf: () => null, subscribe, subscribeSession: () => subscribe };
+  return { cardOf: () => card, sessionOf: () => null, subscribe, subscribeSession: subscribe };
 }
 
 it("a card for an identity with no presence, drawn where no composer is provided, shows its avatar tile with no presence dot or words, and Message disabled", {
