@@ -95,6 +95,14 @@ const SCREENS: readonly Screen[] = [
   },
   { hash: "#/channels/general/threads/1", name: "thread", text: "Thanks, both of you." },
   {
+    click: "More actions",
+    clickIn: 'aside[aria-label="Thread"] header',
+    focus: 'aside[aria-label="Thread"] header button',
+    hash: "#/channels/general/threads/1",
+    name: "thread-menu",
+    text: "Copy link",
+  },
+  {
     focus: 'article:has-text("@triage-agent can you post the failing run?") time',
     hash: "#/channels/general/threads/1",
     name: "receipt",

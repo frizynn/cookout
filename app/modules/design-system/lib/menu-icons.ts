@@ -1,6 +1,7 @@
 import { BellIcon } from "./bell-icon.tsx";
 import { BellOffIcon } from "./bell-off-icon.tsx";
 import { CheckCircleIcon } from "./check-circle-icon.tsx";
+import { CopyIcon } from "./copy-icon.tsx";
 import type { ReactNode } from "react";
 import { ReadIcon } from "./read-icon.tsx";
 import { ReplyIcon } from "./reply-icon.tsx";
@@ -11,6 +12,7 @@ import { createElement } from "react";
 
 const MENU_ICONS = {
   close: CheckCircleIcon,
+  "copy-link": CopyIcon,
   "mark-read": ReadIcon,
   "mark-unread": UnreadIcon,
   react: SmileIcon,
