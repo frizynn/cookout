@@ -23,10 +23,9 @@ interface Offered {
 
 const settled: Effect.Effect<void> = TestClock.withLive(Effect.sleep(SETTLE));
 
-const quietThirtyDays: Effect.Effect<void> = Effect.andThen(
-  Effect.andThen(settled, TestClock.adjust("30 days")),
-  settled,
-);
+function quietFor(wait: "1 days" | "29 days"): Effect.Effect<void> {
+  return Effect.andThen(Effect.andThen(settled, TestClock.adjust(wait)), settled);
+}
 
 function inboxOpenFor(client: CookoutClient): Effect.Effect<void, never, Scope.Scope> {
   return Effect.gen(function* openInbox() {
@@ -45,8 +44,9 @@ const offeredLive: Effect.Effect<Offered, never, TestCookout | Scope.Scope> = Ef
   const ada = yield* cookout.createIdentity("ada", HUMAN);
   const scout = yield* cookout.createIdentity("ada/scout", { owner: "ada" });
   yield* answer(() => ada.client.createChannel({ name: "grill" }));
+  yield* quietFor("29 days");
   yield* inboxOpenFor(ada.client);
-  yield* quietThirtyDays;
+  yield* quietFor("1 days");
   yield* answer(() => inPane().findByText(OFFER));
   return { ada, scout };
 });
@@ -58,8 +58,9 @@ const offeredToAdmins: Effect.Effect<TestIdentity, never, TestCookout | Scope.Sc
     yield* cookout.createIdentity("ada/scout", { owner: "ada" });
     const cy = yield* cookout.createIdentity("cy", ADMIN);
     yield* answer(() => cookout.client.deactivateIdentity(ada.identity.name));
+    yield* quietFor("29 days");
     yield* inboxOpenFor(cookout.client);
-    yield* quietThirtyDays;
+    yield* quietFor("1 days");
     yield* answer(() => inPane().findByText(OFFER));
     return cy;
   },
@@ -123,7 +124,7 @@ it.effect("after 30 quiet days the owner's inbox shows the offer under For you a
       "For you 1",
       [expect.stringMatching(/@ada\/scout has had no activity for 30 days\. Deactivate it\?.*ada\/scout/u)],
       ["1 for you"],
-      "#/inbox/people/ada%2Fscout",
+      "#/inbox?profile=ada/scout",
     ]);
   }).pipe(Effect.scoped, Effect.provide(testCookout())),
 );
@@ -184,6 +185,7 @@ it.effect("Mark all as read clears the offer as Keep does, moving it to Earlier"
 it.effect("the agent posting clears its offer row live", () =>
   Effect.gen(function* postClears() {
     const { scout } = yield* offeredLive;
+    yield* TestClock.adjust("1 minute");
     yield* answer(() => scout.client.createMessage({ channel: "grill", text: "Still here" }));
     yield* earlierShown;
 

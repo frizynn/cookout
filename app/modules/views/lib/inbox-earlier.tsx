@@ -3,6 +3,7 @@ import { EarlierAlerts } from "./earlier-alerts.tsx";
 import { EarlierItems } from "./earlier-items.tsx";
 import { EarlierMore } from "./earlier-more.tsx";
 import { EarlierNudges } from "./earlier-nudges.tsx";
+import { EarlierOffers } from "./earlier-offers.tsx";
 import type { ReactNode } from "react";
 import type { Unread } from "../../unread/index.ts";
 import { useSyncExternalStore } from "react";
@@ -10,14 +11,13 @@ import { useSyncExternalStore } from "react";
 const TITLE = "Earlier";
 
 interface InboxEarlierProps {
-  readonly earlier: Unread["earlier"];
-  readonly alerts: Unread["alerts"];
-  readonly nudges: Unread["nudges"];
+  readonly unread: Pick<Unread, "alerts" | "deactivationOffers" | "earlier" | "nudges">;
   readonly me: string;
 }
 
 export function InboxEarlier(props: InboxEarlierProps): ReactNode {
-  const { earlier } = props;
+  const { unread } = props;
+  const { earlier } = unread;
   const state = useSyncExternalStore(earlier.subscribe, earlier.snapshot);
   if (state.status === "loading") {
     return <Skeleton width="long" />;
@@ -28,8 +28,9 @@ export function InboxEarlier(props: InboxEarlierProps): ReactNode {
   return (
     <>
       <FeedHeading count={null} title={TITLE} />
-      <EarlierNudges nudges={props.nudges} />
-      <EarlierAlerts alerts={props.alerts} />
+      <EarlierOffers offers={unread.deactivationOffers} />
+      <EarlierNudges nudges={unread.nudges} />
+      <EarlierAlerts alerts={unread.alerts} />
       <EarlierItems hasMore={state.hasMore} items={state.items} label={TITLE} me={props.me} />
       <EarlierMore earlier={earlier} state={state} />
     </>
