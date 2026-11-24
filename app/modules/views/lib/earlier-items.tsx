@@ -23,7 +23,7 @@ export function EarlierItems(props: EarlierItemsProps): ReactNode {
   const { hidden, items, me, selected } = props;
   const all = useMemo(() => rowsOf({ items, me }), [items, me]);
   const rows = all.filter((row) => row.key !== hidden);
-  if (rows.length === NONE) {
+  if (all.length === NONE) {
     return !props.hasMore && <FeedNote place="empty">{EMPTY}</FeedNote>;
   }
   return (

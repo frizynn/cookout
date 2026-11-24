@@ -38,8 +38,10 @@ const THEMES: readonly Theme[] = ["light", "dark"];
 
 const SCREENS: readonly Screen[] = [
   { hash: "#/inbox", name: "inbox", text: "Thanks, both of you." },
-  { hash: "#/inbox", history: "more", name: "inbox-more", text: "Show 50 earlier" },
-  { click: "Show 50 earlier", hash: "#/inbox", history: "loading", name: "inbox-loading", text: "Loading…" },
+  { hash: "#/inbox", history: "more", name: "inbox-more", text: "Show earlier" },
+  { click: "Show earlier", hash: "#/inbox", history: "loading", name: "inbox-loading", text: "Loading…" },
+  { hash: "#/inbox/general/1", name: "inbox-thread", text: "Thanks, both of you." },
+  { hash: "#/inbox/general/1", name: "inbox-narrow", narrow: true, text: "earlier replies" },
   { hash: "#/channels/general", name: "channel", text: "Lunch at 12:30." },
   { hash: "#/channels/general/threads/1", name: "thread", text: "Thanks, both of you." },
   {
