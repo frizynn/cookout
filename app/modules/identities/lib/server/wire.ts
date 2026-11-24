@@ -56,6 +56,8 @@ const TokenSchema = Schema.String.check(Schema.isPattern(tokenPattern)).pipe(
   Schema.refine(isToken, { identifier: "Token" }),
 );
 
+const DeprecatedAgentsSchema = Schema.optionalKey(Schema.Array(IdentityNameSchema));
+
 const HumanIdentitySchema = Schema.Struct({
   admin: Schema.Boolean,
   createdAt: IsoTimeSchema,
@@ -90,7 +92,7 @@ export const ListIdentitiesResponseSchema = matchesWire<ListIdentitiesResponse>(
 );
 
 export const DeactivateIdentityResponseSchema = matchesWire<DeactivateIdentityResponse>()(
-  Schema.Struct({ identity: IdentitySchema }),
+  Schema.Struct({ agents: DeprecatedAgentsSchema, identity: IdentitySchema }),
 );
 
 export const IdentityMessageCountResponseSchema = matchesWire<IdentityMessageCountResponse>()(

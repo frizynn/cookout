@@ -152,6 +152,8 @@ interface ListIdentitiesQuery {
 /** The answer to `POST /v1/identities/:name/deactivate`: the deactivated identity. */
 interface DeactivateIdentityResponse {
   readonly identity: Identity;
+  /** @deprecated Always empty, since a human's agents stay active; sent for clients at 0.2.0 or older, which need it. */
+  readonly agents?: readonly IdentityName[];
 }
 /**
  * The body of `POST /v1/identities`. Any human may create an agent it owns; only an admin may create a human, or an

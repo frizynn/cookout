@@ -61,7 +61,7 @@ function deactivatedOrRefused(
   result: DeactivateIdentityResult,
 ): Effect.Effect<DeactivateIdentityResponse, Refusal> {
   if (result.status === "deactivated") {
-    return Effect.succeed({ identity: result.identity });
+    return Effect.succeed({ agents: [], identity: result.identity });
   }
   if (result.status === "last_admin") {
     return Effect.fail(lastAdmin(name));

@@ -12,3 +12,5 @@
 ## Considered options
 
 - **Keep the field until a release whose validator no longer requires it is widespread.** Rejected: the decision on #242 is that one release is enough.
+
+Superseded on 2026-11-24 by [ADR 0076](0076-removing-a-response-field-takes-two-releases.md): the server sends `agents: []` again until a release whose clients accept the answer without it is published (mattpocock/cookout#279).

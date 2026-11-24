@@ -35,7 +35,7 @@ it.effect("deactivating an identity makes every token it holds fail, while its m
     );
     const { messages } = yield* answer(() => cookout.client.listMessages("grill"));
 
-    expect(deactivated).toStrictEqual({ identity: { ...bot.identity, deactivated: true } });
+    expect(deactivated).toStrictEqual({ agents: [], identity: { ...bot.identity, deactivated: true } });
     expect([tokens, Arr.map(messages, ({ author, id }) => [id, author.name])]).toMatchObject([
       [
         { code: "token_revoked", status: UNAUTHORIZED },
@@ -75,7 +75,7 @@ it.effect("deactivating a human leaves every agent they own active: its token wo
       ONE_AT_A_TIME,
     );
 
-    expect(deactivated).toMatchObject({ identity: { deactivated: true, name: "ada" } });
+    expect(deactivated).toMatchObject({ agents: [], identity: { deactivated: true, name: "ada" } });
     expect([token.identity, sessionToken.identity]).toStrictEqual([helper.identity, helper.identity]);
     expect(posted.message).toMatchObject({ author: { name: "ada/helper" }, text: "still here" });
     expect(Arr.map(listed.identities, ({ name }) => name)).toStrictEqual(["ada/helper", "admin"]);
