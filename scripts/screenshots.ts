@@ -110,6 +110,23 @@ function viewportOf(shot: Shot): typeof WIDE {
   return WIDE;
 }
 
+async function fillAll(page: Page, fills: Required<Screen>["fill"]): Promise<void> {
+  const [first = null, ...rest] = fills;
+  if (first === null) {
+    return;
+  }
+  const [label, value] = first;
+  await page.getByLabel(label, { exact: true }).fill(value, { timeout: RENDER_MS });
+  await fillAll(page, rest);
+}
+
+async function chooseAndFill(page: Page, screen: Screen): Promise<void> {
+  if (typeof screen.choose === "string") {
+    await page.getByRole("menuitem", { exact: true, name: screen.choose }).click({ timeout: RENDER_MS });
+  }
+  await fillAll(page, screen.fill ?? []);
+}
+
 async function interact(page: Page, shot: Shot): Promise<void> {
   if (typeof shot.screen.focus === "string") {
     await page.locator(shot.screen.focus).first().focus({ timeout: RENDER_MS });
@@ -121,6 +138,7 @@ async function interact(page: Page, shot: Shot): Promise<void> {
     const scope = page.locator(shot.screen.clickIn ?? "body");
     await scope.getByRole("button", { exact: true, name: shot.screen.click }).click({ timeout: RENDER_MS });
   }
+  await chooseAndFill(page, shot.screen);
 }
 
 async function render(page: Page, shot: Shot): Promise<void> {

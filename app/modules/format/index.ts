@@ -14,7 +14,7 @@
  * a clock they move on by hand, so time on screen passes without waiting.
  * `browserTimeZone()` is the browser's own IANA time zone, and
  * `runTimeIn({ iso, timeZone })` writes a Scheduled message's run in the zone it
- * is scheduled in (`Mon 1 Dec 2026, 09:00`).
+ * is scheduled in (`Mon, 1 Dec 2026, 09:00`).
  * This is the web UI's one reader of `Date` and its one clock.
  */
 const DAY = 1;
@@ -174,7 +174,7 @@ export interface RunTime {
 /**
  * A Scheduled message's run as the zone it is scheduled in shows it.
  * @param run The run's ISO time, and the IANA time zone to write it in; an unknown zone writes it in the browser's.
- * @returns Its weekday, date and 24-hour time, such as `Mon 1 Dec 2026, 09:00`.
+ * @returns Its weekday, date and 24-hour time, such as `Mon, 1 Dec 2026, 09:00`.
  */
 export function runTimeIn(run: RunTime): string {
   const { iso, timeZone } = run;
