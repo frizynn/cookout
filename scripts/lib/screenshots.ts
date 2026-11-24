@@ -45,12 +45,14 @@ interface TakeScreenshots {
 const THEMES: readonly Theme[] = ["light", "dark"];
 const NUDGE_TEXT = "Quiet for 3 days: close it, or follow up?";
 const OFFER_TEXT = "has had no activity for 30 days.";
+const DEACTIVATED_TEXT = "@triage-agent was deactivated after 90 days with no activity.";
 
 const SCREENS: readonly Screen[] = [
   { hash: "#/inbox", name: "inbox", text: "Thanks, both of you." },
   { hash: "#/inbox", history: "more", name: "inbox-more", text: "Show earlier" },
   { daysLater: 3, hash: "#/inbox", name: "inbox-nudge", text: NUDGE_TEXT },
   { admin: true, daysLater: 30, hash: "#/inbox", name: "inbox-offer", text: OFFER_TEXT },
+  { daysLater: 90, hash: "#/inbox", name: "inbox-deactivated", text: DEACTIVATED_TEXT },
   { click: "Show earlier", hash: "#/inbox", history: "loading", name: "inbox-loading", text: "Loading…" },
   {
     focus: 'a[data-feed-row][aria-current="page"]',
