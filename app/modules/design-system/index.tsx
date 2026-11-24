@@ -33,7 +33,12 @@
  * scrolled up, and anything under it, such as a message box in a `BoxFrame`
  * with its keyboard hint; `SidePanel` is a
  * named column on its right with a close link (the whole width on a narrow
- * screen). A split view, such as the inbox's, is a `ListPane` (the main column,
+ * screen). Given an `edge`, a `SidePanel` or `ConversationPanel` is as wide as
+ * its edge says on a wide screen (never more than 60% of the space beside it),
+ * and its left edge is a `PanelEdge`: a focusable vertical separator, a line on
+ * hover and focus, that a drag or the arrow keys resize (Left widens), Home and
+ * End take to its narrowest and widest, and a drag released past its
+ * narrowest closes (`onClose`); it isn't shown on a narrow screen. A split view, such as the inbox's, is a `ListPane` (the main column,
  * hidden on a narrow screen while `hiddenWhenNarrow`) beside a
  * `ConversationPanel`, a named column with a `BackLink` arrow (shown only on a
  * narrow screen, where the panel takes the whole width), its detail, its
@@ -232,6 +237,7 @@ export { PickField } from "./lib/pick-field.tsx";
 export { Pill } from "./lib/pill.tsx";
 export { PromptForm } from "./lib/prompt-form.tsx";
 export { SidePanel } from "./lib/side-panel.tsx";
+export type { PanelEdgeParts } from "./lib/panel-edge-parts.ts";
 export { ScrollArea } from "./lib/scroll-area.tsx";
 export { Sidebar } from "./lib/sidebar.tsx";
 export { SidebarBody } from "./lib/sidebar-body.tsx";

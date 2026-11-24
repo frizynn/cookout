@@ -152,13 +152,6 @@ interface PressButtonParts extends Parts {
   readonly onClick: () => void;
 }
 
-interface SidePanelParts extends Parts {
-  readonly label: string;
-  readonly detail: string;
-  readonly closeHref: string;
-  readonly closeLabel: string;
-}
-
 interface ChoiceParts {
   readonly label: string;
   readonly value: string;
@@ -285,7 +278,6 @@ export type {
   PressButtonParts,
   PillParts,
   SidebarParts,
-  SidePanelParts,
   WorkspaceParts,
   DataAreaParts,
   DataBlockParts,
