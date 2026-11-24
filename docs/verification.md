@@ -71,7 +71,7 @@ env $(cat /tmp/cookout-dev.env) node app/main.ts message post general "A reply" 
 env $(cat /tmp/cookout-dev.env) node app/main.ts channel create triage --description "Bugs to look at."
 env $(cat /tmp/cookout-dev.env) node app/main.ts channel list
 env $(cat /tmp/cookout-dev.env) node app/main.ts channel get triage
-env $(cat /tmp/cookout-dev.env) node app/main.ts identity create reviewer --kind agent --owner grace
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity create reviewer --kind agent --display-name Bot --owner grace
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity list
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity rotate reviewer
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity deactivate reviewer
@@ -118,14 +118,14 @@ Every agent has a human owner, any human creates agents it owns, and an agent ma
 
 ```sh
 jq -r '.identities[] | select(.identity.name == "grace") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-grace.env
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create helper --kind agent
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create grace/helper --kind agent | tee /tmp/cookout-helper.json
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create spy --kind agent --owner ada
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create helper --kind agent --display-name Bot
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create grace/helper --kind agent --display-name Bot | tee /tmp/cookout-helper.json
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create spy --kind agent --display-name Bot --owner ada
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create eve --kind human
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create ada/helper --kind agent
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts identity create ada/helper --kind agent --display-name Bot
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) node app/main.ts message post general "@grace/helper have a look"
 env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(jq -r .token /tmp/cookout-helper.json) node app/main.ts inbox
-env $(cat /tmp/cookout-dev.env) node app/main.ts identity create stray --kind agent --owner release-bot
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity create stray --kind agent --display-name Bot --owner release-bot
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity list | jq -c '.identities[] | [.name, .kind, .owner]'
 ```
 
@@ -310,7 +310,7 @@ env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token ada) node app/main.ts iden
 env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token grace) node app/main.ts identity transfer release-bot --owner grace
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity transfer release-bot --owner grace | jq -c .identity
 env $(cat /tmp/cookout-dev.env) COOKOUT_TOKEN=$(token ada) node app/main.ts identity sessions release-bot
-env $(cat /tmp/cookout-dev.env) node app/main.ts identity create ada/x --kind agent --owner ada > /dev/null
+env $(cat /tmp/cookout-dev.env) node app/main.ts identity create ada/x --kind agent --display-name Bot --owner ada > /dev/null
 env $(cat /tmp/cookout-dev.env) node app/main.ts identity transfer ada/x --owner grace
 ```
 
