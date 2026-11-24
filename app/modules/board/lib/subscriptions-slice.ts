@@ -3,10 +3,12 @@ import type { Failure } from "./failure.ts";
 import type { Slice } from "./slice.ts";
 import { failure } from "./failure.ts";
 
+type AskedFrom = "channel-header" | "channel-menu";
+
 type ChangeState =
   | { readonly status: "idle" }
   | { readonly status: "changing"; readonly channel: ChannelName }
-  | (Failure & { readonly channel: ChannelName });
+  | (Failure & { readonly channel: ChannelName; readonly from: AskedFrom });
 
 type SubscriptionsState =
   | { readonly status: "loading" }
@@ -17,7 +19,12 @@ type SubscriptionChange =
   | CookoutEvent
   | { readonly type: "subscription-asked"; readonly channel: ChannelName }
   | { readonly type: "subscription-answered"; readonly channel: ChannelName; readonly subscribed: boolean }
-  | { readonly type: "subscription-refused"; readonly channel: ChannelName; readonly refusal: Refusal };
+  | {
+      readonly type: "subscription-refused";
+      readonly channel: ChannelName;
+      readonly from: AskedFrom;
+      readonly refusal: Refusal;
+    };
 
 type SubscriptionsClient = Pick<CookoutClient, "listSubscribedChannels" | "subscribe" | "unsubscribe">;
 
@@ -56,7 +63,7 @@ function changeOf(change: SubscriptionChange): ChangeState | null {
     return { channel: change.channel, status: "changing" };
   }
   if (change.type === "subscription-refused") {
-    return { ...change.refusal, channel: change.channel, status: "failed" };
+    return { ...change.refusal, channel: change.channel, from: change.from, status: "failed" };
   }
   if (change.type === "subscription-answered") {
     return IDLE;
@@ -122,4 +129,11 @@ function refusedAs(error: unknown): Refusal {
   return { code, message };
 }
 
-export { type SubscriptionChange, type SubscriptionsClient, type SubscriptionsState, refusedAs, subscriptionsSlice };
+export {
+  type AskedFrom,
+  type SubscriptionChange,
+  type SubscriptionsClient,
+  type SubscriptionsState,
+  refusedAs,
+  subscriptionsSlice,
+};
