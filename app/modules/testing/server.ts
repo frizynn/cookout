@@ -51,10 +51,9 @@ export {
   type InterruptedDev,
   interruptDevBinary,
   runCookoutBinary,
-  signalWatchBinary,
-  type StoppedWatch,
   watchCookoutBinary,
 } from "./lib/server/process.ts";
+export { signalWatchBinary, type StoppedWatch } from "./lib/server/cli-signal.ts";
 export { runCookoutWhile } from "./lib/server/cli-clock.ts";
 export { type IdentityFixtureOptions, identityFixture, identityName } from "./lib/server/identities.ts";
 export { type CuttableLink, cuttableLink } from "./lib/server/cuttable-link.ts";

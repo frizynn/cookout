@@ -1,9 +1,8 @@
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import type { CliResult, WatchRun, Watched } from "./cli.ts";
 import { Deferred, Effect, Fiber, Option, Path, Schema, Stream, pipe } from "effect";
-import type { Duration, Scope } from "effect";
 import { cliResult, parseLine, watched } from "./cli.ts";
-import { TestClock } from "effect/testing";
+import type { Scope } from "effect";
 
 interface BinaryRun {
   readonly args: readonly string[];
@@ -83,38 +82,6 @@ function watchCookoutBinary<During, Needs>({
   }).pipe(Effect.orDie);
 }
 
-interface SignalledWatch<Needs> extends BinaryRun {
-  readonly beforeTheSignal: Effect.Effect<void, never, Needs>;
-}
-
-interface StoppedWatch {
-  readonly exitCode: number;
-  readonly stoppedIn: Duration.Duration;
-}
-
-const GIVE_UP_ON_THE_WATCH = "30 seconds";
-
-function signalWatchBinary<Needs>({
-  args,
-  beforeTheSignal,
-  env,
-}: SignalledWatch<Needs>): Effect.Effect<StoppedWatch, never, Spawns | Needs> {
-  return Effect.gen(function* spawnThenSignal() {
-    const path = yield* Path.Path;
-    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-    const main = yield* path.fromFileUrl(MAIN);
-    const handle = yield* spawner.spawn(
-      ChildProcess.make(process.execPath, [main, ...args], { env: { ...env }, extendEnv: false }),
-    );
-    const stderr = yield* allLines(handle.stderr);
-    yield* stderr.started;
-    yield* beforeTheSignal;
-    const killed = Effect.andThen(handle.kill({ forceKillAfter: GIVE_UP_ON_THE_WATCH }), handle.exitCode);
-    const [stoppedIn, exitCode] = yield* TestClock.withLive(Effect.timed(killed));
-    return { exitCode, stoppedIn };
-  }).pipe(Effect.orDie);
-}
-
 function databaseIn(line: string): Option.Option<string> {
   return pipe(
     Option.liftPredicate(parseLine(line), isDevRunning),
@@ -136,11 +103,4 @@ function interruptDevBinary(): Effect.Effect<InterruptedDev, never, Spawns> {
   }).pipe(Effect.orDie);
 }
 
-export {
-  type InterruptedDev,
-  interruptDevBinary,
-  runCookoutBinary,
-  signalWatchBinary,
-  type StoppedWatch,
-  watchCookoutBinary,
-};
+export { type InterruptedDev, interruptDevBinary, runCookoutBinary, watchCookoutBinary };
