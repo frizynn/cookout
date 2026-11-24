@@ -19,7 +19,7 @@ it.effect("cookout identity deactivate and reactivate, and identity list --deact
     const results = yield* Effect.forEach(verbs, (args) => runCookout({ args, env }), ONE_AT_A_TIME);
 
     expect(results).toMatchObject([
-      { ...succeeded, stdoutJson: { identity: { deactivated: true, name: "grace" } } },
+      { ...succeeded, stdoutJson: { agents: [], identity: { deactivated: true, name: "grace" } } },
       { ...succeeded, stdoutJson: { identities: [{ name: "admin" }] } },
       { ...succeeded, stdoutJson: { identities: [{ name: "admin" }, { deactivated: true, name: "grace" }] } },
       { ...succeeded, stdoutJson: { identity: { name: "grace" } } },
