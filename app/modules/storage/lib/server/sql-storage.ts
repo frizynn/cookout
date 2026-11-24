@@ -6,6 +6,7 @@ import { sqlCommands } from "./commands.ts";
 import { sqlHealth } from "./health.ts";
 import { sqlIdentitySections } from "./identity-sections.ts";
 import { sqlMessageSections } from "./sql-message-sections.ts";
+import { sqlScheduledMessages } from "./scheduled-messages-sqlite.ts";
 
 type SqlStorage = Omit<StorageService, keyof SearchSection>;
 
@@ -16,6 +17,7 @@ function sqlStorage(db: SqlDatabase): SqlStorage {
     ...sqlMessageSections(db),
     ...sqlAgentSessionSections(db),
     ...sqlCommands(db),
+    ...sqlScheduledMessages(db),
   };
 }
 

@@ -6,13 +6,16 @@ import { isHarness, isIdentityName, isOwner } from "../../../identities/index.ts
 import { isMessageId, shownRepliers } from "../../../messages/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { NewMessage } from "./messages.ts";
+import type { ScheduledMessageMarker } from "../../../scheduled-messages/index.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isChannelName } from "../../../channels/index.ts";
+import { isScheduledMessageId } from "../../../scheduled-messages/index.ts";
 import { unreadable } from "./errors.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
 const MessageIdColumn = Schema.Int.pipe(Schema.refine(isMessageId));
+const ScheduledMessageIdColumn = Schema.Int.pipe(Schema.refine(isScheduledMessageId));
 const IdentityNameColumn = Schema.String.pipe(Schema.refine(isIdentityName));
 const MentionsColumn = Schema.fromJsonString(Schema.Array(IdentityNameColumn));
 const OwnerColumn = Schema.String.pipe(Schema.refine(isOwner));
@@ -39,6 +42,8 @@ const MessageRow = Schema.Struct({
   repliers: RepliersColumn,
   reply_count: Schema.Int,
   reply_to: Schema.NullOr(MessageIdColumn),
+  scheduled_message_deleted_at: Schema.NullOr(Schema.String),
+  scheduled_message_id: Schema.NullOr(ScheduledMessageIdColumn),
   text: Schema.String,
 });
 
@@ -50,6 +55,7 @@ interface DataField {
 
 const NO_DATA: DataField = {};
 const NO_HARNESS = {};
+const NO_SCHEDULE = {};
 
 const SHOWN_REPLIERS = String(shownRepliers);
 
@@ -72,7 +78,9 @@ const REPLIERS: DialectForms<string> = { postgres: POSTGRES_REPLIERS, sqlite: SQ
 function messageColumns(db: SqlDatabase): string {
   const repliers = REPLIERS[db.dialect];
   return `id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, harness,
-  closed_at, closed_by,
+  closed_at, closed_by, scheduled_message_id,
+  (SELECT schedules.deleted_at FROM scheduled_messages AS schedules
+    WHERE schedules.id = messages.scheduled_message_id) AS scheduled_message_deleted_at,
   (SELECT count(*) FROM messages AS replies WHERE replies.reply_to = messages.id) AS reply_count,
   (SELECT max(replies.id) FROM messages AS replies WHERE replies.reply_to = messages.id) AS latest_reply_id,
   (SELECT replies.created_at FROM messages AS replies WHERE replies.reply_to = messages.id
@@ -110,6 +118,13 @@ function closingOf(row: MessageRowType): Partial<Closing> {
   return { closedAt: row.closed_at, closedBy: row.closed_by };
 }
 
+function scheduledOf(row: MessageRowType): { readonly scheduledMessage?: ScheduledMessageMarker } {
+  if (Predicate.isNull(row.scheduled_message_id)) {
+    return NO_SCHEDULE;
+  }
+  return { scheduledMessage: { deleted: row.scheduled_message_deleted_at !== null, id: row.scheduled_message_id } };
+}
+
 function messageOf(row: MessageRowType, data: DataField): Message {
   const fields = {
     author: authorOf({ name: row.author_name, owner: row.author_owner }),
@@ -117,7 +132,14 @@ function messageOf(row: MessageRowType, data: DataField): Message {
     createdAt: row.created_at,
     id: row.id,
   };
-  const content = { ...fields, ...harnessOf(row), ...data, mentions: row.mentions, text: row.text };
+  const content = {
+    ...fields,
+    ...harnessOf(row),
+    ...scheduledOf(row),
+    ...data,
+    mentions: row.mentions,
+    text: row.text,
+  };
   if (Predicate.isNull(row.reply_to)) {
     const replies = {
       latestReplyAt: row.latest_reply_at,

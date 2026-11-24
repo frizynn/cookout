@@ -1,4 +1,5 @@
 import { Array as Arr, Effect, Option, Schema } from "effect";
+import { POSTGRES_SCHEDULED_MESSAGES_MIGRATION } from "./scheduled-messages-sqlite.ts";
 import type { PostgresDatabase } from "./adapters/postgres.ts";
 import { StorageUnavailable } from "./errors.ts";
 
@@ -225,6 +226,7 @@ const postgresMigrations: readonly (readonly string[])[] = [
      )`,
   ],
   ["ALTER TABLE deliveries ADD COLUMN added_order bigint GENERATED ALWAYS AS IDENTITY"],
+  POSTGRES_SCHEDULED_MESSAGES_MIGRATION,
 ];
 
 const NO_VERSION = 0;

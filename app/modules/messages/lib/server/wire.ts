@@ -24,6 +24,7 @@ import {
 import { isMessageId, messageTextLength, pageSize, reactionNames, shownRepliers } from "../../index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
+import { isScheduledMessageId } from "../../../scheduled-messages/index.ts";
 import { matchesWire } from "../../../http/index.ts";
 
 const NO_REPLIES = 0;
@@ -44,6 +45,12 @@ const OwnerSchema = Schema.String.check(ownerRule).pipe(Schema.refine(isOwner, {
 
 const positive = Schema.isGreaterThanOrEqualTo(LOWEST_ID).abort();
 const MessageIdSchema = Schema.Int.check(positive).pipe(Schema.refine(isMessageId, { identifier: "MessageId" }));
+
+const ScheduledMessageIdSchema = Schema.Int.check(positive).pipe(
+  Schema.refine(isScheduledMessageId, { identifier: "ScheduledMessageId" }),
+);
+
+const ScheduledMessageMarkerSchema = Schema.Struct({ deleted: Schema.Boolean, id: ScheduledMessageIdSchema });
 
 const textRule = Schema.isBetweenLength(messageTextLength.minimum, messageTextLength.maximum);
 const TextSchema = Schema.String.check(textRule);
@@ -76,6 +83,7 @@ const messageFields = {
   id: MessageIdSchema,
   mentions: Schema.Array(IdentityNameSchema),
   reactions: Schema.optionalKey(Schema.Array(ReactionCountSchema)),
+  scheduledMessage: Schema.optionalKey(ScheduledMessageMarkerSchema),
   text: TextSchema,
 };
 
@@ -183,4 +191,12 @@ export const TopLevelMessageResponseSchema = matchesWire<TopLevelMessageResponse
   Schema.Struct({ message: TopLevelMessageSchema }),
 );
 
-export { MessageIdSchema, MessageSchema, ReactionCountSchema, TopLevelMessageSchema };
+export {
+  AuthorSchema,
+  MessageIdSchema,
+  MessageSchema,
+  ReactionCountSchema,
+  ScheduledMessageIdSchema,
+  TextSchema,
+  TopLevelMessageSchema,
+};

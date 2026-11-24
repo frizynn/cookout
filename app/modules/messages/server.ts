@@ -148,8 +148,11 @@ export { messageNotFound } from "./lib/server/refusals.ts";
 
 /** The Schemas of a message and its ID, for other modules' answers that hold messages. */
 export {
+  AuthorSchema,
   MessageIdSchema,
   MessageSchema,
+  ScheduledMessageIdSchema,
+  TextSchema,
   ReactionCountSchema,
   ReactionSchema,
   ReadReceiptSchema,
