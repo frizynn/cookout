@@ -120,6 +120,9 @@
  * `SearchBox` is the search box atop the workspace column, on the `search` store: the keymap's `openSearch` (Ctrl+K,
  * ⌘K on a Mac, its placeholder naming it) focuses it from anywhere; typing lists the matching messages under it, newest first, each word matching the query highlighted; Up,
  * Down and Enter open one in its thread, and Escape or clicking away closes the list and gives focus back.
+ * `ShortcutListView` is the list of every keyboard shortcut, generated from the keymap and grouped by where each
+ * applies: the keymap's `openShortcutList` (`?` off a text box, Ctrl/Cmd+/ anywhere) opens it, and Escape closes
+ * it with focus back where it was.
  */
 export { AgentJoinApprovalView } from "./lib/agent-join-approval.tsx";
 export { Authors } from "./lib/authors.tsx";
@@ -136,6 +139,7 @@ export { ProfileView } from "./lib/profile.tsx";
 export { ReconnectingView } from "./lib/reconnecting.tsx";
 export { SettingsView } from "./lib/settings.tsx";
 export { SearchBox } from "./lib/search-box.tsx";
+export { ShortcutListView } from "./lib/shortcut-list.tsx";
 export { SidebarView } from "./lib/sidebar.tsx";
 export { ThreadCardComposer } from "./lib/thread-card-composer.tsx";
 export { ThreadView } from "./lib/thread.tsx";

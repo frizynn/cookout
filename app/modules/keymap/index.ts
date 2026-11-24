@@ -20,11 +20,19 @@
  * people (⌘K and ⌥ on a Mac, Ctrl+K and Alt elsewhere), so no view writes a
  * key by hand. The browser's own keys (F6, and Ctrl or Cmd with T, W, N, L, D
  * or P) are never bound.
+ * The keymap is also a store (`subscribe`, `snapshot`): its state holds the shortcut list, generated from `KEYS`
+ * as one group per scope under its heading in `GROUPS` and one row per action with its chords as this platform
+ * shows them, and whether that list is open (`openShortcutList`, `closeShortcutList`). The keymap binds the
+ * `openShortcutList` action (`?`, Ctrl/Cmd+/) itself, so no view binds it. While the list is open, the keymap
+ * acts on no key, since the list is a modal dialog with its own keys. A scope's heading in the list is in
+ * `GROUPS`, and the list shows the scopes outermost first.
  */
 import type { Action, ActionOf, Key, Scope } from "./lib/keys.ts";
 import { KEYS, SCOPES, TEXT_SCOPES } from "./lib/keys.ts";
 import { ariaOf, chordOf, isModified, matches, shownOf } from "./lib/chords.ts";
+import type { KeymapStore } from "./lib/state.ts";
 import type { Platform } from "./lib/chords.ts";
+import { createKeymapStore } from "./lib/state.ts";
 
 type Act = (event: KeyboardEvent) => boolean;
 
@@ -41,7 +49,7 @@ interface Shortcut {
 
 type KeyTarget = Pick<Document, "addEventListener" | "removeEventListener">;
 
-interface Keymap {
+interface Keymap extends KeymapStore {
   readonly listen: (target: KeyTarget) => () => void;
   readonly bind: <Covered extends Scope>(binding: Binding<Covered>) => () => void;
   readonly shortcutOf: (action: Action) => Shortcut;
@@ -107,11 +115,22 @@ function boundInOrder(bindings: readonly Bound[], target: EventTarget | null): r
   return SCOPES.flatMap((scope) => newestFirst.filter((bound) => bound.scope === scope && covers(bound, target)));
 }
 
+function isLeft(event: KeyboardEvent): boolean {
+  return event.defaultPrevented || event.isComposing || typeof Reflect.get(event, "key") !== "string";
+}
+
 function createKeymap(options: { readonly platform: string }): Keymap {
   const platform = platformOf(options.platform);
-  let bindings: readonly Bound[] = [];
+  const store = createKeymapStore(platform);
+  function openList(): boolean {
+    store.openShortcutList();
+    return true;
+  }
+  let bindings: readonly Bound[] = [
+    { rows: rowsOf("everywhere", { openShortcutList: openList }), scope: "everywhere", within: null },
+  ];
   function pressed(event: KeyboardEvent): void {
-    if (event.defaultPrevented || event.isComposing || typeof Reflect.get(event, "key") !== "string") {
+    if (isLeft(event) || store.snapshot().shortcutListOpen) {
       return;
     }
     if (boundInOrder(bindings, event.target).some((bound) => actOn(bound, event))) {
@@ -119,6 +138,7 @@ function createKeymap(options: { readonly platform: string }): Keymap {
     }
   }
   return {
+    ...store,
     bind: (binding) => {
       const bound: Bound = {
         rows: rowsOf(binding.scope, binding.actions),
