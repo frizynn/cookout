@@ -29,8 +29,8 @@ const SCREENS: readonly Screen[] = [
   { click: "Show earlier", hash: "#/inbox", history: "loading", name: "inbox-loading", text: "Loading…" },
   {
     click: "More actions",
-    clickIn: 'main li:has(a[data-feed-row][href="#/inbox/general/1"])',
-    focus: 'main a[data-feed-row][href="#/inbox/general/1"]',
+    clickIn: 'main li:has(a[data-feed-row][href^="#/inbox/general/1/"])',
+    focus: 'main a[data-feed-row][href^="#/inbox/general/1/"]',
     hash: "#/inbox",
     name: "inbox-row-menu",
     text: "Open in channel",
