@@ -1,13 +1,14 @@
 /**
  * The cookout's storage: one `Storage` service, so operations that must be
- * atomic stay one method each, and two Layers that pass the same contract
+ * atomic stay one method each, and Layers that pass the same contract
  * suite. Every method fails with `StorageUnavailable` when the store can't be used.
  */
 import { Context, Layer } from "effect";
-import type { FileSystem } from "effect";
+import type { FileSystem, Redacted } from "effect";
 import type { FullStorage } from "./lib/server/memory-store.ts";
 import { StorageUnavailable } from "./lib/server/errors.ts";
 import { openMemoryStore } from "./lib/server/memory-store.ts";
+import { openPostgresStore } from "./lib/server/postgres-store.ts";
 import { openSqliteStore } from "./lib/server/sqlite-store.ts";
 
 export { StorageUnavailable };
@@ -42,9 +43,31 @@ export class Storage extends Context.Service<Storage, FullStorage>()("@ai-hero/c
  * Opens and migrates the SQLite file at `path`, and closes it when the Layer
  * is released. A new file is created readable by its owner only, and so are
  * its WAL and shared-memory files, since they hold token hashes and messages.
+ * @param path The SQLite file, created if missing.
+ * @returns The store, failing with `StorageUnavailable` if it can't be opened.
  */
-export const sqliteStorage = (path: string): Layer.Layer<Storage, StorageUnavailable, FileSystem.FileSystem> =>
-  Layer.effect(Storage, openSqliteStore(path));
+export function sqliteStorage(path: string): Layer.Layer<Storage, StorageUnavailable, FileSystem.FileSystem> {
+  return Layer.effect(Storage, openSqliteStore(path));
+}
+
+/**
+ * Opens and migrates the Postgres database at `url` on a pool of eight
+ * connections, and closes the pool when the Layer is released. TLS is used
+ * when the URL asks for it (`sslmode=require`). Each transaction is
+ * serializable and runs one at a time; one that loses a serialization or
+ * deadlock conflict is retried with jittered backoff, and surfaces
+ * `StorageUnavailable` once the retries run out, so its work must read no
+ * clock and publish nothing. Migrations are Postgres's own list, applied
+ * in order under an advisory lock so two processes starting together apply
+ * each once; a database newer than the list fails with "Upgrade cookout".
+ * Only health and the identity sections are on Postgres so far; the rest fail
+ * with `StorageUnavailable`, and nothing selects this Layer at runtime yet.
+ * @param url The database URL, kept redacted.
+ * @returns The store, failing with `StorageUnavailable` if it can't be opened.
+ */
+export function postgresStorage(url: Redacted.Redacted): Layer.Layer<Storage, StorageUnavailable> {
+  return Layer.effect(Storage, openPostgresStore(url));
+}
 
 /** A store held in this process only. Everything is lost when the Layer is released. */
 export const memoryStorage: Layer.Layer<Storage> = Layer.effect(Storage, openMemoryStore);

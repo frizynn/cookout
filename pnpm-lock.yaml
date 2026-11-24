@@ -11,6 +11,9 @@ importers:
       '@effect/platform-node':
         specifier: ^4.1.5
         version: 4.1.5(effect@4.1.5)(redis@6.3.1)
+      '@effect/sql-pg':
+        specifier: ^4.1.5
+        version: 4.1.5(effect@4.1.5)
       ajv:
         specifier: ^8.20.0
         version: 8.20.0
@@ -409,6 +412,11 @@ packages:
     peerDependencies:
       effect: ^4.1.5
       redis: '>=5.1.0 <7.0.0'
+
+  '@effect/sql-pg@4.1.5':
+    resolution: {integrity: sha512-Fs/5EmXykN4vKzWES54aRSLts0jBiQn65Y2jnGq//IX8Qj2McB7+WGYwaGNwxXUq4mXvagGWZPNMO0GefwDpQw==}
+    peerDependencies:
+      effect: ^4.1.5
 
   '@effect/tsgo-darwin-arm64@0.73.2':
     resolution: {integrity: sha512-+6xuv33cSp44tNWc9erzLKmS7qRB/QdPJYUCJrEY+4lfRhFdAsCvRDw6uw2aqzePuZDHfM3gDqfYEl5g/mWBfQ==}
@@ -3852,6 +3860,10 @@ snapshots:
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
+
+  '@effect/sql-pg@4.1.5(effect@4.1.5)':
+    dependencies:
+      effect: 4.1.5
 
   '@effect/tsgo-darwin-arm64@0.73.2':
     optional: true

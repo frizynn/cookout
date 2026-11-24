@@ -1,17 +1,10 @@
-import type { DatabaseSync, SQLInputValue } from "node:sqlite";
 import { Effect, Semaphore } from "effect";
+import type { DatabaseSync } from "node:sqlite";
 import type { Scope } from "effect";
+import type { SqlDatabase } from "./sql-database.ts";
 import { StorageUnavailable } from "../errors.ts";
 
-type SqlValue = SQLInputValue;
-
-export type SqliteDatabase = {
-  readonly get: (sql: string, ...params: readonly SqlValue[]) => Effect.Effect<unknown, StorageUnavailable>;
-  readonly all: (sql: string, ...params: readonly SqlValue[]) => Effect.Effect<readonly unknown[], StorageUnavailable>;
-  readonly run: (sql: string, ...params: readonly SqlValue[]) => Effect.Effect<void, StorageUnavailable>;
-  readonly exec: (sql: string) => Effect.Effect<void, StorageUnavailable>;
-  readonly transaction: <A, E>(work: Effect.Effect<A, E>) => Effect.Effect<A, E | StorageUnavailable>;
-};
+export type SqliteDatabase = SqlDatabase;
 
 const unavailable = (cause: unknown): StorageUnavailable =>
   new StorageUnavailable({ message: cause instanceof Error ? cause.message : String(cause) });

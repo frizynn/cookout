@@ -1,11 +1,13 @@
-import { Context, Effect, Exit, FileSystem, Layer, Path, Scope } from "effect";
+import { Context, Effect, Exit, FileSystem, Layer, Path, Predicate, Scope } from "effect";
 import { Storage, StorageUnavailable, memoryStorage, sqliteStorage } from "../../../storage/server.ts";
 import { fixtureOwnerName, identityFixture } from "./identities.ts";
+import { freshPostgresStorage } from "./postgres.ts";
+import { inject } from "vitest";
 import { layer as nodeServices } from "@effect/platform-node/NodeServices";
 import { tokenHash } from "../../../identities/index.ts";
 
 interface StorageLayer {
-  readonly adapter: "memory" | "sqlite";
+  readonly adapter: "memory" | "sqlite" | "postgres";
   readonly layer: Layer.Layer<Storage, StorageUnavailable>;
   readonly emptyLayer: Layer.Layer<Storage, StorageUnavailable>;
 }
@@ -39,9 +41,23 @@ function withFixtureOwner<Failure>(
   );
 }
 
+const postgresLayer: StorageLayer = {
+  adapter: "postgres",
+  emptyLayer: freshPostgresStorage,
+  layer: withFixtureOwner(freshPostgresStorage),
+};
+
+function postgresLayers(): readonly StorageLayer[] {
+  if (Predicate.isUndefined(inject("postgres"))) {
+    return [];
+  }
+  return [postgresLayer];
+}
+
 const storageLayers: readonly StorageLayer[] = [
   { adapter: "memory", emptyLayer: memoryStorage, layer: withFixtureOwner(memoryStorage) },
   { adapter: "sqlite", emptyLayer: freshSqliteStorage, layer: withFixtureOwner(freshSqliteStorage) },
+  ...postgresLayers(),
 ];
 
 const unusableStorage: Layer.Layer<Storage> = Layer.effect(
