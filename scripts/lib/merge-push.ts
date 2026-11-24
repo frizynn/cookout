@@ -51,6 +51,15 @@ function pushBranch(
   return DONE;
 }
 
+function adviceOn(options: PushOptions, watched: Stopped): string {
+  const branch = branchOf(options);
+  const resume = `run pnpm merge-ticket ${options.ticket} --continue`;
+  if (watched.cutOff === true) {
+    return `The merge is on ${branch}: a rerun would hit the same limit, so make the job fit it, commit, then ${resume}.`;
+  }
+  return `The merge is on ${branch}: fix it there and commit, then ${resume}. If the failure looks flaky, run --continue without a new commit: it reruns the failed jobs once.`;
+}
+
 function greenOnCi(options: PushOptions, sha: string): Step {
   const branch = branchOf(options);
   const unchanged = onOrigin(options, sha);
@@ -60,10 +69,7 @@ function greenOnCi(options: PushOptions, sha: string): Step {
   }
   const watched = options.ci(branch, sha, unchanged);
   if (watched.kind === "stopped") {
-    return stop(
-      `${watched.reason}\nNothing was pushed to v1. The merge is on ${branch}: fix it there and commit, then run pnpm merge-ticket ${options.ticket} --continue. If the failure looks flaky, run --continue without a new commit: it reruns the failed jobs once.`,
-      ...watched.files,
-    );
+    return { ...watched, reason: `${watched.reason}\nNothing was pushed to v1. ${adviceOn(options, watched)}` };
   }
   return DONE;
 }

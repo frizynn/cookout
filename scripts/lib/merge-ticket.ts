@@ -22,7 +22,13 @@ interface MergeOptions extends PushOptions {
 
 type Merged =
   | { readonly attempts: number; readonly ok: true; readonly sha: string }
-  | { readonly files: readonly string[]; readonly ok: false; readonly reason: string };
+  | { readonly files: readonly string[]; readonly ok: false; readonly reason: string }
+  | {
+      readonly cutOff: readonly string[];
+      readonly files: readonly string[];
+      readonly ok: false;
+      readonly reason: string;
+    };
 
 type Started = { readonly kind: "started"; readonly sha: string } | Stopped;
 
@@ -99,7 +105,11 @@ function finished(outcome: Pushed | Stopped, count: number): Merged {
   if (outcome.kind === "pushed") {
     return { attempts: count, ok: true, sha: outcome.sha };
   }
-  return { files: outcome.files, ok: false, reason: outcome.reason };
+  const failed = { files: outcome.files, ok: false, reason: outcome.reason } as const;
+  if (outcome.cutOff === true) {
+    return { ...failed, cutOff: outcome.jobs };
+  }
+  return failed;
 }
 
 function regenerateChanged(options: MergeOptions, base: string): Step {
