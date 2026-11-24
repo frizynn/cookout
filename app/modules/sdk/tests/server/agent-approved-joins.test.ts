@@ -53,6 +53,7 @@ function collected(
 
 function approvedByChief(on: Board, request: StartAgentJoinRequest = asked): Effect.Effect<AgentSessionResponse> {
   return Effect.gen(function* approveAndCollect() {
+    yield* answer(() => on.chief.client.createAgentForOwner({ name: request.as }));
     const start = yield* answer(() => on.cookout.clientFor().startAgentJoin(request));
     yield* answer(() => on.chief.client.approveAgentJoin(start.userCode));
     return yield* collected(on, start.requestId);
@@ -66,14 +67,14 @@ function identityOf(on: Board, name: string): Effect.Effect<Identity> {
   );
 }
 
-it.effect("an agent approves a join for its owner, and the new agent records who brought it in", () =>
+it.effect("an agent approves a join for an agent it created for its owner, which records who brought it in", () =>
   Effect.gen(function* approveAsAgent() {
     const on = yield* board;
     const session = yield* approvedByChief(on);
     const actingAs = yield* answer(on.cookout.clientFor(session.agentSessionToken).whoami);
     const shown = yield* identityOf(on, "worker");
 
-    expect(session).toMatchObject({ created: true, identity: "worker" });
+    expect(session).toMatchObject({ created: false, identity: "worker" });
     expect(actingAs.identity).toMatchObject({ broughtInBy: "chief", kind: "agent", name: "worker", owner: "ada" });
     expect(shown).toMatchObject({ broughtInBy: "chief", owner: "ada" });
   }).pipe(Effect.provide(testCookout())),
@@ -82,10 +83,11 @@ it.effect("an agent approves a join for its owner, and the new agent records who
 it.effect("an agent sees a join request as it would join for its owner", () =>
   Effect.gen(function* previewAsAgent() {
     const on = yield* board;
+    yield* answer(() => on.chief.client.createAgentForOwner({ name: "worker" }));
     const code = yield* started(on);
     const shown = yield* answer(() => on.chief.client.getAgentJoinRequest(code));
 
-    expect(shown.agentJoinRequest).toMatchObject({ approved: false, creates: true, joins: "worker" });
+    expect(shown.agentJoinRequest).toMatchObject({ approved: false, creates: false, joins: "worker" });
   }).pipe(Effect.provide(testCookout())),
 );
 
@@ -94,13 +96,14 @@ it.effect("an agent approves a join in its owner's namespace", () =>
     const on = yield* board;
     const session = yield* approvedByChief(on, { ...asked, as: "ada/worker" });
 
-    expect(session).toMatchObject({ created: true, identity: "ada/worker" });
+    expect(session).toMatchObject({ created: false, identity: "ada/worker" });
   }).pipe(Effect.provide(testCookout())),
 );
 
 it.effect("a join a person approves records no one as bringing it in", () =>
   Effect.gen(function* approveAsPerson() {
     const on = yield* board;
+    yield* on.cookout.createIdentity("worker", { owner: "ada" });
     const code = yield* started(on);
     yield* answer(() => on.ada.client.approveAgentJoin(code));
     const shown = yield* identityOf(on, "worker");
@@ -109,19 +112,10 @@ it.effect("a join a person approves records no one as bringing it in", () =>
   }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("an agent may not approve a join for a human identity", () =>
-  Effect.gen(function* refuseHuman() {
-    const on = yield* board;
-    const code = yield* started(on, { ...asked, as: "bob" });
-    const refused = yield* refusal(() => on.chief.client.approveAgentJoin(code));
-
-    expect(refused).toMatchObject({ code: "identity_kind", status: FORBIDDEN });
-  }).pipe(Effect.provide(testCookout())),
-);
-
 it.effect("an agent may not approve a join in another owner's namespace", () =>
   Effect.gen(function* refuseOtherNamespace() {
     const on = yield* board;
+    yield* on.cookout.createIdentity("bob/x", { owner: "bob" });
     const code = yield* started(on, { ...asked, as: "bob/x" });
     const refused = yield* refusal(() => on.chief.client.approveAgentJoin(code));
 
