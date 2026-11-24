@@ -138,7 +138,6 @@ function automaticDeactivationsOn(on: DeactivationsOn): AutomaticDeactivationsSe
 export {
   type AutomaticDeactivationRecords,
   type AutomaticDeactivationsSection,
-  type NewAutomaticDeactivation,
   type StoredAutomaticDeactivation,
   automaticDeactivationsOn,
   deactivatingWith,

@@ -180,7 +180,6 @@ function nextDueIn({ board, days }: Dating): IsoTime | null {
 export {
   type Board,
   type Due,
-  type DueDeactivation,
   type OfferRecord,
   type QuietDays,
   dueDeactivations,
