@@ -5,6 +5,7 @@ import type {
   CleanCloseResponse,
   CommandEvent,
   ConnectedEvent,
+  DeactivationOfferEvent,
   IdentityDeletedEvent,
   IdentityEvent,
   InboxItemEvent,
@@ -20,8 +21,8 @@ import type {
   ThreadEvent,
 } from "../../index.ts";
 import { ChannelNameSchema, ChannelSchema } from "../../../channels/server.ts";
-import { IdentityNameSchema, IdentitySchema } from "../../../identities/server.ts";
 import {
+  DeactivationOfferSchema,
   InboxItemSchema,
   MovedBackReadPositionSchema,
   NudgeSchema,
@@ -29,6 +30,7 @@ import {
   ReadPositionSchema,
   SubscriptionResponseSchema,
 } from "../../../inbox/server.ts";
+import { IdentityNameSchema, IdentitySchema } from "../../../identities/server.ts";
 import {
   MessageIdSchema,
   MessageSchema,
@@ -50,6 +52,10 @@ export const InboxItemEventSchema = matchesWire<InboxItemEvent>()(
 
 export const NudgeEventSchema = matchesWire<NudgeEvent>()(
   Schema.Struct({ nudge: NudgeSchema, type: Schema.Literal("nudge") }),
+);
+
+export const DeactivationOfferEventSchema = matchesWire<DeactivationOfferEvent>()(
+  Schema.Struct({ deactivationOffer: DeactivationOfferSchema, type: Schema.Literal("deactivation-offer") }),
 );
 
 export const ReadPositionEventSchema = matchesWire<ReadPositionEvent>()(

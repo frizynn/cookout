@@ -33,7 +33,7 @@ export type TestIdentity = {
   readonly client: CookoutClient;
 };
 
-export type CreateTestIdentityOptions = IdentityFixtureOptions;
+export type CreateTestIdentityOptions = IdentityFixtureOptions & { readonly createdAt?: Identity["createdAt"] };
 
 export type BootedServer = {
   readonly url: string;
@@ -149,8 +149,9 @@ const seedIdentity =
     Effect.gen(function* seedTestIdentity() {
       const storage = yield* Storage;
       const identities = yield* Identities;
-      const createdAt = yield* currentTime;
-      const identity: Identity = { ...identityFixture(name, ownedByAdminUnlessNamed(options)), createdAt };
+      const { createdAt: seededAt, ...kind } = options;
+      const createdAt = seededAt ?? (yield* currentTime);
+      const identity: Identity = { ...identityFixture(name, ownedByAdminUnlessNamed(kind)), createdAt };
       yield* seedMissingOwner(identity);
       const { token, hash } = yield* identities.issueToken;
       const created = yield* storage.createIdentity(identity, hash);

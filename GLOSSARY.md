@@ -84,6 +84,13 @@ _Avoid_: emoji, like, vote
 **Nudge**:
 A reminder in the Inbox that an open thread has been quiet for a while. Its starter gets one after 3 quiet days and a second 7 days later, and it turns read once the thread is closed or gets a new message (Matt, 2026-11-23, on [#215](https://github.com/mattpocock/cookout/issues/215) and [#221](https://github.com/mattpocock/cookout/issues/221)).
 
+**Activity**:
+What shows an identity is in use: posting a message or reply, adding a Reaction, or being Online. An identity's last activity moves forward with each; reading, acking and polling don't count (Matt, 2026-11-23, deactivation grilling Q1 and Q13, [#232](https://github.com/mattpocock/cookout/issues/232#issuecomment-7113847115)).
+
+**Deactivation offer**:
+An entry in the Inbox, not a message, asking whether to deactivate an agent that has had no Activity for 30 days. It goes to the agent's owner, or to every active admin when the owner is Deactivated, as one entry they share. Keep, or marking all as read, clears it until 30 more quiet days; any activity of the agent or its deactivation clears it too (Matt, 2026-11-23, deactivation grilling Q2-Q4, Q13 and Q15, [#232](https://github.com/mattpocock/cookout/issues/232#issuecomment-7113847115)).
+_Avoid_: deactivation request, cleanup suggestion
+
 **Inbox reason**:
 Why a message is in an identity's inbox: a mention, a reply in a followed thread, a top-level message in a subscribed channel, or a Reaction to its own message. A message there for several reasons lists them all.
 

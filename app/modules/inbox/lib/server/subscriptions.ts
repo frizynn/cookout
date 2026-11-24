@@ -1,11 +1,17 @@
 import type { Fails, Hub } from "./acks.ts";
+import type { FollowResponse, SubscriptionResponse } from "../../index.ts";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
+import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import { Effect } from "effect";
-import type { StorageUnavailable } from "../../../storage/server.ts";
-import type { SubscriptionResponse } from "../../index.ts";
+import type { MessageId } from "../../../messages/index.ts";
 import { channelNotFound } from "../../../channels/server.ts";
 import { isChannelName } from "../../../channels/index.ts";
+import { isMessageId } from "../../../messages/index.ts";
+import { messageNotFound } from "../../../messages/server.ts";
+import { orMessageNotFound } from "./acks.ts";
+
+type FollowChange = Storage["Service"]["followThread"];
 
 type SubscriptionChange = (identity: IdentityName, channel: ChannelName) => Effect.Effect<boolean, StorageUnavailable>;
 
@@ -40,4 +46,26 @@ function subscription({
     });
 }
 
-export { type SubscriptionChanged, subscription };
+function messageIdOf(asked: string): Fails<MessageId> {
+  const id = Number(asked);
+  if (isMessageId(id)) {
+    return Effect.succeed(id);
+  }
+  return Effect.fail(messageNotFound(asked));
+}
+
+interface Following {
+  readonly change: FollowChange;
+  readonly isFollowing: boolean;
+}
+
+function following({ change, isFollowing }: Following) {
+  return (caller: Identity, asked: string): Fails<FollowResponse> =>
+    Effect.gen(function* changeFollow() {
+      const id = yield* messageIdOf(asked);
+      const thread = yield* Effect.flatMap(change(caller.name, id), orMessageNotFound<MessageId>(asked));
+      return { following: isFollowing, thread };
+    });
+}
+
+export { type SubscriptionChanged, following, subscription };

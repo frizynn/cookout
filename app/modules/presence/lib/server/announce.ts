@@ -1,10 +1,10 @@
 import type { BookState, End } from "./book.ts";
 import { DateTime, Effect, Option, Predicate, PubSub } from "effect";
+import { DeactivationOffers, OfflineAlerts } from "../../../inbox/server.ts";
 import type { OfflineReason, Presence } from "../../index.ts";
 import type { Storage, StoredPresence } from "../../../storage/server.ts";
 import { endIn, presenceIn } from "./book.ts";
 import type { IsoTime } from "../../../time/index.ts";
-import { OfflineAlerts } from "../../../inbox/server.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 
 type IdentityName = Presence["identity"];
@@ -99,19 +99,20 @@ function announced({
 
 function announcer(
   storage: Storage["Service"],
-): Effect.Effect<Announce & { readonly hub: PubSub.PubSub<Presence> }, never, OfflineAlerts> {
+): Effect.Effect<Announce & { readonly hub: PubSub.PubSub<Presence> }, never, AnnounceNeeds> {
   return Effect.gen(function* openAnnouncer() {
     const hub = yield* PubSub.unbounded<Presence>();
     const alerts = yield* OfflineAlerts;
+    const offers = yield* DeactivationOffers;
     return {
       alerts,
       hub,
       publish: (presence) => Effect.asVoid(PubSub.publish(hub, presence)),
-      record: (presence) => Effect.ignore(storage.recordPresence(presence)),
+      record: (presence) => Effect.andThen(Effect.ignore(storage.recordPresence(presence)), offers.presenceChanged),
     };
   });
 }
 
-type AnnounceNeeds = OfflineAlerts;
+type AnnounceNeeds = OfflineAlerts | DeactivationOffers;
 
 export { type Announce, type AnnounceNeeds, announced, announcer, now };

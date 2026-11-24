@@ -1,0 +1,136 @@
+import type { ActivityRecords, DeactivationOffersSection, OfferSources } from "./deactivation-offers.ts";
+import { Array as Arr, DateTime, Effect, Schema } from "effect";
+import { IsoTimeSchema, isoTimeOf } from "../../../time/server.ts";
+import type { IdentityName } from "../../../identities/index.ts";
+import type { IsoTime } from "../../../time/index.ts";
+import type { OfferRecord } from "./deactivation-offer-board.ts";
+import type { SqliteDatabase } from "./adapters/sqlite.ts";
+import type { StorageUnavailable } from "./errors.ts";
+import { deactivationOffersOn } from "./deactivation-offers.ts";
+import { isDeactivationOfferId } from "../../../inbox/index.ts";
+import { isIdentityName } from "../../../identities/index.ts";
+import { unreadable } from "./errors.ts";
+
+type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
+
+const CLEARED = 1;
+const OPEN = 0;
+const ONLY_ROW = 1;
+
+const DEACTIVATION_OFFERS_MIGRATION = `CREATE TABLE activity (
+     identity_name TEXT PRIMARY KEY,
+     last_activity_at TEXT NOT NULL
+   ) STRICT;
+   CREATE TABLE activity_since (
+     id INTEGER PRIMARY KEY CHECK (id = 1),
+     since TEXT NOT NULL
+   ) STRICT;
+   CREATE TABLE deactivation_offers (
+     id INTEGER PRIMARY KEY,
+     identity_name TEXT NOT NULL REFERENCES identities (name) ON DELETE CASCADE,
+     recipients TEXT NOT NULL,
+     raised_at TEXT NOT NULL,
+     quiet_days INTEGER NOT NULL CHECK (quiet_days > 0),
+     cleared INTEGER NOT NULL CHECK (cleared IN (0, 1))
+   ) STRICT;`;
+
+const COLUMNS = "id, identity_name, recipients, raised_at, quiet_days, cleared";
+
+const IdentityNameColumn = Schema.String.pipe(Schema.refine(isIdentityName));
+
+const OfferRow = Schema.Struct({
+  cleared: Schema.Literals([OPEN, CLEARED]),
+  id: Schema.Int.pipe(Schema.refine(isDeactivationOfferId)),
+  identity_name: IdentityNameColumn,
+  quiet_days: Schema.Int,
+  raised_at: IsoTimeSchema,
+  recipients: Schema.fromJsonString(Schema.Array(IdentityNameColumn)),
+});
+
+const ActivityRow = Schema.Struct({ identity_name: IdentityNameColumn, last_activity_at: IsoTimeSchema });
+
+const RecipientsColumn = Schema.fromJsonString(Schema.Array(Schema.String));
+
+const SinceRow = Schema.Struct({ since: IsoTimeSchema });
+
+function offerRows(rows: readonly unknown[]): Fails<readonly OfferRecord[]> {
+  return Schema.decodeUnknownEffect(Schema.Array(OfferRow))(rows).pipe(
+    Effect.mapBoth({
+      onFailure: unreadable,
+      onSuccess: (decoded) =>
+        Arr.map(
+          decoded,
+          (row): OfferRecord => ({
+            cleared: row.cleared === CLEARED,
+            id: row.id,
+            identity: row.identity_name,
+            quietDays: row.quiet_days,
+            raisedAt: row.raised_at,
+            recipients: row.recipients,
+          }),
+        ),
+    }),
+  );
+}
+
+function offerRow(row: unknown): Fails<OfferRecord> {
+  return Effect.flatMap(offerRows([row]), (records) =>
+    Effect.mapError(Effect.fromOption(Arr.head(records)), unreadable),
+  );
+}
+
+function activityRows(rows: readonly unknown[]): Fails<ReadonlyMap<IdentityName, IsoTime>> {
+  return Schema.decodeUnknownEffect(Schema.Array(ActivityRow))(rows).pipe(
+    Effect.mapBoth({
+      onFailure: unreadable,
+      onSuccess: (decoded) => new Map(Arr.map(decoded, (row) => [row.identity_name, row.last_activity_at] as const)),
+    }),
+  );
+}
+
+const SINCE = `INSERT OR IGNORE INTO activity_since (id, since) VALUES (${String(ONLY_ROW)}, ?)`;
+const INSERT = `INSERT INTO deactivation_offers (identity_name, recipients, raised_at, quiet_days, cleared)
+  VALUES (?, ?, ?, ?, ${String(OPEN)}) RETURNING ${COLUMNS}`;
+const RECORD = `INSERT INTO activity (identity_name, last_activity_at) VALUES (?, ?)
+  ON CONFLICT (identity_name) DO UPDATE SET last_activity_at = max(last_activity_at, excluded.last_activity_at)`;
+const CLEAR = `UPDATE deactivation_offers SET cleared = ${String(CLEARED)} WHERE id = ?`;
+
+function sinceOn(db: SqliteDatabase): Fails<IsoTime> {
+  return Effect.gen(function* beginActivity() {
+    const now = yield* DateTime.now;
+    yield* db.run(SINCE, isoTimeOf(now));
+    const row = yield* db.get("SELECT since FROM activity_since");
+    return yield* Schema.decodeUnknownEffect(SinceRow)(row).pipe(
+      Effect.mapBoth({ onFailure: unreadable, onSuccess: ({ since }) => since }),
+    );
+  });
+}
+
+function sqliteActivityRecords(db: SqliteDatabase, since: IsoTime): ActivityRecords {
+  return {
+    activity: Effect.flatMap(db.all("SELECT identity_name, last_activity_at FROM activity"), activityRows),
+    clear: (ids) => Effect.forEach(ids, (id) => db.run(CLEAR, id), { concurrency: 1, discard: true }),
+    insert: ({ identity, quietDays, raisedAt, recipients }) =>
+      Schema.encodeEffect(RecipientsColumn)(recipients).pipe(
+        Effect.mapError(unreadable),
+        Effect.flatMap((encoded) => db.get(INSERT, identity, encoded, raisedAt, quietDays)),
+        Effect.flatMap(offerRow),
+      ),
+    offers: Effect.flatMap(db.all(`SELECT ${COLUMNS} FROM deactivation_offers ORDER BY id`), offerRows),
+    recordActivity: (identity, at) => db.run(RECORD, identity, at),
+    since: Effect.succeed(since),
+  };
+}
+
+interface SqliteSources {
+  readonly db: SqliteDatabase;
+  readonly sources: OfferSources;
+}
+
+function sqliteDeactivationOffers({ db, sources }: SqliteSources): Fails<DeactivationOffersSection> {
+  return Effect.map(sinceOn(db), (since) =>
+    deactivationOffersOn({ atomically: db.transaction, records: sqliteActivityRecords(db, since), sources }),
+  );
+}
+
+export { DEACTIVATION_OFFERS_MIGRATION, sqliteDeactivationOffers };

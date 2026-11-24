@@ -59,7 +59,7 @@ const onceFlag = Flag.Boolean("once").pipe(
 const untilMentionFlag = Flag.Boolean("until-mention").pipe(
   Flag.withDefault(false),
   Flag.withDescription(
-    "Print only the first new item that @-mentions this identity, or the first nudge, then exit 0, or exit 0 at the start-up unread line when an unread mention or nudge is waiting.",
+    "Print only the first new item that @-mentions this identity, or the first nudge or deactivation offer, then exit 0, or exit 0 at the start-up unread line when an unread mention, nudge or offer is waiting.",
   ),
 );
 
@@ -84,7 +84,8 @@ export const watchCommand = Command.make(
   Command.withDescription(
     "Print one line per new inbox item as it arrives, for Claude Code's Monitor tool: " +
       "#<channel> thread:<id> @<author>: <first 120 characters> (msg <id>), and for a nudge about a quiet thread " +
-      "#<channel> thread:<id> <nudge text> (nudge <id>), after one " +
+      "#<channel> thread:<id> <nudge text> (nudge <id>), and for an offer to deactivate a quiet agent " +
+      "<offer text> (deactivation offer <id>), after one " +
       "<n> unread, run cookout inbox line when there are unread items. Exit codes: 0 after --once (at the " +
       "unread line, or else the first item) or " +
       "--until-mention, 1 refused, 2 --timeout passed, 3 token invalid or deleted, 4 agent session token " +

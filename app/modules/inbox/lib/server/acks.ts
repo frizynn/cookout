@@ -1,4 +1,11 @@
-import type { AckAllRequest, AckAllResponse, AckResponse, OfflineAlert, ReadPosition } from "../../index.ts";
+import type {
+  AckAllRequest,
+  AckAllResponse,
+  AckResponse,
+  DeactivationOfferId,
+  OfflineAlert,
+  ReadPosition,
+} from "../../index.ts";
 import type { AckedMessage, Storage, StorageUnavailable } from "../../../storage/server.ts";
 import { DateTime, Effect, Predicate } from "effect";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
@@ -27,6 +34,9 @@ interface AckHubs {
   readonly acked: Hub<Acked>;
   readonly readReceipts: ReadReceipts["Service"];
   readonly offlineAlerts: OfflineAlerts["Service"];
+  readonly deactivationOffers: {
+    readonly keepUpTo: (caller: Identity, upTo: DeactivationOfferId) => Effect.Effect<void, StorageUnavailable>;
+  };
 }
 
 interface AckCalls {
@@ -69,6 +79,21 @@ function inboxAckedUpTo({ hubs, storage }: AcksOn, caller: Identity, upTo: Messa
   });
 }
 
+function nonMessagesAcked(
+  { hubs, storage }: AcksOn,
+  caller: Identity,
+  { deactivationOffersUpTo, nudgesUpTo }: AckAllRequest,
+): Effect.Effect<void, StorageUnavailable> {
+  return Effect.gen(function* ackNudgesAndOffers() {
+    if (Predicate.isNotUndefined(nudgesUpTo)) {
+      yield* storage.markNudgesReadUpTo(caller.name, nudgesUpTo);
+    }
+    if (Predicate.isNotUndefined(deactivationOffersUpTo)) {
+      yield* hubs.deactivationOffers.keepUpTo(caller, deactivationOffersUpTo);
+    }
+  });
+}
+
 function acksOn(on: AcksOn): AckCalls {
   const { hubs, storage } = on;
   const { acked: hub, readReceipts } = hubs;
@@ -82,13 +107,12 @@ function acksOn(on: AcksOn): AckCalls {
         yield* readReceipts.publish(receipts);
         return { readPosition };
       }),
-    ackAll: (caller, { alertsUpTo, nudgesUpTo, upTo }) =>
+    ackAll: (caller, request) =>
       Effect.gen(function* ackInboxAndAlerts() {
         let readPositions = NO_POSITIONS;
         let alerts = NO_ALERTS;
-        if (Predicate.isNotUndefined(nudgesUpTo)) {
-          yield* storage.markNudgesReadUpTo(caller.name, nudgesUpTo);
-        }
+        const { alertsUpTo, upTo } = request;
+        yield* nonMessagesAcked(on, caller, request);
         if (Predicate.isNotUndefined(upTo)) {
           readPositions = yield* inboxAckedUpTo(on, caller, upTo);
         }

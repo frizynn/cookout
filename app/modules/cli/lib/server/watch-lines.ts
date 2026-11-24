@@ -1,5 +1,5 @@
 import { Array as Arr, Console, Effect, Schema, String as Str, pipe } from "effect";
-import type { InboxItemEvent, NudgeEvent, Reaction } from "../../../sdk/index.ts";
+import type { DeactivationOfferEvent, InboxItemEvent, NudgeEvent, Reaction } from "../../../sdk/index.ts";
 import { reactionSymbols } from "../../../messages/index.ts";
 
 type Format = "json" | "text";
@@ -15,6 +15,10 @@ function nudgeLine({ nudge: { channel, id, parent, text } }: NudgeEvent): string
   return `#${channel.name} thread:${String(parent.id)} ${text} (nudge ${String(id)})`;
 }
 
+function offerLine({ deactivationOffer: { id, text } }: DeactivationOfferEvent): string {
+  return `${text} (deactivation offer ${String(id)})`;
+}
+
 function itemLine({ item: { channel, message, newReactions = [], parent } }: InboxItemEvent): string {
   const shown = pipe(message.text, Str.replaceAll(/\s+/gu, " "), Str.takeLeft(SHOWN_CHARACTERS));
   const where = `#${channel.name} thread:${String(parent.id)}`;
@@ -25,9 +29,12 @@ function itemLine({ item: { channel, message, newReactions = [], parent } }: Inb
   return `${where} @${message.author.name}: ${shown} ${at}`;
 }
 
-function textLine(event: InboxItemEvent | NudgeEvent): string {
+function textLine(event: InboxItemEvent | NudgeEvent | DeactivationOfferEvent): string {
   if (event.type === "nudge") {
     return nudgeLine(event);
+  }
+  if (event.type === "deactivation-offer") {
+    return offerLine(event);
   }
   return itemLine(event);
 }

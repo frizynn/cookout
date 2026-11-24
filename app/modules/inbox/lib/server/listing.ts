@@ -1,5 +1,6 @@
 import { Array as Arr, Effect, Option, Predicate } from "effect";
 import type {
+  DeactivationOffer,
   InboxHistoryItem,
   InboxHistoryNudge,
   InboxHistoryResponse,
@@ -13,6 +14,7 @@ import type { Storage, StorageUnavailable, StoredNudge } from "../../../storage/
 import { isNudgeId, nudgeTexts } from "../../index.ts";
 import { itemsWithReactions, reactionItemFor, withReactionItems } from "./reaction-items.ts";
 import type { Channel } from "../../../channels/index.ts";
+import type { DeactivationOffers } from "./deactivation-offers.ts";
 import type { Identity } from "../../../identities/index.ts";
 import type { MessageId } from "../../../messages/index.ts";
 import type { OfflineAlerts } from "./offline-alerts.ts";
@@ -47,6 +49,7 @@ interface Asking {
 interface Listing {
   readonly storage: Store;
   readonly offlineAlerts: OfflineAlerts["Service"];
+  readonly deactivationOffers: DeactivationOffers["Service"];
 }
 
 interface ListingCalls {
@@ -133,6 +136,16 @@ function alertsOnPage(
   return Effect.map(offlineAlerts.list(caller), Arr.reverse);
 }
 
+function offersOnPage(
+  { caller, deactivationOffers }: Listing & Asking,
+  query: HistoryQuery,
+): Fails<readonly DeactivationOffer[]> {
+  if (Predicate.isNotUndefined(query.before)) {
+    return Effect.succeed([]);
+  }
+  return Effect.map(deactivationOffers.list(caller, "all"), Arr.reverse);
+}
+
 function historyOf(asking: Listing & Asking, query: HistoryQuery): Fails<InboxHistoryResponse> {
   const { caller, storage } = asking;
   return Effect.gen(function* inboxHistory() {
@@ -140,7 +153,8 @@ function historyOf(asking: Listing & Asking, query: HistoryQuery): Fails<InboxHi
     const listed = yield* withChannels<StoredHistoryItem>(storage, items);
     const alerts = yield* alertsOnPage(asking, query);
     const nudges = yield* nudgesOnPage(asking, query);
-    return { alerts, hasMore, items: listed, nudges };
+    const deactivationOffers = yield* offersOnPage(asking, query);
+    return { alerts, deactivationOffers, hasMore, items: listed, nudges };
   });
 }
 
@@ -151,14 +165,15 @@ function unreadNudges({ caller, storage }: Asking): Fails<readonly Nudge[]> {
 }
 
 function inboxOf(asking: Listing & Asking): Fails<InboxResponse> {
-  const { caller, offlineAlerts, storage } = asking;
+  const { caller, deactivationOffers: offers, offlineAlerts, storage } = asking;
   return Effect.gen(function* inboxWithAlertsAndNudges() {
     const stored = yield* storage.listInbox(caller.name);
     const withReactions = yield* withReactionItems({ author: caller.name, items: stored, storage });
     const items = yield* withChannels(storage, withReactions);
     const alerts = yield* offlineAlerts.list(caller);
     const nudges = yield* unreadNudges(asking);
-    return { alerts: unread(alerts), items, nudges };
+    const deactivationOffers = yield* offers.list(caller, "open");
+    return { alerts: unread(alerts), deactivationOffers, items, nudges };
   });
 }
 

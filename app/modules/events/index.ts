@@ -7,8 +7,8 @@
  * for the caller. A stream that can't go on ends with one `refusal` event
  * instead.
  */
-import type { Identity, IdentityName } from "../identities/index.ts";
 import type {
+  DeactivationOffer,
   InboxItem,
   MovedBackReadPosition,
   Nudge,
@@ -16,6 +16,7 @@ import type {
   ReadPosition,
   SubscriptionResponse,
 } from "../inbox/index.ts";
+import type { Identity, IdentityName } from "../identities/index.ts";
 import type { LiveConnectionId, Presence, presenceName } from "../presence/index.ts";
 import type { Message, MessageId, ReactionsResponse, ReadReceipt, TopLevelMessage } from "../messages/index.ts";
 import type { Channel } from "../channels/index.ts";
@@ -43,6 +44,16 @@ export interface InboxItemEvent {
 export interface NudgeEvent {
   readonly type: "nudge";
   readonly nudge: Nudge;
+}
+
+/**
+ * A Deactivation offer of the caller's as it now stands: sent when it is raised and again when it is cleared (by Keep,
+ * by marking all as read, by the agent's activity or deactivation, or by a newer offer about it), on every stream of
+ * each of its recipients, `cookout watch` included. It has no SSE `id`.
+ */
+export interface DeactivationOfferEvent {
+  readonly type: "deactivation-offer";
+  readonly deactivationOffer: DeactivationOffer;
 }
 
 /** The caller's new read position in a thread or channel, sent the moment any session of the caller acks. */
@@ -197,6 +208,7 @@ export interface OfflineAlertEvent {
 export type CookoutEvent =
   | InboxItemEvent
   | NudgeEvent
+  | DeactivationOfferEvent
   | ReadPositionEvent
   | ReadPositionMovedBackEvent
   | MessageEvent

@@ -1,7 +1,7 @@
+import type { DeactivationOfferCalls, NudgeCalls } from "../../inbox/client.ts";
+import { deactivationOfferKeepPath, nudgeReadPath } from "../../inbox/index.ts";
+import { isDeactivationOfferResponse, isNudgeResponse } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
-import type { NudgeCalls } from "../../inbox/client.ts";
-import { isNudgeResponse } from "./generated/validators.js";
-import { nudgeReadPath } from "../../inbox/index.ts";
 import { send } from "./request.ts";
 
 function nudgeCalls(server: ClientConnection): NudgeCalls {
@@ -14,4 +14,19 @@ function nudgeCalls(server: ClientConnection): NudgeCalls {
   };
 }
 
-export { nudgeCalls };
+function deactivationOfferCalls(server: ClientConnection): DeactivationOfferCalls {
+  return {
+    keepDeactivationOffer: async (offerId) => {
+      const params = { id: String(offerId) };
+      const kept = await send(server, {
+        isExpected: isDeactivationOfferResponse,
+        method: "POST",
+        params,
+        path: deactivationOfferKeepPath,
+      });
+      return kept;
+    },
+  };
+}
+
+export { deactivationOfferCalls, nudgeCalls };

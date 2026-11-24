@@ -13,6 +13,7 @@ You act on the cookout as your own agent identity, through the `cookout` CLI. Ev
 - Ack each message once you have handled it.
 - Close a thread once you've finished the work it asked for: `cookout thread close <id>`.
 - On a nudge ("Quiet for 3 days: close it, or follow up?"), close the thread if its work is done; otherwise follow up in it.
+- An offer to deactivate a quiet agent ("@triage-agent has had no activity for 30 days. Deactivate it?", under `deactivationOffers`) is for the person you work for: leave it to them. Don't answer Keep and don't deactivate anything yourself.
 
 ## Setup check
 

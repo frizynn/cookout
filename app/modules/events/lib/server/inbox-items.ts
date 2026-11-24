@@ -1,7 +1,7 @@
 import { Array as Arr, Effect, Option, Stream } from "effect";
 import type { Connected, StreamRequest } from "./source.ts";
-import { Inbox, Nudges } from "../../../inbox/server.ts";
-import { InboxItemEventSchema, NudgeEventSchema } from "./wire.ts";
+import { DeactivationOfferEventSchema, InboxItemEventSchema, NudgeEventSchema } from "./wire.ts";
+import { DeactivationOffers, Inbox, Nudges } from "../../../inbox/server.ts";
 import { Messages, Reactions } from "../../../messages/server.ts";
 import type { MessageId } from "../../../messages/index.ts";
 import { sseEvent } from "./source.ts";
@@ -9,6 +9,8 @@ import { sseEvent } from "./source.ts";
 const inboxItemEvent = sseEvent(InboxItemEventSchema);
 
 const nudgeEvent = sseEvent(NudgeEventSchema);
+
+const deactivationOfferEvent = sseEvent(DeactivationOfferEventSchema);
 
 function reactionItems({ caller }: StreamRequest): Connected<Inbox | Reactions> {
   return Effect.gen(function* subscribeToReactionItems() {
@@ -62,4 +64,17 @@ function nudges({ caller }: StreamRequest): Connected<Nudges> {
   });
 }
 
-export { inboxItems, nudges, reactionItems };
+function deactivationOffers({ caller }: StreamRequest): Connected<DeactivationOffers> {
+  return Effect.gen(function* subscribeToDeactivationOffers() {
+    const offers = yield* DeactivationOffers;
+    const changed = yield* offers.changed;
+    return Stream.fromSubscription(changed).pipe(
+      Stream.filter(({ recipient }) => recipient === caller.name),
+      Stream.mapEffect(({ deactivationOffer }) =>
+        deactivationOfferEvent({ deactivationOffer, type: "deactivation-offer" }),
+      ),
+    );
+  });
+}
+
+export { deactivationOffers, inboxItems, nudges, reactionItems };

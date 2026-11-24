@@ -2,6 +2,8 @@ import type {
   AckAllRequest,
   AckAllResponse,
   AckResponse,
+  DeactivationOffer,
+  DeactivationOfferResponse,
   FollowResponse,
   InboxHistoryItem,
   InboxHistoryNudge,
@@ -19,10 +21,10 @@ import type {
   SubscriptionResponse,
 } from "../../index.ts";
 import { ChannelNameSchema, ChannelSchema } from "../../../channels/server.ts";
+import { IdentityNameSchema, IdentitySchema } from "../../../identities/server.ts";
 import { MessageIdSchema, MessageSchema, ReactionSchema, TopLevelMessageSchema } from "../../../messages/server.ts";
-import { inboxReasons, isNudgeId, nudgeKinds } from "../../index.ts";
+import { inboxReasons, isDeactivationOfferId, isNudgeId, nudgeKinds } from "../../index.ts";
 import { isOfflineAlertId, offlineReasons } from "../../../presence/index.ts";
-import { IdentityNameSchema } from "../../../identities/server.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
@@ -57,6 +59,25 @@ const InboxHistoryNudgeSchema = matchesWire<InboxHistoryNudge>()(
 );
 
 const NudgeResponseSchema = matchesWire<NudgeResponse>()(Schema.Struct({ nudge: InboxHistoryNudgeSchema }));
+
+const DeactivationOfferIdSchema = Schema.Int.pipe(
+  Schema.refine(isDeactivationOfferId, { identifier: "DeactivationOfferId" }),
+);
+
+const DeactivationOfferSchema = matchesWire<DeactivationOffer>()(
+  Schema.Struct({
+    cleared: Schema.Boolean,
+    id: DeactivationOfferIdSchema,
+    identity: IdentitySchema,
+    quietDays: Schema.Int,
+    raisedAt: IsoTimeSchema,
+    text: Schema.String,
+  }),
+);
+
+const DeactivationOfferResponseSchema = matchesWire<DeactivationOfferResponse>()(
+  Schema.Struct({ deactivationOffer: DeactivationOfferSchema }),
+);
 
 const InboxHistoryItemSchema = matchesWire<InboxHistoryItem>()(
   Schema.Struct({ ...inboxItemFields, read: Schema.Boolean }),
@@ -104,6 +125,7 @@ export const InboxItemSchema = matchesWire<InboxItem>()(Schema.Struct(inboxItemF
 export const InboxHistoryResponseSchema = matchesWire<InboxHistoryResponse>()(
   Schema.Struct({
     alerts: Schema.Array(OfflineAlertSchema),
+    deactivationOffers: Schema.Array(DeactivationOfferSchema),
     hasMore: Schema.Boolean,
     items: Schema.Array(InboxHistoryItemSchema),
     nudges: Schema.Array(InboxHistoryNudgeSchema),
@@ -115,6 +137,7 @@ export const AckRequestSchema = Schema.Struct({ messageId: MessageIdSchema });
 export const AckAllRequestSchema = matchesWire<AckAllRequest>()(
   Schema.Struct({
     alertsUpTo: Schema.optionalKey(OfflineAlertIdSchema),
+    deactivationOffersUpTo: Schema.optionalKey(DeactivationOfferIdSchema),
     nudgesUpTo: Schema.optionalKey(NudgeIdSchema),
     upTo: Schema.optionalKey(MessageIdSchema),
   }),
@@ -127,6 +150,7 @@ export const AckAllResponseSchema = matchesWire<AckAllResponse>()(
 export const InboxResponseSchema = matchesWire<InboxResponse>()(
   Schema.Struct({
     alerts: Schema.Array(OfflineAlertSchema),
+    deactivationOffers: Schema.Array(DeactivationOfferSchema),
     items: Schema.Array(InboxItemSchema),
     nudges: Schema.Array(NudgeSchema),
   }),
@@ -144,4 +168,4 @@ export const SubscriptionResponseSchema = matchesWire<SubscriptionResponse>()(
 
 export { PageQuerySchema as InboxHistoryQuerySchema } from "../../../messages/server.ts";
 
-export { NudgeResponseSchema, NudgeSchema };
+export { DeactivationOfferResponseSchema, DeactivationOfferSchema, NudgeResponseSchema, NudgeSchema };
