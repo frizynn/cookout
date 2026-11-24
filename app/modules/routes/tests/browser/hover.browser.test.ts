@@ -54,3 +54,38 @@ test("Reply in a thread's More actions menu opens the thread with the cursor in 
 
   await expect(page.getByLabel("Reply", { exact: true })).toBeFocused();
 });
+
+interface Shot {
+  readonly page: Page;
+  readonly theme: "dark" | "light";
+}
+
+async function hoverBarIn({ page, theme }: Shot): Promise<void> {
+  await page.evaluate((chosen) => {
+    globalThis.localStorage.setItem("cookout-theme", chosen);
+  }, theme);
+  await page.reload();
+
+  await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+
+  const message = page.getByRole("list", { name: "Messages" }).getByRole("article");
+  const bar = message.getByRole("group", { name: "Quick actions" });
+
+  await expect(async () => {
+    await message.hover();
+
+    await expect(bar).toBeVisible({ timeout: 1000 });
+  }).toPass();
+
+  await expect(bar.getByRole("button", { name: "React with 👎" })).toBeHidden();
+
+  await message.screenshot({ path: test.info().outputPath(`hover-bar-${theme}.png`) });
+}
+
+test("a channel message's hover bar draws 👍, Reply, Close thread and More actions as icons in both themes", async ({
+  page,
+}) => {
+  await openChannel(page, "browser-hover-bar");
+  await hoverBarIn({ page, theme: "dark" });
+  await hoverBarIn({ page, theme: "light" });
+});
