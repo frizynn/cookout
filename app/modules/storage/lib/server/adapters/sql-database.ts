@@ -27,4 +27,4 @@ const TRUE: DialectForms<string> = { postgres: "TRUE", sqlite: "1" };
 
 const FALSE: DialectForms<string> = { postgres: "FALSE", sqlite: "0" };
 
-export { type DialectForms, FALSE, isFalse, type SqlDatabase, type SqlValue, TRUE };
+export { type DialectForms, FALSE, isFalse, type SqlDatabase, type SqlDialect, type SqlValue, TRUE };

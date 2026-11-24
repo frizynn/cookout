@@ -1,3 +1,4 @@
+import type { AskedFrom, SubscriptionChange, SubscriptionsClient } from "./subscriptions-slice.ts";
 import type {
   Channel,
   ChannelName,
@@ -8,7 +9,6 @@ import type {
   SubscriptionResponse,
 } from "../../sdk/index.ts";
 import type { ClosingClient, ClosingRefusal } from "./thread-closing.ts";
-import type { SubscriptionChange, SubscriptionsClient } from "./subscriptions-slice.ts";
 import { createMessageAcks } from "./message-acks.ts";
 import { createThreadClosing } from "./thread-closing.ts";
 import { refusedAs } from "./subscriptions-slice.ts";
@@ -17,7 +17,7 @@ type CallsClient = ClosingClient & SubscriptionsClient & Pick<CookoutClient, "ac
 
 interface BoardCalls {
   readonly createChannel: (request: CreateChannelRequest) => Promise<Channel>;
-  readonly setSubscribed: (channel: ChannelName, subscribed: boolean) => void;
+  readonly setSubscribed: (channel: ChannelName, subscribed: boolean, from: AskedFrom) => void;
   readonly close: (messageId: MessageId) => void;
   readonly reopen: (messageId: MessageId) => void;
   readonly closingRefusal: () => ClosingRefusal | null;
@@ -48,14 +48,14 @@ async function after(previous: Promise<void>, step: () => Promise<void>): Promis
 function subscribing(options: CallsOptions): BoardCalls["setSubscribed"] {
   let queue = Promise.resolve();
   const { client, subscriptionChanged } = options;
-  return (channel, wanted) => {
+  return (channel, wanted, from) => {
     queue = after(queue, async () => {
       subscriptionChanged({ channel, type: "subscription-asked" });
       try {
         const { subscribed } = await send(client, channel, wanted);
         subscriptionChanged({ channel, subscribed, type: "subscription-answered" });
       } catch (error: unknown) {
-        subscriptionChanged({ channel, refusal: refusedAs(error), type: "subscription-refused" });
+        subscriptionChanged({ channel, from, refusal: refusedAs(error), type: "subscription-refused" });
       }
     });
   };

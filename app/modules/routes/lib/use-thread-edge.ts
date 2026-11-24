@@ -21,6 +21,7 @@ function useThreadEdge({ closeHref, layout }: ThreadEdgeOptions): PanelEdgeParts
     min: threadWidths.min,
     onClose: handleClose,
     onResize: layout.resizeThread,
+    side: "left",
     step: threadWidths.step,
     width: threadWidth,
   };

@@ -8,6 +8,7 @@ interface Screen {
   readonly click?: string;
   readonly clickIn?: string;
   readonly focus?: string;
+  readonly press?: string;
   readonly text: string;
   readonly narrow?: boolean;
   readonly admin?: boolean;
@@ -136,6 +137,20 @@ const SCREENS: readonly Screen[] = [
   { click: "Open the sidebar", hash: "#/channels/general", name: "narrow", narrow: true, text: "#deploys" },
   { hash: "#/channels/deploys", name: "closed-threads", text: "2 closed threads" },
   { hash: "#/channels/deploys/threads/8", name: "closed-thread", text: "Rolled back to 1.4.1." },
+  {
+    focus: 'nav [role="separator"]',
+    hash: "#/channels/general",
+    name: "sidebar-narrowest",
+    press: "Home",
+    text: "Lunch at 12:30.",
+  },
+  {
+    focus: 'nav [role="separator"]',
+    hash: "#/channels/general",
+    name: "sidebar-widest",
+    press: "End",
+    text: "Lunch at 12:30.",
+  },
   { click: "Collapse sidebar", hash: "#/channels/general", name: "collapsed", text: "Lunch at 12:30." },
   { hash: "#/channels/general", liveDown: true, name: "reconnecting", text: "Reconnecting…" },
 ];
