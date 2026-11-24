@@ -63,7 +63,7 @@ function pressedOutside(): HTMLElement | null {
   return screen.queryByRole("list", RESULTS);
 }
 
-it("ctrl+K and Cmd+K focus the search box from a message box, preventing the browser's own", {
+it("off a Mac, Ctrl+K focuses the search box from a message box, preventing the browser's own, and Cmd+K doesn't", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -71,13 +71,12 @@ it("ctrl+K and Cmd+K focus the search box from a message box, preventing the bro
   const opened = await openedOnThread("web-search-shortcut");
   const reply = await inThread().findByRole("textbox", { name: "Reply" });
   reply.focus();
-  const ctrl = fireEvent.keyDown(reply, { ctrlKey: true, key: "k" });
-  const focusedByCtrl = globalThis.document.activeElement === (await searchBox());
-  reply.focus();
   const meta = fireEvent.keyDown(reply, { key: "K", metaKey: true });
+  const focusedByMeta = globalThis.document.activeElement === reply;
+  const ctrl = fireEvent.keyDown(reply, { ctrlKey: true, key: "k" });
 
-  expect([ctrl, focusedByCtrl, meta, globalThis.document.activeElement]).toStrictEqual([
-    false,
+  expect([meta, focusedByMeta, ctrl, globalThis.document.activeElement]).toStrictEqual([
+    true,
     true,
     false,
     await searchBox(),

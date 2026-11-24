@@ -73,6 +73,28 @@ test("on a Mac, Cmd+K opens the search box and its placeholder names ⌘K", asyn
   await expect(page.getByRole("searchbox", BOX)).toHaveAttribute("aria-keyshortcuts", "Meta+K");
 });
 
+test("on a Mac, Ctrl+K in the reply box leaves the search box closed", async ({ page }) => {
+  await reportingMac(page);
+  await openedOnThread(page, "browser-keymap-mac-ctrl");
+  const reply = page.getByRole("textbox", REPLY);
+  await reply.click();
+  await page.keyboard.press("Control+k");
+  await page.keyboard.type("still here");
+
+  await expect(reply).toBeFocused();
+  await expect(reply).toHaveValue("still here");
+});
+
+test("off a Mac, Cmd+K leaves the search box closed", async ({ page }) => {
+  await openedOnThread(page, "browser-keymap-other-meta");
+  const reply = page.getByRole("textbox", REPLY);
+  await reply.click();
+  await page.keyboard.press("Meta+k");
+  await page.keyboard.type("still here");
+
+  await expect(reply).toBeFocused();
+});
+
 test("escape closes the profile panel", async ({ page }) => {
   const reader = await openedOnThread(page, "browser-keymap-profile");
   await page.goto(`/#/people/${reader}`);
