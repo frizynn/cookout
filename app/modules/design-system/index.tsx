@@ -1,7 +1,7 @@
 /**
  * The design system: hand-written Tailwind components styled after shadcn/ui
  * (its token names and its card), in a Vercel-like neutral look with small
- * pops of colour (ADR 0034, ADR 0040). Every view builds from these and none
+ * pops of colour (ADR 0080). Every view builds from these and none
  * styles itself, so no component takes classes. `styles.css` is the Tailwind
  * theme, which `index.html` loads: its tokens are CSS variables, dark by
  * default, light under `data-theme="light"` on the root element, and light
@@ -75,7 +75,7 @@
  * to one thing, `ButtonRow` puts buttons side by side, and `TokenText` shows a
  * secret, such as a fresh token, to copy.
  * `ConfirmDialog` asks before an action, in a modal shadcn AlertDialog on
- * Radix's primitives (ADR 0058), the one part built on a library: its title, a
+ * Radix's primitives (ADR 0080), the one part built on a library: its title, a
  * body naming exactly what happens, Cancel and a confirm button, in the
  * destructive colour when the action can't be undone. It holds focus inside
  * while open, Escape or Cancel calls `onCancel`, and focus goes back to what
