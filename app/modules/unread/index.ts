@@ -55,6 +55,23 @@
  * page, lists them all for the Earlier list. One turns read when it is marked read (`POST /v1/inbox/nudges/:id/read`),
  * with `markAllRead`, when `close` closes its thread (`PUT` on the thread's close route), and live when a `thread`
  * event closes its thread or a `message` event brings a reply in it, as the server reads it then.
+ * `createReading` makes the `reading` store, beside the unread store: the Inbox's read rule, as Slack's (Matt, Inbox grilling
+ * on the board, 2026-11-23; `docs/adr/0073-the-inbox-reads-a-conversation-after-2-s-on-screen.md`).
+ * `reader(key, sources)` is the reader of one selected conversation, the same
+ * store each time for one key; it starts when its first subscriber arrives and
+ * starts afresh, forgetting everything, once the last one leaves, as when the
+ * selection moves. Opening a conversation reads nothing: once it has shown
+ * the same newest message for 2 s, with the page visible and focused (the
+ * `page-focus` store), the reader acks it. Losing focus restarts the count,
+ * and so does a new message arriving live, whose ack then covers it. A
+ * message of the reader's own arriving (a reply) acks at once. `markRead`
+ * acks the newest message at once too; after either, `marked` is true for
+ * 5 s, the "Marked as read" note. `markUnread` (also the note's Undo) marks
+ * the conversation unread from its first message that was unread when the
+ * reader started, or from its newest if none was, and holds the read rule off
+ * (`held`) until the reader starts afresh. Time passes on the `Clock` it is
+ * made with: `browserReading()` uses `browserClock` and the document's focus,
+ * and tests bring a clock they move on by hand.
  */
 import type { ChannelName, CookoutClient, MessageId } from "../sdk/index.ts";
 import type { NewLine, WithNewLines } from "./lib/new-lines.ts";
@@ -189,3 +206,6 @@ export type { InboxRow } from "./lib/rows.ts";
 export { rowsOf } from "./lib/rows.ts";
 export type { ThreadNews, UnreadCounts, UnreadWhy } from "./lib/levels.ts";
 export { NO_COUNTS, countsByChannel, countsOf, newsByThread } from "./lib/levels.ts";
+export { type Reading, createReading } from "./lib/reading.ts";
+export { browserReading } from "./lib/browser-reading.ts";
+export type { Newest, Reader, ReaderSources, ReaderState, ReaderTools } from "./lib/reader.ts";

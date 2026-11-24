@@ -6,7 +6,10 @@
  * sends the session cookie instead. Logging in uses a client with the token.
  * The layout keeps the theme in the browser's local storage and sets it on the
  * page's root element, as `public/assets/theme.js` does before the first paint.
+ * The Inbox's read rule counts time on the page's timers while the page is
+ * visible and focused.
  */
+import { browserReading, createUnread } from "./modules/unread/index.ts";
 import { createAgentJoinApprovals, createLoginApprovals, createSession } from "./modules/session/index.ts";
 import { createLive, eventSourceAdapter } from "./modules/live/index.ts";
 import { CookoutApp } from "./modules/routes/index.tsx";
@@ -16,7 +19,6 @@ import { createCookoutClient } from "./modules/sdk/index.ts";
 import { createLayout } from "./modules/layout/index.ts";
 import { createPresenceStore } from "./modules/presence-store/index.ts";
 import { createRoot } from "react-dom/client";
-import { createUnread } from "./modules/unread/index.ts";
 
 const root = document.querySelector("#root");
 
@@ -40,6 +42,7 @@ if (root !== null) {
       live={live}
       loginApprovals={createLoginApprovals(client)}
       presence={createPresenceStore({ client, live })}
+      reading={browserReading()}
       session={session}
       unread={unread}
     />,

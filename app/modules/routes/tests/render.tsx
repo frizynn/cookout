@@ -1,10 +1,10 @@
 import type { AgentJoinApprovals, LoginApprovals, Session } from "../../session/index.ts";
 import type { Board, BoardOptions } from "../../board/index.ts";
-import type { PresenceStore, Unread } from "./defaults.ts";
+import type { PresenceStore, Reading, Unread } from "./defaults.ts";
 import { adminClient, anonymousClient, sessionOf } from "./identities.ts";
 import { cleanup, render } from "@testing-library/react";
 import { createAgentJoinApprovals, createLoginApprovals } from "../../session/index.ts";
-import { createUnread, presenceFor, unreadFor } from "./defaults.ts";
+import { createUnread, presenceFor, readingFor, unreadFor } from "./defaults.ts";
 import type { Composer } from "../../composer/index.ts";
 import { CookoutApp } from "../index.tsx";
 import type { CookoutClient } from "../../sdk/index.ts";
@@ -51,6 +51,7 @@ interface BoardOpening {
   readonly loginApprovals?: LoginApprovals;
   readonly agentJoinApprovals?: AgentJoinApprovals;
   readonly presence?: PresenceStore;
+  readonly reading?: Reading;
   readonly session: Session;
   readonly unread?: Unread;
 }
@@ -63,6 +64,7 @@ interface Opening {
   readonly pageSize?: number;
   readonly session?: Session;
   readonly live?: NonNullable<BoardOptions["live"]>;
+  readonly reading?: Reading;
 }
 
 function anonymousLoginRequests(): Pick<CookoutClient, "approveLogin" | "getLoginRequest"> {
@@ -124,6 +126,7 @@ export function openBoard(opening: BoardOpening): () => void {
       live={opening.live ?? null}
       loginApprovals={loginApprovals}
       presence={presence}
+      reading={readingFor(opening.reading)}
       session={opening.session}
       unread={unread}
     />,
@@ -141,6 +144,7 @@ export function openAt(opening: Opening): () => void {
     ...(opening.loginApprovals && { loginApprovals: opening.loginApprovals }),
     ...(opening.agentJoinApprovals && { agentJoinApprovals: opening.agentJoinApprovals }),
     presence: presenceFor(opening),
+    reading: readingFor(opening.reading),
     session,
     unread: createUnread(opening),
   });
