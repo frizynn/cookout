@@ -450,7 +450,7 @@ interface SetTriggerRequest {
   readonly token: string;
   readonly headers?: readonly TriggerHeader[];
 }
-/** The SDK's calls on an agent's trigger URL, each only for the agent's owner. */
+/** The SDK's calls on an agent's trigger URL, each only for the agent's owner or the agent that brought it in. */
 interface TriggerCalls {
   /** `GET /v1/identities/:name/trigger`: the agent's trigger URL and its last result, or `null`; never the token. */
   readonly getTrigger: (agent: string) => Promise<TriggerResponse>;
