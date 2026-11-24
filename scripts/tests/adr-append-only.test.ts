@@ -26,6 +26,7 @@ it("passes the dated notes existing ADRs already carry", { timeout: 1000 }, () =
     "+_Superseded by ADR 0051._",
     "+Confirmed by Matt on 2026-11-24 (mattpocock/cookout#200).",
     "+2026-11-23: Matt confirmed all three assumptions below (mattpocock/cookout#134).",
+    "+2026-11-24: Matt approved this rule; it is no longer an assumption.",
     "+More than one admin, and who may make one: [ADR 0037](0037-any-admin-can-make-any-human-an-admin.md).",
     "+[ADR 0039](0039-cookout-admin-name-names-the-admin-token-identity.md) lets `COOKOUT_ADMIN_NAME` name it.",
   ].join("\n");

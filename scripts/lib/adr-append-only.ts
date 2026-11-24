@@ -16,7 +16,7 @@ const DATED_NOTE = new RegExp(
   [
     String.raw`^_?Superseded\b`,
     `^_?Confirmed by Matt on ${DATE}`,
-    String.raw`^${DATE}: Matt confirmed\b`,
+    String.raw`^${DATE}: Matt (?:confirmed|approved)\b`,
     String.raw`: ${ADR_LINK}\.$`,
     `^${ADR_LINK} `,
   ].join("|"),
