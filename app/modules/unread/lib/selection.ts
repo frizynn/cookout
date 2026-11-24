@@ -105,4 +105,4 @@ function createSelections(store: ItemsStore): (scope: Scope | null) => Selection
   };
 }
 
-export { type Selection, type SelectionState, createSelections };
+export { type Selection, createSelections };
