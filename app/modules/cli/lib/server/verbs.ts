@@ -1,4 +1,5 @@
 import { Argument, Command, Flag } from "effect/cli";
+import { approveJoinCommand, joinCommand, leaveCommand } from "./join-command.ts";
 import {
   beforeFlag,
   channelArgument,
@@ -7,7 +8,6 @@ import {
   messageIdArgument,
   pageQuery,
 } from "./message-command.ts";
-import { joinCommand, leaveCommand } from "./join-command.ts";
 import { searchCommand, threadCommandFor } from "./thread.ts";
 import { Option } from "effect";
 import { answer } from "./output.ts";
@@ -155,6 +155,7 @@ export const verbCommands = [
   searchCommand,
   joinCommand,
   leaveCommand,
+  approveJoinCommand,
   inboxCommand,
   ackCommand,
   keepCommand,

@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { idOf, postedIn } from "./feed.ts";
 import { inPane, inThread } from "./regions.ts";
+import type { Message } from "../../sdk/index.ts";
 import { openAt } from "./render.tsx";
 
 const TEXTS = ["Before.", "Deploy?", "After."] as const;
@@ -44,6 +45,14 @@ function iconNamed(name: string): Shown {
 }
 
 const THUMBS_UP: Shown = { drawn: "👍", named: true, text: "", tooltip: "React with 👍" };
+
+function valueOf(box: () => HTMLElement): string {
+  const shown = box();
+  if (!(shown instanceof HTMLTextAreaElement)) {
+    throw new TypeError("The reply box is no text area");
+  }
+  return shown.value;
+}
 
 async function articleIn(list: string, text: string): Promise<HTMLElement> {
   const found = await within(await screen.findByRole("list", { name: list })).findByText(text);
@@ -93,7 +102,9 @@ it("a closed thread's hover bar holds Reopen thread as an icon", { timeout: 5000
   close();
 });
 
-it("in a thread panel, neither the parent's hover bar nor a reply's holds Reply", { timeout: 5000 }, async () => {
+it("in a thread panel, the parent's hover bar and a reply's hold 👍, Reply and More actions", {
+  timeout: 5000,
+}, async () => {
   expect.hasAssertions();
 
   const posted = await postedIn({ channel: "web-hover-bar-panel", closed: [], texts: TEXTS });
@@ -104,8 +115,8 @@ it("in a thread panel, neither the parent's hover bar nor a reply's holds Reply"
   const shownParent = await inThread().findByRole("article", { name: "Parent message" });
 
   expect([hoverBarOf(() => shownParent), hoverBarOf(() => reply)]).toStrictEqual([
-    [THUMBS_UP, iconNamed("More actions")],
-    [THUMBS_UP, iconNamed("More actions")],
+    [THUMBS_UP, iconNamed("Reply"), iconNamed("More actions")],
+    [THUMBS_UP, iconNamed("Reply"), iconNamed("More actions")],
   ]);
 
   close();
@@ -127,6 +138,37 @@ it("pressing a channel message's hover Reply opens its thread with the cursor in
       true,
       `#/channels/${posted.channel}/threads/${String(idOf({ posted, text: "Deploy?" }))}`,
     ]);
+  });
+
+  close();
+});
+
+interface ThreadOpen {
+  readonly close: () => void;
+  readonly message: Message;
+}
+
+async function threadWithReply(channel: string): Promise<ThreadOpen> {
+  const posted = await postedIn({ channel, closed: [], texts: TEXTS });
+  const parent = idOf({ posted, text: "Deploy?" });
+  const { message } = await posted.poster.createMessage({ channel: posted.channel, replyTo: parent, text: "Noon." });
+  const close = openAt({ client: posted.reader, hash: `#/channels/${posted.channel}/threads/${String(parent)}` });
+  return { close, message };
+}
+
+it("pressing a thread reply's hover Reply puts @its-author in the reply box, keeping the draft", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const { close, message } = await threadWithReply("web-hover-bar-thread-reply");
+  const reply = await articleIn("Replies", "Noon.");
+  const box = await within(await screen.findByRole("complementary", { name: "Thread" })).findByLabelText("Reply");
+  fireEvent.change(box, { target: { value: "works" } });
+  fireEvent.click(within(reply).getByRole("button", { name: "Reply" }));
+
+  await waitFor(() => {
+    expect([document.activeElement === box, valueOf(() => box)]).toStrictEqual([true, `@${message.author.name} works`]);
   });
 
   close();

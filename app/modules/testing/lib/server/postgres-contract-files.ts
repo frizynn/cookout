@@ -42,6 +42,7 @@ export const postgresContractFiles: readonly string[] = [
   "deactivation-offers",
   "person-deactivation-offers",
   "deactivated-quiet-agents",
+  "brought-in-by",
   "search",
   "search-filters",
 ];

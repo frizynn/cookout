@@ -226,6 +226,10 @@ const postgresMigrations: readonly (readonly string[])[] = [
      )`,
   ],
   ["ALTER TABLE deliveries ADD COLUMN added_order bigint GENERATED ALWAYS AS IDENTITY"],
+  [
+    `ALTER TABLE identities
+       ADD COLUMN brought_in_by text COLLATE "C" REFERENCES identities (name) ON DELETE SET NULL`,
+  ],
   POSTGRES_SEARCH_MIGRATION,
 ];
 

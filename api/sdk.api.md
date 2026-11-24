@@ -123,6 +123,8 @@ type HumanIdentity = IdentityFields & {
 type AgentIdentity = Described<IdentityFields> & {
   readonly kind: "agent";
   readonly owner: Owner;
+  /** The agent whose approval of a join created this agent (#370); never changed. Absent when a person approved. */
+  readonly broughtInBy?: IdentityName;
   /** Present, and true, on a command's handler identity in `GET /v1/identities`. */
   readonly handler?: true;
 };
@@ -794,11 +796,12 @@ declare const agentSessionExpired = "agent_session_expired";
  * Deactivated agent), the 400s `idle_expiry_too_long`, `agent_session_required` (leave sent without an agent session token),
  * `display_name_required` (a join that would create an agent with no display name, when the request asks for one) and
  * `display_name_on_existing_agent` (a display name sent to join an agent that already exists),
- * the 404 `agent_join_request_not_found` (an agent join request expired, was collected, or never existed), and the
+ * the 403 `not_brought_in` (an agent approves a join for an existing agent it didn't bring in, #370), the 404
+ * `agent_join_request_not_found` (an agent join request expired, was collected, or never existed), and the
  * 401s any request sent with an ended agent session token gets, and the 404 `join_code_not_found` (a join code that
  * was used, expired or never issued).
  */
-declare const agentSessionErrorCodes: readonly ["not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "agent_session_revoked", "agent_session_expired"];
+declare const agentSessionErrorCodes: readonly ["not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_session_revoked", "agent_session_expired"];
 /**
  * `POST /v1/agent-join-requests` (no token): a box with no Login asks to join as an agent (Matt, 2026-11-23,
  * mattpocock/cookout#120). The server answers a user code and a secret request ID, valid 10 minutes unapproved.
@@ -806,9 +809,15 @@ declare const agentSessionErrorCodes: readonly ["not_your_identity", "identity_k
 declare const agentJoinRequestsPath = "/v1/agent-join-requests";
 /** `POST /v1/agent-join-requests/collect` (no token): 202 pending, then the agent session token once; 404 after. */
 declare const collectAgentJoinRequestPath = "/v1/agent-join-requests/collect";
-/** `GET /v1/agent-join-requests/:code` (a human): the live request with that user code, as it would join for the caller. */
+/**
+ * `GET /v1/agent-join-requests/:code` (a human, or an agent for its owner, #370): the live request with that user code,
+ * as it would join for the caller.
+ */
 declare const agentJoinRequestPath = "/v1/agent-join-requests/:code";
-/** `PUT /v1/agent-join-requests/:code/approval` (a human; an agent is 403 `human_only`): approves it as the caller. */
+/**
+ * `PUT /v1/agent-join-requests/:code/approval`: approves it as the caller. A human approves as before; an agent approves
+ * only a join that creates an agent of its own owner, recorded as brought in by it, or rejoins one it brought in (#370).
+ */
 declare const agentJoinRequestApprovalPath = "/v1/agent-join-requests/:code/approval";
 /**
  * The approval page's path on the server for an agent join request's user code.
@@ -1223,7 +1232,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
