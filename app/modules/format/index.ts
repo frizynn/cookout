@@ -173,7 +173,7 @@ export interface RunTime {
 
 /**
  * A Scheduled message's run as the zone it is scheduled in shows it.
- * @param run The run's ISO time, and the IANA time zone to write it in; an unknown zone writes it in the browser's.
+ * @param run The run's ISO time, and the IANA time zone to write it in, one the server has accepted.
  * @returns Its weekday, date and 24-hour time, such as `Mon, 1 Dec 2026, 09:00`.
  */
 export function runTimeIn(run: RunTime): string {
@@ -187,11 +187,7 @@ export function runTimeIn(run: RunTime): string {
     weekday: "short",
     year: "numeric",
   } as const;
-  try {
-    return new Intl.DateTimeFormat("en-GB", { ...shape, timeZone }).format(new Date(iso));
-  } catch {
-    return new Intl.DateTimeFormat("en-GB", shape).format(new Date(iso));
-  }
+  return new Intl.DateTimeFormat("en-GB", { ...shape, timeZone }).format(new Date(iso));
 }
 
 export { type Clock, browserClock } from "./lib/browser-clock.ts";

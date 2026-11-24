@@ -1,6 +1,6 @@
 import { chose, pressed } from "./menus.ts";
 import { expect, it, vi } from "vitest";
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { inPane, inThread } from "./regions.ts";
 import type { ScheduledMessage } from "../../scheduled-messages/index.ts";
 import { adminClient } from "./identities.ts";
@@ -65,6 +65,19 @@ async function refusalOf(cron: string, words: Readonly<RegExp>): Promise<readonl
   return [shown.textContent, button.disabled];
 }
 
+async function refusedOnSave(): Promise<string | null> {
+  fireEvent.click(within(dialog()).getByRole("button", { name: "Schedule" }));
+  const refusal = await within(dialog()).findByRole("alert");
+  return refusal.textContent;
+}
+
+async function closedByEscape(): Promise<void> {
+  fireEvent.keyDown(dialog(), { key: "Escape" });
+  await waitFor(() => {
+    expect(screen.queryByRole("dialog", { name: TITLE })).toBeNull();
+  });
+}
+
 function browserZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
@@ -76,17 +89,21 @@ it("schedule… opens a dialog with the composer's text, and saving a recurring 
 
   const close = await openChannel("web-schedule-recurring", "Standup starts now");
   const seeded = within(dialog()).getByLabelText<HTMLInputElement>("Text").value;
+  edit("Text", "Standup starts now, @admin");
   recurring("0 9 * * 1-5");
   const schedules = await saved("web-schedule-recurring");
+  fireEvent.click(inPane().getByRole("button", { name: "Dismiss" }));
 
   expect([
     seeded,
     schedules.map(({ cron, text, timeZone }) => ({ cron, text, timeZone })),
     screen.getByLabelText<HTMLTextAreaElement>("Message").value,
+    screen.queryByText(/^Scheduled\./u),
   ]).toStrictEqual([
     "Standup starts now",
-    [{ cron: "0 9 * * 1-5", text: "Standup starts now", timeZone: browserZone() }],
+    [{ cron: "0 9 * * 1-5", text: "Standup starts now, @admin", timeZone: browserZone() }],
     "",
+    null,
   ]);
 
   close();
@@ -96,6 +113,8 @@ it("a once schedule is created with its date, time and zone", { timeout: 10_000 
   expect.hasAssertions();
 
   const close = await openChannel("web-schedule-once", "The deploy window opens now");
+  recurring("0 9 * * *");
+  fireEvent.click(within(dialog()).getByRole("radio", { name: "Once" }));
   edit("Date", "2099-06-01");
   edit("Time", "09:30");
   edit("Time zone", "Europe/London");
@@ -154,6 +173,23 @@ it("a thread's reply box can't schedule, since every run posts at the top level"
   await inThread().findByRole("textbox", { name: "Reply" });
 
   expect(inThread().queryByRole("button", { name: "More ways to send" })).toBeNull();
+
+  close();
+});
+
+it("a refusal on saving shows in the dialog, and Escape closes it without scheduling", {
+  timeout: 10_000,
+}, async () => {
+  expect.hasAssertions();
+
+  const close = await openChannel("web-schedule-save-refused", "Into a channel about to go");
+  recurring("0 9 * * *");
+  await runsShown();
+  await adminClient().deleteChannel("web-schedule-save-refused");
+  const refused = await refusedOnSave();
+  await closedByEscape();
+
+  expect(refused).toMatch(/^Couldn't schedule it\. .*\(channel_not_found\)$/u);
 
   close();
 });

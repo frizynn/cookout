@@ -18,7 +18,7 @@ export function FormDialogContent(parts: FormDialogContentParts): ReactNode {
           busy={parts.busy}
           busyButton={parts.busyButton}
           button={parts.button}
-          disabled={parts.disabled ?? false}
+          disabled={parts.disabled}
           onCancel={handleCancel}
         />
       </form>

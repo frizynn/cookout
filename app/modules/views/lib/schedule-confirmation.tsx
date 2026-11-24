@@ -6,6 +6,8 @@ import type { Scheduling } from "../../board/index.ts";
 import { runTimeIn } from "../../format/index.ts";
 import { useSyncExternalStore } from "react";
 
+const FIRST = 0;
+const ONE = 1;
 const TEXT = { dismiss: "Dismiss", scheduled: "Scheduled." } as const;
 
 interface ScheduleConfirmationProps {
@@ -14,11 +16,11 @@ interface ScheduleConfirmationProps {
 }
 
 function confirmationOf(scheduled: ScheduledMessage): string {
-  const [next = null] = scheduled.nextRuns;
-  if (next === null) {
-    return TEXT.scheduled;
-  }
-  return `${TEXT.scheduled} Its next run is ${runTimeIn({ iso: next, timeZone: scheduled.timeZone })} (${scheduled.timeZone}).`;
+  const { timeZone } = scheduled;
+  const next = scheduled.nextRuns
+    .slice(FIRST, ONE)
+    .map((iso) => `Its next run is ${runTimeIn({ iso, timeZone })} (${timeZone}).`);
+  return [TEXT.scheduled, ...next].join(" ");
 }
 
 export function ScheduleConfirmation(props: ScheduleConfirmationProps): ReactNode {

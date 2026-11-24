@@ -26,7 +26,7 @@ export function FormDialog(parts: FormDialogParts): ReactNode {
           busyButton={parts.busyButton}
           button={parts.button}
           description={parts.description}
-          disabled={parts.disabled ?? false}
+          disabled={parts.disabled}
           onCancel={handleCancel}
           onSubmit={handleSubmit}
           title={parts.title}

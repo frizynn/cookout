@@ -10,5 +10,5 @@ const WORDS: Readonly<Partial<Record<Refusal["code"], string>>> = {
 };
 
 export function refusalWords(refusal: Refusal): string {
-  return WORDS[refusal.code] ?? `Couldn't check it (${refusal.code}): ${refusal.message}`;
+  return WORDS[refusal.code] ?? `${refusal.message} (${refusal.code})`;
 }

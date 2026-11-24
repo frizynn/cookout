@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { ScheduleRuns } from "./schedule-runs.tsx";
 import { ScheduleTiming } from "./schedule-timing.tsx";
 import type { Scheduling } from "../../board/index.ts";
+import { refusalWords } from "./schedule-words.ts";
 
 const TEXT = {
   busy: "Scheduling…",
@@ -62,9 +63,7 @@ export function ScheduleDialog(props: ScheduleDialogProps): ReactNode {
         value={state.timeZone}
       />
       <ScheduleRuns state={state} />
-      {state.save.status === "failed" && (
-        <Alert>{`Couldn't schedule it (${state.save.code}): ${state.save.message}`}</Alert>
-      )}
+      {state.save.status === "failed" && <Alert>{`Couldn't schedule it. ${refusalWords(state.save)}`}</Alert>}
     </FormDialog>
   );
 }
