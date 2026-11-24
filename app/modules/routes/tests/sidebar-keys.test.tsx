@@ -93,6 +93,18 @@ it("alt+shift+↑ opens the previous unread channel, wrapping round, and says so
   close();
 });
 
+it("alt+↓ from the Inbox opens a channel", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const channels = channelsOf("web-sidebar-keys-from-inbox");
+  const close = openAt({ client: await readerOf(channels), hash: "#/inbox" });
+  await rowOf(channels.first);
+
+  expect(pressed({ altKey: true, key: "ArrowDown" })).toMatch(/^#\/channels\/[^/]+$/u);
+
+  close();
+});
+
 it("e on a channel row marks it read, says so, and says when there is nothing to mark", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
