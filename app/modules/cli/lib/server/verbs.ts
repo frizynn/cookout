@@ -6,6 +6,7 @@ import {
   messageCommand,
   messageIdArgument,
   pageQuery,
+  scheduleCommand,
 } from "./message-command.ts";
 import { joinCommand, leaveCommand } from "./join-command.ts";
 import { searchCommand, threadCommandFor } from "./thread.ts";
@@ -165,6 +166,7 @@ export const verbCommands = [
   unfollowCommand,
   subscribeCommand,
   unsubscribeCommand,
+  scheduleCommand,
   commandCommand,
   helpCommand,
 ] as const;

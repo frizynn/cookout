@@ -151,3 +151,4 @@ const messageCommand = Command.make("message").pipe(
 );
 
 export { beforeFlag, channelArgument, limitFlag, messageCommand, messageIdArgument, pageQuery };
+export { scheduleCommand } from "./schedule.ts";
