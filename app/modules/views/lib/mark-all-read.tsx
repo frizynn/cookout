@@ -18,7 +18,9 @@ export function MarkAllRead(props: MarkAllReadProps): ReactNode {
   const handleClick = props.unread.markAllRead;
   return (
     <Button
-      disabled={(state.inbox.length === NONE && state.alerts.length === NONE) || state.markAll.status === "marking"}
+      disabled={
+        state.inbox.length + state.alerts.length + state.nudges.length === NONE || state.markAll.status === "marking"
+      }
       onClick={handleClick}
     >
       {TEXT.markAll}

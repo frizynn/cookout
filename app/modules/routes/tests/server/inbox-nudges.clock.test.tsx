@@ -90,7 +90,7 @@ it.effect("after 3 quiet days the starter's inbox shows the nudge under For you 
       inboxCounts(),
       link.getAttribute("href"),
     ]).toStrictEqual([
-      "For you1",
+      "For you 1",
       [expect.stringMatching(/Quiet for 3 days: close it, or follow up\?.*#grill.*Who owns the release notes\?/u)],
       ["1 for you"],
       `#/channels/grill/threads/${String(thread.id)}`,

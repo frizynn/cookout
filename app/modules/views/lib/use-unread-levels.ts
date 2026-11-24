@@ -3,7 +3,7 @@ import type { ThreadNews, Unread, UnreadCounts, UnreadState } from "../../unread
 import { countsByChannel, countsOf, newsByThread } from "../../unread/index.ts";
 import { useMemo, useSyncExternalStore } from "react";
 
-const NO_ALERTS = 0;
+const NONE_BESIDE = 0;
 
 interface Looking {
   readonly me: string;
@@ -34,11 +34,11 @@ function useThreadNews({ me, unread }: Looking): ReadonlyMap<MessageId, ThreadNe
   return useMemo(() => newsByThread({ items: itemsOf(state).items, me }), [state, me]);
 }
 
-function alertsOf(state: UnreadState): number {
+function alertsAndNudgesOf(state: UnreadState): number {
   if (state.status !== "loaded") {
-    return NO_ALERTS;
+    return NONE_BESIDE;
   }
-  return state.alerts.length;
+  return state.alerts.length + state.nudges.length;
 }
 
 function useSidebarCounts({ me, state }: Counting): SidebarCounts {
@@ -47,7 +47,7 @@ function useSidebarCounts({ me, state }: Counting): SidebarCounts {
     const counts = countsOf({ items: inbox, me });
     return {
       channels: countsByChannel({ items: inbox, me }),
-      inbox: { ...counts, forYou: counts.forYou + alertsOf(state) },
+      inbox: { ...counts, forYou: counts.forYou + alertsAndNudgesOf(state) },
     };
   }, [state, me]);
 }
