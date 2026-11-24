@@ -21,3 +21,5 @@
 - **Mark scopes on the page with data attributes**: rejected. A binding's own element (or none, for the whole page) says what it covers, and the fixed scope order says which comes first, without markup only the keymap reads.
 - **Match `Mod` strictly by platform** (Cmd only on a Mac): not now. Ctrl+K and Cmd+K both worked everywhere before, and their tests stay; it can tighten later without changing a view.
 - **React context for the keymap**: rejected. The frontend passes its stores down through `CookoutApp`'s props (`docs/web-components.md`), and the keymap is one more.
+
+Superseded in part on 2026-11-24 by [ADR 0089](0089-a-keymap-binding-gives-some-of-its-scopes-actions.md): a binding gives some or all of its scope's actions, and a channel row and the sidebar join `SCOPES` before the Inbox.

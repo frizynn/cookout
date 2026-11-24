@@ -1,4 +1,4 @@
-const SCOPES = ["search box", "text box", "profile panel", "inbox", "everywhere"] as const;
+const SCOPES = ["search box", "text box", "profile panel", "channel row", "sidebar", "inbox", "everywhere"] as const;
 
 type Scope = (typeof SCOPES)[number];
 
@@ -6,6 +6,14 @@ const TEXT_SCOPES: ReadonlySet<Scope> = new Set(["search box", "text box"]);
 
 const KEYS = [
   { action: "openSearch", chord: "Mod+K", scope: "everywhere" },
+  { action: "nextChannel", chord: "Alt+ArrowDown", scope: "everywhere" },
+  { action: "previousChannel", chord: "Alt+ArrowUp", scope: "everywhere" },
+  { action: "nextUnreadChannel", chord: "Alt+Shift+ArrowDown", scope: "everywhere" },
+  { action: "previousUnreadChannel", chord: "Alt+Shift+ArrowUp", scope: "everywhere" },
+  { action: "nextLink", chord: "ArrowDown", scope: "sidebar" },
+  { action: "previousLink", chord: "ArrowUp", scope: "sidebar" },
+  { action: "markChannelRead", chord: "e", scope: "channel row" },
+  { action: "toggleSubscription", chord: "s", scope: "channel row" },
   { action: "highlightNext", chord: "ArrowDown", scope: "search box" },
   { action: "highlightPrevious", chord: "ArrowUp", scope: "search box" },
   { action: "openHighlighted", chord: "Enter", scope: "search box" },
