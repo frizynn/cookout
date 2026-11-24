@@ -5,6 +5,7 @@ import { deactivation, identitiesAnswer, identityAnswer } from "./handles.ts";
 import type { CallFailure } from "./adapters/sdk.ts";
 import { callServer } from "./adapters/sdk.ts";
 import { identityKinds } from "../../../identities/index.ts";
+import { isDeactivationOfferId } from "../../../inbox/index.ts";
 
 const NOTHING = {};
 
@@ -228,4 +229,19 @@ const identityCommand = Command.make("identity").pipe(
   ]),
 );
 
-export { identityCommand };
+const offerIdArgument = Argument.Int("deactivation-offer-id").pipe(
+  Argument.filterMap(
+    (value) => Option.liftPredicate(value, isDeactivationOfferId),
+    (value) => `${String(value)} is not a deactivation offer ID.`,
+  ),
+);
+
+const keepCommand = Command.make("keep", { id: offerIdArgument }, ({ id }) =>
+  answer((client) => client.keepDeactivationOffer(id)),
+).pipe(
+  Command.withDescription(
+    "Answer Keep on an offer to deactivate a quiet agent: it leaves the inbox of everyone it went to, and the next comes 30 days later if the agent stays quiet. To deactivate instead, run cookout identity deactivate.",
+  ),
+);
+
+export { identityCommand, keepCommand };

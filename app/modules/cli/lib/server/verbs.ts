@@ -2,12 +2,12 @@ import { Argument, Command, Flag } from "effect/cli";
 import type { ListMessagesQuery, MessageId, PostMessageRequest } from "../../../messages/index.ts";
 import { Option, Schema } from "effect";
 import { answer, refused } from "./output.ts";
+import { assetCommand, attachFlag, postAttaching } from "./attachments.ts";
+import { identityCommand, keepCommand } from "./identity.ts";
 import { joinCommand, leaveCommand } from "./join-command.ts";
 import { searchCommand, threadCommandFor } from "./thread.ts";
 import { commandCommand } from "./command.ts";
 import { helpCommand } from "./help-monitor.ts";
-import { identityCommand } from "./identity.ts";
-import { isDeactivationOfferId } from "../../../inbox/index.ts";
 import { isMessageId } from "../../../messages/index.ts";
 
 const NOTHING = {};
@@ -109,7 +109,10 @@ function notAMessageId(value: number): string {
 }
 
 const channelArgument = Argument.String("channel").pipe(Argument.withDescription("The channel's name."));
-const textArgument = Argument.String("text").pipe(Argument.withDescription("The message, 1-40,000 characters."));
+const textArgument = Argument.String("text").pipe(
+  Argument.withDefault(""),
+  Argument.withDescription("The message, up to 40,000 characters. Only a message with --attach may leave it out."),
+);
 const jsonData = Flag.String("data").pipe(Flag.withSchema(Schema.fromJsonString(Schema.Json)));
 const dataFlag = jsonData.pipe(Flag.optional, Flag.withDescription("Any JSON value, for commands and agents to read."));
 const replyToFlag = Flag.Int("reply-to").pipe(
@@ -129,13 +132,24 @@ const messageIdArgument = Argument.Int("message-id").pipe(Argument.filterMap(mes
 
 const messagePostCommand = Command.make(
   "post",
-  { channel: channelArgument, close: closeFlag, data: dataFlag, replyTo: replyToFlag, text: textArgument },
+  {
+    attach: attachFlag,
+    channel: channelArgument,
+    close: closeFlag,
+    data: dataFlag,
+    replyTo: replyToFlag,
+    text: textArgument,
+  },
   (flags) =>
     Option.match(postRequest(flags), {
       onNone: () => refused(closeWithoutReplyTo),
-      onSome: (request) => answer((client) => client.createMessage(request)),
+      onSome: (request) => postAttaching({ files: flags.attach, request }),
     }),
-).pipe(Command.withDescription("Post a message, or a reply with --reply-to, which --close also closes in one step."));
+).pipe(
+  Command.withDescription(
+    "Post a message, or a reply with --reply-to, which --close also closes in one step. --attach adds files.",
+  ),
+);
 
 const messageListCommand = Command.make(
   "list",
@@ -168,21 +182,6 @@ const inboxCommand = Command.make("inbox", { before: beforeFlag, history: histor
 
 const ackCommand = Command.make("ack", { id: messageIdArgument }, ({ id }) => answer((client) => client.ack(id))).pipe(
   Command.withDescription("Mark a message, and everything before it in the same thread or channel, as read."),
-);
-
-const offerIdArgument = Argument.Int("deactivation-offer-id").pipe(
-  Argument.filterMap(
-    (value) => Option.liftPredicate(value, isDeactivationOfferId),
-    (value) => `${String(value)} is not a deactivation offer ID.`,
-  ),
-);
-
-const keepCommand = Command.make("keep", { id: offerIdArgument }, ({ id }) =>
-  answer((client) => client.keepDeactivationOffer(id)),
-).pipe(
-  Command.withDescription(
-    "Answer Keep on an offer to deactivate a quiet agent: it leaves the inbox of everyone it went to, and the next comes 30 days later if the agent stays quiet. To deactivate instead, run cookout identity deactivate.",
-  ),
 );
 
 const unreadCommand = Command.make("unread", { id: messageIdArgument }, ({ id }) =>
@@ -234,6 +233,7 @@ export const verbCommands = [
   identityCommand,
   channelCommand,
   messageCommand,
+  assetCommand,
   threadCommand,
   searchCommand,
   joinCommand,
