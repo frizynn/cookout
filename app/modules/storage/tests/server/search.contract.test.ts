@@ -27,6 +27,8 @@ import { tokenHash } from "../../../identities/index.ts";
 const ADA = identityName("ada");
 const EVERY = { limit: 50 } as const;
 const PAGE_OF_TWO = 2;
+const LONG_WORD = 3000;
+const HALF = 2;
 const HASH_LENGTH = 64;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const MONDAY = isoTime("2026-01-05T00:00:00.000Z");
@@ -219,5 +221,18 @@ it.effect.each(storageLayers)(
         pages: Arr.reverse(sent),
         second: false,
       });
+    }),
+);
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): a message with a word of thousands of characters is stored, and found by that word or its start",
+  ({ layer }) =>
+    Effect.gen(function* longWord() {
+      const { ids, post } = yield* aBoard(layer);
+      const word = Str.repeat(LONG_WORD)("é");
+      const said = yield* post(MONDAY, `the hash ${word}`);
+      const found = yield* Effect.all([ids(word), ids(Str.repeat(LONG_WORD / HALF)("e")), ids("hash")], ONE_AT_A_TIME);
+
+      expect(found).toStrictEqual([[said.id], [said.id], [said.id]]);
     }),
 );

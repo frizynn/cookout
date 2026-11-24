@@ -1,8 +1,11 @@
-import { Effect, FileSystem, String as Str } from "effect";
+import { Array as Arr, Effect, FileSystem, String as Str } from "effect";
 import { StorageUnavailable, postgresStorage } from "../../server.ts";
 import {
+  appendTo,
+  channelFixture,
   emptyPostgresDatabase,
   identityFixture,
+  newMessageFixture,
   onPostgresDatabase,
   openStore,
   postgresContractFiles,
@@ -21,6 +24,11 @@ const ada = identityFixture("ada", { kind: "human" });
 const BEFORE_INSERT = "CREATE TRIGGER fault BEFORE INSERT ON identities FOR EACH ROW EXECUTE FUNCTION fault()";
 const AT_COMMIT = `CREATE CONSTRAINT TRIGGER fault AFTER INSERT ON identities DEFERRABLE INITIALLY DEFERRED
   FOR EACH ROW EXECUTE FUNCTION fault()`;
+const BEFORE_SEARCH = [
+  "DROP INDEX message_search",
+  "DROP FUNCTION message_search_words",
+  "UPDATE schema_version SET version = 3",
+];
 const FAIL_ONCE = "IF nextval('fault_attempts') <= 1 THEN RAISE EXCEPTION 'conflict' USING ERRCODE = '40001'; END IF;";
 
 function failInsertsWith(
@@ -76,7 +84,7 @@ it.effect("a database at a newer schema version than this cookout fails with Sto
 
       expect(error).toStrictEqual(
         StorageUnavailable.make({
-          message: "The database is at schema version 1000, newer than this cookout (2). Upgrade cookout.",
+          message: "The database is at schema version 1000, newer than this cookout (3). Upgrade cookout.",
         }),
       );
     }),
@@ -180,19 +188,23 @@ it.effect("a database with a negative schema version fails with StorageUnavailab
   ),
 );
 
-it.effect("a section not on Postgres yet fails with StorageUnavailable", () =>
+it.effect("the search migration finds every message stored before search existed", () =>
   Effect.scoped(
-    Effect.gen(function* notYet() {
+    Effect.gen(function* backfill() {
       const url = yield* emptyPostgresDatabase;
-      const { close, storage } = yield* opened(url);
-      const error = yield* Effect.flip(
-        storage.searchMessages({ authors: [], channels: [], words: ["deploy"] }, { limit: 1 }),
+      const first = yield* opened(url);
+      yield* first.storage.createChannel(channelFixture("grill"));
+      const said = yield* appendTo(first.storage)(newMessageFixture("grill", "the deploy freeze is over"));
+      yield* first.close;
+      yield* onPostgresDatabase({ statements: BEFORE_SEARCH, url });
+      const second = yield* opened(url);
+      const { results } = yield* second.storage.searchMessages(
+        { authors: [], channels: [], words: ["freeze"] },
+        { limit: 1 },
       );
-      yield* close;
+      yield* second.close;
 
-      expect(error).toStrictEqual(
-        StorageUnavailable.make({ message: "This part of the store is not on Postgres yet." }),
-      );
+      expect(Arr.map(results, ({ message }) => message.id)).toStrictEqual([said.id]);
     }),
   ),
 );

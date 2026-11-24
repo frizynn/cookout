@@ -1,9 +1,7 @@
 import { Effect, identity } from "effect";
 import type { StorageService } from "./service.ts";
 import { openMigrated } from "./migrations.ts";
-import { sqlMessageReader } from "./messages-sqlite.ts";
 import { sqlStorage } from "./sql-storage.ts";
-import { sqliteSearch } from "./search-sqlite.ts";
 
 type Opened = ReturnType<typeof openMigrated>;
 
@@ -24,8 +22,7 @@ function openSqliteStorage({
   return Effect.gen(function* openStorage() {
     const migrated = yield* openMigrated(path);
     const db = watch(migrated);
-    const storage: StorageService = { ...sqlStorage(db), ...sqliteSearch({ db, reader: sqlMessageReader(db) }) };
-    return { db, storage };
+    return { db, storage: sqlStorage(db) };
   });
 }
 

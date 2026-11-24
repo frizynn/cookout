@@ -10,6 +10,7 @@ import { StorageUnavailable } from "./lib/server/errors.ts";
 import { openMemoryStore } from "./lib/server/memory-store.ts";
 import { openPostgresStore } from "./lib/server/postgres-store.ts";
 import { openSqliteStore } from "./lib/server/sqlite-store.ts";
+import { postgresQueryPlans as planPostgresQueries } from "./lib/server/query-plans-postgres.ts";
 import { sqliteQueryPlans as planSqliteQueries } from "./lib/server/query-plans-sqlite.ts";
 
 export { StorageUnavailable };
@@ -68,6 +69,20 @@ export function sqliteQueryPlans<Failure>(planning: {
 }
 
 /**
+ * Runs `work` on a Postgres store at `url`, then returns Postgres's generic
+ * query plan for each distinct statement the store ran, so a test can check
+ * a query still uses its index.
+ * @param planning The Postgres database, migrated if it isn't, and what to do with its store.
+ * @returns Each statement with the lines of its `EXPLAIN (GENERIC_PLAN)`.
+ */
+export function postgresQueryPlans<Failure>(planning: {
+  readonly url: Redacted.Redacted;
+  readonly work: (storage: Storage["Service"]) => Effect.Effect<unknown, Failure>;
+}): ReturnType<typeof planPostgresQueries<Failure>> {
+  return planPostgresQueries(planning);
+}
+
+/**
  * Opens and migrates the Postgres database at `url` on a pool of eight
  * connections, and closes the pool when the Layer is released. TLS is used
  * when the URL asks for it (`sslmode=require`). Each transaction is
@@ -77,13 +92,13 @@ export function sqliteQueryPlans<Failure>(planning: {
  * clock and publish nothing. Migrations are Postgres's own list, applied
  * in order under an advisory lock so two processes starting together apply
  * each once; a database newer than the list fails with "Upgrade cookout".
- * Every section but search is on Postgres so far; search fails with
- * `StorageUnavailable`, and nothing selects this Layer at runtime yet.
+ * Every section is on Postgres, search included (a GIN index over each
+ * message's words), and nothing selects this Layer at runtime yet.
  * @param url The database URL, kept redacted.
  * @returns The store, failing with `StorageUnavailable` if it can't be opened.
  */
 export function postgresStorage(url: Redacted.Redacted): Layer.Layer<Storage, StorageUnavailable> {
-  return Layer.effect(Storage, openPostgresStore(url));
+  return Layer.effect(Storage, openPostgresStore({ url }));
 }
 
 /** A store held in this process only. Everything is lost when the Layer is released. */

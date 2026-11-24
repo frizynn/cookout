@@ -3,6 +3,7 @@ import {
   Storage,
   StorageUnavailable,
   memoryStorage,
+  postgresQueryPlans,
   postgresStorage,
   sqliteQueryPlans,
   sqliteStorage,
@@ -87,6 +88,12 @@ function freshSqliteQueryPlans<Failure>(
   return Effect.scoped(Effect.flatMap(freshDatabasePath, (path) => sqliteQueryPlans({ path, work })));
 }
 
+function freshPostgresQueryPlans<Failure>(
+  work: (storage: Storage["Service"]) => Effect.Effect<unknown, Failure>,
+): Effect.Effect<readonly QueryPlan[], Failure | StorageUnavailable> {
+  return Effect.scoped(Effect.flatMap(freshPostgresDatabase, (url) => postgresQueryPlans({ url, work })));
+}
+
 function openStore<Failure, Needs>(
   layer: Layer.Layer<Storage, Failure, Needs>,
 ): Effect.Effect<OpenStore, Failure, Needs> {
@@ -97,4 +104,4 @@ function openStore<Failure, Needs>(
   });
 }
 
-export { freshDatabasePath, freshSqliteQueryPlans, openStore, storageLayers, unusableStorage };
+export { freshDatabasePath, freshPostgresQueryPlans, freshSqliteQueryPlans, openStore, storageLayers, unusableStorage };
