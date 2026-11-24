@@ -82,10 +82,13 @@ function acksOn(on: AcksOn): AckCalls {
         yield* readReceipts.publish(receipts);
         return { readPosition };
       }),
-    ackAll: (caller, { alertsUpTo, upTo }) =>
+    ackAll: (caller, { alertsUpTo, nudgesUpTo, upTo }) =>
       Effect.gen(function* ackInboxAndAlerts() {
         let readPositions = NO_POSITIONS;
         let alerts = NO_ALERTS;
+        if (Predicate.isNotUndefined(nudgesUpTo)) {
+          yield* storage.markNudgesReadUpTo(caller.name, nudgesUpTo);
+        }
         if (Predicate.isNotUndefined(upTo)) {
           readPositions = yield* inboxAckedUpTo(on, caller, upTo);
         }

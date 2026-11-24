@@ -6,6 +6,7 @@ import type {
   EventStream,
   InboxItemEvent,
   MessageId,
+  NudgeEvent,
   WatchOptions,
 } from "../../../sdk/index.ts";
 import { callClient, toFailure } from "./adapters/sdk.ts";
@@ -13,7 +14,9 @@ import type { Scope } from "effect";
 import { eventsPath } from "../../../events/index.ts";
 import { note } from "./watch-lines.ts";
 
-type Heard = InboxItemEvent | ConnectedEvent;
+type WatchedEvent = InboxItemEvent | NudgeEvent;
+
+type Heard = WatchedEvent | ConnectedEvent;
 
 const SERVER_ERROR = 500;
 const NO_STATUS = 0;
@@ -68,11 +71,15 @@ function isInboxItem(event: CookoutEvent | Heard): event is InboxItemEvent {
   return event.type === "inbox-item";
 }
 
+function isWatched(event: CookoutEvent | Heard): event is WatchedEvent {
+  return event.type === "inbox-item" || event.type === "nudge";
+}
+
 function heardOn(
   events: EventStream,
   signals: Stream.Stream<readonly Heard[], CallFailure>,
 ): Stream.Stream<readonly Heard[], CallFailure> {
-  const items = Stream.fromAsyncIterable(events, toFailure).pipe(Stream.filter(isInboxItem), Stream.map(Arr.of));
+  const items = Stream.fromAsyncIterable(events, toFailure).pipe(Stream.filter(isWatched), Stream.map(Arr.of));
   const untilEnded = Stream.concat(items, Stream.fail(streamEnded));
   return Stream.merge(untilEnded, signals, { haltStrategy: "left" }).pipe(
     Stream.timeoutOrElse({ duration: THREE_MISSED_HEARTBEATS, orElse: () => Stream.fail(heardNothing) }),
@@ -161,6 +168,9 @@ function lastSeenAfter(event: Heard): (seen: Option.Option<MessageId>) => Option
   if (isInboxItem(event)) {
     return () => Option.some(event.item.message.id);
   }
+  if (event.type === "nudge") {
+    return (seen) => seen;
+  }
   return Option.orElse(() => Option.fromNullishOr(event.latestMessageId));
 }
 
@@ -190,4 +200,4 @@ function source({ first, opened }: Resuming): Stream.Stream<Heard, CallFailure> 
   );
 }
 
-export { type Heard, isInboxItem, source, start, whileUnavailable };
+export { type Heard, type WatchedEvent, isWatched, source, start, whileUnavailable };

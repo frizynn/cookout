@@ -1,8 +1,8 @@
-import type { Inbox, OfflineAlerts } from "../../../inbox/server.ts";
+import type { Inbox, Nudges, OfflineAlerts } from "../../../inbox/server.ts";
 import { allChannels, channels, reactions, readReceipts, threads } from "./all-channels.ts";
 import { connected, presence } from "./connected.ts";
 import { identities, identityDeletions } from "./identities.ts";
-import { inboxItems, reactionItems } from "./inbox-items.ts";
+import { inboxItems, nudges, reactionItems } from "./inbox-items.ts";
 import { offlineAlerts, subscriptions } from "./subscriptions.ts";
 import type { AllChannelsNeeds } from "./all-channels.ts";
 import type { BoardChangesNeeds } from "./board-changes.ts";
@@ -13,12 +13,20 @@ import { boardChanges } from "./board-changes.ts";
 import { heartbeat } from "./source.ts";
 import { readPositions } from "./read-positions.ts";
 
-type SourceNeeds = Inbox | OfflineAlerts | AllChannelsNeeds | IdentityChanges | BoardChangesNeeds | LiveConnectionNeeds;
+type SourceNeeds =
+  | Inbox
+  | Nudges
+  | OfflineAlerts
+  | AllChannelsNeeds
+  | IdentityChanges
+  | BoardChangesNeeds
+  | LiveConnectionNeeds;
 
 const sources: readonly EventSource<SourceNeeds>[] = [
   connected,
   inboxItems,
   reactionItems,
+  nudges,
   readPositions,
   subscriptions,
   offlineAlerts,

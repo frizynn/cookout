@@ -81,6 +81,9 @@ _Avoid_: acknowledgement, explicit ack, seen marker
 One identity's thumbs up or thumbs down on one message. An identity has at most one of each on a message, and may have both. Matt's term, from his request on the board ("These should be modeled as reactions", 2026-11-23, [#199](https://github.com/mattpocock/cookout/issues/199)).
 _Avoid_: emoji, like, vote
 
+**Nudge**:
+A reminder in the Inbox that an open thread has been quiet for a while. Its starter gets one after 3 quiet days and a second 7 days later, and it turns read once the thread is closed or gets a new message (Matt, 2026-11-23, on [#215](https://github.com/mattpocock/cookout/issues/215) and [#221](https://github.com/mattpocock/cookout/issues/221)).
+
 **Inbox reason**:
 Why a message is in an identity's inbox: a mention, a reply in a followed thread, a top-level message in a subscribed channel, or a Reaction to its own message. A message there for several reasons lists them all.
 

@@ -1,12 +1,12 @@
 import { Array as Arr, Duration, Effect, Option, Ref, Stream } from "effect";
 import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import { CommandFailed, refused } from "./output.ts";
-import type { ConnectedEvent, InboxItemEvent, MessageId } from "../../../sdk/index.ts";
+import type { ConnectedEvent, MessageId } from "../../../sdk/index.ts";
+import type { Heard, WatchedEvent } from "./watch-connection.ts";
 import { agentSessionExpired, agentSessionRevoked } from "../../../agent-sessions/index.ts";
-import { isInboxItem, whileUnavailable } from "./watch-connection.ts";
+import { isWatched, whileUnavailable } from "./watch-connection.ts";
 import { note, printLine } from "./watch-lines.ts";
 import type { Format } from "./watch-lines.ts";
-import type { Heard } from "./watch-connection.ts";
 import { callClient } from "./adapters/sdk.ts";
 import { watchReplaced } from "../../../presence/index.ts";
 
@@ -40,9 +40,10 @@ function unreadUpTo(opened: ClientWithAgentSessionState, latest: MessageId | nul
   if (latest === null) {
     return Effect.succeed(NONE_UNREAD);
   }
-  return Effect.map(whileUnavailable(callClient((client) => client.inbox())(opened)), ({ items }) => {
+  return Effect.map(whileUnavailable(callClient((client) => client.inbox())(opened)), ({ items, nudges }) => {
     const unread = Arr.filter(items, ({ message }) => message.id <= latest);
-    return { count: unread.length, mentioned: Arr.some(unread, ({ reasons }) => reasons.includes("mention")) };
+    const mentioned = Arr.some(unread, ({ reasons }) => reasons.includes("mention"));
+    return { count: unread.length + nudges.length, mentioned: mentioned || Arr.isReadonlyArrayNonEmpty(nudges) };
   });
 }
 
@@ -60,7 +61,11 @@ function stopsAtStartUp(stop: StopCondition, { count, mentioned }: Unread): bool
   return stop.once && count > NO_UNREAD;
 }
 
-function isNewerThan(counted: Option.Option<number>, { item }: InboxItemEvent): boolean {
+function isNewerThan(counted: Option.Option<number>, event: WatchedEvent): boolean {
+  if (event.type === "nudge") {
+    return true;
+  }
+  const { item } = event;
   return item.reasons.includes("reaction") || !Option.exists(counted, (latest) => item.message.id <= latest);
 }
 
@@ -74,7 +79,7 @@ function startUpLine({
   format,
   opened,
   stop,
-}: Counting): (events: Stream.Stream<Heard, CallFailure>) => Stream.Stream<InboxItemEvent, CallFailure> {
+}: Counting): (events: Stream.Stream<Heard, CallFailure>) => Stream.Stream<WatchedEvent, CallFailure> {
   return (events) =>
     Stream.unwrap(
       Effect.gen(function* countOnce() {
@@ -94,33 +99,33 @@ function startUpLine({
           );
           return stops.includes(true);
         });
-        function isNewer(event: InboxItemEvent): Effect.Effect<boolean> {
+        function isNewer(event: WatchedEvent): Effect.Effect<boolean> {
           return Effect.map(Ref.get(counted), (latest) => isNewerThan(latest, event));
         }
         return events.pipe(
           Stream.takeUntilEffect((event) => {
-            if (isInboxItem(event)) {
+            if (isWatched(event)) {
               return Effect.succeed(false);
             }
             return sayOnce(event);
           }),
-          Stream.filter(isInboxItem),
+          Stream.filter(isWatched),
           Stream.filterEffect(isNewer),
         );
       }),
     );
 }
 
-function isMention({ item }: InboxItemEvent): boolean {
-  return item.reasons.includes("mention");
+function stopsUntilMention(event: WatchedEvent): boolean {
+  return event.type === "nudge" || event.item.reasons.includes("mention");
 }
 
 function wanted(
   { once, untilMention }: StopCondition,
-  events: Stream.Stream<InboxItemEvent, CallFailure>,
-): Stream.Stream<InboxItemEvent, CallFailure> {
+  events: Stream.Stream<WatchedEvent, CallFailure>,
+): Stream.Stream<WatchedEvent, CallFailure> {
   if (untilMention) {
-    return Stream.take(Stream.filter(events, isMention), FIRST);
+    return Stream.take(Stream.filter(events, stopsUntilMention), FIRST);
   }
   if (once) {
     return Stream.take(events, FIRST);
@@ -130,7 +135,7 @@ function wanted(
 
 function untilStopped(
   stop: StopCondition,
-): (events: Stream.Stream<InboxItemEvent, CallFailure>) => Stream.Stream<InboxItemEvent, CallFailure> {
+): (events: Stream.Stream<WatchedEvent, CallFailure>) => Stream.Stream<WatchedEvent, CallFailure> {
   const seconds = stop.timeout;
   if (seconds === null) {
     return (events) => wanted(stop, events);

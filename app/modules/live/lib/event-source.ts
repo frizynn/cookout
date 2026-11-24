@@ -17,6 +17,7 @@ const eventTypes = {
   "identity-deleted": true,
   "inbox-item": true,
   message: true,
+  nudge: true,
   "offline-alert": true,
   presence: true,
   reaction: true,

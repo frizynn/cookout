@@ -1,14 +1,13 @@
 import type { CallFailure, ClientWithAgentSessionState } from "./adapters/sdk.ts";
 import { Command, Flag } from "effect/cli";
 import { Effect, Option, Stream } from "effect";
+import type { Heard, WatchedEvent } from "./watch-connection.ts";
 import { printLine, textLine } from "./watch-lines.ts";
 import { source, start } from "./watch-connection.ts";
 import { startUpLine, stopped, untilStopped } from "./watch-stages.ts";
 import type { AgentSessionStateNeeds } from "./agent-session-state.ts";
 import type { CommandFailed } from "./output.ts";
 import type { Format } from "./watch-lines.ts";
-import type { Heard } from "./watch-connection.ts";
-import type { InboxItemEvent } from "../../../sdk/index.ts";
 import type { StopCondition } from "./watch-stages.ts";
 import { withClient } from "./adapters/sdk.ts";
 
@@ -17,7 +16,7 @@ interface Watching {
   readonly stop: StopCondition;
 }
 
-function printEach(format: Format): (event: InboxItemEvent) => Effect.Effect<void> {
+function printEach(format: Format): (event: WatchedEvent) => Effect.Effect<void> {
   return (event) => printLine({ format, json: event, text: textLine(event) });
 }
 
@@ -60,7 +59,7 @@ const onceFlag = Flag.Boolean("once").pipe(
 const untilMentionFlag = Flag.Boolean("until-mention").pipe(
   Flag.withDefault(false),
   Flag.withDescription(
-    "Print only the first new item that @-mentions this identity, then exit 0, or exit 0 at the start-up unread line when an unread mention is waiting.",
+    "Print only the first new item that @-mentions this identity, or the first nudge, then exit 0, or exit 0 at the start-up unread line when an unread mention or nudge is waiting.",
   ),
 );
 
@@ -84,7 +83,8 @@ export const watchCommand = Command.make(
 ).pipe(
   Command.withDescription(
     "Print one line per new inbox item as it arrives, for Claude Code's Monitor tool: " +
-      "#<channel> thread:<id> @<author>: <first 120 characters> (msg <id>), after one " +
+      "#<channel> thread:<id> @<author>: <first 120 characters> (msg <id>), and for a nudge about a quiet thread " +
+      "#<channel> thread:<id> <nudge text> (nudge <id>), after one " +
       "<n> unread, run cookout inbox line when there are unread items. Exit codes: 0 after --once (at the " +
       "unread line, or else the first item) or " +
       "--until-mention, 1 refused, 2 --timeout passed, 3 token invalid or deleted, 4 agent session token " +

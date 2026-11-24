@@ -2,10 +2,10 @@
 import type { AgentJoinCollectedResponse, AgentJoinRequestResponse, AgentJoinRequestStartedResponse, AgentSessionResponse, JoinCodeResponse, LeaveResponse, ListAgentSessionsResponse, RevokeAgentSessionResponse } from "../../../agent-sessions/index.ts";
 import type { ChannelResponse, ListChannelsResponse } from "../../../channels/index.ts";
 import type { CallCommandResponse, CommandWithSecretResponse, ListCommandsResponse } from "../../../commands/index.ts";
-import type { AgentSessionEvent, ChannelDeletedEvent, ChannelEvent, CleanCloseResponse, CommandEvent, ConnectedEvent, IdentityDeletedEvent, IdentityEvent, InboxItemEvent, MessageEvent, OfflineAlertEvent, PresenceEvent, PresenceResponse, ReactionEvent, ReadPositionEvent, ReadPositionMovedBackEvent, ReadReceiptEvent, SubscriptionEvent, ThreadEvent } from "../../../events/index.ts";
+import type { AgentSessionEvent, ChannelDeletedEvent, ChannelEvent, CleanCloseResponse, CommandEvent, ConnectedEvent, IdentityDeletedEvent, IdentityEvent, InboxItemEvent, MessageEvent, NudgeEvent, OfflineAlertEvent, PresenceEvent, PresenceResponse, ReactionEvent, ReadPositionEvent, ReadPositionMovedBackEvent, ReadReceiptEvent, SubscriptionEvent, ThreadEvent } from "../../../events/index.ts";
 import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../../http/index.ts";
 import type { DeactivateIdentityResponse, IdentityMessageCountResponse, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";
-import type { AckAllResponse, AckResponse, FollowResponse, InboxHistoryResponse, InboxResponse, MarkUnreadResponse, OfflineAlertResponse, ReadPositionsResponse, SubscriptionResponse } from "../../../inbox/index.ts";
+import type { AckAllResponse, AckResponse, FollowResponse, InboxHistoryResponse, InboxResponse, MarkUnreadResponse, NudgeResponse, OfflineAlertResponse, ReadPositionsResponse, SubscriptionResponse } from "../../../inbox/index.ts";
 import type { LoginCollectedResponse, LoginRequestResponse, LoginRequestStartedResponse, LogoutResponse } from "../../../logins/index.ts";
 import type { ListMessagesResponse, ListOpenThreadsResponse, MessageResponse, ReactionsResponse, ThreadResponse, TopLevelMessageResponse } from "../../../messages/index.ts";
 
@@ -32,6 +32,7 @@ export declare function isIdentityDeletedEvent(data: unknown): data is IdentityD
 export declare function isIdentityEvent(data: unknown): data is IdentityEvent;
 export declare function isInboxItemEvent(data: unknown): data is InboxItemEvent;
 export declare function isMessageEvent(data: unknown): data is MessageEvent;
+export declare function isNudgeEvent(data: unknown): data is NudgeEvent;
 export declare function isOfflineAlertEvent(data: unknown): data is OfflineAlertEvent;
 export declare function isPresenceEvent(data: unknown): data is PresenceEvent;
 export declare function isPresenceResponse(data: unknown): data is PresenceResponse;
@@ -55,6 +56,7 @@ export declare function isFollowResponse(data: unknown): data is FollowResponse;
 export declare function isInboxHistoryResponse(data: unknown): data is InboxHistoryResponse;
 export declare function isInboxResponse(data: unknown): data is InboxResponse;
 export declare function isMarkUnreadResponse(data: unknown): data is MarkUnreadResponse;
+export declare function isNudgeResponse(data: unknown): data is NudgeResponse;
 export declare function isOfflineAlertResponse(data: unknown): data is OfflineAlertResponse;
 export declare function isReadPositionsResponse(data: unknown): data is ReadPositionsResponse;
 export declare function isSubscriptionResponse(data: unknown): data is SubscriptionResponse;

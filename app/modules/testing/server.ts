@@ -16,7 +16,9 @@
  * read a CLI session's agent session state folder. `builtWebFolder` stands in for
  * the Vite build that `cookout serve` serves at `/`. A test cookout comes
  * with its own webhook fake, `webhook`, for a command to deliver its calls to,
- * and `pendingDeliveries` reads the deliveries its storage holds as pending.
+ * and `pendingDeliveries` reads the deliveries its storage holds as pending. `restartServerAfter` stops the server,
+ * runs an effect while it is down (moving the `TestClock` on, say) and boots it again on the same storage;
+ * `seedMessage` stores a message as it is given, with any `createdAt`, as if posted before the test began.
  * `cuttableLink` puts a link in front of a server that a test can cut, to
  * drop a client's connection, take down, so every later request gets 502, or
  * answer 502 to just its next few requests (or those to one path), as a deploy

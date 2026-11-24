@@ -1,12 +1,14 @@
 import { Array as Arr, Effect, Option, Stream } from "effect";
 import type { Connected, StreamRequest } from "./source.ts";
+import { Inbox, Nudges } from "../../../inbox/server.ts";
+import { InboxItemEventSchema, NudgeEventSchema } from "./wire.ts";
 import { Messages, Reactions } from "../../../messages/server.ts";
-import { Inbox } from "../../../inbox/server.ts";
-import { InboxItemEventSchema } from "./wire.ts";
 import type { MessageId } from "../../../messages/index.ts";
 import { sseEvent } from "./source.ts";
 
 const inboxItemEvent = sseEvent(InboxItemEventSchema);
+
+const nudgeEvent = sseEvent(NudgeEventSchema);
 
 function reactionItems({ caller }: StreamRequest): Connected<Inbox | Reactions> {
   return Effect.gen(function* subscribeToReactionItems() {
@@ -49,4 +51,15 @@ function inboxItems({ caller, lastEventId }: StreamRequest): Connected<Inbox | M
   });
 }
 
-export { inboxItems, reactionItems };
+function nudges({ caller }: StreamRequest): Connected<Nudges> {
+  return Effect.gen(function* subscribeToNudges() {
+    const scheduler = yield* Nudges;
+    const raised = yield* scheduler.raised;
+    return Stream.fromSubscription(raised).pipe(
+      Stream.filter(({ recipient }) => recipient === caller.name),
+      Stream.mapEffect(({ nudge }) => nudgeEvent({ nudge, type: "nudge" })),
+    );
+  });
+}
+
+export { inboxItems, nudges, reactionItems };

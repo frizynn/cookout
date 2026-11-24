@@ -33,6 +33,8 @@ import {
 } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import type { MessageId } from "../../messages/index.ts";
+import type { NudgeCalls } from "../../inbox/client.ts";
+import { nudgeCalls } from "./nudges.ts";
 import { offlineAlertCalls } from "./offline-alerts.ts";
 import { send } from "./request.ts";
 
@@ -125,8 +127,8 @@ function readingCalls(server: ClientConnection): InboxCalls {
   };
 }
 
-function inboxCalls(server: ClientConnection): InboxCalls & OfflineAlertCalls {
-  return { ...readingCalls(server), ...offlineAlertCalls(server) };
+function inboxCalls(server: ClientConnection): InboxCalls & OfflineAlertCalls & NudgeCalls {
+  return { ...readingCalls(server), ...offlineAlertCalls(server), ...nudgeCalls(server) };
 }
 
 export type {

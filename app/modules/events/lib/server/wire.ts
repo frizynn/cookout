@@ -9,6 +9,7 @@ import type {
   IdentityEvent,
   InboxItemEvent,
   MessageEvent,
+  NudgeEvent,
   OfflineAlertEvent,
   PresenceEvent,
   ReactionEvent,
@@ -23,6 +24,7 @@ import { IdentityNameSchema, IdentitySchema } from "../../../identities/server.t
 import {
   InboxItemSchema,
   MovedBackReadPositionSchema,
+  NudgeSchema,
   OfflineAlertSchema,
   ReadPositionSchema,
   SubscriptionResponseSchema,
@@ -44,6 +46,10 @@ const LiveConnectionIdSchema = Schema.Int.pipe(Schema.refine(isLiveConnectionId,
 
 export const InboxItemEventSchema = matchesWire<InboxItemEvent>()(
   Schema.Struct({ item: InboxItemSchema, type: Schema.Literal("inbox-item") }),
+);
+
+export const NudgeEventSchema = matchesWire<NudgeEvent>()(
+  Schema.Struct({ nudge: NudgeSchema, type: Schema.Literal("nudge") }),
 );
 
 export const ReadPositionEventSchema = matchesWire<ReadPositionEvent>()(

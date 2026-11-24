@@ -1,7 +1,7 @@
 /**
  * The inbox on the backend: the `Inbox` service over `Storage`, and the
  * routes that read the caller's inbox, a page of its inbox history and its read positions, ack a message or the whole
- * inbox, mark a message unread, follow and unfollow a
+ * inbox, mark a message unread or a Nudge read, follow and unfollow a
  * thread, and subscribe to and unsubscribe from a channel. Each read position an ack moves is also
  * published to an in-process hub, which `acked` subscribes to, for live
  * updates. Routes sit
@@ -18,6 +18,7 @@ import {
   InboxResponseSchema,
   MarkUnreadRequestSchema,
   MarkUnreadResponseSchema,
+  NudgeResponseSchema,
   OfflineAlertResponseSchema,
   ReadPositionsResponseSchema,
   SubscriptionResponseSchema,
@@ -30,6 +31,7 @@ import {
   inboxHistoryPath,
   inboxPath,
   markUnreadPath,
+  nudgeReadPath,
   offlineAlertReadPath,
   readPositionsPath,
   subscriptionPath,
@@ -139,6 +141,19 @@ const alertReadRoute: Route<Needs> = {
   path: offlineAlertReadPath,
 };
 
+const nudgeReadRoute: Route<Needs> = {
+  handle: (params) =>
+    Effect.gen(function* nudgeReadRouteHandler() {
+      const caller = yield* Caller;
+      const inbox = yield* Inbox;
+      const answer = yield* inbox.markNudgeRead(caller, String(params["id"]));
+      return yield* HttpServerResponse.schemaJson(NudgeResponseSchema)(answer);
+    }),
+  method: "POST",
+  path: nudgeReadPath,
+  segments: { id: (segment) => DIGITS.test(segment) },
+};
+
 function followRoute(method: Change, change: "follow" | "unfollow"): Route<Needs> {
   return {
     handle: (params) =>
@@ -173,11 +188,18 @@ export { Inbox, inboxLayer } from "./lib/server/service.ts";
 /** Offline alerts: raised by presence, listed in the owner's inbox, sent to the owner's streams as they change. */
 export { OfflineAlerts, offlineAlertsLayer } from "./lib/server/offline-alerts.ts";
 
+/**
+ * The nudge scheduler: one fiber in its Layer's scope that raises every Nudge as it falls due, from storage, and
+ * `raised`, which hears each one. A new message, a close or a reopen wakes it to look again.
+ */
+export { Nudges, nudgesLayer } from "./lib/server/nudge-scheduler.ts";
+
 /** The Schemas of an inbox item, a read position, a moved-back one and a subscription, for the events that carry one. */
 export {
   InboxItemSchema,
   MovedBackReadPositionSchema,
   OfflineAlertSchema,
+  NudgeSchema,
   ReadPositionSchema,
   SubscriptionResponseSchema,
 } from "./lib/server/wire.ts";
@@ -194,6 +216,7 @@ export const inboxRoutes: readonly Route<Needs>[] = [
   ackAllRoute,
   markUnreadRoute,
   alertReadRoute,
+  nudgeReadRoute,
   followRoute("PUT", "follow"),
   followRoute("DELETE", "unfollow"),
   subscriptionRoute("PUT", "subscribe"),
@@ -208,6 +231,7 @@ export const inboxResponseSchemas = {
   InboxHistoryResponse: InboxHistoryResponseSchema,
   InboxResponse: InboxResponseSchema,
   MarkUnreadResponse: MarkUnreadResponseSchema,
+  NudgeResponse: NudgeResponseSchema,
   OfflineAlertResponse: OfflineAlertResponseSchema,
   ReadPositionsResponse: ReadPositionsResponseSchema,
   SubscriptionResponse: SubscriptionResponseSchema,
