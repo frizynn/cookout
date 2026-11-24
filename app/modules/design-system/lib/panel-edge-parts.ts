@@ -11,4 +11,4 @@ interface PanelEdgeParts {
   readonly onClose: (() => void) | null;
 }
 
-export type { EdgeSide, PanelEdgeParts };
+export type { PanelEdgeParts };
