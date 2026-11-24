@@ -1,5 +1,4 @@
-import { BellIcon } from "./bell-icon.tsx";
-import { BellOffIcon } from "./bell-off-icon.tsx";
+import { CHANNEL_MENU_ICONS } from "./channel-menu-icons.ts";
 import { PERSON_MENU_ICONS } from "./person-menu-icons.ts";
 import type { ReactNode } from "react";
 import { ReadIcon } from "./read-icon.tsx";
@@ -14,9 +13,8 @@ const MENU_ICONS = {
   "mark-unread": UnreadIcon,
   react: SmileIcon,
   reply: ReplyIcon,
-  subscribe: BellIcon,
-  unsubscribe: BellOffIcon,
   ...PERSON_MENU_ICONS,
+  ...CHANNEL_MENU_ICONS,
   ...THREAD_MENU_ICONS,
 } as const satisfies Readonly<Record<string, () => ReactNode>>;
 

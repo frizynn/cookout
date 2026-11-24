@@ -22,7 +22,7 @@
  * `shown`, such as "Reconnecting…". In the sidebar, `NavLink` is one link, bold when
  * it has something new (`marked`), highlighted when it is the open item, with
  * an icon and any `Pill` after it: a count read out by its label, loud (the
- * unread colour), quiet, or unseen (read out only); given a `menu`, it is an `ActionMenu`'s target.
+ * unread colour), quiet, or unseen (read out only); a `menu` is its `ActionMenu`.
  * `ActionMenu` is a menu outside a message: right-clicking its children, or Shift+F10 or the menu key in them, opens
  * its `choices` as a context menu named by its `label`; a More actions button (or `buttonLabel`), shown on hover or
  * focus (`inline`: before a name), opens them as a dropdown. `PersonMenu` is a name's. `NavHeading` heads a
@@ -99,7 +99,7 @@
  * link, to `authorHref`, above the row's), what they did (`action`) and in which channel, a
  * short time, a `Closed` marker when it is `closed` (its thread is closed), any `count` of how many of its messages are new ("3 new") and any
  * `context` line (a reply's thread), then what it holds: its `FeedText`, up to
- * two lines, and any `RowButton`, a small button raised above the row's link. A `for-you` row has an accent dot and why,
+ * two lines, and any `RowButton`, a small button raised above the row's link; given a `menu`, it is an `ActionMenu`'s target. A `for-you` row has an accent dot and why,
  * a bold name and bright text; an `activity` row has a muted dot and why, a
  * bold name and bright text; a `read` one is muted. A `current` row, the one
  * whose conversation is shown, is highlighted and its link marked as the current page. A `FeedNoticeRow` sits in

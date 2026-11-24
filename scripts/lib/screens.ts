@@ -26,6 +26,14 @@ const SCREENS: readonly Screen[] = [
   { daysLater: 90, hash: "#/inbox", name: "inbox-deactivated", text: DEACTIVATED_TEXT },
   { click: "Show earlier", hash: "#/inbox", history: "loading", name: "inbox-loading", text: "Loading…" },
   {
+    click: "More actions",
+    clickIn: 'main li:has(a[data-feed-row][href="#/inbox/general/1"])',
+    focus: 'main a[data-feed-row][href="#/inbox/general/1"]',
+    hash: "#/inbox",
+    name: "inbox-row-menu",
+    text: "Open in channel",
+  },
+  {
     focus: 'a[data-feed-row][aria-current="page"]',
     hash: "#/inbox/general/1",
     name: "inbox-thread",
