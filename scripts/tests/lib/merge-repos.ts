@@ -17,7 +17,7 @@ interface Repos {
 
 interface Overrides {
   readonly check?: readonly string[];
-  readonly ci?: (branch: string, sha: string) => Step;
+  readonly ci?: (branch: string, sha: string, rerunRed: boolean) => Step;
   readonly install?: readonly string[];
   readonly migrationsBase?: string;
 }

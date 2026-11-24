@@ -102,7 +102,12 @@ function stateDir(responses: Responses): string {
   return dir;
 }
 
-function fake({ vouchedBy = "", ...responses }: Responses & { readonly vouchedBy?: string }): Fake {
+interface FakeOptions extends Responses {
+  readonly rerunRed?: boolean;
+  readonly vouchedBy?: string;
+}
+
+function fake({ rerunRed = false, vouchedBy = "", ...responses }: FakeOptions): Fake {
   const dir = stateDir(responses);
   return {
     calls: (): readonly string[] => readFileSync(path.join(dir, "calls.log"), "utf8").trim().split("\n"),
@@ -119,6 +124,7 @@ function fake({ vouchedBy = "", ...responses }: Responses & { readonly vouchedBy
           logs.push(line);
         },
         polls: POLLS,
+        rerunRed,
         sleep: () => {
           sleeps.push("slept");
         },
