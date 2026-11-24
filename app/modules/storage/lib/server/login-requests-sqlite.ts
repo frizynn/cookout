@@ -5,7 +5,7 @@ import type {
   LoginRequestsSection,
   NewLoginRequest,
 } from "./login-requests.ts";
-import { Effect, Option, Predicate, Schema } from "effect";
+import { Effect, Function as Fn, Option, Predicate, Schema } from "effect";
 import { GONE, PENDING, collected } from "./login-requests.ts";
 import type { Identity, TokenHash } from "../../../identities/index.ts";
 import { IdentityRow, toIdentity } from "./identity-row.ts";
@@ -112,7 +112,7 @@ function issueIn(db: SqlDatabase, { credentialHash, now, requestHash }: CollectL
       yield* db.run("DELETE FROM login_requests WHERE request_hash = ?", requestHash);
       yield* db.run(ISSUE_CREDENTIAL, credentialHash, host, now, approver);
       const issued = yield* credential(credentialHash);
-      return Option.match(issued, { onNone: () => GONE, onSome: collected });
+      return Option.match(issued, { onNone: Fn.constant(GONE), onSome: collected });
     });
 }
 
