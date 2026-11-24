@@ -170,6 +170,22 @@ const SCREENS: readonly Screen[] = [
   { click: "Collapse sidebar", hash: "#/channels/general", name: "collapsed", text: "Lunch at 12:30." },
   { focus: "main a", hash: "#/inbox", name: "shortcut-list", press: "?", text: "Keyboard shortcuts" },
   { hash: "#/channels/general", liveDown: true, name: "reconnecting", text: "Reconnecting…" },
+  { fill: [["Message", "@"]], hash: "#/channels/general", name: "mention-suggestions", text: "Lunch at 12:30." },
+  {
+    focus: 'aside[aria-label="Thread"] textarea',
+    hash: "#/channels/general/threads/1",
+    name: "thread-mention-suggestions",
+    press: "@",
+    text: "Thanks, both of you.",
+  },
+  {
+    fill: [["Search", "gen"]],
+    focus: "main a",
+    hash: "#/channels/general",
+    name: "jump-box",
+    press: "Control+k",
+    text: "#general",
+  },
 ];
 
 export type { Screen };
