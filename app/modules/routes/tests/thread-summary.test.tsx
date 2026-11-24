@@ -13,6 +13,7 @@ interface Scripted {
 }
 
 interface Summary {
+  readonly name: string | null;
   readonly repliers: readonly (readonly [string | undefined, string | undefined])[];
   readonly text: string;
 }
@@ -51,7 +52,7 @@ async function summaryShown(count: string): Promise<Summary> {
   for (const avatar of within(link).getAllByTestId("replier-avatar")) {
     repliers.push([avatar.dataset["initials"], avatar.dataset["agent"]]);
   }
-  return { repliers, text: link.textContent };
+  return { name: link.getAttribute("aria-label"), repliers, text: link.textContent };
 }
 
 async function threadRepliedTo(): Promise<Replied> {
@@ -64,7 +65,7 @@ async function threadRepliedTo(): Promise<Replied> {
   return { ada, parent };
 }
 
-it("a message with replies shows who replied, how many, how many are new and when, and the summary changes live as a reply arrives", {
+it("a message with replies shows who replied, how many, how many are new and when, keeps that text and adds an arrow on hover, is named as the way to view the thread, and the summary changes live as a reply arrives", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -74,11 +75,12 @@ it("a message with replies shows who replied, how many, how many are new and whe
   const close = openWithClockStopped({ client: adminClient(), hash: `#/channels/${CHANNEL}`, live });
 
   await expect(summaryShown("2 replies")).resolves.toStrictEqual({
+    name: "2 replies, 2 new replies to you, Last reply just now, View thread",
     repliers: [
       ["BS", "true"],
       ["AS", "false"],
     ],
-    text: "2 replies2 new replies to youLast reply just nowView thread →",
+    text: "2 replies2 new replies to youLast reply just now →",
   });
 
   const { message: reply } = await ada.client.createMessage({ channel: CHANNEL, replyTo: parent.id, text: "Third" });

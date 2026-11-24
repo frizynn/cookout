@@ -81,7 +81,7 @@ it("following a message's reply count opens its thread in the panel, beside the 
   expect([globalThis.location.hash, await parentShown(), await messagesIn("Messages")]).toStrictEqual([
     hashOf(parent),
     "adminThe parent",
-    ["adminThe parent2 repliesLast reply just nowView thread →"],
+    ["adminThe parent2 repliesLast reply just now →"],
   ]);
 
   close();
