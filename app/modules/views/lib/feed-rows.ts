@@ -25,14 +25,11 @@ function brokenAt(row: StreamRow, afterFold: ReadonlySet<MessageId>): StreamRow 
   return { ...row, grouped: false };
 }
 
-function dayOfNext(next: FeedRow | null): string | null {
-  if (next === null) {
-    return null;
+function dayOf(row: FeedRow): string | null {
+  if (row.kind === "fold") {
+    return row.day;
   }
-  if (next.kind === "fold") {
-    return null;
-  }
-  return next.row.day;
+  return row.row.day;
 }
 
 function isFold(row: FeedRow | null): boolean {
@@ -44,10 +41,10 @@ function isFold(row: FeedRow | null): boolean {
 
 function dayMerged(rows: readonly FeedRow[]): readonly FeedRow[] {
   const before: readonly (FeedRow | null)[] = [null, ...rows];
-  const after: readonly (FeedRow | null)[] = [...rows.slice(ONE), null];
+  const days = rows.map((row) => dayOf(row));
   return rows.map((row, index) => {
     if (row.kind === "fold") {
-      return { ...row, day: dayOfNext(after[index] ?? null) };
+      return { ...row, day: days[index + ONE] ?? null };
     }
     if (isFold(before[index] ?? null)) {
       return { ...row, row: { ...row.row, day: null } };
