@@ -48,27 +48,20 @@ function keptList<Item>(): (next: readonly Item[]) => readonly Item[] {
   };
 }
 
+function isTopLevel(message: Message | undefined): message is TopLevelMessage {
+  return typeof message === "object" && message.kind === "top-level";
+}
+
+function isReply(message: Message | undefined): message is Reply {
+  return typeof message === "object" && message.kind === "reply";
+}
+
 function topLevelOf(held: MessagesHeld, ids: readonly MessageId[]): readonly TopLevelMessage[] {
-  return ids.flatMap((id) => {
-    const message = heldTopLevel({ held, id });
-    if (message === null) {
-      return [];
-    }
-    return [message];
-  });
+  return ids.map((id) => held.table.get(id)).filter((message) => isTopLevel(message));
 }
 
 function repliesOf(held: MessagesHeld, ids: readonly MessageId[]): readonly Reply[] {
-  return ids.flatMap((id) => {
-    const message = held.table.get(id) ?? null;
-    if (message === null) {
-      return [];
-    }
-    if (message.kind !== "reply") {
-      return [];
-    }
-    return [message];
-  });
+  return ids.map((id) => held.table.get(id)).filter((message) => isReply(message));
 }
 
 function receiptsOf(held: MessagesHeld, messages: readonly Message[]): readonly ReadReceipt[] {

@@ -6,6 +6,7 @@ import type { MessagesHeld } from "./messages-table.ts";
 import type { PostRequest } from "./page-calls.ts";
 import { pageCalls } from "./page-calls.ts";
 import { pageOps } from "./page-reads.ts";
+import { readersOf } from "./messages-held.ts";
 
 const NONE = 0;
 const ONE = 1;
@@ -58,7 +59,7 @@ function pagingOf(options: PagesOptions): Paging {
         await step(ops(name));
       });
     },
-    open: (name) => (readers.get(name) ?? NONE) > NONE,
+    open: (name) => readersOf({ key: name, readers }) > NONE,
     ops,
     options,
     readers,
@@ -74,14 +75,14 @@ function showing(paging: Paging): ChannelPages["show"] {
         await ops.reloadNewest();
       });
     }
-    readers.set(name, (readers.get(name) ?? NONE) + ONE);
+    readers.set(name, readersOf({ key: name, readers }) + ONE);
     if (!started) {
       enqueue(name, async (ops) => {
         await ops.loadNewest();
       });
     }
     return () => {
-      readers.set(name, (readers.get(name) ?? ONE) - ONE);
+      readers.set(name, readersOf({ key: name, readers }) - ONE);
     };
   };
 }

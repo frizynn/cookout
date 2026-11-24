@@ -2,7 +2,7 @@ import type { ChannelPages, PagesOptions } from "./channel-pages.ts";
 import type { CookoutClient, CookoutEvent, MessageId, TopLevelMessage } from "../../sdk/index.ts";
 import type { Held, Queues } from "./messages-held.ts";
 import type { ThreadPlace, Threads } from "./threads-part.ts";
-import { createHeld, createQueues } from "./messages-held.ts";
+import { createHeld, createQueues, readersOf } from "./messages-held.ts";
 import { withEntry, withFresh } from "./messages-table.ts";
 import type { MessagesHeld } from "./messages-table.ts";
 import type { ThreadsClient } from "./thread-reads.ts";
@@ -80,7 +80,7 @@ function beforePart(reading: Omit<BeforeReading, "place">, queues: Queues): Befo
   return {
     back: () => {
       for (const [key, place] of places) {
-        if ((readers.get(key) ?? NONE) > NONE) {
+        if (readersOf({ key, readers }) > NONE) {
           read(place);
         }
       }
@@ -91,9 +91,9 @@ function beforePart(reading: Omit<BeforeReading, "place">, queues: Queues): Befo
         places.set(key, place);
         read(place);
       }
-      readers.set(key, (readers.get(key) ?? NONE) + ONE);
+      readers.set(key, readersOf({ key, readers }) + ONE);
       return () => {
-        readers.set(key, (readers.get(key) ?? ONE) - ONE);
+        readers.set(key, readersOf({ key, readers }) - ONE);
       };
     },
   };

@@ -2,6 +2,8 @@ import { NOTHING_HELD, appliedToMessages } from "./messages-table.ts";
 import type { CookoutEvent } from "../../sdk/index.ts";
 import type { MessagesHeld } from "./messages-table.ts";
 
+const NO_READERS = 0;
+
 interface Reading<Value> {
   readonly request: () => Promise<Value>;
   readonly change: (held: MessagesHeld, value: Value) => MessagesHeld;
@@ -74,4 +76,13 @@ function createQueues(): Queues {
   };
 }
 
-export { type Held, type Queues, createHeld, createQueues };
+interface Counted {
+  readonly readers: ReadonlyMap<string, number>;
+  readonly key: string;
+}
+
+function readersOf({ key, readers }: Counted): number {
+  return readers.get(key) ?? NO_READERS;
+}
+
+export { type Held, type Queues, createHeld, createQueues, readersOf };

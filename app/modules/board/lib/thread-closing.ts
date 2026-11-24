@@ -31,9 +31,6 @@ interface Closed {
 }
 
 function closedAs({ message, parent }: Closed): TopLevelMessage {
-  if (message.id !== parent.id) {
-    return message;
-  }
   const { closedAt, closedBy } = parent;
   return { ...reopened(message), ...(closedAt && closedBy && { closedAt, closedBy }) };
 }

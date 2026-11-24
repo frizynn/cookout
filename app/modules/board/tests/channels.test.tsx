@@ -117,6 +117,27 @@ it("a channel event adds the channel once, and the same event again keeps the se
   expect(channelList(store.snapshot())).toBe(after);
 });
 
+it("a command event adds the command once, and the same event again keeps the selector's object", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const known = await created("store-channels-command");
+  const { hand, store } = opened();
+  await readsAll(store, known.name);
+  const { command } = await adminClient().addCommand({
+    name: "store-heard-deploy",
+    schema: { type: "object" },
+    url: "http://127.0.0.1:9/",
+  });
+  hand.send({ command, type: "command" });
+  const after = commandList(store.snapshot());
+  hand.send({ command, type: "command" });
+
+  expect(commandNames(store).filter((name) => name === command.name)).toStrictEqual([command.name]);
+  expect(commandList(store.snapshot())).toBe(after);
+});
+
 it("a command or a subscription changed while the link was down shows once the link is back", {
   timeout: 5000,
 }, async () => {

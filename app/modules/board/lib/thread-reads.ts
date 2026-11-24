@@ -22,11 +22,10 @@ interface ReplyRequest {
   readonly posted: () => void;
 }
 
-type ThreadChange = (thread: ThreadLoaded | null, read: ThreadResponse) => ThreadLoaded | null;
+type ThreadChange = (thread: ThreadLoaded, read: ThreadResponse) => ThreadLoaded;
 
 interface ThreadOps {
   readonly ack: (id: MessageId) => Promise<void>;
-  readonly load: () => Promise<void>;
   readonly reload: () => Promise<void>;
   readonly reply: (request: ReplyRequest) => Promise<void>;
 }
@@ -55,35 +54,7 @@ function latestOf({ parent, replies }: ThreadResponse): MessageId {
   return latest;
 }
 
-async function readThread(at: ThreadAt, change: ThreadChange): Promise<ThreadResponse> {
-  const read = await at.held.readInto({
-    change: (held, answer) => {
-      const fresh = withFresh({
-        fresh: { messages: [answer.parent, ...answer.replies], receipts: answer.receipts },
-        held,
-      });
-      const next = change(loadedIn(fresh, at.key), answer);
-      if (next === null) {
-        return fresh;
-      }
-      return { ...fresh, threads: withEntry({ key: at.key, map: fresh.threads, value: next }) };
-    },
-    request: async () => {
-      const answer = await at.client.getThread(at.id);
-      return answer;
-    },
-  });
-  return read;
-}
-
-function withRead(thread: ThreadLoaded | null, read: ThreadResponse): ThreadLoaded | null {
-  if (thread === null) {
-    return null;
-  }
-  return { ...thread, parent: read.parent.id, replies: read.replies.map((reply) => reply.id) };
-}
-
-function firstRead(_thread: ThreadLoaded | null, read: ThreadResponse): ThreadLoaded {
+function firstRead(read: ThreadResponse): ThreadLoaded {
   return {
     parent: read.parent.id,
     read: { status: "none" },
@@ -93,12 +64,30 @@ function firstRead(_thread: ThreadLoaded | null, read: ThreadResponse): ThreadLo
   };
 }
 
-function repliedRead(thread: ThreadLoaded | null, read: ThreadResponse): ThreadLoaded | null {
-  const next = withRead(thread, read);
-  if (next === null) {
-    return null;
-  }
-  return { ...next, reply: { status: "idle" } };
+async function readThread(at: ThreadAt, change: ThreadChange): Promise<ThreadResponse> {
+  const read = await at.held.readInto({
+    change: (held, answer) => {
+      const fresh = withFresh({
+        fresh: { messages: [answer.parent, ...answer.replies], receipts: answer.receipts },
+        held,
+      });
+      const thread = loadedIn(fresh, at.key) ?? firstRead(answer);
+      return { ...fresh, threads: withEntry({ key: at.key, map: fresh.threads, value: change(thread, answer) }) };
+    },
+    request: async () => {
+      const answer = await at.client.getThread(at.id);
+      return answer;
+    },
+  });
+  return read;
+}
+
+function withRead(thread: ThreadLoaded, read: ThreadResponse): ThreadLoaded {
+  return { ...thread, parent: read.parent.id, replies: read.replies.map((reply) => reply.id) };
+}
+
+function repliedRead(thread: ThreadLoaded, read: ThreadResponse): ThreadLoaded {
+  return { ...withRead(thread, read), reply: { status: "idle" } };
 }
 
 async function ackThread(at: ThreadAt, id: MessageId): Promise<void> {
@@ -119,7 +108,7 @@ async function ackIfAcking(at: ThreadAt, read: ThreadResponse): Promise<void> {
 
 async function loadThread(at: ThreadAt): Promise<void> {
   try {
-    const read = await readThread(at, firstRead);
+    const read = await readThread(at, withRead);
     await ackIfAcking(at, read);
   } catch (error: unknown) {
     const held = at.held.current();
@@ -155,9 +144,6 @@ function threadOps(at: ThreadAt): ThreadOps {
   return {
     ack: async (id) => {
       await ackThread(at, id);
-    },
-    load: async () => {
-      await loadThread(at);
     },
     reload: async () => {
       await reloadThread(at);
