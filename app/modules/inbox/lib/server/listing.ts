@@ -1,5 +1,6 @@
 import { Array as Arr, Effect, Option, Predicate } from "effect";
 import type {
+  DeactivatedQuietAgent,
   DeactivationOffer,
   InboxHistoryItem,
   InboxHistoryNudge,
@@ -153,6 +154,16 @@ function offersOnPage(
   return Effect.map(deactivationOffers.list(caller, "all"), Arr.reverse);
 }
 
+function deactivatedQuietAgentsOnPage(
+  { caller, deactivationOffers }: Listing & Asking,
+  query: HistoryQuery,
+): Fails<readonly DeactivatedQuietAgent[]> {
+  if (Predicate.isNotUndefined(query.before)) {
+    return Effect.succeed([]);
+  }
+  return Effect.map(deactivationOffers.listDeactivatedQuietAgents(caller, "all"), Arr.reverse);
+}
+
 function historyOf(asking: Listing & Asking, query: HistoryQuery): Fails<InboxHistoryResponse> {
   const { caller, storage } = asking;
   return Effect.gen(function* inboxHistory() {
@@ -162,7 +173,8 @@ function historyOf(asking: Listing & Asking, query: HistoryQuery): Fails<InboxHi
     const alerts = yield* alertsOnPage(asking, query);
     const nudges = yield* nudgesOnPage(asking, query);
     const deactivationOffers = yield* offersOnPage(asking, query);
-    return { alerts, deactivationOffers, hasMore, items: listed, nudges };
+    const deactivatedQuietAgents = yield* deactivatedQuietAgentsOnPage(asking, query);
+    return { alerts, deactivatedQuietAgents, deactivationOffers, hasMore, items: listed, nudges };
   });
 }
 
@@ -181,7 +193,8 @@ function inboxOf(asking: Listing & Asking): Fails<InboxResponse> {
     const alerts = yield* offlineAlerts.list(caller);
     const nudges = yield* unreadNudges(asking);
     const deactivationOffers = yield* offers.list(caller, "open");
-    return { alerts: unread(alerts), deactivationOffers, items, nudges };
+    const deactivatedQuietAgents = yield* offers.listDeactivatedQuietAgents(caller, "unread");
+    return { alerts: unread(alerts), deactivatedQuietAgents, deactivationOffers, items, nudges };
   });
 }
 

@@ -1,12 +1,18 @@
 import type { ActivityRecords, DeactivationOffersSection, OfferSources } from "./deactivation-offers.ts";
 import { Array as Arr, DateTime, Effect, Option, Ref } from "effect";
-import type { DeactivationOfferId } from "../../../inbox/index.ts";
+import type { DeactivatedQuietAgentId, DeactivationOfferId } from "../../../inbox/index.ts";
+import type {
+  DeactivatedQuietAgentRecords,
+  DeactivatedQuietAgentsSection,
+  StoredDeactivatedQuietAgent,
+} from "./deactivated-quiet-agents.ts";
+import { boardOn, deactivationOffersOn } from "./deactivation-offers.ts";
+import { deactivatedQuietAgentsOn, deactivatingWith } from "./deactivated-quiet-agents.ts";
+import { isDeactivatedQuietAgentId, isDeactivationOfferId } from "../../../inbox/index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { OfferRecord } from "./deactivation-offer-board.ts";
 import type { Scope } from "effect";
-import { deactivationOffersOn } from "./deactivation-offers.ts";
-import { isDeactivationOfferId } from "../../../inbox/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 import { openMemoryState } from "./memory-state.ts";
 
@@ -18,6 +24,10 @@ interface Kept {
 
 const NEXT = 1;
 const EMPTY: Kept = { activity: new Map(), last: 0, offers: [] };
+
+function asEntryId(value: number): DeactivatedQuietAgentId {
+  return Option.getOrThrow(Option.liftPredicate(value, isDeactivatedQuietAgentId));
+}
 
 function asOfferId(value: number): DeactivationOfferId {
   return Option.getOrThrow(Option.liftPredicate(value, isDeactivationOfferId));
@@ -71,10 +81,51 @@ function memoryActivityRecords(): Effect.Effect<ActivityRecords, never, Scope.Sc
   });
 }
 
-function memoryDeactivationOffers(sources: OfferSources): Effect.Effect<DeactivationOffersSection, never, Scope.Scope> {
-  return Effect.map(memoryActivityRecords(), (records) =>
-    deactivationOffersOn({ atomically: (work) => work, records, sources }),
-  );
+function memoryDeactivatedQuietAgentRecords(): Effect.Effect<DeactivatedQuietAgentRecords, never, Scope.Scope> {
+  return Effect.gen(function* openDeactivatedQuietAgentRecords() {
+    const state = yield* openMemoryState;
+    const kept = yield* Ref.make<readonly StoredDeactivatedQuietAgent[]>([]);
+    return {
+      deactivatedQuietAgents: Effect.andThen(state.ensureOpen, Ref.get(kept)),
+      insert: (record) =>
+        Effect.andThen(
+          state.ensureOpen,
+          Ref.modify(kept, (all) => {
+            const stored: StoredDeactivatedQuietAgent = { ...record, id: asEntryId(all.length + NEXT), read: false };
+            return [stored, [...all, stored]] as const;
+          }),
+        ),
+      markRead: (ids) =>
+        Effect.andThen(
+          state.ensureOpen,
+          Ref.update(kept, (all) =>
+            Arr.map(all, (record) => ({ ...record, read: record.read || ids.includes(record.id) })),
+          ),
+        ),
+    };
+  });
+}
+
+function memoryDeactivationOffers(
+  sources: OfferSources,
+): Effect.Effect<DeactivationOffersSection & DeactivatedQuietAgentsSection, never, Scope.Scope> {
+  return Effect.gen(function* openDeactivationOffers() {
+    const records = yield* memoryActivityRecords();
+    const entries = yield* memoryDeactivatedQuietAgentRecords();
+    const on = {
+      atomically: <Value, Failure>(work: Effect.Effect<Value, Failure>): Effect.Effect<Value, Failure> => work,
+      records,
+      sources,
+    };
+    return {
+      ...deactivationOffersOn(on),
+      ...deactivatedQuietAgentsOn({
+        board: boardOn(on),
+        deactivate: deactivatingWith(sources.deactivateIdentity),
+        records: entries,
+      }),
+    };
+  });
 }
 
 export { memoryDeactivationOffers };

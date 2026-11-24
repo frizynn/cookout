@@ -5,6 +5,7 @@ import { agentSessionExpired, agentSessionRevoked } from "../../../agent-session
 import type { OfflineReason } from "../../index.ts";
 import { Option } from "effect";
 import type { Refusal } from "../../../http/index.ts";
+import { THE_COOKOUT } from "../../../identities/server.ts";
 
 type Cause = TokensEnded["cause"];
 
@@ -45,16 +46,20 @@ function refusalFor(cause: Cause): Refusal {
   return refusals[cause];
 }
 
-function ownedBy(identity: Identity, by: Identity["name"]): boolean {
+function ownedBy(identity: Identity, by: TokensEnded["by"]): boolean {
   return identity.kind === "agent" && identity.owner === by;
 }
 
-function causedByOwner(ended: TokensEnded, found: Option.Option<Identity>): boolean {
-  return ended.by === ended.identity || Option.exists(found, (identity) => ownedBy(identity, ended.by));
+function expected(ended: TokensEnded, found: Option.Option<Identity>): boolean {
+  return (
+    ended.by === THE_COOKOUT ||
+    ended.by === ended.identity ||
+    Option.exists(found, (identity) => ownedBy(identity, ended.by))
+  );
 }
 
 function endOfTokens({ ended, found }: { readonly ended: TokensEnded; readonly found: Option.Option<Identity> }): End {
-  return { offlineReason: reasons[ended.cause], unexpected: !causedByOwner(ended, found) };
+  return { offlineReason: reasons[ended.cause], unexpected: !expected(ended, found) };
 }
 
 function refusedEnd({ code }: Refusal): End {

@@ -3,6 +3,7 @@ import type {
   AckAllResponse,
   AckRequest,
   AckResponse,
+  DeactivatedQuietAgentResponse,
   DeactivationOfferResponse,
   FollowResponse,
   InboxHistoryResponse,
@@ -62,6 +63,7 @@ interface InboxService {
   readonly markAlertRead: (caller: Identity, asked: string) => Fails<OfflineAlertResponse>;
   readonly markNudgeRead: (caller: Identity, asked: string) => Fails<NudgeResponse>;
   readonly keepDeactivationOffer: (caller: Identity, asked: string) => Fails<DeactivationOfferResponse>;
+  readonly markDeactivatedQuietAgentRead: (caller: Identity, asked: string) => Fails<DeactivatedQuietAgentResponse>;
   readonly readPositions: (caller: Identity) => Fails<ReadPositionsResponse>;
   readonly acked: Effect.Effect<PubSub.Subscription<Acked>, never, Scope.Scope>;
   readonly markUnread: (caller: Identity, id: MessageId) => Fails<MarkUnreadResponse>;
@@ -92,6 +94,7 @@ function inboxOn(on: InboxOn): InboxService {
     follow: following({ change: storage.followThread, isFollowing: true }),
     keepDeactivationOffer: deactivationOffers.keep,
     markAlertRead: (caller, asked) => Effect.map(offlineAlerts.markRead(caller, asked), (alert) => ({ alert })),
+    markDeactivatedQuietAgentRead: deactivationOffers.markDeactivatedQuietAgentRead,
     markNudgeRead: (caller, asked) =>
       Effect.tap(listing.markNudgeRead(caller, asked), ({ nudge }) =>
         nudgesRead.publish({ nudgeIds: [nudge.id], recipient: caller.name }),

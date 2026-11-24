@@ -2,10 +2,10 @@
 import type { AgentJoinCollectedResponse, AgentJoinRequestResponse, AgentJoinRequestStartedResponse, AgentSessionResponse, JoinCodeResponse, LeaveResponse, ListAgentSessionsResponse, RevokeAgentSessionResponse } from "../../../agent-sessions/index.ts";
 import type { ChannelResponse, ListChannelsResponse } from "../../../channels/index.ts";
 import type { CallCommandResponse, CommandWithSecretResponse, ListCommandsResponse } from "../../../commands/index.ts";
-import type { AgentSessionEvent, ChannelDeletedEvent, ChannelEvent, CleanCloseResponse, CommandEvent, ConnectedEvent, DeactivationOfferEvent, IdentityDeletedEvent, IdentityEvent, InboxItemEvent, MessageEvent, NudgeEvent, NudgeReadEvent, OfflineAlertEvent, PresenceEvent, PresenceResponse, ReactionEvent, ReadPositionEvent, ReadPositionMovedBackEvent, ReadReceiptEvent, SubscriptionEvent, ThreadEvent } from "../../../events/index.ts";
+import type { AgentSessionEvent, ChannelDeletedEvent, ChannelEvent, CleanCloseResponse, CommandEvent, ConnectedEvent, DeactivatedQuietAgentEvent, DeactivationOfferEvent, IdentityDeletedEvent, IdentityEvent, InboxItemEvent, MessageEvent, NudgeEvent, NudgeReadEvent, OfflineAlertEvent, PresenceEvent, PresenceResponse, ReactionEvent, ReadPositionEvent, ReadPositionMovedBackEvent, ReadReceiptEvent, SubscriptionEvent, ThreadEvent } from "../../../events/index.ts";
 import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../../http/index.ts";
 import type { DeactivateIdentityResponse, IdentityMessageCountResponse, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";
-import type { AckAllResponse, AckResponse, DeactivationOfferResponse, FollowResponse, InboxHistoryResponse, InboxResponse, MarkUnreadResponse, NudgeResponse, OfflineAlertResponse, ReadPositionsResponse, SubscriptionResponse } from "../../../inbox/index.ts";
+import type { AckAllResponse, AckResponse, DeactivatedQuietAgentResponse, DeactivationOfferResponse, FollowResponse, InboxHistoryResponse, InboxResponse, MarkUnreadResponse, NudgeResponse, OfflineAlertResponse, ReadPositionsResponse, SubscriptionResponse } from "../../../inbox/index.ts";
 import type { LoginCollectedResponse, LoginRequestResponse, LoginRequestStartedResponse, LogoutResponse } from "../../../logins/index.ts";
 import type { ListMessagesResponse, ListOpenThreadsResponse, MessageResponse, ReactionsResponse, ThreadResponse, TopLevelMessageResponse } from "../../../messages/index.ts";
 
@@ -28,6 +28,7 @@ export declare function isChannelEvent(data: unknown): data is ChannelEvent;
 export declare function isCleanCloseResponse(data: unknown): data is CleanCloseResponse;
 export declare function isCommandEvent(data: unknown): data is CommandEvent;
 export declare function isConnectedEvent(data: unknown): data is ConnectedEvent;
+export declare function isDeactivatedQuietAgentEvent(data: unknown): data is DeactivatedQuietAgentEvent;
 export declare function isDeactivationOfferEvent(data: unknown): data is DeactivationOfferEvent;
 export declare function isIdentityDeletedEvent(data: unknown): data is IdentityDeletedEvent;
 export declare function isIdentityEvent(data: unknown): data is IdentityEvent;
@@ -54,6 +55,7 @@ export declare function isIdentityWithTokenResponse(data: unknown): data is Iden
 export declare function isListIdentitiesResponse(data: unknown): data is ListIdentitiesResponse;
 export declare function isAckAllResponse(data: unknown): data is AckAllResponse;
 export declare function isAckResponse(data: unknown): data is AckResponse;
+export declare function isDeactivatedQuietAgentResponse(data: unknown): data is DeactivatedQuietAgentResponse;
 export declare function isDeactivationOfferResponse(data: unknown): data is DeactivationOfferResponse;
 export declare function isFollowResponse(data: unknown): data is FollowResponse;
 export declare function isInboxHistoryResponse(data: unknown): data is InboxHistoryResponse;

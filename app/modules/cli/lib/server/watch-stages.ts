@@ -42,10 +42,10 @@ function unreadUpTo(opened: ClientWithAgentSessionState, latest: MessageId | nul
   }
   return Effect.map(
     whileUnavailable(callClient((client) => client.inbox())(opened)),
-    ({ deactivationOffers, items, nudges }) => {
+    ({ deactivatedQuietAgents, deactivationOffers, items, nudges }) => {
       const unread = Arr.filter(items, ({ message }) => message.id <= latest);
       const mentioned = Arr.some(unread, ({ reasons }) => reasons.includes("mention"));
-      const asking = [...nudges, ...deactivationOffers];
+      const asking = [...nudges, ...deactivationOffers, ...deactivatedQuietAgents];
       return { count: unread.length + asking.length, mentioned: mentioned || Arr.isReadonlyArrayNonEmpty(asking) };
     },
   );

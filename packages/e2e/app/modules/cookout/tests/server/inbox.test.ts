@@ -69,7 +69,13 @@ it.live(
           { ...inboxItem(reply, ["followed-thread", "mention"]), channel: { name: channel }, parent: { id: top } },
         ],
       });
-      expect(firstAfter).toStrictEqual({ alerts: [], deactivationOffers: [], items: [], nudges: [] });
+      expect(firstAfter).toStrictEqual({
+        alerts: [],
+        deactivatedQuietAgents: [],
+        deactivationOffers: [],
+        items: [],
+        nudges: [],
+      });
       expect(secondInbox).toMatchObject({
         items: [inboxItem(top, ["mention"]), inboxItem(thanks, ["followed-thread"])],
       });
@@ -95,7 +101,13 @@ it.live("an agent's ack clears its inbox items, and the next inbox run no longer
       { ...succeeded, stdoutJson: { readPosition: { channel, messageId: top, thread: null } } },
       { ...succeeded, stdoutJson: { readPosition: { channel, messageId: reply, thread: top } } },
     ]);
-    expect(after).toStrictEqual({ alerts: [], deactivationOffers: [], items: [], nudges: [] });
+    expect(after).toStrictEqual({
+      alerts: [],
+      deactivatedQuietAgents: [],
+      deactivationOffers: [],
+      items: [],
+      nudges: [],
+    });
   }).pipe(Effect.provide([cookoutUnderTest, NodeServices.layer])),
 );
 

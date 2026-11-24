@@ -1,5 +1,5 @@
+import { DEACTIVATED_QUIET_AGENTS_MIGRATION, DEACTIVATION_OFFERS_MIGRATION } from "./deactivation-offers-sqlite.ts";
 import { Effect, FileSystem, Schema } from "effect";
-import { DEACTIVATION_OFFERS_MIGRATION } from "./deactivation-offers-sqlite.ts";
 import { NUDGES_MIGRATION } from "./nudges-sqlite.ts";
 import { OFFLINE_ALERTS_MIGRATION } from "./offline-alerts.ts";
 import { REACTIONS_MIGRATION } from "./reactions-sqlite.ts";
@@ -193,6 +193,7 @@ const migrations: readonly string[] = [
   DEACTIVATION_OFFERS_MIGRATION,
   `ALTER TABLE message_id_sequence ADD COLUMN latest_created_at TEXT;
    UPDATE message_id_sequence SET latest_created_at = (SELECT max(created_at) FROM messages);`,
+  DEACTIVATED_QUIET_AGENTS_MIGRATION,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

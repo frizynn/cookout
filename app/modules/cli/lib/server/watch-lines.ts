@@ -1,5 +1,11 @@
 import { Array as Arr, Console, Effect, Schema, String as Str, pipe } from "effect";
-import type { DeactivationOfferEvent, InboxItemEvent, NudgeEvent, Reaction } from "../../../sdk/index.ts";
+import type {
+  DeactivatedQuietAgentEvent,
+  DeactivationOfferEvent,
+  InboxItemEvent,
+  NudgeEvent,
+  Reaction,
+} from "../../../sdk/index.ts";
 import { reactionSymbols } from "../../../messages/index.ts";
 
 type Format = "json" | "text";
@@ -19,6 +25,10 @@ function offerLine({ deactivationOffer: { id, text } }: DeactivationOfferEvent):
   return `${text} (deactivation offer ${String(id)})`;
 }
 
+function deactivatedLine({ deactivatedQuietAgent: { id, identity, text } }: DeactivatedQuietAgentEvent): string {
+  return `${text} Run cookout identity reactivate ${identity.name} to undo it. (deactivated agent ${String(id)})`;
+}
+
 function itemLine({ item: { channel, message, newReactions = [], parent } }: InboxItemEvent): string {
   const shown = pipe(message.text, Str.replaceAll(/\s+/gu, " "), Str.takeLeft(SHOWN_CHARACTERS));
   const where = `#${channel.name} thread:${String(parent.id)}`;
@@ -29,12 +39,15 @@ function itemLine({ item: { channel, message, newReactions = [], parent } }: Inb
   return `${where} @${message.author.name}: ${shown} ${at}`;
 }
 
-function textLine(event: InboxItemEvent | NudgeEvent | DeactivationOfferEvent): string {
+function textLine(event: InboxItemEvent | NudgeEvent | DeactivationOfferEvent | DeactivatedQuietAgentEvent): string {
   if (event.type === "nudge") {
     return nudgeLine(event);
   }
   if (event.type === "deactivation-offer") {
     return offerLine(event);
+  }
+  if (event.type === "deactivated-quiet-agent") {
+    return deactivatedLine(event);
   }
   return itemLine(event);
 }

@@ -91,7 +91,10 @@ export type CookoutClientOptions = {
 };
 
 export type CookoutClient = CallGroups &
-  Pick<ReturnType<typeof inboxCalls>, "keepDeactivationOffer" | "markNudgeRead" | "markOfflineAlertRead"> & {
+  Pick<
+    ReturnType<typeof inboxCalls>,
+    "keepDeactivationOffer" | "markDeactivatedQuietAgentRead" | "markNudgeRead" | "markOfflineAlertRead"
+  > & {
     /** `GET /v1/health`. Resolves when the server and its storage are usable. */
     readonly health: () => Promise<HealthResponse>;
     /** `GET /v1/whoami`: the identity behind this client's token. */
@@ -186,7 +189,7 @@ export type CookoutClient = CallGroups &
     readonly revokeAgentSession: AgentSessionCalls["revokeAgentSession"];
     /**
      * `GET /v1/inbox`: what the caller hasn't read, oldest first, each message once with every reason it is there
-     * (`followed-thread`, `mention`, `subscribed-channel`), its channel and its thread's top-level message. The caller's own messages never appear. Beside them, `alerts` lists the caller's unread offline alerts, oldest first, and `nudges` its unread Nudges, oldest first about quiet threads it started, and `deactivationOffers` its open Deactivation offers. Reading it changes nothing.
+     * (`followed-thread`, `mention`, `subscribed-channel`), its channel and its thread's top-level message. The caller's own messages never appear. Beside them, `alerts` lists the caller's unread offline alerts, oldest first, and `nudges` its unread Nudges, oldest first about quiet threads it started, `deactivationOffers` its open Deactivation offers and `deactivatedQuietAgents` its unread deactivated quiet agents. Reading it changes nothing.
      */
     readonly inbox: () => Promise<InboxResponse>;
     /**
@@ -231,7 +234,7 @@ export type CookoutClient = CallGroups &
      * `GET /v1/events`: opens one Server-Sent Events stream, resolving once the server has accepted it. Iterate it for
      * each new inbox item (`inbox-item`) the moment another identity posts it (the caller's own posts never arrive), and
      * each new read position (`read-position`) the moment any session of the caller acks, and each read position moved
-     * back (`read-position-moved-back`) the moment one marks a message unread, so several sessions stay in sync. With `allChannels`, it also sends every new message on every channel (`message`), each newly recorded read receipt (`read-receipt`), each change to a message's reactions (`reaction`), each thread closed or reopened (`thread`) and each change to anyone's presence (`presence`), as the web UI needs. Every stream of an agent's owner also sends each offline alert of the owner's as it is raised, back online or read (`offline-alert`), and every stream of the caller each Nudge for it as it is raised (`nudge`), the IDs of its Nudges as they are marked read (`nudge-read`), and each Deactivation offer as it changes (`deactivation-offer`).
+     * back (`read-position-moved-back`) the moment one marks a message unread, so several sessions stay in sync. With `allChannels`, it also sends every new message on every channel (`message`), each newly recorded read receipt (`read-receipt`), each change to a message's reactions (`reaction`), each thread closed or reopened (`thread`) and each change to anyone's presence (`presence`), as the web UI needs. Every stream of an agent's owner also sends each offline alert of the owner's as it is raised, back online or read (`offline-alert`), and every stream of the caller each Nudge for it as it is raised (`nudge`), the IDs of its Nudges as they are marked read (`nudge-read`), each Deactivation offer and deactivated quiet agent as it changes.
      * Each event is checked against the protocol (`bad_response` otherwise); an event type this SDK doesn't know, from
      * a newer server, is skipped. `close` drops the connection, which the server counts as a drop ("connection lost" after the grace); `closeCleanly` first sends `DELETE /v1/events/:connection` with the `connected` event's connection ID, so the end is expected, as `cookout watch` exiting on purpose does.
      * Opened with an agent session token, the stream moves its expiry on while open, and once the token is revoked (`leave`, or another session's `join --force`) the

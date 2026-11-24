@@ -13,6 +13,7 @@ const eventTypes = {
   channel: true,
   "channel-deleted": true,
   command: true,
+  "deactivated-quiet-agent": true,
   "deactivation-offer": true,
   identity: true,
   "identity-deleted": true,

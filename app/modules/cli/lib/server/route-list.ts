@@ -85,16 +85,9 @@ export const domainLayers = Layer.mergeAll(
   addressLimitLayer,
   presenceLayer,
 ).pipe(
-  Layer.provideMerge(Layer.mergeAll(messagesLayer, agentSessionsLayer)),
+  Layer.provideMerge(Layer.mergeAll(messagesLayer, agentSessionsLayer, deactivationOffersLayer)),
   Layer.provideMerge(
-    Layer.mergeAll(
-      identityChangesLayer,
-      commandChangesLayer,
-      readReceiptsLayer,
-      reactionsLayer,
-      offlineAlertsLayer,
-      deactivationOffersLayer,
-    ),
+    Layer.mergeAll(identityChangesLayer, commandChangesLayer, readReceiptsLayer, reactionsLayer, offlineAlertsLayer),
   ),
 );
 

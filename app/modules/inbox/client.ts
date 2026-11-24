@@ -1,8 +1,16 @@
 /**
- * The SDK's calls that mark one Nudge read and answer Keep on a Deactivation offer. Their wire types and paths are in
+ * The SDK's calls that mark one Nudge read, answer Keep on a Deactivation offer and mark an entry about a deactivated
+ * quiet agent read. Their wire types and paths are in
  * `index.ts`.
  */
-import type { DeactivationOfferId, DeactivationOfferResponse, NudgeId, NudgeResponse } from "./index.ts";
+import type {
+  DeactivatedQuietAgentId,
+  DeactivatedQuietAgentResponse,
+  DeactivationOfferId,
+  DeactivationOfferResponse,
+  NudgeId,
+  NudgeResponse,
+} from "./index.ts";
 
 /** The SDK's call on a Nudge. */
 export interface NudgeCalls {
@@ -14,7 +22,7 @@ export interface NudgeCalls {
   readonly markNudgeRead: (nudgeId: NudgeId) => Promise<NudgeResponse>;
 }
 
-/** The SDK's call on a Deactivation offer. */
+/** The SDK's calls on a Deactivation offer and an entry about a deactivated quiet agent. */
 export interface DeactivationOfferCalls {
   /**
    * `POST /v1/inbox/deactivation-offers/:id/keep`: answers Keep on one of the caller's Deactivation offers, clearing it
@@ -23,4 +31,10 @@ export interface DeactivationOfferCalls {
    * `deactivateIdentity`.
    */
   readonly keepDeactivationOffer: (offerId: DeactivationOfferId) => Promise<DeactivationOfferResponse>;
+  /**
+   * `POST /v1/inbox/deactivated-quiet-agents/:id/read`: marks one of the caller's entries about deactivated quiet agents read, for every
+   * recipient, and answers it. One the caller didn't get, or one that doesn't exist, is 404
+   * `deactivated_quiet_agent_not_found`. Reactivating the agent (`reactivateIdentity`) also reads it.
+   */
+  readonly markDeactivatedQuietAgentRead: (entryId: DeactivatedQuietAgentId) => Promise<DeactivatedQuietAgentResponse>;
 }

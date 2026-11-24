@@ -3,9 +3,12 @@ import type { DeactivationOffer, DeactivationOfferId, DeactivationOfferResponse 
 import type { Identity, IdentityName } from "../../../identities/index.ts";
 import type { OfferChanges, StorageUnavailable, StoredDeactivationOffer } from "../../../storage/server.ts";
 import { deactivationOfferText, isDeactivationOfferId } from "../../index.ts";
+import type { DeactivatedQuietAgentsService } from "./deactivated-quiet-agents.ts";
+import type { IdentityChanges } from "../../../identities/server.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Scope } from "effect";
 import { Storage } from "../../../storage/server.ts";
+import { deactivatedQuietAgentsOn } from "./deactivated-quiet-agents.ts";
 import { echoed } from "../../../http/index.ts";
 
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
@@ -15,7 +18,7 @@ interface OfferChanged {
   readonly deactivationOffer: DeactivationOffer;
 }
 
-interface DeactivationOffersService {
+interface DeactivationOffersService extends DeactivatedQuietAgentsService {
   readonly list: (
     caller: Identity,
     which: "open" | "all",
@@ -105,14 +108,16 @@ function keptOffer(
   return storage.keepDeactivationOffer(caller.name, id);
 }
 
-const deactivationOffersLayer: Layer.Layer<DeactivationOffers, never, Storage> = Layer.effect(
+const deactivationOffersLayer: Layer.Layer<DeactivationOffers, never, Storage | IdentityChanges> = Layer.effect(
   DeactivationOffers,
   Effect.gen(function* deactivationOffersOnStorage() {
     const storage = yield* Storage;
     const hub = yield* PubSub.unbounded<OfferChanged>();
     const publish = publishOn({ publishAll: (changed) => PubSub.publishAll(hub, changed), storage });
     const presence = yield* PubSub.sliding<true>(ONE_WAKE_IS_ENOUGH);
+    const deactivatedAgents = yield* deactivatedQuietAgentsOn(storage);
     return {
+      ...deactivatedAgents,
       changed: PubSub.subscribe(hub),
       keep: (caller, asked) =>
         Effect.gen(function* keepOffer() {

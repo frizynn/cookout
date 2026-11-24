@@ -48,7 +48,8 @@ interface DeactivationOffersSection {
   ) => Fails<readonly StoredDeactivationOffer[]>;
 }
 
-type OfferSources = Pick<IdentitiesSection, "listIdentities"> & Pick<PresenceSection, "listPresence">;
+type OfferSources = Pick<IdentitiesSection, "listIdentities" | "deactivateIdentity"> &
+  Pick<PresenceSection, "listPresence">;
 
 interface OffersOn {
   readonly records: ActivityRecords;
@@ -73,7 +74,7 @@ function onlineIn(presence: Effect.Success<ReturnType<OfferSources["listPresence
   return new Set(Arr.flatMap(presence, ({ identity, online }) => Arr.filter([identity], () => online)));
 }
 
-function boardOn({ records, sources }: OffersOn): Fails<Board> {
+function boardOn({ records, sources }: Pick<OffersOn, "records" | "sources">): Fails<Board> {
   return Effect.gen(function* readBoard() {
     const identities = yield* sources.listIdentities();
     const presence = yield* sources.listPresence(Arr.map(identities, ({ name }) => name));
@@ -176,5 +177,6 @@ export {
   type OfferChanges,
   type OfferSources,
   type StoredDeactivationOffer,
+  boardOn,
   deactivationOffersOn,
 };

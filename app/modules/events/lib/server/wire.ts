@@ -5,6 +5,7 @@ import type {
   CleanCloseResponse,
   CommandEvent,
   ConnectedEvent,
+  DeactivatedQuietAgentEvent,
   DeactivationOfferEvent,
   IdentityDeletedEvent,
   IdentityEvent,
@@ -23,6 +24,7 @@ import type {
 } from "../../index.ts";
 import { ChannelNameSchema, ChannelSchema } from "../../../channels/server.ts";
 import {
+  DeactivatedQuietAgentSchema,
   DeactivationOfferSchema,
   InboxItemSchema,
   MovedBackReadPositionSchema,
@@ -58,6 +60,13 @@ export const NudgeEventSchema = matchesWire<NudgeEvent>()(
 
 export const NudgeReadEventSchema = matchesWire<NudgeReadEvent>()(
   Schema.Struct({ nudgeIds: Schema.Array(NudgeIdSchema), type: Schema.Literal("nudge-read") }),
+);
+
+export const DeactivatedQuietAgentEventSchema = matchesWire<DeactivatedQuietAgentEvent>()(
+  Schema.Struct({
+    deactivatedQuietAgent: DeactivatedQuietAgentSchema,
+    type: Schema.Literal("deactivated-quiet-agent"),
+  }),
 );
 
 export const DeactivationOfferEventSchema = matchesWire<DeactivationOfferEvent>()(
