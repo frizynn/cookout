@@ -92,13 +92,10 @@ const pausedMidRunStorage: Layer.Layer<Storage> = Layer.effect(
   })),
 ).pipe(Layer.provide(memoryStorage));
 
-function deactivatingCreator(storage: Storage["Service"], run: ScheduledRun): Effect.Effect<void, StorageUnavailable> {
-  return Effect.flatMap(storage.findScheduledMessage(run.id), (schedule) => {
-    if (Predicate.isUndefined(schedule)) {
-      return Effect.void;
-    }
-    return Effect.asVoid(storage.deactivateIdentity(schedule.creator));
-  });
+function deactivatingCreator(storage: Storage["Service"], run: ScheduledRun): Effect.Effect<void> {
+  return Effect.flatMap(Effect.flatMap(storage.findScheduledMessage(run.id), Effect.fromNullishOr), ({ creator }) =>
+    Effect.asVoid(storage.deactivateIdentity(creator)),
+  ).pipe(Effect.orDie);
 }
 
 const deactivatedMidRunStorage: Layer.Layer<Storage> = Layer.effect(
