@@ -515,6 +515,12 @@
       }
     },
     {
+      "files": ["app/modules/design-system/lib/panel-edge.tsx"],
+      "rules": {
+        "jsx-a11y/prefer-tag-over-role": "off"
+      }
+    },
+    {
       "files": ["app/modules/page-title/**"],
       "rules": {
         "web-rules/page-title-owner": "off"
