@@ -82,4 +82,3 @@ export const runCookout = (args: readonly string[], layers: ServeLayers) =>
   );
 
 export { exitCodeAfterFailure } from "./lib/server/interrupted.ts";
-export { exitCodeFor } from "./lib/server/output.ts";
