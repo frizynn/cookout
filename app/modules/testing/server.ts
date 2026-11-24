@@ -82,7 +82,6 @@ export {
 } from "./lib/server/storage.ts";
 export { emptyPostgresDatabase, onPostgresDatabase } from "./lib/server/postgres.ts";
 export { assetStoreLayers, freshS3Bucket, s3ServeSettings } from "./lib/server/s3.ts";
-export { postgresContractFiles } from "./lib/server/postgres-contract-files.ts";
 
 export {
   type BootedServer,

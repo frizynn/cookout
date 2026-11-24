@@ -1,12 +1,31 @@
 import { Array as Arr, Effect, Path, Record as Rec, Redacted, String as Str } from "effect";
-import type { AssetStore, S3Bucket, Storage, StorageUnavailable } from "../../../storage/server.ts";
+import type { AssetStore, S3Bucket, Storage, StorageSetting, StorageUnavailable } from "../../../storage/server.ts";
 import type { Config, FileSystem, Layer } from "effect";
-import { assetStoreKind, assetStoreRule, assetsDirectory, s3SettingNames, s3Settings } from "../../../config/server.ts";
-import { diskAssetStore, s3AssetStore } from "../../../storage/server.ts";
+import {
+  assetStoreKind,
+  assetStoreRule,
+  assetsDirectory,
+  databaseUrl,
+  s3SettingNames,
+  s3Settings,
+} from "../../../config/server.ts";
+import {
+  diskAssetStore,
+  s3AssetStore,
+  shownDatabase,
+  storageSetting,
+  withoutDatabaseSecret,
+} from "../../../storage/server.ts";
 import type { CommandFailed } from "./output.ts";
 import { refused } from "./output.ts";
 
-type ServeStorage = (path: string) => Layer.Layer<Storage, StorageUnavailable, FileSystem.FileSystem>;
+type ServeStorage = (setting: StorageSetting) => Layer.Layer<Storage, StorageUnavailable, FileSystem.FileSystem>;
+
+interface ServedStorage {
+  readonly database: string;
+  readonly redact: (text: string) => string;
+  readonly setting: StorageSetting;
+}
 
 type ChosenAssetStore = Layer.Layer<AssetStore, StorageUnavailable, FileSystem.FileSystem | Path.Path>;
 
@@ -78,5 +97,12 @@ function chosenAssetStore(
   });
 }
 
-export { chosenAssetStore };
-export type { ServeStorage };
+function servedStorage(path: string): Effect.Effect<ServedStorage, Config.ConfigError> {
+  return Effect.map(databaseUrl, (url) => {
+    const setting = storageSetting({ path, url });
+    return { database: shownDatabase(setting), redact: withoutDatabaseSecret(setting), setting };
+  });
+}
+
+export { chosenAssetStore, servedStorage };
+export type { ServeStorage, ServedStorage };

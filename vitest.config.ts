@@ -1,10 +1,10 @@
 import { defineConfig } from "vitest/config";
-import { postgresContractFiles } from "./app/modules/testing/lib/server/postgres-contract-files.ts";
 
 const postgresFiles = [
-  ...postgresContractFiles.map((name) => `app/modules/storage/tests/server/${name}.contract.test.ts`),
+  "app/modules/storage/tests/server/*.contract.test.ts",
   "app/modules/storage/tests/server/postgres.test.ts",
   "app/modules/storage/tests/server/postgres-query-plans.test.ts",
+  "app/modules/cli/tests/server/serve-postgres.test.ts",
 ];
 
 const s3Files = [
@@ -56,6 +56,7 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          exclude: s3Files,
           globalSetup: ["./scripts/postgres-test-container.ts"],
           include: postgresFiles,
           isolate: false,

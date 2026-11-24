@@ -3,8 +3,8 @@
  * atomic stay one method each, and Layers that pass the same contract
  * suite. Every method fails with `StorageUnavailable` when the store can't be used.
  */
-import { Context, Layer } from "effect";
-import type { Effect, FileSystem, Redacted } from "effect";
+import { Array as Arr, Context, Layer, Redacted, String as Str } from "effect";
+import type { Effect, FileSystem } from "effect";
 import type { FullStorage } from "./lib/server/memory-store.ts";
 import { StorageUnavailable } from "./lib/server/errors.ts";
 import { openMemoryStore } from "./lib/server/memory-store.ts";
@@ -114,7 +114,7 @@ export function postgresQueryPlans<Failure>(planning: {
  * in order under an advisory lock so two processes starting together apply
  * each once; a database newer than the list fails with "Upgrade cookout".
  * Every section is on Postgres, search included (a GIN index over each
- * message's words), and nothing selects this Layer at runtime yet.
+ * message's words). `cookout serve` opens it when `DATABASE_URL` is set.
  * @param url The database URL, kept redacted.
  * @returns The store, failing with `StorageUnavailable` if it can't be opened.
  */
@@ -124,3 +124,76 @@ export function postgresStorage(url: Redacted.Redacted): Layer.Layer<Storage, St
 
 /** A store held in this process only. Everything is lost when the Layer is released. */
 export const memoryStorage: Layer.Layer<Storage> = Layer.effect(Storage, openMemoryStore);
+
+/**
+ * Which store `cookout serve` keeps its data in: the Postgres database at a URL, kept redacted, or else the SQLite
+ * file at a path.
+ */
+export type StorageSetting =
+  | { readonly store: "postgres"; readonly url: Redacted.Redacted }
+  | { readonly store: "sqlite"; readonly path: string };
+
+/**
+ * Chooses the store from the settings: Postgres when the URL is set, since it wins over the path, so a board can
+ * keep its SQLite file in place while it runs on Postgres; otherwise SQLite at the path.
+ * @param settings The SQLite path (`COOKOUT_DB`) and the database URL (`DATABASE_URL`), empty when unset.
+ * @returns The storage setting.
+ */
+export function storageSetting({
+  path,
+  url,
+}: {
+  readonly path: string;
+  readonly url: Redacted.Redacted;
+}): StorageSetting {
+  if (Str.isEmpty(Redacted.value(url))) {
+    return { path, store: "sqlite" };
+  }
+  return { store: "postgres", url };
+}
+
+/**
+ * Opens the store a storage setting names, `postgresStorage` or `sqliteStorage`.
+ * @param setting The storage setting.
+ * @returns The store, failing with `StorageUnavailable` if it can't be opened.
+ */
+export function storageLayer(setting: StorageSetting): Layer.Layer<Storage, StorageUnavailable, FileSystem.FileSystem> {
+  if (setting.store === "postgres") {
+    return postgresStorage(setting.url);
+  }
+  return sqliteStorage(setting.path);
+}
+
+/**
+ * The store as it may be shown, in a startup line or a log: the SQLite path, or the Postgres database as
+ * `postgres://<host>/<database name>`, without its user, password or parameters.
+ * @param setting The storage setting.
+ * @returns The path, or the URL with only its host and database.
+ */
+export function shownDatabase(setting: StorageSetting): string {
+  if (setting.store === "sqlite") {
+    return setting.path;
+  }
+  const { host, pathname } = new URL(Redacted.value(setting.url));
+  return `postgres://${host}${pathname}`;
+}
+
+/**
+ * Takes the database URL out of a text, such as a client's error message, that may quote it: the URL becomes its
+ * shown form and its password, wherever else it appears, `<redacted>`.
+ * @param setting The storage setting.
+ * @returns The text without the URL's password. A SQLite setting leaves it as it is.
+ */
+export function withoutDatabaseSecret(setting: StorageSetting): (text: string) => string {
+  if (setting.store === "sqlite") {
+    return (text) => text;
+  }
+  const url = Redacted.value(setting.url);
+  const { password } = new URL(url);
+  const secrets = Arr.filter([password, decodeURIComponent(password)], Str.isNonEmpty);
+  const shown = shownDatabase(setting);
+  return (text) =>
+    Arr.reduce(secrets, Str.replaceAll(url, shown)(text), (redacted, secret) =>
+      Str.replaceAll(secret, "<redacted>")(redacted),
+    );
+}

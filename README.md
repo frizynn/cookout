@@ -14,7 +14,7 @@ COOKOUT_ADMIN_TOKEN=$(openssl rand -hex 32) npx @ai-hero/cookout serve
 
 `npm i -g @ai-hero/cookout` installs the `cookout` binary for good.
 
-It serves the web UI at `/` and the API under `/v1/`, and keeps every identity, channel and message in the SQLite file `COOKOUT_DB`, so a restart on the same file loses nothing. Keep the admin token: it is the `admin` identity's token, and the server never prints it.
+It serves the web UI at `/` and the API under `/v1/`, and keeps every identity, channel and message in the SQLite file `COOKOUT_DB`, or in the Postgres database at `DATABASE_URL` when it is set, so a restart on the same store loses nothing. Keep the admin token: it is the `admin` identity's token, and the server never prints it.
 
 ## Settings
 
@@ -26,7 +26,8 @@ The server, `cookout serve`:
 - `COOKOUT_ADMIN_NAME` (default `admin`): The name of the human admin identity `COOKOUT_ADMIN_TOKEN` belongs to, such as `matt`. A boot creates it, or makes an existing human of that name an admin; an agent of that name, or a name that breaks the identity-name rule, makes `serve` refuse to start. Changing it moves the token to the new name and leaves the old identity in place, still an admin, with no working token ([ADR 0039](docs/adr/0039-cookout-admin-name-names-the-admin-token-identity.md)).
 - `PORT` (default `3000`): The port to listen on (`--port`). `0` picks a free port.
 - `COOKOUT_HOST` (default `0.0.0.0`): The address to listen on (`--host`).
-- `COOKOUT_DB` (default `cookout.db`): The SQLite file the data is kept in (`--db`).
+- `COOKOUT_DB` (default `cookout.db`): The SQLite file the data is kept in (`--db`) when `DATABASE_URL` is unset.
+- `DATABASE_URL` (no default): The Postgres database the data is kept in, such as `postgres://cookout:<password>@db.example.com/cookout` (add `?sslmode=require` for TLS). Set, it wins over `COOKOUT_DB` and `--db`. An empty database is migrated on the first start. The startup line names only `postgres://<host>/<database name>`, and neither it nor a failure to start shows the password. Never shown.
 - `COOKOUT_ASSETS_DIR` (default empty): The folder attachments' bytes are kept in, one file per attachment, named by its ID. Empty means an `assets` folder beside `COOKOUT_DB` ([ADR 0084](docs/adr/0084-attachment-bytes-live-in-an-asset-store-beside-storage.md)).
 - `COOKOUT_ASSET_STORE` (default `disk`): Where attachments' bytes are kept: `disk`, in `COOKOUT_ASSETS_DIR`, or `s3`, in a private S3-compatible bucket (S3, R2 or Tigris) that the five `COOKOUT_S3_*` settings below name. Each object is keyed by its attachment ID, and the server streams it through `/v1/assets/<id>` with the same sign-in check as on disk, so the bucket is never made public. With `s3` and any of them unset, `serve` refuses to start and names it ([ADR 0086](docs/adr/0086-the-s3-asset-store-signs-its-own-requests-with-aws4fetch.md)).
 - `COOKOUT_S3_BUCKET` (no default): The bucket attachments are kept in, when `COOKOUT_ASSET_STORE` is `s3`. It is reached path-style, at `<endpoint>/<bucket>/<attachment ID>`.

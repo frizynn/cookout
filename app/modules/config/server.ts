@@ -1,7 +1,6 @@
 /**
- * Every environment variable the cookout reads, with its default. Nothing else
- * reads the environment, and every variable here has a line in `.env.example`
- * and a line in the README's Settings section (`pnpm hygiene` checks both).
+ * Every environment variable the cookout reads, with its default. Nothing else reads the environment, and every
+ * variable here has a line in `.env.example` and a line in the README's Settings section (`pnpm hygiene` checks both).
  */
 import { Array as Arr, Config, Record as Rec, Redacted, Schema, String as Str } from "effect";
 import { firstAdminName, isIdentityName } from "../identities/index.ts";
@@ -22,6 +21,13 @@ const DEFAULT_COMMAND_CALLS_PER_MINUTE = 60;
 const DEFAULT_STREAMS_PER_IDENTITY = 20;
 const DEFAULT_PRESENCE_GRACE_SECONDS = 60;
 const SHORTEST_PRESENCE_GRACE_SECONDS = 0;
+
+const isDatabaseUrl = Schema.makeFilter(
+  (url: string) =>
+    url === "" ||
+    (URL.canParse(url) && Arr.contains(["postgres:", "postgresql:"], new URL(url).protocol)) ||
+    "DATABASE_URL must be empty or a Postgres URL such as postgres://user:password@host/database.",
+);
 
 const isPublicUrl = Schema.makeFilter(
   (url: string) =>
@@ -95,13 +101,18 @@ export const routineToken = Config.String("COOKOUT_ROUTINE_TOKEN").pipe(
   Config.map((value) => Redacted.make(value)),
 );
 
+/** `DATABASE_URL`: the Postgres database `cookout serve` uses over `COOKOUT_DB` (#330); empty is unset. Never shown. */
+export const databaseUrl = Config.schema(Schema.Redacted(Schema.String.check(isDatabaseUrl)), "DATABASE_URL").pipe(
+  Config.withDefault(Redacted.make("")),
+);
+
 /**
  * `COOKOUT_ALLOW_LOCAL_TRIGGERS`: when `true`, an agent's trigger URL may also be `http://localhost`, `127.0.0.1` or
  * `[::1]`, for the dev program and tests (mattpocock/cookout#378). Otherwise only `https` URLs are accepted.
  */
 export const allowLocalTriggers = Config.Boolean("COOKOUT_ALLOW_LOCAL_TRIGGERS").pipe(Config.withDefault(false));
 
-/** `COOKOUT_DB`: the SQLite file `cookout serve` keeps its data in. */
+/** `COOKOUT_DB`: the SQLite file `cookout serve` keeps its data in when `DATABASE_URL` is unset. */
 export const databasePath = Config.String("COOKOUT_DB").pipe(Config.withDefault("cookout.db"));
 
 /**
