@@ -24,4 +24,5 @@ export const postgresContractFiles: readonly string[] = [
   "inbox-after",
   "inbox-history",
   "inbox-ack-all",
+  "brought-in-by",
 ];
