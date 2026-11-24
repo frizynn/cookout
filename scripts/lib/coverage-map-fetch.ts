@@ -1,8 +1,18 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { field, list, parseJson, text } from "./json.ts";
 import type { CoverageMap } from "./browser-coverage.ts";
 import type { Outcome } from "./tools.ts";
 import { coverageMapFrom } from "./browser-coverage.ts";
+import { mergedShards } from "./coverage-shards.ts";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
@@ -26,9 +36,10 @@ interface Recording {
 }
 
 const ARTIFACT = "browser-coverage-map";
+const FIRST_SHARD = `${ARTIFACT}-1`;
 const MAP_FILE = "map.json";
 const CACHE = "cookout-browser-coverage";
-const LISTING = `repos/{owner}/{repo}/actions/artifacts?name=${ARTIFACT}&per_page=100`;
+const LISTING = `repos/{owner}/{repo}/actions/artifacts?name=${FIRST_SHARD}&per_page=100`;
 const GH_TIMEOUT_MS = 60_000;
 const EXIT_SUCCESS = 0;
 const NONE = 0;
@@ -80,15 +91,14 @@ function newestOnBase(listing: string, cwd: string, base: string): Outcome<Recor
 function downloaded(gh: Gh, { commit, run }: Recording): Outcome<CoverageMap> {
   const dir = mkdtempSync(path.join(tmpdir(), "browser-coverage-"));
   try {
-    const ran = gh(["run", "download", run, "--name", ARTIFACT, "--dir", dir]);
+    const ran = gh(["run", "download", run, "--pattern", `${ARTIFACT}-*`, "--dir", dir]);
     if (!ran.ok) {
       return ran;
     }
-    const map = coverageMapFrom(readFileSync(path.join(dir, MAP_FILE), "utf8"));
-    if (map.ok && map.value.commit !== commit) {
-      return { ok: false, reason: `CI's map for ${commit} says it was recorded at ${map.value.commit}` };
-    }
-    return map;
+    const sources = readdirSync(dir, { encoding: "utf8", recursive: true })
+      .filter((file) => path.basename(file) === MAP_FILE)
+      .map((file) => readFileSync(path.join(dir, file), "utf8"));
+    return mergedShards({ commit, sources });
   } finally {
     rmSync(dir, { force: true, recursive: true });
   }

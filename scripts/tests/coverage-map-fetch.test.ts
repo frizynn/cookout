@@ -1,5 +1,5 @@
 import { expect, it, onTestFinished } from "vitest";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import type { CoverageMap } from "../lib/browser-coverage.ts";
 import type { Outcome } from "../lib/tools.ts";
 import { execFileSync } from "node:child_process";
@@ -75,7 +75,9 @@ function fakeGh(artifacts: readonly Artifact[]): Fake {
       return { ok: true, value: JSON.stringify(listing) };
     }
     const { sha } = artifacts[Number(args[RUN_ID])] ?? { sha: "" };
-    writeFileSync(path.join(args.at(LAST) ?? "", "map.json"), JSON.stringify(mapAt(sha)));
+    const shard = path.join(args.at(LAST) ?? "", "browser-coverage-map-1");
+    mkdirSync(shard);
+    writeFileSync(path.join(shard, "map.json"), JSON.stringify({ ...mapAt(sha), incomplete: [], shard: "1/1" }));
     return { ok: true, value: "" };
   }
   return { calls, gh };

@@ -68,6 +68,9 @@ const browserTests = selectedBrowserTests();
 const browserSkipped = browserSkip(browserTests);
 
 function browserScript(): readonly string[] {
+  if (inCi && shard !== "") {
+    return ["browser:coverage", `--shard=${shard}`];
+  }
   if (inCi) {
     return ["browser:coverage"];
   }
