@@ -54,6 +54,7 @@ interface InboxService {
   readonly itemFor: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
   readonly itemsAfter: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
   readonly reactionItemFor: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
+  readonly reactionItems: (caller: Identity) => Fails<readonly InboxItem[]>;
   readonly ack: (caller: Identity, id: MessageId) => Fails<AckResponse>;
   readonly ackAll: (caller: Identity, request: AckAllRequest) => Fails<AckAllResponse>;
   readonly markAlertRead: (caller: Identity, asked: string) => Fails<OfflineAlertResponse>;

@@ -106,4 +106,4 @@ function seenUpTo({ author, storage, upTo }: ForAuthor & { readonly upTo: Messag
   });
 }
 
-export { itemsWithReactions, reactionItemFor, seenUpTo, withHistoryReactions, withReactionItems };
+export { itemsWithReactions, reactionItemFor, reactionItems, seenUpTo, withHistoryReactions, withReactionItems };

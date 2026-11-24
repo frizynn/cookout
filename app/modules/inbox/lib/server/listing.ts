@@ -11,7 +11,13 @@ import type {
 } from "../../index.ts";
 import type { Storage, StorageUnavailable, StoredNudge } from "../../../storage/server.ts";
 import { isNudgeId, nudgeTexts } from "../../index.ts";
-import { itemsWithReactions, reactionItemFor, withHistoryReactions, withReactionItems } from "./reaction-items.ts";
+import {
+  itemsWithReactions,
+  reactionItemFor,
+  reactionItems,
+  withHistoryReactions,
+  withReactionItems,
+} from "./reaction-items.ts";
 import type { Channel } from "../../../channels/index.ts";
 import type { Identity } from "../../../identities/index.ts";
 import type { MessageId } from "../../../messages/index.ts";
@@ -55,6 +61,7 @@ interface ListingCalls {
   readonly itemFor: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
   readonly itemsAfter: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
   readonly reactionItemFor: (caller: Identity, id: MessageId) => Fails<readonly InboxItem[]>;
+  readonly reactionItems: (caller: Identity) => Fails<readonly InboxItem[]>;
   readonly markNudgeRead: (caller: Identity, asked: string) => Fails<NudgeResponse>;
 }
 
@@ -196,6 +203,8 @@ function listingOn(listing: Listing): ListingCalls {
     markNudgeRead: (caller, asked) => markNudgeRead({ caller, storage }, asked),
     reactionItemFor: (caller, id) =>
       Effect.flatMap(reactionItemFor({ author: caller.name, id, storage }), (stored) => withChannels(storage, stored)),
+    reactionItems: (caller) =>
+      Effect.flatMap(reactionItems({ author: caller.name, storage }), (stored) => withChannels(storage, stored)),
   };
 }
 

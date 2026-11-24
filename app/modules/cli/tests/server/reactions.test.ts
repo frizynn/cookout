@@ -1,9 +1,10 @@
+import { Array as Arr, Effect, pipe } from "effect";
 import type { CliResult, CommandLineNeeds, TestCookoutService, TestIdentity } from "../../../testing/server.ts";
-import { Effect, pipe } from "effect";
 import {
   TestCookout,
   answer,
   commandLineServices,
+  cuttableLink,
   freshStateFolder,
   runCookout,
   testCookout,
@@ -12,9 +13,14 @@ import {
 import { expect, it } from "@effect/vitest";
 import type { Message } from "../../../messages/index.ts";
 import type { Scope } from "effect";
+import { TestClock } from "effect/testing";
 
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const ONE_LINE = 1;
+const THREE_LINES = 3;
+const THREE_ITEMS = 3;
+const A_WHILE = "5 seconds";
+const EMPTY_INBOX = '"items":[]';
 const USAGE = 1;
 
 interface Board {
@@ -36,6 +42,8 @@ const annPosts: Effect.Effect<Board, never, TestCookout | CommandLineNeeds | Sco
     return { ann, bob, cookout, folder, message };
   },
 );
+
+const passTime = Effect.forever(Effect.andThen(TestClock.adjust(A_WHILE), Effect.yieldNow));
 
 function envFor({ cookout, folder }: Board, who: TestIdentity): Readonly<Record<string, string>> {
   return { COOKOUT_STATE_DIR: folder, COOKOUT_TOKEN: who.token, COOKOUT_URL: cookout.url };
@@ -116,4 +124,41 @@ it.effect("cookout watch prints a line saying who reacted with what to the watch
       `#grill thread:${id} @bob reacted with 👍 to your message: ship it? (msg ${id})`,
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect(
+  "cookout watch prints a reaction added while it was disconnected once after it reconnects, and no other again",
+  () =>
+    Effect.gen(function* watchMissedReaction() {
+      const board = yield* annPosts;
+      const { ann, bob, message } = board;
+      const link = yield* cuttableLink(board.cookout.url);
+      const { message: later } = yield* answer(() => ann.client.createMessage({ channel: "grill", text: "and this" }));
+      const acrossACut = Effect.gen(function* reactAcrossACut() {
+        yield* link.relayed(EMPTY_INBOX);
+        yield* answer(() => bob.client.react(message.id, "thumbs_up"));
+        yield* link.relayed("event: inbox-item");
+        yield* link.cut;
+        yield* answer(() => bob.client.react(later.id, "thumbs_down"));
+        yield* Effect.raceFirst(link.relayed("event: inbox-item", THREE_ITEMS), passTime);
+        const { message: after } = yield* answer(() =>
+          bob.client.createMessage({ channel: "grill", text: "@ann after the cut" }),
+        );
+        return after;
+      });
+      const watched = yield* watchCookout({
+        args: ["watch"],
+        env: { ...envFor(board, ann), COOKOUT_URL: link.url },
+        lines: THREE_LINES,
+        whileWatching: acrossACut,
+      });
+
+      const [first, second, third] = Arr.map([message.id, later.id, watched.during.id], String);
+
+      expect(watched.stdoutLines).toStrictEqual([
+        `#grill thread:${first} @bob reacted with 👍 to your message: ship it? (msg ${first})`,
+        `#grill thread:${second} @bob reacted with 👎 to your message: and this (msg ${second})`,
+        `#grill thread:${third} @bob: @ann after the cut (msg ${third})`,
+      ]);
+    }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
