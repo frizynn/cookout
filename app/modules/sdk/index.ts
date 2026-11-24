@@ -63,17 +63,7 @@ export type {
   CreateChannelRequest,
   ListChannelsResponse,
 } from "./lib/channels.ts";
-export type {
-  AddCommandRequest,
-  CallCommandRequest,
-  CallCommandResponse,
-  Command,
-  CommandName,
-  CommandSecret,
-  CommandWithSecretResponse,
-  JsonSchema,
-  ListCommandsResponse,
-} from "../commands/index.ts";
+export type * from "./lib/command-types.ts";
 export type { HealthResponse, SchemaProblem } from "../http/index.ts";
 export type { IsoTime } from "../time/index.ts";
 export type * from "./lib/identity-types.ts";
