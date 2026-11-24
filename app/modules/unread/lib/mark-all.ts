@@ -86,4 +86,4 @@ function createMarkAll({ alerts, client, items, nudges, onChange, onRead }: Mark
   };
 }
 
-export { type MarkAll, type MarkAllState, createMarkAll };
+export { type MarkAllState, createMarkAll };
