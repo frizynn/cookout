@@ -159,9 +159,9 @@
  * of options under a box, such as mentions or commands (each with any muted detail), one selected, which leaves the box
  * focused even when a pointer picks one; it sits in the overlay layer, above all in the pane. `ComboboxField` is a
  * named search input (`box` its ID) that is a combobox controlling the listbox `list`, its option at `active` the
- * active one while `expanded`; `ResultList` is a named listbox (`list` its ID) of named `ResultGroup`s of
- * `ResultOption`s, each a label, any muted detail and its children, highlighted (and scrolled into view) when
- * `highlighted`; pressing one calls `onChoose` with its `href`, leaving the box focused. `DataArea` is a labelled box
+ * active one while `expanded`; `Listbox` is the named listbox (`list` its ID) both draw, of options in optional named
+ * groups, drawn by its children, the one at `highlighted` selected (scrolled into view in the `results` look); pressing
+ * one calls `onChoose` with its `value`, leaving the box focused; `ResultOption` is a result's label, detail and children. `DataArea` is a labelled box
  * to write JSON in, `LinesArea` an optional one for lines (`name: value` headers), whose text its owner holds.
  * `PromptForm` is a named card in place of a message box that asks for a
  * command's data, titled, with a Cancel and a submit button, its first field focused, and Escape anywhere in it calls
@@ -267,8 +267,9 @@ export {
   PromptForm,
   Suggestions,
   ComboboxField,
-  ResultGroup,
-  ResultList,
+  Listbox,
+  type ListboxGroup,
+  type ListboxOption,
   ResultOption,
   SendButton,
   SubmitButton,
