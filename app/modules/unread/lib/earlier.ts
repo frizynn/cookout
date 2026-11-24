@@ -75,7 +75,7 @@ function loaded(pages: Pages, more: MoreState): EarlierState {
 }
 
 function isRead(unread: UnreadItems, item: InboxHistoryItem): boolean {
-  return unread.isRead(item.message) || (item.read && !unread.has(item.message.id));
+  return !unread.has(item.message.id) && (unread.isRead(item.message) || item.read);
 }
 
 function queryOf(progress: Progress, limit: number): InboxHistoryQuery {
