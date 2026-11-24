@@ -17,4 +17,5 @@ export type {
   SetDisplayNameRequest,
   Token,
 } from "../../identities/index.ts";
+export type { SetTriggerRequest, Trigger, TriggerResponse, TriggerResult } from "../../triggers/index.ts";
 export type { Description, DescriptionCalls, UpdateIdentityRequest } from "../../identities/client.ts";

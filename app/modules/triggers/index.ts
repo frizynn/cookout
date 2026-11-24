@@ -71,6 +71,16 @@ export interface SetTriggerRequest {
  */
 export const identityTriggerPath = "/v1/identities/:name/trigger";
 
+/** The SDK's calls on an agent's trigger URL, each only for the agent's owner. */
+export interface TriggerCalls {
+  /** `GET /v1/identities/:name/trigger`: the agent's trigger URL and its last result, or `null`; never the token. */
+  readonly getTrigger: (agent: string) => Promise<TriggerResponse>;
+  /** `PUT /v1/identities/:name/trigger`: sets or replaces the agent's trigger URL and token. */
+  readonly setTrigger: (agent: string, request: SetTriggerRequest) => Promise<TriggerResponse>;
+  /** `DELETE /v1/identities/:name/trigger`: clears the agent's trigger URL, answering `{ trigger: null }`. */
+  readonly clearTrigger: (agent: string) => Promise<TriggerResponse>;
+}
+
 /** The code of a trigger URL the board won't call. */
 export const triggerUrlInvalid = "trigger_url_invalid";
 

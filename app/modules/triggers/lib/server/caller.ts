@@ -30,7 +30,10 @@ function callerOn(client: HttpClient.HttpClient): TriggerCallerService {
     call: (call) =>
       client
         .execute(requestOf(call))
-        .pipe(Effect.mapBoth({ onFailure: () => UNREACHABLE, onSuccess: ({ status }) => status })),
+        .pipe(
+          Effect.mapBoth({ onFailure: () => UNREACHABLE, onSuccess: ({ status }) => status }),
+          Effect.provideService(HttpClient.TracerPropagationEnabled, false),
+        ),
   };
 }
 

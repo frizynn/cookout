@@ -133,6 +133,7 @@ function settled(services: Services, settling: Settling): Effect.Effect<void, St
     if (!sameTrigger(stored, settling.trigger)) {
       return;
     }
+    yield* Effect.logDebug(`Called the trigger URL of ${agent}`, settling.result);
     yield* services.storage.recordTriggerResult(agent, settling.result);
     yield* services.presence.setReach(agent, Option.some({ lastResult: settling.result }));
     yield* alerted(services, settling, stored);
