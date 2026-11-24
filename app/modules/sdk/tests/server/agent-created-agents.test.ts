@@ -94,6 +94,17 @@ it.effect("a human creating an agent still gets its token, and no brought-in-by"
   }).pipe(Effect.provide(testCookout())),
 );
 
+it.effect("a human created with a description is refused with 400, since only an agent has one", () =>
+  Effect.gen(function* humanHasNoDescription() {
+    const cookout = yield* TestCookout;
+    const refused = yield* refusal(() =>
+      cookout.client.createIdentity({ description: "Writes code.", kind: "human", name: "eve" }),
+    );
+
+    expect(refused).toMatchObject({ status: BAD_REQUEST });
+  }).pipe(Effect.provide(testCookout())),
+);
+
 it.effect("an agent can't create a human, an agent for anyone else, or a taken name", () =>
   Effect.gen(function* agentRefused() {
     const { chief, cookout } = yield* board;
