@@ -113,10 +113,10 @@ export function browserLayout(): Layout {
 
 export function openBoard(opening: BoardOpening): () => void {
   globalThis.location.hash = opening.hash;
-  const composer = opening.composer ?? createComposer({ client: adminClient(), commands: opening.board.commands });
+  const boardStore = boardStoreFor({ boardStore: opening.boardStore, client: adminClient(), live: opening.live });
+  const composer = opening.composer ?? createComposer({ boardStore, commands: opening.board.commands });
   const unread = unreadFor(opening.unread);
   const layout = opening.layout ?? browserLayout();
-  const boardStore = boardStoreFor({ boardStore: opening.boardStore, client: adminClient(), live: opening.live });
   const { agentJoinApprovals, loginApprovals } = approvalsOf(opening);
   onTestFinished(cleanup);
   return render(
@@ -138,14 +138,15 @@ export function openBoard(opening: BoardOpening): () => void {
 export function openAt(opening: Opening): () => void {
   const session = opening.session ?? sessionOf(opening.client);
   const board = createBoard(opening);
+  const boardStore = boardStoreFor(opening);
   return openBoard({
     board,
-    composer: createComposer({ ...opening, commands: board.commands }),
+    composer: createComposer({ boardStore, commands: board.commands }),
     hash: opening.hash,
     ...(opening.live && { live: opening.live }),
     ...(opening.loginApprovals && { loginApprovals: opening.loginApprovals }),
     ...(opening.agentJoinApprovals && { agentJoinApprovals: opening.agentJoinApprovals }),
-    boardStore: boardStoreFor(opening),
+    boardStore,
     reading: readingFor(opening.reading),
     session,
     unread: createUnread(opening),
