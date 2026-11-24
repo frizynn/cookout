@@ -8,12 +8,16 @@ const vitestReport = {
     {
       assertionResults: [
         { fullName: "a thread opens", status: "passed" },
-        { fullName: "a reply shows", status: "failed" },
+        {
+          failureMessages: ["", "\u001B[31mAssertionError: expected 1\u001B[39m\n\n  at thread.test.tsx:4"],
+          fullName: "a reply shows",
+          status: "failed",
+        },
       ],
       name: `${ROOT}/app/thread.test.tsx`,
       status: "failed",
     },
-    { assertionResults: [], name: `${ROOT}/app/broken.test.tsx`, status: "failed" },
+    { assertionResults: [], message: "Cannot find module", name: `${ROOT}/app/broken.test.tsx`, status: "failed" },
     { assertionResults: [{ fullName: "skipped", status: "skipped" }], name: `${ROOT}/app/ok.test.tsx` },
   ],
 };
@@ -23,7 +27,11 @@ const playwrightReport = {
     {
       file: "menu.browser.test.ts",
       specs: [
-        { file: "menu.browser.test.ts", tests: [{ status: "unexpected" }], title: "the menu opens" },
+        {
+          file: "menu.browser.test.ts",
+          tests: [{ results: [{ error: { message: "Timed out waiting for dialog" } }], status: "unexpected" }],
+          title: "the menu opens",
+        },
         { file: "menu.browser.test.ts", tests: [{ status: "expected" }], title: "the menu closes" },
       ],
       suites: [
@@ -44,8 +52,8 @@ it("a Vitest report's failed tests are listed by file, and a file that failed ou
 }, () => {
   expect.hasAssertions();
   expect(vitestFailures({ base: ROOT, report: vitestReport })).toStrictEqual([
-    { file: "app/thread.test.tsx", name: "a reply shows" },
-    { file: "app/broken.test.tsx", name: "(the file failed outside any test)" },
+    { file: "app/thread.test.tsx", name: "a reply shows", reason: "AssertionError: expected 1 | at thread.test.tsx:4" },
+    { file: "app/broken.test.tsx", name: "(the file failed outside any test)", reason: "Cannot find module" },
   ]);
 });
 
@@ -54,7 +62,7 @@ it("a Playwright report's failed tests are listed under the test directory, with
 }, () => {
   expect.hasAssertions();
   expect(playwrightFailures({ base: "browser", report: playwrightReport })).toStrictEqual([
-    { file: "browser/menu.browser.test.ts", name: "the menu opens" },
+    { file: "browser/menu.browser.test.ts", name: "the menu opens", reason: "Timed out waiting for dialog" },
   ]);
 });
 
@@ -71,11 +79,11 @@ it("a test that also failed alone is not a load failure, and one failing in two 
 }, () => {
   expect.hasAssertions();
 
-  const thread = { file: "a.test.tsx", name: "opens" };
-  const menu = { file: "b.test.tsx", name: "closes" };
+  const thread = { file: "a.test.tsx", name: "opens", reason: "late" };
+  const menu = { file: "b.test.tsx", name: "closes", reason: "late" };
   const onlyUnderLoad = failingOnlyUnderLoad({ alone: [{ ...thread }], underLoad: [thread, menu, menu] });
 
   expect(onlyUnderLoad).toStrictEqual([menu]);
   expect(filesOf([menu, thread, menu])).toStrictEqual(["a.test.tsx", "b.test.tsx"]);
-  expect(failureList([thread])).toBe("  a.test.tsx > opens");
+  expect(failureList([thread])).toBe("  a.test.tsx > opens\n    late");
 });

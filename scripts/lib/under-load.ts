@@ -4,6 +4,7 @@ import path from "node:path";
 interface FailedTest {
   readonly file: string;
   readonly name: string;
+  readonly reason: string;
 }
 
 interface Report {
@@ -12,18 +13,45 @@ interface Report {
 }
 
 const NONE = 0;
+const REASON_LINES = 4;
+const ESCAPE_CODE = 27;
+const ESCAPE = String.fromCodePoint(ESCAPE_CODE);
+const ANSI = new RegExp(`${ESCAPE}\\[[0-9;]*m`, "gu");
 const PASSING = new Set(["passed", "skipped", "pending", "todo", "expected", "flaky"]);
+
+function reasonOf(message: string): string {
+  return message
+    .replaceAll(ANSI, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > NONE)
+    .slice(NONE, REASON_LINES)
+    .join(" | ");
+}
+
+function firstText(values: readonly unknown[]): string {
+  return values.map((value) => text(value) ?? "").find((value) => value.length > NONE) ?? "";
+}
+
+function vitestTestFailures(assertion: unknown, file: string): readonly FailedTest[] {
+  if (PASSING.has(text(field(assertion, "status")) ?? "")) {
+    return [];
+  }
+  const messages = list(field(assertion, "failureMessages")) ?? [];
+  return [{ file, name: text(field(assertion, "fullName")) ?? "", reason: reasonOf(firstText(messages)) }];
+}
+
+function outsideAnyTest(result: unknown, file: string): FailedTest {
+  return { file, name: "(the file failed outside any test)", reason: reasonOf(text(field(result, "message")) ?? "") };
+}
 
 function vitestFileFailures(result: unknown, root: string): readonly FailedTest[] {
   const file = path.relative(root, text(field(result, "name")) ?? "");
-  const failed = (list(field(result, "assertionResults")) ?? []).flatMap((assertion) => {
-    if (PASSING.has(text(field(assertion, "status")) ?? "")) {
-      return [];
-    }
-    return [{ file, name: text(field(assertion, "fullName")) ?? "" }];
-  });
+  const failed = (list(field(result, "assertionResults")) ?? []).flatMap((assertion) =>
+    vitestTestFailures(assertion, file),
+  );
   if (failed.length === NONE && text(field(result, "status")) === "failed") {
-    return [{ file, name: "(the file failed outside any test)" }];
+    return [outsideAnyTest(result, file)];
   }
   return failed;
 }
@@ -32,21 +60,28 @@ function vitestFailures({ base, report }: Report): readonly FailedTest[] {
   return (list(field(report, "testResults")) ?? []).flatMap((result) => vitestFileFailures(result, base));
 }
 
-function playwrightSpecFailures(spec: unknown, prefix: readonly string[]): readonly FailedTest[] {
-  const file = text(field(spec, "file")) ?? "";
-  const name = [...prefix, text(field(spec, "title")) ?? ""].join(" > ");
-  const failed = (list(field(spec, "tests")) ?? []).some((test) => !PASSING.has(text(field(test, "status")) ?? ""));
-  if (!failed) {
-    return [];
-  }
-  return [{ file, name }];
+interface Walk {
+  readonly base: string;
+  readonly prefix: readonly string[];
 }
 
-function playwrightSuiteFailures(suite: unknown, prefix: readonly string[]): readonly FailedTest[] {
+function playwrightSpecFailures(spec: unknown, { base, prefix }: Walk): readonly FailedTest[] {
+  const file = path.join(base, text(field(spec, "file")) ?? "");
+  const name = [...prefix, text(field(spec, "title")) ?? ""].join(" > ");
+  const failed = (list(field(spec, "tests")) ?? []).filter((test) => !PASSING.has(text(field(test, "status")) ?? ""));
+  if (failed.length === NONE) {
+    return [];
+  }
+  const results = failed.flatMap((test) => list(field(test, "results")) ?? []);
+  const reason = reasonOf(firstText(results.map((result) => field(field(result, "error"), "message"))));
+  return [{ file, name, reason }];
+}
+
+function playwrightSuiteFailures(suite: unknown, { base, prefix }: Walk): readonly FailedTest[] {
   const title = text(field(suite, "title")) ?? "";
-  let inner = [...prefix, title];
+  let inner: Walk = { base, prefix: [...prefix, title] };
   if (text(field(suite, "file")) === title) {
-    inner = [...prefix];
+    inner = { base, prefix };
   }
   const specs = (list(field(suite, "specs")) ?? []).flatMap((spec) => playwrightSpecFailures(spec, inner));
   const suites = (list(field(suite, "suites")) ?? []).flatMap((child) => playwrightSuiteFailures(child, inner));
@@ -54,9 +89,7 @@ function playwrightSuiteFailures(suite: unknown, prefix: readonly string[]): rea
 }
 
 function playwrightFailures({ base, report }: Report): readonly FailedTest[] {
-  return (list(field(report, "suites")) ?? [])
-    .flatMap((suite) => playwrightSuiteFailures(suite, []))
-    .map((failure) => ({ file: path.join(base, failure.file), name: failure.name }));
+  return (list(field(report, "suites")) ?? []).flatMap((suite) => playwrightSuiteFailures(suite, { base, prefix: [] }));
 }
 
 function keyOf(test: FailedTest): string {
@@ -79,7 +112,7 @@ function filesOf(tests: readonly FailedTest[]): readonly string[] {
 }
 
 function failureList(tests: readonly FailedTest[]): string {
-  return tests.map((test) => `  ${keyOf(test)}`).join("\n");
+  return tests.map((test) => `  ${keyOf(test)}\n    ${test.reason}`).join("\n");
 }
 
 export type { FailedTest };
