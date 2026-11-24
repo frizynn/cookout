@@ -533,7 +533,7 @@
       }
     },
     {
-      "files": ["app/modules/keymap/**", "app/modules/*/tests/**"],
+      "files": ["app/modules/keymap/**"],
       "rules": {
         "web-rules/keymap-owner": "off"
       }

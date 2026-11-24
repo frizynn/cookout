@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { inPane } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
+import { pressedPrevented } from "./prevented.ts";
 
 const RESULTS = { name: "Search results" } as const;
 const BOX = { name: "Search" } as const;
@@ -27,17 +28,9 @@ async function openedOn(page: Page, channel: string): Promise<Opened> {
   return { reply: reply.id, thread: message.id };
 }
 
-function recordingShortcut(): void {
-  globalThis.document.addEventListener("keydown", (event) => {
-    if (event.key === "k") {
-      globalThis.document.body.dataset["shortcutPrevented"] = String(event.defaultPrevented);
-    }
-  });
-}
-
 const SHORTCUTS = [
-  { channel: "browser-search-ctrl", key: "Control+k" },
-  { channel: "browser-search-meta", key: "Meta+k" },
+  { channel: "browser-search-ctrl", chord: { ctrlKey: true, key: "k" }, key: "Control+k" },
+  { channel: "browser-search-meta", chord: { key: "k", metaKey: true }, key: "Meta+k" },
 ] as const;
 const BOTH = 2;
 
@@ -67,18 +60,17 @@ async function selectedInInbox(page: Page, channel: string): Promise<string> {
   return page.url();
 }
 
-for (const { channel, key } of SHORTCUTS) {
+for (const { channel, chord, key } of SHORTCUTS) {
   test(`${key} focuses the search box from a message box, with the browser's own shortcut prevented`, async ({
     page,
   }) => {
     const opened = await openedOn(page, channel);
     await page.goto(`/#/channels/${channel}/threads/${String(opened.thread)}`);
     await page.getByRole("textbox", { exact: true, name: "Reply" }).click();
-    await page.evaluate(recordingShortcut);
-    await page.keyboard.press(key);
+    const prevented = await pressedPrevented({ ...chord, page });
 
     await expect(page.getByRole("searchbox", BOX)).toBeFocused();
-    await expect(page.locator("body")).toHaveAttribute("data-shortcut-prevented", "true");
+    expect(prevented).toBe(true);
   });
 }
 
