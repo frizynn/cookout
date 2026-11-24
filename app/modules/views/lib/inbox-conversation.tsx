@@ -1,4 +1,5 @@
 import type { Board } from "../../board/index.ts";
+import { ChannelConversation } from "./channel-conversation.tsx";
 import { ConversationEmpty } from "../../design-system/index.tsx";
 import { ConversationView } from "./conversation.tsx";
 import type { InboxSelection } from "../../paths/index.ts";
@@ -18,6 +19,17 @@ export function InboxConversation(props: InboxConversationProps): ReactNode {
   const { selected } = props;
   if (selected === null) {
     return <ConversationEmpty label={TEXT.conversation}>{TEXT.pick}</ConversationEmpty>;
+  }
+  if (selected.thread === null) {
+    return (
+      <ChannelConversation
+        board={props.board}
+        channel={selected.channel}
+        key={selected.channel}
+        me={props.me}
+        unread={props.unread}
+      />
+    );
   }
   return (
     <ConversationView

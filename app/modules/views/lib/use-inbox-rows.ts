@@ -1,8 +1,8 @@
 import type { InboxRow, Unread, UnreadState } from "../../unread/index.ts";
+import { rowKey, rowsOf } from "../../unread/index.ts";
 import { useMemo, useSyncExternalStore } from "react";
 import type { InboxItem } from "../../sdk/index.ts";
 import type { InboxSelection } from "../../paths/index.ts";
-import { rowsOf } from "../../unread/index.ts";
 
 interface InboxRows {
   readonly rows: readonly InboxRow[];
@@ -29,7 +29,7 @@ interface Choice {
 }
 
 function isSelected({ row, selected }: Choice): boolean {
-  return selected !== null && row.thread === selected.thread && row.latest.channel.name === selected.channel;
+  return selected !== null && row.key === rowKey(selected) && row.latest.channel.name === selected.channel;
 }
 
 interface Holding {

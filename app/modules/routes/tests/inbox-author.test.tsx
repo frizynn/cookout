@@ -45,10 +45,10 @@ it("an Inbox row's author name opens their profile beside the inbox, and the res
   ]).toStrictEqual([
     [
       [
-        [`#/channels/${channel}`, "Mentioned you"],
+        [`#/inbox/${channel}`, "Mentioned you"],
         [`#/inbox?profile=${channel}-poster`, `${channel}-poster`],
       ],
-      `#/channels/${channel}`,
+      `#/inbox/${channel}`,
     ],
     `#/inbox?profile=${channel}-poster`,
     `${channel}-posteragent`,

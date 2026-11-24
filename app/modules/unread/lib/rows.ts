@@ -1,4 +1,4 @@
-import type { InboxItem, MessageId } from "../../sdk/index.ts";
+import type { ChannelName, InboxItem, MessageId } from "../../sdk/index.ts";
 import { isForYou, whyOf } from "./levels.ts";
 import type { UnreadWhy } from "./levels.ts";
 
@@ -31,14 +31,26 @@ const STRENGTH: readonly UnreadWhy[] = [
 ];
 const NO_ITEMS: readonly InboxItem[] = [];
 
+interface RowPlace {
+  readonly channel: ChannelName;
+  readonly thread: MessageId | null;
+}
+
+function rowKey({ channel, thread }: RowPlace): string {
+  if (thread !== null) {
+    return `thread ${String(thread)}`;
+  }
+  return `channel ${channel}`;
+}
+
 function keyOf(item: InboxItem): string {
   if (item.reasons.includes("reaction")) {
     return `reactions ${String(item.message.id)}`;
   }
   if (item.message.kind === "reply") {
-    return `thread ${String(item.parent.id)}`;
+    return rowKey({ channel: item.channel.name, thread: item.parent.id });
   }
-  return `channel ${item.channel.name}`;
+  return rowKey({ channel: item.channel.name, thread: null });
 }
 
 function threadOf(item: InboxItem): MessageId | null {
@@ -86,4 +98,4 @@ function rowsOf({ items, me }: Grouping): readonly InboxRow[] {
   return rows.toSorted((first, second) => second.latest.message.id - first.latest.message.id);
 }
 
-export { type InboxRow, rowsOf };
+export { type InboxRow, rowKey, rowsOf };

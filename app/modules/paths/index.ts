@@ -1,6 +1,8 @@
 /**
  * The web UI's paths: the one owner of its location hashes. A hash names a
- * `Route` (`#/`, no hash, and `#/inbox` the inbox, `#/login`,
+ * `Route` (`#/`, no hash, and `#/inbox` the inbox, `#/inbox/<channel>` the
+ * same with that channel's row selected and `#/inbox/<channel>/<thread id>`
+ * with that thread's, `#/login`,
  * `#/people` the people and agents, `#/people/<name>` the same with that
  * identity's profile open, `#/settings` the settings page and
  * `#/settings/<section>` the same with the focus on that section (`profile`,
@@ -31,10 +33,12 @@ const settingsSections = ["profile", "theme", "agents"] as const;
 
 type SettingsSection = (typeof settingsSections)[number];
 
-interface InboxSelection {
+interface ThreadSelection {
   readonly channel: ChannelName;
   readonly thread: MessageId;
 }
+
+type InboxSelection = ThreadSelection | { readonly channel: ChannelName; readonly thread: null };
 
 type Route =
   | { readonly name: "login" }
@@ -57,7 +61,7 @@ type LinkedRoute = Extract<
 type Matcher = (hash: string) => Route | false;
 
 const INBOX = /^(?:#\/?|#\/inbox)?$/u;
-const INBOX_THREAD = /^#\/inbox\/(?<channel>[^/]+)\/(?<thread>[^/]+)$/u;
+const INBOX_THREAD = /^#\/inbox\/(?<channel>[^/]+)(?:\/(?<thread>[^/]+))?$/u;
 const LOGIN = /^#\/login$/u;
 const SETTINGS = /^#\/settings$/u;
 const SECTION = /^#\/settings\/(?<section>[^/]+)$/u;
@@ -104,7 +108,7 @@ function approveRoute(userCode: string, name: "approve" | "approve-join" = "appr
   return { name, userCode };
 }
 
-function selectionOf(channel: string, thread: string): InboxSelection | null {
+function selectionOf(channel: string, thread: string): ThreadSelection | null {
   const id = Number(thread);
   if (!isChannelName(channel) || !DIGITS.test(thread) || !isMessageId(id)) {
     return null;
@@ -121,6 +125,9 @@ function threadRoute(channel: string, thread: string): Route {
 }
 
 function inboxRoute(channel: string, thread: string): Route {
+  if (thread === "" && isChannelName(channel)) {
+    return { name: "inbox", selected: { channel, thread: null } };
+  }
   const selected = selectionOf(channel, thread);
   if (selected === null) {
     return MISSING;
@@ -169,6 +176,9 @@ function channelHref(route: Extract<Route, { readonly name: "channel" | "thread"
 function inboxHref(selected: InboxSelection | null): string {
   if (selected === null) {
     return "#/inbox";
+  }
+  if (selected.thread === null) {
+    return `#/inbox/${selected.channel}`;
   }
   return `#/inbox/${selected.channel}/${String(selected.thread)}`;
 }
@@ -287,4 +297,4 @@ export function closedHref(route: Route): string {
   return hrefOf(route);
 }
 
-export type { InboxSelection, LinkedRoute, Place, Route, SettingsSection };
+export type { InboxSelection, LinkedRoute, Place, Route, SettingsSection, ThreadSelection };

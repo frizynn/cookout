@@ -54,13 +54,25 @@
  * reopened or replied to elsewhere changes with no reload. A channel's `showClosed` keeps how many threads of a run
  * of closed threads its feed shows (`expanded`, by each ID in the run) for as long as the page stays open.
  *
+ * `messageBefore({ channel, id })` is the one top-level message just before `id` in the channel (none if `id` is
+ * its first), its own store: it reads it (`listMessages` with `before` and a limit of 1) when its first reader
+ * subscribes, for the Inbox's channel conversation. `read(id)` acks the message `id` each time a first reader
+ * subscribes to it, so opening a channel conversation reads up to its newest post.
+ *
  * `openThreads(all)` is the Open threads page's list, its own store for each of "involving me" and all: each time a
  * first reader subscribes it loads the stalest page of open threads, and `loadMore` appends the next. With `live`, a
  * `thread` event closing a listed thread drops it, one reopening a thread it doesn't list reloads the list, and a reply
  * in a listed thread moves it to the end (or out of the loaded pages, while more are still to load); a thread
  * `closing` closes drops at once. When the stream's link comes back after being down, it reloads.
  */
-import type { ChannelMessages, MessageStoresClient, ThreadClosing, ThreadMessages } from "./lib/message-stores.ts";
+import type {
+  ChannelMessages,
+  MessageBefore,
+  MessageRead,
+  MessageStoresClient,
+  ThreadClosing,
+  ThreadMessages,
+} from "./lib/message-stores.ts";
 import type { ChannelName, CookoutClient, MessageId } from "../sdk/index.ts";
 import type { Commands, CommandsClient } from "./lib/commands.ts";
 import type { OpenThreads, OpenThreadsClient } from "./lib/open-threads.ts";
@@ -107,6 +119,10 @@ export interface Board {
   readonly reactions: ReactionStore;
   /** Closing and reopening threads: one store, whose answers change the loaded channels and threads. */
   readonly closing: ThreadClosing;
+  /** The top-level message just before `id` in `channel`: the same store each time for one channel and ID. */
+  readonly messageBefore: (at: { readonly channel: ChannelName; readonly id: MessageId }) => MessageBefore;
+  /** Acks the message each time a first reader subscribes: the same store each time for one ID. */
+  readonly read: (id: MessageId) => MessageRead;
   /** The open threads involving the logged-in identity, or with `all` every open thread: one store for each. */
   readonly openThreads: (all: boolean) => OpenThreads;
   /** Empties the snapshot's `notice`. */
@@ -156,8 +172,10 @@ export function createBoard(options: BoardOptions): Board {
       },
     }),
     dismissNotice: list.dismissNotice,
+    messageBefore: stores.messageBefore,
     openThreads: openThreads.of,
     reactions: createReactionStore({ client, live }),
+    read: stores.read,
     snapshot: list.snapshot,
     subscribe: (listener) => {
       follow();
@@ -180,3 +198,4 @@ export type { Subscriptions, SubscriptionsState } from "./lib/subscriptions.ts";
 export type { ThreadMessages, ThreadMessagesState } from "./lib/thread-messages.ts";
 export type { ThreadClosing } from "./lib/thread-closing.ts";
 export type { OpenThreads, OpenThreadsState } from "./lib/open-threads.ts";
+export type { MessageBeforeState } from "./lib/message-stores.ts";
