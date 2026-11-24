@@ -6,7 +6,7 @@ const BLOCK =
   "invisible absolute top-1/2 right-3 -translate-y-1/2 group-focus-within/actions:visible group-hover/actions:visible has-data-[state=open]:visible";
 
 const INLINE =
-  "invisible absolute top-1/2 left-full z-10 ml-1 -translate-y-1/2 group-focus-within/inline-actions:visible group-hover/inline-actions:visible has-data-[state=open]:visible";
+  "invisible absolute top-1/2 right-full z-10 mr-1 -translate-y-1/2 group-focus-within/inline-actions:visible group-hover/inline-actions:visible has-data-[state=open]:visible";
 
 interface HoverMoreActionsParts {
   readonly choices: readonly MenuChoice[];

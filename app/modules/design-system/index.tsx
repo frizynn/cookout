@@ -24,7 +24,7 @@
  * `ActionMenu` is the one way to give something outside a message an actions menu: it wraps its children so that
  * right-clicking them, or pressing the context-menu key or Shift+F10 on what has focus in them, opens its `choices`
  * as a context menu named by its `label`, and a More actions button (or `buttonLabel`), shown on hover or focus at
- * their right (`inline`: after a name), opens it as a dropdown. `PersonMenu` is a name's: View profile, Message, Copy
+ * their right (`inline`: before a name, clear of its card), opens it as a dropdown. `PersonMenu` is a name's: View profile, Message, Copy
  * name. `NavHeading` heads a
  * `NavList` of links, with any `HeadingButton` on its line, a plus named by
  * its label that starts something new, such as a channel; in the footer, `FooterLink` is a link
