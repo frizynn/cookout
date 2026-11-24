@@ -6,14 +6,16 @@ import type {
   CookoutEvent,
   CreateChannelRequest,
   MessageId,
+  SearchRequest,
   SubscriptionResponse,
 } from "../../sdk/index.ts";
 import type { ClosingClient, ClosingRefusal } from "./thread-closing.ts";
+import type { SearchAnswer } from "../../search/web.ts";
 import { createMessageAcks } from "./message-acks.ts";
 import { createThreadClosing } from "./thread-closing.ts";
 import { refusedAs } from "./subscriptions-slice.ts";
 
-type CallsClient = ClosingClient & SubscriptionsClient & Pick<CookoutClient, "ack" | "createChannel">;
+type CallsClient = ClosingClient & SubscriptionsClient & Pick<CookoutClient, "ack" | "createChannel" | "search">;
 
 interface BoardCalls {
   readonly createChannel: (request: CreateChannelRequest) => Promise<Channel>;
@@ -22,6 +24,7 @@ interface BoardCalls {
   readonly reopen: (messageId: MessageId) => void;
   readonly closingRefusal: () => ClosingRefusal | null;
   readonly ack: (id: MessageId) => void;
+  readonly search: (request: SearchRequest) => Promise<SearchAnswer>;
 }
 
 interface CallsOptions {
@@ -38,6 +41,15 @@ async function send(client: SubscriptionsClient, channel: ChannelName, wanted: b
   }
   const unsubscribed = await client.unsubscribe(channel);
   return unsubscribed;
+}
+
+async function answerOf(client: CallsClient, request: SearchRequest): Promise<SearchAnswer> {
+  try {
+    const page = await client.search(request);
+    return { page };
+  } catch (error: unknown) {
+    return { refusal: refusedAs(error) };
+  }
 }
 
 async function after(previous: Promise<void>, step: () => Promise<void>): Promise<void> {
@@ -81,6 +93,10 @@ function createBoardCalls(options: CallsOptions): BoardCalls {
       return channel;
     },
     reopen: closing.reopen,
+    search: async (request) => {
+      const answer = await answerOf(client, request);
+      return answer;
+    },
     setSubscribed: subscribing(options),
   };
 }

@@ -19,6 +19,10 @@ function wordsOf(text: string): readonly string[] {
   return plain.match(WORD) ?? [];
 }
 
+function isMatched(word: string, query: { readonly words: readonly string[] }): boolean {
+  return wordsOf(word).some((each) => query.words.some((asked) => each.startsWith(asked)));
+}
+
 const SPACES = /\s+/u;
 const FILTERS = ["from", "in", "before", "after"] as const;
 const WORDS = "words";
@@ -103,6 +107,32 @@ export interface Matching {
 export function matchesQuery(matching: Matching): boolean {
   const words = wordsOf(matching.text);
   return matching.query.words.every((asked) => words.some((word) => word.startsWith(asked)));
+}
+
+/** A run of a text: a word that matches a query word, or anything else. */
+export interface TextPiece {
+  readonly text: string;
+  readonly matched: boolean;
+}
+
+/**
+ * Splits a text into runs, each word that equals or starts with a query word its own matched run, by the same word
+ * rule the server matches with, so the web highlights what the server found.
+ * @param matching The text and the parsed query.
+ * @returns The text's runs, in order, joining back into the text.
+ */
+export function matchedPieces(matching: Matching): readonly TextPiece[] {
+  const pieces: TextPiece[] = [];
+  let shown = NO_WORDS;
+  for (const found of matching.text.matchAll(WORD)) {
+    const [word] = found;
+    if (isMatched(word, matching.query)) {
+      pieces.push({ matched: false, text: matching.text.slice(shown, found.index) }, { matched: true, text: word });
+      shown = found.index + word.length;
+    }
+  }
+  pieces.push({ matched: false, text: matching.text.slice(shown) });
+  return pieces.filter((piece) => piece.text.length > NO_WORDS);
 }
 
 /** One search result: the message as a channel listing or thread shows it, and whether its thread is Closed. */

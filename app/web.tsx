@@ -17,6 +17,7 @@ import { createComposer } from "./modules/composer/index.ts";
 import { createCookoutClient } from "./modules/sdk/index.ts";
 import { createLayout } from "./modules/layout/index.ts";
 import { createRoot } from "react-dom/client";
+import { createSearch } from "./modules/search/web.ts";
 
 const root = document.querySelector("#root");
 
@@ -36,6 +37,7 @@ if (root !== null) {
       live={live}
       loginApprovals={createLoginApprovals(client)}
       reading={createReading(browserReadingTools())}
+      search={createSearch({ search: boardStore.calls.search })}
       session={boardStore.session}
       unread={unread}
     />,
