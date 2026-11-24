@@ -48,8 +48,7 @@ interface DeactivationOffersSection {
   ) => Fails<readonly StoredDeactivationOffer[]>;
 }
 
-type OfferSources = Pick<IdentitiesSection, "findIdentityByName" | "listIdentities"> &
-  Pick<PresenceSection, "listPresence">;
+type OfferSources = Pick<IdentitiesSection, "listIdentities"> & Pick<PresenceSection, "listPresence">;
 
 interface OffersOn {
   readonly records: ActivityRecords;
@@ -91,15 +90,15 @@ function settled(on: OffersOn, board: Board): Fails<readonly StoredDeactivationO
 }
 
 function raiseOne(on: OffersOn, board: Board, now: IsoTime): (due: Due) => Fails<OfferChanges> {
-  return ({ agent, quietDays }) =>
+  return ({ identity, quietDays }) =>
     Effect.gen(function* raiseOffer() {
       const replaced = Arr.filter(
         board.offers,
-        (record) => record.identity === agent.name && isOpen({ board, record }),
+        (record) => record.identity === identity.name && isOpen({ board, record }),
       );
       yield* on.records.clear(Arr.map(replaced, ({ id }) => id));
-      const recipients = recipientsOf({ agent, board });
-      const raised = yield* on.records.insert({ identity: agent.name, quietDays, raisedAt: now, recipients });
+      const recipients = recipientsOf({ board, identity });
+      const raised = yield* on.records.insert({ identity: identity.name, quietDays, raisedAt: now, recipients });
       return { cleared: Arr.map(replaced, asCleared), raised: [raised] };
     });
 }
@@ -141,14 +140,12 @@ function keepWhere(on: OffersOn, recipient: IdentityName, kept: (record: OfferRe
 }
 
 function lastActivityOf(on: OffersOn, name: IdentityName): Fails<IsoTime | null> {
-  return Effect.gen(function* findLastActivity() {
-    const identity = yield* on.sources.findIdentityByName(name);
+  return Effect.map(boardOn(on), (board) => {
+    const identity = Arr.findFirst(board.identities, (each) => each.name === name).pipe(Option.getOrUndefined);
     if (Predicate.isUndefined(identity)) {
       return null;
     }
-    const activity = yield* on.records.activity;
-    const since = yield* on.records.since;
-    return lastActivityIn({ board: { activity, since }, identity });
+    return lastActivityIn({ board, identity });
   });
 }
 

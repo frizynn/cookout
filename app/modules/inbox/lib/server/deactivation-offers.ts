@@ -55,7 +55,7 @@ function shownOffer(
         identity,
         quietDays,
         raisedAt,
-        text: deactivationOfferText({ identity: identity.name, quietDays }),
+        text: deactivationOfferText({ identity: identity.name, kind: identity.kind, quietDays }),
       })),
     );
 }

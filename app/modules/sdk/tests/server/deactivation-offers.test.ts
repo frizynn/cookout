@@ -52,10 +52,14 @@ function quietFor(wait: Wait): Effect.Effect<void> {
   return Effect.andThen(Effect.andThen(settled, TestClock.adjust(wait)), settled);
 }
 
+function offersAnAgent({ identity }: DeactivationOffer): boolean {
+  return identity.kind === "agent";
+}
+
 function openOffers(client: CookoutClient): Effect.Effect<readonly DeactivationOffer[]> {
   return Effect.map(
     answer(() => client.inbox()),
-    ({ deactivationOffers }) => deactivationOffers,
+    ({ deactivationOffers }) => Arr.filter(deactivationOffers, offersAnAgent),
   );
 }
 
@@ -70,7 +74,7 @@ function summaryOf({ cleared, identity, quietDays }: DeactivationOffer): Summary
 function history(client: CookoutClient): Effect.Effect<readonly Summary[]> {
   return Effect.map(
     answer(() => client.inboxHistory()),
-    ({ deactivationOffers }) => Arr.map(deactivationOffers, summaryOf),
+    ({ deactivationOffers }) => Arr.map(Arr.filter(deactivationOffers, offersAnAgent), summaryOf),
   );
 }
 
@@ -104,7 +108,8 @@ function nextOfferEvent(events: AsyncIterator<CookoutEvent>): Effect.Effect<Cook
   return Effect.map(
     Effect.repeat(next, {
       until: (heard: Readonly<IteratorResult<CookoutEvent>>) =>
-        heard.done === true || heard.value.type === "deactivation-offer",
+        heard.done === true ||
+        (heard.value.type === "deactivation-offer" && offersAnAgent(heard.value.deactivationOffer)),
     }),
     eventIn,
   );

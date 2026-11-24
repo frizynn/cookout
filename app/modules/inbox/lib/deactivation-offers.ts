@@ -4,8 +4,11 @@ const LOWEST_ID = 1;
 
 interface QuietIdentity {
   readonly identity: string;
+  readonly kind: "human" | "agent";
   readonly quietDays: number;
 }
+
+const pronouns = { agent: "it", human: "them" } as const;
 
 export type DeactivationOfferId = number & { readonly [brand]: "DeactivationOfferId" };
 
@@ -19,6 +22,6 @@ export function isDeactivationOfferId(value: number): value is DeactivationOffer
   return Number.isSafeInteger(value) && value >= LOWEST_ID;
 }
 
-export function deactivationOfferText({ identity, quietDays }: QuietIdentity): string {
-  return `@${identity} has had no activity for ${String(quietDays)} days. Deactivate it?`;
+export function deactivationOfferText({ identity, kind, quietDays }: QuietIdentity): string {
+  return `@${identity} has had no activity for ${String(quietDays)} days. Deactivate ${pronouns[kind]}?`;
 }
