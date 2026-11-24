@@ -8,8 +8,10 @@ import type { Composer } from "../../composer/index.ts";
 import { CookoutApp } from "../index.tsx";
 import type { CookoutClient } from "../../sdk/index.ts";
 import type { Layout } from "../../layout/index.ts";
+import type { Search } from "../../search/web.ts";
 import { createComposer } from "../../composer/index.ts";
 import { createLayout } from "../../layout/index.ts";
+import { createSearch } from "../../search/web.ts";
 import { onTestFinished } from "vitest";
 
 type AppClient = BoardStoreClient &
@@ -53,6 +55,7 @@ interface BoardOpening {
   readonly agentJoinApprovals?: AgentJoinApprovals;
   readonly boardStore?: BoardStore;
   readonly reading?: Reading;
+  readonly search?: Search;
   readonly session: Session;
   readonly unread?: Unread;
 }
@@ -63,6 +66,7 @@ interface Opening {
   readonly loginApprovals?: LoginApprovals;
   readonly agentJoinApprovals?: AgentJoinApprovals;
   readonly pageSize?: number;
+  readonly searchLimit?: number;
   readonly session?: Session;
   readonly live?: Live;
   readonly reading?: Reading;
@@ -106,6 +110,16 @@ function approvalsOf(opening: BoardOpening): Approvals {
   };
 }
 
+const SEARCH_PAUSE_MS = 10;
+
+function searchFor(boardStore: BoardStore, { searchLimit }: Pick<Opening, "searchLimit">): Search {
+  return createSearch({
+    pause: SEARCH_PAUSE_MS,
+    search: boardStore.calls.search,
+    ...(typeof searchLimit === "number" && { limit: searchLimit }),
+  });
+}
+
 export function browserLayout(): Layout {
   return createLayout({ root: globalThis.document.documentElement, storage: globalThis.localStorage });
 }
@@ -127,6 +141,7 @@ export function openBoard(opening: BoardOpening): () => void {
       live={opening.live ?? null}
       loginApprovals={loginApprovals}
       reading={readingFor(opening.reading)}
+      search={opening.search ?? searchFor(boardStore, {})}
       session={opening.session}
       unread={unread}
     />,
@@ -143,6 +158,7 @@ export function openAt(opening: Opening): () => void {
     ...(opening.agentJoinApprovals && { agentJoinApprovals: opening.agentJoinApprovals }),
     boardStore,
     reading: readingFor(opening.reading),
+    search: searchFor(boardStore, opening),
     session,
     unread: createUnread(opening),
   });
