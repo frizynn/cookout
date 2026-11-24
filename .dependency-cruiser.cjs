@@ -29,6 +29,13 @@ module.exports = {
       to: { path: `^${R}/(testing|webhook-fake|dev)/`, reachable: true },
     },
     {
+      comment: "serve never runs on the dev program's adjustable clock, wherever that clock's file moves (#268).",
+      from: { path: String.raw`(^|/)app/main\.ts$` },
+      name: "serve-never-reaches-the-adjustable-clock",
+      severity: "error",
+      to: { path: String.raw`(^|/)adjustable-clock\.ts$`, reachable: true },
+    },
+    {
       from: { path: exactly(PUBLISHED_SDK) },
       name: "published-sdk-reaches-no-effect",
       severity: "error",
