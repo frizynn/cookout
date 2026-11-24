@@ -273,8 +273,9 @@ interface PostMessageRequest {
   readonly channel: string;
   readonly text: string;
   readonly data?: JsonValue;
-  /** Reply to this message. A reply to a reply goes to the top-level message's thread. */
+  /** Reply to this message. A reply to a reply goes to the top-level message's thread, which `close` also closes. */
   readonly replyTo?: number;
+  readonly close?: true;
 }
 /** The answer to posting a message. */
 interface MessageResponse {
@@ -975,7 +976,8 @@ interface MessageEvent {
   readonly message: Message;
 }
 /**
- * A thread just closed or reopened, by Close, Reopen or a reply in a closed thread: its top-level message as it now
+ * A thread just closed or reopened, by Close, Reopen, a reply in a closed thread or a reply sent with `close`: its
+ * top-level message as it now
  * stands, with `closedAt` and `closedBy` while closed. Sent only on the all-channels feed. It has no SSE `id`.
  */
 interface ThreadEvent {
@@ -1318,7 +1320,8 @@ export type CookoutClient = CallGroups & Pick<ReturnType<typeof inboxCalls>, "ke
   readonly deleteChannel: (name: string) => Promise<ChannelResponse>;
   /**
    * `POST /v1/messages`: a top-level message, or a reply with `replyTo` (a reply to a reply joins the parent's thread).
-   * A missing channel or message is 404; replying in another channel is 400 `reply_in_other_channel`.
+   * A missing channel or message is 404; replying in another channel is 400 `reply_in_other_channel`. With `close`,
+   * the reply also closes its thread in one step.
    */
   readonly createMessage: (request: PostMessageRequest) => Promise<MessageResponse>;
   /**

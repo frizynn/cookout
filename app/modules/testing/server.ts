@@ -43,6 +43,7 @@ export {
   type Watched,
   watchCookout,
 } from "./lib/server/cli.ts";
+export { interruptCookout } from "./lib/server/cli-interrupt.ts";
 export { type DevProcess, startDev, startFakeRoutine } from "./lib/server/dev.ts";
 export {
   type InterruptedDev,
@@ -56,6 +57,7 @@ export { type CuttableLink, cuttableLink } from "./lib/server/cuttable-link.ts";
 export { cuttableRelay } from "../http/server.ts";
 export { type SilentConnection, silentConnection } from "./lib/server/silent-connection.ts";
 export { type FixedAnswer, serverAnswering } from "./lib/server/fixed-answer.ts";
+export { type SilentServer, silentServer } from "./lib/server/silent-server.ts";
 export { type ForwardingProxy, forwardingProxy } from "./lib/server/forwarding-proxy.ts";
 export {
   type TwoSessions,
