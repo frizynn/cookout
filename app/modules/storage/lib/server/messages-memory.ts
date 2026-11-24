@@ -12,7 +12,15 @@ import { Array as Arr, Effect, Option, Predicate, Ref, pipe } from "effect";
 import type { Author, Message, MessageId, TopLevelMessage } from "../../../messages/index.ts";
 import { EMPTY_INBOX, memoryReactions, withoutChannel, withoutIdentity } from "./inbox-memory-state.ts";
 import { afterAppend, memoryInbox } from "./inbox-memory.ts";
-import { asMessageId, isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
+import {
+  asMessageId,
+  isPlaced,
+  placeIn,
+  placed,
+  stampedNoEarlierThan,
+  threadIdOf,
+  withKnownMentions,
+} from "./messages.ts";
 import { current, findMessage, memoryThreads, reopenedBy, repliesTo } from "./threads-memory.ts";
 import type { IdentitiesSection } from "./identities.ts";
 import type { MemoryChannelsSection } from "./channels.ts";
@@ -25,6 +33,7 @@ import { isMessageId } from "../../../messages/index.ts";
 
 interface MemoryMessages extends MemoryThreads {
   readonly last: number;
+  readonly latestAt: Option.Option<NewMessage["createdAt"]>;
   readonly inbox: MemoryInbox;
 }
 
@@ -39,7 +48,13 @@ type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 type ChannelName = NewMessage["channel"];
 
 const NEXT = 1;
-const EMPTY: MemoryMessages = { inbox: EMPTY_INBOX, last: 0, messages: [], reopenedAt: new Map() };
+const EMPTY: MemoryMessages = {
+  inbox: EMPTY_INBOX,
+  last: 0,
+  latestAt: Option.none(),
+  messages: [],
+  reopenedAt: new Map(),
+};
 const CHANNEL_NOT_FOUND = { status: "channel_not_found" } as const;
 
 function placementOf(messages: readonly Message[], { channel, replyTo }: NewMessage): Placement {
@@ -55,7 +70,7 @@ function append(data: MemoryMessages, appending: Mentioning): readonly [AppendMe
     return [placement, data];
   }
   const last = data.last + NEXT;
-  const message = withKnownMentions(appending);
+  const message = stampedNoEarlierThan({ latest: data.latestAt, message: withKnownMentions(appending) });
   const stored = placed({ id: asMessageId(last), message, placement });
   const [reopenedParent, { messages }] = reopenedBy({
     data: { ...data, messages: [...data.messages, stored] },
@@ -64,7 +79,7 @@ function append(data: MemoryMessages, appending: Mentioning): readonly [AppendMe
   const [receipts, inbox] = afterAppend({ inbox: data.inbox, message: stored, messages });
   return [
     { message: stored, receipts, reopened: Option.getOrUndefined(reopenedParent), status: "appended" },
-    { ...data, inbox, last, messages },
+    { ...data, inbox, last, latestAt: Option.some(message.createdAt), messages },
   ];
 }
 

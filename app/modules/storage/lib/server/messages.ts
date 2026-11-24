@@ -134,6 +134,21 @@ function placed({ id, message, placement }: Placing): Message {
   return { ...unreplied(message), id };
 }
 
+interface Stamping {
+  readonly message: NewMessage;
+  readonly latest: Option.Option<IsoTime>;
+}
+
+function stampedNoEarlierThan({ latest, message }: Stamping): NewMessage {
+  return Option.match(
+    Option.filter(latest, (time) => time > message.createdAt),
+    {
+      onNone: () => message,
+      onSome: (createdAt) => ({ ...message, createdAt }),
+    },
+  );
+}
+
 function withKnownMentions({ known, message }: Mentioning): NewMessage {
   return { ...message, mentions: Arr.filter(message.mentions, (name) => known.has(name)) };
 }
@@ -167,6 +182,7 @@ export {
   isPlaced,
   placeIn,
   placed,
+  stampedNoEarlierThan,
   threadIdOf,
   withKnownMentions,
 };

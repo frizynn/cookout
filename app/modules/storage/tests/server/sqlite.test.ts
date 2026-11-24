@@ -4,10 +4,12 @@ import {
   appendTo,
   channelFixture,
   commandFixture,
+  fixtureTime,
   freshDatabasePath,
   handlerFixture,
   identityFixture,
   identityName,
+  isoTime,
   newMessageFixture,
   openStore,
 } from "../../../testing/server.ts";
@@ -200,6 +202,18 @@ it.effect("message IDs keep increasing after the database is reopened", () =>
     const next = yield* appendTo(storage)(newMessageFixture("grill", "third"));
 
     expect(next.id).toBeGreaterThan(lastBeforeClose);
+  }).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect("a message is never stamped earlier than the latest one, even after the database is reopened", () =>
+  Effect.gen(function* timesAfterReopen() {
+    const path = yield* freshDatabasePath;
+    yield* postTwo(path);
+    const { storage } = yield* openStore(sqliteStorage(path));
+    const earlier = { ...newMessageFixture("grill", "third"), createdAt: isoTime("2025-12-31T23:59:59.000Z") };
+    const next = yield* appendTo(storage)(earlier);
+
+    expect(next.createdAt).toBe(fixtureTime);
   }).pipe(Effect.provide(NodeServices.layer)),
 );
 

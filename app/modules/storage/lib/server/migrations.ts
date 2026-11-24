@@ -191,6 +191,8 @@ const migrations: readonly string[] = [
   `ALTER TABLE messages ADD COLUMN closed_at TEXT;
    ALTER TABLE messages ADD COLUMN closed_by TEXT;`,
   DEACTIVATION_OFFERS_MIGRATION,
+  `ALTER TABLE message_id_sequence ADD COLUMN latest_created_at TEXT;
+   UPDATE message_id_sequence SET latest_created_at = (SELECT max(created_at) FROM messages);`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });
