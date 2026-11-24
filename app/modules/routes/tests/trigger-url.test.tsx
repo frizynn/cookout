@@ -83,3 +83,35 @@ it("an agent whose trigger call fails shows Unreachable, and the owner's Clear t
     expect(screen.queryByText("Unreachable", { exact: false })).toBeNull();
   });
 });
+
+function filledWithHeaders(bot: string): HTMLElement {
+  const form = triggerForm(bot);
+  fireEvent.change(within(form).getByLabelText("Trigger URL", { exact: false }), {
+    target: { value: "https://routines.example.com/fire" },
+  });
+  fireEvent.change(within(form).getByLabelText("Token (write-only: never shown again)"), {
+    target: { value: "routine-secret" },
+  });
+  const headers = within(form).getByLabelText("Extra headers (values write-only)", { exact: false });
+  fireEvent.change(headers, { target: { value: "anthropic-version: 2023-06-01\nX-Key: header-secret\n" } });
+  return headers;
+}
+
+it("the owner adds extra headers with the trigger URL, and the form shows only their names", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const { bot, owner } = await ownedAgent("web-trigger-headers");
+  await openedBy({ client: owner, hash: `#/people/${bot}` });
+  await inProfile().findByText("No trigger URL: a mention calls nothing.");
+  const headers = filledWithHeaders(bot);
+  fireEvent.click(within(triggerForm(bot)).getByRole("button", { name: "Save trigger URL" }));
+
+  await expect(inProfile().findByText("Sends headers: anthropic-version, x-key")).resolves.toBeDefined();
+  expect(headers).toHaveProperty("value", "");
+  expect(document.body.innerHTML).not.toContain("header-secret");
+  await expect(owner.getTrigger(bot)).resolves.toStrictEqual({
+    trigger: { headerNames: ["anthropic-version", "x-key"], url: "https://routines.example.com/fire" },
+  });
+});

@@ -165,8 +165,8 @@
  * named listbox of options under a box, such as mentions or commands (each
  * with any muted detail), one selected, which leaves the box focused even when
  * a pointer picks one; it sits in the overlay layer, above all in the pane.
- * `DataArea` is a labelled box to write JSON in, whose
- * text its owner holds. `PromptForm` is a named card in place of a message
+ * `DataArea` is a labelled box to write JSON in, `LinesArea` an optional one for
+ * lines (`name: value` headers), whose text its owner holds. `PromptForm` is a named card in place of a message
  * box that asks for a command's data, titled, with a Cancel and a submit
  * button, its first field focused, and Escape anywhere in it calls
  * `onEscape`; in it `InputField` (text, a number, an
@@ -261,6 +261,7 @@ export {
   CheckField,
   ChoiceGroup,
   DataArea,
+  LinesArea,
   Form,
   LineForm,
   AreaForm,
