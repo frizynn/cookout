@@ -68,5 +68,5 @@ export type { ChannelMessages } from "./channel-messages.ts";
 export type { ThreadMessages } from "./thread-messages.ts";
 export type { ThreadClosing } from "./thread-closing.ts";
 export type { MessageBefore, MessageBeforeState } from "./message-before.ts";
-export type { MessageRead, MessageReadState } from "./message-read.ts";
+export type { MessageRead } from "./message-read.ts";
 export { type MessageStoresClient, createMessageStores };

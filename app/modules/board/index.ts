@@ -198,4 +198,4 @@ export type { Subscriptions, SubscriptionsState } from "./lib/subscriptions.ts";
 export type { ThreadMessages, ThreadMessagesState } from "./lib/thread-messages.ts";
 export type { ThreadClosing } from "./lib/thread-closing.ts";
 export type { OpenThreads, OpenThreadsState } from "./lib/open-threads.ts";
-export type { MessageBefore, MessageBeforeState, MessageRead, MessageReadState } from "./lib/message-stores.ts";
+export type { MessageBeforeState } from "./lib/message-stores.ts";

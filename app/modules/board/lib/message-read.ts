@@ -64,4 +64,4 @@ function createMessageReads(client: ReadClient): (id: MessageId) => MessageRead 
   };
 }
 
-export { type MessageRead, type MessageReadState, createMessageReads };
+export { type MessageRead, createMessageReads };
