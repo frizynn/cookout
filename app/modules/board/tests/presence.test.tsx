@@ -1,7 +1,7 @@
-import type { BoardStore, BoardStoreClient } from "../index.ts";
 import type { CookoutClient, IdentityName, Presence } from "../../sdk/index.ts";
 import { createBoardStore, presences } from "../index.ts";
 import { expect, it, onTestFinished, vi } from "vitest";
+import type { BoardStore } from "../index.ts";
 import type { HandLive } from "../../testing/web.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
 import { createLive } from "../../live/index.ts";
@@ -10,7 +10,7 @@ import { webTestCookout } from "../../../../scripts/web-test-server.ts";
 
 const NOBODY = 0;
 
-type PresenceClient = BoardStoreClient;
+type PresenceClient = CookoutClient;
 
 interface Agent {
   readonly name: IdentityName;

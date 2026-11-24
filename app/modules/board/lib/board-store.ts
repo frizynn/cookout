@@ -146,6 +146,5 @@ function reactionRefusal(state: BoardState): Refusal | null {
   return state.reactionRefusal;
 }
 
-export { type BoardStore, type BoardStoreClient, createBoardStore, presences, reactionRefusal, reactionsOf };
+export { type BoardStore, createBoardStore, presences, reactionRefusal, reactionsOf };
 export type { Presences } from "./presence-slice.ts";
-export type { Toggle } from "./reaction-toggle.ts";

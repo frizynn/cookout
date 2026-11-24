@@ -1,7 +1,7 @@
-import type { BoardStore, BoardStoreClient } from "../index.ts";
 import type { CookoutClient, CookoutEvent, IdentityName, Message, ReactionCount } from "../../sdk/index.ts";
 import { createBoardStore, reactionRefusal, reactionsOf } from "../index.ts";
 import { expect, it, onTestFinished, vi } from "vitest";
+import type { BoardStore } from "../index.ts";
 import type { HandLive } from "../../testing/web.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
 import { createLive } from "../../live/index.ts";
@@ -38,7 +38,7 @@ async function postedIn(channel: string): Promise<Message> {
   return message;
 }
 
-function opened(client: BoardStoreClient = adminClient()): Opened {
+function opened(client: CookoutClient = adminClient()): Opened {
   const hand = handLive();
   const store = createBoardStore({ client, live: createLive(hand.adapter) });
   const unsubscribe = store.subscribeShowing("reactions")(vi.fn<() => void>());
@@ -69,7 +69,7 @@ function bounce(hand: HandLive): void {
   hand.report("up");
 }
 
-function sendingWhileRead(hand: HandLive, event: CookoutEvent): BoardStoreClient["getThread"] {
+function sendingWhileRead(hand: HandLive, event: CookoutEvent): CookoutClient["getThread"] {
   return async (id) => {
     const answer = await adminClient().getThread(id);
     hand.send(event);
@@ -169,7 +169,7 @@ it("a reaction event heard while reactions are read again wins over the value re
 
 interface Unread {
   readonly name: string;
-  readonly getThread: BoardStoreClient["getThread"];
+  readonly getThread: CookoutClient["getThread"];
 }
 
 async function keptAfterBack({ getThread, name }: Unread): Promise<readonly ReactionCount[]> {

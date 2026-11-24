@@ -198,9 +198,7 @@ export type { ThreadClosing } from "./lib/thread-closing.ts";
 export type { MessageBeforeState } from "./lib/message-stores.ts";
 export {
   type BoardStore,
-  type BoardStoreClient,
   type Presences,
-  type Toggle,
   createBoardStore,
   presences,
   reactionRefusal,
