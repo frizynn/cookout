@@ -12,9 +12,9 @@
  * top-level message), `#/approve/<user code>` the approval
  * page for a login request and `#/approve-join/<user code>` for an agent join request); a channel name
  * that isn't a `ChannelName`, an identity name that isn't an `IdentityName`,
- * a thread ID that isn't a message ID, a section the settings page doesn't
- * have, or any other hash is `missing`, except that `#/threads` and
- * `#/threads/all`, where the removed Open threads page was, open the inbox.
+ * a thread ID that isn't a message ID, or a section the settings page doesn't
+ * have is `missing`; `#/threads` and `#/threads/all`, where the removed Open
+ * threads page was, and any hash no page has open the inbox, the homepage.
  * `hrefOf(route)` builds the hash a link to a route
  * goes to, so no view writes a path by hand.
  *
@@ -216,7 +216,7 @@ function routeOf(hash: string): Route {
       return route;
     }
   }
-  return MISSING;
+  return { name: "inbox", selected: null };
 }
 
 /**
