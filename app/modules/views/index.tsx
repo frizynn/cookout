@@ -97,11 +97,13 @@
  * presses in a text field other than `Esc`,
  * presses with Ctrl, Alt or Meta held, and presses another handler already took. `PeopleView` is the directory of every
  * identity (the identity list, which any identity may read): how many there
- * are, a name filter and All / Humans / Agents chips, each counting what the
+ * are, a name filter and an All / Humans / Agents radio group, each counting what the
  * name filter leaves (both kept in the `layout` store), and a row per
  * identity shown, with its avatar, name, "(you)" on the logged-in human, its
  * `agent` and `admin` tags and its kind and owner, the open one highlighted;
- * "Nobody matches." when the filters leave none. `ProfileView` is the panel
+ * "Nobody matches." when the filters leave none. The rows are one Tab stop: ↑/↓ (the keymap's `people list`) move
+ * between them, and on any focused name (`Authors` gives the keymap's `person` keys) Enter views the profile, m
+ * messages them where there is a message box and c copies `@name`, said in a polite status. `ProfileView` is the panel
  * beside it for one identity: its large avatar, name and tags, display name,
  * kind and owner, its presence (how it is connected while online, "Online ·
  * watching from laptop-1", "Online · watching" or "Online · web", or when it
@@ -124,6 +126,9 @@
  * hold, then the matching messages, newest first, each word matching the query highlighted. The first is highlighted;
  * Up, Down and Enter (or pressing one) open a place, a channel, a profile or a message in its thread, and Escape or
  * clicking away closes the list and gives focus back.
+ * `MessageListKeys` binds the keymap's message list keys once for the page: in a channel's, a thread's or a
+ * conversation's message list, ↑/↓ and k/j move one message, Home and End go to the first and last loaded, ↑ past
+ * the oldest loads older messages with focus kept, and Enter on a fold of closed threads unfolds it.
  * `ShortcutListView` is the list of every keyboard shortcut, generated from the keymap and grouped by where each
  * applies: the keymap's `openShortcutList` (`?` off a text box, Ctrl/Cmd+/ anywhere) opens it, and Escape closes
  * it with focus back where it was.
@@ -133,6 +138,7 @@ export { Authors } from "./lib/authors.tsx";
 export { Reacting } from "./lib/reacting.tsx";
 export { ChannelView } from "./lib/channel.tsx";
 export { InboxView } from "./lib/inbox.tsx";
+export { MessageListKeys } from "./lib/message-list-keys-view.tsx";
 export { LoginApprovalView } from "./lib/login-approval.tsx";
 export { IdentityDeletedNotice } from "./lib/identity-deleted-notice.tsx";
 export { LoginView } from "./lib/login.tsx";

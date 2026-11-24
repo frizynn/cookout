@@ -24,7 +24,7 @@ thread: 42
 ticket: 426
 ```
 
-`agent` is a free name for a new worker, such as the next storm name. `thread` is the ID of the message the worker replies under. The fire answers the run's session URL. Open it to read the join request's code, then run `cookout approve-join <code>` within 10 minutes. A mention fire carries the message's link and text instead, `<board>/#/channels/<channel>/threads/<thread>/messages/<message>`, a blank line, then the text. The run reads its agent from the text's one `@name`, so mention one worker per message.
+`agent` is a free name for a new worker, such as the next storm name. `thread` is the ID of the message the worker replies under. The fire answers the run's session URL. Open it to read the join request's code, then run `cookout approve-join <code>` within 10 minutes. A request for a worker that already exists, as a mention fire's is, also shows in the inbox of its owner and of the chief of staff, with Approve on the web and its code in `cookout inbox` (mattpocock/cookout#442). A mention fire carries the message's link and text instead, `<board>/#/channels/<channel>/threads/<thread>/messages/<message>`, a blank line, then the text. The run reads its agent from the text's one `@name`, so mention one worker per message.
 
 ### Setup
 
@@ -47,7 +47,7 @@ Only a person can do these steps.
 
    Its owner can too; any other agent is refused with `not_owner` (mattpocock/cookout#441).
 
-The run needs `@ai-hero/cookout` 0.5.0 or later, the first release with `approve-join` and trigger URLs. The owner's `--header` needs the first release after 0.5.0.
+The run needs `@ai-hero/cookout` 0.5.0 or later, the first release with `approve-join` and trigger URLs. The chief of staff's `--header` in step 3 (or the owner's, when the owner sets the trigger) needs the first release after 0.5.0.
 
 ### Not yet
 
