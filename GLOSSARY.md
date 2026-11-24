@@ -81,6 +81,10 @@ _Avoid_: acknowledgement, explicit ack, seen marker
 One identity's thumbs up or thumbs down on one message. An identity has at most one of each on a message, and may have both. Matt's term, from his request on the board ("These should be modeled as reactions", 2026-11-23, [#199](https://github.com/mattpocock/cookout/issues/199)).
 _Avoid_: emoji, like, vote
 
+**Attachment**:
+A file posted on a message, of any kind, up to 10 MB each and at most 10 per message (Matt, 2026-11-24, board thread 2905: the limits of Q3 in msg 2906, accepted in msg 2997, and "I do think I want arbitrary uploads" in msg 3032). It is fixed when the message is posted, can't be edited or removed on its own, and is deleted with its message (Matt, 2026-11-24, "Correct" in msg 3031, to msg 3006). An image (PNG, JPEG, GIF or WebP, by content) shows as a thumbnail, and any other file as a chip ([#371](https://github.com/mattpocock/cookout/issues/371)). Named by Matt on 2026-11-24 (Q5 in msg 2906, accepted in msg 2997: "Q5 is fine"; recorded in [#372](https://github.com/mattpocock/cookout/issues/372)).
+_Avoid_ (in domain talk): file, upload, asset. Code isn't linted for these, since `file` is also Node's and Effect's word for what is on disk. **Asset store** names only the storage seam that holds the bytes, never the thing a person attaches.
+
 **Nudge**:
 A reminder in the Inbox that an open thread has been quiet for a while. Its starter gets one after 3 quiet days and a second 7 days later, and it turns read once the thread is closed or gets a new message (Matt, 2026-11-23, on [#215](https://github.com/mattpocock/cookout/issues/215) and [#221](https://github.com/mattpocock/cookout/issues/221)).
 

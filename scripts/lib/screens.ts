@@ -18,7 +18,7 @@ const NUDGE_TEXT = "Quiet for 3 days: close it, or follow up?";
 const OFFER_TEXT = "has had no activity for 30 days.";
 const DEACTIVATED_TEXT = "@triage-agent was deactivated after 90 days with no activity.";
 
-export const SCREENS: readonly Screen[] = [
+const SCREENS: readonly Screen[] = [
   { hash: "#/inbox", name: "inbox", text: "Thanks, both of you." },
   { hash: "#/inbox", history: "more", name: "inbox-more", text: "Show earlier" },
   { daysLater: 3, hash: "#/inbox", name: "inbox-nudge", text: NUDGE_TEXT },
@@ -81,6 +81,14 @@ export const SCREENS: readonly Screen[] = [
   },
   { hash: "#/channels/general/threads/1", name: "thread", text: "Thanks, both of you." },
   {
+    click: "More actions",
+    clickIn: 'aside[aria-label="Thread"] header',
+    focus: 'aside[aria-label="Thread"] header h2[tabindex="0"]',
+    hash: "#/channels/general/threads/1",
+    name: "thread-menu",
+    text: "Copy link",
+  },
+  {
     focus: 'article:has-text("@triage-agent can you post the failing run?") time',
     hash: "#/channels/general/threads/1",
     name: "receipt",
@@ -141,3 +149,4 @@ export const SCREENS: readonly Screen[] = [
 ];
 
 export type { Screen };
+export { SCREENS };

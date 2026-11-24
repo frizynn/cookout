@@ -38,7 +38,7 @@
  * scrolled up, and anything under it, such as a message box in a `BoxFrame`
  * with its keyboard hint; `SidePanel` is a
  * named column on its right with a close link (the whole width on a narrow
- * screen). Given an `edge`, a `SidePanel` or `ConversationPanel` is as wide as
+ * screen), its title an `ActionMenu`'s target given a `menu`. Given an `edge`, a `SidePanel` or `ConversationPanel` is as wide as
  * its edge says on a wide screen (never more than 60% of the space beside it),
  * and its left edge is a `PanelEdge`: a focusable vertical separator, a line on
  * hover and focus, that a drag or the arrow keys resize (Left widens), Home and
