@@ -36,21 +36,21 @@
  * named `ScrollArea` that stays scrolled to the end as what it counts grows, unless
  * scrolled up, and anything under it, such as a message box in a `BoxFrame`
  * with its keyboard hint; `SidePanel` is a
- * named column on its right with a close link (full width when narrow), its
- * title an `ActionMenu`'s target given a `menu`. Given an `edge`, a `SidePanel` or `ConversationPanel` is as wide as
- * its edge says when wide (at most 60% of the space beside it),
+ * named column on its right with a close link (the whole width on a narrow
+ * screen), its title an `ActionMenu`'s target given a `menu`. Given an `edge`, a `SidePanel` or `ConversationPanel` is as wide as
+ * its edge says on a wide screen (never more than 60% of the space beside it),
  * and its left edge is a `PanelEdge`: a focusable vertical separator, a line on
  * hover and focus, that a drag or the arrow keys resize (Left widens), Home and
  * End take to its narrowest and widest, and a drag released past its
- * narrowest closes (`onClose`); it isn't shown when narrow. A split view, such as the inbox's, is a `ListPane` (the main column,
- * hidden when narrow while `hiddenWhenNarrow`) beside a
- * `ConversationPanel`, a named column with a `BackLink` arrow (shown only when
- * narrow, where the panel takes the whole width), its detail, its
+ * narrowest closes (`onClose`); it isn't shown on a narrow screen. A split view, such as the inbox's, is a `ListPane` (the main column,
+ * hidden on a narrow screen while `hiddenWhenNarrow`) beside a
+ * `ConversationPanel`, a named column with a `BackLink` arrow (shown only on a
+ * narrow screen, where the panel takes the whole width), its detail, its
  * header's `actions` as small buttons (each naming its key in `aria-keyshortcuts` and a tooltip), and any open link (naming its key, `CONVERSATION_KEYS.open`, in
  * `aria-keyshortcuts` and a tooltip; `CONVERSATION_KEYS` also holds the keys for Mark read and Mark unread), its
  * `message` being what an identity card's Message does in it (an `IdentityCardComposer`), or beside
  * a `ConversationEmpty`, a named column holding only a
- * muted line (hidden when narrow); a
+ * muted line (hidden on a narrow screen); a
  * `DividerButton` is a divider line led by a quiet button, such as one that
  * shows the replies folded under it. A name's avatar is its coloured initials, one of eight hues hashed
  * from the name, a circle for a human and a rounded square for an agent, with
