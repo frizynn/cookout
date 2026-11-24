@@ -59,6 +59,7 @@ it.effect("cookout schedule pause, resume and delete change a Scheduled message 
       SEQUENTIAL,
     );
     const listed = yield* run(["schedule", "list"]);
+    const badId = yield* run(["schedule", "pause", "0"]);
 
     expect(changed).toMatchObject([
       { stdoutJson: { scheduledMessage: { status: "paused" } } },
@@ -66,5 +67,6 @@ it.effect("cookout schedule pause, resume and delete change a Scheduled message 
       { exitCode: EXIT_SUCCESS },
     ]);
     expect(listed).toMatchObject({ stdoutJson: { scheduledMessages: [] } });
+    expect(badId.exitCode).not.toBe(EXIT_SUCCESS);
   }).pipe(Effect.provide(services)),
 );

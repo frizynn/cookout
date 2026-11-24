@@ -1,6 +1,7 @@
 import { Array as Arr, DateTime, Duration, Effect, Option, Order, Predicate } from "effect";
 import type { Storage, StorageUnavailable, StoredScheduledMessage } from "../../../storage/server.ts";
 import { isLate, latestDue, millisOf, runsAfter } from "./timing.ts";
+import type { Cause } from "effect";
 import type { IsoTime } from "../../../time/index.ts";
 import type { Messages } from "../../../messages/server.ts";
 import type { Refusal } from "../../../http/index.ts";
@@ -25,7 +26,7 @@ function untilDue(next: IsoTime | undefined): Effect.Effect<void> {
   });
 }
 
-function isRefusal(error: unknown): error is Refusal {
+function isRefusal(error: unknown): error is Refusal | Cause.NoSuchElementError {
   return !Predicate.isTagged(error, "StorageUnavailable");
 }
 
@@ -35,13 +36,11 @@ function postDue(
   due: IsoTime,
 ): Effect.Effect<void, StorageUnavailable> {
   const run = { due, finished: schedule.cron === null, id: schedule.id, runsFrom: schedule.runsFrom };
-  return Effect.flatMap(running.storage.findIdentityByName(schedule.creator), (creator) => {
-    if (Predicate.isUndefined(creator)) {
-      return Effect.void;
-    }
-    const posting = running.messages.postScheduled(creator, { channel: schedule.channel, text: schedule.text }, run);
-    return Effect.catchIf(Effect.asVoid(posting), isRefusal, () => Effect.void);
-  });
+  const creator = Effect.flatMap(running.storage.findIdentityByName(schedule.creator), Effect.fromNullishOr);
+  const posting = Effect.flatMap(creator, (found) =>
+    running.messages.postScheduled(found, { channel: schedule.channel, text: schedule.text }, run),
+  );
+  return Effect.catchIf(Effect.asVoid(posting), isRefusal, () => Effect.void);
 }
 
 function handle(running: Running, now: IsoTime) {

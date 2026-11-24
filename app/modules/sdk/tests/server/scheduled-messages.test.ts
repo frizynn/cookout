@@ -118,6 +118,8 @@ it.effect("a schedule is refused for a bad, too frequent or never-running cron, 
       { at: "2025-12-31T09:00:00Z" },
       { at: "2026-02-01T09:00:00Z", cron: "0 9 * * *" },
       { channel: "nowhere", cron: "0 9 * * *" },
+      { channel: "Not A Channel", cron: "0 9 * * *" },
+      { at: "soon" },
     ];
     const codes = yield* Effect.forEach(asked, refusedFor(ada), SEQUENTIAL);
     const accepted = yield* Effect.forEach(["30 * * * *", "0,30 * * * *", "0 9 29 2 *"], acceptedFor(ada), SEQUENTIAL);
@@ -133,6 +135,8 @@ it.effect("a schedule is refused for a bad, too frequent or never-running cron, 
       "at_in_past",
       "cron_or_at",
       "channel_not_found",
+      "channel_not_found",
+      "invalid_request",
     ]);
     expect(accepted).toStrictEqual(["active", "active", "active"]);
   }).pipe(Effect.provide(testCookout())),
