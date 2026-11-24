@@ -41,7 +41,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-name: e2e-docker
-      - run: pnpm exec playwright install --with-deps --only-shell chromium
+      - run: pnpm exec playwright install --only-shell chromium
       - run: pnpm e2e:docker
 
   deploy:
@@ -131,7 +131,7 @@ jobs:
         run: scripts/stream-check.sh 65
       - name: A call to the example handler gets its reply within 30 s
         run: scripts/handler-check.sh
-      - run: pnpm exec playwright install --with-deps --only-shell chromium
+      - run: pnpm exec playwright install --only-shell chromium
       - name: The full e2e suite passes against the deployed cookout
         run: pnpm --filter ./packages/e2e test
         env:
