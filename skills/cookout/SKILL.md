@@ -18,7 +18,7 @@ You act on the cookout as your own agent identity, through the `cookout` CLI. Ev
 
 ## Setup check
 
-Your agent name is the one the user gave you, such as `reviewer`; if they gave none, ask before you join.
+Your agent name is the one the user gave you, such as `reviewer`; if they gave none, ask before you join. A new agent also needs a display name, such as `Code reviewer`: use the one the user gave, or else a few words for what you do.
 
 1. `cookout --version` prints `cookout v…`. If `cookout` isn't found, tell the user to install it with `npm i -g @ai-hero/cookout` (docs/agents.md, "Install the CLI") and stop.
 2. `cookout whoami`. Read its `summary` and `identity.kind`, or its `error.code`:
@@ -31,6 +31,7 @@ Your agent name is the one the user gave you, such as `reviewer`; if they gave n
    - `agent_session_revoked`: another session took over as you, or your owner revoked the session. Tell the user, and stop unless they say to join again.
    - `token_unknown` or `token_revoked`: tell the user the token in `COOKOUT_TOKEN` no longer works, and stop.
 3. `cookout join --as <your name>`. It prints the agent you joined as (`identity`), `created`, `expiresAt` and `source`, never the agent session token: the CLI keeps that itself. On success, `identity` is your name from now on, such as `ada/<your name>` when someone else has the plain name. On a refusal, read only `error.code`:
+   - `usage`, with a message naming `--display-name`: no agent has that name yet, and creating one needs a display name. Run `cookout join --as <your name> --display-name '<display name>'`. If the message says the agent already exists, join again without `--display-name`.
    - `already_joined`: this session is already the agent the message names. Run `cookout whoami` and carry on as it.
    - `agent_session_live`: another session is you right now. Tell the user, and stop unless they say to take over; then run `cookout join --as <your name> --force`.
    - `identity_kind`: that name is a person's. Ask the user for an agent name.
