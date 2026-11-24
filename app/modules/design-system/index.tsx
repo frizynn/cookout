@@ -116,9 +116,11 @@
  * `MessageList` is a named list of `MessageItem`s: one message each, which
  * takes focus, with its avatar, name and time, or only its time on hover when
  * `grouped` under the one before; the day's separator and the "New" line above it when it starts them; a
- * mark (`for-you`, the filled accent block, when it mentions or answers the reader, or `open`); and an action (such as Reply: a link, or a button with `onAction`) and
- * a More actions button shown on hover or focus, after a button for each of its `menu`'s `reactions`; a reaction's
- * `key`, pressed while the message itself has focus, leaves it too. Its `menu` gives it one actions menu (the action,
+ * mark (`for-you`, the filled accent block, when it mentions or answers the reader, or `open`); and, shown on hover or
+ * focus, a "Quick actions" group of icon buttons, each with no text and named by its tooltip: a button for each of its
+ * `menu`'s `reactions` that is `inHoverBar`, then, when `replyOnHover`, its action (such as Reply: a link, or a button
+ * with `onAction`), then its thread choice when `threadOnHover`, then More actions. A reaction's
+ * `key`, pressed while the message itself has focus, leaves it too, in or out of the hover bar. Its `menu` gives it one actions menu (the action,
  * then each reaction, then Mark unread, then the thread choice, such as Close, if any), drawn two ways on Radix: right-clicking the message, or the context-menu key or Shift+F10 on it, opens it as a context menu at the pointer, and the
  * More actions button opens it as a dropdown. Every menu item draws its `icon` (a `ThreadChoice` names one too), which its type requires, before its label. An item may be `disabled`, dimmed and not chosen. Radix gives both their keyboard and focus behaviour; a chosen item's
  * action runs once the menu has closed. Mark unread's tooltip names its shortcut, `Alt-click`: an Alt-click (Option-click
@@ -185,6 +187,7 @@ export { ChannelStart } from "./lib/channel-start.tsx";
 export { DataToggle } from "./lib/data-toggle.tsx";
 export { MessageBody } from "./lib/message-body.tsx";
 export { MessageItem } from "./lib/message-item.tsx";
+export { FeedRowClosed } from "./lib/feed-row-closed.tsx";
 export { MessageList } from "./lib/message-list.tsx";
 export { QuietButton } from "./lib/quiet-button.tsx";
 export { ClosedFold } from "./lib/closed-fold.tsx";

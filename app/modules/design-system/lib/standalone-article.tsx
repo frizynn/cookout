@@ -44,6 +44,7 @@ export function StandaloneArticle(parts: StandaloneArticleParts): ReactNode {
           onAction={handleAction}
           presence={message.presence}
           reactions={message.menu.reactions}
+          replyOnHover={message.replyOnHover}
           thread={hoverThread(message)}
           time={message.time}
         >

@@ -83,7 +83,13 @@ function isRetryable(error: unknown): boolean {
   return isStorageUnavailable(error) && retryable.has(error);
 }
 
+const POSITIONED_PLACEHOLDER = /\?(?=\d)/u;
+const POSITIONED_PLACEHOLDERS = /\?(?=\d)/gu;
+
 function numbered(sql: string): string {
+  if (POSITIONED_PLACEHOLDER.test(sql)) {
+    return Str.replaceAll(POSITIONED_PLACEHOLDERS, "$$")(sql);
+  }
   const parts = Str.split("?")(sql);
   return Arr.reduce(
     Arr.tailNonEmpty(parts),
@@ -160,6 +166,7 @@ function openPostgres(url: Redacted.Redacted): Effect.Effect<PostgresDatabase, S
     }
     const database: PostgresDatabase = {
       all: (text, ...params) => query(text, params),
+      dialect: "postgres",
       exec: (text) => Effect.asVoid(query(text, [])),
       get: (text, ...params) => Effect.map(query(text, params), (rows) => Option.getOrUndefined(Arr.head(rows))),
       migrating: (work) => inTransaction(READ_COMMITTED, Effect.andThen(lockMigrations, work)),

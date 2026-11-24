@@ -37,7 +37,7 @@ function subscriptionChoices({ channel, state, subscriptions }: SubscriptionOf):
   const disabled = state.change.status === "changing";
   const subscribed = state.channels.includes(channel);
   function flip(): void {
-    subscriptions.setSubscribed(channel, !subscribed);
+    subscriptions.setSubscribed(channel, !subscribed, "channel-menu");
   }
   return [{ ...wordsOf(subscribed), disabled, href: null, onSelect: flip }];
 }

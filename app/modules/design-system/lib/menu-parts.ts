@@ -3,6 +3,7 @@ import type { MenuIcon } from "./menu-icons.ts";
 interface ReactionChoice {
   readonly symbol: string;
   readonly key: string;
+  readonly inHoverBar: boolean;
   readonly onReact: () => void;
 }
 
@@ -46,6 +47,7 @@ interface ActionMenuParts {
 
 interface HoverActionsParts extends MessageActionParts {
   readonly choices: readonly MenuChoice[];
+  readonly replyOnHover: boolean;
   readonly reactions: readonly ReactionChoice[];
   readonly thread: ThreadChoice | null;
 }

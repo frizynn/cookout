@@ -31,7 +31,11 @@
  * count as a link to its thread and, on hover or focus, a "Reply" link to it;
  * the open thread's parent is highlighted. Each run of consecutive closed threads
  * folds into one divider, "N closed threads", which shows the 10 nearest the run's
- * newest end, then "K more" for the next 10; a top-level message's menu ends with
+ * newest end, then "K more" for the next 10. A closed thread with something unread for you (a mention, a reply in a
+ * thread you follow, a reaction) when the channel opened, or since, stays out of the fold while it is open, shown in
+ * place; a closed thread shown in the channel is labelled Closed. When the channel opens with one of them loaded, the
+ * first unread item for you, the closed thread included, is scrolled into view and highlighted for about 2 s, as a
+ * reply link's is (#349). A top-level message's menu ends with
  * Close, or Reopen while its thread is closed. `ThreadView` is the thread panel
  * beside it: a bar with Close or, while the thread is closed, "Closed by @name
  * 5m ago" and Reopen, then the thread's parent message, its reply count, and its replies,

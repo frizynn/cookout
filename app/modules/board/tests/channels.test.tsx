@@ -170,7 +170,7 @@ it("a subscription event changes the subscriptions, and subscribing through the 
   await readsAll(store, channel.name);
   hand.send({ subscription: { channel: channel.name, subscribed: false }, type: "subscription" });
   const heard = subscribedNames(store).includes(channel.name);
-  store.calls.setSubscribed(channel.name, false);
+  store.calls.setSubscribed(channel.name, false, "channel-header");
 
   await vi.waitFor(() => {
     expect([heard, changeOf(store)]).toStrictEqual([false, { channel: channel.name, status: "failed" }]);

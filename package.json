@@ -44,6 +44,7 @@
     "version": "changeset version",
     "release": "pnpm build && changeset publish",
     "e2e:docker": "scripts/e2e-docker.sh",
+    "new-cloud-worker": "scripts/new-cloud-worker.sh",
     "check": "node scripts/check.ts",
     "fix": "knip --production --include exports,types,dependencies --fix > /dev/null; node scripts/lint-ratchet.ts --fix > /dev/null 2>&1; biome format --write . > /dev/null && node scripts/lint-ratchet.ts",
     "typecheck": "tsc --noEmit --incremental",

@@ -70,7 +70,7 @@ export {
   type DeleteIdentityResult,
   type IdentityDeletesSection,
   memoryRemoveIdentity,
-  sqliteIdentityDeletes,
+  sqlIdentityDeletes,
 } from "./identity-deletes.ts";
 
 export { type CreateRefusal, memoryCreateRefusal, sqlCreateRefusal };

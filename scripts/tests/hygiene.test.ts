@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 
 const SCRIPT = path.resolve("scripts/hygiene.ts");
 const MIGRATIONS = "app/modules/storage/lib/server/migrations.ts";
+const POSTGRES_MIGRATIONS = "app/modules/storage/lib/server/postgres-migrations.ts";
 const PASSED = 0;
 const FAILED = 1;
 const MINUTE = 60;
@@ -33,6 +34,11 @@ function write(dir: string, file: string, content: string): void {
 
 function migrations(entries: readonly string[]): string {
   return `const migrations = [\n${entries.map((entry) => `  \`CREATE TABLE ${entry} (id TEXT) STRICT;\`,\n`).join("")}];\n`;
+}
+
+function postgresMigrations(entries: readonly string[]): string {
+  const listed = entries.map((entry) => `  [\n    \`CREATE TABLE ${entry} (id text)\`,\n  ],\n`).join("");
+  return `const postgresMigrations: readonly (readonly string[])[] = [\n${listed}];\n`;
 }
 
 function commit(dir: string, file: string, content: string): void {
@@ -106,4 +112,53 @@ it("refuses a migration inserted mid-list on a branch that contains the newest d
   expect(run.stderr).toContain(
     `hygiene: ${MIGRATIONS}: the migrations list must begin with deploy/second's, entry for entry, but index 1 (schema version 2) differs`,
   );
+});
+
+function postgresDeployed(): string {
+  const { dir } = deployedTwice();
+  commit(dir, POSTGRES_MIGRATIONS, postgresMigrations(["a", "b"]));
+  git(dir, "tag", "deploy/third");
+  return dir;
+}
+
+it("refuses a Postgres migration edited after the newest deploy", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const dir = postgresDeployed();
+  commit(dir, POSTGRES_MIGRATIONS, postgresMigrations(["a", "edited"]));
+  const run = hygiene(dir);
+
+  expect(run.status).toBe(FAILED);
+  expect(run.stderr).toContain(
+    `hygiene: ${POSTGRES_MIGRATIONS}: the migrations list must begin with deploy/third's, entry for entry, but index 1 (schema version 2) differs`,
+  );
+});
+
+it("refuses Postgres migrations reordered after the newest deploy", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const dir = postgresDeployed();
+  commit(dir, POSTGRES_MIGRATIONS, postgresMigrations(["b", "a"]));
+  const run = hygiene(dir);
+
+  expect(run.status).toBe(FAILED);
+  expect(run.stderr).toContain(`hygiene: ${POSTGRES_MIGRATIONS}: the migrations list must begin with deploy/third's`);
+});
+
+it("passes a Postgres migration appended after the newest deploy", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const dir = postgresDeployed();
+  commit(dir, POSTGRES_MIGRATIONS, postgresMigrations(["a", "b", "c"]));
+
+  expect(hygiene(dir)).toStrictEqual({ status: PASSED, stderr: "" });
+});
+
+it("passes a Postgres list added after a deploy that had none", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const { dir } = deployedTwice();
+  commit(dir, POSTGRES_MIGRATIONS, postgresMigrations(["a"]));
+
+  expect(hygiene(dir)).toStrictEqual({ status: PASSED, stderr: "" });
 });

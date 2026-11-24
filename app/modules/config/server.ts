@@ -198,6 +198,13 @@ export const cookoutUrl = Config.String("COOKOUT_URL").pipe(Config.withDefault("
 export const cookoutToken = Config.String("COOKOUT_TOKEN").pipe(Config.withDefault(""));
 
 /**
+ * `COOKOUT_AUTH`: `proxy` says a proxy adds the credential, as a cloud session's network proxy adds
+ * `Authorization: Bearer`, so every CLI verb but `serve`, `join`, `login` and `logout` sends no token
+ * (mattpocock/cookout#340). Any other value is refused. Empty counts as unset.
+ */
+export const cookoutAuth = Config.String("COOKOUT_AUTH").pipe(Config.withDefault(""));
+
+/**
  * `COOKOUT_SESSION`: an agent session token, such as one `cookout join --print-env` printed, that every CLI verb but
  * `serve` sends ahead of everything inside a harness, and when `COOKOUT_TOKEN` is unset outside one
  * (mattpocock/cookout#150). Empty counts as unset.
