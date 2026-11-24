@@ -65,7 +65,10 @@
  * leading with its strongest reason, then its latest message's author,
  * channel, how many of its messages are new, a short time, the thread's start
  * and two lines of its text with mentions styled (the reader's own in the
- * mention colour); opening it acks it, so it moves to Earlier. `PeopleView` is the directory of every
+ * mention colour); opening it acks it, so it moves to Earlier. For you leads with a row per open Deactivation
+ * offer, its text above the agent's avatar and name (a link to its profile panel), with Deactivate (through the
+ * same confirmation as the profile's) and Keep (the `unread` store's `deactivationOffers`), then a row per
+ * unread Nudge; cleared offers are muted under Earlier. `PeopleView` is the directory of every
  * identity (the identity list, which any identity may read): how many there
  * are, a name filter and All / Humans / Agents chips, each counting what the
  * name filter leaves (both kept in the `layout` store), and a row per

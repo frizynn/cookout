@@ -13,6 +13,7 @@ interface Screen {
   readonly admin?: boolean;
   readonly liveDown?: boolean;
   readonly nudge?: boolean;
+  readonly offer?: boolean;
   readonly history?: "more" | "loading";
 }
 
@@ -38,11 +39,14 @@ interface TakeScreenshots {
 
 const THEMES: readonly Theme[] = ["light", "dark"];
 const NUDGE_TEXT = "Quiet for 3 days: close it, or follow up?";
+const OFFER_TEXT = "@release-bot has had no activity for 30 days. Deactivate it?";
+const OFFER_RAISED_AT = "2026-01-31T09:00:00.000Z";
 
 const SCREENS: readonly Screen[] = [
   { hash: "#/inbox", name: "inbox", text: "Thanks, both of you." },
   { hash: "#/inbox", history: "more", name: "inbox-more", text: "Show 50 earlier" },
   { hash: "#/inbox", name: "inbox-nudge", nudge: true, text: NUDGE_TEXT },
+  { admin: true, hash: "#/inbox", name: "inbox-offer", offer: true, text: OFFER_TEXT },
   { click: "Show 50 earlier", hash: "#/inbox", history: "loading", name: "inbox-loading", text: "Loading…" },
   { hash: "#/channels/general", name: "channel", text: "Lunch at 12:30." },
   { hash: "#/channels/general/threads/1", name: "thread", text: "Thanks, both of you." },
@@ -183,12 +187,38 @@ function withNudgeIn(body: string): string {
   return body.replace('"nudges":[]', `"nudges":${nudges}`);
 }
 
-async function withNudge(page: Page): Promise<void> {
+function withOfferIn(body: string): string {
+  const raisedAt = OFFER_RAISED_AT;
+  const identity = { admin: false, createdAt: raisedAt, kind: "agent", name: "release-bot", owner: "ada" };
+  const offer = { cleared: false, id: 1, identity, quietDays: 30, raisedAt, text: OFFER_TEXT };
+  return body.replace('"deactivationOffers":[]', `"deactivationOffers":${JSON.stringify([offer])}`);
+}
+
+function withEntriesIn(screen: Screen, body: string): string {
+  let changed = body;
+  if (screen.nudge === true) {
+    changed = withNudgeIn(changed);
+  }
+  if (screen.offer === true) {
+    changed = withOfferIn(changed);
+  }
+  return changed;
+}
+
+interface InboxEntries {
+  readonly page: Page;
+  readonly screen: Screen;
+}
+
+async function withInboxEntries({ page, screen }: InboxEntries): Promise<void> {
+  if (screen.nudge !== true && screen.offer !== true) {
+    return;
+  }
   await page.route("**/v1/inbox", async (route) => {
     const response = await route.fetch();
-    await route.fulfill({ body: withNudgeIn(await response.text()), response });
+    await route.fulfill({ body: withEntriesIn(screen, await response.text()), response });
   });
 }
 
 export type { Screen, Shot, Theme };
-export { screenshotOptions, takeScreenshots, withNudge, withOlderHistory };
+export { screenshotOptions, takeScreenshots, withInboxEntries, withOlderHistory };

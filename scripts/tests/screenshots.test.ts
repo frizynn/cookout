@@ -47,6 +47,7 @@ it("takes each standard screen in light and then in dark before the next screen"
       "inbox",
       "inbox-more",
       "inbox-nudge",
+      "inbox-offer",
       "inbox-loading",
       "channel",
       "thread",
@@ -100,7 +101,7 @@ it("with no flags it takes every screen into no named folder", { timeout: 2000 }
 it("an unknown screen or flag, or a flag with no value, is refused", { timeout: 2000 }, () => {
   expect.hasAssertions();
   expect(() => screenshotOptions(["--only", "nope"])).toThrow(
-    "Unknown screen nope: pick from inbox, inbox-more, inbox-nudge, inbox-loading, channel, thread, receipt, people, profile, warning, admin-profile, admin-deactivated, confirm, settings, new-channel, narrow, closed-threads, closed-thread, open-threads, collapsed, reconnecting.",
+    "Unknown screen nope: pick from inbox, inbox-more, inbox-nudge, inbox-offer, inbox-loading, channel, thread, receipt, people, profile, warning, admin-profile, admin-deactivated, confirm, settings, new-channel, narrow, closed-threads, closed-thread, open-threads, collapsed, reconnecting.",
   );
   expect(() => screenshotOptions(["--theme", "dark"])).toThrow(
     "Unknown flag --theme: use --only <screen> or --out <dir>.",
