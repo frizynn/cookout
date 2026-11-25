@@ -26,6 +26,7 @@ export function ConversationView(props: ConversationProps): ReactNode {
   const { closing, read: messages, state } = useShownThread({ acking: false, place: { channel, id: thread } });
   const reader = useThreadReader(props);
   const draft = threadDraft({ channel, composer: props.composer, me: props.me, messages, thread });
+  const handleFiles = draft.attachments.attach;
   if (isMissing(state)) {
     return <ConversationMissing />;
   }
@@ -38,6 +39,7 @@ export function ConversationView(props: ConversationProps): ReactNode {
       edge={props.edge}
       label={TEXT.conversation}
       message={draft.replyTo}
+      onFiles={handleFiles}
       open={openLinkOf({ keymap: props.keymap, label: TEXT.open, to: { channel, name: "thread", thread } })}
     >
       <ReadNote reader={reader} />
