@@ -1,12 +1,12 @@
+import { boxOptionsOf, foundIdsOf } from "./search-options.ts";
+import { useChannels, useSearchResults } from "./use-board.ts";
 import { useMemo, useSyncExternalStore } from "react";
 import type { BoxOption } from "./search-options.ts";
 import type { FilterSuggestion } from "./filter-suggestions.ts";
 import type { Identities } from "../../composer/index.ts";
 import type { SearchState } from "../../search/web.ts";
-import { boxOptionsOf } from "./search-options.ts";
 import { filterSuggestionsOf } from "./filter-suggestions.ts";
 import { recentDays } from "../../format/index.ts";
-import { useChannels } from "./use-board.ts";
 
 interface SearchLists {
   readonly options: readonly BoxOption[];
@@ -53,13 +53,14 @@ function listsOf(state: SearchState, found: Found): SearchLists {
 function useSearchLists({ identities, state }: Listing): SearchLists {
   const channels = useChannels();
   const everyone = useSyncExternalStore(identities.subscribe, identities.snapshot);
+  const results = useSearchResults(foundIdsOf(state));
   return useMemo(
     () =>
       listsOf(state, {
-        options: boxOptionsOf({ channels, identities: everyone, state }),
+        options: boxOptionsOf({ channels, identities: everyone, results, state }),
         suggestions: filterSuggestionsOf({ channels, days: recentDays(), identities: everyone, state }),
       }),
-    [channels, everyone, state],
+    [channels, everyone, results, state],
   );
 }
 

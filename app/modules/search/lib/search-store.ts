@@ -1,5 +1,5 @@
-import type { Refusal, SearchRequest } from "../../sdk/index.ts";
-import type { SearchResponse, SearchResult, SearchSort } from "../index.ts";
+import type { MessageId, Refusal, SearchRequest } from "../../sdk/index.ts";
+import type { SearchResponse, SearchSort } from "../index.ts";
 import { isEmptyQuery, parseQuery } from "../index.ts";
 
 type SearchAnswer = { readonly page: SearchResponse } | { readonly refusal: Refusal };
@@ -12,7 +12,7 @@ type Found =
   | { readonly status: "refused"; readonly message: string }
   | {
       readonly status: "found";
-      readonly results: readonly SearchResult[];
+      readonly ids: readonly MessageId[];
       readonly cursor: string | null;
       readonly loadingMore: boolean;
     };
@@ -72,11 +72,11 @@ function requestOf(asked: Asked): SearchRequest {
   };
 }
 
-function resultsOf(found: Found): readonly SearchResult[] {
+function idsOf(found: Found): readonly MessageId[] {
   if (found.status !== "found") {
     return [];
   }
-  return found.results;
+  return found.ids;
 }
 
 function cursorOf(page: SearchResponse): string | null {
@@ -86,12 +86,13 @@ function cursorOf(page: SearchResponse): string | null {
   return page.cursor;
 }
 
-function foundAfter(earlier: readonly SearchResult[], answer: SearchAnswer): Found {
+function foundAfter(earlier: readonly MessageId[], answer: SearchAnswer): Found {
   if ("refusal" in answer) {
     return { message: answer.refusal.message, status: "refused" };
   }
   const { page } = answer;
-  return { cursor: cursorOf(page), loadingMore: false, results: [...earlier, ...page.results], status: "found" };
+  const ids = [...earlier, ...page.results.map((result) => result.message.id)];
+  return { cursor: cursorOf(page), ids, loadingMore: false, status: "found" };
 }
 
 function movedTo(at: number, direction: Direction, count: number): number {
@@ -164,7 +165,7 @@ function asking(held: Held, options: SearchOptions): Asking {
     const { found, query, sort } = held.state();
     const answer = await options.search(requestOf({ cursor, limit: options.limit ?? null, query, sort }));
     if (mine === latest) {
-      held.set({ found: foundAfter(resultsOf(found), answer) });
+      held.set({ found: foundAfter(idsOf(found), answer) });
     }
   }
   return {
@@ -250,7 +251,7 @@ function createSearch(options: SearchOptions): Search {
     },
     loadMore,
     move: (direction, ahead = FIRST) => {
-      const count = ahead + resultsOf(held.state().found).length;
+      const count = ahead + idsOf(held.state().found).length;
       const highlighted = movedTo(held.state().highlighted, direction, count);
       held.set({ highlighted });
       if (highlighted > ahead - ONE && highlighted === count - ONE) {

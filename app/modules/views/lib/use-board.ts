@@ -11,7 +11,7 @@ import type {
   ThreadClosing,
   ThreadMessagesState,
 } from "../../board/index.ts";
-import type { ChannelName, MessageId } from "../../sdk/index.ts";
+import type { ChannelName, MessageId, SearchResult } from "../../sdk/index.ts";
 import {
   channelList,
   channelPage,
@@ -21,6 +21,7 @@ import {
   deletedSchedules,
   messageBeforeOf,
   scheduleListOf,
+  searchResultsOf,
   subscribedChannels,
   threadOf,
 } from "../../board/index.ts";
@@ -124,6 +125,12 @@ function useClosingRefusal(): ClosingRefusal | null {
   return useSyncExternalStore(store.subscribe, () => closingRefusal(store.snapshot()));
 }
 
+function useSearchResults(ids: readonly MessageId[]): readonly SearchResult[] {
+  const store = useBoardStore();
+  const select = useMemo(() => searchResultsOf(ids), [ids]);
+  return useSyncExternalStore(store.subscribe, () => select(store.snapshot()));
+}
+
 function useChannelPage(name: ChannelName): ChannelMessagesState {
   const store = useBoardStore();
   const read = useMemo(
@@ -203,6 +210,7 @@ export {
   useDeletedSchedules,
   useMessageBefore,
   useReply,
+  useSearchResults,
   useShownThread,
   useSubscriptions,
   useThreadRead,
