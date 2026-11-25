@@ -11,8 +11,7 @@ interface DrawerKeys {
 }
 
 function focusOpener(): void {
-  const opener = globalThis.document.querySelector<HTMLElement>(OPENER);
-  if (opener !== null) {
+  for (const opener of globalThis.document.querySelectorAll<HTMLElement>(OPENER)) {
     opener.focus();
   }
 }
