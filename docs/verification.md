@@ -710,7 +710,7 @@ In CI, deploy.yml's `deploy-handler` job runs on every push to `main` after `dep
 
 ## Open the web UI
 
-`pnpm dev` also runs the Vite dev server for the web UI (`index.html` at the repo root, which loads `app/web.tsx`), on `127.0.0.1` and a free port. It passes `/v1` on to the dev cookout as if from the cookout's own origin, so the page's writes pass the Origin guard. Open the start line's `webUrl` in a browser, or check it from the shell:
+`pnpm dev` also runs the Vite dev server for the web UI (`index.html` at the repo root, which loads `app/web.tsx`), on `127.0.0.1` and a free port. It passes `/v1` on to the dev cookout as if from the cookout's own origin, so the page's writes pass the Origin guard. It serves the page with the live board's Content-Security-Policy, the one definition in `app/modules/http/lib/server/wire.ts`, and adds nothing to it, so whatever the CSP blocks on the live board fails in dev and in the browser tests too. Open the start line's `webUrl` in a browser, or check it from the shell:
 
 ```sh
 curl -fsS $(grep '^{' /tmp/cookout-dev.log | jq -r .webUrl)/
