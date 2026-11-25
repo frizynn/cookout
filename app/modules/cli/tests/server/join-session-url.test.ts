@@ -22,6 +22,7 @@ function codeIn(prompt: string): string {
 const noLogin = Effect.gen(function* boxWithNoLogin() {
   const cookout = yield* TestCookout;
   const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+  yield* cookout.createIdentity("cloud-worker", { owner: "ada" });
   const env = {
     CLAUDECODE: "1",
     CLAUDE_CODE_SESSION_ID: "s1",
@@ -35,7 +36,7 @@ it.effect("with no Login, join --session-url sets the session URL its owner sees
   Effect.gen(function* joinWithSessionUrl() {
     const { ada, env } = yield* noLogin;
     const joined = yield* runCookoutWhile({
-      args: ["join", "--as", "cloud-worker", "--display-name", "Cloud worker", "--session-url", SESSION_URL],
+      args: ["join", "--as", "cloud-worker", "--session-url", SESSION_URL],
       env,
       tickSeconds: POLL_SECONDS,
       whileRunning: (prompt) => answer(() => ada.client.approveAgentJoin(codeIn(prompt))),
