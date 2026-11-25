@@ -169,6 +169,7 @@ it("names the browser tests it skipped, and that CI runs them all", { timeout: 1
       ciJob: "browser",
       command: "pnpm browser",
       name: "the browser tests this branch doesn't reach (2 of 3 files: approve, home)",
+      workflow: "Release",
     },
   ]);
 });

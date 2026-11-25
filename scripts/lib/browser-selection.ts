@@ -267,6 +267,7 @@ function browserSkip(tests: BrowserTests): readonly CiOnly[] {
       ciJob: "browser",
       command: "pnpm browser",
       name: `the browser tests this branch doesn't reach (${String(tests.skipped.length)} of ${String(total)} files: ${names})`,
+      workflow: "Release",
     },
   ];
 }
