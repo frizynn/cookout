@@ -1,5 +1,3 @@
-import { objectIn } from "./object.ts";
-
 type Published = () => void;
 type Call = (...args: readonly unknown[]) => unknown;
 
@@ -80,31 +78,8 @@ function publishedOnce(publishes: (store: string) => void, store: string): Publi
   };
 }
 
-function typeOf(event: unknown): string {
-  const type: unknown = Reflect.get(objectIn(event), "type");
-  return String(type);
-}
-
-function probeLive(live: unknown, heard: (type: string) => void): void {
-  const follow = callable(Reflect.get(objectIn(live), "follow"));
-  if (follow === null) {
-    return;
-  }
-  Reflect.set(objectIn(live), "follow", (follower: unknown) => {
-    const hear = callable(Reflect.get(objectIn(follower), "heard")) ?? ((): null => null);
-    return follow({
-      ...objectIn(follower),
-      heard: (event: unknown) => {
-        heard(typeOf(event));
-        return hear(event);
-      },
-    });
-  });
-}
-
 interface Probing {
   readonly stores: object;
-  readonly heard: (type: string) => void;
   readonly published: (store: string) => void;
 }
 
@@ -121,14 +96,11 @@ function treeProber(): (root: unknown, published: Published) => void {
   };
 }
 
-function probeStores({ heard, published, stores }: Probing): void {
+function probeStores({ published, stores }: Probing): void {
   const probeTree = treeProber();
   for (const name of Object.keys(stores)) {
-    if (name !== "live") {
-      probeTree(Reflect.get(stores, name), publishedOnce(published, name));
-    }
+    probeTree(Reflect.get(stores, name), publishedOnce(published, name));
   }
-  probeLive(Reflect.get(stores, "live"), heard);
 }
 
 export { probeStores };

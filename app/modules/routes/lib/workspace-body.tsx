@@ -18,13 +18,8 @@ export function WorkspaceBody(props: WorkspaceBodyProps): ReactNode {
   return (
     <WorkspaceColumn>
       <MessageListKeys keymap={stores.keymap} />
-      <SearchBox
-        board={stores.board}
-        identities={stores.composer.identities}
-        keymap={stores.keymap}
-        search={stores.search}
-      />
-      {stores.live !== null && <ReconnectingView live={stores.live} />}
+      <SearchBox identities={stores.composer.identities} keymap={stores.keymap} search={stores.search} />
+      <ReconnectingView />
       <IdentityDeletedNotice identities={stores.composer.identities} />
       <WorkspaceMain>
         <WorkspacePanes me={props.me} profile={props.profile} route={props.route} stores={stores} />

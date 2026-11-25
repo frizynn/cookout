@@ -1,6 +1,5 @@
+import type { ChannelCreation, ScheduleList } from "../../board/index.ts";
 import { NavHeading, NavLink, NavList } from "../../design-system/layout.tsx";
-import { useMemo, useSyncExternalStore } from "react";
-import type { Board } from "../../board/index.ts";
 import { ChannelRows } from "./channel-rows.tsx";
 import { InboxLink } from "./inbox-link.tsx";
 import type { Keymap } from "../../keymap/index.ts";
@@ -10,6 +9,7 @@ import { NewChannelButton } from "./new-channel-button.tsx";
 import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
 import { hrefOf } from "../../paths/index.ts";
+import { useMemo } from "react";
 import { useSidebarCounts } from "./use-unread-levels.ts";
 
 const TEXT = {
@@ -19,9 +19,10 @@ const TEXT = {
 } as const;
 
 interface SidebarLinksProps {
-  readonly board: Board;
+  readonly creation: ChannelCreation;
   readonly keymap: Keymap;
   readonly route: Route;
+  readonly scheduleList: ScheduleList;
   readonly unread: Looking["unread"];
   readonly me: string;
 }
@@ -30,16 +31,10 @@ export type { SidebarLinksProps };
 
 export function SidebarLinks(props: SidebarLinksProps): ReactNode {
   const { route } = props;
-  const { channels } = useSyncExternalStore(props.board.subscribe, props.board.snapshot);
   const counts = useSidebarCounts({ me: props.me });
   const actions = useMemo(
-    () => ({
-      keymap: props.keymap,
-      scheduleList: props.board.scheduleList,
-      subscriptions: props.board.subscriptions,
-      unread: props.unread,
-    }),
-    [props.board.scheduleList, props.board.subscriptions, props.keymap, props.unread],
+    () => ({ keymap: props.keymap, scheduleList: props.scheduleList, unread: props.unread }),
+    [props.keymap, props.scheduleList, props.unread],
   );
   return (
     <>
@@ -54,10 +49,10 @@ export function SidebarLinks(props: SidebarLinksProps): ReactNode {
         />
       </NavList>
       <NavHeading label={TEXT.channels}>
-        <NewChannelButton creation={props.board.creation} />
+        <NewChannelButton creation={props.creation} />
       </NavHeading>
-      <ChannelRows actions={actions} channels={channels} route={route} counts={counts.channels} />
-      <NewChannel creation={props.board.creation} />
+      <ChannelRows actions={actions} route={route} counts={counts.channels} />
+      <NewChannel creation={props.creation} />
     </>
   );
 }

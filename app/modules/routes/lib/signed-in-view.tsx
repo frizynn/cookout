@@ -20,17 +20,23 @@ export function SignedInView(props: SignedInViewProps): ReactNode {
   const { sidebar } = useSyncExternalStore(layout.subscribe, layout.snapshot);
   const handleToggle = layout.toggleSidebar;
   return (
-    <ScheduleLists board={stores.board} me={props.identity}>
+    <ScheduleLists me={props.identity} scheduleList={stores.scheduleList} scheduling={stores.scheduling}>
       <Workspace onToggleSidebar={handleToggle} sidebarOpen={sidebar}>
         <SidebarView
-          board={stores.board}
+          creation={stores.channelCreation}
           identity={props.identity}
           keymap={stores.keymap}
           layout={layout}
           route={props.route}
+          scheduleList={stores.scheduleList}
           unread={stores.unread}
         />
-        <SidebarKeys board={stores.board} keymap={stores.keymap} me={props.identity.name} unread={stores.unread} />
+        <SidebarKeys
+          keymap={stores.keymap}
+          me={props.identity.name}
+          scheduleList={stores.scheduleList}
+          unread={stores.unread}
+        />
         <WorkspaceBody me={props.identity.name} profile={props.profile} route={props.route} stores={stores} />
       </Workspace>
     </ScheduleLists>

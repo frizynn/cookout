@@ -25,11 +25,6 @@ interface ScheduleList {
   readonly change: (id: ScheduledMessageId, change: ScheduleChange) => void;
 }
 
-interface ScheduleMarks {
-  readonly subscribe: (listener: () => void) => () => void;
-  readonly snapshot: () => ReadonlySet<ScheduledMessageId>;
-}
-
 interface ScheduleListOptions {
   readonly change: (id: ScheduledMessageId, change: ScheduleChange) => Promise<void>;
 }
@@ -89,4 +84,4 @@ function createScheduleList(options: ScheduleListOptions): ScheduleList {
   };
 }
 
-export { type ScheduleList, type ScheduleListState, type ScheduleMarks, createScheduleList };
+export { type ScheduleList, type ScheduleListState, createScheduleList };

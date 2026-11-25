@@ -1,5 +1,5 @@
+import type { ScheduleList, Scheduling } from "../../board/index.ts";
 import { useCallback, useSyncExternalStore } from "react";
-import type { Board } from "../../board/index.ts";
 import type { Identity } from "../../sdk/index.ts";
 import { ListDialog } from "../../design-system/controls.tsx";
 import type { ReactNode } from "react";
@@ -14,17 +14,17 @@ const TEXT = {
 } as const;
 
 interface ScheduleListDialogProps {
-  readonly board: Board;
   readonly me: Identity;
+  readonly scheduleList: ScheduleList;
+  readonly scheduling: Scheduling;
 }
 
 export function ScheduleListDialog(props: ScheduleListDialogProps): ReactNode {
-  const { board } = props;
-  const { scheduleList } = board;
+  const { scheduleList, scheduling } = props;
   const state = useSyncExternalStore(scheduleList.subscribe, scheduleList.snapshot);
   const handleClose = scheduleList.close;
   const { channel } = state;
-  const { editing } = useSyncExternalStore(board.scheduling.subscribe, board.scheduling.snapshot);
+  const { editing } = useSyncExternalStore(scheduling.subscribe, scheduling.snapshot);
   const handleSaved = useCallback(() => {
     if (channel !== null) {
       scheduleList.open(channel, editing);
@@ -38,10 +38,16 @@ export function ScheduleListDialog(props: ScheduleListDialogProps): ReactNode {
       open={channel !== null}
       title={TEXT.title}
     >
-      {channel !== null && <ScheduleListBody board={board} channel={channel} me={props.me} state={state} />}
       {channel !== null && (
-        <ScheduleDialog channel={channel} editing onSaved={handleSaved} scheduling={board.scheduling} />
+        <ScheduleListBody
+          channel={channel}
+          me={props.me}
+          scheduleList={scheduleList}
+          scheduling={scheduling}
+          state={state}
+        />
       )}
+      {channel !== null && <ScheduleDialog channel={channel} editing onSaved={handleSaved} scheduling={scheduling} />}
       <ScheduleDeleteConfirm scheduleList={scheduleList} state={state} />
     </ListDialog>
   );

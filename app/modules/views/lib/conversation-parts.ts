@@ -1,17 +1,18 @@
-import type { Board, ThreadMessagesState } from "../../board/index.ts";
+import type { InboxThreadSelection, LinkedRoute } from "../../paths/index.ts";
 import type { PanelAction, PanelEdgeParts, ShortcutLinkParts } from "../../design-system/layout.tsx";
 import type { Reader, Reading, Unread } from "../../unread/index.ts";
 import type { Composer } from "../../composer/index.ts";
-import type { InboxThreadSelection } from "../../paths/index.ts";
 import type { Keymap } from "../../keymap/index.ts";
+import type { ThreadMessagesState } from "../../board/index.ts";
+import { hrefOf } from "../../paths/index.ts";
 
 const TEXT = { markRead: "Mark read", markUnread: "Mark unread", readName: "Mark conversation read" } as const;
 
 const NONE = 0;
+const INBOX_HREF = hrefOf({ name: "inbox", selected: null });
 const NOT_FOUND = "message_not_found";
 
 interface ConversationProps {
-  readonly board: Board;
   readonly composer: Composer;
   readonly edge: PanelEdgeParts;
   readonly selected: InboxThreadSelection;
@@ -27,7 +28,7 @@ interface Actions {
 }
 
 interface OpenLink {
-  readonly href: string;
+  readonly to: LinkedRoute;
   readonly label: string;
   readonly keymap: Keymap;
 }
@@ -44,8 +45,8 @@ function actionsOf({ keymap, reader }: Actions): readonly PanelAction[] {
   ];
 }
 
-function openLinkOf({ href, keymap, label }: OpenLink): ShortcutLinkParts {
-  return { href, label, shortcut: keymap.shortcutOf("openRow") };
+function openLinkOf({ keymap, label, to }: OpenLink): ShortcutLinkParts {
+  return { href: hrefOf(to), label, shortcut: keymap.shortcutOf("openRow") };
 }
 
 function countOf(state: ThreadMessagesState): number {
@@ -59,4 +60,4 @@ function isMissing(state: ThreadMessagesState): boolean {
   return state.status === "failed" && state.code === NOT_FOUND;
 }
 
-export { type ConversationProps, actionsOf, countOf, isMissing, openLinkOf };
+export { type ConversationProps, INBOX_HREF, actionsOf, countOf, isMissing, openLinkOf };

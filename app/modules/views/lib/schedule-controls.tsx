@@ -1,5 +1,5 @@
-import type { Board, ScheduleListState } from "../../board/index.ts";
 import { Button, ButtonRow } from "../../design-system/controls.tsx";
+import type { ScheduleList, ScheduleListState, Scheduling } from "../../board/index.ts";
 import { Alert } from "../../design-system/content.tsx";
 import type { ReactNode } from "react";
 import { ScheduleToggle } from "./schedule-toggle.tsx";
@@ -10,8 +10,9 @@ import { useCallback } from "react";
 const TEXT = { delete: "Delete", edit: "Edit", failed: "Couldn't change it." } as const;
 
 interface ScheduleControlsProps {
-  readonly board: Board;
   readonly schedule: ScheduledMessage;
+  readonly scheduleList: ScheduleList;
+  readonly scheduling: Scheduling;
   readonly state: ScheduleListState;
 }
 
@@ -28,8 +29,7 @@ function busyOn(state: ScheduleListState, schedule: ScheduledMessage): boolean {
 }
 
 export function ScheduleControls(props: ScheduleControlsProps): ReactNode {
-  const { board, schedule, state } = props;
-  const { scheduleList, scheduling } = board;
+  const { schedule, scheduleList, scheduling, state } = props;
   const busy = busyOn(state, schedule);
   const failure = failureOf(state, schedule);
   const handleEdit = useCallback(() => {

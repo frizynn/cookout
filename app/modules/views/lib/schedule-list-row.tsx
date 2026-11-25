@@ -1,5 +1,5 @@
-import type { Board, ScheduleListState } from "../../board/index.ts";
 import { CurrentItemRow, Muted, Tag } from "../../design-system/content.tsx";
+import type { ScheduleList, ScheduleListState, Scheduling } from "../../board/index.ts";
 import { mayChange, nextRunWords, stateWords, timingWords } from "./schedule-facts.ts";
 import type { Identity } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
@@ -7,9 +7,10 @@ import { ScheduleControls } from "./schedule-controls.tsx";
 import type { ScheduledMessage } from "../../scheduled-messages/index.ts";
 
 interface ScheduleListRowProps {
-  readonly board: Board;
   readonly me: Identity;
   readonly schedule: ScheduledMessage;
+  readonly scheduleList: ScheduleList;
+  readonly scheduling: Scheduling;
   readonly state: ScheduleListState;
 }
 
@@ -28,7 +29,12 @@ export function ScheduleListRow(props: ScheduleListRowProps): ReactNode {
         </div>
       )}
       {mayChange({ me: props.me, schedule }) && (
-        <ScheduleControls board={props.board} schedule={schedule} state={props.state} />
+        <ScheduleControls
+          schedule={schedule}
+          scheduleList={props.scheduleList}
+          scheduling={props.scheduling}
+          state={props.state}
+        />
       )}
     </CurrentItemRow>
   );

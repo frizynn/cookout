@@ -151,7 +151,6 @@ export function openBoard(opening: BoardOpening): () => void {
       composer={composer}
       keymap={createKeymap({ platform: globalThis.navigator.platform })}
       layout={layout}
-      live={opening.live ?? null}
       loginApprovals={loginApprovals}
       reading={readingFor(opening.reading)}
       search={opening.search ?? searchFor(boardStore, {})}

@@ -10,7 +10,7 @@
  * panel open beside it. Any other hash opens the inbox, the homepage, as the
  * sidebar's "cookout" name does; a channel name that isn't a channel name, or
  * a thread ID that isn't a message ID, says there is nothing here.
- * With `live`, while the live stream's link to the server is down, a
+ * While the board store says the live stream's link to the server is down, a
  * "Reconnecting…" bar shows at the top of the workspace.
  * `#/approve/<user code>` is the approval page for a login request, a page of
  * its own outside the workspace (after the login view, if logged out), and
@@ -21,17 +21,15 @@
  * `@name`, goes there. `keymap` owns every keyboard shortcut: the app adds its one key listener to the page while
  * drawn, and `?` (off a text box) or Ctrl/Cmd+/ opens the list of every shortcut on any page. The
  * `paths` module reads the hash and builds every link's.
- * The app makes the board's old per-channel and per-thread stores, which the views still read, from `boardStore`, as
- * thin adapters over its selectors and methods, for the last migration ticket to delete.
  */
+import { useMemo, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 import { RouteView } from "./lib/route-view.tsx";
 import { ShortcutListView } from "../views/index.tsx";
 import type { Stores } from "./lib/stores.ts";
+import { boardPageStores } from "./lib/board-page-stores.ts";
 import { locationOf } from "../paths/index.ts";
 import { useKeymapListener } from "./lib/use-keymap-listener.ts";
-import { useSyncExternalStore } from "react";
-import { withBoard } from "./lib/board-adapter.ts";
 
 function subscribeToHash(listener: () => void): () => void {
   globalThis.addEventListener("hashchange", listener);
@@ -44,8 +42,8 @@ function currentHash(): string {
   return globalThis.location.hash;
 }
 
-/** What the web UI reads: the stores, each made with the SDK client it talks through. */
-export type CookoutAppProps = Omit<Stores, "board">;
+/** What the web UI reads: the stores, each made with the SDK client it talks through. The app makes the new-channel form's, the scheduling dialog's and the scheduled messages list's page-only stores from `boardStore`. */
+export type CookoutAppProps = Omit<Stores, "channelCreation" | "scheduleList" | "scheduling">;
 
 /**
  * The whole web UI: the view for the page's location hash, redrawn when it changes.
@@ -55,9 +53,11 @@ export type CookoutAppProps = Omit<Stores, "board">;
 export function CookoutApp(props: CookoutAppProps): ReactNode {
   const hash = useSyncExternalStore(subscribeToHash, currentHash);
   useKeymapListener(props.keymap);
+  const page = useMemo(() => boardPageStores(props.boardStore), [props.boardStore]);
+  const stores = useMemo(() => ({ ...props, ...page }), [page, props]);
   return (
     <>
-      <RouteView place={locationOf(hash)} stores={withBoard(props)} />
+      <RouteView place={locationOf(hash)} stores={stores} />
       <ShortcutListView keymap={props.keymap} />
     </>
   );

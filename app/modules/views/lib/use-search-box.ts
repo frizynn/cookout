@@ -1,14 +1,15 @@
 import { aheadOf, boxOptionsOf } from "./search-options.ts";
 import { filterSuggestionsOf, pickedOf } from "./filter-suggestions.ts";
 import { useCallback, useEffect, useRef } from "react";
-import type { Board } from "../../board/index.ts";
 import type { BoxOption } from "./search-options.ts";
 import type { FilterSuggestion } from "./filter-suggestions.ts";
 import type { Identities } from "../../composer/index.ts";
 import type { Keymap } from "../../keymap/index.ts";
 import type { RefObject } from "react";
 import type { Search } from "../../search/web.ts";
+import { channelList } from "../../board/index.ts";
 import { recentDays } from "../../format/index.ts";
+import { useBoardStore } from "./use-board.ts";
 
 const NEAR_END_PX = 48;
 const CAPTURE = { capture: true } as const;
@@ -22,7 +23,6 @@ interface SearchBox {
 }
 
 interface SearchBoxStores {
-  readonly board: Board;
   readonly box: string;
   readonly identities: Identities;
   readonly keymap: Keymap;
@@ -219,7 +219,8 @@ function listen(place: Place, keymap: Keymap): () => void {
   };
 }
 
-function useSearchBox({ board, box, identities, keymap, search }: SearchBoxStores): SearchBox {
+function useSearchBox({ box, identities, keymap, search }: SearchBoxStores): SearchBox {
+  const store = useBoardStore();
   const area = useRef<HTMLDivElement>(null);
   const back = useRef<unknown>(null);
   const place = useCallback(
@@ -229,7 +230,7 @@ function useSearchBox({ board, box, identities, keymap, search }: SearchBoxStore
       box: () => globalThis.document.querySelector(`[id="${box}"]`),
       options: () =>
         boxOptionsOf({
-          channels: board.snapshot().channels,
+          channels: channelList(store.snapshot()),
           identities: identities.snapshot(),
           state: search.snapshot(),
         }),
@@ -239,13 +240,13 @@ function useSearchBox({ board, box, identities, keymap, search }: SearchBoxStore
       search,
       suggestions: () =>
         filterSuggestionsOf({
-          channels: board.snapshot().channels,
+          channels: channelList(store.snapshot()),
           days: recentDays(),
           identities: identities.snapshot(),
           state: search.snapshot(),
         }),
     }),
-    [board, box, identities, search],
+    [box, identities, search, store],
   );
   useEffect(() => listen(place(), keymap), [keymap, place]);
   const choose = useCallback(

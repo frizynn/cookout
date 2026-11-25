@@ -1,5 +1,4 @@
 import { useMemo, useSyncExternalStore } from "react";
-import type { Board } from "../../board/index.ts";
 import type { BoxOption } from "./search-options.ts";
 import type { FilterSuggestion } from "./filter-suggestions.ts";
 import type { Identities } from "../../composer/index.ts";
@@ -7,6 +6,7 @@ import type { SearchState } from "../../search/web.ts";
 import { boxOptionsOf } from "./search-options.ts";
 import { filterSuggestionsOf } from "./filter-suggestions.ts";
 import { recentDays } from "../../format/index.ts";
+import { useChannels } from "./use-board.ts";
 
 interface SearchLists {
   readonly options: readonly BoxOption[];
@@ -17,7 +17,6 @@ interface SearchLists {
 }
 
 interface Listing {
-  readonly board: Board;
   readonly identities: Identities;
   readonly state: SearchState;
 }
@@ -51,8 +50,8 @@ function listsOf(state: SearchState, found: Found): SearchLists {
   return { ...lists, active: activeOf(state, lists) };
 }
 
-function useSearchLists({ board, identities, state }: Listing): SearchLists {
-  const { channels } = useSyncExternalStore(board.subscribe, board.snapshot);
+function useSearchLists({ identities, state }: Listing): SearchLists {
+  const channels = useChannels();
   const everyone = useSyncExternalStore(identities.subscribe, identities.snapshot);
   return useMemo(
     () =>

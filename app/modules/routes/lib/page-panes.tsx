@@ -20,7 +20,6 @@ export function PagePanes(props: PagePanesProps): ReactNode {
   if (route.name === "inbox") {
     return (
       <InboxView
-        board={stores.board}
         composer={stores.composer}
         edge={edge}
         keymap={stores.keymap}

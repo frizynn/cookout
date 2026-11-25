@@ -1,4 +1,4 @@
-import type { ChannelMessages, ChannelMessagesState, ThreadClosing } from "../../board/index.ts";
+import type { ChannelMessagesState, ThreadClosing } from "../../board/index.ts";
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import type { MessageMenu, ThreadNews } from "../../unread/index.ts";
 import { FoldEntry } from "./fold-entry.tsx";
@@ -14,7 +14,6 @@ interface FeedStreamProps {
   readonly label: string;
   readonly feed: string;
   readonly state: Loaded;
-  readonly messages: ChannelMessages;
   readonly me: string;
   readonly held: ReadonlySet<MessageId>;
   readonly readPosition: number | null;
@@ -44,8 +43,8 @@ export function FeedStream(props: FeedStreamProps): ReactNode {
                 day={row.day}
                 expanded={state.expanded}
                 fold={row.fold}
+                channel={props.channel}
                 key={`fold-${row.fold.run.join("-")}`}
-                messages={props.messages}
               />
             );
           }

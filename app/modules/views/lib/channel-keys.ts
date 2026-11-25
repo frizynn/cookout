@@ -1,4 +1,4 @@
-import type { ScheduleList, Subscriptions } from "../../board/index.ts";
+import type { BoardStore, ScheduleList } from "../../board/index.ts";
 import type { Unread, UnreadCounts } from "../../unread/index.ts";
 import { hrefOf, locationOf } from "../../paths/index.ts";
 import { openChannel, steppedTo } from "./channel-order.ts";
@@ -7,6 +7,7 @@ import type { ChannelName } from "../../sdk/index.ts";
 import { NO_COUNTS } from "../../unread/index.ts";
 import type { Step } from "./channel-order.ts";
 import { hasUnread } from "./unread-counts.ts";
+import { subscribedChannels } from "../../board/index.ts";
 
 const TEXT = {
   markedRead: (channel: ChannelName) => `#${channel} marked read`,
@@ -22,7 +23,7 @@ interface ChannelKeys {
   readonly counts: ReadonlyMap<ChannelName, UnreadCounts>;
   readonly order: readonly ChannelName[];
   readonly scheduleList: ScheduleList;
-  readonly subscriptions: Subscriptions;
+  readonly store: BoardStore;
   readonly unread: Unread;
 }
 
@@ -95,12 +96,12 @@ function subscriptionSaid(channel: ChannelName, subscribing: boolean): string {
 function toggleSubscription(keys: ChannelKeys): Act {
   return ({ target }) => {
     const channel = rowChannel(keys, target);
-    const state = keys.subscriptions.snapshot();
+    const state = subscribedChannels(keys.store.snapshot());
     if (channel === null || state.status !== "loaded" || state.change.status === "changing") {
       return false;
     }
     const subscribing = !state.channels.includes(channel);
-    keys.subscriptions.setSubscribed(channel, subscribing, "channel-menu");
+    keys.store.calls.setSubscribed(channel, subscribing, "channel-menu");
     keys.announce(subscriptionSaid(channel, subscribing));
     return true;
   };

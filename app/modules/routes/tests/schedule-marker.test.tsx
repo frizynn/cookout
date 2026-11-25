@@ -1,44 +1,28 @@
-import type { Message, ScheduledMessage, ServerSentEvent } from "../../sdk/index.ts";
+import type { Message, ScheduledMessage } from "../../sdk/index.ts";
 import { channelMade, linesOf, listDialog, rowOf } from "./schedule-lists.ts";
 import { expect, it } from "vitest";
 import { fireEvent, waitFor } from "@testing-library/react";
-import type { Live } from "../../live/index.ts";
 import { adminClient } from "./identities.ts";
-import { createLive } from "../../live/index.ts";
 import { inPane } from "./regions.ts";
 import { openAt } from "./render.tsx";
+import { scriptedLive } from "../../testing/web.ts";
 
-interface Scripted {
-  readonly live: Live;
-  readonly send: (type: string, data: object) => void;
-}
-
-function scripted(): Scripted {
-  const opened: ((event: ServerSentEvent) => void)[] = [];
-  const live = createLive({
-    open: (onEvent) => {
-      opened.push(onEvent);
-    },
-  });
-  return {
-    live,
-    send: (type, data) => {
-      for (const onEvent of opened) {
-        onEvent({ data: JSON.stringify({ ...data, type }), event: type });
-      }
-    },
-  };
-}
+type Send = (type: string, data: object) => void;
 
 interface Page {
   readonly close: () => void;
-  readonly send: Scripted["send"];
+  readonly send: Send;
 }
 
 function pageOpened(schedule: ScheduledMessage): Page {
-  const { live, send } = scripted();
+  const { live, send } = scriptedLive();
   const close = openAt({ client: adminClient(), hash: `#/channels/${schedule.channel}`, live });
-  return { close, send };
+  return {
+    close,
+    send: (type, data) => {
+      send({ data: JSON.stringify({ ...data, type }), event: type });
+    },
+  };
 }
 
 async function markerBoard(channel: string): Promise<ScheduledMessage> {

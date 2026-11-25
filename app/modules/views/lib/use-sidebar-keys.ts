@@ -1,9 +1,10 @@
 import { markRead, openSchedules, stepTo, toggleSubscription } from "./channel-keys.ts";
 import { moveFocus, roving, sidebar } from "./sidebar-roving.ts";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import type { Board } from "../../board/index.ts";
+import { useBoardStore, useChannels } from "./use-board.ts";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChannelKeys } from "./channel-keys.ts";
 import type { Keymap } from "../../keymap/index.ts";
+import type { ScheduleList } from "../../board/index.ts";
 import type { Unread } from "../../unread/index.ts";
 import { channelOrder } from "./channel-order.ts";
 import { useSidebarCounts } from "./use-unread-levels.ts";
@@ -12,9 +13,9 @@ const FIRST = 0;
 const ONE = 1;
 
 interface SidebarKeys {
-  readonly board: Board;
   readonly keymap: Keymap;
   readonly me: string;
+  readonly scheduleList: ScheduleList;
   readonly unread: Unread;
 }
 
@@ -24,19 +25,20 @@ interface Said {
 }
 
 function useChannelKeys(props: SidebarKeys, announce: (text: string) => void): ChannelKeys {
-  const { board, unread } = props;
-  const { channels } = useSyncExternalStore(board.subscribe, board.snapshot);
+  const { scheduleList, unread } = props;
+  const store = useBoardStore();
+  const channels = useChannels();
   const counts = useSidebarCounts({ me: props.me }).channels;
   return useMemo(
     () => ({
       announce,
       counts,
       order: channelOrder(channels),
-      scheduleList: board.scheduleList,
-      subscriptions: board.subscriptions,
+      scheduleList,
+      store,
       unread,
     }),
-    [announce, board.scheduleList, board.subscriptions, channels, counts, unread],
+    [announce, channels, counts, scheduleList, store, unread],
   );
 }
 

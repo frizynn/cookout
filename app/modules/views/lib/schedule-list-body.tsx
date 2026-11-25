@@ -1,9 +1,9 @@
 import { Alert, ItemList, Muted, Skeleton } from "../../design-system/content.tsx";
-import type { Board, ScheduleListState } from "../../board/index.ts";
 import type { ChannelName, Identity } from "../../sdk/index.ts";
+import type { ScheduleList, ScheduleListState, Scheduling } from "../../board/index.ts";
 import type { ReactNode } from "react";
 import { ScheduleListRow } from "./schedule-list-row.tsx";
-import { useSyncExternalStore } from "react";
+import { useChannelSchedules } from "./use-board.ts";
 
 const NONE = 0;
 
@@ -14,16 +14,16 @@ const TEXT = {
 } as const;
 
 interface ScheduleListBodyProps {
-  readonly board: Board;
   readonly channel: ChannelName;
   readonly me: Identity;
+  readonly scheduleList: ScheduleList;
+  readonly scheduling: Scheduling;
   readonly state: ScheduleListState;
 }
 
 export function ScheduleListBody(props: ScheduleListBodyProps): ReactNode {
-  const { board, channel } = props;
-  const schedules = board.schedules(channel);
-  const listed = useSyncExternalStore(schedules.subscribe, schedules.snapshot);
+  const { channel } = props;
+  const listed = useChannelSchedules(channel);
   if (listed.status === "loading") {
     return <Skeleton width="long" />;
   }
@@ -36,7 +36,14 @@ export function ScheduleListBody(props: ScheduleListBodyProps): ReactNode {
   return (
     <ItemList label={TEXT.label(channel)}>
       {listed.schedules.map((schedule) => (
-        <ScheduleListRow board={board} key={schedule.id} me={props.me} schedule={schedule} state={props.state} />
+        <ScheduleListRow
+          key={schedule.id}
+          me={props.me}
+          schedule={schedule}
+          scheduleList={props.scheduleList}
+          scheduling={props.scheduling}
+          state={props.state}
+        />
       ))}
     </ItemList>
   );

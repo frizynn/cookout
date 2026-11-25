@@ -1,17 +1,16 @@
 import type { ComponentProps, ReactNode } from "react";
 import type { Unread, UnreadState } from "../../unread/index.ts";
-import type { Board } from "../../board/index.ts";
 import { InboxFeed } from "./inbox-feed.tsx";
 import { InboxHeader } from "./inbox-header.tsx";
 import type { InboxRows } from "./use-inbox-rows.ts";
 import type { InboxSelection } from "../../paths/index.ts";
 import { ListPane } from "../../design-system/layout.tsx";
+import { useBoardStore } from "./use-board.ts";
 import { useMemo } from "react";
 
 const TITLE = "Inbox";
 
 interface InboxListProps {
-  readonly board: Board;
   readonly unread: Unread;
   readonly state: UnreadState;
   readonly rows: InboxRows;
@@ -22,12 +21,12 @@ interface InboxListProps {
 
 export function InboxList(props: InboxListProps): ReactNode {
   const { me, rows, selected, state: unread } = props;
-  const { ack } = props.board;
+  const { ack } = useBoardStore().calls;
   const { markUnread } = props.unread;
   const actions = useMemo(() => ({ ack, markUnread }), [ack, markUnread]);
   return (
     <ListPane hiddenWhenNarrow={selected !== null}>
-      <InboxHeader board={props.board} state={unread} title={TITLE} unread={props.unread} />
+      <InboxHeader state={unread} title={TITLE} unread={props.unread} />
       <InboxFeed
         actions={actions}
         label={TITLE}

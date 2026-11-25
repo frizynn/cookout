@@ -170,4 +170,6 @@ function createBoardCalls(options: CallsOptions): BoardCalls {
   };
 }
 
-export { type BoardCalls, type CallsClient, type ScheduleChange, createBoardCalls };
+type ThreadClosing = Pick<BoardCalls, "close" | "reopen">;
+
+export { type BoardCalls, type CallsClient, type ScheduleChange, type ThreadClosing, createBoardCalls };

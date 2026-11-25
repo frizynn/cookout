@@ -1,9 +1,9 @@
 import type { Message, ReactionCount, ReactionName, Refusal } from "../../sdk/index.ts";
 import { reactionNames, reactionSymbols } from "../../messages/index.ts";
 import { reactionRefusal, reactionsOf } from "../../board/index.ts";
-import { useCallback, useContext, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { ReactionChoice } from "../../design-system/messages.tsx";
-import { ReactionList } from "./reaction-list.ts";
+import { useBoardStore } from "./use-board.ts";
 
 const KEYS: Readonly<Record<ReactionName, string>> = { thumbs_down: "-", thumbs_up: "+" };
 
@@ -20,7 +20,7 @@ interface Shown {
 }
 
 function useShownReactions({ me, message }: Reacting): Shown {
-  const store = useContext(ReactionList);
+  const store = useBoardStore();
   const reactions = useSyncExternalStore(store.subscribeShowing("reactions"), () =>
     reactionsOf({ message, state: store.snapshot() }),
   );
@@ -50,7 +50,7 @@ function useReactionChoices(reacting: Reacting): readonly ReactionChoice[] {
 }
 
 function useReactionRefusal(): Refusal | null {
-  const store = useContext(ReactionList);
+  const store = useBoardStore();
   return useSyncExternalStore(store.subscribeShowing("reactions"), () => reactionRefusal(store.snapshot()));
 }
 

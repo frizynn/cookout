@@ -91,8 +91,8 @@
  * reason besides a subscribed channel (#349); and `inboxNewLine` is where a channel's or thread's "New" line goes: its
  * read position, or above every message once a read position moved back to nothing read.
  *
- * `Board` and its parts are the old per-channel and per-thread stores the views still read; the routes module makes them
- * as thin adapters over the store's selectors and methods, for the last migration ticket to delete.
+ * The board store is the web's one caller of the SDK and the one follower of `live` (lint's `web-rules/board-store-owner`
+ * holds that): views read it only through the selectors here and change the server only through its methods.
  *
  * The board store's `session` is whether the person at the browser is logged in, and as whom (`loggedInName` reads the name), shown with
  * `subscribeShowing("session")` (or `session.subscribe`): it asks the server who the page's client is (`whoami`,
@@ -109,17 +109,9 @@
  * for an agent join request: the agent it would join or create for the person viewing it, an idle expiry they may
  * lower, and whether to replace the agent's live session.
  */
-export type {
-  Board,
-  BoardSnapshot,
-  ChannelMessages,
-  ChannelSchedules,
-  Commands,
-  MessageBefore,
-  Subscriptions,
-  ThreadClosing,
-  ThreadMessages,
-} from "./lib/board-interface.ts";
+export type { BoardCalls, ThreadClosing } from "./lib/board-calls.ts";
+export type { ClosingRefusal } from "./lib/thread-closing.ts";
+export type { ListedSchedules } from "./lib/schedules-slice.ts";
 export {
   type ChannelCreation,
   type ChannelCreationSnapshot,
@@ -132,11 +124,10 @@ export {
   type SchedulingSnapshot,
   createScheduling,
 } from "./lib/scheduling.ts";
-export type { ChannelsState } from "./lib/listed-slices.ts";
+export type { ChannelsState, CommandsState } from "./lib/listed-slices.ts";
 export {
   type ScheduleList,
   type ScheduleListState,
-  type ScheduleMarks,
   createScheduleList,
 } from "./lib/schedule-list.ts";
 export { cronWords } from "./lib/cron-words.ts";
