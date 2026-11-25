@@ -154,7 +154,7 @@ const KEYS = [
   { action: "previousRow", chord: "ArrowUp", does: "Previous row", scope: "inbox" },
   { action: "replyToRow", chord: "Enter", does: "Reply", scope: "inbox" },
   { action: "replyToRow", chord: "r", does: "Reply", scope: "inbox" },
-  { action: "markRowRead", chord: "e", does: "Mark read", scope: "inbox" },
+  { action: "markRowRead", chord: "e", does: "Mark read, and move down to the one below", scope: "inbox" },
   { action: "markRowUnread", chord: "u", does: "Mark unread", scope: "inbox" },
   { action: "openRow", chord: "o", does: "Open in its channel", scope: "inbox" },
   { action: "toSidebar", chord: "ArrowLeft", does: "Sidebar, on the Inbox's link", scope: "inbox" },

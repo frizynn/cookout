@@ -112,13 +112,24 @@ function press({ conversation, keymap }: InboxKeys, action: Action): Act {
   };
 }
 
+function thenNext(act: Act): Act {
+  const next = select("next");
+  return (event) => {
+    if (!act(event)) {
+      return false;
+    }
+    next(event);
+    return true;
+  };
+}
+
 function useInboxKeys(keys: InboxKeys): void {
   const { conversation, keymap, selected } = keys;
   useEffect(() => {
     const unbindRows = keymap.bind({
       actions: {
         backToRows: back(selected),
-        markRowRead: press({ conversation, keymap, selected }, "markRowRead"),
+        markRowRead: thenNext(press({ conversation, keymap, selected }, "markRowRead")),
         markRowUnread: press({ conversation, keymap, selected }, "markRowUnread"),
         markSelectedRowRead: press({ conversation, keymap, selected }, "markRowRead"),
         nextRow: select("next"),
