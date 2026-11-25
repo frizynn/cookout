@@ -57,4 +57,4 @@ function createKeymapStore(platform: Platform): KeymapStore {
   };
 }
 
-export { type Announced, type KeymapStore, createKeymapStore };
+export { type KeymapStore, createKeymapStore };
