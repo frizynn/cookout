@@ -68,6 +68,7 @@
     "test:merge": "vitest run --merge-reports --coverage",
     "coverage:changed": "node scripts/coverage-changed.ts",
     "under-load": "node scripts/under-load.ts",
+    "web:slow": "node scripts/web-slow.ts",
     "coverage:raise": "vitest run --coverage --coverage.thresholds.autoUpdate=true",
     "test:watch": "vitest",
     "browser": "playwright test",

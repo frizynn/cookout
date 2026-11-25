@@ -6,6 +6,7 @@ import { createBoardStore } from "../../board/index.ts";
 import { createPageFocus } from "../../page-focus/index.ts";
 import { handClock } from "./hand-clock.ts";
 import { handFocus } from "../../testing/web.ts";
+import { slowCalls } from "./slow-calls.ts";
 import { webTestCookout } from "../../../../scripts/web-test-server.ts";
 
 const OPTIONS = 0;
@@ -23,7 +24,7 @@ function boardStoreFor(opening: BoardStoreOpening): BoardStore {
   return (
     opening.boardStore ??
     createBoardStore({
-      client: opening.client,
+      client: slowCalls(opening.client),
       live: opening.live ?? null,
       url: webTestCookout().url,
       ...(typeof opening.pageSize === "number" && { pageSize: opening.pageSize }),
