@@ -29,7 +29,7 @@ export function LoginForm(props: LoginFormProps): ReactNode {
   return (
     <>
       <Form field="token" label={TEXT.form} onSubmit={handleLogIn}>
-        <TextField label={TEXT.field} name="token" />
+        <TextField focused label={TEXT.field} name="token" />
         <SubmitButton disabled={state.status === "logging-in"}>{TEXT.button}</SubmitButton>
       </Form>
       {state.status === "logged-out" && state.refusal !== null && (
