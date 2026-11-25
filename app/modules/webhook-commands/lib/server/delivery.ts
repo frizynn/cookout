@@ -18,13 +18,9 @@ import { isoTimeOf } from "../../../time/server.ts";
 import { messagesLayer } from "../../../messages/server.ts";
 
 type Calling = Pick<Call, "stored" | "data">;
-
 type Placed = Pick<Call, "channel" | "threadId">;
-
 type CallParts = Omit<NewWebhookCommandCall, "message">;
-
 type DeliveriesNeeds = Secrets | Storage | Layer.Services<typeof messagesLayer>;
-
 type PostCall<Failure> = (parts: CallParts) => Effect.Effect<Placed, Failure>;
 
 interface DeliveriesService {

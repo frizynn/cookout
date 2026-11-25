@@ -57,11 +57,8 @@ type MemoryWebhookCommandsSection = WebhookCommandsSection &
     readonly dropWebhookCommandsOf: (handler: IdentityName) => void;
   };
 
-function memoryWebhookCommands({
-  findIdentity,
-  state,
-  placeHandler,
-}: MemoryWebhookCommandsOptions): MemoryWebhookCommandsSection {
+function memoryWebhookCommands(options: MemoryWebhookCommandsOptions): MemoryWebhookCommandsSection {
+  const { findIdentity, state, placeHandler } = options;
   const commands = new Map<WebhookCommandName, StoredWebhookCommand>();
   function open<Value>(work: () => Value): Fails<Value> {
     return Effect.andThen(state.ensureOpen, Effect.sync(work));
