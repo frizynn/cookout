@@ -59,7 +59,7 @@ const KEYS = [
   { action: "leaveTextBox", chord: "Escape", does: "Leave the box, keeping what you typed", scope: "text box" },
   { action: "newestMessage", chord: "ArrowUp", does: "Newest message, from an empty box", scope: "text box" },
   { action: "viewProfile", chord: "Enter", does: "View profile", scope: "person" },
-  { action: "messagePerson", chord: "m", does: "Message them", scope: "person" },
+  { action: "messagePerson", chord: "m", does: "Message them, where there's a message box", scope: "person" },
   { action: "copyName", chord: "c", does: "Copy their name", scope: "person" },
   { action: "nextPerson", chord: "ArrowDown", does: "Next person", scope: "people list" },
   { action: "previousPerson", chord: "ArrowUp", does: "Previous person", scope: "people list" },

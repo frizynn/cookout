@@ -55,8 +55,8 @@ async function boxHolds(page: Page, name: string): Promise<void> {
   await expect(page.getByRole("textbox", BOX)).toHaveJSProperty("selectionStart", text.length);
 }
 
-async function peopleShown(page: Page): Promise<Pair> {
-  const prefix = "browser-people-keys";
+async function peopleShown(page: Page, prefix: string): Promise<Pair> {
+  await adminClient().createChannel({ name: prefix });
   const pair = { first: `${prefix}-ada`, second: `${prefix}-bea` };
   const reader = await newIdentity({ kind: "human", name: pair.first });
   await newIdentity({ kind: "human", name: pair.second });
@@ -91,7 +91,7 @@ async function arrowsMove(page: Page, { first, second }: Pair): Promise<void> {
 test("one Tab enters the People list, arrows move between people, Tab leaves it, and Enter opens a profile", async ({
   page,
 }) => {
-  const pair = await peopleShown(page);
+  const pair = await peopleShown(page, "browser-people-keys");
   await arrowsMove(page, pair);
   const people = page.getByRole("list", { name: "Identities" });
   await page.keyboard.press("Tab");
@@ -147,6 +147,44 @@ test("the person menu shows Enter, m and c beside View profile, Message and Copy
   await expect(menu.getByRole("menuitem", { name: "Message" })).toHaveAttribute("aria-keyshortcuts", "m");
   await expect(menu.getByRole("menuitem", { name: "Copy name" })).toContainText("c");
   await expect(menu.getByRole("menuitem", { name: "Copy name" })).toHaveAttribute("aria-keyshortcuts", "c");
+});
+
+async function mLeavesRow(page: Page, row: Locator): Promise<void> {
+  await row.focus();
+  await page.keyboard.press("m");
+
+  await expect(row).toBeFocused();
+  await expect(page).toHaveURL(/#\/people$/u);
+}
+
+async function menuHasNoMessage(
+  page: Page,
+  { name, row }: { readonly name: string; readonly row: Locator },
+): Promise<void> {
+  await row.click({ button: "right" });
+  const menu = page.getByRole("menu", { name: `@${name} actions` });
+
+  await expect(menu.getByRole("menuitem", { name: "Copy name" })).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "Message" })).toHaveCount(NONE);
+  await expect(menu.locator('[aria-keyshortcuts="m"]')).toHaveCount(NONE);
+
+  await page.keyboard.press("Escape");
+}
+
+test("in the People list a row offers no m: its menu has no Message, m does nothing, and the shortcut list says m needs a message box", async ({
+  page,
+}) => {
+  const { first } = await peopleShown(page, "browser-people-no-m");
+  const row = page.getByRole("list", { name: "Identities" }).getByRole("link", { name: first });
+  await mLeavesRow(page, row);
+  await menuHasNoMessage(page, { name: first, row });
+  await row.focus();
+  await page.keyboard.press("?");
+  const person = page.getByRole("dialog", { name: "Keyboard shortcuts" }).getByRole("list", { name: "Person" });
+
+  await expect(person.getByRole("listitem").filter({ hasText: "Message them" })).toHaveText(
+    /Message them, where there's a message box/u,
+  );
 });
 
 test("→ in the kind filter chooses Humans", async ({ page }) => {

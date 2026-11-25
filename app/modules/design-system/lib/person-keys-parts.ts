@@ -9,7 +9,7 @@ type PersonAct = (focused: Focused) => boolean;
 
 interface PersonActs {
   readonly viewProfile: PersonAct;
-  readonly message: PersonAct;
+  readonly message: PersonAct | null;
   readonly copyName: PersonAct;
 }
 
