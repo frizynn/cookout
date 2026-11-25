@@ -6,6 +6,8 @@ const OPEN_LINK = `${SIDEBAR_LINK}[aria-current="page"]`;
 const FEED = '[role="feed"]';
 const MESSAGE = "article";
 const SELECTED = `${MESSAGE}[aria-current="true"]`;
+const ROW = "a[data-feed-row]";
+const SELECTED_ROW = `${ROW}[aria-current="page"]`;
 const BOX = 'textarea[name="text"]';
 const PANEL = "aside";
 const LAST = -1;
@@ -45,8 +47,21 @@ function inChannelFeed(target: unknown): boolean {
   return isMessage(target) && holds(channelFeed(), target);
 }
 
+function rowOutsidePanel(selector: string): HTMLElement | null {
+  for (const row of globalThis.document.querySelectorAll<HTMLElement>(`main ${selector}`)) {
+    if (row.closest(PANEL) === null) {
+      return row;
+    }
+  }
+  return null;
+}
+
+function isRow(target: unknown): target is HTMLElement {
+  return target instanceof HTMLElement && target.matches(`main ${ROW}`) && target.closest(PANEL) === null;
+}
+
 function toSidebar({ target }: KeyboardEvent): boolean {
-  return inChannelFeed(target) && focusedOn(globalThis.document.querySelector(OPEN_LINK));
+  return (inChannelFeed(target) || isRow(target)) && focusedOn(globalThis.document.querySelector(OPEN_LINK));
 }
 
 function chosen(): unknown {
@@ -66,9 +81,14 @@ function newestIn(channel: string): unknown {
   return [...feed.querySelectorAll(MESSAGE)].at(LAST);
 }
 
+function chosenRow(): unknown {
+  return rowOutsidePanel(SELECTED_ROW) ?? rowOutsidePanel(ROW);
+}
+
 interface Link {
   readonly link: HTMLAnchorElement;
-  readonly channel: string;
+  readonly chosen: () => unknown;
+  readonly newest: () => unknown;
 }
 
 function linkOf(target: unknown): Link | null {
@@ -76,10 +96,13 @@ function linkOf(target: unknown): Link | null {
     return null;
   }
   const { route } = locationOf(target.hash);
+  if (route.name === "inbox") {
+    return { chosen: chosenRow, link: target, newest: chosenRow };
+  }
   if (route.name !== "channel") {
     return null;
   }
-  return { channel: route.channel, link: target };
+  return { chosen, link: target, newest: () => newestIn(route.channel) };
 }
 
 function intoMessages(keys: ColumnKeys): Act {
@@ -88,13 +111,13 @@ function intoMessages(keys: ColumnKeys): Act {
     if (found === null) {
       return false;
     }
-    const { channel, link } = found;
+    const { link, newest } = found;
     if (link.matches(OPEN_LINK)) {
-      return focusedOn(chosen());
+      return focusedOn(found.chosen());
     }
     link.blur();
     globalThis.location.hash = link.hash;
-    keys.watch(() => newestIn(channel));
+    keys.watch(newest);
     return true;
   };
 }

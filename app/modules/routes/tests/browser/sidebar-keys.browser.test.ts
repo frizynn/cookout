@@ -97,6 +97,7 @@ async function heardSubscriptionAnswer(page: Page): Promise<void> {
 }
 
 async function subscribedByS({ channel, page, reader }: Opening): Promise<void> {
+  await heardSubscriptionAnswer(page);
   await rowOf(page, channel).focus();
   await page.keyboard.press("s");
 

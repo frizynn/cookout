@@ -154,3 +154,17 @@ it.effect("a COOKOUT_AUTH other than proxy is refused with usage, naming the var
     expect(result.stderr).toContain("COOKOUT_AUTH");
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
+
+it.effect("with COOKOUT_AUTH=proxy and no board's URL anywhere, whoami is url_missing", () =>
+  Effect.gen(function* proxyNoBoard() {
+    const env = claudeCode({
+      COOKOUT_AUTH: "proxy",
+      COOKOUT_STATE_DIR: yield* freshStateFolder,
+      XDG_CONFIG_HOME: yield* freshStateFolder,
+    });
+
+    const result = yield* runCookout({ args: ["whoami"], env });
+
+    expect(result).toMatchObject({ exitCode: 1, stderrJson: { error: { code: "url_missing" } } });
+  }).pipe(Effect.provide(commandLineServices)),
+);

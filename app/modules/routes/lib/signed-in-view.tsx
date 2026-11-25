@@ -1,5 +1,5 @@
 import type { Identity, IdentityName } from "../../sdk/index.ts";
-import { ScheduleLists, SidebarKeys, SidebarView } from "../../views/index.tsx";
+import { KeyAnnouncements, ScheduleLists, SidebarKeys, SidebarView } from "../../views/index.tsx";
 import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
 import type { Stores } from "./stores.ts";
@@ -33,11 +33,19 @@ export function SignedInView(props: SignedInViewProps): ReactNode {
         />
         <SidebarKeys
           keymap={stores.keymap}
+          layout={layout}
           me={props.identity.name}
           scheduleList={stores.scheduleList}
           unread={stores.unread}
         />
-        <WorkspaceBody me={props.identity.name} profile={props.profile} route={props.route} stores={stores} />
+        <KeyAnnouncements keymap={stores.keymap} />
+        <WorkspaceBody
+          me={props.identity.name}
+          profile={props.profile}
+          route={props.route}
+          sidebarOpen={sidebar}
+          stores={stores}
+        />
       </Workspace>
     </ScheduleLists>
   );

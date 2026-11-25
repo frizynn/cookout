@@ -214,3 +214,35 @@ it("showing only the session does not open the live stream, so a page not yet lo
 
   expect(open).not.toHaveBeenCalled();
 });
+
+it("logging out asks the server to end the session, and then the session is logged out with no refusal", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const ada = await human("store-session-logout-ada");
+  const logout = vi.fn<CookoutClient["logout"]>(ada.client.logout);
+  const { store } = opened({ ...ada.client, logout });
+  await loggedInAs(store, ada.identity.name);
+  store.session.logOut();
+
+  await vi.waitFor(() => {
+    expect(store.session.snapshot()).toStrictEqual({ refusal: null, status: "logged-out" });
+  });
+
+  expect(logout.mock.calls).toStrictEqual([[]]);
+});
+
+it("a log out the server can't answer checks again, keeping whoever is still logged in", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const ada = await human("store-session-logout-down-ada");
+  const unreachable = createCookoutClient({ env: {}, token: ada.token, url: UNREACHABLE_URL });
+  const { store } = opened({ ...ada.client, logout: unreachable.logout });
+  await loggedInAs(store, ada.identity.name);
+  store.session.logOut();
+
+  await expect(loggedInAs(store, ada.identity.name)).resolves.toBeUndefined();
+});

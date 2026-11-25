@@ -15,15 +15,15 @@ The SDK's public surface: the built `dist/sdk.d.ts`, as consumers of the publish
  * `IsoTime` brand and its check. Every timestamp the protocol carries
  * (`createdAt`, `expiresAt`, `heldUntil`, the health check's `time`) is one.
  */
-declare const brand$10: unique symbol;
+declare const brand$11: unique symbol;
 /** A moment as the wire writes it: ISO 8601 in UTC with milliseconds, such as `2026-01-01T00:00:00.000Z`. */
 type IsoTime = string & {
-  readonly [brand$10]: "IsoTime";
+  readonly [brand$11]: "IsoTime";
 };
-declare const brand$9: unique symbol;
+declare const brand$10: unique symbol;
 /** A channel's name: 1–80 lowercase letters, digits or `-`. Unique on a server. */
 type ChannelName = string & {
-  readonly [brand$9]: "ChannelName";
+  readonly [brand$10]: "ChannelName";
 };
 /** A channel as the server shows it. */
 interface Channel {
@@ -49,13 +49,13 @@ interface ListChannelsResponse {
  * The calls a client makes on one identity by its name: reading it, and setting or clearing an agent's description
  * (#189). The SDK's `CookoutClient` has them.
  */
-declare const brand$8: unique symbol;
+declare const brand$9: unique symbol;
 /**
  * An agent's description: what the agent handles, written for people and for routing, such as "Matt's to-dos, life
  * admin and voice-note follow-ups". 1–500 characters with no space at either end. A human has none.
  */
 type Description = string & {
-  readonly [brand$8]: "Description";
+  readonly [brand$9]: "Description";
 };
 /** An agent identity's fields with its description, which every caller sees. */
 type Described<Fields> = Fields & {
@@ -98,6 +98,38 @@ interface AgentCreationCalls<Answer> {
    */
   readonly createAgentForOwner: (request: CreateAgentForOwnerRequest) => Promise<Answer>;
 }
+/**
+ * Avatars on the wire, shared by the server, the SDK, the CLI and the web: the `AvatarId` brand and its check, an
+ * avatar as an identity carries it, the one shape the server takes, and the paths that set and serve one (#478).
+ *
+ * The browser crops and resizes (Matt, 2026-11-25, board msg 4362): the web UI takes a PNG, JPEG, GIF or WebP of up
+ * to 2 MB, crops a centred square, resizes it to 256 px with a canvas and uploads a PNG. The server takes only a PNG
+ * that is exactly 256 by 256, judged by its signature and the width and height in its IHDR header, with no image
+ * library. A CLI or SDK caller sends one already.
+ */
+declare const brand$8: unique symbol;
+/** An avatar's ID: opaque and random, and new whenever an avatar is set, so its bytes never change under it. */
+type AvatarId = string & {
+  readonly [brand$8]: "AvatarId";
+};
+/** An identity's avatar, the picture shown beside its name, as every identity the API returns carries it. */
+interface Avatar {
+  readonly id: AvatarId;
+}
+/** The identity fields an avatar adds: absent when the identity has none, and it shows its initials. */
+type WithAvatar<Fields> = Fields & {
+  /** The picture shown beside its name, served at `avatarPath`. Absent when it has none. */
+  readonly avatar?: Avatar;
+};
+/** The SDK's avatar call, answering `Answer`: the identity, avatar and all. */
+interface AvatarCalls<Answer> {
+  /**
+   * `PUT /v1/identities/:name/avatar`: sets an identity's avatar to `png`, which must already be a PNG of exactly 256
+   * by 256 pixels (400 `avatar_not_png` or `avatar_wrong_size`) of at most 2 MB (413 `avatar_too_large`). The identity
+   * itself or, for an agent, the human who owns it may (403 `not_owner`). The old avatar is deleted.
+   */
+  readonly setAvatar: (name: string, png: Uint8Array) => Promise<Answer>;
+}
 interface IdentityMessageCountResponse {
   readonly messages: number;
 }
@@ -105,13 +137,13 @@ declare const brand$7: unique symbol;
 type Brand$1<Name extends string> = string & {
   readonly [brand$7]: Name;
 };
-type IdentityFields = {
+type IdentityFields = WithAvatar<{
   readonly name: IdentityName;
   readonly displayName?: DisplayName;
   readonly admin: boolean;
   readonly createdAt: IsoTime;
   readonly deactivated?: true;
-};
+}>;
 /**
  * An identity's name: 1–64 lowercase letters, digits or `-`, so `@name` mentions parse cleanly, or two such parts
  * joined by one `/`, such as `matt/triage-agent`. The first part of a namespaced name is the name of the human who
@@ -1600,7 +1632,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_not_found", "agent_join_request_denied", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "trigger_url_invalid", "trigger_token_missing", "trigger_header_invalid", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "attachment_too_large", "too_many_attachments", "attachment_empty", "attachment_unnamed", "message_empty", "thread_moved", "attachment_not_found", "cron_invalid", "cron_too_frequent", "cron_never_runs", "time_zone_invalid", "at_in_past", "cron_or_at", "scheduled_message_not_found", "creator_deactivated", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "avatar_too_large", "avatar_not_png", "avatar_wrong_size", "avatar_not_found", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_not_found", "agent_join_request_denied", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "trigger_url_invalid", "trigger_token_missing", "trigger_header_invalid", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "attachment_too_large", "too_many_attachments", "attachment_empty", "attachment_unnamed", "message_empty", "thread_moved", "attachment_not_found", "cron_invalid", "cron_too_frequent", "cron_never_runs", "time_zone_invalid", "at_in_past", "cron_or_at", "scheduled_message_not_found", "creator_deactivated", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
@@ -1608,6 +1640,7 @@ interface SchemaProblem {
   readonly message: string;
   readonly path: readonly (string | number)[];
 }
+type IdentityAvatarCalls = AvatarCalls<IdentityResponse>;
 interface StartLoginRequest {
   readonly host: string;
 }
@@ -1663,10 +1696,7 @@ interface IdentityDeletionCalls {
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
   readonly countMessagesBy: (name: string) => Promise<IdentityMessageCountResponse>;
 }
-type ApprovalCalls = LoginCalls & AgentApprovalCalls;
-type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
-type IdentityAgentCreationCalls = AgentCreationCalls<IdentityResponse>;
-type CallGroups = ApprovalCalls & IdentityAgentCreationCalls & AttachmentCalls & IdentityDeletionCalls & IdentityDescriptionCalls & ClosedThreadCalls & OpenThreadCalls & SearchCalls & ScheduledMessageCalls & TriggerCalls & Pick<EventCalls, "presence">;
+type CallGroups = LoginCalls & AgentApprovalCalls & AgentCreationCalls<IdentityResponse> & AttachmentCalls & IdentityAvatarCalls & IdentityDeletionCalls & DescriptionCalls<IdentityResponse> & ClosedThreadCalls & OpenThreadCalls & SearchCalls & ScheduledMessageCalls & TriggerCalls & Pick<EventCalls, "presence">;
 declare function scheduledMessageCalls(server: ClientConnection): ScheduledMessageCalls;
 declare const brand: unique symbol;
 type UnknownErrorCode = string & {
