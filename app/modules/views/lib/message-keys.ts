@@ -23,16 +23,39 @@ function focused(selector: string): boolean {
   return true;
 }
 
-function controlFor(target: EventTarget | null, keys: string): HTMLElement | null {
+type MessageOf = (target: EventTarget | null) => Element | null;
+
+interface Clicking {
+  readonly keymap: Keymap;
+  readonly action: Action;
+  readonly messageOf: MessageOf;
+}
+
+interface ControlOf {
+  readonly target: EventTarget | null;
+  readonly keys: string;
+  readonly message: MessageOf;
+}
+
+function focusedMessage(target: EventTarget | null): Element | null {
   if (!(target instanceof HTMLElement) || !target.matches(MESSAGE)) {
     return null;
   }
-  return target.querySelector<HTMLElement>(`[aria-keyshortcuts="${keys}"]`);
+  return target;
 }
 
-function click(keymap: Keymap, action: Action): Act {
+function controlFor({ keys, message, target }: ControlOf): HTMLElement | null {
+  const found = message(target);
+  if (found === null) {
+    return null;
+  }
+  return found.querySelector<HTMLElement>(`[aria-keyshortcuts="${keys}"]`);
+}
+
+function clickOn({ action, keymap, messageOf }: Clicking): Act {
   return ({ target }) => {
-    const control = controlFor(target, keymap.shortcutOf(action).keys);
+    const { keys } = keymap.shortcutOf(action);
+    const control = controlFor({ keys, message: messageOf, target });
     if (control === null) {
       return false;
     }
@@ -41,9 +64,13 @@ function click(keymap: Keymap, action: Action): Act {
   };
 }
 
+function click(keymap: Keymap, action: Action): Act {
+  return clickOn({ action, keymap, messageOf: focusedMessage });
+}
+
 function press({ action, keymap, whenOpen }: Pressing): Act {
   return ({ target }) => {
-    const control = controlFor(target, keymap.shortcutOf(action).keys);
+    const control = controlFor({ keys: keymap.shortcutOf(action).keys, message: focusedMessage, target });
     if (control === null) {
       return false;
     }
@@ -101,4 +128,4 @@ function messageActions(keymap: Keymap): Readonly<Record<MessageAction, Act>> {
   };
 }
 
-export { closeThread, messageActions, threadPanel };
+export { clickOn, closeThread, messageActions, threadPanel };
