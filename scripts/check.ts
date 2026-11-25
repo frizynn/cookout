@@ -1,5 +1,5 @@
 import type { Check, CiOnly } from "./lib/check-runner.ts";
-import { browserSkip, browserTestsFor } from "./lib/browser-selection.ts";
+import { browserSkip, browserTestsFor, ciBrowserShard } from "./lib/browser-selection.ts";
 import { changedLines, unchangedSince } from "./lib/changed-lines.ts";
 import { fetchedCoverageMap, ghCli } from "./lib/coverage-map-fetch.ts";
 import { loadReport, osReading } from "./lib/machine-load.ts";
@@ -46,11 +46,11 @@ function testScript(): readonly string[] {
   return ["test", ...WITH_DEFAULT_REPORTER];
 }
 
-function lintScript(): readonly string[] {
+function withBase(script: string): readonly string[] {
   if (base !== "") {
-    return ["lint", `--base=${base}`];
+    return [script, `--base=${base}`];
   }
-  return ["lint"];
+  return [script];
 }
 
 const NONE = 0;
@@ -90,12 +90,21 @@ function selectedBrowserTests(): BrowserTests {
 const browserTests = selectedBrowserTests();
 const browserSkipped = browserSkip(browserTests);
 
-function browserScript(): readonly string[] {
-  if (inCi && shard !== "") {
+function shardScript(): readonly string[] {
+  if (!inCi) {
+    return ["browser", `--shard=${shard}`];
+  }
+  if (job !== "browser") {
     return ["browser:coverage", `--shard=${shard}`];
   }
+  const plan = ciBrowserShard({ cwd: process.cwd(), run: option("run"), shard });
+  console.log(plan.line);
+  return ["browser:coverage", ...plan.args];
+}
+
+function browserScript(): readonly string[] {
   if (shard !== "") {
-    return ["browser", `--shard=${shard}`];
+    return shardScript();
   }
   if (browserTests.all) {
     return ["browser"];
@@ -104,7 +113,7 @@ function browserScript(): readonly string[] {
 }
 
 const scripted: readonly Scripted[] = [
-  { budget: 16, job: "lint", name: "lint", script: lintScript() },
+  { budget: 16, job: "lint", name: "lint", script: withBase("lint") },
   { budget: 18, job: "canaries", name: "canaries", script: ["canaries"] },
   { budget: 10, job: "types", name: "types", script: ["typecheck"] },
   { budget: 16, job: "fixers", name: "fixers", script: ["fixers"] },
@@ -134,6 +143,7 @@ const scripted: readonly Scripted[] = [
   { budget: 10, job: "drift", name: "api", script: ["api"] },
   { budget: 6, job: "drift", name: "exports", script: ["exports"] },
   { budget: 4, job: "drift", name: "render", script: ["render"] },
+  { budget: 4, job: "drift", name: "lint-config", script: withBase("lint-config") },
   { afterTests: true, budget: 6, job: "format", name: "format", script: ["format:check"] },
 ];
 

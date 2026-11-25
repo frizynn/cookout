@@ -36,6 +36,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-name: static
+      # lint's baseline ratchet and drift's lint-config guard both judge the push's range.
       - name: Pick the lint baseline's base
         env:
           BEFORE: ${{ github.event.before }}
@@ -73,16 +74,23 @@ jobs:
       - name: pnpm check --job=drift
         env:
           NODE_COMPILE_CACHE: node_modules/.cache/node-compile
-        run: node scripts/check.ts --job=drift --ci
+        run: node scripts/check.ts --job=drift --base="$BASE" --ci
 
   # Every browser test in one job took 205s of a passing run and was cancelled at the 5-minute
-  # limit on loaded runners (#455), so Playwright's --shard splits them, test by test, across 3
-  # jobs: about 70s of tests each at 115 tests. Each shard uploads its JSON report, whose
-  # stats.expected sum is the run's browser test count.
+  # limit on loaded runners (#455), so they're split across 3 jobs. Split test by test, the shards
+  # took 136, 177 and 146s (#619), so each shard runs the files that give it a third of the test
+  # time the newest earlier Check run recorded in its test-timings-browser-* artifacts, falling back
+  # to Playwright's --shard by test count when there are none. A runner has 4 cores, and Playwright
+  # runs 4 workers on CI. Each shard uploads its JSON report, whose stats.expected sum is the run's
+  # browser test count.
   browser:
     name: browser ${{ matrix.shard }}/3
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      # To read the timings an earlier run uploaded.
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -99,8 +107,9 @@ jobs:
         run: pnpm exec playwright install --only-shell chromium
       - name: pnpm check --job=browser --shard=${{ matrix.shard }}/3
         env:
+          GH_TOKEN: ${{ github.token }}
           NODE_COMPILE_CACHE: node_modules/.cache/node-compile
-        run: node scripts/check.ts --job=browser --shard=${{ matrix.shard }}/3 --ci
+        run: node scripts/check.ts --job=browser --shard=${{ matrix.shard }}/3 --run=${{ github.run_id }} --ci
       - name: Upload the per-file test timings
         if: always()
         uses: actions/upload-artifact@v4

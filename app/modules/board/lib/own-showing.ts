@@ -12,9 +12,9 @@ import { createOwnParts } from "./own-parts.ts";
 
 type Subscribe = (listener: () => void) => () => void;
 
-type ChannelPageCalls = Omit<ChannelPages, "back" | "heard" | "show"> & {
+interface ChannelPageCalls extends Omit<ChannelPages, "back" | "heard" | "show"> {
   readonly subscribeShowing: (name: ChannelName) => Subscribe;
-};
+}
 
 interface ThreadCalls {
   readonly subscribeShowing: (place: ThreadPlace, acking: boolean) => Subscribe;

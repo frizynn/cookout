@@ -117,7 +117,10 @@ function resultOf({
     if (Predicate.isNull(error)) {
       return skippedOr(when, skipped, status);
     }
-    return { at: when, error, ok: false };
+    if (Predicate.isNull(status)) {
+      return { at: when, error, ok: false };
+    }
+    return { at: when, error, ok: false, status };
   });
 }
 

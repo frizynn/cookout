@@ -1,6 +1,7 @@
 import { Muted } from "../../design-system/content.tsx";
 import type { ReactNode } from "react";
 import type { TriggerResult } from "../../sdk/index.ts";
+import { answerTextOf } from "./trigger-answer.ts";
 import { useTimeAgo } from "./use-time-ago.ts";
 
 const TEXT = {
@@ -13,11 +14,8 @@ interface TriggerLastCallProps {
   readonly result: TriggerResult;
 }
 
-function answerOf({ error, status }: TriggerResult): string {
-  if (typeof status === "number") {
-    return `HTTP ${String(status)}`;
-  }
-  return error ?? "";
+function answerOf(result: TriggerResult): string {
+  return answerTextOf({ answer: result, silent: "" });
 }
 
 function outcomeOf(result: TriggerResult): string {

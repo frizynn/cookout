@@ -45,6 +45,7 @@ export function FeedStream(props: FeedStreamProps): ReactNode {
                 fold={row.fold}
                 channel={props.channel}
                 key={`fold-${row.fold.run.join("-")}`}
+                open={props.open}
               />
             );
           }

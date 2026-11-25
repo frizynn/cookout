@@ -134,3 +134,47 @@ it("an agent join request approved already shows as approved", { timeout: 5000 }
 
   close();
 });
+
+async function dismissedTexts(): Promise<readonly (string | null)[]> {
+  const live = await screen.findByText(/^web-join-dismissed is already joined in another session/u);
+  fireEvent.click(inPane().getByRole("button", { name: "Dismiss" }));
+  const dismissed = await screen.findByText(/^Dismissed\./u);
+  return [live.textContent, dismissed.textContent];
+}
+
+it("for an agent already joined in another session, the approval page says so, and Dismiss clears the request", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const human = await newIdentity({ kind: "human", name: "web-join-hopper" });
+  await human.client.join({ as: "web-join-dismissed", displayName: "Dismissed agent" });
+  const opened = await openedFor(human, { as: "web-join-dismissed", host: "build-box" });
+  const texts = await dismissedTexts();
+  const refused = await anonymousClient()
+    .collectAgentJoin(opened.requestId)
+    .catch((error: unknown) => error);
+  opened.close();
+
+  expect(texts).toStrictEqual([
+    expect.stringContaining(
+      "Tick Replace its live session to end that session and join this one, or Dismiss this request.",
+    ),
+    "Dismissed. The waiting join stops; you can close this page.",
+  ]);
+  expect(refused).toMatchObject({ code: "agent_join_request_denied" });
+});
+
+it("a Dismiss of a request approved meanwhile says why, and the page stays open", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const human = await ownerOf("web-join-late", "web-join-late-agent");
+  const opened = await openedFor(human, { as: "web-join-late-agent", host: "build-box" });
+  await screen.findByText(/^Joins as web-join-late-agent/u);
+  await human.client.approveAgentJoin(opened.userCode);
+  fireEvent.click(inPane().getByRole("button", { name: "Dismiss" }));
+  const refused = await alertSaying("Couldn't");
+  opened.close();
+
+  expect(refused.textContent).toMatch(/\(agent_join_request_not_found\)/u);
+});

@@ -250,6 +250,8 @@ const postgresMigrations: readonly (readonly string[])[] = [
     'ALTER TABLE agent_join_requests ADD COLUMN session_url text COLLATE "C"',
   ],
   ['ALTER TABLE identities ADD COLUMN avatar text COLLATE "C"'],
+  ['ALTER TABLE login_credentials ADD COLUMN made_with text COLLATE "C"'],
+  ['ALTER TABLE agent_join_requests ADD COLUMN denied_at text COLLATE "C"'],
   POSTGRES_TRIGGER_SKIPPED_MIGRATION,
 ];
 
