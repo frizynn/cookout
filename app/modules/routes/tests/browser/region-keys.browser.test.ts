@@ -54,6 +54,10 @@ function messageBox(page: Page): Locator {
   return inPane(page).getByRole("textbox", { exact: true, name: "Message" });
 }
 
+function threadReply(page: Page): Locator {
+  return inThread(page).getByRole("article").filter({ hasText: "The reply." });
+}
+
 async function intoMessages(page: Page, row: Locator): Promise<void> {
   await row.focus();
   await page.keyboard.press(NEXT);
@@ -70,6 +74,7 @@ async function crossedForward(page: Page, row: Locator): Promise<void> {
 
   await expect(inThread(page).locator(":focus")).toHaveCount(ONE);
 
+  await threadReply(page).focus();
   await page.keyboard.press(NEXT);
 
   await expect(messageBox(page)).toBeFocused();
@@ -88,7 +93,7 @@ async function backToThread(page: Page): Promise<void> {
 
   await page.keyboard.press(PREVIOUS);
 
-  await expect(inThread(page).locator(":focus")).toHaveCount(ONE);
+  await expect(threadReply(page)).toBeFocused();
 }
 
 test("ctrl+] cycles the sidebar, the messages, the thread panel and the message box, and ctrl+[ goes back, each region returning focus where it was left", async ({
