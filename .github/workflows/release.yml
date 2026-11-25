@@ -106,6 +106,34 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           NODE_COMPILE_CACHE: node_modules/.cache/node-compile
         run: node scripts/check.ts --job=browser --shard=${{ matrix.shard }}/3 --run=${{ github.run_id }} --all --ci
+      # A failed test leaves its error-context.md (the error and the page's ARIA snapshot) in
+      # test-results/. Recording a trace of every test made a passing run 40% slower and failed tests
+      # that pass without it (#714), so the run that decides the verdict records none. Instead a
+      # failed shard runs only its failed tests again with a trace, to read with `pnpm exec playwright
+      # show-trace`; that run changes no verdict, and its trace may show a pass.
+      - name: Run the failed tests again with a trace
+        if: failure()
+        continue-on-error: true
+        env:
+          NODE_COMPILE_CACHE: node_modules/.cache/node-compile
+        run: |
+          mv test-results test-results-first-run
+          mkdir test-results
+          cp test-results-first-run/.last-run.json test-results/
+          pnpm exec playwright test --last-failed --trace on
+      # Both folders, kept 14 days. A passing shard uploads nothing; a shard cut off at its time limit
+      # uploads what had failed by then.
+      - name: Upload the failed tests' error context and traces
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-test-results-${{ matrix.shard }}
+          path: |
+            test-results-first-run/
+            test-results/
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Upload the per-file test timings
         if: always()
         uses: actions/upload-artifact@v4
