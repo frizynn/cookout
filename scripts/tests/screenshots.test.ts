@@ -72,6 +72,8 @@ const STANDARD_SCREENS = [
   "channel-hover",
   "attachments",
   "attachment-full",
+  "composer-files",
+  "composer-refusal",
   "message-menu",
   "channel-menu",
   "person-menu",

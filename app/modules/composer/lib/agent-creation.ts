@@ -2,6 +2,7 @@ import type { IdentityName, Refusal, Token } from "../../sdk/index.ts";
 import type { IdentityList } from "./identity-list.ts";
 import { listenersOf } from "./listeners.ts";
 import { refusalOf } from "../../sdk/index.ts";
+import { sameSnapshot } from "../../board/index.ts";
 
 type CreateState =
   | { readonly status: "idle" }
@@ -34,6 +35,9 @@ function createAgentCreation(options: AgentCreationOptions): AgentCreation {
   let queue = Promise.resolve();
 
   function publish(next: AgentCreationSnapshot): void {
+    if (sameSnapshot({ after: next, before: current })) {
+      return;
+    }
     current = next;
     listeners.notify();
   }

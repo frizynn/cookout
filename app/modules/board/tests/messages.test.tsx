@@ -92,7 +92,7 @@ it("a message posted through the store shows once, though the stream also sends 
   const { hand, store } = opened();
   const page = await channelShown({ channel: parent.channel, store });
   const posted = vi.fn<() => void>();
-  store.channelPages.post(parent.channel, { posted, text: "Mine." });
+  store.channelPages.post(parent.channel, { files: [], posted, text: "Mine." });
   await vi.waitFor(() => {
     expect(posted).toHaveBeenCalledTimes(ONE_REPLY);
   });

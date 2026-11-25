@@ -55,23 +55,26 @@
  * choosing one makes it the draft's `command`, whose data the box prompts
  * for, until `clear`, or `unpick`, which brings back the text as it was; `dismiss` hides any suggestions until the next edit. A
  * thread's reply box suggests no commands, since a call is a top-level message.
+ * A draft's `attachments` are the files added to its box and not sent yet (#377): `attach` adds them, leaving out
+ * one over 10 MB and stopping at the 11th with the server's own refusal wording, `remove` takes one out, and `clear`
+ * on the draft empties them with its text. An image among them has an object URL for its thumbnail until it leaves.
  */
-import type { Command, Identity, IdentityName, Token } from "../sdk/index.ts";
+import type { AgentCreation, IdentityActions } from "./lib/owner-powers.ts";
+import type { Command, Identity, IdentityName } from "../sdk/index.ts";
 import type { DisplayNameDraft, TriggerSettings } from "./lib/profile-stores.ts";
 import type { DraftSnapshot, Sources } from "./lib/snapshot.ts";
-import { EMPTY, changesFor } from "./lib/snapshot.ts";
+import { EMPTY, changesFor, draftChanges } from "./lib/snapshot.ts";
 import type { IdentityList, IdentityStore } from "./lib/identity-list.ts";
+import { commandList, selectedStore } from "../board/index.ts";
 import type { AdminChanges } from "./lib/admin-change.ts";
-import type { AgentCreation } from "./lib/agent-creation.ts";
-import type { IdentityActions } from "./lib/identity-actions.ts";
 import type { IdentityDeletion } from "./lib/identity-deletion.ts";
-import { commandList } from "../board/index.ts";
+import type { PendingAttachments } from "./lib/pending-attachments.ts";
 import { createAdminChanges } from "./lib/admin-change.ts";
-import { createAgentCreation } from "./lib/agent-creation.ts";
-import { createIdentityActions } from "./lib/identity-actions.ts";
 import { createIdentityDeletion } from "./lib/identity-deletion.ts";
 import { createIdentityList } from "./lib/identity-list.ts";
+import { createPendingAttachments } from "./lib/pending-attachments.ts";
 import { listenersOf } from "./lib/listeners.ts";
+import { ownerPowersOf } from "./lib/owner-powers.ts";
 import { profileStoresOf } from "./lib/profile-stores.ts";
 
 const NO_COMMANDS: readonly Command[] = [];
@@ -81,15 +84,22 @@ function noMembers(): readonly IdentityName[] {
   return NO_MEMBERS;
 }
 
-function createDraft(list: IdentityList, sources: Sources): Draft {
+function withAttachments(draft: Omit<Draft, "attachments">): Draft {
+  const attachments = createPendingAttachments();
+  return {
+    ...draft,
+    attachments,
+    clear: () => {
+      attachments.clear();
+      draft.clear();
+    },
+  };
+}
+
+function createDraft(list: IdentityList, sources: Sources): Omit<Draft, "attachments"> {
   const listeners = listenersOf(list.show);
   const changes = changesFor(sources);
-  let current: DraftSnapshot = EMPTY;
-
-  function change(update: (snapshot: DraftSnapshot) => DraftSnapshot): void {
-    current = update(current);
-    listeners.notify();
-  }
+  const { change, current } = draftChanges(listeners.notify);
 
   list.onChange(() => {
     change(changes.refreshed);
@@ -124,7 +134,7 @@ function createDraft(list: IdentityList, sources: Sources): Draft {
     replyTo: (name) => {
       change((snapshot) => changes.repliedTo(snapshot, name));
     },
-    snapshot: () => current,
+    snapshot: current,
     subscribe: listeners.add,
     unpick: () => {
       change(changes.unpicked);
@@ -138,15 +148,35 @@ function storeIn<Store>(stores: Map<string, Store>, key: string, make: () => Sto
   return store;
 }
 
-function ownerPowersOf(list: IdentityList): Pick<Identities, "actions" | "creation"> {
-  const stores = new Map<string, IdentityActions>();
-  function actions(name: IdentityName): IdentityActions {
-    return storeIn(stores, name, () => createIdentityActions({ list, name }));
+interface IdentitiesMaking {
+  readonly list: IdentityList;
+  readonly adminChanges: AdminChanges;
+  readonly deletion: IdentityDeletion;
+  readonly readers: Pick<ReturnType<typeof listenersOf>, "add">;
+}
+
+interface IdentitiesShown {
+  readonly identities: readonly Identity[];
+  readonly adminChange: ReturnType<AdminChanges["adminChange"]>;
+}
+
+function identitiesOf({ adminChanges, deletion, list, readers }: IdentitiesMaking): Identities {
+  let shown: IdentitiesShown | null = null;
+  function shownNow(): IdentitiesShown {
+    const identities = list.identities();
+    const adminChange = adminChanges.adminChange();
+    if (shown === null || shown.identities !== identities || shown.adminChange !== adminChange) {
+      shown = { adminChange, identities };
+    }
+    return shown;
   }
-  function created(name: IdentityName, token: Token): void {
-    actions(name).showToken(token);
-  }
-  return { actions, creation: createAgentCreation({ created, list }) };
+  return {
+    ...adminChanges,
+    ...ownerPowersOf(list),
+    deletion,
+    snapshot: list.identities,
+    subscribe: selectedStore({ snapshot: shownNow, subscribe: readers.add }).subscribe,
+  };
 }
 
 /** One message box's draft. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
@@ -171,7 +201,9 @@ export interface Draft {
   readonly dismiss: () => void;
   /** Moves the highlight one suggestion down or up, wrapping round. */
   readonly highlight: (direction: "down" | "up") => void;
-  /** Empties the box and drops the picked command, as after sending its message or call. */
+  /** The files added to the box and not sent yet, by paste, drop or the attach button (#377). */
+  readonly attachments: PendingAttachments;
+  /** Empties the box, its pending files included, and drops the picked command, as after sending its message or call. */
   readonly clear: () => void;
 }
 
@@ -238,23 +270,18 @@ export function createComposer(options: ComposerOptions): Composer {
     ...profileStoresOf(list),
     channelDraft: (channel) =>
       storeIn(drafts, channel, () =>
-        createDraft(list, { commands: registered, identities: list.identities, members: noMembers }),
+        withAttachments(createDraft(list, { commands: registered, identities: list.identities, members: noMembers })),
       ),
     draft: (key, members = noMembers) =>
       storeIn(drafts, key, () =>
-        createDraft(list, { commands: () => NO_COMMANDS, identities: list.identities, members }),
+        withAttachments(createDraft(list, { commands: () => NO_COMMANDS, identities: list.identities, members })),
       ),
-    identities: {
-      ...createAdminChanges(list),
-      ...ownerPowersOf(list),
-      deletion,
-      snapshot: list.identities,
-      subscribe: readers.add,
-    },
+    identities: identitiesOf({ adminChanges: createAdminChanges(list), deletion, list, readers }),
   };
 }
 
 export type { DisplayNameDraft } from "./lib/profile-stores.ts";
 export { type TriggerSettings, type TriggerSnapshot, savedUrl } from "./lib/trigger-settings.ts";
 export type { AgentCreation } from "./lib/agent-creation.ts";
+export type { PendingAttachment, PendingAttachments } from "./lib/pending-attachments.ts";
 export type { IdentityAction, IdentityActions, MessageCount } from "./lib/identity-actions.ts";

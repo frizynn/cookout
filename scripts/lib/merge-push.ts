@@ -1,7 +1,7 @@
 import { DONE, git, stop, tail } from "./merge-steps.ts";
 import type { Landed, Landing } from "./merge-queue.ts";
 import type { Step, Stopped } from "./merge-steps.ts";
-import { messageOf } from "./merge-branch.ts";
+import { titleOf } from "./merge-branch.ts";
 
 interface Queue {
   readonly land: (landing: Landing) => Landed | Stopped;
@@ -98,7 +98,7 @@ function push({ options }: { readonly options: PushOptions }): Attempt {
   if (watched.kind === "stopped") {
     return watched;
   }
-  const landed = options.queue.land({ branch, sha, title: messageOf(options) });
+  const landed = options.queue.land({ branch, sha, title: titleOf(options) });
   if (landed.kind === "stopped") {
     return nothingMerged(options, landed, `The pull request's head is ${branch} at ${sha}.`);
   }
