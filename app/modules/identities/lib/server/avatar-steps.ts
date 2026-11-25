@@ -50,14 +50,11 @@ function settable({
 }: {
   readonly caller: Identity;
   readonly name: IdentityName;
-}): Effect.Effect<Identity, Refusal | StorageUnavailable, Storage> {
+}): Effect.Effect<Identity | undefined, Refusal | StorageUnavailable, Storage> {
   return Effect.gen(function* checkSettable() {
     const storage = yield* Storage;
     const target = yield* storage.findIdentityByName(name);
-    if (Predicate.isUndefined(target)) {
-      return yield* Effect.fail(identityNotFound(name));
-    }
-    if (caller.name !== target.name && !ownsAgent({ caller, target })) {
+    if (Predicate.isNotUndefined(target) && caller.name !== target.name && !ownsAgent({ caller, target })) {
       return yield* Effect.fail(notOwner(name));
     }
     return target;
@@ -100,6 +97,12 @@ function inUse(requested: string): Effect.Effect<AvatarId, Refusal | StorageUnav
   });
 }
 
+function isSet<Result extends { readonly status: string }>(
+  result: Result,
+): result is Extract<Result, { readonly status: "set" }> {
+  return result.status === "set";
+}
+
 function replacedIds(result: { readonly replaced?: AvatarId }): readonly AvatarId[] {
   return Option.toArray(Option.fromNullishOr(result.replaced));
 }
@@ -118,11 +121,10 @@ function stored({
     const storage = yield* Storage;
     const id = yield* Effect.flatMap(Secrets, (secrets) => secrets.newAvatarId);
     yield* assets.put(id, bytes);
-    const result = yield* storage.setAvatar(name, id).pipe(Effect.onError(() => Effect.ignore(assets.remove([id]))));
-    if (result.status === "not_found") {
-      yield* Effect.ignore(assets.remove([id]));
-      return yield* Effect.fail(identityNotFound(name));
-    }
+    const result = yield* storage.setAvatar(name, id).pipe(
+      Effect.filterOrFail(isSet, () => identityNotFound(name)),
+      Effect.onError(() => Effect.ignore(assets.remove([id]))),
+    );
     yield* Effect.ignore(assets.remove(replacedIds(result)));
     return result.identity;
   });

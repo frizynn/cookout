@@ -33,14 +33,16 @@ function withPart(
   return Effect.asSome(part.contentEffect);
 }
 
+function refusedTooLarge(): Effect.Effect<never, typeof tooLarge> {
+  return Effect.fail(tooLarge);
+}
+
 const sentAvatar = Effect.gen(function* readAvatarPart() {
   const request = yield* HttpServerRequest.HttpServerRequest;
   const found = yield* request.multipartStream.pipe(
     Stream.runFoldEffect(() => Option.none<Uint8Array>(), withPart),
-    Effect.catchReasons(
-      "MultipartError",
-      { BodyTooLarge: () => Effect.fail(tooLarge), FileTooLarge: () => Effect.fail(tooLarge) },
-      () => Effect.fail(partMissing),
+    Effect.catchReasons("MultipartError", { BodyTooLarge: refusedTooLarge, FileTooLarge: refusedTooLarge }, () =>
+      Effect.fail(partMissing),
     ),
     Effect.provideContext(multipartLimits),
   );
