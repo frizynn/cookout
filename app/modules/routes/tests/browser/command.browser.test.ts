@@ -4,9 +4,9 @@ import { test as base, expect } from "@playwright/test";
 import type { CookoutClient } from "../../../sdk/index.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
 import { createTestAgent } from "../../../testing/index.ts";
-import { inSidebar } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
+import { sidebarLink } from "./regions.ts";
 import { unique } from "./names.ts";
 
 const test = base.extend(probeFixtures);
@@ -41,14 +41,14 @@ interface Typing {
 }
 
 async function pickByKeyboard(page: Page): Promise<Locator> {
-  await expect(page.getByRole("listbox", { name: "Command suggestions" }).getByRole("option")).toHaveText([
+  await expect(page.getByRole("listbox", { exact: true, name: "Command suggestions" }).getByRole("option")).toHaveText([
     `/${unique("browser-call-box")}Ship a branch`,
   ]);
 
   await page.keyboard.press("Tab");
   return page
-    .getByRole("form", { name: `Call /${unique("browser-call-box")}` })
-    .getByRole("textbox", { name: "branch" });
+    .getByRole("form", { exact: true, name: `Call /${unique("browser-call-box")}` })
+    .getByRole("textbox", { exact: true, name: "branch" });
 }
 
 async function typeAndSend({ page, text }: Typing): Promise<void> {
@@ -59,10 +59,8 @@ async function typeAndSend({ page, text }: Typing): Promise<void> {
 async function openAsCaller({ channel, page }: Opened): Promise<void> {
   const { token } = await newIdentity({ kind: "human", name: unique("browser-command-caller") });
   await logInToChannels({ page, token });
-  await inSidebar(page)
-    .getByRole("link", { name: `#${channel}` })
-    .click();
-  await page.getByRole("textbox", { name: "Message" }).pressSequentially(`/${unique("browser-call-box")}`);
+  await sidebarLink({ label: `#${channel}`, page }).click();
+  await page.getByRole("textbox", { exact: true, name: "Message" }).pressSequentially(`/${unique("browser-call-box")}`);
 }
 
 test("a command call and its result reply show their data", async ({ page }) => {
@@ -84,10 +82,14 @@ test("a command call and its result reply show their data", async ({ page }) => 
   await logInToChannels({ page, token });
   await page.goto(`/#/channels/${channel}/threads/${String(threadId)}`);
 
-  await expect(page.getByRole("article", { name: "Parent message" }).getByLabel(`Call to /${command}`)).toHaveText(
-    JSON.stringify({ branch: "main" }),
-  );
-  await expect(page.getByRole("feed", { name: "Replies" }).getByRole("article")).toContainText(["Shipped main."]);
+  await expect(
+    page
+      .getByRole("article", { exact: true, name: "Parent message" })
+      .getByLabel(`Call to /${command}`, { exact: true }),
+  ).toHaveText(JSON.stringify({ branch: "main" }));
+  await expect(page.getByRole("feed", { exact: true, name: "Replies" }).getByRole("article")).toContainText([
+    "Shipped main.",
+  ]);
 });
 
 test("a person calls a command from the message box by keyboard, and a refusal shows by its field", async ({
@@ -107,8 +109,8 @@ test("a person calls a command from the message box by keyboard, and a refusal s
 
   await typeAndSend({ page, text: "-main" });
 
-  await expect(page.getByRole("feed", { name: "Messages" }).getByRole("article")).toContainText([
+  await expect(page.getByRole("feed", { exact: true, name: "Messages" }).getByRole("article")).toContainText([
     `/${unique("browser-call-box")}${JSON.stringify({ branch: "x-main" })}`,
   ]);
-  await expect(page.getByRole("textbox", { name: "Message" })).toHaveValue("");
+  await expect(page.getByRole("textbox", { exact: true, name: "Message" })).toHaveValue("");
 });

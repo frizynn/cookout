@@ -23,11 +23,14 @@ async function openedChannel(page: Page, channel: string): Promise<MessageId> {
 }
 
 function channelMessage(page: Page, text: string): Locator {
-  return inPane(page).getByRole("feed", { name: "Messages" }).getByRole("article").filter({ hasText: text });
+  return inPane(page)
+    .getByRole("feed", { exact: true, name: "Messages" })
+    .getByRole("article")
+    .filter({ hasText: text });
 }
 
 function threadParent(page: Page): Locator {
-  return inThread(page).getByRole("article", { name: "Parent message" });
+  return inThread(page).getByRole("article", { exact: true, name: "Parent message" });
 }
 
 async function focusOn(message: Locator): Promise<void> {
@@ -52,13 +55,13 @@ test("R on a focused message opens its thread with the cursor in the reply box, 
   await page.keyboard.type("Typed by keys.");
   await page.keyboard.press("Enter");
 
-  await expect(inThread(page).getByRole("feed", { name: "Replies" })).toContainText("Typed by keys.");
+  await expect(inThread(page).getByRole("feed", { exact: true, name: "Replies" })).toContainText("Typed by keys.");
 });
 
 test("R on a focused reply in the thread panel puts the cursor in that thread's reply box", async ({ page }) => {
   const thread = await openedChannel(page, unique("browser-message-keys-panel-reply"));
   await page.goto(`/#/channels/${unique("browser-message-keys-panel-reply")}/threads/${String(thread)}`);
-  const reply = inThread(page).getByRole("feed", { name: "Replies" }).getByRole("article").filter({
+  const reply = inThread(page).getByRole("feed", { exact: true, name: "Replies" }).getByRole("article").filter({
     hasText: "An answer.",
   });
   await focusOn(reply);
@@ -94,7 +97,7 @@ test("← in the thread panel puts focus on the channel message, with the panel 
   await expect(channelMessage(page, "The parent.")).toBeFocused();
   await expect(threadParent(page)).toBeVisible();
 
-  await inThread(page).getByRole("feed", { name: "Replies" }).getByRole("article").first().focus();
+  await inThread(page).getByRole("feed", { exact: true, name: "Replies" }).getByRole("article").first().focus();
   await page.keyboard.press("ArrowLeft");
 
   await expect(channelMessage(page, "The parent.")).toBeFocused();
@@ -142,9 +145,9 @@ test("the message menu's Reply and Open thread show their keys", async ({ page }
   await openedChannel(page, unique("browser-message-keys-menu"));
   await focusOn(channelMessage(page, "The parent."));
   await page.keyboard.press("Shift+F10");
-  const openThread = page.getByRole("menuitem", { name: "Open thread" });
+  const openThread = page.getByRole("menuitem", { exact: true, name: "Open thread" });
 
-  await expect(page.getByRole("menuitem", { name: "Reply" })).toHaveAttribute("aria-keyshortcuts", "r");
+  await expect(page.getByRole("menuitem", { exact: true, name: "Reply" })).toHaveAttribute("aria-keyshortcuts", "r");
   await expect(openThread).toHaveAttribute("aria-keyshortcuts", "ArrowRight t Enter");
   await expect(openThread).toContainText("→ or t or Enter");
 });

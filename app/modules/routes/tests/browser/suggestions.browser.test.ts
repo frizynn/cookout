@@ -70,10 +70,12 @@ test("the @ suggestion box is the topmost element everywhere it shows, over the 
   await logIn({ page, token });
   await page.goto(`/#/channels/${channel}`);
 
-  await expect(inPane(page).getByRole("link", { name: /3 replies/u })).toBeVisible();
+  await expect(
+    inPane(page).getByRole("link", { exact: true, name: "3 replies, Last reply just now, View thread" }),
+  ).toBeVisible();
 
   await inPane(page).getByLabel("Message", { exact: true }).pressSequentially(`@${channel}`);
-  const list = inPane(page).getByRole("listbox", { name: "Mention suggestions" });
+  const list = inPane(page).getByRole("listbox", { exact: true, name: "Mention suggestions" });
 
   await expect(list).toBeVisible();
 

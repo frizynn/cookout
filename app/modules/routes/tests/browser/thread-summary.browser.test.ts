@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
-import { inPane, inSidebar } from "./regions.ts";
+import { inPane, sidebarLink } from "./regions.ts";
 import { logIn } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
@@ -21,9 +21,9 @@ async function lookOf(link: Locator): Promise<Look> {
     throw new Error("Not shown");
   }
   return {
-    arrow: await link.getByText("→").isVisible(),
-    lastReply: await link.getByText(/^Last reply/u).isVisible(),
-    viewThread: await link.getByText("View thread").isVisible(),
+    arrow: await link.getByText("→", { exact: true }).isVisible(),
+    lastReply: await link.getByText("Last reply just now →", { exact: true }).isVisible(),
+    viewThread: await link.getByText("View thread", { exact: true }).isVisible(),
     width: box.width,
   };
 }
@@ -34,10 +34,8 @@ async function openSummary(page: Page, channel: string): Promise<Locator> {
   await adminClient().createMessage({ channel, replyTo: parent.id, text: "Yes" });
   const reader = await newIdentity({ kind: "human", name: unique("browser-summary-reader") });
   await logIn({ page, token: reader.token });
-  await inSidebar(page)
-    .getByRole("link", { name: `#${channel}` })
-    .click();
-  const link = inPane(page).getByRole("link", { name: /View thread/u });
+  await sidebarLink({ label: `#${channel}`, page }).click();
+  const link = inPane(page).getByRole("link", { exact: true, name: "1 reply, Last reply just now, View thread" });
 
   await expect(link).toBeVisible();
 
@@ -51,7 +49,7 @@ test("hovering a thread's summary keeps its last reply text, adds an arrow, and 
   const atRest = await lookOf(link);
   await link.hover();
 
-  await expect(link.getByText("→")).toBeVisible();
+  await expect(link.getByText("→", { exact: true })).toBeVisible();
 
   const hovered = await lookOf(link);
 

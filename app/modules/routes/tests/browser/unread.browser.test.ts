@@ -2,9 +2,9 @@ import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
 import type { Person } from "./people.ts";
-import { inSidebar } from "./regions.ts";
 import { logInWithStream } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
+import { sidebarLink } from "./regions.ts";
 import { unique } from "./names.ts";
 
 const test = base.extend(probeFixtures);
@@ -21,7 +21,7 @@ async function watchList(page: Page, channel: string): Promise<Watching> {
   const reader = await newIdentity({ kind: "human", name: `${channel}-reader` });
   await reader.client.subscribe(channel);
   await logInWithStream({ page, token: reader.token });
-  const row = inSidebar(page).getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
+  const row = sidebarLink({ label: `#${channel}`, page });
 
   await expect(row).toBeVisible();
 
@@ -33,20 +33,18 @@ async function rowInSecondTab(page: Page, channel: string): Promise<Locator> {
   const streamOpen = other.waitForResponse((response) => response.url().includes("/v1/events"));
   await other.goto("/");
   await streamOpen;
-  return inSidebar(other).getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
+  return sidebarLink({ label: `#${channel}`, page: other });
 }
 
 async function openChannel(page: Page, row: Locator, newest: string): Promise<void> {
   await row.click();
 
-  await expect(page.getByRole("feed", { name: "Messages" })).toContainText(newest);
+  await expect(page.getByRole("feed", { exact: true, name: "Messages" })).toContainText(newest);
 }
 
 async function openAndGoBack(page: Page, row: Locator, newest: string): Promise<void> {
   await openChannel(page, row, newest);
-  await inSidebar(page)
-    .getByRole("link", { name: /^Inbox/u })
-    .click();
+  await sidebarLink({ label: "Inbox", page }).click();
 }
 
 test("a channel's unread count goes up when another identity posts, then to zero once it is opened", async ({

@@ -43,14 +43,14 @@ test("an admin revoking an agent's session in one browser shows at once in its o
 }) => {
   const agent = unique("browser-live-sessions-bot");
   const ownerPage = await openAs({ browser, hash: "#/settings/agents", token: await ownerWithSession() });
-  const card = inPane(ownerPage).getByRole("group", { name: `@${agent}` });
+  const card = inPane(ownerPage).getByRole("group", { exact: true, name: `@${agent}` });
 
   await expect(card).toContainText("Joined from laptop");
 
   const adminPage = await openAs({ browser, hash: `#/people/${agent}`, token: await newAdmin() });
 
-  await inProfile(adminPage).getByRole("button", { name: "Revoke session" }).click();
-  await inDialog(adminPage).getByRole("button", { name: "Revoke session" }).click();
+  await inProfile(adminPage).getByRole("button", { exact: true, name: "Revoke session" }).click();
+  await inDialog(adminPage).getByRole("button", { exact: true, name: "Revoke session" }).click();
 
   await expect(card).toContainText("No live session");
 });

@@ -1,6 +1,6 @@
 import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
-import { inSidebar, inTopBar } from "./regions.ts";
+import { inSidebar, inTopBar, sidebarLink } from "./regions.ts";
 import type { Message } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
 import { logInToChannels } from "./login.ts";
@@ -40,7 +40,7 @@ async function narrowLogIn(page: Page): Promise<Message> {
 }
 
 async function widthOf(page: Page, name: string): Promise<number> {
-  const box = await page.getByRole("complementary", { name }).boundingBox();
+  const box = await page.getByRole("complementary", { exact: true, name }).boundingBox();
   if (box === null) {
     return NONE;
   }
@@ -54,10 +54,8 @@ test("on a narrow screen the sidebar hides behind a button, and the thread panel
 
   await expect(inSidebar(page)).toBeHidden();
 
-  await inTopBar(page).getByRole("button", { name: "Open the sidebar" }).click();
-  await inSidebar(page)
-    .getByRole("link", { name: `#${unique("browser-narrow")}` })
-    .click();
+  await inTopBar(page).getByRole("button", { exact: true, name: "Open the sidebar" }).click();
+  await sidebarLink({ label: `#${unique("browser-narrow")}`, page }).click();
 
   await expect(inSidebar(page)).toBeHidden();
 

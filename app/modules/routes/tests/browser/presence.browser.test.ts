@@ -35,15 +35,17 @@ test("a human whose tab opens shows online in another browser, and offline once 
   const watcher = await newIdentity({ kind: "human", name: watched });
   const profile = await profileOf({ page, watched });
 
-  await expect(profile.getByRole("img", { name: `${watched}, Offline` })).toBeVisible();
+  await expect(profile.getByRole("img", { exact: true, name: `${watched}, Offline` })).toBeVisible();
 
   const closeTab = await tabOf(browser, watcher.token);
 
-  await expect(profile.getByRole("img", { name: `${watched}, Online` })).toBeVisible();
-  await expect(profile.getByText("Online · web")).toBeVisible();
+  await expect(profile.getByRole("img", { exact: true, name: `${watched}, Online` })).toBeVisible();
+  await expect(profile.getByText("Online · web", { exact: true })).toBeVisible();
 
   await closeTab();
 
-  await expect(profile.getByRole("img", { name: new RegExp(`^${watched}, Offline, last seen `, "u") })).toBeVisible();
-  await expect(profile.getByText(/^Offline · last seen /u)).toBeVisible();
+  await expect(
+    profile.getByRole("img", { exact: true, name: `${watched}, Offline, last seen just now` }),
+  ).toBeVisible();
+  await expect(profile.getByText("Offline · last seen just now", { exact: true })).toBeVisible();
 });

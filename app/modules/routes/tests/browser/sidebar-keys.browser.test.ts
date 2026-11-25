@@ -1,8 +1,8 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
+import { inSidebar, sidebarLink } from "./regions.ts";
 import type { Person } from "./people.ts";
-import { inSidebar } from "./regions.ts";
 import { logInWithStream } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
@@ -45,7 +45,7 @@ async function readerOf(prefix: string): Promise<Reading> {
 }
 
 function rowOf(page: Page, channel: string): Locator {
-  return inSidebar(page).getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
+  return sidebarLink({ label: `#${channel}`, page });
 }
 
 function opened(channel: string): RegExp {
@@ -74,7 +74,7 @@ async function tabbedIntoSidebar(page: Page): Promise<void> {
   await inSidebar(page).getByRole("button", { exact: true, name: "Collapse sidebar" }).focus();
   await page.keyboard.press("Tab");
 
-  await expect(inSidebar(page).getByRole("link", { name: /^Inbox/u })).toBeFocused();
+  await expect(sidebarLink({ label: "Inbox", page })).toBeFocused();
 
   await page.keyboard.press("ArrowDown");
 
@@ -191,11 +191,14 @@ test("the channel menu shows the keys for Mark all as read and Unsubscribe", asy
   await openedOn({ channel: first, page, reader });
   await rowOf(page, second).focus();
   await page.keyboard.press("Shift+F10");
-  const menu = page.getByRole("menu", { name: `#${second} actions` });
-  const markRead = menu.getByRole("menuitem", { name: "Mark all as read" });
+  const menu = page.getByRole("menu", { exact: true, name: `#${second} actions` });
+  const markRead = menu.getByRole("menuitem", { exact: true, name: "Mark all as read" });
 
   await expect(markRead).toHaveAttribute("aria-keyshortcuts", "e");
   await expect(markRead.locator("kbd")).toHaveText("e");
-  await expect(menu.getByRole("menuitem", { name: "Unsubscribe" })).toHaveAttribute("aria-keyshortcuts", "s");
-  await expect(menu.getByRole("menuitem", { name: "Unsubscribe" }).locator("kbd")).toHaveText("s");
+  await expect(menu.getByRole("menuitem", { exact: true, name: "Unsubscribe" })).toHaveAttribute(
+    "aria-keyshortcuts",
+    "s",
+  );
+  await expect(menu.getByRole("menuitem", { exact: true, name: "Unsubscribe" }).locator("kbd")).toHaveText("s");
 });

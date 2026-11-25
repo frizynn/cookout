@@ -49,7 +49,7 @@ async function expectUnmovedWhileSuggesting({ field, form, region }: Box): Promi
 
   await field.pressSequentially("@");
 
-  const list = region.getByRole("listbox", { name: "Mention suggestions" });
+  const list = region.getByRole("listbox", { exact: true, name: "Mention suggestions" });
 
   await expect(list).toBeVisible();
   expect(await sizeOf(form)).toStrictEqual(before);
@@ -78,7 +78,7 @@ test("the @ suggestion list floats above a channel's message box without resizin
 
   await expectUnmovedWhileSuggesting({
     field: inPane(page).getByRole("textbox", { exact: true, name: "Message" }),
-    form: inPane(page).getByRole("form", { name: "Post to the channel" }),
+    form: inPane(page).getByRole("form", { exact: true, name: "Post to the channel" }),
     region: inPane(page),
   });
 });
@@ -90,7 +90,7 @@ test("the @ suggestion list floats above a thread's reply box without resizing i
 
   await expectUnmovedWhileSuggesting({
     field: inThread(page).getByRole("textbox", { exact: true, name: "Reply" }),
-    form: inThread(page).getByRole("form", { name: "Reply to the thread" }),
+    form: inThread(page).getByRole("form", { exact: true, name: "Reply to the thread" }),
     region: inThread(page),
   });
 });

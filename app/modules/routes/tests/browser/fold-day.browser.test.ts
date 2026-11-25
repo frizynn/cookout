@@ -50,7 +50,7 @@ async function boxOf(page: Page, found: ReturnType<Page["getByText"]>): Promise<
 
 async function dayLine(page: Page): Promise<Day> {
   const named = `${String(CLOSED)} closed threads`;
-  const fold = inPane(page).getByRole("button", { name: named });
+  const fold = inPane(page).getByRole("button", { exact: true, name: named });
 
   await expect(fold).toBeVisible();
 
