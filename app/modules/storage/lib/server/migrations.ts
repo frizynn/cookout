@@ -1,5 +1,6 @@
 import {
   ATTACHMENTS_MIGRATION,
+  ATTACHMENT_SIZES_MIGRATION,
   SEARCH_MIGRATION,
   TRIGGERS_MIGRATION,
   TRIGGER_HEADERS_MIGRATION,
@@ -227,6 +228,7 @@ const migrations: readonly string[] = [
    ALTER TABLE messages ADD COLUMN scheduled_message_id INTEGER;`,
   TRIGGERS_MIGRATION,
   TRIGGER_HEADERS_MIGRATION,
+  ATTACHMENT_SIZES_MIGRATION,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });
