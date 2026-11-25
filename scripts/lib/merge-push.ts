@@ -1,4 +1,4 @@
-import { DONE, git, stop, tail } from "./merge-steps.ts";
+import { DONE, git, lines, stop, tail } from "./merge-steps.ts";
 import type { Landed, Landing } from "./merge-queue.ts";
 import type { Step, Stopped } from "./merge-steps.ts";
 import { titleOf } from "./merge-branch.ts";
@@ -20,32 +20,47 @@ interface PushOptions {
 type Attempt = Landed | Stopped;
 
 const NONE = 0;
+const NEXT = 1;
+const SHORT = 12;
+const HEADS = "refs/heads/";
 
 function branchOf(options: Pick<PushOptions, "ticket">): string {
   return `merge-ticket-${options.ticket}`;
 }
 
-function deleteRemoteBranch(options: PushOptions): void {
+function attemptBranchOf(options: Pick<PushOptions, "ticket">, sha: string): string {
+  return `${branchOf(options)}-${sha.slice(NONE, SHORT)}`;
+}
+
+function remoteBranches(options: PushOptions): readonly string[] {
   const branch = branchOf(options);
-  if (git(options, "ls-remote", "--exit-code", "--heads", "origin", branch).ok) {
+  const listed = git(options, "ls-remote", "--heads", "origin", branch, `${branch}-*`);
+  return lines(listed.output).flatMap((line) => {
+    const ref = line.split("\t").at(NEXT) ?? "";
+    return [ref.slice(HEADS.length)].filter(() => ref.startsWith(HEADS));
+  });
+}
+
+function deleteRemoteBranches(options: PushOptions, keep: string): void {
+  for (const branch of remoteBranches(options).filter((name) => name !== keep)) {
     git(options, "push", "-q", "origin", "--delete", branch);
   }
 }
 
-function onOrigin(options: PushOptions, sha: string): boolean {
-  const listed = git(options, "ls-remote", "--heads", "origin", branchOf(options));
-  return listed.ok && listed.output.startsWith(`${sha}\t`);
+function deleteRemoteBranch(options: PushOptions): void {
+  deleteRemoteBranches(options, "");
 }
 
 function pushBranch(options: PushOptions, sha: string): Step {
-  const branch = branchOf(options);
-  if (onOrigin(options, sha)) {
+  const branch = attemptBranchOf(options, sha);
+  if (remoteBranches(options).includes(branch)) {
     options.log(
-      `${branch} is already at ${sha} on origin: not pushing again. If its Check run is red, its failed jobs are rerun once, in case they were flaky.`,
+      `${branch} is already on origin: not pushing again. If its Check run is red, its failed jobs are rerun once, in case they were flaky.`,
     );
     return DONE;
   }
-  const pushed = git(options, "push", "-q", "--force", "origin", `${sha}:refs/heads/${branch}`);
+  deleteRemoteBranches(options, branch);
+  const pushed = git(options, "push", "-q", "origin", `${sha}:${HEADS}${branch}`);
   if (!pushed.ok) {
     return stop(`git push origin ${sha}:${branch} failed; nothing was merged.\n${tail(pushed.output)}`);
   }
@@ -70,7 +85,7 @@ function nothingMerged(options: PushOptions, stopped: Stopped, on: string): Stop
 }
 
 function greenOnCi(options: PushOptions, sha: string): Step {
-  const branch = branchOf(options);
+  const branch = attemptBranchOf(options, sha);
   if (options.queue.required) {
     options.log(`v1 lands through the merge queue: its merge_group Check run is the gate, not ${branch}'s push run.`);
     return DONE;
@@ -93,7 +108,7 @@ function pushedAndGreen(options: PushOptions, sha: string): Step {
 
 function push({ options }: { readonly options: PushOptions }): Attempt {
   const sha = git(options, "rev-parse", "HEAD").output;
-  const branch = branchOf(options);
+  const branch = attemptBranchOf(options, sha);
   const watched = pushedAndGreen(options, sha);
   if (watched.kind === "stopped") {
     return watched;

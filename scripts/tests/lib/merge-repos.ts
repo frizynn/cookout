@@ -31,6 +31,8 @@ interface Overrides {
 
 const TICKET = 7;
 const INDENT = 2;
+const START = 0;
+const SHORT = 12;
 const BRANCH = `ticket-${TICKET}`;
 const GITHUB = ["-c", "user.name=GitHub", "-c", "user.email=noreply@github.com"] as const;
 const FLOOR = { base: ["90", "95"], merged: ["91", "94"], ticket: ["92", "94"], v1: ["91", "95"] } as const;
@@ -107,6 +109,7 @@ function temporaryRoot(): string {
 function bareOrigin(root: string): string {
   const origin = path.join(root, "origin.git");
   git(root, "init", "-q", "--bare", "-b", "v1", origin);
+  git(origin, "config", "receive.denyNonFastForwards", "true");
   return origin;
 }
 
@@ -146,6 +149,17 @@ function landOn(origin: string, { sha, title }: Landing): Landed | Stopped {
   } catch {
     return stop("The pull request left the merge queue without merging: it conflicts with v1.");
   }
+}
+
+function attemptOf(sha: string): string {
+  return `merge-ticket-${TICKET}-${sha.slice(START, SHORT)}`;
+}
+
+function pushedBranch(origin: string): string {
+  return git(origin, "branch", "--list", "--format=%(refname:short)")
+    .split("\n")
+    .filter((branch) => branch !== "v1")
+    .join("\n");
 }
 
 function fakeQueue({
@@ -251,12 +265,14 @@ export {
   OPT_OUTS,
   OXLINT_CONFIG,
   TICKET,
+  attemptOf,
   fakeQueue,
   floor,
   generated,
   git,
   migrations,
   oxlint,
+  pushedBranch,
   redCi,
   repo,
   repos,

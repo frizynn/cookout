@@ -95,7 +95,9 @@ it("lands a --fixes-red-v1 merge through the queue, printing the merge queue's r
   expect([status, lines.at(LAST)]).toStrictEqual([EXIT_OK, "RESULT: MERGED m3rg3"]);
   expect(lines).toStrictEqual(
     expect.arrayContaining([
-      "merge-ticket: v1 lands through the merge queue: its merge_group Check run is the gate, not merge-ticket-7's push run.",
+      expect.stringMatching(
+        /^merge-ticket: v1 lands through the merge queue: its merge_group Check run is the gate, not merge-ticket-7-[0-9a-f]{12}'s push run\.$/u,
+      ),
       expect.stringMatching(ENQUEUED),
       "merge-ticket: Watching the merge queue's Check run of gh-readonly-queue/v1/pr-9-abc, run 50.",
       "merge-ticket: merged ticket-7 into v1 at m3rg3, through its pull request from merge-ticket-7.",
