@@ -5,8 +5,9 @@ import type { TestCookoutService, TestIdentity } from "../../../testing/server.t
 import { eventsPath, refusalEvent } from "../../../events/index.ts";
 import { expect, it } from "@effect/vitest";
 import { openEventStream, request } from "../../../http/client.ts";
-import { sessionPath, whoamiPath } from "../../../identities/index.ts";
+import { sessionCookieName, sessionPath, whoamiPath } from "../../../identities/index.ts";
 import type { Scope } from "effect";
+import { createTestAgent } from "../../../testing/index.ts";
 
 const REVOKED = '"code":"token_revoked"';
 
@@ -100,6 +101,19 @@ function twoWebStreams(
   });
 }
 
+type Watch = Awaited<ReturnType<TestIdentity["client"]["watch"]>>;
+
+function agentSessionWatch(cookout: TestCookoutService, owner: TestIdentity): Effect.Effect<Watch, never, Scope.Scope> {
+  return Effect.gen(function* joinAndWatch() {
+    yield* answer(() => createTestAgent({ by: cookout.client, name: "triage", owner: owner.identity.name }));
+    const { agentSessionToken } = yield* answer(() => owner.client.join({ as: "triage" }));
+    return yield* Effect.acquireRelease(
+      answer(() => cookout.clientFor(agentSessionToken).watch()),
+      (events) => answer(() => events.close()),
+    );
+  });
+}
+
 it.effect("a session made with another of the human's credentials keeps working when their token is rotated", () =>
   Effect.gen(function* otherCredentialSurvives() {
     const cookout = yield* TestCookout;
@@ -130,5 +144,33 @@ it.effect("rotating the human's token closes the event streams of sessions made 
       [refusalEvent, true],
     ]);
     expect(Option.getOrUndefined(next)).toMatchObject({ event: "inbox-item" });
+  }).pipe(Effect.scoped, Effect.provide(testCookout())),
+);
+
+it.effect("rotating the human's token closes a web stream whose cookie holds that token itself", () =>
+  Effect.gen(function* legacyCookieCloses() {
+    const cookout = yield* TestCookout;
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const stream = yield* webStream(cookout.url, `${sessionCookieName}=${ada.token}`);
+    yield* answer(() => cookout.client.rotateToken("ada"));
+    const ended = yield* eventsUntilEnd(stream);
+
+    expect(Arr.map(ended, ({ data, event }) => [event, Str.includes(REVOKED)(data)])).toStrictEqual([
+      [refusalEvent, true],
+    ]);
+  }).pipe(Effect.scoped, Effect.provide(testCookout())),
+);
+
+it.effect("rotating an agent's Identity token leaves a watch sent with its agent session token open", () =>
+  Effect.gen(function* agentSessionSurvives() {
+    const cookout = yield* TestCookout;
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    yield* answer(() => cookout.client.createChannel({ name: "grill" }));
+    const events = yield* agentSessionWatch(cookout, ada);
+    yield* answer(() => cookout.client.rotateToken("triage"));
+    yield* answer(() => cookout.client.createMessage({ channel: "grill", text: "@triage still there?" }));
+    const next = yield* answer(() => events[Symbol.asyncIterator]().next());
+
+    expect(next).toMatchObject({ done: false, value: { type: "inbox-item" } });
   }).pipe(Effect.scoped, Effect.provide(testCookout())),
 );
