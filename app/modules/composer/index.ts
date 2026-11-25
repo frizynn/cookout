@@ -61,17 +61,17 @@ import type { DisplayNameDraft, TriggerSettings } from "./lib/profile-stores.ts"
 import type { DraftSnapshot, Sources } from "./lib/snapshot.ts";
 import { EMPTY, changesFor } from "./lib/snapshot.ts";
 import type { IdentityList, IdentityStore } from "./lib/identity-list.ts";
+import { commandList, selectedStore } from "../board/index.ts";
+import { listenersOf, sameSnapshot } from "./lib/listeners.ts";
 import type { AdminChanges } from "./lib/admin-change.ts";
 import type { AgentCreation } from "./lib/agent-creation.ts";
 import type { IdentityActions } from "./lib/identity-actions.ts";
 import type { IdentityDeletion } from "./lib/identity-deletion.ts";
-import { commandList } from "../board/index.ts";
 import { createAdminChanges } from "./lib/admin-change.ts";
 import { createAgentCreation } from "./lib/agent-creation.ts";
 import { createIdentityActions } from "./lib/identity-actions.ts";
 import { createIdentityDeletion } from "./lib/identity-deletion.ts";
 import { createIdentityList } from "./lib/identity-list.ts";
-import { listenersOf } from "./lib/listeners.ts";
 import { profileStoresOf } from "./lib/profile-stores.ts";
 
 const NO_COMMANDS: readonly Command[] = [];
@@ -81,15 +81,29 @@ function noMembers(): readonly IdentityName[] {
   return NO_MEMBERS;
 }
 
+interface DraftChanges {
+  readonly current: () => DraftSnapshot;
+  readonly change: (update: (snapshot: DraftSnapshot) => DraftSnapshot) => void;
+}
+
+function draftChanges(notify: () => void): DraftChanges {
+  let current: DraftSnapshot = EMPTY;
+  return {
+    change: (update) => {
+      const next = update(current);
+      if (!sameSnapshot({ after: next, before: current })) {
+        current = next;
+        notify();
+      }
+    },
+    current: () => current,
+  };
+}
+
 function createDraft(list: IdentityList, sources: Sources): Draft {
   const listeners = listenersOf(list.show);
   const changes = changesFor(sources);
-  let current: DraftSnapshot = EMPTY;
-
-  function change(update: (snapshot: DraftSnapshot) => DraftSnapshot): void {
-    current = update(current);
-    listeners.notify();
-  }
+  const { change, current } = draftChanges(listeners.notify);
 
   list.onChange(() => {
     change(changes.refreshed);
@@ -124,7 +138,7 @@ function createDraft(list: IdentityList, sources: Sources): Draft {
     replyTo: (name) => {
       change((snapshot) => changes.repliedTo(snapshot, name));
     },
-    snapshot: () => current,
+    snapshot: current,
     subscribe: listeners.add,
     unpick: () => {
       change(changes.unpicked);
@@ -248,8 +262,7 @@ export function createComposer(options: ComposerOptions): Composer {
       ...createAdminChanges(list),
       ...ownerPowersOf(list),
       deletion,
-      snapshot: list.identities,
-      subscribe: readers.add,
+      ...selectedStore({ snapshot: list.identities, subscribe: readers.add }),
     },
   };
 }

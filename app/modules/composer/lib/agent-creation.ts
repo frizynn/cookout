@@ -1,6 +1,6 @@
 import type { IdentityName, Refusal, Token } from "../../sdk/index.ts";
+import { listenersOf, sameSnapshot } from "./listeners.ts";
 import type { IdentityList } from "./identity-list.ts";
-import { listenersOf } from "./listeners.ts";
 import { refusalOf } from "../../sdk/index.ts";
 
 type CreateState =
@@ -34,6 +34,9 @@ function createAgentCreation(options: AgentCreationOptions): AgentCreation {
   let queue = Promise.resolve();
 
   function publish(next: AgentCreationSnapshot): void {
+    if (sameSnapshot({ after: next, before: current })) {
+      return;
+    }
     current = next;
     listeners.notify();
   }
