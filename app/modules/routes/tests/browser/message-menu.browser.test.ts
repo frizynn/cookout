@@ -30,7 +30,7 @@ async function openChannel(page: Page, channel: string): Promise<Locator> {
   const { token } = await newIdentity({ kind: "human", name: `${channel}-reader` });
   await logIn({ page, token });
   await page.goto(`/#/channels/${channel}`);
-  const message = page.getByRole("feed", { name: "Messages" }).getByRole("article");
+  const message = page.getByRole("feed", { exact: true, name: "Messages" }).getByRole("article");
 
   await expect(message).toBeVisible();
 
@@ -49,9 +49,9 @@ async function boxOf(locator: Locator): Promise<Corners> {
 
 async function menuAt(page: Page, point: Point): Promise<Corners> {
   await page.mouse.click(point.left, point.top, { button: "right" });
-  const menu = page.getByRole("menu", { name: "Message actions" });
+  const menu = page.getByRole("menu", { exact: true, name: "Message actions" });
 
-  await expect(menu.getByRole("menuitem", { name: "Mark unread" })).toBeVisible();
+  await expect(menu.getByRole("menuitem", { exact: true, name: "Mark unread" })).toBeVisible();
 
   return boxOf(menu);
 }
@@ -96,7 +96,7 @@ test("right-clicking a message by the window's right edge opens its menu leftwar
 async function downTo(page: Page, name: string): Promise<void> {
   await page.keyboard.press("ArrowDown");
 
-  await expect(page.getByRole("menuitem", { name })).toBeFocused();
+  await expect(page.getByRole("menuitem", { exact: true, name })).toBeFocused();
 }
 
 test("the More actions menu takes focus, moves with the arrow keys and gives focus back on Escape", async ({
@@ -104,11 +104,11 @@ test("the More actions menu takes focus, moves with the arrow keys and gives foc
 }) => {
   const message = await openChannel(page, unique("browser-menu-keys"));
   await message.focus();
-  const more = message.getByRole("button", { name: "More actions" });
+  const more = message.getByRole("button", { exact: true, name: "More actions" });
   await more.focus();
   await page.keyboard.press("Enter");
 
-  await expect(page.getByRole("menuitem", { name: "Reply" })).toBeFocused();
+  await expect(page.getByRole("menuitem", { exact: true, name: "Reply" })).toBeFocused();
 
   await downTo(page, "Open thread");
   await downTo(page, "React with 👍");
@@ -122,12 +122,14 @@ test("the More actions button stays shown while its menu is open, so Escape can 
   page,
 }) => {
   const message = await openChannel(page, unique("browser-menu-shown"));
-  await message.getByRole("button", { name: "More actions" }).focus();
+  await message.getByRole("button", { exact: true, name: "More actions" }).focus();
   await page.keyboard.press("Enter");
 
-  await expect(page.getByRole("menuitem", { name: "Reply" })).toBeFocused();
+  await expect(page.getByRole("menuitem", { exact: true, name: "Reply" })).toBeFocused();
   await expect(
-    page.getByRole("main", { includeHidden: true }).getByRole("button", { includeHidden: true, name: "More actions" }),
+    page
+      .getByRole("main", { includeHidden: true })
+      .getByRole("button", { exact: true, includeHidden: true, name: "More actions" }),
   ).toBeVisible();
 });
 
@@ -137,11 +139,11 @@ test("Escape in the More actions menu gives focus back to its button with the mo
   const message = await openChannel(page, unique("browser-menu-unhovered"));
   await page.mouse.move(CORNER, CORNER);
   await message.focus();
-  const more = message.getByRole("button", { name: "More actions" });
+  const more = message.getByRole("button", { exact: true, name: "More actions" });
   await more.focus();
   await page.keyboard.press("Enter");
 
-  await expect(page.getByRole("menuitem", { name: "Reply" })).toBeFocused();
+  await expect(page.getByRole("menuitem", { exact: true, name: "Reply" })).toBeFocused();
 
   await page.keyboard.press("Escape");
 

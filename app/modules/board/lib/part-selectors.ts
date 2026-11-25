@@ -38,4 +38,11 @@ function agentSessions(agent: IdentityName): (state: BoardState) => Sessions {
   return sessionsIn;
 }
 
-export { agentSessions, deletedIdentities, identityList, presences, reactionRefusal, reactionsOf };
+function loggedInName(state: BoardState): IdentityName | null {
+  if (state.session.status !== "logged-in") {
+    return null;
+  }
+  return state.session.identity.name;
+}
+
+export { agentSessions, deletedIdentities, identityList, loggedInName, presences, reactionRefusal, reactionsOf };

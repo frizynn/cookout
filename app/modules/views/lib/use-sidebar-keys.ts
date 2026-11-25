@@ -26,8 +26,7 @@ interface Said {
 function useChannelKeys(props: SidebarKeys, announce: (text: string) => void): ChannelKeys {
   const { board, unread } = props;
   const { channels } = useSyncExternalStore(board.subscribe, board.snapshot);
-  const state = useSyncExternalStore(unread.subscribe, unread.snapshot);
-  const counts = useSidebarCounts({ me: props.me, state }).channels;
+  const counts = useSidebarCounts({ me: props.me }).channels;
   return useMemo(
     () => ({
       announce,

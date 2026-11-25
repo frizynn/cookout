@@ -3,8 +3,10 @@ import { adminClient, agentOption, newIdentity, revocableView } from "./identiti
 import { expect, it } from "vitest";
 import { fireEvent, waitFor, within } from "@testing-library/react";
 import { inConversation, inThread } from "./regions.ts";
+import type { ClientMethod } from "./answering.ts";
+import type { OpenedView } from "./view-opened.ts";
 import { chose } from "./menus.ts";
-import { openWithClockStopped } from "./clock.ts";
+import { conversationOpened } from "./view-opened.ts";
 import { subscribedReader } from "./inbox-reader.ts";
 
 interface Followed {
@@ -37,6 +39,22 @@ async function sent(text: string): Promise<HTMLElement> {
   return box;
 }
 
+interface Sending {
+  readonly answered: OpenedView["answered"];
+  readonly methods: readonly ClientMethod[];
+  readonly text: string;
+}
+
+async function sentAndAnswered({ answered, methods, text }: Sending): Promise<HTMLElement> {
+  const box = await sent(text);
+  await Promise.all(
+    methods.map(async (method) => {
+      await answered(method);
+    }),
+  );
+  return box;
+}
+
 async function suggested(): Promise<readonly (string | null)[]> {
   const list = await inConversation().findByRole("listbox", { name: "Mention suggestions" });
   const shown: (string | null)[] = [];
@@ -52,9 +70,9 @@ it("replying in a thread conversation posts into the thread, shows the reply and
   expect.hasAssertions();
 
   const thread = await followedWithNews("web-inbox-reply");
-  const unmount = openWithClockStopped({ client: thread.reader, hash: thread.address });
+  const { answered, close: unmount } = await conversationOpened({ client: thread.reader, hash: thread.address });
   await inConversation().findByText("Any takers?");
-  const box = await sent("I'll take it");
+  const box = await sentAndAnswered({ answered, methods: ["createMessage", "getThread"], text: "I'll take it" });
   await inConversation().findByText("I'll take it");
   await waitFor(() => {
     expect(box).toHaveProperty("value", "");
@@ -97,7 +115,11 @@ it("in a thread conversation, typing @ lists the thread's members first, most re
 }, async () => {
   expect.hasAssertions();
 
-  const unmount = openWithClockStopped({ client: adminClient(), hash: addressOf(await threadWithMembers()) });
+  const { close: unmount } = await conversationOpened({
+    client: adminClient(),
+    hash: addressOf(await threadWithMembers()),
+    waitingOn: ["getThread", "listIdentities"],
+  });
   await inConversation().findByText("Hi");
   await typed("Ping @inbox-member");
 
@@ -112,7 +134,7 @@ it("a draft typed in a thread conversation is in the thread panel's box when the
   expect.hasAssertions();
 
   const thread = await followedWithNews("web-inbox-reply-draft");
-  const unmount = openWithClockStopped({ client: thread.reader, hash: thread.address });
+  const { close: unmount } = await conversationOpened({ client: thread.reader, hash: thread.address });
   await inConversation().findByText("Any takers?");
   await typed("Half written");
   fireEvent.click(inConversation().getByRole("link", { name: "Open thread" }));
@@ -136,7 +158,7 @@ it("reply on a message in a thread conversation mentions its author in the box",
   expect.hasAssertions();
 
   const thread = await followedWithNews("web-inbox-reply-mention");
-  const unmount = openWithClockStopped({ client: thread.reader, hash: thread.address });
+  const { close: unmount } = await conversationOpened({ client: thread.reader, hash: thread.address });
   fireEvent.contextMenu(await messageSaying("Any takers?"));
   await chose("Reply");
   const box = inConversation().getByRole("textbox", { name: "Reply" });
@@ -168,10 +190,10 @@ it("a refused reply in a thread conversation keeps its text and shows the refusa
   expect.hasAssertions();
 
   const { address, writer } = await refusedWriter();
-  const unmount = openWithClockStopped({ client: writer.client, hash: address });
+  const { answered, close: unmount } = await conversationOpened({ client: writer.client, hash: address });
   await inConversation().findByText("Hello");
   await writer.rotateToken();
-  const box = await sent("Too late");
+  const box = await sentAndAnswered({ answered, methods: ["createMessage"], text: "Too late" });
   const alert = await inConversation().findByRole("alert");
 
   expect(alert.textContent).toMatch(/^Couldn't post the reply \(token_revoked\)/u);

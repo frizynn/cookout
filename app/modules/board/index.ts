@@ -6,10 +6,16 @@
  * `subscribe` and `snapshot` (`BoardState`, a new object whenever a slice's part changes, the same one until then),
  * read through selectors such as `presences`, each returning the same object until what it reads changes. Nothing is
  * read up front: `subscribeShowing(slice)` subscribes a view that shows that slice, and the slice is read when its first
- * such reader arrives. Each event on `live` is applied to every slice, in one place; an event heard while a slice is
+ * such reader arrives. The store is `live`'s one follower, which it becomes when a view first shows something: each
+ * event on `live` is applied to every slice, in one place; an event heard while a slice is
  * being read is applied again on what the read brings, so the event wins, and an event heard twice changes nothing.
  * When the link comes back after being down, each slice someone is showing is read again, and one nobody is showing
- * is read again when it is next shown; that is the store's one catch-up. Its slices: `presence`, every identity's
+ * is read again when it is next shown, and the triggers called while the link was down are forgotten, as a fresh load
+ * would have none; that is the store's one catch-up. Inbox items, and the unacked reaction items, the server replays
+ * after `Last-Event-ID` (ADR `docs/adr/0071-a-resume-replays-every-unseen-reaction-item.md`) apply by message ID, so
+ * one already held changes nothing. Everything else the server keeps no events for, so each slice reads its snapshot
+ * again and compares (ADR 0068); the catch-up is one function (`catchUpOf`), the one place that becomes replaying events
+ * if the server one day replays every kind. Its slices: `presence`, every identity's
  * presence, read with `GET /v1/presence`, changed by `presence` events and left by `identity-deleted`;
  * `reactions`, read through
  * `reactionsOf(state, message)`: a message arrives with its reactions, the slice holds each `reaction` event's
@@ -79,7 +85,7 @@
  * The Inbox's levels are selectors too, each the same object until the items it reads change: `inboxRows` groups the
  * unread items into rows (`rowsOf`: one per thread, its replies, or per channel,
  * its top-level messages, each with its latest item, count, level and strongest reason, newest first; `rowKey` is a
- * row's key); `inboxCounts` and `inboxCountsByChannel` count the two levels, for you (a mention, a reaction, a reply
+ * row's key); `inboxCounts` and `inboxCountsByChannel` count the two levels, and `inboxForYou` is the one For you count with the unread notices, for the sidebar's Inbox badge and the page title, for you (a mention, a reaction, a reply
  * in a thread you started) and activity (the rest; Matt, #152, 2026-11-23); `inboxNewsByThread` counts each thread's
  * unread replies and how many are for you; `inboxThreadsWithNews` lists a channel's threads with an item there for a
  * reason besides a subscribed channel (#349); and `inboxNewLine` is where a channel's or thread's "New" line goes: its
@@ -88,7 +94,7 @@
  * `Board` and its parts are the old per-channel and per-thread stores the views still read; the routes module makes them
  * as thin adapters over the store's selectors and methods, for the last migration ticket to delete.
  *
- * The board store's `session` is whether the person at the browser is logged in, and as whom, shown with
+ * The board store's `session` is whether the person at the browser is logged in, and as whom (`loggedInName` reads the name), shown with
  * `subscribeShowing("session")` (or `session.subscribe`): it asks the server who the page's client is (`whoami`,
  * which a browser answers with the session cookie); no cookie is simply logged out. Its identity is the identities
  * slice's identity of that name once the slice holds one, so an `identity` event for it (a display name or admin flag
@@ -153,6 +159,7 @@ export {
   agentSessions,
   deletedIdentities,
   identityList,
+  loggedInName,
   presences,
   reactionRefusal,
   reactionsOf,
@@ -179,6 +186,7 @@ export {
 export {
   inboxCounts,
   inboxCountsByChannel,
+  inboxForYou,
   inboxNewLine,
   inboxNewsByThread,
   inboxRows,
@@ -189,7 +197,6 @@ export {
   type ThreadNews,
   type UnreadCounts,
   type UnreadWhy,
-  countsOf,
 } from "./lib/inbox-levels.ts";
 export { type InboxRow, rowKey, rowsOf } from "./lib/inbox-rows.ts";
 export { calledTrigger } from "./lib/triggers-slice.ts";

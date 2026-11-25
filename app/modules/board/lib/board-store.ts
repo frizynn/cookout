@@ -12,12 +12,13 @@ import type { InboxCalls, InboxCallsClient, InboxHeld, InboxParts } from "./inbo
 import type { OwnClient, OwnShowing, OwnState } from "./own-showing.ts";
 import type { PresenceClient, Presences } from "./presence-slice.ts";
 import type { ReactionParts, Reactions, ReactionsClient, Toggle, ToggleClient } from "./reaction-parts.ts";
-import type { Live } from "../../live/index.ts";
+import type { FollowedLive } from "./live-following.ts";
 import type { Part } from "./slice.ts";
 import { createCalledTriggers } from "./triggers-slice.ts";
 import { createListeners } from "./listeners.ts";
 import { createOwn } from "./own-showing.ts";
 import { createPart } from "./slice.ts";
+import { followerOf } from "./live-following.ts";
 import { identityPartsOf } from "./identity-parts.ts";
 import { inboxPartsOf } from "./inbox-part.ts";
 import { presenceSlice } from "./presence-slice.ts";
@@ -75,7 +76,7 @@ type BoardStoreClient = OwnClient &
 interface BoardStoreOptions {
   readonly client: BoardStoreClient;
   readonly url: string;
-  readonly live: Live | null;
+  readonly live: FollowedLive;
   readonly pageSize?: number;
 }
 
@@ -85,31 +86,6 @@ interface Showing {
   readonly part: Pick<Part<unknown>, "hide" | "show">;
   readonly follow: () => void;
   readonly subscribe: Subscribe;
-}
-
-type Followed = Pick<Part<unknown>, "apply" | "back">;
-
-function follower(live: Live | null, parts: readonly Followed[], backs: readonly (() => void)[]): () => void {
-  let following = false;
-  return () => {
-    if (following || live === null) {
-      return;
-    }
-    following = true;
-    live.subscribe((event) => {
-      for (const part of parts) {
-        part.apply(event);
-      }
-    });
-    live.onBack(() => {
-      for (const part of parts) {
-        part.back();
-      }
-      for (const back of backs) {
-        back();
-      }
-    });
-  };
 }
 
 function showingUnfollowed({ part, subscribe }: Omit<Showing, "follow">): Subscribe {
@@ -192,11 +168,11 @@ function createBoardStore(options: BoardStoreOptions): BoardStore {
   }
   const parts = partsOf(changed, options);
   const { identities, identityCalls, own, presence, reactionToggle, reactions, session, sessions, triggers } = parts;
-  const follow = follower(
-    options.live,
-    [own.parts, presence, reactions, identities, sessions, triggers, parts.inboxFollowed],
-    [session.back],
-  );
+  const follow = followerOf({
+    live: options.live,
+    parts: [own.parts, presence, reactions, identities, sessions, triggers, parts.inboxFollowed],
+    rereads: [session.back],
+  });
   const subscribers = {
     ...own.subscribers({ follow, subscribe }),
     identities: showing({ follow, part: identities, subscribe }),

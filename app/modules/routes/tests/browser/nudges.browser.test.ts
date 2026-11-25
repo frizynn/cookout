@@ -34,8 +34,9 @@ test("a nudge row's link opens its thread", async ({ ownCookout, page }) => {
   await logIn({ page, token: started.starter.token, url: "/#/inbox" });
 
   await inPane(page)
-    .getByRole("list", { name: "For you" })
-    .getByRole("link", { name: new RegExp(NUDGE.replace("?", String.raw`\?`), "u") })
+    .getByRole("list", { exact: true, name: "For you" })
+    .getByRole("link")
+    .filter({ has: page.getByText(NUDGE, { exact: true }) })
     .click();
 
   await expect(page).toHaveURL(

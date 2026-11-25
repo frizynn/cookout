@@ -50,7 +50,7 @@ test("the confirmation dialog keeps focus inside while open, and Escape gives it
   const deactivate = inProfile(page).getByRole("button", { exact: true, name: "Deactivate" });
   await deactivate.click();
 
-  await expect(inDialog(page).getByRole("button", { name: "Cancel" })).toBeFocused();
+  await expect(inDialog(page).getByRole("button", { exact: true, name: "Cancel" })).toBeFocused();
 
   await expect(tabOrder(page)).resolves.toStrictEqual([`Deactivate @${agent}`, "Cancel", `Deactivate @${agent}`]);
 

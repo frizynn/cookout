@@ -61,8 +61,9 @@ async function openFromInbox(page: Page, list: string): Promise<void> {
   await page.goto("/#/inbox");
   await page
     .getByRole("main")
-    .getByRole("list", { name: list })
-    .getByRole("link", { name: /Mentioned you/u })
+    .getByRole("list", { exact: true, name: list })
+    .getByRole("link")
+    .filter({ has: page.getByText("Mentioned you", { exact: true }) })
     .click();
 }
 

@@ -25,12 +25,15 @@ async function openThread({ channel, page }: Opened): Promise<void> {
 }
 
 function replyNamed(page: Page, text: string): Locator {
-  return inThread(page).getByRole("feed", { name: "Replies" }).getByRole("article").filter({ hasText: text });
+  return inThread(page)
+    .getByRole("feed", { exact: true, name: "Replies" })
+    .getByRole("article")
+    .filter({ hasText: text });
 }
 
 async function hoverReply(message: Locator): Promise<void> {
   const reply = message
-    .getByRole("group", { name: "Quick actions" })
+    .getByRole("group", { exact: true, name: "Quick actions" })
     .getByRole("button", { exact: true, name: "Reply" });
 
   await expect(async () => {
@@ -92,7 +95,7 @@ async function threadHoverBarIn({ page, theme }: Shot): Promise<void> {
   await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
 
   const message = replyNamed(page, "Noon works");
-  const bar = message.getByRole("group", { name: "Quick actions" });
+  const bar = message.getByRole("group", { exact: true, name: "Quick actions" });
 
   await expect(async () => {
     await message.hover();

@@ -1,7 +1,9 @@
 import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { inConversation, inPane, inSidebar } from "./regions.ts";
+import type { Answering } from "./answering.ts";
 import type { HandReading } from "./hand-reading.ts";
+import { answering } from "./answering.ts";
 import { clockStopped } from "./clock.ts";
 import { expect } from "vitest";
 import { handReading } from "./hand-reading.ts";
@@ -167,6 +169,7 @@ function acking(client: CookoutClient): Acking {
 }
 
 interface Opened extends Omit<HandReading, "reading"> {
+  readonly answered: Answering["answered"];
   readonly close: () => Promise<void>;
   readonly read: () => Promise<number>;
   readonly unreadAfter: (millis: number) => Promise<number>;
@@ -182,11 +185,13 @@ async function openReading({ hash, thread }: Opening): Promise<Opened> {
   const { advance, page, reading } = handReading();
   const { live, stream } = watched(thread.reader);
   clockStopped();
-  const { acked, client } = acking(thread.reader);
+  const { acked, client: ackingClient } = acking(thread.reader);
+  const { answered, client } = answering(ackingClient);
   const unmount = openAt({ client, hash, live, reading });
   const events: EventStream = await stream;
   return {
     advance,
+    answered,
     close: async () => {
       unmount();
       await events.close();

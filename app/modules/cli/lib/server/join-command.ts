@@ -42,7 +42,7 @@ const sessionUrlFlag = Flag.String("session-url").pipe(
   Flag.optional,
   Flag.withDescription(
     "Where a person can watch this session, such as a cloud session's page: an absolute http or https URL. Shown " +
-      "to the agent's owner until the session ends. Not with --code.",
+      "to the agent's owner until the session ends.",
   ),
 );
 

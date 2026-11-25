@@ -31,8 +31,7 @@ export type { SidebarLinksProps };
 export function SidebarLinks(props: SidebarLinksProps): ReactNode {
   const { route } = props;
   const { channels } = useSyncExternalStore(props.board.subscribe, props.board.snapshot);
-  const unread = useSyncExternalStore(props.unread.subscribe, props.unread.snapshot);
-  const counts = useSidebarCounts({ me: props.me, state: unread });
+  const counts = useSidebarCounts({ me: props.me });
   const actions = useMemo(
     () => ({
       keymap: props.keymap,

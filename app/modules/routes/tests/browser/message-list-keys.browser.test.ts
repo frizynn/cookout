@@ -55,7 +55,7 @@ async function openedWith(page: Page, posting: Posting): Promise<readonly Messag
 }
 
 function messagesOn(page: Page): Locator {
-  return inPane(page).getByRole("feed", { name: "Messages" });
+  return inPane(page).getByRole("feed", { exact: true, name: "Messages" });
 }
 
 function focusedMessage(page: Page): Locator {
@@ -115,7 +115,7 @@ test("a channel of 30 messages is one Tab stop: Tab walks one message's own cont
   page,
 }) => {
   await openedWith(page, { channel: unique("browser-keys-tab"), count: THIRTY, replyTo: null });
-  await page.getByRole("textbox", { name: "Message" }).focus();
+  await page.getByRole("textbox", { exact: true, name: "Message" }).focus();
 
   const backwards = await walkedInFeed({ key: "Shift+Tab", left: TAB_LIMIT, page });
 
@@ -128,7 +128,7 @@ test("a channel of 30 messages is one Tab stop: Tab walks one message's own cont
   const forwards = await walkedInFeed({ key: "Tab", left: TAB_LIMIT, page });
 
   expect(forwards.every((text) => text.includes(noteOf(THIRTY)))).toBe(true);
-  await expect(page.getByRole("textbox", { name: "Message" })).toBeFocused();
+  await expect(page.getByRole("textbox", { exact: true, name: "Message" })).toBeFocused();
 });
 
 test("arrow keys, j and k move one message, and Home and End reach the ends", async ({ page }) => {
@@ -151,7 +151,7 @@ test("a live message arriving keeps focus on the message it was on", async ({ pa
 
   await adminClient().createMessage({ channel, text: "Arrived live." });
 
-  await expect(messagesOn(page).getByText("Arrived live.")).toBeVisible();
+  await expect(messagesOn(page).getByText("Arrived live.", { exact: true })).toBeVisible();
   await expect(focusedMessage(page)).toContainText(noteOf(FIRST));
 });
 
@@ -191,7 +191,7 @@ test("Enter on a fold of closed threads unfolds it", async ({ page }) => {
 
   await page.keyboard.press("Enter");
 
-  await expect(messagesOn(page).getByText("Done and dusted.")).toBeVisible();
+  await expect(messagesOn(page).getByText("Done and dusted.", { exact: true })).toBeVisible();
   await expect(focusedMessage(page)).toContainText("Done and dusted.");
 });
 
@@ -206,7 +206,7 @@ async function openedThread(page: Page, channel: string): Promise<void> {
 
 test("the same keys move between an open thread's replies", async ({ page }) => {
   await openedThread(page, unique("browser-keys-thread"));
-  const replies = inThread(page).getByRole("feed", { name: "Replies" });
+  const replies = inThread(page).getByRole("feed", { exact: true, name: "Replies" });
   await replies
     .getByRole("article")
     .filter({ hasText: noteOf(REPLIES) })
