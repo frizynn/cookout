@@ -42,5 +42,4 @@ function docsOnlySkip({ base, cwd }: Diff): DocsOnly {
   return { line: SKIP_LINE, skip: true };
 }
 
-export type { DocsOnly };
 export { docsOnlySkip };
