@@ -29,7 +29,6 @@ const QUIET_TURNS = 3;
 const STALL_MS = 4000;
 const NONE = 0;
 const ONE = 1;
-const FIRST = 0;
 const realTimeout = globalThis.setTimeout;
 const realClearTimeout = globalThis.clearTimeout;
 
@@ -44,7 +43,7 @@ async function turn(): Promise<boolean> {
 
 function stalled({ names, stallMs }: Stalling & { readonly names: readonly string[] }): Error {
   return new Error(
-    `calls still in flight after ${String(stallMs)} ms before a read of the screen: ${names.join(", ")}. A test that holds a call open on purpose names it first: holdsCallsOpen("${names[FIRST] ?? ""}") from app/modules/testing/web.ts.`,
+    `calls still in flight after ${String(stallMs)} ms before a read of the screen: ${names.join(", ")}. A test that holds a call open on purpose names it first: holdsCallsOpen("${names.join('", "')}") from app/modules/testing/web.ts.`,
   );
 }
 
