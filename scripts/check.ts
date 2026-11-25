@@ -1,6 +1,7 @@
 import { browserTestsFor, ciBrowserShard } from "./lib/browser-selection.ts";
 import { changedLines, unchangedSince } from "./lib/changed-lines.ts";
 import { checkPlan, reasonLines } from "./lib/check-plan.ts";
+import { ciUnitShard, unitTestsFor } from "./lib/test-selection.ts";
 import { fetchedCoverageMap, ghCli } from "./lib/coverage-map-fetch.ts";
 import { loadReport, osReading } from "./lib/machine-load.ts";
 import type { BrowserTests } from "./lib/browser-selection.ts";
@@ -9,7 +10,6 @@ import type { UnitTests } from "./lib/test-selection.ts";
 import { changedFiles } from "./lib/changed-files.ts";
 import { ciGreenAtHead } from "./lib/ci-green.ts";
 import { runChecks } from "./lib/check-runner.ts";
-import { unitTestsFor } from "./lib/test-selection.ts";
 
 function option(name: string): string {
   const prefix = `--${name}=`;
@@ -63,11 +63,25 @@ function selectedBrowserTests(): BrowserTests {
 const unitTests = selectedUnitTests();
 const browserTests = selectedBrowserTests();
 
+function ciShard(): typeof ciBrowserShard | null {
+  if (!inCi || shard === "") {
+    return null;
+  }
+  if (job === "browser") {
+    return ciBrowserShard;
+  }
+  if (job === "tests") {
+    return ciUnitShard;
+  }
+  return null;
+}
+
 function shardArgs(): readonly string[] {
-  if (!inCi || job !== "browser" || shard === "") {
+  const planned = ciShard();
+  if (planned === null) {
     return [`--shard=${shard}`];
   }
-  const shardPlan = ciBrowserShard({ cwd: process.cwd(), gh: ghCli(process.cwd()), run: option("run"), shard });
+  const shardPlan = planned({ cwd: process.cwd(), gh: ghCli(process.cwd()), run: option("run"), shard });
   console.log(shardPlan.line);
   return shardPlan.args;
 }
@@ -103,6 +117,7 @@ async function exitCode(): Promise<number> {
     inCi,
     job,
     lockFile: SUITE_LOCK_FILE,
+    recordTime: local,
   });
   return code;
 }

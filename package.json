@@ -65,6 +65,7 @@
     "hygiene": "node scripts/hygiene.ts",
     "merge-ticket": "node scripts/merge-ticket.ts",
     "ci:wait": "node scripts/ci-wait.ts",
+    "budgets": "node scripts/budgets.ts",
     "test": "vitest run --coverage",
     "test:related": "vitest related --run --passWithNoTests",
     "test:shard": "vitest run --coverage --reporter=blob --reporter=default --coverage.thresholds.statements=0 --coverage.thresholds.branches=0 --coverage.thresholds.functions=0 --coverage.thresholds.lines=0",

@@ -6,6 +6,7 @@ import { firstError } from "./first-error.ts";
 import { once } from "node:events";
 import { rmSync } from "node:fs";
 import { spawn } from "node:child_process";
+import { timedStage } from "./stage-log.ts";
 import { verdictLine } from "./verdict.ts";
 
 interface Check {
@@ -31,6 +32,7 @@ interface Checks {
   readonly inCi: boolean;
   readonly job: string;
   readonly lockFile: string;
+  readonly recordTime?: boolean;
 }
 
 interface Outcome {
@@ -228,7 +230,7 @@ function reportSkipped({ ciOnly, inCi, job }: Checks): void {
   }
 }
 
-async function runChecks(options: Checks): Promise<number> {
+async function runJob(options: Checks): Promise<number> {
   const { checks, inCi, job } = options;
   const selected = checks.filter((check) => job === "" || check.job === job);
   if (selected.length === NONE) {
@@ -241,6 +243,15 @@ async function runChecks(options: Checks): Promise<number> {
   }
   reportSkipped(options);
   return exitCodeOf(final.filter((outcome) => !passed(outcome)).map((outcome) => outcome.check.name));
+}
+
+async function runChecks(options: Checks): Promise<number> {
+  if (options.recordTime !== true) {
+    const code = await runJob(options);
+    return code;
+  }
+  const code = await timedStage({ cwd: process.cwd(), exit: runJob(options), stage: "pnpm check" });
+  return code;
 }
 
 export type { Check, CiOnly };

@@ -6,6 +6,7 @@ import type {
   MessagesSection,
   NewMessage,
   Placement,
+  ReplyTarget,
   StoredPage,
   StoredThread,
 } from "./messages.ts";
@@ -68,15 +69,30 @@ const EMPTY: MemoryMessages = {
 };
 const CHANNEL_NOT_FOUND = { status: "channel_not_found" } as const;
 
-function placementOf(messages: readonly Message[], { channel, replyTo }: NewMessage): Placement {
+function everyMessageOf({ deleted, messages }: MemoryMessages): readonly Message[] {
+  return [...messages, ...Arr.map(deleted, ({ message }) => message)];
+}
+
+function targetOf(data: MemoryMessages, found: Message): ReplyTarget {
+  const thread = threadIdOf(found);
+  const threadDeleted = Option.isNone(findMessage({ id: thread, messages: data.messages }));
+  return { channel: found.channel, thread, threadDeleted };
+}
+
+function targetIn(data: MemoryMessages, id: MessageId): ReplyTarget | undefined {
+  const found = findMessage({ id, messages: everyMessageOf(data) });
+  return Option.getOrUndefined(Option.map(found, (message) => targetOf(data, message)));
+}
+
+function placementOf(data: MemoryMessages, { channel, replyTo }: NewMessage): Placement {
   if (Predicate.isUndefined(replyTo)) {
     return { status: "top-level" };
   }
-  return placeIn({ channel, found: Option.getOrUndefined(findMessage({ id: replyTo, messages })) });
+  return placeIn({ channel, found: targetIn(data, replyTo) });
 }
 
 function append(data: MemoryMessages, appending: Mentioning): readonly [AppendMessageResult, MemoryMessages] {
-  const placement = placementOf(data.messages, appending.message);
+  const placement = placementOf(data, appending.message);
   if (!isPlaced(placement)) {
     return [placement, data];
   }
@@ -166,8 +182,13 @@ function withDeleted(
   return [Option.getOrUndefined(Option.map(found, (message) => asItWas(data.messages, message))), next];
 }
 
-function everyMessageOf({ deleted, messages }: MemoryMessages): readonly Message[] {
-  return [...messages, ...Arr.map(deleted, ({ message }) => message)];
+type Lookups = Pick<MessagesSection, "findAttachment" | "findReplyTarget">;
+
+function lookupsIn(readBoard: <Value>(work: (data: MemoryMessages) => Value) => Fails<Value>): Lookups {
+  return {
+    findAttachment: (id) => readBoard((data) => attachmentIn(id)(data.messages)),
+    findReplyTarget: (id) => readBoard((data) => targetIn(data, id)),
+  };
 }
 
 type MemoryMessagesSection = MessagesSection &
@@ -257,7 +278,7 @@ function memoryMessages({ channels, identities, state }: MemoryMessagesOptions):
       }),
     countMessagesBy: (identity) => readBoard((data) => Arr.filter(everyMessageOf(data), namesAuthor(identity)).length),
     deleteMessage: (id, deleting) => change((data) => withDeleted(data, { deleting, id })),
-    findAttachment: (id) => read(attachmentIn(id)),
+    ...lookupsIn(readBoard),
     forgetChannel: (channel) => change((data) => withoutMessagesIn(data, channel)),
     forgetIdentity: (identity) =>
       Effect.asVoid(change((data) => [true, { ...data, inbox: withoutIdentity({ identity, inbox: data.inbox }) }])),
