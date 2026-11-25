@@ -40,6 +40,7 @@ type Shown =
   | "inbox"
   | "presence"
   | "reactions"
+  | "schedules"
   | "session"
   | "subscriptions"
   | "triggers";
