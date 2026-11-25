@@ -87,13 +87,13 @@ type Publish = (next: Partial<Held>) => void;
 
 type Edits = Pick<IdentityActions, "editTransfer" | "forgetToken" | "showToken">;
 
-function editsOf(publish: Publish): Edits {
+function editsOf(publish: Publish, held: () => Held): Edits {
   return {
     editTransfer: (transferTo) => {
       publish({ transferTo });
     },
     forgetToken: () => {
-      publish({ token: null, tokenForgotten: true });
+      publish({ token: null, tokenForgotten: held().token !== null });
     },
     showToken: (token) => {
       publish({ token });
@@ -211,7 +211,7 @@ function createIdentityActions(options: IdentityActionsOptions): IdentityActions
   const add = joined(store.subscribe, listeners.add);
 
   return {
-    ...editsOf(publish),
+    ...editsOf(publish, () => current),
     ask: asksOf(publish),
     cancel: cancelOf(publish, () => current),
     confirm: () => {

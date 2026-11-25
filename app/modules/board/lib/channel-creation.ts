@@ -91,7 +91,7 @@ function createChannelCreation(options: CreationOptions): ChannelCreation {
 
   return {
     close: () => {
-      publish({ ...CLOSED, cancelled: true });
+      publish({ ...CLOSED, cancelled: current.open || current.cancelled });
     },
     create: (created) => {
       publish({ ...current, create: { status: "creating" } });
