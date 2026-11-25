@@ -3,6 +3,7 @@ import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import type { Live } from "../../live/index.ts";
 import type { Unread } from "../../unread/index.ts";
+import { boardStoreFor } from "./defaults.ts";
 import { createLive } from "../../live/index.ts";
 import { createUnread } from "../../unread/index.ts";
 import { waitFor } from "@testing-library/react";
@@ -51,7 +52,7 @@ async function followingAReply(): Promise<Following> {
   const reader = await newIdentity({ kind: "human", name: `${CHANNEL}-reader` });
   const reply = await replyElsewhere();
   const { live, send } = scripted();
-  const unread = createUnread({ client: reader.client, live });
+  const unread = createUnread({ boardStore: boardStoreFor({ client: reader.client, live }) });
   const heard: null[] = [];
   unread.subscribe(() => {
     heard.push(null);

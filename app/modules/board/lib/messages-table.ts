@@ -2,6 +2,7 @@ import type { BeforeState, PageState, ThreadLoaded, ThreadState } from "./messag
 import type {
   ChannelName,
   CookoutEvent,
+  InboxItem,
   Message,
   MessageId,
   ReadReceipt,
@@ -175,6 +176,23 @@ function withClosing(held: MessagesHeld, parent: TopLevelMessage): MessagesHeld 
   return { ...held, table: withEntry({ key: parent.id, map: held.table, value: closed }) };
 }
 
+function messagesOfItems(items: readonly InboxItem[]): readonly Message[] {
+  const messages = new Map<MessageId, Message>();
+  for (const { message, parent } of items) {
+    messages.set(parent.id, parent);
+    messages.set(message.id, message);
+  }
+  return [...messages.values()];
+}
+
+function withItemMessages(held: MessagesHeld, items: readonly InboxItem[]): MessagesHeld {
+  const table = freshTable(held.table, messagesOfItems(items));
+  if (table === held.table) {
+    return held;
+  }
+  return { ...held, table };
+}
+
 function appliedToMessages({ event, held }: HeldEvent): MessagesHeld {
   if (event.type === "message") {
     return withMessage(held, event.message);
@@ -185,6 +203,9 @@ function appliedToMessages({ event, held }: HeldEvent): MessagesHeld {
   if (event.type === "thread") {
     return withClosing(held, event.parent);
   }
+  if (event.type === "inbox-item") {
+    return withItemMessages(held, [event.item]);
+  }
   return held;
 }
 
@@ -192,4 +213,4 @@ function heldTopLevel({ held, id }: { readonly held: MessagesHeld; readonly id: 
   return topLevelIn(held, id);
 }
 
-export { type MessagesHeld, NOTHING_HELD, appliedToMessages, heldTopLevel, withEntry, withFresh };
+export { type MessagesHeld, NOTHING_HELD, appliedToMessages, heldTopLevel, messagesOfItems, withEntry, withFresh };

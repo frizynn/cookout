@@ -1,6 +1,6 @@
 import type { ChannelName, InboxItem, MessageId } from "../../sdk/index.ts";
-import { isForYou, whyOf } from "./levels.ts";
-import type { UnreadWhy } from "./levels.ts";
+import { isForYou, whyOf } from "./inbox-levels.ts";
+import type { UnreadWhy } from "./inbox-levels.ts";
 
 interface InboxRow {
   readonly key: string;
