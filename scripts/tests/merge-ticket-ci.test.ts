@@ -1,4 +1,4 @@
-import { ATTEMPTS, BRANCH, TICKET, git, repo, repos } from "./lib/merge-repos.ts";
+import { BRANCH, TICKET, fakeQueue, git, repo, repos, resolvedByHand } from "./lib/merge-repos.ts";
 import { DONE, stop } from "../lib/merge-steps.ts";
 import { expect, it } from "vitest";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -7,9 +7,9 @@ import type { Step } from "../lib/merge-steps.ts";
 import path from "node:path";
 
 const MERGE_BRANCH = `merge-ticket-${TICKET}`;
-const ONE_ATTEMPT = 1;
-const TWO_ATTEMPTS = 2;
+const TITLE = `Merge ${BRANCH}: Add the c table (#${TICKET})`;
 const FIRST_RUN = 1;
+const TWO_RUNS = 2;
 const FIRST_FIELD = 0;
 const EXECUTABLE = 0o755;
 const CREATED = /^0+ \S+ refs\/heads\/merge-ticket-/u;
@@ -68,15 +68,7 @@ function remoteBranches(origin: string): string {
   return git(origin, "branch", "--list", "--format=%(refname:short)");
 }
 
-function v1Updates(origin: string): readonly string[] {
-  return git(origin, "reflog", "--format=%H", "v1").split("\n");
-}
-
-function logAllRefUpdates(origin: string): void {
-  git(origin, "config", "core.logAllRefUpdates", "always");
-}
-
-it("pushes merge-ticket-N, and fast-forwards v1 to the exact commit whose Check run is green", {
+it("pushes merge-ticket-N, waits for its green Check run, and lands that exact commit on v1 through its pull request", {
   timeout: 10_000,
 }, () => {
   expect.hasAssertions();
@@ -84,20 +76,26 @@ it("pushes merge-ticket-N, and fast-forwards v1 to the exact commit whose Check 
   const { origin, other, work } = repos();
   repo(work).commit("the ticket", { "notes.txt": "ticket\n" });
   const { ci, green, watched } = fakeCi({ origin, other });
+  const queue = fakeQueue({ origin });
 
-  const merged = repo(work).merge({ ci });
+  const merged = repo(work).merge({ ci, queue });
 
-  const sha = git(origin, "rev-parse", "v1");
+  const head = git(origin, "rev-parse", "v1^2");
 
-  expect([merged, green, watched, remoteBranches(origin)]).toStrictEqual([
-    { attempts: ONE_ATTEMPT, ok: true, sha },
-    [sha],
-    [`${MERGE_BRANCH} ${sha} ${sha}`],
+  expect([merged, green, watched, queue.landings, remoteBranches(origin)]).toStrictEqual([
+    { ok: true, sha: git(origin, "rev-parse", "v1") },
+    [head],
+    [`${MERGE_BRANCH} ${head} ${head}`],
+    [{ branch: MERGE_BRANCH, sha: head, title: TITLE }],
     "v1",
+  ]);
+  expect([git(origin, "log", "-1", "--format=%s", "v1"), git(origin, "rev-parse", "v1^2^2")]).toStrictEqual([
+    TITLE,
+    git(work, "rev-parse", BRANCH),
   ]);
 });
 
-it("returns the merge once v1 is fast-forwarded, watching no Check run but merge-ticket-N's", {
+it("returns the merge once the queue lands it, watching no Check run but merge-ticket-N's", {
   timeout: 10_000,
 }, () => {
   expect.hasAssertions();
@@ -111,7 +109,22 @@ it("returns the merge once v1 is fast-forwarded, watching no Check run but merge
   expect([merged.ok, watched.map((each) => each.split(" ").at(FIRST_FIELD))]).toStrictEqual([true, [MERGE_BRANCH]]);
 });
 
-it("stops on a red Check run of merge-ticket-N, pushes nothing to v1 and keeps the branch for a rerun", {
+it("enqueues without waiting for merge-ticket-N's push run once v1 requires the merge queue", {
+  timeout: 10_000,
+}, () => {
+  expect.hasAssertions();
+
+  const { origin, other, work } = repos();
+  repo(work).commit("the ticket", { "notes.txt": "ticket\n" });
+  const { ci, watched } = fakeCi({ origin, other });
+  const queue = fakeQueue({ origin, required: true });
+
+  const merged = repo(work).merge({ ci, queue });
+
+  expect([merged.ok, watched, queue.landings.length]).toStrictEqual([true, [], FIRST_RUN]);
+});
+
+it("stops on a red Check run of merge-ticket-N, enqueues nothing and keeps the branch for a rerun", {
   timeout: 10_000,
 }, () => {
   expect.hasAssertions();
@@ -120,86 +133,39 @@ it("stops on a red Check run of merge-ticket-N, pushes nothing to v1 and keeps t
   const before = git(origin, "rev-parse", "v1");
   repo(work).commit("the ticket", { "notes.txt": "ticket\n" });
   const { ci } = fakeCi({ origin, other, red: () => true });
+  const queue = fakeQueue({ origin });
 
-  const merged = repo(work).merge({ ci });
+  const merged = repo(work).merge({ ci, queue });
 
   const red = git(origin, "rev-parse", MERGE_BRANCH);
 
-  expect([merged.ok, git(origin, "rev-parse", "v1"), remoteBranches(origin)]).toStrictEqual([
+  expect([merged.ok, git(origin, "rev-parse", "v1"), queue.landings, remoteBranches(origin)]).toStrictEqual([
     false,
     before,
+    [],
     `${MERGE_BRANCH}
 v1`,
   ]);
   expect(reasonOf(merged)).toContain(
-    `tests 1/2 (failure).\nThat Check run was on ${MERGE_BRANCH} at ${red}.\nNothing was pushed to v1. The merge is on ${MERGE_BRANCH}`,
+    `tests 1/2 (failure).\nThat Check run was on ${MERGE_BRANCH} at ${red}.\nNothing was merged. The merge is on ${MERGE_BRANCH}`,
   );
 });
 
-it("merges again when v1 moves while it waits for CI, and pushes v1 only to a green commit", {
+it("lands on a v1 that moved while it waited for CI, without merging again or another Check run", {
   timeout: 10_000,
 }, () => {
   expect.hasAssertions();
 
   const { origin, other, work } = repos();
-  logAllRefUpdates(origin);
   repo(work).commit("the ticket", { "notes.txt": "ticket\n" });
   const { ci, green } = fakeCi({ moveV1: (run) => run === FIRST_RUN, origin, other });
 
   const merged = repo(work).merge({ ci });
 
-  const sha = git(origin, "rev-parse", "v1");
-
-  expect([
-    merged,
-    green.length,
-    green.slice(ONE_ATTEMPT),
-    git(origin, "log", "-1", "--format=%s", "v1^1"),
-  ]).toStrictEqual([{ attempts: TWO_ATTEMPTS, ok: true, sha }, TWO_ATTEMPTS, [sha], "moved"]);
-  expect(v1Updates(origin).filter((update) => update !== git(origin, "rev-parse", "v1^1"))).toStrictEqual([sha]);
-});
-
-it("never forces v1: when v1 keeps moving during CI, v1 keeps every move and never gets the merge", {
-  timeout: 10_000,
-}, () => {
-  expect.hasAssertions();
-
-  const { origin, other, work } = repos();
-  logAllRefUpdates(origin);
-  repo(work).commit("the ticket", { "notes.txt": "ticket\n" });
-  const { ci, green } = fakeCi({ moveV1: () => true, origin, other });
-
-  const merged = repo(work).merge({ ci });
-
-  const moves = git(origin, "log", "--format=%s", "v1").split("\n");
-
-  expect([merged.ok, green.length, moves.filter((subject) => subject === "moved").length]).toStrictEqual([
-    false,
-    ATTEMPTS,
-    ATTEMPTS,
-  ]);
-  expect(v1Updates(origin).some((update) => green.includes(update))).toBe(false);
-  expect(moves).not.toContain(`Merge ${BRANCH}: Add the c table (#${TICKET})`);
-});
-
-it("pushes and watches merge-ticket-N again when continuing a merge resolved by hand", { timeout: 10_000 }, () => {
-  expect.hasAssertions();
-
-  const { origin, other, work } = repos();
-  repo(other).push({ "notes.txt": "v1\n" });
-  repo(work).commit("the ticket", { "notes.txt": "ticket\n" });
-  repo(work).merge({});
-  repo(work).resolveByHand("both\n");
-  const { ci, green } = fakeCi({ origin, other });
-
-  const merged = repo(work).continueMerge({ ci });
-
-  const sha = git(origin, "rev-parse", "v1");
-
-  expect([merged, green, remoteBranches(origin)]).toStrictEqual([
-    { attempts: ONE_ATTEMPT, ok: true, sha },
-    [sha],
-    "v1",
+  expect([merged, green, git(origin, "log", "-1", "--format=%s", "v1^1")]).toStrictEqual([
+    { ok: true, sha: git(origin, "rev-parse", "v1") },
+    [git(origin, "rev-parse", "v1^2")],
+    "moved",
   ]);
 });
 
@@ -207,22 +173,57 @@ function recordPushes(origin: string): () => readonly string[] {
   const pushes = path.join(origin, "pushes.log");
   writeFileSync(pushes, "");
   writeFileSync(path.join(origin, "hooks", "post-receive"), `#!/bin/sh\ncat >> "${pushes}"\n`, { mode: EXECUTABLE });
-  return (): readonly string[] =>
-    readFileSync(pushes, "utf8")
-      .split("\n")
-      .filter((line) => CREATED.test(line));
+  return (): readonly string[] => readFileSync(pushes, "utf8").split("\n");
 }
 
-function pushedResolution(): ReturnType<typeof repos> & { readonly created: () => readonly string[] } {
-  const repositories = repos();
-  const { origin, other, work } = repositories;
-  repo(other).push({ "notes.txt": "v1\n" });
+function created(pushes: readonly string[]): readonly string[] {
+  return pushes.filter((line) => CREATED.test(line));
+}
+
+it("never pushes v1 itself: v1 changes only through the queue", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const { origin, other, work } = repos();
   repo(work).commit("the ticket", { "notes.txt": "ticket\n" });
-  repo(work).merge({});
-  repo(work).resolveByHand("both\n");
-  const created = recordPushes(origin);
+  const pushes = recordPushes(origin);
+  const { ci } = fakeCi({ origin, other });
+
+  const merged = repo(work).merge({ ci });
+
+  expect([
+    merged.ok,
+    created(pushes()).length,
+    pushes().filter((line) => line.endsWith(" refs/heads/v1")),
+  ]).toStrictEqual([true, FIRST_RUN, []]);
+});
+
+it("pushes, watches and enqueues merge-ticket-N again when continuing a merge resolved by hand", {
+  timeout: 10_000,
+}, () => {
+  expect.hasAssertions();
+
+  const { origin, other, work } = resolvedByHand();
+  const { ci, green } = fakeCi({ origin, other });
+  const queue = fakeQueue({ origin });
+
+  const merged = repo(work).continueMerge({ ci, queue });
+
+  const head = git(origin, "rev-parse", "v1^2");
+
+  expect([merged, green, queue.landings, remoteBranches(origin)]).toStrictEqual([
+    { ok: true, sha: git(origin, "rev-parse", "v1") },
+    [head],
+    [{ branch: MERGE_BRANCH, sha: head, title: TITLE }],
+    "v1",
+  ]);
+});
+
+function pushedResolution(): ReturnType<typeof repos> & { readonly pushes: () => readonly string[] } {
+  const repositories = resolvedByHand();
+  const { origin, work } = repositories;
+  const pushes = recordPushes(origin);
   git(work, "push", "-q", "origin", `HEAD:refs/heads/${MERGE_BRANCH}`);
-  return { ...repositories, created };
+  return { ...repositories, pushes };
 }
 
 it("waits for the existing run, without pushing again, when continuing at a commit origin already has", {
@@ -230,17 +231,19 @@ it("waits for the existing run, without pushing again, when continuing at a comm
 }, () => {
   expect.hasAssertions();
 
-  const { created, origin, other, work } = pushedResolution();
+  const { origin, other, pushes, work } = pushedResolution();
   const { ci, green } = fakeCi({ origin, other });
 
   const merged = repo(work).continueMerge({ ci });
 
-  const sha = git(origin, "rev-parse", "v1");
-
-  expect([merged, green, created().length]).toStrictEqual([{ attempts: ONE_ATTEMPT, ok: true, sha }, [sha], FIRST_RUN]);
+  expect([merged, green, created(pushes()).length]).toStrictEqual([
+    { ok: true, sha: git(origin, "rev-parse", "v1") },
+    [git(origin, "rev-parse", "v1^2")],
+    FIRST_RUN,
+  ]);
 });
 
-it("waits again for merge-ticket-N's run on --continue at an unchanged commit, and merges when it turns green", {
+it("waits again for merge-ticket-N's run on --continue at an unchanged commit, and lands it when it turns green", {
   timeout: 10_000,
 }, () => {
   expect.hasAssertions();
@@ -253,7 +256,11 @@ it("waits again for merge-ticket-N's run on --continue at an unchanged commit, a
 
   const merged = repo(work).continueMerge({ ci });
 
-  expect([merged, remoteBranches(origin)]).toStrictEqual([{ attempts: ONE_ATTEMPT, ok: true, sha: red }, "v1"]);
+  expect([merged, git(origin, "rev-parse", "v1^2"), remoteBranches(origin)]).toStrictEqual([
+    { ok: true, sha: git(origin, "rev-parse", "v1") },
+    red,
+    "v1",
+  ]);
 });
 
 it("fails when merge-ticket-N's run is still red on --continue, naming the jobs", { timeout: 10_000 }, () => {
@@ -269,7 +276,7 @@ it("fails when merge-ticket-N's run is still red on --continue, naming the jobs"
   expect([merged.ok, reasonOf(merged)]).toStrictEqual([false, expect.stringContaining("tests 1/2 (failure).")]);
 });
 
-it("pushes a fixed commit on --continue and merges it, not the red one", { timeout: 10_000 }, () => {
+it("pushes a fixed commit on --continue and lands it, not the red one", { timeout: 10_000 }, () => {
   expect.hasAssertions();
 
   const { origin, other, work } = repos();
@@ -281,9 +288,5 @@ it("pushes a fixed commit on --continue and merges it, not the red one", { timeo
 
   const merged = repo(work).continueMerge({ ci });
 
-  expect([merged.ok, watched.length, git(origin, "rev-parse", "v1") === red]).toStrictEqual([
-    true,
-    TWO_ATTEMPTS,
-    false,
-  ]);
+  expect([merged.ok, watched.length, git(origin, "rev-parse", "v1^2") === red]).toStrictEqual([true, TWO_RUNS, false]);
 });

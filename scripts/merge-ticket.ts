@@ -1,15 +1,14 @@
 import { EXIT_CUT_OFF, cutOffLine, failedJobsOr, mergedLine, verdictOnExit } from "./lib/verdict.ts";
 import type { MergeOptions, Merged } from "./lib/merge-ticket.ts";
 import { continueMerge, mergeTicket } from "./lib/merge-ticket.ts";
+import { queueOf, waitForCi } from "./lib/ci-wait.ts";
 import type { Step } from "./lib/merge-steps.ts";
 import { fail } from "./lib/tools.ts";
 import { mergeRules } from "./lib/merge-rules.ts";
 import { spawnSync } from "node:child_process";
-import { waitForCi } from "./lib/ci-wait.ts";
 
 const SCRIPT = "merge-ticket";
 const verdict = verdictOnExit("usage");
-const ATTEMPTS = 5;
 const NONE = 0;
 const EXIT_SUCCESS = 0;
 const ARGUMENT = 2;
@@ -136,13 +135,13 @@ function failedStepOf(files: readonly string[]): string {
 
 verdict.failingAt("gh issue view");
 const merged: Merged = run({
-  attempts: ATTEMPTS,
   check: ["sh", "-c", FAST_CHECKS],
   ci: ciOf,
   cwd: process.cwd(),
   install: ["pnpm", "install", "--frozen-lockfile"],
   log,
   migrationsBase: migrationsBase(),
+  queue: queueOf(log),
   rules: mergeRules,
   ticket,
   title: titleOf(ticket),
@@ -161,6 +160,8 @@ function shaOf(outcome: Merged): string {
 }
 
 const sha = shaOf(merged);
-console.log(`${SCRIPT}: merged ticket-${ticket} into v1 at ${sha}, whose merge-ticket-${ticket} Check run is green.`);
+console.log(
+  `${SCRIPT}: merged ticket-${ticket} into v1 at ${sha}, through its pull request from merge-ticket-${ticket}.`,
+);
 console.log(sha);
 verdict.succeedWith(mergedLine(sha));

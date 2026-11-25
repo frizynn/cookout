@@ -68,7 +68,7 @@ it("reruns a red ticket run's failed jobs once on a fresh run, and goes on to me
     expect.arrayContaining([
       RERUN_LINE,
       "merge-ticket: ticket-7's latest Check run is green: https://github.com/o/r/actions/runs/42",
-      "merge-ticket: Attempt 1 of 5: merging ticket-7 into origin/v1",
+      "merge-ticket: Merging ticket-7 into origin/v1",
     ]),
   );
 });

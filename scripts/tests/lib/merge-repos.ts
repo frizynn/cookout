@@ -1,9 +1,11 @@
+import { DONE, stop } from "../../lib/merge-steps.ts";
+import type { Landed, Landing } from "../../lib/merge-queue.ts";
 import type { MergeOptions, Merged } from "../../lib/merge-ticket.ts";
+import type { Step, Stopped } from "../../lib/merge-steps.ts";
 import { continueMerge, mergeTicket } from "../../lib/merge-ticket.ts";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { DONE } from "../../lib/merge-steps.ts";
 import type { MergeRules } from "../../lib/merge-resolve.ts";
-import type { Step } from "../../lib/merge-steps.ts";
+import type { Queue } from "../../lib/merge-push.ts";
 import { execFileSync } from "node:child_process";
 import { onTestFinished } from "vitest";
 import path from "node:path";
@@ -22,12 +24,13 @@ interface Overrides {
   readonly install?: readonly string[];
   readonly log?: (line: string) => void;
   readonly migrationsBase?: string;
+  readonly queue?: Queue;
   readonly rules?: MergeRules;
 }
 
 const TICKET = 7;
 const BRANCH = `ticket-${TICKET}`;
-const ATTEMPTS = 3;
+const GITHUB = ["-c", "user.name=GitHub", "-c", "user.email=noreply@github.com"] as const;
 const FLOOR = { base: ["90", "95"], merged: ["91", "94"], ticket: ["92", "94"], v1: ["91", "95"] } as const;
 
 const rules: MergeRules = {
@@ -114,10 +117,46 @@ function repos(): Repos {
   return { origin, other, root, work };
 }
 
+function landOn(origin: string, { sha, title }: Landing): Landed | Stopped {
+  try {
+    const tree = git(origin, "merge-tree", "--write-tree", "v1", sha);
+    const merge = git(origin, ...GITHUB, "commit-tree", tree, "-p", "v1", "-p", sha, "-m", title);
+    git(origin, "update-ref", "refs/heads/v1", merge);
+    return { kind: "landed", sha: merge };
+  } catch {
+    return stop("The pull request left the merge queue without merging: it conflicts with v1.");
+  }
+}
+
+function fakeQueue({
+  origin,
+  required = false,
+}: {
+  readonly origin: string;
+  readonly required?: boolean;
+}): Queue & { readonly landings: readonly Landing[] } {
+  const landings: Landing[] = [];
+  return {
+    land: (landing): Landed | Stopped => {
+      landings.push(landing);
+      return landOn(origin, landing);
+    },
+    landings,
+    required,
+  };
+}
+
+function redCi(): Step {
+  return stop(`merge-ticket-${TICKET}'s latest Check run is red: browser 1/3 (failure).`);
+}
+
+function originOf(work: string): string {
+  return git(work, "remote", "get-url", "origin");
+}
+
 function optionsFor(work: string, overrides: Overrides): MergeOptions {
   const logged: string[] = [];
   return {
-    attempts: ATTEMPTS,
     check: ["true"],
     ci: (): Step => DONE,
     cwd: work,
@@ -126,6 +165,7 @@ function optionsFor(work: string, overrides: Overrides): MergeOptions {
       logged.push(line);
     },
     migrationsBase: "origin/v1",
+    queue: fakeQueue({ origin: originOf(work) }),
     rules,
     ticket: TICKET,
     title: "Add the c table",
@@ -173,5 +213,15 @@ function repo(dir: string): Repo {
   };
 }
 
+function resolvedByHand(): Repos {
+  const repositories = repos();
+  const { other, work } = repositories;
+  repo(other).push({ "notes.txt": "v1\n" });
+  repo(work).commit("the ticket", { "notes.txt": "ticket\n" });
+  repo(work).merge({});
+  repo(work).resolveByHand("both\n");
+  return repositories;
+}
+
 export type { Overrides, Repos };
-export { ATTEMPTS, BRANCH, FLOOR, TICKET, floor, generated, git, migrations, repo, repos };
+export { BRANCH, FLOOR, TICKET, fakeQueue, redCi, floor, generated, git, migrations, repo, repos, resolvedByHand };
