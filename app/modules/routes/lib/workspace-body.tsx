@@ -10,13 +10,14 @@ interface WorkspaceBodyProps {
   readonly me: IdentityName;
   readonly profile: IdentityName | null;
   readonly route: Route;
+  readonly sidebarOpen: boolean;
   readonly stores: Stores;
 }
 
 export function WorkspaceBody(props: WorkspaceBodyProps): ReactNode {
   const { stores } = props;
   return (
-    <WorkspaceColumn>
+    <WorkspaceColumn sidebarOpen={props.sidebarOpen}>
       <MessageListKeys keymap={stores.keymap} />
       <RegionKeys keymap={stores.keymap} />
       <SearchBox identities={stores.composer.identities} keymap={stores.keymap} search={stores.search} />
