@@ -14,7 +14,7 @@ const NOT_FOUND = -1;
 type Move = "first" | "last" | "next" | "previous";
 
 interface List {
-  readonly feed: HTMLElement;
+  readonly list: HTMLElement;
   readonly items: readonly HTMLElement[];
 }
 
@@ -22,12 +22,12 @@ interface Place extends List {
   readonly at: number;
 }
 
-function threadAround(): Element | null {
+function threadAround(): HTMLElement | null {
   const focused = globalThis.document.activeElement;
   if (!(focused instanceof HTMLElement) || focused.closest(`${TOP}, ${FEED}`) === null) {
     return null;
   }
-  return focused.closest(THREAD);
+  return focused.closest<HTMLElement>(THREAD);
 }
 
 function threadList(): List | null {
@@ -35,12 +35,7 @@ function threadList(): List | null {
   if (thread === null) {
     return null;
   }
-  const feed = thread.querySelector<HTMLElement>(FEED);
-  const top = thread.querySelector<HTMLElement>(TOP);
-  if (feed === null || top === null) {
-    return null;
-  }
-  return { feed, items: [top, ...feed.querySelectorAll<HTMLElement>(ITEM)] };
+  return { items: [...thread.querySelectorAll<HTMLElement>(`${TOP}, ${FEED} ${ITEM}`)], list: thread };
 }
 
 function listOf(): List | null {
@@ -48,7 +43,7 @@ function listOf(): List | null {
   if (feed === null) {
     return null;
   }
-  return { feed, items: [...feed.querySelectorAll<HTMLElement>(ITEM)] };
+  return { items: [...feed.querySelectorAll<HTMLElement>(ITEM)], list: feed };
 }
 
 function placeOf(): Place | null {
@@ -56,14 +51,14 @@ function placeOf(): Place | null {
   if (list === null) {
     return null;
   }
-  const { feed, items } = list;
+  const { items } = list;
   let at = NOT_FOUND;
   for (const [index, item] of items.entries()) {
     if (item.matches(":focus-within")) {
       at = index;
     }
   }
-  return { at, feed, items };
+  return { at, items, list: list.list };
 }
 
 function indexAfter(move: Move, at: number, count: number): number {
@@ -83,12 +78,12 @@ function olderButtonOf(): HTMLButtonElement | null {
   const place = placeOf();
   if (
     place === null ||
-    place.feed.id === "" ||
-    place.feed.querySelector(`${ITEM}[aria-setsize="${UNKNOWN_SIZE}"]`) === null
+    place.list.id === "" ||
+    place.list.querySelector(`${ITEM}[aria-setsize="${UNKNOWN_SIZE}"]`) === null
   ) {
     return null;
   }
-  return globalThis.document.querySelector<HTMLButtonElement>(`button[aria-controls="${place.feed.id}"]:enabled`);
+  return globalThis.document.querySelector<HTMLButtonElement>(`button[aria-controls="${place.list.id}"]:enabled`);
 }
 
 function loadOlder(move: Move): void {
