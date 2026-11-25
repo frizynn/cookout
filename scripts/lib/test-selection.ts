@@ -76,4 +76,5 @@ function unitSkip(tests: UnitTests): readonly CiOnly[] {
 }
 
 export type { UnitTests };
+export { ciUnitShard } from "./unit-shards.ts";
 export { everythingReachedBy, isDocs, unitSkip, unitTestsFor };

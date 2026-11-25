@@ -19,3 +19,5 @@ Check ran 8 jobs on every v1 push, browser ×3 among them, and the Release workf
 ## Consequences
 
 This supersedes [ADR 0088](0088-the-e2e-suite-runs-only-on-ci.md) and the Release and browser parts of [ADR 0105](0105-check-runs-8-jobs-only-on-v1-and-merge-ticket-branches.md). A green v1 Check no longer covers the browser tests: a break only they catch shows on the next Release, which then publishes and deploys nothing, and is a fix-forward ticket. The coverage map lags v1 by up to one Release, which the browser selection's staleness rule already handles. Moving main by hand deploys nothing any more.
+
+Superseded in part on 2026-11-25 by [ADR 0116](0116-unit-test-shards-split-by-recorded-time-across-6-jobs.md): v1's Check runs 8 jobs, `tests` ×6 split by recorded time.
