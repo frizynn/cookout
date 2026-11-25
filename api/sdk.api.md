@@ -788,14 +788,14 @@ type Brand<Name extends string> = string & {
   readonly [brand$1]: Name;
 };
 /** A command's name. It is also the name of the command's handler identity, so it follows the plain identity-name rule (no `/`). */
-type CommandName = Brand<"CommandName">;
+type WebhookCommandName = Brand<"CommandName">;
 /** The per-command secret the server signs webhook deliveries with (an HMAC of the body). Shown once, on add or rotate. */
-type CommandSecret = Brand<"CommandSecret">;
+type WebhookCommandSecret = Brand<"CommandSecret">;
 /** A JSON Schema, the rule a command's call data must follow. */
 type JsonSchema = Readonly<Record<string, JsonValue>>;
 /** A registered command as the server shows it: one an admin added, which the server calls by webhook. Its secret is never part of it. */
-interface RegisteredCommand {
-  readonly name: CommandName;
+interface RegisteredWebhookCommand {
+  readonly name: WebhookCommandName;
   /** The `http` or `https` URL the server posts calls to. */
   readonly url: string;
   /** The JSON Schema a call's data must follow. */
@@ -807,11 +807,11 @@ interface RegisteredCommand {
   readonly createdAt: IsoTime;
 }
 /** A built-in command (mattpocock/cookout#250, 2026-11-23): one the server handles itself, so it has no `url`. */
-interface BuiltInCommand extends Omit<RegisteredCommand, "url"> {
+interface BuiltInCommand extends Omit<RegisteredWebhookCommand, "url"> {
   readonly builtIn: true;
 }
 /** A command as `GET /v1/commands` lists it: registered (with a `url`) or built in (with `builtIn: true`). */
-type Command = RegisteredCommand | BuiltInCommand;
+type WebhookCommand = RegisteredWebhookCommand | BuiltInCommand;
 /** The body of `POST /v1/commands`. The server checks the name, URL, schema and description. */
 interface AddCommandRequest {
   readonly name: string;
@@ -821,15 +821,15 @@ interface AddCommandRequest {
 }
 /** The answer to adding a command or rotating its secret. The secret is shown this once only. */
 interface CommandWithSecretResponse {
-  readonly command: RegisteredCommand;
-  readonly secret: CommandSecret;
+  readonly command: RegisteredWebhookCommand;
+  readonly secret: WebhookCommandSecret;
 }
 /**
  * The answer to `GET /v1/commands`: every command, sorted by name. The server has no built-in command since
  * mattpocock/cookout#381; a built-in one would carry `builtIn: true` and no `url`.
  */
 interface ListCommandsResponse {
-  readonly commands: readonly Command[];
+  readonly commands: readonly WebhookCommand[];
 }
 /** The body of a command call. The server checks `data` against the command's schema. */
 interface CallCommandRequest {
@@ -1474,7 +1474,7 @@ interface IdentityDeletedEvent {
  */
 interface CommandEvent {
   readonly type: "command";
-  readonly command: RegisteredCommand;
+  readonly command: RegisteredWebhookCommand;
 }
 /**
  * An agent's agent session just changed: the agent joined or left, or its owner or an admin revoked its session.
@@ -1870,5 +1870,5 @@ export type CookoutClient = CallGroups & Pick<ReturnType<typeof inboxCalls>, "ke
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentCreationCalls, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentJoinRequestsEvent, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Attachment, type AttachmentBytes, type AttachmentContentType, type AttachmentId, type Author, type BuiltInCommand, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type CleanCloseResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateAgentForOwnerRequest, type CreateChannelRequest, type CreateIdentityRequest, type CreateJoinCodeRequest, type CreateMessageRequest, type CreateScheduledMessageRequest, type DeactivateIdentityResponse, type DeactivatedQuietAgent, type DeactivatedQuietAgentEvent, type DeactivatedQuietAgentId, type DeactivatedQuietAgentResponse, type DeactivationOffer, type DeactivationOfferEvent, type DeactivationOfferId, type DeactivationOfferResponse, type Description, type DescriptionCalls, type DisplayName, type EditScheduledMessageRequest, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type ImageContentType, type InboxAgentJoinRequest, type InboxHistoryItem, type InboxHistoryNudge, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinCodeCalls, type JoinCodeResponse, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListOpenThreadsQuery, type ListOpenThreadsResponse, type ListScheduledMessagesQuery, type ListScheduledMessagesResponse, type ListedAgentSession, type LiveConnectionDetail, type LiveConnectionId, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type NewAttachment, type Nudge, type NudgeEvent, type NudgeId, type NudgeKind, type NudgeReadEvent, type NudgeResponse, type OfflineAlert, type OfflineAlertEvent, type OfflineAlertId, type OfflineAlertResponse, type OfflineReason, type OpenThread, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type PreviewScheduledMessageQuery, type Reaction, type ReactionCount, type ReactionEvent, type ReactionName, type ReactionsResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type RedeemJoinCodeRequest, type RedeemJoinCodeResponse, type Refusal, type RegisteredCommand, type Reply, type RevokeAgentSessionResponse, type ScheduledMessage, type ScheduledMessageEvent, type ScheduledMessageId, type ScheduledMessagePreviewResponse, type ScheduledMessageResponse, type ScheduledMessageRun, type SchemaProblem, type SearchRequest, type SearchResponse, type SearchResult, type SearchSort, type ServerSentEvent, type SetDisplayNameRequest, type SetTriggerRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadEvent, type ThreadMovedDetails, type ThreadResponse, type Token, type TopLevelMessage, type TopLevelMessageResponse, type Trigger, type TriggerEvent, type TriggerFailure, type TriggerHeader, type TriggerResponse, type TriggerResult, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type joinCodeLifetimeMinutes, type joinCodesPath, type liveConnectionPath, type redeemJoinCodePath, type refusalEvent, refusalOf, type scheduledMessageCalls };
+export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentCreationCalls, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentJoinRequestsEvent, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Attachment, type AttachmentBytes, type AttachmentContentType, type AttachmentId, type Author, type BuiltInCommand, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type CleanCloseResponse, type WebhookCommand as Command, type CommandEvent, type WebhookCommandName as CommandName, type WebhookCommandSecret as CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateAgentForOwnerRequest, type CreateChannelRequest, type CreateIdentityRequest, type CreateJoinCodeRequest, type CreateMessageRequest, type CreateScheduledMessageRequest, type DeactivateIdentityResponse, type DeactivatedQuietAgent, type DeactivatedQuietAgentEvent, type DeactivatedQuietAgentId, type DeactivatedQuietAgentResponse, type DeactivationOffer, type DeactivationOfferEvent, type DeactivationOfferId, type DeactivationOfferResponse, type Description, type DescriptionCalls, type DisplayName, type EditScheduledMessageRequest, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type ImageContentType, type InboxAgentJoinRequest, type InboxHistoryItem, type InboxHistoryNudge, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinCodeCalls, type JoinCodeResponse, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListOpenThreadsQuery, type ListOpenThreadsResponse, type ListScheduledMessagesQuery, type ListScheduledMessagesResponse, type ListedAgentSession, type LiveConnectionDetail, type LiveConnectionId, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type NewAttachment, type Nudge, type NudgeEvent, type NudgeId, type NudgeKind, type NudgeReadEvent, type NudgeResponse, type OfflineAlert, type OfflineAlertEvent, type OfflineAlertId, type OfflineAlertResponse, type OfflineReason, type OpenThread, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type PreviewScheduledMessageQuery, type Reaction, type ReactionCount, type ReactionEvent, type ReactionName, type ReactionsResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type RedeemJoinCodeRequest, type RedeemJoinCodeResponse, type Refusal, type RegisteredWebhookCommand as RegisteredCommand, type Reply, type RevokeAgentSessionResponse, type ScheduledMessage, type ScheduledMessageEvent, type ScheduledMessageId, type ScheduledMessagePreviewResponse, type ScheduledMessageResponse, type ScheduledMessageRun, type SchemaProblem, type SearchRequest, type SearchResponse, type SearchResult, type SearchSort, type ServerSentEvent, type SetDisplayNameRequest, type SetTriggerRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadEvent, type ThreadMovedDetails, type ThreadResponse, type Token, type TopLevelMessage, type TopLevelMessageResponse, type Trigger, type TriggerEvent, type TriggerFailure, type TriggerHeader, type TriggerResponse, type TriggerResult, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type joinCodeLifetimeMinutes, type joinCodesPath, type liveConnectionPath, type redeemJoinCodePath, type refusalEvent, refusalOf, type scheduledMessageCalls };
 ```

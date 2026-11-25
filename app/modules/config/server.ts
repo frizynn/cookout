@@ -17,7 +17,7 @@ const DEFAULT_WEBHOOK_RETRY_FACTOR = 2.3;
 const SHORTEST_ADMIN_TOKEN = 32;
 const SMALLEST_LIMIT = 1;
 const DEFAULT_REQUESTS_PER_MINUTE = 6000;
-const DEFAULT_COMMAND_CALLS_PER_MINUTE = 60;
+const DEFAULT_WEBHOOK_COMMAND_CALLS_PER_MINUTE = 60;
 const DEFAULT_STREAMS_PER_IDENTITY = 20;
 const DEFAULT_PRESENCE_GRACE_SECONDS = 60;
 const SHORTEST_PRESENCE_GRACE_SECONDS = 0;
@@ -214,10 +214,10 @@ export const requestsPerMinute = Config.schema(
  * on top of the request one, because each call fans out to the command's handler. The default of 60 is not settled
  * yet.
  */
-export const commandCallsPerMinute = Config.schema(
+export const webhookCommandCallsPerMinute = Config.schema(
   Schema.Int.check(Schema.isGreaterThanOrEqualTo(SMALLEST_LIMIT)),
   "COOKOUT_COMMAND_CALLS_PER_MINUTE",
-).pipe(Config.withDefault(DEFAULT_COMMAND_CALLS_PER_MINUTE));
+).pipe(Config.withDefault(DEFAULT_WEBHOOK_COMMAND_CALLS_PER_MINUTE));
 
 /** `COOKOUT_STREAMS_PER_IDENTITY`: how many `/v1/events` streams one identity may hold open at once. */
 export const streamsPerIdentity = Config.schema(
