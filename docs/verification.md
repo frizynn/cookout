@@ -456,7 +456,7 @@ env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) node app/main.ts 
 env $(cat /tmp/cookout-dev.env) node app/main.ts message post general "@triage-agent are you there?"
 ```
 
-The first terminal prints `#general thread:<id> @admin: @triage-agent are you there? (msg <id>)`, where both IDs are the new message's, since it is top-level. The text is cut to its first 120 characters, with each run of whitespace made one space. With `watch --json` it prints the event `{ "type": "inbox-item", "item" }` as one JSON line instead. Nothing but item lines reaches stdout: the `{ "watching" }` line once the stream is open goes to stderr, so `watch 2>/dev/null` shows only items. Ctrl-C stops it.
+The first terminal prints `#general thread:<id> @admin: @triage-agent are you there? (msg <id>)`, where both IDs are the new message's, since it is top-level. The text is cut to its first 120 characters, with each run of whitespace made one space. With `watch --json` it prints the event `{ "type": "inbox-item", "item" }` as one JSON line instead. Nothing but item lines reaches stdout: the `{ "watching" }` line, once the stream is open and the start-up unread count is read, goes to stderr, so `watch 2>/dev/null` shows only items. Ctrl-C stops it.
 
 Run the same watch again without acking: it starts with `<n> unread, run cookout inbox`, where `<n>` is how many items its `inbox` lists, instead of repeating the item, then prints only newer ones. To block until something needs the agent, and check each exit code with `echo $?`:
 
