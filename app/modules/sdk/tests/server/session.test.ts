@@ -118,7 +118,7 @@ it.effect(
     }).pipe(Effect.provide(testCookout())),
 );
 
-it.effect("a session cookie keeps working when the human's token is rotated, like any other Login credential", () =>
+it.effect("a session cookie stops working when the human's token is rotated", () =>
   Effect.gen(function* rotatedCookie() {
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
@@ -126,7 +126,7 @@ it.effect("a session cookie keeps working when the human's token is rotated, lik
     yield* answer(() => cookout.client.rotateToken("ada"));
     const response = yield* withCookie(cookout.url, cookie)({ method: "GET", path: whoamiPath });
 
-    expect(response.json).toStrictEqual({ identity: ada.identity });
+    expect(response).toMatchObject({ json: { error: { code: "token_unknown" } }, status: UNAUTHORIZED });
   }).pipe(Effect.provide(testCookout())),
 );
 

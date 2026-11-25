@@ -16,6 +16,8 @@ import type { Storage, StorageUnavailable, StoredTrigger } from "../../../storag
 import type { TriggerFailure, TriggerResult } from "../../index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { Scope } from "effect";
+import type { TriggerAnswer } from "./answer.ts";
+import { errorMessageOf } from "./answer.ts";
 import { hrefOf } from "../../../paths/index.ts";
 import { isOkStatus } from "../../index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
@@ -75,8 +77,17 @@ function mentionedIn(storage: Storage["Service"], message: Message): Effect.Effe
   );
 }
 
-function resultOf(at: TriggerResult["at"], status: number): TriggerResult {
-  return { at, ok: isOkStatus(status), status };
+function secretsOf({ headers = [], token }: StoredTrigger): readonly string[] {
+  return [token, ...Arr.map(headers, ({ value }) => value)];
+}
+
+function resultOf(at: TriggerResult["at"], trigger: StoredTrigger, { message, status }: TriggerAnswer): TriggerResult {
+  const ok = isOkStatus(status);
+  const answered: TriggerResult = { at, ok, status };
+  return Option.match(errorMessageOf({ message, secrets: secretsOf(trigger) }), {
+    onNone: () => answered,
+    onSome: (error) => ({ ...answered, error }),
+  });
 }
 
 function callMade(
@@ -93,7 +104,7 @@ function callMade(
       Effect.timeoutOrElse({ duration: Duration.seconds(TIMEOUT_SECONDS), orElse: () => Effect.fail(TIMED_OUT) }),
       Effect.match({
         onFailure: (error): TriggerResult => ({ at, error, ok: false }),
-        onSuccess: (status) => resultOf(at, status),
+        onSuccess: (answered) => resultOf(at, trigger, answered),
       }),
     );
   });

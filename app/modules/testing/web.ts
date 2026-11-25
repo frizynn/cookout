@@ -13,6 +13,8 @@
  * its live stream here. `scriptedLive()` is a `Live` a test drives by hand: `send(...events)` sends Server-Sent
  * Events, well-formed or not, on every stream it opened, and `report(link)` reports its link down or up.
  * `watchedLive(client)` is a `Live` on the client's real `watch`, and `stream` is that watch's stream once it opens.
+ * `heard(matches)` resolves once the live has handed the board store an event that `matches` and no earlier `heard`
+ * took, so a test waits for the event a change by another identity sends rather than for a timeout to run out.
  * `Live` and `LiveLink` are their types.
  * `recordPublishes(store)` subscribes to an external store through its
  * `subscribe` and `snapshot`, counts each publish (`count()`), and fails the

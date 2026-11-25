@@ -1,14 +1,16 @@
-import { Caller, issueToken } from "./auth.ts";
+import { Caller, credentialsOf, issueToken, sentToken } from "./auth.ts";
 import { DateTime, Effect, Option } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { sessionCookieName, sessionPath, token, whoamiPath } from "../../index.ts";
 import type { Cookies } from "effect/http";
 import type { Identity } from "../../index.ts";
 import { IdentityResponseSchema } from "./wire.ts";
+import type { IssuedToken } from "./auth.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
+import type { StorageUnavailable } from "../../../storage/server.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 
 const FORBIDDEN = 403;
@@ -43,6 +45,31 @@ const whoamiRoute: Route<Caller> = {
   path: whoamiPath,
 };
 
+const sentTokenHash = Effect.gen(function* hashSentToken() {
+  const request = yield* HttpServerRequest.HttpServerRequest;
+  const secrets = yield* Secrets;
+  return yield* Effect.flatMap(sentToken(credentialsOf(request)), secrets.hashToken);
+});
+
+function issueWebSession(
+  identity: Identity,
+): Effect.Effect<IssuedToken, Refusal | StorageUnavailable, HttpServerRequest.HttpServerRequest | Secrets | Storage> {
+  return Effect.gen(function* issueWebSessionCredential() {
+    const storage = yield* Storage;
+    const madeWith = yield* sentTokenHash;
+    const issued = yield* issueToken;
+    const now = yield* DateTime.now;
+    yield* storage.issueLoginCredential({
+      credentialHash: issued.hash,
+      host: WEB_UI_HOST,
+      identity: identity.name,
+      madeWith,
+      now: isoTimeOf(now),
+    });
+    return issued;
+  });
+}
+
 const loginRoute: Route<Caller | Storage | Secrets> = {
   handle: () =>
     Effect.gen(function* logIn() {
@@ -50,15 +77,7 @@ const loginRoute: Route<Caller | Storage | Secrets> = {
       if (identity.kind !== "human") {
         return yield* Effect.fail(humanOnly(identity));
       }
-      const storage = yield* Storage;
-      const issued = yield* issueToken;
-      const now = yield* DateTime.now;
-      yield* storage.issueLoginCredential({
-        credentialHash: issued.hash,
-        host: WEB_UI_HOST,
-        identity: identity.name,
-        now: isoTimeOf(now),
-      });
+      const issued = yield* issueWebSession(identity);
       const response = yield* identityResponse({ identity });
       return yield* HttpServerResponse.setCookie(response, sessionCookieName, issued.token, cookieOptions);
     }),

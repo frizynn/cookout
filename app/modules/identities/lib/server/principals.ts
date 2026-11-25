@@ -20,6 +20,7 @@ interface Principal {
   readonly identity: Identity;
   readonly webhookCommandThread: Option.Option<MessageId>;
   readonly agentSession: Option.Option<TokenHash>;
+  readonly loginCredential: Option.Option<TokenHash>;
 }
 
 function grantPrincipal(grant: WebhookCommandTokenGrant): Effect.Effect<Principal, Refusal> {
@@ -28,7 +29,12 @@ function grantPrincipal(grant: WebhookCommandTokenGrant): Effect.Effect<Principa
     if (DateTime.isGreaterThanOrEqualTo(now, DateTime.makeUnsafe(grant.expiresAt))) {
       return yield* Effect.fail(tokenExpired);
     }
-    return { agentSession: Option.none(), identity: grant.handler, webhookCommandThread: Option.some(grant.threadId) };
+    return {
+      agentSession: Option.none(),
+      identity: grant.handler,
+      loginCredential: Option.none(),
+      webhookCommandThread: Option.some(grant.threadId),
+    };
   });
 }
 
@@ -42,7 +48,12 @@ function webhookCommandTokenPrincipal({ hash, storage }: LoginLookup) {
     if (Predicate.isUndefined(grant)) {
       return storage.findLoginCredential(hash).pipe(
         Effect.filterOrFail(Predicate.isNotUndefined, Function.constant(tokenUnknown)),
-        Effect.map((identity) => ({ agentSession: Option.none(), identity, webhookCommandThread: Option.none() })),
+        Effect.map((identity) => ({
+          agentSession: Option.none(),
+          identity,
+          loginCredential: Option.some(hash),
+          webhookCommandThread: Option.none(),
+        })),
       );
     }
     return grantPrincipal(grant);

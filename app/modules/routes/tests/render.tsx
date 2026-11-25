@@ -88,11 +88,18 @@ function anonymousLoginRequests(): Pick<CookoutClient, "approveLogin" | "getLogi
   };
 }
 
-function anonymousAgentJoinRequests(): Pick<CookoutClient, "approveAgentJoin" | "getAgentJoinRequest"> {
+function anonymousAgentJoinRequests(): Pick<
+  CookoutClient,
+  "approveAgentJoin" | "denyAgentJoin" | "getAgentJoinRequest"
+> {
   return {
     approveAgentJoin: async (userCode, approval) => {
       const approved = await anonymousClient().approveAgentJoin(userCode, approval);
       return approved;
+    },
+    denyAgentJoin: async (userCode) => {
+      const denied = await anonymousClient().denyAgentJoin(userCode);
+      return denied;
     },
     getAgentJoinRequest: async (userCode) => {
       const found = await anonymousClient().getAgentJoinRequest(userCode);

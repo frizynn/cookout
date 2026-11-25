@@ -101,11 +101,12 @@ function placeHandlerIn(data: MemoryIdentities): PlaceHandler {
   };
 }
 
-type MemoryIdentitiesSection = Omit<IdentitiesSection, keyof IdentityDeletesSection> & {
+interface MemoryIdentitiesSection extends Omit<IdentitiesSection, keyof IdentityDeletesSection> {
   readonly placeHandler: PlaceHandler;
   readonly findIdentity: FindIdentity;
+  readonly tokenRevoked: (hash: TokenHash) => boolean;
   readonly removeIdentity: (name: IdentityName, messages: number) => Fails<DeleteIdentityResult>;
-};
+}
 
 export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection => {
   const data: MemoryIdentities = { activeTokens: new Map(), identities: new Map(), revokedTokens: new Set() };
@@ -147,6 +148,7 @@ export const memoryIdentities = (state: MemoryState): MemoryIdentitiesSection =>
       open(() => {
         setOnlyTokenIn(data, identity, hash);
       }),
+    tokenRevoked: (hash) => data.revokedTokens.has(hash),
   };
 };
 

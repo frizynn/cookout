@@ -14,7 +14,7 @@
  * - `CallChip` is a command call and its data.
  * - `AttachmentList` is a message's named list of attachments, under its text, each in an `AttachmentItem`.
  * - `ImageThumbnail` is an image attachment: a button holding its `AttachmentImage`, scaled to fit 300 by 200 pixels and sized from the image's `size` so it keeps its space while loading (a 300 by 200 box when the size is unknown). Clicking it, or Enter or Space on it, opens the image at full size in a modal dialog named by the image's name, with its `detail` (such as its size) beside the name; Escape or a click outside closes it, and focus returns to the thumbnail.
- * - `AttachmentImage` is an image attachment's picture alone, named by its name: the thumbnail's, or a `small` one (72 by 48 pixels at most) where a button can't go, such as a search result.
+ * - `AttachmentImage` is an image attachment's picture alone, named by its name: the thumbnail's, or a `small` one (72 by 48 pixels at most) where a button can't go, such as a search result. While it loads, or when it can't be shown, its name stays unseen inside its box.
  * - `FileChip` is any other attachment: its name and `detail` (such as its size) after a file icon, a download link to `href`, or plain text where `href` is `null`. Nothing but an image is ever drawn as one.
  * - `DataToggle` is a message's data folded away.
  * - `ThreadSummary` is a link to a message's thread: its repliers' avatars, its reply count, how many replies are new (bold, after an accent dot and with how many are to the reader when any is) and when it was last replied to.
@@ -22,7 +22,7 @@
  * - `ReactionChip` is a reaction and its count, pressed (in the accent) when one is the reader's own, with who reacted as its tooltip.
  * - `RepliesDivider` heads a thread's replies.
  * - `ChannelStart` says a channel has nothing older.
- * - `ClosedFold` is an item of a message list standing for closed threads folded away, an `article` named by its button on a dashed line that unfolds them; given a `day`, the day's label (a separator to a screen reader) shares that line, in place of a day separator of its own beside it: the label in the line's centre, the button at its right end, shortening rather than overlapping the label on a narrow line.
+ * - `ClosedFold` is an item of a message list standing for closed threads folded away, an `article` named by its button on a dashed line that unfolds them, marked `aria-current` while `current`, such as while one of its threads is open in the thread panel; given a `day`, the day's label (a separator to a screen reader) shares that line, in place of a day separator of its own beside it: the label in the line's centre, the button at its right end, shortening rather than overlapping the label on a narrow line.
  * - `ThreadBar` is a muted bar across the top of a thread: a line of text and one icon button named by its tooltip, such as who closed it and Reopen thread.
  */
 export {

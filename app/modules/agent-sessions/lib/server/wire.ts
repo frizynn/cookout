@@ -4,6 +4,7 @@ import type {
   AgentJoinRequestResponse,
   AgentJoinRequestStartedResponse,
   AgentSessionResponse,
+  DenyAgentJoinResponse,
   LeaveResponse,
   ListAgentSessionsResponse,
   ListedAgentSession,
@@ -142,6 +143,10 @@ const AgentJoinRequestResponseSchema = matchesWire<AgentJoinRequestResponse>()(
   Schema.Struct({ agentJoinRequest: AgentJoinRequestViewSchema }),
 );
 
+const DenyAgentJoinResponseSchema = matchesWire<DenyAgentJoinResponse>()(
+  Schema.Struct({ denied: Schema.Literal(true), userCode: UserCodeSchema }),
+);
+
 const CreateJoinCodeRequestSchema = Schema.Struct({
   description: Schema.optionalKey(SentDescriptionSchema),
   displayName: Schema.optionalKey(SentDisplayNameSchema),
@@ -168,6 +173,7 @@ export {
   AgentSessionResponseSchema,
   ApproveAgentJoinRequestSchema,
   CollectAgentJoinRequestSchema,
+  DenyAgentJoinResponseSchema,
   JoinRequestSchema,
   LeaveResponseSchema,
   ListAgentSessionsResponseSchema,
