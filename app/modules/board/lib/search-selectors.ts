@@ -12,19 +12,20 @@ function isClosed({ held, message }: HeldMessage): boolean {
   const thread = threadOfMessage(message);
   const parent = heldTopLevel({ held, id: thread });
   if (parent === null) {
-    return held.threadsClosed.get(thread) ?? false;
+    return held.threadsClosed.get(thread) === true;
   }
   return typeof parent.closedAt === "string";
 }
 
-function resultOf(held: MessagesHeld): (id: MessageId) => readonly SearchResult[] {
-  return (id) => {
-    const message = held.table.get(id) ?? null;
-    if (message === null) {
-      return [];
-    }
-    return [{ message, threadClosed: isClosed({ held, message }) }];
-  };
+function isHeld(message: Message | undefined): message is Message {
+  return typeof message === "object";
+}
+
+function resultsIn(held: MessagesHeld, ids: readonly MessageId[]): readonly SearchResult[] {
+  return ids
+    .map((id) => held.table.get(id))
+    .filter((message) => isHeld(message))
+    .map((message) => ({ message, threadClosed: isClosed({ held, message }) }));
 }
 
 function partsOf(results: readonly SearchResult[]): readonly unknown[] {
@@ -35,7 +36,7 @@ function searchResultsOf(ids: readonly MessageId[]): (state: BoardState) => read
   let shown: readonly SearchResult[] = [];
   let shownParts: readonly unknown[] = [];
   return (state) => {
-    const results = ids.flatMap(resultOf(state.messages));
+    const results = resultsIn(state.messages, ids);
     const parts = partsOf(results);
     if (parts.length !== shownParts.length || parts.some((part, index) => part !== shownParts[index])) {
       shown = results;

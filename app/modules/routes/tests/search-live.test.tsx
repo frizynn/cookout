@@ -2,6 +2,8 @@ import type { CookoutClient, MessageId } from "../../sdk/index.ts";
 import { expect, it, vi } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import { idOf, postedIn } from "./feed.ts";
+import type { Posted } from "./feed.ts";
+import { newIdentity } from "./identities.ts";
 import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";
 
@@ -12,6 +14,7 @@ interface Asking {
   readonly word: string;
   readonly closed: boolean;
   readonly query: string;
+  readonly outsider: boolean;
 }
 
 interface Searched {
@@ -34,15 +37,34 @@ async function rowsAre(rows: readonly string[]): Promise<void> {
   });
 }
 
-async function searchedLive({ channel, closed, query, word }: Asking): Promise<Searched> {
+async function readerOf({ channel, outsider }: Asking, subscribed: CookoutClient): Promise<CookoutClient> {
+  if (!outsider) {
+    return subscribed;
+  }
+  const unsubscribed = await newIdentity({ kind: "human", name: `${channel}-carol` });
+  return unsubscribed.client;
+}
+
+interface Thread {
+  readonly posted: Posted;
+  readonly parent: MessageId;
+}
+
+async function threadPosted({ channel, closed, word }: Asking): Promise<Thread> {
   const posted = await postedIn({ channel, closed: [], texts: [`${word} deploy?`] });
   const parent = idOf({ posted, text: `${word} deploy?` });
   await posted.poster.createMessage({ channel, replyTo: parent, text: `${word} at noon` });
   await (closed && posted.poster.closeThread(parent));
-  const { live, stream } = watched(posted.reader);
-  const close = openAt({ client: posted.reader, hash: "#/inbox", live });
+  return { parent, posted };
+}
+
+async function searchedLive(asking: Asking): Promise<Searched> {
+  const { parent, posted } = await threadPosted(asking);
+  const reader = await readerOf(asking, posted.reader);
+  const { live, stream } = watched(reader);
+  const close = openAt({ client: reader, hash: "#/inbox", live });
   await stream;
-  fireEvent.input(await screen.findByRole("combobox", { name: "Search" }), { target: { value: query } });
+  fireEvent.input(await screen.findByRole("combobox", { name: "Search" }), { target: { value: asking.query } });
   return { close, parent, poster: posted.poster };
 }
 
@@ -52,7 +74,13 @@ it("a result row shows its author's new display name and its thread closing live
   expect.hasAssertions();
 
   const channel = "web-search-live";
-  const searched = await searchedLive({ channel, closed: false, query: "ibexlive", word: "Ibexlive" });
+  const searched = await searchedLive({
+    channel,
+    closed: false,
+    outsider: false,
+    query: "ibexlive",
+    word: "Ibexlive",
+  });
   await rowsAre([
     `${channel}-adareplied in #${channel} · just nowIbexlive at noon`,
     `${channel}-adaposted in #${channel} · just nowIbexlive deploy?`,
@@ -74,13 +102,19 @@ it("a result row shows its author's new display name and its thread closing live
   searched.close();
 });
 
-it("a reply that reopens a closed thread takes Closed off its result rows live, with no new search", {
+it("a reply that reopens a closed thread takes Closed off a reply's result row live, for a reader outside the channel", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
 
   const channel = "web-search-reopen";
-  const searched = await searchedLive({ channel, closed: true, query: "lynxlive noon", word: "Lynxlive" });
+  const searched = await searchedLive({
+    channel,
+    closed: true,
+    outsider: true,
+    query: "lynxlive noon",
+    word: "Lynxlive",
+  });
   await rowsAre([`${channel}-adareplied in #${channel} · Closed · just nowLynxlive at noon`]);
   await searched.poster.createMessage({ channel, replyTo: searched.parent, text: "Moved to two" });
 
