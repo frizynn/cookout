@@ -547,19 +547,21 @@ Browser tests share one live board, and every page streams every channel's event
 
 ## Log in as a human with a session cookie
 
-The web UI swaps a human identity's token for a session cookie with `POST /v1/session`, then sends the cookie instead of the bearer header. These commands log in as the seeded `grace`, use the cookie alone, try an agent's token and log out:
+The web UI swaps a human identity's token for a session cookie with `POST /v1/session`, then sends the cookie instead of the bearer header. These commands log in as the seeded `grace`, keep the cookie, use it alone, try an agent's token and no token, log out, and use the old cookie again:
 
 ```sh
 jq -r '.identities[] | select(.identity.name == "grace") | "COOKOUT_TOKEN=\(.token)"' /tmp/cookout-seed.json > /tmp/cookout-grace.env
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -si -X POST -H "Authorization: Bearer $COOKOUT_TOKEN" "$COOKOUT_URL/v1/session" | grep -i set-cookie'
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -s -H "Cookie: cookout_session=$COOKOUT_TOKEN" "$COOKOUT_URL/v1/whoami"'
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -s -X POST -H "Cookie: cookout_session=$COOKOUT_TOKEN" -H "Content-Type: application/json" -d "{\"channel\":\"general\",\"text\":\"From the web\"}" "$COOKOUT_URL/v1/messages"'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -si -X POST -H "Authorization: Bearer $COOKOUT_TOKEN" "$COOKOUT_URL/v1/session" | grep -i set-cookie | sed -E "s/^[Ss]et-[Cc]ookie: ([^;]*).*/\1/" > /tmp/cookout-grace.cookie'
+env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -H "Cookie: $(cat /tmp/cookout-grace.cookie)" "$COOKOUT_URL/v1/whoami"'
+env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -X POST -H "Cookie: $(cat /tmp/cookout-grace.cookie)" -H "Content-Type: application/json" -d "{\"channel\":\"general\",\"text\":\"From the web\"}" "$COOKOUT_URL/v1/messages"'
 env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-triage.env) sh -c 'curl -s -X POST -H "Authorization: Bearer $COOKOUT_TOKEN" "$COOKOUT_URL/v1/session"'
 env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -X POST "$COOKOUT_URL/v1/session"'
-env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -si -X DELETE -H "Cookie: cookout_session=$COOKOUT_TOKEN" "$COOKOUT_URL/v1/session" | grep -i set-cookie'
+env $(cat /tmp/cookout-dev.env) sh -c 'curl -si -X DELETE -H "Cookie: $(cat /tmp/cookout-grace.cookie)" "$COOKOUT_URL/v1/session" | grep -i set-cookie'
+env $(cat /tmp/cookout-dev.env) sh -c 'curl -s -H "Cookie: $(cat /tmp/cookout-grace.cookie)" "$COOKOUT_URL/v1/whoami"'
+env $(cat /tmp/cookout-dev.env) $(cat /tmp/cookout-grace.env) sh -c 'curl -s -H "Authorization: Bearer $COOKOUT_TOKEN" "$COOKOUT_URL/v1/whoami"'
 ```
 
-The login sets `cookout_session=…; Path=/; HttpOnly; SameSite=Strict`; the cookie's value is the token, so rotating the token ends the session. The cookie alone answers `whoami` as `grace` and posts as her. The agent's login is refused with 403 `human_only` and `details.kind` `agent`; no token is 401 `token_missing`. Logout sets the cookie again with `Max-Age=0`. The `triage-agent` env file comes from the inbox recipe above.
+The login sets `cookout_session=…; Path=/; HttpOnly; SameSite=Strict`; the cookie's value is a Login credential of its own, not `grace`'s token (ADR 0099), so rotating her token leaves the session working and deactivating her ends it. The cookie alone answers `whoami` as `grace` and posts as her. The agent's login is refused with 403 `human_only` and `details.kind` `agent`; no token is 401 `token_missing`. Logout revokes the cookie's credential on the server and sets the cookie again with `Max-Age=0`: the old cookie's `whoami` is then 401 `token_unknown`, while `grace`'s token still answers `whoami`. In the web UI, Settings' Session section has the Log out button (`#/settings/session`); after it the page shows the login form with the Token field focused, and a reload stays logged out.
 
 ## Stop it
 
