@@ -5,7 +5,11 @@ import { adminClient } from "./identities.ts";
 import { openAt } from "./render.tsx";
 
 function narrowWindow(): void {
-  vi.stubGlobal("matchMedia", () => ({ matches: false }));
+  vi.stubGlobal("matchMedia", () => ({
+    addEventListener: vi.fn<() => void>(),
+    matches: false,
+    removeEventListener: vi.fn<() => void>(),
+  }));
   onTestFinished(() => {
     vi.unstubAllGlobals();
   });

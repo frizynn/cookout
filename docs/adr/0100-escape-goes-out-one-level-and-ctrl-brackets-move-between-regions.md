@@ -22,3 +22,5 @@
 - **Data attributes naming the regions**: rejected, as for scopes in ADR 0087; the landmarks the page already has name them.
 
 Superseded in part on 2026-11-25 by [ADR 0101](0101-arrow-keys-move-between-the-three-columns.md): the message box is no longer a region stop, and ← and → also move between the columns (mattpocock/cookout#563).
+
+Superseded in part on 2026-11-25 by [ADR 0103](0103-escape-closes-the-narrow-screen-sidebar.md): on a narrow screen the open sidebar is one more step, closed by `closeSidebar` in the `sidebar` scope (mattpocock/cookout#539).
