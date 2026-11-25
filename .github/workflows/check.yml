@@ -5,7 +5,7 @@ name: Check
 # merge_group runs only), while a fork's pull request still runs Check. A push to main doesn't run
 # it: main is only fast-forwarded to a commit v1's push run already checked.
 #
-# v1 lands through GitHub's merge queue (#522, ADR 0099): pnpm merge-ticket enqueues merge-ticket-N's
+# v1 lands through GitHub's merge queue (#522, docs/adr/…-v1-lands-through-github-s-merge-queue.md): pnpm merge-ticket enqueues merge-ticket-N's
 # pull request, and the queue runs Check on its merge_group event against the v1 it will land on,
 # then lands that exact commit. v1's push run of that commit is its second run; it still runs, and
 # merge-ticket counts it green while the green merge_group run on the same commit vouches for it.
@@ -236,7 +236,7 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
 
-  # The one check the merge queue requires (ADR 0099), so the ruleset needn't list every job and
+  # The one check the merge queue requires (docs/adr/…-v1-lands-through-github-s-merge-queue.md), so the ruleset needn't list every job and
   # shard by name and change whenever one is added. It fails if any other job failed or was
   # cancelled; a job skipped on a pull_request run from this repo passes, as that run checks nothing.
   checked:
