@@ -294,5 +294,5 @@ function browserShardPlan(planning: Planning): Plan {
   return shardPlan({ ...planning, recording: BROWSER });
 }
 
-export type { Planning, Plan, Recording };
+export type { Planning, Plan };
 export { browserShardPlan, shardPlan };

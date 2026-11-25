@@ -1,5 +1,7 @@
+import { unitShardPlan, unitTestFiles } from "./unit-shards.ts";
 import type { CiOnly } from "./check-runner.ts";
 import type { Outcome } from "./tools.ts";
+import type { Plan } from "./timed-shards.ts";
 
 type UnitTests =
   | { readonly all: true; readonly reason: string }
@@ -27,7 +29,7 @@ const REACHES_EVERYTHING_FILES = new Set([
   "scripts/postgres-test-container.ts",
   "scripts/s3-test-container.ts",
   "scripts/web-test-environment.ts",
-  "scripts/web-test-routine.ts",
+  "scripts/web-test-setup.ts",
   "scripts/web-test-server.ts",
 ]);
 const REACHES_EVERYTHING_DIRECTORIES = ["app/modules/testing/"];
@@ -75,6 +77,16 @@ function unitSkip(tests: UnitTests): readonly CiOnly[] {
   ];
 }
 
+interface CiShard {
+  readonly cwd: string;
+  readonly gh: (args: readonly string[]) => Outcome<string>;
+  readonly run: string;
+  readonly shard: string;
+}
+
+function ciUnitShard(sharding: CiShard): Plan {
+  return unitShardPlan({ ...sharding, files: unitTestFiles(sharding.cwd) });
+}
+
 export type { UnitTests };
-export { ciUnitShard } from "./unit-shards.ts";
-export { everythingReachedBy, isDocs, unitSkip, unitTestsFor };
+export { ciUnitShard, everythingReachedBy, isDocs, unitSkip, unitTestsFor };

@@ -22,6 +22,8 @@ interface Started {
   readonly value: string;
 }
 
+const WEB_TEST_BUILD = "node_modules/.cache/web-test-server";
+
 const adminToken = "web-test-admin-token-0123456789abcdef0123456789";
 
 const webTestBoardUrl = "https://board.example.com";
@@ -71,7 +73,7 @@ export async function startWebTestCookout(): Promise<RunningWebTestCookout> {
       "COOKOUT_ALLOW_LOCAL_TRIGGERS=true",
       `COOKOUT_PUBLIC_URL=${webTestBoardUrl}`,
       process.execPath,
-      "app/main.ts",
+      `${WEB_TEST_BUILD}/main.js`,
       "serve",
       "--port",
       "0",
@@ -94,3 +96,5 @@ export async function startWebTestCookout(): Promise<RunningWebTestCookout> {
 export function webTestCookout(): WebTestCookout {
   return { adminToken, receiverUrl: inject("webReceiverUrl"), url: globalThis.location.origin };
 }
+
+export { WEB_TEST_BUILD };

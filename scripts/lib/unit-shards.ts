@@ -14,13 +14,6 @@ interface UnitPlanning extends Planning {
   readonly cwd: string;
 }
 
-interface CiShard {
-  readonly cwd: string;
-  readonly gh: Planning["gh"];
-  readonly run: string;
-  readonly shard: string;
-}
-
 function listedFile(entry: unknown, cwd: string): readonly string[] {
   const file = text(field(entry, "file")) ?? "";
   if (file === "") {
@@ -55,8 +48,4 @@ function unitShardPlan({ cwd, ...planning }: UnitPlanning): Plan {
   });
 }
 
-function ciUnitShard({ cwd, gh, run, shard }: CiShard): Plan {
-  return unitShardPlan({ cwd, files: unitTestFiles(cwd), gh, run, shard });
-}
-
-export { ciUnitShard, unitShardPlan };
+export { unitShardPlan, unitTestFiles };
