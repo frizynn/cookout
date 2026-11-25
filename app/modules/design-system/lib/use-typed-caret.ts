@@ -17,7 +17,7 @@ interface Caret {
 
 export function useTypedCaret(typed: Typed): Caret {
   const { caret, focusRequests, onEdit, value } = typed;
-  const box = useFocusOnOpen(typed.focused);
+  const box = useFocusOnOpen<HTMLTextAreaElement>(typed.focused);
   const seen = useRef({ caret, focusRequests, value });
   const handleEdit = useCallback(() => {
     const element = box.current;
