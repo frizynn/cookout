@@ -167,7 +167,7 @@ const KEYS = [
   { action: "toggleThumbsDown", chord: "-", does: "React with 👎, or take it back", scope: "inbox" },
   { action: "copyMessageLink", chord: "l", does: "Copy its link", scope: "inbox" },
   { action: "toggleThreadClosed", chord: "x", does: "Close its thread, or reopen it", scope: "inbox" },
-  { action: "markRowRead", chord: "e", does: "Mark read", scope: "inbox" },
+  { action: "markRowRead", chord: "e", does: "Mark read, and move down to the one below", scope: "inbox" },
   { action: "markRowUnread", chord: "u", does: "Mark unread", scope: "inbox" },
   { action: "openRow", chord: "o", does: "Open in its channel", scope: "inbox" },
   { action: "toSidebar", chord: "ArrowLeft", does: "Sidebar, on the Inbox's link", scope: "inbox" },
