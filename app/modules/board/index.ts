@@ -121,7 +121,7 @@ export type { ChannelMessagesState, MessageBeforeState, ThreadMessagesState } fr
 export type { CallState } from "./lib/command-call.ts";
 export type { SchemaProblem } from "../sdk/index.ts";
 export type { PostState } from "./lib/failure.ts";
-export type { AskedFrom, SubscriptionsState } from "./lib/subscriptions-slice.ts";
+export type { SubscriptionsState } from "./lib/subscriptions-slice.ts";
 export {
   type BoardStore,
   type IdentityCalls,

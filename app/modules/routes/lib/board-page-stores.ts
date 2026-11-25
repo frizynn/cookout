@@ -22,4 +22,4 @@ function boardPageStores(store: BoardStore): BoardPageStores {
   };
 }
 
-export { type BoardPageStores, boardPageStores };
+export { boardPageStores };

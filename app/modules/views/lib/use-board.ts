@@ -177,7 +177,6 @@ function useMessageBefore({ channel, id }: ThreadPlace): MessageBeforeState {
 export {
   BoardStoreContext,
   type Read,
-  type ThreadPlace,
   threadRead,
   useBoardStore,
   useChannelCalls,
@@ -187,7 +186,6 @@ export {
   useCommands,
   useDeletedChannelNotice,
   useMessageBefore,
-  useRead,
   useReply,
   useShownThread,
   useSubscriptions,
