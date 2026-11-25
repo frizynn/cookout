@@ -86,19 +86,18 @@ function typeOf(event: unknown): string {
 }
 
 function probeLive(live: unknown, heard: (type: string) => void): void {
-  const subscribe = callable(Reflect.get(objectIn(live), "subscribe"));
-  if (subscribe === null) {
+  const follow = callable(Reflect.get(objectIn(live), "follow"));
+  if (follow === null) {
     return;
   }
-  let first = true;
-  Reflect.set(objectIn(live), "subscribe", (listener: Call) => {
-    if (!first) {
-      return subscribe(listener);
-    }
-    first = false;
-    return subscribe((event: unknown) => {
-      heard(typeOf(event));
-      return listener(event);
+  Reflect.set(objectIn(live), "follow", (follower: unknown) => {
+    const hear = callable(Reflect.get(objectIn(follower), "heard")) ?? ((): null => null);
+    return follow({
+      ...objectIn(follower),
+      heard: (event: unknown) => {
+        heard(typeOf(event));
+        return hear(event);
+      },
     });
   });
 }

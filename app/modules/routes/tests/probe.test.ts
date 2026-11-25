@@ -8,8 +8,13 @@ interface ListStore {
   readonly publish: () => void;
 }
 
+interface Follower {
+  readonly heard: (event: { readonly type: string }) => void;
+  readonly back: () => void;
+}
+
 interface HandLive {
-  readonly subscribe: (listener: (event: { readonly type: string }) => void) => void;
+  readonly follow: (follower: Follower) => void;
   readonly send: (type: string) => void;
 }
 
@@ -44,15 +49,15 @@ function listStore(): ListStore {
 }
 
 function handLive(): HandLive {
-  const listeners: ((event: { readonly type: string }) => void)[] = [];
+  const followers: Follower[] = [];
   return {
-    send: (type) => {
-      for (const listener of listeners) {
-        listener({ type });
-      }
+    follow: (follower) => {
+      followers.push(follower);
     },
-    subscribe: (listener) => {
-      listeners.push(listener);
+    send: (type) => {
+      for (const follower of followers) {
+        follower.heard({ type });
+      }
     },
   };
 }
@@ -96,7 +101,7 @@ function Row(): null {
   return null;
 }
 
-it("counts the live events the page receives by type, once each however many stores read the stream", {
+it("counts the live events the page receives by type, as its follower hears them", {
   timeout: 1000,
 }, () => {
   expect.hasAssertions();
@@ -104,8 +109,7 @@ it("counts the live events the page receives by type, once each however many sto
   const probe = createProbe();
   const live = handLive();
   rendered(probe, { live });
-  live.subscribe(ignored);
-  live.subscribe(ignored);
+  live.follow({ back: ignored, heard: ignored });
 
   for (const type of ["presence", "nudge", "presence", "message"]) {
     live.send(type);

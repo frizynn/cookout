@@ -6,10 +6,16 @@
  * `subscribe` and `snapshot` (`BoardState`, a new object whenever a slice's part changes, the same one until then),
  * read through selectors such as `presences`, each returning the same object until what it reads changes. Nothing is
  * read up front: `subscribeShowing(slice)` subscribes a view that shows that slice, and the slice is read when its first
- * such reader arrives. Each event on `live` is applied to every slice, in one place; an event heard while a slice is
+ * such reader arrives. The store is `live`'s one follower, which it becomes when a view first shows something: each
+ * event on `live` is applied to every slice, in one place; an event heard while a slice is
  * being read is applied again on what the read brings, so the event wins, and an event heard twice changes nothing.
  * When the link comes back after being down, each slice someone is showing is read again, and one nobody is showing
- * is read again when it is next shown; that is the store's one catch-up. Its slices: `presence`, every identity's
+ * is read again when it is next shown, and the triggers called while the link was down are forgotten, as a fresh load
+ * would have none; that is the store's one catch-up. Inbox items, and the unacked reaction items, the server replays
+ * after `Last-Event-ID` (ADR `docs/adr/0071-a-resume-replays-every-unseen-reaction-item.md`) apply by message ID, so
+ * one already held changes nothing. Everything else the server keeps no events for, so each slice reads its snapshot
+ * again and compares (ADR 0068); the catch-up is one function (`catchUpOf`), the one place that becomes replaying events
+ * if the server one day replays every kind. Its slices: `presence`, every identity's
  * presence, read with `GET /v1/presence`, changed by `presence` events and left by `identity-deleted`;
  * `reactions`, read through
  * `reactionsOf(state, message)`: a message arrives with its reactions, the slice holds each `reaction` event's
