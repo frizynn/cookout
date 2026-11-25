@@ -59,7 +59,7 @@ test("a reply sent with Enter from the Inbox shows in the conversation, and live
     hash: `#/inbox/${thread.channel}/${thread.parent}`,
     token: thread.answerer,
   });
-  const box = inConversation(replying).getByRole("textbox", { name: "Reply" });
+  const box = inConversation(replying).getByRole("textbox", { exact: true, name: "Reply" });
   await box.fill("Noon works");
   await box.press("Enter");
 

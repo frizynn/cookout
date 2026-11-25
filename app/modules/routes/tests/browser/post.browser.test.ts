@@ -1,22 +1,24 @@
 import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
-import { inPane, inSidebar } from "./regions.ts";
+import { inPane, sidebarLink } from "./regions.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
 import { logInWithStream } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
+import { testAgentDisplayName } from "../../../testing/index.ts";
 import { unique } from "./names.ts";
 
 const test = base.extend(probeFixtures);
 
 async function postWithMention(page: Page): Promise<void> {
-  await inSidebar(page)
-    .getByRole("link", { name: `#${unique("browser-post")}` })
-    .click();
+  await sidebarLink({ label: `#${unique("browser-post")}`, page }).click();
   await page.getByLabel("Message", { exact: true }).pressSequentially(`Can @${unique("browser-post-reviewer")}`);
   await page
-    .getByRole("listbox", { name: "Mention suggestions" })
-    .getByRole("option", { name: `@${unique("browser-post-reviewer")}` })
+    .getByRole("listbox", { exact: true, name: "Mention suggestions" })
+    .getByRole("option", {
+      exact: true,
+      name: `${testAgentDisplayName(unique("browser-post-reviewer"))}, @${unique("browser-post-reviewer")}, Offline`,
+    })
     .click();
   await page.keyboard.type("look?");
   await inPane(page).getByRole("button", { exact: true, name: "Send" }).click();
@@ -36,7 +38,7 @@ test("a human posts a top-level message with an @ mention from the channel view,
   await logInWithStream({ page, token: poster.token });
   await postWithMention(page);
 
-  await expect(page.getByRole("feed", { name: "Messages" }).getByRole("article")).toContainText([
+  await expect(page.getByRole("feed", { exact: true, name: "Messages" }).getByRole("article")).toContainText([
     `Can @${unique("browser-post-reviewer")} look?`,
   ]);
   await expect(page.getByLabel("Message", { exact: true })).toHaveValue("");
@@ -59,11 +61,9 @@ test("a message with attachments and no text shows in the channel under its auth
     text: "",
   });
   await logInWithStream({ page, token: poster.token });
-  await inSidebar(page)
-    .getByRole("link", { name: `#${unique("browser-files-only")}` })
-    .click();
+  await sidebarLink({ label: `#${unique("browser-files-only")}`, page }).click();
 
-  await expect(page.getByRole("feed", { name: "Messages" }).getByRole("article")).toContainText([
+  await expect(page.getByRole("feed", { exact: true, name: "Messages" }).getByRole("article")).toContainText([
     "Earlier",
     unique("browser-files-only"),
   ]);
@@ -73,15 +73,13 @@ test("Send with an empty box, no text and no attachment, posts nothing", async (
   const poster = await newIdentity({ kind: "human", name: unique("browser-empty-send") });
   await adminClient().createChannel({ name: unique("browser-empty-send") });
   await logInWithStream({ page, token: poster.token });
-  await inSidebar(page)
-    .getByRole("link", { name: `#${unique("browser-empty-send")}` })
-    .click();
+  await sidebarLink({ label: `#${unique("browser-empty-send")}`, page }).click();
   const send = inPane(page).getByRole("button", { exact: true, name: "Send" });
   await send.click();
   await page.getByLabel("Message", { exact: true }).fill("After");
   await send.click();
 
-  await expect(page.getByRole("feed", { name: "Messages" }).getByRole("article")).toContainText(["After"]);
+  await expect(page.getByRole("feed", { exact: true, name: "Messages" }).getByRole("article")).toContainText(["After"]);
   await expect
     .poll(async () => {
       const { messages } = await poster.client.listMessages(unique("browser-empty-send"));

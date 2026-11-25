@@ -23,14 +23,14 @@ async function openChannelWithImage(page: Page, channel: string): Promise<Locato
   });
   await logInToChannels({ page, token: poster.token });
   await page.goto(`/#/channels/${channel}`);
-  return inPane(page).getByRole("button", { name: "hills.png" });
+  return inPane(page).getByRole("button", { exact: true, name: "hills.png" });
 }
 
 async function openedFullSize(page: Page, channel: string): Promise<Opened> {
   const thumbnail = await openChannelWithImage(page, channel);
   await thumbnail.focus();
   await page.keyboard.press("Enter");
-  return { dialog: page.getByRole("dialog", { name: "hills.png" }), thumbnail };
+  return { dialog: page.getByRole("dialog", { exact: true, name: "hills.png" }), thumbnail };
 }
 
 test("Enter on a thumbnail opens the image at full size, and Escape closes it, back on the thumbnail", async ({
@@ -38,7 +38,10 @@ test("Enter on a thumbnail opens the image at full size, and Escape closes it, b
 }) => {
   const { dialog, thumbnail } = await openedFullSize(page, "browser-attachments-escape");
 
-  await expect(dialog.getByRole("img", { name: "hills.png" })).toHaveJSProperty("naturalWidth", NATURAL_WIDTH);
+  await expect(dialog.getByRole("img", { exact: true, name: "hills.png" })).toHaveJSProperty(
+    "naturalWidth",
+    NATURAL_WIDTH,
+  );
 
   await page.keyboard.press("Escape");
 
@@ -49,7 +52,7 @@ test("Enter on a thumbnail opens the image at full size, and Escape closes it, b
 test("a click outside the full-size image closes it, back on the thumbnail", async ({ page }) => {
   const { dialog, thumbnail } = await openedFullSize(page, "browser-attachments-outside");
 
-  await expect(dialog.getByRole("img", { name: "hills.png" })).toBeVisible();
+  await expect(dialog.getByRole("img", { exact: true, name: "hills.png" })).toBeVisible();
 
   await page.mouse.click(OUTSIDE.left, OUTSIDE.top);
 

@@ -18,8 +18,8 @@ async function openChannel(page: Page, channel: string): Promise<void> {
 
 test("hovering a thread in the channel shows its Close button, which closes the thread", async ({ page }) => {
   await openChannel(page, unique("browser-hover"));
-  const message = page.getByRole("feed", { name: "Messages" }).getByRole("article");
-  const closeThread = message.getByRole("button", { name: "Close thread" });
+  const message = page.getByRole("feed", { exact: true, name: "Messages" }).getByRole("article");
+  const closeThread = message.getByRole("button", { exact: true, name: "Close thread" });
 
   await expect(closeThread).toBeHidden();
 
@@ -34,13 +34,13 @@ test("hovering a thread in the channel shows its Close button, which closes the 
 
   await closeThread.click();
 
-  await expect(inPane(page).getByRole("button", { name: "1 closed thread" })).toBeVisible();
+  await expect(inPane(page).getByRole("button", { exact: true, name: "1 closed thread" })).toBeVisible();
 });
 
 test("tabbing to a thread in the channel shows its Close button", async ({ page }) => {
   await openChannel(page, unique("browser-tab"));
-  const message = page.getByRole("feed", { name: "Messages" }).getByRole("article");
-  const closeThread = message.getByRole("button", { name: "Close thread" });
+  const message = page.getByRole("feed", { exact: true, name: "Messages" }).getByRole("article");
+  const closeThread = message.getByRole("button", { exact: true, name: "Close thread" });
 
   await expect(closeThread).toBeHidden();
 
@@ -51,10 +51,10 @@ test("tabbing to a thread in the channel shows its Close button", async ({ page 
 
 test("Reply in a thread's More actions menu opens the thread with the cursor in the reply box", async ({ page }) => {
   await openChannel(page, unique("browser-hover-reply"));
-  const message = page.getByRole("feed", { name: "Messages" }).getByRole("article");
+  const message = page.getByRole("feed", { exact: true, name: "Messages" }).getByRole("article");
   await message.hover();
-  await message.getByRole("button", { name: "More actions" }).click();
-  await page.getByRole("menuitem", { name: "Reply" }).click();
+  await message.getByRole("button", { exact: true, name: "More actions" }).click();
+  await page.getByRole("menuitem", { exact: true, name: "Reply" }).click();
 
   await expect(page.getByRole("textbox", { exact: true, name: "Reply" })).toBeFocused();
 });
@@ -72,8 +72,8 @@ async function hoverBarIn({ page, theme }: Shot): Promise<void> {
 
   await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
 
-  const message = page.getByRole("feed", { name: "Messages" }).getByRole("article");
-  const bar = message.getByRole("group", { name: "Quick actions" });
+  const message = page.getByRole("feed", { exact: true, name: "Messages" }).getByRole("article");
+  const bar = message.getByRole("group", { exact: true, name: "Quick actions" });
 
   await expect(async () => {
     await message.hover();
@@ -81,7 +81,7 @@ async function hoverBarIn({ page, theme }: Shot): Promise<void> {
     await expect(bar).toBeVisible({ timeout: 1000 });
   }).toPass();
 
-  await expect(bar.getByRole("button", { name: "React with 👎" })).toBeHidden();
+  await expect(bar.getByRole("button", { exact: true, name: "React with 👎" })).toBeHidden();
 
   await message.screenshot({ path: test.info().outputPath(`hover-bar-${theme}.png`) });
 }

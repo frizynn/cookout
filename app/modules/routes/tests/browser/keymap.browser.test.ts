@@ -8,7 +8,7 @@ import { unique } from "./names.ts";
 
 const test = base.extend(probeFixtures);
 
-const BOX = { name: "Search" } as const;
+const BOX = { exact: true, name: "Search" } as const;
 const REPLY = { exact: true, name: "Reply" } as const;
 
 async function openedOnThread(page: Page, channel: string): Promise<string> {
@@ -35,7 +35,7 @@ async function inboxRowSelected(page: Page, channel: string): Promise<string> {
   await logInToChannels({ page, token: await followedThread(channel) });
   await page.goto("/#/inbox");
 
-  await expect(inPane(page).getByText(`Keymap reply ${channel}`)).toBeVisible();
+  await expect(inPane(page).getByText(`Keymap reply ${channel}`, { exact: true })).toBeVisible();
 
   await page.keyboard.press("j");
 
@@ -119,7 +119,7 @@ test("single-letter keys typed in the reply box type their letters and trigger n
 
   await expect(reply).toHaveValue("jkeuor");
   await expect(reply).toBeFocused();
-  await expect(inConversation(page).getByRole("button", { name: "Mark unread" })).toBeVisible();
+  await expect(inConversation(page).getByRole("button", { exact: true, name: "Mark unread" })).toBeVisible();
 
   expect(page.url()).toBe(selected);
 });

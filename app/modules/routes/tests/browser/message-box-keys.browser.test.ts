@@ -31,11 +31,14 @@ async function typedInto(box: Locator): Promise<void> {
 }
 
 function messageSaying(page: Page, text: string): Locator {
-  return inPane(page).getByRole("feed", { name: "Messages" }).getByRole("article").filter({ hasText: text });
+  return inPane(page)
+    .getByRole("feed", { exact: true, name: "Messages" })
+    .getByRole("article")
+    .filter({ hasText: text });
 }
 
 function messageBox(page: Page): Locator {
-  return inPane(page).getByRole("textbox", { name: "Message" });
+  return inPane(page).getByRole("textbox", { exact: true, name: "Message" });
 }
 
 function focusedMessage(page: Page): Locator {
@@ -81,9 +84,9 @@ test("Escape in a thread's reply box keeps the draft and returns focus to where 
   const channel = unique("browser-box-thread-escape");
   const parent = await threadOf(channel);
   await openedAt(page, channel, `/threads/${String(parent)}`);
-  const replies = inThread(page).getByRole("feed", { name: "Replies" });
+  const replies = inThread(page).getByRole("feed", { exact: true, name: "Replies" });
   await replies.getByRole("article").filter({ hasText: "The first reply." }).focus();
-  const replyBox = inThread(page).getByRole("textbox", { name: "Reply" });
+  const replyBox = inThread(page).getByRole("textbox", { exact: true, name: "Reply" });
   await typedInto(replyBox);
 
   await page.keyboard.press("Escape");
@@ -109,10 +112,14 @@ test("+ and - on a focused message toggle its 👍 and 👎", async ({ page }) =
   await channelOpened(page, channel);
   const message = messageSaying(page, "The middle.");
   await message.focus();
-  const thumbsUp = message.getByRole("button", { name: "👍 1", pressed: true });
+  const thumbsUp = message.getByRole("button", { exact: true, name: "👍 1", pressed: true });
 
   await pressAndSee({ chip: thumbsUp, key: "Shift+Equal", page });
-  await pressAndSee({ chip: message.getByRole("button", { name: "👎 1", pressed: true }), key: "Minus", page });
+  await pressAndSee({
+    chip: message.getByRole("button", { exact: true, name: "👎 1", pressed: true }),
+    key: "Minus",
+    page,
+  });
   await page.keyboard.press("Shift+Equal");
 
   await expect(thumbsUp).toBeHidden();

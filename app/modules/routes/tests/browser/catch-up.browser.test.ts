@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import type { Relay, RelayFixtures, RelayOptions } from "./relay.ts";
 import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
-import { inPane, inSidebar, inThread } from "./regions.ts";
+import { inPane, inThread, sidebarLink } from "./regions.ts";
 import type { Message } from "../../../sdk/index.ts";
 import type { Person } from "./people.ts";
 import { logInWithStream } from "./login.ts";
@@ -35,7 +35,7 @@ async function reading(): Promise<Reading> {
 }
 
 function rowOf(page: Page, channel: string): Locator {
-  return inSidebar(page).getByRole("link", { name: new RegExp(`^#${channel}(?![a-z-])`, "u") });
+  return sidebarLink({ label: `#${channel}`, page });
 }
 
 async function markPage(page: Page): Promise<void> {
@@ -50,7 +50,7 @@ async function pageKept(page: Page): Promise<boolean> {
 }
 
 async function cutWhile(page: Page, relay: Relay, work: () => Promise<void>): Promise<void> {
-  const bar = page.getByRole("status", { name: "Live link" });
+  const bar = page.getByRole("status", { exact: true, name: "Live link" });
   await relay.cut();
 
   await expect(bar).toHaveText("Reconnecting…");
@@ -82,8 +82,8 @@ test("a message, a reply and an unread count from while the live link was down a
     await poster.client.createMessage({ channel: other, text: "Lunch?" });
   });
 
-  await expect(inPane(page).getByRole("feed", { name: "Messages" })).toContainText("Or at one?");
-  await expect(inThread(page).getByRole("feed", { name: "Replies" })).toContainText("Noon works");
+  await expect(inPane(page).getByRole("feed", { exact: true, name: "Messages" })).toContainText("Or at one?");
+  await expect(inThread(page).getByRole("feed", { exact: true, name: "Replies" })).toContainText("Noon works");
   await expect(rowOf(page, other)).toHaveAccessibleName(`#${other} 1 unread`);
   await expect(rowOf(page, channel)).toHaveAccessibleName(`#${channel}`);
   await expect(pageKept(page)).resolves.toBe(true);

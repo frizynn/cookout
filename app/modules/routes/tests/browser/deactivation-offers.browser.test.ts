@@ -32,10 +32,15 @@ test("an offer row's name opens the identity's profile panel", async ({ page }) 
   await logIn({ page, token: owner.token, url: "/#/inbox" });
 
   await inPane(page)
-    .getByRole("list", { name: "For you" })
-    .getByRole("link", { name: testAgentDisplayName(agent) })
+    .getByRole("list", { exact: true, name: "For you" })
+    .getByRole("link", { exact: true, name: testAgentDisplayName(agent) })
     .click();
 
   await expect(page).toHaveURL(new RegExp(`#/inbox\\?profile=${ownerName}/scout$`, "u"));
-  await expect(inProfile(page).getByRole("heading", { name: new RegExp(agent, "u") })).toBeVisible();
+  await expect(
+    inProfile(page).getByRole("heading", {
+      exact: true,
+      name: `${testAgentDisplayName(agent)} @${identity.name} agent`,
+    }),
+  ).toBeVisible();
 });

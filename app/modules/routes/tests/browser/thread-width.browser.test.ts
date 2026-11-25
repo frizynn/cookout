@@ -34,7 +34,7 @@ async function panelWidth(page: Page): Promise<number> {
 }
 
 async function dragEdge(page: Page, by: number): Promise<void> {
-  const box = await page.getByRole("separator", { name: EDGE }).boundingBox();
+  const box = await page.getByRole("separator", { exact: true, name: EDGE }).boundingBox();
   if (box === null) {
     return;
   }
@@ -49,14 +49,14 @@ async function dragEdge(page: Page, by: number): Promise<void> {
 test("dragging the thread panel's edge left widens it, and a reload keeps the width", async ({ page }) => {
   await threadOpen(page, unique("browser-resize-panel"));
 
-  await expect(page.getByRole("separator", { name: EDGE })).toBeVisible();
+  await expect(page.getByRole("separator", { exact: true, name: EDGE })).toBeVisible();
 
   const before = await panelWidth(page);
   await dragEdge(page, DRAGGED);
   const after = await panelWidth(page);
   await page.reload();
 
-  await expect(page.getByRole("separator", { name: EDGE })).toBeVisible();
+  await expect(page.getByRole("separator", { exact: true, name: EDGE })).toBeVisible();
 
   const reloaded = await panelWidth(page);
 
@@ -66,7 +66,7 @@ test("dragging the thread panel's edge left widens it, and a reload keeps the wi
 test("dragging the thread panel's edge past its narrowest closes the thread", async ({ page }) => {
   const message = await threadOpen(page, unique("browser-resize-panel-close"));
 
-  await expect(page.getByRole("separator", { name: EDGE })).toBeVisible();
+  await expect(page.getByRole("separator", { exact: true, name: EDGE })).toBeVisible();
 
   await dragEdge(page, -WIDE.width);
 
@@ -79,5 +79,5 @@ test("on a narrow screen the thread panel has no edge to drag", async ({ page })
   await page.setViewportSize(NARROW);
 
   await expect(page.getByRole("complementary", { exact: true, name: "Thread" })).toContainText("Resizable parent");
-  await expect(page.getByRole("separator", { name: EDGE })).toBeHidden();
+  await expect(page.getByRole("separator", { exact: true, name: EDGE })).toBeHidden();
 });

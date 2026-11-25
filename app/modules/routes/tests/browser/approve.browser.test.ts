@@ -32,7 +32,7 @@ async function screenshotIn({ page, theme }: Shot): Promise<void> {
   await page.reload();
 
   await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-  await expect(page.getByLabel("Code")).toBeVisible();
+  await expect(page.getByLabel("Code", { exact: true })).toBeVisible();
 
   await page.screenshot({ path: test.info().outputPath(`approval-page-${theme}.png`) });
 }
@@ -49,14 +49,18 @@ async function openApproval({ baseURL, page }: Opening): Promise<Opened> {
 test("a human opens a login request's approval link, checks the code, and approves it", async ({ baseURL, page }) => {
   const { anonymous, started } = await openApproval({ baseURL, page });
 
-  await expect(page.getByLabel("Code")).toHaveText(started.userCode);
-  await expect(page.getByText(/^Requested by browser-laptop/u)).toBeVisible();
+  await expect(page.getByLabel("Code", { exact: true })).toHaveText(started.userCode);
+  await expect(
+    page.getByText(`Requested by browser-laptop, until ${started.expiresAt}.`, { exact: true }),
+  ).toBeVisible();
 
   await screenshotIn({ page, theme: "dark" });
   await screenshotIn({ page, theme: "light" });
   await inPane(page).getByRole("button", { exact: true, name: "Approve" }).click();
 
-  await expect(page.getByText(/^Approved\./u)).toBeVisible();
+  await expect(
+    page.getByText("Approved. Your terminal finishes logging in now; you can close this page.", { exact: true }),
+  ).toBeVisible();
   await expect(anonymous.collectLogin(started.requestId)).resolves.toMatchObject({
     identity: { name: unique("browser-approver") },
     status: "approved",

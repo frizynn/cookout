@@ -31,7 +31,7 @@ async function openAs({ browser, token }: Opening): Promise<Page> {
 }
 
 function messagesOn(page: Page): Locator {
-  return inPane(page).getByRole("feed", { name: "Messages" });
+  return inPane(page).getByRole("feed", { exact: true, name: "Messages" });
 }
 
 async function posted(): Promise<Tokens> {
@@ -50,12 +50,12 @@ test("a thread one person closes from its menu folds in another person's feed wi
   const annMessages = messagesOn(await openAs({ browser, token: tokens.ann }));
   const bobMessages = messagesOn(await openAs({ browser, token: tokens.bob }));
 
-  await expect(annMessages.getByText("Ship it?")).toBeVisible();
+  await expect(annMessages.getByText("Ship it?", { exact: true })).toBeVisible();
 
-  await bobMessages.getByText("Ship it?").click({ button: "right" });
-  await bobMessages.page().getByRole("menuitem", { name: "Close" }).click();
+  await bobMessages.getByText("Ship it?", { exact: true }).click({ button: "right" });
+  await bobMessages.page().getByRole("menuitem", { exact: true, name: "Close" }).click();
 
-  await expect(bobMessages.getByRole("button", { name: "1 closed thread" })).toBeVisible();
-  await expect(annMessages.getByRole("button", { name: "1 closed thread" })).toBeVisible();
-  await expect(annMessages.getByText("Ship it?")).toBeHidden();
+  await expect(bobMessages.getByRole("button", { exact: true, name: "1 closed thread" })).toBeVisible();
+  await expect(annMessages.getByRole("button", { exact: true, name: "1 closed thread" })).toBeVisible();
+  await expect(annMessages.getByText("Ship it?", { exact: true })).toBeHidden();
 });

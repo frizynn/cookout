@@ -64,7 +64,7 @@ async function openedWithReadThreads({ channel, count, page, size }: Opening): P
   await page.setViewportSize(size);
   await page.goto("/#/inbox");
 
-  await expect(inPane(page).getByRole("list", { name: "Earlier" })).toContainText(`Reply ${String(ONE)}`);
+  await expect(inPane(page).getByRole("list", { exact: true, name: "Earlier" })).toContainText(`Reply ${String(ONE)}`);
 
   return addresses;
 }
@@ -82,11 +82,11 @@ test("at 600 px wide, j opens the first conversation and Esc returns to the list
   await page.keyboard.press("j");
 
   await expect(inConversation(page)).toContainText("Thread 1");
-  await expect(page.getByRole("heading", { level: 1, name: "Inbox" })).toBeHidden();
+  await expect(page.getByRole("heading", { exact: true, level: 1, name: "Inbox" })).toBeHidden();
 
   await page.keyboard.press("Escape");
 
-  await expect(page.getByRole("heading", { level: 1, name: "Inbox" })).toBeVisible();
+  await expect(page.getByRole("heading", { exact: true, level: 1, name: "Inbox" })).toBeVisible();
   await expect(page).toHaveURL(/#\/inbox$/u);
 });
 

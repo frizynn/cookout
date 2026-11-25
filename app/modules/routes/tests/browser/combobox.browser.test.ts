@@ -40,7 +40,7 @@ async function twoCommands(base: string): Promise<string> {
 }
 
 function listIn(page: Page, name: string): Locator {
-  return inPane(page).getByRole("listbox", { name });
+  return inPane(page).getByRole("listbox", { exact: true, name });
 }
 
 test("typing @grace's name shows the mention list as a combobox's listbox, and Tab writes @grace", async ({ page }) => {
@@ -49,7 +49,10 @@ test("typing @grace's name shows the mention list as a combobox's listbox, and T
   const box = await messageBoxIn(page, unique("browser-combobox-tab"));
   await box.pressSequentially(`@${grace}`);
 
-  await expect(inPane(page).getByRole("combobox", { name: "Message" })).toHaveAttribute("aria-expanded", "true");
+  await expect(inPane(page).getByRole("combobox", { exact: true, name: "Message" })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
   await expect(listIn(page, "Mention suggestions").getByRole("option", { selected: true })).toHaveText(`@${grace}`);
   await expect
     .poll(async () => {
@@ -129,5 +132,5 @@ test("Escape closes the command list keeping the text, and Tab picks a command",
   await box.pressSequentially("s");
   await page.keyboard.press("Tab");
 
-  await expect(page.getByRole("form", { name: `Call /${prefix}-second` })).toBeVisible();
+  await expect(page.getByRole("form", { exact: true, name: `Call /${prefix}-second` })).toBeVisible();
 });
