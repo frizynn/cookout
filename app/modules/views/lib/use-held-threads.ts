@@ -12,6 +12,7 @@ interface Holding {
   readonly channel: ChannelName;
   readonly state: ChannelMessagesState;
   readonly unread: Unread;
+  readonly open: MessageId | null;
 }
 
 interface Kept {
@@ -61,6 +62,14 @@ function grown(kept: Kept, news: readonly MessageId[]): Kept {
   return { ...kept, held: new Set([...kept.held, ...news]) };
 }
 
+function heldOf(news: readonly MessageId[] | null, open: MessageId | null): readonly MessageId[] {
+  const ids = news ?? NO_THREADS;
+  if (open === null) {
+    return ids;
+  }
+  return [...ids, open];
+}
+
 function shownOf(target: MessageId | null, faded: MessageId | null): MessageId | null {
   if (target === faded) {
     return null;
@@ -70,11 +79,11 @@ function shownOf(target: MessageId | null, faded: MessageId | null): MessageId |
 
 const FRESH: Kept = { decided: false, held: new Set(), target: null };
 
-export function useHeldThreads({ channel, state }: Holding): HeldThreads {
+export function useHeldThreads({ channel, open, state }: Holding): HeldThreads {
   const news = useBoardInbox((board) => inboxThreadsWithNews({ channel, state: board }));
   const [kept, setKept] = useState<Kept>(FRESH);
   const [faded, setFaded] = useState<MessageId | null>(null);
-  const next = decided({ kept: grown(kept, news ?? NO_THREADS), messages: messagesOf(state), news });
+  const next = decided({ kept: grown(kept, heldOf(news, open)), messages: messagesOf(state), news });
   if (next !== kept) {
     setKept(next);
   }
