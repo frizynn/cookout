@@ -121,6 +121,14 @@ function dropOn({ files, form }: Handing): void {
   fireEvent.drop(formNamed(form), { dataTransfer: { files: filesOf(files), types: ["Files"] } });
 }
 
+function dragOnto({ files, form }: Handing): boolean {
+  return fireEvent.dragOver(formNamed(form), { dataTransfer: { files: filesOf(files), types: ["Files"] } });
+}
+
+function dragTextOnto(form: string): boolean {
+  return fireEvent.dragOver(formNamed(form), { dataTransfer: { files: [], types: ["text/plain"] } });
+}
+
 function pickerIn(form: string): HTMLInputElement {
   const picker = formNamed(form).querySelector("input[type=file]");
   if (!(picker instanceof HTMLInputElement)) {
@@ -131,6 +139,10 @@ function pickerIn(form: string): HTMLInputElement {
 
 function pickIn({ files, form }: Handing): void {
   fireEvent.change(pickerIn(form), { target: { files: filesOf(files) } });
+}
+
+function pickNothingIn(form: string): void {
+  fireEvent.change(pickerIn(form), { target: { files: null } });
 }
 
 function pendingIn(form: string): readonly string[] {
@@ -158,6 +170,8 @@ function namesIn(messages: readonly Message[]): readonly (readonly [string, read
 }
 
 export {
+  dragOnto,
+  dragTextOnto,
   dropOn,
   filesSupported,
   formNamed,
@@ -168,6 +182,7 @@ export {
   pasteText,
   pendingIn,
   pickIn,
+  pickNothingIn,
   pickerIn,
   sized,
 };

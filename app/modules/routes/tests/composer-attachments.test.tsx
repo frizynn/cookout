@@ -1,4 +1,6 @@
 import {
+  dragOnto,
+  dragTextOnto,
   dropOn,
   filesSupported,
   formNamed,
@@ -9,6 +11,7 @@ import {
   pasteText,
   pendingIn,
   pickIn,
+  pickNothingIn,
   pickerIn,
   sized,
 } from "./composer-files.ts";
@@ -77,13 +80,17 @@ it("an image pasted into the message box waits above the text as a thumbnail, an
   close();
 });
 
-it("files dropped on the message box wait as chips with their name and size", { timeout: 5000 }, async () => {
+it("files dragged over the message box can be dropped there, and wait as chips with their name and size", {
+  timeout: 5000,
+}, async () => {
   expect.hasAssertions();
 
   const close = await channelOpen("web-compose-drop");
+  const filesPassOver = dragOnto({ files: [notes], form: CHANNEL_FORM });
+  const textPassesOver = dragTextOnto(CHANNEL_FORM);
   dropOn({ files: [notes], form: CHANNEL_FORM });
 
-  expect(pendingIn(CHANNEL_FORM)).toStrictEqual([NOTES]);
+  expect([filesPassOver, textPassesOver, pendingIn(CHANNEL_FORM)]).toStrictEqual([false, true, [NOTES]]);
 
   close();
 });
@@ -97,6 +104,7 @@ it("the Attach files button is a named button that opens the file picker, whose 
   const button = within(formNamed(CHANNEL_FORM)).getByRole("button", { name: "Attach files" });
   const opened = vi.spyOn(pickerIn(CHANNEL_FORM), "click");
   fireEvent.click(button);
+  pickNothingIn(CHANNEL_FORM);
   pickIn({ files: [hills, notes], form: CHANNEL_FORM });
 
   expect([button.tagName, button.title, opened.mock.calls.length, pickerIn(CHANNEL_FORM).multiple]).toStrictEqual([
