@@ -21,7 +21,8 @@ function boxLabelled(label: string): HTMLTextAreaElement {
   return screen.getByLabelText<HTMLTextAreaElement>(label, { selector: "textarea" });
 }
 
-function shownIn(label: string): Shown {
+async function shownIn(label: string): Promise<Shown> {
+  await screen.findByLabelText(label, { selector: "textarea" });
   const box = boxLabelled(label);
   return { caret: box.selectionStart, text: box.value };
 }
@@ -37,7 +38,8 @@ async function shownOnceSaying(label: string, text: string): Promise<Shown> {
   await waitFor(() => {
     expect(boxLabelled(label)).toHaveProperty("value", text);
   });
-  return shownIn(label);
+  const shown = await shownIn(label);
+  return shown;
 }
 
 async function visit(channel: string): Promise<void> {
@@ -61,7 +63,7 @@ async function typedThenLeft(typed: string, left: string): Promise<Shown> {
   await visit(typed);
   await typeIn(MESSAGE, "Half a thought");
   await visit(left);
-  const empty = shownIn(MESSAGE);
+  const empty = await shownIn(MESSAGE);
   await typeIn(MESSAGE, "Another");
   return empty;
 }
@@ -91,7 +93,7 @@ it("each channel's message box keeps its unsent text, and shows it only in that 
 async function shownTo(client: CookoutClient, storage: MemoryStorage): Promise<Shown> {
   const close = openAs(client, "#/channels/web-kept-reopen", storage);
   await screen.findByRole("region", { name: "Messages in #web-kept-reopen" });
-  const shown = shownIn(MESSAGE);
+  const shown = await shownIn(MESSAGE);
   close();
   return shown;
 }
@@ -141,8 +143,9 @@ it("sending a channel's message, or emptying its box by hand, forgets its unsent
   const close = openAs(adminClient(), "#/channels/web-kept-sent", storage);
   await sentIn("web-kept-sent");
   const whileTyped = await keptWhileTyped("web-kept-emptied", storage);
+  const { text } = await shownIn(MESSAGE);
 
-  expect([whileTyped, storage.kept().size, shownIn(MESSAGE).text]).toStrictEqual([ONE_KEPT, NOTHING_KEPT, ""]);
+  expect([whileTyped, storage.kept().size, text]).toStrictEqual([ONE_KEPT, NOTHING_KEPT, ""]);
 
   close();
 });
@@ -223,7 +226,7 @@ it("a thread's reply box in the Inbox shows the text kept by its reply box in th
   inPanel();
   const inInbox = openAs(reader, `#/inbox/${parent.channel}/${String(parent.id)}`, storage);
 
-  await expect(replyShownIn(inConversation, "Any takers?")).resolves.toStrictEqual({
+  await expect(replyShownIn(inConversation, "The parent")).resolves.toStrictEqual({
     caret: "Typed in the panel".length,
     text: "Typed in the panel",
   });
