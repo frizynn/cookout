@@ -13,6 +13,10 @@
     {
       "files": ["app/modules/canary/tests/own-clock.test.ts"],
       "rules": { "test-rules/own-clock": "error" }
+    },
+    {
+      "files": ["app/modules/canary/tests/agent-factory.test.ts"],
+      "rules": { "test-rules/agent-factory": "error" }
     }
   ]
 }

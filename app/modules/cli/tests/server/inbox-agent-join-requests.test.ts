@@ -12,6 +12,7 @@ import { expect, it } from "@effect/vitest";
 import type { AgentJoinRequestStartedResponse } from "../../../agent-sessions/index.ts";
 import { Effect } from "effect";
 import type { Scope } from "effect";
+import { createTestAgent } from "../../../testing/index.ts";
 
 interface Board {
   readonly cookout: TestCookoutService;
@@ -28,7 +29,9 @@ function started(cookout: TestCookoutService): Effect.Effect<AgentJoinRequestSta
 }
 
 function workerBroughtInBy(chief: TestIdentity): Effect.Effect<void> {
-  return Effect.asVoid(answer(() => chief.client.createAgentForOwner({ displayName: "worker", name: "worker" })));
+  return Effect.asVoid(
+    answer(() => createTestAgent({ broughtIn: true, by: chief.client, displayName: "worker", name: "worker" })),
+  );
 }
 
 const chiefBroughtInWorker: Effect.Effect<Board, never, TestCookout | CommandLineNeeds | Scope.Scope> = Effect.gen(

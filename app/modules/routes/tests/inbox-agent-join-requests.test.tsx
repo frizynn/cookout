@@ -1,9 +1,9 @@
-import { adminClient, anonymousClient, newIdentity } from "./identities.ts";
+import { anonymousClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { AgentJoinRequestStartedResponse } from "../../sdk/index.ts";
 import { alertSaying } from "./alerts.ts";
-import { createIdentityAsBefore } from "../../testing/index.ts";
+import { createTestAgent } from "../../testing/index.ts";
 import { inboxCounts } from "./owned-agent.ts";
 import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";
@@ -19,7 +19,7 @@ interface Opened {
 async function inboxOpenFor(name: string): Promise<Opened> {
   const owner = await newIdentity({ kind: "human", name });
   const agent = `${name}-agent`;
-  await createIdentityAsBefore({ admin: adminClient(), by: owner.client, request: { kind: "agent", name: agent } });
+  await createTestAgent({ by: owner.client, name: agent });
   const { live, stream } = watched(owner.client);
   const unmount = openAt({ client: owner.client, hash: "#/inbox", live });
   const events = await stream;
@@ -55,11 +55,7 @@ async function refusedApprove(): Promise<string> {
 
 async function anotherAsks(opened: Opened): Promise<void> {
   const another = `${opened.agent}-two`;
-  await createIdentityAsBefore({
-    admin: adminClient(),
-    by: opened.owner.client,
-    request: { kind: "agent", name: another },
-  });
+  await createTestAgent({ by: opened.owner.client, name: another });
   await asked(another);
 }
 
