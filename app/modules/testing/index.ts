@@ -13,8 +13,14 @@
  * (`ada-bot` shows as "Ada Bot", `testAgentDisplayName(name)`), unless `displayName` gives one, or is `null` to send none. With `broughtIn: true`,
  * `by` is an agent that brings it in for its own owner, and it answers with no token. A local lint rule
  * (`test-rules/agent-factory`) refuses any other way in a test file.
+ *
+ * `testClient(options)` is the one way a test makes an SDK client, with the SDK's own options (an admin's, a seeded
+ * identity's, an anonymous one, or one on the environment's `COOKOUT_URL`), and `unreachableClient({ token })` is one
+ * whose server never answers, for a view that says it can't reach the cookout. Only the board store makes a client
+ * outside the tests (`web-rules/board-store-owner`, #311), so tests get theirs here.
  */
 export { type ClockForward, moveClockForward } from "./lib/clock.ts";
 export { hillsPng } from "./lib/hills.ts";
 export { type TestRun, uniqueName } from "./lib/unique-name.ts";
+export { testClient, unreachableClient } from "./lib/clients.ts";
 export { type CreatedTestAgent, type TestAgentRequest, createTestAgent, testAgentDisplayName } from "./lib/agents.ts";

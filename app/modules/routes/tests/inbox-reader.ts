@@ -2,7 +2,7 @@ import { adminClient, newIdentity } from "./identities.ts";
 import { screen, within } from "@testing-library/react";
 import type { Answering } from "./answering.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
-import type { Live } from "../../live/index.ts";
+import type { Live } from "../../testing/web.ts";
 import { answering } from "./answering.ts";
 import { openWithClockStopped } from "./clock.ts";
 import { testAgentDisplayName } from "../../testing/index.ts";

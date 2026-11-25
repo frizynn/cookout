@@ -3,7 +3,7 @@ import { addCommand, suggestedFor } from "./commands.ts";
 import { adminClient, clientWith, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import type { Live } from "../../live/index.ts";
+import type { Live } from "../../testing/web.ts";
 import { inSidebar } from "./regions.ts";
 import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";

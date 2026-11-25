@@ -1,9 +1,8 @@
 import type { CookoutClient, CreateIdentityRequest, IdentityWithTokenResponse, Token } from "../../sdk/index.ts";
-import { createTestAgent, testAgentDisplayName } from "../../testing/index.ts";
+import { createTestAgent, testAgentDisplayName, testClient } from "../../testing/index.ts";
 import type { ClientMethod } from "./answering.ts";
 import type { Session } from "../../board/index.ts";
 import { createBoardStore } from "../../board/index.ts";
-import { createCookoutClient } from "../../sdk/index.ts";
 import { expect } from "vitest";
 import { waitFor } from "@testing-library/react";
 import { webTestCookout } from "../../../../scripts/web-test-server.ts";
@@ -95,11 +94,11 @@ export function refusalNoticed(client: CookoutClient): Refusing {
 }
 
 export function anonymousClient(): CookoutClient {
-  return createCookoutClient({ env: {}, url: webTestCookout().url });
+  return testClient({ env: {}, url: webTestCookout().url });
 }
 
 export function clientWith(token: string): CookoutClient {
-  return createCookoutClient({ env: {}, token, url: webTestCookout().url });
+  return testClient({ env: {}, token, url: webTestCookout().url });
 }
 
 export function adminClient(): CookoutClient {
