@@ -27,6 +27,9 @@
  * `openShortcutList` action (`?`, Ctrl/Cmd+/) itself, so no view binds it. While the list is open, the keymap
  * acts on no key, since the list is a modal dialog with its own keys. A scope's heading in the list is in
  * `GROUPS`, and the list shows the scopes outermost first.
+ * The keymap also holds the page's one announcement (`announce`, read as `announced` in its state): the text a
+ * key's action reads out, such as "Marked unread" or "Copied @ada", for the one polite live region to say. Its
+ * count moves on each announcement, so the same text said twice is read out twice.
  */
 import type { Action, ActionOf, Key, Scope } from "./lib/keys.ts";
 import { KEYS, SCOPES, TEXT_SCOPES } from "./lib/keys.ts";
@@ -180,4 +183,5 @@ function createKeymap(options: { readonly platform: string }): Keymap {
 }
 
 export type { Action } from "./lib/keys.ts";
+export type { Announced } from "./lib/state.ts";
 export { type Act, type Keymap, createKeymap };
