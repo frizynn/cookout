@@ -19,18 +19,11 @@ function repliesWord(count: number): string {
   return "replies";
 }
 
-function threadTitle(message: Message): string {
+function titleOf(message: Message): string {
   if (message.kind !== "top-level" || message.replyCount === NONE) {
     return TEXT.message;
   }
   return `Delete this thread and its ${String(message.replyCount)} ${repliesWord(message.replyCount)}?`;
-}
-
-function titleOf(message: Message | null): string {
-  if (message === null) {
-    return TEXT.message;
-  }
-  return threadTitle(message);
 }
 
 function refusalWords(deleting: MessageDeleting): string | null {

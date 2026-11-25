@@ -146,6 +146,16 @@ it("confirming Delete on a thread you started deletes it, shows Message deleted 
   close();
 });
 
+it("asking to delete a thread with one reply names one reply", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { close } = await mineOpened("web-delete-one-reply", { replies: ["Only."] });
+
+  await expect(askedToDelete("Delete this thread and its 1 reply?")).resolves.toBeInstanceOf(HTMLElement);
+
+  close();
+});
+
 it("the Delete key on your own focused message asks to confirm, and on someone else's does nothing", {
   timeout: 5000,
 }, async () => {

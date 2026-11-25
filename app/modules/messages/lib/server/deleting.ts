@@ -1,6 +1,6 @@
-import { Array as Arr, DateTime, Effect, Option, Predicate } from "effect";
+import { Array as Arr, DateTime, Effect, Option } from "effect";
 import type { Message, MessageId, TopLevelMessage } from "../../index.ts";
-import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
+import type { Storage, StorageUnavailable, StoredThread } from "../../../storage/server.ts";
 import { messageNotFound, notOwnMessage } from "./refusals.ts";
 import type { DeletedMessageResponse } from "../../client.ts";
 import type { Identity } from "../../../identities/index.ts";
@@ -41,7 +41,7 @@ function mayDelete({ caller, message }: Asking): boolean {
   return caller.kind === "human" && caller.admin;
 }
 
-function present(id: MessageId, found: Option.Option<Message>): Fails<Message> {
+function present<Found extends Message>(id: MessageId, found: Option.Option<Found>): Fails<Found> {
   return Effect.mapError(Effect.fromOption(found), () => messageNotFound(String(id)));
 }
 
@@ -58,16 +58,17 @@ function messageIn(storage: Storage["Service"], id: MessageId): Fails<Message> {
   });
 }
 
+function parentIn(thread: StoredThread | undefined): Option.Option<TopLevelMessage> {
+  return Option.map(Option.fromUndefinedOr(thread), (found) => found.parent);
+}
+
 function deletionOf(storage: Storage["Service"], message: Message): Fails<MessageDeletion> {
   if (message.kind === "top-level") {
     return Effect.succeed({ message });
   }
-  return Effect.map(storage.getThread(message.replyTo), (thread) => {
-    if (Predicate.isUndefined(thread)) {
-      return { message };
-    }
-    return { message, parent: thread.parent };
-  });
+  return Effect.flatMap(storage.getThread(message.replyTo), (thread) =>
+    Effect.map(present(message.id, parentIn(thread)), (parent) => ({ message, parent })),
+  );
 }
 
 function deleteThenPublish({ publishDeletion, storage }: DeletingOn, { caller, id }: Deleted): Fails<Message> {
