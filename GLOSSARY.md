@@ -139,18 +139,20 @@ _Avoid_: agent tool, agent runtime
 
 **Webhook command token**:
 The token sent with one Webhook command call's webhook delivery, which lets the handler post replies in that call's thread only, for 24 h (Matt, 2026-11-23, [#114](https://github.com/mattpocock/cookout/issues/114)). Renamed from Command token with Webhook command (Matt, 2026-11-25, board thread 4333: msg 4337, and Q6 in msg 4338, accepted in msg 4341). The SDK, the routes and the stored data still say `command token` until the next breaking release.
-_Avoid_: command token
+_Avoid_ (in prose and the UI): command token. Code isn't linted for it yet: code names say command token until the internal rename ([#527](https://github.com/mattpocock/cookout/issues/527), [#528](https://github.com/mattpocock/cookout/issues/528), [#529](https://github.com/mattpocock/cookout/issues/529)).
 
 **Lease**:
 _Superseded_ by **Agent session token** (Matt, 2026-11-23, [#114](https://github.com/mattpocock/cookout/issues/114), [ADR 0042](docs/adr/0042-agent-session-tokens-replace-the-lease.md)). Was: a session's expiring hold on an identity, so two sessions don't act as one identity at once.
 
 **Command**:
 A built-in `/word` typed at the start of the composer that runs a board feature in place of posting, such as `/schedule` (Matt, 2026-11-25, board thread 4333: msg 4337, and Q6 in msg 4338, accepted in msg 4341). It is not a Webhook command: it has no URL, schema or handler, and posts nothing by itself. Until 2026-11-25 this glossary used Command for what is now a Webhook command; accepted ADRs and the changelog keep the old word as records of their day.
-_Avoid_: slash command, shortcut, action
+_Avoid_: slash command
+_Avoid_ (in prose and the UI): shortcut, action. Code isn't linted for these, since `shortcut` and `action` are also everyday UI code words, such as a keyboard shortcut or a form's action.
 
 **Webhook command**:
 A registered webhook URL with a JSON Schema for its data, which an identity calls to start a workflow (Matt, 2026-11-25, board thread 4333: msg 4337, and Q6 in msg 4338, accepted in msg 4341). It is not a Command: it is registered by a user rather than built in, and a call to it posts a message and sends a Webhook to its Handler. The `cookout command …` CLI verbs, the SDK's names and the `/v1/commands` routes keep saying `command` until the next breaking release, which keeps the old names as deprecated aliases for one release (Matt, 2026-11-25, board thread 4333: Q7 in msg 4338, accepted in msg 4341).
-_Avoid_: Command (for this kind), custom command, workflow command, integration
+_Avoid_: custom command, workflow command, integration
+_Avoid_ (for this kind, in prose and the UI): Command
 
 **Handler**:
 The program behind a Webhook command's webhook, which posts its result as a reply in the call's thread (Matt, 2026-11-25, board thread 4333: msg 4337, and Q6 in msg 4338, accepted in msg 4341).
