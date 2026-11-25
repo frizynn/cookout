@@ -68,7 +68,7 @@ interface MessagesOn {
   readonly attaching: Attaching;
 }
 
-type ThreadChangeCalls = "closeThread" | "reopenThread" | "threadChanged" | "listOpenThreads";
+type ThreadChangeCalls = "closeThread" | "reopenThread" | "threadChanged" | "listOpenThreads" | "deleteMessage";
 
 function pageWith(storage: Storage["Service"]): MessagesService["page"] {
   return (channel, query) =>
@@ -150,6 +150,7 @@ export interface MessagesService {
   readonly closeThread: (caller: Identity, id: MessageId) => Fails<TopLevelMessageResponse>;
   readonly reopenThread: (id: MessageId) => Fails<TopLevelMessageResponse>;
   readonly threadChanged: Effect.Effect<PubSub.Subscription<TopLevelMessage>, never, Scope.Scope>;
+  readonly deleteMessage: (caller: Identity, id: MessageId) => Fails<{ readonly message: Message }>;
 }
 
 export class Messages extends Context.Service<Messages, MessagesService>()(

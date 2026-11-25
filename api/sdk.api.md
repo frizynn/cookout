@@ -1322,6 +1322,22 @@ interface AttachmentCalls {
    */
   readonly getAttachment: (id: AttachmentId) => Promise<AttachmentBytes>;
 }
+/** The answer to deleting a message: the message as it was just before, a top-level message with its counts. */
+interface DeletedMessageResponse {
+  readonly message: Message;
+}
+/** Deleting a message. */
+interface MessageDeleteCalls {
+  /**
+   * `DELETE /v1/messages/:id`: soft deletes a message and answers it as it was. Deleting a top-level message deletes
+   * its whole thread, replies included; deleting a reply leaves the rest of the thread. Its author may delete a
+   * message and an admin anyone's, but an agent only its own, admin flag or not: anyone else is 403 `not_owner`. A
+   * missing or already deleted message is 404 `message_not_found`, so a retry is harmless. From then on channel pages
+   * and thread reads leave it out, as if it had never been posted: a deleted top-level message's thread is 404
+   * `message_not_found`, and reply counts, latest replies and repliers count only live replies. There is no undo.
+   */
+  readonly deleteMessage: (messageId: MessageId) => Promise<DeletedMessageResponse>;
+}
 /** Closing and reopening the thread holding a message. */
 interface ClosedThreadCalls {
   /**
@@ -1698,7 +1714,7 @@ interface IdentityDeletionCalls {
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
   readonly countMessagesBy: (name: string) => Promise<IdentityMessageCountResponse>;
 }
-type CallGroups = LoginCalls & AgentApprovalCalls & AgentCreationCalls<IdentityResponse> & AttachmentCalls & IdentityAvatarCalls & IdentityDeletionCalls & DescriptionCalls<IdentityResponse> & ClosedThreadCalls & OpenThreadCalls & SearchCalls & ScheduledMessageCalls & TriggerCalls & Pick<EventCalls, "presence">;
+type CallGroups = LoginCalls & AgentApprovalCalls & AgentCreationCalls<IdentityResponse> & AttachmentCalls & IdentityAvatarCalls & IdentityDeletionCalls & DescriptionCalls<IdentityResponse> & ClosedThreadCalls & MessageDeleteCalls & OpenThreadCalls & SearchCalls & ScheduledMessageCalls & TriggerCalls & Pick<EventCalls, "presence">;
 declare function scheduledMessageCalls(server: ClientConnection): ScheduledMessageCalls;
 declare const brand: unique symbol;
 type UnknownErrorCode = string & {

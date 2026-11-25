@@ -63,7 +63,7 @@ const SHOWN_REPLIERS = String(shownRepliers);
 
 const SQLITE_REPLIERS = `(SELECT json_group_array(json_object('name', name, 'owner', owner, 'last', last)) FROM (
     SELECT replies.author_name AS name, replies.author_owner AS owner, max(replies.id) AS last
-    FROM messages AS replies WHERE replies.reply_to = messages.id
+    FROM messages AS replies WHERE replies.reply_to = messages.id AND replies.deleted_at IS NULL
     GROUP BY replies.author_name ORDER BY last DESC LIMIT ${SHOWN_REPLIERS}
   ))`;
 
@@ -71,7 +71,7 @@ const POSTGRES_REPLIERS = `(SELECT coalesce(jsonb_agg(jsonb_build_object('name',
   FROM (SELECT name, owner, last FROM (
     SELECT DISTINCT ON (replies.author_name) replies.author_name AS name, replies.author_owner AS owner,
       replies.id AS last
-    FROM messages AS replies WHERE replies.reply_to = messages.id
+    FROM messages AS replies WHERE replies.reply_to = messages.id AND replies.deleted_at IS NULL
     ORDER BY replies.author_name, replies.id DESC
   ) AS latest_per_replier ORDER BY last DESC LIMIT ${SHOWN_REPLIERS}) AS shown_repliers)`;
 
@@ -83,9 +83,9 @@ function messageColumns(db: SqlDatabase): string {
   closed_at, closed_by, scheduled_message_id,
   (SELECT schedules.deleted_at FROM scheduled_messages AS schedules
     WHERE schedules.id = messages.scheduled_message_id) AS scheduled_message_deleted_at,
-  (SELECT count(*) FROM messages AS replies WHERE replies.reply_to = messages.id) AS reply_count,
-  (SELECT max(replies.id) FROM messages AS replies WHERE replies.reply_to = messages.id) AS latest_reply_id,
-  (SELECT replies.created_at FROM messages AS replies WHERE replies.reply_to = messages.id
+  (SELECT count(*) FROM messages AS replies WHERE replies.reply_to = messages.id AND replies.deleted_at IS NULL) AS reply_count,
+  (SELECT max(replies.id) FROM messages AS replies WHERE replies.reply_to = messages.id AND replies.deleted_at IS NULL) AS latest_reply_id,
+  (SELECT replies.created_at FROM messages AS replies WHERE replies.reply_to = messages.id AND replies.deleted_at IS NULL
     ORDER BY replies.id DESC LIMIT 1) AS latest_reply_at,
   ${repliers} AS repliers,
   ${attachmentsColumn(db)} AS attachments`;
