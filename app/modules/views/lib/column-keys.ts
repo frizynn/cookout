@@ -10,6 +10,7 @@ const SELECTED = `${MESSAGE}[aria-current="true"]`;
 const BOX = 'textarea[name="text"]';
 const PANEL = "aside";
 const THREAD = `${PANEL}[aria-label="${THREAD_PANEL.thread}"]`;
+const FIRST_REPLY = `${FEED} ${MESSAGE}`;
 const TOP = `${MESSAGE}[aria-label="${THREAD_PANEL.parent}"]`;
 const LAST = -1;
 
@@ -133,13 +134,6 @@ function intoMessageBox({ target }: KeyboardEvent): boolean {
   return newestOf(panel) === target && focusedOn(panel.querySelector(BOX));
 }
 
-function firstReplyIn(thread: unknown): unknown {
-  if (!(thread instanceof Element)) {
-    return null;
-  }
-  return thread.querySelector(`${FEED} ${MESSAGE}`);
-}
-
 function threadOf(target: unknown): Element | null {
   if (!isMessage(target)) {
     return null;
@@ -149,12 +143,16 @@ function threadOf(target: unknown): Element | null {
 
 function toTopMessage({ target }: KeyboardEvent): boolean {
   const thread = threadOf(target);
-  return thread !== null && firstReplyIn(thread) === target && focusedOn(thread.querySelector(TOP));
+  return (
+    thread instanceof Element && thread.querySelector(FIRST_REPLY) === target && focusedOn(thread.querySelector(TOP))
+  );
 }
 
 function toFirstReply({ target }: KeyboardEvent): boolean {
   const thread = threadOf(target);
-  return thread instanceof Element && thread.querySelector(TOP) === target && focusedOn(firstReplyIn(thread));
+  return (
+    thread instanceof Element && thread.querySelector(TOP) === target && focusedOn(thread.querySelector(FIRST_REPLY))
+  );
 }
 
 function columnActions(keys: Readonly<ColumnKeys>): Readonly<Record<ColumnAction, Act>> {
