@@ -19,6 +19,7 @@ const EVERY_CHECK = [
   "api",
   "exports",
   "render",
+  "lint-config",
   "format",
 ];
 const HOOK_SKIP = {

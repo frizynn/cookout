@@ -67,11 +67,11 @@ function testScript({ merge, shard, unit }: Planning): readonly string[] {
   return ["test", ...WITH_DEFAULT_REPORTER];
 }
 
-function lintScript({ base }: Planning): readonly string[] {
+function withBase(script: string, { base }: Planning): readonly string[] {
   if (base !== "") {
-    return ["lint", `--base=${base}`];
+    return [script, `--base=${base}`];
   }
-  return ["lint"];
+  return [script];
 }
 
 function browserScript({ browser, inCi, shard }: Planning): readonly string[] {
@@ -89,7 +89,7 @@ function browserScript({ browser, inCi, shard }: Planning): readonly string[] {
 
 function scriptedChecks(planning: Planning): readonly Scripted[] {
   return [
-    { budget: 16, job: "lint", name: "lint", script: lintScript(planning) },
+    { budget: 16, job: "lint", name: "lint", script: withBase("lint", planning) },
     { budget: 18, job: "canaries", name: "canaries", script: ["canaries"] },
     { budget: 10, job: "types", name: "types", script: ["typecheck"] },
     { budget: 16, job: "fixers", name: "fixers", script: ["fixers"] },
@@ -119,6 +119,7 @@ function scriptedChecks(planning: Planning): readonly Scripted[] {
     { budget: 10, job: "drift", name: "api", script: ["api"] },
     { budget: 6, job: "drift", name: "exports", script: ["exports"] },
     { budget: 4, job: "drift", name: "render", script: ["render"] },
+    { budget: 4, job: "drift", name: "lint-config", script: withBase("lint-config", planning) },
     { afterTests: true, budget: 6, job: "format", name: "format", script: ["format:check"] },
   ];
 }

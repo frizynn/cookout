@@ -23,4 +23,4 @@ CI's browser job runs a little slower with coverage on. An unsharded CI browser 
 
 The recorder relies on Playwright's internal client instrumentation (`_instrumentation.addListener`, the hooks Playwright's own tracing uses). If an upgrade removes it, CI makes no map and local checks run every browser test.
 
-Superseded in part on 2026-11-25 by [ADR 0108](0108-a-local-check-runs-only-what-the-change-reaches-and-never-repeats-the-hook.md): a local check also runs only the unit tests the change reaches, a change to a file on its list (configs, the lockfile, the testing module, test servers) runs every test, and a docs-only change runs none (mattpocock/cookout#633).
+Superseded in part on 2026-11-25 by [ADR 0110](0110-a-local-check-runs-only-what-the-change-reaches-and-never-repeats-the-hook.md): a local check also runs only the unit tests the change reaches, a change to a file on its list (configs, the lockfile, the testing module, test servers) runs every test, and a docs-only change runs none (mattpocock/cookout#633).
