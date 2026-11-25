@@ -66,7 +66,9 @@
  * in the order asked, applying the answer as a `thread` event, or keeping the refusal (`closingRefusal`) until the next;
  * `calls.createChannel` creates a channel and puts it in the list and the subscriptions; `calls.ack` acks a message,
  * one ack at a time in the order asked; `calls.search` runs a search and answers its page, or the server's refusal,
- * without keeping it, for the `search` store.
+ * for the `search` store, which keeps only the result message IDs: each result's message goes in the table, with its
+ * thread's state for a thread whose top-level message the table doesn't hold, and `searchResultsOf(ids)` reads them
+ * back, so a result row follows `message` and `thread` events like every other view of that message.
  *
  * The Inbox is one slice, `inbox`, shown with `subscribeShowing("inbox")`. One load reads `GET /v1/inbox`, the read
  * positions and the history's first page, once each, for every part: For you (`inboxOf`, the items no read position
@@ -208,6 +210,7 @@ export {
   subscribedChannels,
   threadOf,
 } from "./lib/board-selectors.ts";
+export { searchResultsOf } from "./lib/search-selectors.ts";
 export {
   type LoginApproval,
   type LoginApprovalState,

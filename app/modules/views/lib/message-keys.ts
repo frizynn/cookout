@@ -5,6 +5,7 @@ const MESSAGE = "article";
 const PANEL = `aside[aria-label="${THREAD_PANEL.thread}"]`;
 const PANEL_PARENT = `${PANEL} article[aria-label="${THREAD_PANEL.parent}"]`;
 const PANEL_REPLY_BOX = `${PANEL} textarea`;
+const PANEL_CLOSE = `${PANEL} > header a[href]`;
 const CHANNEL_MESSAGE = `main [role="feed"] ${MESSAGE}[aria-current="true"]`;
 
 interface Pressing {
@@ -62,6 +63,21 @@ function backToChannel({ target }: KeyboardEvent): boolean {
   return inPanel(target) && focused(CHANNEL_MESSAGE);
 }
 
+function threadPanel(): Element | null {
+  return globalThis.document.querySelector(PANEL);
+}
+
+function closedTo(hash: string): boolean {
+  focused(CHANNEL_MESSAGE);
+  globalThis.location.hash = hash;
+  return true;
+}
+
+function closeThread(): boolean {
+  const close = globalThis.document.querySelector<HTMLAnchorElement>(PANEL_CLOSE);
+  return close !== null && closedTo(close.hash);
+}
+
 type MessageAction =
   | "backToChannel"
   | "copyMessageLink"
@@ -85,4 +101,4 @@ function messageActions(keymap: Keymap): Readonly<Record<MessageAction, Act>> {
   };
 }
 
-export { messageActions };
+export { closeThread, messageActions, threadPanel };

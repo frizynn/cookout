@@ -31,6 +31,7 @@ export function CreateAgentForm(props: CreateAgentFormProps): ReactNode {
       onSubmit={handleCreate}
       saving={create.status === "creating"}
       submit={TEXT.submit}
+      submitLast
       value={state.text}
     >
       <InputField

@@ -8,7 +8,7 @@ import type { SidebarLinksProps } from "./sidebar-links.tsx";
 import { SidebarSettings } from "./sidebar-settings.tsx";
 import { hrefOf } from "../../paths/index.ts";
 import { sidebarEdge } from "./sidebar-edge.ts";
-import { useSyncExternalStore } from "react";
+import { useSidebarState } from "./use-sidebar-state.ts";
 
 const TEXT = { name: "cookout" } as const;
 
@@ -21,8 +21,7 @@ interface SidebarProps extends Pick<SidebarLinksProps, "creation" | "keymap" | "
 
 export function SidebarView(props: SidebarProps): ReactNode {
   const { layout } = props;
-  const state = useSyncExternalStore(layout.subscribe, layout.snapshot);
-  const handleFollow = layout.closeSidebar;
+  const { handleFollow, state } = useSidebarState(layout);
   const handleToggleCollapsed = layout.toggleCollapsed;
   return (
     <Sidebar

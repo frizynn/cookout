@@ -107,3 +107,40 @@ test("at full width, the selected row stays in view after many j presses down a 
   await expect(selected).toBeFocused();
   await expect(selected).toBeInViewport();
 });
+
+function unreadOf(reader: CookoutClient): () => Promise<number> {
+  return async () => {
+    const { items } = await reader.inbox();
+    return items.length;
+  };
+}
+
+async function openedWithUnreadThread(page: Page, channel: string): Promise<CookoutClient> {
+  const posting = await readerOf(channel);
+  const { message: parent } = await posting.poster.createMessage({ channel, text: "Thread to read" });
+  await posting.reader.follow(parent.id);
+  await posting.poster.createMessage({ channel, replyTo: parent.id, text: "Unread reply" });
+  await logInToChannels({ page, token: posting.token });
+  await page.setViewportSize(WIDE);
+  await page.goto("/#/inbox");
+
+  await expect(inPane(page).getByText("Unread reply", { exact: true })).toBeVisible();
+
+  return posting.reader;
+}
+
+test("at full width, Esc with nothing left to close marks the selected row read, as e does", async ({ page }) => {
+  const reader = await openedWithUnreadThread(page, unique("browser-inbox-keys-escape"));
+  await page.keyboard.press("j");
+
+  await expect.poll(unreadOf(reader)).toBe(NONE);
+
+  await page.keyboard.press("u");
+
+  await expect.poll(unreadOf(reader)).toBe(ONE);
+
+  await page.keyboard.press("Escape");
+
+  await expect.poll(unreadOf(reader)).toBe(NONE);
+  await expect(page).toHaveURL(/#\/inbox\/.+/u);
+});

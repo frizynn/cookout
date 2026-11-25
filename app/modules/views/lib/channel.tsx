@@ -17,6 +17,7 @@ interface ChannelProps {
   readonly scheduling: ComponentProps<typeof MessageFooter>["scheduling"];
   readonly channel: ChannelName;
   readonly composer: Composer;
+  readonly keymap: ComponentProps<typeof MessageFooter>["keymap"];
   readonly newLine: {
     readonly subscribe: (listener: () => void) => () => void;
     readonly snapshot: () => number | null;
@@ -66,6 +67,7 @@ export function ChannelView(props: ChannelProps): ReactNode {
       <MessageFooter
         channel={props.channel}
         draft={props.composer.channelDraft(props.channel)}
+        keymap={props.keymap}
         scheduling={props.scheduling}
         state={state}
       />
