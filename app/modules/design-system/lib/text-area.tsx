@@ -1,15 +1,16 @@
+import type { ClipboardEvent, ReactNode } from "react";
 import { useCallback, useId } from "react";
-import type { ReactNode } from "react";
 import type { TextAreaParts } from "./parts.ts";
 import { comboboxOf } from "./combobox.ts";
 import { useBoxKeys } from "./box-keys.ts";
 import { useTypedCaret } from "./use-typed-caret.ts";
 
 const ROWS = 3;
+const NONE = 0;
 
 export function TextArea(parts: TextAreaParts): ReactNode {
   const { caret, choosing, focused, onClose, onEdit, onMove, onPick, value } = parts;
-  const { focusRequests } = parts;
+  const { focusRequests, onPasteFiles } = parts;
   const id = useId();
   const { box, handleEdit } = useTypedCaret({ caret, focusRequests, focused, onEdit, value });
   const handleSend = useCallback(() => {
@@ -18,6 +19,16 @@ export function TextArea(parts: TextAreaParts): ReactNode {
       element.form.requestSubmit();
     }
   }, [box]);
+  const handlePaste = useCallback(
+    (event: ClipboardEvent<HTMLTextAreaElement>) => {
+      const files = [...event.clipboardData.files];
+      if (files.length > NONE) {
+        event.preventDefault();
+        onPasteFiles(files);
+      }
+    },
+    [onPasteFiles],
+  );
   const handleKeyDown = useBoxKeys({ choosing, onClose, onMove, onPick, onSend: handleSend });
   const combobox = comboboxOf({ choosing, highlighted: parts.highlighted, list: parts.list });
   return (
@@ -33,9 +44,10 @@ export function TextArea(parts: TextAreaParts): ReactNode {
         name={parts.name}
         onChange={handleEdit}
         onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
         onSelect={handleEdit}
         ref={box}
-        required
+        required={parts.required}
         role={combobox.role}
         rows={ROWS}
         value={value}
