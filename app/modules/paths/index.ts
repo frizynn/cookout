@@ -7,7 +7,7 @@
  * `#/people` the people and agents, `#/people/<name>` the same with that
  * identity's profile open, `#/settings` the settings page and
  * `#/settings/<section>` the same with the focus on that section (`profile`,
- * `theme` or `agents`), `#/channels/<name>`,
+ * `theme`, `agents` or `session`), `#/channels/<name>`,
  * `#/channels/<name>/threads/<id>`, `#/channels/<name>/threads/<id>/messages/<message id>`
  * the same thread scrolled to that message and highlighted (the thread's own ID for its
  * top-level message), `#/approve/<user code>` the approval
@@ -36,7 +36,7 @@ import { isChannelName } from "../channels/index.ts";
 import { isIdentityName } from "../identities/index.ts";
 import { isUserCode } from "../logins/index.ts";
 
-const settingsSections = ["profile", "theme", "agents"] as const;
+const settingsSections = ["profile", "theme", "agents", "session"] as const;
 
 type SettingsSection = (typeof settingsSections)[number];
 
