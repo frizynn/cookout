@@ -151,3 +151,43 @@ it("the schedules are read again when the link comes back while shown", { timeou
 
   expect(reads()).toBe(TWICE);
 });
+
+it("a deleted schedule the list doesn't hold leaves the list as it was, but its ID is kept as deleted", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const gone = await scheduledIn("store-schedules-unheld", "gone");
+  await adminClient().deleteScheduledMessage(gone.id);
+  await scheduledIn("store-schedules-unheld", "kept");
+  const { hand, store } = await shownListing("store-schedules-unheld", ["kept"]);
+  const before = store.snapshot().schedules.listed;
+  sent(hand, gone, true);
+
+  expect(store.snapshot().schedules.listed).toBe(before);
+  expect(deletedSchedules(store.snapshot()).has(gone.id)).toBe(true);
+});
+
+it("a refused read of the schedules shows the refusal", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const client = adminClient();
+  const store = createBoardStore({
+    client: {
+      ...client,
+      listScheduledMessages: async () => {
+        const refused = await client.listScheduledMessages({ channel: "no-such-channel" });
+        return refused;
+      },
+    },
+    live: createLive(handLive().adapter),
+    url: webTestCookout().url,
+  });
+  onTestFinished(store.subscribeShowing("channels")(vi.fn<() => void>()));
+  shown(store);
+  await vi.waitFor(() => {
+    expect(store.snapshot().schedules.listed.status).toBe("failed");
+  });
+
+  expect(store.snapshot().schedules.listed).toMatchObject({ code: "channel_not_found", status: "failed" });
+});
