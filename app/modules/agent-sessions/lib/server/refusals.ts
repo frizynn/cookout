@@ -88,7 +88,7 @@ function idleExpiryTooLong(maxIdleExpiry: string): Refusal {
 function displayNameRequired(name: IdentityName): Refusal {
   return {
     code: "display_name_required",
-    message: `${name} would be a new agent, and a new agent needs a display name: send displayName (--display-name in the CLI).`,
+    message: `${name} would be a new agent, and a new agent needs a display name: join with --display-name.`,
     status: BAD_REQUEST,
   };
 }

@@ -2,6 +2,7 @@ import type { CookoutClient, CreateIdentityRequest, Token } from "../../sdk/inde
 import type { Session } from "../../board/index.ts";
 import { createBoardStore } from "../../board/index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
+import { createIdentityAsBefore } from "../../testing/index.ts";
 import { expect } from "vitest";
 import { waitFor } from "@testing-library/react";
 import { webTestCookout } from "../../../../scripts/web-test-server.ts";
@@ -103,7 +104,7 @@ export function sessionOf(client: CookoutClient): Session {
 }
 
 export async function newIdentity(request: CreateIdentityRequest): Promise<NewIdentity> {
-  const { token } = await adminClient().createIdentity(request);
+  const { token } = await createIdentityAsBefore({ admin: adminClient(), by: adminClient(), request });
   const { client, settled } = tracked(clientWith(token));
   return {
     client,

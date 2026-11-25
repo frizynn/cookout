@@ -22,7 +22,7 @@ const board = Effect.gen(function* seedBoard() {
 it.effect("an agent approves another agent's join by its code, and the new agent collects its own session", () =>
   Effect.gen(function* approveByCode() {
     const { chief, cookout, env } = yield* board;
-    yield* answer(() => chief.client.createAgentForOwner({ name: "worker" }));
+    yield* answer(() => chief.client.createAgentForOwner({ displayName: "worker", name: "worker" }));
     const started = yield* answer(() =>
       cookout.clientFor().startAgentJoin({ as: "worker", host: "box", idleExpiry: "7d" }),
     );

@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { inPane, inSidebar } from "./regions.ts";
 import type { Page } from "@playwright/test";
 import { adminClient } from "./people.ts";
+import { createIdentityAsBefore } from "../../../testing/index.ts";
 import { logIn } from "./login.ts";
 
 async function threadIn(channel: string): Promise<void> {
@@ -23,7 +24,7 @@ async function openThread(page: Page, token: string, channel: string): Promise<v
 async function mentionerAndReviewers(): Promise<string> {
   const admin = adminClient();
   const { token } = await admin.createIdentity({ kind: "human", name: "browser-mentioner" });
-  await admin.createIdentity({ kind: "agent", name: "browser-reviewer-bot" });
+  await createIdentityAsBefore({ admin, by: admin, request: { kind: "agent", name: "browser-reviewer-bot" } });
   await admin.createIdentity({ kind: "human", name: "browser-reviewer-ada" });
   await threadIn("browser-composer");
   return token;

@@ -36,7 +36,9 @@ function claudeCode(session: string, shared: Env): Env {
 const joinCodeFor = Effect.gen(function* makeJoinCode() {
   const cookout = yield* TestCookout;
   const ada = yield* cookout.createIdentity("ada", { kind: "human" });
-  const { joinCode } = yield* answer(() => ada.client.createJoinCode({ name: "joining-agent" }));
+  const { joinCode } = yield* answer(() =>
+    ada.client.createJoinCode({ displayName: "joining-agent", name: "joining-agent" }),
+  );
   const folder = yield* freshStateFolder;
   return { joinCode, shared: { COOKOUT_STATE_DIR: folder, COOKOUT_URL: cookout.url } };
 });

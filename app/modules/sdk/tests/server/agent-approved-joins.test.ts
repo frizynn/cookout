@@ -53,7 +53,7 @@ function collected(
 
 function approvedByChief(on: Board, request: StartAgentJoinRequest = asked): Effect.Effect<AgentSessionResponse> {
   return Effect.gen(function* approveAndCollect() {
-    yield* answer(() => on.chief.client.createAgentForOwner({ name: request.as }));
+    yield* answer(() => on.chief.client.createAgentForOwner({ displayName: request.as, name: request.as }));
     const start = yield* answer(() => on.cookout.clientFor().startAgentJoin(request));
     yield* answer(() => on.chief.client.approveAgentJoin(start.userCode));
     return yield* collected(on, start.requestId);
@@ -83,7 +83,7 @@ it.effect("an agent approves a join for an agent it created for its owner, which
 it.effect("an agent sees a join request as it would join for its owner", () =>
   Effect.gen(function* previewAsAgent() {
     const on = yield* board;
-    yield* answer(() => on.chief.client.createAgentForOwner({ name: "worker" }));
+    yield* answer(() => on.chief.client.createAgentForOwner({ displayName: "worker", name: "worker" }));
     const code = yield* started(on);
     const shown = yield* answer(() => on.chief.client.getAgentJoinRequest(code));
 

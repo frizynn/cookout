@@ -2,7 +2,7 @@ import type { AgentIdentity, DisplayName, HumanIdentity, IdentityName } from "..
 import type { AgentSessionResponse, JoinCodeResponse, RedeemJoinCodeRequest } from "../../index.ts";
 import { DateTime, Effect, Predicate } from "effect";
 import type { JoinCodeRedemption, StorageUnavailable } from "../../../storage/server.ts";
-import { agentSessionLive, displayNameRequired, identityDeactivated } from "./refusals.ts";
+import { agentSessionLive, identityDeactivated } from "./refusals.ts";
 import type { Description } from "../../../identities/client.ts";
 import type { On } from "./join.ts";
 import type { Refusal } from "../../../http/index.ts";
@@ -36,6 +36,14 @@ const joinCodeNotFound: Refusal = {
     `${joinCodeLifetimeMinutes} minutes of being made. Ask the agent's owner for a new one.`,
   status: NOT_FOUND,
 };
+
+function displayNameRequired(name: IdentityName): Refusal {
+  return {
+    code: "display_name_required",
+    message: `${name} would be a new agent, and a new agent needs a display name: send displayName.`,
+    status: BAD_REQUEST,
+  };
+}
 
 function createRefusal(result: "name_taken" | "name_not_owned" | "owner_not_human", name: IdentityName): Refusal {
   if (result === "name_taken") {

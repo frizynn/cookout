@@ -3,6 +3,7 @@ import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import type { CookoutClient } from "../../../sdk/index.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
+import { createIdentityAsBefore } from "../../../testing/index.ts";
 import { inSidebar } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
 
@@ -25,7 +26,11 @@ interface Opened {
 async function channelWithCommand({ channel, command }: InChannel): Promise<CookoutClient> {
   const admin = adminClient();
   await admin.createChannel({ name: channel });
-  const { token } = await admin.createIdentity({ kind: "agent", name: command, owner: "admin" });
+  const { token } = await createIdentityAsBefore({
+    admin,
+    by: admin,
+    request: { kind: "agent", name: command, owner: "admin" },
+  });
   await admin.addCommand({ description: "Ship a branch", name: command, schema, url: nowhere });
   return createCookoutClient({ token });
 }

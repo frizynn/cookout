@@ -111,7 +111,14 @@ const cookoutUnderTest: Layer.Layer<CookoutUnderTest> = Layer.effect(
     const owner = yield* Effect.cached(createHuman("owner"));
     function createAgent(name: string): Effect.Effect<IdentityWithTokenResponse> {
       return Effect.flatMap(owner, ({ identity }) =>
-        Effect.promise(() => admin.createIdentity({ kind: "agent", name: `${prefix}-${name}`, owner: identity.name })),
+        Effect.promise(() =>
+          admin.createIdentity({
+            displayName: `${prefix}-${name}`,
+            kind: "agent",
+            name: `${prefix}-${name}`,
+            owner: identity.name,
+          }),
+        ),
       );
     }
     const runCookout = runBin(url);

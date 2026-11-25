@@ -82,11 +82,14 @@ it.effect("an agent's create answers 201 with a body that has no token field at 
 it.effect("a human creating an agent still gets its token, and no brought-in-by", () =>
   Effect.gen(function* humanCreatesAgent() {
     const { ada } = yield* board;
-    const created = yield* answer(() => ada.client.createIdentity({ kind: "agent", name: "helper" }));
+    const created = yield* answer(() =>
+      ada.client.createIdentity({ displayName: "helper", kind: "agent", name: "helper" }),
+    );
 
     expect(created.identity).toStrictEqual({
       admin: false,
       createdAt: "2026-01-01T00:00:00.000Z",
+      displayName: "helper",
       kind: "agent",
       name: "helper",
       owner: "ada",
@@ -112,10 +115,10 @@ it.effect("an agent can't create a human, an agent for anyone else, or a taken n
     const refused = yield* Effect.all(
       [
         refusal(() => chief.client.createIdentity({ kind: "human", name: "eve" })),
-        refusal(() => chief.client.createIdentity({ kind: "agent", name: "spy", owner: "bob" })),
-        refusal(() => chief.client.createAgentForOwner({ name: "spy", owner: "bob" })),
-        refusal(() => chief.client.createAgentForOwner({ name: "bob" })),
-        refusal(() => chief.client.createAgentForOwner({ name: "bob/spy" })),
+        refusal(() => chief.client.createIdentity({ displayName: "spy", kind: "agent", name: "spy", owner: "bob" })),
+        refusal(() => chief.client.createAgentForOwner({ displayName: "spy", name: "spy", owner: "bob" })),
+        refusal(() => chief.client.createAgentForOwner({ displayName: "bob", name: "bob" })),
+        refusal(() => chief.client.createAgentForOwner({ displayName: "bob/spy", name: "bob/spy" })),
       ],
       ONE_AT_A_TIME,
     );
@@ -135,7 +138,7 @@ it.effect("an agent can't create a human, an agent for anyone else, or a taken n
 it.effect("the new agent's join request shows in its creator's inbox, and the creator's approval joins it", () =>
   Effect.gen(function* creatorApproves() {
     const { ada, chief, cookout } = yield* board;
-    yield* answer(() => chief.client.createAgentForOwner({ name: "worker" }));
+    yield* answer(() => chief.client.createAgentForOwner({ displayName: "worker", name: "worker" }));
     const started = yield* answer(() => cookout.clientFor().startAgentJoin({ as: "worker", host: "build-box" }));
     const creatorInbox = yield* answer(() => chief.client.inbox());
     const ownerInbox = yield* answer(() => ada.client.inbox());
@@ -162,8 +165,8 @@ it.effect(
   () =>
     Effect.gen(function* refuseDeleted() {
       const on = yield* board;
-      yield* answer(() => on.chief.client.createAgentForOwner({ name: "worker" }));
-      yield* answer(() => on.chief.client.createAgentForOwner({ name: "helper" }));
+      yield* answer(() => on.chief.client.createAgentForOwner({ displayName: "worker", name: "worker" }));
+      yield* answer(() => on.chief.client.createAgentForOwner({ displayName: "helper", name: "helper" }));
       const deleted = yield* requestedAs(on, "worker");
       const renamed = yield* requestedAs(on, "helper");
       yield* answer(() => on.cookout.client.deleteIdentity("worker"));
