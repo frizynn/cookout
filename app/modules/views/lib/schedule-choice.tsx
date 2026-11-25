@@ -15,5 +15,5 @@ export function ScheduleChoice(props: ScheduleChoiceProps): ReactNode {
     (): readonly MenuChoice[] => [{ href: null, icon: "schedule", label: TEXT.schedule, onSelect: onSchedule }],
     [onSchedule],
   );
-  return <MoreActions choices={choices} label={TEXT.label} />;
+  return <MoreActions choices={choices} label={TEXT.label} look="box" />;
 }
