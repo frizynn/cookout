@@ -1,4 +1,4 @@
-import { IdentityCards, MessageKeys, PersonKeysArea } from "../../design-system/index.tsx";
+import { IdentityCards, MessageKeys, PersonKeysArea } from "../../design-system/messages.tsx";
 import { messageShortcutsOf, personKeysOf } from "./person-keys.ts";
 import type { BoardStore } from "../../board/index.ts";
 import type { Keymap } from "../../keymap/index.ts";

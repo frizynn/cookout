@@ -1,6 +1,7 @@
-import { Alert, CardBody, Skeleton } from "../../design-system/index.tsx";
+import { Alert, Skeleton } from "../../design-system/content.tsx";
 import type { MessageMenu, Selection } from "../../unread/index.ts";
 import type { ThreadClosing, ThreadMessagesState } from "../../board/index.ts";
+import { CardBody } from "../../design-system/layout.tsx";
 import { ConversationReplies } from "./conversation-replies.tsx";
 import type { MessageId } from "../../sdk/index.ts";
 import type { ReactNode } from "react";

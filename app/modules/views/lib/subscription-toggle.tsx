@@ -1,6 +1,6 @@
 import type { Subscriptions, SubscriptionsState } from "../../board/index.ts";
 import type { ChannelName } from "../../sdk/index.ts";
-import { PressButton } from "../../design-system/index.tsx";
+import { PressButton } from "../../design-system/controls.tsx";
 import type { ReactNode } from "react";
 import { useCallback } from "react";
 

@@ -2,7 +2,7 @@ import type { Search, SearchState } from "../../search/web.ts";
 import { useId, useMemo, useSyncExternalStore } from "react";
 import type { Board } from "../../board/index.ts";
 import type { BoxOption } from "./search-options.ts";
-import { ComboboxField } from "../../design-system/index.tsx";
+import { ComboboxField } from "../../design-system/controls.tsx";
 import type { Identities } from "../../composer/index.ts";
 import type { Keymap } from "../../keymap/index.ts";
 import type { ReactNode } from "react";

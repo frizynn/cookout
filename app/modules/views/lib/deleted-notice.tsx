@@ -1,5 +1,6 @@
-import { Button, Notice } from "../../design-system/index.tsx";
 import type { Board } from "../../board/index.ts";
+import { Button } from "../../design-system/controls.tsx";
+import { Notice } from "../../design-system/content.tsx";
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
 

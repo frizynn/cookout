@@ -2,7 +2,7 @@ import type { Message, ReactionCount, ReactionName, Refusal } from "../../sdk/in
 import { reactionNames, reactionSymbols } from "../../messages/index.ts";
 import { reactionRefusal, reactionsOf } from "../../board/index.ts";
 import { useCallback, useContext, useMemo, useSyncExternalStore } from "react";
-import type { ReactionChoice } from "../../design-system/index.tsx";
+import type { ReactionChoice } from "../../design-system/messages.tsx";
 import { ReactionList } from "./reaction-list.ts";
 
 const KEYS: Readonly<Record<ReactionName, string>> = { thumbs_down: "-", thumbs_up: "+" };

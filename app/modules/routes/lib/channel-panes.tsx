@@ -1,7 +1,7 @@
 import { ChannelView, ThreadCardComposer, ThreadView } from "../../views/index.tsx";
 import type { Board } from "../../board/index.ts";
 import type { Composer } from "../../composer/index.ts";
-import { IdentityCardComposer } from "../../design-system/index.tsx";
+import { IdentityCardComposer } from "../../design-system/messages.tsx";
 import type { Layout } from "../../layout/index.ts";
 import type { MessageId } from "../../sdk/index.ts";
 import type { ReactNode } from "react";

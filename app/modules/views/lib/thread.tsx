@@ -1,10 +1,10 @@
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import type { Board } from "../../board/index.ts";
 import type { Composer } from "./thread-draft.ts";
-import type { PanelEdgeParts } from "../../design-system/index.tsx";
+import type { PanelEdgeParts } from "../../design-system/layout.tsx";
 import type { ReactNode } from "react";
 import { ReplyFooter } from "./reply-footer.tsx";
-import { SidePanel } from "../../design-system/index.tsx";
+import { SidePanel } from "../../design-system/layout.tsx";
 import { ThreadClosingBar } from "./thread-closing-bar.tsx";
 import { ThreadMessages } from "./thread-messages.tsx";
 import type { Unread } from "../../unread/index.ts";

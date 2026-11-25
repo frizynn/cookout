@@ -2,7 +2,7 @@ import type { Unread, UnreadState } from "../../unread/index.ts";
 import type { Board } from "../../board/index.ts";
 import { DeletedNotice } from "./deleted-notice.tsx";
 import { MarkAllRead } from "./mark-all-read.tsx";
-import { PaneHeader } from "../../design-system/index.tsx";
+import { PaneHeader } from "../../design-system/layout.tsx";
 import type { ReactNode } from "react";
 
 const DESCRIPTION = "Mentions, threads you follow, and channels you subscribe to";

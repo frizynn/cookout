@@ -1,16 +1,12 @@
-import { Alert, NavList, Skeleton } from "../../design-system/index.tsx";
-import { channelOrder, openChannel } from "./channel-order.ts";
+import { Alert, Skeleton } from "../../design-system/content.tsx";
 import type { ChannelActions } from "./use-channel-menu.ts";
+import { ChannelList } from "./channel-list.tsx";
 import { ChannelMenuRefusal } from "./channel-menu-refusal.tsx";
 import type { ChannelName } from "../../sdk/index.ts";
-import { ChannelRow } from "./channel-row.tsx";
 import type { ChannelsState } from "../../board/index.ts";
-import { NO_COUNTS } from "../../unread/index.ts";
 import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
 import type { UnreadCounts } from "../../unread/index.ts";
-
-const TEXT = { channels: "Channels" } as const;
 
 interface ChannelRowsProps {
   readonly actions: ChannelActions;
@@ -20,8 +16,7 @@ interface ChannelRowsProps {
 }
 
 export function ChannelRows(props: ChannelRowsProps): ReactNode {
-  const { channels, counts } = props;
-  const open = openChannel(props.route);
+  const { channels } = props;
   if (channels.status === "loading") {
     return (
       <div className="flex flex-col gap-3 p-4">
@@ -35,17 +30,7 @@ export function ChannelRows(props: ChannelRowsProps): ReactNode {
   }
   return (
     <>
-      <NavList label={TEXT.channels}>
-        {channelOrder(channels).map((channel) => (
-          <ChannelRow
-            actions={props.actions}
-            channel={channel}
-            counts={counts.get(channel) ?? NO_COUNTS}
-            key={channel}
-            open={open === channel}
-          />
-        ))}
-      </NavList>
+      <ChannelList actions={props.actions} channels={channels} counts={props.counts} route={props.route} />
       <ChannelMenuRefusal actions={props.actions} />
     </>
   );

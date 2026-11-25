@@ -1,7 +1,7 @@
 import type { ChannelName, Message, MessageId, ReadReceipt } from "../../sdk/index.ts";
 import type { MessageMenu, ThreadNews } from "../../unread/index.ts";
 import { MessageEntry } from "./message-entry.tsx";
-import { MessageList } from "../../design-system/index.tsx";
+import { MessageList } from "../../design-system/messages.tsx";
 import { MessageRefusals } from "./message-refusals.tsx";
 import type { ReactNode } from "react";
 import type { Reply } from "./use-message-menu.ts";

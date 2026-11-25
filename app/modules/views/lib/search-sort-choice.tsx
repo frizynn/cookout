@@ -1,5 +1,5 @@
 import type { Search, SearchState } from "../../search/web.ts";
-import { ChoiceGroup } from "../../design-system/index.tsx";
+import { ChoiceGroup } from "../../design-system/controls.tsx";
 import type { ReactNode } from "react";
 import type { SearchSort } from "../../search/index.ts";
 import { searchSorts } from "../../search/index.ts";

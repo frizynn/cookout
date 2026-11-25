@@ -1,5 +1,7 @@
 import type { AgentJoinApproval, AgentJoinApprovalState } from "../../board/index.ts";
-import { Alert, Button, CardBody, CheckField, InputField, Muted } from "../../design-system/index.tsx";
+import { Alert, Muted } from "../../design-system/content.tsx";
+import { Button, CheckField, InputField } from "../../design-system/controls.tsx";
+import { CardBody } from "../../design-system/layout.tsx";
 import type { ReactNode } from "react";
 
 const TEXT = {

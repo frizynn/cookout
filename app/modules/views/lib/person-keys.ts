@@ -1,5 +1,5 @@
 import type { Act, Keymap } from "../../keymap/index.ts";
-import type { MessageShortcuts, PersonKeysSource } from "../../design-system/index.tsx";
+import type { MessageShortcuts, PersonKeysSource } from "../../design-system/messages.tsx";
 
 function messagePersonOf(message: Act | null): { readonly messagePerson?: Act } {
   if (message === null) {

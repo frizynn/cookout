@@ -1,5 +1,7 @@
-import { Alert, BoxFrame, Form, SendButton, Suggestions, TextArea } from "../../design-system/index.tsx";
+import { Form, SendButton, Suggestions, TextArea } from "../../design-system/controls.tsx";
 import { useCallback, useId, useSyncExternalStore } from "react";
+import { Alert } from "../../design-system/content.tsx";
+import { BoxFrame } from "../../design-system/layout.tsx";
 import type { Draft } from "../../composer/index.ts";
 import type { PostState } from "../../board/index.ts";
 import type { ReactNode } from "react";

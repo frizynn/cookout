@@ -1,5 +1,4 @@
 import {
-  Alert,
   ButtonRow,
   Form,
   InputField,
@@ -7,8 +6,9 @@ import {
   QuietButton,
   SubmitButton,
   TextField,
-} from "../../design-system/index.tsx";
+} from "../../design-system/controls.tsx";
 import type { TriggerSettings, TriggerSnapshot } from "../../composer/index.ts";
+import { Alert } from "../../design-system/content.tsx";
 import type { IdentityName } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
 import { TriggerHeaderNames } from "./trigger-header-names.tsx";

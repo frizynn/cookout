@@ -1,5 +1,6 @@
-import { Alert, LineForm } from "../../design-system/index.tsx";
 import type { AgentCreation } from "../../composer/index.ts";
+import { Alert } from "../../design-system/content.tsx";
+import { LineForm } from "../../design-system/controls.tsx";
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
 

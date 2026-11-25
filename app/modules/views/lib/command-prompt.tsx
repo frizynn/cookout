@@ -5,7 +5,7 @@ import { CallRefusal } from "./call-refusal.tsx";
 import type { Command } from "../../sdk/index.ts";
 import { CommandFields } from "./command-fields.tsx";
 import type { Draft } from "../../composer/index.ts";
-import { PromptForm } from "../../design-system/index.tsx";
+import { PromptForm } from "../../design-system/controls.tsx";
 import type { ReactNode } from "react";
 
 const TEXT = { button: "Call", calling: "Calling…" } as const;

@@ -1,6 +1,6 @@
 import type { KindChoice as Kind, Layout } from "../../layout/index.ts";
 import { useCallback, useMemo } from "react";
-import { ChoiceGroup } from "../../design-system/index.tsx";
+import { ChoiceGroup } from "../../design-system/controls.tsx";
 import type { ReactNode } from "react";
 
 const TEXT = { kind: "Kind" } as const;
