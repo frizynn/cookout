@@ -1,5 +1,5 @@
 function objectIn(value: unknown): object {
-  if ((typeof value === "object" || typeof value === "function") && value !== null) {
+  if (typeof value === "object" && value !== null) {
     return value;
   }
   return {};

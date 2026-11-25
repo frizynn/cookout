@@ -107,11 +107,11 @@ it("counts the live events the page receives by type, once each however many sto
   live.subscribe(ignored);
   live.subscribe(ignored);
 
-  live.send("presence");
-  live.send("message");
-  live.send("presence");
+  for (const type of ["presence", "nudge", "presence", "message"]) {
+    live.send(type);
+  }
 
-  expect(probe.report()).toContain("Live events received: 3 (presence 2, message 1)");
+  expect(probe.report()).toContain("Live events received: 4 (presence 2, message 1, nudge 1)");
 });
 
 it("counts each store's publishes, once for all of its listeners, subscribers a store makes included", {
@@ -182,6 +182,22 @@ it("says when it counted nothing, and probes only the first render's stores", { 
   expect(probe.report()).toBe(
     ["Live events received: 0", "Store publishes: none", "Top-level view renders: none"].join("\n"),
   );
+});
+
+it("answers React's other calls without counting, and leaves alone a store's calls that take no listener", {
+  timeout: 1000,
+}, () => {
+  expect.hasAssertions();
+
+  const probe = createProbe();
+  probe.reactHook.onScheduleFiberRoot(RENDERER, {}, null);
+  const client = { subscribe: (channel: string): string => `subscribed to ${channel}` };
+  const other = createProbe();
+  rendered(other, { client, live: null });
+
+  expect([probe.reactHook.checkDCE(), probe.reactHook.onCommitFiberUnmount()]).toStrictEqual([null, null]);
+  expect(client.subscribe("general")).toBe("subscribed to general");
+  expect(other.report()).toContain("Store publishes: none");
 });
 
 it("installs the probe as the page's React DevTools hook and reports it, and a page without it reports nothing", {
