@@ -21,6 +21,7 @@ interface Deciding {
 interface Go {
   readonly go: boolean;
   readonly line: string;
+  readonly retryAtMillis?: number;
 }
 
 interface ListedRun {
@@ -160,8 +161,10 @@ function withoutRecentGateRun(deciding: Deciding, why: string): Outcome<Go> {
     return recent;
   }
   if (recent.value !== "") {
-    const line = `skipped: a gate run started at ${recent.value}, under ${String(WAIT_MINUTES)} minutes ago; the schedule picks this up later`;
-    return { ok: true, value: { go: false, line } };
+    const retryAtMillis = epochMillis(recent.value) + WAIT_MS;
+    const retryAt = DateTime.formatIso(DateTime.makeUnsafe(retryAtMillis));
+    const line = `waits: a gate run started at ${recent.value}, under ${String(WAIT_MINUTES)} minutes ago; deciding again at ${retryAt}`;
+    return { ok: true, value: { go: false, line, retryAtMillis } };
   }
   return {
     ok: true,
