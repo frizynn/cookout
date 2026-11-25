@@ -1,6 +1,5 @@
 import type { CookoutClient, Refusal } from "../../sdk/index.ts";
 import { refusalOf } from "../../sdk/index.ts";
-import { sameSnapshot } from "./selected.ts";
 
 type AgentJoinApprovalClient = Pick<CookoutClient, "approveAgentJoin" | "getAgentJoinRequest">;
 
@@ -59,9 +58,6 @@ function cell(): Cell {
     current: () => state,
     listeners,
     publish: (next) => {
-      if (sameSnapshot({ after: next, before: state })) {
-        return;
-      }
       state = next;
       for (const listener of listeners) {
         listener();

@@ -1,6 +1,5 @@
 import type { CookoutClient, Refusal } from "../../sdk/index.ts";
 import { refusalOf } from "../../sdk/index.ts";
-import { sameSnapshot } from "./selected.ts";
 
 type LoginApprovalClient = Pick<CookoutClient, "approveLogin" | "getLoginRequest">;
 
@@ -34,9 +33,6 @@ function createLoginApproval(client: LoginApprovalClient, userCode: string): Log
   let loaded: Promise<void> | null = null;
 
   function publish(state: LoginApprovalState): void {
-    if (sameSnapshot({ after: state, before: current })) {
-      return;
-    }
     current = state;
     for (const listener of listeners) {
       listener();

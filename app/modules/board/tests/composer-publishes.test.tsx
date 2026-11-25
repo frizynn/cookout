@@ -4,6 +4,7 @@ import { expect, it, onTestFinished, vi } from "vitest";
 import type { Composer } from "../../composer/index.ts";
 import type { IdentityName } from "../../sdk/index.ts";
 import { createComposer } from "../../composer/index.ts";
+import { createTestAgent } from "../../testing/index.ts";
 import { recordPublishes } from "../../testing/web.ts";
 import { waitFor } from "@testing-library/react";
 
@@ -100,4 +101,20 @@ it("the profile's stores publish nothing for an edit that changes nothing", { ti
   composer.identities.creation.edit("");
 
   expect(publishes.map((store) => store.count())).toStrictEqual(publishes.map(() => NONE));
+});
+
+it("an identity deleted while its profile is not open publishes nothing from the identity deletion", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const { identity } = await createTestAgent({ by: adminClient(), name: "web-composer-deleted-bot", owner: "admin" });
+  const composed = await composing();
+  const { identities } = composed.composer;
+  await recordedOnceLoaded([identities], composed.composer);
+  const deletion = recordPublishes(identities.deletion);
+
+  composed.hand.send({ identity, type: "identity-deleted" });
+
+  expect(deletion.count()).toBe(NONE);
 });

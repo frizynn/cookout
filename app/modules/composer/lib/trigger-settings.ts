@@ -1,6 +1,6 @@
 import type { BoardStore, IdentityCalls } from "../../board/index.ts";
 import type { IdentityName, Refusal, Trigger, TriggerHeader } from "../../sdk/index.ts";
-import { calledTrigger, sameSnapshot } from "../../board/index.ts";
+import { calledTrigger } from "../../board/index.ts";
 import { listenersOf } from "./listeners.ts";
 import { refusalOf } from "../../sdk/index.ts";
 
@@ -97,9 +97,6 @@ function createTriggerSettings(options: TriggerOptions): TriggerSettings {
   let pending: Promise<void> | null = null;
 
   function publish(next: TriggerSnapshot): void {
-    if (sameSnapshot({ after: next, before: current })) {
-      return;
-    }
     current = next;
     listeners.notify();
   }
