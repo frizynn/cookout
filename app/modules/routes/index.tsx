@@ -19,7 +19,7 @@
  * identity's profile panel beside it (replacing a thread's panel); Escape or
  * its close link closes it. Clicking a name, a message's author or an
  * `@name`, goes there. `keymap` owns every keyboard shortcut: the app adds its one key listener to the page while
- * drawn, and `?` (off a text box) or Ctrl/Cmd+/ opens the list of every shortcut on any page. The
+ * drawn, and `?` (off a text box) or Ctrl/Cmd+/ opens the list of every shortcut on any page. Files dropped on a channel, a thread or an Inbox conversation, its messages or its box, wait in that conversation's box; the page refuses files dropped anywhere else, so the browser never opens them. The
  * `paths` module reads the hash and builds every link's.
  */
 import { useMemo, useSyncExternalStore } from "react";
@@ -30,6 +30,7 @@ import type { Stores } from "./lib/stores.ts";
 import { boardPageStores } from "./lib/board-page-stores.ts";
 import { locationOf } from "../paths/index.ts";
 import { useKeymapListener } from "./lib/use-keymap-listener.ts";
+import { useStrayDropGuard } from "./lib/use-stray-drop-guard.ts";
 
 function subscribeToHash(listener: () => void): () => void {
   globalThis.addEventListener("hashchange", listener);
@@ -53,6 +54,7 @@ export type CookoutAppProps = Omit<Stores, "channelCreation" | "scheduleList" | 
 export function CookoutApp(props: CookoutAppProps): ReactNode {
   const hash = useSyncExternalStore(subscribeToHash, currentHash);
   useKeymapListener(props.keymap);
+  useStrayDropGuard();
   const page = useMemo(() => boardPageStores(props.boardStore), [props.boardStore]);
   const stores = useMemo(() => ({ ...props, ...page }), [page, props]);
   return (

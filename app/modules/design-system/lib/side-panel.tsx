@@ -1,5 +1,7 @@
 import type { ActionMenuParts } from "./menu-parts.ts";
 import { CloseLink } from "./close-link.tsx";
+import { FileDrop } from "./file-drop.tsx";
+import type { FilesHandler } from "./drop-zone.tsx";
 import { PanelEdge } from "./panel-edge.tsx";
 import type { PanelEdgeParts } from "./panel-edge-parts.ts";
 import { PanelTitle } from "./panel-title.tsx";
@@ -14,6 +16,7 @@ interface SidePanelParts extends Parts {
   readonly closeLabel: string;
   readonly edge: PanelEdgeParts | null;
   readonly menu?: ActionMenuParts | null;
+  readonly onFiles?: FilesHandler | null;
 }
 
 export function SidePanel(parts: SidePanelParts): ReactNode {
@@ -30,7 +33,7 @@ export function SidePanel(parts: SidePanelParts): ReactNode {
         <PanelTitle detail={parts.detail} label={parts.label} menu={parts.menu ?? null} />
         <CloseLink href={parts.closeHref} label={parts.closeLabel} />
       </header>
-      {parts.children}
+      <FileDrop onFiles={parts.onFiles ?? null}>{parts.children}</FileDrop>
     </aside>
   );
 }

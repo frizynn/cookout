@@ -32,6 +32,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
   const header = useThreadHeader({ channel, closing, menu: props.unread.menu, state });
   const reading = props.linked === props.thread;
   const draft = threadDraft({ channel, composer: props.composer, me: props.me, messages, thread: props.thread });
+  const handleFiles = draft.attachments.attach;
   return (
     <SidePanel
       closeHref={header.closeHref}
@@ -40,6 +41,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
       edge={props.edge}
       label={TEXT.thread}
       menu={header.menu}
+      onFiles={handleFiles}
     >
       {state.status === "loaded" && <ThreadClosingBar closing={closing} parent={state.parent} />}
       <ThreadMessages
