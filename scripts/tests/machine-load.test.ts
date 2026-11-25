@@ -1,10 +1,15 @@
 import { expect, it } from "vitest";
-import { loadReport, osReading } from "../lib/machine-load.ts";
+import { loadReport, osReading, quietMachine } from "../lib/machine-load.ts";
 
 const CORES = 10;
 const BUSY = 14.5;
 const QUIET = 3.25;
 const NONE = 0;
+const LIMIT = 20;
+const HIGH = 27.5;
+const FALLING = 22;
+const DROPPED = 18;
+const TWICE = 2;
 
 it("prints the load average and core count, with no warning when the load is within the cores", {
   timeout: 5000,
@@ -31,4 +36,37 @@ it("reads the machine's own load and core count", { timeout: 5000 }, () => {
   const { cores, load } = osReading();
 
   expect([cores > NONE, load >= NONE]).toStrictEqual([true, true]);
+});
+
+interface Waiting {
+  readonly said: string[];
+  readonly sleeps: number;
+}
+
+async function waitedThrough(loads: readonly number[]): Promise<Waiting> {
+  const said: string[] = [];
+  const queue = [...loads];
+  let sleeps = NONE;
+  await quietMachine({
+    limit: LIMIT,
+    read: () => ({ cores: CORES, load: queue.shift() ?? NONE }),
+    say: (line) => {
+      said.push(line);
+    },
+    sleep: async () => {
+      sleeps += TWICE / TWICE;
+      await Promise.resolve();
+    },
+  });
+  return { said, sleeps };
+}
+
+it("waits while the load average is above the limit, saying once that it waits", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  await expect(waitedThrough([HIGH, FALLING, DROPPED])).resolves.toStrictEqual({
+    said: ["load average 27.50 is above 20: waiting for it to drop before the tests start."],
+    sleeps: TWICE,
+  });
+  await expect(waitedThrough([QUIET])).resolves.toStrictEqual({ said: [], sleeps: NONE });
 });
