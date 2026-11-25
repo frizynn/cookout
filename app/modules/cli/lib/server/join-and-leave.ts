@@ -73,11 +73,6 @@ function alreadyJoined(identity: IdentityName): CallFailure {
   };
 }
 
-const codeWithSessionUrl: CallFailure = {
-  code: "usage",
-  message: "`cookout join --code` doesn't set a session URL yet: leave out --session-url.",
-};
-
 const codeWithDisplayName: CallFailure = {
   code: "usage",
   message:
@@ -179,8 +174,8 @@ function joinIn(
   return issueAndKeep(joining, { file: file.value, url });
 }
 
-function byCode(code: string, idleExpiry: Option.Option<string>): Joining {
-  const redeemed = Effect.flatMap(Effect.orDie(cookoutUrl), (url) => joinByCode({ code, idleExpiry, url }));
+function byCode(code: string, { idleExpiry, sessionUrl }: Pick<JoinFlags, "idleExpiry" | "sessionUrl">): Joining {
+  const redeemed = Effect.flatMap(Effect.orDie(cookoutUrl), (url) => joinByCode({ code, idleExpiry, sessionUrl, url }));
   return {
     command: "cookout join --code <code>",
     issue: Effect.map(redeemed, (issued) => ({ issued, source: "join-code" as const })),
@@ -191,11 +186,8 @@ function joiningByCode(code: string, { as, ...flags }: Omit<JoinOptions, "code">
   if (Option.isSome(flags.displayName)) {
     return Effect.fail(codeWithDisplayName);
   }
-  if (Option.isSome(flags.sessionUrl)) {
-    return Effect.fail(codeWithSessionUrl);
-  }
   return Option.match(as, {
-    onNone: () => Effect.succeed(byCode(code, flags.idleExpiry)),
+    onNone: () => Effect.succeed(byCode(code, flags)),
     onSome: () => Effect.fail(codeWithAs),
   });
 }

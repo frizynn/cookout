@@ -41,6 +41,8 @@ export interface RedeemJoinCodeRequest {
   readonly idleExpiry?: string;
   /** The host the agent joins from, shown to its owner. 1–253 characters. */
   readonly host?: string;
+  /** The session URL of the session it issues, as `join` takes it (mattpocock/cookout#506). */
+  readonly sessionUrl?: string;
 }
 
 /** The answer to `POST /v1/join-codes/redeem`: the code's agent's agent session, as `join` answers it. */

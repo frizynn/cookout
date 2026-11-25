@@ -120,3 +120,31 @@ it.effect("an agent join request refuses a session URL that isn't an absolute ht
     expect(refused).toMatchObject({ code: "invalid_request", status: BAD_REQUEST });
   }).pipe(Effect.provide(testCookout())),
 );
+
+it.effect("redeeming a join code keeps its session URL, answers it and lists it for the agent's owner", () =>
+  Effect.gen(function* setByJoinCode() {
+    const { ada, cookout } = yield* owned;
+    const { joinCode } = yield* answer(() => ada.client.createJoinCode({ displayName: "Coded", name: "coded" }));
+    const issued = yield* answer(() =>
+      cookout.clientFor().redeemJoinCode({ host: "cloud-box", joinCode, sessionUrl: SESSION_URL }),
+    );
+    const { agentSessions } = yield* answer(() => ada.client.listAgentSessions("coded"));
+
+    expect(issued.sessionUrl).toBe(SESSION_URL);
+    expect(agentSessions).toMatchObject([{ host: "cloud-box", sessionUrl: SESSION_URL }]);
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect(
+  "redeeming a join code refuses a session URL that isn't an absolute http or https URL, and keeps the code",
+  () =>
+    Effect.gen(function* refusedByJoinCode() {
+      const { ada, cookout } = yield* owned;
+      const { joinCode } = yield* answer(() => ada.client.createJoinCode({ displayName: "Coded", name: "coded" }));
+      const refused = yield* refusal(() => cookout.clientFor().redeemJoinCode({ joinCode, sessionUrl: "ftp://box/1" }));
+      const redeemed = yield* answer(() => cookout.clientFor().redeemJoinCode({ joinCode }));
+
+      expect(refused).toMatchObject({ code: "invalid_request", details: [NOT_A_SESSION_URL], status: BAD_REQUEST });
+      expect(redeemed).not.toHaveProperty("sessionUrl");
+    }).pipe(Effect.provide(testCookout())),
+);

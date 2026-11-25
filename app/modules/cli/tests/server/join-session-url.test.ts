@@ -51,7 +51,31 @@ it.effect("with no Login, join --session-url sets the session URL its owner sees
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
 
-it.effect("join refuses a --session-url that isn't an absolute http or https URL, and --code with one", () =>
+it.effect("join --code --session-url sets the session URL its owner sees", () =>
+  Effect.gen(function* joinByCodeWithSessionUrl() {
+    const cookout = yield* TestCookout;
+    const ada = yield* cookout.createIdentity("ada", { kind: "human" });
+    const { joinCode } = yield* answer(() =>
+      ada.client.createJoinCode({ displayName: "Cloud worker", name: "cloud-worker" }),
+    );
+    const env = {
+      CLAUDECODE: "1",
+      CLAUDE_CODE_SESSION_ID: "s1",
+      COOKOUT_STATE_DIR: yield* freshStateFolder,
+      COOKOUT_URL: cookout.url,
+    };
+    const joined = yield* runCookout({ args: ["join", "--code", joinCode, "--session-url", SESSION_URL], env });
+    const { agentSessions } = yield* answer(() => ada.client.listAgentSessions("cloud-worker"));
+
+    expect(joined).toMatchObject({
+      exitCode: 0,
+      stdoutJson: { identity: "cloud-worker", sessionUrl: SESSION_URL, source: "join-code" },
+    });
+    expect(agentSessions).toMatchObject([{ sessionUrl: SESSION_URL }]);
+  }).pipe(Effect.provide([testCookout(), commandLineServices])),
+);
+
+it.effect("join refuses a --session-url that isn't an absolute http or https URL, with --as or --code", () =>
   Effect.gen(function* refusedSessionUrl() {
     const cookout = yield* TestCookout;
     const bot = yield* cookout.createIdentity("release-bot");
@@ -62,14 +86,14 @@ it.effect("join refuses a --session-url that isn't an absolute http or https URL
       COOKOUT_TOKEN: bot.token,
       COOKOUT_URL: cookout.url,
     };
-    const notWeb = yield* runCookout({ args: ["join", "--as", "release-bot", "--session-url", "ftp://box/1"], env });
-    const withCode = yield* runCookout({ args: ["join", "--code", "any-code", "--session-url", SESSION_URL], env });
-
-    expect(notWeb).toMatchObject({
+    const notWebError = {
       exitCode: EXIT_FAILURE,
       stderrJson: { error: { code: "invalid_request", details: [{ path: ["sessionUrl"] }] } },
-    });
+    };
+    const notWeb = yield* runCookout({ args: ["join", "--as", "release-bot", "--session-url", "ftp://box/1"], env });
+    const withCode = yield* runCookout({ args: ["join", "--code", "any-code", "--session-url", "ftp://box/1"], env });
+
+    expect([notWeb, withCode]).toMatchObject([notWebError, notWebError]);
     expect(notWeb.stderr).toContain("absolute http or https URL");
-    expect(withCode).toMatchObject({ exitCode: EXIT_FAILURE, stderrJson: { error: { code: "usage" } } });
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );
