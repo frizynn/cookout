@@ -12,7 +12,8 @@
  * bound scopes that cover the focused element, most recently bound first, and
  * runs the first action whose chord matches and that says it acted, which
  * stops the browser's own handling. Off a text field every row fires. In a
- * text field only chords held with Ctrl, Cmd or Alt fire, and the rows of the
+ * text field only chords held with Ctrl, Cmd or Alt fire, Escape (which nothing
+ * types, so each press goes out one level from a box too), and the rows of the
  * text scopes (the search box and text box), which fire only there, so a
  * letter typed or dictated is always typed. `Mod` is Cmd on a Mac (⌘, `Meta`)
  * and Ctrl elsewhere (`Control`), and only that key matches it, so on a Mac
@@ -76,6 +77,7 @@ interface Pressing {
 const MAC = /^(?:Mac|iPhone|iPad|iPod)/u;
 const TEXT_FIELDS: ReadonlySet<string> = new Set(["INPUT", "SELECT", "TEXTAREA"]);
 const KEY_SEPARATOR = " ";
+const NEVER_TYPED = "Escape";
 const LABEL_SEPARATOR = " or ";
 
 function platformOf(platform: string): Platform {
@@ -93,7 +95,8 @@ function fires(key: Key, inTextField: boolean): boolean {
   if (TEXT_SCOPES.has(key.scope)) {
     return inTextField;
   }
-  return !inTextField || isModified(chordOf(key.chord));
+  const chord = chordOf(key.chord);
+  return !inTextField || isModified(chord) || chord.key === NEVER_TYPED;
 }
 
 function covers(bound: Bound, target: EventTarget | null): boolean {
