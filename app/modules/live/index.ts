@@ -99,4 +99,4 @@ export function createLive(adapter: LiveAdapter): Live {
 }
 
 export { eventSourceAdapter } from "./lib/event-source.ts";
-export type { LiveAdapter } from "./lib/adapter.ts";
+export type { Link, LiveAdapter } from "./lib/adapter.ts";

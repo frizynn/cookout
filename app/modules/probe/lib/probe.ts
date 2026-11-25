@@ -2,6 +2,7 @@ import type { ReactHook } from "./renders.ts";
 import type { Tally } from "./tally.ts";
 import { createTally } from "./tally.ts";
 import { objectIn } from "./object.ts";
+import { probeEventSource } from "./event-source.ts";
 import { probeStores } from "./publishes.ts";
 import { reactHook } from "./renders.ts";
 
@@ -29,8 +30,11 @@ function eventsLine(events: Tally): string {
   return `Live events received: ${total} (${events.text()})`;
 }
 
-function createProbe(): Probe {
+function createProbe(page: object | null = null): Probe {
   const events = createTally();
+  if (page !== null) {
+    probeEventSource({ heard: events.add, page });
+  }
   const publishes = createTally();
   const renders = createTally();
   let probing = false;
@@ -47,7 +51,7 @@ function createProbe(): Probe {
         }
         probing = true;
         const stores = objectIn(Reflect.get(objectIn(element), "props"));
-        probeStores({ heard: events.add, published: publishes.add, stores });
+        probeStores({ published: publishes.add, stores });
       },
     }),
     report: () =>
@@ -56,7 +60,7 @@ function createProbe(): Probe {
 }
 
 function installProbe(page: object): void {
-  const probe = createProbe();
+  const probe = createProbe(page);
   Reflect.set(page, REACT_HOOK, probe.reactHook);
   Object.defineProperty(page, "cookoutProbeReport", { get: probe.report });
 }

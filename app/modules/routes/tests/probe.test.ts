@@ -8,15 +8,7 @@ interface ListStore {
   readonly publish: () => void;
 }
 
-interface Follower {
-  readonly heard: (event: { readonly type: string }) => void;
-  readonly back: () => void;
-}
-
-interface HandLive {
-  readonly follow: (follower: Follower) => void;
-  readonly send: (type: string) => void;
-}
+type Heard = (event: { readonly type: string }) => void;
 
 interface Fiber {
   readonly type: unknown;
@@ -48,18 +40,18 @@ function listStore(): ListStore {
   };
 }
 
-function handLive(): HandLive {
-  const followers: Follower[] = [];
-  return {
-    follow: (follower) => {
-      followers.push(follower);
-    },
-    send: (type) => {
-      for (const follower of followers) {
-        follower.heard({ type });
-      }
-    },
-  };
+class HandEventSource {
+  readonly #listeners = new Map<string, Heard[]>();
+
+  public addEventListener(type: string, listener: Heard): void {
+    this.#listeners.set(type, [...(this.#listeners.get(type) ?? []), listener]);
+  }
+
+  public send(type: string): void {
+    for (const listener of this.#listeners.get(type) ?? []) {
+      listener({ type });
+    }
+  }
 }
 
 function rendered(probe: Probe, stores: object): void {
@@ -74,7 +66,7 @@ function probedWith(stores: object): Probe {
 
 function probedUnread(): { readonly probe: Probe; readonly unread: ListStore } {
   const unread = listStore();
-  return { probe: probedWith({ live: null, unread }), unread };
+  return { probe: probedWith({ unread }), unread };
 }
 
 function ignored(): void {
@@ -101,18 +93,20 @@ function Row(): null {
   return null;
 }
 
-it("counts the live events the page receives by type, as its follower hears them", {
+it("counts the live events the page receives by type, as its EventSource hands them on", {
   timeout: 1000,
 }, () => {
   expect.hasAssertions();
 
-  const probe = createProbe();
-  const live = handLive();
-  rendered(probe, { live });
-  live.follow({ back: ignored, heard: ignored });
+  const page = { EventSource: HandEventSource };
+  const probe = createProbe(page);
+  const source = new page.EventSource();
+  for (const type of ["presence", "nudge", "message", "open", "error"]) {
+    source.addEventListener(type, ignored);
+  }
 
-  for (const type of ["presence", "nudge", "presence", "message"]) {
-    live.send(type);
+  for (const type of ["presence", "nudge", "presence", "message", "open", "error"]) {
+    source.send(type);
   }
 
   expect(probe.report()).toContain("Live events received: 4 (presence 2, message 1, nudge 1)");
@@ -143,7 +137,7 @@ it("counts a nested store's publishes as its store's, and unsubscribes the liste
   expect.hasAssertions();
 
   const session = listStore();
-  const probe = probedWith({ boardStore: { session }, live: null, session });
+  const probe = probedWith({ boardStore: { session }, session });
   const heard: string[] = [];
   const unsubscribe = session.subscribe(() => {
     heard.push("published");
@@ -177,9 +171,9 @@ it("says when it counted nothing, and probes only the first render's stores", { 
   expect.hasAssertions();
 
   const probe = createProbe();
-  rendered(probe, { live: null });
+  rendered(probe, {});
   const later = listStore();
-  rendered(probe, { later, live: null });
+  rendered(probe, { later });
   later.subscribe(ignored);
   later.publish();
 
@@ -197,7 +191,7 @@ it("answers React's other calls without counting, and leaves alone a store's cal
   probe.reactHook.onScheduleFiberRoot(RENDERER, {}, null);
   const client = { subscribe: (channel: string): string => `subscribed to ${channel}` };
   const other = createProbe();
-  rendered(other, { client, live: null });
+  rendered(other, { client });
 
   expect([probe.reactHook.checkDCE(), probe.reactHook.onCommitFiberUnmount()]).toStrictEqual([null, null]);
   expect(client.subscribe("general")).toBe("subscribed to general");

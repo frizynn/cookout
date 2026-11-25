@@ -7,18 +7,18 @@ import type {
   SessionState,
 } from "./identity-parts.ts";
 import type { CalledPart, CalledTriggers } from "./triggers-slice.ts";
+import type { FollowedLive, Linked } from "./live-following.ts";
 import type { IdentityName, Refusal } from "../../sdk/index.ts";
 import type { InboxCalls, InboxCallsClient, InboxHeld, InboxParts } from "./inbox-part.ts";
 import type { OwnClient, OwnShowing, OwnState } from "./own-showing.ts";
 import type { PresenceClient, Presences } from "./presence-slice.ts";
 import type { ReactionParts, Reactions, ReactionsClient, Toggle, ToggleClient } from "./reaction-parts.ts";
-import type { FollowedLive } from "./live-following.ts";
+import { followerOf, linkedTo } from "./live-following.ts";
 import type { Part } from "./slice.ts";
 import { createCalledTriggers } from "./triggers-slice.ts";
 import { createListeners } from "./listeners.ts";
 import { createOwn } from "./own-showing.ts";
 import { createPart } from "./slice.ts";
-import { followerOf } from "./live-following.ts";
 import { identityPartsOf } from "./identity-parts.ts";
 import { inboxPartsOf } from "./inbox-part.ts";
 import { presenceSlice } from "./presence-slice.ts";
@@ -47,7 +47,7 @@ type Shown =
 
 type Subscribe = (listener: () => void) => () => void;
 
-interface BoardStore extends OwnShowing {
+interface BoardStore extends OwnShowing, Linked {
   readonly subscribe: Subscribe;
   readonly snapshot: () => BoardState;
   readonly subscribeShowing: (shown: Shown) => Subscribe;
@@ -158,6 +158,15 @@ function partsOf(changed: () => void, options: BoardStoreOptions): Parts {
   };
 }
 
+function followOf(parts: Parts, live: FollowedLive): () => void {
+  const { identities, own, presence, reactions, session, sessions, triggers } = parts;
+  return followerOf({
+    live,
+    parts: [own.parts, presence, reactions, identities, sessions, triggers, parts.inboxFollowed],
+    rereads: [session.back],
+  });
+}
+
 function createBoardStore(options: BoardStoreOptions): BoardStore {
   const { notify, subscribe } = createListeners();
   let snapshot: BoardState | null = null;
@@ -167,11 +176,7 @@ function createBoardStore(options: BoardStoreOptions): BoardStore {
   }
   const parts = partsOf(changed, options);
   const { identities, identityCalls, own, presence, reactionToggle, reactions, session, sessions, triggers } = parts;
-  const follow = followerOf({
-    live: options.live,
-    parts: [own.parts, presence, reactions, identities, sessions, triggers, parts.inboxFollowed],
-    rereads: [session.back],
-  });
+  const follow = followOf(parts, options.live);
   const subscribers = {
     ...own.subscribers({ follow, subscribe }),
     identities: showing({ follow, part: identities, subscribe }),
@@ -197,6 +202,7 @@ function createBoardStore(options: BoardStoreOptions): BoardStore {
   }
   return {
     ...own.showing({ follow, subscribe }),
+    ...linkedTo(options.live),
     identityCalls,
     inboxCalls: parts.inboxCalls,
     logIn: session.logIn,

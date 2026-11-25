@@ -25,6 +25,7 @@ const localRuleFile = (rule: string) => {
 
 const otherPluginRules: ReadonlySet<string> = new Set([
   "agent-factory",
+  "board-store-owner",
   "exact-locators",
   "keymap-owner",
   "no-internal-tag",
@@ -57,6 +58,7 @@ const nativeRules: readonly (readonly [string, string])[] = [
   ["eslint(no-restricted-imports)", "no-restricted-imports.sqlite"],
   ["web-rules(page-title-owner)", "page-title-owner"],
   ["web-rules(keymap-owner)", "keymap-owner"],
+  ["web-rules(board-store-owner)", "board-store-owner"],
   ["export-rules(no-internal-tag)", "no-internal-tag"],
 ];
 
@@ -85,6 +87,7 @@ const lintCanaries: readonly Canary[] = [
 
 const lintPasses: readonly Canary[] = [
   { check: "oxlint", code: "web-rules(keymap-owner)", file: `${ROOT}/app/modules/keymap/index.ts` },
+  { check: "oxlint", code: "web-rules(board-store-owner)", file: `${ROOT}/app/modules/board/index.ts` },
 ];
 
 const tscCanaries: readonly Canary[] = [

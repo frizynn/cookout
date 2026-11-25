@@ -3,7 +3,6 @@ import type { Reading, Unread } from "../../unread/index.ts";
 import type { Composer } from "../../composer/index.ts";
 import type { Keymap } from "../../keymap/index.ts";
 import type { Layout } from "../../layout/index.ts";
-import type { Live } from "../../live/index.ts";
 import type { Search } from "../../search/web.ts";
 
 interface Stores {
@@ -13,7 +12,6 @@ interface Stores {
   readonly composer: Composer;
   readonly keymap: Keymap;
   readonly layout: Layout;
-  readonly live: Live | null;
   readonly loginApprovals: LoginApprovals;
   readonly reading: Reading;
   readonly search: Search;

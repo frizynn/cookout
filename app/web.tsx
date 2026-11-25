@@ -36,7 +36,6 @@ if (root !== null) {
       composer={createComposer({ boardStore })}
       keymap={createKeymap({ platform: globalThis.navigator.platform })}
       layout={layout}
-      live={live}
       loginApprovals={createLoginApprovals(client)}
       reading={createReading(browserReadingTools())}
       search={createSearch({ search: boardStore.calls.search })}

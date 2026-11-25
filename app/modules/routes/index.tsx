@@ -10,7 +10,7 @@
  * panel open beside it. Any other hash opens the inbox, the homepage, as the
  * sidebar's "cookout" name does; a channel name that isn't a channel name, or
  * a thread ID that isn't a message ID, says there is nothing here.
- * With `live`, while the live stream's link to the server is down, a
+ * While the board store says the live stream's link to the server is down, a
  * "Reconnecting…" bar shows at the top of the workspace.
  * `#/approve/<user code>` is the approval page for a login request, a page of
  * its own outside the workspace (after the login view, if logged out), and

@@ -551,6 +551,21 @@
       }
     },
     {
+      "files": ["app/modules/**/*.ts", "app/modules/**/*.tsx"],
+      "excludeFiles": [
+        "app/modules/board/**",
+        "app/modules/live/**",
+        "app/modules/sdk/**",
+        "app/modules/testing/**",
+        "app/modules/*/server.ts",
+        "app/modules/*/lib/server/**",
+        "app/modules/*/tests/**"
+      ],
+      "rules": {
+        "web-rules/board-store-owner": "error"
+      }
+    },
+    {
       "files": ["app/web.tsx", "app/modules/**/*.ts", "app/modules/**/*.tsx"],
       "excludeFiles": ["app/modules/*/server.ts", "app/modules/*/lib/server/**", "app/modules/*/tests/server/**"],
       "rules": {

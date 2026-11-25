@@ -24,7 +24,7 @@ export function WorkspaceBody(props: WorkspaceBodyProps): ReactNode {
         keymap={stores.keymap}
         search={stores.search}
       />
-      {stores.live !== null && <ReconnectingView live={stores.live} />}
+      <ReconnectingView />
       <IdentityDeletedNotice identities={stores.composer.identities} />
       <WorkspaceMain>
         <WorkspacePanes me={props.me} profile={props.profile} route={props.route} stores={stores} />
