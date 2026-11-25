@@ -15,6 +15,7 @@ type SearchCall = Parameters<typeof createSearch>[typeof FIRST]["search"];
 const PAGE = 2;
 const FIRST = 0;
 const NO_PAUSE = 0;
+const SUGGESTED = 3;
 
 function adminClient(): CookoutClient {
   return createCookoutClient({ env: {}, token: webTestCookout().adminToken, url: webTestCookout().url });
@@ -129,7 +130,9 @@ it("loading more adds the next page, and moving onto the last result loaded load
   await shownTexts(shown, ["Dingopage 5", "Dingopage 4", "Dingopage 3", "Dingopage 2", "Dingopage 1"]);
 });
 
-it("a query with neither words nor filters asks nothing, and closing keeps the query", { timeout: 5000 }, () => {
+it("a query with neither words nor filters asks nothing, even sorted again, and closing keeps the query", {
+  timeout: 5000,
+}, () => {
   expect.hasAssertions();
 
   const search = vi.fn<SearchCall>();
@@ -137,10 +140,45 @@ it("a query with neither words nor filters asks nothing, and closing keeps the q
 
   shown.edit("   ");
   shown.move("down");
+  shown.sortBy("best");
+  shown.sortBy("best");
   shown.close();
 
   expect([search.mock.calls, shown.snapshot()]).toStrictEqual([
     [],
-    { found: { status: "idle" }, highlighted: 0, open: false, query: "   " },
+    {
+      caret: 3,
+      dismissed: false,
+      found: { status: "idle" },
+      highlighted: 0,
+      open: false,
+      query: "   ",
+      sort: "best",
+      suggestion: 0,
+    },
+  ]);
+});
+
+function suggestionMoved(shown: Search, direction: "down" | "up"): number {
+  shown.moveSuggestion(direction, SUGGESTED);
+  return shown.snapshot().suggestion;
+}
+
+it("the filter suggestion highlight wraps round, and hiding the suggestions lasts until the next edit", {
+  timeout: 5000,
+}, () => {
+  expect.hasAssertions();
+
+  const shown = createSearch({ pause: NO_PAUSE, search: vi.fn<SearchCall>() });
+  shown.edit("   ", PAGE);
+  const moved = [suggestionMoved(shown, "up"), suggestionMoved(shown, "down")];
+  shown.dismissSuggestions();
+  const { dismissed } = shown.snapshot();
+  shown.edit("    ");
+
+  expect([moved, dismissed, shown.snapshot()]).toStrictEqual([
+    [PAGE, FIRST],
+    true,
+    expect.objectContaining({ caret: "    ".length, dismissed: false, suggestion: FIRST }),
   ]);
 });

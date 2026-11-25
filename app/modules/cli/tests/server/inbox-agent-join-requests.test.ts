@@ -28,7 +28,7 @@ function started(cookout: TestCookoutService): Effect.Effect<AgentJoinRequestSta
 }
 
 function workerBroughtInBy(chief: TestIdentity): Effect.Effect<void> {
-  return Effect.asVoid(answer(() => chief.client.createAgentForOwner({ name: "worker" })));
+  return Effect.asVoid(answer(() => chief.client.createAgentForOwner({ displayName: "worker", name: "worker" })));
 }
 
 const chiefBroughtInWorker: Effect.Effect<Board, never, TestCookout | CommandLineNeeds | Scope.Scope> = Effect.gen(

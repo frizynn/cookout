@@ -3,7 +3,7 @@ import type { IdentityName } from "../../sdk/index.ts";
 import type { Keymap } from "../../keymap/index.ts";
 import { ProfileBody } from "./profile-body.tsx";
 import type { ReactNode } from "react";
-import { SidePanel } from "../../design-system/index.tsx";
+import { SidePanel } from "../../design-system/layout.tsx";
 import { useProfileKeys } from "./use-profile-keys.ts";
 
 const TEXT = { close: "Close profile", profile: "Profile" } as const;

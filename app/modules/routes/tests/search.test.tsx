@@ -176,3 +176,33 @@ it("scrolling to the end of a long list loads the next page", { timeout: 5000 },
 
   close();
 });
+
+const NEWEST = [["zebrasort"], ["Zebrasort", "zebrasort", "zebrasort"]] as const;
+const BEST = NEWEST.toReversed();
+
+async function sortedTo(name: string, marked: readonly (readonly string[])[]): Promise<boolean> {
+  fireEvent.click(screen.getByRole("radio", { name }));
+  await vi.waitFor(() => {
+    expect(rowsNow().map((row) => row.marked)).toStrictEqual(marked);
+  });
+  return screen.getByRole("radio", { name }).matches(":checked");
+}
+
+it("switching to Best match reorders the results, and back to Newest restores them", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const posted = await postedIn({
+    channel: "web-search-sort",
+    closed: [],
+    texts: ["Zebrasort zebrasort zebrasort", "Lunch is at noon and the coffee is fixed, then zebrasort"],
+  });
+  const close = openAt({ client: posted.reader, hash: "#/inbox" });
+  await typed("zebrasort");
+  const before = await rowsShown(NEWEST.length);
+  const best = await sortedTo("Best match", BEST);
+
+  await expect(sortedTo("Newest", NEWEST)).resolves.toBe(true);
+  expect([before.map((row) => row.marked), best]).toStrictEqual([NEWEST, true]);
+
+  close();
+});

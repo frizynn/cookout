@@ -70,6 +70,8 @@ const STANDARD_SCREENS = [
   "inbox-marked",
   "channel",
   "channel-hover",
+  "attachments",
+  "attachment-full",
   "message-menu",
   "channel-menu",
   "person-menu",

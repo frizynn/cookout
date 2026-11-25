@@ -1,5 +1,5 @@
-import type { MenuChoice } from "../../design-system/index.tsx";
-import { MoreActions } from "../../design-system/index.tsx";
+import type { MenuChoice } from "../../design-system/messages.tsx";
+import { MoreActions } from "../../design-system/controls.tsx";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 

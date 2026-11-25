@@ -1,5 +1,5 @@
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
-import { Pane, PaneHeader } from "../../design-system/index.tsx";
+import { Pane, PaneHeader } from "../../design-system/layout.tsx";
 import type { Board } from "../../board/index.ts";
 import { ChannelFeed } from "./channel-feed.tsx";
 import type { ChannelFeedProps } from "./channel-feed.tsx";

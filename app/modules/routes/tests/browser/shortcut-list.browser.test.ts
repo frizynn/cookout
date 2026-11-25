@@ -1,8 +1,12 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inPane } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
+import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const LIST = { name: "Keyboard shortcuts" } as const;
 const BOX = { name: "Message" } as const;
@@ -55,7 +59,7 @@ async function reportingMac(page: Page): Promise<void> {
 test("? with a message focused opens the shortcut list, and Escape closes it with focus back on the message", async ({
   page,
 }) => {
-  const message = await openedChannel(page, "browser-shortcuts-open");
+  const message = await openedChannel(page, unique("browser-shortcuts-open"));
   await message.focus();
   await page.keyboard.press("?");
 
@@ -68,7 +72,7 @@ test("? with a message focused opens the shortcut list, and Escape closes it wit
 });
 
 test("? in the message box types a question mark, and Ctrl+/ there opens the shortcut list", async ({ page }) => {
-  await openedChannel(page, "browser-shortcuts-box");
+  await openedChannel(page, unique("browser-shortcuts-box"));
   const box = page.getByRole("textbox", BOX);
   await box.click();
   await page.keyboard.press("?");
@@ -82,7 +86,7 @@ test("? in the message box types a question mark, and Ctrl+/ there opens the sho
 });
 
 test("escape closes the shortcut list opened from the message box with focus back in the box", async ({ page }) => {
-  await openedChannel(page, "browser-shortcuts-box-back");
+  await openedChannel(page, unique("browser-shortcuts-box-back"));
   const box = page.getByRole("textbox", BOX);
   await box.click();
   await page.keyboard.press("Control+/");
@@ -95,7 +99,7 @@ test("escape closes the shortcut list opened from the message box with focus bac
 });
 
 test("the shortcut list names Ctrl+K and the Inbox keys under their groups", async ({ page }) => {
-  await followedInbox(page, "browser-shortcuts-groups");
+  await followedInbox(page, unique("browser-shortcuts-groups"));
   await page.keyboard.press("?");
   const list = page.getByRole("dialog", LIST);
 
@@ -106,7 +110,7 @@ test("the shortcut list names Ctrl+K and the Inbox keys under their groups", asy
 
 test("on a Mac, the shortcut list names ⌘K and opens on Cmd+/", async ({ page }) => {
   await reportingMac(page);
-  await followedInbox(page, "browser-shortcuts-mac");
+  await followedInbox(page, unique("browser-shortcuts-mac"));
   await page.keyboard.press("Meta+/");
   const list = page.getByRole("dialog", LIST);
 
@@ -115,7 +119,7 @@ test("on a Mac, the shortcut list names ⌘K and opens on Cmd+/", async ({ page 
 });
 
 test("with the shortcut list open, the Inbox keys behind it do nothing", async ({ page }) => {
-  await followedInbox(page, "browser-shortcuts-behind");
+  await followedInbox(page, unique("browser-shortcuts-behind"));
   await page.keyboard.press("?");
 
   await expect(page.getByRole("dialog", LIST)).toBeVisible();

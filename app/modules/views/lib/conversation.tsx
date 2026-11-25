@@ -1,7 +1,7 @@
 import { actionsOf, isMissing, openLinkOf } from "./conversation-parts.ts";
 import { ConversationMessages } from "./conversation-messages.tsx";
 import { ConversationMissing } from "./conversation-missing.tsx";
-import { ConversationPanel } from "../../design-system/index.tsx";
+import { ConversationPanel } from "../../design-system/layout.tsx";
 import type { ConversationProps } from "./conversation-parts.ts";
 import type { ReactNode } from "react";
 import { ReadNote } from "./read-note.tsx";

@@ -1,7 +1,11 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { logInToChannels } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
+import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const FILLERS = 20;
 const NONE = 0;
@@ -62,7 +66,7 @@ async function edgesOnHover(page: Page, name: string): Promise<Edges> {
 test("a card for a name in the middle of the feed opens beside the name, to its right, so it covers no part of it", async ({
   page,
 }) => {
-  const channel = "browser-card-below";
+  const channel = unique("browser-card-below");
   await adminClient().createChannel({ name: channel });
   await postAs(channel, `${channel}-first`, "human");
   await postAs(channel, `${channel}-middle`, "human");
@@ -76,7 +80,7 @@ test("a card for a name in the middle of the feed opens beside the name, to its 
 test("the last message's card, with no room below it near the viewport's bottom, slides up to stay inside the window", async ({
   page,
 }) => {
-  const channel = "browser-card-flip";
+  const channel = unique("browser-card-flip");
   await adminClient().createChannel({ name: channel });
   await Promise.all(
     Array.from({ length: FILLERS }, async (_value, filler) => {
@@ -105,13 +109,13 @@ async function focusedAuthor(page: Page, channel: string): Promise<string> {
 test("by keyboard alone, Tab from a focused name reaches the card's Message, and Enter on it puts @name in the message box", async ({
   page,
 }) => {
-  const author = await focusedAuthor(page, "browser-card-keys");
+  const author = await focusedAuthor(page, unique("browser-card-keys"));
 
   await expect(page.getByRole("dialog")).toBeVisible();
 
   await page.keyboard.press("Tab");
 
-  await expect(page.getByRole("dialog").getByRole("button", { name: "Message" })).toBeFocused();
+  await expect(page.getByRole("dialog").getByRole("button", { exact: true, name: "Message" })).toBeFocused();
 
   await page.keyboard.press("Enter");
 

@@ -1,7 +1,7 @@
 import type { Message, MessageId, ReadReceipt, Reply, TopLevelMessage } from "../../sdk/index.ts";
 import type { MessageMenu, Selection, ThreadNews } from "../../unread/index.ts";
 import { useMemo, useSyncExternalStore } from "react";
-import { DividerButton } from "../../design-system/index.tsx";
+import { DividerButton } from "../../design-system/controls.tsx";
 import { MessageStream } from "./message-stream.tsx";
 import type { ReactNode } from "react";
 import type { Reply as ReplyAction } from "./use-message-menu.ts";

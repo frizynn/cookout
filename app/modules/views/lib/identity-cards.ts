@@ -1,4 +1,4 @@
-import type { IdentityCardLink, IdentityCardParts, IdentityCardSource } from "../../design-system/index.tsx";
+import type { IdentityCardLink, IdentityCardParts, IdentityCardSource } from "../../design-system/messages.tsx";
 import { identityList, presences } from "../../board/index.ts";
 import type { BoardStore } from "../../board/index.ts";
 import type { Identity } from "../../sdk/index.ts";

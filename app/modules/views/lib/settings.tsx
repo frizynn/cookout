@@ -1,4 +1,4 @@
-import { Page, Pane, PaneHeader } from "../../design-system/index.tsx";
+import { Page, Pane, PaneHeader } from "../../design-system/layout.tsx";
 import type { Composer } from "../../composer/index.ts";
 import type { IdentityName } from "../../sdk/index.ts";
 import type { Layout } from "../../layout/index.ts";

@@ -1,4 +1,4 @@
-import { Announcement } from "../../design-system/index.tsx";
+import { Announcement } from "../../design-system/content.tsx";
 import type { Board } from "../../board/index.ts";
 import type { Keymap } from "../../keymap/index.ts";
 import type { ReactNode } from "react";

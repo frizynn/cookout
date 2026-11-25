@@ -11,7 +11,7 @@
  */
 import { Array as Arr, Effect, Option, Predicate, String as Str, pipe } from "effect";
 import { AssetStore, Storage } from "../storage/server.ts";
-import type { Attachment, AttachmentContentType, AttachmentId, ImageContentType, NewAttachment } from "./index.ts";
+import type { Attachment, AttachmentId, ImageContentType, NewAttachment } from "./index.ts";
 import {
   assetPath,
   attachmentLimits,
@@ -25,6 +25,7 @@ import type { Refusal } from "../http/index.ts";
 import type { Route } from "../http/server.ts";
 import { Secrets } from "../secrets/server.ts";
 import type { StorageUnavailable } from "../storage/server.ts";
+import { imageSize } from "./lib/server/image-size.ts";
 
 const BAD_REQUEST = 400;
 const NOT_FOUND = 404;
@@ -64,7 +65,7 @@ const unnamed: Refusal = {
 
 const messageEmpty: Refusal = {
   code: "message_empty",
-  message: "A message needs text, with or without attachments.",
+  message: "A message needs text, at least one attachment, or both.",
   status: BAD_REQUEST,
 };
 
@@ -88,14 +89,20 @@ function empty(name: string): Refusal {
   };
 }
 
-function detectContent(bytes: NewAttachment["bytes"]): Pick<Attachment, "contentType" | "image"> {
+type Content = Pick<Attachment, "contentType" | "image" | "width" | "height">;
+
+function detectContent(bytes: NewAttachment["bytes"]): Content {
   const head = String.fromCodePoint(...bytes.subarray(START, HEAD_LENGTH));
-  const found: Option.Option<AttachmentContentType> = Arr.findFirst(IMAGE_SIGNATURES, ([, signature]) =>
+  const found: Option.Option<ImageContentType> = Arr.findFirst(IMAGE_SIGNATURES, ([, signature]) =>
     new RegExp(signature, "u").test(head),
   ).pipe(Option.map(([type]) => type));
   return Option.match(found, {
-    onNone: () => ({ contentType: opaqueContentType, image: false }),
-    onSome: (contentType) => ({ contentType, image: true }),
+    onNone: (): Content => ({ contentType: opaqueContentType, image: false }),
+    onSome: (contentType): Content => ({
+      contentType,
+      image: true,
+      ...Option.getOrElse(imageSize({ bytes, contentType }), () => ({})),
+    }),
   });
 }
 

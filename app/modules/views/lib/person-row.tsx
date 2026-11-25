@@ -1,5 +1,5 @@
 import type { Identity, IdentityName } from "../../sdk/index.ts";
-import { IdentityRow } from "../../design-system/index.tsx";
+import { IdentityRow } from "../../design-system/content.tsx";
 import { IdentityTags } from "./identity-tags.tsx";
 import type { ReactNode } from "react";
 import { noteOf as deactivatedNote } from "./use-author.ts";

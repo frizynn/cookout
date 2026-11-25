@@ -3,7 +3,7 @@ import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import type { MessageMenu, ThreadNews } from "../../unread/index.ts";
 import { FoldEntry } from "./fold-entry.tsx";
 import { MessageEntry } from "./message-entry.tsx";
-import { MessageList } from "../../design-system/index.tsx";
+import { MessageList } from "../../design-system/messages.tsx";
 import { MessageRefusals } from "./message-refusals.tsx";
 import type { ReactNode } from "react";
 import { feedRows } from "./feed-rows.ts";

@@ -1,4 +1,4 @@
-import type { ActionMenuParts, MenuChoice } from "../../design-system/index.tsx";
+import type { ActionMenuParts, MenuChoice } from "../../design-system/messages.tsx";
 import type { Subscriptions, SubscriptionsState } from "../../board/index.ts";
 import type { Unread, UnreadCounts } from "../../unread/index.ts";
 import { useMemo, useSyncExternalStore } from "react";

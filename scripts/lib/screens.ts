@@ -57,6 +57,8 @@ const SCREENS: readonly Screen[] = [
     name: "channel-hover",
     text: "Lunch at 12:30.",
   },
+  { hash: "#/channels/design", name: "attachments", text: "The view from the office, and my notes." },
+  { click: "hills.png", hash: "#/channels/design", name: "attachment-full", text: "1.2 KB" },
   {
     click: "More actions",
     clickIn: 'article:has-text("Lunch at 12:30.")',

@@ -1,5 +1,5 @@
 import type { Board, ThreadMessagesState } from "../../board/index.ts";
-import type { PanelAction, PanelEdgeParts, ShortcutLinkParts } from "../../design-system/index.tsx";
+import type { PanelAction, PanelEdgeParts, ShortcutLinkParts } from "../../design-system/layout.tsx";
 import type { Reader, Reading, Unread } from "../../unread/index.ts";
 import type { Composer } from "../../composer/index.ts";
 import type { InboxThreadSelection } from "../../paths/index.ts";

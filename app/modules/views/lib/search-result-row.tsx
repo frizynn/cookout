@@ -1,6 +1,8 @@
-import { FeedText, ResultOption } from "../../design-system/index.tsx";
+import { FeedText } from "../../design-system/feed.tsx";
+import { MessageAttachments } from "./message-attachments.tsx";
 import type { ParsedQuery } from "../../search/index.ts";
 import type { ReactNode } from "react";
+import { ResultOption } from "../../design-system/controls.tsx";
 import type { SearchResult } from "../../sdk/index.ts";
 import { SearchText } from "./search-text.tsx";
 import { useAuthor } from "./use-author.ts";
@@ -30,6 +32,7 @@ export function SearchResultRow(props: SearchResultRowProps): ReactNode {
       <FeedText unread>
         <SearchText query={props.query} text={message.text} />
       </FeedText>
+      <MessageAttachments linked={false} message={message} />
     </ResultOption>
   );
 }

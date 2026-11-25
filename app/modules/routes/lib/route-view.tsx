@@ -1,5 +1,5 @@
 import { AgentJoinApprovalView, Authors, LoginApprovalView, LoginView, Reacting } from "../../views/index.tsx";
-import { AppShell } from "../../design-system/index.tsx";
+import { AppShell } from "../../design-system/layout.tsx";
 import type { Place } from "../../paths/index.ts";
 import type { ReactNode } from "react";
 import { SignedInView } from "./signed-in-view.tsx";

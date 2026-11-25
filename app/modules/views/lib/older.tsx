@@ -1,5 +1,6 @@
-import { Alert, QuietButton } from "../../design-system/index.tsx";
+import { Alert } from "../../design-system/content.tsx";
 import type { ChannelMessagesState } from "../../board/index.ts";
+import { QuietButton } from "../../design-system/controls.tsx";
 import type { ReactNode } from "react";
 
 type OlderState = Extract<ChannelMessagesState, { readonly status: "loaded" }>["older"];

@@ -2,12 +2,11 @@ import type { Reading, Unread } from "../../unread/index.ts";
 import type { Board } from "../../board/index.ts";
 import { ChannelConversation } from "./channel-conversation.tsx";
 import type { Composer } from "../../composer/index.ts";
-import { ConversationEmpty } from "../../design-system/index.tsx";
+import { ConversationEmpty } from "../../design-system/layout.tsx";
 import { ConversationView } from "./conversation.tsx";
 import type { InboxSelection } from "../../paths/index.ts";
 import type { Keymap } from "../../keymap/index.ts";
-import type { PanelEdgeParts } from "../../design-system/index.tsx";
-
+import type { PanelEdgeParts } from "../../design-system/layout.tsx";
 import type { ReactNode } from "react";
 
 const TEXT = { conversation: "Conversation", pick: "Pick a conversation" } as const;

@@ -3,6 +3,7 @@ import { adminClient, anonymousClient, clientWith, newIdentity } from "./identit
 import { agentNamed, openedBy } from "./presence.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { createAgentForOwnerAsBefore } from "../../testing/index.ts";
 import { inPane } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
@@ -230,7 +231,7 @@ it("a deactivated identity's card says Deactivated in place of its presence, sti
 
 async function chiefWithWorker(channel: string): Promise<Awaited<ReturnType<typeof newIdentity>>> {
   const chief = await newIdentity({ kind: "agent", name: `${channel}-chief`, owner: `${channel}-owner` });
-  await chief.client.createAgentForOwner({ name: `${channel}-worker` });
+  await createAgentForOwnerAsBefore({ admin: adminClient(), by: chief.client, request: `${channel}-worker` });
   return chief;
 }
 

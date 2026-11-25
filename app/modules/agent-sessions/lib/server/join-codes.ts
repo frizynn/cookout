@@ -1,4 +1,4 @@
-import type { AgentIdentity, HumanIdentity, IdentityName } from "../../../identities/index.ts";
+import type { AgentIdentity, DisplayName, HumanIdentity, IdentityName } from "../../../identities/index.ts";
 import type { AgentSessionResponse, JoinCodeResponse, RedeemJoinCodeRequest } from "../../index.ts";
 import { DateTime, Effect, Predicate } from "effect";
 import type { JoinCodeRedemption, StorageUnavailable } from "../../../storage/server.ts";
@@ -17,6 +17,7 @@ interface NewAgent {
   readonly caller: HumanIdentity;
   readonly name: IdentityName;
   readonly description?: Description;
+  readonly displayName?: DisplayName;
 }
 
 interface JoinCodes {
@@ -35,6 +36,14 @@ const joinCodeNotFound: Refusal = {
     `${joinCodeLifetimeMinutes} minutes of being made. Ask the agent's owner for a new one.`,
   status: NOT_FOUND,
 };
+
+function displayNameRequired(name: IdentityName): Refusal {
+  return {
+    code: "display_name_required",
+    message: `${name} would be a new agent, and a new agent needs a display name: send displayName.`,
+    status: BAD_REQUEST,
+  };
+}
 
 function createRefusal(result: "name_taken" | "name_not_owned" | "owner_not_human", name: IdentityName): Refusal {
   if (result === "name_taken") {
@@ -57,12 +66,16 @@ function withHost<Redeem extends object>(
   return { ...redeem, host };
 }
 
-function newAgentOf({ caller, description, name }: NewAgent, createdAt: AgentIdentity["createdAt"]): AgentIdentity {
-  const agent: AgentIdentity = { admin: false, createdAt, kind: "agent", name, owner: caller.name };
-  if (Predicate.isUndefined(description)) {
-    return agent;
+function newAgentOf(asked: NewAgent, createdAt: AgentIdentity["createdAt"]): Effect.Effect<AgentIdentity, Refusal> {
+  const { caller, description, displayName, name } = asked;
+  if (Predicate.isUndefined(displayName)) {
+    return Effect.fail(displayNameRequired(name));
   }
-  return { ...agent, description };
+  const agent: AgentIdentity = { admin: false, createdAt, displayName, kind: "agent", name, owner: caller.name };
+  if (Predicate.isUndefined(description)) {
+    return Effect.succeed(agent);
+  }
+  return Effect.succeed({ ...agent, description });
 }
 
 function agentCreator({ publishIdentity, secrets, storage }: On) {
@@ -87,7 +100,7 @@ function creator(on: On): JoinCodes["createJoinCode"] {
     Effect.gen(function* createAgentWithJoinCode() {
       const now = yield* DateTime.now;
       const createdAt = isoTimeOf(now);
-      const agent = newAgentOf(asked, createdAt);
+      const agent = yield* newAgentOf(asked, createdAt);
       yield* createAgent(agent);
       const joinCode = yield* secrets.newToken;
       const codeHash = yield* secrets.hashToken(joinCode);

@@ -1,7 +1,7 @@
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import type { Board } from "../../board/index.ts";
 import type { Composer } from "./thread-draft.ts";
-import { IdentityCardComposer } from "../../design-system/index.tsx";
+import { IdentityCardComposer } from "../../design-system/messages.tsx";
 import type { ReactNode } from "react";
 import { threadDraft } from "./thread-draft.ts";
 

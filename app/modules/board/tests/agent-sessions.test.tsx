@@ -6,6 +6,7 @@ import type { HandLive } from "../../testing/web.ts";
 import type { Live } from "../../live/index.ts";
 import type { Mock } from "vitest";
 import { createCookoutClient } from "../../sdk/index.ts";
+import { createIdentityAsBefore } from "../../testing/index.ts";
 import { createLive } from "../../live/index.ts";
 import { handLive } from "../../testing/web.ts";
 import { webTestCookout } from "../../../../scripts/web-test-server.ts";
@@ -31,7 +32,11 @@ function adminClient(): CookoutClient {
 }
 
 async function agentNamed(name: string): Promise<Agent> {
-  const { identity, token } = await adminClient().createIdentity({ kind: "agent", name, owner: "admin" });
+  const { identity, token } = await createIdentityAsBefore({
+    admin: adminClient(),
+    by: adminClient(),
+    request: { kind: "agent", name, owner: "admin" },
+  });
   return { client: createCookoutClient({ env: {}, token, url: webTestCookout().url }), name: identity.name };
 }
 

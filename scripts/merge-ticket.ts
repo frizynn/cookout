@@ -1,6 +1,6 @@
+import { EXIT_CUT_OFF, cutOffLine, failedJobsOr, mergedLine, verdictOnExit } from "./lib/verdict.ts";
 import type { MergeOptions, Merged } from "./lib/merge-ticket.ts";
 import { continueMerge, mergeTicket } from "./lib/merge-ticket.ts";
-import { failedJobsOr, mergedLine, verdictOnExit } from "./lib/verdict.ts";
 import type { Step } from "./lib/merge-steps.ts";
 import { fail } from "./lib/tools.ts";
 import { mergeRules } from "./lib/merge-rules.ts";
@@ -60,6 +60,10 @@ function requireGreen(gate: Gate): void {
   const { advice, subject } = gate;
   verdict.failingAt(`${subject}'s Check run`);
   const step = waitForCi({ ...gate, log });
+  if (step.kind === "stopped" && step.cutOff === true) {
+    verdict.failingAt(`${subject}'s Check run: ${cutOffLine(step.jobs)}`);
+    fail(SCRIPT, `${step.reason}\nNothing was merged.`, EXIT_CUT_OFF);
+  }
   if (step.kind === "stopped") {
     verdict.failingAt(`${subject}'s Check run: ${failedJobsOr({ jobs: step.jobs, step: "not green" })}`);
     fail(SCRIPT, `${step.reason}\nNothing was merged. ${advice}`);
@@ -119,8 +123,8 @@ const FAST_CHECKS = ["typecheck", "lint --base=origin/v1", "hygiene"]
   .map((script) => `pnpm run --silent ${script}`)
   .join(" && ");
 
-function ciOf(branch: string, sha: string, rerunRed: boolean): Step {
-  return waitForCi({ args: ["--branch", branch, "--commit", sha], base: [], log, rerunRed, subject: branch });
+function ciOf(branch: string, sha: string): Step {
+  return waitForCi({ args: ["--branch", branch, "--commit", sha], base: [], log, rerunRed: true, subject: branch });
 }
 
 function failedStepOf(files: readonly string[]): string {
@@ -147,6 +151,10 @@ const merged: Merged = run({
 function shaOf(outcome: Merged): string {
   if (outcome.ok) {
     return outcome.sha;
+  }
+  if ("cutOff" in outcome) {
+    verdict.failingAt(`merge-ticket-${ticket}'s Check run: ${cutOffLine(outcome.cutOff)}`);
+    return fail(SCRIPT, outcome.reason, EXIT_CUT_OFF);
   }
   verdict.failingAt(failedStepOf(outcome.files));
   return fail(SCRIPT, outcome.reason);

@@ -22,7 +22,13 @@ interface MergeOptions extends PushOptions {
 
 type Merged =
   | { readonly attempts: number; readonly ok: true; readonly sha: string }
-  | { readonly files: readonly string[]; readonly ok: false; readonly reason: string };
+  | { readonly files: readonly string[]; readonly ok: false; readonly reason: string }
+  | {
+      readonly cutOff: readonly string[];
+      readonly files: readonly string[];
+      readonly ok: false;
+      readonly reason: string;
+    };
 
 type Started = { readonly kind: "started"; readonly sha: string } | Stopped;
 
@@ -85,21 +91,25 @@ function attempt(options: MergeOptions): Attempt {
   const stepped = firstStop([
     (): Step => mergeInto({ first: "ours", into: `ticket-${options.ticket}`, options }),
     (): Step => appendOnlyMigrations(options),
-    (): Step => renumberAdrs({ adrs: options.rules.adrs, cwd: options.cwd, log: options.log }),
     (): Step => install(options),
+    (): Step => renumberAdrs({ adrs: options.rules.adrs, cwd: options.cwd, log: options.log }),
     (): Step => check(options),
   ]);
   if (stepped.kind === "stopped") {
     return stepped;
   }
-  return push({ base: started.sha, options });
+  return push({ afterGreen: false, base: started.sha, options });
 }
 
 function finished(outcome: Pushed | Stopped, count: number): Merged {
   if (outcome.kind === "pushed") {
     return { attempts: count, ok: true, sha: outcome.sha };
   }
-  return { files: outcome.files, ok: false, reason: outcome.reason };
+  const failed = { files: outcome.files, ok: false, reason: outcome.reason } as const;
+  if (outcome.cutOff === true) {
+    return { ...failed, cutOff: outcome.jobs };
+  }
+  return failed;
 }
 
 function regenerateChanged(options: MergeOptions, base: string): Step {
@@ -115,21 +125,26 @@ function regenerateChanged(options: MergeOptions, base: string): Step {
   ]);
 }
 
-function checkAndPush(options: MergeOptions, base: string): Attempt {
+interface Retry {
+  readonly afterGreen: boolean;
+  readonly options: MergeOptions;
+}
+
+function checkAndPush({ afterGreen, base, options }: Retry & { readonly base: string }): Attempt {
   const stepped = firstStop([
     (): Step => appendOnlyMigrations(options),
+    (): Step => install(options),
     (): Step => renumberAdrs({ adrs: options.rules.adrs, cwd: options.cwd, log: options.log }),
     (): Step => regenerateChanged(options, base),
-    (): Step => install(options),
     (): Step => check(options),
   ]);
   if (stepped.kind === "stopped") {
     return stepped;
   }
-  return push({ base, options });
+  return push({ afterGreen, base, options });
 }
 
-function retry(options: MergeOptions): Attempt {
+function retry({ afterGreen, options }: Retry): Attempt {
   const base = git(options, "rev-parse", "origin/v1").output;
   const stepped = firstStop([
     (): Step => mergeInto({ first: "theirs", into: "origin/v1", options }),
@@ -138,7 +153,7 @@ function retry(options: MergeOptions): Attempt {
   if (stepped.kind === "stopped") {
     return stepped;
   }
-  return checkAndPush(options, base);
+  return checkAndPush({ afterGreen, base, options });
 }
 
 function afterAttempt(options: MergeOptions, outcome: Attempt, count: number): Merged {
@@ -153,7 +168,7 @@ function afterAttempt(options: MergeOptions, outcome: Attempt, count: number): M
   options.log(
     `v1 moved before the push. Attempt ${next} of ${options.attempts}: merging the new origin/v1 into merge-ticket-${options.ticket}`,
   );
-  return afterAttempt(options, retry(options), next);
+  return afterAttempt(options, retry({ afterGreen: true, options }), next);
 }
 
 function cleanedUp(options: MergeOptions, merged: Merged): Merged {
@@ -180,10 +195,10 @@ function pushOntoV1(options: MergeOptions): Attempt {
     if (flattened.kind === "stopped") {
       return flattened;
     }
-    return checkAndPush(options, git(options, "rev-parse", "HEAD^1").output);
+    return checkAndPush({ afterGreen: false, base: git(options, "rev-parse", "HEAD^1").output, options });
   }
   options.log(`origin/v1 moved past ${branch}'s v1 parent: merging it into ${branch} before the push`);
-  return retry(options);
+  return retry({ afterGreen: false, options });
 }
 
 function continueAttempt(options: MergeOptions): Attempt {

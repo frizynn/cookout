@@ -1,6 +1,7 @@
 import type { CookoutClient } from "../../app/modules/sdk/index.ts";
 import { createCookoutClient } from "../../app/modules/sdk/index.ts";
 import { dropWatch } from "./dropped-watch.ts";
+import { postScreenAttachments } from "./screen-attachments.ts";
 import { setTimeout as sleep } from "node:timers/promises";
 
 interface Owner {
@@ -12,6 +13,7 @@ interface Presences extends Owner {
   readonly adminToken: string;
   readonly dropped: string;
   readonly droppedToken: string;
+  readonly image: Uint8Array;
 }
 
 const WAKING_AGENT = "release-bot";
@@ -48,4 +50,5 @@ export async function setScreenPresences(presences: Presences): Promise<void> {
   const { adminToken, url } = presences;
   await dropWatch({ adminToken, agent: presences.dropped, agentToken: presences.droppedToken, url });
   await setScreenTriggers(presences);
+  await postScreenAttachments(presences);
 }

@@ -4,7 +4,7 @@ import { useMessageMenu, useReplyAction } from "./use-message-menu.ts";
 import { MessageContent } from "./message-content.tsx";
 import type { MessageMenu } from "../../unread/index.ts";
 import type { ReactNode } from "react";
-import { StandaloneMessage } from "../../design-system/index.tsx";
+import { StandaloneMessage } from "../../design-system/messages.tsx";
 import { dayLabel } from "../../format/index.ts";
 import { useAuthor } from "./use-author.ts";
 import { useMarkOf } from "./message-marks.ts";

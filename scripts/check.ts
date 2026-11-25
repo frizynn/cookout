@@ -7,7 +7,8 @@ import type { BrowserTests } from "./lib/browser-selection.ts";
 import { SUITE_LOCK_FILE } from "./lib/machine-lock.ts";
 import { TIMINGS_DIR } from "./lib/slowest-files.ts";
 import { changedFiles } from "./lib/changed-files.ts";
-import path from "node:path";
+import { ciGreenAtHead } from "./lib/ci-green.ts";
+import { docsOnlySkip } from "./lib/docs-only.ts";
 import { runChecks } from "./lib/check-runner.ts";
 
 interface Scripted extends Omit<Check, "command"> {
@@ -31,7 +32,7 @@ const shard = option("shard");
 const base = option("base");
 const inCi = process.argv.includes("--ci");
 
-const TESTS_REPORT = path.join(TIMINGS_DIR, "tests.json");
+const TESTS_REPORT = `${TIMINGS_DIR}/tests.json`;
 const JSON_REPORTER = ["--reporter=json", `--outputFile.json=${TESTS_REPORT}`];
 const WITH_DEFAULT_REPORTER = ["--reporter=default", ...JSON_REPORTER];
 
@@ -55,9 +56,24 @@ function lintScript(): readonly string[] {
 const NONE = 0;
 const V1 = "origin/v1";
 
+const EXIT_SUCCESS = 0;
+const ciGreen = ciGreenAtHead({ asked: !inCi && job === "", cwd: process.cwd(), gh: ghCli(process.cwd()) });
+const local = !inCi && job === "" && !ciGreen.skip;
+function docsOnlyRun(): ReturnType<typeof docsOnlySkip> {
+  if (!local) {
+    return { line: "", skip: false };
+  }
+  return docsOnlySkip({ base: V1, cwd: process.cwd() });
+}
+
+const docsOnly = docsOnlyRun();
+
 function selectedBrowserTests(): BrowserTests {
-  if (inCi || job !== "") {
+  if (!local) {
     return { all: true, reason: "" };
+  }
+  if (docsOnly.skip) {
+    return { all: false, run: [], skipped: [] };
   }
   const cwd = process.cwd();
   return browserTestsFor({
@@ -107,7 +123,7 @@ const scripted: readonly Scripted[] = [
     script: browserScript(),
     timings: {
       base: "app/modules/routes/tests/browser",
-      file: path.join(TIMINGS_DIR, "browser.json"),
+      file: `${TIMINGS_DIR}/browser.json`,
       runner: "playwright",
     },
   },
@@ -126,6 +142,7 @@ function commandOf({ script, ...check }: Scripted): Check {
 
 const checks: readonly Check[] = scripted
   .filter((check) => check.job !== "browser" || browserTests.all || browserTests.run.length > NONE)
+  .filter((check) => check.job !== "tests" || !docsOnly.skip)
   .map((check) => commandOf(check));
 
 const ciOnly: readonly CiOnly[] = [
@@ -133,8 +150,25 @@ const ciOnly: readonly CiOnly[] = [
   ...browserSkipped,
 ];
 
-if (browserTests.all && browserTests.reason !== "") {
-  console.error(`check: running every browser test, since ${browserTests.reason}.`);
+function printReasons(): void {
+  for (const line of [ciGreen.line, docsOnly.line]) {
+    if (line !== "") {
+      console.error(line);
+    }
+  }
+  if (browserTests.all && browserTests.reason !== "") {
+    console.error(`check: running every browser test, since ${browserTests.reason}.`);
+  }
 }
 
-process.exitCode = await runChecks({ checks, ciOnly, inCi, job, lockFile: SUITE_LOCK_FILE });
+async function exitCode(): Promise<number> {
+  if (ciGreen.skip) {
+    console.log(ciGreen.line);
+    return EXIT_SUCCESS;
+  }
+  printReasons();
+  const code = await runChecks({ checks, ciOnly, inCi, job, lockFile: SUITE_LOCK_FILE });
+  return code;
+}
+
+process.exitCode = await exitCode();
