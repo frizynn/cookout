@@ -2,6 +2,7 @@ import type { ChannelsState } from "../../board/index.ts";
 import type { Identity } from "../../sdk/index.ts";
 import type { RecentDay } from "../../format/index.ts";
 import type { SearchState } from "../../search/web.ts";
+import { channelOrder } from "./channel-order.ts";
 
 interface FilterSuggestion {
   readonly start: number;
@@ -72,18 +73,9 @@ function identitiesOf(identities: readonly Identity[], typed: Typed): readonly F
 }
 
 function channelsOf(channels: ChannelsState, typed: Typed): readonly FilterSuggestion[] {
-  if (channels.status !== "loaded") {
-    return [];
-  }
-  return channels.channels
-    .filter((channel) => channel.name.startsWith(typed.prefix))
-    .map((channel) => ({
-      detail: null,
-      filter: `in:#${channel.name}`,
-      identity: null,
-      option: `#${channel.name}`,
-      start: typed.start,
-    }));
+  return channelOrder(channels)
+    .filter((name) => name.startsWith(typed.prefix))
+    .map((name) => ({ detail: null, filter: `in:#${name}`, identity: null, option: `#${name}`, start: typed.start }));
 }
 
 function datesOf(kind: "after" | "before", days: readonly RecentDay[], typed: Typed): readonly FilterSuggestion[] {

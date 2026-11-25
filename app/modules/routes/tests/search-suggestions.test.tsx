@@ -132,3 +132,41 @@ it("typing before: suggests today first, then yesterday, a week ago and a month 
     "before:2026-03-31 ",
   ]);
 });
+
+function pressedAll(keys: readonly string[]): string | null {
+  const box = screen.getByRole("combobox", BOX);
+  for (const key of keys) {
+    fireEvent.keyDown(box, { key });
+  }
+  const active = box.getAttribute("aria-activedescendant") ?? "";
+  const option = globalThis.document.querySelector(`[id="${active}"]`);
+  if (option === null) {
+    return null;
+  }
+  return option.textContent;
+}
+
+function escapedTwice(): readonly (HTMLElement | null)[] {
+  pressedAll(["Escape"]);
+  const hidden = screen.queryByRole("listbox", SUGGESTIONS);
+  pressedAll(["Escape"]);
+  return [hidden, screen.queryByRole("listbox", { name: "Search results" })];
+}
+
+it("down and Up wrap round the suggestions, Escape hides them until the next edit, then closes search", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const posted = await openedFor("keysuggest-a");
+  await adminClient().createChannel({ name: "keysuggest-b" });
+  await posted.reader.subscribe("keysuggest-b");
+  await typedAtEnd("in:keysuggest-");
+  await suggestionNamed("#keysuggest-b");
+  const highlighted = [pressedAll(["ArrowUp"]), pressedAll(["ArrowDown"]), pressedAll(["ArrowDown"])];
+
+  expect([highlighted, escapedTwice()]).toStrictEqual([
+    ["#keysuggest-b", "#keysuggest-a", "#keysuggest-b"],
+    [null, null],
+  ]);
+});

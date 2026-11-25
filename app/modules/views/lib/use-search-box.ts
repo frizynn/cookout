@@ -159,7 +159,7 @@ function typedOf(place: Place): Listener {
   return (event) => {
     for (const box of inputs(place.box())) {
       if (box === event.target) {
-        place.search.edit(box.value, box.selectionEnd ?? box.value.length);
+        place.search.edit(box.value, Number(box.selectionEnd));
       }
     }
   };
