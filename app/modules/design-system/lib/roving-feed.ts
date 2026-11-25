@@ -101,13 +101,12 @@ function focusIf(focused: boolean, item: Readonly<Pick<HTMLElement, "focus">>): 
 }
 
 function besideFoldAt(feed: string, at: number): HTMLElement | null {
-  const items = itemsIn(feed);
-  const fold = items[at];
-  if (typeof fold !== "object") {
-    return null;
-  }
+  const items: readonly (HTMLElement | null)[] = itemsIn(feed);
+  const fold = items[at] ?? null;
   const messages = [...globalThis.document.querySelectorAll<HTMLElement>(`${feedOf(feed)} ${ITEM}:not(${FOLD})`)];
-  const folds = [...globalThis.document.querySelectorAll(`${feedOf(feed)} ${ITEM}${FOLD}`)];
+  const folds: readonly (Element | null)[] = [
+    ...globalThis.document.querySelectorAll(`${feedOf(feed)} ${ITEM}${FOLD}`),
+  ];
   const passed = at - folds.indexOf(fold);
   return messages[passed] ?? messages[passed - FIRST_POSITION] ?? fold;
 }

@@ -87,11 +87,10 @@ function focusedOn(message: unknown): boolean {
 }
 
 function besideOpenFold(): HTMLElement | null {
-  const [fold] = inChannel(OPEN_FOLD);
-  if (typeof fold !== "object") {
-    return null;
-  }
-  const passed = inChannel(MESSAGE).indexOf(fold) - inChannel(`${MESSAGE}${FOLD}`).indexOf(fold);
+  const [fold = null] = inChannel(OPEN_FOLD);
+  const items: readonly (HTMLElement | null)[] = inChannel(MESSAGE);
+  const folds: readonly (HTMLElement | null)[] = inChannel(`${MESSAGE}${FOLD}`);
+  const passed = items.indexOf(fold) - folds.indexOf(fold);
   const messages = inChannel(NOT_A_FOLD);
   return messages[passed] ?? messages[passed - NEXT] ?? fold;
 }
