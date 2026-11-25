@@ -153,6 +153,7 @@ const RedeemJoinCodeRequestSchema = Schema.Struct({
   host: Schema.optionalKey(HostSchema),
   idleExpiry: Schema.optionalKey(IdleExpirySchema),
   joinCode: Schema.String,
+  sessionUrl: Schema.optionalKey(SessionUrlSchema),
 });
 
 const JoinCodeResponseSchema = matchesWire<JoinCodeResponse>()(

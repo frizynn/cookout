@@ -90,15 +90,22 @@ interface CodeGiven {
   readonly url: string;
   readonly code: string;
   readonly idleExpiry: Option.Option<string>;
+  readonly sessionUrl: Option.Option<string>;
 }
 
-function joinByCode({ code, idleExpiry, url }: CodeGiven): Effect.Effect<AgentSessionResponse, CallFailure> {
+function joinByCode({
+  code,
+  idleExpiry,
+  sessionUrl,
+  url,
+}: CodeGiven): Effect.Effect<AgentSessionResponse, CallFailure> {
   return Effect.gen(function* redeemJoinCode() {
     const client = yield* Effect.try({ catch: toFailure, try: () => createCookoutClient({ env: NOTHING, url }) });
     const host = yield* machineName;
+    const asked = { host, joinCode: code, ...watchedAt(sessionUrl) };
     const request = Option.match(idleExpiry, {
-      onNone: () => ({ host, joinCode: code }),
-      onSome: (asked) => ({ host, idleExpiry: asked, joinCode: code }),
+      onNone: () => asked,
+      onSome: (expiry) => ({ ...asked, idleExpiry: expiry }),
     });
     return yield* Effect.tryPromise({ catch: toFailure, try: () => client.redeemJoinCode(request) });
   });
