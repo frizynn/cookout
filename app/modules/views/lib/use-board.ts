@@ -7,6 +7,7 @@ import type {
   CommandsState,
   ListedSchedules,
   MessageBeforeState,
+  Outgoing,
   SubscriptionsState,
   ThreadClosing,
   ThreadMessagesState,
@@ -165,20 +166,20 @@ function useShownThread(reading: ThreadReading): ShownThread {
   return { closing: useBoardStore().calls, read, state: useRead(read) };
 }
 
-function useReply({ place: { channel, id }, replied }: Replying): (text: string, posted: () => void) => void {
+function useReply({ place: { channel, id }, replied }: Replying): (outgoing: Outgoing, posted: () => void) => void {
   const store = useBoardStore();
   return useCallback(
-    (text: string, posted: () => void) => {
+    (outgoing: Outgoing, posted: () => void) => {
       store.threads.reply(
         { channel, id },
         {
+          ...outgoing,
           posted: () => {
             posted();
             if (replied !== null) {
               replied();
             }
           },
-          text,
         },
       );
     },

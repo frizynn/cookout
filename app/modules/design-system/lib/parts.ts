@@ -54,6 +54,8 @@ interface TextAreaParts extends TextFieldParts {
   readonly focused: boolean;
   readonly focusRequests: number;
   readonly onClose: () => void;
+  readonly onPasteFiles: (files: readonly File[]) => void;
+  readonly required: boolean;
 }
 
 interface TagParts {
