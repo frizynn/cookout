@@ -61,8 +61,7 @@ import type { DisplayNameDraft, TriggerSettings } from "./lib/profile-stores.ts"
 import type { DraftSnapshot, Sources } from "./lib/snapshot.ts";
 import { EMPTY, changesFor } from "./lib/snapshot.ts";
 import type { IdentityList, IdentityStore } from "./lib/identity-list.ts";
-import { commandList, selectedStore } from "../board/index.ts";
-import { listenersOf, sameSnapshot } from "./lib/listeners.ts";
+import { commandList, sameSnapshot, selectedStore } from "../board/index.ts";
 import type { AdminChanges } from "./lib/admin-change.ts";
 import type { AgentCreation } from "./lib/agent-creation.ts";
 import type { IdentityActions } from "./lib/identity-actions.ts";
@@ -72,6 +71,7 @@ import { createAgentCreation } from "./lib/agent-creation.ts";
 import { createIdentityActions } from "./lib/identity-actions.ts";
 import { createIdentityDeletion } from "./lib/identity-deletion.ts";
 import { createIdentityList } from "./lib/identity-list.ts";
+import { listenersOf } from "./lib/listeners.ts";
 import { profileStoresOf } from "./lib/profile-stores.ts";
 
 const NO_COMMANDS: readonly Command[] = [];

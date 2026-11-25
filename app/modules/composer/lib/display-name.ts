@@ -1,7 +1,8 @@
 import type { IdentityName, Refusal } from "../../sdk/index.ts";
-import { listenersOf, sameSnapshot } from "./listeners.ts";
 import type { IdentityList } from "./identity-list.ts";
+import { listenersOf } from "./listeners.ts";
 import { refusalOf } from "../../sdk/index.ts";
+import { sameSnapshot } from "../../board/index.ts";
 
 type SaveState =
   | { readonly status: "idle" }

@@ -2,6 +2,7 @@ import type { Held, Previews, ScheduleKind, SchedulingOptions, SchedulingSnapsho
 import { closedIn, createPreviews, createSaving } from "./scheduling-previews.ts";
 import type { ChannelName } from "../../sdk/index.ts";
 import type { ScheduledMessage } from "../../scheduled-messages/index.ts";
+import { sameSnapshot } from "./selected.ts";
 import { timingOf } from "./schedule-timing.ts";
 
 interface Scheduling {
@@ -70,6 +71,9 @@ function createScheduling(options: SchedulingOptions): Scheduling {
     current: () => current,
     options,
     publish: (next) => {
+      if (sameSnapshot({ after: next, before: current })) {
+        return;
+      }
       current = next;
       for (const listener of listeners) {
         listener();

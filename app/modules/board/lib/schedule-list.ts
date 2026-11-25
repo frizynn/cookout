@@ -2,6 +2,7 @@ import type { ChannelName, Refusal } from "../../sdk/index.ts";
 import type { ScheduleChange } from "./board-calls.ts";
 import type { ScheduledMessageId } from "../../scheduled-messages/index.ts";
 import { refusalOf } from "../../sdk/index.ts";
+import { sameSnapshot } from "./selected.ts";
 
 type ScheduleChangeState =
   | { readonly status: "idle" }
@@ -47,6 +48,9 @@ function createScheduleList(options: ScheduleListOptions): ScheduleList {
   let current = CLOSED;
   let changes = Promise.resolve();
   function publish(next: ScheduleListState): void {
+    if (sameSnapshot({ after: next, before: current })) {
+      return;
+    }
     current = next;
     for (const listener of listeners) {
       listener();

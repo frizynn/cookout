@@ -1,7 +1,7 @@
 import type { IdentityName, ListedAgentSession, Refusal, Token } from "../../sdk/index.ts";
-import { agentSessions, selectedStore } from "../../board/index.ts";
-import { listenersOf, sameSnapshot } from "./listeners.ts";
+import { agentSessions, sameSnapshot, selectedStore } from "../../board/index.ts";
 import type { IdentityList } from "./identity-list.ts";
+import { listenersOf } from "./listeners.ts";
 import { refusalOf } from "../../sdk/index.ts";
 
 type IdentityAction = "deactivate" | "delete" | "reactivate" | "revoke" | "rotate" | "transfer";

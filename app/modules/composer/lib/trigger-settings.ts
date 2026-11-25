@@ -1,7 +1,7 @@
 import type { BoardStore, IdentityCalls } from "../../board/index.ts";
 import type { IdentityName, Refusal, Trigger, TriggerHeader } from "../../sdk/index.ts";
-import { listenersOf, sameSnapshot } from "./listeners.ts";
-import { calledTrigger } from "../../board/index.ts";
+import { calledTrigger, sameSnapshot } from "../../board/index.ts";
+import { listenersOf } from "./listeners.ts";
 import { refusalOf } from "../../sdk/index.ts";
 
 type Loaded = { readonly status: "loading" } | { readonly status: "loaded"; readonly trigger: Trigger | null };
