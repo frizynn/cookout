@@ -21,10 +21,11 @@ interface ReadThread {
   readonly reader: CookoutClient;
   readonly parent: Message;
   readonly address: string;
+  readonly latest: Message;
 }
 
 interface Replying {
-  readonly thread: ReadThread;
+  readonly thread: Pick<ReadThread, "channel" | "parent" | "poster">;
   readonly text: string;
   readonly by?: CookoutClient;
 }
@@ -51,8 +52,8 @@ async function startedThread({ channel, poster, reader, text }: Starting): Promi
   await reader.ack(parent.id);
   const started = { address: `#/inbox/${channel}/${String(parent.id)}`, channel, parent, poster, reader };
   const first = await replied({ text: `${FIRST_REPLY} in ${text}`, thread: started });
-  await replied({ text: `${SECOND_REPLY} in ${text}`, thread: started });
-  return { ...started, address: `${started.address}/messages/${String(first.id)}` };
+  const latest = await replied({ text: `${SECOND_REPLY} in ${text}`, thread: started });
+  return { ...started, address: `${started.address}/messages/${String(first.id)}`, latest };
 }
 
 async function threadToRead(channel: string): Promise<ReadThread> {
@@ -165,23 +166,49 @@ function clicked(name: string): void {
   fireEvent.click(inConversation().getByRole("button", { name }));
 }
 
+interface Pressing {
+  readonly opened: Answered;
+  readonly button: string;
+  readonly methods: readonly ClientMethod[];
+}
+
+async function pressedAndAnswered({ button, methods, opened }: Pressing): Promise<void> {
+  clicked(button);
+  await Promise.all(
+    methods.map(async (method) => {
+      await opened.answered(method);
+    }),
+  );
+}
+
 interface Acking {
   readonly acked: () => Promise<void>;
+  readonly ackedAt: (message: Message) => Promise<void>;
   readonly client: CookoutClient;
 }
 
 function acking(client: CookoutClient): Acking {
   let answered = Promise.withResolvers<boolean>();
+  const acks = new Map<Message["id"], PromiseWithResolvers<boolean>>();
+  function ackOf(id: Message["id"]): PromiseWithResolvers<boolean> {
+    const known = acks.get(id) ?? Promise.withResolvers<boolean>();
+    acks.set(id, known);
+    return known;
+  }
   return {
     acked: async () => {
       await answered.promise;
       answered = Promise.withResolvers<boolean>();
+    },
+    ackedAt: async (message) => {
+      await ackOf(message.id).promise;
     },
     client: {
       ...client,
       ack: async (messageId) => {
         const answer = await client.ack(messageId);
         answered.resolve(true);
+        ackOf(messageId).resolve(true);
         return answer;
       },
     },
@@ -206,7 +233,7 @@ async function openReading({ hash, thread, waitingOn = [] }: Opening): Promise<O
   const { advance, page, reading } = handReading();
   const { live, stream } = watched(thread.reader);
   clockStopped();
-  const { acked, client: ackingClient } = acking(thread.reader);
+  const { acked, ackedAt, client: ackingClient } = acking(thread.reader);
   const { answered, client } = answering(ackingClient);
   const unmount = openAt({ client, hash, live, reading });
   const events: EventStream = await stream;
@@ -224,7 +251,7 @@ async function openReading({ hash, thread, waitingOn = [] }: Opening): Promise<O
     },
     page,
     read: async () => {
-      await acked();
+      await ackedAt(thread.latest);
       const count = await unreadIn(thread);
       return count;
     },
@@ -249,6 +276,7 @@ export {
   clicked,
   openReading,
   otherThread,
+  pressedAndAnswered,
   readAtLast,
   replied,
   rowSelected,

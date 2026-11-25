@@ -4,6 +4,7 @@ import {
   clicked,
   openReading,
   otherThread,
+  pressedAndAnswered,
   readAtLast,
   replied,
   rowSelected,
@@ -74,11 +75,11 @@ it("mark read reads the row at once, and Undo brings it back unread", { timeout:
   expect.hasAssertions();
 
   const thread = await threadToRead("web-mark-read-undo");
-  const opened = await openReading({ hash: thread.address, thread });
+  const opened = await openReading({ hash: thread.address, thread, waitingOn: ["inbox"] });
   await answeredAndShown({ opened, text: LATEST });
-  clicked("Mark conversation read");
+  await pressedAndAnswered({ button: "Mark conversation read", methods: ["ack"], opened });
   const read = [await readAtLast(thread), await noteShown()];
-  clicked("Undo");
+  await pressedAndAnswered({ button: "Undo", methods: ["markUnread", "inbox"], opened });
 
   expect([read, await backInActivity(thread), await noteGone()]).toStrictEqual([
     [NONE, MARKED],
@@ -111,10 +112,10 @@ it("mark unread puts a read row back in its section, and it stays unread while i
   expect.hasAssertions();
 
   const thread = await threadToRead("web-mark-unread-held");
-  const opened = await openReading({ hash: thread.address, thread });
+  const opened = await openReading({ hash: thread.address, thread, waitingOn: ["inbox"] });
   await answeredAndShown({ opened, text: LATEST });
   await opened.readAfter(READ_AFTER);
-  clicked("Mark unread");
+  await pressedAndAnswered({ button: "Mark unread", methods: ["markUnread", "inbox"], opened });
   const back = await backInActivity(thread);
 
   expect([back.length, await opened.unreadAfter(READ_AFTER)]).toStrictEqual([ONE, TWO]);
