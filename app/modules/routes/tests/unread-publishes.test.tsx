@@ -77,6 +77,21 @@ it("someone coming online publishes nothing from the unread store or any store o
   expect(publishes.map((store) => store.count())).toStrictEqual(publishes.map(() => NONE));
 });
 
+it("a reply in somebody else's thread publishes nothing from the unread store or any store of its own", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const { channel, message } = await posted("reply");
+  const { message: reply } = await adminClient().createMessage({ channel, replyTo: message.id, text: "Yes" });
+  const { hand, unread } = await followingTheInbox("reply");
+  const publishes = everyStoreOf(unread, channel);
+
+  hand.send({ message: reply, type: "message" });
+
+  expect(publishes.map((store) => store.count())).toStrictEqual(publishes.map(() => NONE));
+});
+
 interface Selected {
   readonly message: Message;
   readonly selection: Selection;
