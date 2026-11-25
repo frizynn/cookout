@@ -8,7 +8,7 @@
  * - `SidebarBody` is the sidebar's body of links (following one, but not pressing a button, closes it on a narrow screen).
  * - `SidebarFooter` is the sidebar's footer.
  * - `WorkspaceMain` holds the route's panes on the right.
- * - `WorkspaceColumn` is the column of the route's panes, under any `StatusBar`.
+ * - `WorkspaceColumn` is the column of the route's panes, under any `StatusBar`. While the sidebar is open over it on a narrow screen it is inert, so Tab stays in the sidebar and the top bar.
  * - `StatusBar` is a named polite live region that shows its text in a bar, in the attention colours, only while `shown`, such as "Reconnecting…".
  * - `NavLink` is one link in the sidebar, bold when it has something new (`marked`), highlighted when it is the open item, with an icon and any `Pill` after it; a `menu` is its `ActionMenu`.
  * - `NavHeading` heads a `NavList` of links, with any `HeadingButton` on its line.

@@ -20,3 +20,5 @@
 - **One Escape action that decides the level itself**: rejected. It would have to know every widget on the page; the scope walk already orders them.
 - **A scope set that fires both in and off text fields** (for the prompt form): rejected for the plainer rule that Escape always does.
 - **Data attributes naming the regions**: rejected, as for scopes in ADR 0087; the landmarks the page already has name them.
+
+Superseded in part on 2026-11-25 by [ADR 0102](0102-escape-closes-the-narrow-screen-sidebar.md): on a narrow screen the open sidebar is one more step, closed by `closeSidebar` in the `sidebar` scope (mattpocock/cookout#539).

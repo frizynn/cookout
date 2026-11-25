@@ -62,6 +62,7 @@ const KEYS = [
   },
   { action: "nextLink", chord: "ArrowDown", does: "Next link", scope: "sidebar" },
   { action: "previousLink", chord: "ArrowUp", does: "Previous link", scope: "sidebar" },
+  { action: "closeSidebar", chord: "Escape", does: "Close the sidebar, on a narrow screen", scope: "sidebar" },
   { action: "markChannelRead", chord: "e", does: "Mark all as read", scope: "channel row" },
   { action: "toggleSubscription", chord: "s", does: "Subscribe or unsubscribe", scope: "channel row" },
   { action: "openSchedules", chord: "Shift+S", does: "Show its scheduled messages", scope: "channel row" },
