@@ -33,6 +33,7 @@ interface ConversationRepliesProps {
   readonly selection: Selection;
   readonly reply: ReplyAction;
   readonly closing: ThreadClosing;
+  readonly deleted: ReadonlySet<MessageId>;
   readonly opened: boolean;
 }
 
@@ -69,6 +70,7 @@ export function ConversationReplies(props: ConversationRepliesProps): ReactNode 
       {expanded && (
         <EarlierReplies
           closing={props.closing}
+          deleted={props.deleted}
           me={me}
           menu={menu}
           parent={parent}
@@ -81,6 +83,7 @@ export function ConversationReplies(props: ConversationRepliesProps): ReactNode 
         after={lastOf(earlier, parent)}
         closing={props.closing}
         channel={null}
+        deleted={props.deleted}
         feed={feed}
         label={props.label}
         me={me}

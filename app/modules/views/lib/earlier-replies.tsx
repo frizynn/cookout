@@ -17,6 +17,7 @@ interface EarlierRepliesProps {
   readonly menu: MessageMenu;
   readonly reply: ReplyAction;
   readonly closing: ThreadClosing;
+  readonly deleted: ReadonlySet<MessageId>;
 }
 
 export function EarlierReplies(props: EarlierRepliesProps): ReactNode {
@@ -25,6 +26,7 @@ export function EarlierReplies(props: EarlierRepliesProps): ReactNode {
       after={props.parent}
       closing={props.closing}
       channel={null}
+      deleted={props.deleted}
       feed={null}
       label={TEXT.earlier}
       me={props.me}

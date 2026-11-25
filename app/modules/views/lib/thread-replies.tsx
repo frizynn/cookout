@@ -25,6 +25,7 @@ interface ThreadRepliesProps {
   readonly menu: MessageMenu;
   readonly selection: Selection;
   readonly reply: Reply;
+  readonly deleted: ReadonlySet<MessageId>;
 }
 
 function linkedReply({ linked, parent }: ThreadRepliesProps): MessageId | null {
@@ -35,9 +36,10 @@ function linkedReply({ linked, parent }: ThreadRepliesProps): MessageId | null {
 }
 
 export function ThreadReplies(props: ThreadRepliesProps): ReactNode {
+  const shown = props.replies.filter((message) => !props.deleted.has(message.id)).length;
   return (
     <>
-      <RepliesDivider>{replies(props.replies.length)}</RepliesDivider>
+      <RepliesDivider>{replies(shown)}</RepliesDivider>
       {props.replies.length === NONE && (
         <CardBody>
           <Muted>{TEXT.empty}</Muted>
@@ -45,6 +47,7 @@ export function ThreadReplies(props: ThreadRepliesProps): ReactNode {
       )}
       <ConversationReplies
         closing={props.closing}
+        deleted={props.deleted}
         kept={KEPT}
         linked={linkedReply(props)}
         readPosition={props.readPosition}
