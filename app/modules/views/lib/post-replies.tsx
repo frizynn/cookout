@@ -20,6 +20,7 @@ export function PostReplies(props: PostRepliesProps): ReactNode {
       closing={null}
       after={props.post}
       channel={null}
+      feed={null}
       label={LABEL}
       me={props.me}
       menu={props.menu}
