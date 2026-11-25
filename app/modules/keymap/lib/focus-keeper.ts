@@ -41,8 +41,8 @@ interface Landing {
 }
 
 interface FocusKeeper {
-  readonly keep: (landing: Landing) => () => void;
   readonly landsOn: (event: unknown) => boolean;
+  readonly stop: () => void;
 }
 
 interface Handlers {
@@ -51,15 +51,12 @@ interface Handlers {
   readonly blurred: (event: unknown) => void;
 }
 
-const NOT_LANDING: Landing = { isLanding: () => false };
-
 function isOnPage(element: unknown): element is HTMLElement {
   return element instanceof HTMLElement && element.isConnected && element.getClientRects().length > NONE;
 }
 
 function isOnNothing(target: unknown): boolean {
-  const { body, documentElement } = globalThis.document;
-  return target === null || target === body || target === documentElement;
+  return target === null || target === globalThis.document.body;
 }
 
 function isLost(): boolean {
@@ -110,21 +107,19 @@ function placesNow(): readonly unknown[] {
   return PLACES.map((hunt) => hunt());
 }
 
-function listOf(element: unknown): unknown {
-  if (!(element instanceof Element) || element.parentElement === null) {
-    return globalThis.document.body;
+function listOf(element: unknown): Element {
+  const { body } = globalThis.document;
+  if (element instanceof Element && element.parentElement !== null) {
+    return element.parentElement.closest(LIST) ?? body;
   }
-  return element.parentElement.closest(LIST) ?? globalThis.document.body;
+  return body;
 }
 
 function kindOf(element: unknown): string {
-  if (!(element instanceof Element)) {
-    return ROW;
+  if (element instanceof Element && !element.matches(ROW)) {
+    return element.tagName.toLowerCase();
   }
-  if (element.matches(ROW)) {
-    return ROW;
-  }
-  return element.tagName.toLowerCase();
+  return ROW;
 }
 
 function isPeer(each: unknown, list: unknown): boolean {
@@ -134,9 +129,6 @@ function isPeer(each: unknown, list: unknown): boolean {
 function peersOf(element: unknown): readonly unknown[] {
   const list = listOf(element);
   const peers: unknown[] = [];
-  if (!(list instanceof Element)) {
-    return peers;
-  }
   for (const each of list.querySelectorAll(kindOf(element))) {
     if (each === element || isPeer(each, list)) {
       peers.push(each);
@@ -189,10 +181,9 @@ function listening(handlers: Handlers): () => void {
   };
 }
 
-function createFocusKeeper(): FocusKeeper {
+function createFocusKeeper(landing: Landing): FocusKeeper {
   let last: unknown = null;
   let held: Held | null = null;
-  let landing = NOT_LANDING;
   function recover(lost: Held): void {
     if (held === lost && isLost() && !landing.isLanding()) {
       held = null;
@@ -231,13 +222,11 @@ function createFocusKeeper(): FocusKeeper {
       }
     },
   };
+  const stop = listening(handlers);
   return {
-    keep: (keeping) => {
-      landing = keeping;
-      return listening(handlers);
-    },
     landsOn: (event) => isLandingKey(event) && [last, ...placesNow()].some((place) => focusedOn(place)),
+    stop,
   };
 }
 
-export { type Landing, createFocusKeeper };
+export { type FocusKeeper, type Landing, createFocusKeeper };

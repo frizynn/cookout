@@ -42,10 +42,10 @@
  * `listen`'s `landing` (the landing store) is landing.
  */
 import type { Action, ActionOf, Key, Scope } from "./lib/keys.ts";
+import type { FocusKeeper, Landing } from "./lib/focus-keeper.ts";
 import { KEYS, SCOPES, TEXT_SCOPES } from "./lib/keys.ts";
 import { ariaOf, chordOf, isModified, matches, shownOf } from "./lib/chords.ts";
 import type { KeymapStore } from "./lib/state.ts";
-import type { Landing } from "./lib/focus-keeper.ts";
 import type { Platform } from "./lib/chords.ts";
 import { createFocusKeeper } from "./lib/focus-keeper.ts";
 import { createKeymapStore } from "./lib/state.ts";
@@ -86,6 +86,13 @@ interface Pressing {
   readonly bound: Bound;
   readonly event: KeyboardEvent;
   readonly platform: Platform;
+}
+
+interface Listening {
+  readonly bindings: () => readonly Bound[];
+  readonly keeper: FocusKeeper;
+  readonly platform: Platform;
+  readonly store: KeymapStore;
 }
 
 const MAC = /^(?:Mac|iPhone|iPad|iPod)/u;
@@ -147,6 +154,20 @@ function isLeft(event: KeyboardEvent): boolean {
   return event.defaultPrevented || event.isComposing || typeof Reflect.get(event, "key") !== "string";
 }
 
+function pressedOn({ bindings, keeper, platform, store }: Listening): (event: KeyboardEvent) => void {
+  return (event) => {
+    if (isLeft(event) || store.snapshot().shortcutListOpen) {
+      return;
+    }
+    if (
+      boundInOrder(bindings(), event.target).some((bound) => actOn({ bound, event, platform })) ||
+      keeper.landsOn(event)
+    ) {
+      event.preventDefault();
+    }
+  };
+}
+
 function shortcutOf(action: Action, platform: Platform): Shortcut {
   const chords = [...new Set(KEYS.filter((key) => key.action === action).map((key) => key.chord))].map((chord) =>
     chordOf(chord),
@@ -160,7 +181,6 @@ function shortcutOf(action: Action, platform: Platform): Shortcut {
 function createKeymap(options: { readonly platform: string }): Keymap {
   const platform = platformOf(options.platform);
   const store = createKeymapStore(platform);
-  const keeper = createFocusKeeper();
   function openList(): boolean {
     store.openShortcutList();
     return true;
@@ -168,17 +188,6 @@ function createKeymap(options: { readonly platform: string }): Keymap {
   let bindings: readonly Bound[] = [
     { rows: rowsOf("everywhere", { openShortcutList: openList }), scope: "everywhere", within: null },
   ];
-  function pressed(event: KeyboardEvent): void {
-    if (isLeft(event) || store.snapshot().shortcutListOpen) {
-      return;
-    }
-    if (
-      boundInOrder(bindings, event.target).some((bound) => actOn({ bound, event, platform })) ||
-      keeper.landsOn(event)
-    ) {
-      event.preventDefault();
-    }
-  }
   return {
     ...store,
     bind: (binding) => {
@@ -193,11 +202,12 @@ function createKeymap(options: { readonly platform: string }): Keymap {
       };
     },
     listen: (target, landing) => {
+      const keeper = createFocusKeeper(landing);
+      const pressed = pressedOn({ bindings: () => bindings, keeper, platform, store });
       target.addEventListener("keydown", pressed);
-      const stopKeeping = keeper.keep(landing);
       return () => {
         target.removeEventListener("keydown", pressed);
-        stopKeeping();
+        keeper.stop();
       };
     },
     shortcutOf: (action) => shortcutOf(action, platform),
