@@ -7,6 +7,7 @@ import { ScheduleRuns } from "./schedule-runs.tsx";
 import { ScheduleTiming } from "./schedule-timing.tsx";
 import type { Scheduling } from "../../board/index.ts";
 import { refusalWords } from "./schedule-words.ts";
+import { useScheduleCancel } from "./use-schedule-cancel.ts";
 
 const TEXT = {
   busy: "Scheduling…",
@@ -29,6 +30,7 @@ function wordsOf(editing: boolean): typeof EDITING | typeof MAKING {
 }
 
 interface ScheduleDialogProps {
+  readonly cancelled: string | null;
   readonly channel: ChannelName;
   readonly scheduling: Scheduling;
   readonly onSaved: () => void;
@@ -40,7 +42,7 @@ export function ScheduleDialog(props: ScheduleDialogProps): ReactNode {
   const state = useSyncExternalStore(scheduling.subscribe, scheduling.snapshot);
   const editing = props.editing === true;
   const words = wordsOf(editing);
-  const handleCancel = scheduling.close;
+  const handleCancel = useScheduleCancel({ cancelled: props.cancelled, scheduling });
   const handleEditText = scheduling.editText;
   const handleEditTimeZone = scheduling.editTimeZone;
   const handleSubmit = useCallback(() => {
