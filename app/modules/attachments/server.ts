@@ -207,6 +207,33 @@ const assetRoute: Route<Storage | AssetStore> = {
   path: assetPath,
 };
 
+/** An upload's content when it is one of the four image types: its type, and its size if its header reads. */
+export interface ImageContent {
+  readonly contentType: ImageContentType;
+  readonly width?: number;
+  readonly height?: number;
+}
+
+/**
+ * What image `bytes` hold, judged by their first bytes alone and never by a name or a type header, with the width and
+ * height read from the image's header; none when they aren't a PNG, JPEG, GIF or WebP. An avatar's check uses it.
+ * @param bytes The uploaded bytes.
+ * @returns The image type and, if its header reads, its size.
+ */
+export function detectImage(bytes: Uint8Array): Option.Option<ImageContent> {
+  const { contentType, image, ...size } = detectContent(bytes);
+  if (!image || contentType === opaqueContentType) {
+    return Option.none();
+  }
+  return Option.some({ contentType, ...size });
+}
+
+/**
+ * The headers every served asset carries, so nothing uploaded can run in the board's origin: `nosniff`, a sandboxing
+ * `Content-Security-Policy`, and a private cache that may keep it for a year, since an ID's bytes never change.
+ */
+export const servingHeaders: Readonly<Record<string, string>> = serving;
+
 /** The refusal of a file over the size limit, for a multipart parse that stopped at the limit. */
 export const fileTooLarge: Refusal = tooLarge;
 

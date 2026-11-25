@@ -16,15 +16,15 @@ import { sqliteQueryPlans as planSqliteQueries } from "./lib/server/query-plans-
 export { StorageUnavailable };
 
 /**
- * The asset store: an attachment's bytes, put, read and removed by attachment ID only, beside `Storage`, which holds
- * each attachment's metadata. Callers never see a path. `diskAssetStore` keeps each attachment as one file named by
- * its ID, written to a partial file first and renamed into place, so a crash never leaves half a file under an ID;
+ * The asset store: an attachment's or an avatar's bytes, put, read and removed by its ID only, beside
+ * `Storage`, which holds each one's metadata. Callers never see a path. `diskAssetStore` keeps each asset as one file
+ * named by its ID, written to a partial file first and renamed into place, so a crash never leaves half a file under an ID;
  * `memoryAssetStore` holds them in this process only.
  */
 export { AssetStore, diskAssetStore, memoryAssetStore } from "./lib/server/asset-store.ts";
 
 /**
- * The S3-compatible asset store (S3, R2 or Tigris): one private object per attachment, keyed by its ID alone, in the
+ * The S3-compatible asset store (S3, R2 or Tigris): one private object per asset, keyed by its ID alone, in the
  * bucket `S3Bucket` names, each request signed with its credentials.
  */
 export { s3AssetStore } from "./lib/server/asset-store-s3.ts";
