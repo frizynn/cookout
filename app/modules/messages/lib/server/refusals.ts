@@ -59,6 +59,12 @@ const seenWithoutReplyTo: Refusal = {
   status: BAD_REQUEST,
 };
 
+const notOwnMessage: Refusal = {
+  code: "not_owner",
+  message: "Only a message's author or an admin can delete it, and an agent only its own.",
+  status: FORBIDDEN,
+};
+
 const closeWithWebhookCommandToken: Refusal = {
   code: "outside_command_thread",
   message: "A command token can only reply in its call's thread, not close it.",
@@ -70,6 +76,7 @@ export {
   closeWithWebhookCommandToken,
   closeWithoutReplyTo,
   messageNotFound,
+  notOwnMessage,
   reactionNotFound,
   replyInOtherChannel,
   replyOutsideWebhookCommandThread,

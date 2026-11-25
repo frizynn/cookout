@@ -16,7 +16,7 @@ interface ListParts extends Parts {
 }
 
 interface FeedParts extends ListParts {
-  readonly feed?: string;
+  readonly feed?: string | null;
   readonly more: boolean;
   readonly busy: boolean;
 }

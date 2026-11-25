@@ -253,6 +253,10 @@ const postgresMigrations: readonly (readonly string[])[] = [
   ['ALTER TABLE login_credentials ADD COLUMN made_with text COLLATE "C"'],
   ['ALTER TABLE agent_join_requests ADD COLUMN denied_at text COLLATE "C"'],
   POSTGRES_TRIGGER_SKIPPED_MIGRATION,
+  [
+    'ALTER TABLE messages ADD COLUMN deleted_at text COLLATE "C"',
+    'ALTER TABLE messages ADD COLUMN deleted_by text COLLATE "C"',
+  ],
 ];
 
 const NEXT_VERSION = 1;
