@@ -25,7 +25,6 @@
  * - `SubmitButton` sends a `Form`.
  * - `SendButton` is its paper-plane icon form, named and tooltipped by `label`.
  * - `AttachButton` is a paperclip icon button, named and tooltipped by `label`, that opens the file picker for several files and hands what is picked to `onFiles`.
- * - `FileDrop` is a conversation's drop zone, its messages and its box together: it hands files dropped anywhere on its children to `onFiles`, and is lit up while files are dragged over it; anything else dragged or dropped is left alone.
  * - `PendingList` is a box's named list of files waiting to be sent, above its text, each in a `PendingItem`: its children (a thumbnail or a chip) with a small remove button named by `removeLabel` at its corner.
  * - `Suggestions` is a named listbox of options under a box, such as mentions or commands (each with any muted detail), one selected, which leaves the box focused even when a pointer picks one; it floats above the box (or below it, with `place` `below`), out of its layout, over all in the pane.
  * - `ComboboxField` is a named search input (`box` its ID) that is a combobox controlling the listbox `list`, its option at `active` the active one while `expanded`.
@@ -71,7 +70,6 @@ export {
   ResultOption,
   SendButton,
   AttachButton,
-  FileDrop,
   PendingItem,
   PendingList,
   SubmitButton,
