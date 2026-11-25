@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { inPane } from "./regions.ts";
+import { sessionCookieName } from "../../../identities/index.ts";
 
 export interface LogIn {
   readonly page: Page;
@@ -24,4 +25,14 @@ export async function logInWithStream(login: LogIn): Promise<void> {
   const streamOpen = login.page.waitForResponse((response) => response.url().includes("/v1/events"));
   await logIn(login);
   await streamOpen;
+}
+
+export async function sessionTokenOf(page: Page): Promise<string> {
+  const cookies = await page.context().cookies();
+  for (const { name, value } of cookies) {
+    if (name === sessionCookieName) {
+      return value;
+    }
+  }
+  return "";
 }

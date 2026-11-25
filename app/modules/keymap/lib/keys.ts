@@ -134,7 +134,12 @@ const KEYS = [
     does: "Previous message, loading older ones past the oldest",
     scope: "message list",
   },
-  { action: "firstMessage", chord: "Home", does: "First loaded message", scope: "message list" },
+  {
+    action: "firstMessage",
+    chord: "Home",
+    does: "First loaded message, or the thread's top message",
+    scope: "message list",
+  },
   { action: "lastMessage", chord: "End", does: "Last message", scope: "message list" },
   { action: "unfoldClosed", chord: "Enter", does: "Unfold the closed threads", scope: "message list" },
   { action: "nextRow", chord: "j", does: "Next row", scope: "inbox" },

@@ -64,6 +64,7 @@ interface Session {
   readonly subscribe: Subscribe;
   readonly snapshot: () => SessionState;
   readonly logIn: (token: string) => void;
+  readonly logOut: () => void;
 }
 
 type BoardStoreClient = OwnClient &
@@ -168,6 +169,10 @@ function followOf(parts: Parts, live: FollowedLive): () => void {
   });
 }
 
+function sessionCalls({ logIn, logOut }: Pick<Session, "logIn" | "logOut">): Pick<Session, "logIn" | "logOut"> {
+  return { logIn, logOut };
+}
+
 function createBoardStore(options: BoardStoreOptions): BoardStore {
   const { notify, subscribe } = createListeners();
   let snapshot: BoardState | null = null;
@@ -207,7 +212,7 @@ function createBoardStore(options: BoardStoreOptions): BoardStore {
     identityCalls,
     inboxCalls: parts.inboxCalls,
     logIn: session.logIn,
-    session: { logIn: session.logIn, snapshot: () => snapshotOf().session, subscribe: subscribers.session },
+    session: { ...sessionCalls(session), snapshot: () => snapshotOf().session, subscribe: subscribers.session },
     snapshot: snapshotOf,
     subscribe,
     subscribeShowing: (shown) => subscribers[shown],
