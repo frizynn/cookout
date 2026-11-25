@@ -21,6 +21,7 @@ const TEXT = {
 interface ChannelKeys {
   readonly announce: (text: string) => void;
   readonly counts: ReadonlyMap<ChannelName, UnreadCounts>;
+  readonly land: () => void;
   readonly order: readonly ChannelName[];
   readonly scheduleList: ScheduleList;
   readonly store: BoardStore;
@@ -31,8 +32,9 @@ function unreadIn(keys: ChannelKeys): (channel: ChannelName) => boolean {
   return (channel) => hasUnread(keys.counts.get(channel) ?? NO_COUNTS);
 }
 
-function opened(channel: ChannelName): true {
+function opened(keys: ChannelKeys, channel: ChannelName): true {
   globalThis.location.hash = hrefOf({ channel, name: "channel" });
+  keys.land();
   return true;
 }
 
@@ -58,7 +60,7 @@ function stepTo(stepping: Stepping): Act {
       keys.announce(NONE_LEFT[`${unreadOnly}`]);
       return true;
     }
-    return opened(channel);
+    return opened(keys, channel);
   };
 }
 

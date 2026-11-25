@@ -1,9 +1,10 @@
 import { markRead, openSchedules, stepTo, toggleSubscription } from "./channel-keys.ts";
 import { moveFocus, roving, sidebar } from "./sidebar-roving.ts";
 import { useBoardStore, useChannels } from "./use-board.ts";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ChannelKeys } from "./channel-keys.ts";
 import type { Keymap } from "../../keymap/index.ts";
+import { LandingContext } from "../../landing/index.ts";
 import type { ScheduleList } from "../../board/index.ts";
 import type { Unread } from "../../unread/index.ts";
 import { channelOrder } from "./channel-order.ts";
@@ -29,16 +30,18 @@ function useChannelKeys(props: SidebarKeys, announce: (text: string) => void): C
   const store = useBoardStore();
   const channels = useChannels();
   const counts = useSidebarCounts({ me: props.me }).channels;
+  const land = useContext(LandingContext).ask;
   return useMemo(
     () => ({
       announce,
       counts,
+      land,
       order: channelOrder(channels),
       scheduleList,
       store,
       unread,
     }),
-    [announce, channels, counts, scheduleList, store, unread],
+    [announce, channels, counts, land, scheduleList, store, unread],
   );
 }
 

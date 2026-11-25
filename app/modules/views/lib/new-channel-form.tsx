@@ -1,9 +1,10 @@
 import type { ChannelCreation, ChannelCreationSnapshot, CreationState } from "../../board/index.ts";
 import { InputField, PromptForm } from "../../design-system/controls.tsx";
+import { useCallback, useContext } from "react";
 import type { ChannelName } from "../../sdk/index.ts";
+import { LandingContext } from "../../landing/index.ts";
 import type { ReactNode } from "react";
 import { hrefOf } from "../../paths/index.ts";
-import { useCallback } from "react";
 
 const TEXT = {
   busy: "Creating…",
@@ -27,18 +28,18 @@ function errorOn(create: CreationState, field: "name" | "description"): string |
   return `Couldn't create the channel (${create.code}): ${create.message}`;
 }
 
-function openChannel(channel: ChannelName): void {
-  globalThis.location.hash = hrefOf({ channel, name: "channel" });
-}
-
 export function NewChannelForm(props: NewChannelFormProps): ReactNode {
   const { creation, state } = props;
   const handleCancel = creation.close;
   const handleEditName = creation.editName;
   const handleEditDescription = creation.editDescription;
+  const land = useContext(LandingContext).ask;
   const handleSubmit = useCallback(() => {
-    creation.create(openChannel);
-  }, [creation]);
+    creation.create((channel: ChannelName) => {
+      globalThis.location.hash = hrefOf({ channel, name: "channel" });
+      land();
+    });
+  }, [creation, land]);
   return (
     <PromptForm
       busy={state.create.status === "creating"}
