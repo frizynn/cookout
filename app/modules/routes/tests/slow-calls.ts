@@ -41,4 +41,4 @@ function slowCalls<Client extends object>(client: Client): Client {
   return trackedCalls(heldBack({ client, delay: inject("webSlowMs") ?? NO_DELAY }));
 }
 
-export { heldBack, slowCalls };
+export { heldBack, slept, slowCalls };

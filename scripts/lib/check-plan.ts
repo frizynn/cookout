@@ -55,9 +55,9 @@ const HOOK: CiOnly = {
   name: "lint, format, types and seams",
 };
 
-function testScript({ merge, shard, unit }: Planning): readonly string[] {
+function testScript({ merge, shard, shardArgs, unit }: Planning): readonly string[] {
   if (shard !== "") {
-    return ["test:shard", `--shard=${shard}`, ...JSON_REPORTER];
+    return ["test:shard", ...shardArgs, ...JSON_REPORTER];
   }
   if (merge) {
     return ["test:merge", ...WITH_DEFAULT_REPORTER];

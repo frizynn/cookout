@@ -10,6 +10,7 @@ type Gh = (args: readonly string[]) => Outcome<string>;
 
 interface Splitting {
   readonly files: readonly string[];
+  readonly name: string;
   readonly shard: string;
   readonly timings: readonly FileTiming[];
 }
@@ -45,15 +46,25 @@ interface Planning extends Fetching {
   readonly shard: string;
 }
 
+interface Recording {
+  readonly fallback: string;
+  readonly name: string;
+  readonly prefix: string;
+  readonly read: (file: string) => readonly FileTiming[];
+  readonly report: string;
+  readonly runArgs: (shard: string, files: readonly string[]) => readonly string[];
+}
+
+interface Asking extends Fetching {
+  readonly recording: Recording;
+}
+
 interface Plan {
   readonly args: readonly string[];
   readonly line: string;
 }
 
 const BROWSER_TESTS = "app/modules/routes/tests/browser";
-const ARTIFACT_PREFIX = "test-timings-browser-";
-const FIRST_ARTIFACT = `${ARTIFACT_PREFIX}1`;
-const REPORT = "browser.json";
 const SHARD = /^(?<index>\d+)\/(?<total>\d+)$/v;
 const FIRST = 1;
 const NONE = 0;
@@ -116,14 +127,14 @@ function split(weights: readonly FileTiming[], { index, total }: Shard): Split {
   return { files: files.toSorted(), seconds };
 }
 
-function shardByTime({ files, shard, timings }: Splitting): Outcome<Split> {
+function shardByTime({ files, name, shard, timings }: Splitting): Outcome<Split> {
   const parsed = shardOf(shard);
   if (!parsed.ok) {
     return parsed;
   }
   const recorded = recordedSeconds(files, timings);
   if (recorded.size === NONE) {
-    return { ok: false, reason: "no browser test file has a recorded time" };
+    return { ok: false, reason: `no ${name} test file has a recorded time` };
   }
   return { ok: true, value: split(weighed(files, recorded), parsed.value) };
 }
@@ -148,14 +159,14 @@ function artifactsBefore(listing: string, createdAt: string): readonly Artifact[
     .toSorted((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
 
-function timingsIn(dir: string): readonly FileTiming[] {
+function timingsIn(dir: string, recording: Recording): readonly FileTiming[] {
   return readdirSync(dir, { encoding: "utf8", recursive: true })
-    .filter((file) => path.basename(file) === REPORT)
-    .flatMap((file) => readTimings({ base: BROWSER_TESTS, file: path.join(dir, file), runner: "playwright" }));
+    .filter((file) => path.basename(file) === recording.report)
+    .flatMap((file) => recording.read(path.join(dir, file)));
 }
 
-function downloaded(gh: Gh, artifacts: readonly Artifact[]): Outcome<readonly FileTiming[]> {
-  const dir = mkdtempSync(path.join(tmpdir(), "browser-timings-"));
+function downloaded(gh: Gh, artifacts: readonly Artifact[], recording: Recording): Outcome<readonly FileTiming[]> {
+  const dir = mkdtempSync(path.join(tmpdir(), `${recording.name}-timings-`));
   try {
     for (const { name, run } of artifacts) {
       const ran = gh(["run", "download", run, "--name", name, "--dir", path.join(dir, name)]);
@@ -163,7 +174,7 @@ function downloaded(gh: Gh, artifacts: readonly Artifact[]): Outcome<readonly Fi
         return ran;
       }
     }
-    return { ok: true, value: timingsIn(dir) };
+    return { ok: true, value: timingsIn(dir, recording) };
   } finally {
     rmSync(dir, { force: true, recursive: true });
   }
@@ -182,12 +193,12 @@ function askedAt(gh: Gh, run: string): Outcome<string> {
   return { ok: true, value: textIn(parseJson(asking.value), "created_at") };
 }
 
-function newestBefore(gh: Gh, run: string): Outcome<Newest> {
+function newestBefore({ gh, recording, run }: Asking): Outcome<Newest> {
   const createdAt = askedAt(gh, run);
   if (!createdAt.ok) {
     return createdAt;
   }
-  const listing = gh(["api", `repos/{owner}/{repo}/actions/artifacts?name=${FIRST_ARTIFACT}&per_page=100`]);
+  const listing = gh(["api", `repos/{owner}/{repo}/actions/artifacts?name=${recording.prefix}1&per_page=100`]);
   if (!listing.ok) {
     return listing;
   }
@@ -197,28 +208,28 @@ function newestBefore(gh: Gh, run: string): Outcome<Newest> {
       value: { createdAt: createdAt.value, run: artifact.run },
     }),
   );
-  return found[NONE] ?? { ok: false, reason: `no Check run recorded browser timings before run ${run}` };
+  return found[NONE] ?? { ok: false, reason: `no Check run recorded ${recording.name} timings before run ${run}` };
 }
 
-function runArtifacts(gh: Gh, run: string, createdAt: string): Outcome<readonly Artifact[]> {
+function runArtifacts({ gh, recording, run }: Asking, createdAt: string): Outcome<readonly Artifact[]> {
   const listing = gh(["api", `repos/{owner}/{repo}/actions/runs/${run}/artifacts?per_page=100`]);
   if (!listing.ok) {
     return listing;
   }
   const artifacts = artifactsBefore(listing.value, createdAt);
-  return { ok: true, value: artifacts.filter((artifact) => artifact.name.startsWith(ARTIFACT_PREFIX)) };
+  return { ok: true, value: artifacts.filter((artifact) => artifact.name.startsWith(recording.prefix)) };
 }
 
-function recordedBrowserTimings({ gh, run }: Fetching): Outcome<Recorded> {
-  const newest = newestBefore(gh, run);
+function recordedTimings(asking: Asking): Outcome<Recorded> {
+  const newest = newestBefore(asking);
   if (!newest.ok) {
     return newest;
   }
-  const artifacts = runArtifacts(gh, newest.value.run, newest.value.createdAt);
+  const artifacts = runArtifacts({ ...asking, run: newest.value.run }, newest.value.createdAt);
   if (!artifacts.ok) {
     return artifacts;
   }
-  const timings = downloaded(gh, artifacts.value);
+  const timings = downloaded(asking.gh, artifacts.value, asking.recording);
   if (!timings.ok) {
     return timings;
   }
@@ -230,45 +241,58 @@ interface Timed {
   readonly recorded: Recorded;
 }
 
-function recordedFor({ files, gh, run }: Planning): Outcome<Timed> {
+function recordedFor({ files, gh, run }: Planning, recording: Recording): Outcome<Timed> {
   if (!files.ok) {
     return files;
   }
   if (run === "") {
     return { ok: false, reason: "this isn't a GitHub Actions run" };
   }
-  const recorded = recordedBrowserTimings({ gh, run });
+  const recorded = recordedTimings({ gh, recording, run });
   if (!recorded.ok) {
     return recorded;
   }
   return { ok: true, value: { all: files.value, recorded: recorded.value } };
 }
 
-function timedPlan(planning: Planning): Outcome<Plan> {
-  const found = recordedFor(planning);
+function timedPlan(planning: Planning, recording: Recording): Outcome<Plan> {
+  const found = recordedFor(planning, recording);
   if (!found.ok) {
     return found;
   }
   const { all, recorded } = found.value;
-  const timed = shardByTime({ files: all, shard: planning.shard, timings: recorded.timings });
+  const timed = shardByTime({ files: all, name: recording.name, shard: planning.shard, timings: recorded.timings });
   if (!timed.ok) {
     return timed;
   }
   const { files, seconds } = timed.value;
-  const line = `browser shard ${planning.shard}: ${String(files.length)} of ${String(all.length)} files, ${seconds.toFixed(DECIMALS)}s of test time as run ${recorded.run} recorded it`;
-  return { ok: true, value: { args: [`--record-shard=${planning.shard}`, ...files], line } };
+  const line = `${recording.name} shard ${planning.shard}: ${String(files.length)} of ${String(all.length)} files, ${seconds.toFixed(DECIMALS)}s of test time as run ${recorded.run} recorded it`;
+  return { ok: true, value: { args: recording.runArgs(planning.shard, files), line } };
 }
 
-function browserShardPlan(planning: Planning): Plan {
-  const timed = timedPlan(planning);
+function shardPlan({ recording, ...planning }: Planning & Asking): Plan {
+  const timed = timedPlan(planning, recording);
   if (timed.ok) {
     return timed.value;
   }
   return {
     args: [`--shard=${planning.shard}`],
-    line: `browser shard ${planning.shard}: split by test count, since ${timed.reason}`,
+    line: `${recording.name} shard ${planning.shard}: split by ${recording.fallback}, since ${timed.reason}`,
   };
 }
 
-export type { Plan };
-export { browserShardPlan };
+const BROWSER: Recording = {
+  fallback: "test count",
+  name: "browser",
+  prefix: "test-timings-browser-",
+  read: (file) => readTimings({ base: BROWSER_TESTS, file, runner: "playwright" }),
+  report: "browser.json",
+  runArgs: (shard, files) => [`--record-shard=${shard}`, ...files],
+};
+
+function browserShardPlan(planning: Planning): Plan {
+  return shardPlan({ ...planning, recording: BROWSER });
+}
+
+export type { Planning, Plan };
+export { browserShardPlan, shardPlan };

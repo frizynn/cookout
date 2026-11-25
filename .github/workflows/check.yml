@@ -3,8 +3,8 @@ name: Check
 # Check runs once per commit, on v1 and the merge-ticket-* branches only (#605): a worker runs
 # `pnpm check` before opening a pull request. It doesn't run on pull_request or on ticket-* pushes,
 # which ran it twice per commit and queued the landing runs behind them. A push to main doesn't run
-# it: main is only fast-forwarded to a commit v1's push run already checked. A Check run has 5 jobs,
-# the static checks and the unit tests on the merged result: `static`, `tests` ×3 and `coverage`.
+# it: main is only fast-forwarded to a commit v1's push run already checked. A Check run has 8 jobs,
+# the static checks and the unit tests on the merged result: `static`, `tests` ×6 and `coverage`.
 # The browser tests, pack smoke, the published client and the e2e suite run in the Release
 # workflow, the gate, on the newest v1 commit whose Check run is green, before it publishes and
 # deploys (#636, docs/adr/0114-release-is-the-gate-on-the-newest-green-v1-commit.md).
@@ -78,23 +78,31 @@ jobs:
           NODE_COMPILE_CACHE: node_modules/.cache/node-compile
         run: node scripts/check.ts --job=drift --base="$BASE" --all --ci
 
-  # Two shards ran 4-5 minutes each and one was cancelled at the 5-minute limit after 284.7s of
-  # passing tests (#485), so Vitest's --shard splits the test files across 3 jobs. Each uploads its
-  # blob report, and the coverage job merges every vitest-blob-* into one run.
+  # Split by file count, 3 shards took 288, 177 and 157s of tests on a 4-core runner, and the first
+  # was cut off at the 5-minute limit (#707). So 6 jobs each run the test files that give it a sixth
+  # of the test time the newest earlier Check run recorded in its test-timings-tests-* artifacts,
+  # falling back to Vitest's --shard by file count when there are none (scripts/lib/timed-shards.ts).
+  # Each uploads its blob report, and the coverage job merges every vitest-blob-* into one run.
   tests:
-    name: tests ${{ matrix.shard }}/3
+    name: tests ${{ matrix.shard }}/6
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      # To read the timings an earlier run uploaded.
+      actions: read
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
         with:
           cache-name: tests
-      - run: node scripts/check.ts --job=tests --shard=${{ matrix.shard }}/3 --all --ci
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/check.ts --job=tests --shard=${{ matrix.shard }}/6 --run=${{ github.run_id }} --all --ci
       - uses: actions/upload-artifact@v4
         with:
           name: vitest-blob-${{ matrix.shard }}
@@ -106,7 +114,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-timings-tests-${{ matrix.shard }}
-          path: .timings/*.txt
+          path: |
+            .timings/*.txt
+            .timings/tests.json
           include-hidden-files: true
           if-no-files-found: ignore
 
