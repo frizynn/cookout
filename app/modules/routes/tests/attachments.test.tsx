@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { inConversation, inPane, inThread } from "./regions.ts";
 import { adminClient } from "./identities.ts";
-import { hillsPng } from "../../testing/web.ts";
+import { hillsPng } from "../../testing/index.ts";
 import { openWithClockStopped } from "./clock.ts";
 import { postedWithFiles } from "./attachment-posts.ts";
 import { subscribedReader } from "./inbox-reader.ts";

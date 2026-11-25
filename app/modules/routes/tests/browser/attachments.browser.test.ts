@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
-import { hillsPng } from "../../../testing/web.ts";
+import { hillsPng } from "../../../testing/index.ts";
 import { inPane } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
 
