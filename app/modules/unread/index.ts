@@ -4,7 +4,7 @@
  * positions (`GET /v1/read-positions`) and one first page of the Inbox history (`GET /v1/inbox/history`) per load or
  * catch-up, shared by every part below, with the live events applied in one place. This module keeps the shape the
  * views read and the page state that stays here: the "New" lines, the selection and the reading rule. The levels and
- * rows below (`rowsOf`, `rowKey`, `countsOf`) are the board store's,
+ * rows below (`rowsOf`, `rowKey`) are the board store's,
  * re-exported for the views (the sidebar, the Inbox rows and the channel feed read the board's selectors), and a "New" line takes its place from the board's `inboxNewLine`.
  * The unread inbox items of whoever is looking, oldest first. An external store, read by components with
  * `useSyncExternalStore`, loaded when its first reader subscribes, a message there for several reasons held once.
@@ -217,7 +217,6 @@ export {
   type ThreadNews,
   type UnreadCounts,
   type UnreadWhy,
-  countsOf,
   rowKey,
   rowsOf,
 } from "../board/index.ts";
