@@ -20,7 +20,7 @@
  * - `Chip` is a button, pressed or not.
  * - `QuietButton` is a muted centred button, naming what it `controls`, such as loading older messages.
  * - `Form` hands one field's value to `onSubmit` without reloading the page.
- * - `TextField` is a labelled secret input in a `Form`, such as a token.
+ * - `TextField` is a labelled secret input in a `Form`, such as a token. It takes focus when it first appears if `focused`.
  * - `TextArea` is a labelled box to write in, such as a reply, whose text and caret its owner holds, where Enter sends the form and Shift+Enter starts a new line, and, while its owner is `choosing` from suggestions, is a combobox naming the highlighted option as its active descendant, where the arrows move it, Enter or Tab picks it and Escape closes the list. It takes focus when it first appears if `focused`. Files pasted into it go to `onPasteFiles` instead of the text; it needs text to send only while `required`.
  * - `SubmitButton` sends a `Form`.
  * - `SendButton` is its paper-plane icon form, named and tooltipped by `label`.

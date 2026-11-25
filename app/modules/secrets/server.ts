@@ -8,6 +8,7 @@ import type { CallId, WebhookCommandSecret } from "../webhook-commands/index.ts"
 import { Context, Layer } from "effect";
 import type { Token, TokenHash } from "../identities/index.ts";
 import type { AttachmentId } from "../attachments/index.ts";
+import type { AvatarId } from "../avatars/index.ts";
 import type { Effect } from "effect";
 import { liveSecrets } from "./lib/server/live.ts";
 
@@ -27,6 +28,8 @@ export interface SecretsService {
   readonly newUserCode: Effect.Effect<string>;
   /** A new attachment ID: 128 random bits as base64url, so it gives nothing away. */
   readonly newAttachmentId: Effect.Effect<AttachmentId>;
+  /** A new avatar ID: 128 random bits as hex, like an attachment's, so the two never clash in the asset store. */
+  readonly newAvatarId: Effect.Effect<AvatarId>;
   /** A new call ID: `call_` and 128 random bits. */
   readonly newCallId: Effect.Effect<CallId>;
   /**

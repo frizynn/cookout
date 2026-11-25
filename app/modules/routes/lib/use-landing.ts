@@ -11,6 +11,7 @@ const TARGET = {
   heading: "main h1",
   profile: 'aside[aria-label="Profile"] h2',
   thread: 'aside[aria-label="Thread"] textarea',
+  threadAlone: 'aside[aria-label="Thread"] h2',
   token: 'form[aria-label="Log in"] input[name="token"]',
 } as const;
 
@@ -20,12 +21,23 @@ interface Landed {
   readonly session: Session;
 }
 
+function threadTarget(route: Place["route"]): string | null {
+  if (route.name !== "thread") {
+    return null;
+  }
+  if (route.alone === true) {
+    return TARGET.threadAlone;
+  }
+  return TARGET.thread;
+}
+
 function targetOf({ profile, route }: Place): string {
   if (profile !== null || route.name === "profile") {
     return TARGET.profile;
   }
-  if (route.name === "thread") {
-    return TARGET.thread;
+  const thread = threadTarget(route);
+  if (thread !== null) {
+    return thread;
   }
   if (route.name === "channel") {
     return TARGET.channel;

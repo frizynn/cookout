@@ -6,7 +6,7 @@
  * `name` with one run of a test (`run` is its Playwright `TestInfo`), so the channels and identities a browser test
  * makes never clash with its own repeats under `--repeat-each` or its retries; the browser tests reach it as
  * `unique(name)` from their `names.ts`. `hillsPng()` is a real 480 by 320 PNG, for a test or a screen that shows
- * an image attachment.
+ * an image attachment. `avatarPng()` is a real 256 by 256 PNG, the one shape the server takes as an avatar (#478).
  *
  * `createTestAgent({ by, name })` is the one way a test makes an agent, through the board's interface: `by` creates it,
  * an admin or a human (who owns it unless `owner` names another), and it gets a display name that differs from its name
@@ -20,6 +20,7 @@
  * outside the tests (`web-rules/board-store-owner`, #311), so tests get theirs here.
  */
 export { type ClockForward, moveClockForward } from "./lib/clock.ts";
+export { avatarPng } from "./lib/avatar-png.ts";
 export { hillsPng } from "./lib/hills.ts";
 export { type TestRun, uniqueName } from "./lib/unique-name.ts";
 export { testClient, unreachableClient } from "./lib/clients.ts";
