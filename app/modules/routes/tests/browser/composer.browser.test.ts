@@ -1,8 +1,8 @@
 import { test as base, expect } from "@playwright/test";
+import { createTestAgent, testAgentDisplayName } from "../../../testing/index.ts";
 import { inPane, inSidebar } from "./regions.ts";
 import type { Page } from "@playwright/test";
 import { adminClient } from "./people.ts";
-import { createTestAgent } from "../../../testing/index.ts";
 import { logIn } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
@@ -50,7 +50,10 @@ test("typing @ and a prefix in the reply box suggests the matching identities, a
   await box.pressSequentially(`Could @${reviewers}`);
   const suggestions = page.getByRole("listbox", { name: "Mention suggestions" });
 
-  await expect(suggestions.getByRole("option")).toHaveText([`@${reviewers}-ada`, `@${reviewers}-bot`]);
+  await expect(suggestions.getByRole("option")).toHaveText([
+    `@${reviewers}-ada`,
+    `@${reviewers}-bot${testAgentDisplayName(`${reviewers}-bot`)}`,
+  ]);
 
   await suggestions.getByRole("option", { name: `@${reviewers}-bot` }).click();
   await page.keyboard.type("look?");

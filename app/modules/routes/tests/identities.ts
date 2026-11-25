@@ -1,8 +1,8 @@
 import type { CookoutClient, CreateIdentityRequest, IdentityWithTokenResponse, Token } from "../../sdk/index.ts";
+import { createTestAgent, testAgentDisplayName } from "../../testing/index.ts";
 import type { Session } from "../../board/index.ts";
 import { createBoardStore } from "../../board/index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
-import { createTestAgent } from "../../testing/index.ts";
 import { expect } from "vitest";
 import { waitFor } from "@testing-library/react";
 import { webTestCookout } from "../../../../scripts/web-test-server.ts";
@@ -134,4 +134,12 @@ export async function revocableView({ methods, revoked, viewer }: Revocable): Pr
     Object.assign(client, { [method]: rotated.client[method] });
   }
   return { client, rotateToken: rotated.rotateToken };
+}
+
+export function agentShown(name: string): string {
+  return `${testAgentDisplayName(name)}@${name}`;
+}
+
+export function agentOption(name: string): string {
+  return `@${name}${testAgentDisplayName(name)}`;
 }

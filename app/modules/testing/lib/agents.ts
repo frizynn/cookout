@@ -55,4 +55,4 @@ async function createTestAgent<const Request extends TestAgentRequest>(
   );
 }
 
-export { type CreatedTestAgent, type TestAgentRequest, createTestAgent };
+export { type CreatedTestAgent, type TestAgentRequest, createTestAgent, testAgentDisplayName };

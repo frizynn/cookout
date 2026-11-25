@@ -1,9 +1,9 @@
 import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
+import { createTestAgent, testAgentDisplayName } from "../../../testing/index.ts";
 import { inPane, inProfile } from "./regions.ts";
 import type { Identity } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
-import { createTestAgent } from "../../../testing/index.ts";
 import { logIn } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
@@ -31,7 +31,10 @@ test("an offer row's name opens the identity's profile panel", async ({ page }) 
   await offeredOn(page, identity);
   await logIn({ page, token: owner.token, url: "/#/inbox" });
 
-  await inPane(page).getByRole("list", { name: "For you" }).getByRole("link", { name: agent }).click();
+  await inPane(page)
+    .getByRole("list", { name: "For you" })
+    .getByRole("link", { name: testAgentDisplayName(agent) })
+    .click();
 
   await expect(page).toHaveURL(new RegExp(`#/inbox\\?profile=${ownerName}/scout$`, "u"));
   await expect(inProfile(page).getByRole("heading", { name: new RegExp(agent, "u") })).toBeVisible();

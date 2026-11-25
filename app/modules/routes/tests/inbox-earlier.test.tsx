@@ -1,9 +1,9 @@
 import type { CookoutClient, MessageId } from "../../sdk/index.ts";
+import { agentShown, anonymousClient } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import { rowsOf, subscribedReader } from "./inbox-reader.ts";
 import { alertSaying } from "./alerts.ts";
-import { anonymousClient } from "./identities.ts";
 import { inPane } from "./regions.ts";
 import { openWithClockStopped } from "./clock.ts";
 
@@ -64,11 +64,11 @@ async function readElsewhere(channel: string): Promise<CookoutClient> {
 }
 
 function postedRow(channel: string, text: string): string {
-  return `#/inbox/${channel} New in #${channel}${channel}-posterposted in#${channel}just now${text}`;
+  return `#/inbox/${channel} New in #${channel}${agentShown(`${channel}-poster`)}posted in#${channel}just now${text}`;
 }
 
 function newRow(channel: string, text: string): string {
-  return `#/inbox/${channel} New in #${channel}${channel}-posterposted in#${channel}3 newjust now${text}`;
+  return `#/inbox/${channel} New in #${channel}${agentShown(`${channel}-poster`)}posted in#${channel}3 newjust now${text}`;
 }
 
 it("earlier lists read rows, a page at a time, merging each page into the rows it shows, until there are no more", {

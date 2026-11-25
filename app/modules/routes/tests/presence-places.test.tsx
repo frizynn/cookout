@@ -6,6 +6,7 @@ import type { ServerSentEvent } from "../../sdk/index.ts";
 import { createLive } from "../../live/index.ts";
 import { inProfile } from "./regions.ts";
 import { openAt } from "./render.tsx";
+import { testAgentDisplayName } from "../../testing/index.ts";
 
 it("the @-suggestions show each identity's dot", { timeout: 5000 }, async () => {
   expect.hasAssertions();
@@ -78,7 +79,9 @@ it("when the server refuses presence, the People rows show no dot", { timeout: 5
     expect(asked).toStrictEqual(["presence"]);
   });
   const rows = await screen.findByRole("list", { name: "Identities" });
-  const row = await within(rows).findByRole("link", { name: /web-presence-refused-bot/u });
+  const row = await within(rows).findByRole("link", {
+    name: new RegExp(testAgentDisplayName("web-presence-refused-bot"), "u"),
+  });
 
   expect(within(row).queryByRole("img")).toBeNull();
 });
