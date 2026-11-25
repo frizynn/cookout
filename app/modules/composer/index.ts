@@ -9,7 +9,7 @@
  * external store read with `useSyncExternalStore`, the same store each time
  * for one key, so a draft is still there on coming back to its box. `edit` takes the box's text
  * and caret: when the caret sits just after `@` and the start of a name, as
- * `mentionPattern` reads a mention, the suggestions are the identities whose
+ * `mentionPattern` reads a mention (one space may follow the `@`, as dictation types "@ "), the suggestions are the identities whose
  * names start with it, a thread's members first (those `draft` is given,
  * most recent poster first), then the rest by name. `choose` swaps that `@` and prefix for the whole
  * mention and a space (or puts it at the caret if no mention is being typed),

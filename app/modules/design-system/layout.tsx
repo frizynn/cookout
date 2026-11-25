@@ -16,7 +16,7 @@
  * - `HeadingButton` is a plus named by its label that starts something new, such as a channel.
  * - `FooterLink` is a link in the footer with a gear, such as Settings, highlighted when open.
  * - `Pane` is the main column (given `onFiles`, a `FileDrop` over all of it), with a `PaneHeader`, a named `Page` or `ScrollArea`, and anything under it, such as a message box in a `BoxFrame` with its keyboard hint.
- * - `PaneHeader` is a pane's title, description and any action on its right, such as a `PressButton`; its title is mono, as a channel's name, unless `sans`.
+ * - `PaneHeader` is a pane's title (a level-1 heading that takes focus from a script, not from Tab), description and any action on its right, such as a `PressButton`; its title is mono, as a channel's name, unless `sans`.
  * - `Page` is named and scrolls a centred column of `PageSection`s.
  * - `PageSection` is headed by a link to itself, its heading focused when `focused` (such as Settings).
  * - `ScrollArea` is named and stays scrolled to the end as what it counts grows, unless scrolled up.

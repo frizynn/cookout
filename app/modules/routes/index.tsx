@@ -19,9 +19,15 @@
  * identity's profile panel beside it (replacing a thread's panel); Escape or
  * its close link closes it. Clicking a name, a message's author or an
  * `@name`, goes there. `keymap` owns every keyboard shortcut: the app adds its one key listener to the page while
- * drawn, and `?` (off a text box) or Ctrl/Cmd+/ opens the list of every shortcut on any page. Files dropped on a channel, a thread or an Inbox conversation, its messages or its box, wait in that conversation's box; the page refuses files dropped anywhere else, so the browser never opens them. The
+ * drawn, and `?` (off a text box) or Ctrl/Cmd+/ opens the list of every shortcut on any page. After a move
+ * that asks for it (logging in, Alt+↑/↓, a Ctrl/Cmd+K jump, a new channel, a sidebar link on a narrow screen, an
+ * identity card's View profile), the app's `landing` focuses the new view's element once it is drawn: a profile's
+ * panel heading, a thread's reply box, a channel's message box, or else the view's level-1 heading; the login page
+ * focuses its Token field. Files dropped on a channel, a thread or an Inbox conversation, its messages or its box,
+ * wait in that conversation's box; the page refuses files dropped anywhere else, so the browser never opens them. The
  * `paths` module reads the hash and builds every link's.
  */
+import { LandingContext, createLanding } from "../landing/index.ts";
 import { useMemo, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 import { RouteView } from "./lib/route-view.tsx";
@@ -30,6 +36,7 @@ import type { Stores } from "./lib/stores.ts";
 import { boardPageStores } from "./lib/board-page-stores.ts";
 import { locationOf } from "../paths/index.ts";
 import { useKeymapListener } from "./lib/use-keymap-listener.ts";
+import { useLanding } from "./lib/use-landing.ts";
 import { useStrayDropGuard } from "./lib/use-stray-drop-guard.ts";
 
 function subscribeToHash(listener: () => void): () => void {
@@ -57,10 +64,12 @@ export function CookoutApp(props: CookoutAppProps): ReactNode {
   useStrayDropGuard();
   const page = useMemo(() => boardPageStores(props.boardStore), [props.boardStore]);
   const stores = useMemo(() => ({ ...props, ...page }), [page, props]);
+  const landing = useMemo(() => createLanding(), []);
+  useLanding({ hash, landing, session: props.session });
   return (
-    <>
+    <LandingContext value={landing}>
       <RouteView place={locationOf(hash)} stores={stores} />
       <ShortcutListView keymap={props.keymap} />
-    </>
+    </LandingContext>
   );
 }

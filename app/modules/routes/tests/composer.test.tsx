@@ -154,6 +154,38 @@ it("text with no @ before the caret suggests nobody", { timeout: 5000 }, async (
   close();
 });
 
+it("@ and a space, as dictation types it, still suggests, and @ g filters as @g does", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  await newIdentity({ kind: "human", name: "spoken-grace" });
+  const parent = await threadIn("web-composer-spoken");
+  const close = openAt({ client: adminClient(), hash: hashOf(parent) });
+
+  await typeInReply("Ping @ ");
+
+  await expect(suggested()).resolves.not.toStrictEqual([]);
+
+  await typeInReply("Ping @ spoken-g");
+
+  await expect(suggested()).resolves.toStrictEqual(["@spoken-grace"]);
+
+  close();
+});
+
+it("a spoken at, with no @, suggests nobody", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  await newIdentity({ kind: "human", name: "spoken-at-grace" });
+  const parent = await threadIn("web-composer-spoken-at");
+  const close = openAt({ client: adminClient(), hash: hashOf(parent) });
+
+  await typeInReply("Ping at spoken-at-g");
+
+  expect(screen.queryByRole("listbox", { name: "Mention suggestions" })).toBeNull();
+
+  close();
+});
+
 it("when the server refuses the identity list, typing @ suggests nobody and the box still takes text", {
   timeout: 5000,
 }, async () => {
