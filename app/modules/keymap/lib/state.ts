@@ -37,15 +37,20 @@ function createKeymapStore(platform: Platform): KeymapStore {
       listener();
     }
   }
+  function setOpen(shortcutListOpen: boolean): void {
+    if (shortcutListOpen !== state.shortcutListOpen) {
+      set({ shortcutListOpen });
+    }
+  }
   return {
     announce: (text) => {
       set({ announced: { count: state.announced.count + ONE, text } });
     },
     closeShortcutList: () => {
-      set({ shortcutListOpen: false });
+      setOpen(false);
     },
     openShortcutList: () => {
-      set({ shortcutListOpen: true });
+      setOpen(true);
     },
     snapshot: () => state,
     subscribe: (listener) => {

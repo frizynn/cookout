@@ -14,10 +14,15 @@
  * Events, well-formed or not, on every stream it opened, and `report(link)` reports its link down or up.
  * `watchedLive(client)` is a `Live` on the client's real `watch`, and `stream` is that watch's stream once it opens.
  * `Live` and `LiveLink` are their types.
+ * `recordPublishes(store)` subscribes to an external store through its
+ * `subscribe` and `snapshot`, counts each publish (`count()`), and fails the
+ * test when a publish leaves the snapshot deep-equal to the one before, since
+ * each such publish re-renders every view that reads the store for nothing.
  */
 export { watchAdapter } from "./lib/watch.ts";
 export { type HandFocus, handFocus } from "./lib/page-focus.ts";
 export { type HandLive, handLive } from "./lib/hand-live.ts";
+export { type ExternalStore, type Publishes, recordPublishes } from "./lib/publishes.ts";
 export {
   type Live,
   type LiveLink,

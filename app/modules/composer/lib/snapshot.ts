@@ -1,4 +1,5 @@
 import type { Command, Identity, IdentityName } from "../../sdk/index.ts";
+import { sameSnapshot } from "../../board/index.ts";
 
 const MOST_SUGGESTIONS = 8;
 const NOTHING = 0;
@@ -183,4 +184,23 @@ function changesFor(sources: Sources): Changes {
   };
 }
 
-export { type DraftSnapshot, type Sources, EMPTY, changesFor };
+interface DraftChanges {
+  readonly current: () => DraftSnapshot;
+  readonly change: (update: (snapshot: DraftSnapshot) => DraftSnapshot) => void;
+}
+
+function draftChanges(notify: () => void): DraftChanges {
+  let current: DraftSnapshot = EMPTY;
+  return {
+    change: (update) => {
+      const next = update(current);
+      if (!sameSnapshot({ after: next, before: current })) {
+        current = next;
+        notify();
+      }
+    },
+    current: () => current,
+  };
+}
+
+export { type DraftSnapshot, type Sources, EMPTY, changesFor, draftChanges };

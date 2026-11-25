@@ -1,5 +1,6 @@
 import type { Channel, ChannelName, CreateChannelRequest, Refusal } from "../../sdk/index.ts";
 import { CookoutError, refusalOf } from "../../sdk/index.ts";
+import { sameSnapshot } from "./selected.ts";
 
 type CreationField = "name" | "description";
 
@@ -76,6 +77,9 @@ function createChannelCreation(options: CreationOptions): ChannelCreation {
   let queue = Promise.resolve();
 
   function publish(next: ChannelCreationSnapshot): void {
+    if (sameSnapshot({ after: next, before: current })) {
+      return;
+    }
     current = next;
     for (const listener of listeners) {
       listener();

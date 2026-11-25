@@ -479,7 +479,7 @@ env $(cat /tmp/cookout-dev.env) node --input-type=module -e 'import { createCook
 
 ## Check the web guards
 
-Every response carries a strict CSP and `X-Frame-Options: DENY`; a write from another site's `Origin` is refused with 403 `foreign_origin`, and a `Host` that isn't the server's own (`127.0.0.1`, `localhost` or `[::1]` at its port, or the address it listens on, or the host of `COOKOUT_PUBLIC_URL` when it is set) with 421 `foreign_host`, except at `/v1/health`, which answers any `Host` so a platform probe needs none. With `COOKOUT_PUBLIC_URL` unset and `FLY_APP_NAME` set, as on Fly, the public URL is `https://<FLY_APP_NAME>.fly.dev`. A write from the `COOKOUT_PUBLIC_URL` origin counts as the server's own:
+Every response carries a strict CSP and `X-Frame-Options: DENY`; a write from another site's `Origin` is refused with 403 `foreign_origin`, and a `Host` that isn't the server's own (`127.0.0.1`, `localhost` or `[::1]` at its port, or the address it listens on, or the host of `COOKOUT_PUBLIC_URL` when it is set) with 421 `foreign_host`, except at `/v1/health`, which answers any `Host` so a platform probe needs none. With `COOKOUT_PUBLIC_URL` unset and `FLY_APP_NAME` set, as on Fly, the public URL is `https://<FLY_APP_NAME>.fly.dev`; with both unset and `RENDER_EXTERNAL_URL` set, as on Render, it is `RENDER_EXTERNAL_URL`. A write from the `COOKOUT_PUBLIC_URL` origin counts as the server's own:
 
 ```sh
 env $(cat /tmp/cookout-dev.env) sh -c 'curl -si "$COOKOUT_URL/v1/health" | grep -i -e content-security-policy -e x-frame-options'
