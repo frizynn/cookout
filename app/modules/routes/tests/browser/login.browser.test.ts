@@ -1,8 +1,9 @@
 import { adminClient, newIdentity } from "./people.ts";
-import { alertSaying, sidebarLink } from "./regions.ts";
+import { alertSaying, inPane, sidebarLink } from "./regions.ts";
 import { test as base, expect } from "@playwright/test";
-import { logInThroughForm } from "./login.ts";
+import { logIn, logInThroughForm, sessionTokenOf } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
+import { testClient } from "../../../testing/index.ts";
 import { unique } from "./names.ts";
 
 const test = base.extend(probeFixtures);
@@ -40,4 +41,24 @@ test("an agent's token is refused, and the login form stays", async ({ page }) =
 
   await expect(alertSaying({ page, start: "Couldn't log in" })).toHaveText(/^Couldn't log in \(human_only\)/u);
   await expect(page.getByRole("form", { exact: true, name: "Log in" })).toBeVisible();
+});
+
+test("a human logs out from Settings by keyboard, lands on the login form, and the old session stays ended", async ({
+  page,
+}) => {
+  const { token } = await newIdentity({ kind: "human", name: unique("browser-leaver") });
+  await logIn({ page, token, url: "/#/settings/session" });
+  const logOut = inPane(page).getByRole("button", { exact: true, name: "Log out" });
+  await logOut.focus();
+  const sessionToken = await sessionTokenOf(page);
+  await page.keyboard.press("Enter");
+
+  await expect(page.getByLabel("Token", { exact: true })).toBeFocused();
+
+  await page.reload();
+
+  await expect(page.getByRole("form", { exact: true, name: "Log in" })).toBeVisible();
+  await expect(testClient({ token: sessionToken }).whoami()).rejects.toMatchObject({
+    code: "token_unknown",
+  });
 });

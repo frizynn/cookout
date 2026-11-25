@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
-import { inPane, inProfile, inSidebar, inThread, sidebarLink } from "./regions.ts";
+import { inPane, inProfile, inSidebar, inThread, inTopBar, sidebarLink } from "./regions.ts";
 import { logInWithStream } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
@@ -11,6 +11,7 @@ const test = base.extend(probeFixtures);
 const PARENT = "The parent.";
 const FRIEND = "-friend";
 const FRIEND_TYPED = "-fri";
+const NARROW = { height: 900, width: 600 };
 
 interface Thread {
   readonly channel: string;
@@ -103,7 +104,9 @@ test("each Escape goes out one level: the menu, the reply box, the thread panel,
   await page.keyboard.press("Escape");
 
   await expect(rowOf(page, channel)).toHaveAccessibleName(`#${channel}`);
-  await expect(page.getByRole("status").filter({ hasText: `#${channel} marked read` })).toBeAttached();
+  await expect(
+    page.getByRole("status", { exact: true, name: "Announcements" }).filter({ hasText: `#${channel} marked read` }),
+  ).toBeAttached();
 });
 
 test("Escape on an open identity card closes only the card", async ({ page }) => {
@@ -164,4 +167,58 @@ test("Escape closes the profile panel and focus goes to the person that opened i
 
   await expect(inProfile(page)).toBeHidden();
   await expect(row).toBeFocused();
+});
+
+async function narrowSidebarOpened(page: Page, channel: string): Promise<Locator> {
+  await threadOpened(page, channel);
+  await page.goto(`/#/channels/${channel}`);
+  await page.setViewportSize(NARROW);
+  await inTopBar(page).getByRole("button", { exact: true, name: "Open the sidebar" }).press("Enter");
+
+  await expect(inSidebar(page)).toBeVisible();
+  await expect(inTopBar(page).getByRole("button", { exact: true, name: "Close the sidebar" })).toBeFocused();
+
+  return inTopBar(page).getByRole("button", { exact: true, name: "Open the sidebar" });
+}
+
+test("on a narrow screen, Escape closes the open sidebar and focuses the button that opens it", async ({ page }) => {
+  const opener = await narrowSidebarOpened(page, unique("browser-escape-narrow"));
+  await page.keyboard.press("Escape");
+
+  await expect(inSidebar(page)).toBeHidden();
+  await expect(opener).toBeFocused();
+});
+
+test("on a narrow screen, Escape from a link in the open sidebar closes it", async ({ page }) => {
+  const channel = unique("browser-escape-narrow-link");
+  const opener = await narrowSidebarOpened(page, channel);
+  await rowOf(page, channel).focus();
+  await page.keyboard.press("Escape");
+
+  await expect(inSidebar(page)).toBeHidden();
+  await expect(opener).toBeFocused();
+});
+
+const TABS = 30;
+const NONE = 0;
+const ONE = 1;
+
+async function tabbedOutside(page: Page, left: number): Promise<number> {
+  if (left === NONE) {
+    return NONE;
+  }
+  await page.keyboard.press("Tab");
+  const outside = await page.evaluate(
+    () =>
+      document.activeElement !== null &&
+      document.activeElement !== document.body &&
+      document.activeElement.closest('nav[aria-label="Sidebar"], header[aria-label="Top bar"]') === null,
+  );
+  return Number(outside) + (await tabbedOutside(page, left - ONE));
+}
+
+test("on a narrow screen, Tab stays inside the open sidebar and its top bar", async ({ page }) => {
+  await narrowSidebarOpened(page, unique("browser-escape-narrow-tab"));
+
+  expect(await tabbedOutside(page, TABS)).toBe(NONE);
 });
