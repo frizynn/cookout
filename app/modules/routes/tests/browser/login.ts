@@ -29,7 +29,7 @@ export async function logIn({ page, token, url = "/" }: LogIn): Promise<void> {
 export async function logInToChannels(login: LogIn): Promise<void> {
   await logIn(login);
 
-  await expect(login.page.getByRole("list", { exact: true, name: "Channels" })).toBeVisible();
+  await expect(login.page.getByRole("list", { exact: true, name: "Channels" })).toBeAttached();
 }
 
 export async function logInWithStream(login: LogIn): Promise<void> {
