@@ -9,7 +9,6 @@ import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 
 const [SQLITE = "", POSTGRES = ""] = MIGRATION_LISTS;
-const ONE_ATTEMPT = 1;
 
 function list(name: string, entries: readonly string[]): string {
   const imports = entries.map((entry) => `import { ${entry} } from "./${entry.toLowerCase()}.ts";\n`).join("");
@@ -64,7 +63,7 @@ it("keeps v1's whole migration lists and appends the ticket's entries after them
 
   const merged = repo(work).merge({ rules: mergeRules });
 
-  expect(merged).toStrictEqual({ attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect(merged).toStrictEqual({ ok: true, sha: git(origin, "rev-parse", "v1") });
   expect(onV1(origin)).toStrictEqual([
     sqlite("BASE", "SEARCH", "ATTACHMENTS"),
     postgres("BASE", "SEARCH", "ATTACHMENTS"),
@@ -84,7 +83,7 @@ it("keeps v1's migrations first when v1 appends one while a merge resolved by ha
   const merged = repo(work).continueMerge({ rules: mergeRules });
 
   expect(stops).toStrictEqual([false, false]);
-  expect(merged).toStrictEqual({ attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect(merged).toStrictEqual({ ok: true, sha: git(origin, "rev-parse", "v1") });
   expect(onV1(origin)).toStrictEqual([
     sqlite("BASE", "ORDER", "SEARCH", "ATTACHMENTS"),
     postgres("BASE", "ORDER", "SEARCH", "ATTACHMENTS"),
@@ -164,7 +163,7 @@ it("ignores a recorded rerere resolution of a migrations list that drops v1's en
 
   const merged = repo(work).merge({ rules: mergeRules });
 
-  expect(merged).toStrictEqual({ attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect(merged).toStrictEqual({ ok: true, sha: git(origin, "rev-parse", "v1") });
   expect(onV1(origin)).toStrictEqual([
     sqlite("BASE", "SEARCH", "ATTACHMENTS"),
     postgres("BASE", "SEARCH", "ATTACHMENTS"),

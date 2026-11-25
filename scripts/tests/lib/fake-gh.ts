@@ -1,6 +1,8 @@
+import type { Landed, Landing } from "../../lib/merge-queue.ts";
+import type { Step, Stopped } from "../../lib/merge-steps.ts";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { landThroughQueue, queueRequired } from "../../lib/merge-queue.ts";
 import { DateTime } from "effect";
-import type { Step } from "../../lib/merge-steps.ts";
 import { ciGreen } from "../../lib/ci-gate.ts";
 import { onTestFinished } from "vitest";
 import path from "node:path";
@@ -20,7 +22,8 @@ import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 const dir = new URL(".", import.meta.url);
 const state = JSON.parse(readFileSync(new URL("state.json", dir), "utf8"));
 const args = process.argv.slice(2);
-const verb = args.includes("--log-failed") ? "log" : args[1];
+const named = \`\${args[0]} \${args[1]}\`;
+const verb = args.includes("--log-failed") ? "log" : named in state ? named : args[1];
 appendFileSync(new URL("calls.log", dir), process.argv.slice(2).join(" ") + "\\n");
 const queue = state[verb] ?? [];
 const next = queue.length > 1 ? queue.shift() : queue[0];
@@ -59,12 +62,21 @@ interface Gated {
   readonly step: Step;
 }
 
+interface Queued {
+  readonly landed: Landed | Stopped;
+  readonly logs: readonly string[];
+  readonly sleeps: number;
+}
+
 interface Fake {
   readonly calls: () => readonly string[];
   readonly gate: (args: readonly string[], base?: readonly string[], appear?: number) => Gated;
+  readonly land: (landing: Landing, required?: boolean) => Queued;
+  readonly required: () => { readonly logs: readonly string[]; readonly required: boolean };
 }
 
 interface Responses {
+  readonly [command: `${string} ${string}`]: readonly unknown[];
   readonly list: readonly unknown[];
   readonly log?: readonly string[];
   readonly rerun?: readonly string[];
@@ -118,13 +130,36 @@ function stateDir(responses: Responses, workflow = ""): string {
   return dir;
 }
 
+function landIn(dir: string, landing: Landing, required: boolean): Queued {
+  const logs: string[] = [];
+  const sleeps: string[] = [];
+  const landed = landThroughQueue({
+    landing,
+    options: {
+      appear: POLLS,
+      cwd: dir,
+      gh: ["node", path.join(dir, "gh.mjs")],
+      log: (line) => {
+        logs.push(line);
+      },
+      polls: POLLS,
+      required,
+      sleep: () => {
+        sleeps.push("slept");
+      },
+    },
+  });
+  return { landed, logs, sleeps: sleeps.length };
+}
+
 interface FakeOptions extends Responses {
+  readonly event?: string;
   readonly rerunRed?: boolean;
   readonly vouchedBy?: string;
   readonly workflow?: string;
 }
 
-function fake({ rerunRed = false, vouchedBy = "", workflow = "", ...responses }: FakeOptions): Fake {
+function fake({ event = "push", rerunRed = false, vouchedBy = "", workflow = "", ...responses }: FakeOptions): Fake {
   const dir = stateDir(responses, workflow);
   return {
     calls: (): readonly string[] => readFileSync(path.join(dir, "calls.log"), "utf8").trim().split("\n"),
@@ -136,6 +171,7 @@ function fake({ rerunRed = false, vouchedBy = "", workflow = "", ...responses }:
         args,
         base,
         cwd: dir,
+        event,
         gh: ["node", path.join(dir, "gh.mjs")],
         log: (line) => {
           logs.push(line);
@@ -149,6 +185,18 @@ function fake({ rerunRed = false, vouchedBy = "", workflow = "", ...responses }:
         vouchedBy,
       });
       return { logs, sleeps: sleeps.length, step };
+    },
+    land: (landing, required = true): Queued => landIn(dir, landing, required),
+    required: (): { readonly logs: readonly string[]; readonly required: boolean } => {
+      const logs: string[] = [];
+      const required = queueRequired({
+        cwd: dir,
+        gh: ["node", path.join(dir, "gh.mjs")],
+        log: (line) => {
+          logs.push(line);
+        },
+      });
+      return { logs, required };
     },
   };
 }
