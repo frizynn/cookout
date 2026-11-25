@@ -67,14 +67,15 @@ function threadPanel(): Element | null {
   return globalThis.document.querySelector(PANEL);
 }
 
+function closedTo(hash: string): boolean {
+  focused(CHANNEL_MESSAGE);
+  globalThis.location.hash = hash;
+  return true;
+}
+
 function closeThread(): boolean {
   const close = globalThis.document.querySelector<HTMLAnchorElement>(PANEL_CLOSE);
-  if (close === null) {
-    return false;
-  }
-  focused(CHANNEL_MESSAGE);
-  globalThis.location.hash = close.hash;
-  return true;
+  return close !== null && closedTo(close.hash);
 }
 
 type MessageAction = "backToChannel" | "openThread" | "replyToMessage" | "toggleThumbsDown" | "toggleThumbsUp";
