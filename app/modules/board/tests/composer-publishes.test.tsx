@@ -1,12 +1,10 @@
 import type { ExternalStore, HandLive, Publishes } from "../../testing/web.ts";
+import { adminClient, opened } from "./held-store.ts";
 import { expect, it, onTestFinished, vi } from "vitest";
-import { handLive, recordPublishes } from "../../testing/web.ts";
 import type { Composer } from "../../composer/index.ts";
 import type { IdentityName } from "../../sdk/index.ts";
-import { adminClient } from "./identities.ts";
-import { boardStoreFor } from "./defaults.ts";
 import { createComposer } from "../../composer/index.ts";
-import { createLive } from "../../live/index.ts";
+import { recordPublishes } from "../../testing/web.ts";
 import { waitFor } from "@testing-library/react";
 
 const NONE = 0;
@@ -37,10 +35,8 @@ function storesOf({ admin, composer }: Composing): readonly ExternalStore<unknow
 
 async function composing(): Promise<Composing> {
   const { identity } = await adminClient().whoami();
-  const hand = handLive();
-  const composer = createComposer({
-    boardStore: boardStoreFor({ client: adminClient(), live: createLive(hand.adapter) }),
-  });
+  const { hand, store } = opened();
+  const composer = createComposer({ boardStore: store });
   return { admin: identity.name, composer, hand };
 }
 
@@ -60,11 +56,11 @@ async function recordedOnceLoaded(
 it("someone coming online publishes nothing from the composer's stores", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
-  const opened = await composing();
-  const publishes = await recordedOnceLoaded(storesOf(opened), opened.composer);
+  const composed = await composing();
+  const publishes = await recordedOnceLoaded(storesOf(composed), composed.composer);
 
-  opened.hand.send({ presence: { identity: opened.admin, online: true }, type: "presence" });
-  opened.hand.send({ presence: { identity: opened.admin, online: false }, type: "presence" });
+  composed.hand.send({ presence: { identity: composed.admin, online: true }, type: "presence" });
+  composed.hand.send({ presence: { identity: composed.admin, online: false }, type: "presence" });
 
   expect(publishes.map((store) => store.count())).toStrictEqual(publishes.map(() => NONE));
 });

@@ -1,12 +1,10 @@
 import type { ChannelName, IdentityName, Message } from "../../sdk/index.ts";
 import type { ExternalStore, HandLive, Publishes } from "../../testing/web.ts";
 import type { Selection, Unread } from "../../unread/index.ts";
-import { adminClient, newIdentity } from "./identities.ts";
+import { adminClient, humanIn, opened } from "./held-store.ts";
 import { expect, it, onTestFinished, vi } from "vitest";
-import { handLive, recordPublishes } from "../../testing/web.ts";
-import { boardStoreFor } from "./defaults.ts";
-import { createLive } from "../../live/index.ts";
 import { createUnread } from "../../unread/index.ts";
+import { recordPublishes } from "../../testing/web.ts";
 import { waitFor } from "@testing-library/react";
 
 const NAME = "web-unread-publishes";
@@ -23,17 +21,15 @@ function followed<State>(store: ExternalStore<State>): void {
 }
 
 async function followingTheInbox(name: string): Promise<Following> {
-  const reader = await newIdentity({ kind: "human", name: `${NAME}-${name}` });
-  const { identity } = await reader.client.whoami();
-  const hand = handLive();
-  const boardStore = boardStoreFor({ client: reader.client, live: createLive(hand.adapter) });
+  const reader = await humanIn(`${NAME}-${name}`);
+  const { hand, store: boardStore } = opened({ client: reader.client });
   const unread = createUnread({ boardStore });
   followed(unread);
   followed({ snapshot: boardStore.snapshot, subscribe: boardStore.subscribeShowing("presence") });
   await waitFor(() => {
     expect(unread.snapshot().status).toBe("loaded");
   });
-  return { hand, reader: identity.name, unread };
+  return { hand, reader: reader.name, unread };
 }
 
 interface Posted {
