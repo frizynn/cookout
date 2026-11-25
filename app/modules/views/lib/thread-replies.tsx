@@ -23,12 +23,14 @@ interface ThreadRepliesProps {
   readonly readPosition: number | null;
   readonly menu: MessageMenu;
   readonly reply: Reply;
+  readonly deleted: ReadonlySet<MessageId>;
 }
 
 export function ThreadReplies(props: ThreadRepliesProps): ReactNode {
+  const shown = props.replies.filter((message) => !props.deleted.has(message.id)).length;
   return (
     <>
-      <RepliesDivider>{replies(props.replies.length)}</RepliesDivider>
+      <RepliesDivider>{replies(shown)}</RepliesDivider>
       {props.replies.length === NONE && (
         <CardBody>
           <Muted>{TEXT.empty}</Muted>
@@ -38,6 +40,7 @@ export function ThreadReplies(props: ThreadRepliesProps): ReactNode {
         after={props.parent}
         closing={props.closing}
         channel={null}
+        deleted={props.deleted}
         label={TEXT.replies}
         me={props.me}
         menu={props.menu}

@@ -9,6 +9,7 @@ import { useMemo } from "react";
 const TEXT = { later: "Later posts", posts: "Posts" } as const;
 const NONE = 0;
 const NO_THREADS: ReadonlyMap<MessageId, ThreadNews> = new Map();
+const NOTHING_DELETED: ReadonlySet<MessageId> = new Set();
 
 interface ChannelPostStreamsProps {
   readonly before: TopLevelMessage | null;
@@ -46,6 +47,7 @@ export function ChannelPostStreams(props: ChannelPostStreamsProps): ReactNode {
     <>
       <MessageStream
         closing={null}
+        deleted={NOTHING_DELETED}
         after={null}
         channel={null}
         label={TEXT.posts}
@@ -65,6 +67,7 @@ export function ChannelPostStreams(props: ChannelPostStreamsProps): ReactNode {
       {later.length > NONE && (
         <MessageStream
           closing={null}
+          deleted={NOTHING_DELETED}
           after={post}
           channel={null}
           label={TEXT.later}

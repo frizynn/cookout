@@ -27,6 +27,7 @@ interface ConversationRepliesProps {
   readonly selection: Selection;
   readonly reply: ReplyAction;
   readonly closing: ThreadClosing;
+  readonly deleted: ReadonlySet<MessageId>;
 }
 
 function earlierText(count: number): string {
@@ -79,6 +80,7 @@ export function ConversationReplies(props: ConversationRepliesProps): ReactNode 
           after={parent}
           closing={props.closing}
           channel={null}
+          deleted={props.deleted}
           label={TEXT.earlier}
           me={me}
           menu={menu}
@@ -95,6 +97,7 @@ export function ConversationReplies(props: ConversationRepliesProps): ReactNode 
         after={lastOf(earlier, parent)}
         closing={props.closing}
         channel={null}
+        deleted={props.deleted}
         label={TEXT.unread}
         me={me}
         menu={menu}
