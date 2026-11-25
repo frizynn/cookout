@@ -163,6 +163,37 @@ function ownerPowersOf(list: IdentityList): Pick<Identities, "actions" | "creati
   return { actions, creation: createAgentCreation({ created, list }) };
 }
 
+interface IdentitiesMaking {
+  readonly list: IdentityList;
+  readonly adminChanges: AdminChanges;
+  readonly deletion: IdentityDeletion;
+  readonly readers: Pick<ReturnType<typeof listenersOf>, "add">;
+}
+
+interface IdentitiesShown {
+  readonly identities: readonly Identity[];
+  readonly adminChange: ReturnType<AdminChanges["adminChange"]>;
+}
+
+function identitiesOf({ adminChanges, deletion, list, readers }: IdentitiesMaking): Identities {
+  let shown: IdentitiesShown | null = null;
+  function shownNow(): IdentitiesShown {
+    const identities = list.identities();
+    const adminChange = adminChanges.adminChange();
+    if (shown === null || shown.identities !== identities || shown.adminChange !== adminChange) {
+      shown = { adminChange, identities };
+    }
+    return shown;
+  }
+  return {
+    ...adminChanges,
+    ...ownerPowersOf(list),
+    deletion,
+    snapshot: list.identities,
+    subscribe: selectedStore({ snapshot: shownNow, subscribe: readers.add }).subscribe,
+  };
+}
+
 /** One message box's draft. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
 export interface Draft {
   /** Calls `listener` after every change, until the returned function is called. */
@@ -258,12 +289,7 @@ export function createComposer(options: ComposerOptions): Composer {
       storeIn(drafts, key, () =>
         createDraft(list, { commands: () => NO_COMMANDS, identities: list.identities, members }),
       ),
-    identities: {
-      ...createAdminChanges(list),
-      ...ownerPowersOf(list),
-      deletion,
-      ...selectedStore({ snapshot: list.identities, subscribe: readers.add }),
-    },
+    identities: identitiesOf({ adminChanges: createAdminChanges(list), deletion, list, readers }),
   };
 }
 

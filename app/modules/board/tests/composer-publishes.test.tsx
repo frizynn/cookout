@@ -21,7 +21,10 @@ function storesOf({ admin, composer }: Composing): readonly ExternalStore<unknow
   return [
     composer.channelDraft("general"),
     composer.draft("general/1"),
-    composer.identities,
+    {
+      snapshot: () => [composer.identities.snapshot(), composer.identities.adminChange()],
+      subscribe: composer.identities.subscribe,
+    },
     actions,
     { snapshot: actions.snapshot, subscribe: actions.subscribeToSessions },
     { snapshot: actions.snapshot, subscribe: actions.subscribeToMessages },
