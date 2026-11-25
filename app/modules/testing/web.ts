@@ -30,7 +30,8 @@
  * for calls by that name until it finishes; `holdsCallsOpen()` with no name stops them waiting for any call. A call
  * in flight for 4 s fails the wait, naming it and the opt-out. `createCallsInFlight({ stallMs })` makes a counter of
  * its own: `track(client)`, `settled()` and `holdOpen(names)`, an empty list meaning every call. `CallsInFlight` is
- * its type.
+ * its type. `settledCalls()` waits as those waits do, for a test's end: a call a view makes after the test's last
+ * read (an ack, say) would otherwise still be in flight when the test's server stops.
  */
 export { watchAdapter } from "./lib/watch.ts";
 export { type HandFocus, handFocus } from "./lib/page-focus.ts";
@@ -49,5 +50,6 @@ export {
   type CallsInFlight,
   createCallsInFlight,
   holdsCallsOpen,
+  settledCalls,
   trackedCalls,
 } from "./lib/calls-in-flight.ts";
