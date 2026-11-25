@@ -2,7 +2,7 @@
  * Trigger URLs on the backend (mattpocock/cookout#378). `triggerRoutes` let an agent's owner, and nobody else, read,
  * set and clear the agent's trigger URL and token; the token is stored for the call alone and never answered.
  * `mentionTriggersLayer` subscribes to every stored message, whatever posted it, and for each agent it mentions that
- * has a trigger URL, is active and isn't its author, POSTs `{ text }` (the message's link and text) to the URL with
+ * has a trigger URL, is active, isn't its author and holds no live agent session, POSTs `{ text }` (the message's link and text) to the URL with
  * `Authorization: Bearer <token>` and the owner's extra headers (mattpocock/cookout#440), whose values are kept like
  * the token and never answered, in the background, through the `TriggerCaller` seam: one attempt, given up after
  * 10 s, never retried, and never holding up or failing the post. Each result is stored as the URL's last result and
