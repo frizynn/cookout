@@ -133,6 +133,7 @@ const scripted: readonly Scripted[] = [
   { budget: 6, job: "drift", name: "docs", script: ["docs"] },
   { budget: 10, job: "drift", name: "api", script: ["api"] },
   { budget: 6, job: "drift", name: "exports", script: ["exports"] },
+  { budget: 4, job: "drift", name: "render", script: ["render"] },
   { afterTests: true, budget: 6, job: "format", name: "format", script: ["format:check"] },
 ];
 
@@ -146,7 +147,12 @@ const checks: readonly Check[] = scripted
   .map((check) => commandOf(check));
 
 const ciOnly: readonly CiOnly[] = [
-  { ciJob: "e2e-docker", command: "pnpm e2e:docker", name: "the e2e suite (packages/e2e on the Docker image)" },
+  {
+    ciJob: "e2e-docker",
+    command: "pnpm e2e:docker",
+    name: "the e2e suite (packages/e2e on the Docker image)",
+    workflow: "Release",
+  },
   ...browserSkipped,
 ];
 

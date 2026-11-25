@@ -11,9 +11,9 @@ import {
   Ref,
   Scope,
 } from "effect";
-import type { Attachment, CookoutClient, Identity, Message, Token } from "../../../sdk/index.ts";
-import type { Booted, LastEnd, LoggedLine } from "./booted.ts";
-import type { NewMessage, StorageUnavailable, StoredCommand, StoredDelivery } from "../../../storage/server.ts";
+import type { Booted, HeldAssets, LastEnd, LoggedLine } from "./booted.ts";
+import type { CookoutClient, Identity, Message, Token } from "../../../sdk/index.ts";
+import type { NewMessage, StorageUnavailable, StoredDelivery, StoredWebhookCommand } from "../../../storage/server.ts";
 import { backingServices, newToken, scriptedTriggersIn, storageFor } from "./backing.ts";
 import { booted, capturedLogs, heldAssetsOn, lastEndOn, liveConnectionsClosedOn } from "./booted.ts";
 import { currentTime, startTestClock } from "./time.ts";
@@ -54,9 +54,9 @@ export type TestCookoutService = {
   readonly restartServer: Effect.Effect<BootedServer>;
   readonly restartServerAfter: (whileDown: Effect.Effect<void>) => Effect.Effect<BootedServer>;
   readonly seedMessage: (message: NewMessage) => Effect.Effect<Message>;
-  readonly seedCommand: (stored: StoredCommand) => Effect.Effect<void>;
+  readonly seedCommand: (stored: StoredWebhookCommand) => Effect.Effect<void>;
   readonly pendingDeliveries: Effect.Effect<readonly StoredDelivery[]>;
-  readonly heldAssets: (ids: readonly Attachment["id"][]) => Effect.Effect<readonly Attachment["id"][]>;
+  readonly heldAssets: HeldAssets;
   readonly logs: Effect.Effect<readonly LoggedLine[]>;
   readonly webhook: WebhookFake["Service"];
   readonly triggers: ReturnType<typeof scriptedTriggersIn>;
@@ -150,7 +150,7 @@ const seedIdentity =
       return { client: clientAt(url)(token), identity, token };
     }).pipe(Effect.orDie);
 
-function seedCommand(stored: StoredCommand): Effect.Effect<void, never, Storage> {
+function seedCommand(stored: StoredWebhookCommand): Effect.Effect<void, never, Storage> {
   const handler = {
     admin: false,
     createdAt: stored.command.createdAt,
@@ -160,7 +160,7 @@ function seedCommand(stored: StoredCommand): Effect.Effect<void, never, Storage>
   } as const;
   return Effect.gen(function* seedTestCommand() {
     const storage = yield* Storage;
-    yield* storage.addCommand(stored, handler);
+    yield* storage.addWebhookCommand(stored, handler);
   }).pipe(Effect.orDie);
 }
 

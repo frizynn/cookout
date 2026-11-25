@@ -29,7 +29,7 @@ type RequestRowType = typeof RequestRow.Type;
 
 const REQUEST_COLUMNS = "approved_by, expires_at, host, user_code";
 
-const FIND_CREDENTIAL = `SELECT i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name, i.deactivated
+const FIND_CREDENTIAL = `SELECT i.name, i.kind, i.owner, i.admin, i.created_at, i.display_name, i.deactivated, i.avatar
   FROM login_credentials AS c JOIN identities AS i ON i.name = c.identity_name WHERE c.hash = ?`;
 
 const FIND_LIVE_BY_HASH = `SELECT ${REQUEST_COLUMNS} FROM login_requests WHERE request_hash = ? AND expires_at > ?`;
@@ -132,6 +132,18 @@ function collectIn(db: SqlDatabase): LoginRequestsSection["collectLoginRequest"]
     );
 }
 
+function issueStraightIn(db: SqlDatabase): LoginRequestsSection["issueLoginCredential"] {
+  const { credential } = sqlQueries(db);
+  return ({ credentialHash, host, identity, now }) =>
+    db.transaction(
+      Effect.gen(function* issueCredential() {
+        yield* db.run(ISSUE_CREDENTIAL, credentialHash, host, now, identity);
+        const issued = yield* credential(credentialHash);
+        return Option.getOrUndefined(issued);
+      }),
+    );
+}
+
 function revokeIn(db: SqlDatabase): LoginRequestsSection["revokeLoginCredential"] {
   return (hash) =>
     db.transaction(
@@ -152,6 +164,7 @@ function sqlLoginRequests(db: SqlDatabase): LoginRequestsSection {
     findLoginCredential: (hash) => Effect.map(credential(hash), Option.getOrUndefined),
     findLoginRequest: (userCode, now) =>
       Effect.map(liveByCode(userCode, now), (row) => Option.getOrUndefined(Option.map(row, shown))),
+    issueLoginCredential: issueStraightIn(db),
     revokeLoginCredential: revokeIn(db),
   };
 }

@@ -17,6 +17,7 @@ interface ThreadChoice {
 
 interface MessageMenuParts {
   readonly onMarkUnread: () => void;
+  readonly onCopyLink: () => void;
   readonly reactions: readonly ReactionChoice[];
   readonly thread: ThreadChoice | null;
 }
@@ -39,7 +40,6 @@ type MenuChoice =
   | (MenuChoiceLabel & {
       readonly href: null;
       readonly onSelect: () => void;
-      readonly shortcut?: string;
       readonly disabled?: boolean;
     });
 
@@ -49,7 +49,9 @@ interface ActionMenuParts {
   readonly buttonLabel?: string;
 }
 
-interface HoverActionsParts extends MessageActionParts {
+type MoreActionsLook = "box" | "hover";
+
+interface HoverActionsParts extends Omit<MessageActionParts, "threadHref"> {
   readonly choices: readonly MenuChoice[];
   readonly replyOnHover: boolean;
   readonly reactions: readonly ReactionChoice[];
@@ -62,6 +64,7 @@ export type {
   MenuChoice,
   MessageActionParts,
   MessageMenuParts,
+  MoreActionsLook,
   ReactionChoice,
   ThreadChoice,
 };

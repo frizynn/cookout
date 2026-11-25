@@ -18,7 +18,7 @@ const after = isoTime("2026-01-01T00:10:00.001Z");
 const requestHash = tokenHash("hash:request");
 const credentialHash = tokenHash("hash:credential");
 const ada = identity("ada", { kind: "human" });
-const FAILING_CALLS = 6;
+const FAILING_CALLS = 7;
 const late = tokenHash("hash:late");
 
 const request = { createdAt: created, expiresAt, host: "ada-laptop", requestHash, userCode: "WDJB-MJHT" };
@@ -146,6 +146,34 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
+  "storage contract ($adapter): a Login credential issued straight to an identity authenticates as it until revoked",
+  ({ layer }) =>
+    Effect.gen(function* issuedStraight() {
+      const { storage } = yield* openStore(layer);
+      yield* withAda(storage);
+      const issued = yield* storage.issueLoginCredential({
+        credentialHash,
+        host: "web",
+        identity: ada.name,
+        now: before,
+      });
+      const found = yield* storage.findLoginCredential(credentialHash);
+      const revoked = yield* storage.revokeLoginCredential(credentialHash);
+      const gone = yield* storage.findLoginCredential(credentialHash);
+      const nobody = yield* storage.issueLoginCredential({
+        credentialHash: late,
+        host: "web",
+        identity: identityName("nobody"),
+        now: before,
+      });
+      const notIssued = yield* storage.findLoginCredential(late);
+
+      expect([issued, found, revoked]).toStrictEqual([ada, ada, true]);
+      expect([isFound(gone), isFound(nobody), isFound(notIssued)]).toStrictEqual([false, false, false]);
+    }),
+);
+
+it.effect.each(storageLayers)(
   "storage contract ($adapter): deactivating an identity removes its Login credentials, even once reactivated",
   ({ layer }) =>
     Effect.gen(function* deleted() {
@@ -218,6 +246,7 @@ it.effect.each(storageLayers)("storage contract ($adapter): a closed store can't
         Effect.flip(storage.collectLoginRequest({ credentialHash, now: before, requestHash })),
         Effect.flip(storage.findLoginCredential(credentialHash)),
         Effect.flip(storage.revokeLoginCredential(credentialHash)),
+        Effect.flip(storage.issueLoginCredential({ credentialHash, host: "web", identity: ada.name, now: before })),
       ],
       { concurrency: 1 },
     );

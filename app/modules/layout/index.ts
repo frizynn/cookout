@@ -115,6 +115,35 @@ interface Resizing {
   readonly publish: (width: number) => void;
 }
 
+const layoutKeys: readonly (keyof LayoutState)[] = [
+  "collapsed",
+  "identityFilter",
+  "identityKind",
+  "showDeactivated",
+  "sidebar",
+  "sidebarWidth",
+  "theme",
+  "threadWidth",
+];
+
+function storedLayout(storage: LayoutOptions["storage"]): LayoutState {
+  return {
+    collapsed: storage.getItem(COLLAPSED_KEY) === COLLAPSED,
+    identityFilter: "",
+    identityKind: "all",
+    showDeactivated: false,
+    sidebar: false,
+    sidebarWidth: storedWidth(storage, SIDEBAR),
+    theme: storedTheme(storage),
+    threadWidth: storedWidth(storage, THREAD),
+  };
+}
+
+function holds(current: LayoutState, next: Partial<LayoutState>): boolean {
+  const changed: LayoutState = { ...current, ...next };
+  return layoutKeys.every((key) => Object.is(changed[key], current[key]));
+}
+
 function resizer({ current, publish, storage, widths }: Resizing): (width: number) => void {
   return (width) => {
     const kept = withinBounds(widths, width);
@@ -219,19 +248,13 @@ export interface Layout {
  */
 export function createLayout(options: LayoutOptions): Layout {
   const listeners = new Set<() => void>();
-  let current: LayoutState = {
-    collapsed: options.storage.getItem(COLLAPSED_KEY) === COLLAPSED,
-    identityFilter: "",
-    identityKind: "all",
-    showDeactivated: false,
-    sidebar: false,
-    sidebarWidth: storedWidth(options.storage, SIDEBAR),
-    theme: storedTheme(options.storage),
-    threadWidth: storedWidth(options.storage, THREAD),
-  };
+  let current = storedLayout(options.storage);
   keepTheme(options, current.theme);
 
   function publish(next: Partial<LayoutState>): void {
+    if (holds(current, next)) {
+      return;
+    }
     current = { ...current, ...next };
     for (const listener of listeners) {
       listener();

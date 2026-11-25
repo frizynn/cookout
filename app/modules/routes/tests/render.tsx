@@ -64,6 +64,7 @@ interface BoardOpening {
 interface Opening {
   readonly hash: string;
   readonly client: AppClient;
+  readonly boardStore?: BoardStore;
   readonly loginApprovals?: LoginApprovals;
   readonly agentJoinApprovals?: AgentJoinApprovals;
   readonly pageSize?: number;

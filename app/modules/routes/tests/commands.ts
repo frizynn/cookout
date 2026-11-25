@@ -1,7 +1,7 @@
 import { adminClient, newIdentity } from "./identities.ts";
 import { fireEvent, screen, within } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
-import type { JsonSchema } from "../../commands/index.ts";
+import type { JsonSchema } from "../../webhook-commands/index.ts";
 import { openAt } from "./render.tsx";
 
 const branchSchema = { properties: { branch: { type: "string" } }, required: ["branch"], type: "object" } as const;
