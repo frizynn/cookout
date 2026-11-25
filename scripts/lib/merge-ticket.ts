@@ -91,8 +91,8 @@ function attempt(options: MergeOptions): Attempt {
   const stepped = firstStop([
     (): Step => mergeInto({ first: "ours", into: `ticket-${options.ticket}`, options }),
     (): Step => appendOnlyMigrations(options),
-    (): Step => renumberAdrs({ adrs: options.rules.adrs, cwd: options.cwd, log: options.log }),
     (): Step => install(options),
+    (): Step => renumberAdrs({ adrs: options.rules.adrs, cwd: options.cwd, log: options.log }),
     (): Step => check(options),
   ]);
   if (stepped.kind === "stopped") {
@@ -128,9 +128,9 @@ function regenerateChanged(options: MergeOptions, base: string): Step {
 function checkAndPush(options: MergeOptions, base: string): Attempt {
   const stepped = firstStop([
     (): Step => appendOnlyMigrations(options),
+    (): Step => install(options),
     (): Step => renumberAdrs({ adrs: options.rules.adrs, cwd: options.cwd, log: options.log }),
     (): Step => regenerateChanged(options, base),
-    (): Step => install(options),
     (): Step => check(options),
   ]);
   if (stepped.kind === "stopped") {
