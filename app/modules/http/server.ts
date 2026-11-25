@@ -164,6 +164,12 @@ function guardRequest(
  */
 export { cuttableRelay } from "./lib/server/cuttable-relay.ts";
 export type { Gate, Route } from "./lib/server/router.ts";
+
+/**
+ * The one Content-Security-Policy every response of the cookout carries, and the one the dev program's Vite server
+ * sends with the web UI, so a page the CSP blocks fails in dev and in browser tests as it does on the live board.
+ */
+export { contentSecurityPolicy } from "./lib/server/wire.ts";
 export type { Listen, Serving };
 
 /** The response Schemas of `/v1/health`, of every refusal and of an `invalid_request` refusal's details, for the SDK's generated validators. */
