@@ -119,7 +119,14 @@ const KEYS = [
   { action: "copyMessageLink", chord: "l", does: "Copy its link", scope: "message" },
   { action: "toggleThreadClosed", chord: "x", does: "Close its thread, or reopen it", scope: "message" },
   { action: "toSidebar", chord: "ArrowLeft", does: "Sidebar, on the channel's link", scope: "message" },
+  {
+    action: "toTopMessage",
+    chord: "ArrowUp",
+    does: "The thread's top message, from its first reply",
+    scope: "message",
+  },
   { action: "intoMessageBox", chord: "ArrowDown", does: "Message box, from the newest message", scope: "message" },
+  { action: "toFirstReply", chord: "ArrowDown", does: "First reply, from the thread's top message", scope: "message" },
   { action: "nextMessage", chord: "j", does: "Next message", scope: "message list" },
   { action: "nextMessage", chord: "ArrowDown", does: "Next message", scope: "message list" },
   {
