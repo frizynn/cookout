@@ -132,6 +132,25 @@ it("escape in the thread panel closes it, with focus on the channel message", { 
   close();
 });
 
+it("escape in a thread panel with no close link leaves the panel open", { timeout: 10_000 }, async () => {
+  expect.hasAssertions();
+
+  const close = await openThread("web-regions-no-close-link");
+  for (const link of globalThis.document.querySelectorAll("main aside > header a[href]")) {
+    link.removeAttribute("href");
+  }
+  const reply = replyArticle();
+  reply.focus();
+  fireEvent.keyDown(reply, { key: "Escape" });
+
+  expect([globalThis.location.hash, globalThis.document.querySelector("main aside") === null]).toStrictEqual([
+    expect.stringMatching(/^#\/channels\/web-regions-no-close-link\/threads\/\d+$/u),
+    false,
+  ]);
+
+  close();
+});
+
 it("on a page with no channel messages, ctrl+] goes from the sidebar to the next region shown", {
   timeout: 10_000,
 }, async () => {
