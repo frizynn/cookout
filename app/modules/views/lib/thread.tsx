@@ -26,21 +26,15 @@ interface ThreadProps {
 }
 
 export function ThreadView(props: ThreadProps): ReactNode {
-  const { channel } = props;
-  const { closing, read: messages, state } = useShownThread({ acking: true, place: { channel, id: props.thread } });
-  const line = props.unread.newLine(channel, props.thread);
+  const { channel, thread } = props;
+  const { closing, read: messages, state } = useShownThread({ acking: true, place: { channel, id: thread } });
+  const line = props.unread.newLine(channel, thread);
   const readPosition = useSyncExternalStore(line.subscribe, line.snapshot);
-  const header = useThreadHeader({
-    alone: props.alone,
-    channel,
-    closing,
-    menu: props.unread.menu,
-    state,
-    thread: props.thread,
-  });
-  const reading = props.linked === props.thread;
+  const header = useThreadHeader({ alone: props.alone, channel, closing, menu: props.unread.menu, state, thread });
+  const reading = props.linked === thread;
   const handleClose = header.onClose;
-  const draft = threadDraft({ channel, composer: props.composer, me: props.me, messages, thread: props.thread });
+  const draft = threadDraft({ channel, composer: props.composer, me: props.me, messages, thread });
+  const handleFiles = draft.attachments.attach;
   return (
     <SidePanel
       alone={header.alone}
@@ -51,6 +45,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
       label={TEXT.thread}
       menu={header.menu}
       onClose={handleClose}
+      onFiles={handleFiles}
     >
       {state.status === "loaded" && <ThreadClosingBar closing={closing} parent={state.parent} />}
       <ThreadMessages
@@ -70,7 +65,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
         channel={channel}
         replied={null}
         state={state}
-        thread={props.thread}
+        thread={thread}
       />
     </SidePanel>
   );

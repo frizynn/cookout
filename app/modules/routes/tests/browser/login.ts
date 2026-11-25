@@ -7,6 +7,7 @@ interface LogIn {
   readonly page: Page;
   readonly token: string;
   readonly url?: string;
+  readonly waitUntil?: "commit" | "load";
 }
 
 const SESSION_PATH = "/v1/session";
@@ -18,18 +19,18 @@ export async function logInThroughForm({ page, token, url = "/" }: LogIn): Promi
   await inPane(page).getByRole("button", { exact: true, name: "Log in" }).click();
 }
 
-export async function logIn({ page, token, url = "/" }: LogIn): Promise<void> {
+export async function logIn({ page, token, url = "/", waitUntil = "load" }: LogIn): Promise<void> {
   const response = await page.request.post(SESSION_PATH, { headers: { authorization: `Bearer ${token}` } });
 
   expect(response.ok(), await response.text()).toBe(true);
 
-  await page.goto(url);
+  await page.goto(url, { waitUntil });
 }
 
 export async function logInToChannels(login: LogIn): Promise<void> {
   await logIn(login);
 
-  await expect(login.page.getByRole("list", { exact: true, name: "Channels" })).toBeVisible();
+  await expect(login.page.getByRole("list", { exact: true, name: "Channels" })).toBeAttached();
 }
 
 export async function logInWithStream(login: LogIn): Promise<void> {

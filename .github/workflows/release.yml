@@ -1,33 +1,122 @@
 name: Release
 
-# Opens or updates the "Version Packages" pull request from the changesets on main. Merging that
-# pull request publishes @ai-hero/cookout to npm by trusted publishing (OIDC), with provenance and
-# no npm token (docs/adr/0050-the-cli-is-published-to-npm.md). The e2e suite, pack smoke and the
-# published client run first, and release needs all three, so a release can't ship a broken package
-# or image. They moved here from Check (#605).
+# Release is the gate (#636, docs/adr/0114-release-is-the-gate-on-the-newest-green-v1-commit.md). Its
+# first job picks the newest v1 commit whose Check push run is green, reusing that run's static
+# checks and unit tests. On that commit it runs every browser test (3 shards, moved from Check),
+# pack smoke, the published client and the e2e suite on the Docker image. Only when all of them
+# pass does it fast-forward main to that commit, call Deploy, and run changesets: it opens or
+# updates the Version Packages pull request against v1, and once that is merged and no changesets
+# are left, publishes @ai-hero/cookout to npm by trusted publishing (OIDC), with provenance and no
+# npm token (docs/adr/0050-the-cli-is-published-to-npm.md). A failing gate job publishes nothing,
+# deploys nothing, and the verdict job names it in the run summary. `dry-run` runs the choice and
+# the gate, then only prints what it would publish and deploy. It runs by workflow_dispatch on v1.
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Run the choice and the gate, then only print what it would publish and deploy
+        type: boolean
+        default: false
 
 permissions:
-  contents: write
-  pull-requests: write
-  id-token: write
+  contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
 jobs:
-  # The image and the example handler in Docker, driven by packages/e2e, as Deploy runs it before
-  # deploying main.
-  e2e-docker:
+  choose:
+    name: choose the commit
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     permissions:
       contents: read
+      actions: read
+    outputs:
+      sha: ${{ steps.choose.outputs.sha }}
+    steps:
+      - name: Only from v1
+        if: github.ref != 'refs/heads/v1'
+        run: |
+          echo "::error::Release runs on v1 only, not on $GITHUB_REF"
+          exit 1
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - id: choose
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/release-commit.ts --output "$GITHUB_OUTPUT" --summary "$GITHUB_STEP_SUMMARY"
+
+  # Every browser test in one job took 205s of a passing run and was cancelled at the 5-minute
+  # limit on loaded runners (#455), so they're split across 3 jobs. Each shard runs the files that
+  # give it a third of the test time the newest earlier run recorded in its test-timings-browser-*
+  # artifacts, falling back to Playwright's --shard by test count when there are none (#619). A
+  # runner has 4 cores, and Playwright runs 4 workers on CI.
+  browser:
+    name: browser ${{ matrix.shard }}/3
+    needs: choose
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # To read the timings an earlier run uploaded.
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.choose.outputs.sha }}
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: browser
+      # No --with-deps: ubuntu-latest already has every library the headless shell needs, and
+      # --with-deps sometimes took 4.5 minutes fetching fonts from the Ubuntu mirror (#265).
+      - name: Install headless Chromium
+        run: pnpm exec playwright install --only-shell chromium
+      - name: pnpm check --job=browser --shard=${{ matrix.shard }}/3
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NODE_COMPILE_CACHE: node_modules/.cache/node-compile
+        run: node scripts/check.ts --job=browser --shard=${{ matrix.shard }}/3 --run=${{ github.run_id }} --all --ci
+      - name: Upload the per-file test timings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-timings-browser-${{ matrix.shard }}
+          path: |
+            .timings/*.txt
+            .timings/browser.json
+          include-hidden-files: true
+          if-no-files-found: ignore
+      # A local pnpm check fetches the newest of these on its base to pick the browser tests a branch
+      # reaches (#444). Each shard's map names the chosen commit, which the check reads from the map.
+      - name: Upload the browser coverage map
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-coverage-map-${{ matrix.shard }}
+          path: .browser-coverage/map.json
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # The image and the example handler in Docker, driven by packages/e2e. Deploy skips its own run of
+  # it when Release calls it after this.
+  e2e-docker:
+    needs: choose
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.choose.outputs.sha }}
       - uses: ./.github/actions/setup
         with:
           cache-name: e2e-docker
@@ -44,12 +133,13 @@ jobs:
 
   pack:
     name: pack smoke
+    needs: choose
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.choose.outputs.sha }}
       - uses: ./.github/actions/setup
         with:
           cache-name: pack
@@ -59,24 +149,114 @@ jobs:
   # field that the published client still requires fails here (docs/verification.md).
   published-client:
     name: published client
+    needs: choose
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.choose.outputs.sha }}
       - uses: ./.github/actions/setup
         with:
           cache-name: published-client
       - run: pnpm run --silent published-client
 
-  release:
-    needs: [e2e-docker, pack, published-client]
+  # Names each gate job that didn't pass in the run summary, and fails then. Every job after it needs it.
+  gate:
+    name: the gate
+    needs: [choose, browser, e2e-docker, pack, published-client]
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
+    steps:
+      - env:
+          NEEDS: ${{ toJSON(needs) }}
+          SHA: ${{ needs.choose.outputs.sha }}
+        run: |
+          failed="$(jq -r 'to_entries | map(select(.value.result != "success")) | map("\(.key) (\(.value.result))") | join(", ")' <<< "$NEEDS")"
+          if [ -n "$failed" ]; then
+            echo "### The gate failed on ${SHA:-no commit}: $failed. Nothing was published or deployed." >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::The gate failed on ${SHA:-no commit}: $failed. Nothing was published or deployed."
+            exit 1
+          fi
+          echo "### The gate passed on $SHA: browser ×3, pack smoke, the published client and e2e-docker" >> "$GITHUB_STEP_SUMMARY"
+
+  # Says what a real run would publish and deploy, and does neither.
+  dry-run:
+    name: what it would release
+    needs: [choose, gate]
+    if: ${{ inputs.dry-run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ needs.choose.outputs.sha }}
+          fetch-depth: 0
+      - env:
+          SHA: ${{ needs.choose.outputs.sha }}
+        run: |
+          main="$(git rev-parse origin/main)"
+          version="$(jq -r .version package.json)"
+          changesets="$(find .changeset -name '*.md' ! -name README.md | wc -l)"
+          {
+            echo "### Dry run: nothing was published or deployed"
+            echo "- would fast-forward main from ${main::12} to ${SHA::12}"
+            echo "- would call Deploy on ${SHA::12}: the cookout and the example handler to Fly, the deployed checks, then tag deploy/${SHA::8}"
+            if [ "$changesets" -gt 0 ]; then
+              echo "- would open or update the Version Packages pull request against v1 from $changesets changesets"
+            elif npm view "@ai-hero/cookout@$version" version > /dev/null 2>&1; then
+              echo "- would publish nothing to npm: @ai-hero/cookout@$version is already there"
+            else
+              echo "- would publish @ai-hero/cookout@$version to npm"
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  # A plain push: GitHub refuses it unless it fast-forwards main, and the choose job already stopped
+  # if main had commits the chosen one lacks.
+  promote:
+    name: move main
+    needs: [choose, gate]
+    if: ${{ !inputs.dry-run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.choose.outputs.sha }}
+          fetch-depth: 0
+      - env:
+          SHA: ${{ needs.choose.outputs.sha }}
+        run: |
+          git push origin "$SHA:refs/heads/main"
+          echo "### main fast-forwarded to $SHA" >> "$GITHUB_STEP_SUMMARY"
+
+  # A push made with the workflow's token starts no other workflow, so Deploy is called here
+  # rather than started by the push to main.
+  deploy:
+    needs: [choose, promote]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/deploy.yml
+    with:
+      gated: true
+      ref: ${{ needs.choose.outputs.sha }}
+    secrets: inherit
+
+  release:
+    needs: [choose, promote]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.choose.outputs.sha }}
           fetch-depth: 0
       - uses: ./.github/actions/setup
         with:
@@ -85,6 +265,9 @@ jobs:
       # Trusted publishing needs npm 11.5.1 or later; Node 22 ships npm 10.
       - name: Upgrade npm for trusted publishing
         run: npm install -g npm@^11.5.1
+      # This run is on v1, so the action opens the Version Packages pull request from
+      # changeset-release/v1 against v1: the version bump lands on v1 like any other change, and main
+      # can always fast-forward to v1.
       - name: Open or update the Version Packages pull request
         id: changesets
         uses: changesets/action@v1
@@ -94,9 +277,9 @@ jobs:
           commit: Version Packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # Runs once no changesets are left, that is on the push that merges the Version Packages pull
-      # request. `changeset publish` publishes only a version npm doesn't have yet. This step is the
-      # only publisher: passing `publish:` to the action as well would publish twice in one run.
+      # Runs once no changesets are left, that is once a merged Version Packages pull request is on
+      # the chosen commit. `changeset publish` publishes only a version npm doesn't have yet. This
+      # step is the only publisher: passing `publish:` to the action as well would publish twice.
       - name: Publish to npm
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: pnpm release
