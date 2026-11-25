@@ -35,6 +35,7 @@ const ALL = {
   inCi: false,
   local: false,
   merge: false,
+  reached: false,
   shard: "",
   shardArgs: [],
   unit: EVERYTHING,
@@ -121,5 +122,26 @@ it("says in one line which file made it run every unit and browser test", { time
     ["check: running every unit and browser test, since pnpm-lock.yaml reaches every test."],
     ["check: running every browser test, since there's no browser coverage map."],
     [],
+  ]);
+});
+
+function browserCommand(reached: boolean): readonly (readonly string[])[] {
+  const login = "app/modules/routes/tests/browser/login.browser.test.ts";
+  const browser = { all: false, run: [login], skipped: [] } as const;
+  return checkPlan({ ...ALL, browser, inCi: true, reached, shard: "1/6", shardArgs: [login] })
+    .checks.filter((check) => check.job === "browser")
+    .map((check) => check.command);
+}
+
+it("a pull request's browser shard runs Playwright on the reached files it was given, recording no coverage map", {
+  timeout: 1000,
+}, () => {
+  expect.hasAssertions();
+
+  const login = "app/modules/routes/tests/browser/login.browser.test.ts";
+
+  expect([browserCommand(true), browserCommand(false)]).toStrictEqual([
+    [["pnpm", "run", "--silent", "browser", login]],
+    [["pnpm", "run", "--silent", "browser:coverage", login]],
   ]);
 });

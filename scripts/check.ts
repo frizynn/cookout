@@ -1,14 +1,15 @@
-import { browserTestsFor, ciBrowserShard } from "./lib/browser-selection.ts";
-import { changedLines, unchangedSince } from "./lib/changed-lines.ts";
+import { browserTestsSince, reachedShard } from "./lib/reached-browser.ts";
 import { checkPlan, reasonLines } from "./lib/check-plan.ts";
 import { ciUnitShard, unitTestsFor } from "./lib/test-selection.ts";
-import { fetchedCoverageMap, ghCli } from "./lib/coverage-map-fetch.ts";
 import { loadReport, osReading } from "./lib/machine-load.ts";
 import type { BrowserTests } from "./lib/browser-selection.ts";
+import type { ReachedPlan } from "./lib/reached-browser.ts";
 import { SUITE_LOCK_FILE } from "./lib/machine-lock.ts";
 import type { UnitTests } from "./lib/test-selection.ts";
 import { changedFiles } from "./lib/changed-files.ts";
+import { ciBrowserShard } from "./lib/browser-selection.ts";
 import { ciGreenAtHead } from "./lib/ci-green.ts";
+import { ghCli } from "./lib/coverage-map-fetch.ts";
 import { runChecks } from "./lib/check-runner.ts";
 
 function option(name: string): string {
@@ -28,10 +29,13 @@ const shard = option("shard");
 const base = option("base");
 const inCi = process.argv.includes("--ci");
 const all = process.argv.includes("--all");
+const reached = inCi && job === "browser" && process.argv.includes("--reached");
 
 const V1 = "origin/v1";
 const EXIT_SUCCESS = 0;
+const EXIT_FAILURE = 1;
 const EVERYTHING: UnitTests & BrowserTests = { all: true, reason: "" };
+const NOT_REACHED: ReachedPlan = { args: [], failure: "", lines: [], nothing: "" };
 
 const ciGreen = ciGreenAtHead({ asked: !inCi && job === "" && !all, cwd: process.cwd(), gh: ghCli(process.cwd()) });
 const local = !inCi && job === "" && !all && !ciGreen.skip;
@@ -45,19 +49,10 @@ function selectedUnitTests(): UnitTests {
 }
 
 function selectedBrowserTests(): BrowserTests {
-  if (!local) {
+  if (!local && !reached) {
     return EVERYTHING;
   }
-  const cwd = process.cwd();
-  return browserTestsFor({
-    changed,
-    coverage: () => fetchedCoverageMap({ base: V1, cwd, gh: ghCli(cwd) }),
-    cwd,
-    history: {
-      changedLines: (file) => changedLines({ base: V1, cwd, file }),
-      unchangedSince: (commit, file) => unchangedSince({ base: V1, commit, cwd, file }),
-    },
-  });
+  return browserTestsSince({ base: V1, changed, cwd: process.cwd() });
 }
 
 const unitTests = selectedUnitTests();
@@ -76,15 +71,32 @@ function ciShard(): typeof ciBrowserShard | null {
   return null;
 }
 
-function shardArgs(): readonly string[] {
+function reachedPlan(): ReachedPlan {
+  if (!reached) {
+    return NOT_REACHED;
+  }
+  const cwd = process.cwd();
+  return reachedShard({ cwd, gh: ghCli(cwd), run: option("run"), shard, tests: browserTests });
+}
+
+const reachedShardPlan = reachedPlan();
+
+function plannedShard(): Pick<ReachedPlan, "args" | "failure"> {
+  if (reached) {
+    return reachedShardPlan;
+  }
   const planned = ciShard();
   if (planned === null) {
-    return [`--shard=${shard}`];
+    return { args: [`--shard=${shard}`], failure: "" };
   }
   const shardPlan = planned({ cwd: process.cwd(), gh: ghCli(process.cwd()), run: option("run"), shard });
-  console.log(shardPlan.line);
-  return shardPlan.args;
+  if (shardPlan.line !== "") {
+    console.log(shardPlan.line);
+  }
+  return shardPlan;
 }
+
+const shardRun = plannedShard();
 
 const plan = checkPlan({
   base,
@@ -92,25 +104,43 @@ const plan = checkPlan({
   inCi,
   local,
   merge: process.argv.includes("--merge"),
+  reached,
   shard,
-  shardArgs: shardArgs(),
+  shardArgs: shardRun.args,
   unit: unitTests,
 });
 
 function printReasons(): void {
-  for (const line of [ciGreen.line, ...reasonLines({ browser: browserTests, unit: unitTests })]) {
+  const reasons = reasonLines({ browser: browserTests, unit: unitTests });
+  for (const line of [ciGreen.line, ...reachedShardPlan.lines, ...reasons]) {
     if (line !== "") {
       console.error(line);
     }
   }
 }
 
-async function exitCode(): Promise<number> {
+function earlyVerdict(): string {
   if (ciGreen.skip) {
-    console.log(ciGreen.line);
-    return EXIT_SUCCESS;
+    return ciGreen.line;
   }
   printReasons();
+  if (reachedShardPlan.nothing !== "") {
+    return `${reachedShardPlan.nothing}\nRESULT: PASS`;
+  }
+  return "";
+}
+
+async function exitCode(): Promise<number> {
+  if (shardRun.failure !== "") {
+    console.error(`check: ${shardRun.failure}`);
+    console.log(`RESULT: FAIL (${job} shard ${shard})`);
+    return EXIT_FAILURE;
+  }
+  const early = earlyVerdict();
+  if (early !== "") {
+    console.log(early);
+    return EXIT_SUCCESS;
+  }
   const code = await runChecks({
     checks: plan.checks,
     ciOnly: plan.skipped,
