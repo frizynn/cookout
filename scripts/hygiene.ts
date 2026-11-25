@@ -4,6 +4,7 @@ import { MIGRATION_LISTS } from "./lib/migration-lists.ts";
 import type { SpawnSyncReturns } from "node:child_process";
 import { adrEdits } from "./lib/adr-append-only.ts";
 import { migrationsInserted } from "./lib/migrations-append-only.ts";
+import { mixedLocalActions } from "./lib/workflow-actions.ts";
 import { spawnSync } from "node:child_process";
 
 const SELF = "scripts/hygiene.ts";
@@ -170,6 +171,11 @@ function deployedMigrations(): readonly string[] {
   return MIGRATION_LISTS.flatMap((file) => deployedList(tag, file));
 }
 
+function workflowActions(): readonly string[] {
+  const files = git(["ls-files", ".github/workflows/*.yml"]);
+  return mixedLocalActions(files.map((file) => ({ path: file, text: readFileSync(file, "utf8") })));
+}
+
 const failures = [
   ...gitlinks(),
   ...workspaceFile(),
@@ -180,6 +186,7 @@ const failures = [
   ...appendOnlyAdrs(),
   ...adrsTakenOnV1(),
   ...deployedMigrations(),
+  ...workflowActions(),
 ];
 for (const failure of failures) {
   console.error(`hygiene: ${failure}`);
