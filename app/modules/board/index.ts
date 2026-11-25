@@ -101,7 +101,8 @@
  * changed in another tab) changes it at once; until then, the server's answer. On a link back it asks again, keeping
  * whoever is logged in if the server can't be reached. `logIn` swaps a human identity's token for the session cookie
  * (`POST /v1/session`) through a client with that token for the cookout at `url`; a refused login (an agent's token, a bad token)
- * keeps the server's error code to show.
+ * keeps the server's error code to show. `logOut` ends the session on the server (`DELETE /v1/session`, which revokes the
+ * session cookie's credential) and is then logged out; if the server doesn't answer, it asks who is logged in again.
  *
  * `createLoginApprovals` makes the store the approval page reads: for a login request's user code, the request (its
  * host and when it expires) once the page subscribes, or why it can't be shown, and `approve`, which approves it as

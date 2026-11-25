@@ -32,17 +32,21 @@ interface FormParts extends Parts {
   readonly onSubmit: (value: string) => void;
 }
 
-interface TextFieldParts {
+interface FieldParts {
   readonly label: string;
   readonly name: string;
 }
 
-interface DataAreaParts extends TextFieldParts {
+interface TextFieldParts extends FieldParts {
+  readonly focused?: boolean;
+}
+
+interface DataAreaParts extends FieldParts {
   readonly value: string;
   readonly onEdit: (text: string) => void;
 }
 
-interface TextAreaParts extends TextFieldParts {
+interface TextAreaParts extends FieldParts {
   readonly value: string;
   readonly caret: number;
   readonly onEdit: (text: string, caret: number) => void;

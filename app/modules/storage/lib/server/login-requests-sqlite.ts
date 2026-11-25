@@ -132,6 +132,18 @@ function collectIn(db: SqlDatabase): LoginRequestsSection["collectLoginRequest"]
     );
 }
 
+function issueStraightIn(db: SqlDatabase): LoginRequestsSection["issueLoginCredential"] {
+  const { credential } = sqlQueries(db);
+  return ({ credentialHash, host, identity, now }) =>
+    db.transaction(
+      Effect.gen(function* issueCredential() {
+        yield* db.run(ISSUE_CREDENTIAL, credentialHash, host, now, identity);
+        const issued = yield* credential(credentialHash);
+        return Option.getOrUndefined(issued);
+      }),
+    );
+}
+
 function revokeIn(db: SqlDatabase): LoginRequestsSection["revokeLoginCredential"] {
   return (hash) =>
     db.transaction(
@@ -152,6 +164,7 @@ function sqlLoginRequests(db: SqlDatabase): LoginRequestsSection {
     findLoginCredential: (hash) => Effect.map(credential(hash), Option.getOrUndefined),
     findLoginRequest: (userCode, now) =>
       Effect.map(liveByCode(userCode, now), (row) => Option.getOrUndefined(Option.map(row, shown))),
+    issueLoginCredential: issueStraightIn(db),
     revokeLoginCredential: revokeIn(db),
   };
 }
