@@ -17,6 +17,8 @@ const argument = process.argv.at(ARGUMENT) ?? "";
 const resuming = process.argv.includes("--continue");
 const fixesRedV1 = process.argv.includes("--fixes-red-v1");
 const reordersUndeployed = process.argv.includes("--reorders-undeployed-migrations");
+const APPROVED = "--approved=";
+const approvals = process.argv.filter((arg) => arg.startsWith(APPROVED)).map((arg) => arg.slice(APPROVED.length));
 
 function titleOf(ticket: number): string {
   const issue = spawnSync("gh", ["issue", "view", String(ticket), "--json", "title", "--jq", ".title"], {
@@ -29,11 +31,20 @@ function titleOf(ticket: number): string {
 }
 
 const ticket = Number(argument);
-if (!Number.isInteger(ticket) || ticket <= NONE) {
+const MESSAGE_ID = /^[1-9]\d*$/u;
+if (!Number.isInteger(ticket) || ticket <= NONE || approvals.some((approval) => !MESSAGE_ID.test(approval))) {
   fail(
     SCRIPT,
-    "usage: pnpm merge-ticket <N> [--continue] [--fixes-red-v1] [--reorders-undeployed-migrations], where ticket-N is a local branch.",
+    "usage: pnpm merge-ticket <N> [--continue] [--fixes-red-v1] [--reorders-undeployed-migrations] [--approved=<board msg id>], where ticket-N is a local branch.",
   );
+}
+
+function approvedOption(): { readonly approved?: string } {
+  const [approved = ""] = approvals;
+  if (approved === "") {
+    return {};
+  }
+  return { approved };
 }
 
 function run(options: MergeOptions): Merged {
@@ -136,6 +147,7 @@ function failedStepOf(files: readonly string[]): string {
 
 verdict.failingAt("gh issue view");
 const merged: Merged = run({
+  ...approvedOption(),
   attempts: ATTEMPTS,
   check: ["sh", "-c", FAST_CHECKS],
   ci: ciOf,
