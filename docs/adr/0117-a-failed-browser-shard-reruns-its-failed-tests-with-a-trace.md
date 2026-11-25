@@ -6,10 +6,10 @@
 
 Release run 45656055347 failed a browser test that nobody could reproduce, and it uploaded nothing to read. The ticket asked for `trace: "retain-on-failure"`. That mode records a trace of every test and deletes it on a pass, so a passing run pays for the recording. Measured on 60 tests from 8 files, 4 workers on 4 cores, 3 runs each:
 
-| trace | time of each run | failures |
-| --- | --- | --- |
-| off | 86 s, 87 s, 93 s | none |
-| `retain-on-failure` | 122 s, 122 s, 121 s | `inbox-open` failed once |
+| trace                               | time of each run    | failures                      |
+| ----------------------------------- | ------------------- | ----------------------------- |
+| off                                 | 86 s, 87 s, 93 s    | none                          |
+| `retain-on-failure`                 | 122 s, 122 s, 121 s | `inbox-open` failed once      |
 | `retain-on-failure`, no screenshots | 100 s, 102 s, 107 s | `inbox-keys` failed every run |
 
 A run 20-40% slower risks the browser jobs' 5-minute limit, and tests that fail only while tracing make the gate flaky.
