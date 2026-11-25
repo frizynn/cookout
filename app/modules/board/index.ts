@@ -69,6 +69,11 @@
  * for the `search` store, which keeps only the result message IDs: each result's message goes in the table, with its
  * thread's state for a thread whose top-level message the table doesn't hold, and `searchResultsOf(ids)` reads them
  * back, so a result row follows `message` and `thread` events like every other view of that message.
+ * A `message-deleted` event applies a reply's updated top-level message to the table, and marks the message's slot in
+ * each channel page and thread that holds it (`deleted`, a deleted top-level message marking its thread's every slot),
+ * so a shown view keeps it, to draw as "Message deleted", through a catch-up read after a link back; opening the page
+ * or thread again drops the marked slots (a thread whose top-level message is deleted is read anew), as the server's
+ * reads no longer have them.
  *
  * The Inbox is one slice, `inbox`, shown with `subscribeShowing("inbox")`. One load reads `GET /v1/inbox`, the read
  * positions and the history's first page, once each, for every part: For you (`inboxOf`, the items no read position
@@ -79,7 +84,8 @@
  * message and top-level message by ID: every read and `inbox-item` event puts them in the messages table first, so a
  * `thread`, `message` or `reaction` event reaches an item through the table, and the selectors read them from it. A
  * `read-position` event moves the items it covers to Earlier; a `thread` event that closes a thread reads its Nudges;
- * `channel-deleted` drops the channel's items, Earlier rows, Nudges and read positions. On a link back the slice reads
+ * `channel-deleted` drops the channel's items, Earlier rows, Nudges and read positions; `message-deleted` drops the
+ * deleted message's items and Earlier rows, and for a top-level message its whole thread's and its Nudges. On a link back the slice reads
  * again and merges: an item the server shows unread comes back, one it no longer shows moves to Earlier. Each selector
  * returns the same object until what it reads changes. `inboxCalls` makes the Inbox's changes on the server (mark all,
  * mark a channel, mark unread, keep an offer, read a notice, close a nudged thread, hold or release a quiet agent,

@@ -1,6 +1,6 @@
-import { INBOX_HREF, actionsOf, isMissing, openLinkOf } from "./conversation-parts.ts";
+import { INBOX_HREF, actionsOf, openLinkOf, shapeOf } from "./conversation-parts.ts";
+import { ConversationGone } from "./conversation-gone.tsx";
 import { ConversationMessages } from "./conversation-messages.tsx";
-import { ConversationMissing } from "./conversation-missing.tsx";
 import { ConversationPanel } from "../../design-system/layout.tsx";
 import type { ConversationProps } from "./conversation-parts.ts";
 import type { ReactNode } from "react";
@@ -18,6 +18,7 @@ const TEXT = {
   open: "Open thread",
   reply: "Reply",
 } as const;
+const BACK_LINK = `aside[aria-label="${TEXT.conversation}"] a[aria-label="${TEXT.back}"]`;
 
 export function ConversationView(props: ConversationProps): ReactNode {
   const { channel, thread } = props.selected;
@@ -27,8 +28,8 @@ export function ConversationView(props: ConversationProps): ReactNode {
   const reader = useThreadReader(props);
   const draft = threadDraft({ channel, composer: props.composer, me: props.me, messages, thread });
   const handleFiles = draft.attachments.attach;
-  if (isMissing(state)) {
-    return <ConversationMissing />;
+  if (shapeOf(state) !== "shown") {
+    return <ConversationGone channel={channel} edge={props.edge} landing={BACK_LINK} state={state} />;
   }
   return (
     <ConversationPanel
