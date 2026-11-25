@@ -1,5 +1,6 @@
 import {
   dragInto,
+  dragNothingOverPage,
   dragOnto,
   dragOutOf,
   dragTextOnto,
@@ -117,7 +118,7 @@ it("a channel lights up while files are dragged over its messages, until the las
   close();
 });
 
-it("files dropped on a channel's messages wait in its box, unlit, and files dropped off any conversation are refused", {
+it("files dropped on a channel's messages wait in its box, unlit, files dropped off any conversation are refused, and a drag of nothing is left alone", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -127,8 +128,9 @@ it("files dropped on a channel's messages wait in its box, unlit, and files drop
   dragInto(over);
   dropInto(over);
   const strayTaken = dropOnPage([notes]);
+  const nothingPasses = dragNothingOverPage();
 
-  expect([litZones(), strayTaken, pendingIn(CHANNEL_FORM)]).toStrictEqual([EMPTY, false, [NOTES]]);
+  expect([litZones(), strayTaken, nothingPasses, pendingIn(CHANNEL_FORM)]).toStrictEqual([EMPTY, false, true, [NOTES]]);
 
   close();
 });

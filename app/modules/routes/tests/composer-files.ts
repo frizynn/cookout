@@ -161,6 +161,10 @@ function dropOnPage(files: readonly FileSpec[]): boolean {
   return fireEvent.drop(document.body, carried(files));
 }
 
+function dragNothingOverPage(): boolean {
+  return fireEvent.dragOver(document.body, { dataTransfer: null });
+}
+
 function litZones(): number {
   return document.querySelectorAll(`[data-dropping="true"]`).length;
 }
@@ -218,6 +222,7 @@ export {
   dragOutOf,
   dropInto,
   dropOnPage,
+  dragNothingOverPage,
   litZones,
   pasteItemsInto,
   dragOnto,
