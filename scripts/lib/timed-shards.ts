@@ -48,6 +48,7 @@ interface Planning extends Fetching {
 
 interface Recording {
   readonly fallback: string;
+  readonly fallbackArgs?: (shard: string, files: Outcome<readonly string[]>) => readonly string[];
   readonly name: string;
   readonly prefix: string;
   readonly read: (file: string) => readonly FileTiming[];
@@ -275,8 +276,9 @@ function shardPlan({ recording, ...planning }: Planning & Asking): Plan {
   if (timed.ok) {
     return timed.value;
   }
+  const { fallbackArgs = (shard: string): readonly string[] => [`--shard=${shard}`] } = recording;
   return {
-    args: [`--shard=${planning.shard}`],
+    args: fallbackArgs(planning.shard, planning.files),
     line: `${recording.name} shard ${planning.shard}: split by ${recording.fallback}, since ${timed.reason}`,
   };
 }
@@ -294,5 +296,5 @@ function browserShardPlan(planning: Planning): Plan {
   return shardPlan({ ...planning, recording: BROWSER });
 }
 
-export type { Planning, Plan };
-export { browserShardPlan, shardPlan };
+export type { Planning, Plan, Recording };
+export { BROWSER, browserShardPlan, shardOf, shardPlan };
