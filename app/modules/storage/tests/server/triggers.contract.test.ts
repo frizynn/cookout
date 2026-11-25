@@ -81,6 +81,27 @@ it.effect.each(storageLayers)(
 );
 
 it.effect.each(storageLayers)(
+  "storage contract ($adapter): a skipped call keeps why it was skipped, and a later answered one replaces it",
+  ({ layer }) =>
+    Effect.gen(function* skippedKept() {
+      const { storage } = yield* openStore(layer);
+      yield* boardOf(storage);
+      yield* storage.setTrigger(TRIAGE, { token: FIRST_TOKEN, url: ROUTINE_URL });
+      yield* storage.recordTriggerResult(TRIAGE, { at: FAILED_AT, ok: true, skipped: "agent_session_live" });
+      const skipped = yield* storage.listTriggers([TRIAGE]);
+      yield* storage.recordTriggerResult(TRIAGE, { at: CLEARED_AT, ok: true, status: OK });
+      const answered = yield* storage.listTriggers([TRIAGE]);
+
+      const lastResults = Arr.map([...skipped, ...answered], ({ lastResult }) => lastResult);
+
+      expect(lastResults).toStrictEqual([
+        { at: FAILED_AT, ok: true, skipped: "agent_session_live" },
+        { at: CLEARED_AT, ok: true, status: OK },
+      ]);
+    }),
+);
+
+it.effect.each(storageLayers)(
   "storage contract ($adapter): a result with no answer keeps its error, and a later one replaces it",
   ({ layer }) =>
     Effect.gen(function* resultsKept() {

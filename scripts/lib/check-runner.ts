@@ -20,6 +20,7 @@ interface Check {
 interface CiOnly {
   readonly ciJob: string;
   readonly command: string;
+  readonly hook?: true;
   readonly name: string;
   readonly workflow?: string;
 }
@@ -211,14 +212,19 @@ function ownerOf(suite: CiOnly): string {
   return `the ${workflow} workflow's`;
 }
 
+function skippedLine(suite: CiOnly): string {
+  if (suite.hook === true) {
+    return `skipped: ${suite.name}, the pre-commit hook's, which it ran on every commit and CI runs as its ${suite.ciJob} job. Run them here on purpose with ${suite.command}.`;
+  }
+  return `skipped: ${suite.name}, which CI runs as ${ownerOf(suite)} ${suite.ciJob} job. Run it here on purpose with ${suite.command}.`;
+}
+
 function reportSkipped({ ciOnly, inCi, job }: Checks): void {
   if (inCi || job !== "") {
     return;
   }
   for (const suite of ciOnly) {
-    console.log(
-      `skipped: ${suite.name}, which CI runs as ${ownerOf(suite)} ${suite.ciJob} job. Run it here on purpose with ${suite.command}.`,
-    );
+    console.log(skippedLine(suite));
   }
 }
 

@@ -48,11 +48,15 @@ function channelFold(page: Page): Locator {
     .getByRole("article", { exact: true, name: "1 closed thread" });
 }
 
-function channelMessage(page: Page): Locator {
+function channelMessage(page: Page, text = PARENT): Locator {
   return inPane(page)
     .getByRole("feed", { exact: true, name: "Messages" })
     .getByRole("article")
-    .filter({ hasText: PARENT });
+    .filter({ hasText: text });
+}
+
+function afterFold(page: Page): Locator {
+  return channelMessage(page, "After.");
 }
 
 function threadParent(page: Page): Locator {
@@ -65,7 +69,7 @@ function threadReply(page: Page): Locator {
   });
 }
 
-test("← from a message in a closed thread's panel puts focus on the fold holding its channel message, with the panel still open", async ({
+test("← from a message in a closed thread's panel puts focus on the channel message after the fold holding it, with the panel still open", async ({
   page,
 }) => {
   await closedThreadOpened(page, unique("browser-closed-thread-keys-left"));
@@ -73,13 +77,13 @@ test("← from a message in a closed thread's panel puts focus on the fold holdi
 
   await page.keyboard.press("ArrowLeft");
 
-  await expect(channelFold(page)).toBeFocused();
+  await expect(afterFold(page)).toBeFocused();
   await expect(threadParent(page)).toBeVisible();
 
   await threadParent(page).focus();
   await page.keyboard.press("ArrowLeft");
 
-  await expect(channelFold(page)).toBeFocused();
+  await expect(afterFold(page)).toBeFocused();
 });
 
 const PLACES = [
@@ -104,7 +108,7 @@ const PLACES = [
 ] as const;
 
 for (const { focus, place } of PLACES) {
-  test(`Escape from ${place} in a closed thread's panel closes it, with focus on the fold holding its channel message`, async ({
+  test(`Escape from ${place} in a closed thread's panel closes it, with focus on the channel message after the fold holding it`, async ({
     page,
   }) => {
     const channel = unique("browser-closed-thread-keys-escape");
@@ -115,27 +119,22 @@ for (const { focus, place } of PLACES) {
 
     await expect(inThread(page)).toBeHidden();
     await expect(page).toHaveURL(new RegExp(`#/channels/${channel}$`, "u"));
-    await expect(channelFold(page)).toBeFocused();
+    await expect(afterFold(page)).toBeFocused();
   });
 }
 
-test("j after Escape closes a closed thread's panel carries on from its fold to the next channel message", async ({
+test("k after Escape closes a closed thread's panel carries on from the message after its fold to the fold", async ({
   page,
 }) => {
   await closedThreadOpened(page, unique("browser-closed-thread-keys-carry-on"));
   await threadReply(page).focus();
   await page.keyboard.press("Escape");
 
+  await expect(afterFold(page)).toBeFocused();
+
+  await page.keyboard.press("k");
+
   await expect(channelFold(page)).toBeFocused();
-
-  await page.keyboard.press("j");
-
-  await expect(
-    inPane(page)
-      .getByRole("feed", { exact: true, name: "Messages" })
-      .getByRole("article")
-      .filter({ hasText: "After." }),
-  ).toBeFocused();
 });
 
 const MOVES = [
@@ -168,7 +167,7 @@ test("+ on a message in a closed thread's panel reacts to it", async ({ page }) 
 });
 
 const CONTROLS = [
-  { closed: true, control: "Reopen thread", landing: channelFold },
+  { closed: true, control: "Reopen thread", landing: afterFold },
   { closed: false, control: "Close thread", landing: channelMessage },
 ] as const;
 

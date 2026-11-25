@@ -456,16 +456,23 @@ interface ListOpenThreadsResponse {
 /** An open thread: its top-level message and when anything last happened in it. */
 type OpenThread = ListOpenThreadsResponse["threads"][number];
 /**
+ * Why a mention didn't call a trigger URL (mattpocock/cookout#644): `agent_session_live`, the agent held a live agent
+ * session, which hears the mention through its inbox and stream, so a new run would only ask to join and be refused.
+ */
+type TriggerSkip = "agent_session_live";
+/**
  * How the last call to a trigger URL went: when it was made, and either the HTTP status the URL answered or, when it
- * answered nothing (a timeout, a refused connection), why. `ok` is true only for a `2xx`. A non-`2xx` answer whose
- * body said something keeps the start of its error message as `error` too: the JSON envelope's `error.message`, else
- * the body as text, at most 200 characters, never the token or a header's value.
+ * answered nothing (a timeout, a refused connection), why. `ok` is true only for a `2xx`, or for a mention that called
+ * nothing on purpose: then `skipped` says why, and it has no status or error, as it neither failed nor reached the URL.
+ * A non-`2xx` answer whose body said something keeps the start of its error message as `error` too: the JSON
+ * envelope's `error.message`, else the body as text, at most 200 characters, never the token or a header's value.
  */
 interface TriggerResult {
   readonly at: IsoTime;
   readonly ok: boolean;
   readonly status?: number;
   readonly error?: string;
+  readonly skipped?: TriggerSkip;
 }
 /** What a `trigger failed` offline alert says: the message that didn't get through, and the status, error or both. */
 interface TriggerFailure {
