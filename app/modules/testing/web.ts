@@ -8,7 +8,12 @@
  * `handLive()` is a `LiveAdapter` a test feeds by hand: `send(event)` sends an
  * event on every stream it opened, and `report(link)` reports the link down or
  * up, as the routes tests' `cuttable` does, for the board store's tests.
+ * `recordPublishes(store)` subscribes to an external store through its
+ * `subscribe` and `snapshot`, counts each publish (`count()`), and fails the
+ * test when a publish leaves the snapshot deep-equal to the one before, since
+ * each such publish re-renders every view that reads the store for nothing.
  */
 export { watchAdapter } from "./lib/watch.ts";
 export { type HandFocus, handFocus } from "./lib/page-focus.ts";
 export { type HandLive, handLive } from "./lib/hand-live.ts";
+export { type ExternalStore, type Publishes, recordPublishes } from "./lib/publishes.ts";
