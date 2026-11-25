@@ -15,6 +15,7 @@ import { useThreadHeader } from "./use-thread-header.ts";
 const TEXT = { close: "Close panel", reply: "Reply", thread: "Thread" } as const;
 
 interface ThreadProps {
+  readonly alone: boolean;
   readonly channel: ChannelName;
   readonly composer: Composer;
   readonly edge: PanelEdgeParts;
@@ -29,11 +30,19 @@ export function ThreadView(props: ThreadProps): ReactNode {
   const { closing, read: messages, state } = useShownThread({ acking: true, place: { channel, id: props.thread } });
   const line = props.unread.newLine(channel, props.thread);
   const readPosition = useSyncExternalStore(line.subscribe, line.snapshot);
-  const header = useThreadHeader({ channel, closing, menu: props.unread.menu, state });
+  const header = useThreadHeader({
+    alone: props.alone,
+    channel,
+    closing,
+    menu: props.unread.menu,
+    state,
+    thread: props.thread,
+  });
   const reading = props.linked === props.thread;
   const draft = threadDraft({ channel, composer: props.composer, me: props.me, messages, thread: props.thread });
   return (
     <SidePanel
+      alone={header.alone}
       closeHref={header.closeHref}
       closeLabel={TEXT.close}
       detail={`#${channel}`}

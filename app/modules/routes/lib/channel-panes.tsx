@@ -28,20 +28,23 @@ function openThread(route: ChannelPanesProps["route"]): MessageId | null {
 
 export function ChannelPanes(props: ChannelPanesProps): ReactNode {
   const { composer, me, route, unread } = props;
+  const alone = route.name === "thread" && route.alone === true;
   const edge = useThreadEdge({ closeHref: hrefOf({ channel: route.channel, name: "channel" }), layout: props.layout });
   return (
     <>
-      <IdentityCardComposer value={composer.channelDraft(route.channel).replyTo}>
-        <ChannelView
-          channel={route.channel}
-          composer={composer}
-          me={me}
-          open={openThread(route)}
-          newLine={unread.newLine(route.channel, null)}
-          scheduling={props.scheduling}
-          unread={unread}
-        />
-      </IdentityCardComposer>
+      {!alone && (
+        <IdentityCardComposer value={composer.channelDraft(route.channel).replyTo}>
+          <ChannelView
+            channel={route.channel}
+            composer={composer}
+            me={me}
+            open={openThread(route)}
+            newLine={unread.newLine(route.channel, null)}
+            scheduling={props.scheduling}
+            unread={unread}
+          />
+        </IdentityCardComposer>
+      )}
       {route.name === "thread" && (
         <ThreadCardComposer
           channel={route.channel}
@@ -51,6 +54,7 @@ export function ChannelPanes(props: ChannelPanesProps): ReactNode {
           thread={route.thread}
         >
           <ThreadView
+            alone={alone}
             channel={route.channel}
             composer={composer}
             edge={edge}
