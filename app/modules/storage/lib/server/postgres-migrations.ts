@@ -248,6 +248,7 @@ const postgresMigrations: readonly (readonly string[])[] = [
     'ALTER TABLE agent_session_tokens ADD COLUMN session_url text COLLATE "C"',
     'ALTER TABLE agent_join_requests ADD COLUMN session_url text COLLATE "C"',
   ],
+  ['ALTER TABLE agent_join_requests ADD COLUMN denied_at text COLLATE "C"'],
 ];
 
 const NEXT_VERSION = 1;

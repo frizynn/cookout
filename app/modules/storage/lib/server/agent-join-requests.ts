@@ -49,6 +49,7 @@ interface CollectAgentJoinRequest {
 type AgentJoinCollection =
   | { readonly status: "pending" }
   | { readonly status: "gone" }
+  | { readonly status: "denied" }
   | { readonly status: "live"; readonly identity: IdentityName; readonly expiresAt: IsoTime }
   | {
       readonly status: "collected";
@@ -69,6 +70,7 @@ interface AgentJoinRequestsSection {
     now: IsoTime,
   ) => Fails<"approved" | "not_found">;
   readonly collectAgentJoinRequest: (collect: CollectAgentJoinRequest) => Fails<AgentJoinCollection>;
+  readonly denyAgentJoinRequest: (userCode: string, now: IsoTime) => Fails<"denied" | "not_found">;
 }
 
 interface Approved {
@@ -86,6 +88,7 @@ interface Issued {
 
 const PENDING: AgentJoinCollection = { status: "pending" };
 const GONE: AgentJoinCollection = { status: "gone" };
+const DENIED: AgentJoinCollection = { status: "denied" };
 
 function sessionToIssue({ approval, collect, host, sessionUrl }: Approved): IssueAgentSession {
   const { force, idleSeconds, identity } = approval;
@@ -110,7 +113,7 @@ function collectionOf({ created, issue, result }: Issued): AgentJoinCollection {
   return { ...collected, sessionUrl };
 }
 
-export { GONE, PENDING, collectionOf, sessionToIssue };
+export { DENIED, GONE, PENDING, collectionOf, sessionToIssue };
 
 export type { JoinCodesSection } from "./join-codes.ts";
 

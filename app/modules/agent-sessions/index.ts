@@ -125,7 +125,9 @@ export const agentSessionExpired = "agent_session_expired";
  * `display_name_on_existing_agent` (a display name sent to join an agent that already exists),
  * the 403 `not_brought_in` (an agent approves a join for an existing agent it didn't bring in, #370), the 404
  * `agent_join_request_not_found` (an agent join request expired, was collected, or never existed), the 404
- * `agent_not_found` (an agent join request names no active agent: a join request never creates one, #461), and the
+ * `agent_not_found` (an agent join request names no active agent: a join request never creates one, #461), the 403
+ * `agent_join_request_denied` (collecting an agent join request that someone who could approve it dismissed, #586),
+ * and the
  * 401s any request sent with an ended agent session token gets, and the 404 `join_code_not_found` (a join code that
  * was used, expired or never issued).
  */
@@ -142,6 +144,7 @@ export const agentSessionErrorCodes = [
   "join_code_not_found",
   "not_brought_in",
   "agent_not_found",
+  "agent_join_request_denied",
   agentSessionRevoked,
   agentSessionExpired,
 ] as const;
@@ -166,6 +169,12 @@ export const agentJoinRequestPath = "/v1/agent-join-requests/:code";
  * one (#461). A human approves for an agent they own; an agent only for an agent it brought in (#370).
  */
 export const agentJoinRequestApprovalPath = "/v1/agent-join-requests/:code/approval";
+
+/**
+ * `PUT /v1/agent-join-requests/:code/denial`: dismisses the pending request, for anyone who could approve it (#586).
+ * It leaves every approver's list, and its collect is then 403 `agent_join_request_denied`.
+ */
+export const agentJoinRequestDenialPath = "/v1/agent-join-requests/:code/denial";
 
 /**
  * The approval page's path on the server for an agent join request's user code.
@@ -224,6 +233,12 @@ export interface AgentJoinRequestResponse {
   readonly agentJoinRequest: AgentJoinRequestView;
 }
 
+/** The answer to dismissing an agent join request. */
+export interface DenyAgentJoinResponse {
+  readonly userCode: string;
+  readonly denied: true;
+}
+
 /** The body of approving an agent join request. */
 export interface ApproveAgentJoinRequest {
   /** A shorter idle expiry than the box asked for; longer is 400 `idle_expiry_too_long`. */
@@ -251,4 +266,9 @@ export interface AgentJoinCalls {
     userCode: string,
     approval?: ApproveAgentJoinRequest,
   ) => Promise<AgentJoinRequestResponse>;
+  /**
+   * `PUT /v1/agent-join-requests/:code/denial`: dismisses a pending request, for anyone who could approve it. The
+   * waiting `cookout join` is refused with 403 `agent_join_request_denied`.
+   */
+  readonly denyAgentJoin: (userCode: string) => Promise<DenyAgentJoinResponse>;
 }

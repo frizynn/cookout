@@ -7,7 +7,7 @@ import type {
   PendingAgentJoinRequest,
 } from "./agent-join-requests.ts";
 import { Array as Arr, Effect, Option, Predicate, Schema } from "effect";
-import { GONE, PENDING, collectionOf, sessionToIssue } from "./agent-join-requests.ts";
+import { DENIED, GONE, PENDING, collectionOf, sessionToIssue } from "./agent-join-requests.ts";
 import { agentSessionIssuer, sqlAgentSessions } from "./agent-sessions-sqlite.ts";
 import type { AgentSessionsSection } from "./agent-sessions.ts";
 import type { Fails } from "./errors.ts";
@@ -25,6 +25,7 @@ const YES = 1;
 const RequestRow = Schema.Struct({
   agent: NameColumn,
   created: Schema.NullOr(Schema.Literals([NO, YES])),
+  denied_at: Schema.NullOr(IsoTimeSchema),
   expires_at: IsoTimeSchema,
   force: Schema.NullOr(Schema.Literals([NO, YES])),
   host: Schema.String,
@@ -46,11 +47,12 @@ const PendingRow = Schema.Struct({
 });
 
 const LIST_PENDING = `SELECT agent, created_at, expires_at, host, user_code FROM agent_join_requests
-  WHERE joins IS NULL AND expires_at > ? ORDER BY created_at, user_code`;
+  WHERE joins IS NULL AND denied_at IS NULL AND expires_at > ? ORDER BY created_at, user_code`;
 
 const decodePendingRows = Schema.decodeUnknownEffect(Schema.Array(PendingRow));
 
-const COLUMNS = "agent, created, expires_at, force, host, idle_expiry, idle_seconds, joins, session_url, user_code";
+const COLUMNS =
+  "agent, created, denied_at, expires_at, force, host, idle_expiry, idle_seconds, joins, session_url, user_code";
 
 const FIND_LIVE_BY_HASH = `SELECT ${COLUMNS} FROM agent_join_requests WHERE request_hash = ? AND expires_at > ?`;
 
@@ -62,6 +64,8 @@ const INSERT_REQUEST = `INSERT INTO agent_join_requests
 
 const APPROVE = `UPDATE agent_join_requests SET joins = ?, created = ?, idle_seconds = ?, force = ?
   WHERE user_code = ? AND joins IS NULL`;
+
+const DENY = "UPDATE agent_join_requests SET denied_at = ? WHERE user_code = ?";
 
 const decodeRow = Schema.decodeUnknownEffect(RequestRow);
 
@@ -107,6 +111,13 @@ function liveByCode(db: SqlDatabase, userCode: string, now: IsoTime): Fails<Opti
   return Effect.flatMap(db.get(FIND_LIVE_BY_CODE, userCode, now), requestRow);
 }
 
+function undeniedByCode(db: SqlDatabase, userCode: string, now: IsoTime): Fails<Option.Option<RequestRowType>> {
+  return Effect.map(
+    liveByCode(db, userCode, now),
+    Option.filter((row) => row.denied_at === null),
+  );
+}
+
 function addIn(db: SqlDatabase): AgentJoinRequestsSection["addAgentJoinRequest"] {
   return (request: NewAgentJoinRequest, now: IsoTime) =>
     db.transaction(
@@ -136,12 +147,26 @@ function approveIn(db: SqlDatabase): AgentJoinRequestsSection["approveAgentJoinR
   return (userCode, { created, force, idleSeconds, identity }, now) =>
     db.transaction(
       Effect.gen(function* approveRequest() {
-        const found = yield* liveByCode(db, userCode, now);
+        const found = yield* undeniedByCode(db, userCode, now);
         if (Option.isNone(found)) {
           return "not_found" as const;
         }
         yield* db.run(APPROVE, identity, Number(created), idleSeconds, Number(force), userCode);
         return "approved" as const;
+      }),
+    );
+}
+
+function denyIn(db: SqlDatabase): AgentJoinRequestsSection["denyAgentJoinRequest"] {
+  return (userCode, now) =>
+    db.transaction(
+      Effect.gen(function* denyRequest() {
+        const found = yield* undeniedByCode(db, userCode, now);
+        if (Option.isNone(found) || found.value.joins !== null) {
+          return "not_found" as const;
+        }
+        yield* db.run(DENY, now, userCode);
+        return "denied" as const;
       }),
     );
 }
@@ -166,6 +191,9 @@ function collectIn(db: SqlDatabase): AgentJoinRequestsSection["collectAgentJoinR
         if (Option.isNone(found)) {
           return GONE;
         }
+        if (found.value.denied_at !== null) {
+          return DENIED;
+        }
         if (found.value.joins === null) {
           return PENDING;
         }
@@ -179,8 +207,9 @@ function sqliteAgentJoinRequests(db: SqlDatabase): AgentJoinRequestsSection {
     addAgentJoinRequest: addIn(db),
     approveAgentJoinRequest: approveIn(db),
     collectAgentJoinRequest: collectIn(db),
+    denyAgentJoinRequest: denyIn(db),
     findAgentJoinRequest: (userCode, now) =>
-      Effect.map(liveByCode(db, userCode, now), (row) => Option.getOrUndefined(Option.map(row, shown))),
+      Effect.map(undeniedByCode(db, userCode, now), (row) => Option.getOrUndefined(Option.map(row, shown))),
     listPendingAgentJoinRequests: pendingIn(db),
   };
 }
