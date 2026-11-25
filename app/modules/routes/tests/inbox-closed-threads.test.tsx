@@ -1,10 +1,9 @@
 import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
 import { expect, it } from "vitest";
 import { inConversation, inSidebar } from "./regions.ts";
-import { rowsOf, subscribedReader } from "./inbox-reader.ts";
+import { inboxOpened, rowsOf, subscribedReader } from "./inbox-reader.ts";
 import { screen, waitFor, within } from "@testing-library/react";
 import { agentShown } from "./identities.ts";
-import { openWithClockStopped } from "./clock.ts";
 import { watched } from "./watched.ts";
 
 interface Thread {
@@ -29,9 +28,14 @@ async function threadWithNews(channel: string): Promise<Thread> {
   return { channel, mention, parent, poster, reader };
 }
 
-async function openInbox(reader: CookoutClient, hash = "#/inbox"): Promise<() => Promise<void>> {
+interface InboxOf {
+  readonly channel: string;
+  readonly reader: CookoutClient;
+}
+
+async function openInbox({ channel, reader }: InboxOf, hash = "#/inbox"): Promise<() => Promise<void>> {
   const { live, stream } = watched(reader);
-  const unmount = openWithClockStopped({ client: reader, hash, live });
+  const { unmount } = await inboxOpened({ author: `${channel}-poster`, hash, live, reader });
   await screen.findByRole("list", { name: "Earlier" });
   const events: EventStream = await stream;
   return async () => {
@@ -82,7 +86,7 @@ it("an unread reply in a thread closed elsewhere stays in For you, marked Closed
   expect.hasAssertions();
 
   const thread = await threadWithNews("web-closed-live");
-  const close = await openInbox(thread.reader);
+  const close = await openInbox(thread);
 
   await expect(shown(OPEN)).resolves.toStrictEqual(shownWith(thread, OPEN));
 
@@ -100,7 +104,7 @@ it("an Inbox loaded with a thread already closed shows its unread items, marked 
 
   const thread = await threadWithNews("web-closed-load");
   await thread.poster.closeThread(thread.parent.id);
-  const close = await openInbox(thread.reader);
+  const close = await openInbox(thread);
 
   await expect(shown(MARKED)).resolves.toStrictEqual(shownWith(thread, MARKED));
 
@@ -114,7 +118,7 @@ it("reopening a closed thread takes the Closed marker off its row, and the row s
 
   const thread = await threadWithNews("web-closed-reopen");
   await thread.poster.closeThread(thread.parent.id);
-  const close = await openInbox(thread.reader);
+  const close = await openInbox(thread);
   await shown(MARKED);
 
   await thread.poster.reopenThread(thread.parent.id);
@@ -124,7 +128,7 @@ it("reopening a closed thread takes the Closed marker off its row, and the row s
   await close();
 });
 
-async function reactedInClosedThread(channel: string): Promise<CookoutClient> {
+async function reactedInClosedThread(channel: string): Promise<InboxOf> {
   const { poster, reader } = await subscribedReader(channel);
   const { message: parent } = await poster.createMessage({ channel, text: "Deploy at noon?" });
   const { message: reply } = await reader.createMessage({ channel, replyTo: parent.id, text: "Done" });
@@ -132,7 +136,7 @@ async function reactedInClosedThread(channel: string): Promise<CookoutClient> {
   await reader.ack(reply.id);
   await poster.react(reply.id, "thumbs_up");
   await poster.closeThread(parent.id);
-  return reader;
+  return { channel, reader };
 }
 
 it("a reaction to your reply in a closed thread shows in For you, marked Closed", { timeout: 5000 }, async () => {
@@ -155,7 +159,7 @@ it("opening a closed thread's row shows the thread in the conversation", { timeo
 
   const thread = await threadWithNews("web-closed-open");
   await thread.poster.closeThread(thread.parent.id);
-  const close = await openInbox(thread.reader, `#/inbox/${thread.channel}/${String(thread.parent.id)}`);
+  const close = await openInbox(thread, `#/inbox/${thread.channel}/${String(thread.parent.id)}`);
 
   await expect(inConversation().findByText("Two")).resolves.toBeInstanceOf(HTMLElement);
 
