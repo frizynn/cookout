@@ -70,7 +70,11 @@ function pressedOffThePanel(message: () => HTMLElement): readonly boolean[] {
   within(message()).getByRole("link", { name: "Reply" }).focus();
   const onLink = pressedOn("r");
   message().focus();
-  return [onLink, pressedOn("ArrowLeft")];
+  const toSidebar =
+    pressedOn("ArrowLeft") &&
+    screen.getByRole("navigation", { name: "Sidebar" }).contains(globalThis.document.activeElement);
+  message().focus();
+  return [onLink, toSidebar];
 }
 
 it("r on a focused message opens its thread with the cursor in the reply box, and again with it open", {
@@ -106,20 +110,20 @@ it("t opens the thread on its top-level message, ← goes back to the channel me
   close();
 });
 
-it("the message keys leave a key alone off a message, off the thread panel and with no control to press", {
+it("the message keys leave a key alone off a message and with no control to press, and ← off the thread panel goes to the sidebar", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
 
   const { close } = await opened("web-message-keys-alone");
   const message = await channelMessage();
-  const [onLink, leftOutside] = pressedOffThePanel(() => message);
+  const [onLink, toSidebar] = pressedOffThePanel(() => message);
   await pressedThenOn("t", threadParent);
   const openOnParent = pressedOn("t");
 
-  expect([onLink, leftOutside, openOnParent, await leftWithNoChannelMessage()]).toStrictEqual([
+  expect([onLink, toSidebar, openOnParent, await leftWithNoChannelMessage()]).toStrictEqual([
     false,
-    false,
+    true,
     false,
     false,
   ]);

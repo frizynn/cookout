@@ -21,6 +21,7 @@ const TEXT = {
 interface ChannelKeys {
   readonly announce: (text: string) => void;
   readonly counts: ReadonlyMap<ChannelName, UnreadCounts>;
+  readonly land: () => void;
   readonly order: readonly ChannelName[];
   readonly scheduleList: ScheduleList;
   readonly store: BoardStore;
@@ -31,8 +32,9 @@ function unreadIn(keys: ChannelKeys): (channel: ChannelName) => boolean {
   return (channel) => hasUnread(keys.counts.get(channel) ?? NO_COUNTS);
 }
 
-function opened(channel: ChannelName): true {
+function opened(keys: ChannelKeys, channel: ChannelName): true {
   globalThis.location.hash = hrefOf({ channel, name: "channel" });
+  keys.land();
   return true;
 }
 
@@ -58,7 +60,7 @@ function stepTo(stepping: Stepping): Act {
       keys.announce(NONE_LEFT[`${unreadOnly}`]);
       return true;
     }
-    return opened(channel);
+    return opened(keys, channel);
   };
 }
 
@@ -70,20 +72,25 @@ function rowChannel(keys: ChannelKeys, target: EventTarget | null): ChannelName 
   return keys.order.find((channel) => hrefOf({ channel, name: "channel" }) === href) ?? null;
 }
 
-function markRead(keys: ChannelKeys): Act {
-  return ({ target }) => {
-    const channel = rowChannel(keys, target);
-    if (channel === null) {
-      return false;
-    }
-    if (!unreadIn(keys)(channel)) {
-      keys.announce(TEXT.nothingUnread(channel));
-      return true;
-    }
-    keys.unread.markChannelRead(channel);
-    keys.announce(TEXT.markedRead(channel));
+function markedRead(keys: ChannelKeys, channel: ChannelName | null): boolean {
+  if (channel === null) {
+    return false;
+  }
+  if (!unreadIn(keys)(channel)) {
+    keys.announce(TEXT.nothingUnread(channel));
     return true;
-  };
+  }
+  keys.unread.markChannelRead(channel);
+  keys.announce(TEXT.markedRead(channel));
+  return true;
+}
+
+function markRead(keys: ChannelKeys): Act {
+  return ({ target }) => markedRead(keys, rowChannel(keys, target));
+}
+
+function markShownRead(keys: ChannelKeys): Act {
+  return () => markedRead(keys, openChannel(locationOf(globalThis.location.hash).route));
 }
 
 function subscriptionSaid(channel: ChannelName, subscribing: boolean): string {
@@ -118,4 +125,4 @@ function openSchedules(keys: ChannelKeys): Act {
   };
 }
 
-export { type ChannelKeys, markRead, openSchedules, stepTo, toggleSubscription };
+export { type ChannelKeys, markRead, markShownRead, openSchedules, stepTo, toggleSubscription };

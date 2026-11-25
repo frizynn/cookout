@@ -35,7 +35,12 @@
 export { answer, refusal } from "./lib/server/calls.ts";
 export { pastOwnPresence, watchingAllChannels } from "./lib/server/own-presence.ts";
 export { type ChannelFixtureOptions, channelFixture, channelName } from "./lib/server/channels.ts";
-export { type CommandFixtureOptions, commandFixture, commandName, handlerFixture } from "./lib/server/commands.ts";
+export {
+  type WebhookCommandFixtureOptions,
+  webhookCommandFixture,
+  webhookCommandName,
+  handlerFixture,
+} from "./lib/server/commands.ts";
 export {
   type CliResult,
   type CommandLineNeeds,

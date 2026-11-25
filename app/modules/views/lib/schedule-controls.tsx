@@ -24,6 +24,11 @@ function failureOf(state: ScheduleListState, schedule: ScheduledMessage): string
   return `${TEXT.failed} ${refusalWords(change)}`;
 }
 
+function returnsTo(state: ScheduleListState, schedule: ScheduledMessage, control: "toggle" | "edit"): boolean {
+  const { returnTo } = state;
+  return returnTo !== null && returnTo.id === schedule.id && returnTo.control === control;
+}
+
 function busyOn(state: ScheduleListState, schedule: ScheduledMessage): boolean {
   return state.change.status === "changing" && state.change.id === schedule.id;
 }
@@ -33,17 +38,23 @@ export function ScheduleControls(props: ScheduleControlsProps): ReactNode {
   const busy = busyOn(state, schedule);
   const failure = failureOf(state, schedule);
   const handleEdit = useCallback(() => {
+    scheduleList.returnToEdit(null);
     scheduling.openEdit(schedule);
-  }, [schedule, scheduling]);
+  }, [schedule, scheduleList, scheduling]);
   const handleDelete = useCallback(() => {
     scheduleList.askDelete(schedule.id);
   }, [schedule.id, scheduleList]);
   return (
     <>
       <ButtonRow>
-        <ScheduleToggle busy={busy} schedule={schedule} scheduleList={scheduleList} />
+        <ScheduleToggle
+          busy={busy}
+          focused={returnsTo(state, schedule, "toggle")}
+          schedule={schedule}
+          scheduleList={scheduleList}
+        />
         {schedule.status !== "finished" && (
-          <Button disabled={busy} onClick={handleEdit}>
+          <Button disabled={busy} focused={returnsTo(state, schedule, "edit")} onClick={handleEdit}>
             {TEXT.edit}
           </Button>
         )}

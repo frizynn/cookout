@@ -13,7 +13,7 @@
  * every new message on every channel, every identity created, changed or
  * deleted (fed by the `IdentityChanges` hubs), every channel created or deleted (fed by the
  * `Channels` service's hubs), every command registered or rotated (fed by the
- * `CommandChanges` hub) and, to an agent's owner and to admins, every change
+ * `WebhookCommandChanges` hub) and, to an agent's owner and to admins, every change
  * to the agent's agent session (fed by the `AgentSessions` service's hub), for
  * the web UI; and a comment
  * heartbeat every 15 s, so proxies keep the connection open. On a reconnect

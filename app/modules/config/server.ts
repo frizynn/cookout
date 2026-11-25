@@ -17,7 +17,7 @@ const DEFAULT_WEBHOOK_RETRY_FACTOR = 2.3;
 const SHORTEST_ADMIN_TOKEN = 32;
 const SMALLEST_LIMIT = 1;
 const DEFAULT_REQUESTS_PER_MINUTE = 6000;
-const DEFAULT_COMMAND_CALLS_PER_MINUTE = 60;
+const DEFAULT_WEBHOOK_COMMAND_CALLS_PER_MINUTE = 60;
 const DEFAULT_STREAMS_PER_IDENTITY = 20;
 const DEFAULT_PRESENCE_GRACE_SECONDS = 60;
 const SHORTEST_PRESENCE_GRACE_SECONDS = 0;
@@ -36,11 +36,14 @@ const isPublicUrl = Schema.makeFilter(
 
 const flyAppName = Config.String("FLY_APP_NAME").pipe(Config.withDefault(""));
 
-function publicUrlOf({ app, url }: Readonly<{ app: string; url: string }>): string {
-  if (url !== "" || app === "") {
+function publicUrlOf({ app, render, url }: Readonly<{ app: string; render: string; url: string }>): string {
+  if (url !== "") {
     return url;
   }
-  return `https://${app}.fly.dev`;
+  if (app !== "") {
+    return `https://${app}.fly.dev`;
+  }
+  return render;
 }
 
 const adminTokenRule = `COOKOUT_ADMIN_TOKEN must be set to a token of at least ${String(SHORTEST_ADMIN_TOKEN)} characters, such as one made by \`openssl rand -hex 32\`. It becomes the admin identity's token.`;
@@ -73,10 +76,12 @@ export const host = Config.String("COOKOUT_HOST").pipe(Config.withDefault("0.0.0
  * `COOKOUT_PUBLIC_URL`: the address the cookout is deployed at, such as
  * `https://cookout.fly.dev`. Its host is answered as well as the server's own
  * (Matt, 2026-11-23, mattpocock/cookout#56). Empty counts as unset, and then on Fly, where `FLY_APP_NAME` names the
- * app, it is `https://<app>.fly.dev`, so the repo's `fly.toml` deploys to a new app unedited (mattpocock/cookout#489).
+ * app, it is `https://<app>.fly.dev`, so the repo's `fly.toml` deploys to a new app unedited (mattpocock/cookout#489),
+ * and else the `RENDER_EXTERNAL_URL` Render sets, so `render.yaml` deploys unedited too (mattpocock/cookout#523).
  */
 export const publicUrl = Config.all({
   app: flyAppName,
+  render: Config.String("RENDER_EXTERNAL_URL").pipe(Config.withDefault("")),
   url: Config.schema(Schema.String.check(isPublicUrl), "COOKOUT_PUBLIC_URL").pipe(Config.withDefault("")),
 }).pipe(Config.map(publicUrlOf));
 
@@ -209,10 +214,10 @@ export const requestsPerMinute = Config.schema(
  * on top of the request one, because each call fans out to the command's handler. The default of 60 is not settled
  * yet.
  */
-export const commandCallsPerMinute = Config.schema(
+export const webhookCommandCallsPerMinute = Config.schema(
   Schema.Int.check(Schema.isGreaterThanOrEqualTo(SMALLEST_LIMIT)),
   "COOKOUT_COMMAND_CALLS_PER_MINUTE",
-).pipe(Config.withDefault(DEFAULT_COMMAND_CALLS_PER_MINUTE));
+).pipe(Config.withDefault(DEFAULT_WEBHOOK_COMMAND_CALLS_PER_MINUTE));
 
 /** `COOKOUT_STREAMS_PER_IDENTITY`: how many `/v1/events` streams one identity may hold open at once. */
 export const streamsPerIdentity = Config.schema(

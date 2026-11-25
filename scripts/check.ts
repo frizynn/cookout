@@ -133,6 +133,7 @@ const scripted: readonly Scripted[] = [
   { budget: 6, job: "drift", name: "docs", script: ["docs"] },
   { budget: 10, job: "drift", name: "api", script: ["api"] },
   { budget: 6, job: "drift", name: "exports", script: ["exports"] },
+  { budget: 4, job: "drift", name: "render", script: ["render"] },
   { afterTests: true, budget: 6, job: "format", name: "format", script: ["format:check"] },
 ];
 

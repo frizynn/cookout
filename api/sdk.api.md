@@ -15,15 +15,15 @@ The SDK's public surface: the built `dist/sdk.d.ts`, as consumers of the publish
  * `IsoTime` brand and its check. Every timestamp the protocol carries
  * (`createdAt`, `expiresAt`, `heldUntil`, the health check's `time`) is one.
  */
-declare const brand$10: unique symbol;
+declare const brand$11: unique symbol;
 /** A moment as the wire writes it: ISO 8601 in UTC with milliseconds, such as `2026-01-01T00:00:00.000Z`. */
 type IsoTime = string & {
-  readonly [brand$10]: "IsoTime";
+  readonly [brand$11]: "IsoTime";
 };
-declare const brand$9: unique symbol;
+declare const brand$10: unique symbol;
 /** A channel's name: 1–80 lowercase letters, digits or `-`. Unique on a server. */
 type ChannelName = string & {
-  readonly [brand$9]: "ChannelName";
+  readonly [brand$10]: "ChannelName";
 };
 /** A channel as the server shows it. */
 interface Channel {
@@ -49,13 +49,13 @@ interface ListChannelsResponse {
  * The calls a client makes on one identity by its name: reading it, and setting or clearing an agent's description
  * (#189). The SDK's `CookoutClient` has them.
  */
-declare const brand$8: unique symbol;
+declare const brand$9: unique symbol;
 /**
  * An agent's description: what the agent handles, written for people and for routing, such as "Matt's to-dos, life
  * admin and voice-note follow-ups". 1–500 characters with no space at either end. A human has none.
  */
 type Description = string & {
-  readonly [brand$8]: "Description";
+  readonly [brand$9]: "Description";
 };
 /** An agent identity's fields with its description, which every caller sees. */
 type Described<Fields> = Fields & {
@@ -98,6 +98,38 @@ interface AgentCreationCalls<Answer> {
    */
   readonly createAgentForOwner: (request: CreateAgentForOwnerRequest) => Promise<Answer>;
 }
+/**
+ * Avatars on the wire, shared by the server, the SDK, the CLI and the web: the `AvatarId` brand and its check, an
+ * avatar as an identity carries it, the one shape the server takes, and the paths that set and serve one (#478).
+ *
+ * The browser crops and resizes (Matt, 2026-11-25, board msg 4362): the web UI takes a PNG, JPEG, GIF or WebP of up
+ * to 2 MB, crops a centred square, resizes it to 256 px with a canvas and uploads a PNG. The server takes only a PNG
+ * that is exactly 256 by 256, judged by its signature and the width and height in its IHDR header, with no image
+ * library. A CLI or SDK caller sends one already.
+ */
+declare const brand$8: unique symbol;
+/** An avatar's ID: opaque and random, and new whenever an avatar is set, so its bytes never change under it. */
+type AvatarId = string & {
+  readonly [brand$8]: "AvatarId";
+};
+/** An identity's avatar, the picture shown beside its name, as every identity the API returns carries it. */
+interface Avatar {
+  readonly id: AvatarId;
+}
+/** The identity fields an avatar adds: absent when the identity has none, and it shows its initials. */
+type WithAvatar<Fields> = Fields & {
+  /** The picture shown beside its name, served at `avatarPath`. Absent when it has none. */
+  readonly avatar?: Avatar;
+};
+/** The SDK's avatar call, answering `Answer`: the identity, avatar and all. */
+interface AvatarCalls<Answer> {
+  /**
+   * `PUT /v1/identities/:name/avatar`: sets an identity's avatar to `png`, which must already be a PNG of exactly 256
+   * by 256 pixels (400 `avatar_not_png` or `avatar_wrong_size`) of at most 2 MB (413 `avatar_too_large`). The identity
+   * itself or, for an agent, the human who owns it may (403 `not_owner`). The old avatar is deleted.
+   */
+  readonly setAvatar: (name: string, png: Uint8Array) => Promise<Answer>;
+}
 interface IdentityMessageCountResponse {
   readonly messages: number;
 }
@@ -105,13 +137,13 @@ declare const brand$7: unique symbol;
 type Brand$1<Name extends string> = string & {
   readonly [brand$7]: Name;
 };
-type IdentityFields = {
+type IdentityFields = WithAvatar<{
   readonly name: IdentityName;
   readonly displayName?: DisplayName;
   readonly admin: boolean;
   readonly createdAt: IsoTime;
   readonly deactivated?: true;
-};
+}>;
 /**
  * An identity's name: 1–64 lowercase letters, digits or `-`, so `@name` mentions parse cleanly, or two such parts
  * joined by one `/`, such as `matt/triage-agent`. The first part of a namespaced name is the name of the human who
@@ -788,14 +820,14 @@ type Brand<Name extends string> = string & {
   readonly [brand$1]: Name;
 };
 /** A command's name. It is also the name of the command's handler identity, so it follows the plain identity-name rule (no `/`). */
-type CommandName = Brand<"CommandName">;
+type WebhookCommandName = Brand<"CommandName">;
 /** The per-command secret the server signs webhook deliveries with (an HMAC of the body). Shown once, on add or rotate. */
-type CommandSecret = Brand<"CommandSecret">;
+type WebhookCommandSecret = Brand<"CommandSecret">;
 /** A JSON Schema, the rule a command's call data must follow. */
 type JsonSchema = Readonly<Record<string, JsonValue>>;
 /** A registered command as the server shows it: one an admin added, which the server calls by webhook. Its secret is never part of it. */
-interface RegisteredCommand {
-  readonly name: CommandName;
+interface RegisteredWebhookCommand {
+  readonly name: WebhookCommandName;
   /** The `http` or `https` URL the server posts calls to. */
   readonly url: string;
   /** The JSON Schema a call's data must follow. */
@@ -807,11 +839,11 @@ interface RegisteredCommand {
   readonly createdAt: IsoTime;
 }
 /** A built-in command (mattpocock/cookout#250, 2026-11-23): one the server handles itself, so it has no `url`. */
-interface BuiltInCommand extends Omit<RegisteredCommand, "url"> {
+interface BuiltInCommand extends Omit<RegisteredWebhookCommand, "url"> {
   readonly builtIn: true;
 }
 /** A command as `GET /v1/commands` lists it: registered (with a `url`) or built in (with `builtIn: true`). */
-type Command = RegisteredCommand | BuiltInCommand;
+type WebhookCommand = RegisteredWebhookCommand | BuiltInCommand;
 /** The body of `POST /v1/commands`. The server checks the name, URL, schema and description. */
 interface AddCommandRequest {
   readonly name: string;
@@ -821,15 +853,15 @@ interface AddCommandRequest {
 }
 /** The answer to adding a command or rotating its secret. The secret is shown this once only. */
 interface CommandWithSecretResponse {
-  readonly command: RegisteredCommand;
-  readonly secret: CommandSecret;
+  readonly command: RegisteredWebhookCommand;
+  readonly secret: WebhookCommandSecret;
 }
 /**
  * The answer to `GET /v1/commands`: every command, sorted by name. The server has no built-in command since
  * mattpocock/cookout#381; a built-in one would carry `builtIn: true` and no `url`.
  */
 interface ListCommandsResponse {
-  readonly commands: readonly Command[];
+  readonly commands: readonly WebhookCommand[];
 }
 /** The body of a command call. The server checks `data` against the command's schema. */
 interface CallCommandRequest {
@@ -1474,7 +1506,7 @@ interface IdentityDeletedEvent {
  */
 interface CommandEvent {
   readonly type: "command";
-  readonly command: RegisteredCommand;
+  readonly command: RegisteredWebhookCommand;
 }
 /**
  * An agent's agent session just changed: the agent joined or left, or its owner or an admin revoked its session.
@@ -1579,7 +1611,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_not_found", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "trigger_url_invalid", "trigger_token_missing", "trigger_header_invalid", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "attachment_too_large", "too_many_attachments", "attachment_empty", "attachment_unnamed", "message_empty", "thread_moved", "attachment_not_found", "cron_invalid", "cron_too_frequent", "cron_never_runs", "time_zone_invalid", "at_in_past", "cron_or_at", "scheduled_message_not_found", "creator_deactivated", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "avatar_too_large", "avatar_not_png", "avatar_wrong_size", "avatar_not_found", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_not_found", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "trigger_url_invalid", "trigger_token_missing", "trigger_header_invalid", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "attachment_too_large", "too_many_attachments", "attachment_empty", "attachment_unnamed", "message_empty", "thread_moved", "attachment_not_found", "cron_invalid", "cron_too_frequent", "cron_never_runs", "time_zone_invalid", "at_in_past", "cron_or_at", "scheduled_message_not_found", "creator_deactivated", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
@@ -1587,6 +1619,7 @@ interface SchemaProblem {
   readonly message: string;
   readonly path: readonly (string | number)[];
 }
+type IdentityAvatarCalls = AvatarCalls<IdentityResponse>;
 interface StartLoginRequest {
   readonly host: string;
 }
@@ -1642,10 +1675,7 @@ interface IdentityDeletionCalls {
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
   readonly countMessagesBy: (name: string) => Promise<IdentityMessageCountResponse>;
 }
-type ApprovalCalls = LoginCalls & AgentApprovalCalls;
-type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
-type IdentityAgentCreationCalls = AgentCreationCalls<IdentityResponse>;
-type CallGroups = ApprovalCalls & IdentityAgentCreationCalls & AttachmentCalls & IdentityDeletionCalls & IdentityDescriptionCalls & ClosedThreadCalls & OpenThreadCalls & SearchCalls & ScheduledMessageCalls & TriggerCalls & Pick<EventCalls, "presence">;
+type CallGroups = LoginCalls & AgentApprovalCalls & AgentCreationCalls<IdentityResponse> & AttachmentCalls & IdentityAvatarCalls & IdentityDeletionCalls & DescriptionCalls<IdentityResponse> & ClosedThreadCalls & OpenThreadCalls & SearchCalls & ScheduledMessageCalls & TriggerCalls & Pick<EventCalls, "presence">;
 declare function scheduledMessageCalls(server: ClientConnection): ScheduledMessageCalls;
 declare const brand: unique symbol;
 type UnknownErrorCode = string & {
@@ -1870,5 +1900,5 @@ export type CookoutClient = CallGroups & Pick<ReturnType<typeof inboxCalls>, "ke
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentCreationCalls, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentJoinRequestsEvent, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Attachment, type AttachmentBytes, type AttachmentContentType, type AttachmentId, type Author, type BuiltInCommand, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type CleanCloseResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateAgentForOwnerRequest, type CreateChannelRequest, type CreateIdentityRequest, type CreateJoinCodeRequest, type CreateMessageRequest, type CreateScheduledMessageRequest, type DeactivateIdentityResponse, type DeactivatedQuietAgent, type DeactivatedQuietAgentEvent, type DeactivatedQuietAgentId, type DeactivatedQuietAgentResponse, type DeactivationOffer, type DeactivationOfferEvent, type DeactivationOfferId, type DeactivationOfferResponse, type Description, type DescriptionCalls, type DisplayName, type EditScheduledMessageRequest, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type ImageContentType, type InboxAgentJoinRequest, type InboxHistoryItem, type InboxHistoryNudge, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinCodeCalls, type JoinCodeResponse, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListOpenThreadsQuery, type ListOpenThreadsResponse, type ListScheduledMessagesQuery, type ListScheduledMessagesResponse, type ListedAgentSession, type LiveConnectionDetail, type LiveConnectionId, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type NewAttachment, type Nudge, type NudgeEvent, type NudgeId, type NudgeKind, type NudgeReadEvent, type NudgeResponse, type OfflineAlert, type OfflineAlertEvent, type OfflineAlertId, type OfflineAlertResponse, type OfflineReason, type OpenThread, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type PreviewScheduledMessageQuery, type Reaction, type ReactionCount, type ReactionEvent, type ReactionName, type ReactionsResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type RedeemJoinCodeRequest, type RedeemJoinCodeResponse, type Refusal, type RegisteredCommand, type Reply, type RevokeAgentSessionResponse, type ScheduledMessage, type ScheduledMessageEvent, type ScheduledMessageId, type ScheduledMessagePreviewResponse, type ScheduledMessageResponse, type ScheduledMessageRun, type SchemaProblem, type SearchRequest, type SearchResponse, type SearchResult, type SearchSort, type ServerSentEvent, type SetDisplayNameRequest, type SetTriggerRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadEvent, type ThreadMovedDetails, type ThreadResponse, type Token, type TopLevelMessage, type TopLevelMessageResponse, type Trigger, type TriggerEvent, type TriggerFailure, type TriggerHeader, type TriggerResponse, type TriggerResult, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type joinCodeLifetimeMinutes, type joinCodesPath, type liveConnectionPath, type redeemJoinCodePath, type refusalEvent, refusalOf, type scheduledMessageCalls };
+export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentCreationCalls, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentJoinRequestsEvent, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Attachment, type AttachmentBytes, type AttachmentContentType, type AttachmentId, type Author, type BuiltInCommand, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type CleanCloseResponse, type WebhookCommand as Command, type CommandEvent, type WebhookCommandName as CommandName, type WebhookCommandSecret as CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateAgentForOwnerRequest, type CreateChannelRequest, type CreateIdentityRequest, type CreateJoinCodeRequest, type CreateMessageRequest, type CreateScheduledMessageRequest, type DeactivateIdentityResponse, type DeactivatedQuietAgent, type DeactivatedQuietAgentEvent, type DeactivatedQuietAgentId, type DeactivatedQuietAgentResponse, type DeactivationOffer, type DeactivationOfferEvent, type DeactivationOfferId, type DeactivationOfferResponse, type Description, type DescriptionCalls, type DisplayName, type EditScheduledMessageRequest, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type ImageContentType, type InboxAgentJoinRequest, type InboxHistoryItem, type InboxHistoryNudge, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinCodeCalls, type JoinCodeResponse, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListOpenThreadsQuery, type ListOpenThreadsResponse, type ListScheduledMessagesQuery, type ListScheduledMessagesResponse, type ListedAgentSession, type LiveConnectionDetail, type LiveConnectionId, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type NewAttachment, type Nudge, type NudgeEvent, type NudgeId, type NudgeKind, type NudgeReadEvent, type NudgeResponse, type OfflineAlert, type OfflineAlertEvent, type OfflineAlertId, type OfflineAlertResponse, type OfflineReason, type OpenThread, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type PreviewScheduledMessageQuery, type Reaction, type ReactionCount, type ReactionEvent, type ReactionName, type ReactionsResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type RedeemJoinCodeRequest, type RedeemJoinCodeResponse, type Refusal, type RegisteredWebhookCommand as RegisteredCommand, type Reply, type RevokeAgentSessionResponse, type ScheduledMessage, type ScheduledMessageEvent, type ScheduledMessageId, type ScheduledMessagePreviewResponse, type ScheduledMessageResponse, type ScheduledMessageRun, type SchemaProblem, type SearchRequest, type SearchResponse, type SearchResult, type SearchSort, type ServerSentEvent, type SetDisplayNameRequest, type SetTriggerRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadEvent, type ThreadMovedDetails, type ThreadResponse, type Token, type TopLevelMessage, type TopLevelMessageResponse, type Trigger, type TriggerEvent, type TriggerFailure, type TriggerHeader, type TriggerResponse, type TriggerResult, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type joinCodeLifetimeMinutes, type joinCodesPath, type liveConnectionPath, type redeemJoinCodePath, type refusalEvent, refusalOf, type scheduledMessageCalls };
 ```

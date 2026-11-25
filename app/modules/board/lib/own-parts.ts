@@ -96,6 +96,7 @@ function createOwnParts(options: OwnOptions): OwnParts {
       changed,
       client: options.client,
       heard: apply,
+      keepResults: messages.keepResults,
       subscriptionChanged: subscriptions.apply,
     }),
     channels,

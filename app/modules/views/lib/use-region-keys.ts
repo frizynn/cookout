@@ -1,0 +1,30 @@
+import { useContext, useEffect } from "react";
+import type { Keymap } from "../../keymap/index.ts";
+import { LandingContext } from "../../landing/index.ts";
+import { columnActions } from "./column-keys.ts";
+import { createRegionKeys } from "./regions.ts";
+import { sidebar } from "./sidebar-roving.ts";
+
+export function useRegionKeys(keymap: Keymap): void {
+  const { watch } = useContext(LandingContext);
+  useEffect(() => {
+    const regions = createRegionKeys();
+    const { intoMessageBox, intoMessages, toSidebar } = columnActions({ watch });
+    const { document } = globalThis;
+    function remember(event: Readonly<Event>): void {
+      regions.remember(event.target);
+    }
+    document.addEventListener("focusin", remember);
+    const unbind = [
+      keymap.bind({ actions: regions.actions, scope: "everywhere" }),
+      keymap.bind({ actions: { intoMessageBox, toSidebar }, scope: "message" }),
+      keymap.bind({ actions: { intoMessages }, scope: "channel row", within: sidebar }),
+    ];
+    return (): void => {
+      document.removeEventListener("focusin", remember);
+      for (const each of unbind) {
+        each();
+      }
+    };
+  }, [keymap, watch]);
+}

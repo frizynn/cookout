@@ -14,6 +14,7 @@ interface SameCommit extends Polled {
   readonly args: readonly string[];
   readonly checkRun: CheckRun;
   readonly cwd: string;
+  readonly event: string;
   readonly gh: Command;
   readonly subject: string;
 }
@@ -38,7 +39,7 @@ const CANCELLED = "cancelled";
 const COMPLETED = "completed";
 const NOT_FOUND = "none";
 const ALONE: Verdict = { kind: "alone" };
-const LIST = ["run", "list", "--workflow", "Check", "--event", "push", "--json", "databaseId,status,conclusion,url"];
+const FIELDS = ["--json", "databaseId,status,conclusion,url"];
 
 function ghJson(options: SameCommit, args: readonly string[]): unknown {
   const ran = run(options.cwd, ...options.gh, ...args);
@@ -70,7 +71,10 @@ function listedOf(value: unknown): readonly Listed[] {
 }
 
 function othersOn(options: SameCommit, sha: string): readonly Listed[] {
-  const runs = list(ghJson(options, [...LIST, "--commit", sha])) ?? [];
+  const runs =
+    list(
+      ghJson(options, ["run", "list", "--workflow", "Check", "--event", options.event, ...FIELDS, "--commit", sha]),
+    ) ?? [];
   return runs
     .flatMap((value) => listedOf(value))
     .filter(({ runNumber }) => runNumber !== options.runNumber)

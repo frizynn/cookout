@@ -7,13 +7,13 @@
 import {
   AgentSessionSent,
   Caller,
-  CommandThread,
   HarnessSent,
+  WebhookCommandThread,
   authenticate,
   credentialsOf,
   harnessOf,
   issueToken,
-  requireCommandRoute,
+  requireWebhookCommandRoute,
 } from "./lib/server/auth.ts";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import type { Credentials, IdentityChanges, IssuedToken, Principal } from "./lib/server/auth.ts";
@@ -37,7 +37,7 @@ export { AgentSessionSent } from "./lib/server/auth.ts";
  * The one thread a request may reply in when it carries a command token, and none for any other token. `Messages`
  * posts such a request only as a reply in this thread.
  */
-export { CommandThread } from "./lib/server/auth.ts";
+export { WebhookCommandThread } from "./lib/server/auth.ts";
 /**
  * The harness the request named in `cookout-harness`, as a field to spread into a message to post: only an
  * agent identity's request carries one (a human's is refused with 403 `agent_as_human`), and none without the header.
@@ -89,14 +89,14 @@ export const requireToken: Gate<
   Effect.gen(function* () {
     const identities = yield* Identities;
     const request = yield* HttpServerRequest.HttpServerRequest;
-    const { agentSession, commandThread, identity } = yield* identities.authenticate(credentialsOf(request));
+    const { agentSession, webhookCommandThread, identity } = yield* identities.authenticate(credentialsOf(request));
     const harness = yield* harnessOf({ headers: request.headers, identity, target: request });
-    if (Option.isSome(commandThread)) {
-      yield* requireCommandRoute(request);
+    if (Option.isSome(webhookCommandThread)) {
+      yield* requireWebhookCommandRoute(request);
     }
     return yield* effect.pipe(
       Effect.provideService(Caller, identity),
-      Effect.provideService(CommandThread, commandThread),
+      Effect.provideService(WebhookCommandThread, webhookCommandThread),
       Effect.provideService(HarnessSent, harness),
       Effect.provideService(AgentSessionSent, agentSession),
     );
@@ -217,6 +217,14 @@ export { displayNameRoutes, displayNamesLayer } from "./lib/server/display-names
  * is 403 `identity_kind`). The `PATCH` needs `Caller`, which `requireToken` provides.
  */
 export { descriptionRoutes } from "./lib/server/descriptions.ts";
+/**
+ * `PUT /v1/identities/:name/avatar` sets an identity's avatar and `GET /v1/avatars/:id` serves its bytes behind the
+ * token gate (#478). Only the identity itself or, for an agent, its owner may set one (403 `not_owner`, admins too).
+ * The server takes only a PNG of exactly 256 by 256 pixels, judged by its signature and IHDR header with no image
+ * library; the browser crops and resizes (Matt, 2026-11-25, board msg 4362). The bytes are stored first, then the
+ * avatar is recorded, and only then are the replaced avatar's bytes removed.
+ */
+export { avatarRoutes } from "./lib/server/avatars.ts";
 
 /**
  * The `IdentityChanges` hub: every route that creates an identity or changes one (its display name, admin flag,

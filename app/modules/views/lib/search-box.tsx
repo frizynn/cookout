@@ -1,8 +1,9 @@
-import { useId, useSyncExternalStore } from "react";
+import { useContext, useId, useSyncExternalStore } from "react";
 import { ComboboxField } from "../../design-system/controls.tsx";
 import { FilterSuggestionList } from "./filter-suggestion-list.tsx";
 import type { Identities } from "../../composer/index.ts";
 import type { Keymap } from "../../keymap/index.ts";
+import { LandingContext } from "../../landing/index.ts";
 import type { ReactNode } from "react";
 import type { Search } from "../../search/web.ts";
 import { SearchResults } from "./search-results.tsx";
@@ -23,7 +24,11 @@ export function SearchBox(props: SearchBoxProps): ReactNode {
   const field = useId();
   const state = useSyncExternalStore(props.search.subscribe, props.search.snapshot);
   const lists = useSearchLists({ identities: props.identities, state });
-  const { area, choose: handleChoose, pick: handlePick } = useSearchBox({ ...props, box: field });
+  const {
+    area,
+    choose: handleChoose,
+    pick: handlePick,
+  } = useSearchBox({ ...props, box: field, land: useContext(LandingContext).ask });
   return (
     <div className="relative shrink-0 border-b px-4 py-2" ref={area}>
       <ComboboxField
