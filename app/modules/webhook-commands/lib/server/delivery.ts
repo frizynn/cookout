@@ -1,9 +1,14 @@
 import type { Call, FailureReplyNeeds } from "./failure-reply.ts";
 import type { Cause, Config, Scope } from "effect";
-import type { CommandName, CommandSecret } from "../../index.ts";
 import { Context, DateTime, Duration, Effect, FiberSet, Layer, Ref, Schedule, Schema } from "effect";
-import type { DeliveryOutcome, NewCommandCall, StorageUnavailable, StoredDelivery } from "../../../storage/server.ts";
+import type {
+  DeliveryOutcome,
+  NewWebhookCommandCall,
+  StorageUnavailable,
+  StoredDelivery,
+} from "../../../storage/server.ts";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
+import type { WebhookCommandName, WebhookCommandSecret } from "../../index.ts";
 import { webhookRetryDelaySeconds, webhookRetryFactor, webhookTimeoutSeconds } from "../../../config/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
@@ -16,7 +21,7 @@ type Calling = Pick<Call, "stored" | "data">;
 
 type Placed = Pick<Call, "channel" | "threadId">;
 
-type CallParts = Omit<NewCommandCall, "message">;
+type CallParts = Omit<NewWebhookCommandCall, "message">;
 
 type DeliveriesNeeds = Secrets | Storage | Layer.Services<typeof messagesLayer>;
 
@@ -58,7 +63,7 @@ const SIGNATURE_HEADER = "cookout-signature";
 const RETRIES = 5;
 const NONE = 0;
 const ONE = 1;
-const COMMAND_TOKEN_LIFETIME: Duration.Input = "24 hours";
+const WEBHOOK_COMMAND_TOKEN_LIFETIME: Duration.Input = "24 hours";
 const toJson = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown));
 
 class Deliveries extends Context.Service<Deliveries, DeliveriesService>()(
@@ -91,11 +96,11 @@ function record({ attempts, callId, delaySeconds, outcome }: Settled): Effect.Ef
 }
 
 function currentSecret(
-  name: CommandName,
-): Effect.Effect<CommandSecret, StorageUnavailable | Cause.NoSuchElementError, Storage> {
+  name: WebhookCommandName,
+): Effect.Effect<WebhookCommandSecret, StorageUnavailable | Cause.NoSuchElementError, Storage> {
   return Effect.gen(function* findSecret() {
     const storage = yield* Storage;
-    const { secret } = yield* Effect.flatMap(storage.findCommand(name), Effect.fromNullishOr);
+    const { secret } = yield* Effect.flatMap(storage.findWebhookCommand(name), Effect.fromNullishOr);
     return secret;
   });
 }
@@ -198,14 +203,14 @@ interface IssuedToken {
   readonly stored: CallParts["token"];
 }
 
-const newCommandToken = Effect.fnUntraced(function* issueCommandToken(
+const newWebhookCommandToken = Effect.fnUntraced(function* issueWebhookCommandToken(
   { stored }: Calling,
   calledAt: DateTime.Utc,
 ): Effect.fn.Return<IssuedToken, never, Secrets> {
   const secrets = yield* Secrets;
-  const token = yield* secrets.newCommandToken;
+  const token = yield* secrets.newWebhookCommandToken;
   const hash = yield* secrets.hashToken(token);
-  const expiresAt = isoTimeOf(DateTime.addDuration(calledAt, COMMAND_TOKEN_LIFETIME));
+  const expiresAt = isoTimeOf(DateTime.addDuration(calledAt, WEBHOOK_COMMAND_TOKEN_LIFETIME));
   return { stored: { expiresAt, handler: stored.command.handler, hash }, token };
 });
 
@@ -240,7 +245,7 @@ const callOf = Effect.fnUntraced(function* findCall(
   pending: StoredDelivery,
 ): Effect.fn.Return<Call, StorageUnavailable, Storage> {
   const storage = yield* Storage;
-  const found = yield* storage.findCommand(pending.command);
+  const found = yield* storage.findWebhookCommand(pending.command);
   const stored = yield* Effect.orDie(Effect.fromNullishOr(found));
   return { channel: pending.channel, data: pending.data, stored, threadId: pending.threadId };
 });
@@ -261,9 +266,9 @@ function deliveriesWith(
       return Effect.gen(function* resumeDelivery() {
         const call = yield* callOf(pending);
         const calledAt = yield* calledAtOf(call);
-        const { stored, token } = yield* newCommandToken(call, calledAt);
+        const { stored, token } = yield* newWebhookCommandToken(call, calledAt);
         const storage = yield* Storage;
-        yield* storage.addCommandToken({ ...stored, threadId: call.threadId });
+        yield* storage.addWebhookCommandToken({ ...stored, threadId: call.threadId });
         yield* sendInBackground({ call, progress: pending, token });
       });
     }
@@ -273,7 +278,7 @@ function deliveriesWith(
     ): Effect.Effect<Placed, Failure | StorageUnavailable> {
       return Effect.gen(function* postAndSend() {
         const now = yield* DateTime.now;
-        const { stored, token } = yield* newCommandToken(calling, now);
+        const { stored, token } = yield* newWebhookCommandToken(calling, now);
         const delivery = yield* newDelivery(calling);
         const placed = yield* post({ delivery, token: stored });
         yield* sendInBackground({ call: { ...calling, ...placed }, progress: delivery, token });

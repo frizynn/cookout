@@ -3,10 +3,10 @@ import type { ChannelName } from "../../../channels/index.ts";
 import { Effect } from "effect";
 import { Messages } from "../../../messages/server.ts";
 import { Storage } from "../../../storage/server.ts";
-import type { StoredCommand } from "../../../storage/server.ts";
+import type { StoredWebhookCommand } from "../../../storage/server.ts";
 
 interface Call {
-  readonly stored: StoredCommand;
+  readonly stored: StoredWebhookCommand;
   readonly data: JsonValue;
   readonly channel: ChannelName;
   readonly threadId: MessageId;

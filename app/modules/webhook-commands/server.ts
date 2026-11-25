@@ -26,67 +26,67 @@ import {
 } from "./lib/server/wire.ts";
 import { Caller, requireAdmin } from "../identities/server.ts";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import { addCommand, rotateCommandSecret } from "./lib/server/add.ts";
-import { commandCallsPath, commandSecretPath, commandsPath } from "./index.ts";
+import { addWebhookCommand, rotateWebhookCommandSecret } from "./lib/server/add.ts";
+import { webhookCommandCallsPath, webhookCommandSecretPath, webhookCommandsPath } from "./index.ts";
 import type { AddNeeds } from "./lib/server/add.ts";
 import type { CallNeeds } from "./lib/server/call.ts";
 import { Effect } from "effect";
 import type { Route } from "../http/server.ts";
 import { Storage } from "../storage/server.ts";
-import { callCommand } from "./lib/server/call.ts";
+import { callWebhookCommand } from "./lib/server/call.ts";
 
 const CREATED = 201;
 const ACCEPTED = 202;
 
 const addRoute: Route<Caller | AddNeeds> = {
   handle: () =>
-    Effect.gen(function* addCommandRoute() {
+    Effect.gen(function* addWebhookCommandRoute() {
       yield* requireAdmin;
       const caller = yield* Caller;
       const fields = yield* HttpServerRequest.schemaBodyJson(AddCommandRequestSchema, { errors: "all" });
-      const added = yield* addCommand({ fields, owner: caller.name });
+      const added = yield* addWebhookCommand({ fields, owner: caller.name });
       return yield* HttpServerResponse.schemaJson(CommandWithSecretResponseSchema)(added, { status: CREATED });
     }),
   method: "POST",
-  path: commandsPath,
+  path: webhookCommandsPath,
 };
 
 const rotateRoute: Route<Caller | AddNeeds> = {
   handle: (params) =>
     Effect.gen(function* rotateSecretRoute() {
       yield* requireAdmin;
-      const rotated = yield* rotateCommandSecret(String(params["name"]));
+      const rotated = yield* rotateWebhookCommandSecret(String(params["name"]));
       return yield* HttpServerResponse.schemaJson(CommandWithSecretResponseSchema)(rotated);
     }),
   method: "POST",
-  path: commandSecretPath,
+  path: webhookCommandSecretPath,
 };
 
 const listRoute: Route<Storage> = {
   handle: () =>
-    Effect.gen(function* listCommandsRoute() {
+    Effect.gen(function* listWebhookCommandsRoute() {
       const storage = yield* Storage;
-      const commands = yield* storage.listCommands;
+      const commands = yield* storage.listWebhookCommands;
       return yield* HttpServerResponse.schemaJson(ListCommandsResponseSchema)({ commands });
     }),
   method: "GET",
-  path: commandsPath,
+  path: webhookCommandsPath,
 };
 
 const callRoute: Route<Caller | CallNeeds> = {
   handle: (params) =>
-    Effect.gen(function* callCommandRoute() {
+    Effect.gen(function* callWebhookCommandRoute() {
       const fields = yield* HttpServerRequest.schemaBodyJson(CallCommandRequestSchema, { errors: "all" });
       const caller = yield* Caller;
-      const called = yield* callCommand({ ...fields, caller, name: String(params["name"]) });
+      const called = yield* callWebhookCommand({ ...fields, caller, name: String(params["name"]) });
       return yield* HttpServerResponse.schemaJson(CallCommandResponseSchema)(called, { status: ACCEPTED });
     }),
   method: "POST",
-  path: commandCallsPath,
+  path: webhookCommandCallsPath,
 };
 
 /** The command routes, for the server's route list. They need `Caller`, which `requireToken` provides. */
-export const commandRoutes: readonly Route<Caller | AddNeeds | CallNeeds>[] = [
+export const webhookCommandRoutes: readonly Route<Caller | AddNeeds | CallNeeds>[] = [
   addRoute,
   rotateRoute,
   listRoute,
@@ -94,7 +94,7 @@ export const commandRoutes: readonly Route<Caller | AddNeeds | CallNeeds>[] = [
 ];
 
 /** The response Schemas of the command routes, for the SDK's generated validators. */
-export const commandResponseSchemas = {
+export const webhookCommandResponseSchemas = {
   CallCommandResponse: CallCommandResponseSchema,
   CommandWithSecretResponse: CommandWithSecretResponseSchema,
   ListCommandsResponse: ListCommandsResponseSchema,
@@ -104,13 +104,13 @@ export const commandResponseSchemas = {
  * The background webhook delivery of each call, which the command routes need beyond storage. On start it resumes the
  * deliveries a stopped server left pending, with the same call IDs.
  */
-export { deliveriesLayer as commandsLayer } from "./lib/server/call.ts";
+export { deliveriesLayer as webhookCommandsLayer } from "./lib/server/call.ts";
 
 /**
  * The `CommandChanges` hub: registering a command and rotating its secret each publish the command, and the live
  * stream sends each on as a `command` event.
  */
-export { CommandChanges, commandChangesLayer } from "./lib/server/changes.ts";
+export { WebhookCommandChanges, webhookCommandChangesLayer } from "./lib/server/changes.ts";
 
 /** The Schema of a command as the server shows it, for the live stream's `command` event. */
-export { RegisteredCommandSchema } from "./lib/server/wire.ts";
+export { RegisteredWebhookCommandSchema } from "./lib/server/wire.ts";

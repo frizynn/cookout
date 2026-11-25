@@ -6,11 +6,11 @@ import {
   searchResponseSchemas,
 } from "../../app/modules/scheduled-messages/server.ts";
 import { channelResponseSchemas } from "../../app/modules/channels/server.ts";
-import { commandResponseSchemas } from "../../app/modules/webhook-commands/server.ts";
 import { eventResponseSchemas } from "../../app/modules/events/server.ts";
 import { httpResponseSchemas } from "../../app/modules/http/server.ts";
 import { inboxResponseSchemas } from "../../app/modules/inbox/server.ts";
 import { triggerResponseSchemas } from "../../app/modules/triggers/server.ts";
+import { webhookCommandResponseSchemas } from "../../app/modules/webhook-commands/server.ts";
 
 const responseSchemas = {
   "agent-sessions": agentSessionResponseSchemas,
@@ -25,7 +25,7 @@ const responseSchemas = {
   "scheduled-messages": scheduledMessageResponseSchemas,
   search: searchResponseSchemas,
   triggers: triggerResponseSchemas,
-  "webhook-commands": commandResponseSchemas,
+  "webhook-commands": webhookCommandResponseSchemas,
 };
 
 export { responseSchemas };

@@ -1,8 +1,8 @@
 import { Array as Arr, Effect, Option, String as Str } from "effect";
-import type { CallId, CommandSecret } from "../../../webhook-commands/index.ts";
+import type { CallId, WebhookCommandSecret } from "../../../webhook-commands/index.ts";
 import type { Token, TokenHash } from "../../../identities/index.ts";
 import { createHash, createHmac, randomBytes, randomInt } from "node:crypto";
-import { isCallId, isCommandSecret } from "../../../webhook-commands/index.ts";
+import { isCallId, isWebhookCommandSecret } from "../../../webhook-commands/index.ts";
 import { token, tokenHash } from "../../../identities/index.ts";
 import type { AttachmentId } from "../../../attachments/index.ts";
 import { isAttachmentId } from "../../../attachments/index.ts";
@@ -12,11 +12,11 @@ interface LiveSecrets {
   readonly newCallId: Effect.Effect<CallId>;
   readonly newAttachmentId: Effect.Effect<AttachmentId>;
   readonly newUserCode: Effect.Effect<string>;
-  readonly newCommandSecret: Effect.Effect<CommandSecret>;
-  readonly newCommandToken: Effect.Effect<Token>;
+  readonly newWebhookCommandSecret: Effect.Effect<WebhookCommandSecret>;
+  readonly newWebhookCommandToken: Effect.Effect<Token>;
   readonly hashToken: (issued: Token) => Effect.Effect<TokenHash>;
   readonly newToken: Effect.Effect<Token>;
-  readonly signature: (secret: CommandSecret, body: string) => Effect.Effect<string>;
+  readonly signature: (secret: WebhookCommandSecret, body: string) => Effect.Effect<string>;
 }
 
 const TOKEN_BYTES = 32;
@@ -55,8 +55,8 @@ function newUserCode(): string {
   return `${userCodeGroup()}-${userCodeGroup()}`;
 }
 
-function asCommandSecret(value: string): CommandSecret {
-  return Option.getOrThrow(Option.liftPredicate(value, isCommandSecret));
+function asWebhookCommandSecret(value: string): WebhookCommandSecret {
+  return Option.getOrThrow(Option.liftPredicate(value, isWebhookCommandSecret));
 }
 
 const liveSecrets: LiveSecrets = {
@@ -64,10 +64,12 @@ const liveSecrets: LiveSecrets = {
   hashToken: (issued) => Effect.sync(() => tokenHash(sha256(issued))),
   newAttachmentId: Effect.sync(() => asAttachmentId(randomBytes(ATTACHMENT_ID_BYTES).toString("hex"))),
   newCallId: Effect.sync(() => asCallId(`call_${randomBytes(CALL_ID_BYTES).toString("base64url")}`)),
-  newCommandSecret: Effect.sync(() => asCommandSecret(`hmac_${randomBytes(SECRET_BYTES).toString("base64url")}`)),
-  newCommandToken: Effect.sync(newToken),
   newToken: Effect.sync(newToken),
   newUserCode: Effect.sync(newUserCode),
+  newWebhookCommandSecret: Effect.sync(() =>
+    asWebhookCommandSecret(`hmac_${randomBytes(SECRET_BYTES).toString("base64url")}`),
+  ),
+  newWebhookCommandToken: Effect.sync(newToken),
   signature: (secret, body) => Effect.sync(() => createHmac("sha256", secret).update(body).digest("hex")),
 };
 
