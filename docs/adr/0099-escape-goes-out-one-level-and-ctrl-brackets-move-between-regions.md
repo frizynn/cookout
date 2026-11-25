@@ -21,4 +21,4 @@
 - **A scope set that fires both in and off text fields** (for the prompt form): rejected for the plainer rule that Escape always does.
 - **Data attributes naming the regions**: rejected, as for scopes in ADR 0087; the landmarks the page already has name them.
 
-2026-11-25: the message box is no longer a region stop, and ← and → also move between the columns: see [ADR 0100](0100-arrow-keys-move-between-the-three-columns.md).
+Superseded in part on 2026-11-25 by [ADR 0100](0100-arrow-keys-move-between-the-three-columns.md): the message box is no longer a region stop, and ← and → also move between the columns (mattpocock/cookout#563).
