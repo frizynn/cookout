@@ -180,5 +180,5 @@ function lintConfigCheck(given: Range): Verdict {
   return { ok: false, report: refusal(range, found.value) };
 }
 
-export type { Loosening, Range };
+export type { Loosening };
 export { lintConfigCheck, listed, mergeBase, unapprovedLoosenings };
