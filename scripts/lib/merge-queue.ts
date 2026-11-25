@@ -284,5 +284,5 @@ function landThroughQueue({
   return enqueueAgain(options, { first, landing, pr });
 }
 
-export type { Landed, Landing, QueueOptions } from "./merge-queue-types.ts";
+export type { Landed, Landing } from "./merge-queue-types.ts";
 export { landThroughQueue, queueRequired };
