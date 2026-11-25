@@ -19,6 +19,7 @@ export function useRegionKeys(keymap: Keymap): void {
       keymap.bind({ actions: regions.actions, scope: "everywhere" }),
       keymap.bind({ actions: { intoMessageBox, toSidebar }, scope: "message" }),
       keymap.bind({ actions: { intoMessages }, scope: "channel row", within: sidebar }),
+      keymap.bind({ actions: { toSidebar }, scope: "inbox" }),
     ];
     return (): void => {
       document.removeEventListener("focusin", remember);
