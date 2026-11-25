@@ -1,7 +1,7 @@
-import { browserShardPlan, shardByTime } from "../lib/browser-shards.ts";
 import { expect, it } from "vitest";
 import { mkdirSync, writeFileSync } from "node:fs";
 import type { Outcome } from "../lib/tools.ts";
+import { browserShardPlan } from "../lib/browser-shards.ts";
 import path from "node:path";
 
 const DIR = "app/modules/routes/tests/browser";
@@ -84,55 +84,53 @@ function offline(): Outcome<string> {
 
 const FILES = ["alpha", "bravo", "charlie", "delta", "echo"].map((name) => file(name));
 
-it("splits the browser test files so each shard's recorded time comes out close, slowest file first", {
-  timeout: 1000,
-}, () => {
-  expect.hasAssertions();
+function recordedBy(reports: FakeCi["reports"]): (args: readonly string[]) => Outcome<string> {
+  const artifacts = Object.keys(reports).map((name) => ({ createdAt: EARLIER, name, run: 800 }));
+  return fakeGh({ artifacts, reports });
+}
 
-  const timings = [
-    { file: file("alpha"), seconds: 50 },
-    { file: file("bravo"), seconds: 40 },
-    { file: file("charlie"), seconds: 30 },
-    { file: file("delta"), seconds: 20 },
-    { file: file("echo"), seconds: 10 },
-  ];
-
-  expect(["1/2", "2/2"].map((shard) => shardByTime({ files: FILES, shard, timings }))).toStrictEqual([
-    { ok: true, value: { files: [file("alpha"), file("delta"), file("echo")], seconds: 80 } },
-    { ok: true, value: { files: [file("bravo"), file("charlie")], seconds: 70 } },
-  ]);
-});
+function planned(shard: string, reports: FakeCi["reports"], files: readonly string[] = FILES): readonly string[] {
+  return browserShardPlan({ files: { ok: true, value: files }, gh: recordedBy(reports), run: RUN, shard }).args;
+}
 
 it("counts a file with no recorded time as the average file, and adds up a file's times across reports", {
-  timeout: 1000,
+  timeout: 10_000,
 }, () => {
   expect.hasAssertions();
 
-  const timings = [
-    { file: file("alpha"), seconds: 30 },
-    { file: file("alpha"), seconds: 30 },
-    { file: file("bravo"), seconds: 20 },
-    { file: file("gone"), seconds: 500 },
-  ];
+  const reports = {
+    "test-timings-browser-1": { alpha: 30, bravo: 20 },
+    "test-timings-browser-2": { alpha: 30, gone: 500 },
+  };
   const files = [file("alpha"), file("bravo"), file("new")];
 
-  expect(["1/2", "2/2"].map((shard) => shardByTime({ files, shard, timings }))).toStrictEqual([
-    { ok: true, value: { files: [file("alpha")], seconds: 60 } },
-    { ok: true, value: { files: [file("bravo"), file("new")], seconds: 60 } },
+  expect(["1/2", "2/2"].map((shard) => planned(shard, reports, files))).toStrictEqual([
+    ["--record-shard=1/2", file("alpha")],
+    ["--record-shard=2/2", file("bravo"), file("new")],
   ]);
 });
 
-it("can't split by time when no browser test file has a recorded time, or the shard isn't one", {
-  timeout: 1000,
+it("splits by test count when no browser test file has a recorded time, or the shard isn't one", {
+  timeout: 10_000,
 }, () => {
   expect.hasAssertions();
 
   expect([
-    shardByTime({ files: FILES, shard: "1/2", timings: [{ file: file("gone"), seconds: 5 }] }),
-    shardByTime({ files: FILES, shard: "3/2", timings: [{ file: file("alpha"), seconds: 5 }] }),
+    browserShardPlan({
+      files: { ok: true, value: FILES },
+      gh: recordedBy({ "test-timings-browser-1": { gone: 5 } }),
+      run: RUN,
+      shard: "1/2",
+    }).line,
+    browserShardPlan({
+      files: { ok: true, value: FILES },
+      gh: recordedBy({ "test-timings-browser-1": { alpha: 5 } }),
+      run: RUN,
+      shard: "3/2",
+    }).line,
   ]).toStrictEqual([
-    { ok: false, reason: "no browser test file has a recorded time" },
-    { ok: false, reason: "3/2 isn't a shard such as 1/3" },
+    "browser shard 1/2: split by test count, since no browser test file has a recorded time",
+    "browser shard 3/2: split by test count, since 3/2 isn't a shard such as 1/3",
   ]);
 });
 

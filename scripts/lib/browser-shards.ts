@@ -270,5 +270,5 @@ function browserShardPlan(planning: Planning): Plan {
   };
 }
 
-export type { Plan, Split };
-export { browserShardPlan, shardByTime };
+export type { Plan };
+export { browserShardPlan };
