@@ -108,7 +108,13 @@
  * whoever is logged in so the terminal that started it finishes logging in. `createAgentJoinApprovals` does the same
  * for an agent join request: the agent it would join or create for the person viewing it, an idle expiry they may
  * lower, and whether to replace the agent's live session.
+ *
+ * `selectedStore({ subscribe, snapshot })` is an external store over one of the board store's subscriptions that reads
+ * it through a selector (`snapshot`, such as `() => commandList(store.snapshot())`): it calls its listeners only when the
+ * selector's answer is a different object, so a view reading one part of the board re-renders only when that part
+ * changes, not on every change anywhere on the board (#495).
  */
+export { type SelectedStore, selectedStore } from "./lib/selected.ts";
 export type {
   Board,
   BoardSnapshot,

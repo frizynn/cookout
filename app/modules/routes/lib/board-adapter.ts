@@ -21,6 +21,7 @@ import {
   deletedSchedules,
   messageBeforeOf,
   scheduleListOf,
+  selectedStore,
   subscribedChannels,
   threadOf,
 } from "../../board/index.ts";
@@ -78,14 +79,13 @@ function channelOf(store: BoardStore, name: ChannelName): ChannelMessages {
     showClosed: (run, count) => {
       pages.showClosed(name, { count, run });
     },
-    snapshot: () => select(store.snapshot()),
-    subscribe: pages.subscribeShowing(name),
+    ...selectedStore({ snapshot: () => select(store.snapshot()), subscribe: pages.subscribeShowing(name) }),
   };
 }
 
 function schedulesIn(store: BoardStore, channel: ChannelName): ChannelSchedules {
   const select = scheduleListOf(channel);
-  return { snapshot: () => select(store.snapshot()), subscribe: store.subscribeShowing("schedules") };
+  return selectedStore({ snapshot: () => select(store.snapshot()), subscribe: store.subscribeShowing("schedules") });
 }
 
 function threadIn(store: BoardStore, place: ThreadPlace): ThreadMessages {
@@ -99,14 +99,20 @@ function threadIn(store: BoardStore, place: ThreadPlace): ThreadMessages {
       threads.reply(place, { posted, text });
     },
     snapshot: () => select(store.snapshot()),
-    subscribe: threads.subscribeShowing(place, true),
-    subscribeWithoutAcking: threads.subscribeShowing(place, false),
+    subscribe: selectedStore({
+      snapshot: () => select(store.snapshot()),
+      subscribe: threads.subscribeShowing(place, true),
+    }).subscribe,
+    subscribeWithoutAcking: selectedStore({
+      snapshot: () => select(store.snapshot()),
+      subscribe: threads.subscribeShowing(place, false),
+    }).subscribe,
   };
 }
 
 function beforeIn(store: BoardStore, place: ThreadPlace): MessageBefore {
   const select = messageBeforeOf(place);
-  return { snapshot: () => select(store.snapshot()), subscribe: store.subscribeShowingBefore(place) };
+  return selectedStore({ snapshot: () => select(store.snapshot()), subscribe: store.subscribeShowingBefore(place) });
 }
 
 function createBoard(store: BoardStore): Board {
@@ -119,17 +125,18 @@ function createBoard(store: BoardStore): Board {
       close: store.calls.close,
       refusal: () => closingRefusal(store.snapshot()),
       reopen: store.calls.reopen,
-      subscribe: store.subscribe,
+      subscribe: selectedStore({ snapshot: () => closingRefusal(store.snapshot()), subscribe: store.subscribe })
+        .subscribe,
     },
-    commands: {
+    commands: selectedStore({
       snapshot: () => commandList(store.snapshot()),
       subscribe: store.subscribeShowing("commands"),
-    },
+    }),
     creation: createChannelCreation({ createChannel: store.calls.createChannel }),
     dismissNotice: store.dismissNotice,
     messageBefore: madeOnce(placeKey, (place: ThreadPlace) => beforeIn(store, place)),
     scheduleList: createScheduleList({ change: store.calls.changeScheduledMessage }),
-    scheduleMarks: { snapshot: () => deletedSchedules(store.snapshot()), subscribe: store.subscribe },
+    scheduleMarks: selectedStore({ snapshot: () => deletedSchedules(store.snapshot()), subscribe: store.subscribe }),
     schedules: madeOnce(String, (name: ChannelName) => schedulesIn(store, name)),
     scheduling: createScheduling({
       clock: browserClock,
@@ -139,12 +146,13 @@ function createBoard(store: BoardStore): Board {
       preview: store.calls.previewScheduledMessage,
       timeZone: browserTimeZone(),
     }),
-    snapshot: listBoardSnapshot(store),
-    subscribe: store.subscribeShowing("channels"),
+    ...selectedStore({ snapshot: listBoardSnapshot(store), subscribe: store.subscribeShowing("channels") }),
     subscriptions: {
       setSubscribed: store.calls.setSubscribed,
-      snapshot: () => subscribedChannels(store.snapshot()),
-      subscribe: store.subscribeShowing("subscriptions"),
+      ...selectedStore({
+        snapshot: () => subscribedChannels(store.snapshot()),
+        subscribe: store.subscribeShowing("subscriptions"),
+      }),
     },
     thread: (channel, id) => threads({ channel, id }),
   };

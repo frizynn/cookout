@@ -20,7 +20,16 @@ import type {
   OfflineAlertId,
   Refusal,
 } from "../../sdk/index.ts";
-import { alertsOf, earlierOf, inboxOf, joinRefusalsOf, nudgesOf, offersOf, quietAgentsOf } from "../../board/index.ts";
+import {
+  alertsOf,
+  earlierOf,
+  inboxOf,
+  joinRefusalsOf,
+  nudgesOf,
+  offersOf,
+  quietAgentsOf,
+  selectedStore,
+} from "../../board/index.ts";
 
 type Subscribe = (listener: () => void) => () => void;
 
@@ -94,24 +103,8 @@ interface InboxStores {
   readonly menu: MessageMenu;
 }
 
-function onChangeOf(subscribe: Subscribe, snapshot: () => unknown): Subscribe {
-  return (listener) => {
-    let last = snapshot();
-    return subscribe(() => {
-      const next = snapshot();
-      if (!Object.is(next, last)) {
-        last = next;
-        listener();
-      }
-    });
-  };
-}
-
 function shownBy<State>(board: InboxBoard, select: (state: BoardState) => State): Shown<State> {
-  function snapshot(): State {
-    return select(board.snapshot());
-  }
-  return { snapshot, subscribe: onChangeOf(board.subscribeShowing("inbox"), snapshot) };
+  return selectedStore({ snapshot: () => select(board.snapshot()), subscribe: board.subscribeShowing("inbox") });
 }
 
 function noticeStores(
@@ -154,9 +147,13 @@ function inboxStoresOf(board: InboxBoard): InboxStores {
     markChannel: {
       markChannelRead: calls.markChannelRead,
       refusal: markChannelRefusal,
-      subscribe: onChangeOf(subscribe, markChannelRefusal),
+      subscribe: selectedStore({ snapshot: markChannelRefusal, subscribe }).subscribe,
     },
-    menu: { markUnread: calls.markUnread, refusal: menuRefusal, subscribe: onChangeOf(subscribe, menuRefusal) },
+    menu: {
+      markUnread: calls.markUnread,
+      refusal: menuRefusal,
+      subscribe: selectedStore({ snapshot: menuRefusal, subscribe }).subscribe,
+    },
   };
 }
 
