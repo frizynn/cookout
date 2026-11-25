@@ -14,7 +14,7 @@ interface TriggerLastCallProps {
 }
 
 function answerOf(result: TriggerResult): string {
-  return answerTextOf(result) ?? "";
+  return answerTextOf({ answer: result, silent: "" });
 }
 
 function outcomeOf(result: TriggerResult): string {

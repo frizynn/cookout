@@ -1,10 +1,13 @@
 import type { TriggerFailure } from "../../sdk/index.ts";
 
-type Answer = Pick<TriggerFailure, "error" | "status">;
+interface Shown {
+  readonly answer: Pick<TriggerFailure, "error" | "status">;
+  readonly silent: string;
+}
 
-function answerTextOf({ error, status }: Answer): string | undefined {
+function answerTextOf({ answer: { error, status }, silent }: Shown): string {
   if (typeof status !== "number") {
-    return error;
+    return error ?? silent;
   }
   const code = `HTTP ${String(status)}`;
   if (typeof error === "string") {

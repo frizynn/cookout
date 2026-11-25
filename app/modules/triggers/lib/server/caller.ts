@@ -1,4 +1,4 @@
-import { Array as Arr, Context, Effect, Layer, Record, Schema } from "effect";
+import { Array as Arr, Context, Effect, Function as Fn, Layer, Record, Schema } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http";
 import type { TriggerHeader, TriggerToken } from "../../index.ts";
 import type { TriggerAnswer } from "./answer.ts";
@@ -26,7 +26,7 @@ const Envelope = Schema.Struct({ error: Schema.Struct({ message: Schema.String }
 function messageOf(response: HttpClientResponse.HttpClientResponse): Effect.Effect<string> {
   return HttpClientResponse.schemaBodyJson(Envelope)(response).pipe(
     Effect.matchEffect({ onFailure: () => response.text, onSuccess: ({ error }) => Effect.succeed(error.message) }),
-    Effect.orElseSucceed(() => NO_MESSAGE),
+    Effect.orElseSucceed(Fn.constant(NO_MESSAGE)),
   );
 }
 

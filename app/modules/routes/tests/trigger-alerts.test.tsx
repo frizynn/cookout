@@ -7,6 +7,7 @@ import type { CookoutClient } from "../../sdk/index.ts";
 import { webTestCookout } from "../../../../scripts/web-test-server.ts";
 
 const REFUSED_URL = "http://routines.example.com/fire";
+const CLOSED_URL = "http://127.0.0.1:1/fire";
 const TOKEN = "routine-secret";
 const UNREACHABLE = "Unreachable: HTTP 404, just now";
 const NOT_FOUND = "HTTP 404: No route for POST /v1/no-such-route.";
@@ -105,6 +106,19 @@ it("a failed call raises an inbox alert for the owner, which says why it failed 
   await called.owner.setTrigger(called.bot, { token: TOKEN, url: webTestCookout().receiverUrl });
 
   await expect(inPane().findByText(/Reached again/u)).resolves.toBeDefined();
+});
+
+it("an alert for a trigger URL that never answered says it couldn't be reached", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const called = await calledAgent("web-trigger-closed");
+  await called.owner.setTrigger(called.bot, { token: TOKEN, url: CLOSED_URL });
+  const failed = await called.mention();
+  await untilCalled(called, false);
+  fireEvent.click(inSidebar().getByRole("link", { name: /^Inbox/u }));
+  const alert = `@${called.bot} is unreachable: its trigger URL answered the trigger URL couldn't be reached to message ${String(failed)}`;
+
+  await expect(inPane().findByText(alert)).resolves.toBeDefined();
 });
 
 it("a trigger URL the server refuses shows the refusal in the form and keeps the URL", { timeout: 5000 }, async () => {

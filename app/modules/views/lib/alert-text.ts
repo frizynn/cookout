@@ -9,7 +9,7 @@ const TEXT = {
 } as const;
 
 function outcomeOf(failure: TriggerFailure): string {
-  return answerTextOf(failure) ?? "no answer";
+  return answerTextOf({ answer: failure, silent: "no answer" });
 }
 
 function alertTextOf(alert: OfflineAlert): string {
