@@ -19,6 +19,7 @@ interface IdentityActionsSnapshot {
   readonly messages: MessageCount;
   readonly sessions: readonly ListedAgentSession[] | null;
   readonly token: Token | null;
+  readonly tokenForgotten: boolean;
   readonly transferTo: string;
 }
 
@@ -54,6 +55,7 @@ const START: Held = {
   confirming: null,
   messages: "loading",
   token: null,
+  tokenForgotten: false,
   transferTo: "",
 };
 
@@ -85,13 +87,13 @@ type Publish = (next: Partial<Held>) => void;
 
 type Edits = Pick<IdentityActions, "editTransfer" | "forgetToken" | "showToken">;
 
-function editsOf(publish: Publish): Edits {
+function editsOf(publish: Publish, held: () => Held): Edits {
   return {
     editTransfer: (transferTo) => {
       publish({ transferTo });
     },
     forgetToken: () => {
-      publish({ token: null });
+      publish({ token: null, tokenForgotten: held().token !== null });
     },
     showToken: (token) => {
       publish({ token });
@@ -195,7 +197,7 @@ function createIdentityActions(options: IdentityActionsOptions): IdentityActions
   const sends = sendsFor(options, () => current.transferTo);
 
   function publish(next: Partial<Held>): void {
-    const changed = { ...current, ...next };
+    const changed = { ...current, tokenForgotten: false, ...next };
     if (sameSnapshot({ after: changed, before: current })) {
       return;
     }
@@ -217,7 +219,7 @@ function createIdentityActions(options: IdentityActionsOptions): IdentityActions
   const add = selectedStore({ snapshot, subscribe: joined(options.list.store.subscribe, listeners.add) }).subscribe;
 
   return {
-    ...editsOf(publish),
+    ...editsOf(publish, () => current),
     ask: asksOf(publish),
     cancel: cancelOf(publish, () => current),
     confirm: () => {

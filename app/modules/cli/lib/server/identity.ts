@@ -267,3 +267,5 @@ const keepCommand = Command.make("keep", { id: offerIdArgument }, ({ id }) =>
 );
 
 export { identityCommand, keepCommand };
+
+export { avatarCommand } from "./avatar.ts";

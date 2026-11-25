@@ -1,27 +1,43 @@
-import type { ActionMenuParts } from "./menu-parts.ts";
-import { CloseLink } from "./close-link.tsx";
+import type { CSSProperties, ReactNode } from "react";
 import { FileDrop } from "./file-drop.tsx";
 import type { FilesHandler } from "./drop-zone.tsx";
+import type { PanelAloneParts } from "./panel-alone-parts.ts";
 import { PanelEdge } from "./panel-edge.tsx";
 import type { PanelEdgeParts } from "./panel-edge-parts.ts";
-import { PanelTitle } from "./panel-title.tsx";
 import type { Parts } from "./parts.ts";
-import type { ReactNode } from "react";
+import { SidePanelHeader } from "./side-panel-header.tsx";
+import type { SidePanelHeaderParts } from "./side-panel-header.tsx";
 import { panelWidth } from "./panel-width.ts";
 
-interface SidePanelParts extends Parts {
-  readonly label: string;
-  readonly detail: string;
-  readonly closeHref: string;
-  readonly closeLabel: string;
+interface SidePanelParts extends Parts, SidePanelHeaderParts {
   readonly edge: PanelEdgeParts | null;
-  readonly menu?: ActionMenuParts | null;
   readonly onFiles?: FilesHandler | null;
 }
 
+interface SideLook {
+  readonly edge: PanelEdgeParts | null;
+  readonly width: string;
+  readonly style: CSSProperties;
+}
+
+const FILLING: SideLook = { edge: null, style: {}, width: "md:flex-1" };
+
+function sideLook(alone: PanelAloneParts | null, edge: PanelEdgeParts | null): SideLook {
+  const fitted = { edge, ...panelWidth({ edge, fixed: "md:w-md" }) };
+  if (alone === null) {
+    return fitted;
+  }
+  if (alone.alone) {
+    return FILLING;
+  }
+  return fitted;
+}
+
 export function SidePanel(parts: SidePanelParts): ReactNode {
-  const { edge } = parts;
-  const look = panelWidth({ edge, fixed: "md:w-md" });
+  const alone = parts.alone ?? null;
+  const look = sideLook(alone, parts.edge);
+  const { edge } = look;
+  const handleClose = parts.onClose;
   return (
     <aside
       aria-label={parts.label}
@@ -29,10 +45,15 @@ export function SidePanel(parts: SidePanelParts): ReactNode {
       style={look.style}
     >
       {edge !== null && <PanelEdge edge={edge} />}
-      <header className="flex h-14 shrink-0 items-center gap-2 border-b px-5">
-        <PanelTitle detail={parts.detail} label={parts.label} menu={parts.menu ?? null} />
-        <CloseLink href={parts.closeHref} label={parts.closeLabel} />
-      </header>
+      <SidePanelHeader
+        alone={alone}
+        closeHref={parts.closeHref}
+        closeLabel={parts.closeLabel}
+        detail={parts.detail}
+        label={parts.label}
+        menu={parts.menu}
+        onClose={handleClose}
+      />
       <FileDrop onFiles={parts.onFiles ?? null}>{parts.children}</FileDrop>
     </aside>
   );

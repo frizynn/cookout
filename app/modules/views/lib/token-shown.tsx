@@ -28,7 +28,9 @@ export function TokenShown(props: TokenShownProps): ReactNode {
       <TokenText label={TEXT.label} token={token} />
       <Muted>{TEXT.warning}</Muted>
       <ButtonRow>
-        <Button onClick={handleCopy}>{TEXT.copy}</Button>
+        <Button focused onClick={handleCopy}>
+          {TEXT.copy}
+        </Button>
         <Button onClick={handleDone}>{TEXT.done}</Button>
       </ButtonRow>
     </>

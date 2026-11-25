@@ -54,6 +54,7 @@ export function RoutePanes(props: RoutePanesProps): ReactNode {
       <ChannelPanes
         composer={stores.composer}
         key={route.channel}
+        keymap={stores.keymap}
         layout={stores.layout}
         me={props.me}
         route={route}

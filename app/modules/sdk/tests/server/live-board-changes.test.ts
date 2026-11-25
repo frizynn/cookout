@@ -36,7 +36,7 @@ function watchingAllChannels(client: CookoutClient): Effect.Effect<Feed, never, 
 }
 
 it.effect("registering a command and rotating its secret each send it as a command event", () =>
-  Effect.gen(function* commandArrives() {
+  Effect.gen(function* webhookCommandArrives() {
     const cookout = yield* TestCookout;
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
     const events = yield* watchingAllChannels(grace.client);

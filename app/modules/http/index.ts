@@ -8,11 +8,11 @@ import { messageErrorCodes, scheduledMessageErrorCodes } from "../scheduled-mess
 import type { IsoTime } from "../time/index.ts";
 import { agentSessionErrorCodes } from "../agent-sessions/index.ts";
 import { channelErrorCodes } from "../channels/index.ts";
-import { commandErrorCodes } from "../commands/index.ts";
 import { identityErrorCodes } from "../identities/index.ts";
 import { limitErrorCodes } from "../limits/index.ts";
 import { presenceErrorCodes } from "../presence/index.ts";
 import { searchErrorCodes } from "../search/index.ts";
+import { webhookCommandErrorCodes } from "../webhook-commands/index.ts";
 
 type Same<Left, Right> = [Left] extends [Right] ? ([Right] extends [Left] ? true : false) : false;
 type SameShape<Left, Right> = Same<Left, Right> extends true ? Same<keyof Left, keyof Right> : false;
@@ -59,7 +59,7 @@ export const errorCodes = [
   ...deactivationOfferErrorCodes,
   ...deactivatedQuietAgentErrorCodes,
   ...agentSessionErrorCodes,
-  ...commandErrorCodes,
+  ...webhookCommandErrorCodes,
   ...limitErrorCodes,
   ...presenceErrorCodes,
   ...searchErrorCodes,

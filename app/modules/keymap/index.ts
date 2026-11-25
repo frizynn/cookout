@@ -12,7 +12,8 @@
  * bound scopes that cover the focused element, most recently bound first, and
  * runs the first action whose chord matches and that says it acted, which
  * stops the browser's own handling. Off a text field every row fires. In a
- * text field only chords held with Ctrl, Cmd or Alt fire, and the rows of the
+ * text field only chords held with Ctrl, Cmd or Alt fire, Escape (which nothing
+ * types, so each press goes out one level from a box too), and the rows of the
  * text scopes (the search box and text box), which fire only there, so a
  * letter typed or dictated is always typed. `Mod` is Cmd on a Mac (⌘, `Meta`)
  * and Ctrl elsewhere (`Control`), and only that key matches it, so on a Mac
@@ -27,6 +28,9 @@
  * `openShortcutList` action (`?`, Ctrl/Cmd+/) itself, so no view binds it. While the list is open, the keymap
  * acts on no key, since the list is a modal dialog with its own keys. A scope's heading in the list is in
  * `GROUPS`, and the list shows the scopes outermost first.
+ * The keymap also holds the page's one announcement (`announce`, read as `announced` in its state): the text a
+ * key's action reads out, such as "Marked unread" or "Copied @ada", for the one polite live region to say. Its
+ * count moves on each announcement, so the same text said twice is read out twice.
  */
 import type { Action, ActionOf, Key, Scope } from "./lib/keys.ts";
 import { KEYS, SCOPES, TEXT_SCOPES } from "./lib/keys.ts";
@@ -76,6 +80,7 @@ interface Pressing {
 const MAC = /^(?:Mac|iPhone|iPad|iPod)/u;
 const TEXT_FIELDS: ReadonlySet<string> = new Set(["INPUT", "SELECT", "TEXTAREA"]);
 const KEY_SEPARATOR = " ";
+const NEVER_TYPED = "Escape";
 const LABEL_SEPARATOR = " or ";
 
 function platformOf(platform: string): Platform {
@@ -93,7 +98,8 @@ function fires(key: Key, inTextField: boolean): boolean {
   if (TEXT_SCOPES.has(key.scope)) {
     return inTextField;
   }
-  return !inTextField || isModified(chordOf(key.chord));
+  const chord = chordOf(key.chord);
+  return !inTextField || isModified(chord) || chord.key === NEVER_TYPED;
 }
 
 function covers(bound: Bound, target: EventTarget | null): boolean {

@@ -120,6 +120,7 @@ function useInboxKeys(keys: InboxKeys): void {
         backToRows: back(selected),
         markRowRead: press({ conversation, keymap, selected }, "markRowRead"),
         markRowUnread: press({ conversation, keymap, selected }, "markRowUnread"),
+        markSelectedRowRead: press({ conversation, keymap, selected }, "markRowRead"),
         nextRow: select("next"),
         openRow: press({ conversation, keymap, selected }, "openRow"),
         previousRow: select("previous"),

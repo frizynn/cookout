@@ -1,4 +1,4 @@
-import { IdentityDeletedNotice, MessageListKeys, ReconnectingView, SearchBox } from "../../views/index.tsx";
+import { IdentityDeletedNotice, MessageListKeys, ReconnectingView, RegionKeys, SearchBox } from "../../views/index.tsx";
 import { WorkspaceColumn, WorkspaceMain } from "../../design-system/layout.tsx";
 import type { IdentityName } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
@@ -18,6 +18,7 @@ export function WorkspaceBody(props: WorkspaceBodyProps): ReactNode {
   return (
     <WorkspaceColumn>
       <MessageListKeys keymap={stores.keymap} />
+      <RegionKeys keymap={stores.keymap} />
       <SearchBox identities={stores.composer.identities} keymap={stores.keymap} search={stores.search} />
       <ReconnectingView />
       <IdentityDeletedNotice identities={stores.composer.identities} />
