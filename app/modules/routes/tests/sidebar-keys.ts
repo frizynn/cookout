@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import type { CookoutClient } from "../../sdk/index.ts";
 import { expect } from "vitest";
+import { holdsCallsOpen } from "../../testing/web.ts";
 import { inSidebar } from "./regions.ts";
 import { subscribedReader } from "./inbox-reader.ts";
 
@@ -106,6 +107,7 @@ async function forever<Value>(): Promise<Value> {
 }
 
 function loadingSubscriptions(reader: Readonly<CookoutClient>): CookoutClient {
+  holdsCallsOpen("listSubscribedChannels");
   return { ...reader, listSubscribedChannels: forever };
 }
 
