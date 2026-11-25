@@ -94,8 +94,24 @@ interface InboxStores {
   readonly menu: MessageMenu;
 }
 
+function onChangeOf(subscribe: Subscribe, snapshot: () => unknown): Subscribe {
+  return (listener) => {
+    let last = snapshot();
+    return subscribe(() => {
+      const next = snapshot();
+      if (!Object.is(next, last)) {
+        last = next;
+        listener();
+      }
+    });
+  };
+}
+
 function shownBy<State>(board: InboxBoard, select: (state: BoardState) => State): Shown<State> {
-  return { snapshot: () => select(board.snapshot()), subscribe: board.subscribeShowing("inbox") };
+  function snapshot(): State {
+    return select(board.snapshot());
+  }
+  return { snapshot, subscribe: onChangeOf(board.subscribeShowing("inbox"), snapshot) };
 }
 
 function noticeStores(
@@ -123,7 +139,13 @@ function noticeStores(
 
 function inboxStoresOf(board: InboxBoard): InboxStores {
   const calls = board.inboxCalls;
-  const { subscribe } = shownBy(board, inboxOf);
+  const subscribe = board.subscribeShowing("inbox");
+  function markChannelRefusal(): MarkChannelRefusal | null {
+    return board.snapshot().inboxCalls.markChannel;
+  }
+  function menuRefusal(): Refusal | null {
+    return board.snapshot().inboxCalls.menu;
+  }
   return {
     ...noticeStores(board),
     agentJoinRequests: { ...shownBy(board, joinRefusalsOf), approve: calls.approve },
@@ -131,10 +153,10 @@ function inboxStoresOf(board: InboxBoard): InboxStores {
     inbox: shownBy(board, inboxOf),
     markChannel: {
       markChannelRead: calls.markChannelRead,
-      refusal: () => board.snapshot().inboxCalls.markChannel,
-      subscribe,
+      refusal: markChannelRefusal,
+      subscribe: onChangeOf(subscribe, markChannelRefusal),
     },
-    menu: { markUnread: calls.markUnread, refusal: () => board.snapshot().inboxCalls.menu, subscribe },
+    menu: { markUnread: calls.markUnread, refusal: menuRefusal, subscribe: onChangeOf(subscribe, menuRefusal) },
   };
 }
 
