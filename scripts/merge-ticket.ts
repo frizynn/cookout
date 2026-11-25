@@ -123,8 +123,8 @@ const FAST_CHECKS = ["typecheck", "lint --base=origin/v1", "hygiene"]
   .map((script) => `pnpm run --silent ${script}`)
   .join(" && ");
 
-function ciOf(branch: string, sha: string, rerunRed: boolean): Step {
-  return waitForCi({ args: ["--branch", branch, "--commit", sha], base: [], log, rerunRed, subject: branch });
+function ciOf(branch: string, sha: string): Step {
+  return waitForCi({ args: ["--branch", branch, "--commit", sha], base: [], log, rerunRed: true, subject: branch });
 }
 
 function failedStepOf(files: readonly string[]): string {
