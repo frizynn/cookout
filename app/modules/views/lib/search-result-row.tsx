@@ -1,4 +1,5 @@
 import { FeedText } from "../../design-system/feed.tsx";
+import { MessageAttachments } from "./message-attachments.tsx";
 import type { ParsedQuery } from "../../search/index.ts";
 import type { ReactNode } from "react";
 import { ResultOption } from "../../design-system/controls.tsx";
@@ -31,6 +32,7 @@ export function SearchResultRow(props: SearchResultRowProps): ReactNode {
       <FeedText unread>
         <SearchText query={props.query} text={message.text} />
       </FeedText>
+      <MessageAttachments linked={false} message={message} />
     </ResultOption>
   );
 }

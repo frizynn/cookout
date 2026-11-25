@@ -8,7 +8,9 @@
  * `handLive()` is a `LiveAdapter` a test feeds by hand: `send(event)` sends an
  * event on every stream it opened, and `report(link)` reports the link down or
  * up, as the routes tests' `cuttable` does, for the board store's tests.
+ * `hillsPng()` is a real 480 by 320 PNG, for a test that shows an image attachment.
  */
 export { watchAdapter } from "./lib/watch.ts";
 export { type HandFocus, handFocus } from "./lib/page-focus.ts";
 export { type HandLive, handLive } from "./lib/hand-live.ts";
+export { hillsPng } from "./lib/hills.ts";
