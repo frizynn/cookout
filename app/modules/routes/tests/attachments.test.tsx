@@ -9,6 +9,9 @@ import { postedWithFiles } from "./attachment-posts.ts";
 import { subscribedReader } from "./inbox-reader.ts";
 
 const NOTES_LENGTH = 1536;
+const LOG_LENGTH = 12_000;
+const DUMP_LENGTH = 1_200_000;
+const PNG_CUT_BEFORE_ITS_SIZE = "89504e470d0a1a0a0000000d494844520000";
 const LOGO: NewAttachment = {
   bytes: new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'),
   name: "logo.svg",
@@ -212,6 +215,56 @@ it("a search result shows its message's image and the names of its other files",
     [`hills.png ${assetOf(message, "hills.png")}`],
     [],
     "logo.svg71 Bnotes.txt1.5 KB",
+  ]);
+
+  close();
+});
+
+it("a file's size reads in kilobytes or megabytes once it is that big", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  await adminClient().createChannel({ name: "web-attachments-sizes" });
+  const message = await postedWithFiles({
+    attachments: [
+      { bytes: new TextEncoder().encode("x".repeat(LOG_LENGTH)), name: "log.txt" },
+      { bytes: new Uint8Array(DUMP_LENGTH), name: "dump.bin" },
+    ],
+    channel: "web-attachments-sizes",
+    client: adminClient(),
+    text: "Logs",
+  });
+  const close = openWithClockStopped({ client: adminClient(), hash: "#/channels/web-attachments-sizes" });
+  await inPane().findByRole("list", { name: "Attachments" });
+
+  expect(chipsIn(inPane())).toStrictEqual([
+    `log.txt12 KB ${assetOf(message, "log.txt")} log.txt`,
+    `dump.bin1.2 MB ${assetOf(message, "dump.bin")} dump.bin`,
+  ]);
+
+  close();
+});
+
+it("an image whose size can't be read takes the whole thumbnail box, and opens at its own size", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  await adminClient().createChannel({ name: "web-attachments-unsized" });
+  await postedWithFiles({
+    attachments: [{ bytes: Uint8Array.from(Buffer.from(PNG_CUT_BEFORE_ITS_SIZE, "hex")), name: "cut.png" }],
+    channel: "web-attachments-unsized",
+    client: adminClient(),
+    text: "Cut",
+  });
+  const close = openWithClockStopped({ client: adminClient(), hash: "#/channels/web-attachments-unsized" });
+  const thumbnail = await inPane().findByRole("img", { name: "cut.png" });
+  fireEvent.click(inPane().getByRole("button", { name: "cut.png" }));
+  const full = within(await screen.findByRole("dialog", { name: "cut.png" })).getByRole("img", { name: "cut.png" });
+
+  expect([thumbnail.style.width, thumbnail.style.height, full.hasAttribute("width")]).toStrictEqual([
+    "300px",
+    "200px",
+    false,
   ]);
 
   close();

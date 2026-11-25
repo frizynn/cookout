@@ -8,6 +8,8 @@ const PNG_WIDTH = 640;
 const PNG_HEIGHT = 480;
 const JPEG_WIDTH = 1024;
 const JPEG_HEIGHT = 768;
+const RESTARTED_WIDTH = 32;
+const RESTARTED_HEIGHT = 16;
 const GIF_WIDTH = 32;
 const GIF_HEIGHT = 16;
 const LOSSY_WIDTH = 300;
@@ -21,6 +23,9 @@ const PNG = "89504e470d0a1a0a0000000d4948445200000280000001e00806000000";
 const PNG_CUT_BEFORE_ITS_SIZE = "89504e470d0a1a0a0000000d494844520000";
 const JPEG = "ffd8ffe000104a46494600010100000100010000ffffc20011080300040003012200021101031101ffd9";
 const JPEG_WITH_NO_FRAME = "ffd8ffe000104a46494600010100000100010000ffda0008010100003f00ffd9";
+const JPEG_WITH_A_RESTART_MARKER = "ffd8ffd0ffc0001108001000200301220002110103110100ffd9";
+const JPEG_CUT_INSIDE_A_SEGMENT = "ffd8ffe000";
+const JPEG_WITH_NO_MARKER_WHERE_ONE_BELONGS = "ffd8ffe0000400000000";
 const GIF = "47494638396120001000000000";
 const LOSSY_WEBP = "524946461800000057454250565038200c0000000000009d012a2c01c8000000";
 const LOSSLESS_WEBP = "5249464612000000574542505650384c060000002f0400020000";
@@ -56,6 +61,13 @@ function postedOne(cookout: TestCookoutService, name: string, hex: string): Effe
 it.effect.each([
   ["a PNG", "shot.png", PNG, PNG_WIDTH, PNG_HEIGHT],
   ["a JPEG", "photo.jpg", JPEG, JPEG_WIDTH, JPEG_HEIGHT],
+  [
+    "a JPEG with a restart marker before its frame",
+    "restart.jpg",
+    JPEG_WITH_A_RESTART_MARKER,
+    RESTARTED_WIDTH,
+    RESTARTED_HEIGHT,
+  ],
   ["a GIF", "clip.gif", GIF, GIF_WIDTH, GIF_HEIGHT],
   ["a lossy WebP", "shot.webp", LOSSY_WEBP, LOSSY_WIDTH, LOSSY_HEIGHT],
   ["a lossless WebP", "icon.webp", LOSSLESS_WEBP, LOSSLESS_WIDTH, LOSSLESS_HEIGHT],
@@ -74,6 +86,8 @@ it.effect.each([
   ["a text file", "notes.txt", TEXT, false],
   ["a PNG cut off before its size", "cut.png", PNG_CUT_BEFORE_ITS_SIZE, true],
   ["a JPEG with no frame before its scan", "odd.jpg", JPEG_WITH_NO_FRAME, true],
+  ["a JPEG cut off inside a segment", "short.jpg", JPEG_CUT_INSIDE_A_SEGMENT, true],
+  ["a JPEG with no marker where one belongs", "broken.jpg", JPEG_WITH_NO_MARKER_WHERE_ONE_BELONGS, true],
 ] as const)("%s reports neither width nor height", ([, name, hex, image]) =>
   Effect.gen(function* noSize() {
     const cookout = yield* TestCookout;
