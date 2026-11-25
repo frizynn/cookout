@@ -1,4 +1,4 @@
-import { Effect, String as Str } from "effect";
+import { Array as Arr, Effect, String as Str } from "effect";
 import type { Storage, StorageUnavailable } from "../../server.ts";
 import { expect, it } from "@effect/vitest";
 import {
@@ -77,6 +77,27 @@ it.effect.each(storageLayers)(
 
       expect(replaced).toStrictEqual({ agent: TRIAGE, token: SECOND_TOKEN, url: OTHER_URL });
       expect([cleared, after]).toStrictEqual([[true, false], []]);
+    }),
+);
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): a skipped call keeps why it was skipped, and a later answered one replaces it",
+  ({ layer }) =>
+    Effect.gen(function* skippedKept() {
+      const { storage } = yield* openStore(layer);
+      yield* boardOf(storage);
+      yield* storage.setTrigger(TRIAGE, { token: FIRST_TOKEN, url: ROUTINE_URL });
+      yield* storage.recordTriggerResult(TRIAGE, { at: FAILED_AT, ok: true, skipped: "agent_session_live" });
+      const skipped = yield* storage.listTriggers([TRIAGE]);
+      yield* storage.recordTriggerResult(TRIAGE, { at: CLEARED_AT, ok: true, status: OK });
+      const answered = yield* storage.listTriggers([TRIAGE]);
+
+      const lastResults = Arr.map([...skipped, ...answered], ({ lastResult }) => lastResult);
+
+      expect(lastResults).toStrictEqual([
+        { at: FAILED_AT, ok: true, skipped: "agent_session_live" },
+        { at: CLEARED_AT, ok: true, status: OK },
+      ]);
     }),
 );
 

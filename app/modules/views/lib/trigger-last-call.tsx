@@ -5,6 +5,7 @@ import { useTimeAgo } from "./use-time-ago.ts";
 
 const TEXT = {
   failed: "Last call failed: ",
+  skippedLive: "Last mention called nothing: the agent was joined",
   succeeded: "Last call answered ",
 } as const;
 
@@ -20,6 +21,9 @@ function answerOf({ error, status }: TriggerResult): string {
 }
 
 function outcomeOf(result: TriggerResult): string {
+  if (result.skipped === "agent_session_live") {
+    return TEXT.skippedLive;
+  }
   if (result.ok) {
     return `${TEXT.succeeded}${answerOf(result)}`;
   }

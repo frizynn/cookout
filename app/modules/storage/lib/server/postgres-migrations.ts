@@ -5,6 +5,7 @@ import {
   POSTGRES_SEARCH_MIGRATION,
   POSTGRES_TRIGGERS_MIGRATION,
   POSTGRES_TRIGGER_HEADERS_MIGRATION,
+  POSTGRES_TRIGGER_SKIPPED_MIGRATION,
 } from "./feature-migrations.ts";
 import { POSTGRES_SCHEDULED_MESSAGES_MIGRATION } from "./scheduled-messages-sqlite.ts";
 import type { PostgresDatabase } from "./adapters/postgres.ts";
@@ -249,6 +250,7 @@ const postgresMigrations: readonly (readonly string[])[] = [
     'ALTER TABLE agent_join_requests ADD COLUMN session_url text COLLATE "C"',
   ],
   ['ALTER TABLE identities ADD COLUMN avatar text COLLATE "C"'],
+  POSTGRES_TRIGGER_SKIPPED_MIGRATION,
 ];
 
 const NEXT_VERSION = 1;
