@@ -1,5 +1,6 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { createInterface } from "node:readline";
+import { inject } from "vitest";
 import { once } from "node:events";
 import os from "node:os";
 import path from "node:path";
@@ -13,7 +14,6 @@ interface WebTestCookout {
 
 interface RunningWebTestCookout {
   readonly url: string;
-  readonly receiverUrl: string;
   readonly stop: () => Promise<void>;
 }
 
@@ -21,8 +21,6 @@ interface Started {
   readonly stop: () => Promise<void>;
   readonly value: string;
 }
-
-const RECEIVER_URL = "cookoutWebTestReceiverUrl";
 
 const adminToken = "web-test-admin-token-0123456789abcdef0123456789";
 
@@ -59,9 +57,13 @@ async function startPrinting(args: readonly string[], field: string): Promise<St
   };
 }
 
+export async function startFakeRoutine(): Promise<Started> {
+  const routine = await startPrinting([process.execPath, "app/dev.ts", "fake-routine"], "fireUrl");
+  return routine;
+}
+
 export async function startWebTestCookout(): Promise<RunningWebTestCookout> {
   const folder = mkdtempSync(path.join(os.tmpdir(), "cookout-web-test-"));
-  const routine = await startPrinting([process.execPath, "app/dev.ts", "fake-routine"], "fireUrl");
   const server = await startPrinting(
     [
       `COOKOUT_ADMIN_TOKEN=${adminToken}`,
@@ -81,9 +83,8 @@ export async function startWebTestCookout(): Promise<RunningWebTestCookout> {
     "listening",
   );
   return {
-    receiverUrl: routine.value,
     stop: async () => {
-      await Promise.all([server.stop(), routine.stop()]);
+      await server.stop();
       rmSync(folder, { force: true, recursive: true });
     },
     url: server.value,
@@ -91,7 +92,5 @@ export async function startWebTestCookout(): Promise<RunningWebTestCookout> {
 }
 
 export function webTestCookout(): WebTestCookout {
-  return { adminToken, receiverUrl: String(Reflect.get(globalThis, RECEIVER_URL)), url: globalThis.location.origin };
+  return { adminToken, receiverUrl: inject("webReceiverUrl"), url: globalThis.location.origin };
 }
-
-export { RECEIVER_URL };

@@ -27,6 +27,7 @@ const REACHES_EVERYTHING_FILES = new Set([
   "scripts/postgres-test-container.ts",
   "scripts/s3-test-container.ts",
   "scripts/web-test-environment.ts",
+  "scripts/web-test-routine.ts",
   "scripts/web-test-server.ts",
 ]);
 const REACHES_EVERYTHING_DIRECTORIES = ["app/modules/testing/"];
