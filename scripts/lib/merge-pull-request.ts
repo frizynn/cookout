@@ -83,5 +83,5 @@ function pullRequestOf({
   return open;
 }
 
-export type { Landed, Landing, PullRequest, PullRequestOptions };
+export type { Landed, Landing, PullRequest };
 export { pullRequestOf };
