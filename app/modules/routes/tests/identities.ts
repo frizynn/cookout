@@ -1,4 +1,5 @@
 import type { CookoutClient, CreateIdentityRequest, Token } from "../../sdk/index.ts";
+import type { ClientMethod } from "./answering.ts";
 import type { Session } from "../../board/index.ts";
 import { createBoardStore } from "../../board/index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
@@ -9,10 +10,6 @@ import { webTestCookout } from "../../../../scripts/web-test-server.ts";
 
 const NONE = 0;
 const ONE = 1;
-
-type ClientMethod = {
-  readonly [Key in keyof CookoutClient]: CookoutClient[Key] extends (...args: never) => unknown ? Key : never;
-}[keyof CookoutClient];
 
 interface Tracked {
   readonly client: CookoutClient;
