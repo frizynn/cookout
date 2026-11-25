@@ -4,6 +4,7 @@ import type { Page } from "@playwright/test";
 import { inPane } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
 import { pressedPrevented } from "./prevented.ts";
+import { unique } from "./names.ts";
 
 const RESULTS = { name: "Search results" } as const;
 const BOX = { name: "Search" } as const;
@@ -60,7 +61,7 @@ async function selectedInInbox(page: Page, channel: string): Promise<string> {
 test("ctrl+K focuses the search box from a message box, with the browser's own shortcut prevented", async ({
   page,
 }) => {
-  const channel = "browser-search-ctrl";
+  const channel = unique("browser-search-ctrl");
   const opened = await openedOn(page, channel);
   await page.goto(`/#/channels/${channel}/threads/${String(opened.thread)}`);
   await page.getByRole("textbox", { exact: true, name: "Reply" }).click();
@@ -71,7 +72,7 @@ test("ctrl+K focuses the search box from a message box, with the browser's own s
 });
 
 test("Inbox keys typed in the search box change nothing in the Inbox", async ({ page }) => {
-  const selected = await selectedInInbox(page, "browser-search-letters");
+  const selected = await selectedInInbox(page, unique("browser-search-letters"));
   await searched(page, "jkeu");
 
   await expect(page.getByRole("combobox", BOX)).toHaveValue("jkeu");
@@ -81,7 +82,7 @@ test("Inbox keys typed in the search box change nothing in the Inbox", async ({ 
 });
 
 test("Escape closes the list, gives focus back, and the Inbox's selected row stays selected", async ({ page }) => {
-  const channel = "browser-search-escape";
+  const channel = unique("browser-search-escape");
   const selected = await selectedInInbox(page, channel);
   await searched(page, `pangolinkey ${channel}`);
 
@@ -96,7 +97,7 @@ test("Escape closes the list, gives focus back, and the Inbox's selected row sta
 });
 
 test("Down, Up and Enter open the highlighted result", async ({ page }) => {
-  const channel = "browser-search-arrows";
+  const channel = unique("browser-search-arrows");
   const opened = await openedOn(page, channel);
   await page.goto("/#/inbox");
   await searched(page, `pangolinkey ${channel}`);
