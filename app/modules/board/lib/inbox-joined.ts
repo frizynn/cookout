@@ -52,30 +52,18 @@ function joinedOf(entry: InboxEntry, message: Message, parent: TopLevelMessage):
   return item;
 }
 
-function topLevelIn(table: Table, id: MessageId): TopLevelMessage | null {
-  const message = table.get(id) ?? null;
-  if (message === null) {
-    return null;
-  }
-  if (message.kind !== "top-level") {
-    return null;
-  }
-  return message;
+function heldIn(table: Table, id: MessageId): readonly Message[] {
+  return [table.get(id) ?? []].flat();
 }
 
-function itemOf(entry: InboxEntry, table: Table): InboxItem | null {
-  const message = table.get(entry.message) ?? null;
-  const parent = topLevelIn(table, entry.parent);
-  if (message === null || parent === null) {
-    return null;
-  }
-  return joinedOf(entry, message, parent);
+function itemsOf(entry: InboxEntry, table: Table): readonly InboxItem[] {
+  const parents = heldIn(table, entry.parent).filter((parent) => parent.kind === "top-level");
+  return heldIn(table, entry.message).flatMap((message) => parents.map((parent) => joinedOf(entry, message, parent)));
 }
 
 const itemsIn = keptOn((held: ReadonlyMap<MessageId, InboxEntry>, table: Table): readonly InboxItem[] =>
   [...held.values()]
-    .map((entry) => itemOf(entry, table))
-    .filter((item) => item !== null)
+    .flatMap((entry) => itemsOf(entry, table))
     .toSorted((first, second) => second.message.id - first.message.id),
 );
 

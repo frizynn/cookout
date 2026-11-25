@@ -134,3 +134,17 @@ it("the New line follows the read position fed to the store, and moves above eve
 
   expect({ movedBack, read, unread }).toStrictEqual({ movedBack: NOTHING_READ, read: parent.id, unread: null });
 });
+
+it("a channel's threads with news and its New line are null until the Inbox loads", { timeout: 10_000 }, async () => {
+  expect.hasAssertions();
+
+  const { channel } = await adminClient().createChannel({ name: "web-inbox-unloaded" });
+  const store = createBoardStore({
+    client: adminClient(),
+    live: createLive(handLive().adapter),
+    url: webTestCookout().url,
+  });
+  const place = { channel: channel.name, state: store.snapshot() };
+
+  expect([inboxThreadsWithNews(place), inboxNewLine({ ...place, thread: null })]).toStrictEqual([null, null]);
+});
