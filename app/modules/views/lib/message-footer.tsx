@@ -1,11 +1,11 @@
 import type { ChannelMessagesState, Outgoing, Scheduling } from "../../board/index.ts";
+import type { ComponentProps, ReactNode } from "react";
 import { useCallback, useSyncExternalStore } from "react";
 import type { ChannelName } from "../../sdk/index.ts";
 import { CommandPrompt } from "./command-prompt.tsx";
 import { CommandsRefusal } from "./commands-refusal.tsx";
 import type { Draft } from "../../composer/index.ts";
 import { MessageBox } from "./message-box.tsx";
-import type { ReactNode } from "react";
 import { ScheduleConfirmation } from "./schedule-confirmation.tsx";
 import { ScheduleDialog } from "./schedule-dialog.tsx";
 import { useBoardStore } from "./use-board.ts";
@@ -20,6 +20,7 @@ interface MessageFooterProps {
   readonly channel: ChannelName;
   readonly scheduling: Scheduling;
   readonly draft: Draft;
+  readonly keymap: ComponentProps<typeof CommandPrompt>["keymap"];
   readonly state: ChannelMessagesState;
 }
 
@@ -60,6 +61,7 @@ export function MessageFooter(props: MessageFooterProps): ReactNode {
           channel={channel}
           command={command}
           draft={draft}
+          keymap={props.keymap}
           onBack={handleBack}
         />
       )}
