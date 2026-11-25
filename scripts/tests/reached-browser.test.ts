@@ -50,6 +50,16 @@ function offline(): Outcome<string> {
   return { ok: false, reason: "gh api failed: offline" };
 }
 
+function unrecorded(args: readonly string[]): Outcome<string> {
+  const [, target = ""] = args;
+  if (target.endsWith(`/runs/${RUN}`)) {
+    return { ok: true, value: JSON.stringify({ created_at: "2026-11-25T10:00:00Z" }) };
+  }
+  return { ok: true, value: JSON.stringify({ artifacts: [] }) };
+}
+
+const UNRECORDED = "since no Check run recorded browser timings before run 900";
+
 function planOf(shard: string, run: readonly string[], gh: typeof recorded): readonly [readonly string[], string] {
   const cwd = mkdtempSync(path.join(tmpdir(), "reached-browser-"));
   const tests = { all: false, run, skipped: [] } as const;
@@ -79,12 +89,29 @@ it("a pull request's shard falls back to every third reached file when no run re
   const missing = path.join(tmpdir(), "reached-browser-missing");
 
   expect([
-    planOf("1/3", FILES, offline),
-    reachedShard({ cwd: missing, gh: offline, run: RUN, shard: "2/3", tests: { all: true, reason: "x" } }).args,
+    planOf("1/3", FILES, unrecorded),
+    reachedShard({ cwd: missing, gh: unrecorded, run: RUN, shard: "2/3", tests: { all: true, reason: "x" } }).args,
   ]).toStrictEqual([
-    [[file("alpha"), file("delta")], "browser shard 1/3: split by file count, since gh api failed: offline"],
+    [[file("alpha"), file("delta")], `browser shard 1/3: split by file count, ${UNRECORDED}`],
     ["--shard=2/3"],
   ]);
+});
+
+it("a pull request's shard that can't read the recorded times fails rather than run a split of its own", {
+  timeout: 10_000,
+}, () => {
+  expect.hasAssertions();
+
+  const cwd = mkdtempSync(path.join(tmpdir(), "reached-browser-"));
+  const tests = { all: false, run: FILES, skipped: [] } as const;
+
+  expect(reachedShard({ cwd, gh: offline, run: RUN, shard: "1/3", tests })).toStrictEqual({
+    args: [],
+    failure:
+      "browser shard 1/3 can't read the recorded timings, and a split of its own would differ from the other shards': gh api failed: offline",
+    lines: ["check: this change reaches 5 of 5 browser test files."],
+    nothing: "",
+  });
 });
 
 it("a docs-only change, or a shard whose share is empty, has nothing to run and says so", { timeout: 10_000 }, () => {
@@ -101,6 +128,7 @@ it("a docs-only change, or a shard whose share is empty, has nothing to run and 
   ]).toStrictEqual([
     {
       args: [],
+      failure: "",
       lines: ["check: this change reaches 0 of 5 browser test files."],
       nothing: "check: no browser test to run, so the browser check passes.",
     },
@@ -118,9 +146,12 @@ it("a change that reaches every browser test runs its share of all of them", { t
     writeFileSync(path.join(cwd, test), "");
   }
 
-  expect(reachedShard({ cwd, gh: offline, run: RUN, shard: "2/3", tests: { all: true, reason: "x" } })).toStrictEqual({
+  expect(
+    reachedShard({ cwd, gh: unrecorded, run: RUN, shard: "2/3", tests: { all: true, reason: "x" } }),
+  ).toStrictEqual({
     args: [file("bravo"), file("echo")],
-    lines: ["", "browser shard 2/3: split by file count, since gh api failed: offline"],
+    failure: "",
+    lines: ["", `browser shard 2/3: split by file count, ${UNRECORDED}`],
     nothing: "",
   });
 });

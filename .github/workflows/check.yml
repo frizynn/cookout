@@ -92,6 +92,8 @@ jobs:
   # was cut off at the 5-minute limit (#707). So 6 jobs each run the test files that give it a sixth
   # of the test time the newest earlier Check run recorded in its test-timings-tests-* artifacts,
   # falling back to Vitest's --shard by file count when there are none (scripts/lib/timed-shards.ts).
+  # A shard whose gh call fails reading them fails instead: the others split by the timings, so a
+  # split of its own would leave files to no shard and coverage short (#737).
   # Each uploads its blob report, and the coverage job merges every vitest-blob-* into one run.
   tests:
     name: tests ${{ matrix.shard }}/6

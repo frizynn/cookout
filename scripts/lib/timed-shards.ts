@@ -1,12 +1,8 @@
-import { field, list, parseJson, text } from "./json.ts";
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import type { Gh, Reading, Recorded, Timings } from "./recorded-timings.ts";
 import type { FileTiming } from "./slowest-files.ts";
 import type { Outcome } from "./tools.ts";
-import path from "node:path";
 import { readTimings } from "./slowest-files.ts";
-import { tmpdir } from "node:os";
-
-type Gh = (args: readonly string[]) => Outcome<string>;
+import { recordedTimings } from "./recorded-timings.ts";
 
 interface Splitting {
   readonly files: readonly string[];
@@ -25,17 +21,6 @@ interface Fetching {
   readonly run: string;
 }
 
-interface Recorded {
-  readonly run: string;
-  readonly timings: readonly FileTiming[];
-}
-
-interface Artifact {
-  readonly createdAt: string;
-  readonly name: string;
-  readonly run: string;
-}
-
 interface Shard {
   readonly index: number;
   readonly total: number;
@@ -46,13 +31,9 @@ interface Planning extends Fetching {
   readonly shard: string;
 }
 
-interface Recording {
+interface Recording extends Timings {
   readonly fallback: string;
   readonly fallbackArgs?: (shard: string, files: Outcome<readonly string[]>) => readonly string[];
-  readonly name: string;
-  readonly prefix: string;
-  readonly read: (file: string) => readonly FileTiming[];
-  readonly report: string;
   readonly runArgs: (shard: string, files: readonly string[]) => readonly string[];
 }
 
@@ -62,6 +43,7 @@ interface Asking extends Fetching {
 
 interface Plan {
   readonly args: readonly string[];
+  readonly failure: string;
   readonly line: string;
 }
 
@@ -140,145 +122,56 @@ function shardByTime({ files, name, shard, timings }: Splitting): Outcome<Split>
   return { ok: true, value: split(weighed(files, recorded), parsed.value) };
 }
 
-function textIn(json: unknown, key: string): string {
-  return text(field(json, key)) ?? "";
-}
-
-function artifactOf(artifact: unknown): readonly Artifact[] {
-  const run = field(field(artifact, "workflow_run"), "id");
-  const [createdAt, name] = [textIn(artifact, "created_at"), textIn(artifact, "name")];
-  if (field(artifact, "expired") !== false || typeof run !== "number" || createdAt === "") {
-    return [];
-  }
-  return [{ createdAt, name, run: String(run) }];
-}
-
-function artifactsBefore(listing: string, createdAt: string): readonly Artifact[] {
-  return (list(field(parseJson(listing), "artifacts")) ?? [])
-    .flatMap((artifact) => artifactOf(artifact))
-    .filter((artifact) => artifact.createdAt < createdAt)
-    .toSorted((left, right) => right.createdAt.localeCompare(left.createdAt));
-}
-
-function timingsIn(dir: string, recording: Recording): readonly FileTiming[] {
-  return readdirSync(dir, { encoding: "utf8", recursive: true })
-    .filter((file) => path.basename(file) === recording.report)
-    .flatMap((file) => recording.read(path.join(dir, file)));
-}
-
-function downloaded(gh: Gh, artifacts: readonly Artifact[], recording: Recording): Outcome<readonly FileTiming[]> {
-  const dir = mkdtempSync(path.join(tmpdir(), `${recording.name}-timings-`));
-  try {
-    for (const { name, run } of artifacts) {
-      const ran = gh(["run", "download", run, "--name", name, "--dir", path.join(dir, name)]);
-      if (!ran.ok) {
-        return ran;
-      }
-    }
-    return { ok: true, value: timingsIn(dir, recording) };
-  } finally {
-    rmSync(dir, { force: true, recursive: true });
-  }
-}
-
-interface Newest {
-  readonly createdAt: string;
-  readonly run: string;
-}
-
-function askedAt(gh: Gh, run: string): Outcome<string> {
-  const asking = gh(["api", `repos/{owner}/{repo}/actions/runs/${run}`]);
-  if (!asking.ok) {
-    return asking;
-  }
-  return { ok: true, value: textIn(parseJson(asking.value), "created_at") };
-}
-
-function newestBefore({ gh, recording, run }: Asking): Outcome<Newest> {
-  const createdAt = askedAt(gh, run);
-  if (!createdAt.ok) {
-    return createdAt;
-  }
-  const listing = gh(["api", `repos/{owner}/{repo}/actions/artifacts?name=${recording.prefix}1&per_page=100`]);
-  if (!listing.ok) {
-    return listing;
-  }
-  const found = artifactsBefore(listing.value, createdAt.value).map(
-    (artifact): Outcome<Newest> => ({
-      ok: true,
-      value: { createdAt: createdAt.value, run: artifact.run },
-    }),
-  );
-  return found[NONE] ?? { ok: false, reason: `no Check run recorded ${recording.name} timings before run ${run}` };
-}
-
-function runArtifacts({ gh, recording, run }: Asking, createdAt: string): Outcome<readonly Artifact[]> {
-  const listing = gh(["api", `repos/{owner}/{repo}/actions/runs/${run}/artifacts?per_page=100`]);
-  if (!listing.ok) {
-    return listing;
-  }
-  const artifacts = artifactsBefore(listing.value, createdAt);
-  return { ok: true, value: artifacts.filter((artifact) => artifact.name.startsWith(recording.prefix)) };
-}
-
-function recordedTimings(asking: Asking): Outcome<Recorded> {
-  const newest = newestBefore(asking);
-  if (!newest.ok) {
-    return newest;
-  }
-  const artifacts = runArtifacts({ ...asking, run: newest.value.run }, newest.value.createdAt);
-  if (!artifacts.ok) {
-    return artifacts;
-  }
-  const timings = downloaded(asking.gh, artifacts.value, asking.recording);
-  if (!timings.ok) {
-    return timings;
-  }
-  return { ok: true, value: { run: newest.value.run, timings: timings.value } };
-}
-
 interface Timed {
   readonly all: readonly string[];
   readonly recorded: Recorded;
 }
 
-function recordedFor({ files, gh, run }: Planning, recording: Recording): Outcome<Timed> {
+function recordedFor({ files, gh, run }: Planning, recording: Recording): Reading<Timed> {
   if (!files.ok) {
-    return files;
+    return { kind: "unrecorded", reason: files.reason };
   }
   if (run === "") {
-    return { ok: false, reason: "this isn't a GitHub Actions run" };
+    return { kind: "unrecorded", reason: "this isn't a GitHub Actions run" };
   }
   const recorded = recordedTimings({ gh, recording, run });
-  if (!recorded.ok) {
+  if (recorded.kind !== "read") {
     return recorded;
   }
-  return { ok: true, value: { all: files.value, recorded: recorded.value } };
+  return { kind: "read", value: { all: files.value, recorded: recorded.value } };
 }
 
-function timedPlan(planning: Planning, recording: Recording): Outcome<Plan> {
+function timedPlan(planning: Planning, recording: Recording): Reading<Plan> {
   const found = recordedFor(planning, recording);
-  if (!found.ok) {
+  if (found.kind !== "read") {
     return found;
   }
   const { all, recorded } = found.value;
   const timed = shardByTime({ files: all, name: recording.name, shard: planning.shard, timings: recorded.timings });
   if (!timed.ok) {
-    return timed;
+    return { kind: "unrecorded", reason: timed.reason };
   }
   const { files, seconds } = timed.value;
   const line = `${recording.name} shard ${planning.shard}: ${String(files.length)} of ${String(all.length)} files, ${seconds.toFixed(DECIMALS)}s of test time as run ${recorded.run} recorded it`;
-  return { ok: true, value: { args: recording.runArgs(planning.shard, files), line } };
+  return { kind: "read", value: { args: recording.runArgs(planning.shard, files), failure: "", line } };
 }
 
 function shardPlan({ recording, ...planning }: Planning & Asking): Plan {
   const timed = timedPlan(planning, recording);
-  if (timed.ok) {
+  if (timed.kind === "read") {
     return timed.value;
+  }
+  if (timed.kind === "unreadable") {
+    return {
+      args: [],
+      failure: `${recording.name} shard ${planning.shard} can't read the recorded timings, and a split of its own would differ from the other shards': ${timed.reason}`,
+      line: "",
+    };
   }
   const { fallbackArgs = (shard: string): readonly string[] => [`--shard=${shard}`] } = recording;
   return {
     args: fallbackArgs(planning.shard, planning.files),
+    failure: "",
     line: `${recording.name} shard ${planning.shard}: split by ${recording.fallback}, since ${timed.reason}`,
   };
 }

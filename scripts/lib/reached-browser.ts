@@ -16,6 +16,7 @@ interface ReachedShard {
 
 interface ReachedPlan {
   readonly args: readonly string[];
+  readonly failure: string;
   readonly lines: readonly string[];
   readonly nothing: string;
 }
@@ -67,17 +68,26 @@ function reachedLine(tests: BrowserTests): string {
 function reachedShard({ cwd, gh, run, shard, tests }: ReachedShard): ReachedPlan {
   const line = reachedLine(tests);
   if (!tests.all && tests.run.length === NONE) {
-    return { args: [], lines: [line], nothing: "check: no browser test to run, so the browser check passes." };
+    return {
+      args: [],
+      failure: "",
+      lines: [line],
+      nothing: "check: no browser test to run, so the browser check passes.",
+    };
   }
   const plan = reachedBrowserShardPlan({ files: reachedFiles(cwd, tests), gh, run, shard });
+  if (plan.failure !== "") {
+    return { args: [], failure: plan.failure, lines: [line], nothing: "" };
+  }
   if (plan.args.length === NONE) {
     return {
       args: [],
+      failure: "",
       lines: [line, plan.line],
       nothing: `check: browser shard ${shard} got none of the reached files, so it passes.`,
     };
   }
-  return { args: plan.args, lines: [line, plan.line], nothing: "" };
+  return { args: plan.args, failure: "", lines: [line, plan.line], nothing: "" };
 }
 
 function browserTestsSince({ base, changed, cwd }: Since): BrowserTests {

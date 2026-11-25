@@ -33,8 +33,9 @@ const reached = inCi && job === "browser" && process.argv.includes("--reached");
 
 const V1 = "origin/v1";
 const EXIT_SUCCESS = 0;
+const EXIT_FAILURE = 1;
 const EVERYTHING: UnitTests & BrowserTests = { all: true, reason: "" };
-const NOT_REACHED: ReachedPlan = { args: [], lines: [], nothing: "" };
+const NOT_REACHED: ReachedPlan = { args: [], failure: "", lines: [], nothing: "" };
 
 const ciGreen = ciGreenAtHead({ asked: !inCi && job === "" && !all, cwd: process.cwd(), gh: ghCli(process.cwd()) });
 const local = !inCi && job === "" && !all && !ciGreen.skip;
@@ -80,18 +81,22 @@ function reachedPlan(): ReachedPlan {
 
 const reachedShardPlan = reachedPlan();
 
-function shardArgs(): readonly string[] {
+function plannedShard(): Pick<ReachedPlan, "args" | "failure"> {
   if (reached) {
-    return reachedShardPlan.args;
+    return reachedShardPlan;
   }
   const planned = ciShard();
   if (planned === null) {
-    return [`--shard=${shard}`];
+    return { args: [`--shard=${shard}`], failure: "" };
   }
   const shardPlan = planned({ cwd: process.cwd(), gh: ghCli(process.cwd()), run: option("run"), shard });
-  console.log(shardPlan.line);
-  return shardPlan.args;
+  if (shardPlan.line !== "") {
+    console.log(shardPlan.line);
+  }
+  return shardPlan;
 }
+
+const shardRun = plannedShard();
 
 const plan = checkPlan({
   base,
@@ -101,7 +106,7 @@ const plan = checkPlan({
   merge: process.argv.includes("--merge"),
   reached,
   shard,
-  shardArgs: shardArgs(),
+  shardArgs: shardRun.args,
   unit: unitTests,
 });
 
@@ -126,6 +131,11 @@ function earlyVerdict(): string {
 }
 
 async function exitCode(): Promise<number> {
+  if (shardRun.failure !== "") {
+    console.error(`check: ${shardRun.failure}`);
+    console.log(`RESULT: FAIL (${job} shard ${shard})`);
+    return EXIT_FAILURE;
+  }
   const early = earlyVerdict();
   if (early !== "") {
     console.log(early);
