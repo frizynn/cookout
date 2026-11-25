@@ -1,8 +1,8 @@
 import type { CookoutClient, SearchRequest } from "../../sdk/index.ts";
 import type { Search, SearchState } from "../../search/web.ts";
+import { createBoardStore, searchResultsOf } from "../index.ts";
 import { expect, it, vi } from "vitest";
 import type { BoardStore } from "../index.ts";
-import { createBoardStore } from "../index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
 import { createLive } from "../../live/index.ts";
 import { createSearch } from "../../search/web.ts";
@@ -38,20 +38,27 @@ async function postedIn(channel: string, texts: readonly string[]): Promise<void
   await postedAll(channel, texts);
 }
 
-function textsOf(found: Found): readonly string[] {
+interface Shown {
+  readonly store: BoardStore;
+  readonly found: Found;
+}
+
+function textsOf({ found, store }: Shown): readonly string[] {
   if (found.status !== "found") {
     return [];
   }
-  return found.results.map((result) => result.message.text);
+  return searchResultsOf(found.ids)(store.snapshot()).map((result) => result.message.text);
 }
 
 interface HeldBack {
   readonly search: SearchCall;
   readonly asked: Promise<null>;
   readonly answered: () => Promise<null>;
+  readonly store: BoardStore;
 }
 
-function heldBack(store: BoardStore, query: string): HeldBack {
+function heldBack(query: string): HeldBack {
+  const store = opened();
   const held = Promise.withResolvers<null>();
   const asked = Promise.withResolvers<null>();
   const answered = Promise.withResolvers<null>();
@@ -73,12 +80,23 @@ function heldBack(store: BoardStore, query: string): HeldBack {
     },
     asked: asked.promise,
     search,
+    store,
   };
 }
 
-async function shownTexts(shown: Search, texts: readonly string[]): Promise<void> {
+interface Searched {
+  readonly store: BoardStore;
+  readonly shown: Search;
+}
+
+function paged(): Searched {
+  const store = opened();
+  return { shown: createSearch({ limit: PAGE, search: store.calls.search }), store };
+}
+
+async function shownTexts({ shown, store }: Searched, texts: readonly string[]): Promise<void> {
   await vi.waitFor(() => {
-    expect(textsOf(shown.snapshot().found)).toStrictEqual(texts);
+    expect(textsOf({ found: shown.snapshot().found, store })).toStrictEqual(texts);
   });
 }
 
@@ -101,15 +119,15 @@ it("an answer to an older query that arrives after a newer one's is dropped", { 
   expect.hasAssertions();
 
   await postedIn("bs-search-race", ["Wombatrace old", "Numbatrace new"]);
-  const held = heldBack(opened(), "wombatrace");
-  const shown = createSearch({ pause: NO_PAUSE, search: held.search });
+  const { answered, asked, search, store } = heldBack("wombatrace");
+  const shown = createSearch({ pause: NO_PAUSE, search });
   shown.edit("wombatrace");
-  await held.asked;
+  await asked;
   shown.edit("numbatrace");
-  await shownTexts(shown, ["Numbatrace new"]);
-  await held.answered();
+  await shownTexts({ shown, store }, ["Numbatrace new"]);
+  await answered();
 
-  expect(textsOf(shown.snapshot().found)).toStrictEqual(["Numbatrace new"]);
+  expect(textsOf({ found: shown.snapshot().found, store })).toStrictEqual(["Numbatrace new"]);
 });
 
 it("loading more adds the next page, and moving onto the last result loaded loads it too", {
@@ -118,16 +136,16 @@ it("loading more adds the next page, and moving onto the last result loaded load
   expect.hasAssertions();
 
   await postedIn("bs-search-pages", ["Dingopage 1", "Dingopage 2", "Dingopage 3", "Dingopage 4", "Dingopage 5"]);
-  const shown = createSearch({ limit: PAGE, search: opened().calls.search });
+  const { shown, store } = paged();
   shown.edit("dingopage");
-  await shownTexts(shown, ["Dingopage 5", "Dingopage 4"]);
+  await shownTexts({ shown, store }, ["Dingopage 5", "Dingopage 4"]);
   shown.loadMore();
-  await shownTexts(shown, ["Dingopage 5", "Dingopage 4", "Dingopage 3", "Dingopage 2"]);
+  await shownTexts({ shown, store }, ["Dingopage 5", "Dingopage 4", "Dingopage 3", "Dingopage 2"]);
   for (const direction of ["down", "down", "up", "down", "down"] as const) {
     shown.move(direction);
   }
 
-  await shownTexts(shown, ["Dingopage 5", "Dingopage 4", "Dingopage 3", "Dingopage 2", "Dingopage 1"]);
+  await shownTexts({ shown, store }, ["Dingopage 5", "Dingopage 4", "Dingopage 3", "Dingopage 2", "Dingopage 1"]);
 });
 
 it("a query with neither words nor filters asks nothing, even sorted again, and closing keeps the query", {

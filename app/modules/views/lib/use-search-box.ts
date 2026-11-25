@@ -1,13 +1,15 @@
-import { aheadOf, boxOptionsOf } from "./search-options.ts";
+import { aheadOf, boxOptionsOf, foundIdsOf } from "./search-options.ts";
+import { channelList, searchResultsOf } from "../../board/index.ts";
 import { filterSuggestionsOf, pickedOf } from "./filter-suggestions.ts";
 import { useCallback, useEffect, useRef } from "react";
+import type { BoardStore } from "../../board/index.ts";
 import type { BoxOption } from "./search-options.ts";
 import type { FilterSuggestion } from "./filter-suggestions.ts";
 import type { Identities } from "../../composer/index.ts";
 import type { Keymap } from "../../keymap/index.ts";
 import type { RefObject } from "react";
 import type { Search } from "../../search/web.ts";
-import { channelList } from "../../board/index.ts";
+import type { SearchResult } from "../../sdk/index.ts";
 import { recentDays } from "../../format/index.ts";
 import { useBoardStore } from "./use-board.ts";
 
@@ -219,6 +221,11 @@ function listen(place: Place, keymap: Keymap): () => void {
   };
 }
 
+function resultsNow(store: BoardStore, search: Search): readonly SearchResult[] {
+  const select = searchResultsOf(foundIdsOf(search.snapshot()));
+  return select(store.snapshot());
+}
+
 function useSearchBox({ box, identities, keymap, search }: SearchBoxStores): SearchBox {
   const store = useBoardStore();
   const area = useRef<HTMLDivElement>(null);
@@ -232,6 +239,7 @@ function useSearchBox({ box, identities, keymap, search }: SearchBoxStores): Sea
         boxOptionsOf({
           channels: channelList(store.snapshot()),
           identities: identities.snapshot(),
+          results: resultsNow(store, search),
           state: search.snapshot(),
         }),
       remember: (element) => {
