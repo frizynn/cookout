@@ -4,13 +4,16 @@ import { inPane, inSidebar } from "./regions.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
 import { logInWithStream } from "./login.ts";
+import { unique } from "./names.ts";
 
 async function postWithMention(page: Page): Promise<void> {
-  await inSidebar(page).getByRole("link", { name: "#browser-post" }).click();
-  await page.getByLabel("Message", { exact: true }).pressSequentially("Can @browser-post-r");
+  await inSidebar(page)
+    .getByRole("link", { name: `#${unique("browser-post")}` })
+    .click();
+  await page.getByLabel("Message", { exact: true }).pressSequentially(`Can @${unique("browser-post-reviewer")}`);
   await page
     .getByRole("listbox", { name: "Mention suggestions" })
-    .getByRole("option", { name: "@browser-post-reviewer" })
+    .getByRole("option", { name: `@${unique("browser-post-reviewer")}` })
     .click();
   await page.keyboard.type("look?");
   await inPane(page).getByRole("button", { name: "Send" }).click();
@@ -24,14 +27,14 @@ async function inboxesOf(mentioned: CookoutClient, poster: CookoutClient): Promi
 test("a human posts a top-level message with an @ mention from the channel view, and the mentioned identity's inbox has it", async ({
   page,
 }) => {
-  const poster = await newIdentity({ kind: "human", name: "browser-poster" });
-  const mentioned = await newIdentity({ kind: "agent", name: "browser-post-reviewer" });
-  await adminClient().createChannel({ name: "browser-post" });
+  const poster = await newIdentity({ kind: "human", name: unique("browser-poster") });
+  const mentioned = await newIdentity({ kind: "agent", name: unique("browser-post-reviewer") });
+  await adminClient().createChannel({ name: unique("browser-post") });
   await logInWithStream({ page, token: poster.token });
   await postWithMention(page);
 
   await expect(page.getByRole("feed", { name: "Messages" }).getByRole("article")).toContainText([
-    "Can @browser-post-reviewer look?",
+    `Can @${unique("browser-post-reviewer")} look?`,
   ]);
   await expect(page.getByLabel("Message", { exact: true })).toHaveValue("");
   await expect
@@ -39,5 +42,5 @@ test("a human posts a top-level message with an @ mention from the channel view,
       const inboxes = await inboxesOf(mentioned.client, poster.client);
       return inboxes;
     })
-    .toStrictEqual([[["Can @browser-post-reviewer look?", ["mention"]]], []]);
+    .toStrictEqual([[[`Can @${unique("browser-post-reviewer")} look?`, ["mention"]]], []]);
 });
