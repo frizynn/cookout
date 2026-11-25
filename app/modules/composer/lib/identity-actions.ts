@@ -19,6 +19,7 @@ interface IdentityActionsSnapshot {
   readonly messages: MessageCount;
   readonly sessions: readonly ListedAgentSession[] | null;
   readonly token: Token | null;
+  readonly tokenForgotten: boolean;
   readonly transferTo: string;
 }
 
@@ -54,6 +55,7 @@ const START: Held = {
   confirming: null,
   messages: "loading",
   token: null,
+  tokenForgotten: false,
   transferTo: "",
 };
 
@@ -91,7 +93,7 @@ function editsOf(publish: Publish): Edits {
       publish({ transferTo });
     },
     forgetToken: () => {
-      publish({ token: null });
+      publish({ token: null, tokenForgotten: true });
     },
     showToken: (token) => {
       publish({ token });
@@ -191,7 +193,7 @@ function createIdentityActions(options: IdentityActionsOptions): IdentityActions
   const sends = sendsFor(options, () => current.transferTo);
 
   function publish(next: Partial<Held>): void {
-    current = { ...current, ...next };
+    current = { ...current, tokenForgotten: false, ...next };
     listeners.notify();
   }
 

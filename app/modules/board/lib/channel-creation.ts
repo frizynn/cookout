@@ -10,6 +10,7 @@ type CreationState =
 
 interface ChannelCreationSnapshot {
   readonly open: boolean;
+  readonly cancelled: boolean;
   readonly name: string;
   readonly description: string;
   readonly create: CreationState;
@@ -29,7 +30,13 @@ interface CreationOptions {
   readonly createChannel: (request: CreateChannelRequest) => Promise<Channel>;
 }
 
-const CLOSED: ChannelCreationSnapshot = { create: { status: "idle" }, description: "", name: "", open: false };
+const CLOSED: ChannelCreationSnapshot = {
+  cancelled: false,
+  create: { status: "idle" },
+  description: "",
+  name: "",
+  open: false,
+};
 
 function fieldOf(error: unknown): CreationField {
   if (!(error instanceof CookoutError)) {
@@ -84,7 +91,7 @@ function createChannelCreation(options: CreationOptions): ChannelCreation {
 
   return {
     close: () => {
-      publish(CLOSED);
+      publish({ ...CLOSED, cancelled: true });
     },
     create: (created) => {
       publish({ ...current, create: { status: "creating" } });
@@ -103,7 +110,7 @@ function createChannelCreation(options: CreationOptions): ChannelCreation {
       publish({ ...current, name });
     },
     open: () => {
-      publish({ ...current, open: true });
+      publish({ ...current, cancelled: false, open: true });
     },
     snapshot: () => current,
     subscribe: (listener) => {

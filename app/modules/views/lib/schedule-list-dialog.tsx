@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { ScheduleDeleteConfirm } from "./schedule-delete-confirm.tsx";
 import { ScheduleDialog } from "./schedule-dialog.tsx";
 import { ScheduleListBody } from "./schedule-list-body.tsx";
+import { useEditScheduling } from "./use-edit-scheduling.ts";
 
 const TEXT = {
   close: "Close",
@@ -29,7 +30,9 @@ export function ScheduleListDialog(props: ScheduleListDialogProps): ReactNode {
     if (channel !== null) {
       scheduleList.open(channel, editing);
     }
+    scheduleList.returnToEdit(editing);
   }, [channel, editing, scheduleList]);
+  const editScheduling = useEditScheduling({ editing, scheduleList, scheduling });
   return (
     <ListDialog
       close={TEXT.close}
@@ -47,7 +50,9 @@ export function ScheduleListDialog(props: ScheduleListDialogProps): ReactNode {
           state={state}
         />
       )}
-      {channel !== null && <ScheduleDialog channel={channel} editing onSaved={handleSaved} scheduling={scheduling} />}
+      {channel !== null && (
+        <ScheduleDialog channel={channel} editing onSaved={handleSaved} scheduling={editScheduling} />
+      )}
       <ScheduleDeleteConfirm scheduleList={scheduleList} state={state} />
     </ListDialog>
   );
