@@ -2,8 +2,10 @@ import type { AskedFrom, SubscriptionsState } from "./subscriptions-slice.ts";
 import type { ChannelMessagesState, MessageBeforeState, ThreadMessagesState } from "./message-selectors.ts";
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import type { ChannelsState, CommandsState } from "./listed-slices.ts";
+import type { ScheduleList, ScheduleMarks } from "./schedule-list.ts";
 import type { ChannelCreation } from "./channel-creation.ts";
 import type { ClosingRefusal } from "./thread-closing.ts";
+import type { ListedSchedules } from "./schedules-slice.ts";
 import type { Scheduling } from "./scheduling.ts";
 import type { ThreadPlace } from "./threads-part.ts";
 
@@ -55,6 +57,11 @@ interface MessageBefore {
   readonly snapshot: () => MessageBeforeState;
 }
 
+interface ChannelSchedules {
+  readonly subscribe: Subscribe;
+  readonly snapshot: () => ListedSchedules;
+}
+
 interface Board {
   readonly subscribe: Subscribe;
   readonly snapshot: () => BoardSnapshot;
@@ -64,6 +71,9 @@ interface Board {
   readonly subscriptions: Subscriptions;
   readonly creation: ChannelCreation;
   readonly scheduling: Scheduling;
+  readonly scheduleList: ScheduleList;
+  readonly schedules: (channel: ChannelName) => ChannelSchedules;
+  readonly scheduleMarks: ScheduleMarks;
   readonly closing: ThreadClosing;
   readonly messageBefore: (at: ThreadPlace) => MessageBefore;
   readonly ack: (id: MessageId) => void;
@@ -74,6 +84,7 @@ export type {
   Board,
   BoardSnapshot,
   ChannelMessages,
+  ChannelSchedules,
   Commands,
   MessageBefore,
   Subscriptions,

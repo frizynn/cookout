@@ -9,10 +9,12 @@
  * - `RowButton` is a small button raised above the row's link.
  * - `FeedNoticeRow` sits in a `FeedList` for an Inbox entry about an identity rather than a message: its why, then the identity's avatar and name (a link to `href`) and a short time, then any buttons; `for-you` or `read` as a `FeedRow`.
  * - `FeedNote` is a muted line in a feed: why a part is `empty`, or that it has reached the `end`.
+ * - `ScheduledMark` is a post's muted clock mark with its `label`, such as "Scheduled": a button calling `onOpen`, or plain text where `onOpen` is `null`.
  * - `MoreButton` is a quiet full-width row under a list that loads more of it, with a spinner while `loading`.
  */
 export {
   FeedRowClosed,
+  ScheduledMark,
   MoreButton,
   Feed,
   FeedHeading,

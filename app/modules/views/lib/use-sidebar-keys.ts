@@ -1,4 +1,4 @@
-import { markRead, stepTo, toggleSubscription } from "./channel-keys.ts";
+import { markRead, openSchedules, stepTo, toggleSubscription } from "./channel-keys.ts";
 import { moveFocus, roving, sidebar } from "./sidebar-roving.ts";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { Board } from "../../board/index.ts";
@@ -32,10 +32,11 @@ function useChannelKeys(props: SidebarKeys, announce: (text: string) => void): C
       announce,
       counts,
       order: channelOrder(channels),
+      scheduleList: board.scheduleList,
       subscriptions: board.subscriptions,
       unread,
     }),
-    [announce, board.subscriptions, channels, counts, unread],
+    [announce, board.scheduleList, board.subscriptions, channels, counts, unread],
   );
 }
 
@@ -67,7 +68,11 @@ function useSidebarKeys(props: SidebarKeys): Said {
         within: sidebar,
       }),
       keymap.bind({
-        actions: { markChannelRead: markRead(keys), toggleSubscription: toggleSubscription(keys) },
+        actions: {
+          markChannelRead: markRead(keys),
+          openSchedules: openSchedules(keys),
+          toggleSubscription: toggleSubscription(keys),
+        },
         scope: "channel row",
         within: sidebar,
       }),

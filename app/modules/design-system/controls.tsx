@@ -15,6 +15,7 @@
  * - `FieldNote`.
  * - `MoreActions`.
  * - `ShortcutList` is a Radix modal of keyboard shortcuts, each group a list named by its heading, each row what a shortcut does beside its keys; Escape calls `onClose`, and focus goes back to what was focused when it opened.
+ * - `ListDialog` is a Radix modal of a list, titled and described, with a Close button (`close` its text); Escape or Close calls `onClose`, and focus goes back to what was focused when it opened.
  * - `FilterField` is a labelled box whose text its owner holds.
  * - `Chip` is a button, pressed or not.
  * - `QuietButton` is a muted centred button, naming what it `controls`, such as loading older messages.
@@ -39,6 +40,7 @@ export {
   ConfirmDialog,
   FormDialog,
   ShortcutList,
+  ListDialog,
   FieldNote,
   RunList,
   MoreActions,

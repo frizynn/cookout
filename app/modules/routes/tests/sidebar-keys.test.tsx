@@ -25,6 +25,7 @@ import {
   unsubscribedFrom,
 } from "./sidebar-keys.ts";
 import { expect, it } from "vitest";
+import { screen, within } from "@testing-library/react";
 import { openAt } from "./render.tsx";
 
 it("only one sidebar link is in the tab order, and the row buttons are out of it", { timeout: 5000 }, async () => {
@@ -177,6 +178,35 @@ it("s does nothing while a subscription changes", { timeout: 5000 }, async () =>
   pressed({ key: "s" });
 
   expect(hanging.asked()).toBe(ONCE);
+
+  close();
+});
+
+it("shift+S on a channel row opens its scheduled messages", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const channels = channelsOf("web-sidebar-keys-schedules");
+  const close = openAt({ client: await readerOf(channels), hash: `#/channels/${channels.first}` });
+  await focusedRow(channels.second);
+  pressed({ key: "S", shiftKey: true });
+  const list = await screen.findByRole("dialog", { name: "Scheduled messages" });
+  const said = await within(list).findByText(`Nothing is scheduled in #${channels.second}.`);
+
+  expect(said.textContent).toBe(`Nothing is scheduled in #${channels.second}.`);
+
+  close();
+});
+
+it("shift+S off a channel row opens nothing", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const channels = channelsOf("web-sidebar-keys-schedules-off-row");
+  const close = openAt({ client: await readerOf(channels), hash: "#/inbox" });
+  await rowOf(channels.first);
+  await focusInbox();
+  pressed({ key: "S", shiftKey: true });
+
+  expect(screen.queryByRole("dialog", { name: "Scheduled messages" })).toBeNull();
 
   close();
 });
