@@ -65,7 +65,7 @@ async function articleIn(list: string, text: string): Promise<HTMLElement> {
   return article;
 }
 
-it("a channel message's hover bar holds 👍, Reply, Open thread, Close thread and More actions, each an icon labelled as its tooltip", {
+it("a channel message's hover bar holds 👍, Reply, Close thread and More actions, and no Open thread, each an icon labelled as its tooltip", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -78,7 +78,6 @@ it("a channel message's hover bar holds 👍, Reply, Open thread, Close thread a
   expect(hoverBarOf(() => article)).toStrictEqual([
     THUMBS_UP,
     iconNamed("Reply"),
-    iconNamed("Open thread"),
     iconNamed("Close thread"),
     iconNamed("More actions"),
   ]);
@@ -98,7 +97,6 @@ it("a closed thread's hover bar holds Reopen thread as an icon", { timeout: 5000
   expect(hoverBarOf(() => article)).toStrictEqual([
     THUMBS_UP,
     iconNamed("Reply"),
-    iconNamed("Open thread"),
     iconNamed("Reopen thread"),
     iconNamed("More actions"),
   ]);
