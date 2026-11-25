@@ -527,6 +527,12 @@
       }
     },
     {
+      "files": ["app/modules/*/tests/browser/**"],
+      "rules": {
+        "test-rules/exact-locators": "error"
+      }
+    },
+    {
       "files": ["app/modules/design-system/lib/panel-edge.tsx", "app/modules/design-system/lib/listbox.tsx"],
       "rules": {
         "jsx-a11y/prefer-tag-over-role": "off"
