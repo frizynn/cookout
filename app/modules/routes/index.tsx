@@ -60,11 +60,11 @@ export type CookoutAppProps = Omit<Stores, "channelCreation" | "scheduleList" | 
  */
 export function CookoutApp(props: CookoutAppProps): ReactNode {
   const hash = useSyncExternalStore(subscribeToHash, currentHash);
-  useKeymapListener(props.keymap);
   useStrayDropGuard();
   const page = useMemo(() => boardPageStores(props.boardStore), [props.boardStore]);
   const stores = useMemo(() => ({ ...props, ...page }), [page, props]);
   const landing = useMemo(() => createLanding(), []);
+  useKeymapListener({ keymap: props.keymap, landing });
   useLanding({ hash, landing, session: props.session });
   return (
     <LandingContext value={landing}>

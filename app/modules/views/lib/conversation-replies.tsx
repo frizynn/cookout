@@ -33,6 +33,7 @@ interface ConversationRepliesProps {
   readonly selection: Selection;
   readonly reply: ReplyAction;
   readonly closing: ThreadClosing;
+  readonly opened: boolean;
 }
 
 function earlierText(count: number): string {
@@ -86,6 +87,7 @@ export function ConversationReplies(props: ConversationRepliesProps): ReactNode 
         menu={menu}
         messages={shown}
         open={null}
+        opened={props.opened}
         readPosition={props.newLine}
         receipts={receipts}
         reply={props.reply}

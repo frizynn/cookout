@@ -26,6 +26,7 @@ export function PostReplies(props: PostRepliesProps): ReactNode {
       menu={props.menu}
       messages={props.replies}
       open={null}
+      opened={false}
       readPosition={null}
       receipts={props.receipts}
       reply={null}
