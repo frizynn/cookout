@@ -9,6 +9,7 @@ const FIXTURES = ".vitest";
 const PASSED = 0;
 const FAILED = 1;
 const SUMMARY = -2;
+const LAST = -1;
 const VIOLATION = "export const total = 7 * 6;\n";
 const CLEAN = 'export const greeting = "hello";\n';
 const SETUP = [
@@ -23,6 +24,7 @@ const SETUP = [
 interface Ran {
   readonly output: string;
   readonly status: number | null;
+  readonly stdout: string;
 }
 
 function fixture(content: string): string {
@@ -38,7 +40,11 @@ function fixture(content: string): string {
 
 function node(...args: readonly string[]): Ran {
   const ran = spawnSync("node", args, { encoding: "utf8" });
-  return { output: `${ran.stdout}${ran.stderr}`, status: ran.status };
+  return { output: `${ran.stdout}${ran.stderr}`, status: ran.status, stdout: ran.stdout };
+}
+
+function lastLine(text: string): string {
+  return text.trimEnd().split("\n").at(LAST) ?? "";
 }
 
 function git(cwd: string, ...args: readonly string[]): void {
@@ -96,16 +102,16 @@ it("reports a violation once in the hook's format and fails as the hook does", {
     "By rule (2 violations; the full list is above):",
     `  2 eslint(no-magic-numbers), e.g. ${file}:1 No magic number: 7`,
   ]);
+  expect(lastLine(changed.stdout)).toBe("RESULT: FAIL (lint)");
 });
 
 it("passes a clean file as the hook does", { timeout: 60_000 }, () => {
   expect.hasAssertions();
 
   const file = fixture(CLEAN);
-  const statuses = [
-    node("scripts/lint-changed.ts", file).status,
-    node("scripts/lint-ratchet.ts", "--fix", file).status,
-  ];
+  const changed = node("scripts/lint-changed.ts", file);
+  const statuses = [changed.status, node("scripts/lint-ratchet.ts", "--fix", file).status];
 
   expect(statuses).toStrictEqual([PASSED, PASSED]);
+  expect(lastLine(changed.stdout)).toBe("RESULT: PASS");
 });
