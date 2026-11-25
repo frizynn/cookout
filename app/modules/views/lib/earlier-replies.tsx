@@ -31,6 +31,7 @@ export function EarlierReplies(props: EarlierRepliesProps): ReactNode {
       menu={props.menu}
       messages={props.replies}
       open={null}
+      opened={false}
       readPosition={null}
       receipts={props.receipts}
       reply={props.reply}
