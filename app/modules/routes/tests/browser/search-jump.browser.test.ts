@@ -12,6 +12,7 @@ const BOX = { name: "Search" } as const;
 const RESULTS = { name: "Search results" } as const;
 const REPLY = { exact: true, name: "Reply" } as const;
 const PLACES = ["Inbox", "People", "Settings"] as const;
+const JUMP_GROUPS = /^(?:Places|Channels|People)$/u;
 const NONE = 0;
 const ONE = 1;
 
@@ -116,6 +117,39 @@ test("a word from a message still lists the message, and Enter opens it in its t
 
   await expect(page).toHaveURL(new RegExp(`#/channels/${channel}/threads/${String(thread)}$`, "u"));
   await expect(inPane(page).getByText(`Jump hello ${channel}`).first()).toBeVisible();
+});
+
+test("with messages found, Down from the box goes through the channel and the person before the messages", async ({
+  page,
+}) => {
+  const { channel, reader } = await openedOn(page, "browser-jump-order");
+  await page.goto("/#/inbox");
+  await searched(page, channel);
+
+  await expect(results(page).getByRole("group", { name: "Messages" }).getByRole("option")).toContainText([
+    `Jump hello ${channel}`,
+  ]);
+  await expect(results(page).getByRole("option", { selected: true })).toHaveText(`#${channel}`);
+
+  await pressedDown(page, ONE);
+
+  await expect(results(page).getByRole("option", { selected: true })).toContainText(reader);
+
+  await pressedDown(page, ONE);
+
+  await expect(results(page).getByRole("option", { selected: true })).toContainText(`Jump hello ${channel}`);
+});
+
+test("a query with a filter lists only messages, even when a person's Display name holds it", async ({ page }) => {
+  const { channel, reader } = await openedOn(page, "browser-jump-filter");
+  await adminClient().setDisplayName(reader, `Quetzal in:#${channel} jump`);
+  await page.goto("/#/inbox");
+  await searched(page, `in:#${channel} jump`);
+
+  await expect(results(page).getByRole("group", { name: "Messages" }).getByRole("option")).toContainText([
+    `Jump hello ${channel}`,
+  ]);
+  await expect(results(page).getByRole("group", { name: JUMP_GROUPS })).toHaveCount(NONE);
 });
 
 test("escape closes the box and gives focus back to the reply box", async ({ page }) => {
