@@ -1,9 +1,10 @@
 /**
  * The calls a client makes to close and reopen a thread (#216), to list open threads (#219), to search messages
- * (#320) and to read an attachment's bytes (#373), and the answers they share. The SDK's `CookoutClient` has them.
+ * (#320), to read an attachment's bytes (#373) and to delete a message (#678), and the answers they share. The SDK's
+ * `CookoutClient` has them.
  * Also the body of posting a message (#342).
  */
-import type { JsonValue, ListOpenThreadsResponse, MessageId, TopLevelMessageResponse } from "./index.ts";
+import type { JsonValue, ListOpenThreadsResponse, Message, MessageId, TopLevelMessageResponse } from "./index.ts";
 import type { SearchResponse, SearchSort } from "../search/index.ts";
 import type { AttachmentId } from "../attachments/index.ts";
 
@@ -26,6 +27,24 @@ export interface AttachmentCalls {
 }
 
 export type { ScheduledMessageCalls } from "../scheduled-messages/client.ts";
+
+/** The answer to deleting a message: the message as it was just before, a top-level message with its counts. */
+export interface DeletedMessageResponse {
+  readonly message: Message;
+}
+
+/** Deleting a message. */
+export interface MessageDeleteCalls {
+  /**
+   * `DELETE /v1/messages/:id`: soft deletes a message and answers it as it was. Deleting a top-level message deletes
+   * its whole thread, replies included; deleting a reply leaves the rest of the thread. Its author may delete a
+   * message and an admin anyone's, but an agent only its own, admin flag or not: anyone else is 403 `not_owner`. A
+   * missing or already deleted message is 404 `message_not_found`, so a retry is harmless. From then on channel pages
+   * and thread reads leave it out, as if it had never been posted: a deleted top-level message's thread is 404
+   * `message_not_found`, and reply counts, latest replies and repliers count only live replies. There is no undo.
+   */
+  readonly deleteMessage: (messageId: MessageId) => Promise<DeletedMessageResponse>;
+}
 
 /** Closing and reopening the thread holding a message. */
 export interface ClosedThreadCalls {

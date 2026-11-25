@@ -1,4 +1,5 @@
 import type { Act, Action, Keymap } from "../../keymap/index.ts";
+import { clickOn } from "./message-keys.ts";
 import { hrefOf } from "../../paths/index.ts";
 import { isNarrowWindow } from "./narrow-window.ts";
 import { useEffect } from "react";
@@ -7,6 +8,7 @@ const ROWS = "a[data-feed-row]";
 const INBOX_ROW = "#/inbox/";
 const CONTROLS = "a, button";
 const REPLY_BOX = "textarea";
+const TOP_MESSAGE = 'article[aria-label="First message"]';
 const FIRST = 0;
 const STEPS = { next: 1, previous: -1 } as const;
 const NOT_FOUND = -1;
@@ -82,13 +84,21 @@ function select(step: "next" | "previous"): Act {
   };
 }
 
-function reply(conversation: string): Act {
-  return ({ target }) => {
-    if (target instanceof HTMLElement && target.matches(CONTROLS) && !target.matches(ROWS)) {
-      return false;
-    }
-    return focused(inConversation(conversation, REPLY_BOX));
-  };
+function onAControl(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && target.matches(CONTROLS) && !target.matches(ROWS);
+}
+
+function focusIn(conversation: string, selector: string): Act {
+  return ({ target }) => !onAControl(target) && focused(inConversation(conversation, selector));
+}
+
+function onTopMessage({ conversation, keymap }: Pick<InboxKeys, "conversation" | "keymap">, action: Action): Act {
+  const click = clickOn({
+    action,
+    keymap,
+    messageOf: () => globalThis.document.querySelector(inConversation(conversation, TOP_MESSAGE)),
+  });
+  return (event) => !onAControl(event.target) && click(event);
 }
 
 function leaveTextBox({ target }: KeyboardEvent): boolean {
@@ -143,13 +153,18 @@ function useInboxKeys(keys: InboxKeys): void {
     const unbindRows = keymap.bind({
       actions: {
         backToRows: back({ selected, watch }),
+        copyMessageLink: onTopMessage({ conversation, keymap }, "copyMessageLink"),
         markRowRead: thenNext(press({ conversation, keymap }, "markRowRead")),
         markRowUnread: press({ conversation, keymap }, "markRowUnread"),
         markSelectedRowRead: press({ conversation, keymap }, "markRowRead"),
         nextRow: select("next"),
         openRow: press({ conversation, keymap }, "openRow"),
+        openThread: focusIn(conversation, TOP_MESSAGE),
         previousRow: select("previous"),
-        replyToRow: reply(conversation),
+        replyToRow: focusIn(conversation, REPLY_BOX),
+        toggleThreadClosed: onTopMessage({ conversation, keymap }, "toggleThreadClosed"),
+        toggleThumbsDown: onTopMessage({ conversation, keymap }, "toggleThumbsDown"),
+        toggleThumbsUp: onTopMessage({ conversation, keymap }, "toggleThumbsUp"),
       },
       scope: "inbox",
     });

@@ -82,6 +82,20 @@ async function focusOnBody(page: Page): Promise<void> {
   await expect(page.locator("body")).toBeFocused();
 }
 
+async function twoMoreChannels(page: Page, opened: Seeded): Promise<readonly [string, string]> {
+  const gone = unique("browser-lost-sidebar-gone");
+  const after = `${gone}-z`;
+  await adminClient().createChannel({ name: gone });
+  await adminClient().createChannel({ name: after });
+  await opened.reader.subscribe(gone);
+  await opened.reader.subscribe(after);
+  await page.reload();
+
+  await expect(sidebarLink({ label: `#${after}`, page })).toBeVisible();
+
+  return [gone, after];
+}
+
 test("↓ with focus on the page body focuses the channel's newest message, and moves nothing", async ({ page }) => {
   await openedChannel(page, "browser-lost-body");
   await reloadedWithNoFocus(page);
@@ -92,12 +106,12 @@ test("↓ with focus on the page body focuses the channel's newest message, and 
 
 test("↓ with focus on the page body and a thread open focuses the thread panel's newest message", async ({ page }) => {
   const opened = await openedThread(page, "browser-lost-thread");
-  const { message } = await adminClient().createMessage({ channel: opened.channel, text: "Gone soon." });
-  await messageSaying(page, "Gone soon.").focus();
+  const [gone] = await twoMoreChannels(page, opened);
+  await sidebarLink({ label: `#${gone}`, page }).focus();
   await focusOnBody(page);
-  await adminClient().closeThread(message.id);
+  await adminClient().deleteChannel(gone);
 
-  await expect(messageSaying(page, "Gone soon.")).toBeHidden();
+  await expect(sidebarLink({ label: `#${gone}`, page })).toBeHidden();
   await expect(page.locator("body")).toBeFocused();
 
   await page.keyboard.press(DOWN);
@@ -137,20 +151,6 @@ test("message list: when the newest message folds away, focus moves to the previ
   await expect(messageSaying(page, "Fold me.")).toBeHidden();
   await expect(messageSaying(page, "The newest.")).toBeFocused();
 });
-
-async function twoMoreChannels(page: Page, opened: Seeded): Promise<readonly [string, string]> {
-  const gone = unique("browser-lost-sidebar-gone");
-  const after = `${gone}-z`;
-  await adminClient().createChannel({ name: gone });
-  await adminClient().createChannel({ name: after });
-  await opened.reader.subscribe(gone);
-  await opened.reader.subscribe(after);
-  await page.reload();
-
-  await expect(sidebarLink({ label: `#${after}`, page })).toBeVisible();
-
-  return [gone, after];
-}
 
 test("sidebar: when the focused channel link goes, focus moves to the next link", async ({ page }) => {
   const opened = await openedChannel(page, "browser-lost-sidebar");
