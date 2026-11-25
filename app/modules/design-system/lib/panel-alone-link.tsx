@@ -13,15 +13,22 @@ function pathOf(alone: boolean): string {
   return OUT;
 }
 
-export function PanelAloneLink(parts: PanelAloneParts): ReactNode {
+interface PanelAloneLinkParts {
+  readonly link: PanelAloneParts | null;
+}
+
+export function PanelAloneLink({ link }: PanelAloneLinkParts): ReactNode {
   const handleClick = useContext(LandingContext).askOnFollow;
+  if (link === null) {
+    return null;
+  }
   return (
     <a
-      aria-label={parts.label}
-      className="hidden rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground md:inline-flex"
-      href={parts.href}
+      aria-label={link.label}
+      className="order-1 hidden rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground md:inline-flex"
+      href={link.href}
       onClick={handleClick}
-      title={parts.label}
+      title={link.label}
     >
       <svg
         aria-hidden="true"
@@ -31,7 +38,7 @@ export function PanelAloneLink(parts: PanelAloneParts): ReactNode {
         strokeWidth="1.6"
         viewBox="0 0 16 16"
       >
-        <path d={pathOf(parts.alone)} strokeLinecap="round" strokeLinejoin="round" />
+        <path d={pathOf(link.alone)} strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </a>
   );

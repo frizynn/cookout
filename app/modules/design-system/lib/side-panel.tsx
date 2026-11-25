@@ -38,10 +38,28 @@ function sideLook(alone: PanelAloneParts | null, edge: PanelEdgeParts | null): S
   return fitted;
 }
 
+interface AloneLinks {
+  readonly before: PanelAloneParts | null;
+  readonly after: PanelAloneParts | null;
+}
+
+const NO_LINKS: AloneLinks = { after: null, before: null };
+
+function aloneLinks(alone: PanelAloneParts | null): AloneLinks {
+  if (alone === null) {
+    return NO_LINKS;
+  }
+  if (alone.alone) {
+    return { after: null, before: alone };
+  }
+  return { after: alone, before: null };
+}
+
 export function SidePanel(parts: SidePanelParts): ReactNode {
   const alone = parts.alone ?? null;
   const look = sideLook(alone, parts.edge);
   const { edge } = look;
+  const { after, before } = aloneLinks(alone);
   return (
     <aside
       aria-label={parts.label}
@@ -51,8 +69,9 @@ export function SidePanel(parts: SidePanelParts): ReactNode {
       {edge !== null && <PanelEdge edge={edge} />}
       <header className="flex h-14 shrink-0 items-center gap-2 border-b px-5">
         <PanelTitle detail={parts.detail} label={parts.label} menu={parts.menu ?? null} />
-        {alone !== null && <PanelAloneLink alone={alone.alone} href={alone.href} label={alone.label} />}
+        <PanelAloneLink link={before} />
         <CloseLink href={parts.closeHref} label={parts.closeLabel} />
+        <PanelAloneLink link={after} />
       </header>
       {parts.children}
     </aside>

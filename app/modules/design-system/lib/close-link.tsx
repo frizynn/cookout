@@ -9,7 +9,7 @@ export function CloseLink(parts: CloseLinkParts): ReactNode {
   return (
     <a
       aria-label={parts.label}
-      className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+      className="order-2 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
       href={parts.href}
     >
       <svg

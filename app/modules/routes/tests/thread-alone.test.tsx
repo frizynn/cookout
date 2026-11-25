@@ -16,7 +16,17 @@ function threadHash(parent: Message): string {
   return `#/channels/${parent.channel}/threads/${String(parent.id)}`;
 }
 
-it("the thread panel's header links to the thread on its own, beside the channel", { timeout: 5000 }, async () => {
+function firstHeaderLink(): string | null {
+  const link = inThread().element().querySelector("header a[href]");
+  if (link === null) {
+    return null;
+  }
+  return link.getAttribute("aria-label");
+}
+
+it("the thread panel's header links to the thread on its own after its close link, which Escape follows", {
+  timeout: 5000,
+}, async () => {
   expect.hasAssertions();
 
   const parent = await threadIn("web-thread-alone-link");
@@ -26,13 +36,14 @@ it("the thread panel's header links to the thread on its own, beside the channel
     link.getAttribute("href"),
     screen.queryByRole("heading", { level: 1, name: `#${parent.channel}` }) === null,
     screen.queryByRole("separator", { name: "Resize the thread panel" }) === null,
+    firstHeaderLink(),
   ];
   close();
 
-  expect(shown).toStrictEqual([`${threadHash(parent)}/alone`, false, false]);
+  expect(shown).toStrictEqual([`${threadHash(parent)}/alone`, false, false, "Close panel"]);
 });
 
-it("the thread on its own hides the channel and the panel's edge, and links back to the channel", {
+it("the thread on its own hides the channel and the panel's edge, and its first header link, which Escape follows, goes back to the channel", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -45,8 +56,9 @@ it("the thread on its own hides the channel and the panel's edge, and links back
     link.getAttribute("href"),
     screen.queryByRole("heading", { level: 1, name: `#${parent.channel}` }) === null,
     screen.queryByRole("separator", { name: "Resize the thread panel" }) === null,
+    firstHeaderLink(),
   ];
   close();
 
-  expect(shown).toStrictEqual([threadHash(parent), true, true]);
+  expect(shown).toStrictEqual([threadHash(parent), true, true, "Back to channel"]);
 });
