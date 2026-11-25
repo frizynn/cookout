@@ -23,7 +23,7 @@ async function threadOpen(page: Page, name: string): Promise<Message> {
 }
 
 async function panelWidth(page: Page): Promise<number> {
-  const box = await page.getByRole("complementary", { name: "Thread" }).boundingBox();
+  const box = await page.getByRole("complementary", { exact: true, name: "Thread" }).boundingBox();
   if (box === null) {
     return NONE;
   }
@@ -67,7 +67,7 @@ test("dragging the thread panel's edge past its narrowest closes the thread", as
 
   await dragEdge(page, -WIDE.width);
 
-  await expect(page.getByRole("complementary", { name: "Thread" })).toBeHidden();
+  await expect(page.getByRole("complementary", { exact: true, name: "Thread" })).toBeHidden();
   await expect(page).toHaveURL(new RegExp(`#/channels/${message.channel}$`, "u"));
 });
 
@@ -75,6 +75,6 @@ test("on a narrow screen the thread panel has no edge to drag", async ({ page })
   await threadOpen(page, unique("browser-resize-panel-narrow"));
   await page.setViewportSize(NARROW);
 
-  await expect(page.getByRole("complementary", { name: "Thread" })).toContainText("Resizable parent");
+  await expect(page.getByRole("complementary", { exact: true, name: "Thread" })).toContainText("Resizable parent");
   await expect(page.getByRole("separator", { name: EDGE })).toBeHidden();
 });

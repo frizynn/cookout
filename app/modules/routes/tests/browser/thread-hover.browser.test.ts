@@ -26,7 +26,9 @@ function replyNamed(page: Page, text: string): Locator {
 }
 
 async function hoverReply(message: Locator): Promise<void> {
-  const reply = message.getByRole("group", { name: "Quick actions" }).getByRole("button", { name: "Reply" });
+  const reply = message
+    .getByRole("group", { name: "Quick actions" })
+    .getByRole("button", { exact: true, name: "Reply" });
 
   await expect(async () => {
     await message.hover();
@@ -64,7 +66,7 @@ test("hover Reply on your own thread reply mentions nobody and focuses the reply
 test("tabbing to a thread reply shows its hover Reply", async ({ page }) => {
   await openThread({ channel: unique("browser-panel-hover-tab"), page });
   const message = replyNamed(page, "Noon works");
-  const reply = message.getByRole("button", { name: "Reply" });
+  const reply = message.getByRole("button", { exact: true, name: "Reply" });
 
   await expect(reply).toBeHidden();
 
@@ -92,7 +94,7 @@ async function threadHoverBarIn({ page, theme }: Shot): Promise<void> {
   await expect(async () => {
     await message.hover();
 
-    await expect(bar.getByRole("button", { name: "Reply" })).toBeVisible({ timeout: 1000 });
+    await expect(bar.getByRole("button", { exact: true, name: "Reply" })).toBeVisible({ timeout: 1000 });
   }).toPass();
 
   await message.screenshot({ path: test.info().outputPath(`thread-hover-bar-${theme}.png`) });

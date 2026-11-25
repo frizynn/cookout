@@ -27,7 +27,7 @@ test("hovering a thread in the channel shows its Close button, which closes the 
   }).toPass();
 
   await expect(closeThread).toHaveText("");
-  await expect(message.getByRole("link", { name: "Reply" })).toBeVisible();
+  await expect(message.getByRole("link", { exact: true, name: "Reply" })).toBeVisible();
 
   await closeThread.click();
 
