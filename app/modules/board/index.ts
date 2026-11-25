@@ -66,7 +66,9 @@
  * in the order asked, applying the answer as a `thread` event, or keeping the refusal (`closingRefusal`) until the next;
  * `calls.createChannel` creates a channel and puts it in the list and the subscriptions; `calls.ack` acks a message,
  * one ack at a time in the order asked; `calls.search` runs a search and answers its page, or the server's refusal,
- * without keeping it, for the `search` store.
+ * for the `search` store, which keeps only the result message IDs: each result's message goes in the table, with its
+ * thread's state for a thread whose top-level message the table doesn't hold, and `searchResultsOf(ids)` reads them
+ * back, so a result row follows `message` and `thread` events like every other view of that message.
  *
  * The Inbox is one slice, `inbox`, shown with `subscribeShowing("inbox")`. One load reads `GET /v1/inbox`, the read
  * positions and the history's first page, once each, for every part: For you (`inboxOf`, the items no read position
@@ -101,7 +103,8 @@
  * changed in another tab) changes it at once; until then, the server's answer. On a link back it asks again, keeping
  * whoever is logged in if the server can't be reached. `logIn` swaps a human identity's token for the session cookie
  * (`POST /v1/session`) through a client with that token for the cookout at `url`; a refused login (an agent's token, a bad token)
- * keeps the server's error code to show.
+ * keeps the server's error code to show. `logOut` ends the session on the server (`DELETE /v1/session`, which revokes the
+ * session cookie's credential) and is then logged out; if the server doesn't answer, it asks who is logged in again.
  *
  * `createLoginApprovals` makes the store the approval page reads: for a login request's user code, the request (its
  * host and when it expires) once the page subscribes, or why it can't be shown, and `approve`, which approves it as
@@ -208,6 +211,7 @@ export {
   subscribedChannels,
   threadOf,
 } from "./lib/board-selectors.ts";
+export { searchResultsOf } from "./lib/search-selectors.ts";
 export {
   type LoginApproval,
   type LoginApprovalState,

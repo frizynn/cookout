@@ -3,7 +3,6 @@ import { DONE, stop } from "../lib/merge-steps.ts";
 import { expect, it } from "vitest";
 import type { Step } from "../lib/merge-steps.ts";
 
-const ONE_ATTEMPT = 1;
 const MOVED_LINE = `origin/v1 moved past merge-ticket-${TICKET}'s v1 parent: merging it into merge-ticket-${TICKET} before the push`;
 const UNMOVED_LINE = `origin/v1 has not moved past merge-ticket-${TICKET}'s v1 parent: checking and pushing merge-ticket-${TICKET} as it is`;
 
@@ -47,7 +46,7 @@ it("merges the moved v1 into merge-ticket-N on --continue before pushing it", { 
   const merged = repo(work).continueMerge({ ci: ran.ci, log: ran.log });
 
   expect([merged, ran.lines.includes(MOVED_LINE), ran.shas]).toStrictEqual([
-    { attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") },
+    { ok: true, sha: git(origin, "rev-parse", "v1") },
     true,
     [git(origin, "rev-parse", "v1")],
   ]);
@@ -75,7 +74,7 @@ it("pushes merge-ticket-N as it is on --continue when v1 has not moved", { timeo
 
   const merged = repo(work).continueMerge({ ci: ran.ci, log: ran.log });
 
-  expect(merged).toStrictEqual({ attempts: ONE_ATTEMPT, ok: true, sha: pushed });
+  expect(merged).toStrictEqual({ ok: true, sha: git(origin, "rev-parse", "v1") });
   expect(ran.lines).toContain(UNMOVED_LINE);
   expect([ran.shas, git(origin, "rev-parse", "v1")]).toStrictEqual([[pushed], pushed]);
 });
@@ -94,7 +93,7 @@ it("stops on --continue when the moved v1 conflicts, then continues once that is
 
   expect([stopped, merged]).toMatchObject([
     { files: ["notes.txt"], ok: false },
-    { attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") },
+    { ok: true, sha: git(origin, "rev-parse", "v1") },
   ]);
   expect([
     git(origin, "show", "v1:notes.txt"),

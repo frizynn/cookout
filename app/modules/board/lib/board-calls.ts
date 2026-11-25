@@ -62,6 +62,7 @@ interface CallsOptions {
   readonly heard: (event: CookoutEvent) => void;
   readonly subscriptionChanged: (change: SubscriptionChange) => void;
   readonly changed: () => void;
+  readonly keepResults: (asked: Promise<SearchAnswer>) => Promise<SearchAnswer>;
 }
 
 async function send(client: SubscriptionsClient, channel: ChannelName, wanted: boolean): Promise<SubscriptionResponse> {
@@ -163,7 +164,7 @@ function createBoardCalls(options: CallsOptions): BoardCalls {
     },
     reopen: closing.reopen,
     search: async (request) => {
-      const answer = await answerOf(client, request);
+      const answer = await options.keepResults(answerOf(client, request));
       return answer;
     },
     setSubscribed: subscribing(options),

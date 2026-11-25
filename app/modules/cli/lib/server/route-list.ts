@@ -8,16 +8,8 @@ import {
   openJoinCodeRoutes,
   openJoinRequestRoutes,
 } from "../../../agent-sessions/server.ts";
-import { channelRoutes, channelsLayer } from "../../../channels/server.ts";
-import { commandChangesLayer, commandRoutes, commandsLayer } from "../../../commands/server.ts";
 import {
-  deactivationOffersLayer,
-  inboxLayer,
-  inboxRoutes,
-  nudgesLayer,
-  offlineAlertsLayer,
-} from "../../../inbox/server.ts";
-import {
+  avatarRoutes,
   deactivationRoutes,
   deletionRoutes,
   descriptionRoutes,
@@ -29,6 +21,14 @@ import {
   openIdentityRoutes,
   transferRoutes,
 } from "../../../identities/server.ts";
+import { channelRoutes, channelsLayer } from "../../../channels/server.ts";
+import {
+  deactivationOffersLayer,
+  inboxLayer,
+  inboxRoutes,
+  nudgesLayer,
+  offlineAlertsLayer,
+} from "../../../inbox/server.ts";
 import {
   liveRoutes,
   mentionTriggersLayer,
@@ -38,6 +38,11 @@ import {
   triggerChangesLayer,
 } from "./live-routes.ts";
 import { messageRoutes, messagesLayer, reactionsLayer, readReceiptsLayer } from "../../../messages/server.ts";
+import {
+  webhookCommandChangesLayer,
+  webhookCommandRoutes,
+  webhookCommandsLayer,
+} from "../../../webhook-commands/server.ts";
 import { Layer } from "effect";
 import type { Route } from "../../../http/server.ts";
 
@@ -47,13 +52,14 @@ type RouteNeeds =
   | NeedsOf<typeof identityRoutes>
   | NeedsOf<typeof displayNameRoutes>
   | NeedsOf<typeof descriptionRoutes>
+  | NeedsOf<typeof avatarRoutes>
   | NeedsOf<typeof agentSessionOwnerRoutes>
   | NeedsOf<typeof channelRoutes>
   | NeedsOf<typeof messageRoutes>
   | NeedsOf<typeof agentSessionRoutes>
   | NeedsOf<typeof inboxRoutes>
   | NeedsOf<typeof liveRoutes>
-  | NeedsOf<typeof commandRoutes>
+  | NeedsOf<typeof webhookCommandRoutes>
   | NeedsOf<typeof scheduledMessageRoutes>;
 
 type OpenNeeds = NeedsOf<typeof openIdentityRoutes> | NeedsOf<typeof openJoinRequestRoutes>;
@@ -62,6 +68,7 @@ export const routes: readonly Route<RouteNeeds>[] = [
   ...identityRoutes,
   ...displayNameRoutes,
   ...descriptionRoutes,
+  ...avatarRoutes,
   ...transferRoutes,
   ...deactivationRoutes,
   ...deletionRoutes,
@@ -73,7 +80,7 @@ export const routes: readonly Route<RouteNeeds>[] = [
   ...joinCodeRoutes,
   ...inboxRoutes,
   ...liveRoutes,
-  ...commandRoutes,
+  ...webhookCommandRoutes,
   ...scheduledMessageRoutes,
 ];
 
@@ -89,7 +96,7 @@ export const domainLayers = Layer.mergeAll(
   channelsLayer,
   inboxLayer,
   nudgesLayer,
-  commandsLayer,
+  webhookCommandsLayer,
   limitsLayer,
   addressLimitLayer,
   presenceLayer,
@@ -99,7 +106,7 @@ export const domainLayers = Layer.mergeAll(
   Layer.provideMerge(
     Layer.mergeAll(
       identityChangesLayer,
-      commandChangesLayer,
+      webhookCommandChangesLayer,
       readReceiptsLayer,
       reactionsLayer,
       offlineAlertsLayer,

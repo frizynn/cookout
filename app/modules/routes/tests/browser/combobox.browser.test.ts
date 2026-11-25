@@ -67,6 +67,47 @@ test("typing @grace's name shows the mention list as a combobox's listbox, and T
   await expect(box).toBeFocused();
 });
 
+test('"@ " as dictation types it keeps the mention list open, and Tab writes the top match', async ({ page }) => {
+  await newIdentity({ kind: "human", name: unique("browser-combobox-spoken-reader") });
+  const box = await messageBoxIn(page, unique("browser-combobox-spoken"));
+  await box.pressSequentially("Ping @");
+
+  await expect(listIn(page, "Mention suggestions")).toBeVisible();
+
+  await box.pressSequentially(" ");
+  const top = listIn(page, "Mention suggestions").getByRole("option", { selected: true });
+
+  await expect(top).toHaveText(/^@[a-z0-9-]+/u);
+
+  const [name] = /^@[a-z0-9-]+/u.exec((await top.textContent()) ?? "") ?? [""];
+  await page.keyboard.press("Tab");
+
+  await expect(box).toHaveValue(`Ping ${name} `);
+});
+
+test('"@ g" filters the list as "@g" does, and Tab writes @grace', async ({ page }) => {
+  const grace = unique("grace");
+  await newIdentity({ kind: "human", name: grace });
+  const box = await messageBoxIn(page, unique("browser-combobox-spoken-g"));
+  await box.pressSequentially(`@ ${grace}`);
+
+  await expect(listIn(page, "Mention suggestions").getByRole("option", { selected: true })).toHaveText(`@${grace}`);
+
+  await page.keyboard.press("Tab");
+
+  await expect(box).toHaveValue(`@${grace} `);
+});
+
+test('a spoken "at grace" stays text and opens no list', async ({ page }) => {
+  const grace = unique("grace");
+  await newIdentity({ kind: "human", name: grace });
+  const box = await messageBoxIn(page, unique("browser-combobox-spoken-at"));
+  await box.pressSequentially(`at ${grace}`);
+
+  await expect(box).toHaveValue(`at ${grace}`);
+  await expect(listIn(page, "Mention suggestions")).toBeHidden();
+});
+
 test("Escape closes the mention list and keeps the text, with focus still in the box", async ({ page }) => {
   await newIdentity({ kind: "human", name: unique("browser-combobox-escape-reader") });
   const box = await messageBoxIn(page, unique("browser-combobox-escape"));

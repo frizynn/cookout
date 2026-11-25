@@ -1,15 +1,7 @@
 import type { AgentCreationCalls, DescriptionCalls } from "../../identities/client.ts";
 import type {
-  AttachmentCalls,
-  ClosedThreadCalls,
-  OpenThreadCalls,
-  ScheduledMessageCalls,
-  SearchCalls,
-} from "../../messages/client.ts";
-import type {
   CreateIdentityRequest,
   DeactivateIdentityResponse,
-  IdentityMessageCountResponse,
   IdentityResponse,
   IdentityWithTokenResponse,
   ListIdentitiesQuery,
@@ -37,12 +29,13 @@ import {
   isIdentityWithTokenResponse,
   isListIdentitiesResponse,
 } from "./generated/validators.js";
-import type { AgentApprovalCalls } from "./agent-sessions.ts";
 import type { ClientConnection } from "./request.ts";
-import type { EventCalls } from "./events.ts";
 import type { HealthResponse } from "../../http/index.ts";
+import type { IdentityAvatarCalls } from "./avatars.ts";
+import type { IdentityDeletionCalls } from "./call-groups.ts";
 import type { LoginCalls } from "./logins.ts";
 import type { TriggerCalls } from "./triggers.ts";
+import { avatarCalls } from "./avatars.ts";
 import { healthPath } from "../../http/index.ts";
 import { loginCalls } from "./logins.ts";
 import { triggerCalls } from "./triggers.ts";
@@ -165,11 +158,6 @@ function deactivationCalls(server: ClientConnection): Pick<IdentityCalls, "deact
   };
 }
 
-interface IdentityDeletionCalls {
-  readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
-  readonly countMessagesBy: (name: string) => Promise<IdentityMessageCountResponse>;
-}
-
 function deletionCalls(server: ClientConnection): IdentityDeletionCalls {
   return {
     countMessagesBy: async (name) => {
@@ -245,11 +233,13 @@ function identityCalls(
   server: ClientConnection,
 ): IdentityCalls &
   IdentityDeletionCalls &
-  IdentityDescriptionCalls &
-  IdentityAgentCreationCalls &
+  DescriptionCalls<IdentityResponse> &
+  AgentCreationCalls<IdentityResponse> &
   LoginCalls &
-  TriggerCalls {
+  TriggerCalls &
+  IdentityAvatarCalls {
   return {
+    ...avatarCalls(server),
     ...agentCreationCalls(server),
     ...loginCalls(server),
     ...ownIdentityCalls(server),
@@ -258,18 +248,5 @@ function identityCalls(
   };
 }
 
-type ApprovalCalls = LoginCalls & AgentApprovalCalls;
-type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
-type IdentityAgentCreationCalls = AgentCreationCalls<IdentityResponse>;
-export type CallGroups = ApprovalCalls &
-  IdentityAgentCreationCalls &
-  AttachmentCalls &
-  IdentityDeletionCalls &
-  IdentityDescriptionCalls &
-  ClosedThreadCalls &
-  OpenThreadCalls &
-  SearchCalls &
-  ScheduledMessageCalls &
-  TriggerCalls &
-  Pick<EventCalls, "presence">;
 export { identityCalls };
+export type { CallGroups } from "./call-groups.ts";

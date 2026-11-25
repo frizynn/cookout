@@ -49,6 +49,27 @@ test("tabbing to a thread in the channel shows its Close button", async ({ page 
   await expect(closeThread).toBeVisible();
 });
 
+test("a channel message's hover bar has Reply and no Open thread, and Reply opens the thread with the reply box focused", async ({
+  page,
+}) => {
+  await openChannel(page, unique("browser-hover-no-open"));
+  const message = page.getByRole("feed", { exact: true, name: "Messages" }).getByRole("article");
+  const bar = message.getByRole("group", { exact: true, name: "Quick actions" });
+  const reply = bar.getByRole("link", { exact: true, name: "Reply" });
+
+  await expect(async () => {
+    await message.hover();
+
+    await expect(reply).toBeVisible({ timeout: 1000 });
+  }).toPass();
+
+  await expect(bar.getByRole("link", { exact: true, name: "Open thread" })).not.toBeAttached();
+
+  await reply.click();
+
+  await expect(page.getByRole("textbox", { exact: true, name: "Reply" })).toBeFocused();
+});
+
 test("Reply in a thread's More actions menu opens the thread with the cursor in the reply box", async ({ page }) => {
   await openChannel(page, unique("browser-hover-reply"));
   const message = page.getByRole("feed", { exact: true, name: "Messages" }).getByRole("article");

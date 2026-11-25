@@ -21,7 +21,7 @@ export function AgentButtons(props: AgentButtonsProps): ReactNode {
   const handleRevoke = actions.ask.revoke;
   return (
     <>
-      <Button disabled={sending} onClick={handleRotate}>
+      <Button disabled={sending} focused={state.tokenForgotten} onClick={handleRotate}>
         {TEXT.rotate}
       </Button>
       {(state.sessions ?? NO_SESSIONS).length > NONE && (
