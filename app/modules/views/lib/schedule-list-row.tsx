@@ -22,7 +22,11 @@ export function ScheduleListRow(props: ScheduleListRowProps): ReactNode {
       <Muted>{timingWords(schedule)}</Muted>
       <Muted>{nextRunWords(schedule)}</Muted>
       <Muted>{`Created by @${schedule.creator.name}`}</Muted>
-      {shownState !== null && <Tag label={shownState} />}
+      {shownState !== null && (
+        <div>
+          <Tag label={shownState} />
+        </div>
+      )}
       {mayChange({ me: props.me, schedule }) && (
         <ScheduleControls board={props.board} schedule={schedule} state={props.state} />
       )}
