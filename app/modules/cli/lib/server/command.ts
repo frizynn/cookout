@@ -21,7 +21,7 @@ const commandAddCommand = Command.make(
   {
     description: Flag.String("description").pipe(
       Flag.optional,
-      Flag.withDescription("What the command does, 1-500 characters."),
+      Flag.withDescription("What the Webhook command does, 1-500 characters."),
     ),
     name: Argument.String("name").pipe(
       Argument.withDescription("1-64 lowercase letters, digits or '-'. Also the name of its handler identity."),
@@ -40,24 +40,24 @@ const commandAddCommand = Command.make(
   },
 ).pipe(
   Command.withDescription(
-    "Register a webhook command (admin only). Its handler is an agent identity with the command's name, made " +
+    "Register a Webhook command (admin only). Its handler is an agent identity with the Webhook command's name, made " +
       "unless an agent of that name exists. The secret deliveries are signed with is shown this once.",
   ),
 );
 
 const commandRotateCommand = Command.make(
   "rotate",
-  { name: Argument.String("name").pipe(Argument.withDescription("The command whose secret to rotate.")) },
+  { name: Argument.String("name").pipe(Argument.withDescription("The Webhook command whose secret to rotate.")) },
   ({ name }) => answer((client) => client.rotateCommandSecret(name)),
 ).pipe(
   Command.withDescription(
-    "Rotate a command's secret (admin only). The new secret is shown this once, and the old one signs no delivery " +
-      "from then on, so give the new one to the command's handler.",
+    "Rotate a Webhook command's secret (admin only). The new secret is shown this once, and the old one signs no delivery " +
+      "from then on, so give the new one to the Webhook command's handler.",
   ),
 );
 
 const commandListCommand = Command.make("list", {}, () => answer((client) => client.listCommands())).pipe(
-  Command.withDescription("List every command, by name, without its secret."),
+  Command.withDescription("List every Webhook command, by name, without its secret."),
 );
 
 const commandCallCommand = Command.make(
@@ -66,20 +66,20 @@ const commandCallCommand = Command.make(
     channel: Flag.String("channel").pipe(Flag.withDescription("The channel the call message is posted in.")),
     data: Flag.String("data").pipe(
       Flag.withSchema(JsonText),
-      Flag.withDescription("The call's data, as JSON. It must follow the command's schema."),
+      Flag.withDescription("The call's data, as JSON. It must follow the Webhook command's schema."),
     ),
-    name: Argument.String("name").pipe(Argument.withDescription("The command to call.")),
+    name: Argument.String("name").pipe(Argument.withDescription("The Webhook command to call.")),
   },
   ({ channel, data, name }) => answer((client) => client.callCommand(name, { channel, data })),
 ).pipe(
   Command.withDescription(
-    "Call a command. Data that breaks its schema is refused with the schema errors and nothing is posted. " +
+    "Call a Webhook command. Data that breaks its schema is refused with the schema errors and nothing is posted. " +
       "Otherwise the call is posted in the channel as your message, you follow its thread, and the answer is " +
       "{ messageId, threadId } without waiting for the handler.",
   ),
 );
 
 export const commandCommand = Command.make("command").pipe(
-  Command.withDescription("Register, rotate the secret of, list and call webhook commands."),
+  Command.withDescription("Register, rotate the secret of, list and call Webhook commands."),
   Command.withSubcommands([commandAddCommand, commandRotateCommand, commandListCommand, commandCallCommand]),
 );
