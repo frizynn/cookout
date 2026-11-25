@@ -10,7 +10,7 @@
  * - `IdentityCard` is what a message's author name and an `@name` in its text each are: hovering it (after a short delay) or focusing it opens a card, a Radix tooltip beside the name, kept inside the window: a labelled `dialog` led by a square avatar tile (grey when deactivated; an Agent chip on an agent's), then its name, `@name` handle, presence or a red Deactivated, kind, description, an agent's Open session ↗ (its `sessionOf`, in a new tab), and Message (calls the nearest `IdentityCardComposer`; disabled when deactivated or with none) and View profile. Tab on the name moves into it; Escape or Tab past either end closes it, focus back on the name. Its card comes from the `IdentityCards` source the views provide; with none, the name is drawn alone.
  * - `IdentityCards` is the source of identity cards the views provide.
  * - `IdentityCardComposer` is what an identity card's Message calls, the nearest one.
- * - `MessageBody` holds a message's rendered Markdown text, `Mention` an `@name` in it.
+ * - `MessageBody` holds a message's rendered Markdown text, `Mention` an `@name` in it. While `foldable`, a body taller than about 12 lines folds: it shows its first 8 lines fading out, and its faded end is an Unfold button (no Tab stop, naming `MessageKeys`' unfold shortcut in `aria-keyshortcuts`) that puts focus on its message and calls `onUnfold`.
  * - `CallChip` is a command call and its data.
  * - `AttachmentList` is a message's named list of attachments, under its text, each in an `AttachmentItem`.
  * - `ImageThumbnail` is an image attachment: a button holding its `AttachmentImage`, scaled to fit 300 by 200 pixels and sized from the image's `size` so it keeps its space while loading (a 300 by 200 box when the size is unknown). Clicking it, or Enter or Space on it, opens the image at full size in a modal dialog named by the image's name, with its `detail` (such as its size) beside the name; Escape or a click outside closes it, and focus returns to the thumbnail.
@@ -23,6 +23,7 @@
  * - `RepliesDivider` heads a thread's replies.
  * - `ChannelStart` says a channel has nothing older.
  * - `ClosedFold` is an item of a message list standing for closed threads folded away, an `article` named by its button on a dashed line that unfolds them, marked `aria-current` while `current`, such as while one of its threads is open in the thread panel; given a `day`, the day's label (a separator to a screen reader) shares that line, in place of a day separator of its own beside it: the label in the line's centre, the button at its right end, shortening rather than overlapping the label on a narrow line.
+ * - `DeletedMessage` is the slot of a message deleted while it was shown: "Message deleted", muted, with no author, menu, reactions or keys, and not an `article`, so a message list's keys pass over it.
  * - `ThreadBar` is a muted bar across the top of a thread: a line of text and one icon button named by its tooltip, such as who closed it and Reopen thread.
  */
 export {
@@ -38,6 +39,7 @@ export {
   MessageItem,
   MessageList,
   ClosedFold,
+  DeletedMessage,
   ThreadBar,
   RepliesDivider,
   ThreadSummary,

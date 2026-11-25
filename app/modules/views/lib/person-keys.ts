@@ -32,6 +32,7 @@ function messageShortcutsOf(keymap: Keymap): MessageShortcuts {
     openThread: keymap.shortcutOf("openThread"),
     reply: keymap.shortcutOf("replyToMessage"),
     thread: keymap.shortcutOf("toggleThreadClosed"),
+    unfold: keymap.shortcutOf("unfoldMessage"),
   };
 }
 

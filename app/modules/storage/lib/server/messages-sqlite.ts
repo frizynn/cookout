@@ -15,7 +15,7 @@ import type {
   ThreadResponse,
   TopLevelMessage,
 } from "../../../messages/index.ts";
-import { MentionsText, dataText, messageColumns, toMessage } from "./message-rows-sqlite.ts";
+import { MentionsText, dataText, messageColumns, replyTargets, toMessage } from "./message-rows-sqlite.ts";
 import { insertAttachments, sqlAttachments } from "./attachments.ts";
 import { isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
 import { latestOf, stampedIn, takeId } from "./message-sequence-sqlite.ts";
@@ -67,7 +67,7 @@ function placementOf(db: SqlDatabase, { channel, replyTo }: NewMessage): Fails<P
   if (Predicate.isUndefined(replyTo)) {
     return Effect.succeed({ status: "top-level" });
   }
-  return Effect.map(find(db, replyTo), (found) => placeIn({ channel, found }));
+  return Effect.map(replyTargets(db)(replyTo), (found) => placeIn({ channel, found }));
 }
 
 function scheduleOf({ scheduledMessage }: Message): number | null {
@@ -213,6 +213,7 @@ function sqlMessages(db: SqlDatabase): SharedMessagesSection {
     ...sqlAttachments(db),
     appendMessage: (message) => db.transaction(append(db, message)),
     deleteMessage: (id, deleting) => db.transaction(deleteIn(db, id, deleting)),
+    findReplyTarget: replyTargets(db),
     getThread: (id) => threadOf(db, id),
     latestMessageId: latestOf(db),
     listChannelMessages: (channel, page) =>

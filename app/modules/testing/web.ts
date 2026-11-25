@@ -21,6 +21,16 @@
  * test when a publish leaves the snapshot deep-equal to the one before, since
  * each such publish re-renders every view that reads the store for nothing.
  * `memoryStorage()` is a `BrowserStorage` held in memory, fresh for each test, and `kept()` lists what it holds.
+ * `trackedCalls(client)` is the client with every call that answers a promise counted while it is in flight (the
+ * board store's client in the route tests is one), and from a test's first tracked client on, every Testing Library
+ * wait (`findBy`, `waitFor`, `waitForElementToBeRemoved`) first waits until no call is in flight and none starts over
+ * a few turns of the event loop, since a view often makes its next call only once it renders the first one's answer.
+ * So a view that chains calls is read once they have answered, however slow they are (#699). A test that holds a call
+ * open on purpose, to see a loading state, names it: `holdsCallsOpen("countMessagesBy")`, and its waits stop waiting
+ * for calls by that name until it finishes; `holdsCallsOpen()` with no name stops them waiting for any call. A call
+ * in flight for 4 s fails the wait, naming it and the opt-out. `createCallsInFlight({ stallMs })` makes a counter of
+ * its own: `track(client)`, `settled()` and `holdOpen(names)`, an empty list meaning every call. `CallsInFlight` is
+ * its type.
  */
 export { watchAdapter } from "./lib/watch.ts";
 export { type HandFocus, handFocus } from "./lib/page-focus.ts";
@@ -35,3 +45,9 @@ export {
   watchedLive,
 } from "./lib/scripted-live.ts";
 export { type MemoryStorage, memoryStorage } from "./lib/memory-storage.ts";
+export {
+  type CallsInFlight,
+  createCallsInFlight,
+  holdsCallsOpen,
+  trackedCalls,
+} from "./lib/calls-in-flight.ts";

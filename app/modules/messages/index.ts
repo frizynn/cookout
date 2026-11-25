@@ -1,7 +1,8 @@
 /**
  * Messages and threads on the wire, shared by the server, the SDK and the web: the `MessageId` brand and its check,
  * `Message` as a union tagged by `kind`, the requests and answers of posting, threads and channel pages, their paths,
- * and the error codes they refuse with. Pages and threads leave deleted messages out, and count only live replies.
+ * and the error codes they refuse with. Every read leaves deleted messages out (pages, threads counting only live
+ * replies, search, open threads, receipts, Reactions, Attachments), and reacting to one is 404 `message_not_found`.
  */
 import type { Harness, IdentityName, Owner } from "../identities/index.ts";
 import type { ChannelName } from "../channels/index.ts";

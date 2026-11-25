@@ -1,4 +1,4 @@
-import { Array as Arr, Effect } from "effect";
+import { Array as Arr, Effect, Predicate } from "effect";
 import { isMessageId, reactionNames } from "../../index.ts";
 import type { MessageId } from "../../index.ts";
 import type { Refusal } from "../../../http/index.ts";
@@ -9,9 +9,15 @@ interface MisplacedReply {
   readonly replyTo?: MessageId;
 }
 
+interface ReplyReading {
+  readonly replyTo?: MessageId | undefined;
+  readonly seen?: MessageId | undefined;
+}
+
 const BAD_REQUEST = 400;
 const FORBIDDEN = 403;
 const NOT_FOUND = 404;
+const CONFLICT = 409;
 
 function messageNotFound(asked: string): Refusal {
   return { code: "message_not_found", message: `There is no message ${echoed(asked)}.`, status: NOT_FOUND };
@@ -39,6 +45,17 @@ function reactionNotFound(asked: string): Refusal {
     message: `There is no reaction ${echoed(asked)}. Use ${Arr.join(reactionNames, " or ")}.`,
     status: NOT_FOUND,
   };
+}
+
+function threadDeleted({ replyTo, seen }: ReplyReading): Refusal {
+  if (Predicate.isNotUndefined(replyTo) && Predicate.isNotUndefined(seen) && seen > replyTo) {
+    return {
+      code: "thread_deleted",
+      message: "The thread was deleted since you read it. Nothing was posted.",
+      status: CONFLICT,
+    };
+  }
+  return { code: "thread_deleted", message: "The thread was deleted.", status: CONFLICT };
 }
 
 const replyOutsideWebhookCommandThread: Refusal = {
@@ -81,5 +98,6 @@ export {
   replyInOtherChannel,
   replyOutsideWebhookCommandThread,
   seenWithoutReplyTo,
+  threadDeleted,
   threadIdOf,
 };

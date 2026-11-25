@@ -1,8 +1,8 @@
-import { expect, it, vi } from "vitest";
+import { expect, it } from "vitest";
 import { feedOf, idOf, postedIn } from "./feed.ts";
+import { fireEvent, waitFor } from "@testing-library/react";
 import { inPane, inThread } from "./regions.ts";
 import type { Posted } from "./feed.ts";
-import { fireEvent } from "@testing-library/react";
 import { openAt } from "./render.tsx";
 
 const CLOSING = "Done a.";
@@ -51,13 +51,13 @@ async function followedWithNews({ name, texts }: Landing): Promise<Posted> {
 }
 
 async function folded(landing: Landing): Promise<void> {
-  await vi.waitFor(async () => {
+  await waitFor(async () => {
     await expect(feedOf(landing.texts)).resolves.toStrictEqual(landing.folded);
   });
 }
 
 async function landed(text: string): Promise<void> {
-  await vi.waitFor(() => {
+  await waitFor(() => {
     expect(focusedText()).toContain(text);
   });
 }

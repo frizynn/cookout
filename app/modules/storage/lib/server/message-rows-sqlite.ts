@@ -1,12 +1,12 @@
 import { Array as Arr, Effect, Order, Predicate, Schema } from "effect";
 import { AttachmentsColumn, attachmentsColumn, attachmentsField } from "./attachments.ts";
-import type { Author, Closing, Message } from "../../../messages/index.ts";
+import type { Author, Closing, Message, MessageId } from "../../../messages/index.ts";
 import type { DialectForms, SqlDatabase } from "./adapters/sql-database.ts";
 import type { Harness, IdentityName, Owner } from "../../../identities/index.ts";
+import type { NewMessage, ReplyTarget } from "./messages.ts";
 import { isHarness, isIdentityName, isOwner } from "../../../identities/index.ts";
 import { isMessageId, shownRepliers } from "../../../messages/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
-import type { NewMessage } from "./messages.ts";
 import type { ScheduledMessageMarker } from "../../../scheduled-messages/index.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isChannelName } from "../../../channels/index.ts";
@@ -179,4 +179,35 @@ function dataText(message: NewMessage): Fails<string | null> {
   return Schema.encodeEffect(JsonText)(message.data).pipe(Effect.mapError(unreadable));
 }
 
-export { messageColumns, MentionsText, MessageIdColumn, dataText, toMessage };
+const ReplyTargetRow = Schema.Struct({
+  channel: Schema.String.pipe(Schema.refine(isChannelName)),
+  thread: MessageIdColumn,
+  thread_deleted_at: Schema.NullOr(Schema.String),
+});
+
+const FIND_REPLY_TARGET = `SELECT asked.channel AS channel, thread.id AS thread, thread.deleted_at AS thread_deleted_at
+  FROM messages AS asked JOIN messages AS thread ON thread.id = COALESCE(asked.reply_to, asked.id)
+  WHERE asked.id = ?`;
+
+function replyTargets(db: SqlDatabase): (id: MessageId) => Fails<ReplyTarget | undefined> {
+  return (id) =>
+    db.get(FIND_REPLY_TARGET, id).pipe(
+      Effect.flatMap((row) => {
+        if (Predicate.isUndefined(row)) {
+          return Effect.undefined;
+        }
+        return Schema.decodeUnknownEffect(ReplyTargetRow)(row).pipe(
+          Effect.mapBoth({
+            onFailure: unreadable,
+            onSuccess: ({ channel, thread, thread_deleted_at: deletedAt }) => ({
+              channel,
+              thread,
+              threadDeleted: deletedAt !== null,
+            }),
+          }),
+        );
+      }),
+    );
+}
+
+export { messageColumns, MentionsText, MessageIdColumn, dataText, replyTargets, toMessage };

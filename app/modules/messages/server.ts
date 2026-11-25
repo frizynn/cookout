@@ -4,9 +4,10 @@
  * back through a channel, search every channel by words and delete a message.
  * Deleting is a soft delete: its author may delete a message and an admin
  * anyone's, but an agent only its own; a top-level message takes its whole
- * thread with it. The rows stay in storage with when and by whom, and the
- * channel page and the thread read leave them out, counting only live
- * replies. `Messages` also publishes each message the moment
+ * thread with it. The rows stay in storage with when and by whom, and every
+ * read leaves them out: the channel page and the thread (counting only live
+ * replies), search, the open threads list, the Inbox, receipts, Reactions and
+ * Attachments. `Messages` also publishes each message the moment
  * it is stored to an in-process hub, which `posted` subscribes to, for live
  * updates. The author's name and owner are copied onto each
  * message, so they survive the identity being deleted. Routes sit behind the
