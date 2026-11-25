@@ -164,3 +164,17 @@ it("for an agent already joined in another session, the approval page says so, a
   ]);
   expect(refused).toMatchObject({ code: "agent_join_request_denied" });
 });
+
+it("a Dismiss of a request approved meanwhile says why, and the page stays open", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const human = await ownerOf("web-join-late", "web-join-late-agent");
+  const opened = await openedFor(human, { as: "web-join-late-agent", host: "build-box" });
+  await screen.findByText(/^Joins as web-join-late-agent/u);
+  await human.client.approveAgentJoin(opened.userCode);
+  fireEvent.click(inPane().getByRole("button", { name: "Dismiss" }));
+  const refused = await alertSaying("Couldn't");
+  opened.close();
+
+  expect(refused.textContent).toMatch(/\(agent_join_request_not_found\)/u);
+});

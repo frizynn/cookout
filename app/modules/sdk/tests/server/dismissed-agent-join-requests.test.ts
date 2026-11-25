@@ -176,3 +176,16 @@ it.effect("someone whose own <name>/agent approving would join can't dismiss ano
     expect(listed).toMatchObject([{ userCode: request.userCode }]);
   }).pipe(Effect.provide(testCookout())),
 );
+
+it.effect("an approved join request can't be dismissed, and its join still collects", () =>
+  Effect.gen(function* approvedStays() {
+    const { ada, cookout } = yield* board;
+    const request = yield* started(cookout);
+    yield* answer(() => ada.client.approveAgentJoin(request.userCode));
+    const refused = yield* refusal(() => ada.client.denyAgentJoin(request.userCode));
+    const joined = yield* collect(cookout, request);
+
+    expect(refused).toMatchObject({ code: "agent_join_request_not_found", status: NOT_FOUND });
+    expect(joined).toMatchObject({ agentSession: { identity: "worker" }, status: "approved" });
+  }).pipe(Effect.provide(testCookout())),
+);
