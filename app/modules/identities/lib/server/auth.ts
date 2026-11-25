@@ -59,6 +59,10 @@ const AgentSessionSent = Context.Reference<Option.Option<TokenHash>>("cookout/id
   defaultValue: Option.none,
 });
 
+const LoginCredentialSent = Context.Reference<Option.Option<TokenHash>>("cookout/identities/LoginCredentialSent", {
+  defaultValue: Option.none,
+});
+
 const HarnessSent = Context.Reference<Option.Option<Harness>>("cookout/identities/HarnessSent", {
   defaultValue: Option.none,
 });
@@ -124,6 +128,7 @@ function agentSessionPrincipal(storage: Storage["Service"], hash: TokenHash) {
       return Effect.succeed({
         agentSession: Option.some(hash),
         identity: used.identity,
+        loginCredential: Option.none(),
         webhookCommandThread: Option.none(),
       });
     }
@@ -152,6 +157,7 @@ function principalOf(storage: Storage["Service"], hash: TokenHash) {
         return Effect.succeed({
           agentSession: Option.none(),
           identity: found.identity,
+          loginCredential: Option.none(),
           webhookCommandThread: Option.none(),
         });
       }
@@ -252,6 +258,7 @@ export {
   AgentSessionSent,
   Caller,
   HarnessSent,
+  LoginCredentialSent,
   broughtInBy,
   WebhookCommandThread,
   type Credentials,
