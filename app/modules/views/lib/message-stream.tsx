@@ -21,6 +21,7 @@ interface MessageStreamProps {
   readonly reply: Reply | null;
   readonly closing: MenuClosing;
   readonly threadParent: TopLevelMessage | null;
+  readonly opened: boolean;
 }
 
 export function MessageStream(props: MessageStreamProps): ReactNode {
@@ -43,6 +44,7 @@ export function MessageStream(props: MessageStreamProps): ReactNode {
             menu={props.menu}
             news={props.threads.get(row.message.id) ?? null}
             open={props.open}
+            opened={props.opened}
             parent={props.after}
             threadParent={props.threadParent}
             receipts={props.receipts}

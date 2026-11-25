@@ -53,6 +53,7 @@ export function ChannelPostStreams(props: ChannelPostStreamsProps): ReactNode {
         menu={menu}
         messages={upTo}
         open={null}
+        opened={false}
         readPosition={readPosition}
         receipts={receipts}
         reply={props.reply}
@@ -72,6 +73,7 @@ export function ChannelPostStreams(props: ChannelPostStreamsProps): ReactNode {
           menu={menu}
           messages={later}
           open={null}
+          opened={false}
           readPosition={readPosition}
           receipts={receipts}
           reply={props.reply}

@@ -146,7 +146,8 @@ type MessageAction =
   | "replyToMessage"
   | "toggleThreadClosed"
   | "toggleThumbsDown"
-  | "toggleThumbsUp";
+  | "toggleThumbsUp"
+  | "unfoldMessage";
 
 function messageActions(keymap: Keymap): Readonly<Record<MessageAction, Act>> {
   return {
@@ -158,6 +159,7 @@ function messageActions(keymap: Keymap): Readonly<Record<MessageAction, Act>> {
     toggleThreadClosed: click(keymap, "toggleThreadClosed"),
     toggleThumbsDown: click(keymap, "toggleThumbsDown"),
     toggleThumbsUp: click(keymap, "toggleThumbsUp"),
+    unfoldMessage: click(keymap, "unfoldMessage"),
   };
 }
 

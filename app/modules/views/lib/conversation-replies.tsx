@@ -84,6 +84,7 @@ export function ConversationReplies(props: ConversationRepliesProps): ReactNode 
           menu={menu}
           messages={earlier}
           open={null}
+          opened={false}
           readPosition={null}
           receipts={receipts}
           reply={props.reply}
@@ -100,6 +101,7 @@ export function ConversationReplies(props: ConversationRepliesProps): ReactNode 
         menu={menu}
         messages={unread}
         open={null}
+        opened
         readPosition={null}
         receipts={receipts}
         reply={props.reply}

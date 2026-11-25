@@ -43,6 +43,7 @@ export function ThreadReplies(props: ThreadRepliesProps): ReactNode {
         menu={props.menu}
         messages={props.replies}
         open={null}
+        opened={false}
         readPosition={props.readPosition}
         receipts={props.receipts}
         reply={props.reply}
