@@ -1,4 +1,4 @@
-import { markRead, openSchedules, stepTo, toggleSubscription } from "./channel-keys.ts";
+import { markRead, markShownRead, openSchedules, stepTo, toggleSubscription } from "./channel-keys.ts";
 import { moveFocus, roving, sidebar } from "./sidebar-roving.ts";
 import { useBoardStore, useChannels } from "./use-board.ts";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -54,6 +54,7 @@ function useSidebarKeys(props: SidebarKeys): Said {
     const unbind = [
       keymap.bind({
         actions: {
+          markShownChannelRead: markShownRead(keys),
           nextChannel: stepTo({ keys, step: "next", unreadOnly: false }),
           nextUnreadChannel: stepTo({ keys, step: "next", unreadOnly: true }),
           previousChannel: stepTo({ keys, step: "previous", unreadOnly: false }),

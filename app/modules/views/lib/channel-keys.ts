@@ -70,20 +70,25 @@ function rowChannel(keys: ChannelKeys, target: EventTarget | null): ChannelName 
   return keys.order.find((channel) => hrefOf({ channel, name: "channel" }) === href) ?? null;
 }
 
-function markRead(keys: ChannelKeys): Act {
-  return ({ target }) => {
-    const channel = rowChannel(keys, target);
-    if (channel === null) {
-      return false;
-    }
-    if (!unreadIn(keys)(channel)) {
-      keys.announce(TEXT.nothingUnread(channel));
-      return true;
-    }
-    keys.unread.markChannelRead(channel);
-    keys.announce(TEXT.markedRead(channel));
+function markedRead(keys: ChannelKeys, channel: ChannelName | null): boolean {
+  if (channel === null) {
+    return false;
+  }
+  if (!unreadIn(keys)(channel)) {
+    keys.announce(TEXT.nothingUnread(channel));
     return true;
-  };
+  }
+  keys.unread.markChannelRead(channel);
+  keys.announce(TEXT.markedRead(channel));
+  return true;
+}
+
+function markRead(keys: ChannelKeys): Act {
+  return ({ target }) => markedRead(keys, rowChannel(keys, target));
+}
+
+function markShownRead(keys: ChannelKeys): Act {
+  return () => markedRead(keys, openChannel(locationOf(globalThis.location.hash).route));
 }
 
 function subscriptionSaid(channel: ChannelName, subscribing: boolean): string {
@@ -118,4 +123,4 @@ function openSchedules(keys: ChannelKeys): Act {
   };
 }
 
-export { type ChannelKeys, markRead, openSchedules, stepTo, toggleSubscription };
+export { type ChannelKeys, markRead, markShownRead, openSchedules, stepTo, toggleSubscription };

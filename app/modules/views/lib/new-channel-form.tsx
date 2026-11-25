@@ -1,9 +1,11 @@
 import type { ChannelCreation, ChannelCreationSnapshot, CreationState } from "../../board/index.ts";
 import { InputField, PromptForm } from "../../design-system/controls.tsx";
 import type { ChannelName } from "../../sdk/index.ts";
+import type { Keymap } from "../../keymap/index.ts";
 import type { ReactNode } from "react";
 import { hrefOf } from "../../paths/index.ts";
 import { useCallback } from "react";
+import { usePromptKeys } from "./use-prompt-keys.ts";
 
 const TEXT = {
   busy: "Creating…",
@@ -17,6 +19,7 @@ const TEXT = {
 
 interface NewChannelFormProps {
   readonly creation: ChannelCreation;
+  readonly keymap: Keymap;
   readonly state: ChannelCreationSnapshot;
 }
 
@@ -39,6 +42,7 @@ export function NewChannelForm(props: NewChannelFormProps): ReactNode {
   const handleSubmit = useCallback(() => {
     creation.create(openChannel);
   }, [creation]);
+  usePromptKeys({ keymap: props.keymap, label: TEXT.title, onEscape: handleCancel });
   return (
     <PromptForm
       busy={state.create.status === "creating"}
@@ -47,7 +51,6 @@ export function NewChannelForm(props: NewChannelFormProps): ReactNode {
       description={null}
       label={TEXT.title}
       onCancel={handleCancel}
-      onEscape={handleCancel}
       onSubmit={handleSubmit}
       title={TEXT.title}
     >

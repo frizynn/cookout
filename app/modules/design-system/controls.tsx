@@ -30,7 +30,7 @@
  * - `ResultOption` is a result's label, detail and children.
  * - `DataArea` is a labelled box to write JSON in, whose text its owner holds.
  * - `LinesArea` is an optional labelled box for lines (`name: value` headers), whose text its owner holds.
- * - `PromptForm` is a named card in place of a message box that asks for a command's data, titled, with a Cancel and a submit button, its first field focused, and Escape anywhere in it calls `onEscape`.
+ * - `PromptForm` is a named card in place of a message box that asks for a command's data, titled, with a Cancel and a submit button, its first field focused. Its Escape is the keymap's: the view that draws it binds `cancelPrompt` to the form, named by its `label`.
  * - `InputField` is a labelled field in a `PromptForm` (text, a number, an integer, a date or a time) whose value its owner holds, marked when required, with its help text and any error under it, both read out as its description.
  * - `PickField` is an `InputField` for one of a list, or none.
  * - `CheckField` is an `InputField` for a checkbox.
