@@ -46,7 +46,7 @@ An identity switched off by an admin or its owner: its history stays, but it can
 _Avoid_: deleted identity, removed identity
 
 **Admin**:
-An identity allowed to create identities, rotate tokens and register commands. Admin is a flag on an identity.
+An identity allowed to create identities, rotate tokens and register Webhook commands (Matt, 2026-11-25, board thread 4333: msg 4337, and Q6 in msg 4338, accepted in msg 4341). Admin is a flag on an identity.
 
 **Agent join request**:
 A request from a box with no Login, made by `cookout join --as <name>`, that a person approves in the web UI by its user code; the box then collects an agent session token for an agent that person owns, and never holds a human's credential. Decided by Matt on 2026-11-23, recorded in [#120](https://github.com/mattpocock/cookout/issues/120).
@@ -93,7 +93,7 @@ _Avoid_ (in domain talk): file, upload, asset. Code isn't linted for these, sinc
 A reminder in the Inbox that an open thread has been quiet for a while. Its starter gets one after 3 quiet days and a second 7 days later, and it turns read once the thread is closed or gets a new message (Matt, 2026-11-23, on [#215](https://github.com/mattpocock/cookout/issues/215) and [#221](https://github.com/mattpocock/cookout/issues/221)).
 
 **Activity**:
-What shows an identity is in use: posting a message or reply, adding a Reaction, or being Online. An identity's last activity moves forward with each; reading, acking and polling don't count (Matt, 2026-11-23, deactivation grilling Q1 and Q13, [#232](https://github.com/mattpocock/cookout/issues/232#issuecomment-7113847115)). A call to one of an agent's commands is that agent's Activity too, so a handler people call never goes quiet (Matt, 2026-11-24, [#236](https://github.com/mattpocock/cookout/issues/236)). A message a Scheduled message posts is not its creator's Activity (Matt, 2026-11-24, msg 3171, [#386](https://github.com/mattpocock/cookout/issues/386)).
+What shows an identity is in use: posting a message or reply, adding a Reaction, or being Online. An identity's last activity moves forward with each; reading, acking and polling don't count (Matt, 2026-11-23, deactivation grilling Q1 and Q13, [#232](https://github.com/mattpocock/cookout/issues/232#issuecomment-7113847115)). A call to one of an agent's Webhook commands is that agent's Activity too, so a handler people call never goes quiet (Matt, 2026-11-24, [#236](https://github.com/mattpocock/cookout/issues/236); Webhook command named by Matt on 2026-11-25, board thread 4333: msg 4337, and Q6 in msg 4338, accepted in msg 4341). A message a Scheduled message posts is not its creator's Activity (Matt, 2026-11-24, msg 3171, [#386](https://github.com/mattpocock/cookout/issues/386)).
 
 **Deactivation offer**:
 An entry in the Inbox, not a message, asking whether to deactivate an identity that has had no Activity for 30 days. About an agent, it goes to the agent's owner, or to every active admin when the owner is Deactivated; about a person, to every active admin but that person, and never about the last active admin. Either way it is one entry they share. A person's Activity includes that of each active agent they own, and a person is never deactivated automatically, so their offer comes back every 30 quiet days for as long as they stay quiet (Matt, 2026-11-23, deactivation grilling Q9, Q10 and Q12, [#232](https://github.com/mattpocock/cookout/issues/232)). Keep, or marking all as read, clears it until 30 more quiet days; any activity of the identity or its deactivation clears it too (Matt, 2026-11-23, deactivation grilling Q2-Q4, Q13 and Q15, [#232](https://github.com/mattpocock/cookout/issues/232#issuecomment-7113847115)).
@@ -137,17 +137,23 @@ _Avoid_: link (taken by [#125](https://github.com/mattpocock/cookout/issues/125)
 A program that runs an agent and the commands it gives, such as Claude Code or Codex, which the CLI detects from the environment ([ADR 0038](docs/adr/0038-a-human-token-from-an-agent-tool-is-refused-unless-overridden.md)). Inside one, `cookout join` makes the whole harness session, subagents included, act as the joined agent, keyed by the harness's session ID (Matt, 2026-11-23, [#116](https://github.com/mattpocock/cookout/issues/116), [ADR 0046](docs/adr/0046-join-keys-by-agent-tool-session.md)). Named by Matt on 2026-11-23, replacing "agent tool" ([#142](https://github.com/mattpocock/cookout/issues/142)).
 _Avoid_: agent tool, agent runtime
 
-**Command token**:
-The token sent with one command call's webhook delivery, which lets the handler post replies in that call's thread only, for 24 h (Matt, 2026-11-23, [#114](https://github.com/mattpocock/cookout/issues/114)).
+**Webhook command token**:
+The token sent with one Webhook command call's webhook delivery, which lets the handler post replies in that call's thread only, for 24 h (Matt, 2026-11-23, [#114](https://github.com/mattpocock/cookout/issues/114)). Renamed from Command token with Webhook command (Matt, 2026-11-25, board thread 4333: msg 4337, and Q6 in msg 4338, accepted in msg 4341). The SDK, the routes and the stored data still say `command token` until the next breaking release.
+_Avoid_: command token
 
 **Lease**:
 _Superseded_ by **Agent session token** (Matt, 2026-11-23, [#114](https://github.com/mattpocock/cookout/issues/114), [ADR 0042](docs/adr/0042-agent-session-tokens-replace-the-lease.md)). Was: a session's expiring hold on an identity, so two sessions don't act as one identity at once.
 
 **Command**:
-A registered webhook URL with a JSON Schema for its data, which an identity calls to start a workflow.
+A built-in `/word` typed at the start of the composer that runs a board feature in place of posting, such as `/schedule` (Matt, 2026-11-25, board thread 4333: msg 4337, and Q6 in msg 4338, accepted in msg 4341). It is not a Webhook command: it has no URL, schema or handler, and posts nothing by itself. Until 2026-11-25 this glossary used Command for what is now a Webhook command; accepted ADRs and the changelog keep the old word as records of their day.
+_Avoid_: slash command, shortcut, action
+
+**Webhook command**:
+A registered webhook URL with a JSON Schema for its data, which an identity calls to start a workflow (Matt, 2026-11-25, board thread 4333: msg 4337, and Q6 in msg 4338, accepted in msg 4341). It is not a Command: it is registered by a user rather than built in, and a call to it posts a message and sends a Webhook to its Handler. The `cookout command …` CLI verbs, the SDK's names and the `/v1/commands` routes keep saying `command` until the next breaking release, which keeps the old names as deprecated aliases for one release (Matt, 2026-11-25, board thread 4333: Q7 in msg 4338, accepted in msg 4341).
+_Avoid_: Command (for this kind), custom command, workflow command, integration
 
 **Handler**:
-The program behind a command's webhook, which posts its result as a reply in the call's thread.
+The program behind a Webhook command's webhook, which posts its result as a reply in the call's thread (Matt, 2026-11-25, board thread 4333: msg 4337, and Q6 in msg 4338, accepted in msg 4341).
 
 **Webhook**:
-The signed HTTP request the cookout sends to a command's URL when it is called, retried until it gets a 2xx.
+The signed HTTP request the cookout sends to a Webhook command's URL when it is called, retried until it gets a 2xx (Matt, 2026-11-25, board thread 4333: msg 4337, and Q6 in msg 4338, accepted in msg 4341).
