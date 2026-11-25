@@ -3,7 +3,9 @@
  * that read the Inbox through it. The board store holds the state: one Inbox read (`GET /v1/inbox`), the read
  * positions (`GET /v1/read-positions`) and one first page of the Inbox history (`GET /v1/inbox/history`) per load or
  * catch-up, shared by every part below, with the live events applied in one place. This module keeps the shape the
- * views read and the page state that stays here: the "New" lines, the selection and the reading rule.
+ * views read and the page state that stays here: the "New" lines, the selection and the reading rule. The levels and
+ * rows below (`rowsOf`, `rowKey`, `countsOf`, `countsByChannel`, `newsByThread`, `threadsWithNews`) are the board
+ * store's, re-exported for the views, and a "New" line takes its place from the board's `inboxNewLine`.
  * The unread inbox items of whoever is looking, oldest first. An external store, read by components with
  * `useSyncExternalStore`, loaded when its first reader subscribes, a message there for several reasons held once.
  * Each new inbox item (`inbox-item`) joins them, and each new read
@@ -102,7 +104,7 @@ import type {
 } from "./lib/inbox-stores.ts";
 import type { ChannelName, MessageId } from "../sdk/index.ts";
 import type { NewLine, WithNewLines } from "./lib/new-lines.ts";
-import { inboxMovesBack, inboxReadPosition } from "../board/index.ts";
+import { inboxMovesBack, inboxNewLine } from "../board/index.ts";
 import { inboxStoresOf } from "./lib/inbox-stores.ts";
 import { withNewLines } from "./lib/new-lines.ts";
 
@@ -175,6 +177,7 @@ export function createUnread(options: UnreadOptions): Unread {
     deactivatedQuietAgents: stores.deactivatedQuietAgents,
     deactivationOffers: stores.deactivationOffers,
     earlier: stores.earlier,
+    lineAt: (channel, thread) => inboxNewLine({ channel, state: boardStore.snapshot(), thread }),
     markAllRead: calls.markAllRead,
     markChannel: stores.markChannel,
     markChannelRead: calls.markChannelRead,
@@ -182,7 +185,6 @@ export function createUnread(options: UnreadOptions): Unread {
     menu: stores.menu,
     movesBack: (channel, thread) => inboxMovesBack({ channel, state: boardStore.snapshot(), thread }),
     nudges: stores.nudges,
-    readPosition: (channel, thread) => inboxReadPosition({ channel, state: boardStore.snapshot(), thread }),
     snapshot: stores.inbox.snapshot,
     subscribe: stores.inbox.subscribe,
   });
@@ -209,10 +211,19 @@ export type {
   UnreadState,
 } from "./lib/inbox-stores.ts";
 export type { Selection } from "./lib/selection.ts";
-export type { InboxRow } from "./lib/rows.ts";
-export { rowKey, rowsOf } from "./lib/rows.ts";
-export type { ThreadNews, UnreadCounts, UnreadWhy } from "./lib/levels.ts";
-export { NO_COUNTS, countsByChannel, countsOf, newsByThread, threadsWithNews } from "./lib/levels.ts";
+export {
+  type InboxRow,
+  NO_COUNTS,
+  type ThreadNews,
+  type UnreadCounts,
+  type UnreadWhy,
+  countsByChannel,
+  countsOf,
+  newsByThread,
+  rowKey,
+  rowsOf,
+  threadsWithNews,
+} from "../board/index.ts";
 export { type Reading, createReading } from "./lib/reading.ts";
 export { browserReadingTools } from "./lib/browser-reading.ts";
 export type { Newest, Reader, ReaderSources } from "./lib/reader.ts";

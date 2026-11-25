@@ -69,6 +69,14 @@
  * returns the same object until what it reads changes. `inboxCalls` makes the Inbox's changes on the server (mark all,
  * mark a channel, mark unread, keep an offer, read a notice, close a nudged thread, hold or release a quiet agent,
  * approve a join), one at a time in the order asked, applying each answer to the slice or keeping the refusal.
+ * The Inbox's levels are selectors too, each the same object until the items it reads change: `inboxRows` and
+ * `earlierRows` group the unread and the read items into rows (`rowsOf`: one per thread, its replies, or per channel,
+ * its top-level messages, each with its latest item, count, level and strongest reason, newest first; `rowKey` is a
+ * row's key); `inboxCounts` and `inboxCountsByChannel` count the two levels, for you (a mention, a reaction, a reply
+ * in a thread you started) and activity (the rest; Matt, #152, 2026-11-23); `inboxNewsByThread` counts each thread's
+ * unread replies and how many are for you; `inboxThreadsWithNews` lists a channel's threads with an item there for a
+ * reason besides a subscribed channel (#349); and `inboxNewLine` is where a channel's or thread's "New" line goes: its
+ * read position, or above every message once a read position moved back to nothing read.
  *
  * `Board` and its parts are the old per-channel and per-thread stores the views still read; the routes module makes them
  * as thin adapters over the store's selectors and methods, for the last migration ticket to delete.
@@ -151,6 +159,26 @@ export {
   offersOf,
   quietAgentsOf,
 } from "./lib/inbox-selectors.ts";
+export {
+  earlierRows,
+  inboxCounts,
+  inboxCountsByChannel,
+  inboxNewLine,
+  inboxNewsByThread,
+  inboxRows,
+  inboxThreadsWithNews,
+} from "./lib/inbox-levels-selectors.ts";
+export {
+  NO_COUNTS,
+  type ThreadNews,
+  type UnreadCounts,
+  type UnreadWhy,
+  countsByChannel,
+  countsOf,
+  newsByThread,
+  threadsWithNews,
+} from "./lib/inbox-levels.ts";
+export { type InboxRow, rowKey, rowsOf } from "./lib/inbox-rows.ts";
 export { calledTrigger } from "./lib/triggers-slice.ts";
 export {
   channelList,
