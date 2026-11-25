@@ -49,12 +49,10 @@ it("a thread with more than 20 new replies shows every reply from the New line",
   const { hash, reader } = await threadWithNewReplies("web-earlier-from-new");
   const close = openWithClockStopped({ client: reader, hash });
 
+  const earlier = await inThread().findByRole("button", { name: "3 earlier replies" });
   const shown = await messagesIn("Replies");
 
-  expect([inThread().getByRole("button", { name: "3 earlier replies" }).textContent, shown.length]).toStrictEqual([
-    "3 earlier replies",
-    NEW,
-  ]);
+  expect([earlier.textContent, shown.length]).toStrictEqual(["3 earlier replies", NEW]);
 
   close();
 });
