@@ -150,3 +150,43 @@ it.effect.each(storageLayers)(
       expect(count).toBe(NONE);
     }),
 );
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): a reply naming a deleted reply in a live thread joins that thread",
+  ({ layer }) =>
+    Effect.gen(function* replyToDeletedReply() {
+      const { storage } = yield* openStore(layer);
+      const { parent, second } = yield* threadOfThree(storage);
+      yield* storage.deleteMessage(second.id, deleting);
+      const target = yield* storage.findReplyTarget(second.id);
+      const joined = yield* storage.appendMessage(newMessage("grill", "to the gone reply", { replyTo: second.id }));
+
+      expect(target).toStrictEqual({ channel: GRILL, thread: parent.id, threadDeleted: false });
+      expect(joined).toMatchObject({ message: { kind: "reply", replyTo: parent.id }, status: "appended" });
+    }),
+);
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): a reply naming any message in a deleted thread is refused thread_deleted",
+  ({ layer }) =>
+    Effect.gen(function* replyIntoDeleted() {
+      const { storage } = yield* openStore(layer);
+      const { first, parent, second } = yield* threadOfThree(storage);
+      yield* storage.deleteMessage(second.id, deleting);
+      yield* storage.deleteMessage(parent.id, deleting);
+      const refused = yield* Effect.all(
+        Arr.map([parent.id, first.id, second.id], (replyTo) =>
+          storage.appendMessage(newMessage("grill", "too late", { replyTo })),
+        ),
+        ONE_AT_A_TIME,
+      );
+      const [gone, missing] = yield* Effect.all(
+        [storage.findReplyTarget(first.id), storage.findReplyTarget(messageId(MISSING))],
+        ONE_AT_A_TIME,
+      );
+
+      expect(refused).toStrictEqual(Arr.replicate({ status: "thread_deleted" }, refused.length));
+      expect(gone).toStrictEqual({ channel: GRILL, thread: parent.id, threadDeleted: true });
+      expect(missing).toBeUndefined();
+    }),
+);
