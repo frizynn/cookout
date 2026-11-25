@@ -1,5 +1,6 @@
 import { adminClient, anonymousClient, sessionOf } from "./identities.ts";
 import {
+  answeredAndShown,
   clicked,
   openReading,
   otherThread,
@@ -13,6 +14,7 @@ import {
 } from "./reading.ts";
 import { expect, it } from "vitest";
 import type { ReadThread } from "./reading.ts";
+import { answering } from "./answering.ts";
 import { inConversation } from "./regions.ts";
 import { openAt } from "./render.tsx";
 import { waitFor } from "@testing-library/react";
@@ -59,7 +61,7 @@ it("a reply of your own in the open conversation marks its row read at once, wit
 
   const thread = await threadToRead("web-mark-read-reply");
   const opened = await openReading({ hash: thread.address, thread });
-  await shown(LATEST);
+  await answeredAndShown({ opened, text: LATEST });
   await replied({ by: thread.reader, text: "On it", thread });
   await shown("On it");
 
@@ -73,7 +75,7 @@ it("mark read reads the row at once, and Undo brings it back unread", { timeout:
 
   const thread = await threadToRead("web-mark-read-undo");
   const opened = await openReading({ hash: thread.address, thread });
-  await shown(LATEST);
+  await answeredAndShown({ opened, text: LATEST });
   clicked("Mark conversation read");
   const read = [await readAtLast(thread), await noteShown()];
   clicked("Undo");
@@ -92,7 +94,7 @@ it("the Marked as read note goes after 5 s", { timeout: 8000 }, async () => {
 
   const thread = await threadToRead("web-mark-read-note");
   const opened = await openReading({ hash: thread.address, thread });
-  await shown(LATEST);
+  await answeredAndShown({ opened, text: LATEST });
   await markedRead();
   opened.advance(JUST_SHORT_OF_THE_NOTE);
   const meanwhile = await noteShown();
@@ -110,7 +112,7 @@ it("mark unread puts a read row back in its section, and it stays unread while i
 
   const thread = await threadToRead("web-mark-unread-held");
   const opened = await openReading({ hash: thread.address, thread });
-  await shown(LATEST);
+  await answeredAndShown({ opened, text: LATEST });
   await opened.readAfter(READ_AFTER);
   clicked("Mark unread");
   const back = await backInActivity(thread);
@@ -126,10 +128,10 @@ it("a row marked unread is read 2 s after it is selected again later", { timeout
   const thread = await threadToRead("web-mark-unread-again");
   const other = await otherThread(thread);
   const opened = await openReading({ hash: thread.address, thread });
-  await shown(LATEST);
+  await answeredAndShown({ opened, text: LATEST });
   clicked("Mark unread");
-  await rowSelected(other);
-  await rowSelected(thread);
+  await rowSelected({ opened, thread: other });
+  await rowSelected({ opened, thread });
 
   await expect(opened.readAfter(READ_AFTER)).resolves.toBe(NONE);
 
@@ -139,11 +141,9 @@ it("a row marked unread is read 2 s after it is selected again later", { timeout
 it("mark read and Mark unread on a conversation that couldn't load change nothing", { timeout: 8000 }, async () => {
   expect.hasAssertions();
 
-  const unmount = openAt({
-    client: anonymousClient(),
-    hash: "#/inbox/general/1",
-    session: sessionOf(adminClient()),
-  });
+  const { answered, client } = answering(anonymousClient());
+  const unmount = openAt({ client, hash: "#/inbox/general/1", session: sessionOf(adminClient()) });
+  await answered("getThread");
   await inConversation().findByRole("alert");
   clicked("Mark conversation read");
   clicked("Mark unread");

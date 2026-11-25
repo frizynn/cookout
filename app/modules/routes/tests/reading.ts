@@ -1,7 +1,7 @@
+import type { Answering, ClientMethod } from "./answering.ts";
 import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { inConversation, inPane, inSidebar } from "./regions.ts";
-import type { Answering } from "./answering.ts";
 import type { HandReading } from "./hand-reading.ts";
 import { answering } from "./answering.ts";
 import { clockStopped } from "./clock.ts";
@@ -128,10 +128,30 @@ async function shown(text: string): Promise<string> {
   return found.textContent;
 }
 
-async function rowSelected(thread: ReadThread): Promise<string> {
+interface Answered {
+  readonly answered: Answering["answered"];
+}
+
+interface Showing {
+  readonly opened: Answered;
+  readonly text: string;
+}
+
+async function answeredAndShown({ opened, text }: Showing): Promise<string> {
+  await opened.answered("getThread");
+  const found = await shown(text);
+  return found;
+}
+
+interface Selecting {
+  readonly opened: Answered;
+  readonly thread: ReadThread;
+}
+
+async function rowSelected({ opened, thread }: Selecting): Promise<string> {
   const latest = `${SECOND_REPLY} in ${thread.parent.text}`;
   fireEvent.click(await inPane().findByRole("link", { name: (name) => name.includes(latest) }));
-  const text = await shown(latest);
+  const text = await answeredAndShown({ opened, text: latest });
   return text;
 }
 
@@ -179,9 +199,10 @@ interface Opened extends Omit<HandReading, "reading"> {
 interface Opening {
   readonly thread: ReadThread;
   readonly hash: string;
+  readonly waitingOn?: readonly ClientMethod[];
 }
 
-async function openReading({ hash, thread }: Opening): Promise<Opened> {
+async function openReading({ hash, thread, waitingOn = [] }: Opening): Promise<Opened> {
   const { advance, page, reading } = handReading();
   const { live, stream } = watched(thread.reader);
   clockStopped();
@@ -189,6 +210,11 @@ async function openReading({ hash, thread }: Opening): Promise<Opened> {
   const { answered, client } = answering(ackingClient);
   const unmount = openAt({ client, hash, live, reading });
   const events: EventStream = await stream;
+  await Promise.all(
+    waitingOn.map(async (method) => {
+      await answered(method);
+    }),
+  );
   return {
     advance,
     answered,
@@ -218,6 +244,7 @@ async function openReading({ hash, thread }: Opening): Promise<Opened> {
 
 export {
   type ReadThread,
+  answeredAndShown,
   arrived,
   clicked,
   openReading,
