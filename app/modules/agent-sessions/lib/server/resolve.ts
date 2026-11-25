@@ -31,7 +31,6 @@ interface On {
 
 interface Naming {
   readonly displayName?: DisplayName;
-  readonly requireDisplayName?: boolean;
 }
 
 interface Asked {
@@ -81,7 +80,7 @@ function named(identity: AgentIdentity, { displayName }: Naming): AgentIdentity 
 
 function createOwned(asked: Asked): Fails<Resolved> {
   const { name, naming, on, owner } = asked;
-  if (naming.requireDisplayName === true && Predicate.isUndefined(naming.displayName)) {
+  if (Predicate.isUndefined(naming.displayName)) {
     return Effect.fail(displayNameRequired(name));
   }
   return Effect.gen(function* createOwnedAgent() {

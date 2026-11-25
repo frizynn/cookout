@@ -1,8 +1,8 @@
-import type { AgentIdentity, HumanIdentity, IdentityName } from "../../../identities/index.ts";
+import type { AgentIdentity, DisplayName, HumanIdentity, IdentityName } from "../../../identities/index.ts";
 import type { AgentSessionResponse, JoinCodeResponse, RedeemJoinCodeRequest } from "../../index.ts";
 import { DateTime, Effect, Predicate } from "effect";
 import type { JoinCodeRedemption, StorageUnavailable } from "../../../storage/server.ts";
-import { agentSessionLive, identityDeactivated } from "./refusals.ts";
+import { agentSessionLive, displayNameRequired, identityDeactivated } from "./refusals.ts";
 import type { Description } from "../../../identities/client.ts";
 import type { On } from "./join.ts";
 import type { Refusal } from "../../../http/index.ts";
@@ -17,6 +17,7 @@ interface NewAgent {
   readonly caller: HumanIdentity;
   readonly name: IdentityName;
   readonly description?: Description;
+  readonly displayName?: DisplayName;
 }
 
 interface JoinCodes {
@@ -57,12 +58,16 @@ function withHost<Redeem extends object>(
   return { ...redeem, host };
 }
 
-function newAgentOf({ caller, description, name }: NewAgent, createdAt: AgentIdentity["createdAt"]): AgentIdentity {
-  const agent: AgentIdentity = { admin: false, createdAt, kind: "agent", name, owner: caller.name };
-  if (Predicate.isUndefined(description)) {
-    return agent;
+function newAgentOf(asked: NewAgent, createdAt: AgentIdentity["createdAt"]): Effect.Effect<AgentIdentity, Refusal> {
+  const { caller, description, displayName, name } = asked;
+  if (Predicate.isUndefined(displayName)) {
+    return Effect.fail(displayNameRequired(name));
   }
-  return { ...agent, description };
+  const agent: AgentIdentity = { admin: false, createdAt, displayName, kind: "agent", name, owner: caller.name };
+  if (Predicate.isUndefined(description)) {
+    return Effect.succeed(agent);
+  }
+  return Effect.succeed({ ...agent, description });
 }
 
 function agentCreator({ publishIdentity, secrets, storage }: On) {
@@ -87,7 +92,7 @@ function creator(on: On): JoinCodes["createJoinCode"] {
     Effect.gen(function* createAgentWithJoinCode() {
       const now = yield* DateTime.now;
       const createdAt = isoTimeOf(now);
-      const agent = newAgentOf(asked, createdAt);
+      const agent = yield* newAgentOf(asked, createdAt);
       yield* createAgent(agent);
       const joinCode = yield* secrets.newToken;
       const codeHash = yield* secrets.hashToken(joinCode);
