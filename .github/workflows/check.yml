@@ -36,6 +36,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-name: static
+      # lint's baseline ratchet and drift's lint-config guard both judge the push's range.
       - name: Pick the lint baseline's base
         env:
           BEFORE: ${{ github.event.before }}
@@ -73,7 +74,7 @@ jobs:
       - name: pnpm check --job=drift
         env:
           NODE_COMPILE_CACHE: node_modules/.cache/node-compile
-        run: node scripts/check.ts --job=drift --ci
+        run: node scripts/check.ts --job=drift --base="$BASE" --ci
 
   # Every browser test in one job took 205s of a passing run and was cancelled at the 5-minute
   # limit on loaded runners (#455), so Playwright's --shard splits them, test by test, across 3
