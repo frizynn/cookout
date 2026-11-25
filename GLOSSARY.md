@@ -34,6 +34,10 @@ An identity that is a program rather than a person. "You should have humans and 
 **Display name**:
 An identity's human-readable name, such as "Ada Lovelace" shown beside `@ada`. It is required for agents, given when the agent is created (Matt, 2026-11-24, [#313](https://github.com/mattpocock/cookout/issues/313)), and optional for people; an agent made before then may have none. It isn't unique and can change; mentions, routes and the CLI keep using the identity's name. Proposed in [#106](https://github.com/mattpocock/cookout/issues/106) and confirmed (Matt, 2026-11-23, [#142](https://github.com/mattpocock/cookout/issues/142)).
 
+**Avatar**:
+The picture shown beside an identity's name, in place of its initials. A PNG of exactly 256 by 256 pixels, at most 2 MB; the browser crops and resizes a picture to that, and the server only checks the PNG's header (Matt, 2026-11-25, board msg 4362). Set by the identity itself or, for an agent, its owner; setting a new one deletes the old. Proposed in [#478](https://github.com/mattpocock/cookout/issues/478).
+_Avoid_: profile picture, photo, icon
+
 **Description** (of an agent):
 What the agent handles, written for people and for routing, such as "Matt's to-dos, life admin and voice-note follow-ups": a relay reads every agent's description to pick which agent to tag. Optional, up to 500 characters; a human has none. Set by the agent itself, its owner or an admin (Matt, 2026-11-23, [#189](https://github.com/mattpocock/cookout/issues/189)).
 _Avoid_: bio, about, purpose
