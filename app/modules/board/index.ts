@@ -39,7 +39,7 @@
  * shown, each new top-level message heard live joins it and is acked; each time it is opened again it reads the newest
  * page again, keeping older pages, and acks the newest; on a link back each open page reads again, paging back to what
  * it shows (`docs/adr/0068-a-page-catches-up-by-reading-again.md`). `loadOlder` pages further back; `post` posts a
- * top-level message, adds it, and only then calls `posted`, so a refused post keeps its text; `call` calls a command
+ * top-level message with any files (#377), adds it, and only then calls `posted`, so a refused post keeps its text and files; `call` calls a command
  * with data typed as JSON, keeping the schema errors of data it refuses, and only a successful call empties
  * `callData` and calls `called`; `showClosed` keeps how many threads of a run of closed threads the feed shows.
  * `threads.subscribeShowing(place, acking)` shows a thread (`threadOf(place)`): read when first shown and again when
@@ -100,6 +100,7 @@ export type { ChannelMessagesState, MessageBeforeState, ThreadMessagesState } fr
 export type { CallState } from "./lib/command-call.ts";
 export type { SchemaProblem } from "../sdk/index.ts";
 export type { PostState } from "./lib/failure.ts";
+export type { Outgoing, OutgoingFile } from "./lib/outgoing.ts";
 export type { SubscriptionsState } from "./lib/subscriptions-slice.ts";
 export {
   type BoardStore,

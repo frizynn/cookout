@@ -68,8 +68,8 @@ function channelOf(store: BoardStore, name: ChannelName): ChannelMessages {
     loadOlder: () => {
       pages.loadOlder(name);
     },
-    post: (text, posted) => {
-      pages.post(name, { posted, text });
+    post: (outgoing, posted) => {
+      pages.post(name, { ...outgoing, posted });
     },
     showClosed: (run, count) => {
       pages.showClosed(name, { count, run });
@@ -86,8 +86,8 @@ function threadIn(store: BoardStore, place: ThreadPlace): ThreadMessages {
     ack: (id) => {
       threads.ack(place, id);
     },
-    reply: (text, posted) => {
-      threads.reply(place, { posted, text });
+    reply: (outgoing, posted) => {
+      threads.reply(place, { ...outgoing, posted });
     },
     snapshot: () => select(store.snapshot()),
     subscribe: threads.subscribeShowing(place, true),

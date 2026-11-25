@@ -4,6 +4,7 @@ import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import type { ChannelsState, CommandsState } from "./listed-slices.ts";
 import type { ChannelCreation } from "./channel-creation.ts";
 import type { ClosingRefusal } from "./thread-closing.ts";
+import type { Outgoing } from "./outgoing.ts";
 import type { Scheduling } from "./scheduling.ts";
 import type { ThreadPlace } from "./threads-part.ts";
 
@@ -20,14 +21,14 @@ interface ChannelMessages {
   readonly loadOlder: () => void;
   readonly call: (command: string, data: string, called: () => void) => void;
   readonly editCallData: (data: string) => void;
-  readonly post: (text: string, posted: () => void) => void;
+  readonly post: (outgoing: Outgoing, posted: () => void) => void;
   readonly showClosed: (run: readonly MessageId[], count: number) => void;
 }
 
 interface ThreadMessages {
   readonly subscribe: Subscribe;
   readonly snapshot: () => ThreadMessagesState;
-  readonly reply: (text: string, posted: () => void) => void;
+  readonly reply: (outgoing: Outgoing, posted: () => void) => void;
   readonly subscribeWithoutAcking: Subscribe;
   readonly ack: (id: MessageId) => void;
 }

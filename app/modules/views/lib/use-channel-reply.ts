@@ -41,8 +41,8 @@ export function useChannelReply({
   const messages = useMemo(
     (): ThreadMessages => ({
       ...thread,
-      reply: (text, posted) => {
-        thread.reply(text, () => {
+      reply: (outgoing, posted) => {
+        thread.reply(outgoing, () => {
           posted();
           replied();
         });

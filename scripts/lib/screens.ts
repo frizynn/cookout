@@ -5,6 +5,7 @@ interface Screen {
   readonly clickIn?: string;
   readonly choose?: string;
   readonly fill?: readonly (readonly [label: string, value: string])[];
+  readonly attach?: "pending" | "refused";
   readonly focus?: string;
   readonly press?: string;
   readonly text: string;
@@ -59,6 +60,8 @@ const SCREENS: readonly Screen[] = [
   },
   { hash: "#/channels/design", name: "attachments", text: "The view from the office, and my notes." },
   { click: "hills.png", hash: "#/channels/design", name: "attachment-full", text: "1.2 KB" },
+  { attach: "pending", hash: "#/channels/design", name: "composer-files", text: "notes.txt" },
+  { attach: "refused", hash: "#/channels/design", name: "composer-refusal", text: "Couldn't attach dump.bin" },
   {
     click: "More actions",
     clickIn: 'article:has-text("Lunch at 12:30.")',
