@@ -100,7 +100,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-name: e2e-docker
-      - run: pnpm exec playwright install --only-shell chromium
+      - uses: ./.github/actions/install-chromium
       - run: pnpm e2e:docker
       - name: Upload the per-file test timings
         if: always()
