@@ -19,6 +19,8 @@ ruleTester.run("exact-locators", rule, {
     { code: 'page.getByLabel("Token");', errors: inexact },
     { code: "page.getByLabel(/token/u, { exact: true });", errors: pattern },
     { code: 'page["getByText"]("Hello");', errors: inexact },
+    { code: 'const BOX = { name: "Search" } as const;\npage.getByRole("combobox", BOX);', errors: inexact },
+    { code: 'const HELLO = { exact: false };\npage.getByText("Hello", HELLO);', errors: inexact },
   ],
   valid: [
     { code: 'page.getByRole("button", { exact: true, name: "Send" });' },
@@ -29,5 +31,7 @@ ruleTester.run("exact-locators", rule, {
     { code: 'page.getByLabel("Token", { exact: true });' },
     { code: 'page.getByPlaceholder("Search");' },
     { code: 'page.getByTestId("composer");' },
+    { code: 'const BOX = { exact: true, name: "Search" } as const;\npage.getByRole("combobox", BOX);' },
+    { code: 'const HELLO = { exact: true };\npage.getByText("Hello", HELLO);' },
   ],
 });

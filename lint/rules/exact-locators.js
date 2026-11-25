@@ -39,9 +39,36 @@ function isExact(options) {
   return exact !== null && exact.type === "Literal" && exact.value === true;
 }
 
-function namedBy(node) {
-  const name = calledName(node);
-  const [first = null, options = null] = node.arguments;
+function unwrapped(node) {
+  if (node.type === "TSAsExpression") {
+    return unwrapped(node.expression);
+  }
+  return node;
+}
+
+function declaredObjects(declaration) {
+  if (declaration.type !== "VariableDeclaration") {
+    return [];
+  }
+  return declaration.declarations
+    .filter(
+      (declarator) =>
+        declarator.id.type === "Identifier" &&
+        declarator.init !== null &&
+        unwrapped(declarator.init).type === "ObjectExpression",
+    )
+    .map((declarator) => [declarator.id.name, unwrapped(declarator.init)]);
+}
+
+function optionsOf(constants, node) {
+  const [, options = null] = node.arguments;
+  if (options !== null && options.type === "Identifier" && Object.hasOwn(constants, options.name)) {
+    return constants[options.name];
+  }
+  return options;
+}
+
+function namedBy(name, first, options) {
   if (name === "getByRole") {
     return keyed(options, "name");
   }
@@ -51,15 +78,16 @@ function namedBy(node) {
   return null;
 }
 
-function problem(node) {
-  const named = namedBy(node);
+function problem(constants, node) {
+  const [first = null] = node.arguments;
+  const options = optionsOf(constants, node);
+  const named = namedBy(calledName(node), first, options);
   if (named === null) {
     return null;
   }
   if (isPattern(named)) {
     return "pattern";
   }
-  const [, options = null] = node.arguments;
   if (isExact(options)) {
     return null;
   }
@@ -68,9 +96,12 @@ function problem(node) {
 
 const exactLocators = {
   create(context) {
+    const constants = Object.fromEntries(
+      context.sourceCode.ast.body.flatMap((statement) => declaredObjects(statement)),
+    );
     return {
       CallExpression(node) {
-        const messageId = problem(node);
+        const messageId = problem(constants, node);
         if (messageId !== null) {
           context.report({ messageId, node });
         }
