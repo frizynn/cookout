@@ -47,7 +47,9 @@ export function ScheduleListDialog(props: ScheduleListDialogProps): ReactNode {
           state={state}
         />
       )}
-      {channel !== null && <ScheduleDialog channel={channel} editing onSaved={handleSaved} scheduling={scheduling} />}
+      {channel !== null && (
+        <ScheduleDialog cancelled={null} channel={channel} editing onSaved={handleSaved} scheduling={scheduling} />
+      )}
       <ScheduleDeleteConfirm scheduleList={scheduleList} state={state} />
     </ListDialog>
   );

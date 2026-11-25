@@ -141,12 +141,16 @@ async function openThread(page: Page): Promise<string> {
   return text;
 }
 
-test("closing a thread from its bar focuses the Reopen thread that replaces it", async ({ page }) => {
+test("closing a thread from its bar focuses the Reopen thread that replaces it, and back", async ({ page }) => {
   await openThread(page);
 
   await pressedOn(inThread(page).getByRole("button", { exact: true, name: "Close thread" }));
 
   await expect(inThread(page).getByRole("button", { exact: true, name: "Reopen thread" })).toBeFocused();
+
+  await page.keyboard.press("Enter");
+
+  await expect(inThread(page).getByRole("button", { exact: true, name: "Close thread" })).toBeFocused();
 });
 
 test("the thread's Close panel link lands focus on the thread's message in the channel", async ({ page }) => {

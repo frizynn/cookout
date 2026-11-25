@@ -14,6 +14,7 @@ interface SidePanelParts extends Parts {
   readonly closeLabel: string;
   readonly edge: PanelEdgeParts | null;
   readonly menu?: ActionMenuParts | null;
+  readonly onClose?: (() => void) | null;
 }
 
 export function SidePanel(parts: SidePanelParts): ReactNode {
@@ -28,7 +29,7 @@ export function SidePanel(parts: SidePanelParts): ReactNode {
       {edge !== null && <PanelEdge edge={edge} />}
       <header className="flex h-14 shrink-0 items-center gap-2 border-b px-5">
         <PanelTitle detail={parts.detail} label={parts.label} menu={parts.menu ?? null} />
-        <CloseLink href={parts.closeHref} label={parts.closeLabel} />
+        <CloseLink href={parts.closeHref} label={parts.closeLabel} onFollow={parts.onClose ?? null} />
       </header>
       {parts.children}
     </aside>

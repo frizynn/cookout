@@ -4,7 +4,6 @@ import { useCallback, useMemo } from "react";
 import { CallRefusal } from "./call-refusal.tsx";
 import type { CallState } from "../../board/index.ts";
 import { CommandFields } from "./command-fields.tsx";
-import type { Draft } from "../../composer/index.ts";
 import { PromptForm } from "../../design-system/controls.tsx";
 import type { ReactNode } from "react";
 import { useChannelCalls } from "./use-board.ts";
@@ -13,15 +12,15 @@ const TEXT = { button: "Call", calling: "Calling…" } as const;
 
 interface CommandPromptProps {
   readonly command: Command;
-  readonly draft: Draft;
   readonly channel: ChannelName;
   readonly call: CallState;
   readonly callData: string;
   readonly onBack: () => void;
+  readonly onDone: () => void;
 }
 
 export function CommandPrompt(props: CommandPromptProps): ReactNode {
-  const { callData, channel, command, draft } = props;
+  const { callData, channel, command, onDone } = props;
   const { call, editCallData } = useChannelCalls(channel);
   const prompt = useMemo(() => promptOf(command.schema), [command.schema]);
   const fields = useMemo(() => fieldsOf(prompt), [prompt]);
@@ -33,12 +32,12 @@ export function CommandPrompt(props: CommandPromptProps): ReactNode {
     [editCallData, typed],
   );
   const handleSubmit = useCallback(() => {
-    call(command.name, callDataOf({ kept: callData, prompt, typed }), draft.clear);
-  }, [call, callData, command.name, draft, prompt, typed]);
+    call(command.name, callDataOf({ kept: callData, prompt, typed }), onDone);
+  }, [call, callData, command.name, onDone, prompt, typed]);
   const handleCancel = useCallback(() => {
     editCallData("");
-    draft.clear();
-  }, [draft, editCallData]);
+    onDone();
+  }, [editCallData, onDone]);
   const shown = shownCall({ call: props.call, command: command.name });
   return (
     <PromptForm

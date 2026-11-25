@@ -1,10 +1,11 @@
 import type { ActionMenuParts, MenuChoice } from "../../design-system/messages.tsx";
-import type { ChannelName, TopLevelMessage } from "../../sdk/index.ts";
+import type { ChannelName, MessageId, TopLevelMessage } from "../../sdk/index.ts";
 import type { ThreadClosing, ThreadMessagesState } from "../../board/index.ts";
+import { useCallback, useContext, useMemo } from "react";
+import { LandingContext } from "../../landing/index.ts";
 import type { MessageMenu } from "../../unread/index.ts";
 import { hrefOf } from "../../paths/index.ts";
 import { threadChoice } from "./use-message-menu.ts";
-import { useMemo } from "react";
 
 const TEXT = { copyLink: "Copy link", markUnread: "Mark unread", menu: "Thread actions" } as const;
 
@@ -13,15 +14,17 @@ interface ThreadHeaderOf {
   readonly closing: ThreadClosing;
   readonly menu: MessageMenu;
   readonly state: ThreadMessagesState;
+  readonly thread: MessageId;
 }
 
-interface ThreadChoicesOf extends Omit<ThreadHeaderOf, "state"> {
+interface ThreadChoicesOf extends Omit<ThreadHeaderOf, "state" | "thread"> {
   readonly parent: TopLevelMessage;
 }
 
 interface ThreadHeader {
   readonly closeHref: string;
   readonly menu: ActionMenuParts | null;
+  readonly onClose: () => void;
 }
 
 async function copyAfter(previous: Promise<void>, text: string): Promise<void> {
@@ -48,15 +51,24 @@ function threadChoices({ channel, closing, menu, parent }: ThreadChoicesOf): rea
   ];
 }
 
-function useThreadHeader({ channel, closing, menu, state }: ThreadHeaderOf): ThreadHeader {
+function useThreadHeader({ channel, closing, menu, state, thread }: ThreadHeaderOf): ThreadHeader {
   const parent = state.status === "loaded" && state.parent;
+  const { watch } = useContext(LandingContext);
+  const onClose = useCallback(() => {
+    const opener = hrefOf({ channel, message: thread, name: "thread", thread });
+    watch(`main article:has(a[href="${CSS.escape(opener)}"])`);
+  }, [channel, thread, watch]);
   return useMemo(() => {
     const closeHref = hrefOf({ channel, name: "channel" });
     if (parent === false) {
-      return { closeHref, menu: null };
+      return { closeHref, menu: null, onClose };
     }
-    return { closeHref, menu: { choices: threadChoices({ channel, closing, menu, parent }), label: TEXT.menu } };
-  }, [channel, closing, menu, parent]);
+    return {
+      closeHref,
+      menu: { choices: threadChoices({ channel, closing, menu, parent }), label: TEXT.menu },
+      onClose,
+    };
+  }, [channel, closing, menu, onClose, parent]);
 }
 
 export { useThreadHeader };
