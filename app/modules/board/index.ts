@@ -173,7 +173,6 @@ export {
   type ThreadNews,
   type UnreadCounts,
   type UnreadWhy,
-  countsOf,
 } from "./lib/inbox-levels.ts";
 export { type InboxRow, rowKey, rowsOf } from "./lib/inbox-rows.ts";
 export { calledTrigger } from "./lib/triggers-slice.ts";
