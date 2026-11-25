@@ -20,6 +20,7 @@
  * `subscribe` and `snapshot`, counts each publish (`count()`), and fails the
  * test when a publish leaves the snapshot deep-equal to the one before, since
  * each such publish re-renders every view that reads the store for nothing.
+ * `memoryStorage()` is a `BrowserStorage` held in memory, fresh for each test, and `kept()` lists what it holds.
  */
 export { watchAdapter } from "./lib/watch.ts";
 export { type HandFocus, handFocus } from "./lib/page-focus.ts";
@@ -33,3 +34,4 @@ export {
   scriptedLive,
   watchedLive,
 } from "./lib/scripted-live.ts";
+export { type MemoryStorage, memoryStorage } from "./lib/memory-storage.ts";
