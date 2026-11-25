@@ -30,6 +30,7 @@ type InboxCallsClient = InboxClient &
     | "ackAll"
     | "approveAgentJoin"
     | "closeThread"
+    | "denyAgentJoin"
     | "keepDeactivationOffer"
     | "markDeactivatedQuietAgentRead"
     | "markNudgeRead"
@@ -57,6 +58,8 @@ interface JoinCalls {
   readonly hold: (id: DeactivatedQuietAgentId) => void;
   readonly release: (id: DeactivatedQuietAgentId) => void;
   readonly approve: (userCode: string) => void;
+  readonly replace: (userCode: string) => void;
+  readonly dismiss: (userCode: string) => void;
 }
 
 type Queue = (step: () => Promise<void>) => void;
@@ -154,15 +157,25 @@ function earlierCalls({ apply, client, held, pageSize }: Calling): () => void {
 
 function joinCalls({ apply, client }: Calling): JoinCalls {
   const after = queued();
+  function answering(userCode: string, call: () => Promise<unknown>): void {
+    after(async () => {
+      try {
+        await call();
+        apply({ refusal: null, type: "agent-join-answered", userCode });
+      } catch (error: unknown) {
+        apply({ refusal: refusalOf(error), type: "agent-join-answered", userCode });
+      }
+    });
+  }
   return {
     approve: (userCode) => {
-      after(async () => {
-        try {
-          await client.approveAgentJoin(userCode);
-          apply({ refusal: null, type: "agent-join-answered", userCode });
-        } catch (error: unknown) {
-          apply({ refusal: refusalOf(error), type: "agent-join-answered", userCode });
-        }
+      answering(userCode, async () => {
+        await client.approveAgentJoin(userCode);
+      });
+    },
+    dismiss: (userCode) => {
+      answering(userCode, async () => {
+        await client.denyAgentJoin(userCode);
       });
     },
     hold: (id) => {
@@ -170,6 +183,11 @@ function joinCalls({ apply, client }: Calling): JoinCalls {
     },
     release: (id) => {
       apply({ held: false, id, type: "quiet-agent-held" });
+    },
+    replace: (userCode) => {
+      answering(userCode, async () => {
+        await client.approveAgentJoin(userCode, { force: true });
+      });
     },
   };
 }

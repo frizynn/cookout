@@ -153,7 +153,10 @@ export interface Unread {
   readonly deactivationOffers: DeactivationOffers;
   /** Every Inbox entry of the caller's about a deactivated quiet agent, read or not, newest first, and marking one read. */
   readonly deactivatedQuietAgents: DeactivatedQuietAgents;
-  /** Approve on a pending Agent join request, and why the last Approve of each was refused: a store of its own. */
+  /**
+   * Approve, Replace (approve with `force`) and Dismiss on a pending Agent join request, and why the last of each was
+   * refused: a store of its own.
+   */
   readonly agentJoinRequests: AgentJoinRequests;
 }
 

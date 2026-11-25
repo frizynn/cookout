@@ -250,6 +250,7 @@ const postgresMigrations: readonly (readonly string[])[] = [
   ],
   ['ALTER TABLE identities ADD COLUMN avatar text COLLATE "C"'],
   ['ALTER TABLE login_credentials ADD COLUMN made_with text COLLATE "C"'],
+  ['ALTER TABLE agent_join_requests ADD COLUMN denied_at text COLLATE "C"'],
 ];
 
 const NEXT_VERSION = 1;

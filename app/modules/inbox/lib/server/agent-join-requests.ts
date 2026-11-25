@@ -1,8 +1,8 @@
-import { Array as Arr, DateTime, Effect } from "effect";
+import { Array as Arr, DateTime, Effect, Option } from "effect";
 import type { Identity, IdentityName } from "../../../identities/index.ts";
 import type { PendingAgentJoinRequest, Storage, StorageUnavailable } from "../../../storage/server.ts";
 import type { InboxAgentJoinRequest } from "../agent-join-requests.ts";
-import type { Option } from "effect";
+import type { IsoTime } from "../../../time/index.ts";
 import { agentJoinRequestText } from "../agent-join-requests.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 
@@ -29,15 +29,31 @@ function mayApprove(caller: IdentityName, agent: Identity): boolean {
   return agent.owner === caller || agent.broughtInBy === caller;
 }
 
-function shownTo(storage: Storage["Service"], caller: IdentityName) {
+interface Showing {
+  readonly storage: Storage["Service"];
+  readonly caller: IdentityName;
+  readonly now: IsoTime;
+}
+
+function itemOf(pending: PendingAgentJoinRequest, { now, storage }: Showing) {
+  return (agent: Identity): Effect.Effect<InboxAgentJoinRequest, StorageUnavailable> =>
+    Effect.map(storage.findLiveAgentSession({ identity: agent.name, now }), (live) => {
+      const { createdAt, expiresAt, host, userCode } = pending;
+      const item = { agent, createdAt, expiresAt, host, text: agentJoinRequestText(pending), userCode };
+      return Option.match(live, {
+        onNone: () => item,
+        onSome: (session) => ({ ...item, liveSessionExpiresAt: session.expiresAt }),
+      });
+    });
+}
+
+function shownTo(showing: Showing) {
   return (pending: PendingAgentJoinRequest): Listed =>
-    Effect.map(storage.findIdentityByName(pending.agent), (found) =>
-      Arr.map(
-        Arr.filter(Arr.fromNullishOr(found), (agent) => mayApprove(caller, agent)),
-        (agent) => {
-          const { createdAt, expiresAt, host, userCode } = pending;
-          return { agent, createdAt, expiresAt, host, text: agentJoinRequestText(pending), userCode };
-        },
+    Effect.flatMap(showing.storage.findIdentityByName(pending.agent), (found) =>
+      Effect.forEach(
+        Arr.filter(Arr.fromNullishOr(found), (agent) => mayApprove(showing.caller, agent)),
+        itemOf(pending, showing),
+        ONE_AT_A_TIME,
       ),
     );
 }
@@ -45,9 +61,10 @@ function shownTo(storage: Storage["Service"], caller: IdentityName) {
 function listedFor(storage: Storage["Service"]): AgentJoinRequestCalls["agentJoinRequests"] {
   return (caller) =>
     Effect.gen(function* listAgentJoinRequests() {
-      const now = yield* DateTime.now;
-      const pending = yield* storage.listPendingAgentJoinRequests(isoTimeOf(now));
-      const shown = yield* Effect.forEach(pending, shownTo(storage, caller.name), ONE_AT_A_TIME);
+      const clock = yield* DateTime.now;
+      const now = isoTimeOf(clock);
+      const pending = yield* storage.listPendingAgentJoinRequests(now);
+      const shown = yield* Effect.forEach(pending, shownTo({ caller: caller.name, now, storage }), ONE_AT_A_TIME);
       return Arr.flatten(shown);
     });
 }
