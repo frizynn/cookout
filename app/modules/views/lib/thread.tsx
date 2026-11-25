@@ -55,6 +55,7 @@ export function ThreadView(props: ThreadProps): ReactNode {
         menu={props.unread.menu}
         readPosition={readPosition}
         reply={draft.replyTo}
+        selection={props.unread.selection({ channel, thread: props.thread })}
         state={state}
       />
       <ReplyFooter
