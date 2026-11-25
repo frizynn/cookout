@@ -4,9 +4,11 @@ import { changedLines, unchangedSince } from "./lib/changed-lines.ts";
 import { fetchedCoverageMap, ghCli } from "./lib/coverage-map-fetch.ts";
 import { loadReport, osReading } from "./lib/machine-load.ts";
 import type { BrowserTests } from "./lib/browser-selection.ts";
+import type { DocsOnly } from "./lib/docs-only.ts";
 import { SUITE_LOCK_FILE } from "./lib/machine-lock.ts";
 import { TIMINGS_DIR } from "./lib/slowest-files.ts";
 import { changedFiles } from "./lib/changed-files.ts";
+import { docsOnlySkip } from "./lib/docs-only.ts";
 import path from "node:path";
 import { runChecks } from "./lib/check-runner.ts";
 
@@ -55,9 +57,22 @@ function lintScript(): readonly string[] {
 const NONE = 0;
 const V1 = "origin/v1";
 
+const local = !inCi && job === "";
+function docsOnlyRun(): DocsOnly {
+  if (!local) {
+    return { line: "", skip: false };
+  }
+  return docsOnlySkip({ base: V1, cwd: process.cwd() });
+}
+
+const docsOnly = docsOnlyRun();
+
 function selectedBrowserTests(): BrowserTests {
-  if (inCi || job !== "") {
+  if (!local) {
     return { all: true, reason: "" };
+  }
+  if (docsOnly.skip) {
+    return { all: false, run: [], skipped: [] };
   }
   const cwd = process.cwd();
   return browserTestsFor({
@@ -126,12 +141,17 @@ function commandOf({ script, ...check }: Scripted): Check {
 
 const checks: readonly Check[] = scripted
   .filter((check) => check.job !== "browser" || browserTests.all || browserTests.run.length > NONE)
+  .filter((check) => check.job !== "tests" || !docsOnly.skip)
   .map((check) => commandOf(check));
 
 const ciOnly: readonly CiOnly[] = [
   { ciJob: "e2e-docker", command: "pnpm e2e:docker", name: "the e2e suite (packages/e2e on the Docker image)" },
   ...browserSkipped,
 ];
+
+if (docsOnly.skip) {
+  console.error(docsOnly.line);
+}
 
 if (browserTests.all && browserTests.reason !== "") {
   console.error(`check: running every browser test, since ${browserTests.reason}.`);
