@@ -236,6 +236,8 @@ const migrations: readonly string[] = [
   "ALTER TABLE login_credentials ADD COLUMN made_with TEXT;",
   "ALTER TABLE agent_join_requests ADD COLUMN denied_at TEXT;",
   TRIGGER_SKIPPED_MIGRATION,
+  `ALTER TABLE messages ADD COLUMN deleted_at TEXT;
+   ALTER TABLE messages ADD COLUMN deleted_by TEXT;`,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });
