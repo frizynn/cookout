@@ -8,8 +8,10 @@ const PANEL_REPLY_BOX = `${PANEL} textarea`;
 const PANEL_CLOSE = `${PANEL} > header a[href]`;
 const CHANNEL_FEED = 'main [role="feed"]';
 const OPEN_MESSAGE = `${MESSAGE}[aria-current="true"]`;
-const NOT_A_FOLD = `${MESSAGE}:not([data-closed-fold])`;
-const FIRST = 0;
+const FOLD = "[data-closed-fold]";
+const NOT_A_FOLD = `${MESSAGE}:not(${FOLD})`;
+const OPEN_FOLD = `${MESSAGE}${FOLD}[aria-current="true"]`;
+const NEXT = 1;
 const LAST = -1;
 
 interface Pressing {
@@ -84,8 +86,26 @@ function focusedOn(message: unknown): boolean {
   return true;
 }
 
+function besideOpenFold(): HTMLElement | null {
+  const [fold] = inChannel(OPEN_FOLD);
+  if (typeof fold !== "object") {
+    return null;
+  }
+  const passed = inChannel(MESSAGE).indexOf(fold) - inChannel(`${MESSAGE}${FOLD}`).indexOf(fold);
+  const messages = inChannel(NOT_A_FOLD);
+  return messages[passed] ?? messages[passed - NEXT] ?? fold;
+}
+
+function openInChannel(): HTMLElement | null {
+  const [open = null] = inChannel(OPEN_MESSAGE);
+  if (open === null || !open.matches(FOLD)) {
+    return open;
+  }
+  return besideOpenFold();
+}
+
 function focusedOnChannelMessage(): boolean {
-  return focusedOn(inChannel(OPEN_MESSAGE).at(FIRST));
+  return focusedOn(openInChannel());
 }
 
 function inPanel(target: EventTarget | null): boolean {
@@ -101,7 +121,7 @@ function threadPanel(): Element | null {
 }
 
 function closedTo(hash: string): boolean {
-  focusedOn(inChannel(OPEN_MESSAGE).at(FIRST) ?? inChannel(NOT_A_FOLD).at(LAST));
+  focusedOn(openInChannel() ?? inChannel(NOT_A_FOLD).at(LAST));
   globalThis.location.hash = hash;
   return true;
 }
