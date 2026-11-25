@@ -8,6 +8,7 @@ interface InboxAgentJoinRequest {
   readonly text: string;
   readonly createdAt: IsoTime;
   readonly expiresAt: IsoTime;
+  readonly liveSessionExpiresAt?: IsoTime;
 }
 
 interface Asking {

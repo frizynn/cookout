@@ -32,7 +32,11 @@ function deactivatedLine({ deactivatedQuietAgent: { id, identity, text } }: Deac
 
 function joinRequestsLine({ agentJoinRequests }: AgentJoinRequestsEvent): string {
   return Arr.join(
-    Arr.map(agentJoinRequests, ({ text, userCode }) => `${text} Run cookout approve-join ${userCode} to approve it.`),
+    Arr.map(
+      agentJoinRequests,
+      ({ text, userCode }) =>
+        `${text} Run cookout approve-join ${userCode} to approve it, or cookout deny-join ${userCode} to dismiss it.`,
+    ),
     "\n",
   );
 }

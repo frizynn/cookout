@@ -1,6 +1,7 @@
 import { Array as Arr, Effect, FileSystem } from "effect";
 import type { Plugin, ProxyOptions } from "vite";
 import type { Scope } from "effect";
+import { contentSecurityPolicy } from "../../../http/server.ts";
 import { createServer } from "vite";
 
 const LOCAL = "127.0.0.1";
@@ -35,7 +36,14 @@ function viteDevServer({
   return Effect.gen(function* startWebDevServer() {
     const fs = yield* FileSystem.FileSystem;
     const cacheDir = yield* Effect.orDie(fs.makeTempDirectoryScoped({ prefix: "cookout-vite-" }));
-    const server = { host: LOCAL, port: FREE_PORT, proxy: { "/v1": cookoutProxy(cookoutUrl) }, strictPort: true };
+    const headers = { "content-security-policy": contentSecurityPolicy };
+    const server = {
+      headers,
+      host: LOCAL,
+      port: FREE_PORT,
+      proxy: { "/v1": cookoutProxy(cookoutUrl) },
+      strictPort: true,
+    };
     const vite = yield* Effect.promise(() => createServer({ cacheDir, plugins: probePlugins(probe), server }));
     yield* Effect.addFinalizer(() => Effect.promise(() => vite.close()));
     yield* Effect.promise(() => vite.listen());

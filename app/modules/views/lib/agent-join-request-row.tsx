@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 import { useAuthor } from "./use-author.ts";
 import { useTimeAgo } from "./use-time-ago.ts";
 
-const TEXT = { approve: "Approve" } as const;
+const TEXT = { approve: "Approve", dismiss: "Dismiss", replace: "Replace" } as const;
 
 interface AgentJoinRequestRowProps {
   readonly request: InboxAgentJoinRequest;
@@ -23,6 +23,17 @@ function refusalText(requests: ReturnType<AgentJoinRequests["snapshot"]>, userCo
   return `Couldn't approve (${refused.code}): ${refused.message}`;
 }
 
+function whyText(request: InboxAgentJoinRequest): string {
+  const live = request.liveSessionExpiresAt ?? null;
+  if (live === null) {
+    return request.text;
+  }
+  return (
+    `${request.text} @${request.agent.name} is already joined in another session. ` +
+    "Replace ends that session and joins this one; Dismiss clears this request."
+  );
+}
+
 export function AgentJoinRequestRow(props: AgentJoinRequestRowProps): ReactNode {
   const { request, requests } = props;
   const state = useSyncExternalStore(requests.subscribe, requests.snapshot);
@@ -31,7 +42,14 @@ export function AgentJoinRequestRow(props: AgentJoinRequestRowProps): ReactNode 
   const handleApprove = useCallback(() => {
     requests.approve(request.userCode);
   }, [requests, request]);
+  const handleReplace = useCallback(() => {
+    requests.replace(request.userCode);
+  }, [requests, request]);
+  const handleDismiss = useCallback(() => {
+    requests.dismiss(request.userCode);
+  }, [requests, request]);
   const refused = refusalText(state, request.userCode);
+  const live = Boolean(request.liveSessionExpiresAt);
   return (
     <FeedNoticeRow
       agent={agent}
@@ -42,10 +60,12 @@ export function AgentJoinRequestRow(props: AgentJoinRequestRowProps): ReactNode 
       note={note}
       presence={presence}
       time={time}
-      why={request.text}
+      why={whyText(request)}
     >
       <ButtonRow>
-        <RowButton onClick={handleApprove}>{TEXT.approve}</RowButton>
+        {!live && <RowButton onClick={handleApprove}>{TEXT.approve}</RowButton>}
+        {live && <RowButton onClick={handleReplace}>{TEXT.replace}</RowButton>}
+        <RowButton onClick={handleDismiss}>{TEXT.dismiss}</RowButton>
       </ButtonRow>
       {refused !== null && <Alert>{refused}</Alert>}
     </FeedNoticeRow>

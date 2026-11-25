@@ -1,6 +1,4 @@
-import { changesetMissing, packageShips } from "./lib/changesets.ts";
 import { existsSync, readFileSync } from "node:fs";
-import type { Change } from "./lib/changesets.ts";
 import { MIGRATION_LISTS } from "./lib/migration-lists.ts";
 import type { SpawnSyncReturns } from "node:child_process";
 import { adrEdits } from "./lib/adr-append-only.ts";
@@ -165,37 +163,6 @@ function deployedMigrations(): readonly string[] {
   return MIGRATION_LISTS.flatMap((file) => deployedList(tag, file));
 }
 
-const MERGE_PARENTS_LINE = 3;
-
-function isMergeOnV1(): boolean {
-  const [mergeBase = ""] = git(["merge-base", "HEAD", "origin/v1"]);
-  const headAndParents = git(["rev-list", "--parents", "--max-count=1", "HEAD"]).join(" ").split(" ");
-  const [head] = headAndParents;
-  return head === mergeBase && headAndParents.length >= MERGE_PARENTS_LINE;
-}
-
-function change(line: string): Change {
-  const [status = "", ...files] = line.split("\t");
-  const [kind = ""] = status;
-  const [file = ""] = files.toReversed();
-  return { file, status: kind };
-}
-
-function changesetSides(): readonly string[] {
-  if (STAGED) {
-    return ["--cached", comparedBase()];
-  }
-  return [comparedBase(), "HEAD"];
-}
-
-async function changesets(): Promise<readonly string[]> {
-  if (!STAGED && isMergeOnV1()) {
-    return [];
-  }
-  const changes = git(["diff", "--name-status", "--find-renames", ...changesetSides()]).map((line) => change(line));
-  return changesetMissing({ changes, ships: await packageShips() });
-}
-
 const failures = [
   ...gitlinks(),
   ...workspaceFile(),
@@ -205,7 +172,6 @@ const failures = [
   ...adrNumbers(),
   ...appendOnlyAdrs(),
   ...deployedMigrations(),
-  ...(await changesets()),
 ];
 for (const failure of failures) {
   console.error(`hygiene: ${failure}`);

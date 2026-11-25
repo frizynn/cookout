@@ -5,6 +5,16 @@ interface Reading {
   readonly load: number;
 }
 
+interface Recheck {
+  readonly limit: number;
+  readonly read: () => Reading;
+  readonly sleep: () => Promise<void>;
+}
+
+interface QuietWait extends Recheck {
+  readonly say: (line: string) => void;
+}
+
 interface LoadReport {
   readonly line: string;
   readonly warning: string;
@@ -31,4 +41,21 @@ function loadReport(read: () => Reading): LoadReport {
   };
 }
 
-export { loadReport, osReading };
+async function loadDropped(recheck: Recheck): Promise<void> {
+  await recheck.sleep();
+  if (recheck.read().load > recheck.limit) {
+    await loadDropped(recheck);
+  }
+}
+
+async function quietMachine(wait: QuietWait): Promise<void> {
+  const { load } = wait.read();
+  if (load <= wait.limit) {
+    return;
+  }
+  const shown = load.toFixed(DECIMALS);
+  wait.say(`load average ${shown} is above ${String(wait.limit)}: waiting for it to drop before the tests start.`);
+  await loadDropped(wait);
+}
+
+export { loadReport, osReading, quietMachine };

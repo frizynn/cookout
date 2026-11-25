@@ -28,6 +28,7 @@ interface IssueLoginCredential {
   readonly identity: IdentityName;
   readonly host: string;
   readonly now: IsoTime;
+  readonly madeWith: TokenHash;
 }
 
 type LoginCollection =
@@ -47,6 +48,7 @@ interface LoginRequestsSection {
   readonly issueLoginCredential: (issue: IssueLoginCredential) => Fails<Identity | undefined>;
   readonly findLoginCredential: (hash: TokenHash) => Fails<Identity | undefined>;
   readonly revokeLoginCredential: (hash: TokenHash) => Fails<boolean>;
+  readonly revokeLoginCredentialsMadeWithRevokedTokens: (identity: IdentityName) => Fails<readonly TokenHash[]>;
 }
 
 const PENDING: LoginCollection = { status: "pending" };

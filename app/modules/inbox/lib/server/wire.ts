@@ -107,6 +107,7 @@ const InboxAgentJoinRequestSchema = matchesWire<InboxAgentJoinRequest>()(
     createdAt: IsoTimeSchema,
     expiresAt: IsoTimeSchema,
     host: Schema.String,
+    liveSessionExpiresAt: Schema.optionalKey(IsoTimeSchema),
     text: Schema.String,
     userCode: Schema.String,
   }),
