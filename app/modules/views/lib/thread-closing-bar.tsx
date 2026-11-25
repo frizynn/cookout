@@ -40,7 +40,7 @@ export function ThreadClosingBar(props: ThreadClosingBarProps): ReactNode {
           <ClosedBy closing={closed} />
         </ThreadBar>
       )}
-      <ClosingRefusal closing={closing} />
+      <ClosingRefusal />
     </>
   );
 }

@@ -1,6 +1,5 @@
 import type { Reading, Unread } from "../../unread/index.ts";
 import { useMemo, useSyncExternalStore } from "react";
-import type { Board } from "../../board/index.ts";
 import type { Composer } from "../../composer/index.ts";
 import { InboxConversation } from "./inbox-conversation.tsx";
 import type { InboxKeys } from "./use-inbox-keys.ts";
@@ -14,7 +13,6 @@ import { useInboxRows } from "./use-inbox-rows.ts";
 const CONVERSATION = "Conversation";
 
 interface InboxProps {
-  readonly board: Board;
   readonly composer: Composer;
   readonly edge: PanelEdgeParts;
   readonly keymap: InboxKeys["keymap"];
@@ -25,7 +23,7 @@ interface InboxProps {
 }
 
 export function InboxView(props: InboxProps): ReactNode {
-  const { board, composer, keymap, me, selected, unread } = props;
+  const { composer, keymap, me, selected, unread } = props;
   const state = useSyncExternalStore(unread.subscribe, unread.snapshot);
   const rows = useInboxRows({ me, selected, state, unread });
   const { agentJoinRequests, deactivatedQuietAgents, deactivationOffers, nudges } = unread;
@@ -37,18 +35,9 @@ export function InboxView(props: InboxProps): ReactNode {
   useInboxKeys({ conversation: CONVERSATION, keymap, selected: selected !== null });
   return (
     <>
-      <InboxList
-        board={board}
-        me={me}
-        notices={notices}
-        rows={rows}
-        selected={selected}
-        state={state}
-        unread={unread}
-      />
+      <InboxList me={me} notices={notices} rows={rows} selected={selected} state={state} unread={unread} />
       {state.status !== "loading" && (
         <InboxConversation
-          board={board}
           composer={composer}
           edge={props.edge}
           keymap={keymap}

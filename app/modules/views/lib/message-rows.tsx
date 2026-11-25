@@ -1,5 +1,5 @@
 import { Alert, Skeleton } from "../../design-system/content.tsx";
-import type { ChannelMessages, ChannelMessagesState, ThreadClosing } from "../../board/index.ts";
+import type { ChannelMessagesState, ThreadClosing } from "../../board/index.ts";
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import { CardBody } from "../../design-system/layout.tsx";
 import { ChannelTop } from "./channel-top.tsx";
@@ -14,7 +14,6 @@ const TEXT = { messages: "Messages" } as const;
 
 interface MessageRowsProps {
   readonly channel: ChannelName;
-  readonly messages: ChannelMessages;
   readonly state: ChannelMessagesState;
   readonly me: string;
   readonly held: ReadonlySet<MessageId>;
@@ -27,8 +26,7 @@ interface MessageRowsProps {
 export type { MessageRowsProps };
 
 export function MessageRows(props: MessageRowsProps): ReactNode {
-  const { channel, messages, state } = props;
-  const handleLoad = messages.loadOlder;
+  const { channel, state } = props;
   const threads = useThreadNews({ me: props.me, unread: props.unread });
   const feed = useId();
   if (state.status === "loading") {
@@ -44,7 +42,7 @@ export function MessageRows(props: MessageRowsProps): ReactNode {
   }
   return (
     <>
-      <ChannelTop channel={channel} feed={feed} onLoad={handleLoad} state={state} />
+      <ChannelTop channel={channel} feed={feed} state={state} />
       <FeedStream
         closing={props.closing}
         channel={channel}
@@ -53,7 +51,6 @@ export function MessageRows(props: MessageRowsProps): ReactNode {
         label={TEXT.messages}
         me={props.me}
         menu={props.unread.menu}
-        messages={messages}
         open={props.open}
         readPosition={props.readPosition}
         state={state}

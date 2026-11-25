@@ -2,7 +2,7 @@ import type { Author, Identity } from "../../sdk/index.ts";
 import type { PresenceShown } from "./use-presence.ts";
 import { identityList } from "../../board/index.ts";
 import { useAuthorPresence } from "./use-presence.ts";
-import { useBoardStore } from "./board-store-context.ts";
+import { useBoardStore } from "./use-board.ts";
 import { useProfileHref } from "./profile-base.ts";
 import { useSyncExternalStore } from "react";
 

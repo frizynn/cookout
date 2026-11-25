@@ -3,7 +3,7 @@ import { reactionNames, reactionSymbols } from "../../messages/index.ts";
 import { reactionRefusal, reactionsOf } from "../../board/index.ts";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { ReactionChoice } from "../../design-system/messages.tsx";
-import { useBoardStore } from "./board-store-context.ts";
+import { useBoardStore } from "./use-board.ts";
 
 const KEYS: Readonly<Record<ReactionName, string>> = { thumbs_down: "-", thumbs_up: "+" };
 

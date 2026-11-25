@@ -4,7 +4,6 @@ import { ChannelConversationPanel } from "./channel-conversation-panel.tsx";
 import { ConversationMissing } from "./conversation-missing.tsx";
 import type { ConversationProps } from "./conversation-parts.ts";
 import type { ReactNode } from "react";
-import { hrefOf } from "../../paths/index.ts";
 import { useChannelPosts } from "./use-channel-posts.ts";
 import { useChannelReader } from "./use-channel-reader.ts";
 
@@ -46,7 +45,6 @@ export function ChannelConversation(props: ChannelConversationProps): ReactNode 
   return (
     <ChannelConversationPanel
       actions={actionsOf({ keymap: props.keymap, reader })}
-      board={props.board}
       channel={channel}
       composer={props.composer}
       edge={props.edge}
@@ -55,9 +53,9 @@ export function ChannelConversation(props: ChannelConversationProps): ReactNode 
       me={props.me}
       menu={props.unread.menu}
       open={openLinkOf({
-        href: hrefOf({ channel, name: "channel" }),
         keymap: props.keymap,
         label: `Open in #${channel}`,
+        to: { channel, name: "channel" },
       })}
       posts={posts}
       reader={reader}

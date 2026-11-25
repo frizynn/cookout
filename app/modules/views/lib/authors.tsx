@@ -1,6 +1,6 @@
 import { AuthorCards } from "./author-cards.tsx";
 import type { BoardStore } from "../../board/index.ts";
-import { BoardStoreContext } from "./board-store-context.ts";
+import { BoardStoreContext } from "./use-board.ts";
 import type { Keymap } from "../../keymap/index.ts";
 import type { ReactNode } from "react";
 

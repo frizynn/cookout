@@ -1,4 +1,4 @@
-import type { ChannelMessages, ChannelMessagesState, Commands, Scheduling } from "../../board/index.ts";
+import type { ChannelMessagesState, Scheduling } from "../../board/index.ts";
 import { useCallback, useSyncExternalStore } from "react";
 import type { ChannelName } from "../../sdk/index.ts";
 import { CommandPrompt } from "./command-prompt.tsx";
@@ -8,6 +8,7 @@ import { MessageBox } from "./message-box.tsx";
 import type { ReactNode } from "react";
 import { ScheduleConfirmation } from "./schedule-confirmation.tsx";
 import { ScheduleDialog } from "./schedule-dialog.tsx";
+import { useBoardStore } from "./use-board.ts";
 
 const MESSAGE_BOX = {
   field: "Message",
@@ -18,18 +19,21 @@ const MESSAGE_BOX = {
 interface MessageFooterProps {
   readonly channel: ChannelName;
   readonly scheduling: Scheduling;
-  readonly commands: Commands;
   readonly draft: Draft;
-  readonly messages: ChannelMessages;
   readonly state: ChannelMessagesState;
 }
 
 export function MessageFooter(props: MessageFooterProps): ReactNode {
-  const { draft, messages, state } = props;
-  const handlePost = messages.post;
+  const { channel, draft, scheduling, state } = props;
+  const store = useBoardStore();
+  const handlePost = useCallback(
+    (text: string, posted: () => void) => {
+      store.channelPages.post(channel, { posted, text });
+    },
+    [channel, store],
+  );
   const { command, returned } = useSyncExternalStore(draft.subscribe, draft.snapshot);
   const handleBack = draft.unpick;
-  const { channel, scheduling } = props;
   const handleSaved = draft.clear;
   const handleSchedule = useCallback(() => {
     scheduling.open(channel, draft.snapshot().text);
@@ -53,13 +57,13 @@ export function MessageFooter(props: MessageFooterProps): ReactNode {
         <CommandPrompt
           call={state.call}
           callData={state.callData}
+          channel={channel}
           command={command}
           draft={draft}
-          messages={messages}
           onBack={handleBack}
         />
       )}
-      <CommandsRefusal commands={props.commands} />
+      <CommandsRefusal />
       <ScheduleConfirmation channel={channel} scheduling={scheduling} />
       <ScheduleDialog channel={channel} onSaved={handleSaved} scheduling={scheduling} />
     </>

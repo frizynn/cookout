@@ -4,7 +4,7 @@ import type { Presences } from "../../board/index.ts";
 import { onTick } from "./use-time-ago.ts";
 import { presences } from "../../board/index.ts";
 import { timeAgo } from "../../format/index.ts";
-import { useBoardStore } from "./board-store-context.ts";
+import { useBoardStore } from "./use-board.ts";
 import { useSyncExternalStore } from "react";
 
 const TEXT = {

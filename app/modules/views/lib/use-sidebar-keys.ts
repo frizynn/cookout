@@ -1,7 +1,7 @@
 import { markRead, stepTo, toggleSubscription } from "./channel-keys.ts";
 import { moveFocus, roving, sidebar } from "./sidebar-roving.ts";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import type { Board } from "../../board/index.ts";
+import { useBoardStore, useChannels } from "./use-board.ts";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChannelKeys } from "./channel-keys.ts";
 import type { Keymap } from "../../keymap/index.ts";
 import type { Unread } from "../../unread/index.ts";
@@ -12,7 +12,6 @@ const FIRST = 0;
 const ONE = 1;
 
 interface SidebarKeys {
-  readonly board: Board;
   readonly keymap: Keymap;
   readonly me: string;
   readonly unread: Unread;
@@ -24,18 +23,19 @@ interface Said {
 }
 
 function useChannelKeys(props: SidebarKeys, announce: (text: string) => void): ChannelKeys {
-  const { board, unread } = props;
-  const { channels } = useSyncExternalStore(board.subscribe, board.snapshot);
+  const { unread } = props;
+  const store = useBoardStore();
+  const channels = useChannels();
   const counts = useSidebarCounts({ me: props.me }).channels;
   return useMemo(
     () => ({
       announce,
       counts,
       order: channelOrder(channels),
-      subscriptions: board.subscriptions,
+      store,
       unread,
     }),
-    [announce, board.subscriptions, channels, counts, unread],
+    [announce, channels, counts, store, unread],
   );
 }
 

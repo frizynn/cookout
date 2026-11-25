@@ -1,5 +1,5 @@
 import type { BoardState } from "../../board/index.ts";
-import { useBoardStore } from "./board-store-context.ts";
+import { useBoardStore } from "./use-board.ts";
 import { useSyncExternalStore } from "react";
 
 export function useBoardInbox<Out>(select: (state: BoardState) => Out): Out {

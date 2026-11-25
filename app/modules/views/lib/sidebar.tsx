@@ -14,7 +14,7 @@ const TEXT = { name: "cookout" } as const;
 
 const HOME = hrefOf({ name: "inbox", selected: null });
 
-interface SidebarProps extends Pick<SidebarLinksProps, "board" | "keymap" | "route" | "unread"> {
+interface SidebarProps extends Pick<SidebarLinksProps, "creation" | "keymap" | "route" | "unread"> {
   readonly identity: Identity;
   readonly layout: Layout;
 }
@@ -37,7 +37,7 @@ export function SidebarView(props: SidebarProps): ReactNode {
     >
       <SidebarBody onFollow={handleFollow}>
         <SidebarLinks
-          board={props.board}
+          creation={props.creation}
           keymap={props.keymap}
           me={props.identity.name}
           route={props.route}

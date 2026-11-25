@@ -3,20 +3,19 @@ import type { ChannelActions } from "./use-channel-menu.ts";
 import { ChannelList } from "./channel-list.tsx";
 import { ChannelMenuRefusal } from "./channel-menu-refusal.tsx";
 import type { ChannelName } from "../../sdk/index.ts";
-import type { ChannelsState } from "../../board/index.ts";
 import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
 import type { UnreadCounts } from "../../unread/index.ts";
+import { useChannels } from "./use-board.ts";
 
 interface ChannelRowsProps {
   readonly actions: ChannelActions;
-  readonly channels: ChannelsState;
   readonly route: Route;
   readonly counts: ReadonlyMap<ChannelName, UnreadCounts>;
 }
 
 export function ChannelRows(props: ChannelRowsProps): ReactNode {
-  const { channels } = props;
+  const channels = useChannels();
   if (channels.status === "loading") {
     return (
       <div className="flex flex-col gap-3 p-4">

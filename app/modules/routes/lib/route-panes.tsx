@@ -52,12 +52,12 @@ export function RoutePanes(props: RoutePanesProps): ReactNode {
   if (isChannel(route)) {
     return (
       <ChannelPanes
-        board={stores.board}
         composer={stores.composer}
         key={route.channel}
         layout={stores.layout}
         me={props.me}
         route={route}
+        scheduling={stores.scheduling}
         unread={stores.unread}
       />
     );

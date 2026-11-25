@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { StatusBar } from "../../design-system/layout.tsx";
-import { useBoardStore } from "./board-store-context.ts";
+import { useBoardStore } from "./use-board.ts";
 import { useSyncExternalStore } from "react";
 
 const TEXT = { label: "Live link", reconnecting: "Reconnecting…" } as const;

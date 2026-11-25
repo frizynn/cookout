@@ -22,14 +22,14 @@ export function SignedInView(props: SignedInViewProps): ReactNode {
   return (
     <Workspace onToggleSidebar={handleToggle} sidebarOpen={sidebar}>
       <SidebarView
-        board={stores.board}
+        creation={stores.channelCreation}
         identity={props.identity}
         keymap={stores.keymap}
         layout={layout}
         route={props.route}
         unread={stores.unread}
       />
-      <SidebarKeys board={stores.board} keymap={stores.keymap} me={props.identity.name} unread={stores.unread} />
+      <SidebarKeys keymap={stores.keymap} me={props.identity.name} unread={stores.unread} />
       <WorkspaceBody me={props.identity.name} profile={props.profile} route={props.route} stores={stores} />
     </Workspace>
   );

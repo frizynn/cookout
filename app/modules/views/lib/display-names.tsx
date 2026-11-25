@@ -3,7 +3,7 @@ import type { Composer } from "../../composer/index.ts";
 import { DisplayNameField } from "./display-name-field.tsx";
 import type { ReactNode } from "react";
 import { identityList } from "../../board/index.ts";
-import { useBoardStore } from "./board-store-context.ts";
+import { useBoardStore } from "./use-board.ts";
 import { useSyncExternalStore } from "react";
 
 const TEXT = { own: "Your display name" } as const;

@@ -1,17 +1,17 @@
 import { ChannelView, ThreadCardComposer, ThreadView } from "../../views/index.tsx";
-import type { Board } from "../../board/index.ts";
 import type { Composer } from "../../composer/index.ts";
 import { IdentityCardComposer } from "../../design-system/messages.tsx";
 import type { Layout } from "../../layout/index.ts";
 import type { MessageId } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
+import type { Scheduling } from "../../board/index.ts";
 import type { Unread } from "../../unread/index.ts";
 import { hrefOf } from "../../paths/index.ts";
 import { useThreadEdge } from "./use-thread-edge.ts";
 
 interface ChannelPanesProps {
-  readonly board: Board;
+  readonly scheduling: Scheduling;
   readonly composer: Composer;
   readonly layout: Layout;
   readonly route: Extract<Route, { readonly name: "channel" | "thread" }>;
@@ -27,24 +27,23 @@ function openThread(route: ChannelPanesProps["route"]): MessageId | null {
 }
 
 export function ChannelPanes(props: ChannelPanesProps): ReactNode {
-  const { board, composer, me, route, unread } = props;
+  const { composer, me, route, unread } = props;
   const edge = useThreadEdge({ closeHref: hrefOf({ channel: route.channel, name: "channel" }), layout: props.layout });
   return (
     <>
       <IdentityCardComposer value={composer.channelDraft(route.channel).replyTo}>
         <ChannelView
-          board={board}
           channel={route.channel}
           composer={composer}
           me={me}
           open={openThread(route)}
           newLine={unread.newLine(route.channel, null)}
+          scheduling={props.scheduling}
           unread={unread}
         />
       </IdentityCardComposer>
       {route.name === "thread" && (
         <ThreadCardComposer
-          board={board}
           channel={route.channel}
           composer={composer}
           key={String(route.thread)}
@@ -52,7 +51,6 @@ export function ChannelPanes(props: ChannelPanesProps): ReactNode {
           thread={route.thread}
         >
           <ThreadView
-            board={board}
             channel={route.channel}
             composer={composer}
             edge={edge}
