@@ -115,7 +115,7 @@
  * changes, not on every change anywhere on the board (#495). `sameSnapshot({ before, after })` is whether a store's new
  * snapshot holds the same value in every field (an array field, the same items), for a store to publish nothing then.
  */
-export { type SelectedStore, type Snapshots, sameSnapshot, selectedStore } from "./lib/selected.ts";
+export { sameSnapshot, selectedStore } from "./lib/selected.ts";
 export type {
   Board,
   BoardSnapshot,

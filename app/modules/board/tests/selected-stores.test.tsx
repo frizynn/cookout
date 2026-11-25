@@ -1,4 +1,4 @@
-import type { BoardStore, SelectedStore } from "../index.ts";
+import type { ExternalStore, Publishes } from "../../testing/web.ts";
 import { bothShown, postedIn, repliedTo } from "./held-store.ts";
 import {
   channelList,
@@ -13,14 +13,14 @@ import {
   threadOf,
 } from "../index.ts";
 import { expect, it, onTestFinished, vi } from "vitest";
-import type { Publishes } from "../../testing/web.ts";
+import type { BoardStore } from "../index.ts";
 import type { TopLevelMessage } from "../../sdk/index.ts";
 import { recordPublishes } from "../../testing/web.ts";
 
 const CHANNEL = "web-selected-stores";
 const NONE = 0;
 
-function storesOf(store: BoardStore, parent: TopLevelMessage): readonly SelectedStore<unknown>[] {
+function storesOf(store: BoardStore, parent: TopLevelMessage): readonly ExternalStore<unknown>[] {
   const place = { channel: parent.channel, id: parent.id };
   const read = store.snapshot;
   const page = channelPage(parent.channel);
@@ -47,7 +47,7 @@ function statusOf(snapshot: unknown): unknown {
   return Reflect.get(snapshot, "status");
 }
 
-async function recordedOnceLoaded(stores: readonly SelectedStore<unknown>[]): Promise<readonly Publishes[]> {
+async function recordedOnceLoaded(stores: readonly ExternalStore<unknown>[]): Promise<readonly Publishes[]> {
   for (const each of stores) {
     onTestFinished(each.subscribe(vi.fn<() => void>()));
   }

@@ -41,4 +41,4 @@ function sameSnapshot({ after, before }: Snapshots): boolean {
   );
 }
 
-export { type SelectedStore, type Snapshots, sameSnapshot, selectedStore };
+export { sameSnapshot, selectedStore };
