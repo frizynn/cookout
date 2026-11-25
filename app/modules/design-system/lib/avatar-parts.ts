@@ -56,7 +56,6 @@ export type {
   AvatarParts,
   PresenceDotParts,
   PresenceShown,
-  SuggestedIdentity,
   SuggestionOptionParts,
   SuggestionsParts,
 };
