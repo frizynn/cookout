@@ -72,7 +72,7 @@
  * The Inbox's levels are selectors too, each the same object until the items it reads change: `inboxRows` groups the
  * unread items into rows (`rowsOf`: one per thread, its replies, or per channel,
  * its top-level messages, each with its latest item, count, level and strongest reason, newest first; `rowKey` is a
- * row's key); `inboxCounts` and `inboxCountsByChannel` count the two levels, for you (a mention, a reaction, a reply
+ * row's key); `inboxCounts` and `inboxCountsByChannel` count the two levels, and `inboxForYou` is the one For you count with the unread notices, for the sidebar's Inbox badge and the page title, for you (a mention, a reaction, a reply
  * in a thread you started) and activity (the rest; Matt, #152, 2026-11-23); `inboxNewsByThread` counts each thread's
  * unread replies and how many are for you; `inboxThreadsWithNews` lists a channel's threads with an item there for a
  * reason besides a subscribed channel (#349); and `inboxNewLine` is where a channel's or thread's "New" line goes: its
@@ -81,7 +81,7 @@
  * `Board` and its parts are the old per-channel and per-thread stores the views still read; the routes module makes them
  * as thin adapters over the store's selectors and methods, for the last migration ticket to delete.
  *
- * The board store's `session` is whether the person at the browser is logged in, and as whom, shown with
+ * The board store's `session` is whether the person at the browser is logged in, and as whom (`loggedInName` reads the name), shown with
  * `subscribeShowing("session")` (or `session.subscribe`): it asks the server who the page's client is (`whoami`,
  * which a browser answers with the session cookie); no cookie is simply logged out. Its identity is the identities
  * slice's identity of that name once the slice holds one, so an `identity` event for it (a display name or admin flag
@@ -135,6 +135,7 @@ export {
   agentSessions,
   deletedIdentities,
   identityList,
+  loggedInName,
   presences,
   reactionRefusal,
   reactionsOf,
@@ -161,6 +162,7 @@ export {
 export {
   inboxCounts,
   inboxCountsByChannel,
+  inboxForYou,
   inboxNewLine,
   inboxNewsByThread,
   inboxRows,

@@ -18,7 +18,7 @@ export function RouteView(props: RouteViewProps): ReactNode {
     stores: { session },
   } = props;
   const state = useSyncExternalStore(session.subscribe, session.snapshot);
-  usePageTitle({ route, session, unread: props.stores.unread });
+  usePageTitle({ board: props.stores.boardStore, route });
   if (state.status !== "logged-in") {
     return (
       <AppShell>

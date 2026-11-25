@@ -63,6 +63,21 @@ function inboxCounts({ me, state }: Looking): UnreadCounts {
   return countsKept(unreadItems(state), me);
 }
 
+function inboxForYou({ me, state }: Looking): number {
+  const inbox = inboxOf(state);
+  if (inbox.status !== "loaded") {
+    return NONE;
+  }
+  return (
+    countsKept(inbox.items, me).forYou +
+    inbox.alerts.length +
+    inbox.nudges.length +
+    inbox.deactivationOffers.length +
+    inbox.deactivatedQuietAgents.length +
+    inbox.agentJoinRequests.length
+  );
+}
+
 function inboxCountsByChannel({ me, state }: Looking): ReadonlyMap<ChannelName, UnreadCounts> {
   return byChannelKept(unreadItems(state), me);
 }
@@ -89,4 +104,12 @@ function inboxNewLine({ channel, state, thread }: AtPlace): MessageId | number |
   return position;
 }
 
-export { inboxCounts, inboxCountsByChannel, inboxNewLine, inboxNewsByThread, inboxRows, inboxThreadsWithNews };
+export {
+  inboxCounts,
+  inboxCountsByChannel,
+  inboxForYou,
+  inboxNewLine,
+  inboxNewsByThread,
+  inboxRows,
+  inboxThreadsWithNews,
+};
