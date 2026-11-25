@@ -22,7 +22,7 @@ async function replyInThread(page: Page, channel: string, text: string): Promise
     .click();
   await page.getByRole("article").filter({ hasText: "Who's on call?" }).getByRole("link", { name: "1 reply" }).click();
   await page.getByRole("textbox", { exact: true, name: "Reply" }).fill(text);
-  await inThread(page).getByRole("button", { name: "Send" }).click();
+  await inThread(page).getByRole("button", { exact: true, name: "Send" }).click();
 }
 
 test("a human opens a thread, replies, and the thread leaves their inbox", async ({ page }) => {

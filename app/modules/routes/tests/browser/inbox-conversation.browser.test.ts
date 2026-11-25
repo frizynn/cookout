@@ -53,7 +53,7 @@ async function postFromElsewhere(browser: Browser, poster: Person, channel: stri
   const page = await context.newPage();
   await logIn({ page, token: poster.token, url: `/#/channels/${channel}` });
   await page.getByLabel("Message", { exact: true }).fill("Rolled out to everyone");
-  await inPane(page).getByRole("button", { name: "Send" }).click();
+  await inPane(page).getByRole("button", { exact: true, name: "Send" }).click();
 
   await expect(page.getByRole("feed", { name: "Messages" })).toContainText("Rolled out to everyone");
 

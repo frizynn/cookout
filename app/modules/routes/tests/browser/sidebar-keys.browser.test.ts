@@ -68,14 +68,14 @@ function subscriptionOf(person: Person, channel: string): () => Promise<boolean>
 }
 
 async function tabbedIntoSidebar(page: Page): Promise<void> {
-  await inSidebar(page).getByRole("button", { name: "Collapse sidebar" }).focus();
+  await inSidebar(page).getByRole("button", { exact: true, name: "Collapse sidebar" }).focus();
   await page.keyboard.press("Tab");
 
   await expect(inSidebar(page).getByRole("link", { name: /^Inbox/u })).toBeFocused();
 
   await page.keyboard.press("ArrowDown");
 
-  await expect(inSidebar(page).getByRole("link", { name: "People & agents" })).toBeFocused();
+  await expect(inSidebar(page).getByRole("link", { exact: true, name: "People & agents" })).toBeFocused();
 }
 
 async function openedByArrows(page: Page): Promise<string> {

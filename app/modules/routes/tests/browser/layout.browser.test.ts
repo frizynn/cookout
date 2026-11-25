@@ -15,8 +15,8 @@ async function backgroundOf(page: Page): Promise<string> {
 }
 
 async function themeChosen(page: Page, theme: string): Promise<string> {
-  await inSidebar(page).getByRole("link", { name: "Settings" }).click();
-  await page.getByRole("region", { name: "Settings" }).getByText(theme, { exact: true }).click();
+  await inSidebar(page).getByRole("link", { exact: true, name: "Settings" }).click();
+  await page.getByRole("region", { exact: true, name: "Settings" }).getByText(theme, { exact: true }).click();
   const colour = await backgroundOf(page);
   return colour;
 }
@@ -63,7 +63,7 @@ test("on a narrow screen the sidebar hides behind a button, and the thread panel
 
   await page.goto(`/#/channels/${unique("browser-narrow")}/threads/${String(message.id)}`);
 
-  await expect(page.getByRole("complementary", { name: "Thread" })).toContainText("Narrow parent");
+  await expect(page.getByRole("complementary", { exact: true, name: "Thread" })).toContainText("Narrow parent");
   await expect
     .poll(async () => {
       const width = await widthOf(page, "Thread");

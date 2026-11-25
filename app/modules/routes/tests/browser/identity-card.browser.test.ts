@@ -112,7 +112,7 @@ test("by keyboard alone, Tab from a focused name reaches the card's Message, and
 
   await page.keyboard.press("Tab");
 
-  await expect(page.getByRole("dialog").getByRole("button", { name: "Message" })).toBeFocused();
+  await expect(page.getByRole("dialog").getByRole("button", { exact: true, name: "Message" })).toBeFocused();
 
   await page.keyboard.press("Enter");
 

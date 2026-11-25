@@ -13,7 +13,7 @@ async function profileOf({ page, watched }: Viewing): Promise<Locator> {
   const viewer = await newIdentity({ kind: "human", name: `${watched}-viewer` });
   await logInWithStream({ page, token: viewer.token });
   await page.goto(`/#/people/${watched}`);
-  return page.getByRole("complementary", { name: "Profile" });
+  return page.getByRole("complementary", { exact: true, name: "Profile" });
 }
 
 async function tabOf(browser: Browser, token: string): Promise<() => Promise<void>> {

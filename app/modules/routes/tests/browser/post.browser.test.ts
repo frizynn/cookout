@@ -16,7 +16,7 @@ async function postWithMention(page: Page): Promise<void> {
     .getByRole("option", { name: `@${unique("browser-post-reviewer")}` })
     .click();
   await page.keyboard.type("look?");
-  await inPane(page).getByRole("button", { name: "Send" }).click();
+  await inPane(page).getByRole("button", { exact: true, name: "Send" }).click();
 }
 
 async function inboxesOf(mentioned: CookoutClient, poster: CookoutClient): Promise<readonly unknown[]> {
@@ -73,7 +73,7 @@ test("Send with an empty box, no text and no attachment, posts nothing", async (
   await inSidebar(page)
     .getByRole("link", { name: `#${unique("browser-empty-send")}` })
     .click();
-  const send = inPane(page).getByRole("button", { name: "Send" });
+  const send = inPane(page).getByRole("button", { exact: true, name: "Send" });
   await send.click();
   await page.getByLabel("Message", { exact: true }).fill("After");
   await send.click();

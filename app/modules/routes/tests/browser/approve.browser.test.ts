@@ -51,7 +51,7 @@ test("a human opens a login request's approval link, checks the code, and approv
 
   await screenshotIn({ page, theme: "dark" });
   await screenshotIn({ page, theme: "light" });
-  await inPane(page).getByRole("button", { name: "Approve" }).click();
+  await inPane(page).getByRole("button", { exact: true, name: "Approve" }).click();
 
   await expect(page.getByText(/^Approved\./u)).toBeVisible();
   await expect(anonymous.collectLogin(started.requestId)).resolves.toMatchObject({
