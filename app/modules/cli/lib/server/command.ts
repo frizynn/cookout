@@ -16,7 +16,7 @@ function answer<Value>(call: Call<Value>): Effect.Effect<void, CommandFailed, Ag
   return Effect.matchEffect(callServer(call), { onFailure: refused, onSuccess: printAnswer });
 }
 
-const commandAddCommand = Command.make(
+const webhookCommandAddVerb = Command.make(
   "add",
   {
     description: Flag.String("description").pipe(
@@ -45,7 +45,7 @@ const commandAddCommand = Command.make(
   ),
 );
 
-const commandRotateCommand = Command.make(
+const webhookCommandRotateVerb = Command.make(
   "rotate",
   { name: Argument.String("name").pipe(Argument.withDescription("The Webhook command whose secret to rotate.")) },
   ({ name }) => answer((client) => client.rotateCommandSecret(name)),
@@ -56,11 +56,11 @@ const commandRotateCommand = Command.make(
   ),
 );
 
-const commandListCommand = Command.make("list", {}, () => answer((client) => client.listCommands())).pipe(
+const webhookCommandListVerb = Command.make("list", {}, () => answer((client) => client.listCommands())).pipe(
   Command.withDescription("List every Webhook command, by name, without its secret."),
 );
 
-const commandCallCommand = Command.make(
+const webhookCommandCallVerb = Command.make(
   "call",
   {
     channel: Flag.String("channel").pipe(Flag.withDescription("The channel the call message is posted in.")),
@@ -79,7 +79,12 @@ const commandCallCommand = Command.make(
   ),
 );
 
-export const commandCommand = Command.make("command").pipe(
+export const webhookCommandVerb = Command.make("command").pipe(
   Command.withDescription("Register, rotate the secret of, list and call Webhook commands."),
-  Command.withSubcommands([commandAddCommand, commandRotateCommand, commandListCommand, commandCallCommand]),
+  Command.withSubcommands([
+    webhookCommandAddVerb,
+    webhookCommandRotateVerb,
+    webhookCommandListVerb,
+    webhookCommandCallVerb,
+  ]),
 );
