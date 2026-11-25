@@ -4,16 +4,22 @@ import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import type { MessagesService } from "./service.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Scope } from "effect";
+import { deleteMessageWith } from "./deleting.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 import { messageNotFound } from "./refusals.ts";
+
+type OneAtATime = <Value, Failure, Needs>(
+  effect: Effect.Effect<Value, Failure, Needs>,
+) => Effect.Effect<Value, Failure, Needs>;
 
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
 
 type ThreadChange = Effect.Success<ReturnType<Storage["Service"]["reopenThread"]>>;
 
-type ClosedThreadsService = Pick<MessagesService, "closeThread" | "reopenThread" | "threadChanged">;
+type ClosedThreadsService = Pick<MessagesService, "closeThread" | "reopenThread" | "threadChanged" | "deleteMessage">;
 
 interface ThreadHub {
+  readonly oneAtATime: OneAtATime;
   readonly changeThenPublish: (change: Effect.Effect<ThreadChange, StorageUnavailable>) => Fails<ThreadChange>;
   readonly publishThreadChange: (parent: TopLevelMessage | undefined) => Effect.Effect<void>;
   readonly threadChanged: Effect.Effect<PubSub.Subscription<TopLevelMessage>, never, Scope.Scope>;
@@ -40,10 +46,6 @@ function answerFor(asked: MessageId): (change: ThreadChange) => Fails<TopLevelMe
   };
 }
 
-type OneAtATime = <Value, Failure, Needs>(
-  effect: Effect.Effect<Value, Failure, Needs>,
-) => Effect.Effect<Value, Failure, Needs>;
-
 function threadHub(oneAtATime: OneAtATime): Effect.Effect<ThreadHub> {
   return Effect.gen(function* makeThreadHub() {
     const threads = yield* PubSub.unbounded<TopLevelMessage>();
@@ -52,6 +54,7 @@ function threadHub(oneAtATime: OneAtATime): Effect.Effect<ThreadHub> {
     }
     return {
       changeThenPublish: (change) => oneAtATime(Effect.tap(change, (changed) => publish(changedParents(changed)))),
+      oneAtATime,
       publishThreadChange: (parent) => publish(Arr.filter([parent], Predicate.isNotUndefined)),
       threadChanged: PubSub.subscribe(threads),
     };
@@ -67,6 +70,7 @@ function closedThreadsOn({ hub, storage }: ClosedThreadsOn): ClosedThreadsServic
         const change = yield* hub.changeThenPublish(storage.closeThread(id, closing));
         return yield* answerFor(id)(change);
       }),
+    deleteMessage: deleteMessageWith({ oneAtATime: hub.oneAtATime, storage }),
     reopenThread: (id) =>
       Effect.gen(function* reopenThread() {
         const now = yield* DateTime.now;

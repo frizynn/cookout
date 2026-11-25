@@ -84,6 +84,11 @@ interface ThreadStateChange {
   readonly parent: TopLevelMessage;
 }
 
+interface Deleting {
+  readonly deletedAt: IsoTime;
+  readonly deletedBy: IdentityName;
+}
+
 interface MessagesSection extends OpenThreadsSection, SearchSection, AttachmentsSection {
   readonly appendMessage: (message: NewMessage) => Fails<AppendMessageResult>;
   readonly listChannelMessages: (channel: ChannelName, page: ChannelPageRequest) => Fails<StoredPage | undefined>;
@@ -91,6 +96,7 @@ interface MessagesSection extends OpenThreadsSection, SearchSection, Attachments
   readonly latestMessageId: Effect.Effect<MessageId | undefined, StorageUnavailable>;
   readonly closeThread: (id: MessageId, closing: Closing) => Fails<ThreadStateChange | undefined>;
   readonly reopenThread: (id: MessageId, reopenedAt: IsoTime) => Fails<ThreadStateChange | undefined>;
+  readonly deleteMessage: (id: MessageId, deleting: Deleting) => Fails<Message | undefined>;
 }
 
 const NO_REPLIES = 0;
@@ -185,6 +191,7 @@ function counted({ parent, replies }: Counting): TopLevelMessage {
 export {
   type AppendMessageResult,
   type ChannelPageRequest,
+  type Deleting,
   type Mentioning,
   type MessagesSection,
   type NewMessage,

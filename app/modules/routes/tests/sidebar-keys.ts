@@ -112,20 +112,24 @@ function loadingSubscriptions(reader: Readonly<CookoutClient>): CookoutClient {
 interface Hanging {
   readonly client: CookoutClient;
   readonly asked: () => number;
+  readonly reached: Promise<boolean>;
 }
 
 function hangingSubscribe(reader: Readonly<CookoutClient>): Hanging {
   let asked = 0;
+  const reached = Promise.withResolvers<boolean>();
   return {
     asked: () => asked,
     client: {
       ...reader,
       subscribe: async () => {
         asked += ONCE;
+        reached.resolve(true);
         const never = await forever<Awaited<ReturnType<CookoutClient["subscribe"]>>>();
         return never;
       },
     },
+    reached: reached.promise,
   };
 }
 
