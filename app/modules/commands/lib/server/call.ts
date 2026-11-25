@@ -1,25 +1,24 @@
 import { Array as Arr, Effect, Predicate, Result } from "effect";
 import type { CallCommandResponse, Command, CommandName, JsonSchema } from "../../index.ts";
 import type { DataCheck, DataError } from "./data-schema.ts";
-import { Spawning, spawnAgentCommand } from "./spawn-agent.ts";
 import type { StorageUnavailable, StoredCommand } from "../../../storage/server.ts";
 import type { CallCommandRequestSchema } from "./wire.ts";
 import { Deliveries } from "./delivery.ts";
+import type { Identity } from "../../../identities/index.ts";
 import { Messages } from "../../../messages/server.ts";
 import type { Refusal } from "../../../http/index.ts";
-import type { SpawnCall } from "./spawn-agent.ts";
 import { Storage } from "../../../storage/server.ts";
 import { compileDataSchema } from "./data-schema.ts";
 import { echoed } from "../../../http/index.ts";
 import { isCommandName } from "../../index.ts";
 import { sentHarness } from "../../../identities/server.ts";
 
-type CallNeeds = Storage | Messages | Deliveries | Spawning;
+type CallNeeds = Storage | Messages | Deliveries;
 
 type Refused = Refusal | StorageUnavailable;
 
 interface CommandCall extends Readonly<typeof CallCommandRequestSchema.Type> {
-  readonly caller: SpawnCall["caller"];
+  readonly caller: Identity;
   readonly name: string;
 }
 
@@ -102,20 +101,8 @@ function callMessageOf(
   return Effect.map(sentHarness, (tool) => ({ ...tool, channel, data: { command: name, data }, text: `/${name}` }));
 }
 
-function spawnCall({ caller, channel, data }: CommandCall): Effect.Effect<CallCommandResponse, Refused, Spawning> {
-  return Effect.gen(function* spawnAgent() {
-    yield* requireData(spawnAgentCommand, data);
-    const spawning = yield* Spawning;
-    const message = yield* callMessageOf(spawnAgentCommand.name, { channel, data });
-    return yield* spawning.spawn({ caller, data, message });
-  });
-}
-
 function callCommand(call: CommandCall): Effect.Effect<CallCommandResponse, Refused, CallNeeds> {
   const { caller, channel, data, name } = call;
-  if (name === spawnAgentCommand.name) {
-    return spawnCall(call);
-  }
   return Effect.gen(function* postCall() {
     const stored = yield* storedCommand(name);
     const { command } = stored;

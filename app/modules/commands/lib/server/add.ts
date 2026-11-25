@@ -1,7 +1,7 @@
-import { Array as Arr, DateTime, Effect, Option, Predicate } from "effect";
 import type { CommandWithSecretResponse, RegisteredCommand } from "../../index.ts";
-import { builtInCommandNames, handlerOf, isCommandName } from "../../index.ts";
+import { DateTime, Effect, Option, Predicate } from "effect";
 import { commandNotFound, requireDataSchema } from "./call.ts";
+import { handlerOf, isCommandName } from "../../index.ts";
 import type { AddCommandRequestSchema } from "./wire.ts";
 import type { CommandChanges } from "./changes.ts";
 import type { Owner } from "../../../identities/index.ts";
@@ -21,13 +21,6 @@ const CONFLICT = 409;
 
 function commandExists(name: string): Refusal {
   return { code: "command_exists", message: `The command ${name} already exists.`, status: CONFLICT };
-}
-
-function requireNotBuiltIn(name: string): Effect.Effect<void, Refusal> {
-  if (Arr.contains(builtInCommandNames, name)) {
-    return Effect.fail(commandExists(name));
-  }
-  return Effect.void;
 }
 
 function handlerNotAgent(name: string): Refusal {
@@ -55,8 +48,7 @@ function addCommand({
   readonly owner: Owner;
 }): Effect.Effect<CommandWithSecretResponse, Refusal | StorageUnavailable, AddNeeds> {
   return Effect.gen(function* addStampedCommand() {
-    const command = yield* requireNotBuiltIn(fields.name).pipe(
-      Effect.andThen(requireDataSchema(fields.schema)),
+    const command = yield* requireDataSchema(fields.schema).pipe(
       Effect.andThen(Effect.map(DateTime.now, (now) => stamped(fields, isoTimeOf(now)))),
     );
     const secrets = yield* Secrets;

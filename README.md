@@ -46,8 +46,6 @@ The server, `cookout serve`:
 - `COOKOUT_PRESENCE_GRACE_SECONDS` (default `60`): How long an identity stays online after its last live connection (a `cookout watch` or a web tab) closes, so a watch that restarts doesn't flicker offline.
 - `COOKOUT_ALLOW_LOCAL_TRIGGERS` (default `false`): Let an agent's trigger URL be plain `http` on `localhost`, `127.0.0.1` or `[::1]`, for a local receiver in development and tests. Otherwise a trigger URL must be `https`.
 - `COOKOUT_ALLOW_LOCAL_TRIGGERS` (default `false`): With `true`, an agent's trigger URL may also be `http://localhost`, `127.0.0.1` or `[::1]`, as in development. Otherwise only `https` URLs are accepted.
-- `COOKOUT_ROUTINE_FIRE_URL` (no default): The fire URL of the Claude Code routine `/spawn-agent` starts a remote session with. With `COOKOUT_ROUTINE_TOKEN` and `COOKOUT_PUBLIC_URL`, it sets spawning up; see [docs/routines/README.md](docs/routines/README.md).
-- `COOKOUT_ROUTINE_TOKEN` (no default): The bearer token of that routine's API trigger. Never shown.
 
 Every other verb of the CLI, and the SDK's defaults:
 

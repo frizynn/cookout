@@ -91,8 +91,6 @@ export {
   type TestCookoutService,
   type TestIdentity,
   testCookout,
-  testRoutineFirePath,
-  testRoutineToken,
 } from "./lib/server/cookout.ts";
 export type { LastEnd } from "./lib/server/booted.ts";
 export { fixtureTime, isoTime, testStartTime } from "./lib/server/time.ts";
