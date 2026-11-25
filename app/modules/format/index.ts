@@ -217,5 +217,5 @@ export function runTimeIn(run: RunTime): string {
   return new Intl.DateTimeFormat("en-GB", { ...shape, timeZone }).format(new Date(iso));
 }
 
-export { type RunParts, runPartsIn } from "./lib/run-parts.ts";
+export { runPartsIn } from "./lib/run-parts.ts";
 export { type Clock, browserClock } from "./lib/browser-clock.ts";

@@ -133,15 +133,12 @@ export {
   createScheduling,
 } from "./lib/scheduling.ts";
 export type { ChannelsState } from "./lib/listed-slices.ts";
-export type { ListedSchedules } from "./lib/schedules-slice.ts";
 export {
-  type ScheduleChangeState,
   type ScheduleList,
   type ScheduleListState,
   type ScheduleMarks,
   createScheduleList,
 } from "./lib/schedule-list.ts";
-export type { ScheduleChange } from "./lib/board-calls.ts";
 export { cronWords } from "./lib/cron-words.ts";
 export type { ChannelMessagesState, MessageBeforeState, ThreadMessagesState } from "./lib/message-selectors.ts";
 export type { CallState } from "./lib/command-call.ts";

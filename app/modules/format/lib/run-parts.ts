@@ -20,4 +20,4 @@ function runPartsIn(run: RunAt): RunParts {
   };
 }
 
-export { type RunParts, runPartsIn };
+export { runPartsIn };

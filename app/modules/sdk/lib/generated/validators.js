@@ -49909,8 +49909,8 @@ return errors === 0;
 }
 validate86.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 
-export const isScheduledMessageEvent = validate87;
-const schema765 = {"type":"object","properties":{"deleted":{"type":"boolean"},"scheduledMessage":{"type":"object","properties":{"at":{"$ref":"#/$defs/IsoTime"},"channel":{"$ref":"#/$defs/ChannelName"},"createdAt":{"$ref":"#/$defs/IsoTime"},"creator":{"type":"object","properties":{"name":{"$ref":"#/$defs/IdentityName"},"owner":{"$ref":"#/$defs/Owner"}},"required":["name"],"additionalProperties":true},"cron":{"type":"string"},"id":{"$ref":"#/$defs/ScheduledMessageId"},"lastRun":{"type":"object","properties":{"due":{"$ref":"#/$defs/IsoTime"},"messageId":{"$ref":"#/$defs/MessageId"},"outcome":{"type":"string","enum":["posted","skipped"]}},"required":["due","outcome"],"additionalProperties":true},"nextRuns":{"type":"array","items":{"$ref":"#/$defs/IsoTime"}},"pausedBecause":{"anyOf":[{"type":"string","enum":["creator_deactivated"]}]},"status":{"type":"string","enum":["active","paused","finished"]},"text":{"type":"string"},"timeZone":{"type":"string"},"updatedAt":{"$ref":"#/$defs/IsoTime"}},"required":["channel","createdAt","creator","id","nextRuns","status","text","timeZone","updatedAt"],"additionalProperties":true},"type":{"type":"string","enum":["scheduled-message"]}},"required":["deleted","scheduledMessage","type"],"additionalProperties":true,"$defs":{"IsoTime":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},"ChannelName":{"type":"string","pattern":"^[a-z0-9-]{1,80}$"},"IdentityName":{"type":"string","pattern":"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"},"Owner":{"type":"string","pattern":"^[a-z0-9-]{1,64}$"},"ScheduledMessageId":{"type":"integer","minimum":1,"maximum":9007199254740991},"MessageId":{"type":"integer","minimum":1,"maximum":9007199254740991}}};
+export const isListScheduledMessagesResponse = validate87;
+const schema765 = {"type":"object","properties":{"scheduledMessages":{"type":"array","items":{"type":"object","properties":{"at":{"$ref":"#/$defs/IsoTime"},"channel":{"$ref":"#/$defs/ChannelName"},"createdAt":{"$ref":"#/$defs/IsoTime"},"creator":{"type":"object","properties":{"name":{"$ref":"#/$defs/IdentityName"},"owner":{"$ref":"#/$defs/Owner"}},"required":["name"],"additionalProperties":true},"cron":{"type":"string"},"id":{"$ref":"#/$defs/ScheduledMessageId"},"lastRun":{"type":"object","properties":{"due":{"$ref":"#/$defs/IsoTime"},"messageId":{"$ref":"#/$defs/MessageId"},"outcome":{"type":"string","enum":["posted","skipped"]}},"required":["due","outcome"],"additionalProperties":true},"nextRuns":{"type":"array","items":{"$ref":"#/$defs/IsoTime"}},"pausedBecause":{"anyOf":[{"type":"string","enum":["creator_deactivated"]}]},"status":{"type":"string","enum":["active","paused","finished"]},"text":{"type":"string"},"timeZone":{"type":"string"},"updatedAt":{"$ref":"#/$defs/IsoTime"}},"required":["channel","createdAt","creator","id","nextRuns","status","text","timeZone","updatedAt"],"additionalProperties":true}}},"required":["scheduledMessages"],"additionalProperties":true,"$defs":{"IsoTime":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},"ChannelName":{"type":"string","pattern":"^[a-z0-9-]{1,80}$"},"IdentityName":{"type":"string","pattern":"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"},"Owner":{"type":"string","pattern":"^[a-z0-9-]{1,64}$"},"ScheduledMessageId":{"type":"integer","minimum":1,"maximum":9007199254740991},"MessageId":{"type":"integer","minimum":1,"maximum":9007199254740991}}};
 const schema766 = {"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"};
 const schema767 = {"type":"string","pattern":"^[a-z0-9-]{1,80}$"};
 const schema769 = {"type":"string","pattern":"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"};
@@ -49931,538 +49931,8 @@ evaluated0.items = undefined;
 if(errors === 0){
 if(data && typeof data == "object" && !Array.isArray(data)){
 let missing0;
-if((((data.deleted === undefined) && (missing0 = "deleted")) || ((data.scheduledMessage === undefined) && (missing0 = "scheduledMessage"))) || ((data.type === undefined) && (missing0 = "type"))){
-validate87.errors = [{instancePath,schemaPath:"#/required",keyword:"required",params:{missingProperty: missing0},message:"must have required property '"+missing0+"'"}];
-return false;
-}
-else {
-if(data.deleted !== undefined){
-const _errs2 = errors;
-if(typeof data.deleted !== "boolean"){
-validate87.errors = [{instancePath:instancePath+"/deleted",schemaPath:"#/properties/deleted/type",keyword:"type",params:{type: "boolean"},message:"must be boolean"}];
-return false;
-}
-var valid0 = _errs2 === errors;
-}
-else {
-var valid0 = true;
-}
-if(valid0){
-if(data.scheduledMessage !== undefined){
-let data1 = data.scheduledMessage;
-const _errs4 = errors;
-if(errors === _errs4){
-if(data1 && typeof data1 == "object" && !Array.isArray(data1)){
-let missing1;
-if((((((((((data1.channel === undefined) && (missing1 = "channel")) || ((data1.createdAt === undefined) && (missing1 = "createdAt"))) || ((data1.creator === undefined) && (missing1 = "creator"))) || ((data1.id === undefined) && (missing1 = "id"))) || ((data1.nextRuns === undefined) && (missing1 = "nextRuns"))) || ((data1.status === undefined) && (missing1 = "status"))) || ((data1.text === undefined) && (missing1 = "text"))) || ((data1.timeZone === undefined) && (missing1 = "timeZone"))) || ((data1.updatedAt === undefined) && (missing1 = "updatedAt"))){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage",schemaPath:"#/properties/scheduledMessage/required",keyword:"required",params:{missingProperty: missing1},message:"must have required property '"+missing1+"'"}];
-return false;
-}
-else {
-if(data1.at !== undefined){
-let data2 = data1.at;
-const _errs7 = errors;
-const _errs8 = errors;
-if(errors === _errs8){
-if(typeof data2 === "string"){
-if(!pattern5.test(data2)){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/at",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
-return false;
-}
-}
-else {
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/at",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
-return false;
-}
-}
-var valid1 = _errs7 === errors;
-}
-else {
-var valid1 = true;
-}
-if(valid1){
-if(data1.channel !== undefined){
-let data3 = data1.channel;
-const _errs10 = errors;
-const _errs11 = errors;
-if(errors === _errs11){
-if(typeof data3 === "string"){
-if(!pattern32.test(data3)){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/channel",schemaPath:"#/$defs/ChannelName/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9-]{1,80}$"},message:"must match pattern \""+"^[a-z0-9-]{1,80}$"+"\""}];
-return false;
-}
-}
-else {
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/channel",schemaPath:"#/$defs/ChannelName/type",keyword:"type",params:{type: "string"},message:"must be string"}];
-return false;
-}
-}
-var valid1 = _errs10 === errors;
-}
-else {
-var valid1 = true;
-}
-if(valid1){
-if(data1.createdAt !== undefined){
-let data4 = data1.createdAt;
-const _errs13 = errors;
-const _errs14 = errors;
-if(errors === _errs14){
-if(typeof data4 === "string"){
-if(!pattern5.test(data4)){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/createdAt",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
-return false;
-}
-}
-else {
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/createdAt",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
-return false;
-}
-}
-var valid1 = _errs13 === errors;
-}
-else {
-var valid1 = true;
-}
-if(valid1){
-if(data1.creator !== undefined){
-let data5 = data1.creator;
-const _errs16 = errors;
-if(errors === _errs16){
-if(data5 && typeof data5 == "object" && !Array.isArray(data5)){
-let missing2;
-if((data5.name === undefined) && (missing2 = "name")){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/creator",schemaPath:"#/properties/scheduledMessage/properties/creator/required",keyword:"required",params:{missingProperty: missing2},message:"must have required property '"+missing2+"'"}];
-return false;
-}
-else {
-if(data5.name !== undefined){
-let data6 = data5.name;
-const _errs19 = errors;
-const _errs20 = errors;
-if(errors === _errs20){
-if(typeof data6 === "string"){
-if(!pattern6.test(data6)){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/creator/name",schemaPath:"#/$defs/IdentityName/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"},message:"must match pattern \""+"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"+"\""}];
-return false;
-}
-}
-else {
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/creator/name",schemaPath:"#/$defs/IdentityName/type",keyword:"type",params:{type: "string"},message:"must be string"}];
-return false;
-}
-}
-var valid5 = _errs19 === errors;
-}
-else {
-var valid5 = true;
-}
-if(valid5){
-if(data5.owner !== undefined){
-let data7 = data5.owner;
-const _errs22 = errors;
-const _errs23 = errors;
-if(errors === _errs23){
-if(typeof data7 === "string"){
-if(!pattern29.test(data7)){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/creator/owner",schemaPath:"#/$defs/Owner/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9-]{1,64}$"},message:"must match pattern \""+"^[a-z0-9-]{1,64}$"+"\""}];
-return false;
-}
-}
-else {
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/creator/owner",schemaPath:"#/$defs/Owner/type",keyword:"type",params:{type: "string"},message:"must be string"}];
-return false;
-}
-}
-var valid5 = _errs22 === errors;
-}
-else {
-var valid5 = true;
-}
-}
-}
-}
-else {
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/creator",schemaPath:"#/properties/scheduledMessage/properties/creator/type",keyword:"type",params:{type: "object"},message:"must be object"}];
-return false;
-}
-}
-var valid1 = _errs16 === errors;
-}
-else {
-var valid1 = true;
-}
-if(valid1){
-if(data1.cron !== undefined){
-const _errs25 = errors;
-if(typeof data1.cron !== "string"){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/cron",schemaPath:"#/properties/scheduledMessage/properties/cron/type",keyword:"type",params:{type: "string"},message:"must be string"}];
-return false;
-}
-var valid1 = _errs25 === errors;
-}
-else {
-var valid1 = true;
-}
-if(valid1){
-if(data1.id !== undefined){
-let data9 = data1.id;
-const _errs27 = errors;
-const _errs28 = errors;
-if(!(((typeof data9 == "number") && (!(data9 % 1) && !isNaN(data9))) && (isFinite(data9)))){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/id",schemaPath:"#/$defs/ScheduledMessageId/type",keyword:"type",params:{type: "integer"},message:"must be integer"}];
-return false;
-}
-if(errors === _errs28){
-if((typeof data9 == "number") && (isFinite(data9))){
-if(data9 > 9007199254740991 || isNaN(data9)){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/id",schemaPath:"#/$defs/ScheduledMessageId/maximum",keyword:"maximum",params:{comparison: "<=", limit: 9007199254740991},message:"must be <= 9007199254740991"}];
-return false;
-}
-else {
-if(data9 < 1 || isNaN(data9)){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/id",schemaPath:"#/$defs/ScheduledMessageId/minimum",keyword:"minimum",params:{comparison: ">=", limit: 1},message:"must be >= 1"}];
-return false;
-}
-}
-}
-}
-var valid1 = _errs27 === errors;
-}
-else {
-var valid1 = true;
-}
-if(valid1){
-if(data1.lastRun !== undefined){
-let data10 = data1.lastRun;
-const _errs30 = errors;
-if(errors === _errs30){
-if(data10 && typeof data10 == "object" && !Array.isArray(data10)){
-let missing3;
-if(((data10.due === undefined) && (missing3 = "due")) || ((data10.outcome === undefined) && (missing3 = "outcome"))){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun",schemaPath:"#/properties/scheduledMessage/properties/lastRun/required",keyword:"required",params:{missingProperty: missing3},message:"must have required property '"+missing3+"'"}];
-return false;
-}
-else {
-if(data10.due !== undefined){
-let data11 = data10.due;
-const _errs33 = errors;
-const _errs34 = errors;
-if(errors === _errs34){
-if(typeof data11 === "string"){
-if(!pattern5.test(data11)){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun/due",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
-return false;
-}
-}
-else {
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun/due",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
-return false;
-}
-}
-var valid9 = _errs33 === errors;
-}
-else {
-var valid9 = true;
-}
-if(valid9){
-if(data10.messageId !== undefined){
-let data12 = data10.messageId;
-const _errs36 = errors;
-const _errs37 = errors;
-if(!(((typeof data12 == "number") && (!(data12 % 1) && !isNaN(data12))) && (isFinite(data12)))){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun/messageId",schemaPath:"#/$defs/MessageId/type",keyword:"type",params:{type: "integer"},message:"must be integer"}];
-return false;
-}
-if(errors === _errs37){
-if((typeof data12 == "number") && (isFinite(data12))){
-if(data12 > 9007199254740991 || isNaN(data12)){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun/messageId",schemaPath:"#/$defs/MessageId/maximum",keyword:"maximum",params:{comparison: "<=", limit: 9007199254740991},message:"must be <= 9007199254740991"}];
-return false;
-}
-else {
-if(data12 < 1 || isNaN(data12)){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun/messageId",schemaPath:"#/$defs/MessageId/minimum",keyword:"minimum",params:{comparison: ">=", limit: 1},message:"must be >= 1"}];
-return false;
-}
-}
-}
-}
-var valid9 = _errs36 === errors;
-}
-else {
-var valid9 = true;
-}
-if(valid9){
-if(data10.outcome !== undefined){
-let data13 = data10.outcome;
-const _errs39 = errors;
-if(typeof data13 !== "string"){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun/outcome",schemaPath:"#/properties/scheduledMessage/properties/lastRun/properties/outcome/type",keyword:"type",params:{type: "string"},message:"must be string"}];
-return false;
-}
-if(!((data13 === "posted") || (data13 === "skipped"))){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun/outcome",schemaPath:"#/properties/scheduledMessage/properties/lastRun/properties/outcome/enum",keyword:"enum",params:{allowedValues: schema765.properties.scheduledMessage.properties.lastRun.properties.outcome.enum},message:"must be equal to one of the allowed values"}];
-return false;
-}
-var valid9 = _errs39 === errors;
-}
-else {
-var valid9 = true;
-}
-}
-}
-}
-}
-else {
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun",schemaPath:"#/properties/scheduledMessage/properties/lastRun/type",keyword:"type",params:{type: "object"},message:"must be object"}];
-return false;
-}
-}
-var valid1 = _errs30 === errors;
-}
-else {
-var valid1 = true;
-}
-if(valid1){
-if(data1.nextRuns !== undefined){
-let data14 = data1.nextRuns;
-const _errs41 = errors;
-if(errors === _errs41){
-if(Array.isArray(data14)){
-var valid12 = true;
-const len0 = data14.length;
-for(let i0=0; i0<len0; i0++){
-let data15 = data14[i0];
-const _errs43 = errors;
-const _errs44 = errors;
-if(errors === _errs44){
-if(typeof data15 === "string"){
-if(!pattern5.test(data15)){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/nextRuns/" + i0,schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
-return false;
-}
-}
-else {
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/nextRuns/" + i0,schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
-return false;
-}
-}
-var valid12 = _errs43 === errors;
-if(!valid12){
-break;
-}
-}
-}
-else {
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/nextRuns",schemaPath:"#/properties/scheduledMessage/properties/nextRuns/type",keyword:"type",params:{type: "array"},message:"must be array"}];
-return false;
-}
-}
-var valid1 = _errs41 === errors;
-}
-else {
-var valid1 = true;
-}
-if(valid1){
-if(data1.pausedBecause !== undefined){
-let data16 = data1.pausedBecause;
-const _errs46 = errors;
-const _errs47 = errors;
-let valid14 = false;
-const _errs48 = errors;
-if(typeof data16 !== "string"){
-const err0 = {instancePath:instancePath+"/scheduledMessage/pausedBecause",schemaPath:"#/properties/scheduledMessage/properties/pausedBecause/anyOf/0/type",keyword:"type",params:{type: "string"},message:"must be string"};
-if(vErrors === null){
-vErrors = [err0];
-}
-else {
-vErrors.push(err0);
-}
-errors++;
-}
-if(!(data16 === "creator_deactivated")){
-const err1 = {instancePath:instancePath+"/scheduledMessage/pausedBecause",schemaPath:"#/properties/scheduledMessage/properties/pausedBecause/anyOf/0/enum",keyword:"enum",params:{allowedValues: schema765.properties.scheduledMessage.properties.pausedBecause.anyOf[0].enum},message:"must be equal to one of the allowed values"};
-if(vErrors === null){
-vErrors = [err1];
-}
-else {
-vErrors.push(err1);
-}
-errors++;
-}
-var _valid0 = _errs48 === errors;
-valid14 = valid14 || _valid0;
-if(!valid14){
-const err2 = {instancePath:instancePath+"/scheduledMessage/pausedBecause",schemaPath:"#/properties/scheduledMessage/properties/pausedBecause/anyOf",keyword:"anyOf",params:{},message:"must match a schema in anyOf"};
-if(vErrors === null){
-vErrors = [err2];
-}
-else {
-vErrors.push(err2);
-}
-errors++;
-validate87.errors = vErrors;
-return false;
-}
-else {
-errors = _errs47;
-if(vErrors !== null){
-if(_errs47){
-vErrors.length = _errs47;
-}
-else {
-vErrors = null;
-}
-}
-}
-var valid1 = _errs46 === errors;
-}
-else {
-var valid1 = true;
-}
-if(valid1){
-if(data1.status !== undefined){
-let data17 = data1.status;
-const _errs50 = errors;
-if(typeof data17 !== "string"){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/status",schemaPath:"#/properties/scheduledMessage/properties/status/type",keyword:"type",params:{type: "string"},message:"must be string"}];
-return false;
-}
-if(!(((data17 === "active") || (data17 === "paused")) || (data17 === "finished"))){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/status",schemaPath:"#/properties/scheduledMessage/properties/status/enum",keyword:"enum",params:{allowedValues: schema765.properties.scheduledMessage.properties.status.enum},message:"must be equal to one of the allowed values"}];
-return false;
-}
-var valid1 = _errs50 === errors;
-}
-else {
-var valid1 = true;
-}
-if(valid1){
-if(data1.text !== undefined){
-const _errs52 = errors;
-if(typeof data1.text !== "string"){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/text",schemaPath:"#/properties/scheduledMessage/properties/text/type",keyword:"type",params:{type: "string"},message:"must be string"}];
-return false;
-}
-var valid1 = _errs52 === errors;
-}
-else {
-var valid1 = true;
-}
-if(valid1){
-if(data1.timeZone !== undefined){
-const _errs54 = errors;
-if(typeof data1.timeZone !== "string"){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/timeZone",schemaPath:"#/properties/scheduledMessage/properties/timeZone/type",keyword:"type",params:{type: "string"},message:"must be string"}];
-return false;
-}
-var valid1 = _errs54 === errors;
-}
-else {
-var valid1 = true;
-}
-if(valid1){
-if(data1.updatedAt !== undefined){
-let data20 = data1.updatedAt;
-const _errs56 = errors;
-const _errs57 = errors;
-if(errors === _errs57){
-if(typeof data20 === "string"){
-if(!pattern5.test(data20)){
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/updatedAt",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
-return false;
-}
-}
-else {
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage/updatedAt",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
-return false;
-}
-}
-var valid1 = _errs56 === errors;
-}
-else {
-var valid1 = true;
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-else {
-validate87.errors = [{instancePath:instancePath+"/scheduledMessage",schemaPath:"#/properties/scheduledMessage/type",keyword:"type",params:{type: "object"},message:"must be object"}];
-return false;
-}
-}
-var valid0 = _errs4 === errors;
-}
-else {
-var valid0 = true;
-}
-if(valid0){
-if(data.type !== undefined){
-let data21 = data.type;
-const _errs59 = errors;
-if(typeof data21 !== "string"){
-validate87.errors = [{instancePath:instancePath+"/type",schemaPath:"#/properties/type/type",keyword:"type",params:{type: "string"},message:"must be string"}];
-return false;
-}
-if(!(data21 === "scheduled-message")){
-validate87.errors = [{instancePath:instancePath+"/type",schemaPath:"#/properties/type/enum",keyword:"enum",params:{allowedValues: schema765.properties.type.enum},message:"must be equal to one of the allowed values"}];
-return false;
-}
-var valid0 = _errs59 === errors;
-}
-else {
-var valid0 = true;
-}
-}
-}
-}
-}
-else {
-validate87.errors = [{instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"}];
-return false;
-}
-}
-validate87.errors = vErrors;
-return errors === 0;
-}
-validate87.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
-
-export const isListScheduledMessagesResponse = validate88;
-const schema776 = {"type":"object","properties":{"scheduledMessages":{"type":"array","items":{"type":"object","properties":{"at":{"$ref":"#/$defs/IsoTime"},"channel":{"$ref":"#/$defs/ChannelName"},"createdAt":{"$ref":"#/$defs/IsoTime"},"creator":{"type":"object","properties":{"name":{"$ref":"#/$defs/IdentityName"},"owner":{"$ref":"#/$defs/Owner"}},"required":["name"],"additionalProperties":true},"cron":{"type":"string"},"id":{"$ref":"#/$defs/ScheduledMessageId"},"lastRun":{"type":"object","properties":{"due":{"$ref":"#/$defs/IsoTime"},"messageId":{"$ref":"#/$defs/MessageId"},"outcome":{"type":"string","enum":["posted","skipped"]}},"required":["due","outcome"],"additionalProperties":true},"nextRuns":{"type":"array","items":{"$ref":"#/$defs/IsoTime"}},"pausedBecause":{"anyOf":[{"type":"string","enum":["creator_deactivated"]}]},"status":{"type":"string","enum":["active","paused","finished"]},"text":{"type":"string"},"timeZone":{"type":"string"},"updatedAt":{"$ref":"#/$defs/IsoTime"}},"required":["channel","createdAt","creator","id","nextRuns","status","text","timeZone","updatedAt"],"additionalProperties":true}}},"required":["scheduledMessages"],"additionalProperties":true,"$defs":{"IsoTime":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},"ChannelName":{"type":"string","pattern":"^[a-z0-9-]{1,80}$"},"IdentityName":{"type":"string","pattern":"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"},"Owner":{"type":"string","pattern":"^[a-z0-9-]{1,64}$"},"ScheduledMessageId":{"type":"integer","minimum":1,"maximum":9007199254740991},"MessageId":{"type":"integer","minimum":1,"maximum":9007199254740991}}};
-const schema777 = {"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"};
-const schema778 = {"type":"string","pattern":"^[a-z0-9-]{1,80}$"};
-const schema780 = {"type":"string","pattern":"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"};
-const schema781 = {"type":"string","pattern":"^[a-z0-9-]{1,64}$"};
-const schema782 = {"type":"integer","minimum":1,"maximum":9007199254740991};
-const schema784 = {"type":"integer","minimum":1,"maximum":9007199254740991};
-
-function validate88(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
-let vErrors = null;
-let errors = 0;
-const evaluated0 = validate88.evaluated;
-if(evaluated0.dynamicProps){
-evaluated0.props = undefined;
-}
-if(evaluated0.dynamicItems){
-evaluated0.items = undefined;
-}
-if(errors === 0){
-if(data && typeof data == "object" && !Array.isArray(data)){
-let missing0;
 if((data.scheduledMessages === undefined) && (missing0 = "scheduledMessages")){
-validate88.errors = [{instancePath,schemaPath:"#/required",keyword:"required",params:{missingProperty: missing0},message:"must have required property '"+missing0+"'"}];
+validate87.errors = [{instancePath,schemaPath:"#/required",keyword:"required",params:{missingProperty: missing0},message:"must have required property '"+missing0+"'"}];
 return false;
 }
 else {
@@ -50480,7 +49950,7 @@ if(errors === _errs4){
 if(data1 && typeof data1 == "object" && !Array.isArray(data1)){
 let missing1;
 if((((((((((data1.channel === undefined) && (missing1 = "channel")) || ((data1.createdAt === undefined) && (missing1 = "createdAt"))) || ((data1.creator === undefined) && (missing1 = "creator"))) || ((data1.id === undefined) && (missing1 = "id"))) || ((data1.nextRuns === undefined) && (missing1 = "nextRuns"))) || ((data1.status === undefined) && (missing1 = "status"))) || ((data1.text === undefined) && (missing1 = "text"))) || ((data1.timeZone === undefined) && (missing1 = "timeZone"))) || ((data1.updatedAt === undefined) && (missing1 = "updatedAt"))){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0,schemaPath:"#/properties/scheduledMessages/items/required",keyword:"required",params:{missingProperty: missing1},message:"must have required property '"+missing1+"'"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0,schemaPath:"#/properties/scheduledMessages/items/required",keyword:"required",params:{missingProperty: missing1},message:"must have required property '"+missing1+"'"}];
 return false;
 }
 else {
@@ -50491,12 +49961,12 @@ const _errs8 = errors;
 if(errors === _errs8){
 if(typeof data2 === "string"){
 if(!pattern5.test(data2)){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/at",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/at",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
 return false;
 }
 }
 else {
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/at",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/at",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
 return false;
 }
 }
@@ -50513,12 +49983,12 @@ const _errs11 = errors;
 if(errors === _errs11){
 if(typeof data3 === "string"){
 if(!pattern32.test(data3)){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/channel",schemaPath:"#/$defs/ChannelName/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9-]{1,80}$"},message:"must match pattern \""+"^[a-z0-9-]{1,80}$"+"\""}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/channel",schemaPath:"#/$defs/ChannelName/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9-]{1,80}$"},message:"must match pattern \""+"^[a-z0-9-]{1,80}$"+"\""}];
 return false;
 }
 }
 else {
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/channel",schemaPath:"#/$defs/ChannelName/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/channel",schemaPath:"#/$defs/ChannelName/type",keyword:"type",params:{type: "string"},message:"must be string"}];
 return false;
 }
 }
@@ -50535,12 +50005,12 @@ const _errs14 = errors;
 if(errors === _errs14){
 if(typeof data4 === "string"){
 if(!pattern5.test(data4)){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/createdAt",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/createdAt",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
 return false;
 }
 }
 else {
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/createdAt",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/createdAt",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
 return false;
 }
 }
@@ -50557,7 +50027,7 @@ if(errors === _errs16){
 if(data5 && typeof data5 == "object" && !Array.isArray(data5)){
 let missing2;
 if((data5.name === undefined) && (missing2 = "name")){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/creator",schemaPath:"#/properties/scheduledMessages/items/properties/creator/required",keyword:"required",params:{missingProperty: missing2},message:"must have required property '"+missing2+"'"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/creator",schemaPath:"#/properties/scheduledMessages/items/properties/creator/required",keyword:"required",params:{missingProperty: missing2},message:"must have required property '"+missing2+"'"}];
 return false;
 }
 else {
@@ -50568,12 +50038,12 @@ const _errs20 = errors;
 if(errors === _errs20){
 if(typeof data6 === "string"){
 if(!pattern6.test(data6)){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/creator/name",schemaPath:"#/$defs/IdentityName/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"},message:"must match pattern \""+"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"+"\""}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/creator/name",schemaPath:"#/$defs/IdentityName/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"},message:"must match pattern \""+"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"+"\""}];
 return false;
 }
 }
 else {
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/creator/name",schemaPath:"#/$defs/IdentityName/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/creator/name",schemaPath:"#/$defs/IdentityName/type",keyword:"type",params:{type: "string"},message:"must be string"}];
 return false;
 }
 }
@@ -50590,12 +50060,12 @@ const _errs23 = errors;
 if(errors === _errs23){
 if(typeof data7 === "string"){
 if(!pattern29.test(data7)){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/creator/owner",schemaPath:"#/$defs/Owner/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9-]{1,64}$"},message:"must match pattern \""+"^[a-z0-9-]{1,64}$"+"\""}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/creator/owner",schemaPath:"#/$defs/Owner/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9-]{1,64}$"},message:"must match pattern \""+"^[a-z0-9-]{1,64}$"+"\""}];
 return false;
 }
 }
 else {
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/creator/owner",schemaPath:"#/$defs/Owner/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/creator/owner",schemaPath:"#/$defs/Owner/type",keyword:"type",params:{type: "string"},message:"must be string"}];
 return false;
 }
 }
@@ -50608,7 +50078,7 @@ var valid6 = true;
 }
 }
 else {
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/creator",schemaPath:"#/properties/scheduledMessages/items/properties/creator/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/creator",schemaPath:"#/properties/scheduledMessages/items/properties/creator/type",keyword:"type",params:{type: "object"},message:"must be object"}];
 return false;
 }
 }
@@ -50621,7 +50091,7 @@ if(valid2){
 if(data1.cron !== undefined){
 const _errs25 = errors;
 if(typeof data1.cron !== "string"){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/cron",schemaPath:"#/properties/scheduledMessages/items/properties/cron/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/cron",schemaPath:"#/properties/scheduledMessages/items/properties/cron/type",keyword:"type",params:{type: "string"},message:"must be string"}];
 return false;
 }
 var valid2 = _errs25 === errors;
@@ -50635,18 +50105,18 @@ let data9 = data1.id;
 const _errs27 = errors;
 const _errs28 = errors;
 if(!(((typeof data9 == "number") && (!(data9 % 1) && !isNaN(data9))) && (isFinite(data9)))){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/id",schemaPath:"#/$defs/ScheduledMessageId/type",keyword:"type",params:{type: "integer"},message:"must be integer"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/id",schemaPath:"#/$defs/ScheduledMessageId/type",keyword:"type",params:{type: "integer"},message:"must be integer"}];
 return false;
 }
 if(errors === _errs28){
 if((typeof data9 == "number") && (isFinite(data9))){
 if(data9 > 9007199254740991 || isNaN(data9)){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/id",schemaPath:"#/$defs/ScheduledMessageId/maximum",keyword:"maximum",params:{comparison: "<=", limit: 9007199254740991},message:"must be <= 9007199254740991"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/id",schemaPath:"#/$defs/ScheduledMessageId/maximum",keyword:"maximum",params:{comparison: "<=", limit: 9007199254740991},message:"must be <= 9007199254740991"}];
 return false;
 }
 else {
 if(data9 < 1 || isNaN(data9)){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/id",schemaPath:"#/$defs/ScheduledMessageId/minimum",keyword:"minimum",params:{comparison: ">=", limit: 1},message:"must be >= 1"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/id",schemaPath:"#/$defs/ScheduledMessageId/minimum",keyword:"minimum",params:{comparison: ">=", limit: 1},message:"must be >= 1"}];
 return false;
 }
 }
@@ -50665,7 +50135,7 @@ if(errors === _errs30){
 if(data10 && typeof data10 == "object" && !Array.isArray(data10)){
 let missing3;
 if(((data10.due === undefined) && (missing3 = "due")) || ((data10.outcome === undefined) && (missing3 = "outcome"))){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun",schemaPath:"#/properties/scheduledMessages/items/properties/lastRun/required",keyword:"required",params:{missingProperty: missing3},message:"must have required property '"+missing3+"'"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun",schemaPath:"#/properties/scheduledMessages/items/properties/lastRun/required",keyword:"required",params:{missingProperty: missing3},message:"must have required property '"+missing3+"'"}];
 return false;
 }
 else {
@@ -50676,12 +50146,12 @@ const _errs34 = errors;
 if(errors === _errs34){
 if(typeof data11 === "string"){
 if(!pattern5.test(data11)){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun/due",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun/due",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
 return false;
 }
 }
 else {
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun/due",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun/due",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
 return false;
 }
 }
@@ -50696,18 +50166,18 @@ let data12 = data10.messageId;
 const _errs36 = errors;
 const _errs37 = errors;
 if(!(((typeof data12 == "number") && (!(data12 % 1) && !isNaN(data12))) && (isFinite(data12)))){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun/messageId",schemaPath:"#/$defs/MessageId/type",keyword:"type",params:{type: "integer"},message:"must be integer"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun/messageId",schemaPath:"#/$defs/MessageId/type",keyword:"type",params:{type: "integer"},message:"must be integer"}];
 return false;
 }
 if(errors === _errs37){
 if((typeof data12 == "number") && (isFinite(data12))){
 if(data12 > 9007199254740991 || isNaN(data12)){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun/messageId",schemaPath:"#/$defs/MessageId/maximum",keyword:"maximum",params:{comparison: "<=", limit: 9007199254740991},message:"must be <= 9007199254740991"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun/messageId",schemaPath:"#/$defs/MessageId/maximum",keyword:"maximum",params:{comparison: "<=", limit: 9007199254740991},message:"must be <= 9007199254740991"}];
 return false;
 }
 else {
 if(data12 < 1 || isNaN(data12)){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun/messageId",schemaPath:"#/$defs/MessageId/minimum",keyword:"minimum",params:{comparison: ">=", limit: 1},message:"must be >= 1"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun/messageId",schemaPath:"#/$defs/MessageId/minimum",keyword:"minimum",params:{comparison: ">=", limit: 1},message:"must be >= 1"}];
 return false;
 }
 }
@@ -50723,11 +50193,11 @@ if(data10.outcome !== undefined){
 let data13 = data10.outcome;
 const _errs39 = errors;
 if(typeof data13 !== "string"){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun/outcome",schemaPath:"#/properties/scheduledMessages/items/properties/lastRun/properties/outcome/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun/outcome",schemaPath:"#/properties/scheduledMessages/items/properties/lastRun/properties/outcome/type",keyword:"type",params:{type: "string"},message:"must be string"}];
 return false;
 }
 if(!((data13 === "posted") || (data13 === "skipped"))){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun/outcome",schemaPath:"#/properties/scheduledMessages/items/properties/lastRun/properties/outcome/enum",keyword:"enum",params:{allowedValues: schema776.properties.scheduledMessages.items.properties.lastRun.properties.outcome.enum},message:"must be equal to one of the allowed values"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun/outcome",schemaPath:"#/properties/scheduledMessages/items/properties/lastRun/properties/outcome/enum",keyword:"enum",params:{allowedValues: schema765.properties.scheduledMessages.items.properties.lastRun.properties.outcome.enum},message:"must be equal to one of the allowed values"}];
 return false;
 }
 var valid10 = _errs39 === errors;
@@ -50740,7 +50210,7 @@ var valid10 = true;
 }
 }
 else {
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun",schemaPath:"#/properties/scheduledMessages/items/properties/lastRun/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/lastRun",schemaPath:"#/properties/scheduledMessages/items/properties/lastRun/type",keyword:"type",params:{type: "object"},message:"must be object"}];
 return false;
 }
 }
@@ -50764,12 +50234,12 @@ const _errs44 = errors;
 if(errors === _errs44){
 if(typeof data15 === "string"){
 if(!pattern5.test(data15)){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/nextRuns/" + i1,schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/nextRuns/" + i1,schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
 return false;
 }
 }
 else {
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/nextRuns/" + i1,schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/nextRuns/" + i1,schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
 return false;
 }
 }
@@ -50780,7 +50250,7 @@ break;
 }
 }
 else {
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/nextRuns",schemaPath:"#/properties/scheduledMessages/items/properties/nextRuns/type",keyword:"type",params:{type: "array"},message:"must be array"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/nextRuns",schemaPath:"#/properties/scheduledMessages/items/properties/nextRuns/type",keyword:"type",params:{type: "array"},message:"must be array"}];
 return false;
 }
 }
@@ -50807,7 +50277,7 @@ vErrors.push(err0);
 errors++;
 }
 if(!(data16 === "creator_deactivated")){
-const err1 = {instancePath:instancePath+"/scheduledMessages/" + i0+"/pausedBecause",schemaPath:"#/properties/scheduledMessages/items/properties/pausedBecause/anyOf/0/enum",keyword:"enum",params:{allowedValues: schema776.properties.scheduledMessages.items.properties.pausedBecause.anyOf[0].enum},message:"must be equal to one of the allowed values"};
+const err1 = {instancePath:instancePath+"/scheduledMessages/" + i0+"/pausedBecause",schemaPath:"#/properties/scheduledMessages/items/properties/pausedBecause/anyOf/0/enum",keyword:"enum",params:{allowedValues: schema765.properties.scheduledMessages.items.properties.pausedBecause.anyOf[0].enum},message:"must be equal to one of the allowed values"};
 if(vErrors === null){
 vErrors = [err1];
 }
@@ -50827,7 +50297,7 @@ else {
 vErrors.push(err2);
 }
 errors++;
-validate88.errors = vErrors;
+validate87.errors = vErrors;
 return false;
 }
 else {
@@ -50851,11 +50321,11 @@ if(data1.status !== undefined){
 let data17 = data1.status;
 const _errs50 = errors;
 if(typeof data17 !== "string"){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/status",schemaPath:"#/properties/scheduledMessages/items/properties/status/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/status",schemaPath:"#/properties/scheduledMessages/items/properties/status/type",keyword:"type",params:{type: "string"},message:"must be string"}];
 return false;
 }
 if(!(((data17 === "active") || (data17 === "paused")) || (data17 === "finished"))){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/status",schemaPath:"#/properties/scheduledMessages/items/properties/status/enum",keyword:"enum",params:{allowedValues: schema776.properties.scheduledMessages.items.properties.status.enum},message:"must be equal to one of the allowed values"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/status",schemaPath:"#/properties/scheduledMessages/items/properties/status/enum",keyword:"enum",params:{allowedValues: schema765.properties.scheduledMessages.items.properties.status.enum},message:"must be equal to one of the allowed values"}];
 return false;
 }
 var valid2 = _errs50 === errors;
@@ -50867,7 +50337,7 @@ if(valid2){
 if(data1.text !== undefined){
 const _errs52 = errors;
 if(typeof data1.text !== "string"){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/text",schemaPath:"#/properties/scheduledMessages/items/properties/text/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/text",schemaPath:"#/properties/scheduledMessages/items/properties/text/type",keyword:"type",params:{type: "string"},message:"must be string"}];
 return false;
 }
 var valid2 = _errs52 === errors;
@@ -50879,7 +50349,7 @@ if(valid2){
 if(data1.timeZone !== undefined){
 const _errs54 = errors;
 if(typeof data1.timeZone !== "string"){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/timeZone",schemaPath:"#/properties/scheduledMessages/items/properties/timeZone/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/timeZone",schemaPath:"#/properties/scheduledMessages/items/properties/timeZone/type",keyword:"type",params:{type: "string"},message:"must be string"}];
 return false;
 }
 var valid2 = _errs54 === errors;
@@ -50895,12 +50365,12 @@ const _errs57 = errors;
 if(errors === _errs57){
 if(typeof data20 === "string"){
 if(!pattern5.test(data20)){
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/updatedAt",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/updatedAt",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
 return false;
 }
 }
 else {
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/updatedAt",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0+"/updatedAt",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
 return false;
 }
 }
@@ -50924,7 +50394,7 @@ var valid2 = true;
 }
 }
 else {
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0,schemaPath:"#/properties/scheduledMessages/items/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages/" + i0,schemaPath:"#/properties/scheduledMessages/items/type",keyword:"type",params:{type: "object"},message:"must be object"}];
 return false;
 }
 }
@@ -50935,8 +50405,538 @@ break;
 }
 }
 else {
-validate88.errors = [{instancePath:instancePath+"/scheduledMessages",schemaPath:"#/properties/scheduledMessages/type",keyword:"type",params:{type: "array"},message:"must be array"}];
+validate87.errors = [{instancePath:instancePath+"/scheduledMessages",schemaPath:"#/properties/scheduledMessages/type",keyword:"type",params:{type: "array"},message:"must be array"}];
 return false;
+}
+}
+}
+}
+}
+else {
+validate87.errors = [{instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+return false;
+}
+}
+validate87.errors = vErrors;
+return errors === 0;
+}
+validate87.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
+
+export const isScheduledMessageEvent = validate88;
+const schema776 = {"type":"object","properties":{"deleted":{"type":"boolean"},"scheduledMessage":{"type":"object","properties":{"at":{"$ref":"#/$defs/IsoTime"},"channel":{"$ref":"#/$defs/ChannelName"},"createdAt":{"$ref":"#/$defs/IsoTime"},"creator":{"type":"object","properties":{"name":{"$ref":"#/$defs/IdentityName"},"owner":{"$ref":"#/$defs/Owner"}},"required":["name"],"additionalProperties":true},"cron":{"type":"string"},"id":{"$ref":"#/$defs/ScheduledMessageId"},"lastRun":{"type":"object","properties":{"due":{"$ref":"#/$defs/IsoTime"},"messageId":{"$ref":"#/$defs/MessageId"},"outcome":{"type":"string","enum":["posted","skipped"]}},"required":["due","outcome"],"additionalProperties":true},"nextRuns":{"type":"array","items":{"$ref":"#/$defs/IsoTime"}},"pausedBecause":{"anyOf":[{"type":"string","enum":["creator_deactivated"]}]},"status":{"type":"string","enum":["active","paused","finished"]},"text":{"type":"string"},"timeZone":{"type":"string"},"updatedAt":{"$ref":"#/$defs/IsoTime"}},"required":["channel","createdAt","creator","id","nextRuns","status","text","timeZone","updatedAt"],"additionalProperties":true},"type":{"type":"string","enum":["scheduled-message"]}},"required":["deleted","scheduledMessage","type"],"additionalProperties":true,"$defs":{"IsoTime":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},"ChannelName":{"type":"string","pattern":"^[a-z0-9-]{1,80}$"},"IdentityName":{"type":"string","pattern":"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"},"Owner":{"type":"string","pattern":"^[a-z0-9-]{1,64}$"},"ScheduledMessageId":{"type":"integer","minimum":1,"maximum":9007199254740991},"MessageId":{"type":"integer","minimum":1,"maximum":9007199254740991}}};
+const schema777 = {"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"};
+const schema778 = {"type":"string","pattern":"^[a-z0-9-]{1,80}$"};
+const schema780 = {"type":"string","pattern":"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"};
+const schema781 = {"type":"string","pattern":"^[a-z0-9-]{1,64}$"};
+const schema782 = {"type":"integer","minimum":1,"maximum":9007199254740991};
+const schema784 = {"type":"integer","minimum":1,"maximum":9007199254740991};
+
+function validate88(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
+let vErrors = null;
+let errors = 0;
+const evaluated0 = validate88.evaluated;
+if(evaluated0.dynamicProps){
+evaluated0.props = undefined;
+}
+if(evaluated0.dynamicItems){
+evaluated0.items = undefined;
+}
+if(errors === 0){
+if(data && typeof data == "object" && !Array.isArray(data)){
+let missing0;
+if((((data.deleted === undefined) && (missing0 = "deleted")) || ((data.scheduledMessage === undefined) && (missing0 = "scheduledMessage"))) || ((data.type === undefined) && (missing0 = "type"))){
+validate88.errors = [{instancePath,schemaPath:"#/required",keyword:"required",params:{missingProperty: missing0},message:"must have required property '"+missing0+"'"}];
+return false;
+}
+else {
+if(data.deleted !== undefined){
+const _errs2 = errors;
+if(typeof data.deleted !== "boolean"){
+validate88.errors = [{instancePath:instancePath+"/deleted",schemaPath:"#/properties/deleted/type",keyword:"type",params:{type: "boolean"},message:"must be boolean"}];
+return false;
+}
+var valid0 = _errs2 === errors;
+}
+else {
+var valid0 = true;
+}
+if(valid0){
+if(data.scheduledMessage !== undefined){
+let data1 = data.scheduledMessage;
+const _errs4 = errors;
+if(errors === _errs4){
+if(data1 && typeof data1 == "object" && !Array.isArray(data1)){
+let missing1;
+if((((((((((data1.channel === undefined) && (missing1 = "channel")) || ((data1.createdAt === undefined) && (missing1 = "createdAt"))) || ((data1.creator === undefined) && (missing1 = "creator"))) || ((data1.id === undefined) && (missing1 = "id"))) || ((data1.nextRuns === undefined) && (missing1 = "nextRuns"))) || ((data1.status === undefined) && (missing1 = "status"))) || ((data1.text === undefined) && (missing1 = "text"))) || ((data1.timeZone === undefined) && (missing1 = "timeZone"))) || ((data1.updatedAt === undefined) && (missing1 = "updatedAt"))){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage",schemaPath:"#/properties/scheduledMessage/required",keyword:"required",params:{missingProperty: missing1},message:"must have required property '"+missing1+"'"}];
+return false;
+}
+else {
+if(data1.at !== undefined){
+let data2 = data1.at;
+const _errs7 = errors;
+const _errs8 = errors;
+if(errors === _errs8){
+if(typeof data2 === "string"){
+if(!pattern5.test(data2)){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/at",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
+return false;
+}
+}
+else {
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/at",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid1 = _errs7 === errors;
+}
+else {
+var valid1 = true;
+}
+if(valid1){
+if(data1.channel !== undefined){
+let data3 = data1.channel;
+const _errs10 = errors;
+const _errs11 = errors;
+if(errors === _errs11){
+if(typeof data3 === "string"){
+if(!pattern32.test(data3)){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/channel",schemaPath:"#/$defs/ChannelName/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9-]{1,80}$"},message:"must match pattern \""+"^[a-z0-9-]{1,80}$"+"\""}];
+return false;
+}
+}
+else {
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/channel",schemaPath:"#/$defs/ChannelName/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid1 = _errs10 === errors;
+}
+else {
+var valid1 = true;
+}
+if(valid1){
+if(data1.createdAt !== undefined){
+let data4 = data1.createdAt;
+const _errs13 = errors;
+const _errs14 = errors;
+if(errors === _errs14){
+if(typeof data4 === "string"){
+if(!pattern5.test(data4)){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/createdAt",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
+return false;
+}
+}
+else {
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/createdAt",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid1 = _errs13 === errors;
+}
+else {
+var valid1 = true;
+}
+if(valid1){
+if(data1.creator !== undefined){
+let data5 = data1.creator;
+const _errs16 = errors;
+if(errors === _errs16){
+if(data5 && typeof data5 == "object" && !Array.isArray(data5)){
+let missing2;
+if((data5.name === undefined) && (missing2 = "name")){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/creator",schemaPath:"#/properties/scheduledMessage/properties/creator/required",keyword:"required",params:{missingProperty: missing2},message:"must have required property '"+missing2+"'"}];
+return false;
+}
+else {
+if(data5.name !== undefined){
+let data6 = data5.name;
+const _errs19 = errors;
+const _errs20 = errors;
+if(errors === _errs20){
+if(typeof data6 === "string"){
+if(!pattern6.test(data6)){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/creator/name",schemaPath:"#/$defs/IdentityName/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"},message:"must match pattern \""+"^[a-z0-9-]{1,64}(?:\\/[a-z0-9-]{1,64})?$"+"\""}];
+return false;
+}
+}
+else {
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/creator/name",schemaPath:"#/$defs/IdentityName/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid5 = _errs19 === errors;
+}
+else {
+var valid5 = true;
+}
+if(valid5){
+if(data5.owner !== undefined){
+let data7 = data5.owner;
+const _errs22 = errors;
+const _errs23 = errors;
+if(errors === _errs23){
+if(typeof data7 === "string"){
+if(!pattern29.test(data7)){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/creator/owner",schemaPath:"#/$defs/Owner/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9-]{1,64}$"},message:"must match pattern \""+"^[a-z0-9-]{1,64}$"+"\""}];
+return false;
+}
+}
+else {
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/creator/owner",schemaPath:"#/$defs/Owner/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid5 = _errs22 === errors;
+}
+else {
+var valid5 = true;
+}
+}
+}
+}
+else {
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/creator",schemaPath:"#/properties/scheduledMessage/properties/creator/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+return false;
+}
+}
+var valid1 = _errs16 === errors;
+}
+else {
+var valid1 = true;
+}
+if(valid1){
+if(data1.cron !== undefined){
+const _errs25 = errors;
+if(typeof data1.cron !== "string"){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/cron",schemaPath:"#/properties/scheduledMessage/properties/cron/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+var valid1 = _errs25 === errors;
+}
+else {
+var valid1 = true;
+}
+if(valid1){
+if(data1.id !== undefined){
+let data9 = data1.id;
+const _errs27 = errors;
+const _errs28 = errors;
+if(!(((typeof data9 == "number") && (!(data9 % 1) && !isNaN(data9))) && (isFinite(data9)))){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/id",schemaPath:"#/$defs/ScheduledMessageId/type",keyword:"type",params:{type: "integer"},message:"must be integer"}];
+return false;
+}
+if(errors === _errs28){
+if((typeof data9 == "number") && (isFinite(data9))){
+if(data9 > 9007199254740991 || isNaN(data9)){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/id",schemaPath:"#/$defs/ScheduledMessageId/maximum",keyword:"maximum",params:{comparison: "<=", limit: 9007199254740991},message:"must be <= 9007199254740991"}];
+return false;
+}
+else {
+if(data9 < 1 || isNaN(data9)){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/id",schemaPath:"#/$defs/ScheduledMessageId/minimum",keyword:"minimum",params:{comparison: ">=", limit: 1},message:"must be >= 1"}];
+return false;
+}
+}
+}
+}
+var valid1 = _errs27 === errors;
+}
+else {
+var valid1 = true;
+}
+if(valid1){
+if(data1.lastRun !== undefined){
+let data10 = data1.lastRun;
+const _errs30 = errors;
+if(errors === _errs30){
+if(data10 && typeof data10 == "object" && !Array.isArray(data10)){
+let missing3;
+if(((data10.due === undefined) && (missing3 = "due")) || ((data10.outcome === undefined) && (missing3 = "outcome"))){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun",schemaPath:"#/properties/scheduledMessage/properties/lastRun/required",keyword:"required",params:{missingProperty: missing3},message:"must have required property '"+missing3+"'"}];
+return false;
+}
+else {
+if(data10.due !== undefined){
+let data11 = data10.due;
+const _errs33 = errors;
+const _errs34 = errors;
+if(errors === _errs34){
+if(typeof data11 === "string"){
+if(!pattern5.test(data11)){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun/due",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
+return false;
+}
+}
+else {
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun/due",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid9 = _errs33 === errors;
+}
+else {
+var valid9 = true;
+}
+if(valid9){
+if(data10.messageId !== undefined){
+let data12 = data10.messageId;
+const _errs36 = errors;
+const _errs37 = errors;
+if(!(((typeof data12 == "number") && (!(data12 % 1) && !isNaN(data12))) && (isFinite(data12)))){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun/messageId",schemaPath:"#/$defs/MessageId/type",keyword:"type",params:{type: "integer"},message:"must be integer"}];
+return false;
+}
+if(errors === _errs37){
+if((typeof data12 == "number") && (isFinite(data12))){
+if(data12 > 9007199254740991 || isNaN(data12)){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun/messageId",schemaPath:"#/$defs/MessageId/maximum",keyword:"maximum",params:{comparison: "<=", limit: 9007199254740991},message:"must be <= 9007199254740991"}];
+return false;
+}
+else {
+if(data12 < 1 || isNaN(data12)){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun/messageId",schemaPath:"#/$defs/MessageId/minimum",keyword:"minimum",params:{comparison: ">=", limit: 1},message:"must be >= 1"}];
+return false;
+}
+}
+}
+}
+var valid9 = _errs36 === errors;
+}
+else {
+var valid9 = true;
+}
+if(valid9){
+if(data10.outcome !== undefined){
+let data13 = data10.outcome;
+const _errs39 = errors;
+if(typeof data13 !== "string"){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun/outcome",schemaPath:"#/properties/scheduledMessage/properties/lastRun/properties/outcome/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+if(!((data13 === "posted") || (data13 === "skipped"))){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun/outcome",schemaPath:"#/properties/scheduledMessage/properties/lastRun/properties/outcome/enum",keyword:"enum",params:{allowedValues: schema776.properties.scheduledMessage.properties.lastRun.properties.outcome.enum},message:"must be equal to one of the allowed values"}];
+return false;
+}
+var valid9 = _errs39 === errors;
+}
+else {
+var valid9 = true;
+}
+}
+}
+}
+}
+else {
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/lastRun",schemaPath:"#/properties/scheduledMessage/properties/lastRun/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+return false;
+}
+}
+var valid1 = _errs30 === errors;
+}
+else {
+var valid1 = true;
+}
+if(valid1){
+if(data1.nextRuns !== undefined){
+let data14 = data1.nextRuns;
+const _errs41 = errors;
+if(errors === _errs41){
+if(Array.isArray(data14)){
+var valid12 = true;
+const len0 = data14.length;
+for(let i0=0; i0<len0; i0++){
+let data15 = data14[i0];
+const _errs43 = errors;
+const _errs44 = errors;
+if(errors === _errs44){
+if(typeof data15 === "string"){
+if(!pattern5.test(data15)){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/nextRuns/" + i0,schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
+return false;
+}
+}
+else {
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/nextRuns/" + i0,schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid12 = _errs43 === errors;
+if(!valid12){
+break;
+}
+}
+}
+else {
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/nextRuns",schemaPath:"#/properties/scheduledMessage/properties/nextRuns/type",keyword:"type",params:{type: "array"},message:"must be array"}];
+return false;
+}
+}
+var valid1 = _errs41 === errors;
+}
+else {
+var valid1 = true;
+}
+if(valid1){
+if(data1.pausedBecause !== undefined){
+let data16 = data1.pausedBecause;
+const _errs46 = errors;
+const _errs47 = errors;
+let valid14 = false;
+const _errs48 = errors;
+if(typeof data16 !== "string"){
+const err0 = {instancePath:instancePath+"/scheduledMessage/pausedBecause",schemaPath:"#/properties/scheduledMessage/properties/pausedBecause/anyOf/0/type",keyword:"type",params:{type: "string"},message:"must be string"};
+if(vErrors === null){
+vErrors = [err0];
+}
+else {
+vErrors.push(err0);
+}
+errors++;
+}
+if(!(data16 === "creator_deactivated")){
+const err1 = {instancePath:instancePath+"/scheduledMessage/pausedBecause",schemaPath:"#/properties/scheduledMessage/properties/pausedBecause/anyOf/0/enum",keyword:"enum",params:{allowedValues: schema776.properties.scheduledMessage.properties.pausedBecause.anyOf[0].enum},message:"must be equal to one of the allowed values"};
+if(vErrors === null){
+vErrors = [err1];
+}
+else {
+vErrors.push(err1);
+}
+errors++;
+}
+var _valid0 = _errs48 === errors;
+valid14 = valid14 || _valid0;
+if(!valid14){
+const err2 = {instancePath:instancePath+"/scheduledMessage/pausedBecause",schemaPath:"#/properties/scheduledMessage/properties/pausedBecause/anyOf",keyword:"anyOf",params:{},message:"must match a schema in anyOf"};
+if(vErrors === null){
+vErrors = [err2];
+}
+else {
+vErrors.push(err2);
+}
+errors++;
+validate88.errors = vErrors;
+return false;
+}
+else {
+errors = _errs47;
+if(vErrors !== null){
+if(_errs47){
+vErrors.length = _errs47;
+}
+else {
+vErrors = null;
+}
+}
+}
+var valid1 = _errs46 === errors;
+}
+else {
+var valid1 = true;
+}
+if(valid1){
+if(data1.status !== undefined){
+let data17 = data1.status;
+const _errs50 = errors;
+if(typeof data17 !== "string"){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/status",schemaPath:"#/properties/scheduledMessage/properties/status/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+if(!(((data17 === "active") || (data17 === "paused")) || (data17 === "finished"))){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/status",schemaPath:"#/properties/scheduledMessage/properties/status/enum",keyword:"enum",params:{allowedValues: schema776.properties.scheduledMessage.properties.status.enum},message:"must be equal to one of the allowed values"}];
+return false;
+}
+var valid1 = _errs50 === errors;
+}
+else {
+var valid1 = true;
+}
+if(valid1){
+if(data1.text !== undefined){
+const _errs52 = errors;
+if(typeof data1.text !== "string"){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/text",schemaPath:"#/properties/scheduledMessage/properties/text/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+var valid1 = _errs52 === errors;
+}
+else {
+var valid1 = true;
+}
+if(valid1){
+if(data1.timeZone !== undefined){
+const _errs54 = errors;
+if(typeof data1.timeZone !== "string"){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/timeZone",schemaPath:"#/properties/scheduledMessage/properties/timeZone/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+var valid1 = _errs54 === errors;
+}
+else {
+var valid1 = true;
+}
+if(valid1){
+if(data1.updatedAt !== undefined){
+let data20 = data1.updatedAt;
+const _errs56 = errors;
+const _errs57 = errors;
+if(errors === _errs57){
+if(typeof data20 === "string"){
+if(!pattern5.test(data20)){
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/updatedAt",schemaPath:"#/$defs/IsoTime/pattern",keyword:"pattern",params:{pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"},message:"must match pattern \""+"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"+"\""}];
+return false;
+}
+}
+else {
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage/updatedAt",schemaPath:"#/$defs/IsoTime/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+}
+var valid1 = _errs56 === errors;
+}
+else {
+var valid1 = true;
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+}
+else {
+validate88.errors = [{instancePath:instancePath+"/scheduledMessage",schemaPath:"#/properties/scheduledMessage/type",keyword:"type",params:{type: "object"},message:"must be object"}];
+return false;
+}
+}
+var valid0 = _errs4 === errors;
+}
+else {
+var valid0 = true;
+}
+if(valid0){
+if(data.type !== undefined){
+let data21 = data.type;
+const _errs59 = errors;
+if(typeof data21 !== "string"){
+validate88.errors = [{instancePath:instancePath+"/type",schemaPath:"#/properties/type/type",keyword:"type",params:{type: "string"},message:"must be string"}];
+return false;
+}
+if(!(data21 === "scheduled-message")){
+validate88.errors = [{instancePath:instancePath+"/type",schemaPath:"#/properties/type/enum",keyword:"enum",params:{allowedValues: schema776.properties.type.enum},message:"must be equal to one of the allowed values"}];
+return false;
+}
+var valid0 = _errs59 === errors;
+}
+else {
+var valid0 = true;
 }
 }
 }

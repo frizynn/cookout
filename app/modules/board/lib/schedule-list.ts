@@ -89,4 +89,4 @@ function createScheduleList(options: ScheduleListOptions): ScheduleList {
   };
 }
 
-export { type ScheduleChangeState, type ScheduleList, type ScheduleListState, type ScheduleMarks, createScheduleList };
+export { type ScheduleList, type ScheduleListState, type ScheduleMarks, createScheduleList };
