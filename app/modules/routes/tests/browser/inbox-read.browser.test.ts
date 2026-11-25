@@ -1,10 +1,13 @@
 import type { Browser, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import type { Person } from "./people.ts";
 import { inConversation } from "./regions.ts";
 import { logInWithStream } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const CHANNEL = "browser-inbox-read";
 const NOT_BEFORE_MILLIS = 1500;

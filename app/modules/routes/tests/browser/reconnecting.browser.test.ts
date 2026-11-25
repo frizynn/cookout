@@ -3,10 +3,11 @@ import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
 import { inSidebar } from "./regions.ts";
 import { logInWithStream } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { relayFixtures } from "./relay.ts";
 import { unique } from "./names.ts";
 
-const test = base.extend<RelayFixtures & RelayOptions>(relayFixtures);
+const test = base.extend(probeFixtures).extend<RelayFixtures & RelayOptions>(relayFixtures);
 
 test("cutting the live link shows the Reconnecting bar, and restoring it clears the bar and shows a channel made meanwhile", async ({
   page,

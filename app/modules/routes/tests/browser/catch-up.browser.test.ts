@@ -6,10 +6,11 @@ import { inPane, inSidebar, inThread } from "./regions.ts";
 import type { Message } from "../../../sdk/index.ts";
 import type { Person } from "./people.ts";
 import { logInWithStream } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { relayFixtures } from "./relay.ts";
 import { unique } from "./names.ts";
 
-const test = base.extend<RelayFixtures & RelayOptions>(relayFixtures);
+const test = base.extend(probeFixtures).extend<RelayFixtures & RelayOptions>(relayFixtures);
 
 const PAGE_MARK = "cookoutCatchUpMark";
 

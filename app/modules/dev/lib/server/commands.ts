@@ -27,9 +27,14 @@ function printFailure(failure: SeedFailure): Effect.Effect<void> {
 
 const portFlag = Flag.Int("port").pipe(Flag.withDefault(FREE_PORT), Flag.withDescription("The port to listen on."));
 
-const startCommand = Command.make("start", { port: portFlag }, ({ port }) =>
+const probeFlag = Flag.Boolean("probe").pipe(
+  Flag.withDefault(false),
+  Flag.withDescription("Put the browser tests' probe (the probe module) on the web UI's pages."),
+);
+
+const startCommand = Command.make("start", { port: portFlag, probe: probeFlag }, ({ port, probe }) =>
   Effect.gen(function* start() {
-    const dev = yield* devCookout(port);
+    const dev = yield* devCookout({ port, probe });
     yield* printLine({ ...dev, message: "The dev cookout is running. Ctrl-C stops it and deletes its database." });
     return yield* Effect.never;
   }).pipe(Effect.scoped),

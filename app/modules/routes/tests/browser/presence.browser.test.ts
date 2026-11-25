@@ -1,8 +1,11 @@
 import type { Browser, Locator, Page } from "@playwright/test";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { logInWithStream } from "./login.ts";
 import { newIdentity } from "./people.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 interface Viewing {
   readonly page: Page;

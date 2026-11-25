@@ -1,10 +1,13 @@
 import type { Browser, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inConversation, inPane } from "./regions.ts";
 import { logIn, logInToChannels, logInWithStream } from "./login.ts";
 import type { Person } from "./people.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const NARROW = { height: 900, width: 600 };
 

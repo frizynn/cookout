@@ -1,9 +1,12 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inPane } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const LIST = { name: "Keyboard shortcuts" } as const;
 const BOX = { name: "Message" } as const;

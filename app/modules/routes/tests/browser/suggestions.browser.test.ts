@@ -1,9 +1,12 @@
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import type { Locator } from "@playwright/test";
 import { inPane } from "./regions.ts";
 import { logIn } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const CHANNEL = "browser-suggestions-layer";
 const EARLIER_MESSAGES = 30;

@@ -1,9 +1,12 @@
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inConversation, inPane, inProfile } from "./regions.ts";
 import type { Page } from "@playwright/test";
 import { logInToChannels } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const BOX = { name: "Search" } as const;
 const REPLY = { exact: true, name: "Reply" } as const;

@@ -1,11 +1,14 @@
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inSidebar, inThread } from "./regions.ts";
 import type { Message } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
 import type { Person } from "./people.ts";
 import { logIn } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 async function followedThread(channel: string, reader: Person): Promise<Message> {
   const admin = adminClient();
