@@ -11,8 +11,8 @@ import {
   Ref,
   Scope,
 } from "effect";
-import type { Attachment, CookoutClient, Identity, Message, Token } from "../../../sdk/index.ts";
-import type { Booted, LastEnd, LoggedLine } from "./booted.ts";
+import type { Booted, HeldAssets, LastEnd, LoggedLine } from "./booted.ts";
+import type { CookoutClient, Identity, Message, Token } from "../../../sdk/index.ts";
 import type { NewMessage, StorageUnavailable, StoredDelivery, StoredWebhookCommand } from "../../../storage/server.ts";
 import { backingServices, newToken, scriptedTriggersIn, storageFor } from "./backing.ts";
 import { booted, capturedLogs, heldAssetsOn, lastEndOn, liveConnectionsClosedOn } from "./booted.ts";
@@ -56,7 +56,7 @@ export type TestCookoutService = {
   readonly seedMessage: (message: NewMessage) => Effect.Effect<Message>;
   readonly seedCommand: (stored: StoredWebhookCommand) => Effect.Effect<void>;
   readonly pendingDeliveries: Effect.Effect<readonly StoredDelivery[]>;
-  readonly heldAssets: (ids: readonly Attachment["id"][]) => Effect.Effect<readonly Attachment["id"][]>;
+  readonly heldAssets: HeldAssets;
   readonly logs: Effect.Effect<readonly LoggedLine[]>;
   readonly webhook: WebhookFake["Service"];
   readonly triggers: ReturnType<typeof scriptedTriggersIn>;
