@@ -18,15 +18,16 @@ const after = isoTime("2026-01-01T00:10:00.001Z");
 const requestHash = tokenHash("hash:request");
 const credentialHash = tokenHash("hash:credential");
 const ada = identity("ada", { kind: "human" });
-const FAILING_CALLS = 7;
+const FAILING_CALLS = 8;
 const late = tokenHash("hash:late");
+const adaToken = tokenHash("hash:ada");
 
 const request = { createdAt: created, expiresAt, host: "ada-laptop", requestHash, userCode: "WDJB-MJHT" };
 
 type Store = Storage["Service"];
 
 function withAda(storage: Store): Effect.Effect<void, StorageUnavailable> {
-  return Effect.asVoid(storage.createIdentity(ada, tokenHash("hash:ada")));
+  return Effect.asVoid(storage.createIdentity(ada, adaToken));
 }
 
 function approvedAndCollected(
@@ -155,6 +156,7 @@ it.effect.each(storageLayers)(
         credentialHash,
         host: "web",
         identity: ada.name,
+        madeWith: adaToken,
         now: before,
       });
       const found = yield* storage.findLoginCredential(credentialHash);
@@ -164,6 +166,7 @@ it.effect.each(storageLayers)(
         credentialHash: late,
         host: "web",
         identity: identityName("nobody"),
+        madeWith: adaToken,
         now: before,
       });
       const notIssued = yield* storage.findLoginCredential(late);
@@ -246,7 +249,16 @@ it.effect.each(storageLayers)("storage contract ($adapter): a closed store can't
         Effect.flip(storage.collectLoginRequest({ credentialHash, now: before, requestHash })),
         Effect.flip(storage.findLoginCredential(credentialHash)),
         Effect.flip(storage.revokeLoginCredential(credentialHash)),
-        Effect.flip(storage.issueLoginCredential({ credentialHash, host: "web", identity: ada.name, now: before })),
+        Effect.flip(
+          storage.issueLoginCredential({
+            credentialHash,
+            host: "web",
+            identity: ada.name,
+            madeWith: adaToken,
+            now: before,
+          }),
+        ),
+        Effect.flip(storage.revokeLoginCredentialsMadeWithRevokedTokens(ada.name)),
       ],
       { concurrency: 1 },
     );

@@ -6,7 +6,7 @@ export function AttachmentImage(parts: AttachmentImageParts): ReactNode {
   return (
     <img
       alt={parts.name}
-      className="block rounded-md border bg-muted object-contain"
+      className="block overflow-hidden rounded-md border bg-muted object-contain text-transparent"
       decoding="async"
       loading="lazy"
       src={parts.src}

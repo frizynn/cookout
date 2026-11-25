@@ -35,6 +35,7 @@ function joinRequestChangesOn(): Effect.Effect<
     }
     return {
       approved: publish,
+      denied: publish,
       hub,
       started: (agent, expiresAt) => Effect.andThen(publish(agent), publishAtExpiry(agent, expiresAt)),
     };

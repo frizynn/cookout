@@ -73,7 +73,9 @@ it.effect("cookout watch prints a line for a join request as it starts, naming t
     });
 
     expect(stdoutLines).toStrictEqual([
-      expect.stringMatching(/^@worker asks to join from build-box\. Run cookout approve-join \S+ to approve it\.$/u),
+      expect.stringMatching(
+        /^@worker asks to join from build-box\. Run cookout approve-join \S+ to approve it, or cookout deny-join \S+ to dismiss it\.$/u,
+      ),
     ]);
   }).pipe(Effect.provide([testCookout(), commandLineServices])),
 );

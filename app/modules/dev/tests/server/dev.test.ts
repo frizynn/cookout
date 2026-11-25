@@ -67,6 +67,14 @@ function fetchedText(url: string): Effect.Effect<Fetched> {
   }).pipe(Effect.provide(FetchHttpClient.layer), Effect.orDie);
 }
 
+function policyOf(url: string): Effect.Effect<string | undefined> {
+  return HttpClient.execute(HttpClientRequest.get(url)).pipe(
+    Effect.map((response) => response.headers["content-security-policy"]),
+    Effect.provide(FetchHttpClient.layer),
+    Effect.orDie,
+  );
+}
+
 function postedFrom(origin: string, url: string): Effect.Effect<string> {
   return HttpClient.execute(HttpClientRequest.post(url).pipe(HttpClientRequest.setHeader("origin", origin))).pipe(
     Effect.flatMap((response) => response.text),
@@ -109,6 +117,18 @@ it.effect("pnpm dev serves the web UI from the Vite dev server, which passes /v1
     expect(page.text).toContain('src="/app/web.tsx"');
     expect(page.text).not.toContain("/app/modules/probe/web.ts");
     expect(health.text).toContain('"status":"ok"');
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
+it.effect("pnpm dev's web UI carries the live board's CSP, the one every cookout response carries", () =>
+  Effect.gen(function* devServesTheLiveCsp() {
+    const dev = yield* startDev;
+    const page = yield* policyOf(dev.webUrl);
+    const script = yield* policyOf(`${dev.webUrl}/app/web.tsx`);
+    const live = yield* policyOf(`${dev.url}/v1/health`);
+
+    expect(live).toContain("default-src 'none'");
+    expect([page, script]).toStrictEqual([live, live]);
   }).pipe(Effect.provide(commandLineServices)),
 );
 

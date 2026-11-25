@@ -29,7 +29,16 @@ const HOOK_SKIP = {
   name: "lint, format, types and seams",
 };
 
-const ALL = { base: "", browser: EVERYTHING, inCi: false, local: false, merge: false, shard: "", unit: EVERYTHING };
+const ALL = {
+  base: "",
+  browser: EVERYTHING,
+  inCi: false,
+  local: false,
+  merge: false,
+  shard: "",
+  shardArgs: [],
+  unit: EVERYTHING,
+};
 const LOCAL = {
   ...ALL,
   browser: { all: false, run: ["app/modules/routes/tests/browser/login.browser.test.ts"], skipped: [] },

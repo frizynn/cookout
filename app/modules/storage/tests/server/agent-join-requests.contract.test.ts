@@ -14,7 +14,7 @@ const sessionHash = tokenHash("hash:session");
 const ada = identity("ada", { kind: "human" });
 const agent = identity("triage-agent", { kind: "agent", owner: ada.name });
 const WEEK = 604_800;
-const FAILING_CALLS = 5;
+const FAILING_CALLS = 6;
 
 const request = {
   agent: agent.name,
@@ -205,6 +205,7 @@ it.effect.each(storageLayers)(
           Effect.flip(storage.approveAgentJoinRequest("WDJB-MJHT", approval, before)),
           Effect.flip(storage.collectAgentJoinRequest({ now: before, requestHash, sessionHash })),
           Effect.flip(storage.listPendingAgentJoinRequests(before)),
+          Effect.flip(storage.denyAgentJoinRequest("WDJB-MJHT", before)),
         ],
         { concurrency: 1 },
       );
@@ -227,5 +228,61 @@ it.effect.each(storageLayers)(
 
       expect(collected).toMatchObject({ sessionUrl, status: "collected" });
       expect(listed).toMatchObject({ value: { host: "build-box", sessionUrl } });
+    }),
+);
+
+function deniedOnce(storage: Store): Effect.Effect<readonly string[], StorageUnavailable> {
+  return Effect.gen(function* addThenDenyTwice() {
+    yield* withAgent(storage);
+    yield* storage.addAgentJoinRequest(request, created);
+    const denied = yield* storage.denyAgentJoinRequest("WDJB-MJHT", before);
+    const deniedAgain = yield* storage.denyAgentJoinRequest("WDJB-MJHT", before);
+    const unknown = yield* storage.denyAgentJoinRequest("NONE-SUCH", before);
+    return [denied, deniedAgain, unknown];
+  });
+}
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): a denied agent join request leaves the pending list and can't be approved",
+  ({ layer }) =>
+    Effect.gen(function* deniedLeaves() {
+      const { storage } = yield* openStore(layer);
+      const denials = yield* deniedOnce(storage);
+      const listed = yield* storage.listPendingAgentJoinRequests(before);
+      const found = yield* storage.findAgentJoinRequest("WDJB-MJHT", before);
+      const approved = yield* storage.approveAgentJoinRequest("WDJB-MJHT", approval, before);
+
+      expect(denials).toStrictEqual(["denied", "not_found", "not_found"]);
+      expect([listed, approved]).toStrictEqual([[], "not_found"]);
+      expect(found).toBeUndefined();
+    }),
+);
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): a denied agent join request collects as denied until it expires",
+  ({ layer }) =>
+    Effect.gen(function* deniedCollects() {
+      const { storage } = yield* openStore(layer);
+      yield* deniedOnce(storage);
+      const collected = yield* storage.collectAgentJoinRequest({ now: before, requestHash, sessionHash });
+      const expired = yield* storage.collectAgentJoinRequest({ now: after, requestHash, sessionHash });
+
+      expect([collected, expired]).toStrictEqual([{ status: "denied" }, { status: "gone" }]);
+    }),
+);
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): an approved agent join request can't be denied",
+  ({ layer }) =>
+    Effect.gen(function* approvedStays() {
+      const { storage } = yield* openStore(layer);
+      yield* withAgent(storage);
+      yield* storage.addAgentJoinRequest(request, created);
+      yield* storage.approveAgentJoinRequest("WDJB-MJHT", approval, before);
+      const denied = yield* storage.denyAgentJoinRequest("WDJB-MJHT", before);
+      const collected = yield* storage.collectAgentJoinRequest({ now: before, requestHash, sessionHash });
+
+      expect(denied).toBe("not_found");
+      expect(collected).toMatchObject({ status: "collected" });
     }),
 );

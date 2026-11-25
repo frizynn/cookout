@@ -75,6 +75,8 @@ interface DeactivatedQuietAgents extends Shown<DeactivatedQuietAgentsState> {
 
 interface AgentJoinRequests extends Shown<JoinsShown> {
   readonly approve: (userCode: string) => void;
+  readonly replace: (userCode: string) => void;
+  readonly dismiss: (userCode: string) => void;
 }
 
 interface MarkChannel {
@@ -141,7 +143,12 @@ function inboxStoresOf(board: InboxBoard): InboxStores {
   }
   return {
     ...noticeStores(board),
-    agentJoinRequests: { ...shownBy(board, joinRefusalsOf), approve: calls.approve },
+    agentJoinRequests: {
+      ...shownBy(board, joinRefusalsOf),
+      approve: calls.approve,
+      dismiss: calls.dismiss,
+      replace: calls.replace,
+    },
     earlier: { ...shownBy(board, earlierOf), loadMore: calls.loadEarlier },
     inbox: shownBy(board, inboxOf),
     markChannel: {

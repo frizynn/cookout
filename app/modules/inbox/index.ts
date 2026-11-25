@@ -129,7 +129,9 @@ export interface InboxResponse {
   readonly nudges: readonly Nudge[];
   readonly deactivationOffers: readonly DeactivationOffer[];
   readonly deactivatedQuietAgents: readonly DeactivatedQuietAgent[];
-  /** The pending Agent join requests for agents the caller owns or brought in, oldest first; none is in the history. */
+  /**
+   * The pending Agent join requests for agents the caller owns or brought in, oldest first; none is in the history. One whose agent is already joined in another session has `liveSessionExpiresAt`, and approving it replaces that session only with `force`; any can be dismissed with `denyAgentJoin`.
+   */
   readonly agentJoinRequests: readonly InboxAgentJoinRequest[];
 }
 

@@ -16,6 +16,7 @@ interface Planning {
   readonly local: boolean;
   readonly merge: boolean;
   readonly shard: string;
+  readonly shardArgs: readonly string[];
   readonly unit: UnitTests;
 }
 
@@ -74,12 +75,12 @@ function withBase(script: string, { base }: Planning): readonly string[] {
   return [script];
 }
 
-function browserScript({ browser, inCi, shard }: Planning): readonly string[] {
+function browserScript({ browser, inCi, shard, shardArgs }: Planning): readonly string[] {
   if (inCi && shard !== "") {
-    return ["browser:coverage", `--shard=${shard}`];
+    return ["browser:coverage", ...shardArgs];
   }
   if (shard !== "") {
-    return ["browser", `--shard=${shard}`];
+    return ["browser", ...shardArgs];
   }
   if (browser.all) {
     return ["browser"];

@@ -3,7 +3,9 @@ import { field, list, parseJson, text } from "./json.ts";
 import type { CiOnly } from "./check-runner.ts";
 import type { CoverageMap } from "./browser-coverage.ts";
 import type { Outcome } from "./tools.ts";
+import type { Plan } from "./browser-shards.ts";
 import type { Span } from "./page-coverage.ts";
+import { browserShardPlan } from "./browser-shards.ts";
 import path from "node:path";
 import { readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -269,5 +271,16 @@ function browserSkip(tests: BrowserTests): readonly CiOnly[] {
   ];
 }
 
+interface CiShard {
+  readonly cwd: string;
+  readonly gh: (args: readonly string[]) => Outcome<string>;
+  readonly run: string;
+  readonly shard: string;
+}
+
+function ciBrowserShard({ cwd, gh, run, shard }: CiShard): Plan {
+  return browserShardPlan({ files: browserTestFiles(cwd), gh, run, shard });
+}
+
 export type { BrowserTests };
-export { browserSkip, browserTestsFor };
+export { browserSkip, browserTestsFor, ciBrowserShard };

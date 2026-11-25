@@ -1,3 +1,4 @@
+import { browserTestsFor, ciBrowserShard } from "./lib/browser-selection.ts";
 import { changedLines, unchangedSince } from "./lib/changed-lines.ts";
 import { checkPlan, reasonLines } from "./lib/check-plan.ts";
 import { fetchedCoverageMap, ghCli } from "./lib/coverage-map-fetch.ts";
@@ -5,7 +6,6 @@ import { loadReport, osReading } from "./lib/machine-load.ts";
 import type { BrowserTests } from "./lib/browser-selection.ts";
 import { SUITE_LOCK_FILE } from "./lib/machine-lock.ts";
 import type { UnitTests } from "./lib/test-selection.ts";
-import { browserTestsFor } from "./lib/browser-selection.ts";
 import { changedFiles } from "./lib/changed-files.ts";
 import { ciGreenAtHead } from "./lib/ci-green.ts";
 import { runChecks } from "./lib/check-runner.ts";
@@ -62,6 +62,16 @@ function selectedBrowserTests(): BrowserTests {
 
 const unitTests = selectedUnitTests();
 const browserTests = selectedBrowserTests();
+
+function shardArgs(): readonly string[] {
+  if (!inCi || job !== "browser" || shard === "") {
+    return [`--shard=${shard}`];
+  }
+  const shardPlan = ciBrowserShard({ cwd: process.cwd(), gh: ghCli(process.cwd()), run: option("run"), shard });
+  console.log(shardPlan.line);
+  return shardPlan.args;
+}
+
 const plan = checkPlan({
   base,
   browser: browserTests,
@@ -69,6 +79,7 @@ const plan = checkPlan({
   local,
   merge: process.argv.includes("--merge"),
   shard,
+  shardArgs: shardArgs(),
   unit: unitTests,
 });
 
