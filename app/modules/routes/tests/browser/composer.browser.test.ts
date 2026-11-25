@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { inPane, inSidebar } from "./regions.ts";
 import type { Page } from "@playwright/test";
 import { adminClient } from "./people.ts";
+import { createIdentityAsBefore } from "../../../testing/index.ts";
 import { logIn } from "./login.ts";
 import { unique } from "./names.ts";
 
@@ -30,7 +31,7 @@ async function mentionerAndReviewers(): Promise<Mentioning> {
   const admin = adminClient();
   const reviewers = unique("browser-reviewer");
   const { token } = await admin.createIdentity({ kind: "human", name: unique("browser-mentioner") });
-  await admin.createIdentity({ kind: "agent", name: `${reviewers}-bot` });
+  await createIdentityAsBefore({ admin, by: admin, request: { kind: "agent", name: `${reviewers}-bot` } });
   await admin.createIdentity({ kind: "human", name: `${reviewers}-ada` });
   await threadIn(unique("browser-composer"));
   return { reviewers, token };

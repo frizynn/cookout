@@ -1,5 +1,6 @@
 import type { CookoutClient, CreateIdentityRequest } from "../../../sdk/index.ts";
 import { createCookoutClient } from "../../../sdk/index.ts";
+import { createIdentityAsBefore } from "../../../testing/index.ts";
 
 export interface Person {
   readonly client: CookoutClient;
@@ -11,6 +12,6 @@ export function adminClient(): CookoutClient {
 }
 
 export async function newIdentity(request: CreateIdentityRequest): Promise<Person> {
-  const { token } = await adminClient().createIdentity(request);
+  const { token } = await createIdentityAsBefore({ admin: adminClient(), by: adminClient(), request });
   return { client: createCookoutClient({ token }), token };
 }

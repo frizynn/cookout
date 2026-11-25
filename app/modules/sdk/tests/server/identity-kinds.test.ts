@@ -73,8 +73,12 @@ it.effect("an identity keeps the kind it was created with, through a second crea
   Effect.gen(function* kindNeverChanges() {
     const cookout = yield* TestCookout;
     const human = yield* answer(() => cookout.client.createIdentity({ kind: "human", name: "ada" }));
-    const agent = yield* answer(() => cookout.client.createIdentity({ kind: "agent", name: "bot" }));
-    const recreated = yield* refusal(() => cookout.client.createIdentity({ kind: "agent", name: "ada" }));
+    const agent = yield* answer(() =>
+      cookout.client.createIdentity({ displayName: "bot", kind: "agent", name: "bot" }),
+    );
+    const recreated = yield* refusal(() =>
+      cookout.client.createIdentity({ displayName: "ada", kind: "agent", name: "ada" }),
+    );
     const rotated = yield* Effect.forEach(
       ["ada", "bot"],
       (name) => answer(() => cookout.client.rotateToken(name)),

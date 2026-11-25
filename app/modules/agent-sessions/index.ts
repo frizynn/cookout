@@ -46,8 +46,8 @@ export interface JoinRequest {
    */
   readonly displayName?: string;
   /**
-   * Refuses to create an agent without `displayName`: 400 `display_name_required`, and nothing is created. The CLI
-   * sends it (mattpocock/cookout#313); the server refuses every such create one release later.
+   * Has no effect, but is still accepted as released CLIs send it: a join that would create an agent without
+   * `displayName` is always 400 `display_name_required`, and nothing is created (mattpocock/cookout#314).
    */
   readonly requireDisplayName?: boolean;
 }
@@ -115,7 +115,7 @@ export const agentSessionExpired = "agent_session_expired";
  * the identity codes), the 409s
  * `agent_session_live` (join while the agent has a live agent session token) and `identity_deactivated` (join a
  * Deactivated agent), the 400s `idle_expiry_too_long`, `agent_session_required` (leave sent without an agent session token),
- * `display_name_required` (a join that would create an agent with no display name, when the request asks for one) and
+ * `display_name_required` (a join or join code that would create an agent with no display name) and
  * `display_name_on_existing_agent` (a display name sent to join an agent that already exists),
  * the 403 `not_brought_in` (an agent approves a join for an existing agent it didn't bring in, #370), the 404
  * `agent_join_request_not_found` (an agent join request expired, was collected, or never existed), the 404
@@ -262,6 +262,8 @@ export interface CreateJoinCodeRequest {
   readonly name: string;
   /** What the agent is for, trimmed, then 1–500 characters. */
   readonly description?: string;
+  /** Trimmed, then 1–80 characters. Left out, it is 400 `display_name_required` and nothing is created. */
+  readonly displayName?: string;
 }
 
 /**

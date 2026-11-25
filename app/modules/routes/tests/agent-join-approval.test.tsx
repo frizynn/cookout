@@ -91,7 +91,7 @@ it("for an agent with a live session, approving says so until the approver ticks
   expect.hasAssertions();
 
   const human = await newIdentity({ kind: "human", name: "web-join-grace" });
-  await human.client.join({ as: "web-join-live" });
+  await human.client.join({ as: "web-join-live", displayName: "Live agent" });
   const opened = await openedFor(human, { as: "web-join-live", host: "build-box" });
   const refusedText = await refusedThenReplaced();
   opened.close();

@@ -168,7 +168,7 @@ export type CreateIdentityRequest = {
   readonly kind: IdentityKind;
   /** An agent's owner, an existing human (400 `owner_not_human` otherwise); left out, the caller or its owner. */
   readonly owner?: string;
-  /** Trimmed, then 1–80 characters (400 otherwise). */
+  /** Trimmed, then 1–80 characters (400 otherwise). An agent's is required (400 `display_name_required`). */
   readonly displayName?: string;
   /** An agent's description: trimmed, then 1–500 characters (400 otherwise, or on a human). */
   readonly description?: string;

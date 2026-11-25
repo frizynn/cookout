@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { inPane, inProfile } from "./regions.ts";
 import type { Identity } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
+import { createIdentityAsBefore } from "../../../testing/index.ts";
 import { logIn } from "./login.ts";
 import { unique } from "./names.ts";
 
@@ -23,7 +24,11 @@ test("an offer row's name opens the identity's profile panel", async ({ page }) 
   const ownerName = unique("browser-offers-owner");
   const agent = `${ownerName}/scout`;
   const owner = await newIdentity({ kind: "human", name: ownerName });
-  const { identity } = await adminClient().createIdentity({ kind: "agent", name: agent, owner: ownerName });
+  const { identity } = await createIdentityAsBefore({
+    admin: adminClient(),
+    by: adminClient(),
+    request: { kind: "agent", name: agent, owner: ownerName },
+  });
   await offeredOn(page, identity);
   await logIn({ page, token: owner.token, url: "/#/inbox" });
 
