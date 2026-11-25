@@ -17,4 +17,4 @@ async function attachmentsOf(files: readonly OutgoingFile[]): Promise<readonly N
   return attachments;
 }
 
-export { type Outgoing, type OutgoingFile, attachmentsOf };
+export { type Outgoing, attachmentsOf };

@@ -263,10 +263,5 @@ export function createComposer(options: ComposerOptions): Composer {
 export type { DisplayNameDraft } from "./lib/profile-stores.ts";
 export { type TriggerSettings, type TriggerSnapshot, savedUrl } from "./lib/trigger-settings.ts";
 export type { AgentCreation } from "./lib/agent-creation.ts";
-export type {
-  AttachRefusal,
-  PendingAttachment,
-  PendingAttachments,
-  PendingSnapshot,
-} from "./lib/pending-attachments.ts";
+export type { PendingAttachment, PendingAttachments } from "./lib/pending-attachments.ts";
 export type { IdentityAction, IdentityActions, MessageCount } from "./lib/identity-actions.ts";

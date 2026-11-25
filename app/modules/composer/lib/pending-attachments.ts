@@ -125,10 +125,4 @@ function createPendingAttachments(): PendingAttachments {
   };
 }
 
-export {
-  type AttachRefusal,
-  type PendingAttachment,
-  type PendingAttachments,
-  type PendingSnapshot,
-  createPendingAttachments,
-};
+export { type PendingAttachment, type PendingAttachments, createPendingAttachments };
