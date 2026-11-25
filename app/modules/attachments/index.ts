@@ -48,6 +48,13 @@ export interface Attachment {
   readonly contentType: AttachmentContentType;
   /** Whether its content is a PNG, JPEG, GIF or WebP image, whatever its name says. */
   readonly image: boolean;
+  /**
+   * An image's width in pixels, read from its header when it was posted (#376). Absent on anything that isn't an
+   * image, on an image whose header couldn't be read, and on one posted before the cookout read sizes.
+   */
+  readonly width?: number;
+  /** An image's height in pixels, present exactly when `width` is. */
+  readonly height?: number;
 }
 
 /** The attachments on a message, as `MessageFields` carries them. */

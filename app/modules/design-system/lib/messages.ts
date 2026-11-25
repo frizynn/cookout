@@ -1,3 +1,7 @@
+export { AttachmentImage } from "./attachment-image.tsx";
+export { AttachmentItem } from "./attachment-item.tsx";
+export { AttachmentList } from "./attachment-list.tsx";
+export type { ImageBox } from "./attachment-parts.ts";
 export { CallChip } from "./call-chip.tsx";
 export { ChannelStart } from "./channel-start.tsx";
 export { DataToggle } from "./data-toggle.tsx";
@@ -21,3 +25,5 @@ export type { IdentityCardLink, IdentityCardParts, IdentityCardSource } from "./
 export { ReactionChip } from "./reaction-chip.tsx";
 export { ReactionChips } from "./reaction-chips.tsx";
 export type { ActionMenuParts, MenuChoice, ReactionChoice, ThreadChoice } from "./menu-parts.ts";
+export { FileChip } from "./file-chip.tsx";
+export { ImageThumbnail } from "./image-thumbnail.tsx";

@@ -67,14 +67,17 @@ const AttachmentIdSchema = Schema.String.check(Schema.isPattern(attachmentIdPatt
 );
 const AttachmentContentTypeSchema = Schema.Literals([...imageContentTypes, opaqueContentType]);
 const AttachmentSizeSchema = Schema.Int.check(Schema.isGreaterThanOrEqualTo(LOWEST_ID));
+const AttachmentPixelsSchema = Schema.Int.check(Schema.isGreaterThanOrEqualTo(LOWEST_ID));
 
 const AttachmentSchema = matchesWire<Attachment>()(
   Schema.Struct({
     contentType: AttachmentContentTypeSchema,
+    height: Schema.optionalKey(AttachmentPixelsSchema),
     id: AttachmentIdSchema,
     image: Schema.Boolean,
     name: Schema.String,
     size: AttachmentSizeSchema,
+    width: Schema.optionalKey(AttachmentPixelsSchema),
   }),
 );
 
