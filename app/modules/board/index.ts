@@ -108,7 +108,14 @@
  * whoever is logged in so the terminal that started it finishes logging in. `createAgentJoinApprovals` does the same
  * for an agent join request: the agent it would join or create for the person viewing it, an idle expiry they may
  * lower, and whether to replace the agent's live session.
+ *
+ * `selectedStore({ subscribe, snapshot })` is an external store over one of the board store's subscriptions that reads
+ * it through a selector (`snapshot`, such as `() => commandList(store.snapshot())`): it calls its listeners only when the
+ * selector's answer is a different object, so a view reading one part of the board re-renders only when that part
+ * changes, not on every change anywhere on the board (#495). `sameSnapshot({ before, after })` is whether a store's new
+ * snapshot holds the same value in every field (an array field, the same items), for a store to publish nothing then.
  */
+export { sameSnapshot, selectedStore } from "./lib/selected.ts";
 export type { BoardCalls, ThreadClosing } from "./lib/board-calls.ts";
 export type { ClosingRefusal } from "./lib/thread-closing.ts";
 export type { ListedSchedules } from "./lib/schedules-slice.ts";

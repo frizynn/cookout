@@ -177,6 +177,7 @@ export function createUnread(options: UnreadOptions): Unread {
     deactivatedQuietAgents: stores.deactivatedQuietAgents,
     deactivationOffers: stores.deactivationOffers,
     earlier: stores.earlier,
+    heard: boardStore.subscribeShowing("inbox"),
     lineAt: (channel, thread) => inboxNewLine({ channel, state: boardStore.snapshot(), thread }),
     markAllRead: calls.markAllRead,
     markChannel: stores.markChannel,

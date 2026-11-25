@@ -116,6 +116,17 @@ interface Held {
   readonly subscribe: Search["subscribe"];
 }
 
+const searchKeys: readonly (keyof SearchState)[] = [
+  "caret",
+  "dismissed",
+  "found",
+  "highlighted",
+  "open",
+  "query",
+  "sort",
+  "suggestion",
+];
+
 function heldState(): Held {
   const listeners = new Set<() => void>();
   let state: SearchState = {
@@ -130,7 +141,11 @@ function heldState(): Held {
   };
   return {
     set: (next) => {
-      state = { ...state, ...next };
+      const changed: SearchState = { ...state, ...next };
+      if (searchKeys.every((key) => Object.is(changed[key], state[key]))) {
+        return;
+      }
+      state = changed;
       for (const listener of listeners) {
         listener();
       }

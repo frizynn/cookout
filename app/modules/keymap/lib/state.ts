@@ -18,6 +18,9 @@ function createKeymapStore(platform: Platform): KeymapStore {
   let state: KeymapState = { shortcutList: shortcutListOf(platform), shortcutListOpen: false };
   const listeners = new Set<() => void>();
   function setOpen(shortcutListOpen: boolean): void {
+    if (shortcutListOpen === state.shortcutListOpen) {
+      return;
+    }
     state = { ...state, shortcutListOpen };
     for (const listener of listeners) {
       listener();

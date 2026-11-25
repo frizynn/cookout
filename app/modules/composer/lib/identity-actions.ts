@@ -1,6 +1,6 @@
 import type { IdentityName, ListedAgentSession, Refusal, Token } from "../../sdk/index.ts";
+import { agentSessions, sameSnapshot, selectedStore } from "../../board/index.ts";
 import type { IdentityList } from "./identity-list.ts";
-import { agentSessions } from "../../board/index.ts";
 import { listenersOf } from "./listeners.ts";
 import { refusalOf } from "../../sdk/index.ts";
 
@@ -183,6 +183,10 @@ function joined(first: Subscribe, second: Subscribe): Subscribe {
   };
 }
 
+function sessionsOf({ list, name }: IdentityActionsOptions, add: Subscribe): Subscribe {
+  return joined(list.store.subscribeShowingSessions(name), add);
+}
+
 function createIdentityActions(options: IdentityActionsOptions): IdentityActions {
   const listeners = listenersOf(options.list.show);
   let current = START;
@@ -191,7 +195,11 @@ function createIdentityActions(options: IdentityActionsOptions): IdentityActions
   const sends = sendsFor(options, () => current.transferTo);
 
   function publish(next: Partial<Held>): void {
-    current = { ...current, ...next };
+    const changed = { ...current, ...next };
+    if (sameSnapshot({ after: changed, before: current })) {
+      return;
+    }
+    current = changed;
     listeners.notify();
   }
 
@@ -205,8 +213,8 @@ function createIdentityActions(options: IdentityActionsOptions): IdentityActions
     }
   }
 
-  const { store } = options.list;
-  const add = joined(store.subscribe, listeners.add);
+  const snapshot = shownOf(options, () => current);
+  const add = selectedStore({ snapshot, subscribe: joined(options.list.store.subscribe, listeners.add) }).subscribe;
 
   return {
     ...editsOf(publish),
@@ -221,10 +229,10 @@ function createIdentityActions(options: IdentityActionsOptions): IdentityActions
     copyToken: () => {
       copying = copyAfter(copying, current.token);
     },
-    snapshot: shownOf(options, () => current),
+    snapshot,
     subscribe: add,
     subscribeToMessages: loadingOnFirst(messagesOf, { add, options, publish }),
-    subscribeToSessions: joined(store.subscribeShowingSessions(options.name), listeners.add),
+    subscribeToSessions: selectedStore({ snapshot, subscribe: sessionsOf(options, listeners.add) }).subscribe,
   };
 }
 

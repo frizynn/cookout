@@ -8,6 +8,7 @@ import { alertSaying } from "./alerts.ts";
 import { answering } from "./answering.ts";
 import { inPane } from "./regions.ts";
 import { openWithClockStopped } from "./clock.ts";
+import { testAgentDisplayName } from "../../testing/index.ts";
 
 const NONE = 0;
 const ONE = 1;
@@ -171,6 +172,7 @@ it("an item read in another session after the inbox loaded stays in Activity, no
   const channel = "web-inbox-read-elsewhere";
   const unmount = openWithClockStopped({ client: await readElsewhere(channel), hash: "#/inbox" });
   await screen.findByText("Nothing read yet.");
+  await inPane().findByRole("link", { name: testAgentDisplayName(`${channel}-poster`) });
 
   expect(rowsOf("Activity")).toStrictEqual([postedRow(channel, "One")]);
 
