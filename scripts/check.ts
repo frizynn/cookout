@@ -103,6 +103,7 @@ async function exitCode(): Promise<number> {
     inCi,
     job,
     lockFile: SUITE_LOCK_FILE,
+    recordTime: local,
   });
   return code;
 }
