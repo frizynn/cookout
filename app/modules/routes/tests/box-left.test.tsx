@@ -5,6 +5,7 @@ import { inConversation, inPane, inThread } from "./regions.ts";
 import { adminClient } from "./identities.ts";
 import { openAt } from "./render.tsx";
 import { postedIn } from "./feed.ts";
+import { viewOpened } from "./view-opened.ts";
 
 const TEXTS = ["The parent.", "The newest."] as const;
 const DRAFT = "Half a thought";
@@ -47,7 +48,12 @@ async function threadOpened(channel: string): Promise<() => void> {
   await adminClient().createChannel({ name: channel });
   const { message } = await adminClient().createMessage({ channel, text: "The parent." });
   await adminClient().createMessage({ channel, replyTo: message.id, text: "The reply." });
-  return openAt({ client: adminClient(), hash: `#/channels/${channel}/threads/${String(message.id)}` });
+  const { close } = await viewOpened({
+    client: adminClient(),
+    hash: `#/channels/${channel}/threads/${String(message.id)}`,
+    waitingOn: ["listMessages", "getThread"],
+  });
+  return close;
 }
 
 async function channelOpened(channel: string): Promise<() => void> {
