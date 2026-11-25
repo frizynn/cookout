@@ -1,4 +1,4 @@
-import type { ChannelMessagesState, Scheduling } from "../../board/index.ts";
+import type { ChannelMessagesState, Outgoing, Scheduling } from "../../board/index.ts";
 import type { ComponentProps, ReactNode } from "react";
 import { useCallback, useSyncExternalStore } from "react";
 import type { ChannelName } from "../../sdk/index.ts";
@@ -28,8 +28,8 @@ export function MessageFooter(props: MessageFooterProps): ReactNode {
   const { channel, draft, scheduling, state } = props;
   const store = useBoardStore();
   const handlePost = useCallback(
-    (text: string, posted: () => void) => {
-      store.channelPages.post(channel, { posted, text });
+    (outgoing: Outgoing, posted: () => void) => {
+      store.channelPages.post(channel, { ...outgoing, posted });
     },
     [channel, store],
   );

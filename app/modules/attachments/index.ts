@@ -7,6 +7,10 @@
 
 declare const brand: unique symbol;
 const NONE = 0;
+const BYTES_IN_A_MEGABYTE = 1_000_000;
+const MAXIMUM_BYTES = 10_000_000;
+const MAXIMUM_COUNT = 10;
+const megabytes = `${String(MAXIMUM_BYTES / BYTES_IN_A_MEGABYTE)} MB`;
 
 /** An attachment's ID: opaque and random, so it gives away nothing about how many the board holds. */
 export type AttachmentId = string & { readonly [brand]: "AttachmentId" };
@@ -76,7 +80,25 @@ export interface NewAttachment {
  * The limits a post's attachments are held to (Matt, 2026-11-24, board msg 3032): each at most 10 MB (10,000,000
  * bytes), at most 10 on one message, and none empty.
  */
-export const attachmentLimits = { maximumBytes: 10_000_000, maximumCount: 10 } as const;
+export const attachmentLimits = { maximumBytes: MAXIMUM_BYTES, maximumCount: MAXIMUM_COUNT } as const;
+
+/** A refusal of a post's attachments for a limit: the code and wording the server answers, and the web composer shows before sending. */
+export interface AttachmentLimitRefusal {
+  readonly code: "too_many_attachments" | "attachment_too_large";
+  readonly message: string;
+}
+
+/** The refusal of a post with more than `attachmentLimits.maximumCount` attachments. */
+export const tooManyAttachmentsRefusal: AttachmentLimitRefusal = {
+  code: "too_many_attachments",
+  message: `A message can have at most ${String(MAXIMUM_COUNT)} attachments.`,
+};
+
+/** The refusal of a post with an attachment over `attachmentLimits.maximumBytes`. */
+export const attachmentTooLargeRefusal: AttachmentLimitRefusal = {
+  code: "attachment_too_large",
+  message: `An attachment is over ${megabytes}: each attachment can be at most ${megabytes} (${String(MAXIMUM_BYTES)} bytes).`,
+};
 
 /** The longest name an attachment keeps, in UTF-16 code units. */
 export const attachmentNameMaximumLength = 255;
