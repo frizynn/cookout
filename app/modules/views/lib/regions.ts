@@ -46,12 +46,7 @@ function isShown(element: unknown): element is HTMLElement {
 function regionsShown(): readonly HTMLElement[] {
   const { document } = globalThis;
   const shown: HTMLElement[] = [];
-  for (const region of [
-    document.querySelector(SIDEBAR),
-    messagesRegion(),
-    document.querySelector(PANEL),
-    outsidePanel(MESSAGE_BOX),
-  ]) {
+  for (const region of [document.querySelector(SIDEBAR), messagesRegion(), document.querySelector(PANEL)]) {
     if (isShown(region)) {
       shown.push(region);
     }
@@ -69,10 +64,18 @@ interface Moving {
   readonly step: Step;
 }
 
+function columnOf(target: unknown): unknown {
+  if (holds(outsidePanel(MESSAGE_BOX), target)) {
+    return messagesRegion();
+  }
+  return target;
+}
+
 function indexHolding({ regions, target }: Omit<Moving, "step">): number {
+  const within = columnOf(target);
   let at = NOT_FOUND;
   for (const [index, region] of regions.entries()) {
-    if (holds(region, target)) {
+    if (holds(region, within)) {
       at = index;
     }
   }
