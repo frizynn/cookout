@@ -1,5 +1,6 @@
 import type { MenuChoice } from "./menu-parts.ts";
 import type { ReactNode } from "react";
+import type { Shortcut } from "./shortcut.ts";
 
 interface ChoiceKeysParts {
   readonly choices: readonly MenuChoice[];
@@ -12,21 +13,14 @@ interface Keyed {
 }
 
 const NO_KEYS = "";
-
-function keysOf(choice: MenuChoice): string {
-  const keys = choice.keys ?? null;
-  if (keys === null) {
-    return NO_KEYS;
-  }
-  return keys.keys;
-}
+const UNKEYED: Shortcut = { keys: NO_KEYS, label: NO_KEYS };
 
 function keyedOf(choice: MenuChoice): readonly Keyed[] {
-  const keys = keysOf(choice);
-  if (choice.href !== null || choice.disabled === true || keys === NO_KEYS) {
+  const { keys = UNKEYED } = choice;
+  if (keys.keys === NO_KEYS || choice.href !== null || choice.disabled === true) {
     return [];
   }
-  return [{ keys, label: choice.label, onSelect: choice.onSelect }];
+  return [{ keys: keys.keys, label: choice.label, onSelect: choice.onSelect }];
 }
 
 export function ChoiceKeys(parts: ChoiceKeysParts): ReactNode {

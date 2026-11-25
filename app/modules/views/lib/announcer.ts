@@ -2,10 +2,8 @@ import { createContext } from "react";
 
 type Announce = (text: string) => unknown;
 
-function nothing(): null {
-  return null;
-}
+const UNHEARD: Announce = Boolean;
 
-const Announcer = createContext<Announce>(nothing);
+const Announcer = createContext<Announce>(UNHEARD);
 
 export { type Announce, Announcer };
