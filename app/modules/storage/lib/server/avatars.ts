@@ -92,4 +92,4 @@ function sqlAvatars(db: SqlDatabase): AvatarsSection {
   };
 }
 
-export { type AvatarsSection, memoryAvatars, type SetAvatarResult, sqlAvatars };
+export { type AvatarsSection, memoryAvatars, sqlAvatars };

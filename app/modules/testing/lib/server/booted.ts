@@ -1,10 +1,10 @@
 import { Array as Arr, Context, Effect, Layer, Logger, MutableList, Schedule, Stream } from "effect";
-import type { AssetKey, StoredPresence } from "../../../storage/server.ts";
 import { AssetStore, Storage } from "../../../storage/server.ts";
 import type { HttpServer } from "effect/http";
 import type { Identities } from "../../../identities/server.ts";
 import { PresenceRegistry } from "../../../presence/server.ts";
 import type { Scope } from "effect";
+import type { StoredPresence } from "../../../storage/server.ts";
 import { TestClock } from "effect/testing";
 import type { WebhookFake } from "../../../webhook-fake/server.ts";
 import { identityName } from "./identities.ts";
@@ -57,6 +57,8 @@ const capturedLogs: Effect.Effect<CapturedLogs> = Effect.sync(() => {
     lines: Effect.sync(() => MutableList.toArray(kept)),
   };
 });
+
+type AssetKey = Parameters<AssetStore["Service"]["read"]> extends readonly [infer Key] ? Key : never;
 
 type HeldAssets = <Key extends AssetKey>(ids: readonly Key[]) => Effect.Effect<readonly Key[]>;
 
