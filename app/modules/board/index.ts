@@ -60,8 +60,10 @@
  * covers, oldest first, with the unread notices), Earlier (`earlierOf`, read items newest first, paged further back by
  * `inboxCalls.loadEarlier`), and the history of Offline alerts, Nudges, Deactivation offers and Deactivated quiet agents
  * (`alertsOf`, `nudgesOf`, `offersOf`, `quietAgentsOf`). Read positions (`inboxReadPosition`, `inboxMovesBack`) only
- * move on, except by a `read-position-moved-back` event, which reads the Inbox again. A `read-position` event moves
- * the items it covers to Earlier; a `thread` event changes each item's top-level message and reads its Nudges;
+ * move on, except by a `read-position-moved-back` event, which reads the Inbox again. The slice holds each item's
+ * message and top-level message by ID: every read and `inbox-item` event puts them in the messages table first, so a
+ * `thread`, `message` or `reaction` event reaches an item through the table, and the selectors read them from it. A
+ * `read-position` event moves the items it covers to Earlier; a `thread` event that closes a thread reads its Nudges;
  * `channel-deleted` drops the channel's items, Earlier rows, Nudges and read positions. On a link back the slice reads
  * again and merges: an item the server shows unread comes back, one it no longer shows moves to Earlier. Each selector
  * returns the same object until what it reads changes. `inboxCalls` makes the Inbox's changes on the server (mark all,

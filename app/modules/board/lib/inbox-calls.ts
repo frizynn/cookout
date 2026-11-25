@@ -1,6 +1,6 @@
-import type { AckAllRequest, ChannelName, InboxItem, MessageId, Refusal } from "../../sdk/index.ts";
+import type { AckAllRequest, ChannelName, MessageId, Refusal } from "../../sdk/index.ts";
 import type { Calling, InboxCallsClient, InboxCallsState, JoinCalls, NoticeCalls } from "./inbox-notice-calls.ts";
-import type { Change, InboxEntries, InboxState } from "./inbox-entries.ts";
+import type { Change, InboxEntries, InboxEntry, InboxState } from "./inbox-entries.ts";
 import { IDLE, earlierCalls, joinCalls, noticeCalls, queued } from "./inbox-notice-calls.ts";
 import { failure } from "./failure.ts";
 import { refusalOf } from "../../sdk/index.ts";
@@ -58,19 +58,19 @@ function noticesUpTo(entries: InboxEntries): AckAllRequest {
   };
 }
 
-function placeOf(item: InboxItem): string {
-  if (item.message.kind === "reply") {
-    return String(item.message.replyTo);
+function placeOf(entry: InboxEntry): string {
+  if (entry.place.thread !== null) {
+    return String(entry.place.thread);
   }
   return "channel";
 }
 
 function newestByPlace(entries: InboxEntries, channel: ChannelName): readonly MessageId[] {
   const newest = new Map<string, MessageId>();
-  const items = [...entries.items.values()].toSorted((first, second) => first.message.id - second.message.id);
-  for (const item of items) {
-    if (item.channel.name === channel) {
-      newest.set(placeOf(item), item.message.id);
+  const items = [...entries.items.values()].toSorted((first, second) => first.message - second.message);
+  for (const entry of items) {
+    if (entry.channel.name === channel) {
+      newest.set(placeOf(entry), entry.message);
     }
   }
   return [...newest.values()];

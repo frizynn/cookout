@@ -16,8 +16,15 @@ import type {
   ReadPosition,
   Refusal,
 } from "../../sdk/index.ts";
+import type { Place, ReadPositions } from "./read-positions-slice.ts";
 import type { Failure } from "./failure.ts";
-import type { ReadPositions } from "./read-positions-slice.ts";
+import { placeOfMessage } from "./read-positions-slice.ts";
+
+type InboxEntry = Omit<InboxItem, "message" | "parent"> & {
+  readonly message: MessageId;
+  readonly parent: MessageId;
+  readonly place: Place;
+};
 
 type Loaded = { readonly status: "loading" } | { readonly status: "loaded" } | Failure;
 
@@ -25,7 +32,7 @@ type MoreState = { readonly status: "idle" } | { readonly status: "loading" } | 
 
 interface EarlierHeld {
   readonly status: Loaded;
-  readonly read: ReadonlyMap<MessageId, InboxItem>;
+  readonly read: ReadonlyMap<MessageId, InboxEntry>;
   readonly hasMore: boolean;
   readonly oldest: MessageId | null;
   readonly more: MoreState;
@@ -34,7 +41,7 @@ interface EarlierHeld {
 interface InboxEntries {
   readonly inbox: Loaded;
   readonly history: Loaded;
-  readonly items: ReadonlyMap<MessageId, InboxItem>;
+  readonly items: ReadonlyMap<MessageId, InboxEntry>;
   readonly alerts: ReadonlyMap<OfflineAlertId, OfflineAlert>;
   readonly nudges: ReadonlyMap<NudgeId, InboxHistoryNudge>;
   readonly deactivationOffers: ReadonlyMap<DeactivationOfferId, DeactivationOffer>;
@@ -96,6 +103,10 @@ const NO_ENTRIES: InboxEntries = {
   nudges: new Map(),
   refusedJoins: new Map(),
 };
+
+function entryOf({ message, parent, ...rest }: InboxItem): InboxEntry {
+  return { ...rest, message: message.id, parent: parent.id, place: placeOfMessage(message) };
+}
 
 interface Pair {
   readonly one: unknown;
@@ -167,9 +178,11 @@ export {
   type EarlierHeld,
   type InboxChange,
   type InboxEntries,
+  type InboxEntry,
   type InboxState,
   type Loaded,
   NO_ENTRIES,
+  entryOf,
   same,
   withAll,
   withPart,

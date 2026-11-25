@@ -12,10 +12,12 @@ import type {
   Refusal,
 } from "../../sdk/index.ts";
 import type { InboxEntries, Loaded } from "./inbox-entries.ts";
+import { itemsNewestFirst, keptOn } from "./inbox-joined.ts";
 import { movesBackAt, readPositionAt } from "./read-positions-slice.ts";
 import type { Failure } from "./failure.ts";
 import type { InboxHeld } from "./inbox-part.ts";
 import type { MarkAllState } from "./inbox-calls.ts";
+import type { MessagesHeld } from "./messages-table.ts";
 
 type InboxShown =
   | { readonly status: "loading" }
@@ -69,33 +71,10 @@ interface JoinsShown {
 const LOADING = { status: "loading" } as const;
 const FAILED = { status: "failed" } as const;
 
-function keptOn<Key extends object, Rest, Out>(compute: (key: Key, rest: Rest) => Out): (key: Key, rest: Rest) => Out {
-  const kept = new WeakMap<Key, { readonly rest: Rest; readonly out: Out }>();
-  function fresh(key: Key, rest: Rest): Out {
-    const out = compute(key, rest);
-    kept.set(key, { out, rest });
-    return out;
-  }
-  return (key, rest) => {
-    const held = kept.get(key) ?? null;
-    if (held === null) {
-      return fresh(key, rest);
-    }
-    if (held.rest === rest) {
-      return held.out;
-    }
-    return fresh(key, rest);
-  };
-}
-
 function newestFirst<Id extends number, Entry extends { readonly id: Id }>(
   held: ReadonlyMap<Id, Entry>,
 ): readonly Entry[] {
   return [...held.values()].toSorted((first, second) => second.id - first.id);
-}
-
-function itemsNewestFirst(items: Iterable<InboxItem>): readonly InboxItem[] {
-  return [...items].toSorted((first, second) => second.message.id - first.message.id);
 }
 
 function withoutRead({ read: _read, ...nudge }: InboxHistoryNudge): Nudge {
@@ -112,13 +91,13 @@ function quietOf(
   };
 }
 
-function loadedOf(entries: InboxEntries, markAll: MarkAllState): InboxShown {
+function loadedOf(entries: InboxEntries, markAll: MarkAllState, items: readonly InboxItem[]): InboxShown {
   return {
     ...quietOf(entries),
     agentJoinRequests: entries.agentJoinRequests,
     alerts: newestFirst(entries.alerts).filter(({ read }) => !read),
     deactivationOffers: newestFirst(entries.deactivationOffers).filter(({ cleared }) => !cleared),
-    items: itemsNewestFirst(entries.items.values()).toReversed(),
+    items: items.toReversed(),
     markAll,
     nudges: newestFirst(entries.nudges)
       .filter(({ read }) => !read)
@@ -127,27 +106,41 @@ function loadedOf(entries: InboxEntries, markAll: MarkAllState): InboxShown {
   };
 }
 
-const inboxShown = keptOn((entries: InboxEntries, markAll: MarkAllState): InboxShown => {
+const inboxShown = keptOn((entries: InboxEntries, markAll: MarkAllState, items: readonly InboxItem[]): InboxShown => {
   if (entries.inbox.status === "loaded") {
-    return loadedOf(entries, markAll);
+    return loadedOf(entries, markAll, items);
   }
   return entries.inbox;
 });
 
-function inboxOf(state: InboxHeld): InboxShown {
-  return inboxShown(state.inbox.entries, state.inboxCalls.markAll);
+type InboxShowing = InboxHeld & { readonly messages: MessagesHeld };
+
+function inboxOf(state: InboxShowing): InboxShown {
+  const { entries } = state.inbox;
+  return inboxShown(
+    entries,
+    state.inboxCalls.markAll,
+    itemsNewestFirst({ held: entries.items, table: state.messages.table }),
+  );
 }
 
-const earlierShown = keptOn((earlier: InboxEntries["earlier"], pageSize: number): EarlierShown => {
-  if (earlier.status.status !== "loaded") {
-    return earlier.status;
-  }
-  const { hasMore, more } = earlier;
-  return { hasMore, items: itemsNewestFirst(earlier.read.values()), more, pageSize, status: "loaded" };
-});
+const earlierShown = keptOn(
+  (earlier: InboxEntries["earlier"], pageSize: number, items: readonly InboxItem[]): EarlierShown => {
+    if (earlier.status.status !== "loaded") {
+      return earlier.status;
+    }
+    const { hasMore, more } = earlier;
+    return { hasMore, items, more, pageSize, status: "loaded" };
+  },
+);
 
-function earlierOf(state: InboxHeld): EarlierShown {
-  return earlierShown(state.inbox.entries.earlier, state.inboxPageSize);
+function earlierOf(state: InboxShowing): EarlierShown {
+  const { earlier } = state.inbox.entries;
+  return earlierShown(
+    earlier,
+    state.inboxPageSize,
+    itemsNewestFirst({ held: earlier.read, table: state.messages.table }),
+  );
 }
 
 function historyOf<Shown>(history: Loaded, loaded: () => Shown): HistoryShown<Shown> {
@@ -223,6 +216,7 @@ function inboxMovesBack({ channel, state, thread }: InboxPlace): number {
 export {
   type AlertsShown,
   type EarlierShown,
+  type InboxShowing,
   type InboxShown,
   type JoinsShown,
   type NudgesShown,

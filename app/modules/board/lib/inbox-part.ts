@@ -1,5 +1,6 @@
 import type { Change, InboxState } from "./inbox-entries.ts";
 import type { InboxCalls, InboxCallsClient, InboxCallsState } from "./inbox-calls.ts";
+import type { MessagesPart } from "./messages-part.ts";
 import type { Part } from "./slice.ts";
 import { createInboxCalls } from "./inbox-calls.ts";
 import { createPart } from "./slice.ts";
@@ -18,13 +19,31 @@ interface InboxParts {
   readonly inboxHeld: () => InboxHeld;
 }
 
+type KeepItems = MessagesPart["keepItems"];
+
 interface InboxPartsOptions {
   readonly changed: () => void;
   readonly client: InboxCallsClient;
   readonly pageSize: number;
+  readonly keepItems: KeepItems;
 }
 
-function inboxPartsOf({ changed, client, pageSize }: InboxPartsOptions): InboxParts {
+function keepingClient(client: InboxCallsClient, keepItems: KeepItems): InboxCallsClient {
+  return {
+    ...client,
+    inbox: async () => {
+      const read = await keepItems({ asked: client.inbox(), items: ({ items }) => items });
+      return read;
+    },
+    inboxHistory: async (query) => {
+      const page = await keepItems({ asked: client.inboxHistory(query), items: ({ items }) => items });
+      return page;
+    },
+  };
+}
+
+function inboxPartsOf({ changed, keepItems, pageSize, ...options }: InboxPartsOptions): InboxParts {
+  const client = keepingClient(options.client, keepItems);
   const inbox = createPart({ changed, client: { client, pageSize }, slice: inboxSlice });
   const { calls, state } = createInboxCalls({ apply: inbox.apply, changed, client, held: inbox.state, pageSize });
   return {

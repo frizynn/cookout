@@ -1,25 +1,22 @@
-import type { Applying, EarlierHeld, InboxEntries } from "./inbox-entries.ts";
-import type {
-  ChannelName,
-  InboxHistoryItem,
-  InboxItem,
-  MovedBackReadPosition,
-  ReadPosition,
-  TopLevelMessage,
-} from "../../sdk/index.ts";
-import { isReadAt, placeKey, placeOfMessage } from "./read-positions-slice.ts";
-import { same, withoutWhere } from "./inbox-entries.ts";
+import type { Applying, EarlierHeld, InboxEntries, InboxEntry } from "./inbox-entries.ts";
+import type { ChannelName, InboxHistoryItem, InboxItem, MovedBackReadPosition, ReadPosition } from "../../sdk/index.ts";
+import { entryOf, same, withoutWhere } from "./inbox-entries.ts";
+import { isReadAtPlace, placeKey } from "./read-positions-slice.ts";
 import type { ReadPositions } from "./read-positions-slice.ts";
 
 const NONE = 0;
 const NOTHING_READ = 0;
 
-function isReaction(item: InboxItem): boolean {
-  return item.reasons.includes("reaction");
+function isReaction(entry: InboxEntry): boolean {
+  return entry.reasons.includes("reaction");
 }
 
-function ackedAt(position: ReadPosition, item: InboxItem): boolean {
-  return placeKey(placeOfMessage(item.message)) === placeKey(position) && item.message.id <= position.messageId;
+function isReadIn(positions: ReadPositions, entry: InboxEntry): boolean {
+  return isReadAtPlace({ id: entry.message, place: entry.place, positions });
+}
+
+function ackedAt(position: ReadPosition, entry: InboxEntry): boolean {
+  return placeKey(entry.place) === placeKey(position) && entry.message <= position.messageId;
 }
 
 interface Reading {
@@ -28,24 +25,24 @@ interface Reading {
   readonly acked: readonly ReadPosition[];
 }
 
-function isReadIn({ acked, positions }: Omit<Reading, "entries">, item: InboxItem): boolean {
-  if (isReaction(item)) {
-    return acked.some((position) => ackedAt(position, item));
+function isReadBy({ acked, positions }: Omit<Reading, "entries">, entry: InboxEntry): boolean {
+  if (isReaction(entry)) {
+    return acked.some((position) => ackedAt(position, entry));
   }
-  return isReadAt({ message: item.message, positions });
+  return isReadIn(positions, entry);
 }
 
 function withRead(reading: Reading): InboxEntries {
   const { entries } = reading;
-  const read = [...entries.items.values()].filter((item) => isReadIn(reading, item));
+  const read = [...entries.items.values()].filter((entry) => isReadBy(reading, entry));
   if (read.length === NONE) {
     return entries;
   }
   const items = new Map(entries.items);
   const earlier = new Map(entries.earlier.read);
-  for (const item of read) {
-    items.delete(item.message.id);
-    earlier.set(item.message.id, item);
+  for (const entry of read) {
+    items.delete(entry.message);
+    earlier.set(entry.message, entry);
   }
   return { ...entries, earlier: { ...entries.earlier, read: earlier }, items };
 }
@@ -57,26 +54,25 @@ interface Adding {
 }
 
 function withItems({ entries, items, positions }: Adding): InboxEntries {
-  const fresh = items.filter(
-    (item) =>
-      (isReaction(item) || !isReadAt({ message: item.message, positions })) &&
-      !same({ one: entries.items.get(item.message.id), other: item }),
-  );
+  const fresh = items
+    .map((item) => entryOf(item))
+    .filter(
+      (entry) =>
+        (isReaction(entry) || !isReadIn(positions, entry)) &&
+        !same({ one: entries.items.get(entry.message), other: entry }),
+    );
   if (fresh.length === NONE) {
     return entries;
   }
   const next = new Map(entries.items);
-  for (const item of fresh) {
-    next.set(item.message.id, item);
+  for (const entry of fresh) {
+    next.set(entry.message, entry);
   }
   return { ...entries, items: next };
 }
 
-function isAfter(position: MovedBackReadPosition, item: InboxItem): boolean {
-  return (
-    placeKey(placeOfMessage(item.message)) === placeKey(position) &&
-    item.message.id > (position.messageId ?? NOTHING_READ)
-  );
+function isAfter(position: MovedBackReadPosition, entry: InboxEntry): boolean {
+  return placeKey(entry.place) === placeKey(position) && entry.message > (position.messageId ?? NOTHING_READ);
 }
 
 function withEarlier(entries: InboxEntries, earlier: EarlierHeld): InboxEntries {
@@ -86,7 +82,7 @@ function withEarlier(entries: InboxEntries, earlier: EarlierHeld): InboxEntries 
   return { ...entries, earlier };
 }
 
-function earlierWithout(earlier: EarlierHeld, gone: (item: InboxItem) => boolean): EarlierHeld {
+function earlierWithout(earlier: EarlierHeld, gone: (entry: InboxEntry) => boolean): EarlierHeld {
   const read = withoutWhere({ gone, held: earlier.read });
   if (read === earlier.read) {
     return earlier;
@@ -95,8 +91,8 @@ function earlierWithout(earlier: EarlierHeld, gone: (item: InboxItem) => boolean
 }
 
 function withoutChannel(entries: InboxEntries, channel: ChannelName): InboxEntries {
-  function inChannel(item: InboxItem): boolean {
-    return item.message.channel === channel;
+  function inChannel(entry: InboxEntry): boolean {
+    return entry.place.channel === channel;
   }
   const items = withoutWhere({ gone: inChannel, held: entries.items });
   const earlier = earlierWithout(entries.earlier, inChannel);
@@ -120,7 +116,7 @@ function earlierWithPage(paging: Paging): EarlierHeld {
   const read = new Map(earlier.read);
   for (const item of paging.page) {
     if (isReadInHistory(paging.entries, item)) {
-      read.set(item.message.id, item);
+      read.set(item.message.id, entryOf(item));
     }
   }
   return { ...earlier, read };
@@ -154,20 +150,6 @@ function readApplied({ change, entries, positions }: Applying): InboxEntries {
   return entries;
 }
 
-function reparented(entries: InboxEntries, parent: TopLevelMessage): InboxEntries {
-  const under = [...entries.items.values()].filter(
-    (item) => item.parent.id === parent.id && !same({ one: item.parent, other: parent }),
-  );
-  if (under.length === NONE) {
-    return entries;
-  }
-  const items = new Map(entries.items);
-  for (const item of under) {
-    items.set(item.message.id, { ...item, parent });
-  }
-  return { ...entries, items };
-}
-
 function itemsApplied(applying: Applying): InboxEntries {
   const { change, entries, positions } = applying;
   if (change.type === "inbox-item") {
@@ -178,9 +160,6 @@ function itemsApplied(applying: Applying): InboxEntries {
   }
   if (change.type === "channel-deleted") {
     return withoutChannel(entries, change.channel.name);
-  }
-  if (change.type === "thread") {
-    return reparented(entries, change.parent);
   }
   return readApplied(applying);
 }

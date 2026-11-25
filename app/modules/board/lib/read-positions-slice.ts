@@ -22,11 +22,6 @@ interface AtPlace {
   readonly place: Place;
 }
 
-interface AtMessage {
-  readonly positions: ReadPositions;
-  readonly message: Message;
-}
-
 const NO_MOVES = 0;
 const ONE_MORE = 1;
 
@@ -58,9 +53,13 @@ function readPositionAt({ place, positions }: AtPlace): MessageId | null {
   return heldAt(positions.byPlace, placeKey(place));
 }
 
-function isReadAt({ message, positions }: AtMessage): boolean {
-  const position = readPositionAt({ place: placeOfMessage(message), positions });
-  return position !== null && message.id <= position;
+interface AtId extends AtPlace {
+  readonly id: MessageId;
+}
+
+function isReadAtPlace({ id, place, positions }: AtId): boolean {
+  const position = readPositionAt({ place, positions });
+  return position !== null && id <= position;
 }
 
 function movesBackAt({ place, positions }: AtPlace): number {
@@ -173,9 +172,10 @@ function behindOnServer({ held, server }: Comparing): readonly MovedBackReadPosi
 
 export {
   NO_READ_POSITIONS,
+  type Place,
   type ReadPositions,
   behindOnServer,
-  isReadAt,
+  isReadAtPlace,
   movedBack,
   movedOn,
   movesBackAt,

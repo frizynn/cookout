@@ -171,11 +171,12 @@ interface Parts extends IdentityParts, ReactionParts, InboxParts {
 
 function partsOf(changed: () => void, options: BoardStoreOptions): Parts {
   const { client, pageSize = PAGE_SIZE, url } = options;
+  const own = createOwn({ changed, client, pageSize });
   return {
     ...reactionPartsOf({ changed, client }),
     ...identityPartsOf({ changed, client, url }),
-    ...inboxPartsOf({ changed, client, pageSize }),
-    own: createOwn({ changed, client, pageSize }),
+    ...inboxPartsOf({ changed, client, keepItems: own.parts.messages.keepItems, pageSize }),
+    own,
     presence: createPart({ changed, client, slice: presenceSlice }),
     triggers: createCalledTriggers(changed),
   };
