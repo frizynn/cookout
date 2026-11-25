@@ -11,11 +11,14 @@ name: Release
 # deploys nothing, and the verdict job names it in the run summary. `dry-run` runs the choice and
 # the gate, then only prints what it would publish and deploy.
 #
-# It runs on its own (#637): when Check completes on v1, and every 10 minutes to pick up a run it
-# deferred. The choose job then decides whether to go ahead (scripts/lib/release-go.ts): only when
-# the chosen commit isn't at or behind the newest deploy/* tag, something user-facing changed since
-# that tag, and no Release run started its gate in the last 30 minutes. Otherwise it prints one line
-# saying why, every other job is skipped, and the run ends green. A workflow_dispatch on v1 always
+# It runs on its own (#637) when Check completes on v1. The choose job then decides whether to go
+# ahead (scripts/lib/release-go.ts): only when the chosen commit isn't at or behind the newest
+# deploy/* tag, something user-facing changed since that tag, and no Release run started its gate
+# in the last 30 minutes. When a gate run is the only reason, it waits until that run is 30 minutes
+# old, fetches v1 and decides again (#744). There is no schedule: GitHub registers a schedule only
+# from a push that isn't the workflow's token, and only Release's own token moves main, so a cron
+# here never fired. Otherwise it prints one line saying why, every other job is skipped, and the
+# run ends green. A workflow_dispatch on v1 always
 # goes ahead. Before changesets runs, the release job adds a patch changeset when shipping code
 # landed since the last version with none (changesets are optional, #648), so it isn't left unreleased.
 on:
@@ -23,8 +26,6 @@ on:
     workflows: [Check]
     types: [completed]
     branches: [v1]
-  schedule:
-    - cron: "*/10 * * * *"
   workflow_dispatch:
     inputs:
       dry-run:
@@ -43,7 +44,8 @@ jobs:
   choose:
     name: choose the commit
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Up to 30 minutes of waiting for the last gate run to be 30 minutes old, then the choice.
+    timeout-minutes: 40
     permissions:
       contents: read
       actions: read
@@ -51,8 +53,8 @@ jobs:
       go: ${{ steps.choose.outputs.go }}
       sha: ${{ steps.choose.outputs.sha }}
     steps:
-      # A workflow_run or schedule run starts from the default branch's workflow and still releases
-      # from v1: the choice reads origin/v1.
+      # A workflow_run run starts from the default branch's workflow and still releases from v1: the
+      # choice reads origin/v1.
       - name: Only from v1
         if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/v1'
         run: |
