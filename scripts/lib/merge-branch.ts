@@ -9,8 +9,12 @@ interface BranchOptions {
   readonly title: string;
 }
 
+function titleOf(options: Pick<BranchOptions, "ticket" | "title">): string {
+  return `Merge ticket-${options.ticket}: ${options.title} (#${options.ticket})`;
+}
+
 function messageOf(options: BranchOptions): string {
-  return `Merge ticket-${options.ticket}: ${options.title} (#${options.ticket})${approvalTrailer(options.approved ?? "")}`;
+  return `${titleOf(options)}${approvalTrailer(options.approved ?? "")}`;
 }
 
 function asOneTicketMerge(options: BranchOptions): Step {
@@ -33,4 +37,4 @@ function cleanTree(options: BranchOptions): Step {
   return stop(`The working tree is not clean; commit first.\n${status.output}`);
 }
 
-export { cleanTree, asOneTicketMerge, messageOf };
+export { cleanTree, asOneTicketMerge, messageOf, titleOf };

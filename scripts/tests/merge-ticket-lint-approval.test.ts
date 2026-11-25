@@ -2,7 +2,6 @@ import { DEPENDENCY_CRUISER, OPT_OUTS, OXLINT_CONFIG, TICKET, git, oxlint, repo,
 import { expect, it } from "vitest";
 import type { Merged } from "../lib/merge-ticket.ts";
 
-const ONE_ATTEMPT = 1;
 const OXLINT = ".oxlintrc.json";
 const OPT_OUTS_FILE = "docs/lint-opt-outs.md";
 const CRUISER = ".dependency-cruiser.cjs";
@@ -212,8 +211,8 @@ it.each(loosenings)(
 
     const merged = repo(work).merge({ approved: APPROVAL });
 
-    expect(merged).toStrictEqual({ attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") });
-    expect(git(origin, "log", "-1", "--format=%(trailers:key=Lint-approved-by,valueonly)", "v1")).toBe(
+    expect(merged).toStrictEqual({ ok: true, sha: git(origin, "rev-parse", "v1") });
+    expect(git(origin, "log", "-1", "--format=%(trailers:key=Lint-approved-by,valueonly)", "v1^2")).toBe(
       `board msg ${APPROVAL}`,
     );
   },
@@ -227,8 +226,8 @@ it.each(tightenings)("lands a ticket with $name without an approval", { timeout:
 
   const merged = repo(work).merge({});
 
-  expect(merged).toStrictEqual({ attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") });
-  expect(git(origin, "log", "-1", "--format=%(trailers:key=Lint-approved-by,valueonly)", "v1")).toBe("");
+  expect(merged).toStrictEqual({ ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect(git(origin, "log", "-1", "--format=%(trailers:key=Lint-approved-by,valueonly)", "v1^2")).toBe("");
 });
 
 it("keeps the approval trailer when merge-ticket --continue lands a merge resolved by hand", {
@@ -244,8 +243,8 @@ it("keeps the approval trailer when merge-ticket --continue lands a merge resolv
 
   const merged = repo(work).continueMerge({ approved: APPROVAL });
 
-  expect(merged).toStrictEqual({ attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") });
-  expect(git(origin, "log", "-1", "--format=%(trailers:key=Lint-approved-by,valueonly)", "v1")).toBe(
+  expect(merged).toStrictEqual({ ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect(git(origin, "log", "-1", "--format=%(trailers:key=Lint-approved-by,valueonly)", "v1^2")).toBe(
     `board msg ${APPROVAL}`,
   );
 });
