@@ -1,4 +1,4 @@
-import type { ChannelName, CookoutEvent, Message, MessageId, TopLevelMessage } from "../../sdk/index.ts";
+import type { ChannelName, CookoutClient, CookoutEvent, Message, MessageId, TopLevelMessage } from "../../sdk/index.ts";
 import {
   adminClient,
   bothShown,
@@ -173,4 +173,46 @@ it("a deleted message nobody shows leaves the store's pages and threads as they 
   hand.send(await deletedEvent(parent));
 
   expect(store.snapshot()).toBe(before);
+});
+
+async function down(): Promise<never> {
+  await Promise.resolve();
+  throw new Error("The board is down.");
+}
+
+function failingReads(): CookoutClient {
+  return { ...adminClient(), getThread: down, listMessages: down };
+}
+
+it("a deleted message reaching a channel page and thread that failed to load leaves the store as it was", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const parent = await postedIn("web-deleted-failed");
+  const { hand, store } = opened({ client: failingReads() });
+  const place = { channel: parent.channel, id: parent.id };
+  shown(store.channelPages.subscribeShowing(parent.channel)(vi.fn<() => void>()));
+  shown(store.threads.subscribeShowing(place, true)(vi.fn<() => void>()));
+  await vi.waitFor(() => {
+    expect([
+      channelPage(parent.channel)(store.snapshot()).status,
+      threadOf(place)(store.snapshot()).status,
+    ]).toStrictEqual(["failed", "failed"]);
+  });
+  const before = store.snapshot();
+  hand.send(await deletedEvent(parent));
+
+  expect(store.snapshot()).toBe(before);
+});
+
+it("opening a thread again after its top-level message was deleted reads it afresh", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const parent = await postedIn("web-deleted-parent-reopened");
+  await repliedTo({ parent });
+  const { place, store } = await deletedThenLeft({ gone: [parent], parent });
+  shown(store.threads.subscribeShowing(place, true)(vi.fn<() => void>()));
+
+  expect(threadOf(place)(store.snapshot()).status).toBe("loading");
 });
