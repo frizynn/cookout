@@ -122,6 +122,7 @@ const KEYS = [
   { action: "closeThread", chord: "Escape", does: "Close the thread", scope: "thread panel" },
   { action: "toggleThumbsUp", chord: "+", does: "React with 👍, or take it back", scope: "message" },
   { action: "toggleThumbsDown", chord: "-", does: "React with 👎, or take it back", scope: "message" },
+  { action: "unfoldMessage", chord: "Enter", does: "Unfold it, when it's folded", scope: "message" },
   { action: "replyToMessage", chord: "ArrowRight", does: "Reply in its thread", scope: "message" },
   { action: "replyToMessage", chord: "Enter", does: "Reply in its thread", scope: "message" },
   { action: "replyToMessage", chord: "r", does: "Reply in its thread", scope: "message" },
