@@ -17,7 +17,7 @@ const IDENTITY = [
   ["user.name", "Test"],
   ["commit.gpgsign", "false"],
 ] as const;
-const MERGED = { autoMergeRequest: null, isInMergeQueue: false, mergeCommit: { oid: "m3rg3" }, state: "MERGED" };
+const MERGED = { autoMergeRequest: null, mergeCommit: { oid: "m3rg3" }, state: "MERGED" };
 
 function git(cwd: string, ...args: readonly string[]): string {
   return execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();

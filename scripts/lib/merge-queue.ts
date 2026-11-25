@@ -23,7 +23,7 @@ const MERGED = "MERGED";
 const CLOSED = "CLOSED";
 const MERGE_GROUP = "merge_group";
 const OPEN = ["--base", BASE, "--state", "open", "--json", "number,url"];
-const PR_STATE = "state,mergeCommit,autoMergeRequest,isInMergeQueue";
+const PR_STATE = "state,mergeCommit,autoMergeRequest";
 const QUEUE_RUNS = ["run", "list", "--workflow", "Check", "--event", MERGE_GROUP, "--limit", "20"];
 const RULES = `repos/{owner}/{repo}/rules/branches/${BASE}`;
 const QUEUE_RULES = '[.[] | select(.type == "merge_queue")] | length';
@@ -127,7 +127,7 @@ function removedReason(options: QueueOptions, pr: PullRequest): string {
 }
 
 function openState(options: QueueOptions, pr: PullRequest, value: unknown): Left | "queued" {
-  if (field(value, "isInMergeQueue") === true || field(value, "autoMergeRequest") !== null) {
+  if (field(value, "autoMergeRequest") !== null) {
     return "queued";
   }
   return left(`${pr.url} left the merge queue without merging: ${removedReason(options, pr)}.`);

@@ -3,6 +3,7 @@ import type { Step, Stopped } from "../../lib/merge-steps.ts";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { landThroughQueue, queueRequired } from "../../lib/merge-queue.ts";
 import { DateTime } from "effect";
+import { GH_2_102_JSON_FIELDS } from "./gh-json-fields.ts";
 import { ciGreen } from "../../lib/ci-gate.ts";
 import { onTestFinished } from "vitest";
 import path from "node:path";
@@ -22,6 +23,13 @@ import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 const dir = new URL(".", import.meta.url);
 const state = JSON.parse(readFileSync(new URL("state.json", dir), "utf8"));
 const args = process.argv.slice(2);
+const known = ${JSON.stringify(GH_2_102_JSON_FIELDS)}[args[0]];
+const fields = args.includes("--json") ? (args[args.indexOf("--json") + 1] ?? "").split(",") : [];
+const unknown = known === undefined ? undefined : fields.find((name) => !known.includes(name));
+if (unknown !== undefined) {
+  process.stderr.write(\`Unknown JSON field: "\${unknown}"\`);
+  process.exit(1);
+}
 const named = \`\${args[0]} \${args[1]}\`;
 const verb = args.includes("--log-failed") ? "log" : named in state ? named : args[1];
 appendFileSync(new URL("calls.log", dir), process.argv.slice(2).join(" ") + "\\n");
