@@ -1,5 +1,5 @@
 import type { CookoutClient, Message } from "../../sdk/index.ts";
-import { adminClient, newIdentity, revocableView } from "./identities.ts";
+import { adminClient, agentOption, newIdentity, revocableView } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, waitFor, within } from "@testing-library/react";
 import { inConversation, inThread } from "./regions.ts";
@@ -70,7 +70,7 @@ it("replying in a thread conversation posts into the thread, shows the reply and
 });
 
 const NONE = 0;
-const MEMBERS = ["@inbox-member-dot", "@inbox-member-cy", "@inbox-member-bea"];
+const MEMBERS = ["@inbox-member-dot", agentOption("inbox-member-cy"), "@inbox-member-bea"];
 
 async function repliesBy(parent: Message, posters: readonly CookoutClient[]): Promise<void> {
   if (posters.length === NONE) {

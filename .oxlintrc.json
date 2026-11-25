@@ -514,6 +514,12 @@
       }
     },
     {
+      "files": ["app/modules/*/tests/**"],
+      "rules": {
+        "test-rules/agent-factory": "error"
+      }
+    },
+    {
       "files": ["app/modules/routes/tests/browser/**"],
       "excludeFiles": ["app/modules/routes/tests/browser/clock.ts"],
       "rules": {

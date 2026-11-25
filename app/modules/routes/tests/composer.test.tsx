@@ -1,5 +1,5 @@
 import type { CookoutClient, Message } from "../../sdk/index.ts";
-import { adminClient, clientWith, newIdentity } from "./identities.ts";
+import { adminClient, agentOption, clientWith, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, getDefaultNormalizer, screen, within } from "@testing-library/react";
 import { inPane } from "./regions.ts";
@@ -43,7 +43,7 @@ it("typing @ and a prefix suggests the identities whose names start with it, hum
 
   await typeInReply("Ping @sugg");
 
-  await expect(suggested()).resolves.toStrictEqual(["@suggest-ada", "@suggest-agent"]);
+  await expect(suggested()).resolves.toStrictEqual(["@suggest-ada", agentOption("suggest-agent")]);
 
   close();
 });
@@ -77,7 +77,7 @@ it("typing @ and the start of a display name, in any case, suggests that identit
   close();
 });
 
-const MEMBERS = ["@member-dot", "@member-cy", "@member-bea"];
+const MEMBERS = ["@member-dot", agentOption("member-cy"), "@member-bea"];
 const FIRST = 0;
 
 async function repliesBy(parent: Message, earlier: CookoutClient, latest: CookoutClient): Promise<void> {

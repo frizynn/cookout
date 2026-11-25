@@ -1,4 +1,4 @@
-import { adminClient, clientWith, newIdentity, revocableView } from "./identities.ts";
+import { adminClient, agentShown, clientWith, newIdentity, revocableView } from "./identities.ts";
 import { callWith, callWithFields, channelWithCommand, noProperties, openChannel, pretty } from "./commands.ts";
 import { expect, it } from "vitest";
 import { screen, within } from "@testing-library/react";
@@ -49,7 +49,7 @@ it("a command call and its result reply show their data in the thread", { timeou
   ]).toStrictEqual([
     JSON.stringify({ branch: "main" }),
     pretty({ status: "done" }),
-    [`web-show-callagentShipped main.▸ data▾ data${pretty({ status: "done" })}`],
+    [`${agentShown("web-show-call")}agentShipped main.▸ data▾ data${pretty({ status: "done" })}`],
   ]);
 
   close();

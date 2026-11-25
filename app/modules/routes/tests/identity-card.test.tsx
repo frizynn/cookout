@@ -1,9 +1,9 @@
 import type { CookoutClient, EventStream } from "../../sdk/index.ts";
 import { adminClient, anonymousClient, clientWith, newIdentity } from "./identities.ts";
 import { agentNamed, openedBy } from "./presence.ts";
+import { createTestAgent, testAgentDisplayName } from "../../testing/index.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { createAgentForOwnerAsBefore } from "../../testing/index.ts";
 import { inPane } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
@@ -25,7 +25,9 @@ async function readerOn(channel: string): Promise<() => void> {
 
 async function authorName(name: string): Promise<HTMLElement> {
   const messages = await screen.findByRole("feed", { name: "Messages" });
-  const link = await within(messages).findByRole("link", { name });
+  const link = await within(messages).findByRole("link", {
+    name: (shown) => shown === name || shown === testAgentDisplayName(name),
+  });
   return link;
 }
 
@@ -231,7 +233,7 @@ it("a deactivated identity's card says Deactivated in place of its presence, sti
 
 async function chiefWithWorker(channel: string): Promise<Awaited<ReturnType<typeof newIdentity>>> {
   const chief = await newIdentity({ kind: "agent", name: `${channel}-chief`, owner: `${channel}-owner` });
-  await createAgentForOwnerAsBefore({ admin: adminClient(), by: chief.client, request: `${channel}-worker` });
+  await createTestAgent({ broughtIn: true, by: chief.client, name: `${channel}-worker` });
   return chief;
 }
 
@@ -260,7 +262,8 @@ it("an agent another agent brought in has a card saying Brought in by, linking t
   const bringer = within(shownCard()).getByRole("link", { name: `@${channel}-chief` });
 
   expect(card.lines).toStrictEqual([
-    `${channel}-worker`,
+    testAgentDisplayName(`${channel}-worker`),
+    `@${channel}-worker`,
     "Offline",
     `Agent · owned by ${channel}-owner`,
     `Brought in by @${channel}-chief`,

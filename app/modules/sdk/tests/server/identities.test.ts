@@ -3,6 +3,7 @@ import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { TestClock } from "effect/testing";
+import { createTestAgent } from "../../../testing/index.ts";
 import { identitiesPath } from "../../../identities/index.ts";
 
 const BAD_REQUEST = 400;
@@ -32,12 +33,7 @@ it.effect("an admin creates an identity with an owner and gets its token once", 
     yield* cookout.createIdentity("matt", { kind: "human" });
     yield* TestClock.adjust("1 second");
     const created = yield* answer(() =>
-      cookout.client.createIdentity({
-        displayName: "auth-griller",
-        kind: "agent",
-        name: "auth-griller",
-        owner: "matt",
-      }),
+      createTestAgent({ by: cookout.client, displayName: "auth-griller", name: "auth-griller", owner: "matt" }),
     );
     const whoami = yield* answer(cookout.clientFor(created.token).whoami);
 
@@ -58,7 +54,7 @@ it.effect("an agent created with no owner is owned by the human who created it",
   Effect.gen(function* createWithoutOwner() {
     const cookout = yield* TestCookout;
     const created = yield* answer(() =>
-      cookout.client.createIdentity({ displayName: "company-bot", kind: "agent", name: "company-bot" }),
+      createTestAgent({ by: cookout.client, displayName: "company-bot", name: "company-bot" }),
     );
 
     expect(created.identity).toStrictEqual({
@@ -78,7 +74,7 @@ it.effect("every identity gets a different random token of at least 256 bits", (
     const created = yield* pipe(
       ["agent-0", "agent-1", "agent-2", "agent-3", "agent-4"],
       Effect.forEach(
-        (name) => answer(() => cookout.client.createIdentity({ displayName: name, kind: "agent", name })),
+        (name) => answer(() => createTestAgent({ by: cookout.client, displayName: name, name })),
         ONE_AT_A_TIME,
       ),
     );
@@ -101,9 +97,9 @@ it.effect("every identity gets a different random token of at least 256 bits", (
 it.effect("a name already in use is refused with 409", () =>
   Effect.gen(function* nameInUse() {
     const cookout = yield* TestCookout;
-    yield* answer(() => cookout.client.createIdentity({ displayName: "twin", kind: "agent", name: "twin" }));
+    yield* answer(() => createTestAgent({ by: cookout.client, displayName: "twin", name: "twin" }));
     const error = yield* refusal(() =>
-      cookout.client.createIdentity({ displayName: "twin", kind: "agent", name: "twin", owner: "matt" }),
+      createTestAgent({ by: cookout.client, displayName: "twin", name: "twin", owner: "matt" }),
     );
 
     expect(error).toMatchObject({ code: "identity_exists", status: 409 });
@@ -117,7 +113,7 @@ it.effect("identity names are 1-64 lowercase letters, digits or '-'", () =>
     const created = yield* pipe(
       good,
       Effect.forEach(
-        (name) => answer(() => cookout.client.createIdentity({ displayName: name, kind: "agent", name })),
+        (name) => answer(() => createTestAgent({ by: cookout.client, displayName: name, name })),
         ONE_AT_A_TIME,
       ),
     );
@@ -137,7 +133,7 @@ it.effect("a name that breaks the naming rule is refused with 400", () =>
     const refused = yield* pipe(
       BAD_NAMES,
       Effect.forEach(
-        (name) => refusal(() => cookout.client.createIdentity({ displayName: name, kind: "agent", name })),
+        (name) => refusal(() => createTestAgent({ by: cookout.client, displayName: name, name })),
         ONE_AT_A_TIME,
       ),
     );
@@ -156,11 +152,9 @@ it.effect("a name that breaks the naming rule is refused with 400", () =>
 it.effect("a refused identity says, for each field, which rule it broke", () =>
   Effect.gen(function* schemaErrors() {
     const cookout = yield* TestCookout;
-    const name = yield* refusal(() =>
-      cookout.client.createIdentity({ displayName: "Auth", kind: "agent", name: "Auth" }),
-    );
+    const name = yield* refusal(() => createTestAgent({ by: cookout.client, displayName: "Auth", name: "Auth" }));
     const owner = yield* refusal(() =>
-      cookout.client.createIdentity({ displayName: "agent", kind: "agent", name: "agent", owner: "Ada" }),
+      createTestAgent({ by: cookout.client, displayName: "agent", name: "agent", owner: "Ada" }),
     );
 
     expect([name, owner]).toMatchObject([nameRefused, ownerRefused]);
@@ -174,8 +168,7 @@ it.effect("an owner is a human's name: anything else is refused with 400", () =>
     const refused = yield* pipe(
       bad,
       Effect.forEach(
-        (owner) =>
-          refusal(() => cookout.client.createIdentity({ displayName: "agent", kind: "agent", name: "agent", owner })),
+        (owner) => refusal(() => createTestAgent({ by: cookout.client, displayName: "agent", name: "agent", owner })),
         ONE_AT_A_TIME,
       ),
     );

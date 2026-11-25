@@ -1,8 +1,8 @@
 import { test as base, expect } from "@playwright/test";
+import { createTestAgent, testAgentDisplayName } from "../../../testing/index.ts";
 import { inPane, inSidebar } from "./regions.ts";
 import type { Page } from "@playwright/test";
 import { adminClient } from "./people.ts";
-import { createIdentityAsBefore } from "../../../testing/index.ts";
 import { logIn } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
@@ -34,7 +34,7 @@ async function mentionerAndReviewers(): Promise<Mentioning> {
   const admin = adminClient();
   const reviewers = unique("browser-reviewer");
   const { token } = await admin.createIdentity({ kind: "human", name: unique("browser-mentioner") });
-  await createIdentityAsBefore({ admin, by: admin, request: { kind: "agent", name: `${reviewers}-bot` } });
+  await createTestAgent({ by: admin, name: `${reviewers}-bot` });
   await admin.createIdentity({ kind: "human", name: `${reviewers}-ada` });
   await threadIn(unique("browser-composer"));
   return { reviewers, token };
@@ -50,7 +50,10 @@ test("typing @ and a prefix in the reply box suggests the matching identities, a
   await box.pressSequentially(`Could @${reviewers}`);
   const suggestions = page.getByRole("listbox", { name: "Mention suggestions" });
 
-  await expect(suggestions.getByRole("option")).toHaveText([`@${reviewers}-ada`, `@${reviewers}-bot`]);
+  await expect(suggestions.getByRole("option")).toHaveText([
+    `@${reviewers}-ada`,
+    `@${reviewers}-bot${testAgentDisplayName(`${reviewers}-bot`)}`,
+  ]);
 
   await suggestions.getByRole("option", { name: `@${reviewers}-bot` }).click();
   await page.keyboard.type("look?");

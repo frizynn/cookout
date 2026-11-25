@@ -4,8 +4,8 @@ import { expect, it, onTestFinished, vi } from "vitest";
 import type { BoardStore } from "../index.ts";
 import type { HandLive } from "../../testing/web.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
-import { createIdentityAsBefore } from "../../testing/index.ts";
 import { createLive } from "../../live/index.ts";
+import { createTestAgent } from "../../testing/index.ts";
 import { handLive } from "../../testing/web.ts";
 import { webTestCookout } from "../../../../scripts/web-test-server.ts";
 
@@ -33,11 +33,7 @@ function adminClient(): CookoutClient {
 }
 
 async function agentNamed(name: string): Promise<Agent> {
-  const { identity, token } = await createIdentityAsBefore({
-    admin: adminClient(),
-    by: adminClient(),
-    request: { kind: "agent", name, owner: "admin" },
-  });
+  const { identity, token } = await createTestAgent({ by: adminClient(), name, owner: "admin" });
   return { client: createCookoutClient({ env: {}, token, url: webTestCookout().url }), name: identity.name };
 }
 

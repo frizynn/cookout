@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
 import { expect, test as playwrightTest } from "@playwright/test";
-import { createIdentityAsBefore } from "../../../testing/index.ts";
+import { createTestAgent } from "../../../testing/index.ts";
 import { inPane } from "./regions.ts";
 import { logIn } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
@@ -32,7 +32,7 @@ async function twoCommands(base: string): Promise<string> {
   const admin = adminClient();
   await Promise.all(
     [`${prefix}-first`, `${prefix}-second`].map(async (name) => {
-      await createIdentityAsBefore({ admin, by: admin, request: { kind: "agent", name, owner: "admin" } });
+      await createTestAgent({ by: admin, name, owner: "admin" });
       await admin.addCommand({ name, schema, url: nowhere });
     }),
   );

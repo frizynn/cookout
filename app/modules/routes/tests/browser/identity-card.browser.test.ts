@@ -3,6 +3,7 @@ import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
 import { logInToChannels } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
+import { testAgentDisplayName } from "../../../testing/index.ts";
 import { unique } from "./names.ts";
 
 const test = base.extend(probeFixtures);
@@ -45,7 +46,9 @@ async function openAsReader(page: Page, channel: string): Promise<void> {
 }
 
 async function cardTrigger(page: Page, name: string): Promise<Locator> {
-  const trigger = page.getByRole("feed", { name: "Messages" }).getByRole("link", { exact: true, name });
+  const trigger = page
+    .getByRole("feed", { name: "Messages" })
+    .getByRole("link", { name: new RegExp(`^(${name}|${testAgentDisplayName(name)})$`, "u") });
 
   await expect(trigger).toHaveAttribute("data-identity-card");
   await expect(trigger).toBeInViewport();

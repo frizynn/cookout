@@ -6,6 +6,7 @@ import { logIn, logInToChannels, logInWithStream } from "./login.ts";
 import type { MessageId } from "../../../sdk/index.ts";
 import type { Person } from "./people.ts";
 import { probeFixtures } from "./probe.ts";
+import { testAgentDisplayName } from "../../../testing/index.ts";
 import { unique } from "./names.ts";
 
 const test = base.extend(probeFixtures);
@@ -77,10 +78,10 @@ test("the inbox lists the identity's unread rows for you, then activity, each le
 
   await expect(page.getByRole("heading", { level: 2, name: "For you 1" })).toBeVisible();
   await expect(rows(page, "For you")).toHaveText([
-    `Mentioned you${channel}-posterreplied in a thread in#${channel}just nowre: Deploy at noon?@${channel}-reader can you check the rollout?`,
+    `Mentioned you${testAgentDisplayName(`${channel}-poster`)}@${channel}-posterreplied in a thread in#${channel}just nowre: Deploy at noon?@${channel}-reader can you check the rollout?`,
   ]);
   await expect(rows(page, "Activity")).toHaveText([
-    `New in #${channel}${channel}-posterposted in#${channel}2 newjust nowOr at one?`,
+    `New in #${channel}${testAgentDisplayName(`${channel}-poster`)}@${channel}-posterposted in#${channel}2 newjust nowOr at one?`,
   ]);
   await expect(page.getByText("Nothing read yet.")).toBeVisible();
 });

@@ -1,8 +1,8 @@
 import type { CookoutClient, EventStream } from "../../sdk/index.ts";
-import { adminClient, newIdentity } from "./identities.ts";
+import { adminClient, agentOption, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { createIdentityAsBefore } from "../../testing/index.ts";
+import { createTestAgent } from "../../testing/index.ts";
 import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";
 
@@ -43,14 +43,10 @@ it("an agent created elsewhere shows in the @ suggestions without a reload", { t
   expect.hasAssertions();
 
   const { close } = await openChannel("web-new-agent");
-  await createIdentityAsBefore({
-    admin: adminClient(),
-    by: adminClient(),
-    request: { kind: "agent", name: "web-new-agent-bot", owner: "web-new-agent-human" },
-  });
+  await createTestAgent({ by: adminClient(), name: "web-new-agent-bot", owner: "web-new-agent-human" });
 
   await waitFor(() => {
-    expect(suggestionsFor("@web-new-agent-b")).toStrictEqual(["@web-new-agent-bot"]);
+    expect(suggestionsFor("@web-new-agent-b")).toStrictEqual([agentOption("web-new-agent-bot")]);
   });
 
   await close();
@@ -63,7 +59,7 @@ it("an agent deactivated elsewhere leaves the @ suggestions without a reload", {
   await newIdentity({ kind: "agent", name: "web-new-gone-bot", owner: "web-new-gone-boss" });
   const { close } = await openChannel("web-new-gone");
   await waitFor(() => {
-    expect(suggestionsFor("@web-new-gone-bot")).toStrictEqual(["@web-new-gone-bot"]);
+    expect(suggestionsFor("@web-new-gone-bot")).toStrictEqual([agentOption("web-new-gone-bot")]);
   });
   await adminClient().deactivateIdentity("web-new-gone-bot");
 

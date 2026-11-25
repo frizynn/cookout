@@ -3,6 +3,7 @@ import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { Effect } from "effect";
 import type { Scope } from "effect";
+import { createTestAgent } from "../../../testing/index.ts";
 
 function watchingAllChannels(client: CookoutClient): Effect.Effect<AsyncIterator<CookoutEvent>, never, Scope.Scope> {
   return Effect.map(
@@ -21,7 +22,7 @@ it.effect("a new agent reaches every all-channels watcher as an identity event",
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
     const events = yield* watchingAllChannels(grace.client);
     const { identity } = yield* answer(() =>
-      ada.client.createIdentity({ displayName: "ada/helper", kind: "agent", name: "ada/helper" }),
+      createTestAgent({ by: ada.client, displayName: "ada/helper", name: "ada/helper" }),
     );
     const event = yield* answer(() => events.next());
 

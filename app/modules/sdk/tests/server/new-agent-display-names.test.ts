@@ -2,6 +2,7 @@ import { Array as Arr, Effect, String as Str } from "effect";
 import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import type { TestCookoutService } from "../../../testing/server.ts";
+import { createTestAgent } from "../../../testing/index.ts";
 
 const BAD_REQUEST = 400;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
@@ -21,9 +22,9 @@ it.effect("every way of creating an agent refuses one with no display name with 
     const chief = yield* cookout.createIdentity("chief", { owner: "ada" });
     const refusals = yield* Effect.all(
       [
-        refusal(() => ada.client.createIdentity({ kind: "agent", name: "by-human" })),
-        refusal(() => cookout.client.createIdentity({ kind: "agent", name: "by-admin", owner: "ada" })),
-        refusal(() => chief.client.createAgentForOwner({ name: "by-agent" })),
+        refusal(() => createTestAgent({ by: ada.client, displayName: null, name: "by-human" })),
+        refusal(() => createTestAgent({ by: cookout.client, displayName: null, name: "by-admin", owner: "ada" })),
+        refusal(() => createTestAgent({ broughtIn: true, by: chief.client, displayName: null, name: "by-agent" })),
         refusal(() => ada.client.createJoinCode({ name: "by-join-code" })),
         refusal(() => ada.client.join({ as: "by-join" })),
         refusal(() => ada.client.join({ as: "by-old-join", requireDisplayName: false })),
@@ -42,8 +43,10 @@ it.effect("each way of creating an agent takes its display name", () =>
     const cookout = yield* TestCookout;
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     const chief = yield* cookout.createIdentity("chief", { owner: "ada" });
-    const byHuman = yield* answer(() => ada.client.createIdentity({ displayName: "A", kind: "agent", name: "a" }));
-    const byAgent = yield* answer(() => chief.client.createAgentForOwner({ displayName: "B", name: "b" }));
+    const byHuman = yield* answer(() => createTestAgent({ by: ada.client, displayName: "A", name: "a" }));
+    const byAgent = yield* answer(() =>
+      createTestAgent({ broughtIn: true, by: chief.client, displayName: "B", name: "b" }),
+    );
     const byCode = yield* answer(() => ada.client.createJoinCode({ displayName: " C ", name: "c" }));
     const byJoin = yield* answer(() => ada.client.join({ as: "d", displayName: "D" }));
 
