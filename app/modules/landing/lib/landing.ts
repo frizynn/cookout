@@ -3,11 +3,13 @@ import { createContext } from "react";
 const WAIT_MS = 10_000;
 const WATCHED = { childList: true, subtree: true } as const;
 
+type Target = string | (() => Element | null);
+
 interface Landing {
   readonly ask: () => void;
   readonly askOnFollow: () => void;
   readonly settle: (target: string) => void;
-  readonly watch: (target: string) => void;
+  readonly watch: (target: Target) => void;
   readonly subscribe: (listener: () => void) => () => void;
   readonly snapshot: () => boolean;
 }
@@ -24,9 +26,16 @@ function blurred(): void {
   }
 }
 
-function landedOn(target: string, stop: () => void): () => void {
+function found(target: Target): Element | null {
+  if (typeof target === "string") {
+    return globalThis.document.querySelector(target);
+  }
+  return target();
+}
+
+function landedOn(target: Target, stop: () => void): () => void {
   return () => {
-    const element = globalThis.document.querySelector(target);
+    const element = found(target);
     if (element instanceof HTMLElement && isLost()) {
       stop();
       element.focus();
@@ -34,7 +43,7 @@ function landedOn(target: string, stop: () => void): () => void {
   };
 }
 
-function watched(target: string): AbortController {
+function watched(target: Target): AbortController {
   const control = new AbortController();
   function stop(): void {
     control.abort();
@@ -62,7 +71,7 @@ function createLanding(): Landing {
       listener();
     }
   }
-  function watch(target: string): void {
+  function watch(target: Target): void {
     watching.abort();
     watching = watched(target);
   }
