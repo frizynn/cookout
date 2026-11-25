@@ -52,6 +52,10 @@ function newestFirst(nudges: Iterable<InboxHistoryNudge>): readonly InboxHistory
   return [...nudges].toSorted((first, second) => second.id - first.id);
 }
 
+function asRead(nudge: InboxHistoryNudge): InboxHistoryNudge {
+  return { ...nudge, read: true };
+}
+
 function withoutRead({ read: _read, ...nudge }: InboxHistoryNudge): Nudge {
   return nudge;
 }
@@ -87,8 +91,11 @@ function knownNudges(shown: Notifier<NudgesState>, onChange: NudgesOptions["onCh
     },
     readWhere: (read) => {
       const turned = [...known.values()].filter((nudge) => !nudge.read && read(nudge));
-      addAll(turned.map((nudge) => ({ ...nudge, read: true })));
-      return turned.length > NONE;
+      if (turned.length === NONE) {
+        return false;
+      }
+      addAll(turned.map((nudge) => asRead(nudge)));
+      return true;
     },
     unread,
   };
