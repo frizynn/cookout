@@ -50,6 +50,7 @@ export function ChannelPostStreams(props: ChannelPostStreamsProps): ReactNode {
         deleted={NOTHING_DELETED}
         after={null}
         channel={null}
+        feed={null}
         label={TEXT.posts}
         me={me}
         menu={menu}
@@ -70,6 +71,7 @@ export function ChannelPostStreams(props: ChannelPostStreamsProps): ReactNode {
           deleted={NOTHING_DELETED}
           after={post}
           channel={null}
+          feed={null}
           label={TEXT.later}
           me={me}
           menu={menu}

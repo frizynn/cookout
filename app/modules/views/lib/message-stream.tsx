@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 import { streamRows } from "./stream-rows.ts";
 
 interface MessageStreamProps {
+  readonly feed: string | null;
   readonly label: string;
   readonly messages: readonly Message[];
   readonly me: string;
@@ -33,7 +34,7 @@ export function MessageStream(props: MessageStreamProps): ReactNode {
   });
   return (
     <>
-      <MessageList busy={false} label={props.label} more={false}>
+      <MessageList busy={false} feed={props.feed} label={props.label} more={false}>
         {rows.map((row) => {
           if (props.deleted.has(row.message.id)) {
             return <DeletedMessage key={row.message.id} />;

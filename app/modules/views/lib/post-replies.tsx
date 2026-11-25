@@ -22,6 +22,7 @@ export function PostReplies(props: PostRepliesProps): ReactNode {
       deleted={NOTHING_DELETED}
       after={props.post}
       channel={null}
+      feed={null}
       label={LABEL}
       me={props.me}
       menu={props.menu}
