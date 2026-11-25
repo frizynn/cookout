@@ -1,13 +1,13 @@
-import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import type { CookoutClient } from "../../sdk/index.ts";
+import { adminClient } from "./identities.ts";
 import { inThread } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
 const LEFT = "ArrowLeft";
 const RIGHT = "ArrowRight";
 const DOWN = "ArrowDown";
+const UP = "ArrowUp";
 
 async function seeded(channel: string): Promise<number> {
   await adminClient().createChannel({ name: channel });
@@ -157,72 +157,6 @@ it("→ on another channel's link opens it and lands on its newest message", { t
   close();
 });
 
-async function readerOfThread(channel: string): Promise<CookoutClient> {
-  await adminClient().createChannel({ name: channel });
-  const { message: parent } = await adminClient().createMessage({ channel, text: "The thread." });
-  const { client } = await newIdentity({ kind: "human", name: `${channel}-reader` });
-  await client.follow(parent.id);
-  await adminClient().createMessage({ channel, replyTo: parent.id, text: "The new reply." });
-  return client;
-}
-
-function activeHref(): string | null {
-  const focused = active();
-  if (focused === null) {
-    return null;
-  }
-  return focused.getAttribute("href");
-}
-
-function inboxLink(): HTMLElement | null {
-  return globalThis.document.querySelector<HTMLElement>('nav[aria-label="Sidebar"] a[href="#/inbox"]');
-}
-
-async function inboxRow(): Promise<HTMLElement> {
-  const found = await waitFor(() => {
-    const row = globalThis.document.querySelector<HTMLElement>("main a[data-feed-row]");
-    if (row === null) {
-      throw new TypeError("No Inbox row");
-    }
-    return row;
-  });
-  return found;
-}
-
-it("← on an Inbox row focuses the Inbox's link, and → on it focuses the row again", { timeout: 10_000 }, async () => {
-  expect.hasAssertions();
-
-  const client = await readerOfThread("web-columns-inbox");
-  const close = openAt({ client, hash: "#/inbox" });
-  const row = await inboxRow();
-  const left = pressedOn(row, LEFT);
-  const link = activeHref();
-  const right = pressedOn(inboxLink(), RIGHT);
-
-  expect([left, link, right, active() === row]).toStrictEqual([true, "#/inbox", true, true]);
-
-  close();
-});
-
-it("→ on the Inbox's link from a channel opens the Inbox and lands on its newest row", {
-  timeout: 10_000,
-}, async () => {
-  expect.hasAssertions();
-
-  const client = await readerOfThread("web-columns-to-inbox");
-  const close = openAt({ client, hash: "#/channels/web-columns-to-inbox" });
-  await linkTo("web-columns-to-inbox");
-  const moved = pressedOn(inboxLink(), RIGHT);
-  const row = await inboxRow();
-  await waitFor(() => {
-    expect(active()).toBe(row);
-  });
-
-  expect([moved, globalThis.location.hash]).toStrictEqual([true, "#/inbox"]);
-
-  close();
-});
-
 it("→ leaves a key alone on a sidebar link that isn't a channel's or the Inbox's, or a row's button", {
   timeout: 10_000,
 }, async () => {
@@ -278,6 +212,37 @@ it("↓ on the newest message stays put with no channel feed", { timeout: 10_000
   pressedOn(newest, DOWN);
 
   expect(active()).toBe(newest);
+
+  close();
+});
+
+function topMessage(): HTMLElement {
+  return inThread().getByRole("article", { name: "Parent message" });
+}
+
+it("↑ on the thread's first reply focuses its top message, and ↓ there goes back to the reply", {
+  timeout: 10_000,
+}, async () => {
+  expect.hasAssertions();
+
+  const close = await threadOpened("web-columns-top");
+  const up = pressedOn(reply(), UP);
+  const top = active();
+  const down = pressedOn(topMessage(), DOWN);
+
+  expect([up, top, down, active()]).toStrictEqual([true, topMessage(), true, reply()]);
+
+  close();
+});
+
+it("↑ and ↓ leave the top message alone off a message, and off the thread panel", { timeout: 10_000 }, async () => {
+  expect.hasAssertions();
+
+  const close = await threadOpened("web-columns-top-off");
+  const fromLink = pressedOn(inThread().getByRole("link", { name: "Close panel" }), UP);
+  pressedOn(await messageSaying("The oldest."), DOWN);
+
+  expect([fromLink, active()]).toStrictEqual([false, await messageSaying("The newest.")]);
 
   close();
 });

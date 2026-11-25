@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
 import { inPane, inProfile } from "./regions.ts";
-import { logInToChannels } from "./login.ts";
+import { logIn, logInToChannels } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
 
@@ -206,7 +206,7 @@ test("in the People list a row offers no m: its menu has no Message, m does noth
 test("→ in the kind filter chooses Humans", async ({ page }) => {
   const name = unique("browser-person-keys-kinds");
   const reader = await newIdentity({ kind: "human", name });
-  await logInToChannels({ page, token: reader.token, url: "/#/people" });
+  await logIn({ page, token: reader.token, url: "/#/people" });
   await page.getByRole("textbox", { exact: true, name: "Filter by name" }).fill(name);
   const kinds = page.getByRole("radiogroup", { exact: true, name: "Kind" });
   await kinds.getByRole("radio", { exact: true, name: "All 1" }).focus();
@@ -218,7 +218,7 @@ test("→ in the kind filter chooses Humans", async ({ page }) => {
 
 test("→ in the theme choice chooses Light", async ({ page }) => {
   const reader = await newIdentity({ kind: "human", name: unique("browser-person-keys-themes") });
-  await logInToChannels({ page, token: reader.token, url: "/#/settings/theme" });
+  await logIn({ page, token: reader.token, url: "/#/settings/theme" });
   const themes = page.getByRole("radiogroup", { exact: true, name: "Theme" });
   await themes.getByRole("radio", { exact: true, name: "System" }).focus();
   await page.keyboard.press("ArrowRight");
