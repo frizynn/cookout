@@ -1,24 +1,25 @@
 /**
- * Identities on the wire, shared by the server, the SDK and the web: the
- * `IdentityName`, `Owner`, `Token` and `TokenHash` brands, the two identity kinds and their
- * constructors, the identity as the server shows it, the routes, and the
- * error codes bearer auth, the admin check and identity creation answer with.
+ * Identities on the wire, shared by the server, the SDK and the web: the `IdentityName`, `Owner`, `Token` and
+ * `TokenHash` brands, the two identity kinds and their constructors, the identity as the server shows it (its avatar
+ * too), the routes, and the error codes bearer auth, the admin check and identity creation answer with.
  */
 import type { Described } from "./client.ts";
 import type { IsoTime } from "../time/index.ts";
+import type { WithAvatar } from "../avatars/index.ts";
+import { avatarErrorCodes } from "../avatars/index.ts";
 import { identityDeletionErrorCodes } from "./lib/deletion.ts";
 
 declare const brand: unique symbol;
 
 type Brand<Name extends string> = string & { readonly [brand]: Name };
 
-type IdentityFields = {
+type IdentityFields = WithAvatar<{
   readonly name: IdentityName;
   readonly displayName?: DisplayName;
   readonly admin: boolean;
   readonly createdAt: IsoTime;
   readonly deactivated?: true;
-};
+}>;
 
 /**
  * An identity's name: 1–64 lowercase letters, digits or `-`, so `@name` mentions parse cleanly, or two such parts
@@ -294,5 +295,6 @@ export const identityErrorCodes = [
   "name_not_owned",
   "not_deactivated",
   ...identityDeletionErrorCodes,
+  ...avatarErrorCodes,
   "login_request_not_found",
 ] as const;

@@ -1,11 +1,10 @@
 import { Array as Arr, Context, Effect, Layer, Logger, MutableList, Schedule, Stream } from "effect";
+import type { AssetKey, StoredPresence } from "../../../storage/server.ts";
 import { AssetStore, Storage } from "../../../storage/server.ts";
-import type { AttachmentId } from "../../../attachments/index.ts";
 import type { HttpServer } from "effect/http";
 import type { Identities } from "../../../identities/server.ts";
 import { PresenceRegistry } from "../../../presence/server.ts";
 import type { Scope } from "effect";
-import type { StoredPresence } from "../../../storage/server.ts";
 import { TestClock } from "effect/testing";
 import type { WebhookFake } from "../../../webhook-fake/server.ts";
 import { identityName } from "./identities.ts";
@@ -59,7 +58,9 @@ const capturedLogs: Effect.Effect<CapturedLogs> = Effect.sync(() => {
   };
 });
 
-function heldAssetsOn(server: BootedContext): (ids: readonly AttachmentId[]) => Effect.Effect<readonly AttachmentId[]> {
+type HeldAssets = <Key extends AssetKey>(ids: readonly Key[]) => Effect.Effect<readonly Key[]>;
+
+function heldAssetsOn(server: BootedContext): HeldAssets {
   const assets = Context.get(server, AssetStore);
   return (ids) => Effect.filter(ids, (id) => Effect.isSuccess(Stream.runDrain(assets.read(id))));
 }
@@ -102,6 +103,7 @@ function lastEndOn({
   );
 }
 
+export type { HeldAssets };
 export {
   type Booted,
   type LastEnd,

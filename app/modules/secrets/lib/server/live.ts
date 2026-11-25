@@ -5,12 +5,15 @@ import { createHash, createHmac, randomBytes, randomInt } from "node:crypto";
 import { isCallId, isCommandSecret } from "../../../commands/index.ts";
 import { token, tokenHash } from "../../../identities/index.ts";
 import type { AttachmentId } from "../../../attachments/index.ts";
+import type { AvatarId } from "../../../avatars/index.ts";
 import { isAttachmentId } from "../../../attachments/index.ts";
+import { isAvatarId } from "../../../avatars/index.ts";
 
 interface LiveSecrets {
   readonly digest: (text: string) => Effect.Effect<string>;
   readonly newCallId: Effect.Effect<CallId>;
   readonly newAttachmentId: Effect.Effect<AttachmentId>;
+  readonly newAvatarId: Effect.Effect<AvatarId>;
   readonly newUserCode: Effect.Effect<string>;
   readonly newCommandSecret: Effect.Effect<CommandSecret>;
   readonly newCommandToken: Effect.Effect<Token>;
@@ -30,6 +33,10 @@ function sha256(text: string): string {
 
 function asAttachmentId(value: string): AttachmentId {
   return Option.getOrThrow(Option.liftPredicate(value, isAttachmentId));
+}
+
+function asAvatarId(value: string): AvatarId {
+  return Option.getOrThrow(Option.liftPredicate(value, isAvatarId));
 }
 
 function asCallId(value: string): CallId {
@@ -63,6 +70,7 @@ const liveSecrets: LiveSecrets = {
   digest: (text) => Effect.sync(() => sha256(text)),
   hashToken: (issued) => Effect.sync(() => tokenHash(sha256(issued))),
   newAttachmentId: Effect.sync(() => asAttachmentId(randomBytes(ATTACHMENT_ID_BYTES).toString("hex"))),
+  newAvatarId: Effect.sync(() => asAvatarId(randomBytes(ATTACHMENT_ID_BYTES).toString("hex"))),
   newCallId: Effect.sync(() => asCallId(`call_${randomBytes(CALL_ID_BYTES).toString("base64url")}`)),
   newCommandSecret: Effect.sync(() => asCommandSecret(`hmac_${randomBytes(SECRET_BYTES).toString("base64url")}`)),
   newCommandToken: Effect.sync(newToken),

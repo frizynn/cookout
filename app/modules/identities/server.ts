@@ -217,6 +217,14 @@ export { displayNameRoutes, displayNamesLayer } from "./lib/server/display-names
  * is 403 `identity_kind`). The `PATCH` needs `Caller`, which `requireToken` provides.
  */
 export { descriptionRoutes } from "./lib/server/descriptions.ts";
+/**
+ * `PUT /v1/identities/:name/avatar` sets an identity's avatar and `GET /v1/avatars/:id` serves its bytes behind the
+ * token gate (#478). Only the identity itself or, for an agent, its owner may set one (403 `not_owner`, admins too).
+ * The server takes only a PNG of exactly 256 by 256 pixels, judged by its signature and IHDR header with no image
+ * library; the browser crops and resizes (Matt, 2026-11-25, board msg 4362). The bytes are stored first, then the
+ * avatar is recorded, and only then are the replaced avatar's bytes removed.
+ */
+export { avatarRoutes } from "./lib/server/avatars.ts";
 
 /**
  * The `IdentityChanges` hub: every route that creates an identity or changes one (its display name, admin flag,
