@@ -19,6 +19,7 @@ const SAVE = "Save";
 export function LineForm(parts: LineFormParts): ReactNode {
   const { onEdit, onSubmit } = parts;
   const id = useId();
+  const submit = parts.submit ?? SAVE;
   const box = useRef<HTMLInputElement>(null);
   const handleChange = useCallback(() => {
     if (box.current !== null) {
@@ -44,12 +45,10 @@ export function LineForm(parts: LineFormParts): ReactNode {
           type="text"
           value={parts.value}
         />
-        {parts.submitLast !== true && (
-          <LineFormSave below={false} saving={parts.saving} submit={parts.submit ?? SAVE} />
-        )}
+        {parts.submitLast !== true && <LineFormSave below={false} saving={parts.saving} submit={submit} />}
       </span>
       {parts.children}
-      {parts.submitLast === true && <LineFormSave below saving={parts.saving} submit={parts.submit ?? SAVE} />}
+      {parts.submitLast === true && <LineFormSave below saving={parts.saving} submit={submit} />}
     </form>
   );
 }
