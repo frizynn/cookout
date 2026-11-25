@@ -1,5 +1,6 @@
 import type { AlertsState, InboxRow } from "../../unread/index.ts";
 import type { OfflineAlert } from "../../sdk/index.ts";
+import { millisOf } from "../../format/index.ts";
 
 type EarlierEntry =
   | { readonly kind: "alert"; readonly key: string; readonly alert: OfflineAlert }
@@ -17,10 +18,6 @@ function readAlertsOf(state: AlertsState): readonly OfflineAlert[] {
   return state.alerts.filter(({ read }) => read);
 }
 
-const BEFORE = -1;
-const SAME = 0;
-const AFTER = 1;
-
 function timeOf(entry: EarlierEntry): string {
   if (entry.kind === "alert") {
     return entry.alert.raisedAt;
@@ -29,14 +26,7 @@ function timeOf(entry: EarlierEntry): string {
 }
 
 function newestFirst(first: EarlierEntry, second: EarlierEntry): number {
-  const [firstTime, secondTime] = [timeOf(first), timeOf(second)];
-  if (firstTime === secondTime) {
-    return SAME;
-  }
-  if (firstTime > secondTime) {
-    return BEFORE;
-  }
-  return AFTER;
+  return millisOf(timeOf(second)) - millisOf(timeOf(first));
 }
 
 function earlierEntries({ alerts, rows }: EarlierLists): readonly EarlierEntry[] {
