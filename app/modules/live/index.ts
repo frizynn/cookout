@@ -37,8 +37,7 @@ function checked(event: ServerSentEvent): CookoutEvent | null {
   }
 }
 
-/** What follows the live stream: `heard` gets each event, and `back` runs each time the link comes back after being down. */
-export interface LiveFollower {
+interface LiveFollower {
   readonly heard: (event: CookoutEvent) => void;
   readonly back: () => void;
 }
