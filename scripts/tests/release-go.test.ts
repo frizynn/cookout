@@ -12,6 +12,7 @@ const JUST_NOW = 0;
 const A_MINUTE = 1;
 const FIVE_MINUTES = 5;
 const TEN_MINUTES = 10;
+const TWENTY_MINUTES = 20;
 const THIRTY_ONE_MINUTES = 31;
 
 interface GateRun {
@@ -139,7 +140,7 @@ it("runs when nothing was ever deployed", { timeout: 1000 }, () => {
   });
 });
 
-it("defers when a gate run started 10 minutes ago", { timeout: 1000 }, () => {
+it("waits, until it is 30 minutes old, when a gate run started 10 minutes ago", { timeout: 1000 }, () => {
   expect.hasAssertions();
 
   const runs = [
@@ -151,7 +152,8 @@ it("defers when a gate run started 10 minutes ago", { timeout: 1000 }, () => {
     ok: true,
     value: {
       go: false,
-      line: `skipped: a gate run started at ${startedAt(TEN_MINUTES)}, under 30 minutes ago; the schedule picks this up later`,
+      line: `waits: a gate run started at ${startedAt(TEN_MINUTES)}, under 30 minutes ago; deciding again at ${startedAt(-TWENTY_MINUTES)}`,
+      retryAtMillis: NOW_MS + TWENTY_MINUTES * MINUTE_MS,
     },
   });
 });
