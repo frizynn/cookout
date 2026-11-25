@@ -1,5 +1,4 @@
 import type { Act } from "../../keymap/index.ts";
-import { THREAD_PANEL } from "./thread-panel.ts";
 import { locationOf } from "../../paths/index.ts";
 
 const SIDEBAR_LINK = 'nav[aria-label="Sidebar"] a[href]';
@@ -11,12 +10,9 @@ const ROW = "a[data-feed-row]";
 const SELECTED_ROW = `${ROW}[aria-current="page"]`;
 const BOX = 'textarea[name="text"]';
 const PANEL = "aside";
-const THREAD = `${PANEL}[aria-label="${THREAD_PANEL.thread}"]`;
-const FIRST_REPLY = `${FEED} ${MESSAGE}`;
-const TOP = `${MESSAGE}[aria-label="${THREAD_PANEL.parent}"]`;
 const LAST = -1;
 
-type ColumnAction = "intoMessageBox" | "intoMessages" | "toFirstReply" | "toSidebar" | "toTopMessage";
+type ColumnAction = "intoMessageBox" | "intoMessages" | "toSidebar";
 
 interface ColumnKeys {
   readonly watch: (target: () => unknown) => void;
@@ -157,29 +153,8 @@ function intoMessageBox({ target }: KeyboardEvent): boolean {
   return newestOf(panel) === target && focusedOn(panel.querySelector(BOX));
 }
 
-function threadOf(target: unknown): Element | null {
-  if (!isMessage(target)) {
-    return null;
-  }
-  return target.closest(THREAD);
-}
-
-function toTopMessage({ target }: KeyboardEvent): boolean {
-  const thread = threadOf(target);
-  return (
-    thread instanceof Element && thread.querySelector(FIRST_REPLY) === target && focusedOn(thread.querySelector(TOP))
-  );
-}
-
-function toFirstReply({ target }: KeyboardEvent): boolean {
-  const thread = threadOf(target);
-  return (
-    thread instanceof Element && thread.querySelector(TOP) === target && focusedOn(thread.querySelector(FIRST_REPLY))
-  );
-}
-
 function columnActions(keys: Readonly<ColumnKeys>): Readonly<Record<ColumnAction, Act>> {
-  return { intoMessageBox, intoMessages: intoMessages(keys), toFirstReply, toSidebar, toTopMessage };
+  return { intoMessageBox, intoMessages: intoMessages(keys), toSidebar };
 }
 
 export { columnActions };
