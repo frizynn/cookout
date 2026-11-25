@@ -1,8 +1,8 @@
+import { duplicateNumbers, takenOnV1 } from "./lib/adr-numbers.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { MIGRATION_LISTS } from "./lib/migration-lists.ts";
 import type { SpawnSyncReturns } from "node:child_process";
 import { adrEdits } from "./lib/adr-append-only.ts";
-import { duplicateNumbers } from "./lib/adr-numbers.ts";
 import { migrationsInserted } from "./lib/migrations-append-only.ts";
 import { spawnSync } from "node:child_process";
 
@@ -135,6 +135,13 @@ function appendOnlyAdrs(): readonly string[] {
   });
 }
 
+function adrsTakenOnV1(): readonly string[] {
+  return takenOnV1({
+    added: git(["diff", "--name-only", "--no-renames", "--diff-filter=A", ...adrSides(), "--", ADRS]),
+    v1: git(["ls-tree", "--name-only", "origin/v1", "--", "docs/adr/"]),
+  });
+}
+
 function headList(file: string): string {
   if (!existsSync(file)) {
     return "";
@@ -171,6 +178,7 @@ const failures = [
   ...wikiCitations(),
   ...adrNumbers(),
   ...appendOnlyAdrs(),
+  ...adrsTakenOnV1(),
   ...deployedMigrations(),
 ];
 for (const failure of failures) {
