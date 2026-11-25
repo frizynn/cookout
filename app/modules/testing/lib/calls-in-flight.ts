@@ -217,4 +217,8 @@ function holdsCallsOpen(...names: readonly string[]): void {
   callsInFlight().holdOpen(names);
 }
 
-export { type CallsInFlight, createCallsInFlight, holdsCallsOpen, trackedCalls };
+async function settledCalls(): Promise<void> {
+  await callsInFlight().settled();
+}
+
+export { type CallsInFlight, createCallsInFlight, holdsCallsOpen, settledCalls, trackedCalls };

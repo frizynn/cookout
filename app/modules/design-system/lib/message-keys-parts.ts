@@ -6,6 +6,7 @@ interface MessageShortcuts {
   readonly openThread: Shortcut;
   readonly markUnread: Shortcut;
   readonly copyLink: Shortcut;
+  readonly delete: Shortcut;
   readonly thread: Shortcut;
   readonly unfold: Shortcut;
 }
@@ -14,6 +15,7 @@ const NO_SHORTCUT: Shortcut = { keys: "", label: "" };
 
 const MessageKeys = createContext<MessageShortcuts>({
   copyLink: NO_SHORTCUT,
+  delete: NO_SHORTCUT,
   markUnread: NO_SHORTCUT,
   openThread: NO_SHORTCUT,
   reply: NO_SHORTCUT,

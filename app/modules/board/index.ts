@@ -64,6 +64,11 @@
  * is applied once to the table, so every view of a message agrees; a read puts what it brings with every event heard
  * meanwhile applied again, so the event wins. `calls.close` and `calls.reopen` close or reopen a thread, one at a time
  * in the order asked, applying the answer as a `thread` event, or keeping the refusal (`closingRefusal`) until the next;
+ * `calls.askDelete(message)` asks to delete one of the logged-in human's messages, held as `messageDeleting`'s `asked`
+ * for the confirmation to show until `calls.cancelDelete` or the delete; `calls.deleteMessage` deletes it through the SDK
+ * (for a top-level message, its whole thread), one delete at a time, applying the answer as a `message-deleted` event,
+ * or keeping the refusal, with the message still asked, until the next ask, and hands `answered` the outcome (the
+ * message deleted, or the refusal) for the page to say;
  * `calls.createChannel` creates a channel and puts it in the list and the subscriptions; `calls.ack` acks a message,
  * one ack at a time in the order asked; `calls.search` runs a search and answers its page, or the server's refusal,
  * for the `search` store, which keeps only the result message IDs: each result's message goes in the table, with its
@@ -125,8 +130,9 @@
  * snapshot holds the same value in every field (an array field, the same items), for a store to publish nothing then.
  */
 export { sameSnapshot, selectedStore } from "./lib/selected.ts";
-export type { BoardCalls, ThreadClosing } from "./lib/board-calls.ts";
+export type { BoardCalls, MessageDeletes, ThreadClosing } from "./lib/board-calls.ts";
 export type { ClosingRefusal } from "./lib/thread-closing.ts";
+export type { DeleteOutcome, MessageDeleting } from "./lib/message-deleting.ts";
 export type { ListedSchedules } from "./lib/schedules-slice.ts";
 export {
   type ChannelCreation,
@@ -213,6 +219,7 @@ export {
   deletedChannelNotice,
   deletedSchedules,
   messageBeforeOf,
+  messageDeleting,
   scheduleListOf,
   subscribedChannels,
   threadOf,

@@ -1,7 +1,8 @@
 /**
  * The keymap: the one owner of the web UI's keyboard shortcuts. `KEYS`, in
  * `lib/keys.ts`, is the one table of them: each row is a key chord, the action
- * it does and the scope it applies in. `createKeymap` is made once in the web
+ * it does and the scope it applies in, such as the message scope's Delete, which deletes a focused message you wrote
+ * after a confirmation (mattpocock/cookout#683). `createKeymap` is made once in the web
  * entry, for the browser's platform, and passed down through `CookoutApp`,
  * whose `listen` adds the page's one key listener.
  * A view says what an action does with `bind`: a scope, what some or all of its
@@ -29,7 +30,7 @@
  * acts on no key, since the list is a modal dialog with its own keys. A scope's heading in the list is in
  * `GROUPS`, and the list shows the scopes outermost first.
  * The keymap also holds the page's one announcement (`announce`, read as `announced` in its state): the text a
- * key's action reads out, such as "Marked unread" or "Copied @ada", for the one polite live region to say. Its
+ * key's action reads out, such as "Marked unread", "Message deleted" or "Copied @ada", for the one polite live region to say. Its
  * count moves on each announcement, so the same text said twice is read out twice.
  * The keymap also never leaves keyboard focus on nothing (the page body), as one rule for every scope
  * (`lib/focus-keeper.ts`, mattpocock/cookout#670). An arrow key, j, k, Escape, Enter or Space pressed on the body that
