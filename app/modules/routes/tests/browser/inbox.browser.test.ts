@@ -1,11 +1,14 @@
 import type { Browser, Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inPane, inSidebar, inThread } from "./regions.ts";
 import { logIn, logInToChannels, logInWithStream } from "./login.ts";
 import type { MessageId } from "../../../sdk/index.ts";
 import type { Person } from "./people.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const ONE = 1;
 const A_PAGE_AND_ONE = 51;

@@ -1,11 +1,14 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import type { MessageId } from "../../../sdk/index.ts";
 import type { Person } from "./people.ts";
 import { inConversation } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const NONE = 0;
 const ONE = 1;

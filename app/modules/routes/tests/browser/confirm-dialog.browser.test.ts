@@ -1,9 +1,12 @@
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inDialog, inProfile } from "./regions.ts";
 import type { Page } from "@playwright/test";
 import { logIn } from "./login.ts";
 import { newIdentity } from "./people.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 function agentName(): string {
   return unique("browser-confirm-bot");

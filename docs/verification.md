@@ -539,6 +539,8 @@ pnpm e2e:docker
 
 Browser tests share one live board, and every page streams every channel's events, so a flake that disappears at `--workers=1` is likely other tests' live traffic, not CPU load. Reproduce it by posting replies into an unrelated thread while the test runs, never with a CPU-load generator.
 
+`COOKOUT_BROWSER_PROBE=1 node_modules/.bin/playwright test <file>` adds to each failed test's output, per open page, the live events it received by type, each store's publish count and the top-level views' render counts (the `probe` module); a browser test gets it by importing `test` from `./probe.ts`, not `@playwright/test`.
+
 ## Log in as a human with a session cookie
 
 The web UI swaps a human identity's token for a session cookie with `POST /v1/session`, then sends the cookie instead of the bearer header. These commands log in as the seeded `grace`, use the cookie alone, try an agent's token and log out:

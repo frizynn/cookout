@@ -1,10 +1,13 @@
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inPane, inProfile } from "./regions.ts";
 import type { Identity } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
 import { logIn } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 async function offeredOn(page: Page, identity: Identity): Promise<void> {
   const text = `@${identity.name} has had no activity for 30 days. Deactivate it?`;

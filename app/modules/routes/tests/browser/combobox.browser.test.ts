@@ -1,9 +1,12 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { expect, test as playwrightTest } from "@playwright/test";
 import { inPane } from "./regions.ts";
 import { logIn } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = playwrightTest.extend(probeFixtures);
 
 const nowhere = "http://127.0.0.1:9/command";
 const schema = { properties: { branch: { type: "string" } }, type: "object" } as const;

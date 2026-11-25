@@ -5,9 +5,10 @@ import type { Person } from "./people.ts";
 import type { TopLevelMessage } from "../../../sdk/index.ts";
 import { clockFixtures } from "./clock.ts";
 import { logIn } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
 
-const test = base.extend<ClockFixtures>(clockFixtures);
+const test = base.extend(probeFixtures).extend<ClockFixtures>(clockFixtures);
 
 const NUDGE = "Quiet for 3 days: close it, or follow up?";
 const QUIET_DAYS = 3;

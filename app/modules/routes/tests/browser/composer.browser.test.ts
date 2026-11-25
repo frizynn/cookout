@@ -1,9 +1,12 @@
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inPane, inSidebar } from "./regions.ts";
 import type { Page } from "@playwright/test";
 import { adminClient } from "./people.ts";
 import { logIn } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 interface Mentioning {
   readonly reviewers: string;

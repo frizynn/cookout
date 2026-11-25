@@ -1,10 +1,13 @@
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inPane, inSidebar } from "./regions.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
 import { logInWithStream } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 async function postWithMention(page: Page): Promise<void> {
   await inSidebar(page)
