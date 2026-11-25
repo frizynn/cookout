@@ -535,7 +535,7 @@ pnpm e2e:docker
 
 ## Reproduce a web test's missing wait
 
-`pnpm web:slow [ms] <files...>` runs web test files with every view call held back `ms` (700 by default) before it goes out, so a test that reads the screen before the view's call answered fails every run; a test that waits on `answering`'s `answered` gets the answer when the view does. `pnpm under-load --web-only [files...]` is an optional final check, judged by the failure-rate rule, never a fixed count of clean runs.
+`pnpm web:slow [ms] <files...>` runs web test files with every view call held back `ms` (700 by default) before it goes out (it provides `webSlowMs`, which `slowCalls` in `app/modules/routes/tests/slow-calls.ts` reads), so a test that reads the screen before the view's call answered fails every run; a test that waits on `answering`'s `answered` gets the answer when the view does. `pnpm under-load --web-only [files...]` is an optional final check, judged by the failure-rate rule, never a fixed count of clean runs.
 
 ## Reproduce a flaky browser test
 

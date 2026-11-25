@@ -22,17 +22,11 @@ it("takes an optional delay in ms, 700 by default, then one or more web test fil
   ]);
 });
 
-it("runs vitest's web projects on the files with the delay in COOKOUT_WEB_SLOW_MS", { timeout: 1000 }, () => {
+it("runs vitest's web projects on the files, providing the delay as webSlowMs", { timeout: 1000 }, () => {
   expect.hasAssertions();
 
-  expect(slowRun({ delayMs: 250, files: [FILE] })).toStrictEqual([
-    "COOKOUT_WEB_SLOW_MS=250",
-    "node_modules/.bin/vitest",
-    "run",
-    "--project",
-    "web",
-    "--project",
-    "web-clock",
-    FILE,
-  ]);
+  expect(slowRun({ delayMs: 250, files: [FILE] })).toStrictEqual({
+    files: [FILE],
+    options: { project: ["web", "web-clock"], provide: { webSlowMs: 250 }, run: true },
+  });
 });

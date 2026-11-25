@@ -1,4 +1,4 @@
-import { webSlowMs } from "../../config/index.ts";
+import { inject } from "vitest";
 
 const NO_DELAY = 0;
 const realTimeout = globalThis.setTimeout;
@@ -12,8 +12,12 @@ async function slept(delay: number): Promise<boolean> {
   return woke;
 }
 
-function slowCalls<Client extends object>(client: Client): Client {
-  const delay = webSlowMs();
+interface Holding<Client> {
+  readonly client: Client;
+  readonly delay: number;
+}
+
+function heldBack<Client extends object>({ client, delay }: Holding<Client>): Client {
   if (delay === NO_DELAY) {
     return client;
   }
@@ -32,4 +36,8 @@ function slowCalls<Client extends object>(client: Client): Client {
   });
 }
 
-export { slowCalls };
+function slowCalls<Client extends object>(client: Client): Client {
+  return heldBack({ client, delay: inject("webSlowMs") ?? NO_DELAY });
+}
+
+export { heldBack, slowCalls };

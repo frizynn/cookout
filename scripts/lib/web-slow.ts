@@ -1,11 +1,24 @@
-import { WEB_SLOW_VARIABLE } from "../../app/modules/config/index.ts";
-
 interface SlowRun {
   readonly delayMs: number;
   readonly files: readonly string[];
 }
 
+declare module "vitest" {
+  interface ProvidedContext {
+    webSlowMs?: number;
+  }
+}
+
 type SlowArguments = (SlowRun & { readonly ok: true }) | { readonly ok: false };
+
+interface SlowVitest {
+  readonly files: readonly string[];
+  readonly options: {
+    readonly project: readonly string[];
+    readonly provide: { readonly webSlowMs: number };
+    readonly run: true;
+  };
+}
 
 const DEFAULT_DELAY_MS = 700;
 const NONE = 0;
@@ -27,17 +40,8 @@ function slowArguments(args: readonly string[]): SlowArguments {
   return { delayMs, files, ok: true };
 }
 
-function slowRun({ delayMs, files }: SlowRun): readonly string[] {
-  return [
-    `${WEB_SLOW_VARIABLE}=${String(delayMs)}`,
-    "node_modules/.bin/vitest",
-    "run",
-    "--project",
-    "web",
-    "--project",
-    "web-clock",
-    ...files,
-  ];
+function slowRun({ delayMs, files }: SlowRun): SlowVitest {
+  return { files, options: { project: ["web", "web-clock"], provide: { webSlowMs: delayMs }, run: true } };
 }
 
 export { slowArguments, slowRun };
