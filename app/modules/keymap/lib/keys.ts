@@ -101,6 +101,12 @@ const KEYS = [
   { action: "cancelPrompt", chord: "Escape", does: "Cancel the form", scope: "prompt form" },
   { action: "leaveTextBox", chord: "Escape", does: "Leave the box, keeping what you typed", scope: "text box" },
   { action: "newestMessage", chord: "ArrowUp", does: "Newest message, from an empty box", scope: "text box" },
+  {
+    action: "toLeftColumn",
+    chord: "ArrowLeft",
+    does: "Column on the left, from the box's first character",
+    scope: "text box",
+  },
   { action: "viewProfile", chord: "Enter", does: "View profile", scope: "person" },
   { action: "messagePerson", chord: "m", does: "Message them, where there's a message box", scope: "person" },
   { action: "copyName", chord: "c", does: "Copy their name", scope: "person" },

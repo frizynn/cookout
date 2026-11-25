@@ -9,6 +9,7 @@ const PANEL_CLOSE = `${PANEL} > header a[href]`;
 const CHANNEL_FEED = 'main [role="feed"]';
 const OPEN_MESSAGE = `${MESSAGE}[aria-current="true"]`;
 const NOT_A_FOLD = `${MESSAGE}:not([data-closed-fold])`;
+const FIRST = 0;
 const LAST = -1;
 
 interface Pressing {
@@ -67,25 +68,24 @@ function channelFeed(): Element | null {
   return null;
 }
 
-function channelMessage(): HTMLElement | null {
+function inChannel(selector: string): readonly HTMLElement[] {
   const feed = channelFeed();
   if (feed === null) {
-    return null;
+    return [];
   }
-  return (
-    feed.querySelector<HTMLElement>(OPEN_MESSAGE) ??
-    [...feed.querySelectorAll<HTMLElement>(NOT_A_FOLD)].at(LAST) ??
-    null
-  );
+  return [...feed.querySelectorAll<HTMLElement>(selector)];
 }
 
-function focusedOnChannelMessage(): boolean {
-  const message = channelMessage();
-  if (message === null) {
+function focusedOn(message: unknown): boolean {
+  if (!(message instanceof HTMLElement)) {
     return false;
   }
   message.focus();
   return true;
+}
+
+function focusedOnChannelMessage(): boolean {
+  return focusedOn(inChannel(OPEN_MESSAGE).at(FIRST));
 }
 
 function inPanel(target: EventTarget | null): boolean {
@@ -101,7 +101,7 @@ function threadPanel(): Element | null {
 }
 
 function closedTo(hash: string): boolean {
-  focusedOnChannelMessage();
+  focusedOn(inChannel(OPEN_MESSAGE).at(FIRST) ?? inChannel(NOT_A_FOLD).at(LAST));
   globalThis.location.hash = hash;
   return true;
 }
@@ -134,4 +134,4 @@ function messageActions(keymap: Keymap): Readonly<Record<MessageAction, Act>> {
   };
 }
 
-export { closeThread, messageActions, threadPanel };
+export { closeThread, focusedOnChannelMessage, messageActions, threadPanel };

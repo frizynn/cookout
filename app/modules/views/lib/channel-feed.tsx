@@ -17,8 +17,8 @@ function countOf(state: ChannelMessagesState): number {
 }
 
 export function ChannelFeed(props: ChannelFeedProps): ReactNode {
-  const { channel, open, state, unread } = props;
-  const { held, highlighted } = useHeldThreads({ channel, open, state, unread });
+  const { channel, state, unread } = props;
+  const { held, highlighted } = useHeldThreads({ channel, state, unread });
   return (
     <LinkedScroll count={countOf(state)} highlighted={highlighted} label={`Messages in #${channel}`}>
       <MessageRows
@@ -26,7 +26,7 @@ export function ChannelFeed(props: ChannelFeedProps): ReactNode {
         closing={props.closing}
         held={held}
         me={props.me}
-        open={open}
+        open={props.open}
         readPosition={props.readPosition}
         state={state}
         unread={unread}
