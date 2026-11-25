@@ -1,5 +1,6 @@
 import type { Answering, ClientMethod } from "./answering.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
+import type { Live } from "../../live/index.ts";
 import { answering } from "./answering.ts";
 import { openAt } from "./render.tsx";
 import { openWithClockStopped } from "./clock.ts";
@@ -7,6 +8,7 @@ import { openWithClockStopped } from "./clock.ts";
 interface ViewOpening {
   readonly client: CookoutClient;
   readonly hash: string;
+  readonly live?: Live;
   readonly open?: typeof openAt;
   readonly waitingOn: readonly ClientMethod[];
 }
@@ -16,9 +18,9 @@ interface OpenedView {
   readonly close: () => void;
 }
 
-async function viewOpened({ client, hash, open = openAt, waitingOn }: ViewOpening): Promise<OpenedView> {
+async function viewOpened({ client, hash, live, open = openAt, waitingOn }: ViewOpening): Promise<OpenedView> {
   const { answered, client: answeringClient } = answering(client);
-  const close = open({ client: answeringClient, hash });
+  const close = open({ client: answeringClient, hash, ...(live && { live }) });
   await Promise.all(
     waitingOn.map(async (method) => {
       await answered(method);
@@ -57,4 +59,5 @@ async function conversationOpened({
   return opened;
 }
 
+export type { ClientMethod } from "./answering.ts";
 export { type OpenedView, conversationOpened, profileOpened, viewOpened };
