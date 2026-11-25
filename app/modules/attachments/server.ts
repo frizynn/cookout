@@ -65,7 +65,7 @@ const unnamed: Refusal = {
 
 const messageEmpty: Refusal = {
   code: "message_empty",
-  message: "A message needs text, with or without attachments.",
+  message: "A message needs text, at least one attachment, or both.",
   status: BAD_REQUEST,
 };
 

@@ -4,12 +4,11 @@ import { changedLines, unchangedSince } from "./lib/changed-lines.ts";
 import { fetchedCoverageMap, ghCli } from "./lib/coverage-map-fetch.ts";
 import { loadReport, osReading } from "./lib/machine-load.ts";
 import type { BrowserTests } from "./lib/browser-selection.ts";
-import type { DocsOnly } from "./lib/docs-only.ts";
 import { SUITE_LOCK_FILE } from "./lib/machine-lock.ts";
 import { TIMINGS_DIR } from "./lib/slowest-files.ts";
 import { changedFiles } from "./lib/changed-files.ts";
+import { ciGreenAtHead } from "./lib/ci-green.ts";
 import { docsOnlySkip } from "./lib/docs-only.ts";
-import path from "node:path";
 import { runChecks } from "./lib/check-runner.ts";
 
 interface Scripted extends Omit<Check, "command"> {
@@ -33,7 +32,7 @@ const shard = option("shard");
 const base = option("base");
 const inCi = process.argv.includes("--ci");
 
-const TESTS_REPORT = path.join(TIMINGS_DIR, "tests.json");
+const TESTS_REPORT = `${TIMINGS_DIR}/tests.json`;
 const JSON_REPORTER = ["--reporter=json", `--outputFile.json=${TESTS_REPORT}`];
 const WITH_DEFAULT_REPORTER = ["--reporter=default", ...JSON_REPORTER];
 
@@ -57,8 +56,10 @@ function lintScript(): readonly string[] {
 const NONE = 0;
 const V1 = "origin/v1";
 
-const local = !inCi && job === "";
-function docsOnlyRun(): DocsOnly {
+const EXIT_SUCCESS = 0;
+const ciGreen = ciGreenAtHead({ asked: !inCi && job === "", cwd: process.cwd(), gh: ghCli(process.cwd()) });
+const local = !inCi && job === "" && !ciGreen.skip;
+function docsOnlyRun(): ReturnType<typeof docsOnlySkip> {
   if (!local) {
     return { line: "", skip: false };
   }
@@ -122,7 +123,7 @@ const scripted: readonly Scripted[] = [
     script: browserScript(),
     timings: {
       base: "app/modules/routes/tests/browser",
-      file: path.join(TIMINGS_DIR, "browser.json"),
+      file: `${TIMINGS_DIR}/browser.json`,
       runner: "playwright",
     },
   },
@@ -149,12 +150,25 @@ const ciOnly: readonly CiOnly[] = [
   ...browserSkipped,
 ];
 
-if (docsOnly.skip) {
-  console.error(docsOnly.line);
+function printReasons(): void {
+  for (const line of [ciGreen.line, docsOnly.line]) {
+    if (line !== "") {
+      console.error(line);
+    }
+  }
+  if (browserTests.all && browserTests.reason !== "") {
+    console.error(`check: running every browser test, since ${browserTests.reason}.`);
+  }
 }
 
-if (browserTests.all && browserTests.reason !== "") {
-  console.error(`check: running every browser test, since ${browserTests.reason}.`);
+async function exitCode(): Promise<number> {
+  if (ciGreen.skip) {
+    console.log(ciGreen.line);
+    return EXIT_SUCCESS;
+  }
+  printReasons();
+  const code = await runChecks({ checks, ciOnly, inCi, job, lockFile: SUITE_LOCK_FILE });
+  return code;
 }
 
-process.exitCode = await runChecks({ checks, ciOnly, inCi, job, lockFile: SUITE_LOCK_FILE });
+process.exitCode = await exitCode();

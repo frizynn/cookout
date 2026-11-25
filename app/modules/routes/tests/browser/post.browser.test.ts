@@ -41,3 +41,41 @@ test("a human posts a top-level message with an @ mention from the channel view,
     })
     .toStrictEqual([[["Can @browser-post-reviewer look?", ["mention"]]], []]);
 });
+
+test("a message with attachments and no text shows in the channel under its author", async ({ page }) => {
+  const poster = await newIdentity({ kind: "human", name: "browser-files-only" });
+  await adminClient().createChannel({ name: "browser-files-only" });
+  await adminClient().createMessage({ channel: "browser-files-only", text: "Earlier" });
+  const bytes = new TextEncoder().encode("a log line");
+  await poster.client.createMessage({
+    attachments: [{ bytes, name: "log.txt" }],
+    channel: "browser-files-only",
+    text: "",
+  });
+  await logInWithStream({ page, token: poster.token });
+  await inSidebar(page).getByRole("link", { name: "#browser-files-only" }).click();
+
+  await expect(page.getByRole("feed", { name: "Messages" }).getByRole("article")).toContainText([
+    "Earlier",
+    "browser-files-only",
+  ]);
+});
+
+test("Send with an empty box, no text and no attachment, posts nothing", async ({ page }) => {
+  const poster = await newIdentity({ kind: "human", name: "browser-empty-send" });
+  await adminClient().createChannel({ name: "browser-empty-send" });
+  await logInWithStream({ page, token: poster.token });
+  await inSidebar(page).getByRole("link", { name: "#browser-empty-send" }).click();
+  const send = inPane(page).getByRole("button", { name: "Send" });
+  await send.click();
+  await page.getByLabel("Message", { exact: true }).fill("After");
+  await send.click();
+
+  await expect(page.getByRole("feed", { name: "Messages" }).getByRole("article")).toContainText(["After"]);
+  await expect
+    .poll(async () => {
+      const { messages } = await poster.client.listMessages("browser-empty-send");
+      return messages.map((message) => message.text);
+    })
+    .toStrictEqual(["After"]);
+});
