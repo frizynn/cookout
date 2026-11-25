@@ -8,7 +8,7 @@ interface Saying {
 }
 
 export function inSidebar(page: Page): Locator {
-  return page.getByRole("navigation", { name: "Sidebar" });
+  return page.getByRole("navigation", { exact: true, name: "Sidebar" });
 }
 
 export function inPane(page: Page): Locator {
@@ -16,15 +16,15 @@ export function inPane(page: Page): Locator {
 }
 
 export function inThread(page: Page): Locator {
-  return page.getByRole("complementary", { name: "Thread" });
+  return page.getByRole("complementary", { exact: true, name: "Thread" });
 }
 
 export function inConversation(page: Page): Locator {
-  return page.getByRole("complementary", { name: "Conversation" });
+  return page.getByRole("complementary", { exact: true, name: "Conversation" });
 }
 
 export function inProfile(page: Page): Locator {
-  return page.getByRole("complementary", { name: "Profile" });
+  return page.getByRole("complementary", { exact: true, name: "Profile" });
 }
 
 export function inTopBar(page: Page): Locator {

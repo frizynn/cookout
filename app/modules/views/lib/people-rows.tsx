@@ -1,5 +1,6 @@
-import { CardBody, ListArea, Muted, NavList, Skeleton } from "../../design-system/index.tsx";
+import { CardBody, ListArea, NavList } from "../../design-system/layout.tsx";
 import type { Identity, IdentityName } from "../../sdk/index.ts";
+import { Muted, Skeleton } from "../../design-system/content.tsx";
 import type { Keymap } from "../../keymap/index.ts";
 import { PersonRow } from "./person-row.tsx";
 import type { ReactNode } from "react";

@@ -8,6 +8,7 @@ import {
   runDev,
   startDev,
   startFakeRoutine,
+  startProbedDev,
 } from "../../../testing/server.ts";
 import { clockForwardPath, relayCutPath, relayRestorePath } from "../../../http/index.ts";
 import { expect, it } from "@effect/vitest";
@@ -109,7 +110,17 @@ it.effect("pnpm dev serves the web UI from the Vite dev server, which passes /v1
 
     expect([page.status, health.status]).toStrictEqual([OK, OK]);
     expect(page.text).toContain('src="/app/web.tsx"');
+    expect(page.text).not.toContain("/app/modules/probe/web.ts");
     expect(health.text).toContain('"status":"ok"');
+  }).pipe(Effect.provide(commandLineServices)),
+);
+
+it.effect("pnpm dev start --probe puts the browser tests' probe on the web UI's page ahead of the app", () =>
+  Effect.gen(function* devServesTheProbe() {
+    const dev = yield* startProbedDev;
+    const page = yield* fetchedText(dev.webUrl);
+
+    expect(page.text).toMatch(/src="\/app\/modules\/probe\/web\.ts"[\s\S]*src="\/app\/web\.tsx"/u);
   }).pipe(Effect.provide(commandLineServices)),
 );
 

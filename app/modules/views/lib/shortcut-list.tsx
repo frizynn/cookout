@@ -1,6 +1,6 @@
 import type { Keymap } from "../../keymap/index.ts";
 import type { ReactNode } from "react";
-import { ShortcutList } from "../../design-system/index.tsx";
+import { ShortcutList } from "../../design-system/controls.tsx";
 import { useSyncExternalStore } from "react";
 
 const TEXT = {

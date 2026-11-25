@@ -1,9 +1,13 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import type { Person } from "./people.ts";
 import { inSidebar } from "./regions.ts";
 import { logInWithStream } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
+import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const MESSAGE_BOX = { exact: true, name: "Message" } as const;
 const NONE = 0;
@@ -67,14 +71,14 @@ function subscriptionOf(person: Person, channel: string): () => Promise<boolean>
 }
 
 async function tabbedIntoSidebar(page: Page): Promise<void> {
-  await inSidebar(page).getByRole("button", { name: "Collapse sidebar" }).focus();
+  await inSidebar(page).getByRole("button", { exact: true, name: "Collapse sidebar" }).focus();
   await page.keyboard.press("Tab");
 
   await expect(inSidebar(page).getByRole("link", { name: /^Inbox/u })).toBeFocused();
 
   await page.keyboard.press("ArrowDown");
 
-  await expect(inSidebar(page).getByRole("link", { name: "People & agents" })).toBeFocused();
+  await expect(inSidebar(page).getByRole("link", { exact: true, name: "People & agents" })).toBeFocused();
 }
 
 async function openedByArrows(page: Page): Promise<string> {
@@ -113,7 +117,7 @@ async function caughtUp(page: Page, channel: string): Promise<void> {
 test("the sidebar's links are one Tab stop: arrows move between them, Enter opens one, and Tab leaves", async ({
   page,
 }) => {
-  const { reader } = await readerOf("browser-sidebar-keys-tab");
+  const { reader } = await readerOf(unique("browser-sidebar-keys-tab"));
   await logInWithStream({ page, token: reader.token });
   await tabbedIntoSidebar(page);
   const channel = await openedByArrows(page);
@@ -130,7 +134,7 @@ test("the sidebar's links are one Tab stop: arrows move between them, Enter open
 });
 
 test("alt+↓ and alt+↑ open the next and previous channel, from the message box too", async ({ page }) => {
-  const { first, reader, second } = await readerOf("browser-sidebar-keys-alt");
+  const { first, reader, second } = await readerOf(unique("browser-sidebar-keys-alt"));
   await openedOn({ channel: first, page, reader });
   await page.getByRole("textbox", MESSAGE_BOX).click();
   await page.keyboard.press("Alt+ArrowDown");
@@ -144,7 +148,7 @@ test("alt+↓ and alt+↑ open the next and previous channel, from the message b
 });
 
 test("alt+shift+↓ opens the next unread channel, and says so when none is left", async ({ page }) => {
-  const { first, poster, reader, second, third } = await readerOf("browser-sidebar-keys-unread");
+  const { first, poster, reader, second, third } = await readerOf(unique("browser-sidebar-keys-unread"));
   await openedOn({ channel: first, page, reader });
   await poster.client.createMessage({ channel: third, text: "Unread over here" });
 
@@ -160,7 +164,7 @@ test("alt+shift+↓ opens the next unread channel, and says so when none is left
 });
 
 test("e on a focused channel row marks it all read", async ({ page }) => {
-  const { first, poster, reader, second } = await readerOf("browser-sidebar-keys-read");
+  const { first, poster, reader, second } = await readerOf(unique("browser-sidebar-keys-read"));
   await openedOn({ channel: first, page, reader });
   await poster.client.createMessage({ channel: second, text: "Read me from the sidebar" });
 
@@ -175,7 +179,7 @@ test("e on a focused channel row marks it all read", async ({ page }) => {
 });
 
 test("s on a focused channel row subscribes, then unsubscribes", async ({ page }) => {
-  const { first, reader, second } = await readerOf("browser-sidebar-keys-subscribe");
+  const { first, reader, second } = await readerOf(unique("browser-sidebar-keys-subscribe"));
   await reader.client.unsubscribe(second);
   await openedOn({ channel: first, page, reader });
   await subscribedByS({ channel: second, page, reader });
@@ -183,7 +187,7 @@ test("s on a focused channel row subscribes, then unsubscribes", async ({ page }
 });
 
 test("the channel menu shows the keys for Mark all as read and Unsubscribe", async ({ page }) => {
-  const { first, reader, second } = await readerOf("browser-sidebar-keys-menu");
+  const { first, reader, second } = await readerOf(unique("browser-sidebar-keys-menu"));
   await openedOn({ channel: first, page, reader });
   await rowOf(page, second).focus();
   await page.keyboard.press("Shift+F10");

@@ -22,13 +22,13 @@ import {
   termsAsked,
   viewOf,
 } from "./join-request-terms.ts";
-import { agentToApprove, agentToPreview } from "./resolve.ts";
+import { agentNotFound, agentSessionLive } from "./refusals.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { On } from "./join.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Terms } from "./join-request-terms.ts";
 import { agentJoinApprovalPathOf } from "../../index.ts";
-import { agentSessionLive } from "./refusals.ts";
+import { agentToApprove } from "./resolve.ts";
 
 type Fails<Value> = Effect.Effect<Value, Refusal | StorageUnavailable>;
 
@@ -68,11 +68,22 @@ interface Changing extends On {
 
 const codeTaken = new Error("The new user code was taken: start again.");
 
+function isActiveAgent(found: Identity | undefined): boolean {
+  return Predicate.isNotUndefined(found) && found.kind === "agent" && found.deactivated !== true;
+}
+
+function refuseUnlessAgent(on: On, agent: IdentityName): Fails<void> {
+  return Effect.asVoid(
+    Effect.filterOrFail(on.storage.findIdentityByName(agent), isActiveAgent, () => agentNotFound(agent)),
+  );
+}
+
 function starter(on: Changing): JoinRequests["startJoin"] {
   const asked = termsAsked(on);
   return ({ as: agent, ...request }) =>
     Effect.gen(function* startAgentJoinRequest() {
       yield* asked(request.idleExpiry);
+      yield* refuseUnlessAgent(on, agent);
       const requestId = yield* on.secrets.newToken;
       const requestHash = yield* on.secrets.hashToken(requestId);
       const userCode = yield* on.secrets.newUserCode;
@@ -142,7 +153,7 @@ function shower(on: On): JoinRequests["showJoin"] {
     Effect.gen(function* showAgentJoinRequest() {
       const found = yield* liveRequest(on)(userCode);
       const { idleExpiry } = yield* asked(found.idleExpiry);
-      const { created, identity } = yield* agentToPreview({ as: found.agent, caller, on });
+      const { created, identity } = yield* agentToApprove({ as: found.agent, caller, on });
       const live = yield* liveExpiryOf(on)(identity.name);
       return viewOf({ creates: created, found, idleExpiry, joins: identity.name, live });
     });

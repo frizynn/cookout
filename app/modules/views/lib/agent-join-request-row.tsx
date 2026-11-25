@@ -1,6 +1,8 @@
-import { Alert, ButtonRow, FeedNoticeRow, RowButton } from "../../design-system/index.tsx";
+import { FeedNoticeRow, RowButton } from "../../design-system/feed.tsx";
 import { useCallback, useSyncExternalStore } from "react";
 import type { AgentJoinRequests } from "../../unread/index.ts";
+import { Alert } from "../../design-system/content.tsx";
+import { ButtonRow } from "../../design-system/controls.tsx";
 import type { InboxAgentJoinRequest } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
 import { useAuthor } from "./use-author.ts";

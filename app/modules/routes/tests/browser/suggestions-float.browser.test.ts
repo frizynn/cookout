@@ -1,8 +1,12 @@
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inPane, inThread } from "./regions.ts";
 import type { Locator } from "@playwright/test";
 import { logIn } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
+import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const CHANNEL = "browser-suggestions-float";
 const PARENT = "Who can take this one?";
@@ -68,7 +72,7 @@ async function openedChannel(channel: string): Promise<Opened> {
 }
 
 test("the @ suggestion list floats above a channel's message box without resizing it", async ({ page }) => {
-  const { channel, token } = await openedChannel(`${CHANNEL}-channel`);
+  const { channel, token } = await openedChannel(unique(`${CHANNEL}-channel`));
   await logIn({ page, token });
   await page.goto(`/#/channels/${channel}`);
 
@@ -80,7 +84,7 @@ test("the @ suggestion list floats above a channel's message box without resizin
 });
 
 test("the @ suggestion list floats above a thread's reply box without resizing it", async ({ page }) => {
-  const { channel, thread, token } = await openedChannel(`${CHANNEL}-thread`);
+  const { channel, thread, token } = await openedChannel(unique(`${CHANNEL}-thread`));
   await logIn({ page, token });
   await page.goto(`/#/channels/${channel}/threads/${thread}`);
 

@@ -145,6 +145,7 @@ const AgentJoinRequestResponseSchema = matchesWire<AgentJoinRequestResponse>()(
 
 const CreateJoinCodeRequestSchema = Schema.Struct({
   description: Schema.optionalKey(SentDescriptionSchema),
+  displayName: Schema.optionalKey(SentDisplayNameSchema),
   name: IdentityNameSchema,
 });
 

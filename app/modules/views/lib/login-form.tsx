@@ -1,4 +1,6 @@
-import { Alert, CardBody, Form, Skeleton, SubmitButton, TextField } from "../../design-system/index.tsx";
+import { Alert, Skeleton } from "../../design-system/content.tsx";
+import { Form, SubmitButton, TextField } from "../../design-system/controls.tsx";
+import { CardBody } from "../../design-system/layout.tsx";
 import { LoggedIn } from "./logged-in.tsx";
 import type { ReactNode } from "react";
 import type { Session } from "../../board/index.ts";

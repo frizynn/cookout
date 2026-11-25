@@ -1,11 +1,18 @@
-import type { Keymap } from "../../keymap/index.ts";
-import type { PersonKeysSource } from "../../design-system/index.tsx";
+import type { Act, Keymap } from "../../keymap/index.ts";
+import type { MessageShortcuts, PersonKeysSource } from "../../design-system/messages.tsx";
+
+function messagePersonOf(message: Act | null): { readonly messagePerson?: Act } {
+  if (message === null) {
+    return {};
+  }
+  return { messagePerson: message };
+}
 
 function personKeysOf(keymap: Keymap): PersonKeysSource {
   return {
     bind: ({ acts, within }) =>
       keymap.bind({
-        actions: { copyName: acts.copyName, messagePerson: acts.message, viewProfile: acts.viewProfile },
+        actions: { copyName: acts.copyName, viewProfile: acts.viewProfile, ...messagePersonOf(acts.message) },
         scope: "person",
         within,
       }),
@@ -17,4 +24,8 @@ function personKeysOf(keymap: Keymap): PersonKeysSource {
   };
 }
 
-export { personKeysOf };
+function messageShortcutsOf(keymap: Keymap): MessageShortcuts {
+  return { openThread: keymap.shortcutOf("openThread"), reply: keymap.shortcutOf("replyToMessage") };
+}
+
+export { messageShortcutsOf, personKeysOf };

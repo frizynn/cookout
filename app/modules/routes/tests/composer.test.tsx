@@ -83,8 +83,8 @@ const FIRST = 0;
 async function repliesBy(parent: Message, earlier: CookoutClient, latest: CookoutClient): Promise<void> {
   const reply = { channel: parent.channel, replyTo: parent.id, text: "Reply" };
   await earlier.createMessage(reply);
-  await latest.createMessage(reply);
-  await earlier.createMessage(reply);
+  const { message: read } = await latest.createMessage(reply);
+  await earlier.createMessage({ ...reply, seen: read.id });
   await latest.createMessage(reply);
   await adminClient().createMessage(reply);
 }

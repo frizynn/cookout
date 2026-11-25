@@ -1,9 +1,13 @@
 name: Check
 
+# Check runs once per commit (#483). A pull request from a branch in this repo already has its push
+# run, so each job skips on its pull_request run (no runner is taken; the tools read push runs only),
+# while a fork's pull request still runs Check. A push to main doesn't run it: main is only
+# fast-forwarded to a commit v1's push run already checked.
 on:
   pull_request:
   push:
-    branches: [main, v1, rewrite-perfect-ts, "ticket-*", "merge-ticket-*"]
+    branches: [v1, rewrite-perfect-ts, "ticket-*", "merge-ticket-*"]
 
 permissions:
   contents: read
@@ -18,6 +22,7 @@ jobs:
   check:
     name: ${{ matrix.job }}
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     timeout-minutes: 5
     strategy:
       fail-fast: false
@@ -51,6 +56,7 @@ jobs:
   browser:
     name: browser ${{ matrix.shard }}/3
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     timeout-minutes: 5
     strategy:
       fail-fast: false
@@ -90,20 +96,52 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
-  tests:
-    name: tests ${{ matrix.shard }}/2
+  # Every screen in scripts/lib/screens.ts, in both themes, against a real seeded board, so a UI
+  # change that breaks a screen's steps fails here (#467 broke inbox-row-menu unnoticed). It only
+  # checks each screen can be captured; it never compares images. The script exits non-zero when
+  # any screen fails, naming each one.
+  screenshots:
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          cache-name: screenshots
+      - name: Install headless Chromium
+        run: pnpm exec playwright install --only-shell chromium
+      - name: pnpm screenshots
+        env:
+          NODE_COMPILE_CACHE: node_modules/.cache/node-compile
+        run: node scripts/screenshots.ts --out "$RUNNER_TEMP/screenshots"
+      - name: Upload the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: ${{ runner.temp }}/screenshots
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Two shards ran 4-5 minutes each and one was cancelled at the 5-minute limit after 284.7s of
+  # passing tests (#485), so Vitest's --shard splits the test files across 3 jobs. Each uploads its
+  # blob report, and the coverage job merges every vitest-blob-* into one run.
+  tests:
+    name: tests ${{ matrix.shard }}/3
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
         with:
           cache-name: tests
-      - run: node scripts/check.ts --job=tests --shard=${{ matrix.shard }}/2 --ci
+      - run: node scripts/check.ts --job=tests --shard=${{ matrix.shard }}/3 --ci
       - uses: actions/upload-artifact@v4
         with:
           name: vitest-blob-${{ matrix.shard }}
@@ -123,6 +161,7 @@ jobs:
   # deploying main, so a ticket or v1 push that breaks it fails here instead of blocking a deploy.
   e2e-docker:
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -143,6 +182,7 @@ jobs:
   pack:
     name: pack smoke
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
@@ -156,6 +196,7 @@ jobs:
   published-client:
     name: published client
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4

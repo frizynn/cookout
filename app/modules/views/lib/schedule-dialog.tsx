@@ -1,5 +1,6 @@
-import { Alert, FormDialog, InputField } from "../../design-system/index.tsx";
+import { FormDialog, InputField } from "../../design-system/controls.tsx";
 import { useCallback, useSyncExternalStore } from "react";
+import { Alert } from "../../design-system/content.tsx";
 import type { ChannelName } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
 import { ScheduleRuns } from "./schedule-runs.tsx";

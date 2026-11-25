@@ -91,7 +91,9 @@ async function readTheMention(page: Page, cookout: BrowserRun, { channel, person
 async function agentAnswers({ agent, channel, question }: Board, mentionReply: string): Promise<void> {
   await expect.poll(inboxOf(agent)).toStrictEqual([mentionReply]);
 
-  await agent.client.createMessage({ channel, replyTo: question.id, text: "Looking now." });
+  const { replies } = await agent.client.getThread(question.id);
+  const seen = Math.max(question.id, ...replies.map((reply) => reply.id));
+  await agent.client.createMessage({ channel, replyTo: question.id, seen, text: "Looking now." });
 }
 
 const test = base.extend(browserFixtures);

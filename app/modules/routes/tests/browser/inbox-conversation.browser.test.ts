@@ -1,9 +1,13 @@
 import type { Browser, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inConversation, inPane } from "./regions.ts";
 import { logIn, logInToChannels, logInWithStream } from "./login.ts";
 import type { Person } from "./people.ts";
+import { probeFixtures } from "./probe.ts";
+import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const NARROW = { height: 900, width: 600 };
 
@@ -31,7 +35,7 @@ async function narrowInbox(page: Page, channel: string): Promise<void> {
 test("at 600 px wide, selecting a thread row shows only its conversation, and the back arrow returns to the list", async ({
   page,
 }) => {
-  await narrowInbox(page, "browser-inbox-narrow");
+  await narrowInbox(page, unique("browser-inbox-narrow"));
   await inPane(page)
     .getByRole("list", { name: "For you" })
     .getByRole("link", { name: /Mentioned you/u })
@@ -52,7 +56,7 @@ async function postFromElsewhere(browser: Browser, poster: Person, channel: stri
   const page = await context.newPage();
   await logIn({ page, token: poster.token, url: `/#/channels/${channel}` });
   await page.getByLabel("Message", { exact: true }).fill("Rolled out to everyone");
-  await inPane(page).getByRole("button", { name: "Send" }).click();
+  await inPane(page).getByRole("button", { exact: true, name: "Send" }).click();
 
   await expect(page.getByRole("feed", { name: "Messages" })).toContainText("Rolled out to everyone");
 
@@ -60,7 +64,7 @@ async function postFromElsewhere(browser: Browser, poster: Person, channel: stri
 }
 
 test("a post from another identity appears live in the open channel conversation", async ({ browser, page }) => {
-  const channel = "browser-inbox-channel-live";
+  const channel = unique("browser-inbox-channel-live");
   await adminClient().createChannel({ name: channel });
   const poster = await newIdentity({ kind: "human", name: `${channel}-poster` });
   const reader = await newIdentity({ kind: "human", name: `${channel}-reader` });

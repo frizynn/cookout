@@ -3,7 +3,7 @@
  * requests and answers, the idle expiry's format, and the codes they refuse with. `join` issues an agent session
  * token, a bearer token that acts as the agent for one session (Matt, 2026-11-23, mattpocock/cookout#114).
  */
-import type { AgentIdentity, IdentityName, Token } from "../identities/index.ts";
+import type { IdentityName, Token } from "../identities/index.ts";
 import type { IsoTime } from "../time/index.ts";
 
 /** `POST /v1/agent-session` joins (issues an agent session token); `DELETE /v1/agent-session` leaves (revokes it). */
@@ -48,8 +48,8 @@ export interface JoinRequest {
    */
   readonly displayName?: string;
   /**
-   * Refuses to create an agent without `displayName`: 400 `display_name_required`, and nothing is created. The CLI
-   * sends it (mattpocock/cookout#313); the server refuses every such create one release later.
+   * Has no effect, but is still accepted as released CLIs send it: a join that would create an agent without
+   * `displayName` is always 400 `display_name_required`, and nothing is created (mattpocock/cookout#314).
    */
   readonly requireDisplayName?: boolean;
 }
@@ -121,10 +121,11 @@ export const agentSessionExpired = "agent_session_expired";
  * the identity codes), the 409s
  * `agent_session_live` (join while the agent has a live agent session token) and `identity_deactivated` (join a
  * Deactivated agent), the 400s `idle_expiry_too_long`, `agent_session_required` (leave sent without an agent session token),
- * `display_name_required` (a join that would create an agent with no display name, when the request asks for one) and
+ * `display_name_required` (a join or join code that would create an agent with no display name) and
  * `display_name_on_existing_agent` (a display name sent to join an agent that already exists),
  * the 403 `not_brought_in` (an agent approves a join for an existing agent it didn't bring in, #370), the 404
- * `agent_join_request_not_found` (an agent join request expired, was collected, or never existed), and the
+ * `agent_join_request_not_found` (an agent join request expired, was collected, or never existed), the 404
+ * `agent_not_found` (an agent join request names no active agent: a join request never creates one, #461), and the
  * 401s any request sent with an ended agent session token gets, and the 404 `join_code_not_found` (a join code that
  * was used, expired or never issued).
  */
@@ -140,6 +141,7 @@ export const agentSessionErrorCodes = [
   "agent_join_request_not_found",
   "join_code_not_found",
   "not_brought_in",
+  "agent_not_found",
   agentSessionRevoked,
   agentSessionExpired,
 ] as const;
@@ -160,8 +162,8 @@ export const collectAgentJoinRequestPath = "/v1/agent-join-requests/collect";
 export const agentJoinRequestPath = "/v1/agent-join-requests/:code";
 
 /**
- * `PUT /v1/agent-join-requests/:code/approval`: approves it as the caller. A human approves as before; an agent approves
- * only a join that creates an agent of its own owner, recorded as brought in by it, or rejoins one it brought in (#370).
+ * `PUT /v1/agent-join-requests/:code/approval`: approves it as the caller, joining an existing agent and never creating
+ * one (#461). A human approves for an agent they own; an agent only for an agent it brought in (#370).
  */
 export const agentJoinRequestApprovalPath = "/v1/agent-join-requests/:code/approval";
 
@@ -209,7 +211,7 @@ export interface AgentJoinRequestView {
   readonly as: string;
   /** The agent approving joins, such as `ada/triage-agent` when `triage-agent` is someone else's. */
   readonly joins: IdentityName;
-  /** Whether approving creates that agent, owned by the approver. */
+  /** Whether approving creates that agent: always `false`, since a join request never creates one (#461). */
   readonly creates: boolean;
   /** The idle expiry the box asked for (or the default); the approver may lower it, never raise it. */
   readonly idleExpiry: string;
@@ -232,7 +234,10 @@ export interface ApproveAgentJoinRequest {
 
 /** The SDK's calls for an agent join request: a box with no Login joins once a person approves in the browser. */
 export interface AgentJoinCalls {
-  /** `POST /v1/agent-join-requests` (no token): starts an agent join request, which lasts 10 minutes unapproved. */
+  /**
+   * `POST /v1/agent-join-requests` (no token): starts an agent join request, which lasts 10 minutes unapproved. It
+   * never creates an agent: a name no active agent has is 404 `agent_not_found`, and nothing is stored.
+   */
   readonly startAgentJoin: (request: StartAgentJoinRequest) => Promise<AgentJoinRequestStartedResponse>;
   /**
    * `POST /v1/agent-join-requests/collect` (no token): `pending` until a human approves, then, once, the agent
@@ -241,58 +246,12 @@ export interface AgentJoinCalls {
   readonly collectAgentJoin: (requestId: Token) => Promise<AgentJoinCollectedResponse>;
   /** `GET /v1/agent-join-requests/:code` (a human): the request, and the agent approving it would join. */
   readonly getAgentJoinRequest: (userCode: string) => Promise<AgentJoinRequestResponse>;
-  /** `PUT /v1/agent-join-requests/:code/approval` (a human): joins the agent as `join` with the caller's Login would. */
+  /** `PUT /v1/agent-join-requests/:code/approval`: joins the existing agent, as `join` with a Login would, never creating one. */
   readonly approveAgentJoin: (
     userCode: string,
     approval?: ApproveAgentJoinRequest,
   ) => Promise<AgentJoinRequestResponse>;
 }
 
-/** How long a join code lasts unredeemed: 15 minutes. */
-export const joinCodeLifetimeMinutes = 15;
-
-/**
- * `POST /v1/join-codes` (a human; an agent is 403 `human_only`): creates an agent the caller owns, with a
- * single-use join code bound to it (mattpocock/cookout#231).
- */
-export const joinCodesPath = "/v1/join-codes";
-
-/** `POST /v1/join-codes/redeem` (no token): redeems a join code, once, for its agent's agent session token. */
-export const redeemJoinCodePath = "/v1/join-codes/redeem";
-
-/** The body of `POST /v1/join-codes`: the new agent, named as `POST /v1/identities` names one, and its description. */
-export interface CreateJoinCodeRequest {
-  readonly name: string;
-  /** What the agent is for, trimmed, then 1–500 characters. */
-  readonly description?: string;
-}
-
-/**
- * The answer to `POST /v1/join-codes`: the new agent, and its join code, shown this once. The code can only ever join
- * that one agent, once, before `expiresAt`; it is never a person's credential.
- */
-export interface JoinCodeResponse {
-  readonly identity: AgentIdentity;
-  readonly joinCode: Token;
-  readonly expiresAt: IsoTime;
-}
-
-/** The body of `POST /v1/join-codes/redeem`. */
-export interface RedeemJoinCodeRequest {
-  readonly joinCode: string;
-  /** How long the agent session token may go unused, such as `30d`, as `join` takes it. */
-  readonly idleExpiry?: string;
-  /** The host the agent joins from, shown to its owner. 1–253 characters. */
-  readonly host?: string;
-}
-
-/** The SDK's calls for join codes. */
-export interface JoinCodeCalls {
-  /** `POST /v1/join-codes` (a human): creates an agent the caller owns, with a join code for it, valid 15 minutes. */
-  readonly createJoinCode: (request: CreateJoinCodeRequest) => Promise<JoinCodeResponse>;
-  /**
-   * `POST /v1/join-codes/redeem` (no token): the agent session token of the code's agent. A used, expired or unknown
-   * code is 404 `join_code_not_found`.
-   */
-  readonly redeemJoinCode: (request: RedeemJoinCodeRequest) => Promise<AgentSessionResponse>;
-}
+export { joinCodeLifetimeMinutes, joinCodesPath, redeemJoinCodePath } from "./lib/join-codes.ts";
+export type { CreateJoinCodeRequest, JoinCodeCalls, JoinCodeResponse, RedeemJoinCodeRequest } from "./lib/join-codes.ts";

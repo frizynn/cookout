@@ -1,4 +1,4 @@
-import type { ActionMenuParts, MenuChoice } from "../../design-system/index.tsx";
+import type { ActionMenuParts, MenuChoice } from "../../design-system/messages.tsx";
 import type { ChannelName, TopLevelMessage } from "../../sdk/index.ts";
 import type { ThreadClosing, ThreadMessagesState } from "../../board/index.ts";
 import type { MessageMenu } from "../../unread/index.ts";

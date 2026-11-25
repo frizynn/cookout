@@ -1,10 +1,14 @@
 import type { Browser, Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inPane, inSidebar, inThread } from "./regions.ts";
 import { logIn, logInToChannels, logInWithStream } from "./login.ts";
 import type { MessageId } from "../../../sdk/index.ts";
 import type { Person } from "./people.ts";
+import { probeFixtures } from "./probe.ts";
+import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const ONE = 1;
 const A_PAGE_AND_ONE = 51;
@@ -63,7 +67,7 @@ async function mentionedInThread(channel: string): Promise<Person> {
 }
 
 test("the inbox lists the identity's unread rows for you, then activity, each leading with why", async ({ page }) => {
-  const channel = "browser-inbox";
+  const channel = unique("browser-inbox");
   const reader = await mentionedInThread(channel);
   await logInToChannels({ page, token: reader.token });
 
@@ -99,7 +103,7 @@ async function openChannel(page: Page, channel: string, text: string): Promise<v
 }
 
 test("acking in one tab moves the item from Activity to Earlier in another", async ({ page }) => {
-  const channel = "browser-inbox-tabs";
+  const channel = unique("browser-inbox-tabs");
   const second = await inboxInSecondTab(page, channel);
 
   await expect(rows(second, "Activity")).toHaveCount(ONE);
@@ -111,7 +115,7 @@ test("acking in one tab moves the item from Activity to Earlier in another", asy
 });
 
 test("Show earlier reads the next page of what was read into the rows shown, and the end says so", async ({ page }) => {
-  await logInHavingRead(page, "browser-inbox-more");
+  await logInHavingRead(page, unique("browser-inbox-more"));
 
   await expect(rows(page, "Earlier")).toHaveText([/Build 51 passed$/u]);
   await expect(page.getByText("That's everything.")).toBeHidden();
@@ -128,7 +132,7 @@ async function replyFromElsewhere(browser: Browser, poster: Person, thread: stri
   const page = await context.newPage();
   await logIn({ page, token: poster.token, url: thread });
   await inThread(page).getByRole("textbox", { exact: true, name: "Reply" }).fill("Noon works");
-  await inThread(page).getByRole("button", { name: "Send" }).click();
+  await inThread(page).getByRole("button", { exact: true, name: "Send" }).click();
 
   await expect(inThread(page).getByRole("feed", { name: "Replies" })).toContainText("Noon works");
 
@@ -136,7 +140,7 @@ async function replyFromElsewhere(browser: Browser, poster: Person, thread: stri
 }
 
 test("a reply posted by another identity joins its thread's row live", async ({ browser, page }) => {
-  const channel = "browser-inbox-row-live";
+  const channel = unique("browser-inbox-row-live");
   const { reader } = await subscribedPerson(channel);
   const poster = await newIdentity({ kind: "human", name: `${channel}-replier` });
   const { message: parent } = await reader.client.createMessage({ channel, text: "Deploy at noon?" });

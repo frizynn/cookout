@@ -1,4 +1,4 @@
-import { Sidebar, SidebarBody, SidebarFooter } from "../../design-system/index.tsx";
+import { Sidebar, SidebarBody, SidebarFooter } from "../../design-system/layout.tsx";
 import type { Identity } from "../../sdk/index.ts";
 import type { Layout } from "../../layout/index.ts";
 import type { ReactNode } from "react";

@@ -1,7 +1,7 @@
-import type { ListboxGroup, ListboxOption } from "../../design-system/index.tsx";
+import type { ListboxGroup, ListboxOption } from "../../design-system/controls.tsx";
 import { useCallback, useMemo } from "react";
 import type { BoxOption } from "./search-options.ts";
-import { Listbox } from "../../design-system/index.tsx";
+import { Listbox } from "../../design-system/controls.tsx";
 import type { ReactNode } from "react";
 import { SearchResultOption } from "./search-result-option.tsx";
 import { parseQuery } from "../../search/index.ts";

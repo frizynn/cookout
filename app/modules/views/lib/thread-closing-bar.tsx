@@ -2,7 +2,7 @@ import { ClosedBy } from "./closed-by.tsx";
 import type { Closing } from "../../messages/index.ts";
 import { ClosingRefusal } from "./closing-refusal.tsx";
 import type { ReactNode } from "react";
-import { ThreadBar } from "../../design-system/index.tsx";
+import { ThreadBar } from "../../design-system/messages.tsx";
 import type { ThreadClosing } from "../../board/index.ts";
 import type { TopLevelMessage } from "../../sdk/index.ts";
 import { useCallback } from "react";

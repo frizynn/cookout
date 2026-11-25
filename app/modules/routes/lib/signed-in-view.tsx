@@ -3,7 +3,7 @@ import { SidebarKeys, SidebarView } from "../../views/index.tsx";
 import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
 import type { Stores } from "./stores.ts";
-import { Workspace } from "../../design-system/index.tsx";
+import { Workspace } from "../../design-system/layout.tsx";
 import { WorkspaceBody } from "./workspace-body.tsx";
 import { useSyncExternalStore } from "react";
 

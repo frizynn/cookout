@@ -69,6 +69,14 @@ const createsForOthers: Refusal = {
   status: FORBIDDEN,
 };
 
+function displayNameRequired(name: IdentityName): Refusal {
+  return {
+    code: "display_name_required",
+    message: `${name} would be a new agent, and a new agent needs a display name: send displayName (--display-name in the CLI).`,
+    status: BAD_REQUEST,
+  };
+}
+
 function identityExists(name: string): Refusal {
   return { code: "identity_exists", message: `The name ${name} is taken.`, status: CONFLICT };
 }
@@ -149,6 +157,13 @@ function requireMayCreate(caller: HumanIdentity, identity: Identity): Effect.Eff
   return Effect.fail(createsForOthers);
 }
 
+function requireAgentNamed(identity: Identity): Effect.Effect<void, Refusal> {
+  if (identity.kind === "agent" && Predicate.isUndefined(identity.displayName)) {
+    return Effect.fail(displayNameRequired(identity.name));
+  }
+  return Effect.void;
+}
+
 function storedOrRefused(result: "created" | Refused, identity: Identity): Effect.Effect<void, Refusal> {
   if (result === "created") {
     return Effect.void;
@@ -176,6 +191,7 @@ function createIdentity(request: {
     const now = yield* DateTime.now;
     const identity = requested(newIdentity(caller, body, isoTimeOf(now)), body);
     yield* requireMayCreate(caller, identity);
+    yield* requireAgentNamed(identity);
     const { token, hash } = yield* issueToken;
     yield* storeNew(identity, hash);
     return { identity, token };
@@ -191,6 +207,7 @@ function createAgentByAgent(request: {
     const now = yield* DateTime.now;
     const brought = yield* agentBroughtInBy(caller, body, isoTimeOf(now));
     const identity = requested(brought, body);
+    yield* requireAgentNamed(identity);
     const { hash } = yield* issueToken;
     yield* storeNew(identity, hash);
     return { identity };

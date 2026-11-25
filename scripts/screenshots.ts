@@ -1,11 +1,11 @@
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 import type { Screen, Shot, Theme, ThemePass } from "./lib/screenshots.ts";
 import { field, list, parseJson, text } from "./lib/json.ts";
+import { hillsPng, moveClockForward } from "../app/modules/testing/index.ts";
 import { mkdirSync, mkdtempSync } from "node:fs";
 import { screenshotOptions, takeScreenshots, withOlderHistory } from "./lib/screenshots.ts";
 import type { DevCookout } from "./lib/dev-cookout.ts";
 import { chromium } from "@playwright/test";
-import { moveClockForward } from "../app/modules/testing/index.ts";
 import path from "node:path";
 import { setScreenPresences } from "./lib/screen-triggers.ts";
 import { spawnSync } from "node:child_process";
@@ -243,6 +243,7 @@ async function prepared(server: DevCookout): Promise<Board> {
     adminToken,
     dropped: DROPPED_AGENT,
     droppedToken: board.dropped,
+    image: hillsPng(),
     ownerToken: board.owner,
     url,
   });

@@ -1,4 +1,3 @@
-import type { AgentJoinCollectedResponse, AgentJoinRequestStartedResponse } from "../../../agent-sessions/index.ts";
 import type { CommandLineNeeds, TestCookoutService, TestIdentity } from "../../../testing/server.ts";
 import {
   TestCookout,
@@ -10,6 +9,7 @@ import {
   watchCookout,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
+import type { AgentJoinRequestStartedResponse } from "../../../agent-sessions/index.ts";
 import { Effect } from "effect";
 import type { Scope } from "effect";
 
@@ -27,23 +27,8 @@ function started(cookout: TestCookoutService): Effect.Effect<AgentJoinRequestSta
   return answer(() => cookout.clientFor().startAgentJoin(asked));
 }
 
-function sessionTokenOf(joined: AgentJoinCollectedResponse): string {
-  if (joined.status === "approved") {
-    return joined.agentSession.agentSessionToken;
-  }
-  return expect.unreachable("The worker's first join was not approved.");
-}
-
-function workerBroughtInBy(cookout: TestCookoutService, chief: TestIdentity): Effect.Effect<void> {
-  return Effect.gen(function* bringInWorker() {
-    const first = yield* started(cookout);
-    yield* answer(() => chief.client.approveAgentJoin(first.userCode));
-    const sessionToken = yield* Effect.map(
-      answer(() => cookout.clientFor().collectAgentJoin(first.requestId)),
-      sessionTokenOf,
-    );
-    yield* answer(() => cookout.clientFor(sessionToken).leave());
-  });
+function workerBroughtInBy(chief: TestIdentity): Effect.Effect<void> {
+  return Effect.asVoid(answer(() => chief.client.createAgentForOwner({ displayName: "worker", name: "worker" })));
 }
 
 const chiefBroughtInWorker: Effect.Effect<Board, never, TestCookout | CommandLineNeeds | Scope.Scope> = Effect.gen(
@@ -51,7 +36,7 @@ const chiefBroughtInWorker: Effect.Effect<Board, never, TestCookout | CommandLin
     const cookout = yield* TestCookout;
     yield* cookout.createIdentity("ada", { kind: "human" });
     const chief = yield* cookout.createIdentity("chief", { owner: "ada" });
-    yield* workerBroughtInBy(cookout, chief);
+    yield* workerBroughtInBy(chief);
     const env = { COOKOUT_STATE_DIR: yield* freshStateFolder, COOKOUT_TOKEN: chief.token, COOKOUT_URL: cookout.url };
     return { cookout, env };
   },

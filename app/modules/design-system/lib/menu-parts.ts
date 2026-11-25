@@ -25,6 +25,7 @@ interface MessageActionParts {
   readonly actionHref: string | null;
   readonly actionLabel: string;
   readonly onAction: (() => void) | null;
+  readonly threadHref: string | null;
 }
 
 interface MenuChoiceLabel {

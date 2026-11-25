@@ -22,7 +22,9 @@ it.effect("an admin deletes an identity with no messages: its token stops workin
     );
     const token = yield* refusal(bot.client.whoami);
     const { identities } = yield* answer(() => cookout.client.listIdentities({ include: "deactivated" }));
-    const again = yield* answer(() => cookout.client.createIdentity({ kind: "agent", name: "e2e-run-1" }));
+    const again = yield* answer(() =>
+      cookout.client.createIdentity({ displayName: "e2e-run-1", kind: "agent", name: "e2e-run-1" }),
+    );
 
     expect(answers).toStrictEqual([{ messages: 0 }, { identity: bot.identity }]);
     expect(token).toMatchObject({ status: UNAUTHORIZED });
@@ -107,6 +109,6 @@ it.effect("deleting a command's handler identity removes the command", () =>
     yield* answer(() => cookout.client.deleteIdentity("deploy"));
     const { commands } = yield* answer(cookout.client.listCommands);
 
-    expect(Arr.map(commands, ({ name }) => name)).toStrictEqual(["spawn-agent"]);
+    expect(Arr.map(commands, ({ name }) => name)).toStrictEqual([]);
   }).pipe(Effect.provide(testCookout())),
 );

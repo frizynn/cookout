@@ -14,14 +14,23 @@ it.effect("any human creates an agent it owns, sees its token once, and the list
     const grace = yield* cookout.createIdentity("grace", HUMAN);
     const [created, named] = yield* Effect.all(
       [
-        answer(() => grace.client.createIdentity({ kind: "agent", name: "helper" })),
-        answer(() => grace.client.createIdentity({ kind: "agent", name: "scout", owner: "grace" })),
+        answer(() => grace.client.createIdentity({ displayName: "helper", kind: "agent", name: "helper" })),
+        answer(() =>
+          grace.client.createIdentity({ displayName: "scout", kind: "agent", name: "scout", owner: "grace" }),
+        ),
       ],
       ONE_AT_A_TIME,
     );
     const whoami = yield* answer(cookout.clientFor(created.token).whoami);
     const { identities } = yield* answer(grace.client.listIdentities);
-    const helper = { admin: false, createdAt: BOOT, kind: "agent", name: "helper", owner: "grace" };
+    const helper = {
+      admin: false,
+      createdAt: BOOT,
+      displayName: "helper",
+      kind: "agent",
+      name: "helper",
+      owner: "grace",
+    };
 
     expect(created.identity).toStrictEqual(helper);
     expect(named.identity).toMatchObject({ name: "scout", owner: "grace" });
@@ -40,7 +49,7 @@ it.effect(
       const agent = yield* cookout.createIdentity("helper", { owner: "grace" });
       const refused = yield* Effect.all(
         [
-          refusal(() => grace.client.createIdentity({ kind: "agent", name: "spy", owner: "ada" })),
+          refusal(() => grace.client.createIdentity({ displayName: "spy", kind: "agent", name: "spy", owner: "ada" })),
           refusal(() => grace.client.createIdentity({ kind: "human", name: "eve" })),
           refusal(() => agent.client.createIdentity({ kind: "human", name: "minion" })),
         ],
@@ -63,11 +72,12 @@ it.effect("an admin creates an agent owned by any human, and an owner who is no 
     yield* cookout.createIdentity("ada", HUMAN);
     yield* cookout.createIdentity("release-bot", { owner: "ada" });
     const reviewer = yield* answer(() =>
-      cookout.client.createIdentity({ kind: "agent", name: "reviewer", owner: "ada" }),
+      cookout.client.createIdentity({ displayName: "reviewer", kind: "agent", name: "reviewer", owner: "ada" }),
     );
     const refused = yield* Effect.forEach(
       ["release-bot", "nobody"],
-      (owner) => refusal(() => cookout.client.createIdentity({ kind: "agent", name: "stray", owner })),
+      (owner) =>
+        refusal(() => cookout.client.createIdentity({ displayName: "stray", kind: "agent", name: "stray", owner })),
       ONE_AT_A_TIME,
     );
 
@@ -84,15 +94,26 @@ it.effect("owner/name is an agent's name only when owner owns it, and has one '/
     const cookout = yield* TestCookout;
     yield* cookout.createIdentity("ada", HUMAN);
     const grace = yield* cookout.createIdentity("grace", HUMAN);
-    const own = yield* answer(() => grace.client.createIdentity({ kind: "agent", name: "grace/helper" }));
+    const own = yield* answer(() =>
+      grace.client.createIdentity({ displayName: "grace/helper", kind: "agent", name: "grace/helper" }),
+    );
     const byAdmin = yield* answer(() =>
-      cookout.client.createIdentity({ kind: "agent", name: "grace/scout", owner: "grace" }),
+      cookout.client.createIdentity({ displayName: "grace/scout", kind: "agent", name: "grace/scout", owner: "grace" }),
     );
     const refused = yield* Effect.all(
       [
-        refusal(() => grace.client.createIdentity({ kind: "agent", name: "ada/helper" })),
-        refusal(() => cookout.client.createIdentity({ kind: "agent", name: "ada/helper", owner: "grace" })),
-        refusal(() => grace.client.createIdentity({ kind: "agent", name: "grace/helper/x" })),
+        refusal(() => grace.client.createIdentity({ displayName: "ada/helper", kind: "agent", name: "ada/helper" })),
+        refusal(() =>
+          cookout.client.createIdentity({
+            displayName: "ada/helper",
+            kind: "agent",
+            name: "ada/helper",
+            owner: "grace",
+          }),
+        ),
+        refusal(() =>
+          grace.client.createIdentity({ displayName: "grace/helper/x", kind: "agent", name: "grace/helper/x" }),
+        ),
         refusal(() => cookout.client.createIdentity({ kind: "human", name: "a/b" })),
       ],
       ONE_AT_A_TIME,

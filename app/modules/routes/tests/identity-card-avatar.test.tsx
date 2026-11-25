@@ -1,5 +1,5 @@
-import { IdentityCard, IdentityCards } from "../../design-system/index.tsx";
-import type { IdentityCardParts, IdentityCardSource } from "../../design-system/index.tsx";
+import { IdentityCard, IdentityCards } from "../../design-system/messages.tsx";
+import type { IdentityCardParts, IdentityCardSource } from "../../design-system/messages.tsx";
 import { act, render, screen, within } from "@testing-library/react";
 import { expect, it } from "vitest";
 

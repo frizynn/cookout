@@ -77,7 +77,6 @@ export type TestCookoutOptions = {
   readonly requestsPerMinute?: number;
   readonly commandCallsPerMinute?: number;
   readonly streamsPerIdentity?: number;
-  readonly routine?: "fake" | "unreachable";
   readonly triggers?: "receiver" | "scripted";
   readonly allowLocalTriggers?: false;
 };
@@ -97,29 +96,6 @@ const settingNames: readonly (readonly [Setting, string])[] = [
   ["webhookTimeoutSeconds", "COOKOUT_WEBHOOK_TIMEOUT_SECONDS"],
 ];
 
-const testRoutineFirePath = "/v1/claude_code/routines/trig_test/fire";
-
-const testRoutineToken = "routine-test-token";
-
-const unreachableUrl = "http://127.0.0.1:1";
-
-function routineBase(routine: "fake" | "unreachable", webhookUrl: string): string {
-  if (routine === "fake") {
-    return webhookUrl;
-  }
-  return unreachableUrl;
-}
-
-function routineEnv(options: TestCookoutOptions, webhookUrl: string): readonly (readonly [string, string])[] {
-  if (Predicate.isUndefined(options.routine)) {
-    return [];
-  }
-  return [
-    ["COOKOUT_ROUTINE_FIRE_URL", `${routineBase(options.routine, webhookUrl)}${testRoutineFirePath}`],
-    ["COOKOUT_ROUTINE_TOKEN", testRoutineToken],
-  ];
-}
-
 function localTriggers({ allowLocalTriggers }: TestCookoutOptions): readonly (readonly [string, string])[] {
   if (allowLocalTriggers === false) {
     return [];
@@ -127,13 +103,13 @@ function localTriggers({ allowLocalTriggers }: TestCookoutOptions): readonly (re
   return [["COOKOUT_ALLOW_LOCAL_TRIGGERS", "true"]];
 }
 
-function serverEnv(options: TestCookoutOptions, webhookUrl: string): ConfigProvider.ConfigProvider {
+function serverEnv(options: TestCookoutOptions): ConfigProvider.ConfigProvider {
   const set = Arr.flatMap(settingNames, ([option, name]) => {
     const value = options[option];
     return value === undefined ? [] : [[name, String(value)] as const];
   });
   return ConfigProvider.fromEnv({
-    env: Rec.fromEntries([...set, ...localTriggers(options), ...routineEnv(options, webhookUrl)]),
+    env: Rec.fromEntries([...set, ...localTriggers(options)]),
   });
 }
 
@@ -217,7 +193,7 @@ function bootOn(options: TestCookoutOptions): Effect.Effect<Boot, never, Scope.S
     const storage = yield* storageFor(options);
     const logs = yield* capturedLogs;
     const adminToken = yield* newToken(services);
-    const env = serverEnv(options, Context.get(services, WebhookFake).url);
+    const env = serverEnv(options);
     const bootAs = (adminName: string | undefined) =>
       Effect.gen(function* bootServer() {
         const named = adminName === undefined ? {} : { adminName: identityName(adminName) };
@@ -292,5 +268,3 @@ export const testCookout = (options: TestCookoutOptions = {}): Layer.Layer<TestC
       });
     }).pipe(Effect.orDie),
   );
-
-export { testRoutineFirePath, testRoutineToken };

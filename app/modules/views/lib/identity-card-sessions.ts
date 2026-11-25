@@ -1,4 +1,4 @@
-import type { IdentityCardSession, IdentityCardSource } from "../../design-system/index.tsx";
+import type { IdentityCardSession, IdentityCardSource } from "../../design-system/messages.tsx";
 import type { IdentityName, ListedAgentSession } from "../../sdk/index.ts";
 import { agentSessions, identityList } from "../../board/index.ts";
 import type { BoardStore } from "../../board/index.ts";

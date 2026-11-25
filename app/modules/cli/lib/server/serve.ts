@@ -11,15 +11,7 @@ import {
   Schema,
   String as Str,
 } from "effect";
-import {
-  BoardUrl,
-  SpawnSettings,
-  boardUrlLayer,
-  domainLayers,
-  openRoutes,
-  routes,
-  triggerCallerLive,
-} from "./route-list.ts";
+import { BoardUrl, boardUrlLayer, domainLayers, openRoutes, routes, triggerCallerLive } from "./route-list.ts";
 import { Command, Flag } from "effect/cli";
 import { CommandFailed, printLine, refused } from "./output.ts";
 import type { IdentityName, Token } from "../../../identities/index.ts";
@@ -67,7 +59,6 @@ export const cookoutServer = ({
   ).pipe(
     Layer.provideMerge(adminTokenSet({ adminName: name, adminToken: admin })),
     Layer.provideMerge(domainLayers),
-    Layer.provideMerge(Layer.succeed(SpawnSettings, { adminName: name, publicUrl: serving.publicUrl ?? "" })),
     Layer.provideMerge(boardUrlLayer(serving.publicUrl ?? "")),
   );
 

@@ -2,6 +2,7 @@ import type { Command, Step } from "./merge-steps.ts";
 import { DONE, run, stop, tail } from "./merge-steps.ts";
 import { field, list, parseJson, text } from "./json.ts";
 import type { CheckRun } from "./check-run.ts";
+import { cutOffStop } from "./time-limits.ts";
 import { redJobs } from "./check-run.ts";
 
 interface Polled {
@@ -105,6 +106,10 @@ function failedOrCancelled(options: SameCommit, others: readonly Listed[]): Verd
   const failed = others.find(({ conclusion, status }) => status === COMPLETED && conclusion !== CANCELLED) ?? NOT_FOUND;
   if (failed !== NOT_FOUND) {
     return { kind: "red", runNumber: failed.runNumber };
+  }
+  const cutOff = cutOffStop(options);
+  if (cutOff !== null) {
+    return { kind: "next", lines: cutOff.lines, next: cutOff.stopped };
   }
   return rerun(options, Math.max(options.runNumber, ...others.map(({ runNumber }) => runNumber)));
 }

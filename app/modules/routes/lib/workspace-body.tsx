@@ -1,5 +1,5 @@
 import { IdentityDeletedNotice, MessageListKeys, ReconnectingView, SearchBox } from "../../views/index.tsx";
-import { WorkspaceColumn, WorkspaceMain } from "../../design-system/index.tsx";
+import { WorkspaceColumn, WorkspaceMain } from "../../design-system/layout.tsx";
 import type { IdentityName } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";

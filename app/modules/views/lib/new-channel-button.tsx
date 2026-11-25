@@ -1,5 +1,5 @@
 import type { ChannelCreation } from "../../board/index.ts";
-import { HeadingButton } from "../../design-system/index.tsx";
+import { HeadingButton } from "../../design-system/layout.tsx";
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
 
