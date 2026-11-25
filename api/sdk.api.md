@@ -975,8 +975,9 @@ declare const agentJoinRequestPath = "/v1/agent-join-requests/:code";
  */
 declare const agentJoinRequestApprovalPath = "/v1/agent-join-requests/:code/approval";
 /**
- * `PUT /v1/agent-join-requests/:code/denial`: dismisses the pending request, for anyone who could approve it (#586).
- * It leaves every approver's list, and its collect is then 403 `agent_join_request_denied`.
+ * `PUT /v1/agent-join-requests/:code/denial`: dismisses the pending request, for anyone who could approve it as the
+ * agent it asked for (#586); approving that would join `<caller>/<name>` instead is 403 `not_owner`. It leaves every
+ * approver's list, and its collect is then 403 `agent_join_request_denied`.
  */
 declare const agentJoinRequestDenialPath = "/v1/agent-join-requests/:code/denial";
 /**

@@ -163,3 +163,16 @@ it.effect("the owner's stream hears a dismissed join request leave", () =>
     expect(dismissed).toStrictEqual({ agentJoinRequests: [], type: "agent-join-requests" });
   }).pipe(Effect.scoped, Effect.provide(testCookout())),
 );
+
+it.effect("someone whose own <name>/agent approving would join can't dismiss another owner's join request", () =>
+  Effect.gen(function* namespacedRefused() {
+    const { ada, bob, cookout } = yield* board;
+    yield* cookout.createIdentity("bob/worker", { owner: "bob" });
+    const request = yield* started(cookout);
+    const refused = yield* refusal(() => bob.client.denyAgentJoin(request.userCode));
+    const listed = yield* pendingIn(ada.client);
+
+    expect(refused).toMatchObject({ code: "not_owner", status: FORBIDDEN });
+    expect(listed).toMatchObject([{ userCode: request.userCode }]);
+  }).pipe(Effect.provide(testCookout())),
+);

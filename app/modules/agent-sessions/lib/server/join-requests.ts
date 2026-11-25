@@ -24,7 +24,7 @@ import {
   termsAsked,
   viewOf,
 } from "./join-request-terms.ts";
-import { agentNotFound, agentSessionLive } from "./refusals.ts";
+import { agentNotFound, agentSessionLive, joinNotOwned } from "./refusals.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { On } from "./join.ts";
 import type { Refusal } from "../../../http/index.ts";
@@ -212,7 +212,10 @@ function denier(on: Changing): JoinRequests["denyJoin"] {
   return ({ caller, userCode }) =>
     Effect.gen(function* denyAgentJoinRequest() {
       const found = yield* liveRequest(on)(userCode);
-      yield* agentToApprove({ as: found.agent, caller, on });
+      const { identity } = yield* agentToApprove({ as: found.agent, caller, on });
+      if (identity.name !== found.agent) {
+        return yield* Effect.fail(joinNotOwned(found.agent));
+      }
       const at = yield* now;
       const denied = yield* on.storage.denyAgentJoinRequest(userCode, at);
       if (denied === "not_found") {
