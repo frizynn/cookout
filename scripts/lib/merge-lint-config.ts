@@ -236,5 +236,4 @@ function oxlintFindings(sides: Sides): readonly Finding[] {
   ];
 }
 
-export type { Finding };
 export { oxlintFindings };
