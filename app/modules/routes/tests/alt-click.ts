@@ -3,7 +3,7 @@ import { adminClient, newIdentity } from "./identities.ts";
 import { answeredUntil, answering } from "./answering.ts";
 import { fireEvent, screen, within } from "@testing-library/react";
 import type { Answering } from "./answering.ts";
-import type { Live } from "../../live/index.ts";
+import type { Live } from "../../testing/web.ts";
 import { inSidebar } from "./regions.ts";
 import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";

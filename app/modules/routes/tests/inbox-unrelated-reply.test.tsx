@@ -1,11 +1,10 @@
 import type { Message, ServerSentEvent } from "../../sdk/index.ts";
 import { adminClient, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
-import type { Live } from "../../live/index.ts";
 import type { Unread } from "../../unread/index.ts";
 import { boardStoreFor } from "./defaults.ts";
-import { createLive } from "../../live/index.ts";
 import { createUnread } from "../../unread/index.ts";
+import { scriptedLive } from "../../testing/web.ts";
 import { waitFor } from "@testing-library/react";
 
 const CHANNEL = "web-unread-unrelated-reply";
@@ -15,26 +14,6 @@ interface Following {
   readonly reply: Message;
   readonly send: (event: ServerSentEvent) => void;
   readonly changes: () => number;
-}
-
-interface Scripted {
-  readonly live: Live;
-  readonly send: (event: ServerSentEvent) => void;
-}
-
-function scripted(): Scripted {
-  const opened: ((event: ServerSentEvent) => void)[] = [];
-  const live = createLive({
-    open: (onEvent) => {
-      opened.push(onEvent);
-    },
-  });
-  function send(event: ServerSentEvent): void {
-    for (const onEvent of opened) {
-      onEvent(event);
-    }
-  }
-  return { live, send };
 }
 
 async function replyElsewhere(): Promise<Message> {
@@ -51,7 +30,7 @@ async function replyElsewhere(): Promise<Message> {
 async function followingAReply(): Promise<Following> {
   const reader = await newIdentity({ kind: "human", name: `${CHANNEL}-reader` });
   const reply = await replyElsewhere();
-  const { live, send } = scripted();
+  const { live, send } = scriptedLive();
   const unread = createUnread({ boardStore: boardStoreFor({ client: reader.client, live }) });
   const heard: null[] = [];
   unread.subscribe(() => {

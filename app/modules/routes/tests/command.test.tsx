@@ -3,9 +3,9 @@ import { callWith, callWithFields, channelWithCommand, noProperties, openChannel
 import { expect, it } from "vitest";
 import { screen, within } from "@testing-library/react";
 import { alertSaying } from "./alerts.ts";
-import { createCookoutClient } from "../../sdk/index.ts";
 import { messagesIn } from "./messages.ts";
 import { openAt } from "./render.tsx";
+import { unreachableClient } from "../../testing/index.ts";
 
 const LOW = 1;
 const HIGH = 2;
@@ -207,7 +207,7 @@ it("a call to a server that can't be reached says so, with no schema errors", { 
   expect.hasAssertions();
 
   await channelWithCommand({ channel: "web-command-unreachable", command: { name: "web-call-unreachable" } });
-  const nowhereClient = createCookoutClient({ env: {}, token: "cookout_any", url: "http://127.0.0.1:1" });
+  const nowhereClient = unreachableClient({ token: "cookout_any" });
   const close = await openChannel({
     channel: "web-command-unreachable",
     client: {

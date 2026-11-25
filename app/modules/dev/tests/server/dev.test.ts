@@ -12,10 +12,9 @@ import {
 } from "../../../testing/server.ts";
 import { clockForwardPath, relayCutPath, relayRestorePath } from "../../../http/index.ts";
 import { expect, it } from "@effect/vitest";
+import { moveClockForward, testClient } from "../../../testing/index.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
 import type { DevProcess } from "../../../testing/server.ts";
-import { createCookoutClient } from "../../../sdk/index.ts";
-import { moveClockForward } from "../../../testing/index.ts";
 
 interface Fetched {
   readonly status: number;
@@ -87,9 +86,7 @@ function postedJson(url: string): Effect.Effect<unknown> {
 it.effect("pnpm dev serves a fresh board and a webhook fake, and removes its database when it stops", () =>
   Effect.gen(function* devServesAndCleansUp() {
     const dev = yield* startDev;
-    const { identity } = yield* answer(() =>
-      createCookoutClient({ env: {}, token: dev.adminToken, url: dev.url }).whoami(),
-    );
+    const { identity } = yield* answer(() => testClient({ env: {}, token: dev.adminToken, url: dev.url }).whoami());
     const fakeStatus = yield* postedStatus(dev.webhookFakeUrl, "/command");
     const keptWhileRunning = yield* databaseExists(dev.database);
     yield* dev.stop;
@@ -234,10 +231,10 @@ it.effect("the dev program's fake routine answers a fire as a routine does, nami
 
 function threadStartedOn(dev: DevProcess): Effect.Effect<CookoutClient> {
   return Effect.gen(function* startThread() {
-    const admin = createCookoutClient({ env: {}, token: dev.adminToken, url: dev.url });
+    const admin = testClient({ env: {}, token: dev.adminToken, url: dev.url });
     yield* answer(() => admin.createChannel({ name: "release" }));
     const { token } = yield* answer(() => admin.createIdentity({ kind: "human", name: "ada" }));
-    const ada = createCookoutClient({ env: {}, token, url: dev.url });
+    const ada = testClient({ env: {}, token, url: dev.url });
     yield* answer(() => ada.createMessage({ channel: "release", text: "Who owns the release notes?" }));
     return ada;
   });

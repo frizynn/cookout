@@ -1,7 +1,7 @@
 import type { Reading, Unread } from "../../unread/index.ts";
 import { createReading, createUnread } from "../../unread/index.ts";
 import type { BoardStore } from "../../board/index.ts";
-import type { Live } from "../../live/index.ts";
+import type { Live } from "../../testing/web.ts";
 import { createBoardStore } from "../../board/index.ts";
 import { createPageFocus } from "../../page-focus/index.ts";
 import { handClock } from "./hand-clock.ts";
@@ -48,7 +48,7 @@ function unreadFor({ boardStore, unread }: UnreadOpening): Unread {
 export { createKeymap } from "../../keymap/index.ts";
 export { createUnread } from "../../unread/index.ts";
 export type { BoardStore } from "../../board/index.ts";
-export type { Live } from "../../live/index.ts";
+export type { Live } from "../../testing/web.ts";
 export type { BoardStoreClient };
 export type { Unread } from "../../unread/index.ts";
 export type { Reading } from "../../unread/index.ts";

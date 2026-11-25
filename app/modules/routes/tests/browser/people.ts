@@ -1,6 +1,5 @@
 import type { CookoutClient, CreateIdentityRequest, IdentityWithTokenResponse } from "../../../sdk/index.ts";
-import { createCookoutClient } from "../../../sdk/index.ts";
-import { createTestAgent } from "../../../testing/index.ts";
+import { createTestAgent, testClient } from "../../../testing/index.ts";
 
 export interface Person {
   readonly client: CookoutClient;
@@ -8,7 +7,7 @@ export interface Person {
 }
 
 export function adminClient(): CookoutClient {
-  return createCookoutClient();
+  return testClient();
 }
 
 export interface Creating {
@@ -28,5 +27,5 @@ export async function createdBy({ by, request }: Creating): Promise<IdentityWith
 
 export async function newIdentity(request: CreateIdentityRequest): Promise<Person> {
   const { token } = await createdBy({ by: adminClient(), request });
-  return { client: createCookoutClient({ token }), token };
+  return { client: testClient({ token }), token };
 }
