@@ -1,6 +1,7 @@
 import { Array as Arr, Effect, Option, pipe } from "effect";
 import type {
   CollectLoginRequest,
+  IssueLoginCredential,
   LoginCollection,
   LoginRequest,
   LoginRequestsSection,
@@ -130,6 +131,18 @@ function findCredentialIn(held: Held) {
     );
 }
 
+function issueStraightTo(held: Held) {
+  return ({ credentialHash, identity }: IssueLoginCredential): Identity | undefined =>
+    pipe(
+      identityOf(held, identity),
+      Option.map((found) => {
+        held.credentials.set(credentialHash, found.name);
+        return found;
+      }),
+      Option.getOrUndefined,
+    );
+}
+
 function memoryLoginRequests({ findIdentity, state }: MemoryLoginRequestsOptions): MemoryLoginRequestsSection {
   const requests: Requests = new Map();
   const held: Held = { credentials: new Map(), findIdentity };
@@ -137,6 +150,7 @@ function memoryLoginRequests({ findIdentity, state }: MemoryLoginRequestsOptions
   const add = addTo(requests);
   const collect = collectFrom(requests, held);
   const findCredential = findCredentialIn(held);
+  const issue = issueStraightTo(held);
   return {
     addLoginRequest: (request, now) => open(state, () => add(request, now)),
     approveLoginRequest: (userCode, approver, now) => open(state, () => approve(userCode, approver, now)),
@@ -149,6 +163,7 @@ function memoryLoginRequests({ findIdentity, state }: MemoryLoginRequestsOptions
     findLoginCredential: (hash) => open(state, () => findCredential(hash)),
     findLoginRequest: (userCode, now) =>
       open(state, () => pipe(liveByCode(requests, userCode, now), Option.map(shown), Option.getOrUndefined)),
+    issueLoginCredential: (given) => open(state, () => issue(given)),
     revokeLoginCredential: (hash) => open(state, () => held.credentials.delete(hash)),
   };
 }

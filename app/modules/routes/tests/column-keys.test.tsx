@@ -7,6 +7,7 @@ import { openAt } from "./render.tsx";
 const LEFT = "ArrowLeft";
 const RIGHT = "ArrowRight";
 const DOWN = "ArrowDown";
+const UP = "ArrowUp";
 
 async function seeded(channel: string): Promise<number> {
   await adminClient().createChannel({ name: channel });
@@ -94,7 +95,7 @@ function unboxed(): void {
 function pressedRightOnOthers(): readonly boolean[] {
   const pressed: boolean[] = [];
   for (const link of globalThis.document.querySelectorAll(
-    'nav[aria-label="Sidebar"] a[href]:not([href^="#/channels/"])',
+    'nav[aria-label="Sidebar"] a[href]:not([href^="#/channels/"]):not([href="#/inbox"])',
   )) {
     pressed.push(pressedOn(link, RIGHT));
   }
@@ -156,7 +157,7 @@ it("→ on another channel's link opens it and lands on its newest message", { t
   close();
 });
 
-it("→ leaves a key alone on a sidebar link that isn't a channel's, or a row's button", {
+it("→ leaves a key alone on a sidebar link that isn't a channel's or the Inbox's, or a row's button", {
   timeout: 10_000,
 }, async () => {
   expect.hasAssertions();
@@ -211,6 +212,37 @@ it("↓ on the newest message stays put with no channel feed", { timeout: 10_000
   pressedOn(newest, DOWN);
 
   expect(active()).toBe(newest);
+
+  close();
+});
+
+function topMessage(): HTMLElement {
+  return inThread().getByRole("article", { name: "Parent message" });
+}
+
+it("↑ on the thread's first reply focuses its top message, and ↓ there goes back to the reply", {
+  timeout: 10_000,
+}, async () => {
+  expect.hasAssertions();
+
+  const close = await threadOpened("web-columns-top");
+  const up = pressedOn(reply(), UP);
+  const top = active();
+  const down = pressedOn(topMessage(), DOWN);
+
+  expect([up, top, down, active()]).toStrictEqual([true, topMessage(), true, reply()]);
+
+  close();
+});
+
+it("↑ and ↓ leave the top message alone off a message, and off the thread panel", { timeout: 10_000 }, async () => {
+  expect.hasAssertions();
+
+  const close = await threadOpened("web-columns-top-off");
+  const fromLink = pressedOn(inThread().getByRole("link", { name: "Close panel" }), UP);
+  pressedOn(await messageSaying("The oldest."), DOWN);
+
+  expect([fromLink, active()]).toStrictEqual([false, await messageSaying("The newest.")]);
 
   close();
 });
