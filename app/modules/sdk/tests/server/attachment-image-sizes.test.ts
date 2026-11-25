@@ -3,6 +3,7 @@ import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import type { Attachment } from "../../index.ts";
 import type { TestCookoutService } from "../../../testing/server.ts";
+import { bannerPng } from "../../../testing/index.ts";
 
 const PNG_WIDTH = 640;
 const PNG_HEIGHT = 480;
@@ -18,6 +19,8 @@ const LOSSLESS_WIDTH = 5;
 const LOSSLESS_HEIGHT = 9;
 const EXTENDED_WIDTH = 4000;
 const EXTENDED_HEIGHT = 3000;
+const BANNER_WIDTH = 864;
+const BANNER_HEIGHT = 224;
 
 const PNG = "89504e470d0a1a0a0000000d4948445200000280000001e00806000000";
 const PNG_CUT_BEFORE_ITS_SIZE = "89504e470d0a1a0a0000000d494844520000";
@@ -31,6 +34,7 @@ const LOSSY_WEBP = "524946461800000057454250565038200c0000000000009d012a2c01c800
 const LOSSLESS_WEBP = "5249464612000000574542505650384c060000002f0400020000";
 const EXTENDED_WEBP = "524946461600000057454250565038580a000000000000009f0f00b70b00";
 const TEXT = "6a757374206e6f746573";
+const BANNER = Buffer.from(bannerPng()).toString("hex");
 
 function bytesOf(hex: string): Uint8Array {
   return Uint8Array.from(Buffer.from(hex, "hex"));
@@ -60,6 +64,7 @@ function postedOne(cookout: TestCookoutService, name: string, hex: string): Effe
 
 it.effect.each([
   ["a PNG", "shot.png", PNG, PNG_WIDTH, PNG_HEIGHT],
+  ["a whole PNG wider than a thumbnail", "banner.png", BANNER, BANNER_WIDTH, BANNER_HEIGHT],
   ["a JPEG", "photo.jpg", JPEG, JPEG_WIDTH, JPEG_HEIGHT],
   [
     "a JPEG with a restart marker before its frame",
