@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 const FIXTURES = ".vitest";
 const PASSED = 0;
 const FAILED = 1;
+const SUMMARY = -2;
 const VIOLATION = "export const total = 7 * 6;\n";
 const CLEAN = 'export const greeting = "hello";\n';
 const SETUP = [
@@ -91,6 +92,10 @@ it("reports a violation once in the hook's format and fails as the hook does", {
     [`${file}:1 eslint(no-magic-numbers) No magic number: 7`, `${file}:1 eslint(no-magic-numbers) No magic number: 6`],
   ]);
   expect(changed.output).toContain("2 new violations in 1 file");
+  expect(changed.output.trimEnd().split("\n").slice(SUMMARY)).toStrictEqual([
+    "By rule (2 violations; the full list is above):",
+    `  2 eslint(no-magic-numbers), e.g. ${file}:1 No magic number: 7`,
+  ]);
 });
 
 it("passes a clean file as the hook does", { timeout: 60_000 }, () => {

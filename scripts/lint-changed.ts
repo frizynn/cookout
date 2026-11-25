@@ -1,6 +1,7 @@
 import { changedFiles } from "./lib/changed-files.ts";
 import { lintable } from "./lib/fix-until-stable.ts";
 import { parseArgs } from "node:util";
+import { ruleSummary } from "./lib/lint-summary.ts";
 import { spawnSync } from "node:child_process";
 import { unwrap } from "./lib/tools.ts";
 
@@ -22,10 +23,16 @@ function filesToLint(): readonly string[] {
   return unwrap(SCRIPT, changedFiles({ base: values.base, cwd: process.cwd() }));
 }
 
-function passes(command: readonly string[]): boolean {
+interface Ran {
+  readonly passed: boolean;
+  readonly reported: string;
+}
+
+function run(command: readonly string[]): Ran {
   const [program = "true", ...rest] = command;
-  const ran = spawnSync(program, rest, { stdio: "inherit" });
-  return ran.status === EXIT_SUCCESS;
+  const ran = spawnSync(program, rest, { encoding: "utf8", stdio: ["inherit", "inherit", "pipe"] });
+  process.stderr.write(ran.stderr);
+  return { passed: ran.status === EXIT_SUCCESS, reported: ran.stderr };
 }
 
 function checksOf(files: readonly string[]): readonly (readonly string[])[] {
@@ -36,8 +43,11 @@ function checksOf(files: readonly string[]): readonly (readonly string[])[] {
 }
 
 function exitCodeOf(checks: readonly (readonly string[])[]): number {
-  const failed = checks.filter((command) => !passes(command));
-  if (failed.length === NONE) {
+  const ran = checks.map((command) => run(command));
+  for (const line of ruleSummary(ran.flatMap(({ reported }) => reported.split("\n")))) {
+    console.error(line);
+  }
+  if (ran.every(({ passed }) => passed)) {
     return EXIT_SUCCESS;
   }
   return EXIT_FAILURE;
