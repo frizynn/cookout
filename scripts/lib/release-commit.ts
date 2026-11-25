@@ -116,10 +116,6 @@ function chooseReleaseCommit({ commits, runs }: Choosing): Choice {
   return { chosen: null, lines };
 }
 
-function choiceLines(choice: Choice): readonly string[] {
-  return choice.lines;
-}
-
 function mainAhead({ ahead, sha }: Ahead): Outcome<string> {
   if (ahead.length === NONE) {
     return { ok: true, value: sha };
@@ -166,4 +162,4 @@ function releaseChoice(seams: Seams): Released {
   return { lines, outcome: mainAhead({ ahead: linesOf(ahead.value), sha: chosen.sha }) };
 }
 
-export { choiceLines, chooseReleaseCommit, mainAhead, releaseChoice };
+export { releaseChoice };
