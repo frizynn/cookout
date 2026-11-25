@@ -90,8 +90,8 @@ it("an Approve the approve-join rules refuse says why in the row, and it stays a
   expect.hasAssertions();
 
   const opened = await inboxOpenFor("web-join-inbox-live");
-  await opened.owner.client.join({ as: opened.agent });
   await asked(opened.agent);
+  await opened.owner.client.join({ as: opened.agent });
   const refused = await refusedApprove();
   await anotherAsks(opened);
   const stillRefused = await alertSaying("Couldn't approve");
@@ -99,4 +99,52 @@ it("an Approve the approve-join rules refuse says why in the row, and it stays a
 
   expect(refused).toMatch(/^Couldn't approve \(agent_session_live\): /u);
   expect(stillRefused.textContent).toBe(refused);
+});
+
+it("dismiss clears a pending join request from the row, and the waiting join is refused", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const opened = await inboxOpenFor("web-join-inbox-dismiss");
+  const started = await asked(opened.agent);
+  fireEvent.click(within(forYou()).getByRole("button", { name: "Dismiss" }));
+  await screen.findByText("You're all caught up.");
+  const refused = await anonymousClient()
+    .collectAgentJoin(started.requestId)
+    .catch((error: unknown) => error);
+  await opened.close();
+
+  expect(refused).toMatchObject({ code: "agent_join_request_denied" });
+});
+
+interface LiveAsked {
+  readonly started: AgentJoinRequestStartedResponse;
+  readonly row: string;
+  readonly approve: HTMLElement | null;
+}
+
+async function liveAsked(opened: Opened): Promise<LiveAsked> {
+  await opened.owner.client.join({ as: opened.agent });
+  const started = await anonymousClient().startAgentJoin({ as: opened.agent, host: "build-box" });
+  await screen.findByText(/is already joined in another session/u);
+  const row = within(forYou()).getByRole("listitem").textContent;
+  return { approve: within(forYou()).queryByRole("button", { name: "Approve" }), row, started };
+}
+
+it("a join request for an agent already joined in another session says so, and Replace joins it instead", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const opened = await inboxOpenFor("web-join-inbox-replace");
+  const { approve, row, started } = await liveAsked(opened);
+  fireEvent.click(within(forYou()).getByRole("button", { name: "Replace" }));
+  await screen.findByText("You're all caught up.");
+  const collected = await anonymousClient().collectAgentJoin(started.requestId);
+  await opened.close();
+
+  expect(row).toContain(`@${opened.agent} is already joined in another session.`);
+  expect(approve).toBeNull();
+  expect(collected).toMatchObject({ agentSession: { identity: opened.agent }, status: "approved" });
 });
