@@ -3,7 +3,7 @@ import { createContext } from "react";
 const WAIT_MS = 10_000;
 const WATCHED = { childList: true, subtree: true } as const;
 
-type Target = string | (() => Element | null);
+type Target = string | (() => unknown);
 
 interface Landing {
   readonly ask: () => void;
@@ -26,7 +26,7 @@ function blurred(): void {
   }
 }
 
-function found(target: Target): Element | null {
+function found(target: Target): unknown {
   if (typeof target === "string") {
     return globalThis.document.querySelector(target);
   }

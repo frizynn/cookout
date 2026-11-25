@@ -151,6 +151,25 @@ it("escape in a thread panel with no close link leaves the panel open", { timeou
   close();
 });
 
+it("with the messages in no labelled region, ctrl+] goes from the sidebar into the feed itself", {
+  timeout: 10_000,
+}, async () => {
+  expect.hasAssertions();
+
+  const close = await openThread("web-regions-unlabelled");
+  for (const section of globalThis.document.querySelectorAll("main section[aria-label]")) {
+    section.removeAttribute("aria-label");
+  }
+  outOfRegions();
+  pressed(NEXT);
+  pressed(NEXT);
+  const feed = screen.getByRole("feed", { name: "Messages" });
+
+  expect(feed.contains(globalThis.document.activeElement)).toBe(true);
+
+  close();
+});
+
 it("on a page with no channel messages, ctrl+] goes from the sidebar to the next region shown", {
   timeout: 10_000,
 }, async () => {

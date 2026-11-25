@@ -13,7 +13,7 @@ const LAST = -1;
 type ColumnAction = "intoMessageBox" | "intoMessages" | "toSidebar";
 
 interface ColumnKeys {
-  readonly watch: (target: () => Element | null) => void;
+  readonly watch: (target: () => unknown) => void;
 }
 
 function focusedOn(element: unknown): boolean {
@@ -57,16 +57,21 @@ function chosen(): unknown {
   return feed.querySelector(SELECTED) ?? [...feed.querySelectorAll(MESSAGE)].at(LAST);
 }
 
-function newestIn(channel: string): Element | null {
+function newestIn(channel: string): unknown {
   const label = `[aria-label="${CSS.escape(`Messages in #${channel}`)}"]`;
   const feed = channelFeed();
   if (!(feed instanceof Element) || feed.closest(label) === null) {
     return null;
   }
-  return [...feed.querySelectorAll(MESSAGE)].at(LAST) ?? null;
+  return [...feed.querySelectorAll(MESSAGE)].at(LAST);
 }
 
-function channelOf(target: unknown): string | null {
+interface Link {
+  readonly link: HTMLAnchorElement;
+  readonly channel: string;
+}
+
+function linkOf(target: unknown): Link | null {
   if (!(target instanceof HTMLAnchorElement) || !target.matches(SIDEBAR_LINK)) {
     return null;
   }
@@ -74,43 +79,31 @@ function channelOf(target: unknown): string | null {
   if (route.name !== "channel") {
     return null;
   }
-  return route.channel;
+  return { channel: route.channel, link: target };
 }
 
 function intoMessages(keys: ColumnKeys): Act {
   return ({ target }) => {
-    const channel = channelOf(target);
-    if (!(target instanceof HTMLAnchorElement) || channel === null) {
+    const found = linkOf(target);
+    if (found === null) {
       return false;
     }
-    if (target.matches(OPEN_LINK)) {
+    const { channel, link } = found;
+    if (link.matches(OPEN_LINK)) {
       return focusedOn(chosen());
     }
-    target.blur();
-    globalThis.location.hash = target.hash;
+    link.blur();
+    globalThis.location.hash = link.hash;
     keys.watch(() => newestIn(channel));
     return true;
   };
-}
-
-function columnOf(message: unknown): Element | null {
-  if (!(message instanceof Element)) {
-    return null;
-  }
-  return message.closest(PANEL) ?? channelFeed();
 }
 
 function outsidePanel(element: unknown): boolean {
   return element instanceof Element && element.closest(PANEL) === null;
 }
 
-function boxOf(column: unknown): unknown {
-  if (!(column instanceof Element)) {
-    return null;
-  }
-  if (column.matches(PANEL)) {
-    return column.querySelector(BOX);
-  }
+function channelBox(): unknown {
   for (const box of globalThis.document.querySelectorAll(`main ${BOX}`)) {
     if (outsidePanel(box)) {
       return box;
@@ -119,14 +112,22 @@ function boxOf(column: unknown): unknown {
   return null;
 }
 
+function newestOf(around: unknown): unknown {
+  if (!(around instanceof Element)) {
+    return null;
+  }
+  return [...around.querySelectorAll(MESSAGE)].at(LAST);
+}
+
 function intoMessageBox({ target }: KeyboardEvent): boolean {
-  const column = columnOf(target);
-  return (
-    isMessage(target) &&
-    column !== null &&
-    [...column.querySelectorAll(MESSAGE)].at(LAST) === target &&
-    focusedOn(boxOf(column))
-  );
+  if (!isMessage(target)) {
+    return false;
+  }
+  const panel = target.closest(PANEL);
+  if (panel === null) {
+    return newestOf(channelFeed()) === target && focusedOn(channelBox());
+  }
+  return newestOf(panel) === target && focusedOn(panel.querySelector(BOX));
 }
 
 function columnActions(keys: Readonly<ColumnKeys>): Readonly<Record<ColumnAction, Act>> {
