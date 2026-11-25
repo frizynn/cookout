@@ -42,5 +42,8 @@ export { triggerRoutes } from "./lib/server/routes.ts";
  */
 export { type TriggerCall, TriggerCaller, type TriggerCallerService, triggerCallerLive } from "./lib/server/caller.ts";
 
+/** What a trigger URL answered: its status and, for a failed call, its response body. */
+export { type TriggerAnswer } from "./lib/server/answer.ts";
+
 /** The response Schemas of the trigger URL routes, and of the `trigger` event, for the SDK's generated validators. */
 export const triggerResponseSchemas = { TriggerEvent: TriggerEventSchema, TriggerResponse: TriggerResponseSchema };

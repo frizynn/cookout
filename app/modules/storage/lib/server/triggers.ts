@@ -104,7 +104,10 @@ function resultOf({ last_at: at, last_error: error, last_status: status }: Row):
     if (Predicate.isNull(error)) {
       return answered(when, status);
     }
-    return { at: when, error, ok: false };
+    if (Predicate.isNull(status)) {
+      return { at: when, error, ok: false };
+    }
+    return { at: when, error, ok: false, status };
   });
 }
 

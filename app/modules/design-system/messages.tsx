@@ -22,7 +22,7 @@
  * - `ReactionChip` is a reaction and its count, pressed (in the accent) when one is the reader's own, with who reacted as its tooltip.
  * - `RepliesDivider` heads a thread's replies.
  * - `ChannelStart` says a channel has nothing older.
- * - `ClosedFold` is an item of a message list standing for closed threads folded away, an `article` named by its button on a dashed line that unfolds them; given a `day`, the day's label (a separator to a screen reader) shares that line, in place of a day separator of its own beside it: the label in the line's centre, the button at its right end, shortening rather than overlapping the label on a narrow line.
+ * - `ClosedFold` is an item of a message list standing for closed threads folded away, an `article` named by its button on a dashed line that unfolds them, marked `aria-current` while `current`, such as while one of its threads is open in the thread panel; given a `day`, the day's label (a separator to a screen reader) shares that line, in place of a day separator of its own beside it: the label in the line's centre, the button at its right end, shortening rather than overlapping the label on a narrow line.
  * - `ThreadBar` is a muted bar across the top of a thread: a line of text and one icon button named by its tooltip, such as who closed it and Reopen thread.
  */
 export {
