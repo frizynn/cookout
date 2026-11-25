@@ -1,3 +1,4 @@
+import { everythingReachedBy, isDocs } from "./test-selection.ts";
 import { field, list, parseJson, text } from "./json.ts";
 import type { CiOnly } from "./check-runner.ts";
 import type { CoverageMap } from "./browser-coverage.ts";
@@ -57,7 +58,7 @@ const TEST_SUFFIX = ".browser.test.ts";
 const SERVER_ROOTS = ["app/dev.ts", "scripts/browser-test-server.ts"];
 const CLIENT_ROOTS = ["app/web.tsx"];
 const SHORT_COMMIT = 12;
-const INERT_DIRECTORIES = [".changeset/", "docs/", ".github/", "lint/"];
+const INERT_DIRECTORIES = [".github/", "lint/"];
 const INERT_FILES = new Set(["lint-baseline.json"]);
 const EXIT_SUCCESS = 0;
 const NONE = 0;
@@ -124,9 +125,7 @@ function reachedFrom(graph: Graph, roots: readonly string[]): ReadonlySet<string
 }
 
 function inert(file: string): boolean {
-  return (
-    file.endsWith(".md") || INERT_FILES.has(file) || INERT_DIRECTORIES.some((directory) => file.startsWith(directory))
-  );
+  return isDocs(file) || INERT_FILES.has(file) || INERT_DIRECTORIES.some((directory) => file.startsWith(directory));
 }
 
 function unknownChange(changed: readonly string[], graph: Graph): string {
@@ -140,6 +139,14 @@ function unknownChange(changed: readonly string[], graph: Graph): string {
     }
   }
   return "";
+}
+
+function everythingReason(changed: readonly string[], graph: Graph): string {
+  const everything = everythingReachedBy(changed);
+  if (everything !== "") {
+    return everything;
+  }
+  return unknownChange(changed, graph);
 }
 
 function freshMap(file: string, { coverage, history }: Recorded): Outcome<CoverageMap> {
@@ -210,7 +217,7 @@ function reachedByCoverage(
 
 function selected(changed: readonly string[], inputs: Inputs, recording: Recording): BrowserTests {
   const { graph, tests } = inputs;
-  const reason = unknownChange(changed, graph);
+  const reason = everythingReason(changed, graph);
   if (reason !== "") {
     return { all: true, reason };
   }
@@ -225,9 +232,20 @@ function selected(changed: readonly string[], inputs: Inputs, recording: Recordi
   return { all: false, run, skipped: tests.filter((test) => !run.includes(test)) };
 }
 
+function noneOf(cwd: string): BrowserTests {
+  const tests = browserTestFiles(cwd);
+  if (!tests.ok) {
+    return { all: true, reason: tests.reason };
+  }
+  return { all: false, run: [], skipped: tests.value };
+}
+
 function browserTestsFor({ changed, cwd, ...recording }: Selecting): BrowserTests {
   if (!changed.ok) {
     return { all: true, reason: changed.reason };
+  }
+  if (changed.value.every((file) => isDocs(file))) {
+    return noneOf(cwd);
   }
   const inputs = inputsIn(cwd);
   if (!inputs.ok) {
