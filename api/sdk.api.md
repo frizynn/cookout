@@ -872,6 +872,8 @@ interface JoinRequest {
   readonly idleExpiry?: string;
   /** The host the agent joins from, such as the machine's hostname, shown to its owner. 1–253 characters. */
   readonly host?: string;
+  /** The session URL (mattpocock/cookout#354): an absolute http or https URL, at most 2048 characters. */
+  readonly sessionUrl?: string;
   /**
    * The display name for the agent this join creates: 1-80 characters after trimming. Sent for an agent that
    * already exists, it is 400 `display_name_on_existing_agent` and nothing is joined.
@@ -894,6 +896,8 @@ interface AgentSessionResponse {
   readonly identity: IdentityName;
   /** Whether this join created the agent, owned by the human who joined. */
   readonly created: boolean;
+  /** The session URL this join set, if it set one. */
+  readonly sessionUrl?: string;
 }
 /** An agent's live agent session token as its owner sees it: when it was issued and last used, never the token. */
 interface ListedAgentSession {
@@ -903,6 +907,8 @@ interface ListedAgentSession {
   readonly expiresAt: IsoTime;
   /** The host it joined from, if the joining client said. */
   readonly host?: string;
+  /** Where its owner can watch the session, if the join set one. Listed only for the agent's owner. */
+  readonly sessionUrl?: string;
 }
 /** The answer to listing an agent's agent session tokens: its live one, or none. */
 interface ListAgentSessionsResponse {
@@ -977,6 +983,8 @@ interface StartAgentJoinRequest {
   readonly host: string;
   /** The longest idle expiry the box asks for, such as `30d`; the approver may lower it. Default `7d`. */
   readonly idleExpiry?: string;
+  /** The session URL of the session the approved join issues, as `join` takes it. */
+  readonly sessionUrl?: string;
 }
 /** A started agent join request. Only `requestId` collects the agent session token, and it is shown this once. */
 interface AgentJoinRequestStartedResponse {
@@ -1071,6 +1079,8 @@ interface RedeemJoinCodeRequest {
   /** The host the agent joins from, shown to its owner. 1–253 characters. */
   readonly host?: string;
 }
+/** The answer to `POST /v1/join-codes/redeem`: the code's agent's agent session, as `join` answers it. */
+type RedeemJoinCodeResponse = AgentSessionResponse;
 /** The SDK's calls for join codes. */
 interface JoinCodeCalls {
   /** `POST /v1/join-codes` (a human): creates an agent the caller owns, with a join code for it, valid 15 minutes. */
@@ -1079,9 +1089,10 @@ interface JoinCodeCalls {
    * `POST /v1/join-codes/redeem` (no token): the agent session token of the code's agent. A used, expired or unknown
    * code is 404 `join_code_not_found`.
    */
-  readonly redeemJoinCode: (request: RedeemJoinCodeRequest) => Promise<AgentSessionResponse>;
+  readonly redeemJoinCode: (request: RedeemJoinCodeRequest) => Promise<RedeemJoinCodeResponse>;
 }
-interface AgentSessionCalls extends AgentJoinCalls, JoinCodeCalls {
+type AgentApprovalCalls = AgentJoinCalls & JoinCodeCalls;
+interface AgentSessionCalls extends AgentApprovalCalls {
   readonly join: (request: JoinRequest) => Promise<AgentSessionResponse>;
   readonly leave: () => Promise<LeaveResponse>;
   readonly listAgentSessions: (agent: string) => Promise<ListAgentSessionsResponse>;
@@ -1618,7 +1629,7 @@ interface IdentityDeletionCalls {
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
   readonly countMessagesBy: (name: string) => Promise<IdentityMessageCountResponse>;
 }
-type ApprovalCalls = LoginCalls & AgentJoinCalls & JoinCodeCalls;
+type ApprovalCalls = LoginCalls & AgentApprovalCalls;
 type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
 type IdentityAgentCreationCalls = AgentCreationCalls<IdentityResponse>;
 type CallGroups = ApprovalCalls & IdentityAgentCreationCalls & AttachmentCalls & IdentityDeletionCalls & IdentityDescriptionCalls & ClosedThreadCalls & OpenThreadCalls & SearchCalls & ScheduledMessageCalls & TriggerCalls & Pick<EventCalls, "presence">;
@@ -1846,5 +1857,5 @@ export type CookoutClient = CallGroups & Pick<ReturnType<typeof inboxCalls>, "ke
 export declare const parseEvent: typeof eventOf;
 /** A client for the server at `url` with `token`, each defaulting to `COOKOUT_URL` and `COOKOUT_TOKEN`. Throws `CookoutError` code `url_missing` (status 0) when there is no URL. */
 export declare function createCookoutClient(options?: CookoutClientOptions): CookoutClient;
-export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentCreationCalls, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentJoinRequestsEvent, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Attachment, type AttachmentBytes, type AttachmentContentType, type AttachmentId, type Author, type BuiltInCommand, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type CleanCloseResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateAgentForOwnerRequest, type CreateChannelRequest, type CreateIdentityRequest, type CreateJoinCodeRequest, type CreateMessageRequest, type CreateScheduledMessageRequest, type DeactivateIdentityResponse, type DeactivatedQuietAgent, type DeactivatedQuietAgentEvent, type DeactivatedQuietAgentId, type DeactivatedQuietAgentResponse, type DeactivationOffer, type DeactivationOfferEvent, type DeactivationOfferId, type DeactivationOfferResponse, type Description, type DescriptionCalls, type DisplayName, type EditScheduledMessageRequest, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type ImageContentType, type InboxAgentJoinRequest, type InboxHistoryItem, type InboxHistoryNudge, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinCodeCalls, type JoinCodeResponse, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListOpenThreadsQuery, type ListOpenThreadsResponse, type ListScheduledMessagesQuery, type ListScheduledMessagesResponse, type ListedAgentSession, type LiveConnectionDetail, type LiveConnectionId, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type NewAttachment, type Nudge, type NudgeEvent, type NudgeId, type NudgeKind, type NudgeReadEvent, type NudgeResponse, type OfflineAlert, type OfflineAlertEvent, type OfflineAlertId, type OfflineAlertResponse, type OfflineReason, type OpenThread, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type PreviewScheduledMessageQuery, type Reaction, type ReactionCount, type ReactionEvent, type ReactionName, type ReactionsResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type RedeemJoinCodeRequest, type Refusal, type RegisteredCommand, type Reply, type RevokeAgentSessionResponse, type ScheduledMessage, type ScheduledMessageId, type ScheduledMessagePreviewResponse, type ScheduledMessageResponse, type ScheduledMessageRun, type SchemaProblem, type SearchRequest, type SearchResponse, type SearchResult, type SearchSort, type ServerSentEvent, type SetDisplayNameRequest, type SetTriggerRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadEvent, type ThreadMovedDetails, type ThreadResponse, type Token, type TopLevelMessage, type TopLevelMessageResponse, type Trigger, type TriggerEvent, type TriggerFailure, type TriggerHeader, type TriggerResponse, type TriggerResult, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type joinCodeLifetimeMinutes, type joinCodesPath, type liveConnectionPath, type redeemJoinCodePath, type refusalEvent, refusalOf, type scheduledMessageCalls };
+export { type AckAllRequest, type AckAllResponse, type AckRequest, type AckResponse, type AddCommandRequest, type AgentCreationCalls, type AgentIdentity, type AgentJoinCalls, type AgentJoinCollectedResponse, type AgentJoinRequestResponse, type AgentJoinRequestStartedResponse, type AgentJoinRequestView, type AgentJoinRequestsEvent, type AgentSessionEvent, type AgentSessionLiveDetails, type AgentSessionResponse, type ApproveAgentJoinRequest, type Attachment, type AttachmentBytes, type AttachmentContentType, type AttachmentId, type Author, type BuiltInCommand, type CallCommandRequest, type CallCommandResponse, type Channel, type ChannelDeletedEvent, type ChannelEvent, type ChannelName, type ChannelResponse, type CleanCloseResponse, type Command, type CommandEvent, type CommandName, type CommandSecret, type CommandWithSecretResponse, type ConnectedEvent, CookoutError, type CookoutErrorCode, type CookoutEvent, type CreateAgentForOwnerRequest, type CreateChannelRequest, type CreateIdentityRequest, type CreateJoinCodeRequest, type CreateMessageRequest, type CreateScheduledMessageRequest, type DeactivateIdentityResponse, type DeactivatedQuietAgent, type DeactivatedQuietAgentEvent, type DeactivatedQuietAgentId, type DeactivatedQuietAgentResponse, type DeactivationOffer, type DeactivationOfferEvent, type DeactivationOfferId, type DeactivationOfferResponse, type Description, type DescriptionCalls, type DisplayName, type EditScheduledMessageRequest, type EventStream, type FollowResponse, type Harness, type HealthResponse, type HumanIdentity, type Identity, type IdentityDeletedEvent, type IdentityEvent, type IdentityKind, type IdentityMessageCountResponse, type IdentityName, type IdentityResponse, type IdentityWithTokenResponse, type IdleExpiryTooLongDetails, type ImageContentType, type InboxAgentJoinRequest, type InboxHistoryItem, type InboxHistoryNudge, type InboxHistoryQuery, type InboxHistoryResponse, type InboxItem, type InboxItemEvent, type InboxReason, type InboxResponse, type IsoTime, type JoinCodeCalls, type JoinCodeResponse, type JoinRequest, type JsonSchema, type JsonValue, type LeaveResponse, type ListAgentSessionsResponse, type ListChannelsResponse, type ListCommandsResponse, type ListIdentitiesQuery, type ListIdentitiesResponse, type ListMessagesQuery, type ListMessagesResponse, type ListOpenThreadsQuery, type ListOpenThreadsResponse, type ListScheduledMessagesQuery, type ListScheduledMessagesResponse, type ListedAgentSession, type LiveConnectionDetail, type LiveConnectionId, type MarkUnreadRequest, type MarkUnreadResponse, type Message, type MessageEvent, type MessageFields, type MessageId, type MessageResponse, type MovedBackReadPosition, type NewAttachment, type Nudge, type NudgeEvent, type NudgeId, type NudgeKind, type NudgeReadEvent, type NudgeResponse, type OfflineAlert, type OfflineAlertEvent, type OfflineAlertId, type OfflineAlertResponse, type OfflineReason, type OpenThread, type Owner, type PostMessageRequest, type Presence, type PresenceEvent, type PresenceResponse, type PreviewScheduledMessageQuery, type Reaction, type ReactionCount, type ReactionEvent, type ReactionName, type ReactionsResponse, type ReadPosition, type ReadPositionEvent, type ReadPositionMovedBackEvent, type ReadPositionsResponse, type ReadReceipt, type ReadReceiptEvent, type RedeemJoinCodeRequest, type RedeemJoinCodeResponse, type Refusal, type RegisteredCommand, type Reply, type RevokeAgentSessionResponse, type ScheduledMessage, type ScheduledMessageId, type ScheduledMessagePreviewResponse, type ScheduledMessageResponse, type ScheduledMessageRun, type SchemaProblem, type SearchRequest, type SearchResponse, type SearchResult, type SearchSort, type ServerSentEvent, type SetDisplayNameRequest, type SetTriggerRequest, type StartAgentJoinRequest, type SubscriptionEvent, type SubscriptionResponse, type ThreadEvent, type ThreadMovedDetails, type ThreadResponse, type Token, type TopLevelMessage, type TopLevelMessageResponse, type Trigger, type TriggerEvent, type TriggerFailure, type TriggerHeader, type TriggerResponse, type TriggerResult, type UnknownErrorCode, type UpdateIdentityRequest, type WatchOptions, type agentJoinApprovalPathOf, type agentJoinRequestApprovalPath, type agentJoinRequestPath, type agentJoinRequestsPath, type agentSessionErrorCodes, type agentSessionExpired, type agentSessionPath, type agentSessionRevoked, type allChannelsQuery, type collectAgentJoinRequestPath, type defaultIdleExpiry, type eventsPath, type identityAgentSessionPath, type idleExpiryPattern, type joinCodeLifetimeMinutes, type joinCodesPath, type liveConnectionPath, type redeemJoinCodePath, type refusalEvent, refusalOf, type scheduledMessageCalls };
 ```

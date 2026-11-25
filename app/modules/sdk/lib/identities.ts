@@ -1,5 +1,4 @@
 import type { AgentCreationCalls, DescriptionCalls } from "../../identities/client.ts";
-import type { AgentJoinCalls, JoinCodeCalls } from "../../agent-sessions/index.ts";
 import type {
   AttachmentCalls,
   ClosedThreadCalls,
@@ -38,6 +37,7 @@ import {
   isIdentityWithTokenResponse,
   isListIdentitiesResponse,
 } from "./generated/validators.js";
+import type { AgentApprovalCalls } from "./agent-sessions.ts";
 import type { ClientConnection } from "./request.ts";
 import type { EventCalls } from "./events.ts";
 import type { HealthResponse } from "../../http/index.ts";
@@ -258,7 +258,7 @@ function identityCalls(
   };
 }
 
-type ApprovalCalls = LoginCalls & AgentJoinCalls & JoinCodeCalls;
+type ApprovalCalls = LoginCalls & AgentApprovalCalls;
 type IdentityDescriptionCalls = DescriptionCalls<IdentityResponse>;
 type IdentityAgentCreationCalls = AgentCreationCalls<IdentityResponse>;
 export type CallGroups = ApprovalCalls &

@@ -36,6 +36,7 @@ interface StartAgentJoin {
   readonly as: IdentityName;
   readonly host: string;
   readonly idleExpiry?: string;
+  readonly sessionUrl?: string;
 }
 
 interface Approving {
@@ -97,6 +98,18 @@ function starter(on: Changing): JoinRequests["startJoin"] {
     });
 }
 
+function approvedAnswer(
+  collected: Extract<AgentJoinCollection, { readonly status: "collected" }>,
+  agentSessionToken: Token,
+): AgentJoinCollectedResponse {
+  const { created, expiresAt, identity, issuedAt, sessionUrl } = collected;
+  const agentSession = { agentSessionToken, created, expiresAt, identity, issuedAt };
+  if (Predicate.isUndefined(sessionUrl)) {
+    return { agentSession, status: "approved" };
+  }
+  return { agentSession: { ...agentSession, sessionUrl }, status: "approved" };
+}
+
 function collectionAnswer(
   collection: AgentJoinCollection,
   agentSessionToken: Token,
@@ -110,9 +123,7 @@ function collectionAnswer(
   if (collection.status === "live") {
     return Effect.fail(agentSessionLive(collection));
   }
-  const { created, expiresAt, identity, issuedAt } = collection;
-  const agentSession = { agentSessionToken, created, expiresAt, identity, issuedAt };
-  return Effect.succeed({ agentSession, status: "approved" });
+  return Effect.succeed(approvedAnswer(collection, agentSessionToken));
 }
 
 function announcedCollection(on: On, answer: AgentJoinCollectedResponse): Fails<AgentJoinCollectedResponse> {

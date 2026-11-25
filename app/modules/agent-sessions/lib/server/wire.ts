@@ -4,7 +4,6 @@ import type {
   AgentJoinRequestResponse,
   AgentJoinRequestStartedResponse,
   AgentSessionResponse,
-  JoinCodeResponse,
   LeaveResponse,
   ListAgentSessionsResponse,
   ListedAgentSession,
@@ -12,6 +11,7 @@ import type {
 } from "../../index.ts";
 import { identityNamePattern, isIdentityName, isToken, tokenPattern } from "../../../identities/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
+import type { JoinCodeResponse } from "../../join-codes.ts";
 import { Schema } from "effect";
 import { idleExpiryPattern } from "../../index.ts";
 import { matchesWire } from "../../../http/index.ts";
@@ -36,12 +36,26 @@ const HostSchema = Schema.String.check(
   Schema.isBetweenLength(HOST_LENGTH.minimum, HOST_LENGTH.maximum, { message: "Use 1-253 characters." }).abort(),
 );
 
+const SESSION_URL_MAX_LENGTH = 2048;
+const WEB_PROTOCOLS: ReadonlySet<string> = new Set(["http:", "https:"]);
+
+function isSessionUrl(text: string): boolean {
+  return text.length <= SESSION_URL_MAX_LENGTH && URL.canParse(text) && WEB_PROTOCOLS.has(new URL(text).protocol);
+}
+
+const SessionUrlSchema = Schema.String.check(
+  Schema.makeFilter(isSessionUrl, {
+    message: "Use an absolute http or https URL of at most 2048 characters, such as https://example.com/sessions/1.",
+  }).abort(),
+);
+
 const ListedAgentSessionSchema = matchesWire<ListedAgentSession>()(
   Schema.Struct({
     expiresAt: IsoTimeSchema,
     host: Schema.optionalKey(HostSchema),
     issuedAt: IsoTimeSchema,
     lastUsedAt: Schema.optionalKey(IsoTimeSchema),
+    sessionUrl: Schema.optionalKey(SessionUrlSchema),
   }),
 );
 
@@ -56,6 +70,7 @@ const JoinRequestSchema = Schema.Struct({
   host: Schema.optionalKey(HostSchema),
   idleExpiry: Schema.optionalKey(IdleExpirySchema),
   requireDisplayName: Schema.optionalKey(Schema.Boolean),
+  sessionUrl: Schema.optionalKey(SessionUrlSchema),
 });
 
 const AgentSessionResponseSchema = matchesWire<AgentSessionResponse>()(
@@ -65,6 +80,7 @@ const AgentSessionResponseSchema = matchesWire<AgentSessionResponse>()(
     expiresAt: IsoTimeSchema,
     identity: IdentityNameSchema,
     issuedAt: IsoTimeSchema,
+    sessionUrl: Schema.optionalKey(SessionUrlSchema),
   }),
 );
 
@@ -82,6 +98,7 @@ const StartAgentJoinRequestSchema = Schema.Struct({
   as: IdentityNameSchema,
   host: HostSchema,
   idleExpiry: Schema.optionalKey(IdleExpirySchema),
+  sessionUrl: Schema.optionalKey(SessionUrlSchema),
 });
 
 const CollectAgentJoinRequestSchema = Schema.Struct({ requestId: Schema.String });

@@ -21,6 +21,7 @@ const UNREACHABLE_AGENT = "rollback";
 const WAKING_URL = "https://routines.example.com/release-bot";
 const UNREACHABLE_URL = "https://127.0.0.1:1/rollback";
 const ROUTINE_HEADERS = [{ name: "anthropic-version", value: "2023-06-01" }];
+const WATCHED_AT = "https://claude.ai/code/session_01AbCdEf";
 const POLL_MS = 50;
 const TRIES = 100;
 const ONE = 1;
@@ -49,6 +50,8 @@ async function setScreenTriggers({ ownerToken, url }: Owner): Promise<void> {
 export async function setScreenPresences(presences: Presences): Promise<void> {
   const { adminToken, url } = presences;
   await dropWatch({ adminToken, agent: presences.dropped, agentToken: presences.droppedToken, url });
+  const dropped = createCookoutClient({ env: {}, token: presences.droppedToken, url });
+  await dropped.join({ as: presences.dropped, sessionUrl: WATCHED_AT });
   await setScreenTriggers(presences);
   await postScreenAttachments(presences);
 }

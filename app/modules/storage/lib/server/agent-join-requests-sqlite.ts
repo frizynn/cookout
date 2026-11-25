@@ -31,6 +31,7 @@ const RequestRow = Schema.Struct({
   idle_expiry: Schema.NullOr(Schema.String),
   idle_seconds: Schema.NullOr(Schema.Int),
   joins: Schema.NullOr(NameColumn),
+  session_url: Schema.NullOr(Schema.String),
   user_code: Schema.String,
 });
 
@@ -49,14 +50,15 @@ const LIST_PENDING = `SELECT agent, created_at, expires_at, host, user_code FROM
 
 const decodePendingRows = Schema.decodeUnknownEffect(Schema.Array(PendingRow));
 
-const COLUMNS = "agent, created, expires_at, force, host, idle_expiry, idle_seconds, joins, user_code";
+const COLUMNS = "agent, created, expires_at, force, host, idle_expiry, idle_seconds, joins, session_url, user_code";
 
 const FIND_LIVE_BY_HASH = `SELECT ${COLUMNS} FROM agent_join_requests WHERE request_hash = ? AND expires_at > ?`;
 
 const FIND_LIVE_BY_CODE = `SELECT ${COLUMNS} FROM agent_join_requests WHERE user_code = ? AND expires_at > ?`;
 
 const INSERT_REQUEST = `INSERT INTO agent_join_requests
-  (request_hash, user_code, agent, host, idle_expiry, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+  (request_hash, user_code, agent, host, idle_expiry, session_url, created_at, expires_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
 const APPROVE = `UPDATE agent_join_requests SET joins = ?, created = ?, idle_seconds = ?, force = ?
   WHERE user_code = ? AND joins IS NULL`;
@@ -114,8 +116,17 @@ function addIn(db: SqlDatabase): AgentJoinRequestsSection["addAgentJoinRequest"]
         if (Option.isSome(taken)) {
           return "code_taken" as const;
         }
-        const { agent, createdAt, expiresAt, host, idleExpiry = null, requestHash, userCode } = request;
-        yield* db.run(INSERT_REQUEST, requestHash, userCode, agent, host, idleExpiry, createdAt, expiresAt);
+        const {
+          agent,
+          createdAt,
+          expiresAt,
+          host,
+          idleExpiry = null,
+          requestHash,
+          sessionUrl = null,
+          userCode,
+        } = request;
+        yield* db.run(INSERT_REQUEST, requestHash, userCode, agent, host, idleExpiry, sessionUrl, createdAt, expiresAt);
         return "added" as const;
       }),
     );
@@ -141,7 +152,7 @@ function issueIn(db: SqlDatabase, collect: CollectAgentJoinRequest) {
       yield* db.run("DELETE FROM agent_join_requests WHERE request_hash = ?", collect.requestHash);
       const created = row.created === YES;
       const approval = { created, force: row.force === YES, identity, idleSeconds: Number(row.idle_seconds) };
-      const issue = sessionToIssue({ approval, collect, host: row.host });
+      const issue = sessionToIssue({ approval, collect, host: row.host, sessionUrl: row.session_url });
       const result = yield* agentSessionIssuer(db)(issue);
       return collectionOf({ created, issue, result });
     });

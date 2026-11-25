@@ -212,3 +212,20 @@ it.effect.each(storageLayers)(
       expect(failures).toMatchObject(Array.from({ length: FAILING_CALLS }, () => ({ _tag: "StorageUnavailable" })));
     }),
 );
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): an agent join request's session URL goes to the agent session token it issues",
+  ({ layer }) =>
+    Effect.gen(function* collectsSessionUrl() {
+      const { storage } = yield* openStore(layer);
+      const sessionUrl = "https://claude.ai/code/session_1";
+      yield* withAgent(storage);
+      yield* storage.addAgentJoinRequest({ ...request, sessionUrl }, created);
+      yield* storage.approveAgentJoinRequest("WDJB-MJHT", approval, before);
+      const collected = yield* storage.collectAgentJoinRequest({ now: before, requestHash, sessionHash });
+      const listed = yield* storage.findLiveAgentSession({ identity: agent.name, now: before });
+
+      expect(collected).toMatchObject({ sessionUrl, status: "collected" });
+      expect(listed).toMatchObject({ value: { host: "build-box", sessionUrl } });
+    }),
+);

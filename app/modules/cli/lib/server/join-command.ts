@@ -38,6 +38,14 @@ const idleExpiryFlag = Flag.String("idle-expiry").pipe(
   ),
 );
 
+const sessionUrlFlag = Flag.String("session-url").pipe(
+  Flag.optional,
+  Flag.withDescription(
+    "Where a person can watch this session, such as a cloud session's page: an absolute http or https URL. Shown " +
+      "to the agent's owner until the session ends. Not with --code.",
+  ),
+);
+
 const codeDescription = "A single-use join code: joins the one agent it was made for, within 15 minutes. No --as.";
 const codeFlag = Flag.String("code").pipe(Flag.optional, Flag.withDescription(codeDescription));
 
@@ -59,6 +67,7 @@ interface JoinInput {
   readonly force: Option.Option<boolean>;
   readonly idleExpiry: Option.Option<string>;
   readonly printEnv: Option.Option<boolean>;
+  readonly sessionUrl: Option.Option<string>;
 }
 
 type JoinCommand = Command.Command<"join", JoinInput, object, CommandFailed, AgentSessionStateNeeds>;
@@ -72,8 +81,9 @@ const joinCommand: JoinCommand = Command.make(
     force: forceFlag,
     idleExpiry: idleExpiryFlag,
     printEnv: printEnvFlag,
+    sessionUrl: sessionUrlFlag,
   },
-  ({ as, code, displayName, force, idleExpiry, printEnv }) =>
+  ({ as, code, displayName, force, idleExpiry, printEnv, sessionUrl }) =>
     joinCommandRun({
       as,
       code,
@@ -81,6 +91,7 @@ const joinCommand: JoinCommand = Command.make(
       force: Option.getOrElse(force, notForced),
       idleExpiry,
       printEnv: Option.getOrElse(printEnv, notForced),
+      sessionUrl,
     }),
 ).pipe(
   Command.withDescription(
