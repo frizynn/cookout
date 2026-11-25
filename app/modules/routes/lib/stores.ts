@@ -3,6 +3,7 @@ import type {
   BoardStore,
   ChannelCreation,
   LoginApprovals,
+  ScheduleList,
   Scheduling,
   Session,
 } from "../../board/index.ts";
@@ -21,6 +22,7 @@ interface Stores {
   readonly layout: Layout;
   readonly loginApprovals: LoginApprovals;
   readonly reading: Reading;
+  readonly scheduleList: ScheduleList;
   readonly scheduling: Scheduling;
   readonly search: Search;
   readonly session: Session;

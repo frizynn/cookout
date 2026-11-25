@@ -1,5 +1,5 @@
 import type { Identity, IdentityName } from "../../sdk/index.ts";
-import { SidebarKeys, SidebarView } from "../../views/index.tsx";
+import { ScheduleLists, SidebarKeys, SidebarView } from "../../views/index.tsx";
 import type { ReactNode } from "react";
 import type { Route } from "../../paths/index.ts";
 import type { Stores } from "./stores.ts";
@@ -20,17 +20,25 @@ export function SignedInView(props: SignedInViewProps): ReactNode {
   const { sidebar } = useSyncExternalStore(layout.subscribe, layout.snapshot);
   const handleToggle = layout.toggleSidebar;
   return (
-    <Workspace onToggleSidebar={handleToggle} sidebarOpen={sidebar}>
-      <SidebarView
-        creation={stores.channelCreation}
-        identity={props.identity}
-        keymap={stores.keymap}
-        layout={layout}
-        route={props.route}
-        unread={stores.unread}
-      />
-      <SidebarKeys keymap={stores.keymap} me={props.identity.name} unread={stores.unread} />
-      <WorkspaceBody me={props.identity.name} profile={props.profile} route={props.route} stores={stores} />
-    </Workspace>
+    <ScheduleLists me={props.identity} scheduleList={stores.scheduleList} scheduling={stores.scheduling}>
+      <Workspace onToggleSidebar={handleToggle} sidebarOpen={sidebar}>
+        <SidebarView
+          creation={stores.channelCreation}
+          identity={props.identity}
+          keymap={stores.keymap}
+          layout={layout}
+          route={props.route}
+          scheduleList={stores.scheduleList}
+          unread={stores.unread}
+        />
+        <SidebarKeys
+          keymap={stores.keymap}
+          me={props.identity.name}
+          scheduleList={stores.scheduleList}
+          unread={stores.unread}
+        />
+        <WorkspaceBody me={props.identity.name} profile={props.profile} route={props.route} stores={stores} />
+      </Workspace>
+    </ScheduleLists>
   );
 }

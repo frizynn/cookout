@@ -1,6 +1,7 @@
 import { AgentSessionEventSchema, ChannelDeletedEventSchema, CommandEventSchema } from "./wire.ts";
 import type { Connected, EventSource, StreamRequest } from "./source.ts";
 import { Effect, Stream } from "effect";
+import { ScheduledMessageEventSchema, ScheduledMessages } from "../../../scheduled-messages/server.ts";
 import { AgentSessions } from "../../../agent-sessions/server.ts";
 import { Channels } from "../../../channels/server.ts";
 import { CommandChanges } from "../../../commands/server.ts";
@@ -8,11 +9,12 @@ import type { Identity } from "../../../identities/index.ts";
 import { asksForAllChannels } from "./all-channels.ts";
 import { sseEvent } from "./source.ts";
 
-type BoardChangesNeeds = Channels | CommandChanges | AgentSessions;
+type BoardChangesNeeds = Channels | CommandChanges | AgentSessions | ScheduledMessages;
 
 const channelDeletedEvent = sseEvent(ChannelDeletedEventSchema);
 const commandEvent = sseEvent(CommandEventSchema);
 const agentSessionEvent = sseEvent(AgentSessionEventSchema);
+const scheduledMessageEvent = sseEvent(ScheduledMessageEventSchema);
 
 function channelDeletions(request: StreamRequest): Connected<Channels> {
   return Effect.gen(function* subscribeToChannelDeletions() {
@@ -58,6 +60,21 @@ function agentSessions(request: StreamRequest): Connected<AgentSessions> {
   });
 }
 
-const boardChanges: readonly EventSource<BoardChangesNeeds>[] = [channelDeletions, commands, agentSessions];
+function scheduledMessages(): Connected<ScheduledMessages> {
+  return Effect.gen(function* subscribeToScheduledMessages() {
+    const service = yield* ScheduledMessages;
+    const changed = yield* service.changed;
+    return Stream.fromSubscription(changed).pipe(
+      Stream.mapEffect((change) => scheduledMessageEvent({ ...change, type: "scheduled-message" })),
+    );
+  });
+}
+
+const boardChanges: readonly EventSource<BoardChangesNeeds>[] = [
+  channelDeletions,
+  commands,
+  agentSessions,
+  scheduledMessages,
+];
 
 export { type BoardChangesNeeds, boardChanges };

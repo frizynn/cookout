@@ -1,5 +1,5 @@
 import type { ActionMenuParts, MenuChoice } from "../../design-system/messages.tsx";
-import type { BoardCalls, SubscriptionsState } from "../../board/index.ts";
+import type { BoardCalls, ScheduleList, SubscriptionsState } from "../../board/index.ts";
 import type { Unread, UnreadCounts } from "../../unread/index.ts";
 import { useBoardStore, useSubscriptions } from "./use-board.ts";
 import type { ChannelName } from "../../sdk/index.ts";
@@ -7,10 +7,16 @@ import type { Keymap } from "../../keymap/index.ts";
 import { hasUnread } from "./unread-counts.ts";
 import { useMemo } from "react";
 
-const TEXT = { markRead: "Mark all as read", subscribe: "Subscribe", unsubscribe: "Unsubscribe" } as const;
+const TEXT = {
+  markRead: "Mark all as read",
+  schedules: "Scheduled messages",
+  subscribe: "Subscribe",
+  unsubscribe: "Unsubscribe",
+} as const;
 
 interface ChannelActions {
   readonly keymap: Keymap;
+  readonly scheduleList: ScheduleList;
   readonly unread: Unread;
 }
 
@@ -47,13 +53,16 @@ function subscriptionChoices({ channel, keymap, setSubscribed, state }: Subscrip
   ];
 }
 
-function useChannelMenu({ channel, counts, keymap, unread }: ChannelMenuOf): ActionMenuParts {
+function useChannelMenu({ channel, counts, keymap, scheduleList, unread }: ChannelMenuOf): ActionMenuParts {
   const { setSubscribed } = useBoardStore().calls;
   const state = useSubscriptions();
   const unseen = hasUnread(counts);
   return useMemo(() => {
     function markRead(): void {
       unread.markChannelRead(channel);
+    }
+    function openSchedules(): void {
+      scheduleList.open(channel, null);
     }
     return {
       choices: [
@@ -66,10 +75,18 @@ function useChannelMenu({ channel, counts, keymap, unread }: ChannelMenuOf): Act
           onSelect: markRead,
         },
         ...subscriptionChoices({ channel, keymap, setSubscribed, state }),
+        {
+          disabled: false,
+          href: null,
+          icon: "schedule",
+          keys: keymap.shortcutOf("openSchedules"),
+          label: TEXT.schedules,
+          onSelect: openSchedules,
+        },
       ],
       label: `#${channel} actions`,
     };
-  }, [channel, keymap, setSubscribed, state, unread, unseen]);
+  }, [channel, keymap, scheduleList, setSubscribed, state, unread, unseen]);
 }
 
 export { type ChannelActions, useChannelMenu };

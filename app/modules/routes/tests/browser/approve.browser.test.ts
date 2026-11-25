@@ -1,11 +1,11 @@
 import { test as base, expect } from "@playwright/test";
 import type { CookoutClient } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
-import { createCookoutClient } from "../../../sdk/index.ts";
 import { inPane } from "./regions.ts";
 import { logIn } from "./login.ts";
 import { newIdentity } from "./people.ts";
 import { probeFixtures } from "./probe.ts";
+import { testClient } from "../../../testing/index.ts";
 import { unique } from "./names.ts";
 
 const test = base.extend(probeFixtures);
@@ -38,7 +38,7 @@ async function screenshotIn({ page, theme }: Shot): Promise<void> {
 }
 
 async function openApproval({ baseURL, page }: Opening): Promise<Opened> {
-  const anonymous = createCookoutClient({ env: {}, url: baseURL ?? "" });
+  const anonymous = testClient({ env: {}, url: baseURL ?? "" });
   const { token } = await newIdentity({ kind: "human", name: unique("browser-approver") });
   const started = await anonymous.startLogin({ host: "browser-laptop" });
   await logIn({ page, token });

@@ -3,6 +3,7 @@ import type { Message } from "../../sdk/index.ts";
 import { MessageContent } from "./message-content.tsx";
 import type { ReactNode } from "react";
 import { ReplySummary } from "./reply-summary.tsx";
+import { ScheduledMarker } from "./scheduled-marker.tsx";
 import type { ThreadNews } from "../../unread/index.ts";
 import { threadSummaryOf } from "./message-marks.ts";
 
@@ -20,6 +21,7 @@ export function MessageEntryBody(props: MessageEntryBodyProps): ReactNode {
   return (
     <>
       <MessageContent me={props.me} message={props.message} />
+      <ScheduledMarker message={props.message} />
       <FeedRowClosed closed={props.closed} />
       {href !== null && summary !== null && <ReplySummary href={href} news={props.news} summary={summary} />}
     </>

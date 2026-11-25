@@ -37,8 +37,15 @@
  * name as `deletedChannelNotice` until `dismissNotice`); a message in a channel the list doesn't have reads it again.
  * `commands` (`commandList`), every registered command, changed by `command` events; `subscriptions`
  * (`subscribedChannels`), the channels the logged-in identity subscribes to, sorted, changed by `subscription` events
- * and left by `channel-deleted`, with `calls.setSubscribed` keeping the server's refusal, with the channel and the control it was asked `from`. All three
- * are read again on a link back while shown.
+ * and left by `channel-deleted`, with `calls.setSubscribed` keeping the server's refusal, with the channel and the control it was asked `from`;
+ * `schedules`, every Scheduled message, read with `GET /v1/scheduled-messages` and shown a channel at a time by
+ * `scheduleListOf(channel)`, changed by ID by each `scheduled-message` event, which drops a deleted one and keeps its ID
+ * in `deletedSchedules` (from every event heard, shown or not) so its posts' markers say so (#391);
+ * `calls.createScheduledMessage`, `calls.editScheduledMessage` and `calls.changeScheduledMessage` (pause, resume,
+ * remove) apply each answer as that event, and a refusal rejects the promise and changes nothing. All four are read
+ * again on a link back while shown. `createScheduleList` holds which channel's schedules the list shows, which one is
+ * selected, the delete being confirmed and each change asked (one at a time, keeping a refusal on its schedule), and
+ * `cronWords(cron)` writes a cron expression in words, such as `Weekdays at 09:00`, or `null` when it has none.
  *
  * Messages are one table by ID. `channelPages.subscribeShowing(name)` shows a channel's page (`channelPage(name)`):
  * its first reader reads the newest page and acks its newest message, so viewing a channel counts as reading it; while
@@ -104,6 +111,7 @@
  */
 export type { BoardCalls, ThreadClosing } from "./lib/board-calls.ts";
 export type { ClosingRefusal } from "./lib/thread-closing.ts";
+export type { ListedSchedules } from "./lib/schedules-slice.ts";
 export {
   type ChannelCreation,
   type ChannelCreationSnapshot,
@@ -117,6 +125,12 @@ export {
   createScheduling,
 } from "./lib/scheduling.ts";
 export type { ChannelsState, CommandsState } from "./lib/listed-slices.ts";
+export {
+  type ScheduleList,
+  type ScheduleListState,
+  createScheduleList,
+} from "./lib/schedule-list.ts";
+export { cronWords } from "./lib/cron-words.ts";
 export type { ChannelMessagesState, MessageBeforeState, ThreadMessagesState } from "./lib/message-selectors.ts";
 export type { CallState } from "./lib/command-call.ts";
 export type { SchemaProblem } from "../sdk/index.ts";
@@ -180,7 +194,9 @@ export {
   closingRefusal,
   commandList,
   deletedChannelNotice,
+  deletedSchedules,
   messageBeforeOf,
+  scheduleListOf,
   subscribedChannels,
   threadOf,
 } from "./lib/board-selectors.ts";

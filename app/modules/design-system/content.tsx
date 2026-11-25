@@ -19,6 +19,7 @@
  * - `LinkRow` is one link in a `LinkList`.
  * - `ItemList` is a named list of plain rows, each an `ItemRow`.
  * - `ItemRow` is one plain row in an `ItemList`.
+ * - `CurrentItemRow` is an `ItemRow` that is highlighted, and marked `aria-current`, while `current`, such as the schedule a post's marker opened.
  * - `Alert` is a refusal, read out by screen readers.
  * - `Announcement` is a polite live region (its text again as its count moves).
  * - `Notice` is a passing word on what just happened, read out politely.
@@ -32,6 +33,7 @@ export {
   Heading,
   ItemList,
   ItemRow,
+  CurrentItemRow,
   LinkList,
   LinkRow,
   Muted,

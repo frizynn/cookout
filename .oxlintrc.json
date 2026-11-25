@@ -558,8 +558,7 @@
         "app/modules/sdk/**",
         "app/modules/testing/**",
         "app/modules/*/server.ts",
-        "app/modules/*/lib/server/**",
-        "app/modules/*/tests/**"
+        "app/modules/*/lib/server/**"
       ],
       "rules": {
         "web-rules/board-store-owner": "error"

@@ -1,8 +1,8 @@
+import type { BoardStore, ScheduleList } from "../../board/index.ts";
 import type { Unread, UnreadCounts } from "../../unread/index.ts";
 import { hrefOf, locationOf } from "../../paths/index.ts";
 import { openChannel, steppedTo } from "./channel-order.ts";
 import type { Act } from "../../keymap/index.ts";
-import type { BoardStore } from "../../board/index.ts";
 import type { ChannelName } from "../../sdk/index.ts";
 import { NO_COUNTS } from "../../unread/index.ts";
 import type { Step } from "./channel-order.ts";
@@ -22,6 +22,7 @@ interface ChannelKeys {
   readonly announce: (text: string) => void;
   readonly counts: ReadonlyMap<ChannelName, UnreadCounts>;
   readonly order: readonly ChannelName[];
+  readonly scheduleList: ScheduleList;
   readonly store: BoardStore;
   readonly unread: Unread;
 }
@@ -106,4 +107,15 @@ function toggleSubscription(keys: ChannelKeys): Act {
   };
 }
 
-export { type ChannelKeys, markRead, stepTo, toggleSubscription };
+function openSchedules(keys: ChannelKeys): Act {
+  return ({ target }) => {
+    const channel = rowChannel(keys, target);
+    if (channel === null) {
+      return false;
+    }
+    keys.scheduleList.open(channel, null);
+    return true;
+  };
+}
+
+export { type ChannelKeys, markRead, openSchedules, stepTo, toggleSubscription };

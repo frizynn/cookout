@@ -6,9 +6,9 @@ import { fireEvent, screen, within } from "@testing-library/react";
 import { messagesIn, parentShown } from "./messages.ts";
 import type { Answering } from "./answering.ts";
 import { alertsShown } from "./alerts.ts";
-import { createCookoutClient } from "../../sdk/index.ts";
 import { inThread } from "./regions.ts";
 import { openAt } from "./render.tsx";
+import { unreachableClient } from "../../testing/index.ts";
 
 const NONE = 0;
 
@@ -222,7 +222,7 @@ async function openedThenLeft(
 }
 
 function failingOnce(client: CookoutClient): CookoutClient {
-  const unreachable = createCookoutClient({ env: {}, token: "cookout_unused", url: "http://127.0.0.1:9" });
+  const unreachable = unreachableClient({ token: "cookout_unused" });
   const sources = [unreachable];
   return {
     ...client,

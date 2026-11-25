@@ -24,8 +24,10 @@ import type { LiveConnectionId, Presence, presenceName } from "../presence/index
 import type { Message, MessageId, ReactionsResponse, ReadReceipt, TopLevelMessage } from "../messages/index.ts";
 import type { Channel } from "../channels/index.ts";
 import type { RegisteredCommand } from "../commands/index.ts";
+import type { ScheduledMessageEvent } from "../scheduled-messages/index.ts";
 import type { Trigger } from "../triggers/index.ts";
 
+export type { ScheduledMessageEvent } from "../scheduled-messages/index.ts";
 export type {
   LiveConnectionDetail,
   LiveConnectionId,
@@ -274,7 +276,8 @@ export type CookoutEvent =
   | SubscriptionEvent
   | PresenceEvent
   | OfflineAlertEvent
-  | TriggerEvent;
+  | TriggerEvent
+  | ScheduledMessageEvent;
 
 /**
  * `GET /v1/events`: the caller's Server-Sent Events stream, one per connection. With `allChannelsQuery` as its query

@@ -42,8 +42,8 @@ function currentHash(): string {
   return globalThis.location.hash;
 }
 
-/** What the web UI reads: the stores, each made with the SDK client it talks through. The app makes the new-channel form's and the scheduling dialog's page-only stores from `boardStore`. */
-export type CookoutAppProps = Omit<Stores, "channelCreation" | "scheduling">;
+/** What the web UI reads: the stores, each made with the SDK client it talks through. The app makes the new-channel form's, the scheduling dialog's and the scheduled messages list's page-only stores from `boardStore`. */
+export type CookoutAppProps = Omit<Stores, "channelCreation" | "scheduleList" | "scheduling">;
 
 /**
  * The whole web UI: the view for the page's location hash, redrawn when it changes.

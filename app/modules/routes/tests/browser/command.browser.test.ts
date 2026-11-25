@@ -1,9 +1,8 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
+import { createTestAgent, testClient } from "../../../testing/index.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
-import { createCookoutClient } from "../../../sdk/index.ts";
-import { createTestAgent } from "../../../testing/index.ts";
 import { logInToChannels } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
 import { sidebarLink } from "./regions.ts";
@@ -32,7 +31,7 @@ async function channelWithCommand({ channel, command }: InChannel): Promise<Cook
   await admin.createChannel({ name: channel });
   const { token } = await createTestAgent({ by: admin, name: command, owner: "admin" });
   await admin.addCommand({ description: "Ship a branch", name: command, schema, url: nowhere });
-  return createCookoutClient({ token });
+  return testClient({ token });
 }
 
 interface Typing {

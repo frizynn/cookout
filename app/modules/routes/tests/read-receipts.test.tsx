@@ -5,19 +5,11 @@ import { expect, it } from "vitest";
 import { messagesIn, parentShown } from "./messages.ts";
 import { receiptsIn, timeTooltipOf } from "./time-tooltips.ts";
 import { screen, waitFor } from "@testing-library/react";
-import type { Live } from "../../live/index.ts";
+import type { ScriptedLive } from "../../testing/web.ts";
 import { alertsShown } from "./alerts.ts";
-import { createLive } from "../../live/index.ts";
+import { scriptedLive } from "../../testing/web.ts";
 import { viewOpened } from "./view-opened.ts";
 import { watched } from "./watched.ts";
-
-type Link = ReturnType<Live["link"]>;
-
-interface Scripted {
-  readonly live: Live;
-  readonly send: (...events: readonly ServerSentEvent[]) => void;
-  readonly report: (link: Link) => void;
-}
 
 interface Asked {
   readonly bob: CookoutClient;
@@ -33,32 +25,6 @@ interface Talk {
   readonly ann: CookoutClient;
   readonly bob: CookoutClient;
   readonly viewer: CookoutClient;
-}
-
-function scripted(): Scripted {
-  const events: ((event: ServerSentEvent) => void)[] = [];
-  const links: ((link: Link) => void)[] = [];
-  const live = createLive({
-    open: (onEvent, onLink) => {
-      events.push(onEvent);
-      links.push(onLink);
-    },
-  });
-  return {
-    live,
-    report: (link) => {
-      for (const onLink of links) {
-        onLink(link);
-      }
-    },
-    send: (...sent) => {
-      for (const onEvent of events) {
-        for (const event of sent) {
-          onEvent(event);
-        }
-      }
-    },
-  };
 }
 
 async function person(channel: string, who: string): Promise<CookoutClient> {
@@ -103,11 +69,11 @@ interface Answered {
 async function scriptedThread(
   channel: string,
   text = "Noon",
-): Promise<Answered & Scripted & { readonly reply: Message }> {
+): Promise<Answered & ScriptedLive & { readonly reply: Message }> {
   const { ann, bob, viewer } = await talkIn(channel);
   const parent = await post(ann, channel, "Deploy?");
   const { message: reply } = await bob.createMessage({ channel, replyTo: parent.id, text });
-  const opened = scripted();
+  const opened = scriptedLive();
   const { answered } = await viewOpened({
     client: viewer,
     hash: `#/channels/${channel}/threads/${String(parent.id)}`,
@@ -117,10 +83,10 @@ async function scriptedThread(
   return { ...opened, answered, reply };
 }
 
-async function scriptedChannel(channel: string): Promise<Answered & Asked & Scripted> {
+async function scriptedChannel(channel: string): Promise<Answered & Asked & ScriptedLive> {
   const { ann, bob, viewer } = await talkIn(channel);
   const asked = await post(ann, channel, `@${channel}-bob look`);
-  const opened = scripted();
+  const opened = scriptedLive();
   const { answered } = await viewOpened({
     client: viewer,
     hash: `#/channels/${channel}`,
@@ -132,7 +98,7 @@ async function scriptedChannel(channel: string): Promise<Answered & Asked & Scri
 
 interface Relinking extends Answered {
   readonly methods: readonly ClientMethod[];
-  readonly report: Scripted["report"];
+  readonly report: ScriptedLive["report"];
 }
 
 async function linkBack({ answered, methods, report }: Relinking): Promise<void> {
@@ -180,12 +146,12 @@ function refusingWhenAsked(client: CookoutClient): Refusing {
   };
 }
 
-async function refusedThread(channel: string): Promise<Answered & Scripted & Pick<Refusing, "refuse">> {
+async function refusedThread(channel: string): Promise<Answered & ScriptedLive & Pick<Refusing, "refuse">> {
   const { ann, bob, viewer } = await talkIn(channel);
   const parent = await post(ann, channel, "Deploy?");
   await bob.createMessage({ channel, replyTo: parent.id, text: "Noon" });
   const { client, refuse } = refusingWhenAsked(viewer);
-  const opened = scripted();
+  const opened = scriptedLive();
   const { answered } = await viewOpened({
     client,
     hash: `#/channels/${channel}/threads/${String(parent.id)}`,

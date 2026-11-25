@@ -1,6 +1,6 @@
 import type { Answering, ClientMethod } from "./answering.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
-import type { Live } from "../../live/index.ts";
+import type { Live } from "../../testing/web.ts";
 import { answering } from "./answering.ts";
 import { openAt } from "./render.tsx";
 import { openWithClockStopped } from "./clock.ts";

@@ -1,9 +1,10 @@
-import { markRead, stepTo, toggleSubscription } from "./channel-keys.ts";
+import { markRead, openSchedules, stepTo, toggleSubscription } from "./channel-keys.ts";
 import { moveFocus, roving, sidebar } from "./sidebar-roving.ts";
 import { useBoardStore, useChannels } from "./use-board.ts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChannelKeys } from "./channel-keys.ts";
 import type { Keymap } from "../../keymap/index.ts";
+import type { ScheduleList } from "../../board/index.ts";
 import type { Unread } from "../../unread/index.ts";
 import { channelOrder } from "./channel-order.ts";
 import { useSidebarCounts } from "./use-unread-levels.ts";
@@ -14,6 +15,7 @@ const ONE = 1;
 interface SidebarKeys {
   readonly keymap: Keymap;
   readonly me: string;
+  readonly scheduleList: ScheduleList;
   readonly unread: Unread;
 }
 
@@ -23,7 +25,7 @@ interface Said {
 }
 
 function useChannelKeys(props: SidebarKeys, announce: (text: string) => void): ChannelKeys {
-  const { unread } = props;
+  const { scheduleList, unread } = props;
   const store = useBoardStore();
   const channels = useChannels();
   const counts = useSidebarCounts({ me: props.me }).channels;
@@ -32,10 +34,11 @@ function useChannelKeys(props: SidebarKeys, announce: (text: string) => void): C
       announce,
       counts,
       order: channelOrder(channels),
+      scheduleList,
       store,
       unread,
     }),
-    [announce, channels, counts, store, unread],
+    [announce, channels, counts, scheduleList, store, unread],
   );
 }
 
@@ -67,7 +70,11 @@ function useSidebarKeys(props: SidebarKeys): Said {
         within: sidebar,
       }),
       keymap.bind({
-        actions: { markChannelRead: markRead(keys), toggleSubscription: toggleSubscription(keys) },
+        actions: {
+          markChannelRead: markRead(keys),
+          openSchedules: openSchedules(keys),
+          toggleSubscription: toggleSubscription(keys),
+        },
         scope: "channel row",
         within: sidebar,
       }),

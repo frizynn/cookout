@@ -5,6 +5,7 @@ import type {
   ChannelsState,
   ClosingRefusal,
   CommandsState,
+  ListedSchedules,
   MessageBeforeState,
   SubscriptionsState,
   ThreadClosing,
@@ -17,17 +18,20 @@ import {
   closingRefusal,
   commandList,
   deletedChannelNotice,
+  deletedSchedules,
   messageBeforeOf,
+  scheduleListOf,
   subscribedChannels,
   threadOf,
 } from "../../board/index.ts";
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
+import type { ScheduledMessageId } from "../../scheduled-messages/index.ts";
 
 type Subscribe = (listener: () => void) => () => void;
 
 const BoardStoreContext = createContext<BoardStore | null>(null);
 
-type Listed = "channels" | "commands" | "subscriptions";
+type Listed = "channels" | "commands" | "schedules" | "subscriptions";
 
 interface ThreadPlace {
   readonly channel: ChannelName;
@@ -103,6 +107,16 @@ function useCommands(): CommandsState {
 
 function useSubscriptions(): SubscriptionsState {
   return useListed("subscriptions", subscribedChannels);
+}
+
+function useChannelSchedules(channel: ChannelName): ListedSchedules {
+  const select = useMemo(() => scheduleListOf(channel), [channel]);
+  return useListed("schedules", select);
+}
+
+function useDeletedSchedules(): ReadonlySet<ScheduledMessageId> {
+  const store = useBoardStore();
+  return useSyncExternalStore(store.subscribe, () => deletedSchedules(store.snapshot()));
 }
 
 function useClosingRefusal(): ClosingRefusal | null {
@@ -181,10 +195,12 @@ export {
   useBoardStore,
   useChannelCalls,
   useChannelPage,
+  useChannelSchedules,
   useChannels,
   useClosingRefusal,
   useCommands,
   useDeletedChannelNotice,
+  useDeletedSchedules,
   useMessageBefore,
   useReply,
   useShownThread,

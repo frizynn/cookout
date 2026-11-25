@@ -28,6 +28,7 @@ const eventTypes = {
   "read-position": true,
   "read-position-moved-back": true,
   "read-receipt": true,
+  "scheduled-message": true,
   subscription: true,
   thread: true,
   trigger: true,
