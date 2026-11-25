@@ -3,7 +3,7 @@ import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { TestCookout, answer, commandFixture, refusal, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import type { TestCookoutService } from "../../../testing/server.ts";
-import { commandsPath } from "../../../commands/index.ts";
+import { commandsPath } from "../../../webhook-commands/index.ts";
 
 interface RawAnswer {
   readonly json: unknown;

@@ -1,8 +1,8 @@
 import { Array as Arr, Effect, Option, String as Str } from "effect";
-import type { CallId, CommandSecret } from "../../../commands/index.ts";
+import type { CallId, CommandSecret } from "../../../webhook-commands/index.ts";
 import type { Token, TokenHash } from "../../../identities/index.ts";
 import { createHash, createHmac, randomBytes, randomInt } from "node:crypto";
-import { isCallId, isCommandSecret } from "../../../commands/index.ts";
+import { isCallId, isCommandSecret } from "../../../webhook-commands/index.ts";
 import { token, tokenHash } from "../../../identities/index.ts";
 import type { AttachmentId } from "../../../attachments/index.ts";
 import { isAttachmentId } from "../../../attachments/index.ts";

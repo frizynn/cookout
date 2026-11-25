@@ -1,6 +1,6 @@
-import type { CommandName, CommandSecret } from "../../../commands/index.ts";
+import type { CommandName, CommandSecret } from "../../../webhook-commands/index.ts";
 import { fixtureOwnerName, identityName } from "./identities.ts";
-import { isCommandName, isCommandSecret } from "../../../commands/index.ts";
+import { isCommandName, isCommandSecret } from "../../../webhook-commands/index.ts";
 import type { AgentIdentity } from "../../../identities/index.ts";
 import { Option } from "effect";
 import type { StoredCommand } from "../../../storage/server.ts";

@@ -8,7 +8,7 @@ interface CommandChangesService {
 }
 
 class CommandChanges extends Context.Service<CommandChanges, CommandChangesService>()(
-  "@ai-hero/cookout/commands/lib/server/changes/CommandChanges",
+  "@ai-hero/cookout/webhook-commands/lib/server/changes/CommandChanges",
 ) {}
 
 const commandChangesLayer: Layer.Layer<CommandChanges> = Layer.effect(

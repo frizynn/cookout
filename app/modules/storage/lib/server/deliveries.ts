@@ -1,8 +1,8 @@
 import { Array as Arr, Effect, Predicate, Schema } from "effect";
-import type { CallId, CommandName } from "../../../commands/index.ts";
+import type { CallId, CommandName } from "../../../webhook-commands/index.ts";
 import type { DialectForms, SqlDatabase } from "./adapters/sql-database.ts";
 import type { JsonValue, MessageId } from "../../../messages/index.ts";
-import { isCallId, isCommandName } from "../../../commands/index.ts";
+import { isCallId, isCommandName } from "../../../webhook-commands/index.ts";
 import type { ChannelName } from "../../../channels/index.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";

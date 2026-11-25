@@ -4,7 +4,7 @@ import { Effect, Stream } from "effect";
 import { ScheduledMessageEventSchema, ScheduledMessages } from "../../../scheduled-messages/server.ts";
 import { AgentSessions } from "../../../agent-sessions/server.ts";
 import { Channels } from "../../../channels/server.ts";
-import { CommandChanges } from "../../../commands/server.ts";
+import { CommandChanges } from "../../../webhook-commands/server.ts";
 import type { Identity } from "../../../identities/index.ts";
 import { asksForAllChannels } from "./all-channels.ts";
 import { sseEvent } from "./source.ts";

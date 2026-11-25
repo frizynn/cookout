@@ -10,4 +10,4 @@ export type {
   JsonSchema,
   ListCommandsResponse,
   RegisteredCommand,
-} from "../../commands/index.ts";
+} from "../../webhook-commands/index.ts";

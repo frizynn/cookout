@@ -2,7 +2,7 @@
 import type { AgentJoinCollectedResponse, AgentJoinRequestResponse, AgentJoinRequestStartedResponse, AgentSessionResponse, LeaveResponse, ListAgentSessionsResponse, RevokeAgentSessionResponse } from "../../../agent-sessions/index.ts";
 import type { JoinCodeResponse } from "../../../agent-sessions/join-codes.ts";
 import type { ChannelResponse, ListChannelsResponse } from "../../../channels/index.ts";
-import type { CallCommandResponse, CommandWithSecretResponse, ListCommandsResponse } from "../../../commands/index.ts";
+import type { CallCommandResponse, CommandWithSecretResponse, ListCommandsResponse } from "../../../webhook-commands/index.ts";
 import type { AgentJoinRequestsEvent, AgentSessionEvent, ChannelDeletedEvent, ChannelEvent, CleanCloseResponse, CommandEvent, ConnectedEvent, DeactivatedQuietAgentEvent, DeactivationOfferEvent, IdentityDeletedEvent, IdentityEvent, InboxItemEvent, MessageEvent, NudgeEvent, NudgeReadEvent, OfflineAlertEvent, PresenceEvent, PresenceResponse, ReactionEvent, ReadPositionEvent, ReadPositionMovedBackEvent, ReadReceiptEvent, SubscriptionEvent, ThreadEvent } from "../../../events/index.ts";
 import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../../http/index.ts";
 import type { DeactivateIdentityResponse, IdentityMessageCountResponse, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";

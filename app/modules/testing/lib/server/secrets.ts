@@ -1,7 +1,7 @@
-import type { CallId, CommandSecret } from "../../../commands/index.ts";
+import type { CallId, CommandSecret } from "../../../webhook-commands/index.ts";
 import { Effect, Layer, Option, Ref, String as Str } from "effect";
 import { Secrets, secretsLive } from "../../../secrets/server.ts";
-import { isCallId, isCommandSecret } from "../../../commands/index.ts";
+import { isCallId, isCommandSecret } from "../../../webhook-commands/index.ts";
 import { token, tokenHash } from "../../../identities/index.ts";
 import type { SecretsService } from "../../../secrets/server.ts";
 import type { Token } from "../../../identities/index.ts";

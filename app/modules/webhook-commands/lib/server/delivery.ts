@@ -62,7 +62,7 @@ const COMMAND_TOKEN_LIFETIME: Duration.Input = "24 hours";
 const toJson = Schema.encodeEffect(Schema.fromJsonString(Schema.Unknown));
 
 class Deliveries extends Context.Service<Deliveries, DeliveriesService>()(
-  "@ai-hero/cookout/commands/lib/server/delivery/Deliveries",
+  "@ai-hero/cookout/webhook-commands/lib/server/delivery/Deliveries",
 ) {}
 
 const readBackoff: Effect.Effect<Backoff, Config.ConfigError> = Effect.all(

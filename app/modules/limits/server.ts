@@ -13,7 +13,7 @@ import type { Bucket } from "./lib/server/bucket.ts";
 import { HttpServerRequest } from "effect/http";
 import type { Identity } from "../identities/index.ts";
 import type { Refusal } from "../http/index.ts";
-import { commandCallsPath } from "../commands/index.ts";
+import { commandCallsPath } from "../webhook-commands/index.ts";
 import { take } from "./lib/server/bucket.ts";
 
 const TOO_MANY_REQUESTS = 429;

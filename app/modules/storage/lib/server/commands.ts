@@ -1,9 +1,9 @@
 import type { AgentIdentity, IdentityName } from "../../../identities/index.ts";
 import { Array as Arr, Effect, Order, Predicate, Schema } from "effect";
-import type { CommandName, CommandSecret, RegisteredCommand } from "../../../commands/index.ts";
+import type { CommandName, CommandSecret, RegisteredCommand } from "../../../webhook-commands/index.ts";
 import type { CommandTokensSection, MemoryCommandTokensSection } from "./command-tokens.ts";
 import type { DeliveriesSection, MemoryDeliveriesSection } from "./deliveries.ts";
-import { isCommandName, isCommandSecret } from "../../../commands/index.ts";
+import { isCommandName, isCommandSecret } from "../../../webhook-commands/index.ts";
 import { memoryCommandTokens, sqlCommandTokens } from "./command-tokens.ts";
 import { memoryDeliveries, sqlDeliveries } from "./deliveries.ts";
 import { FALSE } from "./adapters/sql-database.ts";

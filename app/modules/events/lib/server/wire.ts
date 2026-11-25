@@ -46,7 +46,7 @@ import {
 } from "../../../messages/server.ts";
 import { isLiveConnectionId, presenceName } from "../../../presence/index.ts";
 import { PresenceSchema } from "../../../presence/server.ts";
-import { RegisteredCommandSchema } from "../../../commands/server.ts";
+import { RegisteredCommandSchema } from "../../../webhook-commands/server.ts";
 import { Schema } from "effect";
 import { matchesWire } from "../../../http/index.ts";
 

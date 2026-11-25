@@ -9,7 +9,7 @@ import {
   openJoinRequestRoutes,
 } from "../../../agent-sessions/server.ts";
 import { channelRoutes, channelsLayer } from "../../../channels/server.ts";
-import { commandChangesLayer, commandRoutes, commandsLayer } from "../../../commands/server.ts";
+import { commandChangesLayer, commandRoutes, commandsLayer } from "../../../webhook-commands/server.ts";
 import {
   deactivationOffersLayer,
   inboxLayer,

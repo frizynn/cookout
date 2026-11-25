@@ -15,7 +15,7 @@ import {
   storageLayers,
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
-import type { CallId } from "../../../commands/index.ts";
+import type { CallId } from "../../../webhook-commands/index.ts";
 import type { Layer } from "effect";
 import type { MessageId } from "../../../messages/index.ts";
 

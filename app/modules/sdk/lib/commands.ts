@@ -4,8 +4,8 @@ import type {
   CallCommandResponse,
   CommandWithSecretResponse,
   ListCommandsResponse,
-} from "../../commands/index.ts";
-import { commandCallsPath, commandSecretPath, commandsPath } from "../../commands/index.ts";
+} from "../../webhook-commands/index.ts";
+import { commandCallsPath, commandSecretPath, commandsPath } from "../../webhook-commands/index.ts";
 import { isCallCommandResponse, isCommandWithSecretResponse, isListCommandsResponse } from "./generated/validators.js";
 import type { ClientConnection } from "./request.ts";
 import { send } from "./request.ts";
@@ -60,5 +60,5 @@ export type {
   CallCommandResponse,
   CommandWithSecretResponse,
   ListCommandsResponse,
-} from "../../commands/index.ts";
+} from "../../webhook-commands/index.ts";
 export { commandCalls };
