@@ -1,8 +1,8 @@
-import { DONE, git, stop, tail } from "./merge-steps.ts";
+import { DONE, git, lines, stop, tail } from "./merge-steps.ts";
 import type { Step, Stopped } from "./merge-steps.ts";
 
 interface PushOptions {
-  readonly ci: (branch: string, sha: string, rerunRed: boolean) => Step;
+  readonly ci: (branch: string, sha: string) => Step;
   readonly cwd: string;
   readonly log: (line: string) => void;
   readonly ticket: number;
@@ -14,6 +14,8 @@ interface Pushed {
 }
 
 type Attempt = { readonly kind: "moved" } | Pushed | Stopped;
+
+const DOCS = /(?:\.md$|^docs\/|^\.changeset\/)/u;
 
 function branchOf(options: PushOptions): string {
   return `merge-ticket-${options.ticket}`;
@@ -57,7 +59,7 @@ function adviceOn(options: PushOptions, watched: Stopped): string {
   if (watched.cutOff === true) {
     return `The merge is on ${branch}: a rerun would hit the same limit, so make the job fit it, commit, then ${resume}.`;
   }
-  return `The merge is on ${branch}: fix it there and commit, then ${resume}. If the failure looks flaky, run --continue without a new commit: it reruns the failed jobs once.`;
+  return `The merge is on ${branch}: its failed jobs were rerun once, so fix it there and commit, then ${resume}.`;
 }
 
 function greenOnCi(options: PushOptions, sha: string): Step {
@@ -67,9 +69,10 @@ function greenOnCi(options: PushOptions, sha: string): Step {
   if (pushed.kind === "stopped") {
     return pushed;
   }
-  const watched = options.ci(branch, sha, unchanged);
+  const watched = options.ci(branch, sha);
   if (watched.kind === "stopped") {
-    return { ...watched, reason: `${watched.reason}\nNothing was pushed to v1. ${adviceOn(options, watched)}` };
+    const on = `That Check run was on ${branch} at ${sha}.`;
+    return { ...watched, reason: `${watched.reason}\n${on}\nNothing was pushed to v1. ${adviceOn(options, watched)}` };
   }
   return DONE;
 }
@@ -86,8 +89,24 @@ function fastForwardV1(options: PushOptions, { base, sha }: { readonly base: str
   return { kind: "moved" };
 }
 
-function push({ base, options }: { readonly base: string; readonly options: PushOptions }): Attempt {
+function docsOnly(options: PushOptions, base: string): boolean {
+  return lines(git(options, "diff", "--name-only", base, "HEAD").output).every((file) => DOCS.test(file));
+}
+
+interface Push {
+  readonly afterGreen: boolean;
+  readonly base: string;
+  readonly options: PushOptions;
+}
+
+function push({ afterGreen, base, options }: Push): Attempt {
   const sha = git(options, "rev-parse", "HEAD").output;
+  if (afterGreen && docsOnly(options, base)) {
+    options.log(
+      `${branchOf(options)} touches only docs and merged the moved v1 cleanly: fast-forwarding v1 to ${sha} without another Check run, as its last run was green`,
+    );
+    return fastForwardV1(options, { base, sha });
+  }
   const watched = greenOnCi(options, sha);
   if (watched.kind === "stopped") {
     return watched;
