@@ -19,6 +19,7 @@ export { PageSection } from "./page-section.tsx";
 export { FooterLink } from "./footer-link.tsx";
 export { SidePanel } from "./side-panel.tsx";
 export type { PanelEdgeParts } from "./panel-edge-parts.ts";
+export type { PanelAloneParts } from "./panel-alone-parts.ts";
 export { ScrollArea } from "./scroll-area.tsx";
 export { Sidebar } from "./sidebar.tsx";
 export { SidebarBody } from "./sidebar-body.tsx";

@@ -4,12 +4,20 @@ import type { ThreadClosing, ThreadMessagesState } from "../../board/index.ts";
 import { useCallback, useContext, useMemo } from "react";
 import { LandingContext } from "../../landing/index.ts";
 import type { MessageMenu } from "../../unread/index.ts";
+import type { PanelAloneParts } from "../../design-system/layout.tsx";
 import { hrefOf } from "../../paths/index.ts";
 import { threadChoice } from "./use-message-menu.ts";
 
-const TEXT = { copyLink: "Copy link", markUnread: "Mark unread", menu: "Thread actions" } as const;
+const TEXT = {
+  alone: "Open thread on its own",
+  back: "Back to channel",
+  copyLink: "Copy link",
+  markUnread: "Mark unread",
+  menu: "Thread actions",
+} as const;
 
 interface ThreadHeaderOf {
+  readonly alone: boolean;
   readonly channel: ChannelName;
   readonly closing: ThreadClosing;
   readonly menu: MessageMenu;
@@ -17,11 +25,12 @@ interface ThreadHeaderOf {
   readonly thread: MessageId;
 }
 
-interface ThreadChoicesOf extends Omit<ThreadHeaderOf, "state" | "thread"> {
+interface ThreadChoicesOf extends Omit<ThreadHeaderOf, "alone" | "state" | "thread"> {
   readonly parent: TopLevelMessage;
 }
 
 interface ThreadHeader {
+  readonly alone: PanelAloneParts;
   readonly closeHref: string;
   readonly menu: ActionMenuParts | null;
   readonly onClose: () => void;
@@ -51,7 +60,14 @@ function threadChoices({ channel, closing, menu, parent }: ThreadChoicesOf): rea
   ];
 }
 
-function useThreadHeader({ channel, closing, menu, state, thread }: ThreadHeaderOf): ThreadHeader {
+function aloneLink({ alone, channel, thread }: Pick<ThreadHeaderOf, "alone" | "channel" | "thread">): PanelAloneParts {
+  if (alone) {
+    return { alone, href: hrefOf({ channel, name: "thread", thread }), label: TEXT.back };
+  }
+  return { alone, href: hrefOf({ alone: true, channel, name: "thread", thread }), label: TEXT.alone };
+}
+
+function useThreadHeader({ alone, channel, closing, menu, state, thread }: ThreadHeaderOf): ThreadHeader {
   const parent = state.status === "loaded" && state.parent;
   const { watch } = useContext(LandingContext);
   const onClose = useCallback(() => {
@@ -59,16 +75,19 @@ function useThreadHeader({ channel, closing, menu, state, thread }: ThreadHeader
     watch(`main article:has(a[href="${CSS.escape(opener)}"])`);
   }, [channel, thread, watch]);
   return useMemo(() => {
-    const closeHref = hrefOf({ channel, name: "channel" });
-    if (parent === false) {
-      return { closeHref, menu: null, onClose };
-    }
-    return {
-      closeHref,
-      menu: { choices: threadChoices({ channel, closing, menu, parent }), label: TEXT.menu },
+    const shown = {
+      alone: aloneLink({ alone, channel, thread }),
+      closeHref: hrefOf({ channel, name: "channel" }),
       onClose,
     };
-  }, [channel, closing, menu, onClose, parent]);
+    if (parent === false) {
+      return { ...shown, menu: null };
+    }
+    return {
+      ...shown,
+      menu: { choices: threadChoices({ channel, closing, menu, parent }), label: TEXT.menu },
+    };
+  }, [alone, channel, closing, menu, onClose, parent, thread]);
 }
 
 export { useThreadHeader };
