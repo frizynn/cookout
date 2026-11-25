@@ -1,11 +1,14 @@
 import type { Held, Previews, ScheduleKind, SchedulingOptions, SchedulingSnapshot } from "./scheduling-previews.ts";
 import { closedIn, createPreviews, createSaving } from "./scheduling-previews.ts";
 import type { ChannelName } from "../../sdk/index.ts";
+import type { ScheduledMessage } from "../../scheduled-messages/index.ts";
+import { timingOf } from "./schedule-timing.ts";
 
 interface Scheduling {
   readonly subscribe: (listener: () => void) => () => void;
   readonly snapshot: () => SchedulingSnapshot;
   readonly open: (channel: ChannelName, text: string) => void;
+  readonly openEdit: (schedule: ScheduledMessage) => void;
   readonly close: () => void;
   readonly dismiss: () => void;
   readonly editText: (text: string) => void;
@@ -50,6 +53,12 @@ function editsOf(held: Held, previews: Previews): Edits {
     open: (channel, text) => {
       previews.forget();
       publish({ ...closedIn(options.timeZone), channel, open: true, text });
+    },
+    openEdit: (schedule) => {
+      previews.forget();
+      const { channel, id, text } = schedule;
+      publish({ ...closedIn(options.timeZone), channel, editing: id, open: true, text });
+      previews.retimed(timingOf(schedule));
     },
   };
 }

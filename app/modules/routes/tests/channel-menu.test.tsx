@@ -77,6 +77,7 @@ it("right-clicking a sidebar channel opens its actions menu, every item with an 
   await expect(menuItems("#web-channel-menu-right actions")).resolves.toStrictEqual([
     ["Mark all as read", true, true],
     ["Unsubscribe", true, false],
+    ["Scheduled messages", true, false],
   ]);
 
   close();
@@ -93,6 +94,7 @@ it("a sidebar channel's More actions button opens the same menu", { timeout: 500
   await expect(menuItems("More actions")).resolves.toStrictEqual([
     ["Mark all as read", true, true],
     ["Unsubscribe", true, false],
+    ["Scheduled messages", true, false],
   ]);
 
   close();
@@ -103,7 +105,7 @@ const KEYS = [
   ["Shift+F10", "F10", true],
 ] as const;
 
-const BOTH_ITEMS = 2;
+const EVERY_ITEM = 3;
 
 async function chooseFor(channel: string, name: string): Promise<void> {
   fireEvent.contextMenu(await channelLink(channel));
@@ -131,7 +133,7 @@ it.each(KEYS)(
     const close = openAt({ client: reader, hash: "#/inbox" });
     fireEvent.keyDown(await channelLink(channel), { key, shiftKey });
 
-    await expect(menuItems(`#${channel} actions`)).resolves.toHaveLength(BOTH_ITEMS);
+    await expect(menuItems(`#${channel} actions`)).resolves.toHaveLength(EVERY_ITEM);
 
     close();
   },

@@ -3,6 +3,7 @@ import type {
   BoardSnapshot,
   BoardStore,
   ChannelMessages,
+  ChannelSchedules,
   MessageBefore,
   ThreadMessages,
 } from "../../board/index.ts";
@@ -14,9 +15,12 @@ import {
   closingRefusal,
   commandList,
   createChannelCreation,
+  createScheduleList,
   createScheduling,
   deletedChannelNotice,
+  deletedSchedules,
   messageBeforeOf,
+  scheduleListOf,
   subscribedChannels,
   threadOf,
 } from "../../board/index.ts";
@@ -79,6 +83,11 @@ function channelOf(store: BoardStore, name: ChannelName): ChannelMessages {
   };
 }
 
+function schedulesIn(store: BoardStore, channel: ChannelName): ChannelSchedules {
+  const select = scheduleListOf(channel);
+  return { snapshot: () => select(store.snapshot()), subscribe: store.subscribeShowing("schedules") };
+}
+
 function threadIn(store: BoardStore, place: ThreadPlace): ThreadMessages {
   const select = threadOf(place);
   const { threads } = store;
@@ -119,9 +128,13 @@ function createBoard(store: BoardStore): Board {
     creation: createChannelCreation({ createChannel: store.calls.createChannel }),
     dismissNotice: store.dismissNotice,
     messageBefore: madeOnce(placeKey, (place: ThreadPlace) => beforeIn(store, place)),
+    scheduleList: createScheduleList({ change: store.calls.changeScheduledMessage }),
+    scheduleMarks: { snapshot: () => deletedSchedules(store.snapshot()), subscribe: store.subscribe },
+    schedules: madeOnce(String, (name: ChannelName) => schedulesIn(store, name)),
     scheduling: createScheduling({
       clock: browserClock,
       create: store.calls.createScheduledMessage,
+      edit: store.calls.editScheduledMessage,
       pause: PREVIEW_PAUSE_MS,
       preview: store.calls.previewScheduledMessage,
       timeZone: browserTimeZone(),

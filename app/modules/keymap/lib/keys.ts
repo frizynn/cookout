@@ -52,6 +52,7 @@ const KEYS = [
   { action: "previousLink", chord: "ArrowUp", does: "Previous link", scope: "sidebar" },
   { action: "markChannelRead", chord: "e", does: "Mark all as read", scope: "channel row" },
   { action: "toggleSubscription", chord: "s", does: "Subscribe or unsubscribe", scope: "channel row" },
+  { action: "openSchedules", chord: "Shift+S", does: "Show its scheduled messages", scope: "channel row" },
   { action: "pickSuggestion", chord: "Tab", does: "Put in the highlighted filter suggestion", scope: "search box" },
   { action: "pickSuggestion", chord: "Enter", does: "Put in the highlighted filter suggestion", scope: "search box" },
   { action: "dismissSuggestions", chord: "Escape", does: "Hide the filter suggestions", scope: "search box" },

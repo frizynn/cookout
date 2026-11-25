@@ -37,7 +37,9 @@
  * in `deletedSchedules` (from every event heard, shown or not) so its posts' markers say so (#391);
  * `calls.createScheduledMessage`, `calls.editScheduledMessage` and `calls.changeScheduledMessage` (pause, resume,
  * remove) apply each answer as that event, and a refusal rejects the promise and changes nothing. All four are read
- * again on a link back while shown.
+ * again on a link back while shown. `createScheduleList` holds which channel's schedules the list shows, which one is
+ * selected, the delete being confirmed and each change asked (one at a time, keeping a refusal on its schedule), and
+ * `cronWords(cron)` writes a cron expression in words, such as `Weekdays at 09:00`, or `null` when it has none.
  *
  * Messages are one table by ID. `channelPages.subscribeShowing(name)` shows a channel's page (`channelPage(name)`):
  * its first reader reads the newest page and acks its newest message, so viewing a channel counts as reading it; while
@@ -105,6 +107,7 @@ export type {
   Board,
   BoardSnapshot,
   ChannelMessages,
+  ChannelSchedules,
   Commands,
   MessageBefore,
   Subscriptions,
@@ -125,7 +128,15 @@ export {
 } from "./lib/scheduling.ts";
 export type { ChannelsState } from "./lib/listed-slices.ts";
 export type { ListedSchedules } from "./lib/schedules-slice.ts";
+export {
+  type ScheduleChangeState,
+  type ScheduleList,
+  type ScheduleListState,
+  type ScheduleMarks,
+  createScheduleList,
+} from "./lib/schedule-list.ts";
 export type { ScheduleChange } from "./lib/board-calls.ts";
+export { cronWords } from "./lib/cron-words.ts";
 export type { ChannelMessagesState, MessageBeforeState, ThreadMessagesState } from "./lib/message-selectors.ts";
 export type { CallState } from "./lib/command-call.ts";
 export type { SchemaProblem } from "../sdk/index.ts";

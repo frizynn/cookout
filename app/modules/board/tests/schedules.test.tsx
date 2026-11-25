@@ -116,6 +116,12 @@ it("a scheduled-message event changes its schedule by ID, and the same event aga
   expect(store.snapshot().schedules).toBe(after);
 });
 
+async function keptThenGone(channel: string): Promise<ScheduledMessage> {
+  await scheduledIn(channel, "kept");
+  const gone = await scheduledIn(channel, "gone");
+  return gone;
+}
+
 it("a deleted schedule leaves the list and its ID is kept as deleted, though the list was never shown", {
   timeout: 5000,
 }, async () => {
@@ -123,10 +129,7 @@ it("a deleted schedule leaves the list and its ID is kept as deleted, though the
 
   const early = await scheduledIn("store-schedules-deleted", "early");
   await adminClient().deleteScheduledMessage(early.id);
-  const [, gone] = await Promise.all([
-    scheduledIn("store-schedules-deleted", "kept"),
-    scheduledIn("store-schedules-deleted", "gone"),
-  ]);
+  const gone = await keptThenGone("store-schedules-deleted");
   const { hand, store } = opened();
   sent(hand, early, true);
   await shownIn(store, "store-schedules-deleted", ["kept", "gone"]);

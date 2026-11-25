@@ -3,6 +3,7 @@ export { Announcement } from "./announcement.tsx";
 export { Heading } from "./heading.tsx";
 export { ItemList } from "./item-list.tsx";
 export { ItemRow } from "./item-row.tsx";
+export { CurrentItemRow } from "./current-item-row.tsx";
 export { LinkList } from "./link-list.tsx";
 export { LinkRow } from "./link-row.tsx";
 export { Muted } from "./muted.tsx";

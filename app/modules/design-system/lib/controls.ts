@@ -2,6 +2,7 @@ export { ActionGroup } from "./action-group.tsx";
 export { ConfirmDialog } from "./confirm-dialog.tsx";
 export { FormDialog } from "./form-dialog.tsx";
 export { ShortcutList } from "./shortcut-list.tsx";
+export { ListDialog } from "./list-dialog.tsx";
 export { FieldNote } from "./field-note.tsx";
 export { RunList } from "./run-list.tsx";
 export { MoreActions } from "./more-actions.tsx";
