@@ -59,39 +59,8 @@ function regionsShown(): readonly HTMLElement[] {
   return shown;
 }
 
-function focusedOn(element: unknown): boolean {
-  if (!(element instanceof HTMLElement) || !element.isConnected) {
-    return false;
-  }
-  element.focus();
-  return globalThis.document.activeElement === element;
-}
-
-function holds(region: unknown, element: unknown): boolean {
-  return region instanceof Node && element instanceof Node && region.contains(element);
-}
-
-function focusedEntry(region: unknown): boolean {
-  if (!(region instanceof Element)) {
-    return false;
-  }
-  for (const entry of ENTRIES) {
-    for (const element of region.querySelectorAll(entry)) {
-      if (focusedOn(element)) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-interface Entering {
-  readonly region: unknown;
-  readonly last: unknown;
-}
-
-function entered({ last, region }: Entering): boolean {
-  return (holds(region, last) && focusedOn(last)) || focusedEntry(region);
+function holds(region: unknown, element: unknown): element is HTMLElement {
+  return region instanceof Node && element instanceof HTMLElement && region.contains(element);
 }
 
 interface Moving {
@@ -120,19 +89,29 @@ function beside(moving: Moving): unknown {
 }
 
 function createRegionKeys(): RegionKeys {
-  const last = new WeakMap<HTMLElement, HTMLElement>();
+  const last = new WeakMap<HTMLElement, unknown>();
   function move(step: Step): Act {
     return ({ target }) => {
       const region = beside({ regions: regionsShown(), step, target });
-      return region instanceof HTMLElement && entered({ last: last.get(region), region });
+      if (!(region instanceof HTMLElement)) {
+        return false;
+      }
+      const entries: unknown[] = [last.get(region)];
+      for (const entry of ENTRIES) {
+        entries.push(...region.querySelectorAll(entry));
+      }
+      return entries.some((each) => {
+        if (!holds(region, each)) {
+          return false;
+        }
+        each.focus();
+        return globalThis.document.activeElement === each;
+      });
     };
   }
   return {
     actions: { nextRegion: move("next"), previousRegion: move("previous") },
     remember: (target) => {
-      if (!(target instanceof HTMLElement)) {
-        return;
-      }
       for (const region of regionsShown()) {
         if (holds(region, target)) {
           last.set(region, target);
