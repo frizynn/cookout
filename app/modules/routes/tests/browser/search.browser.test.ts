@@ -4,6 +4,7 @@ import type { Page } from "@playwright/test";
 import { inPane } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
 import { pressedPrevented } from "./prevented.ts";
+import { unique } from "./names.ts";
 
 const RESULTS = { name: "Search results" } as const;
 const BOX = { name: "Search" } as const;
@@ -60,7 +61,7 @@ async function selectedInInbox(page: Page, channel: string): Promise<string> {
 test("ctrl+K focuses the search box from a message box, with the browser's own shortcut prevented", async ({
   page,
 }) => {
-  const channel = "browser-search-ctrl";
+  const channel = unique("browser-search-ctrl");
   const opened = await openedOn(page, channel);
   await page.goto(`/#/channels/${channel}/threads/${String(opened.thread)}`);
   await page.getByRole("textbox", { exact: true, name: "Reply" }).click();
@@ -71,7 +72,7 @@ test("ctrl+K focuses the search box from a message box, with the browser's own s
 });
 
 test("Inbox keys typed in the search box change nothing in the Inbox", async ({ page }) => {
-  const selected = await selectedInInbox(page, "browser-search-letters");
+  const selected = await selectedInInbox(page, unique("browser-search-letters"));
   await searched(page, "jkeu");
 
   await expect(page.getByRole("combobox", BOX)).toHaveValue("jkeu");
@@ -81,7 +82,7 @@ test("Inbox keys typed in the search box change nothing in the Inbox", async ({ 
 });
 
 test("Escape closes the list, gives focus back, and the Inbox's selected row stays selected", async ({ page }) => {
-  const channel = "browser-search-escape";
+  const channel = unique("browser-search-escape");
   const selected = await selectedInInbox(page, channel);
   await searched(page, `pangolinkey ${channel}`);
 
@@ -96,7 +97,7 @@ test("Escape closes the list, gives focus back, and the Inbox's selected row sta
 });
 
 test("Down, Up and Enter open the highlighted result", async ({ page }) => {
-  const channel = "browser-search-arrows";
+  const channel = unique("browser-search-arrows");
   const opened = await openedOn(page, channel);
   await page.goto("/#/inbox");
   await searched(page, `pangolinkey ${channel}`);
@@ -114,24 +115,26 @@ test("Down, Up and Enter open the highlighted result", async ({ page }) => {
 });
 
 const SUGGESTIONS = { name: "Filter suggestions" } as const;
-const PREFIX = "browser-suggest-keys-";
+function prefix(): string {
+  return `${unique("browser-suggest-keys")}-`;
+}
 
 async function suggestionsOpened(page: Page): Promise<void> {
   const admin = adminClient();
   await Promise.all(
     ["a", "b", "c"].map(async (end) => {
-      await admin.createChannel({ name: `${PREFIX}${end}` });
+      await admin.createChannel({ name: `${prefix()}${end}` });
     }),
   );
-  const reader = await newIdentity({ kind: "human", name: `${PREFIX}reader` });
+  const reader = await newIdentity({ kind: "human", name: `${prefix()}reader` });
   await logInToChannels({ page, token: reader.token });
   await page.goto("/#/inbox");
-  await searched(page, `in:${PREFIX}`);
+  await searched(page, `in:${prefix()}`);
 }
 
 async function expectSelected(page: Page, end: string): Promise<void> {
   await expect(
-    page.getByRole("listbox", SUGGESTIONS).getByRole("option", { name: `#${PREFIX}${end}`, selected: true }),
+    page.getByRole("listbox", SUGGESTIONS).getByRole("option", { name: `#${prefix()}${end}`, selected: true }),
   ).toBeVisible();
 }
 
@@ -141,23 +144,23 @@ async function wrappedAndTabbed(page: Page): Promise<void> {
   await expectSelected(page, "c");
   await pressed(page, ["ArrowDown", "ArrowDown", "Tab"]);
 
-  await expect(page.getByRole("combobox", BOX)).toHaveValue(`in:#${PREFIX}b `);
+  await expect(page.getByRole("combobox", BOX)).toHaveValue(`in:#${prefix()}b `);
   await expect(page.getByRole("combobox", BOX)).toBeFocused();
   await expect(page.getByRole("listbox", SUGGESTIONS)).toBeHidden();
 }
 
 async function enteredThenEscaped(page: Page): Promise<void> {
-  await page.keyboard.type(`in:${PREFIX}c`);
+  await page.keyboard.type(`in:${prefix()}c`);
   await page.keyboard.press("Enter");
 
-  await expect(page.getByRole("combobox", BOX)).toHaveValue(`in:#${PREFIX}b in:#${PREFIX}c `);
+  await expect(page.getByRole("combobox", BOX)).toHaveValue(`in:#${prefix()}b in:#${prefix()}c `);
 
-  await page.keyboard.type(`in:${PREFIX}`);
+  await page.keyboard.type(`in:${prefix()}`);
   await page.keyboard.press("Escape");
 
   await expect(page.getByRole("listbox", SUGGESTIONS)).toBeHidden();
   await expect(page.getByRole("combobox", BOX)).toBeFocused();
-  await expect(page.getByRole("combobox", BOX)).toHaveValue(`in:#${PREFIX}b in:#${PREFIX}c in:${PREFIX}`);
+  await expect(page.getByRole("combobox", BOX)).toHaveValue(`in:#${prefix()}b in:#${prefix()}c in:${prefix()}`);
 }
 
 test("while filter suggestions show, Up and Down wrap, Tab and Enter put one in, Escape hides them, then closes search", async ({
