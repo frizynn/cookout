@@ -24,7 +24,9 @@
  * `sidebarWidths`' `min` and `max`, and keeps it in the browser's storage, so
  * a reload keeps it.
  */
+import type { BrowserStorage } from "../browser-storage/index.ts";
 import type { IdentityKind } from "../sdk/index.ts";
+import { storageKeys } from "../browser-storage/index.ts";
 
 const themeChoices = ["system", "light", "dark"] as const;
 
@@ -49,16 +51,16 @@ interface Widths {
 }
 
 interface LayoutOptions {
-  readonly storage: Pick<Storage, "getItem" | "removeItem" | "setItem">;
+  readonly storage: BrowserStorage;
   readonly root: Pick<HTMLElement, "removeAttribute" | "setAttribute">;
 }
 
-const THEME_KEY = "cookout-theme";
-const COLLAPSED_KEY = "cookout-sidebar-collapsed";
+const THEME_KEY = storageKeys.theme;
+const COLLAPSED_KEY = storageKeys.sidebarCollapsed;
 const COLLAPSED = "collapsed";
-const THREAD_WIDTH_KEY = "cookout-thread-width";
+const THREAD_WIDTH_KEY = storageKeys.threadWidth;
 const threadWidths = { max: 768, min: 320, start: 448, step: 32 } as const;
-const SIDEBAR_WIDTH_KEY = "cookout-sidebar-width";
+const SIDEBAR_WIDTH_KEY = storageKeys.sidebarWidth;
 const sidebarWidths = { max: 448, min: 192, start: 256, step: 32 } as const;
 const THEME_ATTRIBUTE = "data-theme";
 const SYSTEM: ThemeChoice = "system";
