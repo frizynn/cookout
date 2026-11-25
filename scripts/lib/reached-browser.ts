@@ -93,4 +93,4 @@ function browserTestsSince({ base, changed, cwd }: Since): BrowserTests {
 }
 
 export type { ReachedPlan };
-export { browserTestsSince, reachedBrowserShardPlan, reachedShard };
+export { browserTestsSince, reachedShard };

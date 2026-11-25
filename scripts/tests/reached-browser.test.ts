@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { reachedBrowserShardPlan, reachedShard } from "../lib/reached-browser.ts";
 import type { Outcome } from "../lib/tools.ts";
 import path from "node:path";
+import { reachedShard } from "../lib/reached-browser.ts";
 import { tmpdir } from "node:os";
 
 const DIR = "app/modules/routes/tests/browser";
@@ -50,19 +50,24 @@ function offline(): Outcome<string> {
   return { ok: false, reason: "gh api failed: offline" };
 }
 
+function planOf(shard: string, run: readonly string[], gh: typeof recorded): readonly [readonly string[], string] {
+  const cwd = mkdtempSync(path.join(tmpdir(), "reached-browser-"));
+  const tests = { all: false, run, skipped: [] } as const;
+  const { args, lines } = reachedShard({ cwd, gh, run: RUN, shard, tests });
+  return [args, lines.at(LAST) ?? ""];
+}
+
 it("a pull request's shard runs its share of the reached files' recorded time, and none when its share is empty", {
   timeout: 10_000,
 }, () => {
   expect.hasAssertions();
 
-  const reached = { ok: true, value: [file("alpha"), file("charlie")] } as const;
+  const reached = [file("alpha"), file("charlie")];
 
-  expect(
-    ["1/3", "2/3", "3/3"].map((shard) => reachedBrowserShardPlan({ files: reached, gh: recorded, run: RUN, shard })),
-  ).toStrictEqual([
-    { args: [file("alpha")], line: "browser shard 1/3: 1 of 2 files, 50.0s of test time as run 800 recorded it" },
-    { args: [file("charlie")], line: "browser shard 2/3: 1 of 2 files, 30.0s of test time as run 800 recorded it" },
-    { args: [], line: "browser shard 3/3: 0 of 2 files, 0.0s of test time as run 800 recorded it" },
+  expect(["1/3", "2/3", "3/3"].map((shard) => planOf(shard, reached, recorded))).toStrictEqual([
+    [[file("alpha")], "browser shard 1/3: 1 of 2 files, 50.0s of test time as run 800 recorded it"],
+    [[file("charlie")], "browser shard 2/3: 1 of 2 files, 30.0s of test time as run 800 recorded it"],
+    [[], "browser shard 3/3: 0 of 2 files, 0.0s of test time as run 800 recorded it"],
   ]);
 });
 
@@ -71,14 +76,13 @@ it("a pull request's shard falls back to every third reached file when no run re
 }, () => {
   expect.hasAssertions();
 
+  const missing = path.join(tmpdir(), "reached-browser-missing");
+
   expect([
-    reachedBrowserShardPlan({ files: { ok: true, value: FILES }, gh: offline, run: RUN, shard: "1/3" }),
-    reachedBrowserShardPlan({ files: { ok: false, reason: "no listing" }, gh: offline, run: RUN, shard: "2/3" }).args,
+    planOf("1/3", FILES, offline),
+    reachedShard({ cwd: missing, gh: offline, run: RUN, shard: "2/3", tests: { all: true, reason: "x" } }).args,
   ]).toStrictEqual([
-    {
-      args: [file("alpha"), file("delta")],
-      line: "browser shard 1/3: split by file count, since gh api failed: offline",
-    },
+    [[file("alpha"), file("delta")], "browser shard 1/3: split by file count, since gh api failed: offline"],
     ["--shard=2/3"],
   ]);
 });
