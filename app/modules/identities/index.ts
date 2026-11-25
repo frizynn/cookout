@@ -231,9 +231,8 @@ export const identityOwnerPath = "/v1/identities/:name/owner";
 export const identityDisplayNamePath = "/v1/identities/:name/display-name";
 
 /**
- * `POST /v1/session` (a human's bearer token): logs the web UI in, answering with the identity and a session
- * cookie holding a new Login credential of its own (ADR 0102). An agent is refused with 403 `human_only`.
- * `DELETE /v1/session` revokes the credential its cookie holds and clears the cookie.
+ * `POST /v1/session` (a human's bearer token): logs the web UI in, answering with the identity and a cookie holding
+ * a new Login credential (ADR 0102); an agent gets 403 `human_only`. `DELETE /v1/session` revokes it and clears it.
  */
 export const sessionPath = "/v1/session";
 
