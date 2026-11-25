@@ -1,6 +1,6 @@
 /**
  * Commands on the wire, shared by the server, the SDK and the web: the
- * `CommandName` and `CommandSecret` brands and their checks, the command as
+ * `WebhookCommandName` and `WebhookCommandSecret` brands and their checks, the command as
  * the server shows it, the request and answers of the command routes, their
  * paths, and the error codes they refuse with.
  */
@@ -26,9 +26,9 @@ export type JsonSchema = Readonly<Record<string, JsonValue>>;
 export const webhookCommandNamePattern = plainNamePattern;
 
 /**
- * Whether `value` follows the command-name rule; if so, it is a `CommandName`.
+ * Whether `value` follows the command-name rule; if so, it is a `WebhookCommandName`.
  * @param value The name to check.
- * @returns Whether `value` is a `CommandName`.
+ * @returns Whether `value` is a `WebhookCommandName`.
  */
 export function isWebhookCommandName(value: string): value is WebhookCommandName {
   return webhookCommandNamePattern.test(value);
@@ -38,9 +38,9 @@ export function isWebhookCommandName(value: string): value is WebhookCommandName
 export const webhookCommandSecretPattern = /^hmac_[A-Za-z0-9_-]+$/u;
 
 /**
- * Whether `value` looks like a command secret the server issued; if so, it is a `CommandSecret`.
+ * Whether `value` looks like a command secret the server issued; if so, it is a `WebhookCommandSecret`.
  * @param value The secret to check.
- * @returns Whether `value` is a `CommandSecret`.
+ * @returns Whether `value` is a `WebhookCommandSecret`.
  */
 export function isWebhookCommandSecret(value: string): value is WebhookCommandSecret {
   return webhookCommandSecretPattern.test(value);

@@ -7,7 +7,7 @@
  * and the old one signs no delivery from then on. A call's data is checked against the
  * command's JSON Schema, then posted as a top-level message by the caller,
  * and the answer comes without waiting for any delivery to the webhook.
- * `commandsLayer` sends each call to the command's URL in the background:
+ * `webhookCommandsLayer` sends each call to the command's URL in the background:
  * `{ command, data, channel, threadId, token, callId }` as JSON, signed in the
  * `cookout-signature` header with the hex HMAC-SHA256 of the raw body keyed
  * with the command's secret, and given up after `COOKOUT_WEBHOOK_TIMEOUT_SECONDS`. A delivery with no `2xx` (a redirect is never followed, so it
@@ -107,7 +107,7 @@ export const webhookCommandResponseSchemas = {
 export { deliveriesLayer as webhookCommandsLayer } from "./lib/server/call.ts";
 
 /**
- * The `CommandChanges` hub: registering a command and rotating its secret each publish the command, and the live
+ * The `WebhookCommandChanges` hub: registering a command and rotating its secret each publish the command, and the live
  * stream sends each on as a `command` event.
  */
 export { WebhookCommandChanges, webhookCommandChangesLayer } from "./lib/server/changes.ts";
