@@ -1,10 +1,11 @@
 import { aheadOf, boxOptionsOf } from "./search-options.ts";
 import { filterSuggestionsOf, pickedOf } from "./filter-suggestions.ts";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useContext, useEffect, useRef } from "react";
 import type { BoxOption } from "./search-options.ts";
 import type { FilterSuggestion } from "./filter-suggestions.ts";
 import type { Identities } from "../../composer/index.ts";
 import type { Keymap } from "../../keymap/index.ts";
+import { LandingContext } from "../../landing/index.ts";
 import type { RefObject } from "react";
 import type { Search } from "../../search/web.ts";
 import { channelList } from "../../board/index.ts";
@@ -36,6 +37,7 @@ interface Place {
   readonly area: () => HTMLDivElement | null;
   readonly box: () => Element | null;
   readonly back: () => unknown;
+  readonly land: () => void;
   readonly remember: (element: unknown) => void;
 }
 
@@ -66,9 +68,14 @@ function goBack(place: Place): void {
 }
 
 function go(place: Place, href: string): void {
+  for (const box of inputs(place.box())) {
+    box.value = "";
+  }
+  place.search.edit("");
   place.search.close();
   place.remember(null);
   globalThis.location.hash = href;
+  place.land();
 }
 
 function chooseHighlighted(place: Place): void {
@@ -223,11 +230,13 @@ function useSearchBox({ box, identities, keymap, search }: SearchBoxStores): Sea
   const store = useBoardStore();
   const area = useRef<HTMLDivElement>(null);
   const back = useRef<unknown>(null);
+  const land = useContext(LandingContext).ask;
   const place = useCallback(
     (): Place => ({
       area: () => area.current,
       back: () => back.current,
       box: () => globalThis.document.querySelector(`[id="${box}"]`),
+      land,
       options: () =>
         boxOptionsOf({
           channels: channelList(store.snapshot()),
@@ -246,7 +255,7 @@ function useSearchBox({ box, identities, keymap, search }: SearchBoxStores): Sea
           state: search.snapshot(),
         }),
     }),
-    [box, identities, search, store],
+    [box, identities, land, search, store],
   );
   useEffect(() => listen(place(), keymap), [keymap, place]);
   const choose = useCallback(
