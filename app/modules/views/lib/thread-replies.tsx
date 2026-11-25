@@ -56,6 +56,7 @@ export function ThreadReplies(props: ThreadRepliesProps): ReactNode {
         me={props.me}
         menu={props.menu}
         newLine={props.readPosition}
+        opened={false}
         parent={props.parent}
         receipts={props.receipts}
         replies={props.replies}

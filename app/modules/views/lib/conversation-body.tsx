@@ -59,6 +59,7 @@ export function ConversationBody(props: ConversationBodyProps): ReactNode {
         me={props.me}
         menu={props.menu}
         newLine={null}
+        opened
         parent={state.parent}
         receipts={state.receipts}
         replies={state.replies}

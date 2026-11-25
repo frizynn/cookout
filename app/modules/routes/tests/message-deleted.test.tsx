@@ -1,12 +1,33 @@
 import type { CookoutClient, EventStream, MessageId } from "../../sdk/index.ts";
 import { adminClient, newIdentity } from "./identities.ts";
-import { expect, it } from "vitest";
+import { expect, it, onTestFinished, vi } from "vitest";
 import { inPane, inThread } from "./regions.ts";
 import { screen, within } from "@testing-library/react";
 import { openAt } from "./render.tsx";
 import { watched } from "./watched.ts";
 
 const DELETED = "Message deleted";
+const TALL = 1000;
+const SHOWN = 100;
+const NONE = 0;
+
+function bodyMeasured(height: number): (this: unknown) => number {
+  return function measured(this: unknown): number {
+    if (this instanceof HTMLElement && this.classList.contains("message-text")) {
+      return height;
+    }
+    return NONE;
+  };
+}
+
+function measuredAsLong(): void {
+  const scroll = vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(bodyMeasured(TALL));
+  const client = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(bodyMeasured(SHOWN));
+  onTestFinished(() => {
+    scroll.mockRestore();
+    client.mockRestore();
+  });
+}
 
 async function openLive(client: CookoutClient, hash: string): Promise<() => Promise<void>> {
   const { live, stream } = watched(client);
@@ -87,4 +108,45 @@ it("a reply deleted elsewhere shows as Message deleted in the open thread, and i
   const seen = await deletedThenReopened({ back: "No replies yet.", gone, hash, reader: client, region: inThread });
 
   expect(seen).toStrictEqual({ reopened: null, shown: null });
+});
+
+const LONG = "A long report.";
+const ONE = 1;
+
+interface FoldedThenDeleted {
+  readonly folded: number;
+  readonly text: HTMLElement | null;
+  readonly unfold: readonly HTMLElement[];
+}
+
+async function postedLongAndRead(channel: string): Promise<{ client: CookoutClient; id: MessageId }> {
+  await adminClient().createChannel({ name: channel });
+  const { message } = await adminClient().createMessage({ channel, text: LONG });
+  const { client } = await newIdentity({ kind: "human", name: `${channel}-reader` });
+  await client.ack(message.id);
+  return { client, id: message.id };
+}
+
+async function foldedThenDeleted(channel: string): Promise<FoldedThenDeleted> {
+  const { client, id } = await postedLongAndRead(channel);
+  const close = await openLive(client, `#/channels/${channel}`);
+  await inPane().findByText(LONG);
+  const folded = within(inPane().element()).getAllByRole("button", { name: "Unfold" }).length;
+  await adminClient().deleteMessage(id);
+  await inPane().findByText(DELETED);
+  const pane = within(inPane().element());
+  const seen = { folded, text: pane.queryByText(LONG), unfold: pane.queryAllByRole("button", { name: "Unfold" }) };
+  await close();
+  return seen;
+}
+
+it("a folded long message deleted elsewhere shows as Message deleted, with nothing left to unfold", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  measuredAsLong();
+  const seen = await foldedThenDeleted("web-folded-deleted");
+
+  expect(seen).toStrictEqual({ folded: ONE, text: null, unfold: [] });
 });
