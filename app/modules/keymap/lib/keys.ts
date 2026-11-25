@@ -52,8 +52,18 @@ const KEYS = [
     does: "Open the previous channel with unread messages",
     scope: "everywhere",
   },
-  { action: "nextRegion", chord: "Control+]", does: "Next region", scope: "everywhere" },
-  { action: "previousRegion", chord: "Control+[", does: "Previous region", scope: "everywhere" },
+  {
+    action: "nextRegion",
+    chord: "Control+]",
+    does: "Next column: the sidebar, the messages, the thread panel",
+    scope: "everywhere",
+  },
+  {
+    action: "previousRegion",
+    chord: "Control+[",
+    does: "Previous column: the sidebar, the messages, the thread panel",
+    scope: "everywhere",
+  },
   {
     action: "markShownChannelRead",
     chord: "Escape",
@@ -63,6 +73,12 @@ const KEYS = [
   { action: "nextLink", chord: "ArrowDown", does: "Next link", scope: "sidebar" },
   { action: "previousLink", chord: "ArrowUp", does: "Previous link", scope: "sidebar" },
   { action: "closeSidebar", chord: "Escape", does: "Close the sidebar, on a narrow screen", scope: "sidebar" },
+  {
+    action: "intoMessages",
+    chord: "ArrowRight",
+    does: "Into its messages, on the selected or newest one",
+    scope: "channel row",
+  },
   { action: "markChannelRead", chord: "e", does: "Mark all as read", scope: "channel row" },
   { action: "toggleSubscription", chord: "s", does: "Subscribe or unsubscribe", scope: "channel row" },
   { action: "openSchedules", chord: "Shift+S", does: "Show its scheduled messages", scope: "channel row" },
@@ -100,6 +116,8 @@ const KEYS = [
   { action: "openThread", chord: "t", does: "Open its thread", scope: "message" },
   { action: "openThread", chord: "Enter", does: "Open its thread", scope: "message" },
   { action: "backToChannel", chord: "ArrowLeft", does: "Back to the thread's channel message", scope: "message" },
+  { action: "toSidebar", chord: "ArrowLeft", does: "Sidebar, on the channel's link", scope: "message" },
+  { action: "intoMessageBox", chord: "ArrowDown", does: "Message box, from the newest message", scope: "message" },
   { action: "nextMessage", chord: "j", does: "Next message", scope: "message list" },
   { action: "nextMessage", chord: "ArrowDown", does: "Next message", scope: "message list" },
   {
