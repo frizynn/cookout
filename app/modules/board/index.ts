@@ -171,7 +171,6 @@ export {
   type ThreadNews,
   type UnreadCounts,
   type UnreadWhy,
-  countsByChannel,
   countsOf,
 } from "./lib/inbox-levels.ts";
 export { type InboxRow, rowKey, rowsOf } from "./lib/inbox-rows.ts";

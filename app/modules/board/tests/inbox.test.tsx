@@ -1,10 +1,9 @@
 import type { BoardState, BoardStore } from "../index.ts";
 import type { Channel, CookoutClient, CookoutEvent, InboxItem, Message, TopLevelMessage } from "../../sdk/index.ts";
 import { adminClient, bounce, humanIn, shown } from "./held-store.ts";
-import { createBoardStore, earlierOf, inboxOf, nudgesOf } from "../index.ts";
+import { createBoardStore, earlierOf, inboxCountsByChannel, inboxOf, nudgesOf } from "../index.ts";
 import { expect, it, vi } from "vitest";
 import type { HandLive } from "../../testing/web.ts";
-import { countsByChannel } from "../../unread/index.ts";
 import { createLive } from "../../live/index.ts";
 import { handLive } from "../../testing/web.ts";
 import { parseEvent } from "../../sdk/index.ts";
@@ -221,10 +220,9 @@ it("a read position drops the items it covers from For you and the counts, and m
   const second = await posted(channel.name);
   const { hand, store } = await watching(reader);
   hand.send({ readPosition: { channel: channel.name, messageId: first.id, thread: null }, type: "read-position" });
-  const { items } = loadedInbox(store.snapshot());
 
   expect({
-    counts: countsByChannel({ items, me: "nobody" }).get(channel.name),
+    counts: inboxCountsByChannel({ me: "nobody", state: store.snapshot() }).get(channel.name),
     earlier: earlierIds(store),
     items: itemIds(store),
   }).toStrictEqual({ counts: { activity: 1, forYou: 0 }, earlier: [first.id], items: [second.id] });

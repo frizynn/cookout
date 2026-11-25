@@ -4,7 +4,7 @@
  * positions (`GET /v1/read-positions`) and one first page of the Inbox history (`GET /v1/inbox/history`) per load or
  * catch-up, shared by every part below, with the live events applied in one place. This module keeps the shape the
  * views read and the page state that stays here: the "New" lines, the selection and the reading rule. The levels and
- * rows below (`rowsOf`, `rowKey`, `countsOf`, `countsByChannel`) are the board store's,
+ * rows below (`rowsOf`, `rowKey`, `countsOf`) are the board store's,
  * re-exported for the views (the sidebar, the Inbox rows and the channel feed read the board's selectors), and a "New" line takes its place from the board's `inboxNewLine`.
  * The unread inbox items of whoever is looking, oldest first. An external store, read by components with
  * `useSyncExternalStore`, loaded when its first reader subscribes, a message there for several reasons held once.
@@ -18,7 +18,7 @@
  * can't be reached is `unreachable`. The items have two levels, as Slack
  * shows them (Matt, #152, 2026-11-23): for you (a mention, or a reply in a
  * thread you started) and activity (the rest). A row says why it is there,
- * `countsByChannel` counts both levels by channel, and `newsByThread` counts a
+ * the board's `inboxCountsByChannel` counts both levels by channel, and `newsByThread` counts a
  * thread's unread replies and how many of them are for you. `threadsWithNews` lists, oldest first, the top-level
  * messages of a channel's threads with an item there for some reason besides a subscribed channel (a mention, a
  * reply in a thread you follow, a reaction): what keeps a closed thread out of the channel's fold (#349). `rowsOf` groups
@@ -217,7 +217,6 @@ export {
   type ThreadNews,
   type UnreadCounts,
   type UnreadWhy,
-  countsByChannel,
   countsOf,
   rowKey,
   rowsOf,
