@@ -1,14 +1,16 @@
 import { DONE, git, stepOf, stop, tail } from "./merge-steps.ts";
 import type { Step } from "./merge-steps.ts";
+import { approvalTrailer } from "./merge-lint.ts";
 
 interface BranchOptions {
+  readonly approved?: string;
   readonly cwd: string;
   readonly ticket: number;
   readonly title: string;
 }
 
 function messageOf(options: BranchOptions): string {
-  return `Merge ticket-${options.ticket}: ${options.title} (#${options.ticket})`;
+  return `Merge ticket-${options.ticket}: ${options.title} (#${options.ticket})${approvalTrailer(options.approved ?? "")}`;
 }
 
 function asOneTicketMerge(options: BranchOptions): Step {
