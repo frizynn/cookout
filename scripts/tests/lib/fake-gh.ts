@@ -1,11 +1,11 @@
-import type { Landed, Landing } from "../../lib/merge-queue.ts";
+import type { Landing, PullRequest } from "../../lib/merge-pull-request.ts";
 import type { Step, Stopped } from "../../lib/merge-steps.ts";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { landThroughQueue, queueRequired } from "../../lib/merge-queue.ts";
 import { DateTime } from "effect";
 import { ciGreen } from "../../lib/ci-gate.ts";
 import { onTestFinished } from "vitest";
 import path from "node:path";
+import { pullRequestOf } from "../../lib/merge-pull-request.ts";
 import { tmpdir } from "node:os";
 
 const URL = "https://github.com/o/r/actions/runs/42";
@@ -62,17 +62,15 @@ interface Gated {
   readonly step: Step;
 }
 
-interface Queued {
-  readonly landed: Landed | Stopped;
+interface Opened {
   readonly logs: readonly string[];
-  readonly sleeps: number;
+  readonly pr: PullRequest | Stopped;
 }
 
 interface Fake {
   readonly calls: () => readonly string[];
   readonly gate: (args: readonly string[], base?: readonly string[], appear?: number) => Gated;
-  readonly land: (landing: Landing, required?: boolean) => Queued;
-  readonly required: () => { readonly logs: readonly string[]; readonly required: boolean };
+  readonly pullRequest: (landing: Landing) => Opened;
 }
 
 interface Responses {
@@ -130,26 +128,19 @@ function stateDir(responses: Responses, workflow = ""): string {
   return dir;
 }
 
-function landIn(dir: string, landing: Landing, required: boolean): Queued {
+function openIn(dir: string, landing: Landing): Opened {
   const logs: string[] = [];
-  const sleeps: string[] = [];
-  const landed = landThroughQueue({
+  const pr = pullRequestOf({
     landing,
     options: {
-      appear: POLLS,
       cwd: dir,
       gh: ["node", path.join(dir, "gh.mjs")],
       log: (line) => {
         logs.push(line);
       },
-      polls: POLLS,
-      required,
-      sleep: () => {
-        sleeps.push("slept");
-      },
     },
   });
-  return { landed, logs, sleeps: sleeps.length };
+  return { logs, pr };
 }
 
 interface FakeOptions extends Responses {
@@ -186,18 +177,7 @@ function fake({ event = "push", rerunRed = false, vouchedBy = "", workflow = "",
       });
       return { logs, sleeps: sleeps.length, step };
     },
-    land: (landing, required = true): Queued => landIn(dir, landing, required),
-    required: (): { readonly logs: readonly string[]; readonly required: boolean } => {
-      const logs: string[] = [];
-      const required = queueRequired({
-        cwd: dir,
-        gh: ["node", path.join(dir, "gh.mjs")],
-        log: (line) => {
-          logs.push(line);
-        },
-      });
-      return { logs, required };
-    },
+    pullRequest: (landing): Opened => openIn(dir, landing),
   };
 }
 
