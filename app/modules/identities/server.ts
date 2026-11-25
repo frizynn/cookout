@@ -8,6 +8,7 @@ import {
   AgentSessionSent,
   Caller,
   HarnessSent,
+  LoginCredentialSent,
   WebhookCommandThread,
   authenticate,
   credentialsOf,
@@ -33,6 +34,9 @@ export { Caller };
  * and an open stream checks it is still live.
  */
 export { AgentSessionSent } from "./lib/server/auth.ts";
+
+/** The hash of the Login credential the request was sent with, if it was: a web session's cookie holds one (ADR 0103). */
+export { LoginCredentialSent } from "./lib/server/auth.ts";
 /**
  * The one thread a request may reply in when it carries a command token, and none for any other token. `Messages`
  * posts such a request only as a reply in this thread.
@@ -89,7 +93,9 @@ export const requireToken: Gate<
   Effect.gen(function* () {
     const identities = yield* Identities;
     const request = yield* HttpServerRequest.HttpServerRequest;
-    const { agentSession, webhookCommandThread, identity } = yield* identities.authenticate(credentialsOf(request));
+    const { agentSession, identity, loginCredential, webhookCommandThread } = yield* identities.authenticate(
+      credentialsOf(request),
+    );
     const harness = yield* harnessOf({ headers: request.headers, identity, target: request });
     if (Option.isSome(webhookCommandThread)) {
       yield* requireWebhookCommandRoute(request);
@@ -99,6 +105,7 @@ export const requireToken: Gate<
       Effect.provideService(WebhookCommandThread, webhookCommandThread),
       Effect.provideService(HarnessSent, harness),
       Effect.provideService(AgentSessionSent, agentSession),
+      Effect.provideService(LoginCredentialSent, loginCredential),
     );
   });
 
@@ -139,6 +146,7 @@ export function adminTokenSet(
       const hash = yield* secrets.hashToken(adminToken);
       const admin = yield* humanAdmin(adminName);
       yield* storage.setOnlyToken(admin, hash);
+      yield* storage.revokeLoginCredentialsMadeWithRevokedTokens(admin.name);
       return yield* storage.setAdmin(admin.name, true);
     }),
   );

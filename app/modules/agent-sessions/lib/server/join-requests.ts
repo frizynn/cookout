@@ -9,10 +9,12 @@ import type {
   AgentJoinRequestStartedResponse,
   AgentJoinRequestView,
   ApproveAgentJoinRequest,
+  DenyAgentJoinResponse,
 } from "../../index.ts";
 import { Effect, Function, Option, Predicate } from "effect";
 import type { Identity, IdentityName, Token } from "../../../identities/index.ts";
 import {
+  agentJoinRequestDenied,
   agentJoinRequestNotFound,
   lifetime,
   liveExpiryOf,
@@ -22,7 +24,7 @@ import {
   termsAsked,
   viewOf,
 } from "./join-request-terms.ts";
-import { agentNotFound, agentSessionLive } from "./refusals.ts";
+import { agentNotFound, agentSessionLive, joinNotOwned } from "./refusals.ts";
 import type { IsoTime } from "../../../time/index.ts";
 import type { On } from "./join.ts";
 import type { Refusal } from "../../../http/index.ts";
@@ -53,6 +55,7 @@ interface Viewing {
 interface JoinRequestChanges {
   readonly started: (agent: IdentityName, expiresAt: IsoTime) => Effect.Effect<void>;
   readonly approved: (agent: IdentityName) => Effect.Effect<void>;
+  readonly denied: (agent: IdentityName) => Effect.Effect<void>;
 }
 
 interface JoinRequests {
@@ -60,6 +63,7 @@ interface JoinRequests {
   readonly collectJoin: (requestId: Token) => Fails<AgentJoinCollectedResponse>;
   readonly showJoin: (viewing: Viewing) => Fails<AgentJoinRequestView>;
   readonly approveJoin: (approving: Approving) => Fails<AgentJoinRequestView>;
+  readonly denyJoin: (viewing: Viewing) => Fails<DenyAgentJoinResponse>;
 }
 
 interface Changing extends On {
@@ -119,6 +123,9 @@ function collectionAnswer(
   }
   if (collection.status === "gone") {
     return Effect.fail(agentJoinRequestNotFound);
+  }
+  if (collection.status === "denied") {
+    return Effect.fail(agentJoinRequestDenied);
   }
   if (collection.status === "live") {
     return Effect.fail(agentSessionLive(collection));
@@ -201,8 +208,32 @@ function approver(on: Changing): JoinRequests["approveJoin"] {
     });
 }
 
+function denier(on: Changing): JoinRequests["denyJoin"] {
+  return ({ caller, userCode }) =>
+    Effect.gen(function* denyAgentJoinRequest() {
+      const found = yield* liveRequest(on)(userCode);
+      const { identity } = yield* agentToApprove({ as: found.agent, caller, on });
+      if (identity.name !== found.agent) {
+        return yield* Effect.fail(joinNotOwned(found.agent));
+      }
+      const at = yield* now;
+      const denied = yield* on.storage.denyAgentJoinRequest(userCode, at);
+      if (denied === "not_found") {
+        return yield* Effect.fail(agentJoinRequestNotFound);
+      }
+      yield* on.joinRequestChanges.denied(found.agent);
+      return { denied: true, userCode };
+    });
+}
+
 function joinRequestsOn(on: Changing): JoinRequests {
-  return { approveJoin: approver(on), collectJoin: collector(on), showJoin: shower(on), startJoin: starter(on) };
+  return {
+    approveJoin: approver(on),
+    collectJoin: collector(on),
+    denyJoin: denier(on),
+    showJoin: shower(on),
+    startJoin: starter(on),
+  };
 }
 
 export { type JoinRequestChanges, type JoinRequests, joinRequestsOn };

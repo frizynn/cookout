@@ -1,4 +1,4 @@
-import { Array as Arr, Effect } from "effect";
+import { Array as Arr, Effect, String as Str } from "effect";
 import { HttpClient, HttpClientRequest } from "effect/http";
 import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
@@ -14,6 +14,17 @@ const MISDIRECTED = 421;
 const FOREIGN_ORIGIN = "https://elsewhere.example";
 const PUBLIC_URL = "https://cookout.example";
 const STRICT_POLICY = /^default-src 'none';.*frame-ancestors 'none'$/u;
+const LIVE_DIRECTIVES = [
+  "default-src 'none'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "font-src 'self'",
+  "img-src 'self' data: blob:",
+  "connect-src 'self'",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "frame-ancestors 'none'",
+];
 
 function withHost(
   url: string,
@@ -121,5 +132,16 @@ it.effect("every response carries a strict CSP without unsafe-inline and refuses
     expect(frames).toStrictEqual(["DENY", "DENY", "DENY"]);
     expect(Arr.every(policies, (policy) => STRICT_POLICY.test(policy))).toBe(true);
     expect(Arr.join(policies, " ")).not.toContain("unsafe-inline");
+  }).pipe(Effect.provide(testCookout())),
+);
+
+it.effect("the CSP lets images load from blob: URLs, a pasted file's preview, and changes no other directive", () =>
+  Effect.gen(function* blobImages() {
+    const cookout = yield* TestCookout;
+    const health = yield* answer(() => request({ baseUrl: cookout.url, method: "GET", path: healthPath }));
+    const policy = health.headers.get("content-security-policy") ?? "";
+    const directives = Arr.map(Str.split(policy, ";"), Str.trim);
+
+    expect(directives).toStrictEqual(LIVE_DIRECTIVES);
   }).pipe(Effect.provide(testCookout())),
 );

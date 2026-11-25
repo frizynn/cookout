@@ -8,6 +8,7 @@ import type {
 } from "../../agent-sessions/index.ts";
 import {
   agentJoinRequestApprovalPath,
+  agentJoinRequestDenialPath,
   agentJoinRequestPath,
   agentJoinRequestsPath,
   agentSessionPath,
@@ -19,6 +20,7 @@ import {
   isAgentJoinRequestResponse,
   isAgentJoinRequestStartedResponse,
   isAgentSessionResponse,
+  isDenyAgentJoinResponse,
   isJoinCodeResponse,
   isLeaveResponse,
   isListAgentSessionsResponse,
@@ -58,6 +60,15 @@ function agentJoinCalls(server: ClientConnection): AgentJoinCalls {
         path: collectAgentJoinRequestPath,
       });
       return collected;
+    },
+    denyAgentJoin: async (userCode) => {
+      const denied = await send(server, {
+        isExpected: isDenyAgentJoinResponse,
+        method: "PUT",
+        params: { code: userCode },
+        path: agentJoinRequestDenialPath,
+      });
+      return denied;
     },
     getAgentJoinRequest: async (userCode) => {
       const found = await send(server, {
