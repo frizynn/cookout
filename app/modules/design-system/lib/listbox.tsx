@@ -46,20 +46,19 @@ interface Drawn<Option extends ListboxOption> {
 const LOOKS = {
   menu: {
     listbox:
-      "absolute bottom-full left-0 z-50 mb-2 flex min-w-56 flex-col rounded-md border bg-background py-1 text-sm shadow-lg",
-    option: "flex w-full cursor-pointer items-baseline gap-2 px-3 py-1.5 text-left text-foreground hover:bg-muted",
-    scrolls: false,
+      "absolute bottom-full left-0 z-50 mb-2 flex max-h-66 min-w-56 scroll-py-1 flex-col overflow-y-auto rounded-md border bg-background py-1 text-sm shadow-lg",
+    option:
+      "flex w-full shrink-0 cursor-pointer items-baseline gap-2 px-3 py-1.5 text-left text-foreground hover:bg-muted",
   },
   "menu below": {
     listbox:
-      "absolute top-full left-4 z-50 mt-1 flex min-w-56 flex-col rounded-md border bg-background py-1 text-sm shadow-lg",
-    option: "flex w-full cursor-pointer items-baseline gap-2 px-3 py-1.5 text-left text-foreground hover:bg-muted",
-    scrolls: false,
+      "absolute top-full left-4 z-50 mt-1 flex max-h-66 min-w-56 scroll-py-1 flex-col overflow-y-auto rounded-md border bg-background py-1 text-sm shadow-lg",
+    option:
+      "flex w-full shrink-0 cursor-pointer items-baseline gap-2 px-3 py-1.5 text-left text-foreground hover:bg-muted",
   },
   results: {
     listbox: "flex flex-col gap-1",
     option: "flex cursor-pointer flex-col gap-0.5 rounded-md px-3 py-1.5 text-sm hover:bg-muted",
-    scrolls: true,
   },
 } as const;
 
@@ -136,10 +135,10 @@ export function Listbox<Option extends ListboxOption>(parts: ListboxParts<Option
     .map((each) => each.option.value)
     .join("");
   useEffect(() => {
-    if (LOOKS[look].scrolls && chosen !== "") {
+    if (chosen !== "") {
       scrollToOption({ index: highlighted, list });
     }
-  }, [chosen, highlighted, list, look]);
+  }, [chosen, highlighted, list]);
   const handleMouseDown = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
       event.preventDefault();

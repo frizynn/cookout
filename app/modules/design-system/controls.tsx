@@ -27,9 +27,9 @@
  * - `AttachButton` is a paperclip icon button, named and tooltipped by `label`, that opens the file picker for several files and hands what is picked to `onFiles`.
  * - `FileDrop` hands files dropped anywhere on its children to `onFiles`; anything else dropped is left alone.
  * - `PendingList` is a box's named list of files waiting to be sent, above its text, each in a `PendingItem`: its children (a thumbnail or a chip) with a small remove button named by `removeLabel` at its corner.
- * - `Suggestions` is a named listbox of options under a box, such as mentions or commands (each with any muted detail), one selected, which leaves the box focused even when a pointer picks one; it floats above the box (or below it, with `place` `below`), out of its layout, over all in the pane.
+ * - `Suggestions` is a named listbox of options under a box, such as mentions or commands (each with any muted detail), one selected, which leaves the box focused even when a pointer picks one; it lists every option, shows about 8 rows at most and scrolls the rest; it floats above the box (or below it, with `place` `below`), out of its layout, over all in the pane.
  * - `ComboboxField` is a named search input (`box` its ID) that is a combobox controlling the listbox `list`, its option at `active` the active one while `expanded`.
- * - `Listbox` is the named listbox (`list` its ID) both draw, of options in optional named groups, drawn by its children, the one at `highlighted` selected (scrolled into view in the `results` look); pressing one calls `onChoose` with its `value`, leaving the box focused.
+ * - `Listbox` is the named listbox (`list` its ID) both draw, of options in optional named groups, drawn by its children, the one at `highlighted` selected and scrolled into view; pressing one calls `onChoose` with its `value`, leaving the box focused.
  * - `ResultOption` is a result's label, detail and children.
  * - `DataArea` is a labelled box to write JSON in, whose text its owner holds.
  * - `LinesArea` is an optional labelled box for lines (`name: value` headers), whose text its owner holds.
