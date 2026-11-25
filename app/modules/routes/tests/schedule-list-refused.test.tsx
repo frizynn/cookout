@@ -13,6 +13,10 @@ async function refusingPauses(channel: string): Promise<CookoutClient> {
   await client.deleteScheduledMessage(gone.id);
   return {
     ...client,
+    deleteScheduledMessage: async () => {
+      const deleted = await client.deleteScheduledMessage(gone.id);
+      return deleted;
+    },
     pauseScheduledMessage: async () => {
       const paused = await client.pauseScheduledMessage(gone.id);
       return paused;
@@ -24,6 +28,24 @@ async function refused(): Promise<string | null> {
   await pressedIn({ button: "Pause", text: "Retro" });
   const alert = await alertSaying("Couldn't change it.");
   return alert.textContent;
+}
+
+async function deleteRefused(): Promise<string | null> {
+  await pressedIn({ button: "Delete", text: "Retro" });
+  const confirming = await screen.findByRole("alertdialog", { name: "Delete this scheduled message?" });
+  fireEvent.click(within(confirming).getByRole("button", { name: "Delete" }));
+  const alert = await alertSaying("Couldn't delete it.");
+  return alert.textContent;
+}
+
+function unreadable(client: CookoutClient): CookoutClient {
+  return {
+    ...client,
+    listScheduledMessages: async () => {
+      const listed = await client.listScheduledMessages({ channel: "no-such-channel" });
+      return listed;
+    },
+  };
 }
 
 async function cancelled(): Promise<readonly string[]> {
@@ -51,6 +73,29 @@ it("a refused change says why on its row, and cancelling a delete keeps the sche
     expect.stringMatching(/^Couldn't change it\. .+\(scheduled_message_not_found\)$/u),
     ["Pause", "Edit", "Delete"],
   ]);
+
+  close();
+});
+
+it("a refused delete says why in its confirmation", { timeout: 10_000 }, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-schedule-list-refused-delete";
+  const close = await listOpened({ channel, client: await refusingPauses(channel) });
+
+  await expect(deleteRefused()).resolves.toMatch(/^Couldn't delete it\. .+\(scheduled_message_not_found\)$/u);
+
+  close();
+});
+
+it("a refused read of the schedules says it couldn't load them", { timeout: 10_000 }, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-schedule-list-unreadable";
+  const close = await listOpened({ channel, client: unreadable(await refusingPauses(channel)) });
+  const alert = await alertSaying("Couldn't load the scheduled messages.");
+
+  expect(alert.textContent).toBe("Couldn't load the scheduled messages.");
 
   close();
 });

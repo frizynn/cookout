@@ -46,12 +46,13 @@ function postDue(
 }
 
 function announceRun(running: Running, schedule: StoredScheduledMessage): Effect.Effect<void, StorageUnavailable> {
-  return Effect.flatMap(running.storage.findScheduledMessage(schedule.id), (found) => {
-    if (Predicate.isUndefined(found)) {
-      return Effect.void;
-    }
-    return Effect.asVoid(running.announcing.shownAndAnnounced(found, false));
-  });
+  return Effect.flatMap(running.storage.findScheduledMessage(schedule.id), (found) =>
+    Effect.forEach(
+      Option.toArray(Option.fromNullishOr(found)),
+      (still) => Effect.asVoid(running.announcing.shownAndAnnounced(still, false)),
+      { concurrency: 1, discard: true },
+    ),
+  );
 }
 
 interface Due {

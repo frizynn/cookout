@@ -35,6 +35,7 @@ async function fieldsBoard(channel: string): Promise<void> {
   });
   const paused = await made({ by: adminClient(), channel, cron: "15 8 1 * *", text: "Invoices" });
   await adminClient().pauseScheduledMessage(paused.id);
+  await made({ by: adminClient(), channel, cron: "0 9 21 6 *", text: "Midsummer" });
   await deactivatedMaker(channel);
 }
 
@@ -47,7 +48,7 @@ it("the channel menu's Scheduled messages lists the channel's schedules with the
   await fieldsBoard(channel);
   const close = await listOpened({ channel, client: adminClient() });
   const shown = await Promise.all(
-    ["Standup", "Deploy window", "Invoices", "Their standup"].map(async (text) => {
+    ["Standup", "Deploy window", "Invoices", "Midsummer", "Their standup"].map(async (text) => {
       const lines = await linesOf(text);
       return lines;
     }),
@@ -67,6 +68,12 @@ it("the channel menu's Scheduled messages lists the channel's schedules with the
       "Created by @admin",
     ],
     ["Invoices", "On day 1 of every month at 08:15 (15 8 1 * *)", "No next run · UTC", "Created by @admin", "Paused"],
+    [
+      "Midsummer",
+      "Cron 0 9 21 6 *",
+      expect.stringMatching(/^Next run \w{3}, 21 Jun \d{4}, 09:00 · UTC$/u),
+      "Created by @admin",
+    ],
     [
       "Their standup",
       "Every day at 09:00 (0 9 * * *)",

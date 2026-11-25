@@ -196,3 +196,17 @@ it("shift+S on a channel row opens its scheduled messages", { timeout: 5000 }, a
 
   close();
 });
+
+it("shift+S off a channel row opens nothing", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const channels = channelsOf("web-sidebar-keys-schedules-off-row");
+  const close = openAt({ client: await readerOf(channels), hash: "#/inbox" });
+  await rowOf(channels.first);
+  await focusInbox();
+  pressed({ key: "S", shiftKey: true });
+
+  expect(screen.queryByRole("dialog", { name: "Scheduled messages" })).toBeNull();
+
+  close();
+});
