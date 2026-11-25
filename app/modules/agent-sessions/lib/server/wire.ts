@@ -4,7 +4,6 @@ import type {
   AgentJoinRequestResponse,
   AgentJoinRequestStartedResponse,
   AgentSessionResponse,
-  JoinCodeResponse,
   LeaveResponse,
   ListAgentSessionsResponse,
   ListedAgentSession,
@@ -12,6 +11,7 @@ import type {
 } from "../../index.ts";
 import { identityNamePattern, isIdentityName, isToken, tokenPattern } from "../../../identities/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
+import type { JoinCodeResponse } from "../../join-codes.ts";
 import { Schema } from "effect";
 import { idleExpiryPattern } from "../../index.ts";
 import { matchesWire } from "../../../http/index.ts";

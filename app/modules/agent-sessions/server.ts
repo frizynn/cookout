@@ -103,8 +103,10 @@ export const agentSessionResponseSchemas = {
   AgentJoinRequestResponse: AgentJoinRequestResponseSchema,
   AgentJoinRequestStartedResponse: AgentJoinRequestStartedResponseSchema,
   AgentSessionResponse: AgentSessionResponseSchema,
-  JoinCodeResponse: JoinCodeResponseSchema,
   LeaveResponse: LeaveResponseSchema,
   ListAgentSessionsResponse: ListAgentSessionsResponseSchema,
   RevokeAgentSessionResponse: RevokeAgentSessionResponseSchema,
 };
+
+/** The response Schemas of the join code routes, for the SDK's generated validators. */
+export const joinCodeResponseSchemas = { JoinCodeResponse: JoinCodeResponseSchema };

@@ -1,13 +1,13 @@
 import type { AgentIdentity, DisplayName, HumanIdentity, IdentityName } from "../../../identities/index.ts";
-import type { AgentSessionResponse, JoinCodeResponse, RedeemJoinCodeRequest } from "../../index.ts";
 import { DateTime, Effect, Predicate } from "effect";
 import type { JoinCodeRedemption, StorageUnavailable } from "../../../storage/server.ts";
+import type { JoinCodeResponse, RedeemJoinCodeRequest, RedeemJoinCodeResponse } from "../../join-codes.ts";
 import { agentSessionLive, identityDeactivated } from "./refusals.ts";
 import type { Description } from "../../../identities/client.ts";
 import type { On } from "./join.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
-import { joinCodeLifetimeMinutes } from "../../index.ts";
+import { joinCodeLifetimeMinutes } from "../../join-codes.ts";
 import { termsAsked } from "./join-request-terms.ts";
 import { token } from "../../../identities/index.ts";
 
@@ -22,7 +22,7 @@ interface NewAgent {
 
 interface JoinCodes {
   readonly createJoinCode: (agent: NewAgent) => Fails<JoinCodeResponse>;
-  readonly redeemJoinCode: (request: RedeemJoinCodeRequest) => Fails<AgentSessionResponse>;
+  readonly redeemJoinCode: (request: RedeemJoinCodeRequest) => Fails<RedeemJoinCodeResponse>;
 }
 
 const BAD_REQUEST = 400;
@@ -112,8 +112,8 @@ function creator(on: On): JoinCodes["createJoinCode"] {
 
 function answerOf(
   redemption: JoinCodeRedemption,
-  agentSessionToken: AgentSessionResponse["agentSessionToken"],
-): Effect.Effect<AgentSessionResponse, Refusal> {
+  agentSessionToken: RedeemJoinCodeResponse["agentSessionToken"],
+): Effect.Effect<RedeemJoinCodeResponse, Refusal> {
   if (redemption.status === "gone") {
     return Effect.fail(joinCodeNotFound);
   }

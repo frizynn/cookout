@@ -1,5 +1,6 @@
-/** Join codes on the wire: the routes that create and redeem one, and their requests and answers. */
+/** Join codes on the wire: the routes that create and redeem one, their requests and answers, and the SDK's calls. */
 import type { AgentIdentity, Token } from "../identities/index.ts";
+import type { AgentSessionResponse } from "./index.ts";
 import type { IsoTime } from "../time/index.ts";
 
 /** How long a join code lasts unredeemed: 15 minutes. */
@@ -40,4 +41,18 @@ export interface RedeemJoinCodeRequest {
   readonly idleExpiry?: string;
   /** The host the agent joins from, shown to its owner. 1–253 characters. */
   readonly host?: string;
+}
+
+/** The answer to `POST /v1/join-codes/redeem`: the code's agent's agent session, as `join` answers it. */
+export type RedeemJoinCodeResponse = AgentSessionResponse;
+
+/** The SDK's calls for join codes. */
+export interface JoinCodeCalls {
+  /** `POST /v1/join-codes` (a human): creates an agent the caller owns, with a join code for it, valid 15 minutes. */
+  readonly createJoinCode: (request: CreateJoinCodeRequest) => Promise<JoinCodeResponse>;
+  /**
+   * `POST /v1/join-codes/redeem` (no token): the agent session token of the code's agent. A used, expired or unknown
+   * code is 404 `join_code_not_found`.
+   */
+  readonly redeemJoinCode: (request: RedeemJoinCodeRequest) => Promise<RedeemJoinCodeResponse>;
 }
