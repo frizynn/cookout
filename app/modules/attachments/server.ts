@@ -14,11 +14,12 @@ import { AssetStore, Storage } from "../storage/server.ts";
 import type { Attachment, AttachmentId, ImageContentType, NewAttachment } from "./index.ts";
 import {
   assetPath,
-  attachmentLimits,
   attachmentNameMaximumLength,
+  attachmentTooLargeRefusal,
   hasContent,
   isAttachmentId,
   opaqueContentType,
+  tooManyAttachmentsRefusal,
 } from "./index.ts";
 import { HttpServerResponse } from "effect/http";
 import type { Refusal } from "../http/index.ts";
@@ -33,7 +34,6 @@ const TOO_LARGE = 413;
 const NO_BYTES = 0;
 const START = 0;
 const HEAD_LENGTH = 12;
-const BYTES_IN_A_MEGABYTE = 1_000_000;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 
 const IMAGE_SIGNATURES: readonly (readonly [ImageContentType, string])[] = [
@@ -49,13 +49,7 @@ const serving = {
   "x-content-type-options": "nosniff",
 };
 
-const megabytes = `${String(attachmentLimits.maximumBytes / BYTES_IN_A_MEGABYTE)} MB`;
-
-const tooMany: Refusal = {
-  code: "too_many_attachments",
-  message: `A message can have at most ${String(attachmentLimits.maximumCount)} attachments.`,
-  status: BAD_REQUEST,
-};
+const tooMany: Refusal = { ...tooManyAttachmentsRefusal, status: BAD_REQUEST };
 
 const unnamed: Refusal = {
   code: "attachment_unnamed",
@@ -75,11 +69,7 @@ const attachmentNotFound: Refusal = {
   status: NOT_FOUND,
 };
 
-const tooLarge: Refusal = {
-  code: "attachment_too_large",
-  message: `An attachment is over ${megabytes}: each attachment can be at most ${megabytes} (${String(attachmentLimits.maximumBytes)} bytes).`,
-  status: TOO_LARGE,
-};
+const tooLarge: Refusal = { ...attachmentTooLargeRefusal, status: TOO_LARGE };
 
 function empty(name: string): Refusal {
   return {

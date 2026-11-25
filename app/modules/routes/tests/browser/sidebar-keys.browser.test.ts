@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
-import { inSidebar, sidebarLink } from "./regions.ts";
+import { inPane, inSidebar, sidebarLink } from "./regions.ts";
 import type { Person } from "./people.ts";
 import { logInWithStream } from "./login.ts";
 import { probeFixtures } from "./probe.ts";
@@ -92,12 +92,18 @@ async function openedByArrows(page: Page): Promise<string> {
   return new URL(page.url()).hash.replace("#/channels/", "");
 }
 
+async function heardSubscriptionAnswer(page: Page): Promise<void> {
+  await expect(inPane(page).getByRole("button", { exact: true, name: "Subscribed" })).toBeEnabled();
+}
+
 async function subscribedByS({ channel, page, reader }: Opening): Promise<void> {
   await rowOf(page, channel).focus();
   await page.keyboard.press("s");
 
   await expect(said(page, `Subscribed to #${channel}`)).toBeAttached();
   await expect.poll(subscriptionOf(reader, channel)).toBe(true);
+
+  await heardSubscriptionAnswer(page);
 }
 
 async function unsubscribedByS({ channel, page, reader }: Opening): Promise<void> {
