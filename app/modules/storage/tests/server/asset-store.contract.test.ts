@@ -60,7 +60,7 @@ it.effect.each(assetStoreLayers)(
       expect(read).toStrictEqual(bytes);
       expect(missing).toMatchObject({
         _tag: "StorageUnavailable",
-        message: `The asset store holds no bytes for attachment ${MISSING}.`,
+        message: `The asset store holds no bytes for asset ${MISSING}.`,
       });
     }).pipe(Effect.provide(layer)),
 );
