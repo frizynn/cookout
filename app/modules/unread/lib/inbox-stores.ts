@@ -20,7 +20,16 @@ import type {
   OfflineAlertId,
   Refusal,
 } from "../../sdk/index.ts";
-import { alertsOf, earlierOf, inboxOf, joinRefusalsOf, nudgesOf, offersOf, quietAgentsOf } from "../../board/index.ts";
+import {
+  alertsOf,
+  earlierOf,
+  inboxOf,
+  joinRefusalsOf,
+  nudgesOf,
+  offersOf,
+  quietAgentsOf,
+  selectedStore,
+} from "../../board/index.ts";
 
 type Subscribe = (listener: () => void) => () => void;
 
@@ -95,7 +104,7 @@ interface InboxStores {
 }
 
 function shownBy<State>(board: InboxBoard, select: (state: BoardState) => State): Shown<State> {
-  return { snapshot: () => select(board.snapshot()), subscribe: board.subscribeShowing("inbox") };
+  return selectedStore({ snapshot: () => select(board.snapshot()), subscribe: board.subscribeShowing("inbox") });
 }
 
 function noticeStores(
@@ -123,7 +132,13 @@ function noticeStores(
 
 function inboxStoresOf(board: InboxBoard): InboxStores {
   const calls = board.inboxCalls;
-  const { subscribe } = shownBy(board, inboxOf);
+  const subscribe = board.subscribeShowing("inbox");
+  function markChannelRefusal(): MarkChannelRefusal | null {
+    return board.snapshot().inboxCalls.markChannel;
+  }
+  function menuRefusal(): Refusal | null {
+    return board.snapshot().inboxCalls.menu;
+  }
   return {
     ...noticeStores(board),
     agentJoinRequests: { ...shownBy(board, joinRefusalsOf), approve: calls.approve },
@@ -131,10 +146,14 @@ function inboxStoresOf(board: InboxBoard): InboxStores {
     inbox: shownBy(board, inboxOf),
     markChannel: {
       markChannelRead: calls.markChannelRead,
-      refusal: () => board.snapshot().inboxCalls.markChannel,
-      subscribe,
+      refusal: markChannelRefusal,
+      subscribe: selectedStore({ snapshot: markChannelRefusal, subscribe }).subscribe,
     },
-    menu: { markUnread: calls.markUnread, refusal: () => board.snapshot().inboxCalls.menu, subscribe },
+    menu: {
+      markUnread: calls.markUnread,
+      refusal: menuRefusal,
+      subscribe: selectedStore({ snapshot: menuRefusal, subscribe }).subscribe,
+    },
   };
 }
 

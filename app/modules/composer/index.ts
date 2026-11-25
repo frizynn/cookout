@@ -63,12 +63,12 @@ import type { AgentCreation, IdentityActions } from "./lib/owner-powers.ts";
 import type { Command, Identity, IdentityName } from "../sdk/index.ts";
 import type { DisplayNameDraft, TriggerSettings } from "./lib/profile-stores.ts";
 import type { DraftSnapshot, Sources } from "./lib/snapshot.ts";
-import { EMPTY, changesFor } from "./lib/snapshot.ts";
+import { EMPTY, changesFor, draftChanges } from "./lib/snapshot.ts";
 import type { IdentityList, IdentityStore } from "./lib/identity-list.ts";
+import { commandList, selectedStore } from "../board/index.ts";
 import type { AdminChanges } from "./lib/admin-change.ts";
 import type { IdentityDeletion } from "./lib/identity-deletion.ts";
 import type { PendingAttachments } from "./lib/pending-attachments.ts";
-import { commandList } from "../board/index.ts";
 import { createAdminChanges } from "./lib/admin-change.ts";
 import { createIdentityDeletion } from "./lib/identity-deletion.ts";
 import { createIdentityList } from "./lib/identity-list.ts";
@@ -99,12 +99,7 @@ function withAttachments(draft: Omit<Draft, "attachments">): Draft {
 function createDraft(list: IdentityList, sources: Sources): Omit<Draft, "attachments"> {
   const listeners = listenersOf(list.show);
   const changes = changesFor(sources);
-  let current: DraftSnapshot = EMPTY;
-
-  function change(update: (snapshot: DraftSnapshot) => DraftSnapshot): void {
-    current = update(current);
-    listeners.notify();
-  }
+  const { change, current } = draftChanges(listeners.notify);
 
   list.onChange(() => {
     change(changes.refreshed);
@@ -139,7 +134,7 @@ function createDraft(list: IdentityList, sources: Sources): Omit<Draft, "attachm
     replyTo: (name) => {
       change((snapshot) => changes.repliedTo(snapshot, name));
     },
-    snapshot: () => current,
+    snapshot: current,
     subscribe: listeners.add,
     unpick: () => {
       change(changes.unpicked);
@@ -151,6 +146,37 @@ function storeIn<Store>(stores: Map<string, Store>, key: string, make: () => Sto
   const store = stores.get(key) ?? make();
   stores.set(key, store);
   return store;
+}
+
+interface IdentitiesMaking {
+  readonly list: IdentityList;
+  readonly adminChanges: AdminChanges;
+  readonly deletion: IdentityDeletion;
+  readonly readers: Pick<ReturnType<typeof listenersOf>, "add">;
+}
+
+interface IdentitiesShown {
+  readonly identities: readonly Identity[];
+  readonly adminChange: ReturnType<AdminChanges["adminChange"]>;
+}
+
+function identitiesOf({ adminChanges, deletion, list, readers }: IdentitiesMaking): Identities {
+  let shown: IdentitiesShown | null = null;
+  function shownNow(): IdentitiesShown {
+    const identities = list.identities();
+    const adminChange = adminChanges.adminChange();
+    if (shown === null || shown.identities !== identities || shown.adminChange !== adminChange) {
+      shown = { adminChange, identities };
+    }
+    return shown;
+  }
+  return {
+    ...adminChanges,
+    ...ownerPowersOf(list),
+    deletion,
+    snapshot: list.identities,
+    subscribe: selectedStore({ snapshot: shownNow, subscribe: readers.add }).subscribe,
+  };
 }
 
 /** One message box's draft. `subscribe` and `snapshot` are the two halves `useSyncExternalStore` takes. */
@@ -250,13 +276,7 @@ export function createComposer(options: ComposerOptions): Composer {
       storeIn(drafts, key, () =>
         withAttachments(createDraft(list, { commands: () => NO_COMMANDS, identities: list.identities, members })),
       ),
-    identities: {
-      ...createAdminChanges(list),
-      ...ownerPowersOf(list),
-      deletion,
-      snapshot: list.identities,
-      subscribe: readers.add,
-    },
+    identities: identitiesOf({ adminChanges: createAdminChanges(list), deletion, list, readers }),
   };
 }
 

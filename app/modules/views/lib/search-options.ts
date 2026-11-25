@@ -1,4 +1,4 @@
-import type { Identity, SearchResult } from "../../sdk/index.ts";
+import type { Identity, MessageId, SearchResult } from "../../sdk/index.ts";
 import type { ChannelsState } from "../../board/index.ts";
 import type { SearchState } from "../../search/web.ts";
 import { hrefOf } from "../../paths/index.ts";
@@ -19,6 +19,7 @@ type BoxOption =
 interface Listed {
   readonly channels: ChannelsState;
   readonly identities: readonly Identity[];
+  readonly results: readonly SearchResult[];
   readonly state: SearchState;
 }
 
@@ -93,11 +94,8 @@ function peopleOf(identities: readonly Identity[], typed: string): readonly BoxO
     }));
 }
 
-function messagesOf(state: SearchState): readonly BoxOption[] {
-  if (state.found.status !== "found") {
-    return [];
-  }
-  return state.found.results.map((result) => ({
+function messagesOf(results: readonly SearchResult[]): readonly BoxOption[] {
+  return results.map((result) => ({
     group: "Messages",
     href: searchHrefOf(result),
     kind: "message",
@@ -110,21 +108,30 @@ function isFiltered(query: string): boolean {
   return [after, before, from, within].some((values) => values.length > NONE);
 }
 
-function boxOptionsOf({ channels, identities, state }: Listed): readonly BoxOption[] {
+function boxOptionsOf({ channels, identities, results, state }: Listed): readonly BoxOption[] {
   if (isFiltered(state.query)) {
-    return messagesOf(state);
+    return messagesOf(results);
   }
   const typed = state.query.trim().toLowerCase();
   return [
     ...PLACES.filter((place) => place.kind === "jump" && includes(place.label, typed)),
     ...channelsOf(channels, typed),
     ...peopleOf(identities, typed),
-    ...messagesOf(state),
+    ...messagesOf(results),
   ];
+}
+
+const NO_IDS: readonly MessageId[] = [];
+
+function foundIdsOf(state: SearchState): readonly MessageId[] {
+  if (state.found.status !== "found") {
+    return NO_IDS;
+  }
+  return state.found.ids;
 }
 
 function aheadOf(options: readonly BoxOption[]): number {
   return options.filter((option) => option.kind === "jump").length;
 }
 
-export { type BoxOption, aheadOf, boxOptionsOf };
+export { type BoxOption, aheadOf, boxOptionsOf, foundIdsOf };

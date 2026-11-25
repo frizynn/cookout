@@ -20,15 +20,28 @@ interface Overrides {
   readonly check?: readonly string[];
   readonly ci?: (branch: string, sha: string) => Step;
   readonly install?: readonly string[];
+  readonly approved?: string;
   readonly log?: (line: string) => void;
   readonly migrationsBase?: string;
   readonly rules?: MergeRules;
 }
 
 const TICKET = 7;
+const INDENT = 2;
 const BRANCH = `ticket-${TICKET}`;
 const ATTEMPTS = 3;
 const FLOOR = { base: ["90", "95"], merged: ["91", "94"], ticket: ["92", "94"], v1: ["91", "95"] } as const;
+
+const OXLINT_CONFIG = {
+  categories: { correctness: "error" },
+  ignorePatterns: ["coverage/**"],
+  overrides: [{ files: ["scripts/**"], rules: { "node/no-sync": "off" } }],
+  plugins: ["eslint", "unicorn"],
+  rules: { "func-style": ["error", "declaration"], "no-console": "error", "no-debugger": "warn" },
+} as const;
+const OPT_OUTS =
+  "# Lint opt-outs\n\n## Off in some files\n\n- `node/no-sync`, in `scripts/`: a script uses the sync APIs.\n";
+const DEPENDENCY_CRUISER = 'module.exports = {\n  forbidden: [{ name: "no-circular", severity: "error" }],\n};\n';
 
 const rules: MergeRules = {
   adrs: "docs/adr",
@@ -60,6 +73,10 @@ function generated(...sources: readonly string[]): string {
 function migrations(...entries: readonly string[]): string {
   const listed = entries.map((entry) => `  \`CREATE TABLE ${entry} (\n     id TEXT\n   ) STRICT;\`,\n`).join("");
   return `const migrations = [\n${listed}];\n`;
+}
+
+function oxlint(config: unknown): string {
+  return `${JSON.stringify(config, null, INDENT)}\n`;
 }
 
 function floor([branches, lines]: readonly [string, string]): string {
@@ -103,7 +120,10 @@ function repos(): Repos {
   const base = { "floor.ts": floor(FLOOR.base), "gen/out.txt": generated("a"), "migrations.ts": migrations("a") };
   commit(work, "base", {
     ...base,
+    ".dependency-cruiser.cjs": DEPENDENCY_CRUISER,
+    ".oxlintrc.json": oxlint(OXLINT_CONFIG),
     "docs/adr/0001-base.md": "# Base\n",
+    "docs/lint-opt-outs.md": OPT_OUTS,
     "notes.txt": "base\n",
     "pnpm-lock.yaml": "base\n",
     "src/a.txt": "a\n",
@@ -174,4 +194,19 @@ function repo(dir: string): Repo {
 }
 
 export type { Overrides, Repos };
-export { ATTEMPTS, BRANCH, FLOOR, TICKET, floor, generated, git, migrations, repo, repos };
+export {
+  ATTEMPTS,
+  BRANCH,
+  DEPENDENCY_CRUISER,
+  FLOOR,
+  OPT_OUTS,
+  OXLINT_CONFIG,
+  TICKET,
+  floor,
+  generated,
+  git,
+  migrations,
+  oxlint,
+  repo,
+  repos,
+};

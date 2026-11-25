@@ -66,7 +66,9 @@
  * in the order asked, applying the answer as a `thread` event, or keeping the refusal (`closingRefusal`) until the next;
  * `calls.createChannel` creates a channel and puts it in the list and the subscriptions; `calls.ack` acks a message,
  * one ack at a time in the order asked; `calls.search` runs a search and answers its page, or the server's refusal,
- * without keeping it, for the `search` store.
+ * for the `search` store, which keeps only the result message IDs: each result's message goes in the table, with its
+ * thread's state for a thread whose top-level message the table doesn't hold, and `searchResultsOf(ids)` reads them
+ * back, so a result row follows `message` and `thread` events like every other view of that message.
  *
  * The Inbox is one slice, `inbox`, shown with `subscribeShowing("inbox")`. One load reads `GET /v1/inbox`, the read
  * positions and the history's first page, once each, for every part: For you (`inboxOf`, the items no read position
@@ -108,7 +110,14 @@
  * whoever is logged in so the terminal that started it finishes logging in. `createAgentJoinApprovals` does the same
  * for an agent join request: the agent it would join or create for the person viewing it, an idle expiry they may
  * lower, and whether to replace the agent's live session.
+ *
+ * `selectedStore({ subscribe, snapshot })` is an external store over one of the board store's subscriptions that reads
+ * it through a selector (`snapshot`, such as `() => commandList(store.snapshot())`): it calls its listeners only when the
+ * selector's answer is a different object, so a view reading one part of the board re-renders only when that part
+ * changes, not on every change anywhere on the board (#495). `sameSnapshot({ before, after })` is whether a store's new
+ * snapshot holds the same value in every field (an array field, the same items), for a store to publish nothing then.
  */
+export { sameSnapshot, selectedStore } from "./lib/selected.ts";
 export type { BoardCalls, ThreadClosing } from "./lib/board-calls.ts";
 export type { ClosingRefusal } from "./lib/thread-closing.ts";
 export type { ListedSchedules } from "./lib/schedules-slice.ts";
@@ -201,6 +210,7 @@ export {
   subscribedChannels,
   threadOf,
 } from "./lib/board-selectors.ts";
+export { searchResultsOf } from "./lib/search-selectors.ts";
 export {
   type LoginApproval,
   type LoginApprovalState,

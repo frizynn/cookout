@@ -17,7 +17,7 @@ interface CountsStore {
   readonly snapshot: () => { readonly status: string };
 }
 
-type WithNewLines<Store> = Omit<Store, "lineAt" | "movesBack"> & {
+type WithNewLines<Store> = Omit<Store, "heard" | "lineAt" | "movesBack"> & {
   readonly newLine: (channel: ChannelName, thread: MessageId | null) => NewLine;
   readonly selection: ReturnType<typeof createSelections>;
 };
@@ -29,37 +29,44 @@ interface NewLine {
 
 interface Lining {
   readonly counts: CountsStore;
+  readonly heard: CountsStore["subscribe"];
   readonly lineAt: LineOf;
   readonly movesBack: MovesBackOf;
   readonly scope: Scope;
 }
 
-function createNewLine({ counts, lineAt, movesBack, scope }: Lining): NewLine {
+function createNewLine({ counts, heard, lineAt, movesBack, scope }: Lining): NewLine {
   const listeners = new Set<() => void>();
   let line: number | null = null;
   let taken = false;
   let moves = NONE;
   let stop: (() => void) | null = null;
 
+  function put(next: number | null): void {
+    if (next === line) {
+      return;
+    }
+    line = next;
+    for (const listener of listeners) {
+      listener();
+    }
+  }
+
   function take(): void {
-    const state = counts.snapshot();
     const movedBack = movesBack(scope.channel, scope.thread);
-    if ((taken && moves === movedBack) || state.status !== "loaded") {
+    if ((taken && moves === movedBack) || counts.snapshot().status !== "loaded") {
       return;
     }
     taken = true;
     moves = movedBack;
-    line = lineAt(scope.channel, scope.thread);
-    for (const listener of listeners) {
-      listener();
-    }
+    put(lineAt(scope.channel, scope.thread));
   }
 
   return {
     snapshot: () => line,
     subscribe: (listener) => {
       listeners.add(listener);
-      stop ??= counts.subscribe(take);
+      stop ??= heard(take);
       take();
       return () => {
         listeners.delete(listener);
@@ -74,9 +81,14 @@ function createNewLine({ counts, lineAt, movesBack, scope }: Lining): NewLine {
   };
 }
 
-type Lines<Store> = Store & { readonly lineAt: LineOf; readonly movesBack: MovesBackOf };
+type Lines<Store> = Store & {
+  readonly heard: CountsStore["subscribe"];
+  readonly lineAt: LineOf;
+  readonly movesBack: MovesBackOf;
+};
 
 function withNewLines<Store extends CountsStore>({
+  heard,
   lineAt,
   movesBack,
   ...counts
@@ -86,7 +98,7 @@ function withNewLines<Store extends CountsStore>({
     ...counts,
     newLine: (channel, thread) => {
       const key = `${channel}/${String(thread)}`;
-      const line = lines.get(key) ?? createNewLine({ counts, lineAt, movesBack, scope: { channel, thread } });
+      const line = lines.get(key) ?? createNewLine({ counts, heard, lineAt, movesBack, scope: { channel, thread } });
       lines.set(key, line);
       return line;
     },

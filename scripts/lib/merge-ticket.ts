@@ -6,9 +6,11 @@ import { branchOf, deleteRemoteBranch, push } from "./merge-push.ts";
 import { failedStep, mergeInto, regenerateFiles } from "./merge-resolve.ts";
 import type { MergeRules } from "./merge-resolve.ts";
 import { appendOnlyMigrations } from "./merge-migrations.ts";
+import { lintApproval } from "./merge-lint.ts";
 import { renumberAdrs } from "./merge-adrs.ts";
 
 interface MergeOptions extends PushOptions {
+  readonly approved?: string;
   readonly attempts: number;
   readonly check: Command;
   readonly cwd: string;
@@ -89,6 +91,7 @@ function attempt(options: MergeOptions): Attempt {
     return started;
   }
   const stepped = firstStop([
+    (): Step => lintApproval(options),
     (): Step => mergeInto({ first: "ours", into: `ticket-${options.ticket}`, options }),
     (): Step => appendOnlyMigrations(options),
     (): Step => install(options),
@@ -132,6 +135,7 @@ interface Retry {
 
 function checkAndPush({ afterGreen, base, options }: Retry & { readonly base: string }): Attempt {
   const stepped = firstStop([
+    (): Step => lintApproval(options),
     (): Step => appendOnlyMigrations(options),
     (): Step => install(options),
     (): Step => renumberAdrs({ adrs: options.rules.adrs, cwd: options.cwd, log: options.log }),
