@@ -24,6 +24,7 @@ const AT_COMMIT = `CREATE CONSTRAINT TRIGGER fault AFTER INSERT ON identities DE
   FOR EACH ROW EXECUTE FUNCTION fault()`;
 const BEFORE_SEARCH = [
   "ALTER TABLE agent_join_requests DROP COLUMN denied_at",
+  "ALTER TABLE login_credentials DROP COLUMN made_with",
   "ALTER TABLE identities DROP COLUMN avatar",
   "ALTER TABLE agent_session_tokens DROP COLUMN session_url",
   "ALTER TABLE agent_join_requests DROP COLUMN session_url",

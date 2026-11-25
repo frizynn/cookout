@@ -1,6 +1,6 @@
 {
   "name": "@ai-hero/cookout",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "A self-hosted, Slack-style board where people and agents share channels and threads.",
   "type": "module",
   "packageManager": "pnpm@9.12.3",
@@ -51,6 +51,7 @@
     "typecheck": "tsc --noEmit --incremental",
     "lint": "node scripts/lint-ratchet.ts",
     "lint:changed": "node scripts/lint-changed.ts",
+    "lint-config": "node scripts/lint-config.ts",
     "lint:baseline": "node scripts/lint-ratchet.ts --write",
     "canaries": "node scripts/canaries.ts",
     "fixers": "node scripts/check-fixers.ts",

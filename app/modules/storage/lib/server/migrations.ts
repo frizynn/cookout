@@ -232,6 +232,7 @@ const migrations: readonly string[] = [
   `ALTER TABLE agent_session_tokens ADD COLUMN session_url TEXT;
    ALTER TABLE agent_join_requests ADD COLUMN session_url TEXT;`,
   "ALTER TABLE identities ADD COLUMN avatar TEXT;",
+  "ALTER TABLE login_credentials ADD COLUMN made_with TEXT;",
   "ALTER TABLE agent_join_requests ADD COLUMN denied_at TEXT;",
 ];
 
