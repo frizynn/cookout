@@ -10,11 +10,11 @@ import type {
   RevokeAgentSessionResponse,
 } from "../../index.ts";
 import { identityNamePattern, isIdentityName, isToken, tokenPattern } from "../../../identities/index.ts";
+import { isWebUrl, matchesWire } from "../../../http/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { JoinCodeResponse } from "../../join-codes.ts";
 import { Schema } from "effect";
 import { idleExpiryPattern } from "../../index.ts";
-import { matchesWire } from "../../../http/index.ts";
 import { userCodePattern } from "../../../logins/index.ts";
 
 const identityNameRule = Schema.isPattern(identityNamePattern, {
@@ -37,10 +37,9 @@ const HostSchema = Schema.String.check(
 );
 
 const SESSION_URL_MAX_LENGTH = 2048;
-const WEB_PROTOCOLS: ReadonlySet<string> = new Set(["http:", "https:"]);
 
 function isSessionUrl(text: string): boolean {
-  return text.length <= SESSION_URL_MAX_LENGTH && URL.canParse(text) && WEB_PROTOCOLS.has(new URL(text).protocol);
+  return text.length <= SESSION_URL_MAX_LENGTH && isWebUrl(text);
 }
 
 const SessionUrlSchema = Schema.String.check(

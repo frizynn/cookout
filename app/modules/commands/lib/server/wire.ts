@@ -14,17 +14,11 @@ import {
   isCommandSecret,
 } from "../../index.ts";
 import { identityNamePattern, isIdentityName } from "../../../identities/index.ts";
+import { isWebUrl, matchesWire } from "../../../http/index.ts";
 import { ChannelNameSchema } from "../../../channels/server.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { MessageIdSchema } from "../../../messages/server.ts";
 import { Schema } from "effect";
-import { matchesWire } from "../../../http/index.ts";
-
-const WEB_PROTOCOLS = new Set(["http:", "https:"]);
-
-function isWebUrl(value: string): boolean {
-  return URL.canParse(value) && WEB_PROTOCOLS.has(new URL(value).protocol);
-}
 
 const CommandNameSchema = Schema.String.check(
   Schema.isPattern(commandNamePattern, { message: "Use 1-64 lowercase letters, digits or '-'." }).abort(),

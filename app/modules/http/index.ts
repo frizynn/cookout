@@ -21,6 +21,7 @@ type Matching<Schema extends { readonly Type: unknown }, Wire> =
 
 const ECHO_LIMIT = 100;
 const ECHO_START = 0;
+const WEB_PROTOCOLS: ReadonlySet<string> = new Set(["http:", "https:"]);
 
 /** The path of the health check, the one route without a token. */
 export const healthPath = "/v1/health";
@@ -126,6 +127,16 @@ export function echoed(value: string): string {
     return value;
   }
   return `${value.slice(ECHO_START, ECHO_LIMIT)}…`;
+}
+
+/**
+ * Whether `text` is an absolute http or https URL, the one web-URL check the
+ * wire Schemas share.
+ * @param text The text the caller sent.
+ * @returns `true` if it parses as a URL whose protocol is `http:` or `https:`.
+ */
+export function isWebUrl(text: string): boolean {
+  return URL.canParse(text) && WEB_PROTOCOLS.has(new URL(text).protocol);
 }
 
 /**
