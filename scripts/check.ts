@@ -1,5 +1,5 @@
 import type { Check, CiOnly } from "./lib/check-runner.ts";
-import { browserSkip, browserTestsFor } from "./lib/browser-selection.ts";
+import { browserSkip, browserTestsFor, ciBrowserShard } from "./lib/browser-selection.ts";
 import { changedLines, unchangedSince } from "./lib/changed-lines.ts";
 import { fetchedCoverageMap, ghCli } from "./lib/coverage-map-fetch.ts";
 import { loadReport, osReading } from "./lib/machine-load.ts";
@@ -90,12 +90,21 @@ function selectedBrowserTests(): BrowserTests {
 const browserTests = selectedBrowserTests();
 const browserSkipped = browserSkip(browserTests);
 
-function browserScript(): readonly string[] {
-  if (inCi && shard !== "") {
+function shardScript(): readonly string[] {
+  if (!inCi) {
+    return ["browser", `--shard=${shard}`];
+  }
+  if (job !== "browser") {
     return ["browser:coverage", `--shard=${shard}`];
   }
+  const plan = ciBrowserShard({ cwd: process.cwd(), run: option("run"), shard });
+  console.log(plan.line);
+  return ["browser:coverage", ...plan.args];
+}
+
+function browserScript(): readonly string[] {
   if (shard !== "") {
-    return ["browser", `--shard=${shard}`];
+    return shardScript();
   }
   if (browserTests.all) {
     return ["browser"];

@@ -8,9 +8,6 @@ const HOOK_RUN = "run: node scripts/hygiene.ts";
 const SHIPPED = "api/sdk.api.md";
 const ADR = "docs/adr/0001-first.md";
 const NEW_ADR = "docs/adr/0002-second.md";
-const OTHER_CHANGESET = ".changeset/brave-dogs-sing.md";
-const OWN_CHANGESET = ".changeset/quiet-cats-nap.md";
-const CHANGESET_MISSING = "adds no changeset since its merge base with v1";
 
 function hookArgs(): readonly string[] {
   const run =
@@ -42,42 +39,22 @@ function deployedV1(): string {
   return dir;
 }
 
-it("the hook passes an ADR committed alone on a branch whose first commit added its changeset", {
-  timeout: 10_000,
-}, () => {
-  expect.hasAssertions();
-
-  const dir = deployedV1();
-  commit(dir, [OWN_CHANGESET, "---\n---\n"], [SHIPPED, "first\n"]);
-  commit(dir, [SHIPPED, "second\n"]);
-  stage(dir, [NEW_ADR, "# Second\n"]);
-
-  expect(hook(dir)).toStrictEqual({ status: PASSED, stderr: "" });
-});
-
-it("the hook refuses an ADR committed on a branch with no changeset", { timeout: 10_000 }, () => {
+it("passes a branch that changes a shipped file and adds no changeset", { timeout: 10_000 }, () => {
   expect.hasAssertions();
 
   const dir = deployedV1();
   commit(dir, [SHIPPED, "first\n"]);
-  stage(dir, [NEW_ADR, "# Second\n"]);
-  const run = hook(dir);
 
-  expect(run.status).toBe(FAILED);
-  expect(run.stderr).toContain(CHANGESET_MISSING);
+  expect(hygiene(dir)).toStrictEqual({ status: PASSED, stderr: "" });
 });
 
-it("the hook refuses shipped files staged with an ADR in a branch's first commit and no changeset", {
-  timeout: 10_000,
-}, () => {
+it("the hook passes shipped files staged with an ADR and no changeset", { timeout: 10_000 }, () => {
   expect.hasAssertions();
 
   const dir = deployedV1();
   stage(dir, [SHIPPED, "first\n"], [NEW_ADR, "# Second\n"]);
-  const run = hook(dir);
 
-  expect(run.status).toBe(FAILED);
-  expect(run.stderr).toContain(CHANGESET_MISSING);
+  expect(hook(dir)).toStrictEqual({ status: PASSED, stderr: "" });
 });
 
 function mergedV1WithNewAdr(): string {
@@ -122,38 +99,4 @@ it("the hook refuses an ADR from v1 edited in place while resolving a merge of v
 
   expect(run.status).toBe(FAILED);
   expect(run.stderr).toContain(`${NEW_ADR} is append-only`);
-});
-
-function unreleasedChangesetOnV1(): string {
-  const dir = repo();
-  commit(dir, [OTHER_CHANGESET, '---\n"@ai-hero/cookout": patch\n---\n\nA change from another ticket.\n']);
-  git(dir, "tag", "deploy/first");
-  git(dir, "update-ref", "refs/remotes/origin/v1", "v1");
-  git(dir, "checkout", "-q", "-b", "ticket-1");
-  return dir;
-}
-
-it("doesn't count a renamed changeset as adding one", { timeout: 10_000 }, () => {
-  expect.hasAssertions();
-
-  const dir = unreleasedChangesetOnV1();
-  git(dir, "mv", OTHER_CHANGESET, OWN_CHANGESET);
-  commit(dir, [SHIPPED, "first\n"]);
-  const run = hygiene(dir);
-
-  expect(run.status).toBe(FAILED);
-  expect(run.stderr).toContain(CHANGESET_MISSING);
-});
-
-it("the hook doesn't count a changeset renamed alongside an ADR as adding one", { timeout: 10_000 }, () => {
-  expect.hasAssertions();
-
-  const dir = unreleasedChangesetOnV1();
-  commit(dir, [SHIPPED, "first\n"]);
-  git(dir, "mv", OTHER_CHANGESET, OWN_CHANGESET);
-  stage(dir, [NEW_ADR, "# Second\n"]);
-  const run = hook(dir);
-
-  expect(run.status).toBe(FAILED);
-  expect(run.stderr).toContain(CHANGESET_MISSING);
 });

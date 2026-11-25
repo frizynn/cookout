@@ -1,4 +1,4 @@
-import { Effect, String as Str } from "effect";
+import { Array as Arr, Effect, String as Str } from "effect";
 import type { Storage, StorageUnavailable } from "../../server.ts";
 import { expect, it } from "@effect/vitest";
 import {
@@ -94,6 +94,33 @@ it.effect.each(storageLayers)(
 
       expect(timedOut).toMatchObject({ lastResult: { at: FAILED_AT, error: "timed out after 10 s", ok: false } });
       expect(succeeded).toMatchObject({ lastResult: { at: CLEARED_AT, ok: true, status: OK } });
+    }),
+);
+
+const FAILURE = { error: "anthropic-version: header is required", status: SERVER_ERROR };
+const ADA = nameOf("ada");
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): a failed answer keeps both its status and its error message, in the result and the alert",
+  ({ layer }) =>
+    Effect.gen(function* statusAndMessage() {
+      const { storage } = yield* openStore(layer);
+      yield* boardOf(storage);
+      yield* storage.setTrigger(TRIAGE, { token: FIRST_TOKEN, url: ROUTINE_URL });
+      yield* storage.recordTriggerResult(TRIAGE, { at: FAILED_AT, ok: false, ...FAILURE });
+      const stored = yield* storage.findTrigger(TRIAGE);
+      const trigger = { message: messageId(FIRST_MESSAGE), ...FAILURE };
+      yield* storage.recordOfflineAlert({
+        agent: TRIAGE,
+        offlineReason: "trigger failed",
+        owner: ADA,
+        raisedAt: FAILED_AT,
+        trigger,
+      });
+      const listed = yield* storage.listOfflineAlerts(ADA);
+
+      expect(stored).toMatchObject({ lastResult: { at: FAILED_AT, ok: false, ...FAILURE } });
+      expect(Arr.map(listed, (each) => each.trigger)).toStrictEqual([trigger]);
     }),
 );
 

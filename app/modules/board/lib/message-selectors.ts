@@ -11,10 +11,10 @@ const LOADING = { status: "loading" } as const;
 
 const NONE = 0;
 
-type ChannelLoaded = Omit<PageLoaded, "ids"> & {
+interface ChannelLoaded extends Omit<PageLoaded, "ids"> {
   readonly messages: readonly TopLevelMessage[];
   readonly receipts: readonly ReadReceipt[];
-};
+}
 
 type ChannelMessagesState = { readonly status: "loading" } | Failure | ChannelLoaded;
 
