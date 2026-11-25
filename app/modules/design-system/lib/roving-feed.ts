@@ -101,14 +101,11 @@ function focusIf(focused: boolean, item: Readonly<Pick<HTMLElement, "focus">>): 
 }
 
 function besideFoldAt(feed: string, at: number): HTMLElement | null {
-  const items: readonly (HTMLElement | null)[] = itemsIn(feed);
-  const fold = items[at] ?? null;
+  const items: readonly unknown[] = itemsIn(feed);
+  const folds: readonly unknown[] = [...globalThis.document.querySelectorAll(`${feedOf(feed)} ${ITEM}${FOLD}`)];
   const messages = [...globalThis.document.querySelectorAll<HTMLElement>(`${feedOf(feed)} ${ITEM}:not(${FOLD})`)];
-  const folds: readonly (Element | null)[] = [
-    ...globalThis.document.querySelectorAll(`${feedOf(feed)} ${ITEM}${FOLD}`),
-  ];
-  const passed = at - folds.indexOf(fold);
-  return messages[passed] ?? messages[passed - FIRST_POSITION] ?? fold;
+  const passed = at - folds.indexOf(items[at]);
+  return messages[passed] ?? messages[passed - FIRST_POSITION] ?? null;
 }
 
 function itemAt(feed: string, index: number): HTMLElement | null {
@@ -118,7 +115,7 @@ function itemAt(feed: string, index: number): HTMLElement | null {
   if (item === null || !item.matches(FOLD)) {
     return item;
   }
-  return besideFoldAt(feed, at);
+  return besideFoldAt(feed, at) ?? item;
 }
 
 function rovingOf(shown: Feed): Roving {
