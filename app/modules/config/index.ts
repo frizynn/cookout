@@ -18,6 +18,7 @@ interface HarnessMarkers {
 declare const brand: unique symbol;
 
 const NOTHING = {};
+const NO_DELAY = 0;
 const ALLOW_HUMAN = "COOKOUT_ALLOW_HUMAN";
 
 function processEnvironment(): Environment {
@@ -193,4 +194,19 @@ export function readCookoutConnection(env: Environment = processEnvironment()): 
     return urlIn(env);
   }
   return { ...urlIn(env), token, ...harnessIn(env) };
+}
+
+export const WEB_SLOW_VARIABLE = "COOKOUT_WEB_SLOW_MS";
+
+/**
+ * How long a web test holds back each view call before it goes out: `COOKOUT_WEB_SLOW_MS`, which `pnpm web:slow` sets.
+ * @param env Where the variable is read from.
+ * @returns The delay in milliseconds, or 0 when it is unset or not a positive number.
+ */
+export function webSlowMs(env: Environment = processEnvironment()): number {
+  const delay = Number(env[WEB_SLOW_VARIABLE] ?? NO_DELAY);
+  if (Number.isFinite(delay) && delay > NO_DELAY) {
+    return delay;
+  }
+  return NO_DELAY;
 }
