@@ -1,10 +1,13 @@
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inConversation, inPane } from "./regions.ts";
 import type { CookoutClient } from "../../../sdk/index.ts";
 import type { Page } from "@playwright/test";
 import { logInToChannels } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const NARROW = { height: 900, width: 600 };
 const WIDE = { height: 700, width: 1280 };
@@ -61,7 +64,7 @@ async function openedWithReadThreads({ channel, count, page, size }: Opening): P
   await page.setViewportSize(size);
   await page.goto("/#/inbox");
 
-  await expect(inPane(page).getByRole("list", { name: "Earlier" })).toContainText(`Reply ${String(ONE)}`);
+  await expect(inPane(page).getByRole("list", { exact: true, name: "Earlier" })).toContainText(`Reply ${String(ONE)}`);
 
   return addresses;
 }
@@ -79,11 +82,11 @@ test("at 600 px wide, j opens the first conversation and Esc returns to the list
   await page.keyboard.press("j");
 
   await expect(inConversation(page)).toContainText("Thread 1");
-  await expect(page.getByRole("heading", { level: 1, name: "Inbox" })).toBeHidden();
+  await expect(page.getByRole("heading", { exact: true, level: 1, name: "Inbox" })).toBeHidden();
 
   await page.keyboard.press("Escape");
 
-  await expect(page.getByRole("heading", { level: 1, name: "Inbox" })).toBeVisible();
+  await expect(page.getByRole("heading", { exact: true, level: 1, name: "Inbox" })).toBeVisible();
   await expect(page).toHaveURL(/#\/inbox$/u);
 });
 

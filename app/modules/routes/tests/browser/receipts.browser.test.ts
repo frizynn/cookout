@@ -1,9 +1,12 @@
 import type { Browser, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import type { Person } from "./people.ts";
 import { logInWithStream } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 function bobName(): string {
   return `${unique("browser-receipts")}-bob`;
@@ -42,7 +45,7 @@ async function answered(): Promise<Answered> {
 test("when the second person opens the thread, the first sees that they have seen the reply", async ({ browser }) => {
   const opened = await answered();
   const annPage = await openAs({ browser, hash: opened.hash, token: opened.ann.token });
-  const reply = annPage.getByRole("feed", { name: "Replies" }).getByRole("article");
+  const reply = annPage.getByRole("feed", { exact: true, name: "Replies" }).getByRole("article");
 
   await reply.locator("time").focus();
 
@@ -51,6 +54,6 @@ test("when the second person opens the thread, the first sees that they have see
 
   const bobPage = await openAs({ browser, hash: opened.hash, token: opened.bob.token });
 
-  await expect(bobPage.getByRole("feed", { name: "Replies" })).toContainText("Noon works");
+  await expect(bobPage.getByRole("feed", { exact: true, name: "Replies" })).toContainText("Noon works");
   await expect(annPage.getByRole("tooltip")).toContainText(`Seen by @${bobName()} just now`);
 });

@@ -2,6 +2,7 @@ import type { Identity, SearchResult } from "../../sdk/index.ts";
 import type { ChannelsState } from "../../board/index.ts";
 import type { SearchState } from "../../search/web.ts";
 import { hrefOf } from "../../paths/index.ts";
+import { parseQuery } from "../../search/index.ts";
 
 type JumpGroup = "Channels" | "People" | "Places";
 
@@ -23,6 +24,7 @@ interface Listed {
 
 const MOST_PER_GROUP = 5;
 const FIRST = 0;
+const NONE = 0;
 
 const PLACES: readonly BoxOption[] = [
   { detail: null, group: "Places", href: hrefOf({ name: "inbox", selected: null }), kind: "jump", label: "Inbox" },
@@ -103,7 +105,15 @@ function messagesOf(state: SearchState): readonly BoxOption[] {
   }));
 }
 
+function isFiltered(query: string): boolean {
+  const { after, before, from, in: within } = parseQuery(query);
+  return [after, before, from, within].some((values) => values.length > NONE);
+}
+
 function boxOptionsOf({ channels, identities, state }: Listed): readonly BoxOption[] {
+  if (isFiltered(state.query)) {
+    return messagesOf(state);
+  }
   const typed = state.query.trim().toLowerCase();
   return [
     ...PLACES.filter((place) => place.kind === "jump" && includes(place.label, typed)),

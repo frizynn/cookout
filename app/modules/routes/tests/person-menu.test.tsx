@@ -6,6 +6,7 @@ import { inPane, inProfile } from "./regions.ts";
 import type { CookoutClient } from "../../sdk/index.ts";
 import type { Mock } from "vitest";
 import { openAt } from "./render.tsx";
+import { testAgentDisplayName } from "../../testing/index.ts";
 
 const ICON_FIRST = ':scope > svg[aria-hidden="true"]:first-child';
 
@@ -197,7 +198,7 @@ it("a deactivated author's Message is dimmed", { timeout: 5000 }, async () => {
 
 async function peopleRow(name: string): Promise<HTMLElement> {
   const row = await within(await screen.findByRole("list", { name: "Identities" })).findByRole("link", {
-    name: new RegExp(`^${name}`, "u"),
+    name: new RegExp(`^(${name}|${testAgentDisplayName(name)})`, "u"),
   });
   return row;
 }

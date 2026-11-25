@@ -1,11 +1,14 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inPane, inProfile } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
 
-const BOX = { name: "Message" } as const;
+const test = base.extend(probeFixtures);
+
+const BOX = { exact: true, name: "Message" } as const;
 const TWO_PEOPLE = 2;
 const NONE = 0;
 
@@ -45,7 +48,7 @@ async function postedAndOpen(page: Page, channel: string): Promise<Posted> {
 }
 
 function authorOf(page: Page, author: string): Locator {
-  return page.getByRole("feed", { name: "Messages" }).getByRole("link", { exact: true, name: author });
+  return page.getByRole("feed", { exact: true, name: "Messages" }).getByRole("link", { exact: true, name: author });
 }
 
 async function boxHolds(page: Page, name: string): Promise<void> {
@@ -62,31 +65,31 @@ async function peopleShown(page: Page, prefix: string): Promise<Pair> {
   const reader = await newIdentity({ kind: "human", name: pair.first });
   await newIdentity({ kind: "human", name: pair.second });
   await logInToChannels({ page, token: reader.token, url: "/#/people" });
-  await page.getByRole("textbox", { name: "Filter by name" }).fill(prefix);
+  await page.getByRole("textbox", { exact: true, name: "Filter by name" }).fill(prefix);
 
-  await expect(page.getByRole("list", { name: "Identities" }).getByRole("link")).toHaveCount(TWO_PEOPLE);
+  await expect(page.getByRole("list", { exact: true, name: "Identities" }).getByRole("link")).toHaveCount(TWO_PEOPLE);
 
   return pair;
 }
 
 async function arrowsMove(page: Page, { first, second }: Pair): Promise<void> {
-  const people = page.getByRole("list", { name: "Identities" });
-  await inPane(page).getByRole("button", { name: "Show deactivated" }).focus();
+  const people = page.getByRole("list", { exact: true, name: "Identities" });
+  await inPane(page).getByRole("button", { exact: true, name: "Show deactivated" }).focus();
   await page.keyboard.press("Tab");
 
-  await expect(people.getByRole("link", { name: first })).toBeFocused();
+  await expect(people.getByRole("link", { exact: true, name: `${first}, Offline` })).toBeFocused();
 
   await page.keyboard.press("ArrowDown");
 
-  await expect(people.getByRole("link", { name: second })).toBeFocused();
+  await expect(people.getByRole("link", { exact: true, name: `${second}, Offline` })).toBeFocused();
 
   await page.keyboard.press("ArrowUp");
 
-  await expect(people.getByRole("link", { name: first })).toBeFocused();
+  await expect(people.getByRole("link", { exact: true, name: `${first}, Offline` })).toBeFocused();
 
   await page.keyboard.press("ArrowDown");
 
-  await expect(people.getByRole("link", { name: second })).toBeFocused();
+  await expect(people.getByRole("link", { exact: true, name: `${second}, Offline` })).toBeFocused();
 }
 
 test("one Tab enters the People list, arrows move between people, Tab leaves it, and Enter opens a profile", async ({
@@ -94,14 +97,14 @@ test("one Tab enters the People list, arrows move between people, Tab leaves it,
 }) => {
   const pair = await peopleShown(page, unique("browser-people-keys"));
   await arrowsMove(page, pair);
-  const people = page.getByRole("list", { name: "Identities" });
+  const people = page.getByRole("list", { exact: true, name: "Identities" });
   await page.keyboard.press("Tab");
 
   await expect(people.locator(":focus")).toHaveCount(NONE);
 
   await page.keyboard.press("Shift+Tab");
 
-  await expect(people.getByRole("link", { name: pair.second })).toBeFocused();
+  await expect(people.getByRole("link", { exact: true, name: `${pair.second}, Offline` })).toBeFocused();
 
   await page.keyboard.press("Enter");
 
@@ -114,7 +117,9 @@ test("m on a focused @name puts it in the message box with the cursor after it, 
 }) => {
   await copiesRecorded(page);
   const { mentioned } = await postedAndOpen(page, unique("browser-person-keys-mention"));
-  const mention = page.getByRole("feed", { name: "Messages" }).getByRole("link", { name: `@${mentioned}` });
+  const mention = page
+    .getByRole("feed", { exact: true, name: "Messages" })
+    .getByRole("link", { exact: true, name: `@${mentioned}` });
   await mention.focus();
   await page.keyboard.press("c");
 
@@ -128,7 +133,7 @@ test("m on a focused @name puts it in the message box with the cursor after it, 
 
 test("Tab to a message's author, then m, puts @author in the message box", async ({ page }) => {
   const { author } = await postedAndOpen(page, unique("browser-person-keys-author"));
-  await page.getByRole("feed", { name: "Messages" }).getByRole("article").first().focus();
+  await page.getByRole("feed", { exact: true, name: "Messages" }).getByRole("article").first().focus();
   await page.keyboard.press("Tab");
 
   await expect(authorOf(page, author)).toBeFocused();
@@ -140,14 +145,20 @@ test("Tab to a message's author, then m, puts @author in the message box", async
 test("the person menu shows Enter, m and c beside View profile, Message and Copy name", async ({ page }) => {
   const { author } = await postedAndOpen(page, unique("browser-person-keys-menu"));
   await authorOf(page, author).click({ button: "right" });
-  const menu = page.getByRole("menu", { name: `@${author} actions` });
+  const menu = page.getByRole("menu", { exact: true, name: `@${author} actions` });
 
-  await expect(menu.getByRole("menuitem", { name: "View profile" })).toContainText("Enter");
-  await expect(menu.getByRole("menuitem", { name: "View profile" })).toHaveAttribute("aria-keyshortcuts", "Enter");
-  await expect(menu.getByRole("menuitem", { name: "Message" })).toContainText("m");
-  await expect(menu.getByRole("menuitem", { name: "Message" })).toHaveAttribute("aria-keyshortcuts", "m");
-  await expect(menu.getByRole("menuitem", { name: "Copy name" })).toContainText("c");
-  await expect(menu.getByRole("menuitem", { name: "Copy name" })).toHaveAttribute("aria-keyshortcuts", "c");
+  await expect(menu.getByRole("menuitem", { exact: true, name: "View profile" })).toContainText("Enter");
+  await expect(menu.getByRole("menuitem", { exact: true, name: "View profile" })).toHaveAttribute(
+    "aria-keyshortcuts",
+    "Enter",
+  );
+  await expect(menu.getByRole("menuitem", { exact: true, name: "Message" })).toContainText("m");
+  await expect(menu.getByRole("menuitem", { exact: true, name: "Message" })).toHaveAttribute("aria-keyshortcuts", "m");
+  await expect(menu.getByRole("menuitem", { exact: true, name: "Copy name" })).toContainText("c");
+  await expect(menu.getByRole("menuitem", { exact: true, name: "Copy name" })).toHaveAttribute(
+    "aria-keyshortcuts",
+    "c",
+  );
 });
 
 async function mLeavesRow(page: Page, row: Locator): Promise<void> {
@@ -163,10 +174,10 @@ async function menuHasNoMessage(
   { name, row }: { readonly name: string; readonly row: Locator },
 ): Promise<void> {
   await row.click({ button: "right" });
-  const menu = page.getByRole("menu", { name: `@${name} actions` });
+  const menu = page.getByRole("menu", { exact: true, name: `@${name} actions` });
 
-  await expect(menu.getByRole("menuitem", { name: "Copy name" })).toBeVisible();
-  await expect(menu.getByRole("menuitem", { name: "Message" })).toHaveCount(NONE);
+  await expect(menu.getByRole("menuitem", { exact: true, name: "Copy name" })).toBeVisible();
+  await expect(menu.getByRole("menuitem", { exact: true, name: "Message" })).toHaveCount(NONE);
   await expect(menu.locator('[aria-keyshortcuts="m"]')).toHaveCount(NONE);
 
   await page.keyboard.press("Escape");
@@ -176,12 +187,16 @@ test("in the People list a row offers no m: its menu has no Message, m does noth
   page,
 }) => {
   const { first } = await peopleShown(page, unique("browser-people-no-m"));
-  const row = page.getByRole("list", { name: "Identities" }).getByRole("link", { name: first });
+  const row = page
+    .getByRole("list", { exact: true, name: "Identities" })
+    .getByRole("link", { exact: true, name: `${first}, Offline` });
   await mLeavesRow(page, row);
   await menuHasNoMessage(page, { name: first, row });
   await row.focus();
   await page.keyboard.press("?");
-  const person = page.getByRole("dialog", { name: "Keyboard shortcuts" }).getByRole("list", { name: "Person" });
+  const person = page
+    .getByRole("dialog", { exact: true, name: "Keyboard shortcuts" })
+    .getByRole("list", { exact: true, name: "Person" });
 
   await expect(person.getByRole("listitem").filter({ hasText: "Message them" })).toHaveText(
     /Message them, where there's a message box/u,
@@ -189,23 +204,25 @@ test("in the People list a row offers no m: its menu has no Message, m does noth
 });
 
 test("→ in the kind filter chooses Humans", async ({ page }) => {
-  const reader = await newIdentity({ kind: "human", name: unique("browser-person-keys-kinds") });
+  const name = unique("browser-person-keys-kinds");
+  const reader = await newIdentity({ kind: "human", name });
   await logInToChannels({ page, token: reader.token, url: "/#/people" });
-  const kinds = page.getByRole("radiogroup", { name: "Kind" });
-  await kinds.getByRole("radio", { name: /^All/u }).focus();
+  await page.getByRole("textbox", { exact: true, name: "Filter by name" }).fill(name);
+  const kinds = page.getByRole("radiogroup", { exact: true, name: "Kind" });
+  await kinds.getByRole("radio", { exact: true, name: "All 1" }).focus();
   await page.keyboard.press("ArrowRight");
 
-  await expect(kinds.getByRole("radio", { name: /^Humans/u })).toBeChecked();
-  await expect(kinds.getByRole("radio", { name: /^Humans/u })).toBeFocused();
+  await expect(kinds.getByRole("radio", { exact: true, name: "Humans 1" })).toBeChecked();
+  await expect(kinds.getByRole("radio", { exact: true, name: "Humans 1" })).toBeFocused();
 });
 
 test("→ in the theme choice chooses Light", async ({ page }) => {
   const reader = await newIdentity({ kind: "human", name: unique("browser-person-keys-themes") });
   await logInToChannels({ page, token: reader.token, url: "/#/settings/theme" });
-  const themes = page.getByRole("radiogroup", { name: "Theme" });
-  await themes.getByRole("radio", { name: "System" }).focus();
+  const themes = page.getByRole("radiogroup", { exact: true, name: "Theme" });
+  await themes.getByRole("radio", { exact: true, name: "System" }).focus();
   await page.keyboard.press("ArrowRight");
 
-  await expect(themes.getByRole("radio", { name: "Light" })).toBeChecked();
-  await expect(themes.getByRole("radio", { name: "Light" })).toBeFocused();
+  await expect(themes.getByRole("radio", { exact: true, name: "Light" })).toBeChecked();
+  await expect(themes.getByRole("radio", { exact: true, name: "Light" })).toBeFocused();
 });

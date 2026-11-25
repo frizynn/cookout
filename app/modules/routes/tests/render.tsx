@@ -140,7 +140,7 @@ export function openBoard(opening: BoardOpening): () => void {
   globalThis.location.hash = opening.hash;
   const boardStore = boardStoreFor({ boardStore: opening.boardStore, client: adminClient(), live: opening.live });
   const composer = opening.composer ?? createComposer({ boardStore });
-  const unread = unreadFor(opening.unread);
+  const unread = unreadFor({ boardStore, unread: opening.unread });
   const layout = opening.layout ?? browserLayout();
   const { agentJoinApprovals, loginApprovals } = approvalsOf(opening);
   onTestFinished(cleanup);
@@ -173,6 +173,6 @@ export function openAt(opening: Opening): () => void {
     reading: readingFor(opening.reading),
     search: searchFor(boardStore, opening),
     session,
-    unread: createUnread(opening),
+    unread: createUnread({ boardStore }),
   });
 }

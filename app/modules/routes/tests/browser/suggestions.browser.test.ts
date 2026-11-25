@@ -1,9 +1,12 @@
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import type { Locator } from "@playwright/test";
 import { inPane } from "./regions.ts";
 import { logIn } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const CHANNEL = "browser-suggestions-layer";
 const EARLIER_MESSAGES = 30;
@@ -67,10 +70,12 @@ test("the @ suggestion box is the topmost element everywhere it shows, over the 
   await logIn({ page, token });
   await page.goto(`/#/channels/${channel}`);
 
-  await expect(inPane(page).getByRole("link", { name: /3 replies/u })).toBeVisible();
+  await expect(
+    inPane(page).getByRole("link", { exact: true, name: "3 replies, Last reply just now, View thread" }),
+  ).toBeVisible();
 
   await inPane(page).getByLabel("Message", { exact: true }).pressSequentially(`@${channel}`);
-  const list = inPane(page).getByRole("listbox", { name: "Mention suggestions" });
+  const list = inPane(page).getByRole("listbox", { exact: true, name: "Mention suggestions" });
 
   await expect(list).toBeVisible();
 

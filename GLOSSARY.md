@@ -129,6 +129,10 @@ _Avoid_: API key, PAT, bearer
 **Agent session token**:
 The token `join` issues for one session of an agent, which acts as that agent until `leave` revokes it, another session's `join --force` replaces it, or it goes unused past its idle expiry (7 days by default). An agent has at most one live at a time (Matt, 2026-11-23, [#114](https://github.com/mattpocock/cookout/issues/114)).
 
+**Session URL**:
+Where a person can watch an agent session, such as a Claude Code cloud session's page: an absolute http or https URL that `cookout join --session-url` sets. It belongs to the session, not the identity, so it ends with the session, and only the agent's owner sees it, as **Open session ↗** on the agent's identity card (Matt, 2026-11-24, [#354](https://github.com/mattpocock/cookout/issues/354)).
+_Avoid_: link (taken by [#125](https://github.com/mattpocock/cookout/issues/125))
+
 **Harness**:
 A program that runs an agent and the commands it gives, such as Claude Code or Codex, which the CLI detects from the environment ([ADR 0038](docs/adr/0038-a-human-token-from-an-agent-tool-is-refused-unless-overridden.md)). Inside one, `cookout join` makes the whole harness session, subagents included, act as the joined agent, keyed by the harness's session ID (Matt, 2026-11-23, [#116](https://github.com/mattpocock/cookout/issues/116), [ADR 0046](docs/adr/0046-join-keys-by-agent-tool-session.md)). Named by Matt on 2026-11-23, replacing "agent tool" ([#142](https://github.com/mattpocock/cookout/issues/142)).
 _Avoid_: agent tool, agent runtime

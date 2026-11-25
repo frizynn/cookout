@@ -1,13 +1,16 @@
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { inPane } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
 import { pressedPrevented } from "./prevented.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
 
-const RESULTS = { name: "Search results" } as const;
-const BOX = { name: "Search" } as const;
+const test = base.extend(probeFixtures);
+
+const RESULTS = { exact: true, name: "Search results" } as const;
+const BOX = { exact: true, name: "Search" } as const;
 
 interface Opened {
   readonly thread: number;
@@ -49,7 +52,7 @@ async function selectedInInbox(page: Page, channel: string): Promise<string> {
   await openedOn(page, channel);
   await page.goto("/#/inbox");
 
-  await expect(inPane(page).getByText(`Pangolinkey noon ${channel}`)).toBeVisible();
+  await expect(inPane(page).getByText(`Pangolinkey noon ${channel}`, { exact: true })).toBeVisible();
 
   await page.keyboard.press("j");
 
@@ -103,7 +106,7 @@ test("Down, Up and Enter open the highlighted result", async ({ page }) => {
   await searched(page, `pangolinkey ${channel}`);
 
   await expect(
-    page.getByRole("listbox", RESULTS).getByRole("group", { name: "Messages" }).getByRole("option"),
+    page.getByRole("listbox", RESULTS).getByRole("group", { exact: true, name: "Messages" }).getByRole("option"),
   ).toHaveCount(BOTH);
 
   await pressed(page, ["ArrowDown", "ArrowDown", "ArrowUp", "Enter"]);
@@ -114,7 +117,7 @@ test("Down, Up and Enter open the highlighted result", async ({ page }) => {
   await expect(page.getByRole("listbox", RESULTS)).toBeHidden();
 });
 
-const SUGGESTIONS = { name: "Filter suggestions" } as const;
+const SUGGESTIONS = { exact: true, name: "Filter suggestions" } as const;
 function prefix(): string {
   return `${unique("browser-suggest-keys")}-`;
 }
@@ -134,7 +137,9 @@ async function suggestionsOpened(page: Page): Promise<void> {
 
 async function expectSelected(page: Page, end: string): Promise<void> {
   await expect(
-    page.getByRole("listbox", SUGGESTIONS).getByRole("option", { name: `#${prefix()}${end}`, selected: true }),
+    page
+      .getByRole("listbox", SUGGESTIONS)
+      .getByRole("option", { exact: true, name: `#${prefix()}${end}`, selected: true }),
   ).toBeVisible();
 }
 

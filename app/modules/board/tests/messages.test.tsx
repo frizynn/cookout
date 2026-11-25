@@ -185,6 +185,21 @@ it("a read-receipt event shows once on its message, and the same event again kee
   expect(page()).toBe(after);
 });
 
+it("a read-receipt event for a message the store doesn't hold leaves the store as it was", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const parent = await postedIn("store-messages-receipt-unheld");
+  const { channel: elsewhere } = await postedIn("store-messages-receipt-elsewhere");
+  const { hand, store } = opened();
+  await channelShown({ channel: elsewhere, store });
+  const before = store.snapshot().messages;
+  hand.send({ receipt: { identity: parent.author.name, messageId: parent.id, seen: true }, type: "read-receipt" });
+
+  expect(store.snapshot().messages).toBe(before);
+});
+
 it("a change asked of a channel page nobody has read leaves the store as it was", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 

@@ -10,6 +10,7 @@ import { expect, it } from "@effect/vitest";
 import { Effect } from "effect";
 import type { Scope } from "effect";
 import { TestClock } from "effect/testing";
+import { createTestAgent } from "../../../testing/index.ts";
 
 const CONFLICT = 409;
 const SETTLE = "30 millis";
@@ -51,7 +52,7 @@ function sessionTokenOf(joined: AgentJoinCollectedResponse): string {
 
 function workerBroughtInBy(cookout: TestCookoutService, chief: TestIdentity): Effect.Effect<void> {
   return Effect.gen(function* bringInWorker() {
-    yield* answer(() => chief.client.createAgentForOwner({ displayName: "Worker", name: "worker" }));
+    yield* answer(() => createTestAgent({ broughtIn: true, by: chief.client, displayName: "Worker", name: "worker" }));
     const first = yield* started(cookout);
     yield* answer(() => chief.client.approveAgentJoin(first.userCode));
     const sessionToken = yield* Effect.map(

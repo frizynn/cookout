@@ -1,7 +1,6 @@
 import type {
   AgentJoinCalls,
   AgentSessionResponse,
-  JoinCodeCalls,
   JoinRequest,
   LeaveResponse,
   ListAgentSessionsResponse,
@@ -14,8 +13,6 @@ import {
   agentSessionPath,
   collectAgentJoinRequestPath,
   identityAgentSessionPath,
-  joinCodesPath,
-  redeemJoinCodePath,
 } from "../../agent-sessions/index.ts";
 import {
   isAgentJoinCollectedResponse,
@@ -27,10 +24,14 @@ import {
   isListAgentSessionsResponse,
   isRevokeAgentSessionResponse,
 } from "./generated/validators.js";
+import { joinCodesPath, redeemJoinCodePath } from "../../agent-sessions/join-codes.ts";
 import type { ClientConnection } from "./request.ts";
+import type { JoinCodeCalls } from "../../agent-sessions/join-codes.ts";
 import { send } from "./request.ts";
 
-interface AgentSessionCalls extends AgentJoinCalls, JoinCodeCalls {
+type AgentApprovalCalls = AgentJoinCalls & JoinCodeCalls;
+
+interface AgentSessionCalls extends AgentApprovalCalls {
   readonly join: (request: JoinRequest) => Promise<AgentSessionResponse>;
   readonly leave: () => Promise<LeaveResponse>;
   readonly listAgentSessions: (agent: string) => Promise<ListAgentSessionsResponse>;
@@ -141,4 +142,4 @@ function agentSessionCalls(server: ClientConnection): AgentSessionCalls {
 }
 
 export type { AgentSessionResponse, JoinRequest, LeaveResponse } from "../../agent-sessions/index.ts";
-export { type AgentSessionCalls, agentSessionCalls };
+export { type AgentApprovalCalls, type AgentSessionCalls, agentSessionCalls };

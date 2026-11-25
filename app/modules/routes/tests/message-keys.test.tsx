@@ -1,4 +1,4 @@
-import { adminClient, newIdentity } from "./identities.ts";
+import { adminClient, agentOption, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, getDefaultNormalizer, screen, within } from "@testing-library/react";
 import { messagesIn } from "./messages.ts";
@@ -99,7 +99,7 @@ it("while suggestions show, the arrows move the highlight and Enter picks it ins
     screen.queryByDisplayValue("Ping @keys-second ", KEEP_SPACES),
     screen.queryByRole("listbox", { name: "Mention suggestions" }),
     await shownMessages(),
-  ]).toStrictEqual(["@keys-first", "@keys-second", screen.getByLabelText("Message"), null, []]);
+  ]).toStrictEqual(["@keys-first", agentOption("keys-second"), screen.getByLabelText("Message"), null, []]);
 
   close();
 });

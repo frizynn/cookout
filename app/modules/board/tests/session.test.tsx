@@ -6,6 +6,7 @@ import type { LiveAdapter } from "../../live/index.ts";
 import { createBoardStore } from "../index.ts";
 import { createCookoutClient } from "../../sdk/index.ts";
 import { createLive } from "../../live/index.ts";
+import { createTestAgent } from "../../testing/index.ts";
 import { handLive } from "../../testing/web.ts";
 import { webTestCookout } from "../../../../scripts/web-test-server.ts";
 
@@ -130,7 +131,7 @@ it("logging in with an agent's token is refused with human_only, and a human's t
 }, async () => {
   expect.hasAssertions();
 
-  const { token } = await adminClient().createIdentity({ kind: "agent", name: "store-session-agent", owner: "admin" });
+  const { token } = await createTestAgent({ by: adminClient(), name: "store-session-agent", owner: "admin" });
   const ada = await human("store-session-login-ada");
   const { store } = opened(createCookoutClient({ env: {}, url: webTestCookout().url }));
   store.session.logIn(token);

@@ -61,7 +61,7 @@ it("closing the only thread with unread replies in a channel keeps its badge, li
   await badgesBecome(channel, BADGES);
 
   await poster.closeThread(parent);
-  await screen.findByText("Closed");
+  await screen.findAllByText("Closed");
   await badgesBecome(channel, BADGES);
 
   await poster.reopenThread(parent);

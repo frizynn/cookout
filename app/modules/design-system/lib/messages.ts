@@ -21,7 +21,12 @@ export type { PersonKeysSource } from "./person-keys-parts.ts";
 export { MessageKeys } from "./message-keys-parts.ts";
 export type { MessageShortcuts } from "./message-keys-parts.ts";
 export { IdentityCardComposer, IdentityCards } from "./identity-card-parts.ts";
-export type { IdentityCardLink, IdentityCardParts, IdentityCardSource } from "./identity-card-parts.ts";
+export type {
+  IdentityCardLink,
+  IdentityCardParts,
+  IdentityCardSession,
+  IdentityCardSource,
+} from "./identity-card-parts.ts";
 export { ReactionChip } from "./reaction-chip.tsx";
 export { ReactionChips } from "./reaction-chips.tsx";
 export type { ActionMenuParts, MenuChoice, ReactionChoice, ThreadChoice } from "./menu-parts.ts";

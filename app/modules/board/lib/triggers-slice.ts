@@ -1,6 +1,8 @@
 import type { CookoutEvent, IdentityName, Trigger } from "../../sdk/index.ts";
 import type { Part } from "./slice.ts";
 
+const NONE = 0;
+
 type CalledTriggers = ReadonlyMap<IdentityName, Trigger>;
 
 interface Called {
@@ -27,7 +29,10 @@ function createCalledTriggers(changed: () => void): CalledPart {
       }
     },
     back: () => {
-      state = new Map();
+      if (state.size > NONE) {
+        state = new Map();
+        changed();
+      }
     },
     state: () => state,
   };

@@ -1,8 +1,12 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { logInToChannels } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
+import { testAgentDisplayName } from "../../../testing/index.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const FILLERS = 20;
 const NONE = 0;
@@ -42,7 +46,7 @@ async function openAsReader(page: Page, channel: string): Promise<void> {
 }
 
 async function cardTrigger(page: Page, name: string): Promise<Locator> {
-  const trigger = page.getByRole("feed", { name: "Messages" }).getByRole("link", { exact: true, name });
+  const trigger = page.getByRole("feed", { exact: true, name: "Messages" }).getByRole("link", { exact: true, name });
 
   await expect(trigger).toHaveAttribute("data-identity-card");
   await expect(trigger).toBeInViewport();
@@ -86,7 +90,7 @@ test("the last message's card, with no room below it near the viewport's bottom,
   );
   await postAs(channel, `${channel}-bot`, "agent");
   await openAsReader(page, channel);
-  const edges = await edgesOnHover(page, `${channel}-bot`);
+  const edges = await edgesOnHover(page, testAgentDisplayName(`${channel}-bot`));
 
   const height = await page.evaluate(() => globalThis.innerHeight);
 
@@ -112,10 +116,10 @@ test("by keyboard alone, Tab from a focused name reaches the card's Message, and
 
   await page.keyboard.press("Tab");
 
-  await expect(page.getByRole("dialog").getByRole("button", { name: "Message" })).toBeFocused();
+  await expect(page.getByRole("dialog").getByRole("button", { exact: true, name: "Message" })).toBeFocused();
 
   await page.keyboard.press("Enter");
 
-  await expect(page.getByRole("textbox", { name: "Message" })).toBeFocused();
-  await expect(page.getByRole("textbox", { name: "Message" })).toHaveValue(`@${author} `);
+  await expect(page.getByRole("textbox", { exact: true, name: "Message" })).toBeFocused();
+  await expect(page.getByRole("textbox", { exact: true, name: "Message" })).toHaveValue(`@${author} `);
 });

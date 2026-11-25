@@ -3,7 +3,7 @@
  * requests and answers, the idle expiry's format, and the codes they refuse with. `join` issues an agent session
  * token, a bearer token that acts as the agent for one session (Matt, 2026-11-23, mattpocock/cookout#114).
  */
-import type { AgentIdentity, IdentityName, Token } from "../identities/index.ts";
+import type { IdentityName, Token } from "../identities/index.ts";
 import type { IsoTime } from "../time/index.ts";
 
 /** `POST /v1/agent-session` joins (issues an agent session token); `DELETE /v1/agent-session` leaves (revokes it). */
@@ -40,14 +40,16 @@ export interface JoinRequest {
   readonly idleExpiry?: string;
   /** The host the agent joins from, such as the machine's hostname, shown to its owner. 1–253 characters. */
   readonly host?: string;
+  /** The session URL (mattpocock/cookout#354): an absolute http or https URL, at most 2048 characters. */
+  readonly sessionUrl?: string;
   /**
    * The display name for the agent this join creates: 1-80 characters after trimming. Sent for an agent that
    * already exists, it is 400 `display_name_on_existing_agent` and nothing is joined.
    */
   readonly displayName?: string;
   /**
-   * Refuses to create an agent without `displayName`: 400 `display_name_required`, and nothing is created. The CLI
-   * sends it (mattpocock/cookout#313); the server refuses every such create one release later.
+   * Has no effect, but is still accepted as released CLIs send it: a join that would create an agent without
+   * `displayName` is always 400 `display_name_required`, and nothing is created (mattpocock/cookout#314).
    */
   readonly requireDisplayName?: boolean;
 }
@@ -63,6 +65,8 @@ export interface AgentSessionResponse {
   readonly identity: IdentityName;
   /** Whether this join created the agent, owned by the human who joined. */
   readonly created: boolean;
+  /** The session URL this join set, if it set one. */
+  readonly sessionUrl?: string;
 }
 
 /** An agent's live agent session token as its owner sees it: when it was issued and last used, never the token. */
@@ -73,6 +77,8 @@ export interface ListedAgentSession {
   readonly expiresAt: IsoTime;
   /** The host it joined from, if the joining client said. */
   readonly host?: string;
+  /** Where its owner can watch the session, if the join set one. Listed only for the agent's owner. */
+  readonly sessionUrl?: string;
 }
 
 /** The answer to listing an agent's agent session tokens: its live one, or none. */
@@ -115,7 +121,7 @@ export const agentSessionExpired = "agent_session_expired";
  * the identity codes), the 409s
  * `agent_session_live` (join while the agent has a live agent session token) and `identity_deactivated` (join a
  * Deactivated agent), the 400s `idle_expiry_too_long`, `agent_session_required` (leave sent without an agent session token),
- * `display_name_required` (a join that would create an agent with no display name, when the request asks for one) and
+ * `display_name_required` (a join or join code that would create an agent with no display name) and
  * `display_name_on_existing_agent` (a display name sent to join an agent that already exists),
  * the 403 `not_brought_in` (an agent approves a join for an existing agent it didn't bring in, #370), the 404
  * `agent_join_request_not_found` (an agent join request expired, was collected, or never existed), the 404
@@ -178,6 +184,8 @@ export interface StartAgentJoinRequest {
   readonly host: string;
   /** The longest idle expiry the box asks for, such as `30d`; the approver may lower it. Default `7d`. */
   readonly idleExpiry?: string;
+  /** The session URL of the session the approved join issues, as `join` takes it. */
+  readonly sessionUrl?: string;
 }
 
 /** A started agent join request. Only `requestId` collects the agent session token, and it is shown this once. */
@@ -243,53 +251,4 @@ export interface AgentJoinCalls {
     userCode: string,
     approval?: ApproveAgentJoinRequest,
   ) => Promise<AgentJoinRequestResponse>;
-}
-
-/** How long a join code lasts unredeemed: 15 minutes. */
-export const joinCodeLifetimeMinutes = 15;
-
-/**
- * `POST /v1/join-codes` (a human; an agent is 403 `human_only`): creates an agent the caller owns, with a
- * single-use join code bound to it (mattpocock/cookout#231).
- */
-export const joinCodesPath = "/v1/join-codes";
-
-/** `POST /v1/join-codes/redeem` (no token): redeems a join code, once, for its agent's agent session token. */
-export const redeemJoinCodePath = "/v1/join-codes/redeem";
-
-/** The body of `POST /v1/join-codes`: the new agent, named as `POST /v1/identities` names one, and its description. */
-export interface CreateJoinCodeRequest {
-  readonly name: string;
-  /** What the agent is for, trimmed, then 1–500 characters. */
-  readonly description?: string;
-}
-
-/**
- * The answer to `POST /v1/join-codes`: the new agent, and its join code, shown this once. The code can only ever join
- * that one agent, once, before `expiresAt`; it is never a person's credential.
- */
-export interface JoinCodeResponse {
-  readonly identity: AgentIdentity;
-  readonly joinCode: Token;
-  readonly expiresAt: IsoTime;
-}
-
-/** The body of `POST /v1/join-codes/redeem`. */
-export interface RedeemJoinCodeRequest {
-  readonly joinCode: string;
-  /** How long the agent session token may go unused, such as `30d`, as `join` takes it. */
-  readonly idleExpiry?: string;
-  /** The host the agent joins from, shown to its owner. 1–253 characters. */
-  readonly host?: string;
-}
-
-/** The SDK's calls for join codes. */
-export interface JoinCodeCalls {
-  /** `POST /v1/join-codes` (a human): creates an agent the caller owns, with a join code for it, valid 15 minutes. */
-  readonly createJoinCode: (request: CreateJoinCodeRequest) => Promise<JoinCodeResponse>;
-  /**
-   * `POST /v1/join-codes/redeem` (no token): the agent session token of the code's agent. A used, expired or unknown
-   * code is 404 `join_code_not_found`.
-   */
-  readonly redeemJoinCode: (request: RedeemJoinCodeRequest) => Promise<AgentSessionResponse>;
 }

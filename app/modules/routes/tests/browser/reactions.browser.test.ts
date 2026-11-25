@@ -1,9 +1,12 @@
 import type { Browser, Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inPane } from "./regions.ts";
 import { logInWithStream } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 function channelName(): string {
   return unique("browser-reactions");
@@ -36,7 +39,7 @@ async function openAs({ browser, token }: Opening): Promise<Page> {
 }
 
 function messageOn(page: Page): Locator {
-  return inPane(page).getByRole("feed", { name: "Messages" }).getByRole("article");
+  return inPane(page).getByRole("feed", { exact: true, name: "Messages" }).getByRole("article");
 }
 
 async function posted(): Promise<Tokens> {
@@ -54,17 +57,17 @@ test("a 👍 left from the hover actions in one tab shows as a chip in another, 
   const annPage = await openAs({ browser, token: tokens.ann });
   const bobMessage = messageOn(await openAs({ browser, token: tokens.bob }));
   await bobMessage.hover();
-  await bobMessage.getByRole("button", { name: "React with 👍" }).click();
+  await bobMessage.getByRole("button", { exact: true, name: "React with 👍" }).click();
 
-  await expect(bobMessage.getByRole("button", { name: "👍 1", pressed: true })).toBeVisible();
+  await expect(bobMessage.getByRole("button", { exact: true, name: "👍 1", pressed: true })).toBeVisible();
 
-  const annChip = messageOn(annPage).getByRole("button", { name: "👍 1", pressed: false });
+  const annChip = messageOn(annPage).getByRole("button", { exact: true, name: "👍 1", pressed: false });
 
   await expect(annChip).toHaveAttribute("title", bobName());
 
   await annChip.click();
 
-  await expect(bobMessage.getByRole("button", { name: "👍 2", pressed: true })).toHaveAttribute(
+  await expect(bobMessage.getByRole("button", { exact: true, name: "👍 2", pressed: true })).toHaveAttribute(
     "title",
     `${bobName()}, ${annName()}`,
   );

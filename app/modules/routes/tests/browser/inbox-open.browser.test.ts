@@ -1,11 +1,14 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import type { MessageId } from "../../../sdk/index.ts";
 import type { Person } from "./people.ts";
 import { inConversation } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const NONE = 0;
 const ONE = 1;
@@ -58,8 +61,9 @@ async function openFromInbox(page: Page, list: string): Promise<void> {
   await page.goto("/#/inbox");
   await page
     .getByRole("main")
-    .getByRole("list", { name: list })
-    .getByRole("link", { name: /Mentioned you/u })
+    .getByRole("list", { exact: true, name: list })
+    .getByRole("link")
+    .filter({ has: page.getByText("Mentioned you", { exact: true }) })
     .click();
 }
 

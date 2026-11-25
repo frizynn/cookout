@@ -1,9 +1,9 @@
 import type { CookoutClient, EventStream, Message } from "../../sdk/index.ts";
+import { agentShown, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { rowsOf, subscribedReader } from "./inbox-reader.ts";
 import { inPane } from "./regions.ts";
-import { newIdentity } from "./identities.ts";
 import { openWithClockStopped } from "./clock.ts";
 import { watched } from "./watched.ts";
 
@@ -97,13 +97,13 @@ function followedRow(thread: Thread, row: string, opened: Message = thread.first
   const { channel } = thread;
   return threadRow(
     thread,
-    `New reply in a thread you follow${channel}-posterreplied in a thread in#${channel}${row}`,
+    `New reply in a thread you follow${agentShown(`${channel}-poster`)}replied in a thread in#${channel}${row}`,
     opened,
   );
 }
 
 function channelRow(channel: string, row: string): string {
-  return `#/inbox/${channel} New in #${channel}${channel}-posterposted in#${channel}${row}`;
+  return `#/inbox/${channel} New in #${channel}${agentShown(`${channel}-poster`)}posted in#${channel}${row}`;
 }
 
 it("unread replies in one thread share one row, and new posts in one channel share another", {
@@ -146,7 +146,7 @@ it("a thread with one reply that mentions the reader is one row under For you, l
     [
       threadRow(
         thread,
-        `Mentioned you${thread.channel}-posterreplied in a thread in#${thread.channel}3 newjust nowre: Deploy at noon?Three`,
+        `Mentioned you${agentShown(`${thread.channel}-poster`)}replied in a thread in#${thread.channel}3 newjust nowre: Deploy at noon?Three`,
       ),
     ],
     null,
@@ -170,7 +170,7 @@ it("a live reply joins its thread's row and moves it to the top, and a reply in 
   expect([rowsOf("Activity"), rowsOf("For you")]).toStrictEqual([
     [followedRow(thread, "2 newjust nowre: Deploy at noon?Two"), channelRow(channel, "just nowLunch?")],
     [
-      `#/inbox/${channel}/${String(other.id)}/messages/${String(yes.id)} Replied to you${channel}-posterreplied in a thread in#${channel}just nowre: Tea?Yes`,
+      `#/inbox/${channel}/${String(other.id)}/messages/${String(yes.id)} Replied to you${agentShown(`${channel}-poster`)}replied in a thread in#${channel}just nowre: Tea?Yes`,
     ],
   ]);
 
@@ -213,7 +213,10 @@ it("marking all as read empties For you and Activity, and their rows show in Ear
 
   expect(rowsOf("Earlier")).toStrictEqual([
     channelRow(channel, "just nowTea?"),
-    threadRow(thread, `Mentioned you${channel}-posterreplied in a thread in#${channel}just nowre: Deploy at noon?Two`),
+    threadRow(
+      thread,
+      `Mentioned you${agentShown(`${channel}-poster`)}replied in a thread in#${channel}just nowre: Deploy at noon?Two`,
+    ),
   ]);
 
   unmount();

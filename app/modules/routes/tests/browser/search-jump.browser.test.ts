@@ -1,14 +1,18 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inPane, inProfile } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
 
-const BOX = { name: "Search" } as const;
-const RESULTS = { name: "Search results" } as const;
+const test = base.extend(probeFixtures);
+
+const BOX = { exact: true, name: "Search" } as const;
+const RESULTS = { exact: true, name: "Search results" } as const;
 const REPLY = { exact: true, name: "Reply" } as const;
 const PLACES = ["Inbox", "People", "Settings"] as const;
+const JUMP_GROUPS = /^(?:Places|Channels|People)$/u;
 const NONE = 0;
 const ONE = 1;
 
@@ -53,7 +57,9 @@ test("ctrl+K, part of a channel's name and Enter open that channel", async ({ pa
   await page.goto("/#/inbox");
   await searched(page, channel.replace("browser-jump-", "").toUpperCase());
 
-  await expect(results(page).getByRole("group", { name: "Channels" }).getByRole("option")).toHaveText([`#${channel}`]);
+  await expect(results(page).getByRole("group", { exact: true, name: "Channels" }).getByRole("option")).toHaveText([
+    `#${channel}`,
+  ]);
 
   await page.keyboard.press("Enter");
 
@@ -69,7 +75,9 @@ test("a person's Display name and Enter open their profile", async ({ page }) =>
   await searched(page, moonbeam().toLowerCase());
 
   await expect(
-    results(page).getByRole("group", { name: "People" }).getByRole("option", { name: moonbeam() }),
+    results(page)
+      .getByRole("group", { exact: true, name: "People" })
+      .getByRole("option", { exact: true, name: `${moonbeam()} ${unique("browser-jump-person-target")}` }),
   ).toBeVisible();
 
   await page.keyboard.press("Enter");
@@ -88,7 +96,9 @@ for (const [at, place] of PLACES.entries()) {
     await page.keyboard.press("Control+k");
 
     await expect(page.getByRole("combobox", BOX)).toBeFocused();
-    await expect(results(page).getByRole("group", { name: "Places" }).getByRole("option")).toHaveText([...PLACES]);
+    await expect(results(page).getByRole("group", { exact: true, name: "Places" }).getByRole("option")).toHaveText([
+      ...PLACES,
+    ]);
 
     await pressedDown(page, at);
 
@@ -105,14 +115,47 @@ test("a word from a message still lists the message, and Enter opens it in its t
   await page.goto("/#/inbox");
   await searched(page, `jump hello ${channel}`);
 
-  await expect(results(page).getByRole("group", { name: "Messages" }).getByRole("option")).toContainText([
+  await expect(results(page).getByRole("group", { exact: true, name: "Messages" }).getByRole("option")).toContainText([
     `Jump hello ${channel}`,
   ]);
 
   await page.keyboard.press("Enter");
 
   await expect(page).toHaveURL(new RegExp(`#/channels/${channel}/threads/${String(thread)}$`, "u"));
-  await expect(inPane(page).getByText(`Jump hello ${channel}`).first()).toBeVisible();
+  await expect(inPane(page).getByText(`Jump hello ${channel}`, { exact: true }).first()).toBeVisible();
+});
+
+test("with messages found, Down from the box goes through the channel and the person before the messages", async ({
+  page,
+}) => {
+  const { channel, reader } = await openedOn(page, "browser-jump-order");
+  await page.goto("/#/inbox");
+  await searched(page, channel);
+
+  await expect(results(page).getByRole("group", { exact: true, name: "Messages" }).getByRole("option")).toContainText([
+    `Jump hello ${channel}`,
+  ]);
+  await expect(results(page).getByRole("option", { selected: true })).toHaveText(`#${channel}`);
+
+  await pressedDown(page, ONE);
+
+  await expect(results(page).getByRole("option", { selected: true })).toContainText(reader);
+
+  await pressedDown(page, ONE);
+
+  await expect(results(page).getByRole("option", { selected: true })).toContainText(`Jump hello ${channel}`);
+});
+
+test("a query with a filter lists only messages, even when a person's Display name holds it", async ({ page }) => {
+  const { channel, reader } = await openedOn(page, "browser-jump-filter");
+  await adminClient().setDisplayName(reader, `Quetzal in:#${channel} jump`);
+  await page.goto("/#/inbox");
+  await searched(page, `in:#${channel} jump`);
+
+  await expect(results(page).getByRole("group", { exact: true, name: "Messages" }).getByRole("option")).toContainText([
+    `Jump hello ${channel}`,
+  ]);
+  await expect(results(page).getByRole("group", { exact: true, name: JUMP_GROUPS })).toHaveCount(NONE);
 });
 
 test("escape closes the box and gives focus back to the reply box", async ({ page }) => {

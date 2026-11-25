@@ -1,4 +1,4 @@
-import { adminClient, clientWith, newIdentity } from "./identities.ts";
+import { adminClient, agentShown, clientWith, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { inDialog, inPane, inProfile } from "./regions.ts";
@@ -82,7 +82,7 @@ it("an inbox row marks a deactivated author (deactivated)", { timeout: 5000 }, a
 
   await waitFor(() => {
     expect(rowsOf("Activity")).toStrictEqual([
-      "#/inbox/web-off-inbox New in #web-off-inboxweb-off-inbox-poster(deactivated)posted in#web-off-inboxjust nowDeployed",
+      `#/inbox/web-off-inbox New in #web-off-inbox${agentShown("web-off-inbox-poster")}(deactivated)posted in#web-off-inboxjust nowDeployed`,
     ]);
   });
 

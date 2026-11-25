@@ -29,6 +29,7 @@ const ListedRow = Schema.Struct({
   host: Schema.NullOr(Schema.String),
   issued_at: IsoTimeSchema,
   last_used_at: Schema.NullOr(IsoTimeSchema),
+  session_url: Schema.NullOr(Schema.String),
 });
 
 const SessionRow = Schema.Struct({
@@ -49,12 +50,12 @@ interface SessionSql {
 function sessionSql(dialect: SqlDatabase["dialect"]): SessionSql {
   const live = `identity_name = ? AND ${isFalse[dialect]("revoked")} AND expires_at > ?`;
   return {
-    findListed: `SELECT issued_at, expires_at, last_used_at, host FROM agent_session_tokens
+    findListed: `SELECT issued_at, expires_at, last_used_at, host, session_url FROM agent_session_tokens
   WHERE ${live} ORDER BY expires_at DESC LIMIT 1`,
     findLive: `SELECT expires_at FROM agent_session_tokens
   WHERE ${live} ORDER BY expires_at DESC LIMIT 1`,
-    insert: `INSERT INTO agent_session_tokens (hash, identity_name, issued_at, expires_at, idle_seconds, revoked, host)
-        VALUES (?, ?, ?, ?, ?, ${FALSE[dialect]}, ?)`,
+    insert: `INSERT INTO agent_session_tokens (hash, identity_name, issued_at, expires_at, idle_seconds, revoked, host, session_url)
+        VALUES (?, ?, ?, ?, ?, ${FALSE[dialect]}, ?, ?)`,
     revoke: `UPDATE agent_session_tokens SET revoked = ${TRUE[dialect]} WHERE hash = ?`,
     revokeLive: `UPDATE agent_session_tokens SET revoked = ${TRUE[dialect]} WHERE ${live}`,
   };
@@ -90,6 +91,7 @@ function listed(row: typeof ListedRow.Type): LiveAgentSession {
     host: Option.fromNullOr(row.host),
     issuedAt: row.issued_at,
     lastUsedAt: Option.fromNullOr(row.last_used_at),
+    sessionUrl: Option.fromNullOr(row.session_url),
   });
 }
 
@@ -135,6 +137,7 @@ function issue(db: SqlDatabase, { force, session }: IssueAgentSession): Fails<Is
       session.expiresAt,
       session.idleSeconds,
       session.host ?? null,
+      session.sessionUrl ?? null,
     );
     return { status: "issued" } as const;
   });

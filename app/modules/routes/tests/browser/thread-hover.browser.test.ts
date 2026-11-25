@@ -1,9 +1,12 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inThread } from "./regions.ts";
 import { logIn } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 interface Opened {
   readonly page: Page;
@@ -22,11 +25,16 @@ async function openThread({ channel, page }: Opened): Promise<void> {
 }
 
 function replyNamed(page: Page, text: string): Locator {
-  return inThread(page).getByRole("feed", { name: "Replies" }).getByRole("article").filter({ hasText: text });
+  return inThread(page)
+    .getByRole("feed", { exact: true, name: "Replies" })
+    .getByRole("article")
+    .filter({ hasText: text });
 }
 
 async function hoverReply(message: Locator): Promise<void> {
-  const reply = message.getByRole("group", { name: "Quick actions" }).getByRole("button", { name: "Reply" });
+  const reply = message
+    .getByRole("group", { exact: true, name: "Quick actions" })
+    .getByRole("button", { exact: true, name: "Reply" });
 
   await expect(async () => {
     await message.hover();
@@ -64,7 +72,7 @@ test("hover Reply on your own thread reply mentions nobody and focuses the reply
 test("tabbing to a thread reply shows its hover Reply", async ({ page }) => {
   await openThread({ channel: unique("browser-panel-hover-tab"), page });
   const message = replyNamed(page, "Noon works");
-  const reply = message.getByRole("button", { name: "Reply" });
+  const reply = message.getByRole("button", { exact: true, name: "Reply" });
 
   await expect(reply).toBeHidden();
 
@@ -87,12 +95,12 @@ async function threadHoverBarIn({ page, theme }: Shot): Promise<void> {
   await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
 
   const message = replyNamed(page, "Noon works");
-  const bar = message.getByRole("group", { name: "Quick actions" });
+  const bar = message.getByRole("group", { exact: true, name: "Quick actions" });
 
   await expect(async () => {
     await message.hover();
 
-    await expect(bar.getByRole("button", { name: "Reply" })).toBeVisible({ timeout: 1000 });
+    await expect(bar.getByRole("button", { exact: true, name: "Reply" })).toBeVisible({ timeout: 1000 });
   }).toPass();
 
   await message.screenshot({ path: test.info().outputPath(`thread-hover-bar-${theme}.png`) });

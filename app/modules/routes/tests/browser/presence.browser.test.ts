@@ -1,8 +1,11 @@
 import type { Browser, Locator, Page } from "@playwright/test";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { logInWithStream } from "./login.ts";
 import { newIdentity } from "./people.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 interface Viewing {
   readonly page: Page;
@@ -13,7 +16,7 @@ async function profileOf({ page, watched }: Viewing): Promise<Locator> {
   const viewer = await newIdentity({ kind: "human", name: `${watched}-viewer` });
   await logInWithStream({ page, token: viewer.token });
   await page.goto(`/#/people/${watched}`);
-  return page.getByRole("complementary", { name: "Profile" });
+  return page.getByRole("complementary", { exact: true, name: "Profile" });
 }
 
 async function tabOf(browser: Browser, token: string): Promise<() => Promise<void>> {
@@ -32,15 +35,17 @@ test("a human whose tab opens shows online in another browser, and offline once 
   const watcher = await newIdentity({ kind: "human", name: watched });
   const profile = await profileOf({ page, watched });
 
-  await expect(profile.getByRole("img", { name: `${watched}, Offline` })).toBeVisible();
+  await expect(profile.getByRole("img", { exact: true, name: `${watched}, Offline` })).toBeVisible();
 
   const closeTab = await tabOf(browser, watcher.token);
 
-  await expect(profile.getByRole("img", { name: `${watched}, Online` })).toBeVisible();
-  await expect(profile.getByText("Online · web")).toBeVisible();
+  await expect(profile.getByRole("img", { exact: true, name: `${watched}, Online` })).toBeVisible();
+  await expect(profile.getByText("Online · web", { exact: true })).toBeVisible();
 
   await closeTab();
 
-  await expect(profile.getByRole("img", { name: new RegExp(`^${watched}, Offline, last seen `, "u") })).toBeVisible();
-  await expect(profile.getByText(/^Offline · last seen /u)).toBeVisible();
+  await expect(
+    profile.getByRole("img", { exact: true, name: `${watched}, Offline, last seen just now` }),
+  ).toBeVisible();
+  await expect(profile.getByText("Offline · last seen just now", { exact: true })).toBeVisible();
 });

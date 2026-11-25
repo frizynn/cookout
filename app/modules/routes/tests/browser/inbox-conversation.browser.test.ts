@@ -1,10 +1,13 @@
 import type { Browser, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inConversation, inPane } from "./regions.ts";
 import { logIn, logInToChannels, logInWithStream } from "./login.ts";
 import type { Person } from "./people.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const NARROW = { height: 900, width: 600 };
 
@@ -34,16 +37,17 @@ test("at 600 px wide, selecting a thread row shows only its conversation, and th
 }) => {
   await narrowInbox(page, unique("browser-inbox-narrow"));
   await inPane(page)
-    .getByRole("list", { name: "For you" })
-    .getByRole("link", { name: /Mentioned you/u })
+    .getByRole("list", { exact: true, name: "For you" })
+    .getByRole("link")
+    .filter({ has: page.getByText("Mentioned you", { exact: true }) })
     .click();
 
   await expect(inConversation(page)).toContainText("can you check the rollout?");
-  await expect(page.getByRole("heading", { level: 1, name: "Inbox" })).toBeHidden();
+  await expect(page.getByRole("heading", { exact: true, level: 1, name: "Inbox" })).toBeHidden();
 
-  await inConversation(page).getByRole("link", { name: "Back to the inbox" }).click();
+  await inConversation(page).getByRole("link", { exact: true, name: "Back to the inbox" }).click();
 
-  await expect(page.getByRole("heading", { level: 1, name: "Inbox" })).toBeVisible();
+  await expect(page.getByRole("heading", { exact: true, level: 1, name: "Inbox" })).toBeVisible();
   await expect(inConversation(page)).toBeHidden();
   await expect(page).toHaveURL(/#\/inbox$/u);
 });
@@ -53,9 +57,9 @@ async function postFromElsewhere(browser: Browser, poster: Person, channel: stri
   const page = await context.newPage();
   await logIn({ page, token: poster.token, url: `/#/channels/${channel}` });
   await page.getByLabel("Message", { exact: true }).fill("Rolled out to everyone");
-  await inPane(page).getByRole("button", { name: "Send" }).click();
+  await inPane(page).getByRole("button", { exact: true, name: "Send" }).click();
 
-  await expect(page.getByRole("feed", { name: "Messages" })).toContainText("Rolled out to everyone");
+  await expect(page.getByRole("feed", { exact: true, name: "Messages" })).toContainText("Rolled out to everyone");
 
   await context.close();
 }
@@ -73,8 +77,7 @@ test("a post from another identity appears live in the open channel conversation
 
   await postFromElsewhere(browser, poster, channel);
 
-  await expect(inConversation(page).getByRole("feed", { name: "Posts" }).getByRole("article")).toContainText([
-    "Rolling out 1.5",
-    "Rolled out to everyone",
-  ]);
+  await expect(
+    inConversation(page).getByRole("feed", { exact: true, name: "Posts" }).getByRole("article"),
+  ).toContainText(["Rolling out 1.5", "Rolled out to everyone"]);
 });

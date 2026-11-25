@@ -1,9 +1,12 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
-import { inSidebar, inTopBar } from "./regions.ts";
+import { test as base, expect } from "@playwright/test";
+import { inSidebar, inTopBar, sidebarLink } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const NARROW = { height: 900, width: 600 };
 const WIDE = { height: 900, width: 1400 };
@@ -21,7 +24,7 @@ async function sidebarOpen(page: Page, name: string): Promise<void> {
 }
 
 function edgeOf(page: Page): Locator {
-  return inSidebar(page).getByRole("separator", { name: EDGE });
+  return inSidebar(page).getByRole("separator", { exact: true, name: EDGE });
 }
 
 async function sidebarWidth(page: Page): Promise<number> {
@@ -69,7 +72,7 @@ test("dragging the sidebar's edge past its narrowest stops there, with the sideb
 
   await dragEdge(page, -WIDE.width);
 
-  await expect(inSidebar(page).getByRole("link", { name: /^Inbox/u })).toBeVisible();
+  await expect(sidebarLink({ label: "Inbox", page })).toBeVisible();
 
   expect(await sidebarWidth(page)).toBe(NARROWEST);
 });
@@ -77,8 +80,8 @@ test("dragging the sidebar's edge past its narrowest stops there, with the sideb
 test("on a narrow screen the sidebar has no edge to drag", async ({ page }) => {
   await sidebarOpen(page, unique("browser-resize-sidebar-narrow"));
   await page.setViewportSize(NARROW);
-  await inTopBar(page).getByRole("button", { name: "Open the sidebar" }).click();
+  await inTopBar(page).getByRole("button", { exact: true, name: "Open the sidebar" }).click();
 
-  await expect(inSidebar(page).getByRole("link", { name: /^Inbox/u })).toBeVisible();
+  await expect(sidebarLink({ label: "Inbox", page })).toBeVisible();
   await expect(edgeOf(page)).toBeHidden();
 });

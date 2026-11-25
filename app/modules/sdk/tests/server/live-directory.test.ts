@@ -3,6 +3,7 @@ import { TestCookout, answer, testCookout } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { Effect } from "effect";
 import type { Scope } from "effect";
+import { createTestAgent } from "../../../testing/index.ts";
 
 function watchingAllChannels(client: CookoutClient): Effect.Effect<AsyncIterator<CookoutEvent>, never, Scope.Scope> {
   return Effect.map(
@@ -20,7 +21,9 @@ it.effect("a new agent reaches every all-channels watcher as an identity event",
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
     const events = yield* watchingAllChannels(grace.client);
-    const { identity } = yield* answer(() => ada.client.createIdentity({ kind: "agent", name: "ada/helper" }));
+    const { identity } = yield* answer(() =>
+      createTestAgent({ by: ada.client, displayName: "ada/helper", name: "ada/helper" }),
+    );
     const event = yield* answer(() => events.next());
 
     expect(event).toStrictEqual({ done: false, value: { identity, type: "identity" } });
@@ -33,7 +36,7 @@ it.effect("an agent that joining creates reaches every all-channels watcher as a
     const ada = yield* cookout.createIdentity("ada", { kind: "human" });
     const grace = yield* cookout.createIdentity("grace", { kind: "human" });
     const events = yield* watchingAllChannels(grace.client);
-    yield* answer(() => ada.client.join({ as: "release-bot" }));
+    yield* answer(() => ada.client.join({ as: "release-bot", displayName: "Release bot" }));
     const event = yield* answer(() => events.next());
 
     expect(event).toMatchObject({

@@ -1,12 +1,15 @@
 import type { Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inPane } from "./regions.ts";
 import { logInToChannels } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
 
-const LIST = { name: "Keyboard shortcuts" } as const;
-const BOX = { name: "Message" } as const;
+const test = base.extend(probeFixtures);
+
+const LIST = { exact: true, name: "Keyboard shortcuts" } as const;
+const BOX = { exact: true, name: "Message" } as const;
 
 async function openedChannel(page: Page, channel: string): Promise<Locator> {
   const admin = adminClient();
@@ -15,7 +18,7 @@ async function openedChannel(page: Page, channel: string): Promise<Locator> {
   const reader = await newIdentity({ kind: "human", name: `${channel}-reader` });
   await logInToChannels({ page, token: reader.token });
   await page.goto(`/#/channels/${channel}`);
-  const message = page.getByRole("feed", { name: "Messages" }).getByRole("article");
+  const message = page.getByRole("feed", { exact: true, name: "Messages" }).getByRole("article");
 
   await expect(message).toBeVisible();
 
@@ -32,7 +35,7 @@ async function followedInbox(page: Page, channel: string): Promise<void> {
   await logInToChannels({ page, token: reader.token });
   await page.goto("/#/inbox");
 
-  await expect(inPane(page).getByText(`Shortcut reply ${channel}`)).toBeVisible();
+  await expect(inPane(page).getByText(`Shortcut reply ${channel}`, { exact: true })).toBeVisible();
 }
 
 function rowOf({
@@ -44,7 +47,7 @@ function rowOf({
   readonly group: string;
   readonly does: string;
 }): Locator {
-  return list.getByRole("list", { name: group }).getByRole("listitem").filter({ hasText: does });
+  return list.getByRole("list", { exact: true, name: group }).getByRole("listitem").filter({ hasText: does });
 }
 
 async function reportingMac(page: Page): Promise<void> {

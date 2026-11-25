@@ -24,6 +24,8 @@ const localRuleFile = (rule: string) => {
 };
 
 const otherPluginRules: ReadonlySet<string> = new Set([
+  "agent-factory",
+  "exact-locators",
   "keymap-owner",
   "no-internal-tag",
   "own-clock",
@@ -68,6 +70,8 @@ const testRules: readonly (readonly [string, string])[] = [
   ["eslint(no-restricted-imports)", "no-restricted-imports.effect"],
   ["test-rules(region-lookups)", "region-lookups"],
   ["test-rules(own-clock)", "own-clock"],
+  ["test-rules(agent-factory)", "agent-factory"],
+  ["test-rules(exact-locators)", "exact-locators"],
 ];
 
 const backendRules: readonly (readonly [string, string])[] = [["effecttsgo(global-date)", "global-date"]];

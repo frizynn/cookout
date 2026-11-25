@@ -2,6 +2,7 @@ import type { IdentityName, TokenHash } from "../../../identities/index.ts";
 import type { IssueAgentSession, IssueAgentSessionResult } from "./agent-sessions.ts";
 import type { Fails } from "./errors.ts";
 import type { IsoTime } from "../../../time/index.ts";
+import { Predicate } from "effect";
 import { renewedExpiry } from "./agent-sessions.ts";
 
 interface NewAgentJoinRequest {
@@ -10,6 +11,7 @@ interface NewAgentJoinRequest {
   readonly agent: IdentityName;
   readonly host: string;
   readonly idleExpiry?: string;
+  readonly sessionUrl?: string;
   readonly createdAt: IsoTime;
   readonly expiresAt: IsoTime;
 }
@@ -54,6 +56,7 @@ type AgentJoinCollection =
       readonly created: boolean;
       readonly issuedAt: IsoTime;
       readonly expiresAt: IsoTime;
+      readonly sessionUrl?: string;
     };
 
 interface AgentJoinRequestsSection {
@@ -71,6 +74,7 @@ interface AgentJoinRequestsSection {
 interface Approved {
   readonly approval: AgentJoinApproval;
   readonly host: string;
+  readonly sessionUrl: string | null;
   readonly collect: CollectAgentJoinRequest;
 }
 
@@ -83,19 +87,27 @@ interface Issued {
 const PENDING: AgentJoinCollection = { status: "pending" };
 const GONE: AgentJoinCollection = { status: "gone" };
 
-function sessionToIssue({ approval, collect, host }: Approved): IssueAgentSession {
+function sessionToIssue({ approval, collect, host, sessionUrl }: Approved): IssueAgentSession {
   const { force, idleSeconds, identity } = approval;
   const { now, sessionHash } = collect;
   const expiresAt = renewedExpiry({ idleSeconds, now });
-  return { force, session: { expiresAt, hash: sessionHash, host, identity, idleSeconds, issuedAt: now } };
+  const session = { expiresAt, hash: sessionHash, host, identity, idleSeconds, issuedAt: now };
+  if (sessionUrl === null) {
+    return { force, session };
+  }
+  return { force, session: { ...session, sessionUrl } };
 }
 
 function collectionOf({ created, issue, result }: Issued): AgentJoinCollection {
-  const { expiresAt, identity, issuedAt } = issue.session;
+  const { expiresAt, identity, issuedAt, sessionUrl } = issue.session;
   if (result.status === "live") {
     return { expiresAt: result.expiresAt, identity, status: "live" };
   }
-  return { created, expiresAt, identity, issuedAt, status: "collected" };
+  const collected = { created, expiresAt, identity, issuedAt, status: "collected" } as const;
+  if (Predicate.isUndefined(sessionUrl)) {
+    return collected;
+  }
+  return { ...collected, sessionUrl };
 }
 
 export { GONE, PENDING, collectionOf, sessionToIssue };

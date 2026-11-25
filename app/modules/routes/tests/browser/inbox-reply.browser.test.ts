@@ -1,9 +1,12 @@
 import type { Browser, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
-import { expect, test } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { inConversation, inThread } from "./regions.ts";
 import { logInWithStream } from "./login.ts";
+import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
+
+const test = base.extend(probeFixtures);
 
 const CHANNEL = "browser-inbox-reply";
 
@@ -56,7 +59,7 @@ test("a reply sent with Enter from the Inbox shows in the conversation, and live
     hash: `#/inbox/${thread.channel}/${thread.parent}`,
     token: thread.answerer,
   });
-  const box = inConversation(replying).getByRole("textbox", { name: "Reply" });
+  const box = inConversation(replying).getByRole("textbox", { exact: true, name: "Reply" });
   await box.fill("Noon works");
   await box.press("Enter");
 

@@ -8,6 +8,7 @@ import {
 } from "../../../testing/server.ts";
 import { expect, it } from "@effect/vitest";
 import { Effect } from "effect";
+import { createTestAgent } from "../../../testing/index.ts";
 
 const EXIT_FAILURE = 1;
 
@@ -22,7 +23,7 @@ const board = Effect.gen(function* seedBoard() {
 it.effect("an agent approves another agent's join by its code, and the new agent collects its own session", () =>
   Effect.gen(function* approveByCode() {
     const { chief, cookout, env } = yield* board;
-    yield* answer(() => chief.client.createAgentForOwner({ name: "worker" }));
+    yield* answer(() => createTestAgent({ broughtIn: true, by: chief.client, displayName: "worker", name: "worker" }));
     const started = yield* answer(() =>
       cookout.clientFor().startAgentJoin({ as: "worker", host: "box", idleExpiry: "7d" }),
     );
