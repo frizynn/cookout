@@ -537,9 +537,13 @@ pnpm e2e:docker
 
 `pnpm web:slow [ms] <files...>` runs web test files with every view call held back `ms` (700 by default) before it goes out (it provides `webSlowMs`, which `slowCalls` in `app/modules/routes/tests/slow-calls.ts` reads), so a test that reads the screen before the view's call answered fails every run; a test that waits on `answering`'s `answered` gets the answer when the view does. `pnpm under-load --web-only [files...]` is an optional final check, judged by the failure-rate rule, never a fixed count of clean runs.
 
+## Reproduce a browser test's missing wait
+
+`pnpm browser:slow [ms] <file> [-g <title>]` runs browser tests once, with no retries, with the answer to each of the page's calls to the board held back `ms` (700 by default), the live stream held back before it opens. It sets `COOKOUT_BROWSER_SLOW_MS`, which `playwright.config.ts` passes to the `slowMs` option of `slowFixtures` in `app/modules/routes/tests/browser/slow.ts`, part of `probeFixtures`; unset, the page's calls are untouched. A test that reads the screen before the page heard the board's answer then fails every run. Prove a fix to a browser test's wait with it: the old test fails, the fixed one passes, one run each. Repeat runs with `pnpm browser:flaky` are only a final check, below load 15.
+
 ## Reproduce a flaky browser test
 
-`pnpm browser:flaky <file> [N]` runs one browser test file N times (25 by default) and prints each test's pass and fail counts, then a `RESULT:` line. It works because every browser test names the channels and identities it makes with `unique(name)` from `app/modules/routes/tests/browser/names.ts` (built on `uniqueName` in `app/modules/testing/`), so a repeat never clashes with an earlier one; a new browser test does the same.
+`pnpm browser:flaky <file> [N] [-g <title>]` runs one browser test file N times (25 by default), only its tests whose title matches `-g` when given, and prints each test's pass and fail counts, then a `RESULT:` line. Before it starts, it waits while the 1-minute load average is above 20 and prints that it is waiting, since at a high load every test times out a few percent of the time. It works because every browser test names the channels and identities it makes with `unique(name)` from `app/modules/routes/tests/browser/names.ts` (built on `uniqueName` in `app/modules/testing/`), so a repeat never clashes with an earlier one; a new browser test does the same.
 
 Browser tests share one live board, and every page streams every channel's events, so a flake that disappears at `--workers=1` is likely other tests' live traffic, not CPU load. Reproduce it by posting replies into an unrelated thread while the test runs, never with a CPU-load generator.
 
@@ -915,6 +919,10 @@ agent-browser --session cookout screenshot /tmp/cookout-command-refused.png
 ```
 
 The thread shows `@ada`'s `/rollback` with `Call to /rollback` `{"version": "1.4.1"}` as its parent message, and the reply `@rollback` `Rolled back to 1.4.1.` with its `Data` `{"status": "done", "version": "1.4.1"}`. Typing `/` shows `Command suggestions` with `/deploy Ship a branch`, `/hotfix Patch a branch now` and `/rollback`, the first highlighted. Tab picks `/deploy`: the box gives way to the `Call /deploy` form with a focused `branch` field marked `required`. Enter calls it: the `Messages` list ends with `@grace` `/deploy`, `Call to /deploy` `{"branch": "main"}` and `0 replies`, and the message box is back, empty. With `/hotfix` picked by Enter, calling it with `branch` `x` posts nothing; the form stays with `x` in `branch`, `must NOT have fewer than 3 characters` under it, and the alert `Couldn't call /hotfix (invalid_request): The data doesn't follow the schema of the command hotfix.` To see both themes, pick `Light` or `Dark` on the settings page ("Switch the theme and see the workspace") and take the screenshots again.
+
+## Find lines covered only sometimes
+
+`pnpm coverage:unstable [N]` runs the Vitest suite with coverage N times (5 by default, at least 2), one run after another, and prints each line covered in some runs but not all, as `<file>:<line> covered in <k> of <N> runs, reached by <test files>`, then a `RESULT:` line: `RESULT: PASS` when there are none. Such a line is what fails the coverage floor at random on a change that never touched it: only a racy test reaches it. The test files it names are the ones whose own coverage reached the line in any of the runs. Vitest already takes coverage once per test file and merges it; the script keeps each file's raw coverage before Vitest deletes it (`scripts/lib/coverage-by-test.ts`) and, after the last run, converts it for the unstable lines' files alone. It first waits while the machine's 1-minute load average is above 20, and it waits for the same machine-wide lock as `pnpm check`. A full run takes N times the suite (about 7 minutes each on 4 cores). Fix each line it names through the module's interface: a test that reaches it every run, or the racy test made to wait for the event it reads (reproduce a missing wait with `pnpm web:slow`, above).
 
 ## Run the web tests
 

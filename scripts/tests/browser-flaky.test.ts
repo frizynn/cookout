@@ -59,20 +59,28 @@ it("fails when the run reported no tests, so a mistyped file never reads as stea
   expect(flakyReport(null)).toStrictEqual({ lines: ["RESULT: FAIL (no tests ran)"], ok: false });
 });
 
-it("takes a file and a repeat count, 25 by default, and refuses anything else", { timeout: 1000 }, () => {
+it("takes a file, a repeat count, 25 by default, and an optional -g title, and refuses anything else", {
+  timeout: 1000,
+}, () => {
   expect.hasAssertions();
 
-  expect(flakyArguments(["post.browser.test.ts"])).toStrictEqual({
-    file: "post.browser.test.ts",
-    ok: true,
-    repeats: 25,
-  });
-  expect(flakyArguments(["post.browser.test.ts", "4"])).toStrictEqual({
-    file: "post.browser.test.ts",
-    ok: true,
-    repeats: 4,
-  });
-  expect(flakyArguments([])).toStrictEqual({ ok: false });
-  expect(flakyArguments(["post.browser.test.ts", "0"])).toStrictEqual({ ok: false });
-  expect(flakyArguments(["post.browser.test.ts", "many"])).toStrictEqual({ ok: false });
+  expect([
+    flakyArguments(["post.browser.test.ts"]),
+    flakyArguments(["post.browser.test.ts", "4"]),
+    flakyArguments(["post.browser.test.ts", "4", "-g", "posts"]),
+    flakyArguments(["post.browser.test.ts", "-g", "posts"]),
+    flakyArguments([]),
+    flakyArguments(["post.browser.test.ts", "0"]),
+    flakyArguments(["post.browser.test.ts", "many"]),
+    flakyArguments(["post.browser.test.ts", "-g"]),
+  ]).toStrictEqual([
+    { file: "post.browser.test.ts", grep: [], ok: true, repeats: 25 },
+    { file: "post.browser.test.ts", grep: [], ok: true, repeats: 4 },
+    { file: "post.browser.test.ts", grep: ["-g", "posts"], ok: true, repeats: 4 },
+    { file: "post.browser.test.ts", grep: ["-g", "posts"], ok: true, repeats: 25 },
+    { ok: false },
+    { ok: false },
+    { ok: false },
+    { ok: false },
+  ]);
 });
