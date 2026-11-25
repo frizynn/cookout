@@ -10,8 +10,8 @@ const QUEUE_BRANCH = "gh-readonly-queue/v1/pr-9-abc";
 const FIRST_RUN = { databaseId: 50, headBranch: QUEUE_BRANCH, headSha: "abc" };
 const SECOND_RUN = { databaseId: 51, headBranch: "gh-readonly-queue/v1/pr-9-def", headSha: "def" };
 const LANDING = { branch: "merge-ticket-7", sha: "head7", title: "Merge ticket-7: Add the c table (#7)" };
-const MERGED = { autoMergeRequest: null, isInMergeQueue: false, mergeCommit: { oid: "m3rg3" }, state: "MERGED" };
-const DEQUEUED = { autoMergeRequest: null, isInMergeQueue: false, mergeCommit: null, state: "OPEN" };
+const MERGED = { autoMergeRequest: null, mergeCommit: { oid: "m3rg3" }, state: "MERGED" };
+const DEQUEUED = { autoMergeRequest: null, mergeCommit: null, state: "OPEN" };
 const GREEN = view({ jobs: [done("lint"), done("checked")], status: COMPLETED });
 const RED = view({
   jobs: [ended({ conclusion: "failure", failedStep: "pnpm check", name: "tests 1/2" }), done("lint")],
@@ -199,6 +199,21 @@ it("merges the pull request directly, reading no queue run, while v1 has no merg
     ["pr merge 9 --merge --match-head-commit head7 --subject Merge ticket-7: Add the c table (#7)"],
   ]);
   expect(logs).toContain(`v1 has no merge queue yet: merging ${PR} at head7 directly, as its Check run is green.`);
+});
+
+it("lands once gh pr merge succeeds, reading the pull request only with fields gh knows (#564)", {
+  timeout: 10_000,
+}, () => {
+  expect.hasAssertions();
+
+  const gh = fake({ list: [], "pr list": [OPENED], "pr merge": [""], "pr view": [MERGED], view: [] });
+
+  const { landed } = gh.land(LANDING, false);
+
+  expect([landed, called(gh.calls(), "pr view")]).toStrictEqual([
+    { kind: "landed", sha: "m3rg3" },
+    ["pr view 9 --json state,mergeCommit,autoMergeRequest"],
+  ]);
 });
 
 it("stops, naming the command, when the pull request cannot be enqueued", { timeout: 10_000 }, () => {
