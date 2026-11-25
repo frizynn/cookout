@@ -76,7 +76,7 @@ it("an identity deleted elsewhere closes its open profile page with a notice and
 
   await newIdentity({ kind: "agent", name: "web-live-gone-bot" });
   const close = await openLiveAs("web-live-gone-reader", "#/people/web-live-gone-bot");
-  await inPane().findByRole("link", { name: testAgentDisplayName("web-live-gone-bot") });
+  await inPane().findByRole("link", { name: `${testAgentDisplayName("web-live-gone-bot")}, Offline` });
   const notice = await deletedElsewhere("web-live-gone-bot");
 
   expect([notice.textContent, globalThis.location.hash]).toStrictEqual([
@@ -123,7 +123,7 @@ it("an identity deleted elsewhere shows no notice on a page not open on its prof
 
   await newIdentity({ kind: "agent", name: "web-live-gone-other-bot" });
   const { boardStore, close } = await openBoardAs("web-live-gone-other-reader", "#/people");
-  await inPane().findByRole("link", { name: testAgentDisplayName("web-live-gone-other-bot") });
+  await inPane().findByRole("link", { name: `${testAgentDisplayName("web-live-gone-other-bot")}, Offline` });
   await adminClient().deleteIdentity("web-live-gone-other-bot");
   await leftPeople("web-live-gone-other-bot");
   await heardDeleted(boardStore, "web-live-gone-other-bot");

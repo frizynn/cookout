@@ -209,7 +209,7 @@ it("the sidebar's footer opens your own profile", { timeout: 5000 }, async () =>
     waitingOn: ["whoami"],
   });
   const nav = await screen.findByRole("navigation", { name: "Sidebar" });
-  fireEvent.click(await within(nav).findByRole("link", { name: "web-people-self-human" }));
+  fireEvent.click(await within(nav).findByRole("link", { name: "web-people-self-human, Offline" }));
   await answered("listIdentities");
   const name = await inProfile().findByRole("heading", { level: 3 });
 
