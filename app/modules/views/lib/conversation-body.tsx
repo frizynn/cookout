@@ -8,7 +8,9 @@ import type { ReactNode } from "react";
 import type { Reply } from "./use-message-menu.ts";
 import { StandaloneEntry } from "./standalone-entry.tsx";
 
-const TEXT = { first: "First message" } as const;
+const NONE = 0;
+
+const TEXT = { first: "First message", unread: "Unread replies" } as const;
 
 interface ConversationBodyProps {
   readonly state: ThreadMessagesState;
@@ -47,11 +49,15 @@ export function ConversationBody(props: ConversationBodyProps): ReactNode {
       />
       <ConversationReplies
         closing={props.closing}
+        kept={NONE}
         linked={props.linked}
+        readPosition={props.readPosition}
+        unlined="shown"
+        label={TEXT.unread}
         me={props.me}
         menu={props.menu}
+        newLine={null}
         parent={state.parent}
-        readPosition={props.readPosition}
         receipts={state.receipts}
         replies={state.replies}
         reply={props.reply}

@@ -48,6 +48,7 @@ export function ChannelPostStreams(props: ChannelPostStreamsProps): ReactNode {
         closing={null}
         after={null}
         channel={null}
+        feed={null}
         label={TEXT.posts}
         me={me}
         menu={menu}
@@ -67,6 +68,7 @@ export function ChannelPostStreams(props: ChannelPostStreamsProps): ReactNode {
           closing={null}
           after={post}
           channel={null}
+          feed={null}
           label={TEXT.later}
           me={me}
           menu={menu}
