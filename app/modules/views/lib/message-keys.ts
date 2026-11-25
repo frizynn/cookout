@@ -6,7 +6,10 @@ const PANEL = `aside[aria-label="${THREAD_PANEL.thread}"]`;
 const PANEL_PARENT = `${PANEL} article[aria-label="${THREAD_PANEL.parent}"]`;
 const PANEL_REPLY_BOX = `${PANEL} textarea`;
 const PANEL_CLOSE = `${PANEL} > header a[href]`;
-const CHANNEL_MESSAGE = `main [role="feed"] ${MESSAGE}[aria-current="true"]`;
+const CHANNEL_FEED = 'main [role="feed"]';
+const OPEN_MESSAGE = `${MESSAGE}[aria-current="true"]`;
+const NOT_A_FOLD = `${MESSAGE}:not([data-closed-fold])`;
+const LAST = -1;
 
 interface Pressing {
   readonly keymap: Keymap;
@@ -55,12 +58,42 @@ function press({ action, keymap, whenOpen }: Pressing): Act {
   };
 }
 
+function channelFeed(): Element | null {
+  for (const feed of globalThis.document.querySelectorAll(CHANNEL_FEED)) {
+    if (feed.closest(PANEL) === null) {
+      return feed;
+    }
+  }
+  return null;
+}
+
+function channelMessage(): HTMLElement | null {
+  const feed = channelFeed();
+  if (feed === null) {
+    return null;
+  }
+  return (
+    feed.querySelector<HTMLElement>(OPEN_MESSAGE) ??
+    [...feed.querySelectorAll<HTMLElement>(NOT_A_FOLD)].at(LAST) ??
+    null
+  );
+}
+
+function focusedOnChannelMessage(): boolean {
+  const message = channelMessage();
+  if (message === null) {
+    return false;
+  }
+  message.focus();
+  return true;
+}
+
 function inPanel(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && target.matches(MESSAGE) && target.closest(PANEL) !== null;
 }
 
 function backToChannel({ target }: KeyboardEvent): boolean {
-  return inPanel(target) && focused(CHANNEL_MESSAGE);
+  return inPanel(target) && focusedOnChannelMessage();
 }
 
 function threadPanel(): Element | null {
@@ -68,7 +101,7 @@ function threadPanel(): Element | null {
 }
 
 function closedTo(hash: string): boolean {
-  focused(CHANNEL_MESSAGE);
+  focusedOnChannelMessage();
   globalThis.location.hash = hash;
   return true;
 }
