@@ -99,3 +99,37 @@ it("cancelling a delete forgets the message asked and deletes nothing", { timeou
     id: parent.id,
   });
 });
+
+it("a delete asked while another is pending is dropped: it deletes nothing and is never answered", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const parent = await postedIn("web-calls-delete-pending");
+  const [first, dropped, later] = [
+    await repliedTo({ parent }),
+    await repliedTo({ parent }),
+    await repliedTo({ parent }),
+  ];
+  const { store } = opened();
+  const droppedAnswered = vi.fn<(outcome: DeleteOutcome) => void>();
+  const firstDeleted = deleted({ message: first, store });
+  store.calls.deleteMessage(dropped.id, droppedAnswered);
+  const { outcome: firstOutcome } = await firstDeleted;
+  const [{ outcome: laterOutcome }, { parent: after }] = [
+    await deleted({ message: later, store }),
+    await adminClient().getThread(parent.id),
+  ];
+
+  expect({
+    droppedAnswers: droppedAnswered.mock.calls.length,
+    first: deletedIdOf(firstOutcome),
+    later: deletedIdOf(laterOutcome),
+    replyCount: after.replyCount,
+  }).toStrictEqual({
+    droppedAnswers: 0,
+    first: first.id,
+    later: later.id,
+    replyCount: 1,
+  });
+});
