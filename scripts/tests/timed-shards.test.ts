@@ -124,6 +124,14 @@ function recordedBy(reports: FakeCi["reports"]): (args: readonly string[]) => Ou
   return fakeGh({ artifacts, reports });
 }
 
+function downloadFails(args: readonly string[]): Outcome<string> {
+  const [verb] = args;
+  if (verb === "run") {
+    return { ok: false, reason: "gh run download failed: HTTP 503" };
+  }
+  return recordedBy({ "test-timings-browser-1": { alpha: 50, bravo: 40 } })(args);
+}
+
 function planned(shard: string, reports: FakeCi["reports"], files: readonly string[] = FILES): readonly string[] {
   return browserShardPlan({ files: { ok: true, value: files }, gh: recordedBy(reports), run: RUN, shard }).args;
 }
@@ -195,16 +203,18 @@ it("a CI shard runs the files its share of the time recorded before its run pick
   ).toStrictEqual([
     {
       args: ["--record-shard=1/2", file("alpha"), file("delta"), file("echo")],
+      failure: "",
       line: "browser shard 1/2: 3 of 5 files, 80.0s of test time as run 800 recorded it",
     },
     {
       args: ["--record-shard=2/2", file("bravo"), file("charlie")],
+      failure: "",
       line: "browser shard 2/2: 2 of 5 files, 70.0s of test time as run 800 recorded it",
     },
   ]);
 });
 
-it("a CI shard falls back to Playwright's split by test count when it can't read recorded times", {
+it("a CI shard falls back to Playwright's split by test count when no run recorded times", {
   timeout: 10_000,
 }, () => {
   expect.hasAssertions();
@@ -214,14 +224,27 @@ it("a CI shard falls back to Playwright's split by test count when it can't read
 
   expect([
     browserShardPlan({ files, gh: none, run: RUN, shard: "1/3" }).line,
-    browserShardPlan({ files, gh: offline, run: RUN, shard: "1/3" }).line,
     browserShardPlan({ files, gh: none, run: "", shard: "1/3" }).line,
     browserShardPlan({ files: { ok: false, reason: "no listing" }, gh: none, run: RUN, shard: "2/3" }),
   ]).toStrictEqual([
     "browser shard 1/3: split by test count, since no Check run recorded browser timings before run 900",
-    "browser shard 1/3: split by test count, since gh api failed: offline",
     "browser shard 1/3: split by test count, since this isn't a GitHub Actions run",
-    { args: ["--shard=2/3"], line: "browser shard 2/3: split by test count, since no listing" },
+    { args: ["--shard=2/3"], failure: "", line: "browser shard 2/3: split by test count, since no listing" },
+  ]);
+});
+
+it("a CI shard that can't read the recorded times fails rather than split on its own", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const files = { ok: true, value: FILES } as const;
+  const unsplit = "can't read the recorded timings, and a split of its own would differ from the other shards'";
+
+  expect([
+    browserShardPlan({ files, gh: offline, run: RUN, shard: "1/3" }),
+    browserShardPlan({ files, gh: downloadFails, run: RUN, shard: "2/3" }),
+  ]).toStrictEqual([
+    { args: [], failure: `browser shard 1/3 ${unsplit}: gh api failed: offline`, line: "" },
+    { args: [], failure: `browser shard 2/3 ${unsplit}: gh run download failed: HTTP 503`, line: "" },
   ]);
 });
 
@@ -250,10 +273,12 @@ it("a CI unit-test shard runs, by absolute path, the files its share of the reco
   expect(["1/2", "2/2"].map((shard) => unitShardPlan({ cwd: CWD, files, gh, run: RUN, shard }))).toStrictEqual([
     {
       args: ["--outputFile.blob=.vitest/blob/blob-1-2.json", `${CWD}/a/alpha.test.ts`, `${CWD}/b/delta.test.ts`],
+      failure: "",
       line: "unit shard 1/2: 2 of 4 files, 70.0s of test time as run 800 recorded it",
     },
     {
       args: ["--outputFile.blob=.vitest/blob/blob-2-2.json", `${CWD}/a/bravo.test.ts`, `${CWD}/b/charlie.test.ts`],
+      failure: "",
       line: "unit shard 2/2: 2 of 4 files, 70.0s of test time as run 800 recorded it",
     },
   ]);
@@ -268,6 +293,7 @@ it("a CI unit-test shard falls back to Vitest's split by file count when no run 
 
   expect(unitShardPlan({ cwd: CWD, files: { ok: true, value: FILES }, gh, run: RUN, shard: "4/6" })).toStrictEqual({
     args: ["--shard=4/6"],
+    failure: "",
     line: "unit shard 4/6: split by file count, since no Check run recorded unit timings before run 900",
   });
 });

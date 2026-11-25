@@ -284,4 +284,4 @@ function ciBrowserShard({ cwd, gh, run, shard }: CiShard): Plan {
 }
 
 export type { BrowserTests };
-export { browserSkip, browserTestsFor, ciBrowserShard };
+export { browserSkip, browserTestFiles, browserTestsFor, ciBrowserShard };

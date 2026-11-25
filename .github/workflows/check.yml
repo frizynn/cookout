@@ -1,16 +1,25 @@
 name: Check
 
-# Check runs once per commit, on v1 and the merge-ticket-* branches only (#605): a worker runs
-# `pnpm check` before opening a pull request. It doesn't run on pull_request or on ticket-* pushes,
-# which ran it twice per commit and queued the landing runs behind them. A push to main doesn't run
+# Check runs once per commit, on v1 and the merge-ticket-* branches (#605), and on a pull request
+# into v1 (#737): a worker runs `pnpm check` before opening a pull request. It doesn't run on
+# ticket-* pushes, which ran it twice per commit and queued the landing runs behind them. A push to main doesn't run
 # it: main is only fast-forwarded to a commit v1's push run already checked. A Check run has 8 jobs,
 # the static checks and the unit tests on the merged result: `static`, `tests` ×6 and `coverage`.
 # The browser tests, pack smoke, the published client and the e2e suite run in the Release
 # workflow, the gate, on the newest v1 commit whose Check run is green, before it publishes and
 # deploys (#636, docs/adr/0114-release-is-the-gate-on-the-newest-green-v1-commit.md).
+#
+# A pull request into v1 runs the same jobs on its merge with v1, plus `browser` ×6: Release's
+# browser job, each shard running only its share of the browser tests the change reaches (#737).
+# A merged pull request ran no Check before it, so a broken browser test, a coverage gap or an
+# unformatted file showed only when Release ran. A merge-ticket-* pull request runs none of it,
+# since its branch's push run already checked the same merge. Every reader of Check runs asks for
+# push runs, so a pull_request run never stands in for one.
 on:
   push:
     branches: [v1, "merge-ticket-*"]
+  pull_request:
+    branches: [v1]
   workflow_dispatch:
 
 permissions:
@@ -26,6 +35,7 @@ jobs:
   # The 8 static checks, one step each, one after another on one runner: the job stops at the first
   # that fails, and its failed step names it. Each step runs the check's own `pnpm check --job=`.
   static:
+    if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'merge-ticket-')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -82,9 +92,12 @@ jobs:
   # was cut off at the 5-minute limit (#707). So 6 jobs each run the test files that give it a sixth
   # of the test time the newest earlier Check run recorded in its test-timings-tests-* artifacts,
   # falling back to Vitest's --shard by file count when there are none (scripts/lib/timed-shards.ts).
+  # A shard whose gh call fails reading them fails instead: the others split by the timings, so a
+  # split of its own would leave files to no shard and coverage short (#737).
   # Each uploads its blob report, and the coverage job merges every vitest-blob-* into one run.
   tests:
     name: tests ${{ matrix.shard }}/6
+    if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'merge-ticket-')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -143,3 +156,14 @@ jobs:
           path: .timings/*.txt
           include-hidden-files: true
           if-no-files-found: ignore
+
+  # Only on a pull request: the browser tests its change reaches, in Release's 6 shards.
+  browser:
+    if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'merge-ticket-')
+    permissions:
+      contents: read
+      # To read the timings and the coverage map Release uploaded.
+      actions: read
+    uses: ./.github/workflows/browser.yml
+    with:
+      reached: true
