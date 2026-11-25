@@ -39,7 +39,7 @@ const LEVELS: Readonly<Record<string, number>> = { allow: 0, deny: 2, error: 2, 
 const NAMES: readonly string[] = ["off", "warn", "error"];
 const KNOWN_KEYS = new Set(["$schema", "categories", "ignorePatterns", "jsPlugins", "overrides", "plugins", "rules"]);
 const NO_OVERRIDE: Override = { key: "", rest: "{}", rules: {} };
-const CANT_TELL = "and merge-ticket can't tell whether that loosens";
+const CANT_TELL = "and the lint-config guard can't tell whether that loosens";
 
 function record(value: unknown): Readonly<Record<string, unknown>> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -85,7 +85,7 @@ function lowered({ after, before, label }: Levels): readonly string[] {
 function changedSetting(label: string, base: string, head: string): readonly string[] {
   const levels = { after: levelOf(head), before: levelOf(base), label };
   if (levels.before === UNREAD || levels.after === UNREAD) {
-    return [`${label} has a level merge-ticket can't read`];
+    return [`${label} has a level the lint-config guard can't read`];
   }
   if (levels.after < levels.before) {
     return lowered(levels);
