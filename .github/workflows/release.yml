@@ -2,7 +2,7 @@ name: Release
 
 # Release is the gate (#636, docs/adr/0114-release-is-the-gate-on-the-newest-green-v1-commit.md). Its
 # first job picks the newest v1 commit whose Check push run is green, reusing that run's static
-# checks and unit tests. On that commit it runs every browser test (3 shards, moved from Check),
+# checks and unit tests. On that commit it runs every browser test (6 shards, moved from Check),
 # pack smoke, the published client and the e2e suite on the Docker image. Only when all of them
 # pass does it fast-forward main to that commit, call Deploy, and run changesets: it opens or
 # updates the Version Packages pull request against v1, and once that is merged and no changesets
@@ -72,12 +72,14 @@ jobs:
         run: node scripts/release-commit.ts --event "$GITHUB_EVENT_NAME" --run-id "$GITHUB_RUN_ID" --output "$GITHUB_OUTPUT" --summary "$GITHUB_STEP_SUMMARY"
 
   # Every browser test in one job took 205s of a passing run and was cancelled at the 5-minute
-  # limit on loaded runners (#455), so they're split across 3 jobs. Each shard runs the files that
-  # give it a third of the test time the newest earlier run recorded in its test-timings-browser-*
+  # limit on loaded runners (#455), so they're split across jobs. Each shard runs the files that
+  # give it a sixth of the test time the newest earlier run recorded in its test-timings-browser-*
   # artifacts, falling back to Playwright's --shard by test count when there are none (#619). A
-  # runner has 4 cores, and Playwright runs 4 workers on CI.
+  # runner has 4 cores, and Playwright runs 4 workers on CI. 3 shards took 3:57-4:50 of their 5
+  # minutes once the suite's test time reached about 2,800 s (#715); 6 give each about 470 s, about
+  # 2:40 with the job's 33 s of setup.
   browser:
-    name: browser ${{ matrix.shard }}/3
+    name: browser ${{ matrix.shard }}/6
     needs: choose
     if: ${{ needs.choose.outputs.go == 'true' }}
     runs-on: ubuntu-latest
@@ -89,7 +91,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -101,11 +103,11 @@ jobs:
       # --with-deps sometimes took 4.5 minutes fetching fonts from the Ubuntu mirror (#265).
       - name: Install headless Chromium
         run: pnpm exec playwright install --only-shell chromium
-      - name: pnpm check --job=browser --shard=${{ matrix.shard }}/3
+      - name: pnpm check --job=browser --shard=${{ matrix.shard }}/6
         env:
           GH_TOKEN: ${{ github.token }}
           NODE_COMPILE_CACHE: node_modules/.cache/node-compile
-        run: node scripts/check.ts --job=browser --shard=${{ matrix.shard }}/3 --run=${{ github.run_id }} --all --ci
+        run: node scripts/check.ts --job=browser --shard=${{ matrix.shard }}/6 --run=${{ github.run_id }} --all --ci
       # A failed test leaves its error-context.md (the error and the page's ARIA snapshot) in
       # test-results/. Recording a trace of every test made a passing run 40% slower and failed tests
       # that pass without it (#714), so the run that decides the verdict records none. Instead a
@@ -230,7 +232,7 @@ jobs:
             echo "::error::The gate failed on ${SHA:-no commit}: $failed. Nothing was published or deployed."
             exit 1
           fi
-          echo "### The gate passed on $SHA: browser ×3, pack smoke, the published client and e2e-docker" >> "$GITHUB_STEP_SUMMARY"
+          echo "### The gate passed on $SHA: browser ×6, pack smoke, the published client and e2e-docker" >> "$GITHUB_STEP_SUMMARY"
 
   # Says what a real run would publish and deploy, and does neither.
   dry-run:

@@ -14,23 +14,38 @@ const NONE = 0;
 const REPLY_BOX = { exact: true, name: "Reply" } as const;
 
 interface Seeded {
+  readonly after: string;
   readonly channel: string;
+  readonly gone: string;
   readonly parent: MessageId;
-  readonly reader: CookoutClient;
   readonly token: string;
 }
 
-async function seeded(name: string): Promise<Seeded> {
-  const channel = unique(name);
+async function channelWithAThread(channel: string): Promise<MessageId> {
   await adminClient().createChannel({ name: channel });
   const { message } = await adminClient().createMessage({ channel, text: "The oldest." });
   await adminClient().createMessage({ channel, text: "The middle." });
   await adminClient().createMessage({ channel, text: "The newest." });
   await adminClient().createMessage({ channel, replyTo: message.id, text: "The first reply." });
   await adminClient().createMessage({ channel, replyTo: message.id, text: "The last reply." });
+  return message.id;
+}
+
+async function subscribedChannel(reader: CookoutClient, name: string): Promise<void> {
+  await adminClient().createChannel({ name });
+  await reader.subscribe(name);
+}
+
+async function seeded(name: string): Promise<Seeded> {
+  const channel = unique(name);
+  const gone = `${channel}-gone`;
+  const after = `${gone}-z`;
+  const parent = await channelWithAThread(channel);
   const reader = await newIdentity({ kind: "human", name: `${channel}-reader` });
   await reader.client.subscribe(channel);
-  return { channel, parent: message.id, reader: reader.client, token: reader.token };
+  await subscribedChannel(reader.client, gone);
+  await subscribedChannel(reader.client, after);
+  return { after, channel, gone, parent, token: reader.token };
 }
 
 function messageSaying(page: Page, text: string): Locator {
@@ -46,29 +61,12 @@ function replySaying(page: Page, text: string): Locator {
 
 async function openedChannel(page: Page, name: string): Promise<Seeded> {
   const opened = await seeded(name);
-  await logInWithStream({ page, token: opened.token });
-  await page.goto(`/#/channels/${opened.channel}`);
+  await logInWithStream({ page, token: opened.token, url: `/#/channels/${opened.channel}` });
 
   await expect(messageSaying(page, "The newest.")).toBeVisible();
+  await expect(sidebarLink({ label: `#${opened.after}`, page })).toBeVisible();
 
   return opened;
-}
-
-async function openedThread(page: Page, name: string): Promise<Seeded> {
-  const opened = await seeded(name);
-  await logInWithStream({ page, token: opened.token });
-  await page.goto(`/#/channels/${opened.channel}/threads/${String(opened.parent)}`);
-
-  await expect(replySaying(page, "The last reply.")).toBeVisible();
-
-  return opened;
-}
-
-async function reloadedWithNoFocus(page: Page): Promise<void> {
-  await page.reload();
-
-  await expect(inPane(page).getByRole("article").first()).toBeVisible();
-  await expect(page.locator("body")).toBeFocused();
 }
 
 async function focusOnBody(page: Page): Promise<void> {
@@ -82,123 +80,116 @@ async function focusOnBody(page: Page): Promise<void> {
   await expect(page.locator("body")).toBeFocused();
 }
 
-async function twoMoreChannels(page: Page, opened: Seeded): Promise<readonly [string, string]> {
-  const gone = unique("browser-lost-sidebar-gone");
-  const after = `${gone}-z`;
-  await adminClient().createChannel({ name: gone });
-  await adminClient().createChannel({ name: after });
-  await opened.reader.subscribe(gone);
-  await opened.reader.subscribe(after);
-  await page.reload();
-
-  await expect(sidebarLink({ label: `#${after}`, page })).toBeVisible();
-
-  return [gone, after];
-}
-
-test("↓ with focus on the page body focuses the channel's newest message, and moves nothing", async ({ page }) => {
-  await openedChannel(page, "browser-lost-body");
-  await reloadedWithNoFocus(page);
-  await page.keyboard.press(DOWN);
-
-  await expect(messageSaying(page, "The newest.")).toBeFocused();
-});
-
-test("↓ with focus on the page body and a thread open focuses the thread panel's newest message", async ({ page }) => {
-  const opened = await openedThread(page, "browser-lost-thread");
-  const [gone] = await twoMoreChannels(page, opened);
-  await sidebarLink({ label: `#${gone}`, page }).focus();
-  await focusOnBody(page);
-  await adminClient().deleteChannel(gone);
-
-  await expect(sidebarLink({ label: `#${gone}`, page })).toBeHidden();
-  await expect(page.locator("body")).toBeFocused();
-
-  await page.keyboard.press(DOWN);
-
-  await expect(replySaying(page, "The last reply.")).toBeFocused();
-});
-
-test("a key on the page body lands focus back on what last had focus, while it is still on the page", async ({
-  page,
-}) => {
-  await openedChannel(page, "browser-lost-last");
-  await messageSaying(page, "The oldest.").focus();
-  await focusOnBody(page);
-  await page.keyboard.press("j");
-
-  await expect(messageSaying(page, "The oldest.")).toBeFocused();
-});
-
-test("message list: when the focused message folds away, focus moves to the next message", async ({ page }) => {
-  const opened = await openedChannel(page, "browser-lost-fold");
-  await messageSaying(page, "The oldest.").focus();
-  await adminClient().closeThread(opened.parent);
-
-  await expect(messageSaying(page, "The oldest.")).toBeHidden();
-  await expect(messageSaying(page, "The middle.")).toBeFocused();
-});
-
-test("message list: when the newest message folds away, focus moves to the previous one", async ({ page }) => {
-  const opened = await openedChannel(page, "browser-lost-fold-last");
-  const { message } = await adminClient().createMessage({ channel: opened.channel, text: "Fold me." });
-
-  await expect(messageSaying(page, "Fold me.")).toBeVisible();
-
-  await messageSaying(page, "Fold me.").focus();
-  await adminClient().closeThread(message.id);
-
-  await expect(messageSaying(page, "Fold me.")).toBeHidden();
-  await expect(messageSaying(page, "The newest.")).toBeFocused();
-});
-
-test("sidebar: when the focused channel link goes, focus moves to the next link", async ({ page }) => {
-  const opened = await openedChannel(page, "browser-lost-sidebar");
-  const [gone, after] = await twoMoreChannels(page, opened);
-  await sidebarLink({ label: `#${gone}`, page }).focus();
-  await adminClient().deleteChannel(gone);
-
-  await expect(sidebarLink({ label: `#${gone}`, page })).toBeHidden();
-  await expect(sidebarLink({ label: `#${after}`, page })).toBeFocused();
-});
-
-async function openedThreadFromChannel(page: Page, name: string): Promise<void> {
-  await openedChannel(page, name);
+async function openedThreadOfTheOldest(page: Page): Promise<void> {
   await messageSaying(page, "The oldest.").focus();
   await page.keyboard.press("Enter");
 
   await expect(replySaying(page, "The last reply.")).toBeVisible();
 }
 
-test("thread panel: when the thread panel goes from under its focused reply, focus lands on the channel's message", async ({
+async function closedPanelLeavesFocusOnTheOldest(page: Page): Promise<void> {
+  await expect(inThread(page)).toBeHidden();
+  await expect(messageSaying(page, "The oldest.")).toBeFocused();
+}
+
+test("a key on the page body lands focus, and a thread panel going from under its focus leaves it on the channel's message", async ({
   page,
 }) => {
-  await openedThreadFromChannel(page, "browser-lost-panel");
-  await replySaying(page, "The first reply.").focus();
-  await page.goBack();
+  await openedChannel(page, "browser-lost-keys");
 
-  await expect(inThread(page)).toBeHidden();
-  await expect(messageSaying(page, "The oldest.")).toBeFocused();
+  await test.step("↓ with focus on the page body focuses the channel's newest message, and moves nothing", async () => {
+    await expect(page.locator("body")).toBeFocused();
+
+    await page.keyboard.press(DOWN);
+
+    await expect(messageSaying(page, "The newest.")).toBeFocused();
+  });
+
+  await test.step("a key on the page body lands focus back on what last had focus, while it is still on the page", async () => {
+    await messageSaying(page, "The oldest.").focus();
+    await focusOnBody(page);
+    await page.keyboard.press("j");
+
+    await expect(messageSaying(page, "The oldest.")).toBeFocused();
+  });
+
+  await test.step("thread panel: when the thread panel goes from under its focused reply, focus lands on the channel's message", async () => {
+    await openedThreadOfTheOldest(page);
+    await replySaying(page, "The first reply.").focus();
+    await page.goBack();
+
+    await closedPanelLeavesFocusOnTheOldest(page);
+  });
+
+  await test.step("message box: when the focused reply box goes with its thread panel, focus lands on the channel's message", async () => {
+    await openedThreadOfTheOldest(page);
+    await inThread(page).getByRole("textbox", REPLY_BOX).focus();
+    await page.goBack();
+
+    await closedPanelLeavesFocusOnTheOldest(page);
+  });
+
+  await test.step("closing a thread with its X from the thread panel leaves focus on the channel message", async () => {
+    await openedThreadOfTheOldest(page);
+    await replySaying(page, "The first reply.").focus();
+    await inThread(page).getByRole("link", { exact: true, name: "Close panel" }).click();
+
+    await closedPanelLeavesFocusOnTheOldest(page);
+  });
 });
 
-test("message box: when the focused reply box goes with its thread panel, focus lands on the channel's message", async ({
-  page,
-}) => {
-  await openedThreadFromChannel(page, "browser-lost-reply-box");
-  await inThread(page).getByRole("textbox", REPLY_BOX).focus();
-  await page.goBack();
+test("when the focused message or channel link goes, focus moves to its neighbour", async ({ page }) => {
+  const opened = await openedChannel(page, "browser-lost-gone");
 
-  await expect(inThread(page)).toBeHidden();
-  await expect(messageSaying(page, "The oldest.")).toBeFocused();
+  await test.step("message list: when the focused message folds away, focus moves to the next message", async () => {
+    await messageSaying(page, "The oldest.").focus();
+    await adminClient().closeThread(opened.parent);
+
+    await expect(messageSaying(page, "The oldest.")).toBeHidden();
+    await expect(messageSaying(page, "The middle.")).toBeFocused();
+  });
+
+  await test.step("message list: when the newest message folds away, focus moves to the previous one", async () => {
+    const { message } = await adminClient().createMessage({ channel: opened.channel, text: "Fold me." });
+
+    await expect(messageSaying(page, "Fold me.")).toBeVisible();
+
+    await messageSaying(page, "Fold me.").focus();
+    await adminClient().closeThread(message.id);
+
+    await expect(messageSaying(page, "Fold me.")).toBeHidden();
+    await expect(messageSaying(page, "The newest.")).toBeFocused();
+  });
+
+  await test.step("sidebar: when the focused channel link goes, focus moves to the next link", async () => {
+    await sidebarLink({ label: `#${opened.gone}`, page }).focus();
+    await adminClient().deleteChannel(opened.gone);
+
+    await expect(sidebarLink({ label: `#${opened.gone}`, page })).toBeHidden();
+    await expect(sidebarLink({ label: `#${opened.after}`, page })).toBeFocused();
+  });
 });
 
-test("closing a thread with its X from the thread panel leaves focus on the channel message", async ({ page }) => {
-  await openedThreadFromChannel(page, "browser-lost-close");
-  await replySaying(page, "The first reply.").focus();
-  await inThread(page).getByRole("link", { exact: true, name: "Close panel" }).click();
+test("↓ with focus on the page body and a thread open focuses the thread panel's newest message", async ({ page }) => {
+  const opened = await seeded("browser-lost-thread");
+  await logInWithStream({
+    page,
+    token: opened.token,
+    url: `/#/channels/${opened.channel}/threads/${String(opened.parent)}`,
+  });
 
-  await expect(inThread(page)).toBeHidden();
-  await expect(messageSaying(page, "The oldest.")).toBeFocused();
+  await expect(replySaying(page, "The last reply.")).toBeVisible();
+
+  await sidebarLink({ label: `#${opened.gone}`, page }).focus();
+  await focusOnBody(page);
+  await adminClient().deleteChannel(opened.gone);
+
+  await expect(sidebarLink({ label: `#${opened.gone}`, page })).toBeHidden();
+  await expect(page.locator("body")).toBeFocused();
+
+  await page.keyboard.press(DOWN);
+
+  await expect(replySaying(page, "The last reply.")).toBeFocused();
 });
 
 interface Following {
@@ -225,8 +216,7 @@ async function openedInbox(page: Page, name: string): Promise<void> {
   const poster = await newIdentity({ kind: "agent", name: `${channel}-poster` });
   const reader = await newIdentity({ kind: "human", name: `${channel}-reader` });
   await followedThreads({ channel, poster: poster.client, reader: reader.client }, ["First", "Second", "Third"]);
-  await logInWithStream({ page, token: reader.token });
-  await page.goto("/#/inbox");
+  await logInWithStream({ page, token: reader.token, url: "/#/inbox" });
 
   await expect(inPane(page).getByText("First reply", { exact: true })).toBeVisible();
 }

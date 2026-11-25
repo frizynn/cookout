@@ -100,3 +100,60 @@ it("the hook refuses an ADR from v1 edited in place while resolving a merge of v
   expect(run.status).toBe(FAILED);
   expect(run.stderr).toContain(`${NEW_ADR} is append-only`);
 });
+
+const TABLE_ADR = "docs/adr/0003-a-table.md";
+const UNPADDED = [
+  "# A table",
+  "",
+  "| trace | time |",
+  "| --- | --- |",
+  "| off | 86 s |",
+  "| `retain-on-failure` | 122 s |",
+  "",
+];
+const PADDED = [
+  "# A table",
+  "",
+  "| trace               | time  |",
+  "| ------------------- | ----- |",
+  "| off                 | 86 s  |",
+  "| `retain-on-failure` | 122 s |",
+  "",
+];
+
+function v1WithTable(): string {
+  const dir = deployedV1();
+  git(dir, "checkout", "-q", "v1");
+  commit(dir, [TABLE_ADR, UNPADDED.join("\n")]);
+  git(dir, "update-ref", "refs/remotes/origin/v1", "v1");
+  git(dir, "checkout", "-q", "-B", "ticket-1");
+  return dir;
+}
+
+it("the hook passes an ADR from v1 that Biome only reformats", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const dir = v1WithTable();
+  stage(dir, [TABLE_ADR, PADDED.join("\n")]);
+
+  expect(hook(dir)).toStrictEqual({ status: PASSED, stderr: "" });
+});
+
+it("the hook refuses a reformat of an ADR from v1 that also changes a word", { timeout: 10_000 }, () => {
+  expect.hasAssertions();
+
+  const dir = v1WithTable();
+  stage(dir, [TABLE_ADR, PADDED.join("\n").replace("86 s ", "96 s ")]);
+  const run = hook(dir);
+
+  expect(run.status).toBe(FAILED);
+  expect(run.stderr).toContain(`${TABLE_ADR} is append-only, but this change removes the line "| off | 86 s |"`);
+});
+
+it("the hook formats a staged ADR before it judges it", { timeout: 1000 }, () => {
+  expect.hasAssertions();
+
+  expect(readFileSync("lefthook.yml", "utf8")).toMatch(
+    /- name: format\n\s+glob: "\*\.\{[^}]*,md\}"\n\s+run: scripts\/quiet\.sh node_modules\/\.bin\/biome format --write /u,
+  );
+});
