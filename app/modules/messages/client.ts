@@ -4,7 +4,14 @@
  * `CookoutClient` has them.
  * Also the body of posting a message (#342).
  */
-import type { JsonValue, ListOpenThreadsResponse, Message, MessageId, TopLevelMessageResponse } from "./index.ts";
+import type {
+  JsonValue,
+  ListOpenThreadsResponse,
+  Message,
+  MessageId,
+  TopLevelMessage,
+  TopLevelMessageResponse,
+} from "./index.ts";
 import type { SearchResponse, SearchSort } from "../search/index.ts";
 import type { AttachmentId } from "../attachments/index.ts";
 
@@ -31,6 +38,18 @@ export type { ScheduledMessageCalls } from "../scheduled-messages/client.ts";
 /** The answer to deleting a message: the message as it was just before, a top-level message with its counts. */
 export interface DeletedMessageResponse {
   readonly message: Message;
+}
+
+/**
+ * A message just deleted (mattpocock/cookout#681), as it was, sent only on the all-channels feed so every open web UI
+ * drops it at once. For a reply, `parent` is its thread's top-level message as it now stands, with the lowered reply
+ * count; deleting a top-level message deletes its whole thread and sends one event, for that message alone, with no
+ * `parent`. `cookout watch` ignores it. It has no SSE `id`.
+ */
+export interface MessageDeletedEvent {
+  readonly type: "message-deleted";
+  readonly message: Message;
+  readonly parent?: TopLevelMessage;
 }
 
 /** Deleting a message. */

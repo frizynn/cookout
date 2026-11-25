@@ -1,5 +1,5 @@
-import { Array as Arr, DateTime, Effect, Option } from "effect";
-import type { Message, MessageId } from "../../index.ts";
+import { Array as Arr, DateTime, Effect, Option, Predicate } from "effect";
+import type { Message, MessageId, TopLevelMessage } from "../../index.ts";
 import type { Storage, StorageUnavailable } from "../../../storage/server.ts";
 import { messageNotFound, notOwnMessage } from "./refusals.ts";
 import type { DeletedMessageResponse } from "../../client.ts";
@@ -13,14 +13,25 @@ type OneAtATime = <Value, Failure, Needs>(
   effect: Effect.Effect<Value, Failure, Needs>,
 ) => Effect.Effect<Value, Failure, Needs>;
 
+interface MessageDeletion {
+  readonly message: Message;
+  readonly parent?: TopLevelMessage;
+}
+
 interface DeletingOn {
   readonly storage: Storage["Service"];
   readonly oneAtATime: OneAtATime;
+  readonly publishDeletion: (deletion: MessageDeletion) => Effect.Effect<void>;
 }
 
 interface Asking {
   readonly caller: Identity;
   readonly message: Message;
+}
+
+interface Deleted {
+  readonly id: MessageId;
+  readonly caller: Identity;
 }
 
 function mayDelete({ caller, message }: Asking): boolean {
@@ -47,18 +58,39 @@ function messageIn(storage: Storage["Service"], id: MessageId): Fails<Message> {
   });
 }
 
-function deleteMessageWith({ oneAtATime, storage }: DeletingOn) {
+function deletionOf(storage: Storage["Service"], message: Message): Fails<MessageDeletion> {
+  if (message.kind === "top-level") {
+    return Effect.succeed({ message });
+  }
+  return Effect.map(storage.getThread(message.replyTo), (thread) => {
+    if (Predicate.isUndefined(thread)) {
+      return { message };
+    }
+    return { message, parent: thread.parent };
+  });
+}
+
+function deleteThenPublish({ publishDeletion, storage }: DeletingOn, { caller, id }: Deleted): Fails<Message> {
+  return Effect.gen(function* deleteThenPublishDeletion() {
+    const now = yield* DateTime.now;
+    const gone = yield* storage.deleteMessage(id, { deletedAt: isoTimeOf(now), deletedBy: caller.name });
+    const message = yield* present(id, Option.fromUndefinedOr(gone));
+    const deletion = yield* deletionOf(storage, message);
+    yield* publishDeletion(deletion);
+    return message;
+  });
+}
+
+function deleteMessageWith(on: DeletingOn) {
   return (caller: Identity, id: MessageId): Fails<DeletedMessageResponse> =>
     Effect.gen(function* deleteMessage() {
-      const message = yield* messageIn(storage, id);
+      const message = yield* messageIn(on.storage, id);
       if (!mayDelete({ caller, message })) {
         return yield* Effect.fail(notOwnMessage);
       }
-      const now = yield* DateTime.now;
-      const deleting = { deletedAt: isoTimeOf(now), deletedBy: caller.name };
-      const gone = yield* oneAtATime(storage.deleteMessage(id, deleting));
-      return { message: yield* present(id, Option.fromUndefinedOr(gone)) };
+      const deleted = yield* on.oneAtATime(deleteThenPublish(on, { caller, id }));
+      return { message: deleted };
     });
 }
 
-export { deleteMessageWith };
+export { type MessageDeletion, deleteMessageWith };

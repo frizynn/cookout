@@ -136,6 +136,17 @@ function press({ conversation, keymap }: Pick<InboxKeys, "conversation" | "keyma
   };
 }
 
+function thenNext(act: Act): Act {
+  const next = select("next");
+  return (event) => {
+    if (!act(event)) {
+      return false;
+    }
+    next(event);
+    return true;
+  };
+}
+
 function useInboxKeys(keys: InboxKeys): void {
   const { conversation, keymap, selected, watch } = keys;
   useEffect(() => {
@@ -143,7 +154,7 @@ function useInboxKeys(keys: InboxKeys): void {
       actions: {
         backToRows: back({ selected, watch }),
         copyMessageLink: onTopMessage({ conversation, keymap }, "copyMessageLink"),
-        markRowRead: press({ conversation, keymap }, "markRowRead"),
+        markRowRead: thenNext(press({ conversation, keymap }, "markRowRead")),
         markRowUnread: press({ conversation, keymap }, "markRowUnread"),
         markSelectedRowRead: press({ conversation, keymap }, "markRowRead"),
         nextRow: select("next"),
