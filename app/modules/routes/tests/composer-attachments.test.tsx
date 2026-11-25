@@ -16,7 +16,7 @@ import {
   sized,
 } from "./composer-files.ts";
 import { expect, it, vi } from "vitest";
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { inPane, inThread } from "./regions.ts";
 import { adminClient } from "./identities.ts";
 import { alertSaying } from "./alerts.ts";
@@ -126,6 +126,22 @@ it("a waiting file's remove button takes it out of the box before sending", { ti
   fireEvent.click(within(formNamed(CHANNEL_FORM)).getByRole("button", { name: "Remove hills.png" }));
 
   expect(pendingIn(CHANNEL_FORM)).toStrictEqual([NOTES]);
+
+  close();
+});
+
+it("removing a waiting file focuses the next file's remove button", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const close = await channelOpen("web-compose-remove-focus");
+  pickIn({ files: [hills, notes], form: CHANNEL_FORM });
+  fireEvent.click(within(formNamed(CHANNEL_FORM)).getByRole("button", { name: "Remove hills.png" }));
+
+  await waitFor(() => {
+    expect(document.activeElement).toBe(
+      within(formNamed(CHANNEL_FORM)).getByRole("button", { name: "Remove notes.txt" }),
+    );
+  });
 
   close();
 });
