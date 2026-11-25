@@ -6,7 +6,11 @@ const PANEL = `aside[aria-label="${THREAD_PANEL.thread}"]`;
 const PANEL_PARENT = `${PANEL} article[aria-label="${THREAD_PANEL.parent}"]`;
 const PANEL_REPLY_BOX = `${PANEL} textarea`;
 const PANEL_CLOSE = `${PANEL} > header a[href]`;
-const CHANNEL_MESSAGE = `main [role="feed"] ${MESSAGE}[aria-current="true"]`;
+const CHANNEL_FEED = 'main [role="feed"]';
+const OPEN_MESSAGE = `${MESSAGE}[aria-current="true"]`;
+const NOT_A_FOLD = `${MESSAGE}:not([data-closed-fold])`;
+const FIRST = 0;
+const LAST = -1;
 
 interface Pressing {
   readonly keymap: Keymap;
@@ -55,12 +59,41 @@ function press({ action, keymap, whenOpen }: Pressing): Act {
   };
 }
 
+function channelFeed(): Element | null {
+  for (const feed of globalThis.document.querySelectorAll(CHANNEL_FEED)) {
+    if (feed.closest(PANEL) === null) {
+      return feed;
+    }
+  }
+  return null;
+}
+
+function inChannel(selector: string): readonly HTMLElement[] {
+  const feed = channelFeed();
+  if (feed === null) {
+    return [];
+  }
+  return [...feed.querySelectorAll<HTMLElement>(selector)];
+}
+
+function focusedOn(message: unknown): boolean {
+  if (!(message instanceof HTMLElement)) {
+    return false;
+  }
+  message.focus();
+  return true;
+}
+
+function focusedOnChannelMessage(): boolean {
+  return focusedOn(inChannel(OPEN_MESSAGE).at(FIRST));
+}
+
 function inPanel(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && target.matches(MESSAGE) && target.closest(PANEL) !== null;
 }
 
 function backToChannel({ target }: KeyboardEvent): boolean {
-  return inPanel(target) && focused(CHANNEL_MESSAGE);
+  return inPanel(target) && focusedOnChannelMessage();
 }
 
 function threadPanel(): Element | null {
@@ -68,7 +101,7 @@ function threadPanel(): Element | null {
 }
 
 function closedTo(hash: string): boolean {
-  focused(CHANNEL_MESSAGE);
+  focusedOn(inChannel(OPEN_MESSAGE).at(FIRST) ?? inChannel(NOT_A_FOLD).at(LAST));
   globalThis.location.hash = hash;
   return true;
 }
@@ -101,4 +134,4 @@ function messageActions(keymap: Keymap): Readonly<Record<MessageAction, Act>> {
   };
 }
 
-export { closeThread, messageActions, threadPanel };
+export { closeThread, focusedOnChannelMessage, messageActions, threadPanel };
