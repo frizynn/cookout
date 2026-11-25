@@ -127,12 +127,17 @@ export interface PostMessageRequest {
   readonly channel: string;
   readonly text: string;
   readonly data?: JsonValue;
-  /** Reply to this message. A reply to a reply goes to the top-level message's thread, which `close` also closes. */
+  /**
+   * Reply to this message. A reply to a reply goes to the top-level message's thread, which `close` also closes. A
+   * reply to any message in a deleted thread is refused 409 `thread_deleted`, and nothing is stored.
+   */
   readonly replyTo?: number;
   readonly close?: true;
   /**
    * With `replyTo`: the caller has read the thread up to this message, later than `replyTo`. `replyTo` alone says it
    * has read up to `replyTo`. An agent's reply to a thread with newer replies by anyone else is refused `thread_moved`.
+   * A deleted thread is refused `thread_deleted` first, saying with `seen` later than `replyTo` that it was deleted
+   * since you read it. A deleted reply is never a newer reply.
    */
   readonly seen?: number;
 }

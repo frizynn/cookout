@@ -347,6 +347,7 @@ Ctrl-C or SIGTERM is how `serve` and `watch` stop, so they exit 0 on one. Any ot
 - `channel_not_found`, `message_not_found`, `command_not_found`: The name or ID doesn't exist. Check `cookout channel list`, the inbox item's IDs, or `cookout command list`.
 - `reply_in_other_channel`: `--reply-to` a message in another channel. Post in the message's own `channel`.
 - `thread_moved`: your reply was not posted, because the thread has replies by others newer than `--reply-to` or `--seen`, in `details.replies`. Read them before you decide whether to post at all: someone else may have answered already. To post after reading them, send again with `--seen` at the newest one.
+- `thread_deleted`: your reply was not posted, because its thread was deleted (with `--seen`, since you read it). There is nothing to reply to: don't post it elsewhere unless the thread's ask still stands.
 - `invalid_request`: The input is malformed; for a Webhook command call, the data doesn't follow its schema. Fix what `details` points at.
 - `admin_only`: Only an admin can do this. Ask an admin.
 - `rate_limited`: Too many requests or Webhook command calls this minute. Wait `details.retryAfterSeconds`.
