@@ -71,21 +71,22 @@ function joinOwned(found: AgentIdentity, naming: Naming): Fails<Resolved> {
   return Effect.succeed({ created: false, identity: found });
 }
 
-function named(identity: AgentIdentity, { displayName }: Naming): AgentIdentity {
-  if (Predicate.isUndefined(displayName)) {
-    return identity;
-  }
-  return { ...identity, displayName };
-}
-
 function createOwned(asked: Asked): Fails<Resolved> {
   const { name, naming, on, owner } = asked;
-  if (Predicate.isUndefined(naming.displayName)) {
+  const { displayName } = naming;
+  if (Predicate.isUndefined(displayName)) {
     return Effect.fail(displayNameRequired(name));
   }
   return Effect.gen(function* createOwnedAgent() {
     const now = yield* DateTime.now;
-    const identity = named({ admin: false, createdAt: isoTimeOf(now), kind: "agent", name, owner }, naming);
+    const identity: AgentIdentity = {
+      admin: false,
+      createdAt: isoTimeOf(now),
+      displayName,
+      kind: "agent",
+      name,
+      owner,
+    };
     const hash = yield* Effect.flatMap(on.secrets.newToken, on.secrets.hashToken);
     const result = yield* on.storage.createIdentity(identity, hash);
     if (result !== "created") {
