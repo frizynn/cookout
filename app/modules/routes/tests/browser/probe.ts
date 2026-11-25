@@ -1,6 +1,8 @@
-import type { Fixtures, Page, PlaywrightTestArgs, PlaywrightWorkerArgs } from "@playwright/test";
+import type { Fixtures, Page, PlaywrightTestArgs, PlaywrightTestOptions, PlaywrightWorkerArgs } from "@playwright/test";
+import type { SlowOptions } from "./slow.ts";
 import { test as base } from "@playwright/test";
 import { readProbeReport } from "../../../probe/index.ts";
+import { slowFixtures } from "./slow.ts";
 
 interface ProbeOptions {
   readonly probe: boolean;
@@ -39,7 +41,13 @@ async function attachReports(probe: boolean, pages: readonly Page[]): Promise<vo
   await Promise.all(attached);
 }
 
-const probeFixtures: Fixtures<ProbeFixtures & ProbeOptions, object, PlaywrightTestArgs, PlaywrightWorkerArgs> = {
+const probeFixtures: Fixtures<
+  ProbeFixtures & ProbeOptions & SlowOptions,
+  object,
+  PlaywrightTestArgs & PlaywrightTestOptions,
+  PlaywrightWorkerArgs
+> = {
+  ...slowFixtures,
   page: async ({ page, probe }, provide) => {
     await provide(page);
     await attachReports(probe, page.context().pages());

@@ -1,4 +1,5 @@
 import { field, list, text } from "./json.ts";
+import { grepped } from "./playwright-grep.ts";
 
 interface Tally {
   readonly failed: number;
@@ -11,7 +12,9 @@ interface FlakyReport {
   readonly ok: boolean;
 }
 
-type FlakyArguments = { readonly file: string; readonly ok: true; readonly repeats: number } | { readonly ok: false };
+type FlakyArguments =
+  | { readonly file: string; readonly grep: readonly string[]; readonly ok: true; readonly repeats: number }
+  | { readonly ok: false };
 
 const DEFAULT_REPEATS = 25;
 const NONE = 0;
@@ -91,12 +94,17 @@ function repeatsFrom(count: string | undefined): number {
   return NONE;
 }
 
-function flakyArguments([file = "", count]: readonly string[]): FlakyArguments {
+function flakyArguments(args: readonly string[]): FlakyArguments {
+  const filtered = grepped(args);
+  if (filtered === null) {
+    return { ok: false };
+  }
+  const [file = "", count] = filtered.rest;
   const repeats = repeatsFrom(count);
   if (file === "" || repeats === NONE) {
     return { ok: false };
   }
-  return { file, ok: true, repeats };
+  return { file, grep: filtered.grep, ok: true, repeats };
 }
 
 export { flakyArguments, flakyReport };

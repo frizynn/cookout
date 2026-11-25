@@ -537,9 +537,13 @@ pnpm e2e:docker
 
 `pnpm web:slow [ms] <files...>` runs web test files with every view call held back `ms` (700 by default) before it goes out (it provides `webSlowMs`, which `slowCalls` in `app/modules/routes/tests/slow-calls.ts` reads), so a test that reads the screen before the view's call answered fails every run; a test that waits on `answering`'s `answered` gets the answer when the view does. `pnpm under-load --web-only [files...]` is an optional final check, judged by the failure-rate rule, never a fixed count of clean runs.
 
+## Reproduce a browser test's missing wait
+
+`pnpm browser:slow [ms] <file> [-g <title>]` runs browser tests once, with no retries, with the answer to each of the page's calls to the board held back `ms` (700 by default), the live stream held back before it opens. It sets `COOKOUT_BROWSER_SLOW_MS`, which `playwright.config.ts` passes to the `slowMs` option of `slowFixtures` in `app/modules/routes/tests/browser/slow.ts`, part of `probeFixtures`; unset, the page's calls are untouched. A test that reads the screen before the page heard the board's answer then fails every run. Prove a fix to a browser test's wait with it: the old test fails, the fixed one passes, one run each. Repeat runs with `pnpm browser:flaky` are only a final check, below load 15.
+
 ## Reproduce a flaky browser test
 
-`pnpm browser:flaky <file> [N]` runs one browser test file N times (25 by default) and prints each test's pass and fail counts, then a `RESULT:` line. It works because every browser test names the channels and identities it makes with `unique(name)` from `app/modules/routes/tests/browser/names.ts` (built on `uniqueName` in `app/modules/testing/`), so a repeat never clashes with an earlier one; a new browser test does the same.
+`pnpm browser:flaky <file> [N] [-g <title>]` runs one browser test file N times (25 by default), only its tests whose title matches `-g` when given, and prints each test's pass and fail counts, then a `RESULT:` line. Before it starts, it waits while the 1-minute load average is above 20 and prints that it is waiting, since at a high load every test times out a few percent of the time. It works because every browser test names the channels and identities it makes with `unique(name)` from `app/modules/routes/tests/browser/names.ts` (built on `uniqueName` in `app/modules/testing/`), so a repeat never clashes with an earlier one; a new browser test does the same.
 
 Browser tests share one live board, and every page streams every channel's events, so a flake that disappears at `--workers=1` is likely other tests' live traffic, not CPU load. Reproduce it by posting replies into an unrelated thread while the test runs, never with a CPU-load generator.
 
