@@ -1,12 +1,14 @@
 import type { ActionMenuParts, MenuChoice } from "../../design-system/messages.tsx";
 import type { ChannelName, MessageId, TopLevelMessage } from "../../sdk/index.ts";
 import type { ThreadClosing, ThreadMessagesState } from "../../board/index.ts";
+import { copyingLink, threadChoice } from "./use-message-menu.ts";
 import { useCallback, useContext, useMemo } from "react";
+import type { Announce } from "./announcer.ts";
+import { Announcer } from "./announcer.ts";
 import { LandingContext } from "../../landing/index.ts";
 import type { MessageMenu } from "../../unread/index.ts";
 import type { PanelAloneParts } from "../../design-system/layout.tsx";
 import { hrefOf } from "../../paths/index.ts";
-import { threadChoice } from "./use-message-menu.ts";
 
 const TEXT = {
   alone: "Open thread on its own",
@@ -27,6 +29,7 @@ interface ThreadHeaderOf {
 
 interface ThreadChoicesOf extends Omit<ThreadHeaderOf, "alone" | "state" | "thread"> {
   readonly parent: TopLevelMessage;
+  readonly announce: Announce;
 }
 
 interface ThreadHeader {
@@ -36,23 +39,15 @@ interface ThreadHeader {
   readonly onClose: () => void;
 }
 
-async function copyAfter(previous: Promise<void>, text: string): Promise<void> {
-  await previous;
-  await globalThis.navigator.clipboard.writeText(text);
-}
-
-function threadChoices({ channel, closing, menu, parent }: ThreadChoicesOf): readonly MenuChoice[] {
+function threadChoices({ announce, channel, closing, menu, parent }: ThreadChoicesOf): readonly MenuChoice[] {
   const { id } = parent;
   const link = new URL(hrefOf({ channel, name: "thread", thread: id }), globalThis.location.href).href;
-  let copying = Promise.resolve();
-  function copyLink(): void {
-    copying = copyAfter(copying, link);
-  }
+  const copyLink = copyingLink({ announce, link: () => link });
   function markUnread(): void {
     menu.markUnread(id);
   }
   return [
-    ...[threadChoice({ closing, message: parent })]
+    ...[threadChoice({ announce, closing, message: parent })]
       .filter((choice) => choice !== null)
       .map((choice): MenuChoice => ({ href: null, icon: choice.icon, label: choice.label, onSelect: choice.onSelect })),
     { href: null, icon: "mark-unread", label: TEXT.markUnread, onSelect: markUnread },
@@ -69,6 +64,7 @@ function aloneLink({ alone, channel, thread }: Pick<ThreadHeaderOf, "alone" | "c
 
 function useThreadHeader({ alone, channel, closing, menu, state, thread }: ThreadHeaderOf): ThreadHeader {
   const parent = state.status === "loaded" && state.parent;
+  const announce = useContext(Announcer);
   const { watch } = useContext(LandingContext);
   const onClose = useCallback(() => {
     const opener = hrefOf({ channel, message: thread, name: "thread", thread });
@@ -85,9 +81,9 @@ function useThreadHeader({ alone, channel, closing, menu, state, thread }: Threa
     }
     return {
       ...shown,
-      menu: { choices: threadChoices({ channel, closing, menu, parent }), label: TEXT.menu },
+      menu: { choices: threadChoices({ announce, channel, closing, menu, parent }), label: TEXT.menu },
     };
-  }, [alone, channel, closing, menu, onClose, parent, thread]);
+  }, [alone, announce, channel, closing, menu, onClose, parent, thread]);
 }
 
 export { useThreadHeader };
