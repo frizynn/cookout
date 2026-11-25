@@ -28,6 +28,7 @@ function personKeysOf(keymap: Keymap): PersonKeysSource {
 function messageShortcutsOf(keymap: Keymap): MessageShortcuts {
   return {
     copyLink: keymap.shortcutOf("copyMessageLink"),
+    delete: keymap.shortcutOf("deleteMessage"),
     markUnread: keymap.shortcutOf("markUnread"),
     openThread: keymap.shortcutOf("openThread"),
     reply: keymap.shortcutOf("replyToMessage"),

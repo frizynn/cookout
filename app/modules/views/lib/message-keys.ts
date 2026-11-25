@@ -160,6 +160,7 @@ function closeThread(): boolean {
 type MessageAction =
   | "backToChannel"
   | "copyMessageLink"
+  | "deleteMessage"
   | "markUnread"
   | "openThread"
   | "replyToMessage"
@@ -172,6 +173,7 @@ function messageActions(keymap: Keymap): Readonly<Record<MessageAction, Act>> {
   return {
     backToChannel,
     copyMessageLink: click(keymap, "copyMessageLink"),
+    deleteMessage: click(keymap, "deleteMessage"),
     markUnread: click(keymap, "markUnread"),
     openThread: press({ action: "openThread", keymap, whenOpen: PANEL_PARENT }),
     replyToMessage: press({ action: "replyToMessage", keymap, whenOpen: PANEL_REPLY_BOX }),

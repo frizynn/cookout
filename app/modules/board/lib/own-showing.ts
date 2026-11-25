@@ -40,6 +40,7 @@ interface OwnState {
   readonly subscriptions: SubscriptionsState;
   readonly messages: MessagesHeld;
   readonly closingRefusal: ClosingRefusal | null;
+  readonly messageDeleting: ReturnType<BoardCalls["deleting"]>;
 }
 
 interface Following {
@@ -117,6 +118,7 @@ function createOwn(options: OwnOptions): Own {
       channels: parts.channels.state(),
       closingRefusal: parts.calls.closingRefusal(),
       commands: parts.commands.state(),
+      messageDeleting: parts.calls.deleting(),
       messages: parts.messages.state(),
       notice: parts.notice(),
       schedules: parts.schedules.state(),
