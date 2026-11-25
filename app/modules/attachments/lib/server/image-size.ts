@@ -207,4 +207,4 @@ function imageSize({ bytes, contentType }: Header): Option.Option<ImageSize> {
   return readers[contentType](bytes);
 }
 
-export { type ImageSize, imageSize };
+export { imageSize };
