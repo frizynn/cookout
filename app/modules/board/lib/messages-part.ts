@@ -141,4 +141,4 @@ function createMessagesPart({ changed, client, pageSize }: MessagesOptions): Mes
   };
 }
 
-export { type KeepingItems, type MessagesClient, type MessagesPart, beforeKey, createMessagesPart };
+export { type MessagesClient, type MessagesPart, beforeKey, createMessagesPart };

@@ -1,7 +1,7 @@
 import type { ChannelName, InboxItem, MessageId } from "../../sdk/index.ts";
 import type { ThreadNews, UnreadCounts } from "./inbox-levels.ts";
 import { countsByChannel, countsOf, newsByThread, threadsWithNews } from "./inbox-levels.ts";
-import { earlierOf, inboxMovesBack, inboxOf, inboxReadPosition } from "./inbox-selectors.ts";
+import { inboxMovesBack, inboxOf, inboxReadPosition } from "./inbox-selectors.ts";
 import type { InboxRow } from "./inbox-rows.ts";
 import type { InboxShowing } from "./inbox-selectors.ts";
 import { rowsOf } from "./inbox-rows.ts";
@@ -49,14 +49,6 @@ function unreadItems(state: InboxShowing): readonly InboxItem[] {
   return inbox.items;
 }
 
-function readItems(state: InboxShowing): readonly InboxItem[] {
-  const earlier = earlierOf(state);
-  if (earlier.status !== "loaded") {
-    return NO_ITEMS;
-  }
-  return earlier.items;
-}
-
 const rowsKept = keptBy((items, me: string) => rowsOf({ items, me }));
 const countsKept = keptBy((items, me: string) => countsOf({ items, me }));
 const byChannelKept = keptBy((items, me: string) => countsByChannel({ items, me }));
@@ -65,10 +57,6 @@ const threadsKept = keptBy((items, channel: ChannelName) => threadsWithNews({ ch
 
 function inboxRows({ me, state }: Looking): readonly InboxRow[] {
   return rowsKept(unreadItems(state), me);
-}
-
-function earlierRows({ me, state }: Looking): readonly InboxRow[] {
-  return rowsKept(readItems(state), me);
 }
 
 function inboxCounts({ me, state }: Looking): UnreadCounts {
@@ -101,12 +89,4 @@ function inboxNewLine({ channel, state, thread }: AtPlace): MessageId | number |
   return position;
 }
 
-export {
-  earlierRows,
-  inboxCounts,
-  inboxCountsByChannel,
-  inboxNewLine,
-  inboxNewsByThread,
-  inboxRows,
-  inboxThreadsWithNews,
-};
+export { inboxCounts, inboxCountsByChannel, inboxNewLine, inboxNewsByThread, inboxRows, inboxThreadsWithNews };

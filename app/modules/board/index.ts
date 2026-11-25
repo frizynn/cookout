@@ -59,7 +59,7 @@
  * positions and the history's first page, once each, for every part: For you (`inboxOf`, the items no read position
  * covers, oldest first, with the unread notices), Earlier (`earlierOf`, read items newest first, paged further back by
  * `inboxCalls.loadEarlier`), and the history of Offline alerts, Nudges, Deactivation offers and Deactivated quiet agents
- * (`alertsOf`, `nudgesOf`, `offersOf`, `quietAgentsOf`). Read positions (`inboxReadPosition`, `inboxMovesBack`) only
+ * (`alertsOf`, `nudgesOf`, `offersOf`, `quietAgentsOf`). Read positions (`inboxMovesBack`, `inboxNewLine` below) only
  * move on, except by a `read-position-moved-back` event, which reads the Inbox again. The slice holds each item's
  * message and top-level message by ID: every read and `inbox-item` event puts them in the messages table first, so a
  * `thread`, `message` or `reaction` event reaches an item through the table, and the selectors read them from it. A
@@ -69,8 +69,8 @@
  * returns the same object until what it reads changes. `inboxCalls` makes the Inbox's changes on the server (mark all,
  * mark a channel, mark unread, keep an offer, read a notice, close a nudged thread, hold or release a quiet agent,
  * approve a join), one at a time in the order asked, applying each answer to the slice or keeping the refusal.
- * The Inbox's levels are selectors too, each the same object until the items it reads change: `inboxRows` and
- * `earlierRows` group the unread and the read items into rows (`rowsOf`: one per thread, its replies, or per channel,
+ * The Inbox's levels are selectors too, each the same object until the items it reads change: `inboxRows` groups the
+ * unread items into rows (`rowsOf`: one per thread, its replies, or per channel,
  * its top-level messages, each with its latest item, count, level and strongest reason, newest first; `rowKey` is a
  * row's key); `inboxCounts` and `inboxCountsByChannel` count the two levels, for you (a mention, a reaction, a reply
  * in a thread you started) and activity (the rest; Matt, #152, 2026-11-23); `inboxNewsByThread` counts each thread's
@@ -153,14 +153,12 @@ export {
   earlierOf,
   inboxMovesBack,
   inboxOf,
-  inboxReadPosition,
   joinRefusalsOf,
   nudgesOf,
   offersOf,
   quietAgentsOf,
 } from "./lib/inbox-selectors.ts";
 export {
-  earlierRows,
   inboxCounts,
   inboxCountsByChannel,
   inboxNewLine,
@@ -175,8 +173,6 @@ export {
   type UnreadWhy,
   countsByChannel,
   countsOf,
-  newsByThread,
-  threadsWithNews,
 } from "./lib/inbox-levels.ts";
 export { type InboxRow, rowKey, rowsOf } from "./lib/inbox-rows.ts";
 export { calledTrigger } from "./lib/triggers-slice.ts";

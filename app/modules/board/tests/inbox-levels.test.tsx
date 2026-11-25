@@ -3,7 +3,6 @@ import type { IdentityName, Message, TopLevelMessage } from "../../sdk/index.ts"
 import { adminClient, humanIn, shown } from "./held-store.ts";
 import {
   createBoardStore,
-  earlierRows,
   inboxCounts,
   inboxCountsByChannel,
   inboxNewLine,
@@ -66,7 +65,6 @@ function levelsOf(state: BoardState, { me, parent }: Pick<Thread, "me" | "parent
   return {
     byChannel: inboxCountsByChannel(looking).get(parent.channel),
     counts: inboxCounts(looking),
-    earlier: earlierRows(looking).map((row) => row.key),
     news: inboxNewsByThread(looking).get(parent.id) ?? null,
     rows: inboxRows(looking).map((row) => [row.key, row.why, row.count]),
     threads: inboxThreadsWithNews({ channel: parent.channel, state }),
@@ -91,7 +89,6 @@ it("rows, counts by channel and news by thread follow a read position fed to the
     after: {
       byChannel: { activity: ONE, forYou: 0 },
       counts: { activity: ONE, forYou: 0 },
-      earlier: [`thread ${String(parent.id)}`],
       news: null,
       rows: [[`channel ${parent.channel}`, "subscribed-channel", ONE]],
       threads: [],
@@ -99,7 +96,6 @@ it("rows, counts by channel and news by thread follow a read position fed to the
     before: {
       byChannel: { activity: ONE, forYou: ONE },
       counts: { activity: ONE, forYou: ONE },
-      earlier: [],
       news: { count: ONE, forYou: ONE },
       rows: [
         [`thread ${String(parent.id)}`, "mentioned-you", ONE],
