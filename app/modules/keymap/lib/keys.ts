@@ -72,6 +72,7 @@ const KEYS = [
   },
   { action: "nextLink", chord: "ArrowDown", does: "Next link", scope: "sidebar" },
   { action: "previousLink", chord: "ArrowUp", does: "Previous link", scope: "sidebar" },
+  { action: "closeSidebar", chord: "Escape", does: "Close the sidebar, on a narrow screen", scope: "sidebar" },
   {
     action: "intoMessages",
     chord: "ArrowRight",

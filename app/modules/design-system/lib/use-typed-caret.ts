@@ -28,6 +28,12 @@ export function useTypedCaret(typed: Typed): Caret {
   }, [box, onEdit]);
   useLayoutEffect(() => {
     const element = box.current;
+    if (element !== null) {
+      element.setSelectionRange(element.value.length, element.value.length);
+    }
+  }, [box]);
+  useLayoutEffect(() => {
+    const element = box.current;
     const { current } = seen;
     if (
       element === null ||

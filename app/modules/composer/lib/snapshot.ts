@@ -1,4 +1,5 @@
 import type { Command, Identity, IdentityName } from "../../sdk/index.ts";
+import type { KeptText } from "./kept-text.ts";
 import { sameSnapshot } from "../../board/index.ts";
 
 const MOST_SUGGESTIONS = 8;
@@ -189,11 +190,23 @@ interface DraftChanges {
   readonly change: (update: (snapshot: DraftSnapshot) => DraftSnapshot) => void;
 }
 
-function draftChanges(notify: () => void): DraftChanges {
-  let current: DraftSnapshot = EMPTY;
+interface Keeping {
+  readonly kept: KeptText;
+  readonly notify: () => void;
+}
+
+function restored(text: string): DraftSnapshot {
+  return dismissed({ ...EMPTY, caret: text.length, text });
+}
+
+function draftChanges({ kept, notify }: Keeping): DraftChanges {
+  let current: DraftSnapshot = restored(kept.text());
   return {
     change: (update) => {
       const next = update(current);
+      if (next.text !== current.text) {
+        kept.keep(next.text);
+      }
       if (!sameSnapshot({ after: next, before: current })) {
         current = next;
         notify();
@@ -204,3 +217,5 @@ function draftChanges(notify: () => void): DraftChanges {
 }
 
 export { type DraftSnapshot, type Sources, EMPTY, changesFor, draftChanges };
+export { type KeptText, keptTextIn } from "./kept-text.ts";
+export type { BrowserStorage } from "../../browser-storage/index.ts";
