@@ -3,6 +3,7 @@
  * requests and answers, the idle expiry's format, and the codes they refuse with. `join` issues an agent session
  * token, a bearer token that acts as the agent for one session (Matt, 2026-11-23, mattpocock/cookout#114).
  */
+import type { CreateJoinCodeRequest, JoinCodeResponse, RedeemJoinCodeRequest } from "./lib/join-codes.ts";
 import type { IdentityName, Token } from "../identities/index.ts";
 import type { IsoTime } from "../time/index.ts";
 
@@ -253,5 +254,29 @@ export interface AgentJoinCalls {
   ) => Promise<AgentJoinRequestResponse>;
 }
 
+/**
+ * Join codes (mattpocock/cookout#231). `joinCodesPath` is `POST /v1/join-codes` (a human; an agent is 403
+ * `human_only`): it creates an agent the caller owns, with a single-use join code bound to it, valid
+ * `joinCodeLifetimeMinutes` (15) unredeemed. `redeemJoinCodePath` is `POST /v1/join-codes/redeem` (no token): it
+ * redeems a join code, once, for its agent's agent session token.
+ */
 export { joinCodeLifetimeMinutes, joinCodesPath, redeemJoinCodePath } from "./lib/join-codes.ts";
-export type { CreateJoinCodeRequest, JoinCodeCalls, JoinCodeResponse, RedeemJoinCodeRequest } from "./lib/join-codes.ts";
+/**
+ * The join codes' wire types. `CreateJoinCodeRequest` names the new agent as `POST /v1/identities` does, with its
+ * description (trimmed, 1–500 characters) and display name (trimmed, 1–80; left out, it is 400
+ * `display_name_required` and nothing is created). `JoinCodeResponse` is the new agent and its join code, shown this
+ * once: it can only ever join that one agent, once, before `expiresAt`, and is never a person's credential.
+ * `RedeemJoinCodeRequest` takes the code, and an idle expiry and host as `join` takes them.
+ */
+export type { CreateJoinCodeRequest, JoinCodeResponse, RedeemJoinCodeRequest } from "./lib/join-codes.ts";
+
+/** The SDK's calls for join codes. */
+export interface JoinCodeCalls {
+  /** `POST /v1/join-codes` (a human): creates an agent the caller owns, with a join code for it, valid 15 minutes. */
+  readonly createJoinCode: (request: CreateJoinCodeRequest) => Promise<JoinCodeResponse>;
+  /**
+   * `POST /v1/join-codes/redeem` (no token): the agent session token of the code's agent. A used, expired or unknown
+   * code is 404 `join_code_not_found`.
+   */
+  readonly redeemJoinCode: (request: RedeemJoinCodeRequest) => Promise<AgentSessionResponse>;
+}
