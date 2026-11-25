@@ -1,11 +1,13 @@
+import type { Composer, ComposerOptions } from "../../composer/index.ts";
 import type { Reading, Unread } from "../../unread/index.ts";
 import { createReading, createUnread } from "../../unread/index.ts";
+import { handFocus, memoryStorage } from "../../testing/web.ts";
 import type { BoardStore } from "../../board/index.ts";
 import type { Live } from "../../testing/web.ts";
 import { createBoardStore } from "../../board/index.ts";
+import { createComposer } from "../../composer/index.ts";
 import { createPageFocus } from "../../page-focus/index.ts";
 import { handClock } from "./hand-clock.ts";
-import { handFocus } from "../../testing/web.ts";
 import { slowCalls } from "./slow-calls.ts";
 import { webTestCookout } from "../../../../scripts/web-test-server.ts";
 
@@ -32,6 +34,16 @@ function boardStoreFor(opening: BoardStoreOpening): BoardStore {
   );
 }
 
+interface ComposerOpening {
+  readonly boardStore: BoardStore;
+  readonly composer: Composer | undefined;
+  readonly storage: ComposerOptions["storage"] | undefined;
+}
+
+function composerFor({ boardStore, composer, storage }: ComposerOpening): Composer {
+  return composer ?? createComposer({ boardStore, storage: storage ?? memoryStorage() });
+}
+
 function readingFor(reading: Reading | undefined): Reading {
   return reading ?? createReading({ clock: handClock().clock, page: createPageFocus(handFocus().adapter) });
 }
@@ -52,4 +64,5 @@ export type { Live } from "../../testing/web.ts";
 export type { BoardStoreClient };
 export type { Unread } from "../../unread/index.ts";
 export type { Reading } from "../../unread/index.ts";
-export { boardStoreFor, readingFor, unreadFor };
+export type { ComposerOptions } from "../../composer/index.ts";
+export { boardStoreFor, composerFor, readingFor, unreadFor };

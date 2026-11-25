@@ -4,7 +4,6 @@ import { focusedOnChannelMessage } from "./message-keys.ts";
 const BOX = 'textarea[name="text"]';
 const MESSAGE = "article";
 const LAST = -1;
-const EMPTY = "";
 const FIRST_CHARACTER = 0;
 const THREAD = 'aside[aria-label="Thread"]';
 const PANEL = "aside";
@@ -22,14 +21,6 @@ function boxOf(target: unknown): HTMLTextAreaElement | null {
     return target;
   }
   return null;
-}
-
-function emptyBoxOf(target: unknown): HTMLTextAreaElement | null {
-  const box = boxOf(target);
-  if (box === null || box.value !== EMPTY) {
-    return null;
-  }
-  return box;
 }
 
 function boxAtFirstCharacter(target: unknown): HTMLTextAreaElement | null {
@@ -109,7 +100,7 @@ function createMessageBoxKeys(): MessageBoxKeys {
         }
         return true;
       },
-      newestMessage: ({ target }) => focusedOn(newestNear(emptyBoxOf(target))),
+      newestMessage: ({ target }) => focusedOn(newestNear(boxAtFirstCharacter(target))),
       toLeftColumn,
     },
     remember: (target, relatedTarget) => {

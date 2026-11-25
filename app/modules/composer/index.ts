@@ -55,17 +55,22 @@
  * choosing one makes it the draft's `command`, whose data the box prompts
  * for, until `clear`, or `unpick`, which brings back the text as it was; `dismiss` hides any suggestions until the next edit. A
  * thread's reply box suggests no commands, since a call is a top-level message.
+ * Each box's text, unsent, is kept in the browser's storage (`options.storage`, under the browser-storage module's
+ * `keptTextKey`) for the identity logged in when the box is first drawn, so it shows only in its own box and only to
+ * that identity, and comes back, with the caret at its end, when the page opens again (#600); while nobody is logged in it is kept
+ * on the page only. Each identity has its
+ * own draft for a box. Emptying the box, by hand or by `clear` after sending, forgets it. Attachments are not kept.
  * A draft's `attachments` are the files added to its box and not sent yet (#377): `attach` adds them, leaving out
  * one over 10 MB and stopping at the 11th with the server's own refusal wording, `remove` takes one out, and `clear`
  * on the draft empties them with its text. An image among them has an object URL for its thumbnail until it leaves.
  */
 import type { AgentCreation, IdentityActions } from "./lib/owner-powers.ts";
+import type { BrowserStorage, DraftSnapshot, KeptText, Sources } from "./lib/snapshot.ts";
 import type { Command, Identity, IdentityName } from "../sdk/index.ts";
 import type { DisplayNameDraft, TriggerSettings } from "./lib/profile-stores.ts";
-import type { DraftSnapshot, Sources } from "./lib/snapshot.ts";
-import { EMPTY, changesFor, draftChanges } from "./lib/snapshot.ts";
+import { EMPTY, changesFor, draftChanges, keptTextIn } from "./lib/snapshot.ts";
 import type { IdentityList, IdentityStore } from "./lib/identity-list.ts";
-import { commandList, selectedStore } from "../board/index.ts";
+import { commandList, loggedInName, selectedStore } from "../board/index.ts";
 import type { AdminChanges } from "./lib/admin-change.ts";
 import type { IdentityDeletion } from "./lib/identity-deletion.ts";
 import type { PendingAttachments } from "./lib/pending-attachments.ts";
@@ -96,10 +101,10 @@ function withAttachments(draft: Omit<Draft, "attachments">): Draft {
   };
 }
 
-function createDraft(list: IdentityList, sources: Sources): Omit<Draft, "attachments"> {
+function createDraft(list: IdentityList, sources: Sources, kept: KeptText): Omit<Draft, "attachments"> {
   const listeners = listenersOf(list.show);
   const changes = changesFor(sources);
-  const { change, current } = draftChanges(listeners.notify);
+  const { change, current } = draftChanges({ kept, notify: listeners.notify });
 
   list.onChange(() => {
     change(changes.refreshed);
@@ -224,7 +229,7 @@ export interface Identities extends AdminChanges {
   readonly deletion: Pick<IdentityDeletion, "dismiss" | "snapshot" | "subscribe">;
 }
 
-/** The composer store: a draft for each message box, and for each display name being edited. */
+/** The composer store: a draft for each message box (and each identity typing in it), and for each display name being edited. */
 export interface Composer {
   /**
    * The draft for the box with this key (`channel/id` for a thread's reply box): the same store each time for one key. It suggests no commands.
@@ -246,6 +251,8 @@ export interface Composer {
 /** What the composer store needs: the board store, which holds the identities and the commands a channel's box suggests, and makes the identities' changes on the server. */
 export interface ComposerOptions {
   readonly boardStore: IdentityStore;
+  /** Where each box's unsent text is kept: the browser's local storage on the page. */
+  readonly storage: BrowserStorage;
 }
 
 /**
@@ -255,6 +262,7 @@ export interface ComposerOptions {
  */
 export function createComposer(options: ComposerOptions): Composer {
   const drafts = new Map<string, Draft>();
+  const keptText = keptTextIn(options.storage);
   const list = createIdentityList(options.boardStore);
   const deletion = createIdentityDeletion(options.boardStore);
   const readers = listenersOf(list.show);
@@ -265,17 +273,17 @@ export function createComposer(options: ComposerOptions): Composer {
     }
     return commands.commands;
   }
+  function keptDraft(box: string, sources: Sources): Draft {
+    const kept = keptText(loggedInName(options.boardStore.snapshot()), box);
+    return storeIn(drafts, kept.key, () => withAttachments(createDraft(list, sources, kept)));
+  }
   list.onChange(readers.notify);
   return {
     ...profileStoresOf(list),
     channelDraft: (channel) =>
-      storeIn(drafts, channel, () =>
-        withAttachments(createDraft(list, { commands: registered, identities: list.identities, members: noMembers })),
-      ),
+      keptDraft(channel, { commands: registered, identities: list.identities, members: noMembers }),
     draft: (key, members = noMembers) =>
-      storeIn(drafts, key, () =>
-        withAttachments(createDraft(list, { commands: () => NO_COMMANDS, identities: list.identities, members })),
-      ),
+      keptDraft(key, { commands: () => NO_COMMANDS, identities: list.identities, members }),
     identities: identitiesOf({ adminChanges: createAdminChanges(list), deletion, list, readers }),
   };
 }

@@ -1,11 +1,11 @@
 import type { ExternalStore, HandLive, Publishes } from "../../testing/web.ts";
 import { adminClient, opened } from "./held-store.ts";
 import { expect, it, onTestFinished, vi } from "vitest";
+import { memoryStorage, recordPublishes } from "../../testing/web.ts";
 import type { Composer } from "../../composer/index.ts";
 import type { IdentityName } from "../../sdk/index.ts";
 import { createComposer } from "../../composer/index.ts";
 import { createTestAgent } from "../../testing/index.ts";
-import { recordPublishes } from "../../testing/web.ts";
 import { waitFor } from "@testing-library/react";
 
 const NONE = 0;
@@ -40,7 +40,7 @@ function storesOf({ admin, composer }: Composing): readonly ExternalStore<unknow
 async function composing(): Promise<Composing> {
   const { identity } = await adminClient().whoami();
   const { hand, store } = opened();
-  const composer = createComposer({ boardStore: store });
+  const composer = createComposer({ boardStore: store, storage: memoryStorage() });
   return { admin: identity.name, composer, hand };
 }
 

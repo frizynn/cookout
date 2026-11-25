@@ -72,10 +72,11 @@ const KEYS = [
   },
   { action: "nextLink", chord: "ArrowDown", does: "Next link", scope: "sidebar" },
   { action: "previousLink", chord: "ArrowUp", does: "Previous link", scope: "sidebar" },
+  { action: "closeSidebar", chord: "Escape", does: "Close the sidebar, on a narrow screen", scope: "sidebar" },
   {
     action: "intoMessages",
     chord: "ArrowRight",
-    does: "Into its messages, on the selected or newest one",
+    does: "Into its messages or the Inbox's rows, on the selected or newest one",
     scope: "channel row",
   },
   { action: "markChannelRead", chord: "e", does: "Mark all as read", scope: "channel row" },
@@ -100,7 +101,12 @@ const KEYS = [
   { action: "closeSearch", chord: "Escape", does: "Close the search box", scope: "search box" },
   { action: "cancelPrompt", chord: "Escape", does: "Cancel the form", scope: "prompt form" },
   { action: "leaveTextBox", chord: "Escape", does: "Leave the box, keeping what you typed", scope: "text box" },
-  { action: "newestMessage", chord: "ArrowUp", does: "Newest message, from an empty box", scope: "text box" },
+  {
+    action: "newestMessage",
+    chord: "ArrowUp",
+    does: "Newest message, from the box's first character",
+    scope: "text box",
+  },
   {
     action: "toLeftColumn",
     chord: "ArrowLeft",
@@ -157,6 +163,7 @@ const KEYS = [
   { action: "markRowRead", chord: "e", does: "Mark read", scope: "inbox" },
   { action: "markRowUnread", chord: "u", does: "Mark unread", scope: "inbox" },
   { action: "openRow", chord: "o", does: "Open in its channel", scope: "inbox" },
+  { action: "toSidebar", chord: "ArrowLeft", does: "Sidebar, on the Inbox's link", scope: "inbox" },
   { action: "backToRows", chord: "Escape", does: "Back to the rows", scope: "inbox" },
   {
     action: "markSelectedRowRead",
