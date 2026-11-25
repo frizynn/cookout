@@ -134,5 +134,4 @@ async function coverageByTestFile(inputs: {
   return found.flat();
 }
 
-export type { V8Provider };
 export { coverageByTestFile, isV8Provider, keepingTestFiles };
