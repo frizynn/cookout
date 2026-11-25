@@ -147,7 +147,6 @@ export {
   lowered,
   now,
   peopleShownJoinRequestAt,
-  peopleWaitForBroughtInJoinRequests,
   termsAsked,
   viewOf,
 };
