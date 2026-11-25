@@ -51,7 +51,7 @@ interface ActionMenuParts {
 
 type MoreActionsLook = "box" | "hover";
 
-interface HoverActionsParts extends MessageActionParts {
+interface HoverActionsParts extends Omit<MessageActionParts, "threadHref"> {
   readonly choices: readonly MenuChoice[];
   readonly replyOnHover: boolean;
   readonly reactions: readonly ReactionChoice[];

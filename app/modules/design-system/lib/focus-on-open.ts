@@ -1,10 +1,8 @@
 import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
 
-function useFocusOnOpen<Focusable extends HTMLElement = HTMLTextAreaElement>(
-  focused: boolean,
-): RefObject<Focusable | null> {
-  const box = useRef<Focusable>(null);
+function useFocusOnOpen<Element extends HTMLElement>(focused: boolean): RefObject<Element | null> {
+  const box = useRef<Element>(null);
   useEffect(() => {
     const element = box.current;
     if (focused && element !== null) {

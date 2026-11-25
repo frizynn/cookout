@@ -23,7 +23,7 @@ function noteOf(state: SearchState): string | null {
   if (found.status === "refused") {
     return found.message;
   }
-  if (found.status === "found" && found.results.length === NONE) {
+  if (found.status === "found" && found.ids.length === NONE) {
     return TEXT.none;
   }
   return null;

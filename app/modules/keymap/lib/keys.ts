@@ -1,9 +1,11 @@
 const SCOPES = [
   "search box",
+  "prompt form",
   "text box",
   "person",
   "people list",
   "profile panel",
+  "thread panel",
   "channel row",
   "sidebar",
   "message",
@@ -25,9 +27,11 @@ const GROUPS: Readonly<Record<Scope, string>> = {
   "people list": "People list",
   person: "Person",
   "profile panel": "Profile panel",
+  "prompt form": "Form in place of the message box",
   "search box": "Search box",
   sidebar: "Sidebar",
   "text box": "Message box",
+  "thread panel": "Thread panel",
 };
 
 const KEYS = [
@@ -48,8 +52,32 @@ const KEYS = [
     does: "Open the previous channel with unread messages",
     scope: "everywhere",
   },
+  {
+    action: "nextRegion",
+    chord: "Control+]",
+    does: "Next column: the sidebar, the messages, the thread panel",
+    scope: "everywhere",
+  },
+  {
+    action: "previousRegion",
+    chord: "Control+[",
+    does: "Previous column: the sidebar, the messages, the thread panel",
+    scope: "everywhere",
+  },
+  {
+    action: "markShownChannelRead",
+    chord: "Escape",
+    does: "Mark the channel read, with nothing left to close",
+    scope: "everywhere",
+  },
   { action: "nextLink", chord: "ArrowDown", does: "Next link", scope: "sidebar" },
   { action: "previousLink", chord: "ArrowUp", does: "Previous link", scope: "sidebar" },
+  {
+    action: "intoMessages",
+    chord: "ArrowRight",
+    does: "Into its messages, on the selected or newest one",
+    scope: "channel row",
+  },
   { action: "markChannelRead", chord: "e", does: "Mark all as read", scope: "channel row" },
   { action: "toggleSubscription", chord: "s", does: "Subscribe or unsubscribe", scope: "channel row" },
   { action: "openSchedules", chord: "Shift+S", does: "Show its scheduled messages", scope: "channel row" },
@@ -70,6 +98,7 @@ const KEYS = [
   },
   { action: "openHighlighted", chord: "Enter", does: "Open the highlighted result", scope: "search box" },
   { action: "closeSearch", chord: "Escape", does: "Close the search box", scope: "search box" },
+  { action: "cancelPrompt", chord: "Escape", does: "Cancel the form", scope: "prompt form" },
   { action: "leaveTextBox", chord: "Escape", does: "Leave the box, keeping what you typed", scope: "text box" },
   { action: "newestMessage", chord: "ArrowUp", does: "Newest message, from an empty box", scope: "text box" },
   { action: "viewProfile", chord: "Enter", does: "View profile", scope: "person" },
@@ -78,6 +107,7 @@ const KEYS = [
   { action: "nextPerson", chord: "ArrowDown", does: "Next person", scope: "people list" },
   { action: "previousPerson", chord: "ArrowUp", does: "Previous person", scope: "people list" },
   { action: "closeProfile", chord: "Escape", does: "Close the profile", scope: "profile panel" },
+  { action: "closeThread", chord: "Escape", does: "Close the thread", scope: "thread panel" },
   { action: "toggleThumbsUp", chord: "+", does: "React with 👍, or take it back", scope: "message" },
   { action: "toggleThumbsDown", chord: "-", does: "React with 👎, or take it back", scope: "message" },
   { action: "replyToMessage", chord: "r", does: "Reply in its thread", scope: "message" },
@@ -85,6 +115,8 @@ const KEYS = [
   { action: "openThread", chord: "t", does: "Open its thread", scope: "message" },
   { action: "openThread", chord: "Enter", does: "Open its thread", scope: "message" },
   { action: "backToChannel", chord: "ArrowLeft", does: "Back to the thread's channel message", scope: "message" },
+  { action: "toSidebar", chord: "ArrowLeft", does: "Sidebar, on the channel's link", scope: "message" },
+  { action: "intoMessageBox", chord: "ArrowDown", does: "Message box, from the newest message", scope: "message" },
   { action: "nextMessage", chord: "j", does: "Next message", scope: "message list" },
   { action: "nextMessage", chord: "ArrowDown", does: "Next message", scope: "message list" },
   {
@@ -112,6 +144,12 @@ const KEYS = [
   { action: "markRowUnread", chord: "u", does: "Mark unread", scope: "inbox" },
   { action: "openRow", chord: "o", does: "Open in its channel", scope: "inbox" },
   { action: "backToRows", chord: "Escape", does: "Back to the rows", scope: "inbox" },
+  {
+    action: "markSelectedRowRead",
+    chord: "Escape",
+    does: "Mark the selected row read, with nothing left to close",
+    scope: "inbox",
+  },
 ] as const satisfies readonly {
   readonly action: string;
   readonly chord: string;

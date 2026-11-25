@@ -1,6 +1,6 @@
 /**
  * Commands on the wire, shared by the server, the SDK and the web: the
- * `CommandName` and `CommandSecret` brands and their checks, the command as
+ * `WebhookCommandName` and `WebhookCommandSecret` brands and their checks, the command as
  * the server shows it, the request and answers of the command routes, their
  * paths, and the error codes they refuse with.
  */
@@ -14,36 +14,36 @@ declare const brand: unique symbol;
 type Brand<Name extends string> = string & { readonly [brand]: Name };
 
 /** A command's name. It is also the name of the command's handler identity, so it follows the plain identity-name rule (no `/`). */
-export type CommandName = Brand<"CommandName">;
+export type WebhookCommandName = Brand<"CommandName">;
 
 /** The per-command secret the server signs webhook deliveries with (an HMAC of the body). Shown once, on add or rotate. */
-export type CommandSecret = Brand<"CommandSecret">;
+export type WebhookCommandSecret = Brand<"CommandSecret">;
 
 /** A JSON Schema, the rule a command's call data must follow. */
 export type JsonSchema = Readonly<Record<string, JsonValue>>;
 
 /** The rule every command name follows: the plain identity-name rule, for the backend's Schemas. */
-export const commandNamePattern = plainNamePattern;
+export const webhookCommandNamePattern = plainNamePattern;
 
 /**
- * Whether `value` follows the command-name rule; if so, it is a `CommandName`.
+ * Whether `value` follows the command-name rule; if so, it is a `WebhookCommandName`.
  * @param value The name to check.
- * @returns Whether `value` is a `CommandName`.
+ * @returns Whether `value` is a `WebhookCommandName`.
  */
-export function isCommandName(value: string): value is CommandName {
-  return commandNamePattern.test(value);
+export function isWebhookCommandName(value: string): value is WebhookCommandName {
+  return webhookCommandNamePattern.test(value);
 }
 
 /** The rule every command secret the server issues follows. */
-export const commandSecretPattern = /^hmac_[A-Za-z0-9_-]+$/u;
+export const webhookCommandSecretPattern = /^hmac_[A-Za-z0-9_-]+$/u;
 
 /**
- * Whether `value` looks like a command secret the server issued; if so, it is a `CommandSecret`.
+ * Whether `value` looks like a command secret the server issued; if so, it is a `WebhookCommandSecret`.
  * @param value The secret to check.
- * @returns Whether `value` is a `CommandSecret`.
+ * @returns Whether `value` is a `WebhookCommandSecret`.
  */
-export function isCommandSecret(value: string): value is CommandSecret {
-  return commandSecretPattern.test(value);
+export function isWebhookCommandSecret(value: string): value is WebhookCommandSecret {
+  return webhookCommandSecretPattern.test(value);
 }
 
 /** The ID of one command call, sent with its webhook delivery and repeated on each retry, so a handler can drop repeats. */
@@ -59,14 +59,14 @@ export function isCallId(value: string): value is CallId {
 }
 
 /** The description rule, in UTF-16 code units as `String.length` counts them. */
-export const commandDescriptionLength = { maximum: 500, minimum: 1 } as const;
+export const webhookCommandDescriptionLength = { maximum: 500, minimum: 1 } as const;
 
 /** The longest webhook URL the server takes. */
-export const commandUrlMaximumLength = 2000;
+export const webhookCommandUrlMaximumLength = 2000;
 
 /** A registered command as the server shows it: one an admin added, which the server calls by webhook. Its secret is never part of it. */
-export interface RegisteredCommand {
-  readonly name: CommandName;
+export interface RegisteredWebhookCommand {
+  readonly name: WebhookCommandName;
   /** The `http` or `https` URL the server posts calls to. */
   readonly url: string;
   /** The JSON Schema a call's data must follow. */
@@ -79,12 +79,12 @@ export interface RegisteredCommand {
 }
 
 /** A built-in command (mattpocock/cookout#250, 2026-11-23): one the server handles itself, so it has no `url`. */
-export interface BuiltInCommand extends Omit<RegisteredCommand, "url"> {
+export interface BuiltInCommand extends Omit<RegisteredWebhookCommand, "url"> {
   readonly builtIn: true;
 }
 
 /** A command as `GET /v1/commands` lists it: registered (with a `url`) or built in (with `builtIn: true`). */
-export type Command = RegisteredCommand | BuiltInCommand;
+export type WebhookCommand = RegisteredWebhookCommand | BuiltInCommand;
 
 /** The body of `POST /v1/commands`. The server checks the name, URL, schema and description. */
 export interface AddCommandRequest {
@@ -96,8 +96,8 @@ export interface AddCommandRequest {
 
 /** The answer to adding a command or rotating its secret. The secret is shown this once only. */
 export interface CommandWithSecretResponse {
-  readonly command: RegisteredCommand;
-  readonly secret: CommandSecret;
+  readonly command: RegisteredWebhookCommand;
+  readonly secret: WebhookCommandSecret;
 }
 
 /**
@@ -105,7 +105,7 @@ export interface CommandWithSecretResponse {
  * mattpocock/cookout#381; a built-in one would carry `builtIn: true` and no `url`.
  */
 export interface ListCommandsResponse {
-  readonly commands: readonly Command[];
+  readonly commands: readonly WebhookCommand[];
 }
 
 /** The body of a command call. The server checks `data` against the command's schema. */
@@ -122,19 +122,19 @@ export interface CallCommandResponse {
 }
 
 /** `GET /v1/commands` (any identity) and `POST /v1/commands` (admin). */
-export const commandsPath = "/v1/commands";
+export const webhookCommandsPath = "/v1/commands";
 
 /** `POST /v1/commands/:name/calls` (any identity): call the command `name`. */
-export const commandCallsPath = "/v1/commands/:name/calls";
+export const webhookCommandCallsPath = "/v1/commands/:name/calls";
 
 /** `POST /v1/commands/:name/secret` (admin): rotate the secret of the command `name`. */
-export const commandSecretPath = "/v1/commands/:name/secret";
+export const webhookCommandSecretPath = "/v1/commands/:name/secret";
 
 /**
  * The codes the command routes refuse with: a name in use by a registered command (409), a name that is a human's (409), and a call to, or a
  * secret rotation of, a command that doesn't exist (404).
  */
-export const commandErrorCodes = ["command_exists", "handler_not_agent", "command_not_found"] as const;
+export const webhookCommandErrorCodes = ["command_exists", "handler_not_agent", "command_not_found"] as const;
 
 /**
  * The command's handler identity: an agent with the command's name, as it is stored when the command is added. A
@@ -142,7 +142,7 @@ export const commandErrorCodes = ["command_exists", "handler_not_agent", "comman
  * @param added The command whose handler identity to make, and the human who adds it.
  * @returns The handler identity, which posts the command's replies.
  */
-export function handlerOf(added: { readonly command: RegisteredCommand; readonly owner: Owner }): AgentIdentity {
+export function handlerOf(added: { readonly command: RegisteredWebhookCommand; readonly owner: Owner }): AgentIdentity {
   const { command, owner } = added;
   return { admin: false, createdAt: command.createdAt, kind: "agent", name: command.handler, owner };
 }

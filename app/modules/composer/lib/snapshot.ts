@@ -7,7 +7,7 @@ const AT_SIGN = 1;
 const ONE = 1;
 const STEPS = { down: ONE, up: -ONE } as const;
 
-const typedMention = /(?<![\w.@-])@[a-z0-9-]*$/iu;
+const typedMention = /(?<![\w.@-])@ ?[a-z0-9-]*$/iu;
 const typedCommand = /^\/[a-z0-9-]*$/u;
 
 function membersFirst(matches: readonly Identity[], members: readonly IdentityName[]): readonly Identity[] {
@@ -27,7 +27,7 @@ function suggestionsFor(sources: Sources, text: string, caret: number): readonly
     return [];
   }
   const [mention] = found;
-  const prefix = mention.slice(AT_SIGN).toLowerCase();
+  const prefix = mention.slice(AT_SIGN).trimStart().toLowerCase();
   const matches = sources
     .identities()
     .filter((identity) => identity.deactivated !== true && startsWithTyped(identity, prefix));

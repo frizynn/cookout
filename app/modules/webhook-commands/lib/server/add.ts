@@ -1,25 +1,25 @@
-import type { CommandWithSecretResponse, RegisteredCommand } from "../../index.ts";
+import type { CommandWithSecretResponse, RegisteredWebhookCommand } from "../../index.ts";
 import { DateTime, Effect, Option, Predicate } from "effect";
-import { commandNotFound, requireDataSchema } from "./call.ts";
-import { handlerOf, isCommandName } from "../../index.ts";
+import { handlerOf, isWebhookCommandName } from "../../index.ts";
+import { requireDataSchema, webhookCommandNotFound } from "./call.ts";
 import type { AddCommandRequestSchema } from "./wire.ts";
-import type { CommandChanges } from "./changes.ts";
 import type { Owner } from "../../../identities/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import type { StorageUnavailable } from "../../../storage/server.ts";
+import type { WebhookCommandChanges } from "./changes.ts";
 import { announced } from "./changes.ts";
 import { isIdentityName } from "../../../identities/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 
-type NewCommand = typeof AddCommandRequestSchema.Type;
+type NewWebhookCommand = typeof AddCommandRequestSchema.Type;
 
-type AddNeeds = Storage | Secrets | CommandChanges;
+type AddNeeds = Storage | Secrets | WebhookCommandChanges;
 
 const CONFLICT = 409;
 
-function commandExists(name: string): Refusal {
+function webhookCommandExists(name: string): Refusal {
   return { code: "command_exists", message: `The command ${name} already exists.`, status: CONFLICT };
 }
 
@@ -31,7 +31,10 @@ function handlerNotAgent(name: string): Refusal {
   };
 }
 
-function stamped(fields: NewCommand, createdAt: RegisteredCommand["createdAt"]): RegisteredCommand {
+function stamped(
+  fields: NewWebhookCommand,
+  createdAt: RegisteredWebhookCommand["createdAt"],
+): RegisteredWebhookCommand {
   const handler = Option.getOrThrow(Option.liftPredicate(fields.name, isIdentityName));
   const command = { createdAt, handler, name: fields.name, schema: fields.schema, url: fields.url };
   if (typeof fields.description === "string") {
@@ -40,23 +43,23 @@ function stamped(fields: NewCommand, createdAt: RegisteredCommand["createdAt"]):
   return command;
 }
 
-function addCommand({
+function addWebhookCommand({
   fields,
   owner,
 }: {
-  readonly fields: NewCommand;
+  readonly fields: NewWebhookCommand;
   readonly owner: Owner;
 }): Effect.Effect<CommandWithSecretResponse, Refusal | StorageUnavailable, AddNeeds> {
-  return Effect.gen(function* addStampedCommand() {
+  return Effect.gen(function* addStampedWebhookCommand() {
     const command = yield* requireDataSchema(fields.schema).pipe(
       Effect.andThen(Effect.map(DateTime.now, (now) => stamped(fields, isoTimeOf(now)))),
     );
     const secrets = yield* Secrets;
-    const secret = yield* secrets.newCommandSecret;
+    const secret = yield* secrets.newWebhookCommandSecret;
     const storage = yield* Storage;
-    const result = yield* storage.addCommand({ command, secret }, handlerOf({ command, owner }));
+    const result = yield* storage.addWebhookCommand({ command, secret }, handlerOf({ command, owner }));
     if (result === "name_taken") {
-      return yield* Effect.fail(commandExists(command.name));
+      return yield* Effect.fail(webhookCommandExists(command.name));
     }
     if (result === "handler_is_human") {
       return yield* Effect.fail(handlerNotAgent(command.name));
@@ -65,22 +68,22 @@ function addCommand({
   });
 }
 
-function rotateCommandSecret(
+function rotateWebhookCommandSecret(
   name: string,
 ): Effect.Effect<CommandWithSecretResponse, Refusal | StorageUnavailable, AddNeeds> {
   return Effect.gen(function* rotateSecret() {
-    if (!isCommandName(name)) {
-      return yield* Effect.fail(commandNotFound(name));
+    if (!isWebhookCommandName(name)) {
+      return yield* Effect.fail(webhookCommandNotFound(name));
     }
     const secrets = yield* Secrets;
-    const secret = yield* secrets.newCommandSecret;
+    const secret = yield* secrets.newWebhookCommandSecret;
     const storage = yield* Storage;
-    const rotated = yield* storage.replaceCommandSecret(name, secret);
+    const rotated = yield* storage.replaceWebhookCommandSecret(name, secret);
     if (Predicate.isUndefined(rotated)) {
-      return yield* Effect.fail(commandNotFound(name));
+      return yield* Effect.fail(webhookCommandNotFound(name));
     }
     return yield* announced({ command: rotated.command, secret });
   });
 }
 
-export { type AddNeeds, addCommand, rotateCommandSecret };
+export { type AddNeeds, addWebhookCommand, rotateWebhookCommandSecret };

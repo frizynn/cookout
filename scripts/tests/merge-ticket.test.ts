@@ -1,10 +1,8 @@
-import { ATTEMPTS, BRANCH, FLOOR, TICKET, floor, generated, git, migrations, repo, repos } from "./lib/merge-repos.ts";
+import { BRANCH, FLOOR, TICKET, floor, generated, git, migrations, repo, repos } from "./lib/merge-repos.ts";
 import { expect, it } from "vitest";
 import type { Merged } from "../lib/merge-ticket.ts";
 import path from "node:path";
 
-const ONE_ATTEMPT = 1;
-const TWO_ATTEMPTS = 2;
 const MERGE_PARENTS = 2;
 
 function moveV1(other: string, marker: string): string {
@@ -50,7 +48,7 @@ it("merges a ticket whose only conflicts are generated files, a migration number
 
   const merged = repo(work).merge({});
 
-  expect(merged).toStrictEqual({ attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect(merged).toStrictEqual({ ok: true, sha: git(origin, "rev-parse", "v1") });
   expect([
     git(origin, "log", "-1", "--format=%s", "v1"),
     git(origin, "log", "-1", "--format=%P", "v1").split(" ").length,
@@ -80,7 +78,7 @@ it.each<{ readonly files: Readonly<Record<string, string>>; readonly name: strin
   expect(git(origin, "rev-parse", "v1")).toBe(before);
 });
 
-it("merges again onto v1 when v1 moved before the push", { timeout: 10_000 }, () => {
+it("lands on a v1 that moved during its check, through the queue, without merging again", { timeout: 10_000 }, () => {
   expect.hasAssertions();
 
   const { origin, other, root, work } = repos();
@@ -89,20 +87,8 @@ it("merges again onto v1 when v1 moved before the push", { timeout: 10_000 }, ()
 
   const merged = repo(work).merge({ check: ["sh", "-c", `test -f ${moved} || { ${moveV1(other, moved)}; }`] });
 
-  expect(merged).toStrictEqual({ attempts: TWO_ATTEMPTS, ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect(merged).toStrictEqual({ ok: true, sha: git(origin, "rev-parse", "v1") });
   expect(git(origin, "log", "--format=%s", "v1")).toContain("moved");
-});
-
-it("gives up after its attempts when v1 keeps moving", { timeout: 10_000 }, () => {
-  expect.hasAssertions();
-
-  const { origin, other, root, work } = repos();
-  repo(work).commit("the ticket", { "notes.txt": "ticket\n" });
-
-  const merged = repo(work).merge({ check: ["sh", "-c", moveV1(other, path.join(root, "moved"))] });
-
-  expect(reason(merged)).toContain(`gave up after ${ATTEMPTS} attempts`);
-  expect(git(origin, "log", "--format=%s", "v1")).not.toContain(`Merge ${BRANCH}`);
 });
 
 it("pushes nothing when the check fails", { timeout: 10_000 }, () => {
@@ -129,7 +115,7 @@ it("continues a merge resolved by hand: checks it and pushes it to v1", { timeou
 
   const merged = repo(work).continueMerge({});
 
-  expect(merged).toStrictEqual({ attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect(merged).toStrictEqual({ ok: true, sha: git(origin, "rev-parse", "v1") });
   expect([git(origin, "show", "v1:notes.txt"), git(origin, "log", "-1", "--format=%s", "v1")]).toStrictEqual([
     "both",
     `Merge ${BRANCH}: Add the c table (#${TICKET})`,
@@ -148,7 +134,7 @@ it("continues a merge resolved by hand when v1 moved, reusing the resolution", {
 
   const merged = repo(work).continueMerge({ check: ["sh", "-c", `test -f ${moved} || { ${moveV1(other, moved)}; }`] });
 
-  expect(merged).toStrictEqual({ attempts: TWO_ATTEMPTS, ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect(merged).toStrictEqual({ ok: true, sha: git(origin, "rev-parse", "v1") });
   expect([git(origin, "show", "v1:notes.txt"), git(origin, "log", "--format=%s", "v1")]).toStrictEqual([
     "both",
     expect.stringContaining("moved"),
@@ -168,7 +154,7 @@ it("refuses to continue when the branch holds no merge", { timeout: 10_000 }, ()
   expect(git(origin, "rev-parse", "v1")).toBe(before);
 });
 
-it("keeps the merge's own fixes when v1 moves before the push, merging the new v1 into it", {
+it("keeps the merge's own fixes when v1 moves during its check on --continue", {
   timeout: 10_000,
 }, () => {
   expect.hasAssertions();
@@ -184,13 +170,13 @@ it("keeps the merge's own fixes when v1 moves before the push, merging the new v
     check: ["sh", "-c", `grep -q fixed fix.txt && { test -f ${moved} || { ${moveV1(other, moved)}; }; }`],
   });
 
-  expect(merged).toStrictEqual({ attempts: TWO_ATTEMPTS, ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect(merged).toStrictEqual({ ok: true, sha: git(origin, "rev-parse", "v1") });
   expect([
     git(origin, "show", "v1:notes.txt"),
     git(origin, "show", "v1:fix.txt"),
     git(origin, "log", "-1", "--format=%s", "v1"),
     git(origin, "log", "-1", "--format=%s", "v1^1"),
-    git(origin, "rev-parse", "v1^2"),
+    git(origin, "rev-parse", "v1^2^2"),
   ]).toStrictEqual([
     "both",
     "fixed",
@@ -200,24 +186,33 @@ it("keeps the merge's own fixes when v1 moves before the push, merging the new v
   ]);
 });
 
-it("stops when the new v1 conflicts with the merge, then continues onto the new v1", { timeout: 10_000 }, () => {
+function movingV1Once(other: string, moved: string): readonly string[] {
+  return ["sh", "-c", `test -f ${moved} || { ${moveV1Changing(other, moved, "notes.txt")}; }`];
+}
+
+it("stops, merging nothing, when the queue finds the merge conflicts with a moved v1, then continues onto it", {
+  timeout: 10_000,
+}, () => {
   expect.hasAssertions();
 
   const { origin, other, root, work } = repos();
   repo(work).commit("the ticket", { "notes.txt": "ticket\n" });
-  const moved = path.join(root, "moved");
 
-  const stopped = repo(work).merge({
-    check: ["sh", "-c", `test -f ${moved} || { ${moveV1Changing(other, moved, "notes.txt")}; }`],
-  });
+  const dequeued = repo(work).merge({ check: movingV1Once(other, path.join(root, "moved")) });
+  const v1AfterDequeue = git(origin, "log", "-1", "--format=%s", "v1");
+  const stopped = repo(work).continueMerge({});
   repo(work).resolveByHand("all\n");
   const merged = repo(work).continueMerge({});
 
-  expect(filesOf(stopped)).toStrictEqual(["notes.txt"]);
-  expect(merged).toStrictEqual({ attempts: ONE_ATTEMPT, ok: true, sha: git(origin, "rev-parse", "v1") });
+  expect([reason(dequeued), v1AfterDequeue, filesOf(stopped), merged]).toStrictEqual([
+    expect.stringMatching(/left the merge queue without merging: it conflicts with v1\.\n[^]*Nothing was merged\./u),
+    "moved",
+    ["notes.txt"],
+    { ok: true, sha: git(origin, "rev-parse", "v1") },
+  ]);
   expect([
     git(origin, "show", "v1:notes.txt"),
     git(origin, "log", "-1", "--format=%s", "v1^1"),
-    git(origin, "rev-parse", "v1^2"),
+    git(origin, "rev-parse", "v1^2^2"),
   ]).toStrictEqual(["all", "moved", git(work, "rev-parse", BRANCH)]);
 });

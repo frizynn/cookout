@@ -45,7 +45,7 @@ export function MessageForm(props: MessageFormProps): ReactNode {
   );
   return (
     <Form field="text" label={props.text.form} onSubmit={handleSend}>
-      <PendingFiles attachments={attachments} />
+      <PendingFiles attachments={attachments} form={props.text.form} />
       <DraftText
         draft={draft}
         focused={props.focused}
