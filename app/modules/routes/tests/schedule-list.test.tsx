@@ -218,3 +218,21 @@ it("its creator pauses, resumes, edits (in the composer's dialog, filled in) and
 
   close();
 });
+
+it("cancelling an edit gives focus back to that schedule's Edit", { timeout: 10_000 }, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-schedule-list-edit-cancel";
+  const client = await retroBy(channel);
+  const close = await listOpened({ channel, client });
+  await pressedIn({ button: "Edit", text: "Retro" });
+  const editing = await screen.findByRole("dialog", { name: EDIT });
+  fireEvent.click(within(editing).getByRole("button", { name: "Cancel" }));
+  const edit = within(await rowOf("Retro")).getByRole("button", { name: "Edit" });
+
+  await waitFor(() => {
+    expect(globalThis.document.activeElement).toBe(edit);
+  });
+
+  close();
+});

@@ -26,6 +26,7 @@ interface MergeRules {
 }
 
 interface ResolveOptions {
+  readonly approved?: string;
   readonly cwd: string;
   readonly log: (line: string) => void;
   readonly rules: MergeRules;

@@ -2,7 +2,6 @@
 import type { AgentJoinCollectedResponse, AgentJoinRequestResponse, AgentJoinRequestStartedResponse, AgentSessionResponse, LeaveResponse, ListAgentSessionsResponse, RevokeAgentSessionResponse } from "../../../agent-sessions/index.ts";
 import type { JoinCodeResponse } from "../../../agent-sessions/join-codes.ts";
 import type { ChannelResponse, ListChannelsResponse } from "../../../channels/index.ts";
-import type { CallCommandResponse, CommandWithSecretResponse, ListCommandsResponse } from "../../../commands/index.ts";
 import type { AgentJoinRequestsEvent, AgentSessionEvent, ChannelDeletedEvent, ChannelEvent, CleanCloseResponse, CommandEvent, ConnectedEvent, DeactivatedQuietAgentEvent, DeactivationOfferEvent, IdentityDeletedEvent, IdentityEvent, InboxItemEvent, MessageEvent, NudgeEvent, NudgeReadEvent, OfflineAlertEvent, PresenceEvent, PresenceResponse, ReactionEvent, ReadPositionEvent, ReadPositionMovedBackEvent, ReadReceiptEvent, SubscriptionEvent, ThreadEvent } from "../../../events/index.ts";
 import type { ErrorResponse, HealthResponse, SchemaProblems } from "../../../http/index.ts";
 import type { DeactivateIdentityResponse, IdentityMessageCountResponse, IdentityResponse, IdentityWithTokenResponse, ListIdentitiesResponse } from "../../../identities/index.ts";
@@ -12,6 +11,7 @@ import type { ListMessagesResponse, MessageResponse, ReactionsResponse, ThreadRe
 import type { ListScheduledMessagesResponse, ScheduledMessageEvent, ScheduledMessagePreviewResponse, ScheduledMessageResponse } from "../../../scheduled-messages/index.ts";
 import type { SearchResponse } from "../../../search/index.ts";
 import type { TriggerEvent, TriggerResponse } from "../../../triggers/index.ts";
+import type { CallCommandResponse, CommandWithSecretResponse, ListCommandsResponse } from "../../../webhook-commands/index.ts";
 
 export declare function isAgentJoinCollectedResponse(data: unknown): data is AgentJoinCollectedResponse;
 export declare function isAgentJoinRequestResponse(data: unknown): data is AgentJoinRequestResponse;
@@ -23,9 +23,6 @@ export declare function isRevokeAgentSessionResponse(data: unknown): data is Rev
 export declare function isJoinCodeResponse(data: unknown): data is JoinCodeResponse;
 export declare function isChannelResponse(data: unknown): data is ChannelResponse;
 export declare function isListChannelsResponse(data: unknown): data is ListChannelsResponse;
-export declare function isCallCommandResponse(data: unknown): data is CallCommandResponse;
-export declare function isCommandWithSecretResponse(data: unknown): data is CommandWithSecretResponse;
-export declare function isListCommandsResponse(data: unknown): data is ListCommandsResponse;
 export declare function isAgentJoinRequestsEvent(data: unknown): data is AgentJoinRequestsEvent;
 export declare function isAgentSessionEvent(data: unknown): data is AgentSessionEvent;
 export declare function isChannelDeletedEvent(data: unknown): data is ChannelDeletedEvent;
@@ -87,3 +84,6 @@ export declare function isScheduledMessageResponse(data: unknown): data is Sched
 export declare function isSearchResponse(data: unknown): data is SearchResponse;
 export declare function isTriggerEvent(data: unknown): data is TriggerEvent;
 export declare function isTriggerResponse(data: unknown): data is TriggerResponse;
+export declare function isCallCommandResponse(data: unknown): data is CallCommandResponse;
+export declare function isCommandWithSecretResponse(data: unknown): data is CommandWithSecretResponse;
+export declare function isListCommandsResponse(data: unknown): data is ListCommandsResponse;

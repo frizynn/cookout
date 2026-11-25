@@ -28,6 +28,7 @@ interface SearchBoxStores {
   readonly box: string;
   readonly identities: Identities;
   readonly keymap: Keymap;
+  readonly land: () => void;
   readonly search: Search;
 }
 
@@ -38,6 +39,7 @@ interface Place {
   readonly area: () => HTMLDivElement | null;
   readonly box: () => Element | null;
   readonly back: () => unknown;
+  readonly land: () => void;
   readonly remember: (element: unknown) => void;
 }
 
@@ -68,9 +70,14 @@ function goBack(place: Place): void {
 }
 
 function go(place: Place, href: string): void {
+  for (const box of inputs(place.box())) {
+    box.value = "";
+  }
+  place.search.edit("");
   place.search.close();
   place.remember(null);
   globalThis.location.hash = href;
+  place.land();
 }
 
 function chooseHighlighted(place: Place): void {
@@ -226,7 +233,7 @@ function resultsNow(store: BoardStore, search: Search): readonly SearchResult[] 
   return select(store.snapshot());
 }
 
-function useSearchBox({ box, identities, keymap, search }: SearchBoxStores): SearchBox {
+function useSearchBox({ box, identities, keymap, land, search }: SearchBoxStores): SearchBox {
   const store = useBoardStore();
   const area = useRef<HTMLDivElement>(null);
   const back = useRef<unknown>(null);
@@ -235,6 +242,7 @@ function useSearchBox({ box, identities, keymap, search }: SearchBoxStores): Sea
       area: () => area.current,
       back: () => back.current,
       box: () => globalThis.document.querySelector(`[id="${box}"]`),
+      land,
       options: () =>
         boxOptionsOf({
           channels: channelList(store.snapshot()),
@@ -254,7 +262,7 @@ function useSearchBox({ box, identities, keymap, search }: SearchBoxStores): Sea
           state: search.snapshot(),
         }),
     }),
-    [box, identities, search, store],
+    [box, identities, land, search, store],
   );
   useEffect(() => listen(place(), keymap), [keymap, place]);
   const choose = useCallback(

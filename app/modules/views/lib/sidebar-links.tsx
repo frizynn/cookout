@@ -52,7 +52,7 @@ export function SidebarLinks(props: SidebarLinksProps): ReactNode {
         <NewChannelButton creation={props.creation} />
       </NavHeading>
       <ChannelRows actions={actions} route={route} counts={counts.channels} />
-      <NewChannel creation={props.creation} />
+      <NewChannel creation={props.creation} keymap={props.keymap} />
     </>
   );
 }

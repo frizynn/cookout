@@ -81,7 +81,7 @@ const listRoute: Route<Storage> = {
         Effect.provideService(HttpServerRequest.ParsedSearchParams, search),
       );
       const storage = yield* Storage;
-      const commands = yield* storage.listCommands;
+      const commands = yield* storage.listWebhookCommands;
       const stored = yield* storage.listIdentities();
       const handlers = new Set(Arr.map(commands, ({ handler }) => handler));
       const identities = Arr.map(shownFor(query, stored), (identity) => flaggedIfHandler(identity, handlers));
@@ -100,7 +100,7 @@ const getRoute: Route<Storage> = {
       if (Predicate.isUndefined(found)) {
         return yield* Effect.fail(identityNotFound(name));
       }
-      const commands = yield* storage.listCommands;
+      const commands = yield* storage.listWebhookCommands;
       const identity = flaggedIfHandler(found, new Set(Arr.map(commands, ({ handler }) => handler)));
       return yield* HttpServerResponse.schemaJson(IdentityResponseSchema)({ identity });
     }),

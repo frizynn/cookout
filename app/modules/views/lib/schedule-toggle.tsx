@@ -15,6 +15,7 @@ function changeOf(paused: boolean): "pause" | "resume" {
 
 interface ScheduleToggleProps {
   readonly busy: boolean;
+  readonly focused: boolean;
   readonly schedule: ScheduledMessage;
   readonly scheduleList: ScheduleList;
 }
@@ -27,7 +28,7 @@ export function ScheduleToggle(props: ScheduleToggleProps): ReactNode {
   }, [paused, schedule.id, scheduleList]);
   return (
     schedule.status !== "finished" && (
-      <Button disabled={props.busy} onClick={handleClick}>
+      <Button disabled={props.busy} focused={props.focused} onClick={handleClick}>
         {paused && TEXT.resume}
         {!paused && TEXT.pause}
       </Button>
