@@ -10,6 +10,7 @@ const HIGH = 27.5;
 const FALLING = 22;
 const DROPPED = 18;
 const TWICE = 2;
+const ONE_MORE = 1;
 
 it("prints the load average and core count, with no warning when the load is within the cores", {
   timeout: 5000,
@@ -54,7 +55,7 @@ async function waitedThrough(loads: readonly number[]): Promise<Waiting> {
       said.push(line);
     },
     sleep: async () => {
-      sleeps += TWICE / TWICE;
+      sleeps += ONE_MORE;
       await Promise.resolve();
     },
   });
