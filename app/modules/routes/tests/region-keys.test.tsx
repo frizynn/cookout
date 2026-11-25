@@ -67,7 +67,7 @@ function pressed(chord: Readonly<typeof NEXT | typeof PREVIOUS>): string {
   return focusedName();
 }
 
-it("ctrl+] and ctrl+[ cycle the sidebar, the messages, the thread panel and the message box", {
+it("ctrl+] and ctrl+[ cycle the sidebar, the messages and the thread panel, the message box counting as the messages", {
   timeout: 10_000,
 }, async () => {
   expect.hasAssertions();
@@ -78,8 +78,8 @@ it("ctrl+] and ctrl+[ cycle the sidebar, the messages, the thread panel and the 
   const back = [pressed(PREVIOUS), pressed(PREVIOUS)];
 
   expect([forward, back]).toStrictEqual([
-    ["sidebar", "messages", "panel", "box"],
-    ["panel", "messages"],
+    ["panel", "sidebar", "messages", "panel"],
+    ["messages", "sidebar"],
   ]);
 
   close();
@@ -94,7 +94,7 @@ it("from outside every region, ctrl+] goes to the first and ctrl+[ to the last",
   outOfRegions();
   const last = pressed(PREVIOUS);
 
-  expect([first, last]).toStrictEqual(["sidebar", "box"]);
+  expect([first, last]).toStrictEqual(["sidebar", "panel"]);
 
   close();
 });
