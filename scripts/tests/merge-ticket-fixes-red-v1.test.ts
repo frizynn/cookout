@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 const LAST = -1;
 const EXECUTABLE = 0o755;
 const PR = "https://github.com/o/r/pull/9";
-const GREEN = view({ jobs: [done("lint"), done("checked")], status: COMPLETED });
+const GREEN = view({ jobs: [done("lint"), done("tests")], status: COMPLETED });
 const EXIT_OK = 0;
 const START = 0;
 const SHORT = 12;

@@ -1,17 +1,11 @@
 name: Check
 
 # Check runs once per commit (#483). A pull request from a branch in this repo already has its push
-# run, so each job skips on its pull_request run (no runner is taken; the tools read push and
-# merge_group runs only), while a fork's pull request still runs Check. A push to main doesn't run
-# it: main is only fast-forwarded to a commit v1's push run already checked.
-#
-# v1 moves only by fast-forward (#567, docs/adr/…-v1-moves-only-by-fast-forward-from-a-green-merge-ticket-branch.md): pnpm merge-ticket
-# pushes v1 to a merge-ticket-N commit whose push run is green. The merge_group trigger and the
-# checked job are left from #522's merge queue, which GitHub doesn't offer on a user-owned repository,
-# so no merge_group run happens here.
+# run, so each job skips on its pull_request run (no runner is taken; the tools read push runs only),
+# while a fork's pull request still runs Check. A push to main doesn't run it: main is only
+# fast-forwarded to a commit v1's push run already checked.
 on:
   pull_request:
-  merge_group:
   push:
     branches: [v1, rewrite-perfect-ts, "ticket-*", "merge-ticket-*"]
 
@@ -19,8 +13,7 @@ permissions:
   contents: read
 
 # Each v1 push run gets a group of its own, so a newer push neither cancels it nor replaces it in
-# the queue. Other refs share one group per ref, where a newer push cancels the older run. Each merge
-# queue entry has its own gh-readonly-queue/v1/... ref, so its run gets a group of its own too.
+# the queue. Other refs share one group per ref, where a newer push cancels the older run.
 concurrency:
   group: check-${{ github.ref }}-${{ github.ref == 'refs/heads/v1' && github.sha || 'latest' }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/v1' }}
@@ -50,7 +43,7 @@ jobs:
           cache-name: ${{ matrix.job }}
       - name: pnpm check --job=${{ matrix.job }}
         env:
-          BASE: ${{ github.event.pull_request.base.sha || github.event.before || github.event.merge_group.base_sha }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           NODE_COMPILE_CACHE: node_modules/.cache/node-compile
         run: |
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then BASE=HEAD^; fi
@@ -235,20 +228,3 @@ jobs:
           path: .timings/*.txt
           include-hidden-files: true
           if-no-files-found: ignore
-
-  # The one check a merge queue would require (docs/adr/…-v1-lands-through-github-s-merge-queue.md), so a ruleset needn't list every job and
-  # shard by name and change whenever one is added. It fails if any other job failed or was
-  # cancelled; a job skipped on a pull_request run from this repo passes, as that run checks nothing.
-  checked:
-    runs-on: ubuntu-latest
-    if: always()
-    timeout-minutes: 1
-    needs: [check, browser, screenshots, tests, e2e-docker, pack, published-client, coverage]
-    steps:
-      - name: Every other job passed
-        env:
-          NEEDS: ${{ toJSON(needs) }}
-        run: |
-          failed=$(jq -r 'to_entries[] | select(.value.result == "failure" or .value.result == "cancelled") | "\(.key): \(.value.result)"' <<< "$NEEDS")
-          if [ -n "$failed" ]; then echo "Not every job passed:"; echo "$failed"; exit 1; fi
-          echo "Every job passed."
