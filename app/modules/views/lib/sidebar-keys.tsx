@@ -1,4 +1,3 @@
-import { Announcement } from "../../design-system/content.tsx";
 import type { Keymap } from "../../keymap/index.ts";
 import type { Layout } from "../../layout/index.ts";
 import type { ReactNode } from "react";
@@ -17,5 +16,6 @@ interface SidebarKeysProps {
 
 export function SidebarKeys(props: SidebarKeysProps): ReactNode {
   useDrawerKeys(props);
-  return <Announcement said={useSidebarKeys(props)} />;
+  useSidebarKeys(props);
+  return null;
 }

@@ -8,15 +8,8 @@ import {
   openJoinCodeRoutes,
   openJoinRequestRoutes,
 } from "../../../agent-sessions/server.ts";
-import { channelRoutes, channelsLayer } from "../../../channels/server.ts";
 import {
-  deactivationOffersLayer,
-  inboxLayer,
-  inboxRoutes,
-  nudgesLayer,
-  offlineAlertsLayer,
-} from "../../../inbox/server.ts";
-import {
+  avatarRoutes,
   deactivationRoutes,
   deletionRoutes,
   descriptionRoutes,
@@ -28,6 +21,14 @@ import {
   openIdentityRoutes,
   transferRoutes,
 } from "../../../identities/server.ts";
+import { channelRoutes, channelsLayer } from "../../../channels/server.ts";
+import {
+  deactivationOffersLayer,
+  inboxLayer,
+  inboxRoutes,
+  nudgesLayer,
+  offlineAlertsLayer,
+} from "../../../inbox/server.ts";
 import {
   liveRoutes,
   mentionTriggersLayer,
@@ -51,6 +52,7 @@ type RouteNeeds =
   | NeedsOf<typeof identityRoutes>
   | NeedsOf<typeof displayNameRoutes>
   | NeedsOf<typeof descriptionRoutes>
+  | NeedsOf<typeof avatarRoutes>
   | NeedsOf<typeof agentSessionOwnerRoutes>
   | NeedsOf<typeof channelRoutes>
   | NeedsOf<typeof messageRoutes>
@@ -66,6 +68,7 @@ export const routes: readonly Route<RouteNeeds>[] = [
   ...identityRoutes,
   ...displayNameRoutes,
   ...descriptionRoutes,
+  ...avatarRoutes,
   ...transferRoutes,
   ...deactivationRoutes,
   ...deletionRoutes,
