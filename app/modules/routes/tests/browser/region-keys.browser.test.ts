@@ -77,26 +77,16 @@ async function crossedForward(page: Page, row: Locator): Promise<void> {
   await threadReply(page).focus();
   await page.keyboard.press(NEXT);
 
-  await expect(messageBox(page)).toBeFocused();
-
-  await page.keyboard.type(DRAFT);
-  await page.keyboard.press(NEXT);
-
   await expect(row).toBeFocused();
 }
 
 async function backToThread(page: Page): Promise<void> {
   await page.keyboard.press(PREVIOUS);
 
-  await expect(messageBox(page)).toBeFocused();
-  await expect(messageBox(page)).toHaveValue(DRAFT);
-
-  await page.keyboard.press(PREVIOUS);
-
   await expect(threadReply(page)).toBeFocused();
 }
 
-test("ctrl+] cycles the sidebar, the messages, the thread panel and the message box, and ctrl+[ goes back, each region returning focus where it was left", async ({
+test("ctrl+] cycles the three columns (the sidebar, the messages and the thread panel), and ctrl+[ goes back, each region returning focus where it was left", async ({
   page,
 }) => {
   const channel = unique("browser-regions-cycle");
@@ -113,17 +103,36 @@ test("ctrl+] cycles the sidebar, the messages, the thread panel and the message 
   await expect(row).toBeFocused();
 });
 
-test("ctrl+] skips the thread panel when none is open", async ({ page }) => {
+test("ctrl+] skips the thread panel when none is open, and the message box is no stop", async ({ page }) => {
   const channel = unique("browser-regions-skip");
   await opened({ channel, page, thread: false });
+  const row = sidebarLink({ label: `#${channel}`, page });
   await messageSaying(page, "The oldest.").focus();
   await page.keyboard.press(NEXT);
 
-  await expect(messageBox(page)).toBeFocused();
+  await expect(row).toBeFocused();
 
   await page.keyboard.press(PREVIOUS);
 
   await expect(messageSaying(page, "The oldest.")).toBeFocused();
+});
+
+test("from inside the message box, ctrl+] and ctrl+[ move to the columns either side, keeping the draft", async ({
+  page,
+}) => {
+  const channel = unique("browser-regions-box");
+  await opened({ channel, page, thread: true });
+  const row = sidebarLink({ label: `#${channel}`, page });
+  await messageBox(page).fill(DRAFT);
+  await page.keyboard.press(NEXT);
+
+  await expect(inThread(page).locator(":focus")).toHaveCount(ONE);
+
+  await messageBox(page).focus();
+  await page.keyboard.press(PREVIOUS);
+
+  await expect(row).toBeFocused();
+  await expect(messageBox(page)).toHaveValue(DRAFT);
 });
 
 test("on a Mac, Control+] moves to the next region and Meta+] isn't bound", async ({ page }) => {
@@ -139,5 +148,5 @@ test("on a Mac, Control+] moves to the next region and Meta+] isn't bound", asyn
 
   await page.keyboard.press(NEXT);
 
-  await expect(messageBox(page)).toBeFocused();
+  await expect(sidebarLink({ label: `#${channel}`, page })).toBeFocused();
 });
