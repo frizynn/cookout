@@ -119,9 +119,12 @@ function useChannelSettings(of: ChannelSettingsOf): ChannelSettings {
     reset();
     setOpen(true);
   }, [found, reset]);
+  const saving = save.status === "saving";
   const close = useCallback(() => {
-    setOpen(false);
-  }, []);
+    if (!saving) {
+      setOpen(false);
+    }
+  }, [saving]);
   return { ...edits, close, fields, open, save, show, submit };
 }
 

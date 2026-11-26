@@ -16,7 +16,9 @@ interface Checked extends Posted {
 
 const UNPROCESSABLE = 422;
 
-const TALKING = 2;
+const NONE = 0;
+
+const LAST_SOLO = 1;
 
 function isActiveAgent(identity: Identity | undefined): identity is AgentIdentity {
   return Predicate.isNotUndefined(identity) && identity.kind === "agent" && identity.deactivated !== true;
@@ -46,10 +48,21 @@ function agentRunAtEnd(messages: readonly Message[]): readonly Message[] {
   return Arr.takeWhile(Arr.reverse(messages), isAgentAuthored);
 }
 
+function talkingTurns(run: readonly Message[], author: AgentIdentity): number {
+  return Option.match(Arr.head(run), {
+    onNone: () => NONE,
+    onSome: (first) => {
+      const solo = Arr.takeWhile(run, (each) => each.author.name === first.author.name).length;
+      if (solo === run.length && author.name === first.author.name) {
+        return NONE;
+      }
+      return run.length - solo + LAST_SOLO;
+    },
+  });
+}
+
 function agentsTalking(thread: readonly Message[], author: AgentIdentity, turns: number): boolean {
-  const run = agentRunAtEnd(thread);
-  const speakers = new Set([author.name, ...Arr.map(run, (each) => each.author.name)]);
-  return run.length >= turns && speakers.size >= TALKING;
+  return talkingTurns(Arr.reverse(agentRunAtEnd(thread)), author) >= turns;
 }
 
 function threadMessages(

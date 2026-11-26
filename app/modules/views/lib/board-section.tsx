@@ -1,5 +1,6 @@
 import type { BoardLimits } from "../../channels/index.ts";
 import { BoardLimitsDialog } from "./board-limits-dialog.tsx";
+import type { BoardLimitsEdit } from "./use-board-limits.ts";
 import { Button } from "../../design-system/controls.tsx";
 import type { Identities } from "../../composer/index.ts";
 import type { IdentityName } from "../../sdk/index.ts";
@@ -13,6 +14,7 @@ import { useSyncExternalStore } from "react";
 
 const TEXT = {
   edit: "Edit agent limits",
+  failed: "Couldn't load the agent limits.",
   label: "Board",
   loading: "Loading the agent limits…",
   summary: ({ agentMentions, agentTurns }: BoardLimits) =>
@@ -25,7 +27,10 @@ interface BoardSectionProps {
   readonly section: SettingsSection | null;
 }
 
-function summaryOf(limits: BoardLimits | null): string {
+function summaryOf({ failed, limits }: BoardLimitsEdit): string {
+  if (failed !== null) {
+    return `${TEXT.failed} ${failed}`;
+  }
   if (limits === null) {
     return TEXT.loading;
   }
@@ -46,7 +51,7 @@ export function BoardSection(props: BoardSectionProps): ReactNode {
       href={hrefOf({ name: "settings", section: "board" })}
       label={TEXT.label}
     >
-      <p className="text-sm text-muted-foreground">{summaryOf(edit.limits)}</p>
+      <p className="text-sm text-muted-foreground">{summaryOf(edit)}</p>
       <Button disabled={edit.limits === null} onClick={handleEdit}>
         {TEXT.edit}
       </Button>

@@ -23,6 +23,13 @@ function agentNames(identities: readonly Identity[]): readonly string[] {
     .map((identity) => identity.name);
 }
 
+function withHeld(agents: readonly string[], held: string): readonly string[] {
+  if (held === "" || agents.includes(held)) {
+    return agents;
+  }
+  return [...agents, held];
+}
+
 export function ChannelRoutingFields(props: ChannelRoutingFieldsProps): ReactNode {
   const { settings } = props;
   const agents = agentNames(props.identities);
@@ -36,7 +43,7 @@ export function ChannelRoutingFields(props: ChannelRoutingFieldsProps): ReactNod
         help={TEXT.ownerHelp}
         label={TEXT.owner}
         onEdit={handleOwner}
-        options={agents}
+        options={withHeld(agents, settings.fields.owner)}
         required={false}
         value={settings.fields.owner}
       />
@@ -54,7 +61,7 @@ export function ChannelRoutingFields(props: ChannelRoutingFieldsProps): ReactNod
         help={TEXT.fallbackHelp}
         label={TEXT.fallback}
         onEdit={handleFallback}
-        options={agents}
+        options={withHeld(agents, settings.fields.fallback)}
         required={false}
         value={settings.fields.fallback}
       />

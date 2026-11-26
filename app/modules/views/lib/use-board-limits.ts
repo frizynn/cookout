@@ -16,6 +16,7 @@ type LimitsSave =
 
 interface BoardLimitsEdit {
   readonly limits: BoardLimits | null;
+  readonly failed: string | null;
   readonly open: boolean;
   readonly fields: LimitFields;
   readonly save: LimitsSave;
@@ -47,21 +48,35 @@ function limitsOf(fields: LimitFields): BoardLimits {
   return { agentMentions: Number(fields.agentMentions), agentTurns: Number(fields.agentTurns) };
 }
 
-async function loadInto(calls: BoardCalls, setLimits: (limits: BoardLimits) => void): Promise<void> {
+interface Loading {
+  readonly setLimits: (limits: BoardLimits) => void;
+  readonly setFailed: (failed: string) => void;
+}
+
+interface Loaded {
+  readonly limits: BoardLimits | null;
+  readonly failed: string | null;
+  readonly setLimits: (limits: BoardLimits) => void;
+}
+
+async function loadInto(calls: BoardCalls, { setFailed, setLimits }: Loading): Promise<void> {
   const found = await calls.boardLimits();
   if ("answer" in found) {
     setLimits(found.answer);
+    return;
   }
+  setFailed(found.refusal.message);
 }
 
-function useLoadedLimits(): readonly [BoardLimits | null, (limits: BoardLimits) => void] {
+function useLoadedLimits(): Loaded {
   const { calls } = useBoardStore();
   const [limits, setLimits] = useState<BoardLimits | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
   const loading = useRef(Promise.resolve());
   useEffect(() => {
-    loading.current = loadInto(calls, setLimits);
+    loading.current = loadInto(calls, { setFailed, setLimits });
   }, [calls]);
-  return [limits, setLimits];
+  return { failed, limits, setLimits };
 }
 
 function useFieldEdits(
@@ -107,7 +122,7 @@ function useSaving(set: BoardLimitsSet): Pick<BoardLimitsEdit, "save" | "submit"
 }
 
 function useBoardLimits(): BoardLimitsEdit {
-  const [limits, setLimits] = useLoadedLimits();
+  const { failed, limits, setLimits } = useLoadedLimits();
   const [open, setOpen] = useState(false);
   const [fields, setFields] = useState(EMPTY);
   const edits = useFieldEdits(setFields);
@@ -117,10 +132,13 @@ function useBoardLimits(): BoardLimitsEdit {
     reset();
     setOpen(true);
   }, [limits, reset]);
+  const saving = save.status === "saving";
   const close = useCallback(() => {
-    setOpen(false);
-  }, []);
-  return { ...edits, close, fields, limits, open, save, show, submit };
+    if (!saving) {
+      setOpen(false);
+    }
+  }, [saving]);
+  return { ...edits, close, failed, fields, limits, open, save, show, submit };
 }
 
 export { type BoardLimitsEdit, useBoardLimits };

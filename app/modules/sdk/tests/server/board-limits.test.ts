@@ -107,19 +107,20 @@ it.effect("past the board's agent turns, a reply that mentions its owner and ano
   }).pipe(Effect.provide(testCookout({ triggers: "scripted" }))),
 );
 
-it.effect("one agent replying alone in a thread isn't held to the agent turns, as no other agent answers it", () =>
+it.effect("one agent's updates alone in a thread don't count toward the agent turns until a second agent joins", () =>
   Effect.gen(function* aloneInThread() {
     const on = yield* board;
     yield* answer(() => on.cookout.client.setBoardLimits({ agentMentions: 1, agentTurns: 2 }));
     const parent = yield* post(on.helper, "status: starting the deploy");
     yield* reply(on.helper, parent, "status: building");
     yield* reply(on.helper, parent, "status: tests running");
-    const last = yield* reply(on.helper, parent, "status: done");
-    const seen = yield* seenIn(on.owner, parent);
+    yield* reply(on.helper, parent, `@${OWNER} status: done, can you check?`);
+    const joined = yield* reply(on.owner, parent, "checked, all good");
+    const seen = yield* seenIn(on.helper, parent);
     const refused = yield* refusal(() =>
-      on.owner.client.createMessage({ channel: "general", replyTo: parent.id, seen, text: "nice work" }),
+      on.helper.client.createMessage({ channel: "general", replyTo: parent.id, seen, text: "thanks" }),
     );
 
-    expect([last.text, refused.code]).toStrictEqual(["status: done", "agent_turn_limit"]);
+    expect([joined.text, refused.code]).toStrictEqual(["checked, all good", "agent_turn_limit"]);
   }).pipe(Effect.provide(testCookout({ triggers: "scripted" }))),
 );
