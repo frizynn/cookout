@@ -1,3 +1,4 @@
+import { focusInPlace, scrollsToReveal } from "./focus-in-place.ts";
 import { useEffect } from "react";
 
 const SETTLE_MS = 1000;
@@ -99,12 +100,21 @@ function listened(settle: () => void): AbortController {
   return control;
 }
 
+function focusedInPlace(): AbortController {
+  if (scrollsToReveal()) {
+    return focusInPlace();
+  }
+  return new AbortController();
+}
+
 function follow(): () => void {
   const { settle, stop } = settling();
   const control = listened(settle);
+  const inPlace = focusedInPlace();
   measure();
   return () => {
     control.abort();
+    inPlace.abort();
     stop();
     forgotten(HEIGHT);
     forgotten(TOP);
