@@ -1,6 +1,7 @@
-import type { KeyboardEvent, ReactNode } from "react";
-import { useCallback, useId, useRef } from "react";
-import { SECONDARY_BUTTON } from "./button-look.ts";
+import { useCallback, useId } from "react";
+import { AreaBox } from "./area-box.tsx";
+import { LineFormSave } from "./line-form-save.tsx";
+import type { ReactNode } from "react";
 
 interface AreaFormParts {
   readonly label: string;
@@ -13,31 +14,11 @@ interface AreaFormParts {
   readonly children?: ReactNode;
 }
 
-const ROWS = 4;
 const SAVE = "Save";
-const SAVING = "Saving…";
-
-function savesOn(event: KeyboardEvent<HTMLTextAreaElement>): boolean {
-  return event.key === "Enter" && (event.ctrlKey || event.metaKey);
-}
 
 export function AreaForm(parts: AreaFormParts): ReactNode {
   const { onEdit, onSubmit } = parts;
   const id = useId();
-  const box = useRef<HTMLTextAreaElement>(null);
-  const handleChange = useCallback(() => {
-    if (box.current !== null) {
-      onEdit(box.current.value);
-    }
-  }, [onEdit]);
-  const handleKeyDown = useCallback((event: KeyboardEvent<HTMLTextAreaElement>) => {
-    const { form } = event.currentTarget;
-    if (!savesOn(event) || form === null) {
-      return;
-    }
-    event.preventDefault();
-    form.requestSubmit();
-  }, []);
   const submitted = useCallback(() => {
     onSubmit();
   }, [onSubmit]);
@@ -46,22 +27,9 @@ export function AreaForm(parts: AreaFormParts): ReactNode {
       <label className="text-xs font-medium text-foreground max-md:text-[13px]" htmlFor={id}>
         {parts.field}
       </label>
-      <textarea
-        className="field-sizing-content min-w-0 resize-none rounded-md border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-muted-foreground"
-        id={id}
-        maxLength={parts.limit}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        ref={box}
-        rows={ROWS}
-        value={parts.value}
-      />
-      <span className="flex items-center justify-between gap-2">
-        <span className="text-xs text-muted-foreground tabular-nums">{`${String(parts.value.length)}/${String(parts.limit)}`}</span>
-        <button className={SECONDARY_BUTTON} disabled={parts.saving} type="submit">
-          {parts.saving && SAVING}
-          {!parts.saving && SAVE}
-        </button>
+      <span className="flex items-start gap-2">
+        <AreaBox labelled={id} limit={parts.limit} onEdit={onEdit} value={parts.value} />
+        <LineFormSave below={false} saving={parts.saving} submit={SAVE} />
       </span>
       {parts.children}
     </form>
