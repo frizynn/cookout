@@ -1,5 +1,6 @@
 import type { AvatarParts, PresenceShown } from "./avatar-parts.ts";
 import type { ActionMenuParts } from "./menu-parts.ts";
+import type { MenuIcon } from "./menu-icons.ts";
 import type { PanelEdgeParts } from "./panel-edge-parts.ts";
 import type { ReactNode } from "react";
 import type { TextRange } from "./text-range.ts";
@@ -23,6 +24,7 @@ interface FeedParts extends ListParts {
 }
 
 interface ButtonParts extends Parts {
+  readonly icon?: MenuIcon;
   readonly disabled?: boolean;
   readonly focused?: boolean;
   readonly onClick: () => void;
@@ -150,6 +152,7 @@ interface PaneHeaderParts {
 }
 
 interface PressButtonParts extends Parts {
+  readonly icon?: MenuIcon;
   readonly pressed: boolean;
   readonly disabled: boolean;
   readonly onClick: () => void;

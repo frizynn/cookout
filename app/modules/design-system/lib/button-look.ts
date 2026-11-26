@@ -4,3 +4,5 @@ const SHAPE =
 export const PRIMARY_BUTTON = `${SHAPE} border border-transparent bg-foreground text-background transition hover:opacity-90 motion-safe:active:scale-[0.97]`;
 
 export const SECONDARY_BUTTON = `${SHAPE} border bg-surface text-foreground shadow-xs transition hover:bg-accent motion-safe:active:scale-[0.97] max-md:border-transparent max-md:bg-muted max-md:shadow-none`;
+
+export const TOGGLE_BUTTON = `${SHAPE} border transition motion-safe:active:scale-[0.97]`;

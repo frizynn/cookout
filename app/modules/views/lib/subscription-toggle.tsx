@@ -29,7 +29,12 @@ export function SubscriptionToggle(props: SubscriptionToggleProps): ReactNode {
     calls.setSubscribed(channel, !subscribed, "channel-header");
   }, [calls, channel, subscribed]);
   return (
-    <PressButton disabled={props.state.change.status === "changing"} onClick={handleClick} pressed={subscribed}>
+    <PressButton
+      disabled={props.state.change.status === "changing"}
+      icon="subscribe"
+      onClick={handleClick}
+      pressed={subscribed}
+    >
       {labelOf(subscribed)}
     </PressButton>
   );

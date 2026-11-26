@@ -1,14 +1,14 @@
 /**
  * The design system's controls: buttons, forms, fields, boxes and dialogs (`layout.tsx` has the design system as a whole).
  *
- * - `PressButton` is a button that is on or off.
+ * - `PressButton` is a button that is on or off, shaped as a `Button`: off it is outlined, on it is filled and muted. With an `icon`, that menu icon comes before its text.
  * - `ChoiceGroup` is a radio group of a few choices.
  * - `CharacterPicker` is a named group that picks a drawn character as an avatar: a `ChoiceGroup` of styles, eight variants of that style (`look`) seeded from `seed` as a radio group, a Shuffle button for the next eight (`round`), and Save avatar, which hands `onSave` the picked one as a 256 px PNG. Each style's art is CC0 or free for commercial use; an agent with no avatar shows the first variant of the Bot style.
  * - `DividerButton` is a divider line led by a quiet button, such as one that shows the replies folded under it.
  * - `LineForm` is a named form of one labelled line of text, whose text its owner holds, with a Save button (disabled while saving; `submit` names its button, `Save` unless given) and anything under it, such as an `Alert`; with `submitLast` the button comes after what is under it, so Tab reaches a field there first. With `onCancel`, a Cancel button follows Save; with `focused`, its line takes the focus when it opens.
  * - `AreaForm` is `LineForm`'s form of a few growing lines of text, up to `limit` characters shown as a counter, where Enter starts a new line and Ctrl/Cmd+Enter saves.
  * - `ActionGroup` is a named group of what can be done to one thing.
- * - `ButtonRow` puts buttons side by side. A `Button` (and a `HeadingButton`) takes focus whenever `focused` turns true, such as when it appears.
+ * - `ButtonRow` puts buttons side by side. A `Button` (and a `HeadingButton`) takes focus whenever `focused` turns true, such as when it appears; with an `icon`, a `Button` shows that menu icon before its text.
  * - `TokenText` shows a secret, such as a fresh token, to copy.
  * - `ConfirmDialog` asks before an action, in a modal shadcn AlertDialog on Radix's primitives (ADR 0080), the one part built on a library: its title, a body naming exactly what happens, Cancel and a confirm button, in the destructive colour when the action can't be undone. It holds focus inside while open, Escape or Cancel calls `onCancel`, and focus goes back to what opened it when it closes. While `pending` both buttons are disabled and the confirm button says so; an `error` shows inside it. Its owner decides when it is `open`, so it never closes.
  * - `FormDialog` is a Radix modal form.

@@ -9,7 +9,7 @@ import { isAdmin } from "./is-admin.ts";
 import { useChannelSettings } from "./use-channel-settings.ts";
 import { useSyncExternalStore } from "react";
 
-const TEXT = { gear: "⚙︎", settings: "Settings" } as const;
+const TEXT = { settings: "Settings" } as const;
 
 interface ChannelHeaderToolsProps {
   readonly channel: ChannelName;
@@ -28,11 +28,8 @@ export function ChannelHeaderTools(props: ChannelHeaderToolsProps): ReactNode {
   return (
     <span className="flex items-center gap-2">
       {admin && (
-        <Button onClick={handleOpen}>
+        <Button icon="settings" onClick={handleOpen}>
           <span className="max-md:sr-only">{TEXT.settings}</span>
-          <span aria-hidden="true" className="md:hidden">
-            {TEXT.gear}
-          </span>
         </Button>
       )}
       {subscribed.status === "loaded" && <SubscriptionToggle channel={channel} state={subscribed} />}
