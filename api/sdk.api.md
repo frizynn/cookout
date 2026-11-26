@@ -207,6 +207,11 @@ interface SetDisplayNameRequest {
  */
 type Harness = Brand$1<"Harness">;
 declare const brand$7: unique symbol;
+interface WakeModel {
+  readonly name: string;
+  readonly label: string;
+  readonly hint?: string;
+}
 /** A channel's name: 1–80 lowercase letters, digits or `-`. Unique on a server. */
 type ChannelName = string & {
   readonly [brand$7]: "ChannelName";
@@ -233,12 +238,6 @@ interface FallbackWake {
   readonly harness: string;
   readonly model: string;
   readonly effort: string;
-}
-/** A model a harness can start a session on: `name` is what the harness is given, `label` what a person reads. */
-interface WakeModel {
-  readonly name: string;
-  readonly label: string;
-  readonly hint?: string;
 }
 /** A harness the board can wake an agent in, with the models and efforts it offers, the default of each first. */
 interface WakeHarness {
