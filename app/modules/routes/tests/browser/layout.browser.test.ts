@@ -83,7 +83,7 @@ test("the theme switch changes the theme at once, keeps it across a reload, and 
   await page.emulateMedia({ colorScheme: "light" });
 
   expect([systemDark, light, afterReload, await backgroundOf(page)]).toStrictEqual([
-    "rgb(10, 10, 10)",
+    "rgb(27, 32, 40)",
     "rgb(255, 255, 255)",
     "rgb(255, 255, 255)",
     "rgb(255, 255, 255)",

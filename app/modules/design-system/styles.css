@@ -17,17 +17,21 @@
  * - background, card, muted, surface, accent, hover, border: neutral surfaces (accent is the selected row, not the
  *   accent colour).
  */
+/*
+ * The dark theme is a dimmed slate, after GitHub's dark dimmed theme, rather than near-black: each step is a lighter
+ * layer, and muted text keeps 4.5:1 on the selected row.
+ */
 @theme {
   --font-sans:
     "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  --color-background: #0a0a0a;
-  --color-foreground: #ededed;
-  --color-card: #111111;
-  --color-muted: #1a1a1a;
-  --color-muted-foreground: #a1a1a1;
-  --color-border: #2e2e2e;
-  --color-accent: #1f1f1f;
+  --color-background: #1b2028;
+  --color-foreground: #d1d7e0;
+  --color-card: #212830;
+  --color-muted: #2a313c;
+  --color-muted-foreground: #9ea5ae;
+  --color-border: #3d444d;
+  --color-accent: #2f3742;
   --color-destructive: #ff6166;
   --color-mention-bg: rgb(255 178 36 / 0.09);
   --color-mention-bar: #f5a524;
@@ -37,8 +41,8 @@
   --color-link: #52a8ff;
   --color-draft-mention: #52a8ff;
   --color-online: #3ecf71;
-  --color-hover: rgb(255 255 255 / 0.035);
-  --color-surface: #0f0f0f;
+  --color-hover: rgb(255 255 255 / 0.04);
+  --color-surface: #1c222a;
   --radius-lg: 0.5rem;
   /* A message a link opened (#293): held for 1.5 s, then faded by 2 s (#298); with reduced motion it stays until unmarked. */
   --animate-linked-fade: linked-fade 2s ease-in forwards;

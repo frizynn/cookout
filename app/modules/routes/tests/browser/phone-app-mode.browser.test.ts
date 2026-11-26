@@ -20,7 +20,7 @@ test("added to an iPhone's home screen, the cookout opens as an app, full screen
   );
   await expect(page.locator('meta[name="theme-color"][media="(prefers-color-scheme: dark)"]')).toHaveAttribute(
     "content",
-    "#0a0a0a",
+    "#1b2028",
   );
 });
 
