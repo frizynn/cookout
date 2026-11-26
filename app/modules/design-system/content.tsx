@@ -11,7 +11,7 @@
  * - `IdentityRow` is a link to an identity, with its avatar, name, any tags and a muted detail line, highlighted when open.
  * - `Profile` is one identity's large avatar beside its first part, a `ProfileHead`, with every later part (its fields and actions) below at full width. With an `edit`, the avatar is a button named by its `label` that calls `onEdit`, with a pencil at its corner: on hover or focus with a mouse, always on a touch screen.
  * - `ProfileHead` holds a profile's `ProfileName` and the facts under it.
- * - `ProfileName` is an identity's name and any tags, as a heading. With an `edit`, a pencil button named by its `label` that calls `onEdit` ends the heading: shown on hover or focus with a mouse, always on a touch screen.
+ * - `ProfileName` is an identity's name and any tags, as a heading. With an `edit`, a pencil button named by its `label` that calls `onEdit` follows the heading, outside it, so the heading's name stays the identity's: shown on hover or focus with a mouse, always on a touch screen.
  * - `ProfileSection` is one group of a profile's fields or actions, ruled off from the group above; with nothing in it, it isn't shown.
  * - `DateText` is a moment as a date, in tabular figures.
  * - `QuietLink` is a muted link in such a line, such as a name linking to its profile.
