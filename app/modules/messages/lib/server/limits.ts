@@ -16,6 +16,8 @@ interface Checked extends Posted {
 
 const UNPROCESSABLE = 422;
 
+const TALKING = 2;
+
 function isActiveAgent(identity: Identity | undefined): identity is AgentIdentity {
   return Predicate.isNotUndefined(identity) && identity.kind === "agent" && identity.deactivated !== true;
 }
@@ -40,8 +42,14 @@ function isAgentAuthored(message: Message): boolean {
   return Predicate.isNotUndefined(message.author.owner);
 }
 
-function agentRunAtEnd(messages: readonly Message[]): number {
-  return Arr.takeWhile(Arr.reverse(messages), isAgentAuthored).length;
+function agentRunAtEnd(messages: readonly Message[]): readonly Message[] {
+  return Arr.takeWhile(Arr.reverse(messages), isAgentAuthored);
+}
+
+function agentsTalking(thread: readonly Message[], author: AgentIdentity, turns: number): boolean {
+  const run = agentRunAtEnd(thread);
+  const speakers = new Set([author.name, ...Arr.map(run, (each) => each.author.name)]);
+  return run.length >= turns && speakers.size >= TALKING;
 }
 
 function threadMessages(
@@ -83,7 +91,7 @@ function limitRefusal(
     }
     const thread = yield* threadMessages(storage, message.replyTo);
     const handedBack = message.mentions.includes(author.owner) && Arr.isReadonlyArrayEmpty(agents);
-    if (!handedBack && agentRunAtEnd(thread) >= limits.agentTurns) {
+    if (!handedBack && agentsTalking(thread, author, limits.agentTurns)) {
       return Option.some(turnLimitReached(limits, author.owner));
     }
     return Option.none();

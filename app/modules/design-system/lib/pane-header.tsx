@@ -9,9 +9,14 @@ const HEADER_BUTTONS = [
 export function PaneHeader(parts: PaneHeaderParts): ReactNode {
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b px-5 max-md:pr-14 max-md:pl-12">
-      <h1 className="rounded-sm text-[15px] font-semibold" tabIndex={-1}>
-        {parts.title}
-      </h1>
+      <div className="flex min-w-0 items-baseline gap-3 max-md:flex-col max-md:gap-0">
+        <h1 className="max-w-full truncate rounded-sm text-[15px] font-semibold" tabIndex={-1}>
+          {parts.title}
+        </h1>
+        {(parts.note ?? null) !== null && (
+          <p className="max-w-full truncate text-xs text-muted-foreground">{parts.note}</p>
+        )}
+      </div>
       {parts.description !== null && parts.description !== "" && (
         <p className="truncate border-l pl-3 text-xs text-muted-foreground max-md:hidden">{parts.description}</p>
       )}

@@ -84,6 +84,10 @@ export function inSearchResults(): Region {
   return regionOf(() => screen.getByRole("listbox", { name: "Search results" }));
 }
 
+export function inFormDialog(): Region {
+  return regionOf(() => screen.getByRole("dialog"));
+}
+
 export function inDialog(): Region {
   return regionOf(() => screen.getByRole("alertdialog"));
 }

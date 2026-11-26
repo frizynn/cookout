@@ -160,6 +160,7 @@ interface PillParts {
 interface PaneHeaderParts {
   readonly title: string;
   readonly description: string | null;
+  readonly note?: string | null;
   readonly children?: ReactNode;
 }
 

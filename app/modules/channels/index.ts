@@ -74,7 +74,7 @@ export const channelRoutingPath = "/v1/channels/:name/routing";
 export interface BoardLimits {
   /** How many agents one message of an agent may mention. A person has no limit. */
   readonly agentMentions: number;
-  /** How many messages in a row agents may post in one thread before a person writes there. */
+  /** How many messages in a row agents may post in one thread before a person writes there, counted only when two agents or more take part. */
   readonly agentTurns: number;
 }
 

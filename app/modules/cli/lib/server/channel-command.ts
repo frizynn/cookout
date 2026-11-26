@@ -45,7 +45,7 @@ const boardLimitsCommand = Command.make(
     ),
     agentTurns: boardLimitFlag(
       "agent-turns",
-      "How many messages in a row agents may post in a thread before a person writes there, 1-100. Default 6.",
+      "How many messages in a row two agents or more may post in a thread before a person writes there, 1-100. Default 6.",
     ),
   },
   ({ agentMentions, agentTurns }) => {

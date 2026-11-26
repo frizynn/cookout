@@ -1,4 +1,5 @@
 import { AgentAndSessionSections } from "./agent-and-session-sections.tsx";
+import { BoardSection } from "./board-section.tsx";
 import type { Composer } from "../../composer/index.ts";
 import { DisplayNames } from "./display-names.tsx";
 import type { IdentityName } from "../../sdk/index.ts";
@@ -37,6 +38,7 @@ export function SettingsSections(props: SettingsSectionsProps): ReactNode {
       >
         <ThemeChoice layout={props.layout} />
       </PageSection>
+      <BoardSection identities={composer.identities} me={me} section={section} />
       <AgentAndSessionSections identities={composer.identities} me={me} onLogOut={props.onLogOut} section={section} />
     </>
   );

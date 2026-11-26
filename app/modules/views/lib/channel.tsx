@@ -1,14 +1,14 @@
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import type { ComponentProps, ReactNode } from "react";
-import { Pane, PaneHeader } from "../../design-system/layout.tsx";
-import { useBoardStore, useChannelPage, useChannels, useSubscriptions } from "./use-board.ts";
+import { useBoardStore, useChannelPage, useSubscriptions } from "./use-board.ts";
 import { ChannelFeed } from "./channel-feed.tsx";
 import type { ChannelFeedProps } from "./channel-feed.tsx";
+import { ChannelHeader } from "./channel-header.tsx";
 import type { Composer } from "../../composer/index.ts";
 import { MessageFooter } from "./message-footer.tsx";
 import { NotBuiltView } from "./not-built.tsx";
+import { Pane } from "../../design-system/layout.tsx";
 import { SubscriptionRefusal } from "./subscription-refusal.tsx";
-import { SubscriptionToggle } from "./subscription-toggle.tsx";
 import { useSyncExternalStore } from "react";
 
 const TEXT = { missing: "No channel has this name.", nothing: "Nothing here" } as const;
@@ -27,23 +27,9 @@ interface ChannelProps {
   readonly unread: ChannelFeedProps["unread"];
 }
 
-function useDescription(name: ChannelName): string | null {
-  const channels = useChannels();
-  if (channels.status !== "loaded") {
-    return null;
-  }
-  for (const channel of channels.channels) {
-    if (channel.name === name && "description" in channel) {
-      return channel.description;
-    }
-  }
-  return null;
-}
-
 export function ChannelView(props: ChannelProps): ReactNode {
   const store = useBoardStore();
   const state = useChannelPage(props.channel);
-  const description = useDescription(props.channel);
   const subscribed = useSubscriptions();
   const readPosition = useSyncExternalStore(props.newLine.subscribe, props.newLine.snapshot);
   const draft = props.composer.channelDraft(props.channel);
@@ -53,9 +39,12 @@ export function ChannelView(props: ChannelProps): ReactNode {
   }
   return (
     <Pane onFiles={handleFiles} shown={props.channel}>
-      <PaneHeader description={description} title={`#${props.channel}`}>
-        {subscribed.status === "loaded" && <SubscriptionToggle channel={props.channel} state={subscribed} />}
-      </PaneHeader>
+      <ChannelHeader
+        channel={props.channel}
+        identities={props.composer.identities}
+        me={props.me}
+        subscribed={subscribed}
+      />
       <SubscriptionRefusal channel={props.channel} state={subscribed} />
       <ChannelFeed
         closing={store.calls}

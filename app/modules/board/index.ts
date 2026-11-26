@@ -132,6 +132,7 @@
 export { sameSnapshot, selectedStore } from "./lib/selected.ts";
 export type { BoardCalls, MessageDeletes, ThreadClosing } from "./lib/board-calls.ts";
 export type { ClosingRefusal } from "./lib/thread-closing.ts";
+export type { Answer } from "./lib/routing-calls.ts";
 export type { DeleteOutcome, MessageDeleting } from "./lib/message-deleting.ts";
 export type { ListedSchedules } from "./lib/schedules-slice.ts";
 export {

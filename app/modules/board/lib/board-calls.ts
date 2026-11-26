@@ -20,14 +20,17 @@ import type {
   ScheduledMessage,
   ScheduledMessageId,
 } from "../../scheduled-messages/index.ts";
+import type { RoutingCalls, RoutingClient } from "./routing-calls.ts";
 import type { SearchAnswer } from "../../search/web.ts";
 import { createMessageAcks } from "./message-acks.ts";
 import { createMessageDeleting } from "./message-deleting.ts";
 import { createThreadClosing } from "./thread-closing.ts";
 import { refusedAs } from "./subscriptions-slice.ts";
+import { routingCalls } from "./routing-calls.ts";
 
 type CallsClient = ClosingClient &
   DeletingClient &
+  RoutingClient &
   SubscriptionsClient &
   Pick<
     CookoutClient,
@@ -44,7 +47,7 @@ type CallsClient = ClosingClient &
 
 type ScheduleChange = "pause" | "resume" | "remove";
 
-interface BoardCalls {
+interface BoardCalls extends RoutingCalls {
   readonly createChannel: (request: CreateChannelRequest) => Promise<Channel>;
   readonly setSubscribed: (channel: ChannelName, subscribed: boolean, from: AskedFrom) => void;
   readonly close: (messageId: MessageId) => void;
@@ -164,6 +167,7 @@ function createBoardCalls(options: CallsOptions): BoardCalls {
   });
   return {
     ...scheduleCalls(options),
+    ...routingCalls(options),
     ack: createMessageAcks(client),
     askDelete: deleting.askDelete,
     cancelDelete: deleting.cancelDelete,
