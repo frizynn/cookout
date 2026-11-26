@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useAvatarImage } from "./use-avatar-image.ts";
 
 const SIZES = {
+  inline: { box: "h-4 w-4 text-[8px]", testId: "avatar" },
   large: { box: "h-14 w-14 text-lg", testId: "avatar" },
   small: { box: "h-8 w-8 text-xs", testId: "avatar" },
   tiny: { box: "h-5 w-5 text-[9px] ring-2 ring-background", testId: "replier-avatar" },

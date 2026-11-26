@@ -30,7 +30,7 @@ interface AvatarParts {
   readonly name: string;
   readonly agent: boolean;
   readonly presence: PresenceShown | null;
-  readonly size?: "large" | "small" | "tiny";
+  readonly size?: "inline" | "large" | "small" | "tiny";
 }
 
 interface SuggestionOptionParts {
