@@ -91,3 +91,18 @@ it.effect(
       ]);
     }).pipe(Effect.provide(testCookout({ triggers: "scripted" }))),
 );
+
+it.effect("past the board's agent turns, a reply that mentions its owner and another agent is still refused", () =>
+  Effect.gen(function* noPingPong() {
+    const on = yield* board;
+    yield* answer(() => on.cookout.client.setBoardLimits({ agentMentions: 1, agentTurns: 2 }));
+    const parent = yield* post(on.owner, `@${HELPER} ping`);
+    yield* reply(on.helper, parent, `@${OWNER} pong`);
+    const seen = yield* seenIn(on.owner, parent);
+    const refused = yield* refusal(() =>
+      on.owner.client.createMessage({ channel: "general", replyTo: parent.id, seen, text: `@ada @${HELPER} go on` }),
+    );
+
+    expect([refused.code, refused.status]).toStrictEqual(["agent_turn_limit", UNPROCESSABLE]);
+  }).pipe(Effect.provide(testCookout({ triggers: "scripted" }))),
+);

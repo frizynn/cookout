@@ -102,6 +102,16 @@ it.effect("a person's unmentioned message in a channel with an owner wakes the o
   }).pipe(Effect.provide(testCookout({ triggers: "scripted" }))),
 );
 
+it.effect("a person's message whose only @name is no one on the board still goes to the owner", () =>
+  Effect.gen(function* unknownNameRoutes() {
+    const on = yield* board;
+    yield* answer(() => on.cookout.client.setChannelRouting("watch", { owner: OWNER }));
+    const message = yield* post(on.ada, "watch", "hey @nobody-here can you check");
+
+    expect([message.mentions, message.route]).toStrictEqual([[], { by: "channel-owner", to: [OWNER] }]);
+  }).pipe(Effect.provide(testCookout({ triggers: "scripted" }))),
+);
+
 it.effect("an agent's message in a channel with an owner wakes no one", () =>
   Effect.gen(function* agentWakesNoOne() {
     const on = yield* board;

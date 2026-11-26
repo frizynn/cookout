@@ -1,8 +1,9 @@
 import type { AgentIdentity, Identity, IdentityName } from "../../../identities/index.ts";
 import { Array as Arr, Duration, Effect, Option, Predicate, Schema } from "effect";
-import type { BoardLimits, Channel, MessageRoute } from "../../../channels/index.ts";
-import type { Message, MessageId } from "../../index.ts";
+import type { Channel, MessageRoute } from "../../../channels/index.ts";
 import type { NewMessage, StorageUnavailable } from "../../../storage/server.ts";
+import { checkAgentLimits, isActiveAgent } from "./limits.ts";
+import type { Posted } from "./limits.ts";
 import type { Refusal } from "../../../http/index.ts";
 import { RouterCaller } from "../../../channels/server.ts";
 import type { RouterCallerService } from "../../../channels/server.ts";
@@ -18,11 +19,6 @@ interface Routing {
   readonly router: RouterCallerService;
 }
 
-interface Posted {
-  readonly author: Identity;
-  readonly message: NewMessage;
-}
-
 interface Asking extends Posted {
   readonly routing: Routing;
   readonly channel: Channel & { readonly router: string };
@@ -31,7 +27,6 @@ interface Asking extends Posted {
 
 type Route = Option.Option<MessageRoute>;
 
-const UNPROCESSABLE = 422;
 const ROUTER_TIMEOUT_SECONDS = 5;
 const ROUTER_TIMED_OUT = `the router didn't answer within ${String(ROUTER_TIMEOUT_SECONDS)} s`;
 const ROUTER_PICKED_NO_ONE = "the router picked no agent";
@@ -50,93 +45,6 @@ const RouterBodySchema = Schema.Struct({
   text: Schema.String,
 });
 const encodeRouterBody = Schema.encodeEffect(Schema.fromJsonString(RouterBodySchema));
-
-function isActiveAgent(identity: Identity | undefined): identity is AgentIdentity {
-  return Predicate.isNotUndefined(identity) && identity.kind === "agent" && identity.deactivated !== true;
-}
-
-function mentionLimitReached(limits: BoardLimits, owner: string): Refusal {
-  return {
-    code: "agent_mention_limit",
-    message: `An agent may mention at most ${String(limits.agentMentions)} agent(s) in one message on this board. Mention your owner @${owner} to ask for more.`,
-    status: UNPROCESSABLE,
-  };
-}
-
-function turnLimitReached(limits: BoardLimits, owner: string): Refusal {
-  return {
-    code: "agent_turn_limit",
-    message: `Agents have posted ${String(limits.agentTurns)} messages in a row in this thread, the most this board allows before a person writes. Mention your owner @${owner} in your reply to hand it back.`,
-    status: UNPROCESSABLE,
-  };
-}
-
-function isAgentAuthored(message: Message): boolean {
-  return Predicate.isNotUndefined(message.author.owner);
-}
-
-function agentRunAtEnd(messages: readonly Message[]): number {
-  return Arr.takeWhile(Arr.reverse(messages), isAgentAuthored).length;
-}
-
-function threadMessages(
-  storage: Storage["Service"],
-  replyTo: MessageId | undefined,
-): Effect.Effect<readonly Message[], StorageUnavailable> {
-  return Option.match(Option.fromUndefinedOr(replyTo), {
-    onNone: () => Effect.succeed([]),
-    onSome: (parent) =>
-      Effect.map(storage.getThread(parent), (thread) =>
-        Option.match(Option.fromUndefinedOr(thread), {
-          onNone: () => [],
-          onSome: ({ parent: first, replies }) => [first, ...replies],
-        }),
-      ),
-  });
-}
-
-function mentionedAgents(
-  storage: Storage["Service"],
-  { author, message }: Posted,
-): Effect.Effect<readonly IdentityName[], StorageUnavailable> {
-  return Effect.filter(
-    Arr.filter(message.mentions, (name) => name !== author.name),
-    (name) => Effect.map(storage.findIdentityByName(name), isActiveAgent),
-  );
-}
-
-function limitRefusal(
-  storage: Storage["Service"],
-  author: AgentIdentity,
-  message: NewMessage,
-): Effect.Effect<Option.Option<Refusal>, StorageUnavailable> {
-  return Effect.gen(function* checkLimits() {
-    const limits = yield* storage.getBoardLimits();
-    const agents = yield* mentionedAgents(storage, { author, message });
-    if (agents.length > limits.agentMentions) {
-      return Option.some(mentionLimitReached(limits, author.owner));
-    }
-    const thread = yield* threadMessages(storage, message.replyTo);
-    const handedBack = message.mentions.includes(author.owner);
-    if (!handedBack && agentRunAtEnd(thread) >= limits.agentTurns) {
-      return Option.some(turnLimitReached(limits, author.owner));
-    }
-    return Option.none();
-  });
-}
-
-function checkAgentLimits(
-  storage: Storage["Service"],
-  { author, message }: Posted,
-): Effect.Effect<void, Refusal | StorageUnavailable> {
-  if (author.kind !== "agent") {
-    return Effect.void;
-  }
-  return Effect.flatMap(
-    limitRefusal(storage, author, message),
-    Option.match({ onNone: () => Effect.void, onSome: Effect.fail }),
-  );
-}
 
 function listedAgent(agent: AgentIdentity): typeof RouterAgentSchema.Type {
   return {
@@ -253,9 +161,18 @@ function routeIn(routing: Routing, channel: Channel, posted: Posted): Effect.Eff
 }
 
 function needsRoute({ author, message }: Posted): boolean {
-  return (
-    author.kind === "human" && Predicate.isUndefined(message.replyTo) && Arr.isReadonlyArrayEmpty(message.mentions)
-  );
+  return author.kind === "human" && Predicate.isUndefined(message.replyTo);
+}
+
+function isActive(identity: Identity | undefined): boolean {
+  return Predicate.isNotUndefined(identity) && identity.deactivated !== true;
+}
+
+function knownMentions(
+  storage: Storage["Service"],
+  message: NewMessage,
+): Effect.Effect<readonly IdentityName[], StorageUnavailable> {
+  return Effect.filter(message.mentions, (name) => Effect.map(storage.findIdentityByName(name), isActive));
 }
 
 function routedMessage(routing: Routing, posted: Posted): Effect.Effect<NewMessage, StorageUnavailable> {
@@ -264,8 +181,9 @@ function routedMessage(routing: Routing, posted: Posted): Effect.Effect<NewMessa
     return Effect.succeed(message);
   }
   return Effect.gen(function* routeMessage() {
+    const known = yield* knownMentions(routing.storage, message);
     const channel = yield* routing.storage.findChannel(message.channel);
-    if (Predicate.isUndefined(channel)) {
+    if (Arr.isReadonlyArrayNonEmpty(known) || Predicate.isUndefined(channel)) {
       return message;
     }
     const route = yield* routeIn(routing, channel, posted);
@@ -283,7 +201,7 @@ function checkedDraft({
   routing,
   ...posted
 }: Drafted): Effect.Effect<NewMessage, Refusal | StorageUnavailable> {
-  const checked = checkAgentLimits(routing.storage, posted);
+  const checked = checkAgentLimits({ ...posted, storage: routing.storage });
   if (!routes) {
     return Effect.as(checked, posted.message);
   }
