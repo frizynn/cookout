@@ -1,10 +1,12 @@
 /**
- * The design system: hand-written Tailwind components styled after shadcn/ui (its token names and its card), in a Vercel-like neutral look with small pops of colour (ADR 0080). Every view builds from these and none styles itself, so no component takes classes. `styles.css` is the Tailwind theme, which `index.html` loads: its tokens are CSS variables, dark by default, light under `data-theme="light"` on the root element, and light under `prefers-color-scheme: light` unless `data-theme="dark"`; components read tokens, never raw colours. Text and the UI are sans, times and channel names mono.
+ * The design system: hand-written Tailwind components styled after shadcn/ui (its token names and its card), in a Vercel-like neutral look with small pops of colour (ADR 0080). Every view builds from these and none styles itself, so no component takes classes. `styles.css` is the Tailwind theme, which `index.html` loads: its tokens are CSS variables, dark by default, light under `data-theme="light"` on the root element, and light under `prefers-color-scheme: light` unless `data-theme="dark"`; components read tokens, never raw colours. Text, names and times are sans (counts and times in tabular figures); only code, tokens and keys are mono. On a wide screen the sidebar sits on the page and the column of panes is a card inset beside it.
  *
  * This entry point is its layout: the page, its panes and panels, and the sidebar. `messages.tsx`, `feed.tsx`, `controls.tsx` and `content.tsx` are its other parts.
  *
  * - `Workspace` is the page around every route once logged in: a `Sidebar` on the left, and a `WorkspaceMain` of the route's panes on the right, in a `WorkspaceColumn` under any `StatusBar`. On a narrow screen it is pinned to the visual viewport, the part of the screen left visible, since iOS Safari pans that part over the page when the keyboard opens instead of shrinking the page; the page itself never scrolls. iOS tells of that pan late or never (a resize lost as the keyboard goes down, a return from the background, a turn of the phone), so `useVisibleArea` reads it on every frame for a second after each moment it may have changed, and writes it to CSS variables the frame reads: the height only while a text field holds the keyboard up, and nothing under a pinch zoom.
- * - `Sidebar` is on the left (on a narrow screen, behind a button that opens and closes it), which a button at its top collapses to a narrow rail holding only that button on a wide screen (`collapsed`), and, given an `edge`, is as wide as it says, its right edge a `PanelEdge` (`side` `right`; no `onClose`, so a drag stops at its narrowest), with its `SidebarBody` and its `SidebarFooter`.
+ * - `Sidebar` is on the left (on a narrow screen, behind a button that opens and closes it), which a button at its top collapses to a narrow rail holding only that button on a wide screen (`collapsed`), and, given an `edge`, is as wide as it says, its right edge a `PanelEdge` (`side` `right`; no `onClose`, so a drag stops at its narrowest), with any `SidebarSearch` under its header, its `SidebarBody` and its `SidebarFooter`.
+ * - `SidebarSearch` holds the search box in the sidebar, shown only on a wide screen (the sidebar shows nothing but its button as a rail).
+ * - `ColumnSearch` holds the search box atop the `WorkspaceColumn`, shown only where the sidebar can't show it: on a narrow screen, or while the sidebar is a rail.
  * - `SidebarBody` is the sidebar's body of links (following one, but not pressing a button, closes it on a narrow screen).
  * - `SidebarFooter` is the sidebar's footer.
  * - `WorkspaceMain` holds the route's panes on the right.
@@ -16,7 +18,7 @@
  * - `HeadingButton` is a plus named by its label that starts something new, such as a channel.
  * - `FooterLink` is a link in the footer with a gear, such as Settings, highlighted when open.
  * - `Pane` is the main column (given `onFiles`, a drop zone over all of it, lit while files are dragged over it, that hands files dropped on it to `onFiles` and leaves anything else alone), with a `PaneHeader`, a named `Page` or `ScrollArea`, and anything under it, such as a message box in a `BoxFrame` with its keyboard hint.
- * - `PaneHeader` is a pane's title (a level-1 heading that takes focus from a script, not from Tab), description and any action on its right, such as a `PressButton`; its title is mono, as a channel's name, unless `sans`.
+ * - `PaneHeader` is a pane's title (a level-1 heading that takes focus from a script, not from Tab), description and any action on its right, such as a `PressButton`.
  * - `Page` is named and scrolls a centred column of `PageSection`s.
  * - `PageSection` is headed by a link to itself, its heading focused when `focused` (such as Settings).
  * - `ScrollArea` is named and stays scrolled to the end as what it counts grows, unless scrolled up.
@@ -63,5 +65,7 @@ export {
   StatusBar,
   ListArea,
   Toolbar,
+  SidebarSearch,
+  ColumnSearch,
 } from "./lib/layout.ts";
 export type { PanelAction, PanelAloneParts, PanelEdgeParts, ShortcutLinkParts } from "./lib/layout.ts";

@@ -22,7 +22,7 @@ export function MessageTime(parts: ShownTimeParts): ReactNode {
   return (
     <Tooltip lines={linesOf(parts)}>
       <time
-        className={`shrink-0 rounded-sm font-mono whitespace-nowrap text-muted-foreground ${shownClass(parts.hidden)}`}
+        className={`shrink-0 rounded-sm whitespace-nowrap tabular-nums text-muted-foreground ${shownClass(parts.hidden)}`}
         dateTime={parts.iso}
         tabIndex={FOCUSABLE}
       >

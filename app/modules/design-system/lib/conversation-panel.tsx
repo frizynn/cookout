@@ -40,7 +40,7 @@ export function ConversationPanel(parts: ConversationPanelParts): ReactNode {
       <header className="flex h-14 shrink-0 items-center gap-2 border-b px-5">
         <BackLink href={parts.backHref} label={parts.backLabel} />
         <h2 className="shrink-0 text-sm font-semibold @max-lg:sr-only">{parts.label}</h2>
-        <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">{parts.detail}</span>
+        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{parts.detail}</span>
         {(parts.actions ?? NO_ACTIONS).map((action) => (
           <PanelActionButton action={action} key={action.label} />
         ))}

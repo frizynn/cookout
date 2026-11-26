@@ -21,7 +21,7 @@ export function SettingsView(props: SettingsProps): ReactNode {
   const handleLogOut = props.session.logOut;
   return (
     <Pane>
-      <PaneHeader description={TEXT.description} sans title={TEXT.title} />
+      <PaneHeader description={TEXT.description} title={TEXT.title} />
       <Page label={TEXT.title}>
         <SettingsSections
           composer={props.composer}

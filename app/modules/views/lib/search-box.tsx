@@ -20,7 +20,13 @@ const NARROW_LOOK = [
   "max-md:focus-within:px-3 max-md:focus-within:py-2 max-md:focus-within:[&>input]:h-10 max-md:focus-within:[&>input]:opacity-100",
 ].join(" ");
 
+const SIDEBAR_LOOK =
+  "group/search relative shrink-0 px-2 pb-2 [&>div]:right-auto [&>div]:left-2 [&>div]:w-[min(36rem,calc(100vw-1.5rem))]";
+
+const LOOKS = { column: NARROW_LOOK, sidebar: SIDEBAR_LOOK } as const;
+
 interface SearchBoxProps {
+  readonly place: keyof typeof LOOKS;
   readonly identities: Identities;
   readonly keymap: Keymap;
   readonly search: Search;
@@ -38,7 +44,7 @@ export function SearchBox(props: SearchBoxProps): ReactNode {
     pick: handlePick,
   } = useSearchBox({ ...props, box: field, land: useContext(LandingContext).ask });
   return (
-    <div className={NARROW_LOOK} ref={area}>
+    <div className={LOOKS[props.place]} ref={area}>
       <SearchIcon />
       <ComboboxField
         active={lists.active}

@@ -22,7 +22,7 @@ export function PanelTitleText(parts: PanelTitleTextParts): ReactNode {
       <h2 className="rounded-sm text-sm font-semibold" tabIndex={tabIndexOf(parts.focusable)}>
         {parts.label}
       </h2>
-      <span className="flex-1 font-mono text-xs text-muted-foreground">{parts.detail}</span>
+      <span className="flex-1 truncate text-xs text-muted-foreground">{parts.detail}</span>
     </div>
   );
 }

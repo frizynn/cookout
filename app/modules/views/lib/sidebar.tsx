@@ -1,20 +1,20 @@
+import type { ComponentProps, ReactNode } from "react";
+import { HOME, useSidebarState } from "./use-sidebar-state.ts";
 import { Sidebar, SidebarBody, SidebarFooter } from "../../design-system/layout.tsx";
 import type { Identity } from "../../sdk/index.ts";
 import type { Layout } from "../../layout/index.ts";
-import type { ReactNode } from "react";
 import { SIDEBAR } from "./sidebar-roving.ts";
 import { SidebarLinks } from "./sidebar-links.tsx";
 import type { SidebarLinksProps } from "./sidebar-links.tsx";
+import { SidebarSearchBox } from "./sidebar-search-box.tsx";
 import { SidebarSettings } from "./sidebar-settings.tsx";
-import { hrefOf } from "../../paths/index.ts";
 import { sidebarEdge } from "./sidebar-edge.ts";
-import { useSidebarState } from "./use-sidebar-state.ts";
 
 const TEXT = { name: "cookout" } as const;
 
-const HOME = hrefOf({ name: "inbox", selected: null });
-
-interface SidebarProps extends Pick<SidebarLinksProps, "creation" | "keymap" | "route" | "scheduleList" | "unread"> {
+interface SidebarProps
+  extends Pick<SidebarLinksProps, "creation" | "keymap" | "route" | "scheduleList" | "unread">,
+    Pick<ComponentProps<typeof SidebarSearchBox>, "identities" | "search"> {
   readonly identity: Identity;
   readonly layout: Layout;
 }
@@ -34,6 +34,7 @@ export function SidebarView(props: SidebarProps): ReactNode {
       open={state.sidebar}
       title={TEXT.name}
     >
+      <SidebarSearchBox identities={props.identities} keymap={props.keymap} search={props.search} />
       <SidebarBody onFollow={handleFollow}>
         <SidebarLinks
           creation={props.creation}

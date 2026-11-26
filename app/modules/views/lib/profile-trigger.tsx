@@ -1,5 +1,6 @@
 import type { Identity, IdentityName } from "../../sdk/index.ts";
 import type { Composer } from "../../composer/index.ts";
+import { ProfileSection } from "../../design-system/content.tsx";
 import type { ReactNode } from "react";
 import { TriggerForm } from "./trigger-form.tsx";
 
@@ -18,5 +19,9 @@ export function ProfileTrigger(props: ProfileTriggerProps): ReactNode {
   if (!ownedBy(identity, props.me)) {
     return null;
   }
-  return <TriggerForm name={identity.name} settings={props.composer.trigger(identity.name)} />;
+  return (
+    <ProfileSection>
+      <TriggerForm name={identity.name} settings={props.composer.trigger(identity.name)} />
+    </ProfileSection>
+  );
 }

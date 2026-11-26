@@ -54,7 +54,7 @@ export function PeopleView(props: PeopleProps): ReactNode {
   const handleToggle = layout.toggleDeactivated;
   return (
     <Pane>
-      <PaneHeader description={`${String(listed.length)} identities`} sans title={TEXT.title} />
+      <PaneHeader description={`${String(listed.length)} identities`} title={TEXT.title} />
       <Toolbar>
         <FilterField label={TEXT.filter} onEdit={handleEdit} value={state.identityFilter} />
         <KindFilter counts={countsOf(matching)} layout={layout} value={state.identityKind} />

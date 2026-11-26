@@ -24,7 +24,7 @@ export function FeedNoticeTitle(parts: FeedNoticeTitleParts): ReactNode {
       </a>
       {parts.displayName !== null && <span className="text-xs text-muted-foreground">{`@${parts.name}`}</span>}
       {parts.note !== null && <span className="text-xs text-muted-foreground">{parts.note}</span>}
-      <span className="ml-auto shrink-0 font-mono text-[11px] text-muted-foreground">{parts.time}</span>
+      <span className="ml-auto shrink-0 text-[11px] text-muted-foreground tabular-nums">{parts.time}</span>
     </span>
   );
 }

@@ -16,7 +16,7 @@ export function InboxHeader(props: InboxHeaderProps): ReactNode {
   const { state } = props;
   return (
     <>
-      <PaneHeader description={DESCRIPTION} sans title={props.title}>
+      <PaneHeader description={DESCRIPTION} title={props.title}>
         {state.status === "loaded" && <MarkAllRead state={state} unread={props.unread} />}
       </PaneHeader>
       <DeletedNotice />

@@ -31,7 +31,7 @@ export function LineForm(parts: LineFormParts): ReactNode {
   }, [onSubmit]);
   return (
     <form action={submitted} aria-label={parts.label} className="flex flex-col gap-1.5">
-      <label className="text-xs text-muted-foreground max-md:text-[13px] max-md:font-medium" htmlFor={id}>
+      <label className="text-xs font-medium text-foreground max-md:text-[13px]" htmlFor={id}>
         {parts.field}
       </label>
       <span className="flex gap-2">

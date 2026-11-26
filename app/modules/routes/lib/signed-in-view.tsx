@@ -17,18 +17,20 @@ interface SignedInViewProps {
 export function SignedInView(props: SignedInViewProps): ReactNode {
   const { stores } = props;
   const { layout } = stores;
-  const { sidebar } = useSyncExternalStore(layout.subscribe, layout.snapshot);
+  const { collapsed, sidebar } = useSyncExternalStore(layout.subscribe, layout.snapshot);
   const handleToggle = layout.toggleSidebar;
   return (
     <ScheduleLists me={props.identity} scheduleList={stores.scheduleList} scheduling={stores.scheduling}>
       <Workspace onToggleSidebar={handleToggle} sidebarOpen={sidebar}>
         <SidebarView
           creation={stores.channelCreation}
+          identities={stores.composer.identities}
           identity={props.identity}
           keymap={stores.keymap}
           layout={layout}
           route={props.route}
           scheduleList={stores.scheduleList}
+          search={stores.search}
           unread={stores.unread}
         />
         <SidebarKeys
@@ -44,6 +46,7 @@ export function SignedInView(props: SignedInViewProps): ReactNode {
           me={props.identity.name}
           profile={props.profile}
           route={props.route}
+          sidebarCollapsed={collapsed}
           sidebarOpen={sidebar}
           stores={stores}
         />

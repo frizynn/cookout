@@ -1,3 +1,4 @@
+import { NavLabel } from "./nav-label.tsx";
 import type { NavLinkParts } from "./parts.ts";
 import type { ReactNode } from "react";
 
@@ -29,14 +30,11 @@ function linkStyle(parts: NavLinkParts): string {
   return "text-muted-foreground hover:bg-hover hover:text-foreground";
 }
 
-const FONTS = { channel: "font-mono", inbox: "", people: "" } as const;
-
 function textStyle(parts: NavLinkParts): string {
-  const font = FONTS[parts.icon];
   if (parts.marked) {
-    return `${font} font-semibold`;
+    return "font-semibold";
   }
-  return font;
+  return "";
 }
 
 function currentOf(active: boolean): "page" | false {
@@ -61,7 +59,9 @@ export function NavAnchor(parts: NavAnchorParts): ReactNode {
       <span aria-hidden="true" className="flex w-4 justify-center text-muted-foreground">
         {ICONS[link.icon]}
       </span>
-      <span className={`flex-1 truncate ${textStyle(link)}`}>{link.label}</span>
+      <span className={`flex-1 truncate ${textStyle(link)}`}>
+        <NavLabel label={link.label} />
+      </span>
       {link.children}
     </a>
   );

@@ -1,5 +1,6 @@
 import type { KeyboardEvent, ReactNode } from "react";
 import { useCallback, useId, useRef } from "react";
+import { SECONDARY_BUTTON } from "./button-look.ts";
 
 interface AreaFormParts {
   readonly label: string;
@@ -42,7 +43,7 @@ export function AreaForm(parts: AreaFormParts): ReactNode {
   }, [onSubmit]);
   return (
     <form action={submitted} aria-label={parts.label} className="flex flex-col gap-1.5">
-      <label className="text-xs text-muted-foreground max-md:text-[13px] max-md:font-medium" htmlFor={id}>
+      <label className="text-xs font-medium text-foreground max-md:text-[13px]" htmlFor={id}>
         {parts.field}
       </label>
       <textarea
@@ -57,11 +58,7 @@ export function AreaForm(parts: AreaFormParts): ReactNode {
       />
       <span className="flex items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground tabular-nums">{`${String(parts.value.length)}/${String(parts.limit)}`}</span>
-        <button
-          className="h-8 rounded-md border bg-foreground px-3 text-xs font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50 max-md:min-h-11 max-md:rounded-[10px] max-md:px-4 max-md:text-[15px] max-md:border-transparent max-md:bg-muted max-md:text-foreground"
-          disabled={parts.saving}
-          type="submit"
-        >
+        <button className={SECONDARY_BUTTON} disabled={parts.saving} type="submit">
           {parts.saving && SAVING}
           {!parts.saving && SAVE}
         </button>

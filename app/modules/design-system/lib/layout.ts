@@ -30,3 +30,5 @@ export { WorkspaceColumn } from "./workspace-column.tsx";
 export { StatusBar } from "./status-bar.tsx";
 export { ListArea } from "./list-area.tsx";
 export { Toolbar } from "./toolbar.tsx";
+export { SidebarSearch } from "./sidebar-search.tsx";
+export { ColumnSearch } from "./column-search.tsx";

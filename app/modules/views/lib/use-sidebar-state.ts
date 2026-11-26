@@ -1,7 +1,10 @@
 import { useCallback, useContext, useSyncExternalStore } from "react";
 import { LandingContext } from "../../landing/index.ts";
 import type { Layout } from "../../layout/index.ts";
+import { hrefOf } from "../../paths/index.ts";
 import { isNarrowWindow } from "./narrow-window.ts";
+
+const HOME = hrefOf({ name: "inbox", selected: null });
 
 interface SidebarState {
   readonly state: ReturnType<Layout["snapshot"]>;
@@ -20,4 +23,4 @@ function useSidebarState(layout: Layout): SidebarState {
   return { handleFollow, state };
 }
 
-export { useSidebarState };
+export { HOME, useSidebarState };

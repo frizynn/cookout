@@ -1,9 +1,9 @@
 import {
+  Button,
   ButtonRow,
   Form,
   InputField,
   LinesArea,
-  QuietButton,
   SubmitButton,
   TextField,
 } from "../../design-system/controls.tsx";
@@ -59,9 +59,9 @@ export function TriggerForm(props: TriggerFormProps): ReactNode {
       <ButtonRow>
         <SubmitButton disabled={saving}>{TEXT.save}</SubmitButton>
         {hasTrigger(state) && (
-          <QuietButton disabled={saving} onClick={handleClear}>
+          <Button disabled={saving} onClick={handleClear}>
             {TEXT.clear}
-          </QuietButton>
+          </Button>
         )}
       </ButtonRow>
       <TriggerResultLine loaded={state.loaded} />

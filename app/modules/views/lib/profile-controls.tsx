@@ -2,6 +2,7 @@ import type { Identity, IdentityName } from "../../sdk/index.ts";
 import { AdminToggle } from "./admin-toggle.tsx";
 import type { Identities } from "../../composer/index.ts";
 import { ProfileActions } from "./profile-actions.tsx";
+import { ProfileSection } from "../../design-system/content.tsx";
 import type { ReactNode } from "react";
 
 interface ProfileControlsProps {
@@ -12,9 +13,9 @@ interface ProfileControlsProps {
 
 export function ProfileControls(props: ProfileControlsProps): ReactNode {
   return (
-    <>
+    <ProfileSection>
       <AdminToggle identities={props.identities} identity={props.identity} me={props.me} />
       <ProfileActions identities={props.identities} identity={props.identity} me={props.me} />
-    </>
+    </ProfileSection>
   );
 }

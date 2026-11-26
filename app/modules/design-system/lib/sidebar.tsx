@@ -41,14 +41,14 @@ export function Sidebar(parts: SidebarParts): ReactNode {
   return (
     <nav
       aria-label={parts.label}
-      className={`${widthStyle(rail)} shrink-0 flex-col border-r bg-card ${openStyle(parts.open)}`}
+      className={`${widthStyle(rail)} shrink-0 flex-col border-r bg-card md:border-r-0 ${openStyle(parts.open)}`}
       style={widthOf(rail, parts.edge.width)}
     >
       {!rail && <PanelEdge edge={parts.edge} />}
       <div className={`flex h-14 shrink-0 items-center ${headerStyle(rail)}`}>
         {!rail && (
           <a
-            className="rounded font-mono text-sm font-semibold tracking-tight hover:text-muted-foreground"
+            className="rounded text-[15px] font-semibold tracking-tight hover:text-muted-foreground"
             href={parts.home}
             onClick={handleFollowHome}
           >

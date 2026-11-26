@@ -6,10 +6,7 @@ const TEXT = { required: "required" } as const;
 export function FieldLabel(parts: FieldLabelParts): ReactNode {
   return (
     <span className="flex items-baseline gap-2">
-      <label
-        className="font-mono text-xs text-foreground max-md:font-sans max-md:text-[13px] max-md:font-medium"
-        htmlFor={parts.ids.control}
-      >
+      <label className="text-xs font-medium text-foreground max-md:text-[13px]" htmlFor={parts.ids.control}>
         {parts.label}
       </label>
       {parts.required && (
