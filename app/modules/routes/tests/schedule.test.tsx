@@ -4,6 +4,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { inPane, inThread } from "./regions.ts";
 import type { ScheduledMessage } from "../../scheduled-messages/index.ts";
 import { adminClient } from "./identities.ts";
+import { clockStoppedAt } from "./clock.ts";
 import { openAt } from "./render.tsx";
 
 const SHOWN_RUNS = 3;
@@ -30,6 +31,21 @@ function edit(label: string, value: string): void {
 function recurring(cron: string): void {
   fireEvent.click(within(dialog()).getByRole("radio", { name: "Recurring" }));
   edit("Cron expression", cron);
+}
+
+interface Picking {
+  readonly field: string;
+  readonly empty: string;
+  readonly choices: readonly string[];
+}
+
+function picked(pickings: readonly Picking[]): void {
+  for (const { choices, empty, field } of pickings) {
+    fireEvent.click(within(dialog()).getByRole("button", { name: `${field}: ${empty}` }));
+    for (const choice of choices) {
+      fireEvent.click(within(screen.getByRole("dialog", { name: field })).getByRole("button", { name: choice }));
+    }
+  }
 }
 
 async function runsShown(): Promise<readonly string[]> {
@@ -109,14 +125,19 @@ it("schedule… opens a dialog with the composer's text, and saving a recurring 
   close();
 });
 
-it("a once schedule is created with its date, time and zone", { timeout: 10_000 }, async () => {
+it("a once schedule is created with the day picked from its calendar, the time from its list, and its zone", {
+  timeout: 10_000,
+}, async () => {
   expect.hasAssertions();
 
+  clockStoppedAt("2099-05-20T12:00:00.000Z");
   const close = await openChannel("web-schedule-once", "The deploy window opens now");
   recurring("0 9 * * *");
   fireEvent.click(within(dialog()).getByRole("radio", { name: "Once" }));
-  edit("Date", "2099-06-01");
-  edit("Time", "09:30");
+  picked([
+    { choices: ["Next month", "Monday, 1 June 2099"], empty: "Pick a day", field: "Date" },
+    { choices: ["09:30"], empty: "Pick a time", field: "Time" },
+  ]);
   edit("Time zone", "Europe/London");
   const schedules = await saved("web-schedule-once");
 

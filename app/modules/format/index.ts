@@ -17,6 +17,11 @@
  * is scheduled in (`Mon, 1 Dec 2026, 09:00`).
  * `recentDays()` is today, yesterday, a week ago and a month ago (the same day of the month before, or its last day
  * if it has fewer), each as its local `YYYY-MM-DD` and named, for the search box's date filters.
+ * For a date picker, `todayIn(timeZone)` is today's `YYYY-MM-DD` in a zone (the browser's while the zone isn't a
+ * real one), `calendarMonth(month)` lays a `YYYY-MM` out in whole weeks from Monday, each day with its number, its
+ * full spoken name and whether it is in that month, `monthOf(day)` is a day's month, `shiftDays({ day, by })` moves a
+ * day by days and `shiftMonths({ day, by })` by months (to the month's last day when it is shorter), and `dayText({ day, today })`
+ * writes a day short (`Thu, 26 Nov`), with its year when that isn't today's (`Fri, 1 Jan 2027`).
  * This is the web UI's one reader of `Date` and its one clock.
  */
 const DAY = 1;
@@ -218,4 +223,15 @@ export function runTimeIn(run: RunTime): string {
 }
 
 export { runPartsIn } from "./lib/run-parts.ts";
+export {
+  type CalendarDay,
+  type CalendarMonth,
+  type CalendarWeek,
+  calendarMonth,
+  dayText,
+  monthOf,
+  shiftDays,
+  shiftMonths,
+  todayIn,
+} from "./lib/calendar.ts";
 export { type Clock, browserClock } from "./lib/browser-clock.ts";

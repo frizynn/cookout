@@ -1,9 +1,11 @@
 import { CONTROL, useFieldIds } from "./field-ids.ts";
 import { useCallback, useRef } from "react";
+import { DateField } from "./date-field.tsx";
 import { FieldLabel } from "./field-label.tsx";
 import { FieldNotes } from "./field-notes.tsx";
 import type { InputFieldParts } from "./prompt-parts.ts";
 import type { ReactNode } from "react";
+import { TimeField } from "./time-field.tsx";
 
 const STEPS = { date: "any", integer: "1", number: "any", text: "any", time: "60" } as const;
 const TYPES = { date: "date", integer: "number", number: "number", text: "text", time: "time" } as const;
@@ -17,6 +19,33 @@ export function InputField(parts: InputFieldParts): ReactNode {
       onEdit(input.current.value);
     }
   }, [onEdit]);
+  const { error, help, label, required, value } = parts;
+  if (parts.kind === "date") {
+    return (
+      <DateField
+        error={error}
+        help={help}
+        kind="date"
+        label={label}
+        onEdit={onEdit}
+        required={required}
+        value={value}
+      />
+    );
+  }
+  if (parts.kind === "time") {
+    return (
+      <TimeField
+        error={error}
+        help={help}
+        kind="time"
+        label={label}
+        onEdit={onEdit}
+        required={required}
+        value={value}
+      />
+    );
+  }
   return (
     <div className="flex flex-col gap-1">
       <FieldLabel ids={ids} label={parts.label} required={parts.required} />
