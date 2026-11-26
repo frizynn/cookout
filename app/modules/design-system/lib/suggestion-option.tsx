@@ -7,7 +7,11 @@ export function SuggestionOption(parts: SuggestionOptionParts): ReactNode {
   const { identity, option, presence } = parts;
   return (
     <>
-      {identity !== null && <Avatar agent={identity.agent} name={identity.name} presence={null} size="tiny" />}
+      {identity !== null && (
+        <span className="flex self-center">
+          <Avatar agent={identity.agent} name={identity.name} presence={null} size="tiny" />
+        </span>
+      )}
       {presence !== null && (
         <PresenceDot
           label={presence.label}
