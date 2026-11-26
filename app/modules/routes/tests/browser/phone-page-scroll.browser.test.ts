@@ -119,3 +119,21 @@ test("on a phone with the keyboard open the channel's header and message box sta
 
   expect(bottom).toBeLessThanOrEqual(KEYBOARD.top + KEYBOARD.height);
 });
+
+test.describe("with a mouse on a wide screen", () => {
+  test.use({ hasTouch: false, isMobile: false, viewport: { height: 900, width: 1440 } });
+
+  test("zooming in on a wide screen neither moves nor shrinks the board", async ({ page }) => {
+    await page.addInitScript(fakeVisualViewport, OPEN_KEYBOARD);
+    const channel = await longChannel(page);
+    const header = inPane(page).getByRole("heading", { exact: true, name: `#${channel}` });
+
+    await expect(header).toBeVisible();
+
+    const before = await topOf(header);
+    await page.evaluate(openKeyboard, { ...KEYBOARD, name: OPEN_KEYBOARD });
+    const after = await topOf(header);
+
+    expect(after).toBe(before);
+  });
+});

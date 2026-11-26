@@ -10,7 +10,7 @@ function fontOf(sans: boolean): string {
 
 export function PaneHeader(parts: PaneHeaderParts): ReactNode {
   return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b px-5 max-md:px-12">
+    <header className="flex h-14 shrink-0 items-center gap-3 border-b px-5 max-md:pr-14 max-md:pl-12">
       <h1 className={`${fontOf(parts.sans === true)}rounded-sm text-[15px] font-semibold`} tabIndex={-1}>
         {parts.title}
       </h1>

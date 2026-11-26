@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { useNarrowScreen } from "./use-narrow-screen.ts";
 import { useSyncExternalStore } from "react";
 
 const NO_STYLE: CSSProperties = {};
@@ -52,7 +53,12 @@ function styleOf(shown: string): CSSProperties {
 }
 
 function useVisibleArea(): CSSProperties {
-  return styleOf(useSyncExternalStore(subscribe, snapshot));
+  const narrow = useNarrowScreen();
+  const shown = useSyncExternalStore(subscribe, snapshot);
+  if (!narrow) {
+    return NO_STYLE;
+  }
+  return styleOf(shown);
 }
 
 export { useVisibleArea };
