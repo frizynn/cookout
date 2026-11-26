@@ -1,0 +1,8 @@
+{
+  "agents": [
+    {
+      "confidence": 0.8,
+      "name": "billing-bot"
+    }
+  ]
+}

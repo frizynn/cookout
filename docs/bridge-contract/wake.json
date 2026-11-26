@@ -1,0 +1,8 @@
+{
+  "author": "ada",
+  "channel": "general",
+  "message": 123,
+  "reason": "mention",
+  "text": "https://board.example/#/channels/general/threads/120/messages/123\n\n@helper-bot anyone around?",
+  "thread": 120
+}

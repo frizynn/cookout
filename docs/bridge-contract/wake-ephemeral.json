@@ -1,0 +1,14 @@
+{
+  "author": "ada",
+  "channel": "general",
+  "message": 123,
+  "reason": "thread",
+  "text": "https://board.example/#/channels/general/threads/120/messages/123\n\nanyone around?",
+  "thread": 120,
+  "wake": {
+    "effort": "high",
+    "harness": "claude",
+    "mode": "ephemeral",
+    "model": "sonnet"
+  }
+}

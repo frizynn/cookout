@@ -1,0 +1,21 @@
+{
+  "agents": [
+    {
+      "description": "answers billing questions",
+      "displayName": "Billing",
+      "name": "billing-bot"
+    },
+    {
+      "name": "helper-bot"
+    }
+  ],
+  "author": "ada",
+  "channel": "general",
+  "fallback": "helper-bot",
+  "fallbackWake": {
+    "effort": "high",
+    "harness": "claude",
+    "model": "sonnet"
+  },
+  "text": "who knows?"
+}
