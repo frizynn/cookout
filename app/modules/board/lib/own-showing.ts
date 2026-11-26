@@ -1,6 +1,6 @@
 import type { ChannelName, MessageId } from "../../sdk/index.ts";
 import type { ChannelsState, CommandsState } from "./listed-slices.ts";
-import type { OwnClient, OwnParts, Schedules } from "./own-parts.ts";
+import type { OwnClient, OwnParts, Quotes, Schedules } from "./own-parts.ts";
 import type { BoardCalls } from "./board-calls.ts";
 import type { ChannelPages } from "./channel-pages.ts";
 import type { ClosingRefusal } from "./thread-closing.ts";
@@ -28,6 +28,7 @@ interface OwnShowing {
   readonly channelPages: ChannelPageCalls;
   readonly threads: ThreadCalls;
   readonly subscribeShowingBefore: (place: ThreadPlace) => Subscribe;
+  readonly subscribeShowingQuote: (id: MessageId) => Subscribe;
   readonly calls: BoardCalls;
   readonly dismissNotice: () => void;
 }
@@ -39,6 +40,7 @@ interface OwnState {
   readonly schedules: Schedules;
   readonly subscriptions: SubscriptionsState;
   readonly messages: MessagesHeld;
+  readonly quotes: Quotes;
   readonly closingRefusal: ClosingRefusal | null;
   readonly messageDeleting: ReturnType<BoardCalls["deleting"]>;
 }
@@ -85,6 +87,24 @@ function showingPart(following: Following, part: Shown): Subscribe {
   });
 }
 
+function quoteShowing(following: Following, quotes: OwnParts["quotes"]): (id: MessageId) => Subscribe {
+  const subscribers = new Map<MessageId, Subscribe>();
+  return (id) => {
+    const found =
+      subscribers.get(id) ??
+      showingPart(following, {
+        hide: () => {
+          quotes.hide(id);
+        },
+        show: () => {
+          quotes.show(id);
+        },
+      });
+    subscribers.set(id, found);
+    return found;
+  };
+}
+
 function showingOf(own: OwnParts, following: Following): OwnShowing {
   const { messages } = own;
   const { pages, threads } = messages;
@@ -100,6 +120,7 @@ function showingOf(own: OwnParts, following: Following): OwnShowing {
     },
     dismissNotice: own.dismissNotice,
     subscribeShowingBefore: (place) => followedBy(following, () => messages.showBefore(place)),
+    subscribeShowingQuote: quoteShowing(following, own.quotes),
     threads: {
       ack: threads.ack,
       reply: threads.reply,
@@ -121,6 +142,7 @@ function createOwn(options: OwnOptions): Own {
       messageDeleting: parts.calls.deleting(),
       messages: parts.messages.state(),
       notice: parts.notice(),
+      quotes: parts.quotes.state(),
       schedules: parts.schedules.state(),
       subscriptions: parts.subscriptions.state(),
     }),

@@ -28,7 +28,10 @@
  * `deletedIdentities` keeps until an identity of that name comes back; and each agent's sessions
  * (`agentSessions(agent)(state)`: `null` until read, or if the server refuses), shown with
  * `subscribeShowingSessions(agent)` and read again on an `agent-session` or `identity` event for that agent, on a
- * link back, and once one of them expires, all through the store's one stream listener. `identityCalls` makes the
+ * link back, and once one of them expires, all through the store's one stream listener; and each message another
+ * message quotes (`quoteOf(id)(state)`: `"reading"` until read, then the message, or `null` if it is gone or the
+ * server refuses), read once with `GET /v1/messages/:id/thread` when `subscribeShowingQuote(id)` first shows it,
+ * read again on a link back, and `null` once a `message-deleted` event removes it or its thread. `identityCalls` makes the
  * web's identity changes on the server (admin, display name, description, a new agent, and the identity actions) and
  * puts each answer in the slices at once; a refusal rejects its promise and changes nothing.
  *
@@ -173,6 +176,8 @@ export {
   identityList,
   loggedInName,
   presences,
+  type Quoted,
+  quoteOf,
   reactionRefusal,
   reactionsOf,
 } from "./lib/part-selectors.ts";

@@ -13,6 +13,7 @@ export { DeletedMessage } from "./deleted-message.tsx";
 export { ThreadBar } from "./thread-bar.tsx";
 export { RepliesDivider } from "./replies-divider.tsx";
 export { ThreadSummary } from "./thread-summary.tsx";
+export { QuoteCard } from "./quote-card.tsx";
 export { StandaloneMessage } from "./standalone-message.tsx";
 export { Mention } from "./mention.tsx";
 export { IdentityCard } from "./identity-card.tsx";

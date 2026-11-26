@@ -18,6 +18,7 @@
  * - `FileChip` is any other attachment: its name and `detail` (such as its size) after a file icon, a download link to `href`, or plain text where `href` is `null`. Nothing but an image is ever drawn as one.
  * - `DataToggle` is a message's data folded away.
  * - `ThreadSummary` is a link to a message's thread: its repliers' avatars, its reply count (in the link colour, so it reads as the way in without a hover), how many replies are new (bold, after an accent dot and with how many are to the reader when any is) and when it was last replied to.
+ * - `QuoteCard` is a message another message quotes, under the quoting message's text: a bordered card linking to it (`href`), with its author's avatar, name (`author`) and time (`fullTime` as its tooltip), `where` it is, such as "Reply in #general", and its text (`children`), cut to three lines.
  * - `ReactionChips` is a message's named row of `ReactionChip`s.
  * - `ReactionChip` is a reaction and its count, pressed (in the accent) when one is the reader's own, with who reacted as its tooltip.
  * - `RepliesDivider` heads a thread's replies.
@@ -43,6 +44,7 @@ export {
   ThreadBar,
   RepliesDivider,
   ThreadSummary,
+  QuoteCard,
   StandaloneMessage,
   Mention,
   IdentityCard,

@@ -3,6 +3,7 @@ import type { JsonValue, Message } from "../../sdk/index.ts";
 import type { Fold } from "./use-fold.ts";
 import { MarkdownText } from "./markdown-text.tsx";
 import { MessageAttachments } from "./message-attachments.tsx";
+import { MessageQuotes } from "./message-quotes.tsx";
 import type { ReactNode } from "react";
 
 const TEXT = { data: "Data" } as const;
@@ -50,6 +51,7 @@ export function MessageData(props: MessageDataProps): ReactNode {
       <MessageBody foldable={props.fold.foldable} onUnfold={handleUnfold}>
         <MarkdownText me={props.me} message={message} />
       </MessageBody>
+      <MessageQuotes me={props.me} message={message} />
       <MessageAttachments linked message={message} />
       {data !== null && <DataToggle label={TEXT.data} value={data} />}
     </>

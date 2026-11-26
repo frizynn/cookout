@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { linkedMessageOf } from "./quoted-ids.ts";
 
 interface MarkdownLinkProps {
   readonly href?: string | undefined;
@@ -19,6 +20,15 @@ function targetOf(href: string | undefined): Target {
   return "_blank";
 }
 
+function labelOf(props: MarkdownLinkProps): ReactNode {
+  const href = props.href ?? "";
+  const linked = linkedMessageOf({ href, origin: globalThis.location.origin });
+  if (linked === null || props.children !== href) {
+    return props.children;
+  }
+  return `msg ${String(linked.id)} in #${linked.channel}`;
+}
+
 export function MarkdownLink(props: MarkdownLinkProps): ReactNode {
   return (
     <a
@@ -27,7 +37,7 @@ export function MarkdownLink(props: MarkdownLinkProps): ReactNode {
       rel="noopener noreferrer"
       target={targetOf(props.href)}
     >
-      {props.children}
+      {labelOf(props)}
     </a>
   );
 }

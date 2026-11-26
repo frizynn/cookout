@@ -1,3 +1,4 @@
+import { QUOTE_PATTERN } from "./quoted-ids.ts";
 import { mentionPattern } from "../../messages/index.ts";
 
 const AT_SIGN = 1;
@@ -81,6 +82,30 @@ function splitMentions(text: string, shown: MentionsShown): readonly MarkdownNod
   return pieces.filter((piece) => piece.type !== "text" || piece.value !== "");
 }
 
+function quoteNode(text: string, digits: string): MarkdownNode {
+  return { children: [textNode(text)], data: { hName: "cite", hProperties: { dataQuote: digits } }, type: "quote" };
+}
+
+function splitQuotes(text: string, shown: MentionsShown): readonly MarkdownNode[] {
+  const pieces: MarkdownNode[] = [];
+  let kept = START;
+  for (const found of text.matchAll(QUOTE_PATTERN)) {
+    const [quoted] = found;
+    const { id: digits = "" } = found.groups ?? {};
+    pieces.push(...splitMentions(text.slice(kept, found.index), shown), quoteNode(quoted, digits));
+    kept = found.index + quoted.length;
+  }
+  pieces.push(...splitMentions(text.slice(kept), shown));
+  return pieces;
+}
+
+function splitText(text: string, shown: MentionsShown): readonly MarkdownNode[] {
+  if (shown.inLink === true) {
+    return splitMentions(text, shown);
+  }
+  return splitQuotes(text, shown);
+}
+
 function htmlAsText(html: string, parent: string): MarkdownNode {
   const text = textNode(html);
   if (BLOCK_PARENTS.has(parent)) {
@@ -126,7 +151,7 @@ function shownNode(node: MarkdownNode, parent: string, shown: MentionsShown): re
     return [htmlAsText(node.value, parent)];
   }
   if (node.type === "text") {
-    return splitMentions(node.value, shown);
+    return splitText(node.value, shown);
   }
   if (node.type === "code") {
     return [codeNode(node)];

@@ -2,6 +2,7 @@ import type { Components, Options } from "react-markdown";
 import Markdown from "react-markdown";
 import { MarkdownLink } from "./markdown-link.tsx";
 import { MarkdownMention } from "./markdown-mention.tsx";
+import { MarkdownQuote } from "./markdown-quote.tsx";
 import type { Message } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
 import remarkBreaks from "remark-breaks";
@@ -15,6 +16,7 @@ type Plugins = NonNullable<Options["remarkPlugins"]>;
 
 const COMPONENTS: Components = {
   [LINK]: MarkdownLink,
+  cite: MarkdownQuote,
   h1: "strong",
   h2: "strong",
   h3: "strong",

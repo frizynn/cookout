@@ -1,4 +1,4 @@
-import type { Message, MessageId, TopLevelMessage } from "../../sdk/index.ts";
+import type { Message, TopLevelMessage } from "../../sdk/index.ts";
 import type { MessageDeletes, ThreadClosing } from "../../board/index.ts";
 import type { ReactionChoice, ThreadChoice } from "../../design-system/messages.tsx";
 import { useContext, useMemo } from "react";
@@ -6,7 +6,7 @@ import type { Announce } from "./announcer.ts";
 import { Announcer } from "./announcer.ts";
 import type { MessageMenu } from "../../unread/index.ts";
 import { createCopier } from "./copying.ts";
-import { hrefOf } from "../../paths/index.ts";
+import { messageHrefOf } from "./message-href.ts";
 import { useBoardStore } from "./use-board.ts";
 import { useReactionChoices } from "./use-reactions.ts";
 
@@ -85,17 +85,8 @@ function threadOf(message: Message, threadParent: TopLevelMessage | null): TopLe
   return threadParent;
 }
 
-function threadIdOf(message: Message): MessageId {
-  if (message.kind === "top-level") {
-    return message.id;
-  }
-  return message.replyTo;
-}
-
 function linkOf(message: Message): string {
-  const thread = threadIdOf(message);
-  const href = hrefOf({ channel: message.channel, message: message.id, name: "thread", thread });
-  return new URL(href, globalThis.location.href).href;
+  return new URL(messageHrefOf(message), globalThis.location.href).href;
 }
 
 interface CopyingLink {
