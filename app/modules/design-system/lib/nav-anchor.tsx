@@ -55,7 +55,7 @@ export function NavAnchor(parts: NavAnchorParts): ReactNode {
   return (
     <a
       aria-current={currentOf(link.active)}
-      className={`mx-2 flex flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-[13.5px] ${linkStyle(link)}`}
+      className={`mx-2 flex flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-[13.5px] max-md:min-h-11 max-md:gap-3 max-md:rounded-lg max-md:px-3 max-md:text-[15px] max-md:active:bg-accent ${linkStyle(link)}`}
       href={link.href}
     >
       <span aria-hidden="true" className="flex w-4 justify-center text-muted-foreground">

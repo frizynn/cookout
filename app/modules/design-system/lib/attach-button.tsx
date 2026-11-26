@@ -27,7 +27,7 @@ export function AttachButton(parts: AttachButtonParts): ReactNode {
     <>
       <button
         aria-label={parts.label}
-        className="self-start rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+        className="self-start rounded-md p-1.5 text-muted-foreground max-md:grid max-md:size-9 max-md:place-items-center max-md:rounded-full max-md:p-0 hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
         onClick={handleClick}
         title={parts.label}
         type="button"

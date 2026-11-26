@@ -2,7 +2,7 @@ import type { FieldIds, PromptFieldParts } from "./prompt-parts.ts";
 import { useId } from "react";
 
 const CONTROL =
-  "rounded-md border bg-background px-3 py-1.5 text-sm text-foreground outline-none focus:border-muted-foreground aria-invalid:border-destructive";
+  "rounded-md border bg-background px-3 py-1.5 text-sm text-foreground outline-none focus:border-muted-foreground aria-invalid:border-destructive max-md:rounded-[10px]";
 
 function useFieldIds(parts: PromptFieldParts): FieldIds {
   const control = useId();

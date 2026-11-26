@@ -31,13 +31,13 @@ export function LineForm(parts: LineFormParts): ReactNode {
   }, [onSubmit]);
   return (
     <form action={submitted} aria-label={parts.label} className="flex flex-col gap-1.5">
-      <label className="text-xs text-muted-foreground" htmlFor={id}>
+      <label className="text-xs text-muted-foreground max-md:text-[13px] max-md:font-medium" htmlFor={id}>
         {parts.field}
       </label>
       <span className="flex gap-2">
         <input
           autoComplete="off"
-          className="h-8 min-w-0 flex-1 rounded-md border bg-surface px-3 text-sm text-foreground outline-none focus:border-muted-foreground"
+          className="h-8 min-w-0 flex-1 rounded-md border bg-surface px-3 text-sm text-foreground outline-none focus:border-muted-foreground max-md:h-11 max-md:rounded-[10px]"
           id={id}
           onChange={handleChange}
           ref={box}

@@ -7,7 +7,7 @@ interface LineFormSaveParts {
 }
 
 const LOOK =
-  "rounded-md border bg-foreground px-3 text-xs font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50";
+  "rounded-md border bg-foreground px-3 text-xs font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50 max-md:min-h-11 max-md:rounded-[10px] max-md:px-4 max-md:text-[15px] max-md:border-transparent max-md:bg-muted max-md:text-foreground";
 
 function classOf(below: boolean): string {
   if (below) {

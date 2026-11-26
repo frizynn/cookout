@@ -13,7 +13,7 @@ export function PressButton(parts: PressButtonParts): ReactNode {
   return (
     <button
       aria-pressed={parts.pressed}
-      className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${pressStyle(parts.pressed)}`}
+      className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 max-md:min-h-11 max-md:rounded-[10px] max-md:px-4 max-md:text-[15px] ${pressStyle(parts.pressed)}`}
       disabled={parts.disabled}
       onClick={onClick}
       type="button"

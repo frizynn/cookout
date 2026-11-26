@@ -17,7 +17,10 @@ const TAB_STOP = 0;
 const OUT_OF_TAB_ORDER = -1;
 const SHARED =
   "block bg-background text-muted-foreground shadow-sm hover:text-foreground focus-visible:text-foreground data-[returning=true]:visible";
-const SIZE = { box: BOX_BUTTON, hover: "rounded-md border px-1.5 py-0.5" } as const;
+const SIZE = {
+  box: `${BOX_BUTTON} max-md:border-transparent max-md:bg-transparent max-md:shadow-none`,
+  hover: "rounded-md border px-1.5 py-0.5",
+} as const;
 
 function tabIndexOf(inTabOrder: boolean): number {
   if (inTabOrder) {
