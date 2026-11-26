@@ -1,7 +1,8 @@
-import { Chip, FilterField } from "../../design-system/controls.tsx";
 import type { Identity, IdentityName } from "../../sdk/index.ts";
 import type { KindChoice, Layout } from "../../layout/index.ts";
 import { Pane, PaneHeader, Toolbar } from "../../design-system/layout.tsx";
+import { DeactivatedChip } from "./deactivated-chip.tsx";
+import { FilterField } from "../../design-system/controls.tsx";
 import type { Identities } from "../../composer/index.ts";
 import type { Keymap } from "../../keymap/index.ts";
 import { KindFilter } from "./kind-filter.tsx";
@@ -9,7 +10,7 @@ import { PeopleRows } from "./people-rows.tsx";
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
 
-const TEXT = { deactivated: "Show deactivated", filter: "Filter by name", title: "People & agents" } as const;
+const TEXT = { filter: "Filter by name", title: "People & agents" } as const;
 
 interface PeopleProps {
   readonly identities: Identities;
@@ -57,9 +58,7 @@ export function PeopleView(props: PeopleProps): ReactNode {
       <Toolbar>
         <FilterField label={TEXT.filter} onEdit={handleEdit} value={state.identityFilter} />
         <KindFilter counts={countsOf(matching)} layout={layout} value={state.identityKind} />
-        <Chip onClick={handleToggle} pressed={state.showDeactivated}>
-          {TEXT.deactivated}
-        </Chip>
+        <DeactivatedChip onToggle={handleToggle} pressed={state.showDeactivated} />
       </Toolbar>
       <PeopleRows keymap={props.keymap} listed={everyone} me={props.me} open={props.open} shown={shown} />
     </Pane>

@@ -1,14 +1,16 @@
 import { ChoiceGroup, InputField } from "../../design-system/controls.tsx";
-import type { ScheduleKind, Scheduling, SchedulingSnapshot } from "../../board/index.ts";
+import { OnceFields } from "./schedule-once-fields.tsx";
 import type { ReactNode } from "react";
+import type { ScheduleFieldsProps } from "./schedule-once-fields.tsx";
+import type { ScheduleKind } from "../../board/index.ts";
 import { useCallback } from "react";
 
 const TEXT = {
   cron: "Cron expression",
   cronHelp: "Minute, hour, day of month, month and weekday, such as 0 9 * * 1-5 for 9am on weekdays.",
-  date: "Date",
   kind: "Repeats",
-  time: "Time",
+  timeZone: "Time zone",
+  timeZoneHelp: "Yours by default. An IANA name, such as Europe/London.",
 } as const;
 
 const KINDS = [
@@ -16,10 +18,7 @@ const KINDS = [
   { label: "Recurring", value: "recurring" },
 ] as const;
 
-interface ScheduleTimingProps {
-  readonly scheduling: Scheduling;
-  readonly state: SchedulingSnapshot;
-}
+type ScheduleTimingProps = ScheduleFieldsProps;
 
 function kindOf(value: string): ScheduleKind {
   if (value === "recurring") {
@@ -31,8 +30,7 @@ function kindOf(value: string): ScheduleKind {
 export function ScheduleTiming(props: ScheduleTimingProps): ReactNode {
   const { scheduling, state } = props;
   const handleEditCron = scheduling.editCron;
-  const handleEditDate = scheduling.editDate;
-  const handleEditTime = scheduling.editTime;
+  const handleEditTimeZone = scheduling.editTimeZone;
   const handleChoose = useCallback(
     (value: string) => {
       scheduling.chooseKind(kindOf(value));
@@ -53,28 +51,16 @@ export function ScheduleTiming(props: ScheduleTimingProps): ReactNode {
           value={state.cron}
         />
       )}
-      {state.kind === "once" && (
-        <InputField
-          error={null}
-          help={null}
-          kind="date"
-          label={TEXT.date}
-          onEdit={handleEditDate}
-          required
-          value={state.date}
-        />
-      )}
-      {state.kind === "once" && (
-        <InputField
-          error={null}
-          help={null}
-          kind="time"
-          label={TEXT.time}
-          onEdit={handleEditTime}
-          required
-          value={state.time}
-        />
-      )}
+      {state.kind === "once" && <OnceFields scheduling={scheduling} state={state} />}
+      <InputField
+        error={null}
+        help={TEXT.timeZoneHelp}
+        kind="text"
+        label={TEXT.timeZone}
+        onEdit={handleEditTimeZone}
+        required
+        value={state.timeZone}
+      />
     </>
   );
 }

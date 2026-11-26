@@ -13,8 +13,6 @@ const TEXT = {
   busy: "Scheduling…",
   button: "Schedule",
   text: "Text",
-  timeZone: "Time zone",
-  timeZoneHelp: "An IANA time zone, such as Europe/London. Yours unless you change it.",
   title: "Schedule a message",
 } as const;
 
@@ -44,7 +42,6 @@ export function ScheduleDialog(props: ScheduleDialogProps): ReactNode {
   const words = wordsOf(editing);
   const handleCancel = useScheduleCancel({ cancelled: props.cancelled, scheduling });
   const handleEditText = scheduling.editText;
-  const handleEditTimeZone = scheduling.editTimeZone;
   const handleSubmit = useCallback(() => {
     scheduling.save(onSaved);
   }, [onSaved, scheduling]);
@@ -70,15 +67,6 @@ export function ScheduleDialog(props: ScheduleDialogProps): ReactNode {
         value={state.text}
       />
       <ScheduleTiming scheduling={scheduling} state={state} />
-      <InputField
-        error={null}
-        help={TEXT.timeZoneHelp}
-        kind="text"
-        label={TEXT.timeZone}
-        onEdit={handleEditTimeZone}
-        required
-        value={state.timeZone}
-      />
       <ScheduleRuns state={state} />
       {state.save.status === "failed" && <Alert>{`${words.failed} ${refusalWords(state.save)}`}</Alert>}
     </FormDialog>

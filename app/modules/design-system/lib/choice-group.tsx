@@ -7,7 +7,7 @@ export function ChoiceGroup(parts: ChoiceGroupParts): ReactNode {
   return (
     <div
       aria-label={parts.label}
-      className="flex h-8 items-center rounded-md border p-0.5 text-xs max-md:h-11 max-md:rounded-[10px] max-md:border-transparent max-md:bg-muted max-md:text-sm"
+      className="flex h-8 items-center rounded-md border p-0.5 text-xs max-md:h-11 max-md:flex-1 max-md:rounded-[10px] max-md:border-transparent max-md:bg-muted max-md:text-sm"
       role="radiogroup"
     >
       {parts.choices.map((choice) => (
