@@ -35,7 +35,7 @@ function aloneLinks(alone: PanelAloneParts | null): AloneLinks {
 export function SidePanelHeader(parts: SidePanelHeaderParts): ReactNode {
   const { after, before } = aloneLinks(parts.alone ?? null);
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b px-5">
+    <header className="flex h-14 shrink-0 items-center gap-2 border-b px-5 max-md:pr-14 max-md:pl-2.5">
       <PanelTitle detail={parts.detail} label={parts.label} menu={parts.menu ?? null} />
       <PanelAloneLink link={before} />
       <CloseLink href={parts.closeHref} label={parts.closeLabel} onFollow={parts.onClose ?? null} />

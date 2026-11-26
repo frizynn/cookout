@@ -17,19 +17,20 @@ export function CloseLink(parts: CloseLinkParts): ReactNode {
   return (
     <a
       aria-label={parts.label}
-      className="order-2 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+      className="order-2 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground max-md:order-first max-md:p-2"
       href={parts.href}
       onClick={handleFollow}
     >
       <svg
         aria-hidden="true"
-        className="h-3.5 w-3.5"
+        className="h-3.5 w-3.5 max-md:h-4 max-md:w-4"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.6"
         viewBox="0 0 16 16"
       >
-        <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" strokeLinecap="round" />
+        <path className="max-md:hidden" d="M3.5 3.5l9 9M12.5 3.5l-9 9" strokeLinecap="round" />
+        <path className="md:hidden" d="M10 3.5L5.5 8l4.5 4.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </a>
   );
