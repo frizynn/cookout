@@ -16,4 +16,4 @@ const HARNESS_BRANDS: Readonly<Partial<Record<string, HarnessBrand>>> = {
   },
 };
 
-export { HARNESS_BRANDS, type HarnessBrand };
+export { HARNESS_BRANDS };

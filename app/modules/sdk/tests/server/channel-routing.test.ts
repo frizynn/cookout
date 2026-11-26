@@ -2,9 +2,9 @@ import { Array as Arr, Effect, Option, String as Str } from "effect";
 import type { Message, MessageId } from "../../index.ts";
 import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
-import type { TriggerCall, TriggerWake } from "../../../triggers/server.ts";
 import { expect, it } from "@effect/vitest";
 import { TestClock } from "effect/testing";
+import type { TriggerCall } from "../../../triggers/server.ts";
 
 const HUMAN = { kind: "human" } as const;
 const OWNER = "fisgon";
@@ -48,7 +48,7 @@ function woken(calls: readonly TriggerCall[]): readonly (readonly [string, strin
   return Arr.map(calls, ({ url, wake }) => [agentOf(url), wake.reason] as const);
 }
 
-function wakeAt(calls: readonly TriggerCall[], index: number): TriggerWake {
+function wakeAt(calls: readonly TriggerCall[], index: number): TriggerCall["wake"] {
   return Option.getOrThrow(Arr.get(calls, index)).wake;
 }
 

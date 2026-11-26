@@ -44,7 +44,6 @@ export {
   type TriggerCall,
   TriggerCaller,
   type TriggerCallerService,
-  type TriggerWake,
   triggerCallerLive,
 } from "./lib/server/caller.ts";
 

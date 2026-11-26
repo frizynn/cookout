@@ -211,7 +211,6 @@ export {
   POSTGRES_ROUTING_MIGRATION,
   POSTGRES_WAKE_MIGRATION,
   ROUTING_MIGRATION,
-  type StoredRouting,
   memoryRouting,
   routingFields,
   sqlRouting,

@@ -2,8 +2,8 @@ import { Array as Arr, Effect, Option } from "effect";
 import type { Message, MessageId } from "../../index.ts";
 import { TestCookout, answer, refusal, testCookout } from "../../../testing/server.ts";
 import type { TestCookoutService, TestIdentity } from "../../../testing/server.ts";
-import type { TriggerCall, TriggerWake } from "../../../triggers/server.ts";
 import { expect, it } from "@effect/vitest";
+import type { TriggerCall } from "../../../triggers/server.ts";
 
 const HUMAN = { kind: "human" } as const;
 const FALLBACK = "night-shift";
@@ -37,7 +37,7 @@ const board: Effect.Effect<Board, never, TestCookout> = Effect.gen(function* boa
   return { ada, cookout, fallback };
 });
 
-function wakeAt(calls: readonly TriggerCall[], index: number): TriggerWake {
+function wakeAt(calls: readonly TriggerCall[], index: number): TriggerCall["wake"] {
   return Option.getOrThrow(Arr.get(calls, index)).wake;
 }
 

@@ -97,4 +97,4 @@ export const WakeOptionsResponseSchema = matchesWire<WakeOptionsResponse>()(
   Schema.Struct({ options: WakeOptionsSchema }),
 );
 
-export { ChannelNameSchema, ChannelSchema, FallbackWakeSchema, WakeOptionsSchema };
+export { ChannelNameSchema, ChannelSchema, WakeOptionsSchema };

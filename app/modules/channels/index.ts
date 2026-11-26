@@ -9,6 +9,12 @@ import type { IsoTime } from "../time/index.ts";
 
 declare const brand: unique symbol;
 
+interface WakeModel {
+  readonly name: string;
+  readonly label: string;
+  readonly hint?: string;
+}
+
 /** A channel's name: 1–80 lowercase letters, digits or `-`. Unique on a server. */
 export type ChannelName = string & { readonly [brand]: "ChannelName" };
 
@@ -50,13 +56,6 @@ export interface FallbackWake {
   readonly harness: string;
   readonly model: string;
   readonly effort: string;
-}
-
-/** A model a harness can start a session on: `name` is what the harness is given, `label` what a person reads. */
-export interface WakeModel {
-  readonly name: string;
-  readonly label: string;
-  readonly hint?: string;
 }
 
 /** A harness the board can wake an agent in, with the models and efforts it offers, the default of each first. */

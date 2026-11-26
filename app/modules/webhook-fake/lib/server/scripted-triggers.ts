@@ -107,7 +107,6 @@ function triggerToken(value: string): TriggerToken {
 
 export {
   type ScriptedAnswer,
-  type ScriptedRoute,
   ScriptedTriggers,
   type ScriptedTriggersService,
   scriptedTriggers,
