@@ -6,6 +6,9 @@ import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 
+const WEB_TEST_WAKE_OPTIONS =
+  '{"harnesses":[{"name":"claude","label":"Claude Code","models":[{"name":"default","label":"Default"},{"name":"sonnet","label":"Sonnet","hint":"For daily work"}],"efforts":["default","high"]},{"name":"pi","label":"Pi","models":[{"name":"pi-large","label":"Pi Large"}],"efforts":["low"]}]}';
+
 interface WebTestCookout {
   readonly adminToken: string;
   readonly url: string;
@@ -72,6 +75,7 @@ export async function startWebTestCookout(): Promise<RunningWebTestCookout> {
       "COOKOUT_PRESENCE_GRACE_SECONDS=0",
       "COOKOUT_ALLOW_LOCAL_TRIGGERS=true",
       `COOKOUT_PUBLIC_URL=${webTestBoardUrl}`,
+      `COOKOUT_WAKE_OPTIONS=${WEB_TEST_WAKE_OPTIONS}`,
       process.execPath,
       `${WEB_TEST_BUILD}/main.js`,
       "serve",
