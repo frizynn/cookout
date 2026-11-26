@@ -181,5 +181,12 @@
       background: none;
       padding: 0;
     }
+
+    /* A table wider than the message scrolls on its own, as a code block does, rather than pushing the message wider. */
+    & table {
+      display: block;
+      max-width: 100%;
+      overflow-x: auto;
+    }
   }
 }
