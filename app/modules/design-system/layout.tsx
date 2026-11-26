@@ -3,7 +3,7 @@
  *
  * This entry point is its layout: the page, its panes and panels, and the sidebar. `messages.tsx`, `feed.tsx`, `controls.tsx` and `content.tsx` are its other parts.
  *
- * - `Workspace` is the page around every route once logged in: a `Sidebar` on the left, and a `WorkspaceMain` of the route's panes on the right, in a `WorkspaceColumn` under any `StatusBar`. On a narrow screen it is pinned to the visual viewport, the part of the screen left visible, since iOS Safari pans that part over the page when the keyboard opens instead of shrinking the page; the page itself never scrolls.
+ * - `Workspace` is the page around every route once logged in: a `Sidebar` on the left, and a `WorkspaceMain` of the route's panes on the right, in a `WorkspaceColumn` under any `StatusBar`. On a narrow screen it is pinned to the visual viewport, the part of the screen left visible, since iOS Safari pans that part over the page when the keyboard opens instead of shrinking the page; the page itself never scrolls. iOS tells of that pan late or never (a resize lost as the keyboard goes down, a return from the background, a turn of the phone), so `useVisibleArea` reads it on every frame for a second after each moment it may have changed, and writes it to CSS variables the frame reads: the height only while a text field holds the keyboard up, and nothing under a pinch zoom.
  * - `Sidebar` is on the left (on a narrow screen, behind a button that opens and closes it), which a button at its top collapses to a narrow rail holding only that button on a wide screen (`collapsed`), and, given an `edge`, is as wide as it says, its right edge a `PanelEdge` (`side` `right`; no `onClose`, so a drag stops at its narrowest), with its `SidebarBody` and its `SidebarFooter`.
  * - `SidebarBody` is the sidebar's body of links (following one, but not pressing a button, closes it on a narrow screen).
  * - `SidebarFooter` is the sidebar's footer.
@@ -29,7 +29,7 @@
  * - `ConversationEmpty` is a named column holding only a muted line (hidden on a narrow screen).
  * - `Toolbar` sits under a `PaneHeader` and holds a `FilterField` and `Chip`s.
  * - `ListArea` is named and scrolls from the top, holding `IdentityRow`s.
- * - `AppShell` is the page around the login view.
+ * - `AppShell` is the page around the login view, in the same frame pinned to the visible part as `Workspace`.
  * - `Card` is a shadcn-style card, centred in a scrolling column.
  * - `CardHeader` is the card's title row.
  * - `CardBody` is a padded section under the card's title row.

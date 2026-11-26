@@ -8,7 +8,9 @@ import { unique } from "./names.ts";
 const MESSAGES = 20;
 const NONE = 0;
 const FAR = 2000;
-const KEYBOARD = { height: 420, top: 300 } as const;
+const KEYBOARD = { height: 420, scale: 1, top: 300 } as const;
+const CLOSED = { height: PHONE.height, scale: 1, top: 0 } as const;
+const PINCH = { height: 422, scale: 2, top: 0 } as const;
 const OPEN_KEYBOARD = "openKeyboard";
 
 interface Span {
@@ -18,6 +20,7 @@ interface Span {
 
 interface Keyboard {
   readonly height: number;
+  readonly scale: number;
   readonly top: number;
 }
 
@@ -60,20 +63,36 @@ function pageScroll(far: number): Span {
 
 function fakeVisualViewport(name: string): void {
   const area = new EventTarget();
-  const shown = { height: globalThis.innerHeight, top: 0 };
+  const shown = { height: globalThis.innerHeight, scale: 1, top: 0 };
   Object.defineProperties(area, {
     height: { get: () => shown.height },
     offsetTop: { get: () => shown.top },
+    scale: { get: () => shown.scale },
     width: { get: () => globalThis.innerWidth },
   });
   Object.defineProperty(globalThis, "visualViewport", { configurable: true, value: area });
   Object.defineProperty(globalThis, name, {
     value: (keyboard: Keyboard) => {
       shown.height = keyboard.height;
+      shown.scale = keyboard.scale;
       shown.top = keyboard.top;
       area.dispatchEvent(new Event("resize"));
     },
   });
+  Object.defineProperty(globalThis, `${name}Silently`, {
+    value: (keyboard: Keyboard) => {
+      shown.height = keyboard.height;
+      shown.scale = keyboard.scale;
+      shown.top = keyboard.top;
+    },
+  });
+}
+
+function setViewportSilently(keyboard: NamedKeyboard): void {
+  const open: unknown = Reflect.get(globalThis, `${keyboard.name}Silently`);
+  if (typeof open === "function") {
+    Reflect.apply(open, globalThis, [keyboard]);
+  }
 }
 
 function openKeyboard(keyboard: NamedKeyboard): void {
@@ -96,6 +115,17 @@ test("on a phone the page itself never scrolls: only the message list does", asy
   expect(scrolled.top).toBe(NONE);
 });
 
+function pageScrollTop(): number {
+  return globalThis.scrollY;
+}
+
+function blurField(): void {
+  const field = globalThis.document.activeElement;
+  if (field instanceof HTMLElement) {
+    field.blur();
+  }
+}
+
 test("on a phone with the keyboard open the channel's header and message box stay in the part left visible", async ({
   page,
 }) => {
@@ -104,8 +134,7 @@ test("on a phone with the keyboard open the channel's header and message box sta
   const header = inPane(page).getByRole("heading", { exact: true, name: `#${channel}` });
   const box = inPane(page).getByRole("textbox", { exact: true, name: "Message" });
 
-  await expect(box).toBeVisible();
-
+  await box.focus();
   await page.evaluate(openKeyboard, { ...KEYBOARD, name: OPEN_KEYBOARD });
 
   await expect
@@ -118,6 +147,51 @@ test("on a phone with the keyboard open the channel's header and message box sta
   const { bottom } = await spanOf(box);
 
   expect(bottom).toBeLessThanOrEqual(KEYBOARD.top + KEYBOARD.height);
+  expect(await page.evaluate(pageScrollTop)).toBe(NONE);
+});
+
+test("on a phone the board takes the whole screen back once the keyboard goes down, though the phone never says so", async ({
+  page,
+}) => {
+  await page.addInitScript(fakeVisualViewport, OPEN_KEYBOARD);
+  await longChannel(page);
+  const box = inPane(page).getByRole("textbox", { exact: true, name: "Message" });
+  await box.focus();
+  await page.evaluate(openKeyboard, { ...KEYBOARD, name: OPEN_KEYBOARD });
+
+  await expect
+    .poll(async () => {
+      const { bottom } = await spanOf(box);
+      return bottom;
+    })
+    .toBeLessThanOrEqual(KEYBOARD.top + KEYBOARD.height);
+
+  await page.evaluate(setViewportSilently, { ...CLOSED, name: OPEN_KEYBOARD });
+  await page.evaluate(blurField);
+
+  await expect
+    .poll(async () => {
+      const { bottom } = await spanOf(box);
+      return bottom;
+    })
+    .toBeGreaterThan(KEYBOARD.top + KEYBOARD.height);
+});
+
+test("on a phone a pinch zoom neither moves nor shrinks the board", async ({ page }) => {
+  await page.addInitScript(fakeVisualViewport, OPEN_KEYBOARD);
+  const channel = await longChannel(page);
+  const header = inPane(page).getByRole("heading", { exact: true, name: `#${channel}` });
+  const box = inPane(page).getByRole("textbox", { exact: true, name: "Message" });
+
+  await expect(box).toBeVisible();
+
+  const before = await spanOf(box);
+
+  await page.evaluate(openKeyboard, { ...PINCH, name: OPEN_KEYBOARD });
+  await page.evaluate(openKeyboard, { ...PINCH, name: OPEN_KEYBOARD });
+
+  expect(await spanOf(box)).toStrictEqual(before);
+  expect(await topOf(header)).toBeLessThan(KEYBOARD.top);
 });
 
 test.describe("with a mouse on a wide screen", () => {
@@ -131,7 +205,7 @@ test.describe("with a mouse on a wide screen", () => {
     await expect(header).toBeVisible();
 
     const before = await topOf(header);
-    await page.evaluate(openKeyboard, { ...KEYBOARD, name: OPEN_KEYBOARD });
+    await page.evaluate(openKeyboard, { ...PINCH, name: OPEN_KEYBOARD });
     const after = await topOf(header);
 
     expect(after).toBe(before);
