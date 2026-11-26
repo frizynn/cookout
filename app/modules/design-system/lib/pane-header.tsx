@@ -8,6 +8,11 @@ function fontOf(sans: boolean): string {
   return "font-mono ";
 }
 
+const HEADER_BUTTONS = [
+  "max-md:[&_button]:min-h-9 max-md:[&_button]:rounded-full max-md:[&_button]:border-transparent",
+  "max-md:[&_button:not([aria-pressed=true])]:bg-muted max-md:[&_button]:px-3.5 max-md:[&_button]:text-sm max-md:[&_button]:text-foreground",
+].join(" ");
+
 export function PaneHeader(parts: PaneHeaderParts): ReactNode {
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b px-5 max-md:pr-14 max-md:pl-12">
@@ -17,7 +22,7 @@ export function PaneHeader(parts: PaneHeaderParts): ReactNode {
       {parts.description !== null && parts.description !== "" && (
         <p className="truncate border-l pl-3 text-xs text-muted-foreground max-md:hidden">{parts.description}</p>
       )}
-      <div className="ml-auto shrink-0">{parts.children}</div>
+      <div className={`ml-auto shrink-0 ${HEADER_BUTTONS}`}>{parts.children}</div>
     </header>
   );
 }
