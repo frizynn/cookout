@@ -28,12 +28,27 @@ const chromium = {
   slowMs: Number(process.env["COOKOUT_BROWSER_SLOW_MS"] ?? "0"),
 };
 
+const webkitPhone = {
+  ...devices["iPhone 15"],
+  baseURL: process.env["COOKOUT_URL"],
+  headless: true,
+  viewport: { height: 844, width: 390 },
+};
+
+function projects(): { readonly name: string; readonly testMatch?: string; readonly use: object }[] {
+  const all = [{ name: "chromium", use: chromium }];
+  if (process.env["COOKOUT_BROWSER_WEBKIT"] === "1") {
+    return [...all, { name: "webkit", testMatch: "phone-*.browser.test.ts", use: webkitPhone }];
+  }
+  return all;
+}
+
 export default defineConfig<ProbeOptions & RelayOptions & SlowOptions>({
   expect: { timeout: 10_000 },
   forbidOnly: true,
   fullyParallel: true,
   globalSetup: "./scripts/browser-test-server.ts",
-  projects: [{ name: "chromium", use: chromium }],
+  projects: projects(),
   reporter: [["list"], ["json", { outputFile: ".timings/browser.json" }]],
   retries: 0,
   testDir: "app/modules/routes/tests/browser",

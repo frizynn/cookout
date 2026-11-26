@@ -3,7 +3,7 @@
  *
  * This entry point is its layout: the page, its panes and panels, and the sidebar. `messages.tsx`, `feed.tsx`, `controls.tsx` and `content.tsx` are its other parts.
  *
- * - `Workspace` is the page around every route once logged in: a `Sidebar` on the left, and a `WorkspaceMain` of the route's panes on the right, in a `WorkspaceColumn` under any `StatusBar`.
+ * - `Workspace` is the page around every route once logged in: a `Sidebar` on the left, and a `WorkspaceMain` of the route's panes on the right, in a `WorkspaceColumn` under any `StatusBar`. It is pinned to the visual viewport, the part of the screen left visible, since iOS Safari pans that part over the page when the keyboard opens instead of shrinking the page; the page itself never scrolls.
  * - `Sidebar` is on the left (on a narrow screen, behind a button that opens and closes it), which a button at its top collapses to a narrow rail holding only that button on a wide screen (`collapsed`), and, given an `edge`, is as wide as it says, its right edge a `PanelEdge` (`side` `right`; no `onClose`, so a drag stops at its narrowest), with its `SidebarBody` and its `SidebarFooter`.
  * - `SidebarBody` is the sidebar's body of links (following one, but not pressing a button, closes it on a narrow screen).
  * - `SidebarFooter` is the sidebar's footer.

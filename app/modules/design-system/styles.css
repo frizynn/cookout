@@ -120,6 +120,14 @@
     border-color: var(--color-border);
   }
 
+  /* The page never scrolls or bounces as a whole: only the lists inside it scroll. */
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   body {
     margin: 0;
     background: var(--color-background);
