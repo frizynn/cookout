@@ -7,6 +7,7 @@ import { probeFixtures } from "./probe.ts";
 import { unique } from "./names.ts";
 
 const test = base.extend(probeFixtures);
+const CORNER = 0;
 
 async function openChannel(page: Page, channel: string): Promise<void> {
   await adminClient().createChannel({ name: channel });
@@ -47,6 +48,15 @@ test("tabbing to a thread in the channel shows its Close button", async ({ page 
   await message.focus();
 
   await expect(closeThread).toBeVisible();
+});
+
+test("clicking a channel message doesn't leave its hover bar shown once the mouse moves away", async ({ page }) => {
+  await openChannel(page, unique("browser-click-away"));
+  const message = page.getByRole("feed", { exact: true, name: "Messages" }).getByRole("article");
+  await message.getByText("Hover over me", { exact: true }).click();
+  await page.mouse.move(CORNER, CORNER);
+
+  await expect(message.getByRole("group", { exact: true, name: "Quick actions" })).toBeHidden();
 });
 
 test("a channel message's hover bar has Reply and no Open thread, and Reply opens the thread with the reply box focused", async ({

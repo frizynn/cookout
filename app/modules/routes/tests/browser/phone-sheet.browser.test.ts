@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import { PHONE, PHONE_USE, logInOnPhone } from "./phone.ts";
+import { PHONE, PHONE_USE, logInOnPhone, pressAndHold } from "./phone.ts";
 import { adminClient, newIdentity } from "./people.ts";
 import { expect, test } from "@playwright/test";
 import { inPane } from "./regions.ts";
@@ -51,11 +51,10 @@ async function channelWithAMessage(page: Page): Promise<Locator> {
 
 test.use(PHONE_USE);
 
-test("on a phone a message's More actions open as a sheet along the bottom, clear of the message", async ({ page }) => {
+test("on a phone a message's actions open as a sheet along the bottom, clear of the message", async ({ page }) => {
   const message = await channelWithAMessage(page);
-  await message.getByText(TEXT, { exact: true }).tap();
   const text = await boxOf(message.getByText(TEXT, { exact: true }));
-  await message.getByRole("button", { exact: true, name: "More actions" }).tap();
+  await pressAndHold(message.getByText(TEXT, { exact: true }));
   const sheet = page.getByRole("menu");
 
   await expect(sheet.getByRole("menuitem", { exact: true, name: "Copy link" })).toBeVisible();

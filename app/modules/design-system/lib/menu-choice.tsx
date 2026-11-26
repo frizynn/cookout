@@ -3,9 +3,13 @@ import type { MenuChoice as Choice } from "./menu-parts.ts";
 import { MENU_ITEM } from "./menu-style.ts";
 import { MenuChoiceText } from "./menu-choice-text.tsx";
 import type { ReactNode } from "react";
+import type { Release } from "./use-held-release.ts";
+import { useHeldRelease } from "./use-held-release.ts";
 
 interface ItemShape {
   readonly asChild: true;
+  readonly onPointerDown?: () => void;
+  readonly onPointerUp?: (event: Release) => void;
   readonly onSelect?: () => void;
   readonly disabled?: boolean;
   readonly children: ReactNode;
@@ -32,6 +36,9 @@ function keysOf(choice: Choice): string {
 export function MenuChoice(parts: MenuChoiceParts): ReactNode {
   const { choice, onChoose } = parts;
   const RadixItem = parts.item;
+  const release = useHeldRelease();
+  const handlePointerDown = release.onPointerDown;
+  const handlePointerUp = release.onPointerUp;
   const handleSelect = useCallback(() => {
     if (choice.onSelect !== null) {
       onChoose(choice.onSelect);
@@ -39,7 +46,7 @@ export function MenuChoice(parts: MenuChoiceParts): ReactNode {
   }, [choice, onChoose]);
   if (choice.href !== null) {
     return (
-      <RadixItem asChild>
+      <RadixItem asChild onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}>
         <a aria-keyshortcuts={keysOf(choice)} className={MENU_ITEM} href={choice.href}>
           {createElement(MenuChoiceText, { choice })}
         </a>
@@ -47,7 +54,13 @@ export function MenuChoice(parts: MenuChoiceParts): ReactNode {
     );
   }
   return (
-    <RadixItem asChild disabled={choice.disabled ?? false} onSelect={handleSelect}>
+    <RadixItem
+      asChild
+      disabled={choice.disabled ?? false}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onSelect={handleSelect}
+    >
       <div aria-keyshortcuts={keysOf(choice)} className={MENU_ITEM}>
         {createElement(MenuChoiceText, { choice })}
       </div>
