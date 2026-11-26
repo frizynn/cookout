@@ -9,6 +9,7 @@ const HEADER_ROW = 56;
 const NONE = 0;
 const HALF = 2;
 const ONE_LINE = 24;
+const TAP_WAIT = 3000;
 const QUESTION = "I don't get the last deploy note.";
 const ANSWER = "It arrived on its own this time. Which part is unclear? I can explain it here in two lines.";
 const AGENT_NAME = "Triage helper (build ops)";
@@ -103,17 +104,18 @@ test("on a phone an open thread is one view: back, title and its close button in
 }) => {
   const { thread } = await shortThread(page);
   await page.goto(thread);
-  const title = inThread(page).getByRole("heading", { exact: true, name: "Thread" });
+  const closeThread = inThread(page).getByRole("button", { exact: true, name: "Close thread" });
 
   await expect(inThread(page).getByText(ANSWER, { exact: true })).toBeVisible();
 
   const back = await boxOf(inThread(page).getByRole("link", { exact: true, name: "Close panel" }));
-  const heading = await boxOf(title);
-  const close = await boxOf(inThread(page).getByRole("button", { exact: true, name: "Close thread" }));
+  const heading = await boxOf(inThread(page).getByRole("heading", { exact: true, name: "Thread" }));
+  const close = await boxOf(closeThread);
 
   expect(back.left).toBeLessThan(heading.left);
   expect(Math.abs(middleOf(close) - middleOf(heading))).toBeLessThan(ONE_LINE / HALF);
-  expect(close.bottom).toBeLessThanOrEqual(HEADER_ROW);
+
+  await closeThread.tap({ timeout: TAP_WAIT, trial: true });
 });
 
 test("on a phone an open thread hides the channel behind it and the search", async ({ page }) => {

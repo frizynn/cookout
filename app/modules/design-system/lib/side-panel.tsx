@@ -1,10 +1,10 @@
 import type { CSSProperties, ReactNode } from "react";
-import { FileDrop } from "./file-drop.tsx";
 import type { FilesHandler } from "./drop-zone.tsx";
 import type { PanelAloneParts } from "./panel-alone-parts.ts";
 import { PanelEdge } from "./panel-edge.tsx";
 import type { PanelEdgeParts } from "./panel-edge-parts.ts";
 import type { Parts } from "./parts.ts";
+import { SidePanelBody } from "./side-panel-body.tsx";
 import { SidePanelHeader } from "./side-panel-header.tsx";
 import type { SidePanelHeaderParts } from "./side-panel-header.tsx";
 import { panelWidth } from "./panel-width.ts";
@@ -55,9 +55,7 @@ export function SidePanel(parts: SidePanelParts): ReactNode {
         menu={parts.menu}
         onClose={handleClose}
       />
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <FileDrop onFiles={parts.onFiles ?? null}>{parts.children}</FileDrop>
-      </div>
+      <SidePanelBody onFiles={parts.onFiles ?? null}>{parts.children}</SidePanelBody>
     </aside>
   );
 }
