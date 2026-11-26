@@ -18,7 +18,7 @@ async function middleOf(element: Locator): Promise<number> {
 }
 
 async function dotOffsetOf(list: Locator, name: string): Promise<number> {
-  const option = list.getByRole("option").filter({ has: list.getByText(`@${name}`, { exact: true }) });
+  const option = list.getByRole("option").filter({ has: list.page().getByText(`@${name}`, { exact: true }) });
   const dot = await middleOf(option.locator("svg[data-presence]"));
   const shown = await middleOf(option.getByText(`@${name}`, { exact: true }));
   return Math.abs(dot - shown);
