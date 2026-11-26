@@ -4,7 +4,10 @@
  * `{ error }` body. A handler fails with a `Refusal` to answer with it;
  * storage, body and path failures are answered by kind, and anything else is
  * a 500. Given a web folder, it also serves the built web UI: `index.html` at
- * `/` and the build's files under `/assets/`, with no token.
+ * `/` and the build's files under `/assets/`, with no token. The page and every
+ * file whose name carries no build hash say `Cache-Control: no-cache`, so a
+ * phone asks again on each visit and never keeps a stale page; a file named
+ * with its hash is kept for a year, as its name changes with its content.
  */
 import {
   ByteSize,
@@ -67,6 +70,22 @@ const healthRoute: Route<Storage> = {
 type WebNeeds = FileSystem.FileSystem | HttpPlatform.HttpPlatform | Path.Path;
 
 const ASSET_NAME = /^[\w-][\w.-]*$/u;
+const HASHED_NAME = /-[\w-]{8}\.\w+$/u;
+const ASKS_EACH_TIME = "no-cache";
+const KEPT_FOR_A_YEAR = "public, max-age=31536000, immutable";
+
+function cacheControlOf(file: string): string {
+  if (HASHED_NAME.test(file)) {
+    return KEPT_FOR_A_YEAR;
+  }
+  return ASKS_EACH_TIME;
+}
+
+function cached(
+  cacheControl: string,
+): (response: HttpServerResponse.HttpServerResponse) => HttpServerResponse.HttpServerResponse {
+  return (response) => HttpServerResponse.setHeader(response, "cache-control", cacheControl);
+}
 
 function isAssetName(segment: string): boolean {
   return ASSET_NAME.test(segment);
@@ -107,9 +126,14 @@ function indexPage(
 
 function webRoutesIn(webFolder: string, publicUrl: string): readonly Route<WebNeeds>[] {
   return [
-    { handle: () => indexPage(webFolder, publicUrl), method: "GET", path: "/" },
     {
-      handle: ({ file = "" }) => webFile(webFolder, `/assets/${file}`, ["assets", file]),
+      handle: () => Effect.map(indexPage(webFolder, publicUrl), cached(ASKS_EACH_TIME)),
+      method: "GET",
+      path: "/",
+    },
+    {
+      handle: ({ file = "" }) =>
+        Effect.map(webFile(webFolder, `/assets/${file}`, ["assets", file]), cached(cacheControlOf(file))),
       method: "GET",
       path: "/assets/:file",
       segments: { file: isAssetName },

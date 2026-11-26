@@ -9,9 +9,13 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Every dependency, then the root build (tsdown and the Vite web build, into dist/).
+# The image has no .git, so the commit it is built from comes in as an argument:
+# docker build --build-arg COOKOUT_BUILD=$(git rev-parse --short=12 HEAD) -t cookout .
+# The page carries it as <html data-build>, and /assets/build.txt answers it.
 FROM base AS build
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --ignore-scripts
 COPY . .
+ARG COOKOUT_BUILD=""
 RUN pnpm build
 
 # Only the runtime dependencies the built bin imports.

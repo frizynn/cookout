@@ -13,6 +13,7 @@ interface Fetched {
 
 const OK = 200;
 const MANIFEST = "manifest.webmanifest";
+const HASHED_SCRIPT = "web-Cq3x_9Zb.js";
 const MANIFEST_TEXT = '{"name":"cookout","display":"standalone"}';
 const isRefusal = Schema.is(Schema.Struct({ error: Schema.Struct({ code: Schema.String }) }));
 
@@ -21,6 +22,13 @@ function fetched(url: string): Effect.Effect<Fetched> {
     const response = yield* HttpClient.execute(HttpClientRequest.get(url));
     const body = yield* response.text;
     return { body, contentType: response.headers["content-type"] ?? "", status: response.status };
+  }).pipe(Effect.provide(FetchHttpClient.layer), Effect.orDie);
+}
+
+function cacheControlOf(url: string): Effect.Effect<string> {
+  return Effect.gen(function* fetchCacheControl() {
+    const response = yield* HttpClient.execute(HttpClientRequest.get(url));
+    return response.headers["cache-control"] ?? "";
   }).pipe(Effect.provide(FetchHttpClient.layer), Effect.orDie);
 }
 
@@ -68,6 +76,26 @@ it.effect("cookout serve serves the web app manifest as one, so a phone can add 
     const manifest = yield* fetched(`${server.url}/assets/${MANIFEST}`);
 
     expect(manifest).toStrictEqual({ body: MANIFEST_TEXT, contentType: "application/manifest+json", status: OK });
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
+);
+
+it.effect("the served page is asked for again on every visit, and a build file named with its hash is kept", () =>
+  Effect.gen(function* cachesByName() {
+    const web = yield* builtWebFolder;
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    yield* fs.writeFileString(path.join(web.folder, "assets", HASHED_SCRIPT), web.scriptText);
+    const database = yield* freshDatabasePath;
+    const server = yield* startServe({ database, webFolder: web.folder });
+    const page = yield* cacheControlOf(`${server.url}/`);
+    const hashed = yield* cacheControlOf(`${server.url}/assets/${HASHED_SCRIPT}`);
+    const unhashed = yield* cacheControlOf(`${server.url}${web.scriptPath}`);
+
+    expect({ hashed, page, unhashed }).toStrictEqual({
+      hashed: "public, max-age=31536000, immutable",
+      page: "no-cache",
+      unhashed: "no-cache",
+    });
   }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );
 

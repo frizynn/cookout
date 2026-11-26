@@ -47,3 +47,9 @@ test("the cookout's web app manifest opens it standalone, with an icon that load
 
   expect(loaded).toStrictEqual(ICONS.map(() => OK));
 });
+
+test("the page says which commit it was built from, to tell an old copy from the new one", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.locator("html")).toHaveAttribute("data-build", /^\S+$/u);
+});
