@@ -3,6 +3,7 @@ import { Portal, Root } from "@radix-ui/react-dropdown-menu";
 import { MoreActionsButton } from "./more-actions-button.tsx";
 import { MoreActionsContent } from "./more-actions-content.tsx";
 import type { ReactNode } from "react";
+import { useCallback } from "react";
 import { useFocusReturn } from "./use-focus-return.ts";
 
 interface MoreActionsParts {
@@ -16,12 +17,17 @@ export function MoreActions(parts: MoreActionsParts): ReactNode {
   const menu = useFocusReturn();
   const handleOpenChange = menu.onOpenChange;
   const handleReturned = menu.onReturned;
+  const { open } = menu;
+  const handleTap = useCallback(() => {
+    handleOpenChange(!open);
+  }, [handleOpenChange, open]);
   return (
     <Root onOpenChange={handleOpenChange} open={menu.open}>
       <MoreActionsButton
         inTabOrder={parts.inTabOrder ?? true}
         label={parts.label}
         look={parts.look ?? "hover"}
+        onTap={handleTap}
         returning={menu.returning}
       />
       <Portal>

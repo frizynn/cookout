@@ -65,3 +65,18 @@ test("on a phone the message box is a pill without the keyboard hint", async ({ 
     inPane(page).getByText("Enter to send · Shift+Enter for a new line · @ to mention", { exact: true }),
   ).toBeHidden();
 });
+
+test("on a phone the tap that opens the message box's Post later sheet doesn't also pick the choice under the finger", async ({
+  page,
+}) => {
+  await channelWithAMessage(page);
+  const form = inPane(page).getByRole("form", { exact: true, name: "Post to the channel" });
+  await form.getByRole("button", { exact: true, name: "Post later" }).tap();
+
+  await expect(page.getByRole("menu").getByRole("menuitem", { exact: true, name: "Schedule…" })).toBeVisible();
+  await expect(page.getByRole("dialog", { exact: true, name: "Schedule a message" })).toBeHidden();
+
+  await page.getByRole("menuitem", { exact: true, name: "Schedule…" }).tap();
+
+  await expect(page.getByRole("dialog", { exact: true, name: "Schedule a message" })).toBeVisible();
+});
