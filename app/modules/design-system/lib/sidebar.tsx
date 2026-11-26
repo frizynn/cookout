@@ -7,7 +7,7 @@ const NO_STYLE: CSSProperties = {};
 
 function openStyle(open: boolean): string {
   if (open) {
-    return "fixed inset-0 z-40 flex max-md:w-full max-md:motion-safe:animate-drawer-in md:relative md:shadow-none";
+    return "fixed inset-0 z-40 flex max-md:w-full max-md:pt-[env(safe-area-inset-top)] max-md:pb-[env(safe-area-inset-bottom)] max-md:motion-safe:animate-drawer-in md:relative md:shadow-none";
   }
   return "relative hidden md:flex";
 }

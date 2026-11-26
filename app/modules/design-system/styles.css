@@ -228,7 +228,7 @@
   /*
    * The frame every screen is drawn in, fixed to the screen. On a narrow screen it sits on the part the keyboard leaves
    * visible, which `useVisibleArea` writes, and keeps clear of the notch and the home indicator; while the keyboard is
-   * up, it is what covers the home indicator.
+   * up, it is what covers the home indicator. It holds what is fixed inside it, such as the open sidebar, to that part.
    */
   .visible-frame {
     position: fixed;
@@ -242,6 +242,7 @@
       top: var(--visible-top, 0px);
       height: var(--visible-height, 100dvh);
       padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      contain: layout;
     }
 
     :root[data-keyboard] .visible-frame {
