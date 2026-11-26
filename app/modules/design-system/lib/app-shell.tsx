@@ -5,7 +5,7 @@ const NAME = "cookout";
 
 export function AppShell(parts: Parts): ReactNode {
   return (
-    <div className="min-h-screen bg-background font-sans text-foreground">
+    <div className="min-h-dvh bg-background font-sans text-foreground">
       <header className="flex items-center border-b px-6 py-3">
         <span className="font-mono text-sm font-semibold tracking-tight">{NAME}</span>
       </header>
