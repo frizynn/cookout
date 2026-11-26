@@ -12,4 +12,4 @@ function messageHrefOf(message: Message): string {
   return hrefOf({ channel: message.channel, message: message.id, name: "thread", thread: threadIdOf(message) });
 }
 
-export { messageHrefOf, threadIdOf };
+export { messageHrefOf };
