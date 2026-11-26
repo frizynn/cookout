@@ -7,7 +7,7 @@ const NO_STYLE: CSSProperties = {};
 
 function openStyle(open: boolean): string {
   if (open) {
-    return "fixed top-12 bottom-0 left-0 z-30 flex shadow-xl md:relative md:shadow-none";
+    return "fixed inset-0 z-40 flex max-md:w-full md:relative md:shadow-none";
   }
   return "relative hidden md:flex";
 }
@@ -31,7 +31,7 @@ function headerStyle(rail: boolean): string {
   if (rail) {
     return "justify-center";
   }
-  return "justify-between px-4";
+  return "justify-between px-4 max-md:pl-12";
 }
 
 export function Sidebar(parts: SidebarParts): ReactNode {

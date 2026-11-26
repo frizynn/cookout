@@ -27,9 +27,13 @@ test.describe("on a touch screen", () => {
   });
 });
 
-test("with a mouse the text fields keep their smaller letters", async ({ page }) => {
-  await openChannel(page);
+test.describe("with a mouse", () => {
+  test.use({ hasTouch: false, isMobile: false, viewport: { height: 900, width: 1440 } });
 
-  await expect(inPane(page).getByRole("textbox", { exact: true, name: "Message" })).toHaveCSS(FONT_SIZE, "14.5px");
-  await expect(page.getByRole("combobox", { exact: true, name: "Search" })).toHaveCSS(FONT_SIZE, "14px");
+  test("the text fields keep their smaller letters", async ({ page }) => {
+    await openChannel(page);
+
+    await expect(inPane(page).getByRole("textbox", { exact: true, name: "Message" })).toHaveCSS(FONT_SIZE, "14.5px");
+    await expect(page.getByRole("combobox", { exact: true, name: "Search" })).toHaveCSS(FONT_SIZE, "14px");
+  });
 });

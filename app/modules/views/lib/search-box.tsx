@@ -1,5 +1,5 @@
+import { ComboboxField, SearchIcon } from "../../design-system/controls.tsx";
 import { useContext, useId, useSyncExternalStore } from "react";
-import { ComboboxField } from "../../design-system/controls.tsx";
 import { FilterSuggestionList } from "./filter-suggestion-list.tsx";
 import type { Identities } from "../../composer/index.ts";
 import type { Keymap } from "../../keymap/index.ts";
@@ -11,6 +11,14 @@ import { useSearchBox } from "./use-search-box.ts";
 import { useSearchLists } from "./use-search-lists.ts";
 
 const TEXT = { label: "Search", placeholder: "Go to or search" } as const;
+
+const NARROW_LOOK = [
+  "group/search relative shrink-0 border-b px-4 py-2",
+  "max-md:absolute max-md:top-0 max-md:right-0 max-md:z-30 max-md:size-14 max-md:border-0 max-md:p-0",
+  "max-md:[&>input]:size-full max-md:[&>input]:opacity-0 max-md:[:has(main_aside:not(.hidden))_&]:hidden",
+  "max-md:focus-within:inset-x-0 max-md:focus-within:z-60 max-md:focus-within:h-auto max-md:focus-within:w-auto max-md:focus-within:bg-card",
+  "max-md:focus-within:px-3 max-md:focus-within:py-2 max-md:focus-within:[&>input]:h-10 max-md:focus-within:[&>input]:opacity-100",
+].join(" ");
 
 interface SearchBoxProps {
   readonly identities: Identities;
@@ -30,7 +38,8 @@ export function SearchBox(props: SearchBoxProps): ReactNode {
     pick: handlePick,
   } = useSearchBox({ ...props, box: field, land: useContext(LandingContext).ask });
   return (
-    <div className="relative shrink-0 border-b px-4 py-2" ref={area}>
+    <div className={NARROW_LOOK} ref={area}>
+      <SearchIcon />
       <ComboboxField
         active={lists.active}
         box={field}

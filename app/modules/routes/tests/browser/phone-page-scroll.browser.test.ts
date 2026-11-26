@@ -7,7 +7,6 @@ import { unique } from "./names.ts";
 
 const MESSAGES = 20;
 const NONE = 0;
-const FIRST = 0;
 const FAR = 2000;
 const KEYBOARD = { height: 420, top: 300 } as const;
 const OPEN_KEYBOARD = "openKeyboard";
@@ -55,7 +54,7 @@ async function longChannel(page: Page): Promise<string> {
 
 function pageScroll(far: number): Span {
   const root = document.scrollingElement ?? document.documentElement;
-  globalThis.scrollTo(FIRST, far);
+  globalThis.scrollTo({ top: far });
   return { bottom: root.scrollHeight, top: root.scrollTop };
 }
 

@@ -9,7 +9,7 @@ interface PaneParts extends Parts {
 
 export function Pane(parts: PaneParts): ReactNode {
   return (
-    <section className="flex min-w-0 flex-1 flex-col">
+    <section className="flex min-w-0 flex-1 flex-col max-md:[&:has(~aside)]:invisible">
       <FileDrop onFiles={parts.onFiles ?? null}>{parts.children}</FileDrop>
     </section>
   );
