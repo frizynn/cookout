@@ -15,7 +15,7 @@ function spacingOf(grouped: boolean): string {
 }
 
 function messageClass(parts: Pick<MessageItemParts, "grouped" | "mark">): string {
-  return `group relative flex gap-3 px-5 outline-none focus-visible:ring-2 focus-visible:ring-link/50 focus-visible:ring-inset ${spacingOf(parts.grouped)} ${MARKS[parts.mark]}`;
+  return `group relative flex gap-3 px-5 pointer-coarse:flex-wrap outline-none focus-visible:ring-2 focus-visible:ring-link/50 focus-visible:ring-inset ${spacingOf(parts.grouped)} ${MARKS[parts.mark]}`;
 }
 
 export { messageClass };
