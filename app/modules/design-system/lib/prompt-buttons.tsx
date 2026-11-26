@@ -6,16 +6,16 @@ const TEXT = { cancel: "Cancel" } as const;
 export function PromptButtons(parts: PromptButtonsParts): ReactNode {
   const handleCancel = parts.onCancel;
   return (
-    <div className="flex items-center justify-end gap-2">
+    <div className="flex items-center justify-end gap-2 max-md:gap-3">
       <button
-        className="rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground max-md:h-11 max-md:flex-1 max-md:rounded-xl max-md:bg-muted max-md:text-[15px] max-md:font-medium max-md:text-foreground"
         onClick={handleCancel}
         type="button"
       >
         {TEXT.cancel}
       </button>
       <button
-        className="rounded-lg border bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
+        className="rounded-lg border bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-40 max-md:h-11 max-md:flex-1 max-md:rounded-xl max-md:text-[15px]"
         disabled={parts.busy || parts.disabled === true}
         type="submit"
       >

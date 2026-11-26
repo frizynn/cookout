@@ -55,6 +55,7 @@ async function screenAt(page: Page, url: string): Promise<Measured> {
   await page.goto(url);
 
   await expect(page.getByRole("main").getByRole("heading").first()).toBeVisible();
+  await expect(page.locator(FIELDS).first()).toBeAttached();
 
   return measured(page, url);
 }

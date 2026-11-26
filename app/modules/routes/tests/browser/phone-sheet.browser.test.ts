@@ -26,6 +26,19 @@ async function boxOf(locator: Locator): Promise<Box> {
   return { bottom: box.y + box.height, top: box.y, width: box.width };
 }
 
+async function settled(element: Readonly<Pick<Element, "getAnimations">>): Promise<void> {
+  await Promise.all(
+    element.getAnimations().map(async (animation: Readonly<Pick<Animation, "finished">>) => {
+      await animation.finished;
+    }),
+  );
+}
+
+async function risenBoxOf(sheet: Locator): Promise<Box> {
+  await sheet.evaluate(settled);
+  return boxOf(sheet);
+}
+
 async function channelWithAMessage(page: Page): Promise<Locator> {
   const channel = unique("browser-phone-sheet");
   await adminClient().createChannel({ name: channel });
@@ -47,7 +60,7 @@ test("on a phone a message's More actions open as a sheet along the bottom, clea
 
   await expect(sheet.getByRole("menuitem", { exact: true, name: "Copy link" })).toBeVisible();
 
-  const menu = await boxOf(sheet);
+  const menu = await risenBoxOf(sheet);
 
   expect(menu.width).toBe(PHONE.width);
   expect(Math.abs(menu.bottom - PHONE.height)).toBeLessThanOrEqual(EDGE);
