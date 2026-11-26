@@ -46,6 +46,7 @@ export function ConversationBody(props: ConversationBodyProps): ReactNode {
         menu={props.menu}
         message={state.parent}
         receipts={state.receipts}
+        readPosition={props.readPosition}
         reply={props.reply}
       />
       <ConversationReplies

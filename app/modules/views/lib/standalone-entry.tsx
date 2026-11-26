@@ -13,6 +13,7 @@ import { useMessageTime } from "./use-time-ago.ts";
 const REPLY = "Reply";
 
 interface StandaloneEntryProps {
+  readonly fresh: boolean;
   readonly message: Message;
   readonly me: string;
   readonly label: string;
@@ -36,7 +37,7 @@ export function StandaloneEntry(props: StandaloneEntryProps): ReactNode {
       day={dayLabel(message.createdAt)}
       grouped={false}
       label={props.label}
-      mark={useMarkOf({ me: props.me, message, open: null, parent: null })}
+      mark={useMarkOf({ fresh: props.fresh, me: props.me, message, open: null, parent: null })}
       menu={menu}
       name={message.author.name}
       nameHref={profileHref}

@@ -11,6 +11,7 @@ interface StreamRow {
   readonly day: string | null;
   readonly unreadLine: boolean;
   readonly belowNewLine: boolean;
+  readonly fresh: boolean;
 }
 
 interface StreamOf {
@@ -55,6 +56,15 @@ function newLineAt({ me, messages, readPosition }: StreamOf): MessageId | null {
   return first.id;
 }
 
+interface Freshness {
+  readonly id: MessageId;
+  readonly readPosition: number | null;
+}
+
+function isFresh({ id, readPosition }: Freshness): boolean {
+  return readPosition === null || id > readPosition;
+}
+
 function rowOf(message: Message, previous: Message | null, stream: StreamOf & Lined): StreamRow {
   const day = dayStarted(previous ?? stream.after, message);
   const unreadLine = message.id === stream.lineAt;
@@ -62,6 +72,7 @@ function rowOf(message: Message, previous: Message | null, stream: StreamOf & Li
   return {
     belowNewLine,
     day,
+    fresh: isFresh({ id: message.id, readPosition: stream.readPosition }),
     grouped: day === null && !unreadLine && joins(previous, message),
     message,
     unreadLine,
@@ -73,4 +84,4 @@ function streamRows(stream: StreamOf): readonly StreamRow[] {
   return stream.messages.map((message, index) => rowOf(message, stream.messages[index - PREVIOUS] ?? null, lined));
 }
 
-export { type StreamRow, streamRows };
+export { type StreamRow, isFresh, streamRows };

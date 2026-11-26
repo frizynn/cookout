@@ -1,11 +1,12 @@
 import type { CookoutClient, Message } from "../../sdk/index.ts";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { people, post } from "./attention-posts.ts";
 import { screen, within } from "@testing-library/react";
 import type { People } from "./attention-posts.ts";
 import { inPane } from "./regions.ts";
 import { openAt } from "./render.tsx";
 
+const NONE = 0;
 const DOT = '[aria-hidden="true"].rounded-full.bg-mention-bar';
 const PLAIN = "for you: false, dot: false, filled: false";
 const FILLED = "for you: true, dot: false, filled: true";
@@ -109,6 +110,57 @@ it("in a channel, a message that mentions you has the filled accent block, and o
   ).toStrictEqual([PLAIN, FILLED]);
 
   close();
+});
+
+async function inboxEmptied(client: CookoutClient): Promise<void> {
+  await vi.waitUntil(async () => {
+    const inbox = await client.inbox();
+    return inbox.items.length === NONE;
+  });
+}
+
+function feedAccents(): readonly string[] {
+  return accentsOf(() => within(inPane().getByRole("feed", { name: "Messages" })).getAllByRole("article"));
+}
+
+interface Visit {
+  readonly accents: readonly string[];
+  readonly close: () => void;
+}
+
+async function visited(reader: CookoutClient, channel: string): Promise<Visit> {
+  const close = openAt({ client: reader, hash: `#/channels/${channel}` });
+  await inPane().findByText("Lunch first");
+  return { accents: feedAccents(), close };
+}
+
+async function mentionedIn(channel: string): Promise<CookoutClient> {
+  const { poster, reader } = await people(channel);
+  await reader.subscribe(channel);
+  await post({ by: poster, channel, text: "Lunch first" });
+  await post({ by: poster, channel, text: `Hello @${channel}-reader` });
+  return reader;
+}
+
+it("a message that mentions you has the filled accent block until you've read it, and on your next visit looks like any other, its @name still marked", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const channel = "web-attention-read";
+  const reader = await mentionedIn(channel);
+  const first = await visited(reader, channel);
+  await inboxEmptied(reader);
+  first.close();
+  const again = await visited(reader, channel);
+
+  expect({
+    mark: screen.getByText(`@${channel}-reader`, { ignore: "a" }).tagName,
+    read: again.accents,
+    unread: first.accents,
+  }).toStrictEqual({ mark: "MARK", read: [PLAIN, PLAIN], unread: [PLAIN, FILLED] });
+
+  again.close();
 });
 
 interface Following extends People {

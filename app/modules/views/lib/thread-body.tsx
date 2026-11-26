@@ -45,6 +45,7 @@ export function ThreadBody(props: ThreadBodyProps): ReactNode {
         menu={props.menu}
         message={state.parent}
         receipts={state.receipts}
+        readPosition={props.readPosition}
         reply={props.reply}
       />
       <ThreadReplies

@@ -40,6 +40,7 @@ function newsText(news: ThreadNews | null): NewsText | null {
 }
 
 interface Marking {
+  readonly fresh: boolean;
   readonly message: Message;
   readonly me: string;
   readonly open: MessageId | null;
@@ -59,8 +60,8 @@ function answersMe({ me, message, parent }: Marking): boolean {
 }
 
 function markOf(marking: Marking): "for-you" | "open" | "none" {
-  const { me, message, open } = marking;
-  if (message.mentions.some((name) => name === me) || answersMe(marking)) {
+  const { fresh, me, message, open } = marking;
+  if (fresh && (message.mentions.some((name) => name === me) || answersMe(marking))) {
     return "for-you";
   }
   if (message.id === open) {

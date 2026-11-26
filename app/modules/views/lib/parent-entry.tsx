@@ -4,8 +4,10 @@ import { DeletedMessage } from "../../design-system/messages.tsx";
 import type { MessageMenu } from "../../unread/index.ts";
 import type { ReactNode } from "react";
 import { StandaloneEntry } from "./standalone-entry.tsx";
+import { isFresh } from "./stream-rows.ts";
 
 interface ParentEntryProps {
+  readonly readPosition: number | null;
   readonly message: Message;
   readonly deleted: ReadonlySet<MessageId>;
   readonly me: string;
@@ -23,6 +25,7 @@ export function ParentEntry(props: ParentEntryProps): ReactNode {
   return (
     <StandaloneEntry
       closing={props.closing}
+      fresh={isFresh({ id: props.message.id, readPosition: props.readPosition })}
       label={props.label}
       me={props.me}
       menu={props.menu}

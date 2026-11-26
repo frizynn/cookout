@@ -17,6 +17,7 @@ interface Row {
   readonly grouped: boolean;
   readonly unreadLine: boolean;
   readonly belowNewLine: boolean;
+  readonly fresh: boolean;
 }
 
 interface MessageEntryProps {
@@ -55,7 +56,7 @@ export function MessageEntry(props: MessageEntryProps): ReactNode {
       displayName={displayName}
       day={props.row.day}
       grouped={props.row.grouped}
-      mark={useMarkOf({ me: props.me, message, open: props.open, parent: props.parent })}
+      mark={useMarkOf({ fresh: props.row.fresh, me: props.me, message, open: props.open, parent: props.parent })}
       menu={menu}
       name={message.author.name}
       nameHref={profileHref}
