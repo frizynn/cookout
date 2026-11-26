@@ -36,10 +36,15 @@ function seenMotion(name: string): readonly string[] {
   return seen.filter((motion) => typeof motion === "string");
 }
 
-function forgetMotion(name: string): void {
+interface Kept {
+  readonly name: string;
+  readonly first: number;
+}
+
+function forgetMotion({ first, name }: Kept): void {
   const seen: unknown = Reflect.get(globalThis, name);
   if (Array.isArray(seen)) {
-    seen.splice(FIRST);
+    seen.splice(first);
   }
 }
 
@@ -75,7 +80,7 @@ async function watched(page: Page): Promise<Board> {
   const shown = await board();
   await page.addInitScript(watchMotion, SEEN);
   await logInOnPhone({ page, token: shown.token, url: `/#/channels/${shown.first}` });
-  await page.evaluate(forgetMotion, SEEN);
+  await page.evaluate(forgetMotion, { first: FIRST, name: SEEN });
   return shown;
 }
 
