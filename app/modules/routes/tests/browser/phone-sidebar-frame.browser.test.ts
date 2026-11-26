@@ -7,15 +7,21 @@ import { unique } from "./names.ts";
 
 const VISIBLE = { height: 400, top: 120 } as const;
 
-function keyboardUp({ height, top }: typeof VISIBLE): void {
-  const root = globalThis.document.documentElement;
-  root.style.setProperty("--visible-top", `${String(top)}px`);
-  root.style.setProperty("--visible-height", `${String(height)}px`);
-}
-
 interface Edges {
   readonly bottom: number;
   readonly top: number;
+}
+
+function sidebarEdgesWithin({ height, top }: typeof VISIBLE): Edges {
+  const root = globalThis.document.documentElement;
+  root.style.setProperty("--visible-top", `${String(top)}px`);
+  root.style.setProperty("--visible-height", `${String(height)}px`);
+  const sidebar = globalThis.document.querySelector('nav[aria-label="Sidebar"]');
+  if (sidebar === null) {
+    return { bottom: Number.NaN, top: Number.NaN };
+  }
+  const box = sidebar.getBoundingClientRect();
+  return { bottom: box.bottom, top: box.top };
 }
 
 async function sidebarOpen(page: Page): Promise<void> {
@@ -27,14 +33,6 @@ async function sidebarOpen(page: Page): Promise<void> {
   await inTopBar(page).getByRole("button", { exact: true, name: "Open the sidebar" }).tap();
 }
 
-async function sidebarEdges(page: Page): Promise<Edges> {
-  const box = await inSidebar(page).boundingBox();
-  if (box === null) {
-    return { bottom: Number.NaN, top: Number.NaN };
-  }
-  return { bottom: box.y + box.height, top: box.y };
-}
-
 test.use(PHONE_USE);
 
 test("on a phone the open sidebar stays inside the part of the screen the keyboard leaves visible", async ({
@@ -44,8 +42,7 @@ test("on a phone the open sidebar stays inside the part of the screen the keyboa
 
   await expect(inSidebar(page)).toBeVisible();
 
-  await page.evaluate(keyboardUp, VISIBLE);
-  const edges = await sidebarEdges(page);
+  const edges = await page.evaluate(sidebarEdgesWithin, VISIBLE);
 
   expect(edges.top).toBeGreaterThanOrEqual(VISIBLE.top);
   expect(edges.bottom).toBeLessThanOrEqual(VISIBLE.top + VISIBLE.height);
