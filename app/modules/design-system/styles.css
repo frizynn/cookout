@@ -115,6 +115,20 @@
   }
 }
 
+/*
+ * On a narrow screen a menu is a sheet along the bottom of the screen, over a dimmed page, instead of a box that
+ * covers the message it acts on. Radix places each menu's wrapper with inline styles, hence the !important.
+ */
+@media (width < 48rem) {
+  [data-radix-popper-content-wrapper]:has(> [role="menu"]) {
+    position: fixed !important;
+    inset: auto 0 0 !important;
+    min-width: 0 !important;
+    transform: none !important;
+    box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.5);
+  }
+}
+
 @layer base {
   * {
     border-color: var(--color-border);

@@ -14,7 +14,7 @@ export function MenuChoiceText(parts: MenuChoiceTextParts): ReactNode {
       {menuIcon(choice.icon)}
       {choice.label}
       {keys !== null && (
-        <kbd aria-hidden className="ml-auto pl-4 font-sans text-muted-foreground">
+        <kbd aria-hidden className="ml-auto pl-4 font-sans text-muted-foreground pointer-coarse:hidden">
           {keys.label}
         </kbd>
       )}
