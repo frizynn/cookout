@@ -28,14 +28,18 @@ interface Board {
   readonly fallback: TestIdentity;
 }
 
-const board: Effect.Effect<Board, never, TestCookout> = Effect.gen(function* boardWithFallback() {
-  const cookout = yield* TestCookout;
-  const ada = yield* cookout.createIdentity("ada", HUMAN);
-  const fallback = yield* cookout.createIdentity(FALLBACK, { owner: "ada" });
-  yield* answer(() => cookout.client.createChannel({ name: "general" }));
-  yield* answer(() => ada.client.setTrigger(FALLBACK, { token: TOKEN, url: `https://wake.example.com/${FALLBACK}` }));
-  return { ada, cookout, fallback };
-});
+function boardFiring(urlOf: (cookout: TestCookoutService) => string): Effect.Effect<Board, never, TestCookout> {
+  return Effect.gen(function* boardWithFallback() {
+    const cookout = yield* TestCookout;
+    const ada = yield* cookout.createIdentity("ada", HUMAN);
+    const fallback = yield* cookout.createIdentity(FALLBACK, { owner: "ada" });
+    yield* answer(() => cookout.client.createChannel({ name: "general" }));
+    yield* answer(() => ada.client.setTrigger(FALLBACK, { token: TOKEN, url: urlOf(cookout) }));
+    return { ada, cookout, fallback };
+  });
+}
+
+const board = boardFiring(() => `https://wake.example.com/${FALLBACK}`);
 
 function wakeAt(calls: readonly TriggerCall[], index: number): TriggerCall["wake"] {
   return Option.getOrThrow(Arr.get(calls, index)).wake;
@@ -85,6 +89,32 @@ it.effect(
         { mode: "ephemeral", ...WAKE },
       ]);
     }).pipe(Effect.provide(testCookout({ triggers: "scripted" }))),
+);
+
+it.effect("the fallback's trigger URL receives the wake in the JSON body it is POSTed", () =>
+  Effect.gen(function* receivedWake() {
+    const { ada, cookout } = yield* boardFiring((on) => `${on.webhook.url}/fire`);
+    const router = `${cookout.webhook.url}/route`;
+    yield* answer(() =>
+      cookout.client.setChannelRouting("general", { fallback: FALLBACK, fallbackWake: WAKE, router }),
+    );
+    yield* cookout.webhook.failNext(ONCE);
+    const message = yield* post(ada, "anyone around?");
+    const calls = yield* cookout.webhook.waitForCalls(TWICE);
+    const fired = Arr.filter(calls, ({ path }) => path === "/fire");
+
+    expect(Arr.map(fired, ({ body }) => body)).toStrictEqual([
+      {
+        author: "ada",
+        channel: "general",
+        message: message.id,
+        reason: "routed",
+        text: `${cookout.url}/#/channels/general/threads/${message.id}/messages/${message.id}\n\nanyone around?`,
+        thread: message.id,
+        wake: { effort: "high", harness: "claude", mode: "ephemeral", model: "sonnet" },
+      },
+    ]);
+  }).pipe(Effect.provide(testCookout())),
 );
 
 it.effect("a fallback with no wake is called as before, with no wake in the body", () =>
