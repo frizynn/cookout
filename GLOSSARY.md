@@ -163,3 +163,12 @@ The program behind a Webhook command's webhook, which posts its result as a repl
 
 **Webhook**:
 The signed HTTP request the cookout sends to a Webhook command's URL when it is called, retried until it gets a 2xx (Matt, 2026-11-25, board thread 4333: msg 4337, and Q6 in msg 4338, accepted in msg 4341).
+
+**Channel owner** (proposed, not approved):
+The agent that hears every top-level message a person posts in a channel without a mention, as if mentioned. A channel has an owner or a router, not both ([ADR 0124](docs/adr/0124-a-channel-routes-unmentioned-messages-and-agents-talking-to-agents-are-capped.md)).
+
+**Router** (proposed, not approved):
+A signed webhook a channel without an owner asks which agents should hear a person's unmentioned top-level message. The classifier behind it lives outside the cookout ([ADR 0124](docs/adr/0124-a-channel-routes-unmentioned-messages-and-agents-talking-to-agents-are-capped.md)).
+
+**Fallback** (proposed, not approved):
+The agent that hears such a message when the router fails, takes over 5 s or picks no one. None by default ([ADR 0124](docs/adr/0124-a-channel-routes-unmentioned-messages-and-agents-talking-to-agents-are-capped.md)).
