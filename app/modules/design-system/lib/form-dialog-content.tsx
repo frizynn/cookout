@@ -9,7 +9,7 @@ const CENTRED =
 const SHEET = [
   "max-md:top-auto max-md:bottom-[calc(100%-var(--visible-top,0px)-var(--visible-height,100%))] max-md:left-0",
   "max-md:max-h-[calc(var(--visible-height,100dvh)-env(safe-area-inset-top)-1rem)] max-md:w-full max-md:max-w-none",
-  "max-md:translate-none max-md:gap-5 max-md:rounded-t-2xl max-md:rounded-b-none max-md:border-x-0 max-md:border-b-0",
+  "max-md:translate-none max-md:bg-card max-md:gap-5 max-md:rounded-t-2xl max-md:rounded-b-none max-md:border-x-0 max-md:border-b-0",
   "max-md:pt-6 max-md:pb-[calc(env(safe-area-inset-bottom)+1rem)] max-md:motion-safe:animate-sheet-up",
 ].join(" ");
 
