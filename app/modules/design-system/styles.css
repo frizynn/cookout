@@ -146,11 +146,11 @@
 }
 
 /*
- * On a touch screen a one-line field and a button are at least 44 px tall, the size a finger hits without aiming, and
+ * On a narrow touch screen a one-line field and a button are at least 44 px tall, the size a finger hits without aiming, and
  * a button gives way a little under the finger, as a native one does.
  */
 @layer base {
-  @media (pointer: coarse) {
+  @media (pointer: coarse) and (width < 48rem) {
     input:not([type="checkbox"], [type="radio"], [type="hidden"], [type="range"]),
     select {
       min-height: 2.75rem;
@@ -161,6 +161,11 @@
     [role="menuitem"],
     [role="radio"] {
       touch-action: manipulation;
+    }
+
+    button,
+    [role="menuitem"],
+    [role="radio"] {
       -webkit-touch-callout: none;
     }
 
