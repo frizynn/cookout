@@ -1,14 +1,10 @@
 import type { Channel, ChannelName, Refusal } from "../../sdk/index.ts";
+import type { ChannelRoutingResponse, WakeOptions } from "../../channels/index.ts";
+import { EMPTY, editedHarness, editedWake, fieldsOf, requestOf } from "./wake-fields.ts";
+import type { RoutingFields, WakeMode } from "./wake-fields.ts";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { Answer } from "../../board/index.ts";
-import type { ChannelRoutingResponse } from "../../channels/index.ts";
 import { useBoardStore } from "./use-board.ts";
-
-interface RoutingFields {
-  readonly owner: string;
-  readonly router: string;
-  readonly fallback: string;
-}
 
 type SettingsSave =
   | { readonly status: "editing" }
@@ -25,6 +21,11 @@ interface ChannelSettings {
   readonly editOwner: (value: string) => void;
   readonly editRouter: (value: string) => void;
   readonly editFallback: (value: string) => void;
+  readonly editWake: (value: string) => void;
+  readonly editHarness: (value: string) => void;
+  readonly editModel: (value: string) => void;
+  readonly editEffort: (value: string) => void;
+  readonly options: WakeOptions | null;
   readonly submit: () => void;
 }
 
@@ -37,22 +38,6 @@ type FieldsChange = (change: (fields: RoutingFields) => RoutingFields) => void;
 
 const EDITING = { status: "editing" } as const;
 
-const EMPTY: RoutingFields = { fallback: "", owner: "", router: "" };
-
-const FIELDS = ["owner", "router", "fallback"] as const;
-
-function fieldsOf(found: Channel | null): RoutingFields {
-  if (found === null) {
-    return EMPTY;
-  }
-  return { fallback: found.fallback ?? "", owner: found.owner ?? "", router: found.router ?? "" };
-}
-
-function requestOf(fields: RoutingFields): Record<string, string> {
-  const filled = FIELDS.filter((field) => fields[field].trim() !== "");
-  return Object.fromEntries(filled.map((field) => [field, fields[field].trim()]));
-}
-
 function savedAs(set: Answer<ChannelRoutingResponse>): SettingsSave | null {
   if ("refusal" in set) {
     return { refusal: set.refusal, status: "failed" };
@@ -64,11 +49,29 @@ function savedAs(set: Answer<ChannelRoutingResponse>): SettingsSave | null {
   return { secret, status: "secret" };
 }
 
-function useFieldEdits(setFields: FieldsChange): Pick<ChannelSettings, "editFallback" | "editOwner" | "editRouter"> {
+type FieldEdits = Pick<
+  ChannelSettings,
+  "editEffort" | "editFallback" | "editHarness" | "editModel" | "editOwner" | "editRouter" | "editWake"
+>;
+
+function isWakeMode(value: string): value is WakeMode {
+  return value === "session" || value === "ephemeral";
+}
+
+function useFieldEdits(setFields: FieldsChange, options: WakeOptions | null): FieldEdits {
   return useMemo(
     () => ({
+      editEffort: (effort: string) => {
+        setFields((fields) => ({ ...fields, effort }));
+      },
       editFallback: (fallback: string) => {
         setFields((fields) => ({ ...fields, fallback }));
+      },
+      editHarness: (harness: string) => {
+        setFields((fields) => editedHarness({ fields, options })(harness));
+      },
+      editModel: (model: string) => {
+        setFields((fields) => ({ ...fields, model }));
       },
       editOwner: (owner: string) => {
         setFields((fields) => ({ ...fields, owner }));
@@ -76,9 +79,30 @@ function useFieldEdits(setFields: FieldsChange): Pick<ChannelSettings, "editFall
       editRouter: (router: string) => {
         setFields((fields) => ({ ...fields, router }));
       },
+      editWake: (wake: string) => {
+        if (isWakeMode(wake)) {
+          setFields((fields) => editedWake({ fields, options })(wake));
+        }
+      },
     }),
-    [setFields],
+    [options, setFields],
   );
+}
+
+function useWakeOptions(): { readonly options: WakeOptions | null; readonly load: () => void } {
+  const { calls } = useBoardStore();
+  const [options, setOptions] = useState<WakeOptions | null>(null);
+  const running = useRef(Promise.resolve());
+  const load = useCallback(() => {
+    async function loading(): Promise<void> {
+      const found = await calls.wakeOptions();
+      if ("answer" in found) {
+        setOptions(found.answer);
+      }
+    }
+    running.current = loading();
+  }, [calls]);
+  return { load, options };
 }
 
 function useSaving(
@@ -111,21 +135,22 @@ function useSaving(
 function useChannelSettings(of: ChannelSettingsOf): ChannelSettings {
   const [open, setOpen] = useState(false);
   const [fields, setFields] = useState(EMPTY);
-  const edits = useFieldEdits(setFields);
+  const wakeOptions = useWakeOptions();
+  const edits = useFieldEdits(setFields, wakeOptions.options);
   const { reset, save, submit } = useSaving(of, { fields, setOpen });
-  const { found } = of;
   const show = useCallback(() => {
-    setFields(fieldsOf(found));
+    setFields(fieldsOf(of.found));
     reset();
+    wakeOptions.load();
     setOpen(true);
-  }, [found, reset]);
+  }, [of.found, reset, wakeOptions]);
   const saving = save.status === "saving";
   const close = useCallback(() => {
     if (!saving) {
       setOpen(false);
     }
   }, [saving]);
-  return { ...edits, close, fields, open, save, show, submit };
+  return { ...edits, close, fields, open, options: wakeOptions.options, save, show, submit };
 }
 
 export { type ChannelSettings, useChannelSettings };

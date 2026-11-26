@@ -3,6 +3,8 @@
  *
  * - `PressButton` is a button that is on or off, shaped as a `Button`: off it is outlined, on it is filled and muted. With an `icon`, that menu icon comes before its text.
  * - `ChoiceGroup` is a radio group of a few choices.
+ * - `ChoiceField` is a `ChoiceGroup` under its label, with any help text under it.
+ * - `OptionRows` is a labelled radio group drawn as rows, each its label with any muted hint under it, each choice's `name` its value, led by a harness's brand tile when it names a `mark` (a lettered tile for a harness with no brand), and checked when chosen; a few to several choices, such as models.
  * - `CharacterPicker` is a named group that picks a drawn character as an avatar: a `ChoiceGroup` of styles, eight variants of that style (`look`) seeded from `seed` as a radio group, a Shuffle button for the next eight (`round`), and Save avatar, which hands `onSave` the picked one as a 256 px PNG. Each style's art is CC0 or free for commercial use; an agent with no avatar shows the first variant of the Bot style.
  * - `DividerButton` is a divider line led by a quiet button, such as one that shows the replies folded under it.
  * - `LineForm` is a named form of one labelled line of text, whose text its owner holds, with a Save button (disabled while saving; `submit` names its button, `Save` unless given) and anything under it, such as an `Alert`; with `submitLast` the button comes after what is under it, so Tab reaches a field there first. With `onCancel`, a Cancel button follows Save; with `focused`, its line takes the focus when it opens.
@@ -55,6 +57,9 @@ export {
   CheckField,
   CharacterPicker,
   ChoiceGroup,
+  ChoiceField,
+  OptionRows,
+  type OptionRowChoice,
   DataArea,
   LinesArea,
   Form,

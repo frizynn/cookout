@@ -23,7 +23,7 @@ export function ChoiceButton(parts: ChoiceButtonParts): ReactNode {
   }, [onChoose, value]);
   return (
     <label
-      className={`flex-1 cursor-pointer rounded px-2 py-1 text-center max-md:rounded-lg max-md:py-2 whitespace-nowrap transition-colors has-focus-visible:ring-1 ${choiceStyle(parts.chosen)}`}
+      className={`flex-1 cursor-pointer rounded px-2 py-1 text-center max-md:rounded-lg max-md:px-1 max-md:py-2 whitespace-nowrap transition-colors has-focus-visible:ring-1 ${choiceStyle(parts.chosen)}`}
     >
       <input
         checked={parts.chosen}

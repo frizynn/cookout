@@ -1,8 +1,13 @@
-import type { BoardLimits, ChannelRoutingResponse, SetChannelRoutingRequest } from "../../channels/index.ts";
+import type {
+  BoardLimits,
+  ChannelRoutingResponse,
+  SetChannelRoutingRequest,
+  WakeOptions,
+} from "../../channels/index.ts";
 import type { ChannelName, CookoutClient, CookoutEvent, Refusal } from "../../sdk/index.ts";
 import { refusedAs } from "./subscriptions-slice.ts";
 
-type RoutingClient = Pick<CookoutClient, "boardLimits" | "setBoardLimits" | "setChannelRouting">;
+type RoutingClient = Pick<CookoutClient, "boardLimits" | "setBoardLimits" | "setChannelRouting" | "wakeOptions">;
 
 type Answer<Answered> = { readonly answer: Answered } | { readonly refusal: Refusal };
 
@@ -13,6 +18,7 @@ interface RoutingCalls {
   ) => Promise<Answer<ChannelRoutingResponse>>;
   readonly boardLimits: () => Promise<Answer<BoardLimits>>;
   readonly setBoardLimits: (limits: BoardLimits) => Promise<Answer<BoardLimits>>;
+  readonly wakeOptions: () => Promise<Answer<WakeOptions>>;
 }
 
 interface RoutingOptions {
@@ -52,6 +58,13 @@ function routingCalls({ client, heard }: RoutingOptions): RoutingCalls {
         return answer;
       });
       return set;
+    },
+    wakeOptions: async () => {
+      const options = await answered(async () => {
+        const found = await client.wakeOptions();
+        return found.options;
+      });
+      return options;
     },
   };
 }

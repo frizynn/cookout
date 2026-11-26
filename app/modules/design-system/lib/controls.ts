@@ -38,3 +38,6 @@ export { SearchIcon } from "./search-icon.tsx";
 export { Listbox, type ListboxGroup, type ListboxOption } from "./listbox.tsx";
 export type { TextRange } from "./text-range.ts";
 export { ResultOption } from "./result-option.tsx";
+export { ChoiceField } from "./choice-field.tsx";
+export { OptionRows } from "./option-rows.tsx";
+export type { OptionRowChoice } from "./option-rows-parts.ts";

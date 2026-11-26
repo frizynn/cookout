@@ -1,5 +1,6 @@
 import { InputField, PickField } from "../../design-system/controls.tsx";
 import type { ChannelSettings } from "./use-channel-settings.ts";
+import { FallbackWakeFields } from "./fallback-wake-fields.tsx";
 import type { Identity } from "../../sdk/index.ts";
 import type { ReactNode } from "react";
 
@@ -65,6 +66,7 @@ export function ChannelRoutingFields(props: ChannelRoutingFieldsProps): ReactNod
         required={false}
         value={settings.fields.fallback}
       />
+      {settings.fields.fallback !== "" && <FallbackWakeFields settings={settings} />}
     </>
   );
 }
