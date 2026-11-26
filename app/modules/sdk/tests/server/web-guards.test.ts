@@ -21,6 +21,7 @@ const LIVE_DIRECTIVES = [
   "font-src 'self'",
   "img-src 'self' data: blob:",
   "connect-src 'self'",
+  "manifest-src 'self'",
   "base-uri 'none'",
   "form-action 'none'",
   "frame-ancestors 'none'",

@@ -1,4 +1,4 @@
-import { Effect, Schema } from "effect";
+import { Effect, FileSystem, Path, Schema } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { NodeHttpClient, NodeServices } from "@effect/platform-node";
 import { builtWebFolder, freshDatabasePath, startServe } from "../../../testing/server.ts";
@@ -12,6 +12,8 @@ interface Fetched {
 }
 
 const OK = 200;
+const MANIFEST = "manifest.webmanifest";
+const MANIFEST_TEXT = '{"name":"cookout","display":"standalone"}';
 const isRefusal = Schema.is(Schema.Struct({ error: Schema.Struct({ code: Schema.String }) }));
 
 function fetched(url: string): Effect.Effect<Fetched> {
@@ -52,6 +54,20 @@ it.effect("cookout serve serves the built web UI's index.html at / and its asset
 
     expect(page).toStrictEqual({ body: web.indexHtml, contentType: "text/html", status: OK });
     expect(script).toStrictEqual({ body: web.scriptText, contentType: "text/javascript", status: OK });
+  }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
+);
+
+it.effect("cookout serve serves the web app manifest as one, so a phone can add the cookout to its home screen", () =>
+  Effect.gen(function* servesTheManifest() {
+    const web = yield* builtWebFolder;
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    yield* fs.writeFileString(path.join(web.folder, "assets", MANIFEST), MANIFEST_TEXT);
+    const database = yield* freshDatabasePath;
+    const server = yield* startServe({ database, webFolder: web.folder });
+    const manifest = yield* fetched(`${server.url}/assets/${MANIFEST}`);
+
+    expect(manifest).toStrictEqual({ body: MANIFEST_TEXT, contentType: "application/manifest+json", status: OK });
   }).pipe(Effect.provide([NodeServices.layer, secretsLive])),
 );
 
