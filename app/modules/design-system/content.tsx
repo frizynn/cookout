@@ -9,7 +9,7 @@
  * - `Tag` is one such small tag, such as `admin`.
  * - `IdentityLink` is the logged-in identity's avatar and name as a link, highlighted when open.
  * - `IdentityRow` is a link to an identity, with its avatar, name, any tags and a muted detail line, highlighted when open.
- * - `Profile` is one identity's large avatar beside its first part, a `ProfileHead`, with every later part (its fields and actions) below at full width.
+ * - `Profile` is one identity's large avatar beside its first part, a `ProfileHead`, with every later part (its fields and actions) below at full width. With an `edit`, the avatar is a button named by its `label` that calls `onEdit`, with a pencil at its corner: on hover or focus with a mouse, always on a touch screen.
  * - `ProfileHead` holds a profile's `ProfileName` and the facts under it.
  * - `ProfileName` is an identity's name and any tags, as a heading.
  * - `ProfileSection` is one group of a profile's fields or actions, ruled off from the group above; with nothing in it, it isn't shown.
@@ -56,3 +56,4 @@ export {
   AvatarImages,
 } from "./lib/content.ts";
 export type { AvatarImage, AvatarImageSource } from "./lib/avatar-parts.ts";
+export type { AvatarEdit } from "./lib/avatar-edit.ts";

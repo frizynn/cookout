@@ -13,6 +13,7 @@ interface AvatarPickSnapshot {
   readonly round: number;
   readonly picked: number | null;
   readonly save: AvatarSaveState;
+  readonly saved: number;
 }
 
 interface AvatarPick {
@@ -26,6 +27,7 @@ interface AvatarPick {
 
 const FIRST_ROUND = 0;
 const NEXT = 1;
+const NONE_SAVED = 0;
 
 interface AvatarPickOptions {
   readonly list: IdentityList;
@@ -40,6 +42,7 @@ function createAvatarPick(options: AvatarPickOptions): AvatarPick {
     picked: null,
     round: FIRST_ROUND,
     save: { status: "idle" },
+    saved: NONE_SAVED,
     style: options.style,
   };
   let saving = Promise.resolve();
@@ -52,7 +55,7 @@ function createAvatarPick(options: AvatarPickOptions): AvatarPick {
   async function send(png: Promise<Uint8Array>): Promise<void> {
     try {
       await list.calls.setAvatar(name, await png);
-      publish({ ...current, picked: null, save: { status: "idle" } });
+      publish({ ...current, picked: null, save: { status: "idle" }, saved: current.saved + NEXT });
     } catch (error: unknown) {
       publish({ ...current, save: { ...refusalOf(error), status: "failed" } });
     }

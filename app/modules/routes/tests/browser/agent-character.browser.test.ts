@@ -7,6 +7,7 @@ import { logInToChannels } from "./login.ts";
 import { unique } from "./names.ts";
 
 const SIDE = 256;
+const NONE = 0;
 
 interface Owned {
   readonly owner: Person;
@@ -43,15 +44,36 @@ async function pickedAndSaved(avatar: Locator): Promise<void> {
   await avatar.getByRole("button", { exact: true, name: "Save avatar" }).click();
 }
 
-test("an agent's owner picks a character on its profile and saves it, and it becomes the agent's avatar", async ({
+async function changeOpened(profile: Locator): Promise<Locator> {
+  const change = profile.getByRole("button", { exact: true, name: "Change avatar" });
+
+  await expect(change).toBeVisible();
+  await expect(profile.getByRole("group", { exact: true, name: "Avatar" })).toHaveCount(NONE);
+
+  await change.click();
+  return profile.page().getByRole("dialog", { exact: true, name: "Change avatar" });
+}
+
+test("an agent's owner opens Change avatar from its picture, picks a character and saves it, and the dialog closes on the new avatar", async ({
   page,
 }) => {
   const owned = await ownedAgent(page);
   const profile = inProfile(page);
+  const dialog = await changeOpened(profile);
+  await pickedAndSaved(dialog.getByRole("group", { exact: true, name: "Avatar" }));
 
-  await pickedAndSaved(profile.getByRole("group", { exact: true, name: "Avatar" }));
-
+  await expect(dialog).toBeHidden();
   await expect.poll(hasAvatar(owned)).toBe(true);
   await expect(profile.getByTestId("avatar")).not.toHaveAttribute("data-character");
   await expect(profile.getByTestId("avatar")).toHaveJSProperty("naturalWidth", SIDE);
+});
+
+test("someone else's agent's picture is no button", async ({ page }) => {
+  const owned = await ownedAgent(page);
+  const stranger = await newIdentity({ kind: "human", name: unique("browser-character-stranger") });
+  await logInToChannels({ page, token: stranger.token });
+  await page.goto(`/#/people/${owned.agent}`);
+
+  await expect(inProfile(page).getByTestId("avatar")).toBeVisible();
+  await expect(inProfile(page).getByRole("button", { exact: true, name: "Change avatar" })).toHaveCount(NONE);
 });

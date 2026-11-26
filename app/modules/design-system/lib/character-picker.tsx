@@ -38,7 +38,7 @@ export function CharacterPicker(parts: CharacterPickerParts): ReactNode {
   }, [onSave, picked, shown]);
   return (
     <fieldset className="flex min-w-0 flex-col gap-3">
-      <legend className="mb-3 text-xs font-medium text-foreground max-md:text-[13px]">{parts.label}</legend>
+      <legend className="sr-only">{parts.label}</legend>
       <ChoiceGroup choices={STYLE_CHOICES} label={TEXT.style} onChoose={handleChooseLook} value={shown.style} />
       <CharacterGrid onPick={handlePick} picked={picked} shown={shown} />
       <ButtonRow>

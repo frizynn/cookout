@@ -1,30 +1,32 @@
-import type { Identity, IdentityName } from "../../sdk/index.ts";
+import type { AvatarPick } from "../../composer/index.ts";
 import { AvatarPicker } from "./avatar-picker.tsx";
-import type { Composer } from "../../composer/index.ts";
-import { ProfileSection } from "../../design-system/content.tsx";
+import { ListDialog } from "../../design-system/controls.tsx";
 import type { ReactNode } from "react";
 
 interface ProfileAvatarProps {
-  readonly composer: Composer;
-  readonly identity: Identity;
-  readonly me: IdentityName;
+  readonly name: string;
+  readonly open: boolean;
+  readonly pick: AvatarPick;
+  readonly onClose: () => void;
 }
 
-function settableBy(identity: Identity, me: IdentityName): boolean {
-  if (identity.name === me) {
-    return true;
-  }
-  return identity.kind === "agent" && identity.owner === String(me);
-}
+const TEXT = {
+  close: "Cancel",
+  description: (name: string) => `Pick a character for @${name}. Saving it replaces the current picture.`,
+  title: "Change avatar",
+} as const;
 
 export function ProfileAvatar(props: ProfileAvatarProps): ReactNode {
-  const { identity } = props;
-  if (!settableBy(identity, props.me)) {
-    return null;
-  }
+  const handleClose = props.onClose;
   return (
-    <ProfileSection>
-      <AvatarPicker name={identity.name} pick={props.composer.avatar(identity.name)} />
-    </ProfileSection>
+    <ListDialog
+      close={TEXT.close}
+      description={TEXT.description(props.name)}
+      onClose={handleClose}
+      open={props.open}
+      title={TEXT.title}
+    >
+      <AvatarPicker name={props.name} pick={props.pick} />
+    </ListDialog>
   );
 }

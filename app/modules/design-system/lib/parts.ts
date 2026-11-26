@@ -1,5 +1,6 @@
 import type { AvatarParts, PresenceShown } from "./avatar-parts.ts";
 import type { ActionMenuParts } from "./menu-parts.ts";
+import type { AvatarEdit } from "./avatar-edit.ts";
 import type { PanelEdgeParts } from "./panel-edge-parts.ts";
 import type { ReactNode } from "react";
 import type { TextRange } from "./text-range.ts";
@@ -97,6 +98,7 @@ interface ProfileParts extends Parts {
   readonly name: string;
   readonly agent: boolean;
   readonly presence: PresenceShown | null;
+  readonly edit: AvatarEdit | null;
 }
 
 interface ProfileNameParts {

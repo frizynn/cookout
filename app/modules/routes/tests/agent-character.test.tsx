@@ -10,7 +10,7 @@ interface Face {
 
 function faceOf({ agent, name }: { readonly agent: boolean; readonly name: string }): Face {
   const { container, unmount } = render(
-    <Profile agent={agent} name={name} presence={null}>
+    <Profile agent={agent} edit={null} name={name} presence={null}>
       {name}
     </Profile>,
   );

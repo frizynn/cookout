@@ -50,7 +50,7 @@ it("an avatar shows its picture, named by the display name, and its initials onc
 
   const { container, unmount } = render(
     <AvatarImages value={IMAGES}>
-      <Profile agent={false} name={NAME} presence={null}>
+      <Profile agent={false} edit={null} name={NAME} presence={null}>
         {NAME}
       </Profile>
     </AvatarImages>,
