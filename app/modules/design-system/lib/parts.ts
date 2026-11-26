@@ -170,6 +170,20 @@ interface ChoiceParts {
   readonly value: string;
 }
 
+interface CharacterPickerParts {
+  readonly label: string;
+  readonly seed: string;
+  readonly look: string;
+  readonly round: number;
+  readonly picked: number | null;
+  readonly saving: boolean;
+  readonly onChooseLook: (look: string) => void;
+  readonly onShuffle: () => void;
+  readonly onPick: (index: number) => void;
+  readonly onSave: (png: Promise<Uint8Array>) => void;
+  readonly children?: ReactNode;
+}
+
 interface ChoiceGroupParts {
   readonly label: string;
   readonly choices: readonly ChoiceParts[];
@@ -260,6 +274,7 @@ export type {
   ShownTimeParts,
   SeparatorParts,
   ButtonParts,
+  CharacterPickerParts,
   ChoiceGroupParts,
   NavLinkParts,
   PaneHeaderParts,

@@ -10,7 +10,7 @@ import { openAt } from "./render.tsx";
 const PREFIX = "web-card";
 
 interface Card {
-  readonly avatar: { readonly agent: string | null; readonly initials: string | null } | null;
+  readonly avatar: { readonly agent: string | null; readonly face: string | null } | null;
   readonly chip: string | null;
   readonly dot: string | null;
   readonly lines: readonly string[];
@@ -48,7 +48,10 @@ function cardAvatar(): Card["avatar"] {
   if (avatar === null) {
     return null;
   }
-  return { agent: avatar.dataset["agent"] ?? null, initials: avatar.dataset["initials"] ?? null };
+  return {
+    agent: avatar.dataset["agent"] ?? null,
+    face: avatar.dataset["initials"] ?? avatar.dataset["character"] ?? null,
+  };
 }
 
 function chipOf(): string | null {
@@ -144,7 +147,7 @@ it("hovering an agent author's name opens a card led by its avatar tile with an 
   const events = await onlineAgent(channel);
 
   await expect(hovered("Mail Bot")).resolves.toStrictEqual({
-    avatar: { agent: "true", initials: "WC" },
+    avatar: { agent: "true", face: `bot:${bot}` },
     chip: "Agent",
     dot: "online",
     lines: ["Mail Bot", `@${bot}`, "Online", `Agent · owned by ${channel}-owner`, "Reads the mail"],
@@ -173,7 +176,7 @@ it("hovering a person's name opens a card led by their avatar tile with no Agent
   const close = await postedBy(channel, ann.client);
 
   await expect(hovered(`${channel}-ann`)).resolves.toStrictEqual({
-    avatar: { agent: "false", initials: "WC" },
+    avatar: { agent: "false", face: "WC" },
     chip: null,
     dot: "offline",
     lines: [`${channel}-ann`, "Offline", "Human"],
@@ -193,7 +196,7 @@ it("focusing an @mention opens its card, and Escape closes it", { timeout: 10_00
   mention.focus();
 
   await expect(cardOf(() => mention)).resolves.toStrictEqual({
-    avatar: { agent: "false", initials: "WC" },
+    avatar: { agent: "false", face: "WC" },
     chip: null,
     dot: "offline",
     lines: [`${channel}-reader`, "Offline", "Human"],
@@ -220,7 +223,7 @@ it("a deactivated identity's card says Deactivated in place of its presence, sti
   const close = await deactivatedAuthor(channel, cy.client);
 
   await expect(hovered(`${channel}-cy`)).resolves.toStrictEqual({
-    avatar: { agent: "false", initials: "WC" },
+    avatar: { agent: "false", face: "WC" },
     chip: null,
     dot: null,
     lines: [`${channel}-cy`, "Deactivated", "Human"],

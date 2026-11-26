@@ -37,7 +37,10 @@
  * the field's text trimmed (empty clears it), puts the answer in the identity
  * list at once and forgets the text, or, if the server refuses, keeps the
  * text and the refusal. `description(name)` is an agent's description as it
- * is edited, and saves the same way.
+ * is edited, and saves the same way. `avatar(name)` is the character being
+ * picked for that identity's avatar: a style, a round of variants that
+ * `shuffle` moves on, the one picked, and `save`, which sends the PNG it is
+ * handed and puts the answer in the identity list, or keeps the refusal.
  * `identities.actions(name)` is what an agent's owner or an admin does to
  * that identity: rotate its token, list and revoke its agent session (the board store's agent sessions for it, shown while `subscribeToSessions` has a reader),
  * deactivate it, reactivate it, delete it and transfer it. Each is asked
@@ -66,9 +69,9 @@
  * on the draft empties them with its text. An image among them has an object URL for its thumbnail until it leaves.
  */
 import type { AgentCreation, IdentityActions } from "./lib/owner-powers.ts";
+import type { AvatarPick, DisplayNameDraft, TriggerSettings } from "./lib/profile-stores.ts";
 import type { BrowserStorage, DraftSnapshot, KeptText, Sources } from "./lib/snapshot.ts";
 import type { Command, Identity, IdentityName } from "../sdk/index.ts";
-import type { DisplayNameDraft, TriggerSettings } from "./lib/profile-stores.ts";
 import { EMPTY, changesFor, draftChanges, keptTextIn } from "./lib/snapshot.ts";
 import type { IdentityList, IdentityStore } from "./lib/identity-list.ts";
 import { commandList, loggedInName, selectedStore } from "../board/index.ts";
@@ -238,6 +241,8 @@ export interface Composer {
   readonly channelPosters: (channel: string) => readonly IdentityName[];
   /** The display name being edited for this identity: the same store each time for one name. */
   readonly displayName: (name: IdentityName) => DisplayNameDraft;
+  /** The character being picked as this identity's avatar: the same store each time for one name. */
+  readonly avatar: (name: IdentityName) => AvatarPick;
   /** The description being edited for this agent: the same store each time for one name. */
   readonly description: (name: IdentityName) => DisplayNameDraft;
   /** The identity list the suggestions come from. */
@@ -286,7 +291,7 @@ export function createComposer(options: ComposerOptions): Composer {
   };
 }
 
-export type { DisplayNameDraft } from "./lib/profile-stores.ts";
+export type { AvatarPick, DisplayNameDraft } from "./lib/profile-stores.ts";
 export { type TriggerSettings, type TriggerSnapshot, savedUrl } from "./lib/trigger-settings.ts";
 export type { AgentCreation } from "./lib/agent-creation.ts";
 export type { PendingAttachment, PendingAttachments } from "./lib/pending-attachments.ts";

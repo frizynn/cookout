@@ -16,6 +16,7 @@ type IdentityCallsClient = Pick<
   | "removeAdmin"
   | "revokeAgentSession"
   | "rotateToken"
+  | "setAvatar"
   | "setDescription"
   | "setDisplayName"
   | "setTrigger"
@@ -36,6 +37,7 @@ interface IdentityCalls {
   readonly setAdmin: (name: IdentityName, admin: boolean) => Promise<void>;
   readonly setDisplayName: (name: IdentityName, text: string | null) => Promise<void>;
   readonly setDescription: (name: IdentityName, text: string | null) => Promise<void>;
+  readonly setAvatar: (name: IdentityName, png: Uint8Array) => Promise<void>;
   readonly createAgent: (agent: NewAgent) => Promise<Created>;
   readonly rotateToken: (name: IdentityName) => Promise<Token>;
   readonly revokeSession: (name: IdentityName) => Promise<void>;
@@ -155,6 +157,10 @@ function createIdentityCalls(options: IdentityCallsOptions): IdentityCalls {
       const { identity, token } = await client.rotateToken(name);
       put(identity);
       return token;
+    },
+    setAvatar: async (name, png) => {
+      const { identity } = await client.setAvatar(name, png);
+      put(identity);
     },
     transfer: async (name, to) => {
       const { identity } = await client.transferAgent(name, to);

@@ -1,4 +1,5 @@
 import { hueOf, initialsOf } from "./avatar-look.ts";
+import { CharacterImage } from "./character-image.tsx";
 import type { ReactNode } from "react";
 import { useAvatarImage } from "./use-avatar-image.ts";
 
@@ -26,6 +27,17 @@ export function AvatarFace(parts: AvatarFaceParts): ReactNode {
   const handleError = onError;
   const shape = shapeOf(parts.agent);
   const size = SIZES[parts.size];
+  if (image === null && parts.agent) {
+    return (
+      <CharacterImage
+        agent
+        frame={`object-cover ${size.box} ${shape}`}
+        look="bot"
+        seed={parts.name}
+        testId={size.testId}
+      />
+    );
+  }
   if (image === null) {
     return (
       <span

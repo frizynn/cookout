@@ -1,3 +1,4 @@
+import { CharacterImage } from "./character-image.tsx";
 import type { IdentityCardShownParts } from "./identity-card-parts.ts";
 import type { ReactNode } from "react";
 import { initialsOf } from "./avatar-look.ts";
@@ -7,6 +8,17 @@ export function IdentityCardFace(parts: IdentityCardShownParts): ReactNode {
   const { card } = parts;
   const { image, onError } = useAvatarImage(card.name);
   const handleError = onError;
+  if (image === null && card.agent) {
+    return (
+      <CharacterImage
+        agent
+        frame="absolute inset-0 h-full w-full object-cover"
+        look="bot"
+        seed={card.name}
+        testId="avatar"
+      />
+    );
+  }
   if (image === null) {
     return (
       <span

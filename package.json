@@ -83,6 +83,8 @@
     "screenshots": "node scripts/screenshots.ts"
   },
   "dependencies": {
+    "@dicebear/collection": "9.4.3",
+    "@dicebear/core": "9.4.3",
     "@effect/platform-node": "^4.1.5",
     "@effect/sql-pg": "^4.1.5",
     "ajv": "^8.20.0",

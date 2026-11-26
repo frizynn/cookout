@@ -27,7 +27,7 @@ async function summaryShown(count: string): Promise<Summary> {
   const link = await inPane().findByRole("link", { name: (name) => name.startsWith(count) });
   const repliers: (readonly [string | undefined, string | undefined])[] = [];
   for (const avatar of within(link).getAllByTestId("replier-avatar")) {
-    repliers.push([avatar.dataset["initials"], avatar.dataset["agent"]]);
+    repliers.push([avatar.dataset["initials"] ?? avatar.dataset["character"], avatar.dataset["agent"]]);
   }
   return { name: link.getAttribute("aria-label"), repliers, text: link.textContent };
 }
@@ -54,7 +54,7 @@ it("a message with replies shows who replied, how many, how many are new and whe
   await expect(summaryShown("2 replies")).resolves.toStrictEqual({
     name: "2 replies, 2 new replies to you, Last reply just now, View thread",
     repliers: [
-      ["BS", "true"],
+      ["bot:bot-summary", "true"],
       ["AS", "false"],
     ],
     text: "2 replies2 new replies to youLast reply just now →",
@@ -66,7 +66,7 @@ it("a message with replies shows who replied, how many, how many are new and whe
   await expect(summaryShown("3 replies")).resolves.toMatchObject({
     repliers: [
       ["AS", "false"],
-      ["BS", "true"],
+      ["bot:bot-summary", "true"],
     ],
   });
 
