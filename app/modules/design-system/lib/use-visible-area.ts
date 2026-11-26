@@ -18,6 +18,10 @@ interface Settling {
   readonly stop: () => void;
 }
 
+function viewport(): VisualViewport | null {
+  return globalThis.visualViewport ?? null;
+}
+
 function holdsKeyboard(): boolean {
   const element = globalThis.document.activeElement;
   return element !== null && (element.matches(TEXT_FIELD) || element instanceof HTMLIFrameElement);
@@ -47,7 +51,7 @@ function heightWhile(held: boolean, height: number): void {
 }
 
 function measure(): void {
-  const area = globalThis.visualViewport;
+  const area = viewport();
   const held = holdsKeyboard();
   if (area === null || area.scale !== UNZOOMED) {
     if (!held) {
@@ -94,7 +98,7 @@ function listened(settle: () => void): AbortController {
       target.addEventListener(type, settle, { signal: control.signal });
     }
   }
-  on(globalThis.visualViewport, AREA_EVENTS);
+  on(viewport(), AREA_EVENTS);
   on(globalThis.document, PAGE_EVENTS);
   on(globalThis, WINDOW_EVENTS);
   return control;
