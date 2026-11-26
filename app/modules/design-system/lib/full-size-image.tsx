@@ -2,7 +2,7 @@ import type { ImageParts } from "./attachment-parts.ts";
 import type { ReactNode } from "react";
 
 const SHOWN =
-  "h-auto max-h-[calc(100vh-6rem)] w-auto max-w-[calc(100vw-2rem)] rounded-md bg-background object-contain shadow-lg";
+  "h-auto max-h-[calc(100dvh-6rem)] w-auto max-w-[calc(100vw-2rem)] rounded-md bg-background object-contain shadow-lg";
 
 export function FullSizeImage(parts: ImageParts): ReactNode {
   if (parts.size === null) {
