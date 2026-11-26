@@ -2,6 +2,7 @@ import { Muted, Skeleton } from "../../design-system/content.tsx";
 import { CardBody } from "../../design-system/layout.tsx";
 import type { Composer } from "../../composer/index.ts";
 import type { IdentityName } from "../../sdk/index.ts";
+import type { Keymap } from "../../keymap/index.ts";
 import { ProfileEntry } from "./profile-entry.tsx";
 import type { ReactNode } from "react";
 import { usePresences } from "./use-presence.ts";
@@ -13,6 +14,7 @@ const TEXT = { unknown: "Unknown identity" } as const;
 
 interface ProfileBodyProps {
   readonly composer: Composer;
+  readonly keymap: Keymap;
   readonly me: IdentityName;
   readonly name: IdentityName;
 }
@@ -41,6 +43,7 @@ export function ProfileBody(props: ProfileBodyProps): ReactNode {
       composer={props.composer}
       identity={identity}
       key={identity.name}
+      keymap={props.keymap}
       me={props.me}
       presences={presences}
     />

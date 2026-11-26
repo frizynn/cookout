@@ -1,6 +1,6 @@
-interface AvatarEdit {
+interface EditAction {
   readonly label: string;
   readonly onEdit: () => void;
 }
 
-export type { AvatarEdit };
+export type { EditAction };

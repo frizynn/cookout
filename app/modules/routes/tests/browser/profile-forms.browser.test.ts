@@ -43,6 +43,7 @@ async function ownedAgentProfile(page: Page): Promise<Locator> {
 
 test("the description's Save sits beside its box and level with it, as the display name's does", async ({ page }) => {
   const profile = await ownedAgentProfile(page);
+  await profile.getByRole("button", { exact: true, name: "Edit display name" }).click();
 
   const placed = {
     description: await savePlacement(profile.getByRole("form", { exact: true, name: "Description" }), "Description"),
@@ -53,4 +54,30 @@ test("the description's Save sits beside its box and level with it, as the displ
     description: { beside: true, level: true },
     displayName: { beside: true, level: true },
   });
+});
+
+const CORNER = 0;
+
+function opacityOf(control: Locator): () => Promise<string> {
+  return async () => {
+    const shown = await control.evaluate((element: unknown) => {
+      if (!(element instanceof HTMLElement)) {
+        return "";
+      }
+      return globalThis.getComputedStyle(element).opacity;
+    });
+    return shown;
+  };
+}
+
+test("the display name's pencil shows only while the mouse is over the name", async ({ page }) => {
+  const profile = await ownedAgentProfile(page);
+  const pencil = profile.getByRole("button", { exact: true, name: "Edit display name" });
+  await page.mouse.move(CORNER, CORNER);
+
+  await expect.poll(opacityOf(pencil)).toBe("0");
+
+  await profile.getByRole("heading", { level: 3 }).hover();
+
+  await expect.poll(opacityOf(pencil)).toBe("1");
 });

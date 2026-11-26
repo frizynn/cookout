@@ -21,7 +21,7 @@ export function ProfileView(props: ProfileProps): ReactNode {
 
   return (
     <SidePanel closeHref={props.closeHref} closeLabel={TEXT.close} detail={props.name} edge={null} label={TEXT.profile}>
-      <ProfileBody composer={props.composer} me={props.me} name={props.name} />
+      <ProfileBody composer={props.composer} keymap={props.keymap} me={props.me} name={props.name} />
     </SidePanel>
   );
 }

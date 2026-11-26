@@ -1,6 +1,6 @@
 import { Avatar } from "./avatar.tsx";
 import { AvatarEditButton } from "./avatar-edit-button.tsx";
-import type { ProfileParts } from "./parts.ts";
+import type { ProfileParts } from "./profile-parts.ts";
 import type { ReactNode } from "react";
 
 export function Profile(parts: ProfileParts): ReactNode {

@@ -1,6 +1,8 @@
-import { useCallback, useId, useRef } from "react";
+import type { ChangeEvent, ReactNode } from "react";
+import { useCallback, useId } from "react";
 import { LineFormSave } from "./line-form-save.tsx";
-import type { ReactNode } from "react";
+import { SECONDARY_BUTTON } from "./button-look.ts";
+import { useFocusOnOpen } from "./focus-on-open.ts";
 
 interface LineFormParts {
   readonly label: string;
@@ -11,21 +13,26 @@ interface LineFormParts {
   readonly onSubmit: () => void;
   readonly submit?: string;
   readonly submitLast?: boolean;
+  readonly focused?: boolean | undefined;
+  readonly onCancel?: (() => void) | undefined;
   readonly children?: ReactNode;
 }
 
 const SAVE = "Save";
+const CANCEL = "Cancel";
 
 export function LineForm(parts: LineFormParts): ReactNode {
   const { onEdit, onSubmit } = parts;
+  const handleCancel = parts.onCancel;
   const id = useId();
   const submit = parts.submit ?? SAVE;
-  const box = useRef<HTMLInputElement>(null);
-  const handleChange = useCallback(() => {
-    if (box.current !== null) {
-      onEdit(box.current.value);
-    }
-  }, [onEdit]);
+  const box = useFocusOnOpen<HTMLInputElement>(parts.focused === true);
+  const handleChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      onEdit(event.currentTarget.value);
+    },
+    [onEdit],
+  );
   const submitted = useCallback(() => {
     onSubmit();
   }, [onSubmit]);
@@ -46,6 +53,11 @@ export function LineForm(parts: LineFormParts): ReactNode {
           value={parts.value}
         />
         {parts.submitLast !== true && <LineFormSave below={false} saving={parts.saving} submit={submit} />}
+        {typeof handleCancel === "function" && (
+          <button className={SECONDARY_BUTTON} onClick={handleCancel} type="button">
+            {CANCEL}
+          </button>
+        )}
       </span>
       {parts.children}
       {parts.submitLast === true && <LineFormSave below saving={parts.saving} submit={submit} />}

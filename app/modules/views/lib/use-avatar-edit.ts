@@ -1,7 +1,7 @@
 import type { AvatarPick, Composer } from "../../composer/index.ts";
 import type { Identity, IdentityName } from "../../sdk/index.ts";
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
-import type { AvatarEdit } from "../../design-system/content.tsx";
+import type { EditAction } from "../../design-system/content.tsx";
 
 interface AvatarEditProps {
   readonly composer: Composer;
@@ -10,7 +10,7 @@ interface AvatarEditProps {
 }
 
 interface AvatarEditing {
-  readonly edit: AvatarEdit | null;
+  readonly edit: EditAction | null;
   readonly open: boolean;
   readonly close: () => void;
   readonly pick: AvatarPick;
@@ -25,7 +25,7 @@ function settableBy(identity: Identity, me: IdentityName): boolean {
   return identity.kind === "agent" && identity.owner === String(me);
 }
 
-function editOf(settable: boolean, onEdit: () => void): AvatarEdit | null {
+function editOf(settable: boolean, onEdit: () => void): EditAction | null {
   if (!settable) {
     return null;
   }

@@ -1,6 +1,5 @@
 import type { AvatarParts, PresenceShown } from "./avatar-parts.ts";
 import type { ActionMenuParts } from "./menu-parts.ts";
-import type { AvatarEdit } from "./avatar-edit.ts";
 import type { PanelEdgeParts } from "./panel-edge-parts.ts";
 import type { ReactNode } from "react";
 import type { TextRange } from "./text-range.ts";
@@ -91,20 +90,6 @@ interface IdentityRowParts {
   readonly detail: string;
   readonly note: string | null;
   readonly tabbable: boolean;
-  readonly children?: ReactNode;
-}
-
-interface ProfileParts extends Parts {
-  readonly name: string;
-  readonly agent: boolean;
-  readonly presence: PresenceShown | null;
-  readonly edit: AvatarEdit | null;
-}
-
-interface ProfileNameParts {
-  readonly name: string;
-  readonly displayName: string | null;
-  readonly note: string | null;
   readonly children?: ReactNode;
 }
 
@@ -266,8 +251,6 @@ export type {
   DateTextParts,
   FilterFieldParts,
   IdentityRowParts,
-  ProfileNameParts,
-  ProfileParts,
   TagParts,
   AuthorParts,
   CallChipParts,

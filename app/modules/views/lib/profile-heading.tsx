@@ -1,22 +1,30 @@
-import { ProfileHead, ProfileName } from "../../design-system/content.tsx";
-import type { Identity } from "../../sdk/index.ts";
-import { IdentityTags } from "./identity-tags.tsx";
-import { ProfileFacts } from "./profile-facts.tsx";
+import type { Identity, IdentityName } from "../../sdk/index.ts";
+import type { Composer } from "../../composer/index.ts";
+import type { Keymap } from "../../keymap/index.ts";
+import { ProfileDisplayName } from "./profile-display-name.tsx";
+import { ProfileTitle } from "./profile-title.tsx";
 import type { ReactNode } from "react";
-import { noteOf } from "./use-author.ts";
+import { useNameEdit } from "./use-name-edit.ts";
 
 interface ProfileHeadingProps {
+  readonly composer: Composer;
   readonly identity: Identity;
+  readonly keymap: Keymap;
+  readonly me: IdentityName;
 }
 
 export function ProfileHeading(props: ProfileHeadingProps): ReactNode {
   const { identity } = props;
+  const name = useNameEdit({ composer: props.composer, identity, me: props.me });
+  const handleClose = name.close;
   return (
-    <ProfileHead>
-      <ProfileName displayName={identity.displayName ?? null} name={identity.name} note={noteOf(identity)}>
-        <IdentityTags identity={identity} />
-      </ProfileName>
-      <ProfileFacts identity={identity} />
-    </ProfileHead>
+    <>
+      <ProfileTitle edit={name.edit} identity={identity} />
+      {name.open && (
+        <ProfileDisplayName composer={props.composer} identity={identity} keymap={props.keymap} onClose={handleClose} />
+      )}
+    </>
   );
 }
+
+export type { ProfileHeadingProps };

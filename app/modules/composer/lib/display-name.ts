@@ -11,6 +11,7 @@ type SaveState =
 interface DisplayNameSnapshot {
   readonly text: string | null;
   readonly save: SaveState;
+  readonly saved: number;
 }
 
 interface DisplayNameDraft {
@@ -18,6 +19,7 @@ interface DisplayNameDraft {
   readonly snapshot: () => DisplayNameSnapshot;
   readonly edit: (text: string) => void;
   readonly save: (text: string) => void;
+  readonly discard: () => void;
 }
 
 interface DisplayNameOptions {
@@ -34,10 +36,13 @@ function sentOf(text: string): string | null {
   return trimmed;
 }
 
+const NONE_SAVED = 0;
+const NEXT = 1;
+
 function createDisplayName(options: DisplayNameOptions): DisplayNameDraft {
   const { list, name, set } = options;
   const listeners = listenersOf(list.show);
-  let current: DisplayNameSnapshot = { save: { status: "idle" }, text: null };
+  let current: DisplayNameSnapshot = { save: { status: "idle" }, saved: NONE_SAVED, text: null };
   let saving = Promise.resolve();
 
   function publish(next: DisplayNameSnapshot): void {
@@ -48,9 +53,9 @@ function createDisplayName(options: DisplayNameOptions): DisplayNameDraft {
   async function send(text: string): Promise<void> {
     try {
       await set(name, sentOf(text));
-      publish({ save: { status: "idle" }, text: null });
+      publish({ save: { status: "idle" }, saved: current.saved + NEXT, text: null });
     } catch (error: unknown) {
-      publish({ save: { ...refusalOf(error), status: "failed" }, text });
+      publish({ ...current, save: { ...refusalOf(error), status: "failed" }, text });
     }
   }
 
@@ -60,11 +65,14 @@ function createDisplayName(options: DisplayNameOptions): DisplayNameDraft {
   }
 
   return {
+    discard: () => {
+      publish({ ...current, save: { status: "idle" }, text: null });
+    },
     edit: (text) => {
       publish({ ...current, text });
     },
     save: (text) => {
-      publish({ save: { status: "saving" }, text });
+      publish({ ...current, save: { status: "saving" }, text });
       saving = sendAfter(saving, text);
     },
     snapshot: () => current,

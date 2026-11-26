@@ -8,6 +8,7 @@ import { testAgentDisplayName } from "../../testing/index.ts";
 import { watched } from "./watched.ts";
 
 const NONE = 0;
+const ONE = 1;
 
 interface Crew {
   readonly human: CookoutClient;
@@ -35,8 +36,14 @@ async function openedFromAuthor(prefix: string): Promise<readonly string[]> {
   return [globalThis.location.hash, heading.textContent, inPane().getByText("Deployed").textContent];
 }
 
-async function rename(text: string): Promise<void> {
+async function nameFormOpened(): Promise<HTMLElement> {
+  fireEvent.click(await inProfile().findByRole("button", { name: "Edit display name" }));
   const form = await inProfile().findByRole("form", { name: "Display name" });
+  return form;
+}
+
+async function rename(text: string): Promise<void> {
+  const form = await nameFormOpened();
   fireEvent.change(within(form).getByRole("textbox"), { target: { value: text } });
   fireEvent.click(within(form).getByRole("button", { name: "Save" }));
 }
@@ -134,6 +141,66 @@ it("you edit your own display name in your panel", { timeout: 5000 }, async () =
   });
 
   close();
+});
+
+function nameForms(): number {
+  return inProfile().queryAllByRole("form", { name: "Display name" }).length;
+}
+
+async function focusedOnOpen(): Promise<boolean> {
+  const form = await nameFormOpened();
+  return within(form).getByRole("textbox") === document.activeElement;
+}
+
+it("an owner's agent shows no display name field until its pencil opens one, and saving closes it", {
+  timeout: 5000,
+}, async () => {
+  expect.hasAssertions();
+
+  const { close, events } = await watchAsOwner("web-panel-pencil");
+  await inProfile().findByRole("heading", { level: 3 });
+  const before = nameForms();
+  const focused = await focusedOnOpen();
+  await rename("Release Bot");
+  await waitFor(() => {
+    expect(nameForms()).toBe(NONE);
+  });
+
+  expect([before, focused, inProfile().getByRole("heading", { level: 3 }).textContent]).toStrictEqual([
+    NONE,
+    true,
+    "Release Bot@web-panel-pencil-botagent",
+  ]);
+
+  close();
+  await events.close();
+});
+
+async function typedInNameForm(): Promise<HTMLElement> {
+  const form = await nameFormOpened();
+  fireEvent.change(within(form).getByRole("textbox"), { target: { value: "Not this" } });
+  return form;
+}
+
+it("pressing Escape or Cancel leaves the display name as it was and the profile open", { timeout: 5000 }, async () => {
+  expect.hasAssertions();
+
+  const { close, events } = await watchAsOwner("web-panel-escape");
+  fireEvent.keyDown(within(await typedInNameForm()).getByRole("textbox"), { key: "Escape" });
+  const afterEscape = nameForms();
+  fireEvent.click(within(await typedInNameForm()).getByRole("button", { name: "Cancel" }));
+  const afterCancel = nameForms();
+  const reopened = within(await nameFormOpened()).getByRole("textbox");
+
+  expect([afterEscape, afterCancel, reopened, profilePanels()]).toStrictEqual([
+    NONE,
+    NONE,
+    expect.objectContaining({ value: testAgentDisplayName("web-panel-escape-bot") }),
+    ONE,
+  ]);
+
+  close();
+  await events.close();
 });
 
 it("someone who doesn't own the agent sees its profile with no edit controls", { timeout: 5000 }, async () => {

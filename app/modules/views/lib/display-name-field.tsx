@@ -9,6 +9,8 @@ interface DisplayNameFieldProps {
   readonly field: string;
   readonly label: string;
   readonly saved: string | null;
+  readonly focused?: boolean;
+  readonly onCancel?: () => void;
 }
 
 export function DisplayNameField(props: DisplayNameFieldProps): ReactNode {
@@ -23,7 +25,9 @@ export function DisplayNameField(props: DisplayNameFieldProps): ReactNode {
   return (
     <LineForm
       field={props.field}
+      focused={props.focused}
       label={props.label}
+      onCancel={props.onCancel}
       onEdit={handleEdit}
       onSubmit={handleSave}
       saving={save.status === "saving"}

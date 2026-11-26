@@ -5,7 +5,7 @@
  * - `ChoiceGroup` is a radio group of a few choices.
  * - `CharacterPicker` is a named group that picks a drawn character as an avatar: a `ChoiceGroup` of styles, eight variants of that style (`look`) seeded from `seed` as a radio group, a Shuffle button for the next eight (`round`), and Save avatar, which hands `onSave` the picked one as a 256 px PNG. Each style's art is CC0 or free for commercial use; an agent with no avatar shows the first variant of the Bot style.
  * - `DividerButton` is a divider line led by a quiet button, such as one that shows the replies folded under it.
- * - `LineForm` is a named form of one labelled line of text, whose text its owner holds, with a Save button (disabled while saving; `submit` names its button, `Save` unless given) and anything under it, such as an `Alert`; with `submitLast` the button comes after what is under it, so Tab reaches a field there first.
+ * - `LineForm` is a named form of one labelled line of text, whose text its owner holds, with a Save button (disabled while saving; `submit` names its button, `Save` unless given) and anything under it, such as an `Alert`; with `submitLast` the button comes after what is under it, so Tab reaches a field there first. With `onCancel`, a Cancel button follows Save; with `focused`, its line takes the focus when it opens.
  * - `AreaForm` is `LineForm`'s form of a few growing lines of text, up to `limit` characters shown as a counter, where Enter starts a new line and Ctrl/Cmd+Enter saves.
  * - `ActionGroup` is a named group of what can be done to one thing.
  * - `ButtonRow` puts buttons side by side. A `Button` (and a `HeadingButton`) takes focus whenever `focused` turns true, such as when it appears.

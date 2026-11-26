@@ -1,15 +1,15 @@
-import type { AvatarEdit } from "./avatar-edit.ts";
+import type { EditAction } from "./edit-action.ts";
 import { PencilBadge } from "./pencil-badge.tsx";
 import type { ReactNode } from "react";
 import { Tooltip } from "./tooltip.tsx";
 import { useMemo } from "react";
 
 interface AvatarEditButtonParts {
-  readonly edit: AvatarEdit | null;
+  readonly edit: EditAction | null;
   readonly children: ReactNode;
 }
 
-function labelOf(edit: AvatarEdit | null): string {
+function labelOf(edit: EditAction | null): string {
   if (edit === null) {
     return "";
   }
