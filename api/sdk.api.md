@@ -11,51 +11,16 @@ The SDK's public surface: the built `dist/sdk.d.ts`, as consumers of the publish
  * code and message (`unreachable` unless a `CookoutError`).
  */
 /**
- * A moment on the wire, shared by the server, the SDK and the web: the
- * `IsoTime` brand and its check. Every timestamp the protocol carries
- * (`createdAt`, `expiresAt`, `heldUntil`, the health check's `time`) is one.
- */
-declare const brand$11: unique symbol;
-/** A moment as the wire writes it: ISO 8601 in UTC with milliseconds, such as `2026-01-01T00:00:00.000Z`. */
-type IsoTime = string & {
-  readonly [brand$11]: "IsoTime";
-};
-declare const brand$10: unique symbol;
-/** A channel's name: 1–80 lowercase letters, digits or `-`. Unique on a server. */
-type ChannelName = string & {
-  readonly [brand$10]: "ChannelName";
-};
-/** A channel as the server shows it. */
-interface Channel {
-  readonly name: ChannelName;
-  /** 1–500 characters. */
-  readonly description?: string;
-  readonly createdAt: IsoTime;
-}
-/** The body of `POST /v1/channels`. The server checks the name and description. */
-interface CreateChannelRequest {
-  readonly name: string;
-  readonly description?: string;
-}
-/** The answer to creating or getting a channel. */
-interface ChannelResponse {
-  readonly channel: Channel;
-}
-/** The answer to `GET /v1/channels`: every channel, sorted by name. */
-interface ListChannelsResponse {
-  readonly channels: readonly Channel[];
-}
-/**
  * The calls a client makes on one identity by its name: reading it, and setting or clearing an agent's description
  * (#189). The SDK's `CookoutClient` has them.
  */
-declare const brand$9: unique symbol;
+declare const brand$11: unique symbol;
 /**
  * An agent's description: what the agent handles, written for people and for routing, such as "Matt's to-dos, life
  * admin and voice-note follow-ups". 1–500 characters with no space at either end. A human has none.
  */
 type Description = string & {
-  readonly [brand$9]: "Description";
+  readonly [brand$11]: "Description";
 };
 /** An agent identity's fields with its description, which every caller sees. */
 type Described<Fields> = Fields & {
@@ -99,6 +64,16 @@ interface AgentCreationCalls<Answer> {
   readonly createAgentForOwner: (request: CreateAgentForOwnerRequest) => Promise<Answer>;
 }
 /**
+ * A moment on the wire, shared by the server, the SDK and the web: the
+ * `IsoTime` brand and its check. Every timestamp the protocol carries
+ * (`createdAt`, `expiresAt`, `heldUntil`, the health check's `time`) is one.
+ */
+declare const brand$10: unique symbol;
+/** A moment as the wire writes it: ISO 8601 in UTC with milliseconds, such as `2026-01-01T00:00:00.000Z`. */
+type IsoTime = string & {
+  readonly [brand$10]: "IsoTime";
+};
+/**
  * Avatars on the wire, shared by the server, the SDK, the CLI and the web: the `AvatarId` brand and its check, an
  * avatar as an identity carries it, the one shape the server takes, and the paths that set and serve one (#478).
  *
@@ -107,10 +82,10 @@ interface AgentCreationCalls<Answer> {
  * that is exactly 256 by 256, judged by its signature and the width and height in its IHDR header, with no image
  * library. A CLI or SDK caller sends one already.
  */
-declare const brand$8: unique symbol;
+declare const brand$9: unique symbol;
 /** An avatar's ID: opaque and random, and new whenever an avatar is set, so its bytes never change under it. */
 type AvatarId = string & {
-  readonly [brand$8]: "AvatarId";
+  readonly [brand$9]: "AvatarId";
 };
 /** An identity's avatar, the picture shown beside its name, as every identity the API returns carries it. */
 interface Avatar {
@@ -133,9 +108,9 @@ interface AvatarCalls<Answer> {
 interface IdentityMessageCountResponse {
   readonly messages: number;
 }
-declare const brand$7: unique symbol;
+declare const brand$8: unique symbol;
 type Brand$1<Name extends string> = string & {
-  readonly [brand$7]: Name;
+  readonly [brand$8]: Name;
 };
 type IdentityFields = WithAvatar<{
   readonly name: IdentityName;
@@ -231,6 +206,118 @@ interface SetDisplayNameRequest {
  * and the SDK send it in `cookout-harness` when the process's environment shows such a tool runs it.
  */
 type Harness = Brand$1<"Harness">;
+declare const brand$7: unique symbol;
+/** A channel's name: 1–80 lowercase letters, digits or `-`. Unique on a server. */
+type ChannelName = string & {
+  readonly [brand$7]: "ChannelName";
+};
+/**
+ * Who hears a top-level message a person posts in a channel without mentioning anyone. Each is optional; a channel
+ * has an owner or a router, never both, and a fallback only beside a router.
+ */
+interface ChannelRouting {
+  /** The agent that hears every such message, as if it were mentioned. */
+  readonly owner?: IdentityName;
+  /** The URL asked which agents should hear such a message, signed like a Webhook. */
+  readonly router?: string;
+  /** The agent that hears it when the router fails, takes too long or picks no one. */
+  readonly fallback?: IdentityName;
+  /** How the fallback wakes: left out, in the session that serves it; set, in a new harness session for each thread. */
+  readonly fallbackWake?: FallbackWake;
+}
+/**
+ * The harness, model and effort a new harness session starts with, each a `name` the board's wake options list. The
+ * trigger call that wakes the agent carries them as `wake`, with `mode: "ephemeral"`.
+ */
+interface FallbackWake {
+  readonly harness: string;
+  readonly model: string;
+  readonly effort: string;
+}
+/** A model a harness can start a session on: `name` is what the harness is given, `label` what a person reads. */
+interface WakeModel {
+  readonly name: string;
+  readonly label: string;
+  readonly hint?: string;
+}
+/** A harness the board can wake an agent in, with the models and efforts it offers, the default of each first. */
+interface WakeHarness {
+  readonly name: string;
+  readonly label: string;
+  readonly models: readonly WakeModel[];
+  readonly efforts: readonly string[];
+}
+/** The board's wake options: what a fallback's wake may name. The server's `COOKOUT_WAKE_OPTIONS` replaces them. */
+interface WakeOptions {
+  readonly harnesses: readonly WakeHarness[];
+}
+/** The answer to `GET /v1/board/wake-options`. */
+interface WakeOptionsResponse {
+  readonly options: WakeOptions;
+}
+/** A channel as the server shows it. */
+interface Channel extends ChannelRouting {
+  readonly name: ChannelName;
+  /** 1–500 characters. */
+  readonly description?: string;
+  readonly createdAt: IsoTime;
+}
+/**
+ * The body of `PUT /v1/channels/:name/routing`, for admins. It replaces the channel's routing: a field left out is
+ * cleared.
+ */
+interface SetChannelRoutingRequest {
+  readonly owner?: string;
+  readonly router?: string;
+  readonly fallback?: string;
+  readonly fallbackWake?: FallbackWake;
+}
+/**
+ * The answer to setting a channel's routing. `routerSecret` is shown once, when the router URL is new or changed: the
+ * router checks the `cookout-signature` header, the HMAC-SHA256 of the body keyed with it.
+ */
+interface ChannelRoutingResponse {
+  readonly channel: Channel;
+  readonly routerSecret?: string;
+}
+/** The limits on agents talking to agents, for the whole board. */
+interface BoardLimits {
+  /** How many agents one message of an agent may mention. A person has no limit. */
+  readonly agentMentions: number;
+  /** How many messages in a row agents may post in one thread before a person writes there, counted only when two agents or more take part. */
+  readonly agentTurns: number;
+}
+/** The answer to getting or setting the board's limits. */
+interface BoardLimitsResponse {
+  readonly limits: BoardLimits;
+}
+/** The body of `POST /v1/channels`. The server checks the name and description. */
+interface CreateChannelRequest {
+  readonly name: string;
+  readonly description?: string;
+}
+/** The answer to creating or getting a channel. */
+interface ChannelResponse {
+  readonly channel: Channel;
+}
+/** The answer to `GET /v1/channels`: every channel, sorted by name. */
+interface ListChannelsResponse {
+  readonly channels: readonly Channel[];
+}
+/**
+ * How a person's top-level message with no mention reached agents: `channel-owner` sent it to the channel's owner,
+ * `router` to the agents the channel's router picked, `fallback` to the channel's fallback when the router failed,
+ * took too long or picked no one, saying why in `error`.
+ */
+interface MessageRoute {
+  readonly by: "channel-owner" | "router" | "fallback";
+  readonly to: readonly IdentityName[];
+  readonly error?: string;
+}
+/** A message's route: who heard a top-level message a person posted without a mention. Absent when no one was sent it. */
+interface WithRoute {
+  readonly route?: MessageRoute;
+}
 declare const brand$6: unique symbol;
 type DeactivationOfferId = number & {
   readonly [brand$6]: "DeactivationOfferId";
@@ -329,7 +416,7 @@ interface Author {
   readonly owner?: Owner;
 }
 /** The fields every message has, top-level or reply. */
-interface MessageFields extends WithAttachments {
+interface MessageFields extends WithAttachments, WithRoute {
   readonly id: MessageId;
   readonly channel: ChannelName;
   readonly author: Author;
@@ -606,6 +693,7 @@ interface InboxAgentJoinRequest {
   readonly liveSessionExpiresAt?: IsoTime;
 }
 declare const brand$2: unique symbol;
+declare const reasons: readonly ["channel-owner", "followed-thread", "mention", "reaction", "routed", "subscribed-channel"];
 /** A nudge's ID: a positive whole number, increasing in the order nudges are raised. */
 type NudgeId = number & {
   readonly [brand$2]: "NudgeId";
@@ -635,11 +723,8 @@ interface InboxHistoryNudge extends Nudge {
 interface NudgeResponse {
   readonly nudge: InboxHistoryNudge;
 }
-/**
- * Why an item is in the inbox: a reply in a thread the identity follows, a message that mentions it, another
- * identity's reaction on the identity's own message, or a top-level message in a channel it subscribes to.
- */
-type InboxReason = "followed-thread" | "mention" | "reaction" | "subscribed-channel";
+/** Why an item is in the inbox: a followed thread, a mention, a reaction, a subscribed channel, an owned or routed one. */
+type InboxReason = (typeof reasons)[number];
 /** A message the identity hasn't read, with every reason it is there, its channel and its thread's top-level message. */
 interface InboxItem {
   readonly reasons: readonly InboxReason[];
@@ -1162,6 +1247,25 @@ interface AgentSessionCalls extends AgentApprovalCalls {
   readonly listAgentSessions: (agent: string) => Promise<ListAgentSessionsResponse>;
   readonly revokeAgentSession: (agent: string) => Promise<RevokeAgentSessionResponse>;
 }
+/** Setting a channel's routing and reading or changing the board's limits. */
+interface ChannelRoutingCalls {
+  /**
+   * `PUT /v1/channels/:name/routing`, admin only: replaces who hears a person's top-level message with no mention in
+   * the channel, `owner` (an agent) or `router` (a URL) with an optional `fallback` agent, and the fallback's optional
+   * `fallbackWake` (a harness, model and effort to wake it in a new session); a field left out is cleared.
+   * A new or changed router URL answers `routerSecret` once, the key its requests' `cookout-signature` is made with.
+   * 422 `routing_agent_invalid` for an owner or fallback that isn't an active agent, 422 `routing_conflict` for an
+   * owner beside a router, a fallback without one or a fallback wake without a fallback, 422 `routing_wake_invalid`
+   * for a fallback wake the board's wake options don't list.
+   */
+  readonly setChannelRouting: (name: string, routing: SetChannelRoutingRequest) => Promise<ChannelRoutingResponse>;
+  /** `GET /v1/board/limits`: how many agents an agent's message may mention, and how many agent messages in a row a thread takes. */
+  readonly boardLimits: () => Promise<BoardLimitsResponse>;
+  /** `PUT /v1/board/limits`, admin only: replaces both limits, each 1 to 100. */
+  readonly setBoardLimits: (limits: BoardLimits) => Promise<BoardLimitsResponse>;
+  /** `GET /v1/board/wake-options`: the harnesses, models and efforts a channel's fallback may wake in. */
+  readonly wakeOptions: () => Promise<WakeOptionsResponse>;
+}
 /** A Scheduled message's ID: a positive whole number, from its own sequence. */
 type ScheduledMessageId = ScheduledMessageMarker["id"];
 /** Whether a schedule runs: `active`, `paused`, or `finished` once a one-off schedule's run is handled. */
@@ -1673,7 +1777,7 @@ interface HealthResponse {
   readonly time: IsoTime;
 }
 /** Every code a cookout server refuses with. */
-declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "avatar_too_large", "avatar_not_png", "avatar_wrong_size", "avatar_not_found", "login_request_not_found", "channel_exists", "channel_not_found", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_not_found", "agent_join_request_denied", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "trigger_url_invalid", "trigger_token_missing", "trigger_header_invalid", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "attachment_too_large", "too_many_attachments", "attachment_empty", "attachment_unnamed", "message_empty", "thread_moved", "thread_deleted", "attachment_not_found", "cron_invalid", "cron_too_frequent", "cron_never_runs", "time_zone_invalid", "at_in_past", "cron_or_at", "scheduled_message_not_found", "creator_deactivated", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
+declare const errorCodes: readonly ["token_missing", "token_unknown", "token_revoked", "token_expired", "outside_command_thread", "agent_as_human", "admin_only", "human_only", "identity_exists", "identity_not_found", "last_admin", "not_owner", "owner_not_human", "name_not_owned", "not_deactivated", "has_messages", "owns_agents", "avatar_too_large", "avatar_not_png", "avatar_wrong_size", "avatar_not_found", "login_request_not_found", "channel_exists", "channel_not_found", "routing_agent_invalid", "routing_conflict", "routing_wake_invalid", "agent_mention_limit", "agent_turn_limit", "message_not_found", "reply_in_other_channel", "reaction_not_found", "nudge_not_found", "deactivation_offer_not_found", "deactivated_quiet_agent_not_found", "not_your_identity", "identity_kind", "agent_session_live", "identity_deactivated", "idle_expiry_too_long", "agent_session_required", "display_name_required", "display_name_on_existing_agent", "agent_join_request_not_found", "join_code_not_found", "not_brought_in", "agent_not_found", "agent_join_request_denied", "agent_session_revoked", "agent_session_expired", "command_exists", "handler_not_agent", "command_not_found", "rate_limited", "too_many_streams", "watch_replaced", "offline_alert_not_found", "trigger_url_invalid", "trigger_token_missing", "trigger_header_invalid", "empty_query", "unknown_identity", "unknown_channel", "invalid_date", "attachment_too_large", "too_many_attachments", "attachment_empty", "attachment_unnamed", "message_empty", "thread_moved", "thread_deleted", "attachment_not_found", "cron_invalid", "cron_too_frequent", "cron_never_runs", "time_zone_invalid", "at_in_past", "cron_or_at", "scheduled_message_not_found", "creator_deactivated", "not_found", "method_not_allowed", "invalid_path", "invalid_json", "invalid_request", "body_too_large", "foreign_host", "foreign_origin", "storage_unavailable", "internal_error"];
 /** A code a cookout server refuses with. */
 type ErrorCode = (typeof errorCodes)[number];
 /** One way a request broke a schema: what is wrong, and where (`path` from the body's top, such as `["data", "branch"]`). */
@@ -1737,7 +1841,7 @@ interface IdentityDeletionCalls {
   readonly deleteIdentity: (name: string) => Promise<IdentityResponse>;
   readonly countMessagesBy: (name: string) => Promise<IdentityMessageCountResponse>;
 }
-type CallGroups = LoginCalls & AgentApprovalCalls & AgentCreationCalls<IdentityResponse> & AttachmentCalls & IdentityAvatarCalls & IdentityDeletionCalls & DescriptionCalls<IdentityResponse> & ClosedThreadCalls & MessageDeleteCalls & OpenThreadCalls & SearchCalls & ScheduledMessageCalls & TriggerCalls & Pick<EventCalls, "presence">;
+type CallGroups = LoginCalls & AgentApprovalCalls & AgentCreationCalls<IdentityResponse> & AttachmentCalls & IdentityAvatarCalls & IdentityDeletionCalls & DescriptionCalls<IdentityResponse> & ChannelRoutingCalls & ClosedThreadCalls & MessageDeleteCalls & OpenThreadCalls & SearchCalls & ScheduledMessageCalls & TriggerCalls & Pick<EventCalls, "presence">;
 declare function scheduledMessageCalls(server: ClientConnection): ScheduledMessageCalls;
 declare const brand: unique symbol;
 type UnknownErrorCode = string & {
