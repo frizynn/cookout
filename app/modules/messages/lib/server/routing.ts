@@ -42,6 +42,9 @@ const RouterBodySchema = Schema.Struct({
   author: Schema.String,
   channel: Schema.String,
   fallback: Schema.NullOr(Schema.String),
+  fallbackWake: Schema.optionalKey(
+    Schema.Struct({ effort: Schema.String, harness: Schema.String, model: Schema.String }),
+  ),
   text: Schema.String,
 });
 const encodeRouterBody = Schema.encodeEffect(Schema.fromJsonString(RouterBodySchema));
@@ -63,7 +66,11 @@ function listedAgent(agent: AgentIdentity): typeof RouterAgentSchema.Type {
 function routerBody({ agents, author, channel, message }: Asking): Effect.Effect<string> {
   const fallback = Option.getOrNull(Option.fromUndefinedOr(channel.fallback));
   const body = { agents: Arr.map(agents, listedAgent), author: author.name, channel: channel.name, fallback };
-  return Effect.orDie(encodeRouterBody({ ...body, text: message.text }));
+  const wake = Option.match(Option.fromUndefinedOr(channel.fallbackWake), {
+    onNone: () => ({}),
+    onSome: (fallbackWake) => ({ fallbackWake }),
+  });
+  return Effect.orDie(encodeRouterBody({ ...body, ...wake, text: message.text }));
 }
 
 function signingSecret(secret: string | undefined): Option.Option<WebhookCommandSecret> {

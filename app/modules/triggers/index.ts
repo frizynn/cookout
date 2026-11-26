@@ -30,6 +30,19 @@ export const triggerSkips = ["agent_session_live"] as const satisfies readonly T
 export type WakeReason = "mention" | "channel-owner" | "thread" | "routed";
 
 /**
+ * How the woken agent should run, sent as `wake` only when it is a channel's fallback set to wake in a new harness
+ * session, for the message routed to it and for later replies in that thread: `mode` is always `ephemeral`, and
+ * `harness`, `model` and `effort` are names from the board's wake options. A trigger call without it wakes the agent
+ * as before, in the session that serves it.
+ */
+export interface SessionWake {
+  readonly mode: "ephemeral";
+  readonly harness: string;
+  readonly model: string;
+  readonly effort: string;
+}
+
+/**
  * How the last call to a trigger URL went: when it was made, and either the HTTP status the URL answered or, when it
  * answered nothing (a timeout, a refused connection), why. `ok` is true only for a `2xx`, or for a mention that called
  * nothing on purpose: then `skipped` says why, and it has no status or error, as it neither failed nor reached the URL.

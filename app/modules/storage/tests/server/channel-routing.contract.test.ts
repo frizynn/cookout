@@ -20,10 +20,11 @@ const AGENTS = [
 ] as const;
 const OWNER = nameOf("watcher");
 const SECRET = "hmac_test";
+const WAKE = { effort: "high", harness: "claude", model: "sonnet" } as const;
 const OWNED = { ...channel("ops", { description: "Ops" }), owner: OWNER };
 
 it.effect.each(storageLayers)(
-  "storage contract ($adapter): a channel's routing and router secret are replaced together, and cleared",
+  "storage contract ($adapter): a channel's routing and its router secret are replaced together, and cleared",
   ({ layer }) =>
     Effect.gen(function* routing() {
       const { storage } = yield* openStore(layer);
@@ -46,6 +47,21 @@ it.effect.each(storageLayers)(
       expect(routed).toMatchObject({ fallback: OWNER, name: "ops", router: "https://router.example.com/route" });
       expect([secret, ...Arr.map(gone, Predicate.isUndefined)]).toStrictEqual([SECRET, true, true]);
       expect([owned, listed]).toStrictEqual([OWNED, [OWNED]]);
+    }),
+);
+
+it.effect.each(storageLayers)(
+  "storage contract ($adapter): a channel's fallback wake is kept with its routing and read back",
+  ({ layer }) =>
+    Effect.gen(function* wake() {
+      const { storage } = yield* openStore(layer);
+      yield* storage.createChannel(channel("ops", { description: "Ops" }));
+      const routed = yield* storage.setChannelRouting(channelName("ops"), {
+        routing: { fallback: OWNER, fallbackWake: WAKE, router: "https://router.example.com/route" },
+      });
+      const found = yield* storage.findChannel(channelName("ops"));
+
+      expect([routed, found]).toMatchObject([{ fallbackWake: WAKE }, { fallbackWake: WAKE }]);
     }),
 );
 

@@ -31,7 +31,7 @@ interface MemoryChannelsSection extends Omit<ChannelsSection, "deleteChannel"> {
   readonly forgetChannel: (name: ChannelName) => void;
 }
 
-const CHANNEL_COLUMNS = "name, description, created_at, owner, router, fallback";
+const CHANNEL_COLUMNS = "name, description, created_at, owner, router, fallback, fallback_wake";
 
 const byName: Order.Order<Channel> = Order.mapInput(Order.String, (channel: Channel) => channel.name);
 
@@ -41,6 +41,7 @@ const ChannelRow = Schema.Struct({
   created_at: IsoTimeSchema,
   description: Schema.NullOr(Schema.String),
   fallback: Schema.optionalKey(RoutedName),
+  fallback_wake: Schema.optionalKey(Schema.NullOr(Schema.String)),
   name: Schema.String.pipe(Schema.refine(isChannelName)),
   owner: Schema.optionalKey(RoutedName),
   router: Schema.optionalKey(Schema.NullOr(Schema.String)),
@@ -84,8 +85,16 @@ function bareRow({
   return { createdAt, name };
 }
 
-function fromRow({ created_at: createdAt, description, fallback, name, owner, router }: ChannelRowType): Channel {
-  return { ...bareRow({ createdAt, description, name }), ...routingFields({ fallback, owner, router }) };
+function fromRow({
+  created_at: createdAt,
+  description,
+  fallback,
+  fallback_wake: fallbackWake,
+  name,
+  owner,
+  router,
+}: ChannelRowType): Channel {
+  return { ...bareRow({ createdAt, description, name }), ...routingFields({ fallback, fallbackWake, owner, router }) };
 }
 
 function toChannel(row: unknown): Fails<Channel> {

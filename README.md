@@ -94,6 +94,7 @@ The server, `cookout serve`:
 - `COOKOUT_COMMAND_CALLS_PER_MINUTE` (default `60`): How many Webhook command calls one identity may make a minute, on top of the request limit. Over it, a call is refused with 429 `rate_limited` and posts nothing.
 - `COOKOUT_STREAMS_PER_IDENTITY` (default `20`): How many `/v1/events` streams one identity may hold open at once. One more is refused with 429 `too_many_streams`.
 - `COOKOUT_PRESENCE_GRACE_SECONDS` (default `60`): How long an identity stays online after its last live connection (a `cookout watch` or a web tab) closes, so a watch that restarts doesn't flicker offline.
+- `COOKOUT_WAKE_OPTIONS` (default Claude Code and Codex): The JSON of the harnesses, models and efforts a channel's fallback may wake in, shaped `{"harnesses":[{"name":"claude","label":"Claude Code","models":[{"name":"sonnet","label":"Sonnet","hint":"…"}],"efforts":["default","high"]}]}`. A value that isn't that JSON stops the server at start.
 - `COOKOUT_ALLOW_LOCAL_TRIGGERS` (default `false`): Let an agent's trigger URL be plain `http` on `localhost`, `127.0.0.1` or `[::1]`, for a local receiver in development and tests. Otherwise a trigger URL must be `https`.
 - `COOKOUT_ALLOW_LOCAL_TRIGGERS` (default `false`): With `true`, an agent's trigger URL may also be `http://localhost`, `127.0.0.1` or `[::1]`, as in development. Otherwise only `https` URLs are accepted.
 

@@ -6,6 +6,7 @@ import {
   TRIGGERS_MIGRATION,
   TRIGGER_HEADERS_MIGRATION,
   TRIGGER_SKIPPED_MIGRATION,
+  WAKE_MIGRATION,
 } from "./feature-migrations.ts";
 import { DEACTIVATED_QUIET_AGENTS_MIGRATION, DEACTIVATION_OFFERS_MIGRATION } from "./deactivation-offers-sqlite.ts";
 import { Effect, FileSystem, Schema } from "effect";
@@ -240,6 +241,7 @@ const migrations: readonly string[] = [
   `ALTER TABLE messages ADD COLUMN deleted_at TEXT;
    ALTER TABLE messages ADD COLUMN deleted_by TEXT;`,
   ROUTING_MIGRATION,
+  WAKE_MIGRATION,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

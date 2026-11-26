@@ -10,19 +10,19 @@ import {
   Stream,
   Struct,
 } from "effect";
-import type { Message, MessageId } from "../../../messages/index.ts";
 import type { Services, Watching } from "./watching.ts";
 import type { Storage, StorageUnavailable, StoredTrigger } from "../../../storage/server.ts";
 import type { TriggerFailure, TriggerResult, WakeReason } from "../../index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
+import type { Message } from "../../../messages/index.ts";
 import type { Scope } from "effect";
 import type { TriggerAnswer } from "./answer.ts";
 import { errorMessageOf } from "./answer.ts";
-import { hrefOf } from "../../../paths/index.ts";
 import { isOkStatus } from "../../index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 import { mentionsOwnAuthor } from "../../../storage/server.ts";
 import { shownTrigger } from "./wire.ts";
+import { wakeBodyOf } from "./wake-body.ts";
 
 interface Mentioned {
   readonly message: Message;
@@ -44,18 +44,6 @@ const TIMED_OUT = `no answer within ${String(TIMEOUT_SECONDS)} s`;
 const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const IN_TURN = { concurrency: 1, discard: true } as const;
 const ONE_PERMIT = 1;
-
-function threadOf(message: Message): MessageId {
-  if (message.kind === "reply") {
-    return message.replyTo;
-  }
-  return message.id;
-}
-
-function textFor(boardUrl: string, message: Message): string {
-  const href = hrefOf({ channel: message.channel, message: message.id, name: "thread", thread: threadOf(message) });
-  return `${boardUrl}/${href}\n\n${message.text}`;
-}
 
 function isMentionedBy(message: Message, agent: IdentityName): boolean {
   return agent !== message.author.name || mentionsOwnAuthor(message);
@@ -158,14 +146,7 @@ function callMade(
       return { ...SKIPPED_LIVE, at };
     }
     const base = yield* boardUrl;
-    const text = textFor(base, message);
-    const wake = {
-      author: message.author.name,
-      channel: message.channel,
-      message: message.id,
-      reason,
-      thread: threadOf(message),
-    };
+    const { text, wake } = yield* wakeBodyOf({ agent: trigger.agent, boardUrl: base, message, reason, storage });
     return yield* caller
       .call({ headers: trigger.headers ?? [], text, token: trigger.token, url: trigger.url, wake })
       .pipe(

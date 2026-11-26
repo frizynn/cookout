@@ -1,4 +1,4 @@
-import type { BoardLimits, Channel, ChannelName, ChannelRouting } from "../../../channels/index.ts";
+import type { BoardLimits, Channel, ChannelName, ChannelRouting, FallbackWake } from "../../../channels/index.ts";
 import { Effect, Option, Schema } from "effect";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { MemoryState } from "./memory-state.ts";
@@ -24,10 +24,20 @@ interface RoutingColumns {
   readonly owner?: IdentityName | null | undefined;
   readonly router?: string | null | undefined;
   readonly fallback?: IdentityName | null | undefined;
+  readonly fallbackWake?: string | null | undefined;
 }
 
 const LimitsRow = Schema.Struct({ agent_mentions: Schema.Int, agent_turns: Schema.Int });
 const SecretRow = Schema.Struct({ secret: Schema.NullOr(Schema.String) });
+const StoredWake = Schema.fromJsonString(
+  Schema.Struct({ effort: Schema.String, harness: Schema.String, model: Schema.String }),
+);
+const decodeWake = Schema.decodeUnknownOption(StoredWake);
+const encodeWake = Schema.encodeEffect(StoredWake);
+
+const WAKE_MIGRATION = "ALTER TABLE channels ADD COLUMN fallback_wake TEXT;";
+
+const POSTGRES_WAKE_MIGRATION: readonly string[] = ['ALTER TABLE channels ADD COLUMN fallback_wake text COLLATE "C"'];
 
 const ROUTING_MIGRATION = `ALTER TABLE channels ADD COLUMN owner TEXT;
    ALTER TABLE channels ADD COLUMN router TEXT;
@@ -57,11 +67,33 @@ const POSTGRES_ROUTING_MIGRATION: readonly string[] = [
   "CREATE TABLE board_limits (agent_mentions integer NOT NULL, agent_turns integer NOT NULL)",
 ];
 
-function routingFields({ fallback, owner, router }: RoutingColumns): ChannelRouting {
+function wakeField(stored: string | null | undefined): { readonly fallbackWake?: FallbackWake } {
+  return Option.match(Option.flatMap(Option.fromNullishOr(stored), decodeWake), {
+    onNone: () => ({}),
+    onSome: (found) => ({ fallbackWake: found }),
+  });
+}
+
+function storedWake({ fallbackWake }: ChannelRouting): Effect.Effect<string | null> {
+  return Option.match(Option.fromUndefinedOr(fallbackWake), {
+    onNone: () => Effect.succeed(null),
+    onSome: (wake) => Effect.orDie(encodeWake(wake)),
+  });
+}
+
+function keptWake({ fallbackWake }: ChannelRouting): { readonly fallbackWake?: FallbackWake } {
+  return Option.match(Option.fromUndefinedOr(fallbackWake), {
+    onNone: () => ({}),
+    onSome: (wake) => ({ fallbackWake: wake }),
+  });
+}
+
+function routingFields({ fallback, fallbackWake, owner, router }: RoutingColumns): ChannelRouting {
   return {
     ...Option.match(Option.fromNullishOr(owner), { onNone: () => ({}), onSome: (found) => ({ owner: found }) }),
     ...Option.match(Option.fromNullishOr(router), { onNone: () => ({}), onSome: (found) => ({ router: found }) }),
     ...Option.match(Option.fromNullishOr(fallback), { onNone: () => ({}), onSome: (found) => ({ fallback: found }) }),
+    ...wakeField(fallbackWake),
   };
 }
 
@@ -89,7 +121,11 @@ function memoryRouting({ channels, routerSecrets, state }: MemoryRouting): Chann
     if (typeof found !== "object") {
       return found;
     }
-    const changed = { ...bareChannel(found), ...routingFields(routing) };
+    const changed = {
+      ...bareChannel(found),
+      ...routingFields({ ...routing, fallbackWake: null }),
+      ...keptWake(routing),
+    };
     channels.set(name, changed);
     if (typeof routerSecret === "string") {
       routerSecrets.set(name, routerSecret);
@@ -140,35 +176,44 @@ interface SqlRouting {
   readonly find: (name: ChannelName) => Fails<Channel | undefined>;
 }
 
+interface RoutingUpdate {
+  readonly db: SqlDatabase;
+  readonly name: ChannelName;
+  readonly stored: StoredRouting;
+}
+
+function updated({ db, name, stored: { routerSecret, routing } }: RoutingUpdate): Fails<void> {
+  return Effect.flatMap(storedWake(routing), (wake) =>
+    db.run(
+      "UPDATE channels SET owner = ?, router = ?, fallback = ?, fallback_wake = ?, router_secret = ? WHERE name = ?",
+      routing.owner ?? null,
+      routing.router ?? null,
+      routing.fallback ?? null,
+      wake,
+      routerSecret ?? null,
+      name,
+    ),
+  );
+}
+
 function sqlRouting({ db, find }: SqlRouting): ChannelRoutingSection {
   return {
     findRouterSecret: (name) =>
       Effect.map(db.get("SELECT router_secret AS secret FROM channels WHERE name = ?", name), secretIn),
     getBoardLimits: () => limitsIn(db),
     setBoardLimits: (limits) => replaceLimits(db, limits),
-    setChannelRouting: (name, { routerSecret, routing }) =>
-      db.transaction(
-        Effect.andThen(
-          db.run(
-            "UPDATE channels SET owner = ?, router = ?, fallback = ?, router_secret = ? WHERE name = ?",
-            routing.owner ?? null,
-            routing.router ?? null,
-            routing.fallback ?? null,
-            routerSecret ?? null,
-            name,
-          ),
-          find(name),
-        ),
-      ),
+    setChannelRouting: (name, stored) => db.transaction(Effect.andThen(updated({ db, name, stored }), find(name))),
   };
 }
 
 export {
   type ChannelRoutingSection,
   POSTGRES_ROUTING_MIGRATION,
+  POSTGRES_WAKE_MIGRATION,
   ROUTING_MIGRATION,
   type StoredRouting,
   memoryRouting,
   routingFields,
   sqlRouting,
+  WAKE_MIGRATION,
 };

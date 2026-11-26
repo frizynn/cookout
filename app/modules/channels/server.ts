@@ -12,6 +12,7 @@ import {
   CreateChannelRequestSchema,
   ListChannelsQuerySchema,
   ListChannelsResponseSchema,
+  WakeOptionsResponseSchema,
 } from "./lib/server/wire.ts";
 import { Caller, requireAdmin } from "../identities/server.ts";
 import type { DeletedChannel, StorageUnavailable } from "../storage/server.ts";
@@ -134,7 +135,8 @@ export const channelNotFound: (name: string) => Refusal = missingChannel;
 /**
  * The channel calls. `setRouting` replaces who hears a person's unmentioned top-level messages in a channel (its owner,
  * or its router and fallback), refusing with 404 `channel_not_found`, 422 `routing_agent_invalid` and 422
- * `routing_conflict`; `limits` and `setLimits` read and replace the board's limits on agents talking to agents.
+ * `routing_conflict` and 422 `routing_wake_invalid`; `limits` and `setLimits` read and replace the board's limits on agents
+ * talking to agents, and `wakeOptions` are the board's harnesses, models and efforts from `COOKOUT_WAKE_OPTIONS`.
  */
 export interface ChannelsService extends RoutingCalls {
   /**
@@ -261,6 +263,7 @@ export const channelResponseSchemas = {
   ChannelResponse: ChannelResponseSchema,
   ChannelRoutingResponse: ChannelRoutingResponseSchema,
   ListChannelsResponse: ListChannelsResponseSchema,
+  WakeOptionsResponse: WakeOptionsResponseSchema,
 };
 
 /**

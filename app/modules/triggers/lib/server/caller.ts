@@ -1,7 +1,7 @@
 import { Array as Arr, Context, Effect, Function as Fn, Layer, Record, Schema } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http";
 import type { RouterAsk, RouterCallerService, RouterPick } from "../../../channels/server.ts";
-import type { TriggerHeader, TriggerToken, WakeReason } from "../../index.ts";
+import type { SessionWake, TriggerHeader, TriggerToken, WakeReason } from "../../index.ts";
 import { RouterCaller } from "../../../channels/server.ts";
 import type { TriggerAnswer } from "./answer.ts";
 import { isOkStatus } from "../../index.ts";
@@ -12,6 +12,7 @@ interface TriggerWake {
   readonly message: number;
   readonly reason: WakeReason;
   readonly author: string;
+  readonly wake?: SessionWake;
 }
 
 interface TriggerCall {

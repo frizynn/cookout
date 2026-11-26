@@ -1,11 +1,18 @@
 import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "../../channels/index.ts";
-import { boardLimitsPath, channelPath, channelRoutingPath, channelsPath } from "../../channels/index.ts";
+import {
+  boardLimitsPath,
+  channelPath,
+  channelRoutingPath,
+  channelsPath,
+  wakeOptionsPath,
+} from "../../channels/index.ts";
 import { getJson, send } from "./request.ts";
 import {
   isBoardLimitsResponse,
   isChannelResponse,
   isChannelRoutingResponse,
   isListChannelsResponse,
+  isWakeOptionsResponse,
 } from "./generated/validators.js";
 import type { ChannelRoutingCalls } from "../../channels/client.ts";
 import type { ClientConnection } from "./request.ts";
@@ -39,6 +46,10 @@ function channelRoutingCalls(server: ClientConnection): ChannelRoutingCalls {
         path: channelRoutingPath,
       });
       return set;
+    },
+    wakeOptions: async () => {
+      const found = await getJson(server, wakeOptionsPath, isWakeOptionsResponse);
+      return found;
     },
   };
 }

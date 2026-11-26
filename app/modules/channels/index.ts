@@ -38,7 +38,70 @@ export interface ChannelRouting {
   readonly router?: string;
   /** The agent that hears it when the router fails, takes too long or picks no one. */
   readonly fallback?: IdentityName;
+  /** How the fallback wakes: left out, in the session that serves it; set, in a new harness session for each thread. */
+  readonly fallbackWake?: FallbackWake;
 }
+
+/**
+ * The harness, model and effort a new harness session starts with, each a `name` the board's wake options list. The
+ * trigger call that wakes the agent carries them as `wake`, with `mode: "ephemeral"`.
+ */
+export interface FallbackWake {
+  readonly harness: string;
+  readonly model: string;
+  readonly effort: string;
+}
+
+/** A model a harness can start a session on: `name` is what the harness is given, `label` what a person reads. */
+export interface WakeModel {
+  readonly name: string;
+  readonly label: string;
+  readonly hint?: string;
+}
+
+/** A harness the board can wake an agent in, with the models and efforts it offers, the default of each first. */
+export interface WakeHarness {
+  readonly name: string;
+  readonly label: string;
+  readonly models: readonly WakeModel[];
+  readonly efforts: readonly string[];
+}
+
+/** The board's wake options: what a fallback's wake may name. The server's `COOKOUT_WAKE_OPTIONS` replaces them. */
+export interface WakeOptions {
+  readonly harnesses: readonly WakeHarness[];
+}
+
+/** The wake options of a board whose `COOKOUT_WAKE_OPTIONS` is unset. */
+export const defaultWakeOptions: WakeOptions = {
+  harnesses: [
+    {
+      efforts: ["default", "low", "medium", "high", "xhigh", "max"],
+      label: "Claude Code",
+      models: [
+        { hint: "The harness's own default", label: "Default", name: "default" },
+        { hint: "The latest Opus, for complex reasoning", label: "Opus", name: "opus" },
+        { hint: "The latest Sonnet, for daily work", label: "Sonnet", name: "sonnet" },
+        { hint: "Fast and light, for simple tasks", label: "Haiku", name: "haiku" },
+      ],
+      name: "claude",
+    },
+    {
+      efforts: ["default", "low", "medium", "high", "xhigh"],
+      label: "Codex",
+      models: [{ hint: "The harness's own default", label: "Default", name: "default" }],
+      name: "codex",
+    },
+  ],
+};
+
+/** The answer to `GET /v1/board/wake-options`. */
+export interface WakeOptionsResponse {
+  readonly options: WakeOptions;
+}
+
+/** `GET /v1/board/wake-options`: the harnesses, models and efforts a fallback's wake may name, for anyone. */
+export const wakeOptionsPath = "/v1/board/wake-options";
 
 /** A channel as the server shows it. */
 export interface Channel extends ChannelRouting {
@@ -56,6 +119,7 @@ export interface SetChannelRoutingRequest {
   readonly owner?: string;
   readonly router?: string;
   readonly fallback?: string;
+  readonly fallbackWake?: FallbackWake;
 }
 
 /**
@@ -119,12 +183,14 @@ export const channelErrorCodes = ["channel_exists", "channel_not_found"] as cons
 
 /**
  * The codes the routing routes and posting refuse with: an owner or fallback that isn't an active agent (422), an
- * owner beside a router or a fallback without one (422), an agent's message mentioning more agents than the board
+ * owner beside a router, a fallback without one or a fallback wake without a fallback (422), a fallback wake naming a
+ * harness, model or effort the board's wake options don't list (422), an agent's message mentioning more agents than the board
  * allows (422), and an agent's message past the board's agent turns in a thread (422).
  */
 export const routingErrorCodes = [
   "routing_agent_invalid",
   "routing_conflict",
+  "routing_wake_invalid",
   "agent_mention_limit",
   "agent_turn_limit",
 ] as const;

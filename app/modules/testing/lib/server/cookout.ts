@@ -77,6 +77,7 @@ export type TestCookoutOptions = {
   readonly requestsPerMinute?: number;
   readonly commandCallsPerMinute?: number;
   readonly streamsPerIdentity?: number;
+  readonly wakeOptions?: string;
   readonly triggers?: "receiver" | "scripted";
   readonly allowLocalTriggers?: false;
 };
@@ -86,6 +87,7 @@ type Setting =
   | "maxIdleExpiry"
   | "requestsPerMinute"
   | "streamsPerIdentity"
+  | "wakeOptions"
   | "webhookTimeoutSeconds";
 
 const settingNames: readonly (readonly [Setting, string])[] = [
@@ -93,6 +95,7 @@ const settingNames: readonly (readonly [Setting, string])[] = [
   ["maxIdleExpiry", "COOKOUT_MAX_IDLE_EXPIRY"],
   ["requestsPerMinute", "COOKOUT_REQUESTS_PER_MINUTE"],
   ["streamsPerIdentity", "COOKOUT_STREAMS_PER_IDENTITY"],
+  ["wakeOptions", "COOKOUT_WAKE_OPTIONS"],
   ["webhookTimeoutSeconds", "COOKOUT_WEBHOOK_TIMEOUT_SECONDS"],
 ];
 

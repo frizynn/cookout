@@ -4,28 +4,29 @@ import type {
   ChannelRouting,
   ChannelRoutingResponse,
   SetChannelRoutingRequest,
+  WakeOptions,
 } from "../../index.ts";
 import {
   BoardLimitsResponseSchema,
   BoardLimitsSchema,
   ChannelRoutingResponseSchema,
   SetChannelRoutingRequestSchema,
+  WakeOptionsResponseSchema,
 } from "./wire.ts";
-import { Effect, Option, Predicate, Record } from "effect";
+import { Effect, Option, Predicate } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
-import { boardLimitsPath, channelRoutingPath, isChannelName } from "../../index.ts";
+import { boardLimitsPath, channelRoutingPath, isChannelName, wakeOptionsPath } from "../../index.ts";
+import { checkedRouting, present, wakeOptionsOf } from "./routing-checks.ts";
 import type { Caller } from "../../../identities/server.ts";
-import type { IdentityName } from "../../../identities/index.ts";
 import type { Refusal } from "../../../http/index.ts";
 import type { Route } from "../../../http/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import { Storage } from "../../../storage/server.ts";
 import type { StorageUnavailable } from "../../../storage/server.ts";
-import { echoed } from "../../../http/index.ts";
-import { isIdentityName } from "../../../identities/index.ts";
 import { requireAdmin } from "../../../identities/server.ts";
 
 interface RoutingCalls {
+  readonly wakeOptions: WakeOptions;
   readonly limits: Effect.Effect<BoardLimits, StorageUnavailable>;
   readonly setLimits: (limits: BoardLimits) => Effect.Effect<BoardLimits, StorageUnavailable>;
   readonly setRouting: (
@@ -35,6 +36,7 @@ interface RoutingCalls {
 }
 
 interface RoutingNeeds {
+  readonly wakeOptions: WakeOptions;
   readonly storage: Storage["Service"];
   readonly secrets: Secrets["Service"];
   readonly missingChannel: (name: string) => Refusal;
@@ -43,77 +45,6 @@ interface RoutingNeeds {
 interface SecretChoice {
   readonly kept: Option.Option<string>;
   readonly shown: Option.Option<string>;
-}
-
-const UNPROCESSABLE = 422;
-
-function notAnAgent(name: string): Refusal {
-  return {
-    code: "routing_agent_invalid",
-    message: `${echoed(name)} isn't an active agent, so it can't own a channel or be its fallback.`,
-    status: UNPROCESSABLE,
-  };
-}
-
-const ownerAndRouter: Refusal = {
-  code: "routing_conflict",
-  message: "A channel has an owner or a router, not both; a fallback needs a router.",
-  status: UNPROCESSABLE,
-};
-
-function activeAgent(
-  storage: Storage["Service"],
-  asked: string,
-): Effect.Effect<IdentityName, Refusal | StorageUnavailable> {
-  if (!isIdentityName(asked)) {
-    return Effect.fail(notAnAgent(asked));
-  }
-  return Effect.flatMap(storage.findIdentityByName(asked), (found) => {
-    if (Predicate.isUndefined(found) || found.kind !== "agent" || found.deactivated === true) {
-      return Effect.fail(notAnAgent(asked));
-    }
-    return Effect.succeed(found.name);
-  });
-}
-
-function checkedAgent(
-  storage: Storage["Service"],
-  asked: string | undefined,
-): Effect.Effect<Option.Option<IdentityName>, Refusal | StorageUnavailable> {
-  return Option.match(Option.fromUndefinedOr(asked), {
-    onNone: () => Effect.succeedNone,
-    onSome: (name) => Effect.asSome(activeAgent(storage, name)),
-  });
-}
-
-function present<Key extends string, Value>(key: Key, value: Option.Option<Value>): Partial<Record<Key, Value>> {
-  return Option.match(value, {
-    onNone: () => ({}),
-    onSome: (found) => Record.singleton(key, found),
-  });
-}
-
-function conflicting({ fallback, owner, router }: SetChannelRoutingRequest): boolean {
-  const hasRouter = Predicate.isNotUndefined(router);
-  return (Predicate.isNotUndefined(owner) && hasRouter) || (Predicate.isNotUndefined(fallback) && !hasRouter);
-}
-
-function checkedRouting(
-  storage: Storage["Service"],
-  asked: SetChannelRoutingRequest,
-): Effect.Effect<ChannelRouting, Refusal | StorageUnavailable> {
-  if (conflicting(asked)) {
-    return Effect.fail(ownerAndRouter);
-  }
-  return Effect.gen(function* checkRouting() {
-    const owner = yield* checkedAgent(storage, asked.owner);
-    const fallback = yield* checkedAgent(storage, asked.fallback);
-    return {
-      ...present("owner", owner),
-      ...present("router", Option.fromUndefinedOr(asked.router)),
-      ...present("fallback", fallback),
-    };
-  });
 }
 
 function routerSecretFor(
@@ -150,14 +81,14 @@ function setRoutingWith(needs: RoutingNeeds): RoutingCalls["setRouting"] {
   return (name, asked) =>
     Effect.gen(function* setRouting() {
       const before = yield* existing(needs, name);
-      const routing = yield* checkedRouting(needs.storage, asked);
+      const routing = yield* checkedRouting({ asked, storage: needs.storage, wakeOptions: needs.wakeOptions });
       const secret = yield* routerSecretFor(needs, before, routing);
       const changed = yield* needs.storage.setChannelRouting(before.name, {
         routing,
-        ...present("routerSecret", secret.kept),
+        ...present("routerSecret")(secret.kept),
       });
       const channel = yield* Effect.fromOption(Option.fromUndefinedOr(changed), () => needs.missingChannel(name));
-      return { channel, ...present("routerSecret", secret.shown) };
+      return { channel, ...present("routerSecret")(secret.shown) };
     });
 }
 
@@ -167,11 +98,13 @@ function routingCallsOf(
   missingChannel: (name: string) => Refusal,
 ): Effect.Effect<RoutingCalls, never, RoutingCallsNeeds> {
   return Effect.gen(function* openRoutingCalls() {
-    const needs = { missingChannel, secrets: yield* Secrets, storage: yield* Storage };
+    const wakeOptions = yield* wakeOptionsOf;
+    const needs = { missingChannel, secrets: yield* Secrets, storage: yield* Storage, wakeOptions };
     return {
       limits: Effect.suspend(() => needs.storage.getBoardLimits()),
       setLimits: (limits) => needs.storage.setBoardLimits(limits),
       setRouting: setRoutingWith(needs),
+      wakeOptions,
     };
   });
 }
@@ -190,6 +123,15 @@ function routingRoutes<Service>(
         }),
       method: "PUT",
       path: channelRoutingPath,
+    },
+    {
+      handle: () =>
+        Effect.gen(function* wakeOptionsRoute() {
+          const { wakeOptions } = yield* calls;
+          return yield* HttpServerResponse.schemaJson(WakeOptionsResponseSchema)({ options: wakeOptions });
+        }),
+      method: "GET",
+      path: wakeOptionsPath,
     },
     {
       handle: () =>

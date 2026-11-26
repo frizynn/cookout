@@ -125,9 +125,8 @@ export const assetsDirectory = Config.String("COOKOUT_ASSETS_DIR").pipe(Config.w
 
 /**
  * `COOKOUT_ASSET_STORE`: where `cookout serve` keeps attachments' bytes, `disk` (in `COOKOUT_ASSETS_DIR`) or `s3` (in
- * the S3-compatible bucket the `COOKOUT_S3_*` settings name). Empty counts as unset, which is `disk`, so the live
- * board on Fly keeps them on its volume (Matt, 2026-11-24, mattpocock/cookout#375). Anything else, serve refuses to
- * start.
+ * the S3-compatible bucket the `COOKOUT_S3_*` settings name). Empty counts as unset, which is `disk`, so the live board
+ * on Fly keeps them on its volume (Matt, 2026-11-24, mattpocock/cookout#375). Anything else, serve refuses to start.
  */
 export const assetStoreKind = Config.schema(Schema.Literals(["", "disk", "s3"]), "COOKOUT_ASSET_STORE").pipe(
   Config.withDefault(""),
@@ -183,10 +182,9 @@ export const webhookTimeoutSeconds = Config.schema(
 ).pipe(Config.withDefault(DEFAULT_WEBHOOK_TIMEOUT_SECONDS));
 
 /**
- * `COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS`: how long the server waits before it first retries a webhook delivery that
- * got no `2xx`. Each later wait is `COOKOUT_WEBHOOK_RETRY_FACTOR` times the one before, for 5 retries. The working
- * defaults of 10 s and 2.3 wait about 10 s, 23 s, 53 s, 2 min and 5 min; they are not settled yet
- * (mattpocock/cookout#65).
+ * `COOKOUT_WEBHOOK_RETRY_DELAY_SECONDS`: how long the server waits before it first retries a webhook delivery that got
+ * no `2xx`. Each later wait is `COOKOUT_WEBHOOK_RETRY_FACTOR` times the one before, for 5 retries. The working defaults
+ * of 10 s and 2.3 wait about 10 s, 23 s, 53 s, 2 min and 5 min; they are not settled yet (mattpocock/cookout#65).
  */
 export const webhookRetryDelaySeconds = Config.schema(
   Schema.Finite.check(Schema.isGreaterThanOrEqualTo(SHORTEST_WEBHOOK_RETRY_DELAY_SECONDS)),
@@ -210,9 +208,8 @@ export const requestsPerMinute = Config.schema(
 ).pipe(Config.withDefault(DEFAULT_REQUESTS_PER_MINUTE));
 
 /**
- * `COOKOUT_COMMAND_CALLS_PER_MINUTE`: how many command calls one identity may make a minute, in a bucket of its own
- * on top of the request one, because each call fans out to the command's handler. The default of 60 is not settled
- * yet.
+ * `COOKOUT_COMMAND_CALLS_PER_MINUTE`: how many command calls one identity may make a minute, in a bucket of its own on
+ * top of the request one, because each call fans out to the command's handler. The default of 60 is not settled yet.
  */
 export const webhookCommandCallsPerMinute = Config.schema(
   Schema.Int.check(Schema.isGreaterThanOrEqualTo(SMALLEST_LIMIT)),
@@ -297,3 +294,6 @@ export { adminTokenRule };
 
 /** Why `cookout serve` refused `COOKOUT_ADMIN_NAME`: the identity-name rule. */
 export { adminNameRule };
+
+/** `COOKOUT_WAKE_OPTIONS`: the harnesses, models and efforts a channel's fallback may wake in, read by a codec. */
+export { wakeOptionsSetting } from "./lib/server/wake-options.ts";

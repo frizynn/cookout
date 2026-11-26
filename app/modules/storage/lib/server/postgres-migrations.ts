@@ -7,6 +7,7 @@ import {
   POSTGRES_TRIGGERS_MIGRATION,
   POSTGRES_TRIGGER_HEADERS_MIGRATION,
   POSTGRES_TRIGGER_SKIPPED_MIGRATION,
+  POSTGRES_WAKE_MIGRATION,
 } from "./feature-migrations.ts";
 import { POSTGRES_SCHEDULED_MESSAGES_MIGRATION } from "./scheduled-messages-sqlite.ts";
 import type { PostgresDatabase } from "./adapters/postgres.ts";
@@ -259,6 +260,7 @@ const postgresMigrations: readonly (readonly string[])[] = [
     'ALTER TABLE messages ADD COLUMN deleted_by text COLLATE "C"',
   ],
   POSTGRES_ROUTING_MIGRATION,
+  POSTGRES_WAKE_MIGRATION,
 ];
 
 const NEXT_VERSION = 1;
@@ -279,12 +281,9 @@ function applyNext(db: PostgresDatabase): Effect.Effect<boolean, StorageUnavaila
       return yield* Option.match(Arr.get(postgresMigrations, version), {
         onNone: () => Effect.succeed(false),
         onSome: (statements) =>
-          Effect.as(
-            Effect.andThen(
-              Effect.forEach(statements, (statement) => db.exec(statement), { concurrency: 1, discard: true }),
-              db.run("UPDATE schema_version SET version = ?", version + NEXT_VERSION),
-            ),
-            true,
+          Effect.andThen(
+            Effect.forEach(statements, (statement) => db.exec(statement), { concurrency: 1, discard: true }),
+            Effect.as(db.run("UPDATE schema_version SET version = ?", version + NEXT_VERSION), true),
           ),
       });
     }),
