@@ -1,17 +1,70 @@
 import { Argument, Command, Flag } from "effect/cli";
 import { Effect, Option, Record } from "effect";
 import { answer, answered } from "./output.ts";
+import type { CallFailure } from "./adapters/sdk.ts";
 import { callServer } from "./adapters/sdk.ts";
 
 const NOTHING = {};
 
+const DEFAULT_WAKE_NAME = "default";
+
+const needsHarness: CallFailure = {
+  code: "usage",
+  message: "--wake-model and --wake-effort need --wake-harness, the harness a new session runs in.",
+};
+
+interface WakeFlags {
+  readonly harness: Option.Option<string>;
+  readonly model: Option.Option<string>;
+  readonly effort: Option.Option<string>;
+}
+
+interface AskedWake {
+  readonly fallbackWake?: { readonly effort: string; readonly harness: string; readonly model: string };
+}
+
+function noWake({ effort, model }: WakeFlags): Effect.Effect<AskedWake, CallFailure> {
+  if (Option.isSome(model) || Option.isSome(effort)) {
+    return Effect.fail(needsHarness);
+  }
+  return Effect.succeed({});
+}
+
+function wakeAsked(flags: WakeFlags): Effect.Effect<AskedWake, CallFailure> {
+  const { effort, harness, model } = flags;
+  return Option.match(harness, {
+    onNone: () => noWake(flags),
+    onSome: (named) =>
+      Effect.succeed({
+        fallbackWake: {
+          effort: Option.getOrElse(effort, () => DEFAULT_WAKE_NAME),
+          harness: named,
+          model: Option.getOrElse(model, () => DEFAULT_WAKE_NAME),
+        },
+      }),
+  });
+}
+
+function wakeFlag(name: string, description: string): Flag.Flag<Option.Option<string>> {
+  return Flag.String(name).pipe(Flag.optional, Flag.withDescription(description));
+}
+
 const channelRouteCommand = Command.make(
   "route",
   {
+    effort: wakeFlag(
+      "wake-effort",
+      "With --wake-harness, the effort the new session thinks with; default if left out.",
+    ),
     fallback: Flag.String("fallback").pipe(
       Flag.optional,
       Flag.withDescription("The agent that hears it when the router fails, takes over 5 s or picks no one."),
     ),
+    harness: wakeFlag(
+      "wake-harness",
+      "Wake the fallback in a new session of this harness, such as claude or codex, per thread, not its own session.",
+    ),
+    model: wakeFlag("wake-model", "With --wake-harness, the model the new session runs; default if left out."),
     name: Argument.String("name").pipe(Argument.withDescription("The channel's name.")),
     owner: Flag.String("owner").pipe(
       Flag.optional,
@@ -24,11 +77,17 @@ const channelRouteCommand = Command.make(
       ),
     ),
   },
-  ({ fallback, name, owner, router }) =>
-    answer((client) => client.setChannelRouting(name, Record.getSomes({ fallback, owner, router }))),
+  ({ effort, fallback, harness, model, name, owner, router }) =>
+    answered(
+      Effect.flatMap(wakeAsked({ effort, harness, model }), (wake) =>
+        callServer((client) =>
+          client.setChannelRouting(name, { ...Record.getSomes({ fallback, owner, router }), ...wake }),
+        ),
+      ),
+    ),
 ).pipe(
   Command.withDescription(
-    "Set who hears a person's top-level message with no mention in a channel (admin only): --owner, or --router with an optional --fallback. Flags left out are cleared; none clears all.",
+    "Set who hears a person's top-level message with no mention in a channel (admin only): --owner, or --router with an optional --fallback, which --wake-harness, --wake-model and --wake-effort wake in a new session. Flags left out are cleared; none clears all.",
   ),
 );
 
