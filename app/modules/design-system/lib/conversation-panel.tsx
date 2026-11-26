@@ -33,14 +33,14 @@ export function ConversationPanel(parts: ConversationPanelParts): ReactNode {
   return (
     <aside
       aria-label={parts.label}
-      className={`relative flex w-full min-w-0 flex-col bg-card md:shrink-0 md:border-l ${look.width}`}
+      className={`@container relative flex w-full min-w-0 flex-col bg-card md:shrink-0 md:border-l ${look.width}`}
       style={look.style}
     >
       {edge !== null && <PanelEdge edge={edge} />}
       <header className="flex h-14 shrink-0 items-center gap-2 border-b px-5">
         <BackLink href={parts.backHref} label={parts.backLabel} />
-        <h2 className="text-sm font-semibold">{parts.label}</h2>
-        <span className="flex-1 font-mono text-xs text-muted-foreground">{parts.detail}</span>
+        <h2 className="shrink-0 text-sm font-semibold @max-lg:sr-only">{parts.label}</h2>
+        <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">{parts.detail}</span>
         {(parts.actions ?? NO_ACTIONS).map((action) => (
           <PanelActionButton action={action} key={action.label} />
         ))}

@@ -1,4 +1,4 @@
-import type { Browser, Page } from "@playwright/test";
+import type { Browser, Locator, Page } from "@playwright/test";
 import { adminClient, newIdentity } from "./people.ts";
 import { test as base, expect } from "@playwright/test";
 import { inConversation, inPane } from "./regions.ts";
@@ -10,6 +10,7 @@ import { unique } from "./names.ts";
 const test = base.extend(probeFixtures);
 
 const NARROW = { height: 900, width: 600 };
+const ONE_LINE_AND_A_HALF = 30;
 
 async function mentionedInThread(channel: string): Promise<Person> {
   await adminClient().createChannel({ name: channel });
@@ -50,6 +51,68 @@ test("at 600 px wide, selecting a thread row shows only its conversation, and th
   await expect(page.getByRole("heading", { exact: true, level: 1, name: "Inbox" })).toBeVisible();
   await expect(inConversation(page)).toBeHidden();
   await expect(page).toHaveURL(/#\/inbox$/u);
+});
+
+async function pickMention(page: Page): Promise<void> {
+  await inPane(page)
+    .getByRole("list", { exact: true, name: "For you" })
+    .getByRole("link")
+    .filter({ has: page.getByText("Mentioned you", { exact: true }) })
+    .click();
+}
+
+async function mentionOpened(page: Page, channel: string): Promise<void> {
+  const reader = await mentionedInThread(channel);
+  await logInToChannels({ page, token: reader.token });
+  await page.goto("/#/inbox");
+  await pickMention(page);
+}
+
+async function widthOf(page: Page): Promise<number> {
+  const box = await inConversation(page).boundingBox();
+  if (box === null) {
+    return Number.NaN;
+  }
+  return box.width;
+}
+
+async function heightOf(locator: Locator): Promise<number> {
+  const box = await locator.boundingBox();
+  if (box === null) {
+    return Number.NaN;
+  }
+  return box.height;
+}
+
+test("on a wide screen the conversation beside the inbox keeps its width when a thread row is picked", async ({
+  page,
+}) => {
+  const reader = await mentionedInThread(unique("browser-inbox-width"));
+  await logInToChannels({ page, token: reader.token });
+  await page.goto("/#/inbox");
+
+  await expect(inConversation(page)).toContainText("Pick a conversation");
+
+  const empty = await widthOf(page);
+  await pickMention(page);
+
+  await expect(inConversation(page)).toContainText("can you check the rollout?");
+
+  expect(await widthOf(page)).toBe(empty);
+});
+
+test("on a wide screen the conversation's header buttons and Open thread each stay one line high", async ({ page }) => {
+  await mentionOpened(page, unique("browser-inbox-header"));
+  const header = inConversation(page).locator("header").first();
+  const open = header.getByRole("link", { exact: true, name: "Open thread" });
+
+  await expect(open).toBeVisible();
+
+  const button = await heightOf(header.getByRole("button").first());
+  const link = await heightOf(open);
+
+  expect(button).toBe(link);
+  expect(link).toBeLessThan(ONE_LINE_AND_A_HALF);
 });
 
 async function postFromElsewhere(browser: Browser, poster: Person, channel: string): Promise<void> {

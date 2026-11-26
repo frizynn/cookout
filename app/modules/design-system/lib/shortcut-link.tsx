@@ -18,7 +18,7 @@ export function ShortcutLink(parts: ShortcutLinkParts): ReactNode {
     <Tooltip lines={lines}>
       <a
         aria-keyshortcuts={shortcut.keys}
-        className="rounded-md border px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+        className="shrink-0 rounded-md border px-2 py-1 text-xs whitespace-nowrap text-muted-foreground hover:bg-accent hover:text-foreground"
         href={parts.href}
       >
         {parts.label}
