@@ -4,6 +4,7 @@ import { CardBody } from "../../design-system/layout.tsx";
 import { LoggedIn } from "./logged-in.tsx";
 import type { ReactNode } from "react";
 import type { Session } from "../../board/index.ts";
+import { isTouchScreen } from "../../landing/index.ts";
 import { useSyncExternalStore } from "react";
 
 const TEXT = { button: "Log in", field: "Token", form: "Log in" } as const;
@@ -29,7 +30,7 @@ export function LoginForm(props: LoginFormProps): ReactNode {
   return (
     <>
       <Form field="token" label={TEXT.form} onSubmit={handleLogIn}>
-        <TextField focused label={TEXT.field} name="token" />
+        <TextField focused={!isTouchScreen()} label={TEXT.field} name="token" />
         <SubmitButton disabled={state.status === "logging-in"}>{TEXT.button}</SubmitButton>
       </Form>
       {state.status === "logged-out" && state.refusal !== null && (

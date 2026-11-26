@@ -2,6 +2,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import type { Landing } from "../../landing/index.ts";
 import type { Place } from "../../paths/index.ts";
 import type { Session } from "../../board/index.ts";
+import { isTouchScreen } from "../../landing/index.ts";
 import { locationOf } from "../../paths/index.ts";
 
 type Status = ReturnType<Session["snapshot"]>["status"];
@@ -14,6 +15,12 @@ const TARGET = {
   threadAlone: 'aside[aria-label="Thread"] h2',
   token: 'form[aria-label="Log in"] input[name="token"]',
 } as const;
+
+const TYPING_TARGETS: ReadonlySet<string> = new Set([TARGET.channel, TARGET.thread, TARGET.token]);
+
+function opensKeyboard(target: string): boolean {
+  return TYPING_TARGETS.has(target) && isTouchScreen();
+}
 
 interface Landed {
   readonly hash: string;
@@ -31,7 +38,7 @@ function threadTarget(route: Place["route"]): string | null {
   return TARGET.thread;
 }
 
-function targetOf({ profile, route }: Place): string {
+function wantedTargetOf({ profile, route }: Place): string {
   if (profile !== null || route.name === "profile") {
     return TARGET.profile;
   }
@@ -45,6 +52,23 @@ function targetOf({ profile, route }: Place): string {
   return TARGET.heading;
 }
 
+function targetOf(place: Place): string {
+  const wanted = wantedTargetOf(place);
+  if (!opensKeyboard(wanted)) {
+    return wanted;
+  }
+  if (wanted === TARGET.thread) {
+    return TARGET.threadAlone;
+  }
+  return TARGET.heading;
+}
+
+function watchedUnlessTyping(landing: Landing, target: string): void {
+  if (!opensKeyboard(target)) {
+    landing.watch(target);
+  }
+}
+
 interface Settling {
   readonly asked: boolean;
   readonly landing: Landing;
@@ -55,7 +79,7 @@ interface Settling {
 
 function settled({ asked, landing, status, target, was }: Settling): void {
   if (status === "logged-out") {
-    landing.watch(TARGET.token);
+    watchedUnlessTyping(landing, TARGET.token);
     return;
   }
   if (status !== "logged-in") {

@@ -11,5 +11,8 @@
  * message. `subscribe` and `snapshot` (whether a landing is asked for and not yet
  * settled) let the app settle after each ask, even one that doesn't change the location. `isLanding` says whether a
  * landing is asked for or still watching for its target, so the keymap's focus keeper doesn't land focus meanwhile.
+ * `isTouchScreen` says the main pointer is a finger. There a view lands on a heading, never in a text field, since
+ * focus in a text field opens the phone's keyboard, and iOS then pans and may zoom the page, before the person asked.
  */
 export { type Landing, LandingContext, createLanding } from "./lib/landing.ts";
+export { isTouchScreen } from "./lib/touch-screen.ts";
