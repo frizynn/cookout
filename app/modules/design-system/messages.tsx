@@ -17,7 +17,7 @@
  * - `AttachmentImage` is an image attachment's picture alone, named by its name: the thumbnail's, or a `small` one (72 by 48 pixels at most) where a button can't go, such as a search result. While it loads, or when it can't be shown, its name stays unseen inside its box.
  * - `FileChip` is any other attachment: its name and `detail` (such as its size) after a file icon, a download link to `href`, or plain text where `href` is `null`. Nothing but an image is ever drawn as one.
  * - `DataToggle` is a message's data folded away.
- * - `ThreadSummary` is a link to a message's thread: its repliers' avatars, its reply count, how many replies are new (bold, after an accent dot and with how many are to the reader when any is) and when it was last replied to.
+ * - `ThreadSummary` is a link to a message's thread: its repliers' avatars, its reply count (in the link colour, so it reads as the way in without a hover), how many replies are new (bold, after an accent dot and with how many are to the reader when any is) and when it was last replied to.
  * - `ReactionChips` is a message's named row of `ReactionChip`s.
  * - `ReactionChip` is a reaction and its count, pressed (in the accent) when one is the reader's own, with who reacted as its tooltip.
  * - `RepliesDivider` heads a thread's replies.

@@ -59,3 +59,28 @@ test("hovering a thread's summary keeps its last reply text, adds an arrow, and 
     { arrow: true, lastReply: true, viewThread: false, wider: true, width: hovered.width },
   ]);
 });
+
+async function colourOf(element: Locator): Promise<{ readonly count: string; readonly link: string }> {
+  const colours = await element.evaluate((shown: unknown) => {
+    const sample = globalThis.document.createElement("span");
+    sample.style.color = "var(--color-link)";
+    globalThis.document.body.append(sample);
+    const link = globalThis.getComputedStyle(sample).color;
+    sample.remove();
+    if (!(shown instanceof HTMLElement)) {
+      return { count: "", link };
+    }
+    return { count: globalThis.getComputedStyle(shown).color, link };
+  });
+  return colours;
+}
+
+for (const scheme of ["light", "dark"] as const) {
+  test(`a thread's reply count is in the link colour before any hover, in the ${scheme} theme`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    const link = await openSummary(page, unique("browser-reply-colour"));
+    const { count, link: wanted } = await colourOf(link.getByText("1 reply", { exact: true }));
+
+    expect(count).toBe(wanted);
+  });
+}

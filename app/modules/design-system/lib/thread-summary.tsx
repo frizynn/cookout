@@ -30,7 +30,7 @@ export function ThreadSummary(parts: ThreadSummaryParts): ReactNode {
           <Avatar agent={replier.agent} key={replier.name} name={replier.name} presence={null} size="tiny" />
         ))}
       </span>
-      <span className="font-medium text-foreground">{parts.count}</span>
+      <span className="font-medium text-link">{parts.count}</span>
       {parts.news !== null && <ThreadNews forYou={parts.news.forYou}>{parts.news.text}</ThreadNews>}
       <span className="text-muted-foreground">
         {parts.last}
