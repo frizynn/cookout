@@ -55,7 +55,9 @@ export function SidePanel(parts: SidePanelParts): ReactNode {
         menu={parts.menu}
         onClose={handleClose}
       />
-      <FileDrop onFiles={parts.onFiles ?? null}>{parts.children}</FileDrop>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <FileDrop onFiles={parts.onFiles ?? null}>{parts.children}</FileDrop>
+      </div>
     </aside>
   );
 }
