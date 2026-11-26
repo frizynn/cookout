@@ -146,15 +146,11 @@ it("a link to a reply in a closed thread opens it and highlights the reply", { t
   close();
 });
 
-interface BoardLink extends Linked {
-  readonly url: string;
-}
-
-async function boardLinkIn(channel: string): Promise<BoardLink> {
-  const { posted, reply } = await threadWithReplies(channel, []);
-  const url = `${globalThis.location.origin}${globalThis.location.pathname}${linkTo(posted, reply)}`;
-  await posted.poster.createMessage({ channel, text: `See ${url}` });
-  return { posted, reply, url };
+async function boardLinkIn(channel: string): Promise<Linked> {
+  const linked = await threadWithReplies(channel, []);
+  const url = `${globalThis.location.origin}${globalThis.location.pathname}${linkTo(linked.posted, linked.reply)}`;
+  await linked.posted.poster.createMessage({ channel, text: `See ${url}` });
+  return linked;
 }
 
 it("a link in a message to this board opens in place, opening the thread with the reply highlighted", {
@@ -163,9 +159,9 @@ it("a link in a message to this board opens in place, opening the thread with th
   expect.hasAssertions();
 
   scrolledIntoView();
-  const { posted, reply, url } = await boardLinkIn("web-reply-link-in-place");
+  const { posted, reply } = await boardLinkIn("web-reply-link-in-place");
   const close = openAt({ client: posted.reader, hash: `#/channels/${posted.channel}` });
-  const link = await inPane().findByRole("link", { name: url });
+  const link = await inPane().findByRole("link", { name: `msg ${String(reply)} in #${posted.channel}` });
 
   expect(link.getAttribute("target")).toBe("_self");
 
