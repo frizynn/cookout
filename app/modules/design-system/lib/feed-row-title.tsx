@@ -23,7 +23,7 @@ function weightOf(bold: boolean): string {
 
 export function FeedRowTitle(parts: FeedRowTitleParts): ReactNode {
   return (
-    <span className="flex items-baseline gap-1.5 text-[13px]">
+    <span className="flex flex-wrap items-baseline gap-x-1.5 text-[13px]">
       <a className={`relative z-10 hover:underline ${weightOf(parts.bold)}`} href={parts.authorHref}>
         {parts.displayName ?? parts.author}
       </a>
