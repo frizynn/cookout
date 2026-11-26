@@ -52,7 +52,7 @@ export function ChannelView(props: ChannelProps): ReactNode {
     return <NotBuiltView description={TEXT.missing} title={TEXT.nothing} />;
   }
   return (
-    <Pane onFiles={handleFiles}>
+    <Pane onFiles={handleFiles} shown={props.channel}>
       <PaneHeader description={description} title={`#${props.channel}`}>
         {subscribed.status === "loaded" && <SubscriptionToggle channel={props.channel} state={subscribed} />}
       </PaneHeader>
