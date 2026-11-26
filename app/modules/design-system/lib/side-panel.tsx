@@ -3,13 +3,15 @@ import type { FilesHandler } from "./drop-zone.tsx";
 import type { PanelAloneParts } from "./panel-alone-parts.ts";
 import { PanelEdge } from "./panel-edge.tsx";
 import type { PanelEdgeParts } from "./panel-edge-parts.ts";
+import type { PanelIconAction } from "./panel-icon-button.tsx";
 import type { Parts } from "./parts.ts";
 import { SidePanelBody } from "./side-panel-body.tsx";
 import { SidePanelHeader } from "./side-panel-header.tsx";
 import type { SidePanelHeaderParts } from "./side-panel-header.tsx";
 import { panelWidth } from "./panel-width.ts";
 
-interface SidePanelParts extends Parts, SidePanelHeaderParts {
+interface SidePanelParts extends Parts, Omit<SidePanelHeaderParts, "action"> {
+  readonly action?: PanelIconAction | null;
   readonly edge: PanelEdgeParts | null;
   readonly onFiles?: FilesHandler | null;
 }
@@ -47,6 +49,7 @@ export function SidePanel(parts: SidePanelParts): ReactNode {
     >
       {edge !== null && <PanelEdge edge={edge} />}
       <SidePanelHeader
+        action={parts.action ?? null}
         alone={alone}
         closeHref={parts.closeHref}
         closeLabel={parts.closeLabel}

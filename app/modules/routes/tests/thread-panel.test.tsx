@@ -48,7 +48,7 @@ it("a thread's address opens its channel with the thread panel beside it, and cl
   close();
 });
 
-it("the panel's X link is named Close panel, apart from the Close thread icon button that closes the thread", {
+it("the panel's X link is named Close panel, apart from the Close thread icon button in the same header that closes the thread", {
   timeout: 5000,
 }, async () => {
   expect.hasAssertions();
@@ -64,7 +64,8 @@ it("the panel's X link is named Close panel, apart from the Close thread icon bu
     button.tagName,
     button.textContent,
     button.querySelector("svg[aria-hidden='true']") === null,
-  ]).toStrictEqual(["A", "BUTTON", "", false]);
+    button.closest("header") === panel.querySelector("header"),
+  ]).toStrictEqual(["A", "BUTTON", "", false, true]);
 
   close();
 });

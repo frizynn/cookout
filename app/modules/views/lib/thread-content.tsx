@@ -25,7 +25,7 @@ export function ThreadContent(props: ThreadContentProps): ReactNode {
   const { channel, closing, draft, state, thread } = props;
   return (
     <>
-      {state.status === "loaded" && <ThreadClosingBar closing={closing} parent={state.parent} />}
+      {state.status === "loaded" && <ThreadClosingBar parent={state.parent} />}
       <ThreadMessages
         closing={closing}
         linked={props.linked}

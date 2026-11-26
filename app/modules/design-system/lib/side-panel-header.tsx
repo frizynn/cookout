@@ -2,6 +2,8 @@ import type { ActionMenuParts } from "./menu-parts.ts";
 import { CloseLink } from "./close-link.tsx";
 import { PanelAloneLink } from "./panel-alone-link.tsx";
 import type { PanelAloneParts } from "./panel-alone-parts.ts";
+import type { PanelIconAction } from "./panel-icon-button.tsx";
+import { PanelIconButton } from "./panel-icon-button.tsx";
 import { PanelTitle } from "./panel-title.tsx";
 import type { ReactNode } from "react";
 
@@ -11,6 +13,7 @@ interface SidePanelHeaderParts {
   readonly closeHref: string;
   readonly closeLabel: string;
   readonly menu?: ActionMenuParts | null | undefined;
+  readonly action: PanelIconAction | null;
   readonly alone?: PanelAloneParts | null | undefined;
   readonly onClose?: (() => void) | null | undefined;
 }
@@ -35,8 +38,9 @@ function aloneLinks(alone: PanelAloneParts | null): AloneLinks {
 export function SidePanelHeader(parts: SidePanelHeaderParts): ReactNode {
   const { after, before } = aloneLinks(parts.alone ?? null);
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b px-5 max-md:pr-14 max-md:pl-2.5">
+    <header className="flex h-14 shrink-0 items-center gap-2 border-b px-5 max-md:px-2.5">
       <PanelTitle detail={parts.detail} label={parts.label} menu={parts.menu ?? null} />
+      {parts.action !== null && <PanelIconButton action={parts.action} />}
       <PanelAloneLink link={before} />
       <CloseLink href={parts.closeHref} label={parts.closeLabel} onFollow={parts.onClose ?? null} />
       <PanelAloneLink link={after} />

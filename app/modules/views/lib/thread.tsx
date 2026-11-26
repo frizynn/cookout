@@ -9,6 +9,7 @@ import type { Unread } from "../../unread/index.ts";
 import { threadDraft } from "./thread-draft.ts";
 import { useShownThread } from "./use-board.ts";
 import { useSyncExternalStore } from "react";
+import { useThreadClosing } from "./use-thread-closing.ts";
 import { useThreadHeader } from "./use-thread-header.ts";
 
 const TEXT = { close: "Close panel", thread: "Thread" } as const;
@@ -31,11 +32,13 @@ export function ThreadView(props: ThreadProps): ReactNode {
   const line = props.unread.newLine(channel, thread);
   const readPosition = useSyncExternalStore(line.subscribe, line.snapshot);
   const header = useThreadHeader({ alone: props.alone, channel, closing, menu: props.unread.menu, state, thread });
+  const action = useThreadClosing({ closing, gone: header.gone, state });
   const handleClose = header.onClose;
   const draft = threadDraft({ channel, composer: props.composer, me: props.me, messages, thread });
   const handleFiles = draft.attachments.attach;
   return (
     <SidePanel
+      action={action}
       alone={header.alone}
       closeHref={header.closeHref}
       closeLabel={TEXT.close}
