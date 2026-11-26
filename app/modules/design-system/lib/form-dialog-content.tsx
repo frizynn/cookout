@@ -5,7 +5,7 @@ import { PromptButtons } from "./prompt-buttons.tsx";
 import type { ReactNode } from "react";
 
 const CENTRED =
-  "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100%-2rem)] w-[calc(100%-2rem)] max-w-md -translate-1/2 gap-4 overflow-y-auto overscroll-contain rounded-lg border bg-background p-5 shadow-lg";
+  "fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100%-2rem)] w-[calc(100%-2rem)] max-w-md -translate-1/2 gap-4 overflow-y-auto overscroll-contain rounded-lg border bg-background p-5 shadow-lg md:motion-safe:animate-pop-in";
 const SHEET = [
   "max-md:top-auto max-md:bottom-[calc(100%-var(--visible-top,0px)-var(--visible-height,100%))] max-md:left-0",
   "max-md:max-h-[calc(var(--visible-height,100dvh)-env(safe-area-inset-top)-1rem)] max-md:w-full max-md:max-w-none",

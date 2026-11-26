@@ -7,7 +7,7 @@ const OFFSET_PX = 4;
 export function TooltipBox(parts: TooltipLinesParts): ReactNode {
   return (
     <Content asChild sideOffset={OFFSET_PX}>
-      <div className="z-50 max-w-xs rounded-md bg-foreground px-2 py-1 text-xs text-background shadow-md">
+      <div className="z-50 max-w-xs rounded-md bg-foreground px-2 py-1 text-xs text-background shadow-md md:origin-(--radix-popper-transform-origin) md:motion-safe:animate-pop-in">
         {parts.lines.map((line) => (
           <p key={line}>{line}</p>
         ))}

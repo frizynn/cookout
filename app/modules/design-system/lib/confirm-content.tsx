@@ -12,7 +12,7 @@ export function ConfirmContent(parts: ConfirmContentParts): ReactNode {
   const handleConfirm = parts.onConfirm;
   return (
     <Content asChild onCloseAutoFocus={handleCloseAutoFocus} onOpenAutoFocus={handleOpenAutoFocus}>
-      <div className="fixed top-1/2 left-1/2 z-50 grid w-[calc(100%-2rem)] max-w-md -translate-1/2 gap-3 rounded-lg border bg-background p-5 shadow-lg">
+      <div className="fixed top-1/2 left-1/2 z-50 grid w-[calc(100%-2rem)] max-w-md -translate-1/2 gap-3 rounded-lg border bg-background p-5 shadow-lg md:motion-safe:animate-pop-in">
         <ConfirmText body={parts.body} title={parts.title} />
         {parts.error !== null && (
           <p className="text-xs text-destructive" role="alert">

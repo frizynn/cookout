@@ -43,7 +43,7 @@ export function SidePanel(parts: SidePanelParts): ReactNode {
   return (
     <aside
       aria-label={parts.label}
-      className={`absolute inset-0 z-20 flex w-full flex-col bg-card outline-none md:relative md:shrink-0 md:border-l max-md:motion-safe:animate-push-in ${look.width}`}
+      className={`absolute inset-0 z-20 flex w-full flex-col bg-card outline-none md:relative md:shrink-0 md:border-l motion-safe:animate-push-in ${look.width}`}
       style={look.style}
       tabIndex={-1}
     >

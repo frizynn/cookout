@@ -35,7 +35,7 @@ export function IdentityCardBox(parts: IdentityCardBoxParts): ReactNode {
     >
       <dialog
         aria-label={card.displayName ?? card.name}
-        className="static z-50 m-0 flex w-64 flex-col overflow-hidden rounded-xl border bg-card p-0 text-sm text-foreground shadow-xl"
+        className="static z-50 m-0 flex w-64 flex-col overflow-hidden rounded-xl border bg-card p-0 text-sm text-foreground shadow-xl md:origin-(--radix-popper-transform-origin) md:motion-safe:animate-pop-in"
         data-identity-card-box={control.mark}
         open
       >

@@ -46,6 +46,8 @@
   --animate-push-in: push-in 260ms cubic-bezier(0.32, 0.72, 0, 1);
   --animate-drawer-in: drawer-in 260ms cubic-bezier(0.32, 0.72, 0, 1);
   --animate-fade-in: fade-in 200ms ease-out;
+  /* On a wide screen: a menu, tooltip, card or centred dialog grows in from a hair smaller as it fades in. */
+  --animate-pop-in: pop-in 150ms ease-out;
 
   @keyframes sheet-up {
     from {
@@ -69,6 +71,13 @@
   @keyframes fade-in {
     from {
       opacity: 0;
+    }
+  }
+
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      scale: 0.97;
     }
   }
 
