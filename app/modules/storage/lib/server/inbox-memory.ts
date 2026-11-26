@@ -13,7 +13,7 @@ import type { Channel, ChannelName } from "../../../channels/index.ts";
 import type { InboxReason, MovedBackReadPosition } from "../../../inbox/index.ts";
 import type { Message, MessageId, ReadReceipt } from "../../../messages/index.ts";
 import { ackAllIn, ackIn, ackMessageIn, moveBackIn, readPositionsIn, receiptsOf } from "./read-positions-memory.ts";
-import { followersOf, mentionsOwnAuthor, newestPerScope, scopeOf } from "./inbox.ts";
+import { followersOf, mentionsOwnAuthor, newestPerScope, routeReasonOf, routedTo, scopeOf } from "./inbox.ts";
 import { liveIdsIn, reactionHistoryFor, shownItem } from "./inbox-memory-state.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { MemoryInbox } from "./inbox-memory-state.ts";
@@ -116,7 +116,9 @@ function reasonsFor(reading: Reading, message: Message): readonly InboxReason[] 
   const followed = message.kind === "reply" && follows.has(key);
   const mentioned = mentions.has(mentionKeyOf(reading.identity, message.id));
   const subscribed = message.kind === "top-level" && subscriptions.has(key);
+  const routed = routedTo(message).includes(reading.identity);
   const reasons: readonly (readonly [InboxReason, boolean])[] = [
+    [routeReasonOf(message), routed],
     ["followed-thread", followed],
     ["mention", mentioned],
     ["subscribed-channel", subscribed],

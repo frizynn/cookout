@@ -54,6 +54,7 @@ const DROP_ROWS = [
   "DELETE FROM login_credentials WHERE identity_name = ?",
   "DELETE FROM login_requests WHERE approved_by = ?",
   "DELETE FROM message_mentions WHERE identity_name = ?",
+  "DELETE FROM message_routes WHERE identity_name = ?",
   "DELETE FROM follows WHERE identity_name = ?",
   "DELETE FROM subscriptions WHERE identity_name = ?",
   "DELETE FROM channel_read_positions WHERE identity_name = ?",

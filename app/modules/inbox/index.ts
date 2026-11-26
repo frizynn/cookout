@@ -22,6 +22,8 @@ declare const brand: unique symbol;
 
 const LOWEST_ID = 1;
 
+const reasons = ["channel-owner", "followed-thread", "mention", "reaction", "routed", "subscribed-channel"] as const;
+
 /** A nudge's ID: a positive whole number, increasing in the order nudges are raised. */
 export type NudgeId = number & { readonly [brand]: "NudgeId" };
 
@@ -87,14 +89,11 @@ export const nudgeReadPath = "/v1/inbox/nudges/:id/read";
 /** The codes the nudge routes refuse with: a nudge that isn't the caller's or doesn't exist. */
 export const nudgeErrorCodes = ["nudge_not_found"] as const;
 
-/**
- * Why an item is in the inbox: a reply in a thread the identity follows, a message that mentions it, another
- * identity's reaction on the identity's own message, or a top-level message in a channel it subscribes to.
- */
-export type InboxReason = "followed-thread" | "mention" | "reaction" | "subscribed-channel";
+/** Why an item is in the inbox: a followed thread, a mention, a reaction, a subscribed channel, an owned or routed one. */
+export type InboxReason = (typeof reasons)[number];
 
 /** Every inbox reason, in the order an item lists them. */
-export const inboxReasons: readonly InboxReason[] = ["followed-thread", "mention", "reaction", "subscribed-channel"];
+export const inboxReasons: readonly InboxReason[] = reasons;
 
 /** A message the identity hasn't read, with every reason it is there, its channel and its thread's top-level message. */
 export interface InboxItem {

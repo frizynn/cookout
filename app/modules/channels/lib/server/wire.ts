@@ -1,8 +1,17 @@
-import type { Channel, ChannelResponse, ListChannelsResponse } from "../../index.ts";
-import { channelNamePattern, descriptionLength, isChannelName } from "../../index.ts";
+import type {
+  BoardLimitsResponse,
+  Channel,
+  ChannelResponse,
+  ChannelRoutingResponse,
+  ListChannelsResponse,
+} from "../../index.ts";
+import { boardLimitRange, channelNamePattern, descriptionLength, isChannelName } from "../../index.ts";
+import { isWebUrl, matchesWire } from "../../../http/index.ts";
+import { IdentityNameSchema } from "../../../identities/server.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import { Schema } from "effect";
-import { matchesWire } from "../../../http/index.ts";
+
+const ROUTER_URL_MAXIMUM_LENGTH = 2048;
 
 const ChannelNameSchema = Schema.String.check(Schema.isPattern(channelNamePattern).abort()).pipe(
   Schema.refine(isChannelName, { identifier: "ChannelName" }),
@@ -16,8 +25,20 @@ const ChannelSchema = matchesWire<Channel>()(
   Schema.Struct({
     createdAt: IsoTimeSchema,
     description: Schema.optionalKey(DescriptionSchema),
+    fallback: Schema.optionalKey(IdentityNameSchema),
     name: ChannelNameSchema,
+    owner: Schema.optionalKey(IdentityNameSchema),
+    router: Schema.optionalKey(Schema.String),
   }),
+);
+
+const RouterUrlSchema = Schema.String.check(
+  Schema.isMaxLength(ROUTER_URL_MAXIMUM_LENGTH).abort(),
+  Schema.makeFilter(isWebUrl, { message: "Use an http or https URL." }),
+);
+
+const LimitSchema = Schema.Int.check(
+  Schema.isBetween({ maximum: boardLimitRange.maximum, minimum: boardLimitRange.minimum }),
 );
 
 export const CreateChannelRequestSchema = Schema.Struct({
@@ -31,6 +52,22 @@ export const ChannelResponseSchema = matchesWire<ChannelResponse>()(Schema.Struc
 
 export const ListChannelsResponseSchema = matchesWire<ListChannelsResponse>()(
   Schema.Struct({ channels: Schema.Array(ChannelSchema) }),
+);
+
+export const SetChannelRoutingRequestSchema = Schema.Struct({
+  fallback: Schema.optionalKey(Schema.String),
+  owner: Schema.optionalKey(Schema.String),
+  router: Schema.optionalKey(RouterUrlSchema),
+});
+
+export const ChannelRoutingResponseSchema = matchesWire<ChannelRoutingResponse>()(
+  Schema.Struct({ channel: ChannelSchema, routerSecret: Schema.optionalKey(Schema.String) }),
+);
+
+export const BoardLimitsSchema = Schema.Struct({ agentMentions: LimitSchema, agentTurns: LimitSchema });
+
+export const BoardLimitsResponseSchema = matchesWire<BoardLimitsResponse>()(
+  Schema.Struct({ limits: BoardLimitsSchema }),
 );
 
 export { ChannelNameSchema, ChannelSchema };

@@ -113,8 +113,19 @@ function newestPerScope({ items, upTo }: AckingUpTo): readonly Message[] {
   );
 }
 
+function routedTo(message: Message): readonly IdentityName[] {
+  return Option.match(Option.fromUndefinedOr(message.route), { onNone: () => [], onSome: ({ to }) => to });
+}
+
 function followersOf(message: Message): readonly IdentityName[] {
-  return Arr.dedupe([message.author.name, ...message.mentions]);
+  return Arr.dedupe([message.author.name, ...message.mentions, ...routedTo(message)]);
+}
+
+function routeReasonOf(message: Message): "channel-owner" | "routed" {
+  if (Option.exists(Option.fromUndefinedOr(message.route), ({ by }) => by === "channel-owner")) {
+    return "channel-owner";
+  }
+  return "routed";
 }
 
 function mentionsOwnAuthor(message: Message): boolean {
@@ -136,6 +147,8 @@ export {
   type StoredInboxItem,
   followersOf,
   mentionsOwnAuthor,
+  routeReasonOf,
+  routedTo,
   movedBackTo,
   movedTo,
   newestPerScope,

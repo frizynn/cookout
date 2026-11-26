@@ -27,6 +27,13 @@ const ReplierCell = Schema.Struct({ last: Schema.Int, name: IdentityNameColumn, 
 const RepliersColumn = Schema.fromJsonString(Schema.Array(ReplierCell));
 const latestFirst = Order.flip(Order.mapInput(Order.Number, (cell: typeof ReplierCell.Type) => cell.last));
 
+const RouteCell = Schema.Struct({
+  by: Schema.Literals(["channel-owner", "router", "fallback"]),
+  error: Schema.optionalKey(Schema.String),
+  to: Schema.Array(IdentityNameColumn),
+});
+const RouteColumn = Schema.NullOr(Schema.fromJsonString(RouteCell));
+
 const MessageRow = Schema.Struct({
   attachments: AttachmentsColumn,
   author_name: IdentityNameColumn,
@@ -44,6 +51,7 @@ const MessageRow = Schema.Struct({
   repliers: RepliersColumn,
   reply_count: Schema.Int,
   reply_to: Schema.NullOr(MessageIdColumn),
+  route: Schema.optionalKey(RouteColumn),
   scheduled_message_deleted_at: Schema.NullOr(Schema.String),
   scheduled_message_id: Schema.NullOr(ScheduledMessageIdColumn),
   text: Schema.String,
@@ -79,7 +87,7 @@ const REPLIERS: DialectForms<string> = { postgres: POSTGRES_REPLIERS, sqlite: SQ
 
 function messageColumns(db: SqlDatabase): string {
   const repliers = REPLIERS[db.dialect];
-  return `id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, harness,
+  return `id, channel, author_name, author_owner, text, data, reply_to, mentions, route, created_at, harness,
   closed_at, closed_by, scheduled_message_id,
   (SELECT schedules.deleted_at FROM scheduled_messages AS schedules
     WHERE schedules.id = messages.scheduled_message_id) AS scheduled_message_deleted_at,
@@ -128,6 +136,13 @@ function scheduledOf(row: MessageRowType): { readonly scheduledMessage?: Schedul
   return { scheduledMessage: { deleted: row.scheduled_message_deleted_at !== null, id: row.scheduled_message_id } };
 }
 
+function routeOf(row: MessageRowType): Pick<Message, "route"> {
+  if (Predicate.isUndefined(row.route) || Predicate.isNull(row.route)) {
+    return {};
+  }
+  return { route: row.route };
+}
+
 function messageOf(row: MessageRowType, data: DataField): Message {
   const fields = {
     author: authorOf({ name: row.author_name, owner: row.author_owner }),
@@ -138,6 +153,7 @@ function messageOf(row: MessageRowType, data: DataField): Message {
   const content = {
     ...fields,
     ...harnessOf(row),
+    ...routeOf(row),
     ...scheduledOf(row),
     ...data,
     ...attachmentsField(row.attachments),
@@ -210,4 +226,4 @@ function replyTargets(db: SqlDatabase): (id: MessageId) => Fails<ReplyTarget | u
     );
 }
 
-export { messageColumns, MentionsText, MessageIdColumn, dataText, replyTargets, toMessage };
+export { messageColumns, MentionsText, MessageIdColumn, RouteColumn, dataText, replyTargets, toMessage };

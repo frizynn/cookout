@@ -1,5 +1,5 @@
 import { Context, Effect, Option, Predicate } from "effect";
-import type { Hub, PostMessage, ScheduledRunParts } from "./posting.ts";
+import type { Hub, PostMessage, Routing, ScheduledRunParts } from "./posting.ts";
 import type {
   ListMessagesResponse,
   ListOpenThreadsResponse,
@@ -77,6 +77,7 @@ const ONE_AT_A_TIME = 1;
 
 interface MessagesOn {
   readonly storage: Storage["Service"];
+  readonly routing: Routing;
   readonly hub: Hub;
   readonly reactions: Reactions["Service"];
   readonly attaching: Attaching;
@@ -104,9 +105,15 @@ function pageWith(storage: Storage["Service"]): MessagesService["page"] {
     });
 }
 
-function messagesOn({ attaching, hub, reactions, storage }: MessagesOn): Omit<MessagesService, ThreadChangeCalls> {
-  const posting = { attaching, hub, storage };
-  const post = postWith({ ...posting, append: storage.appendMessage });
+function messagesOn({
+  attaching,
+  hub,
+  reactions,
+  routing,
+  storage,
+}: MessagesOn): Omit<MessagesService, ThreadChangeCalls> {
+  const posting = { attaching, hub, routing, storage };
+  const post = postWith({ ...posting, append: storage.appendMessage, routes: true });
   return {
     latestId: storage.latestMessageId,
     page: pageWith(storage),
@@ -129,10 +136,11 @@ function messagesOn({ attaching, hub, reactions, storage }: MessagesOn): Omit<Me
       }),
     postScheduled: postScheduledWith(posting),
     postWebhookCommandCall: (author, message, call) =>
-      postWith({ ...posting, append: (stored) => storage.appendWebhookCommandCall({ ...call, message: stored }) })(
-        author,
-        message,
-      ),
+      postWith({
+        ...posting,
+        append: (stored) => storage.appendWebhookCommandCall({ ...call, message: stored }),
+        routes: false,
+      })(author, message),
     posted: hub.subscribe,
     react: (caller, id, reaction) => react({ asked: { caller, id, reaction }, hub: reactions, storage }),
     thread: (id) =>

@@ -1,6 +1,8 @@
 import { Array as Arr, Effect, Order, Schema } from "effect";
 import type { Channel, ChannelName } from "../../../channels/index.ts";
+import { memoryRouting, routingFields, sqlRouting } from "./channel-routing.ts";
 import type { AttachmentId } from "../../../attachments/index.ts";
+import type { ChannelRoutingSection } from "./channel-routing.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import { IsoTimeSchema } from "../../../time/server.ts";
 import type { MemoryState } from "./memory-state.ts";
@@ -8,11 +10,12 @@ import type { SqlDatabase } from "./adapters/sql-database.ts";
 import type { StorageUnavailable } from "./errors.ts";
 import { isAttachmentId } from "../../../attachments/index.ts";
 import { isChannelName } from "../../../channels/index.ts";
+import { isIdentityName } from "../../../identities/index.ts";
 import { unreadable } from "./errors.ts";
 
 type Fails<Value> = Effect.Effect<Value, StorageUnavailable>;
 
-interface ChannelsSection {
+interface ChannelsSection extends ChannelRoutingSection {
   readonly createChannel: (channel: Channel, creator?: IdentityName) => Fails<"created" | "name_taken">;
   readonly listChannels: () => Fails<readonly Channel[]>;
   readonly findChannel: (name: ChannelName) => Fails<Channel | undefined>;
@@ -28,20 +31,26 @@ interface MemoryChannelsSection extends Omit<ChannelsSection, "deleteChannel"> {
   readonly forgetChannel: (name: ChannelName) => void;
 }
 
-const CHANNEL_COLUMNS = "name, description, created_at";
+const CHANNEL_COLUMNS = "name, description, created_at, owner, router, fallback";
 
 const byName: Order.Order<Channel> = Order.mapInput(Order.String, (channel: Channel) => channel.name);
+
+const RoutedName = Schema.NullOr(Schema.String.pipe(Schema.refine(isIdentityName)));
 
 const ChannelRow = Schema.Struct({
   created_at: IsoTimeSchema,
   description: Schema.NullOr(Schema.String),
+  fallback: Schema.optionalKey(RoutedName),
   name: Schema.String.pipe(Schema.refine(isChannelName)),
+  owner: Schema.optionalKey(RoutedName),
+  router: Schema.optionalKey(Schema.NullOr(Schema.String)),
 });
 
 type ChannelRowType = typeof ChannelRow.Type;
 
 function memoryChannels(state: MemoryState): MemoryChannelsSection {
   const channels = new Map<ChannelName, Channel>();
+  const routerSecrets = new Map<ChannelName, string>();
   function open<Value>(work: () => Value): Fails<Value> {
     return Effect.andThen(state.ensureOpen, Effect.sync(work));
   }
@@ -53,20 +62,30 @@ function memoryChannels(state: MemoryState): MemoryChannelsSection {
     return "created";
   }
   return {
+    ...memoryRouting({ channels, routerSecrets, state }),
     createChannel: (channel) => open(() => create(channel)),
     findChannel: (name) => open(() => channels.get(name)),
     forgetChannel: (name) => {
       channels.delete(name);
+      routerSecrets.delete(name);
     },
     listChannels: () => open(() => Arr.sort(channels.values(), byName)),
   };
 }
 
-function fromRow({ created_at: createdAt, description, name }: ChannelRowType): Channel {
+function bareRow({
+  createdAt,
+  description,
+  name,
+}: Omit<Channel, "description"> & { readonly description: string | null }): Channel {
   if (typeof description === "string") {
     return { createdAt, description, name };
   }
   return { createdAt, name };
+}
+
+function fromRow({ created_at: createdAt, description, fallback, name, owner, router }: ChannelRowType): Channel {
+  return { ...bareRow({ createdAt, description, name }), ...routingFields({ fallback, owner, router }) };
 }
 
 function toChannel(row: unknown): Fails<Channel> {
@@ -96,6 +115,7 @@ const AttachmentIdRow = Schema.Struct({ id: Schema.String.pipe(Schema.refine(isA
 
 const CHANNEL_DELETES: readonly string[] = [
   `DELETE FROM message_mentions WHERE message_id IN (${IN_CHANNEL})`,
+  `DELETE FROM message_routes WHERE message_id IN (${IN_CHANNEL})`,
   `DELETE FROM read_receipts WHERE message_id IN (${IN_CHANNEL})`,
   `DELETE FROM reactions WHERE message_id IN (${IN_CHANNEL})`,
   `DELETE FROM attachments WHERE message_id IN (${IN_CHANNEL})`,
@@ -135,6 +155,7 @@ function sqlChannels(db: SqlDatabase): ChannelsSection {
     );
   }
   return {
+    ...sqlRouting({ db, find }),
     createChannel: (channel, creator) =>
       db.transaction(
         Effect.gen(function* createChannel() {

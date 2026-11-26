@@ -1,7 +1,13 @@
 import type { ChannelResponse, CreateChannelRequest, ListChannelsResponse } from "../../channels/index.ts";
-import { channelPath, channelsPath } from "../../channels/index.ts";
+import { boardLimitsPath, channelPath, channelRoutingPath, channelsPath } from "../../channels/index.ts";
 import { getJson, send } from "./request.ts";
-import { isChannelResponse, isListChannelsResponse } from "./generated/validators.js";
+import {
+  isBoardLimitsResponse,
+  isChannelResponse,
+  isChannelRoutingResponse,
+  isListChannelsResponse,
+} from "./generated/validators.js";
+import type { ChannelRoutingCalls } from "../../channels/client.ts";
 import type { ClientConnection } from "./request.ts";
 import type { ScheduledMessageCalls } from "../../scheduled-messages/client.ts";
 import { scheduledMessageCalls } from "./scheduled-messages.ts";
@@ -14,9 +20,32 @@ interface ChannelCalls {
   readonly deleteChannel: (name: string) => Promise<ChannelResponse>;
 }
 
-function channelCalls(server: ClientConnection): ChannelCalls & ScheduledMessageCalls {
+function channelRoutingCalls(server: ClientConnection): ChannelRoutingCalls {
+  return {
+    boardLimits: async () => {
+      const found = await getJson(server, boardLimitsPath, isBoardLimitsResponse);
+      return found;
+    },
+    setBoardLimits: async (body) => {
+      const set = await send(server, { body, isExpected: isBoardLimitsResponse, method: "PUT", path: boardLimitsPath });
+      return set;
+    },
+    setChannelRouting: async (name, body) => {
+      const set = await send(server, {
+        body,
+        isExpected: isChannelRoutingResponse,
+        method: "PUT",
+        params: { name },
+        path: channelRoutingPath,
+      });
+      return set;
+    },
+  };
+}
+function channelCalls(server: ClientConnection): ChannelCalls & ScheduledMessageCalls & ChannelRoutingCalls {
   return {
     ...scheduledMessageCalls(server),
+    ...channelRoutingCalls(server),
     createChannel: async (body) => {
       const created = await send(server, { body, isExpected: isChannelResponse, method: "POST", path: channelsPath });
       return created;

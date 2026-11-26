@@ -1,6 +1,7 @@
 import {
   ATTACHMENTS_MIGRATION,
   ATTACHMENT_SIZES_MIGRATION,
+  ROUTING_MIGRATION,
   SEARCH_MIGRATION,
   TRIGGERS_MIGRATION,
   TRIGGER_HEADERS_MIGRATION,
@@ -238,6 +239,7 @@ const migrations: readonly string[] = [
   TRIGGER_SKIPPED_MIGRATION,
   `ALTER TABLE messages ADD COLUMN deleted_at TEXT;
    ALTER TABLE messages ADD COLUMN deleted_by TEXT;`,
+  ROUTING_MIGRATION,
 ];
 
 const UserVersionRow = Schema.Struct({ user_version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) });

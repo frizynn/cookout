@@ -10,61 +10,12 @@ import {
   pageQuery,
   scheduleCommand,
 } from "./message-command.ts";
+import { boardCommand, channelCommand } from "./channel-command.ts";
 import { searchCommand, threadCommandFor } from "./thread.ts";
-import { Option } from "effect";
 import { answer } from "./output.ts";
 import { assetCommand } from "./attachments.ts";
 import { helpCommand } from "./help-monitor.ts";
 import { webhookCommandVerb } from "./command.ts";
-
-const NOTHING = {};
-
-const channelCreateCommand = Command.make(
-  "create",
-  {
-    description: Flag.String("description").pipe(
-      Flag.optional,
-      Flag.withDescription("What the channel is for, 1-500 characters."),
-    ),
-    name: Argument.String("name").pipe(Argument.withDescription("1-80 lowercase letters, digits or '-'.")),
-  },
-  ({ name, description }) => {
-    const withDescription = Option.match(description, {
-      onNone: () => NOTHING,
-      onSome: (value) => ({ description: value }),
-    });
-    return answer((client) => client.createChannel({ name, ...withDescription }));
-  },
-).pipe(Command.withDescription("Create a channel. Any identity can, and is subscribed to it; unsubscribe to stop."));
-
-const subscribedFlag = Flag.Boolean("subscribed").pipe(
-  Flag.withDefault(false),
-  Flag.withDescription("Only the channels you subscribe to."),
-);
-
-const channelListCommand = Command.make("list", { subscribed: subscribedFlag }, ({ subscribed }) => {
-  if (subscribed) {
-    return answer((client) => client.listSubscribedChannels());
-  }
-  return answer((client) => client.listChannels());
-}).pipe(Command.withDescription("List every channel, by name, or with --subscribed only yours."));
-
-const channelGetCommand = Command.make("get", { name: Argument.String("name") }, ({ name }) =>
-  answer((client) => client.getChannel(name)),
-).pipe(Command.withDescription("Show one channel."));
-
-const channelDeleteCommand = Command.make("delete", { name: Argument.String("name") }, ({ name }) =>
-  answer((client) => client.deleteChannel(name)),
-).pipe(
-  Command.withDescription(
-    "Delete a channel and everything in it (admin only). Its name can be created again, as a new, empty channel.",
-  ),
-);
-
-const channelCommand = Command.make("channel").pipe(
-  Command.withDescription("Create, list, get and delete channels."),
-  Command.withSubcommands([channelCreateCommand, channelListCommand, channelGetCommand, channelDeleteCommand]),
-);
 
 const threadCommand = threadCommandFor(messageIdArgument);
 
@@ -136,6 +87,7 @@ const unsubscribeCommand = Command.make("unsubscribe", { channel: channelArgumen
 export const verbCommands = [
   identityCommand,
   channelCommand,
+  boardCommand,
   messageCommand,
   assetCommand,
   avatarCommand,

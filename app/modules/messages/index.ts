@@ -4,8 +4,8 @@
  * and the error codes they refuse with. Every read leaves deleted messages out (pages, threads counting only live
  * replies, search, open threads, receipts, Reactions, Attachments), and reacting to one is 404 `message_not_found`.
  */
+import type { ChannelName, WithRoute } from "../channels/index.ts";
 import type { Harness, IdentityName, Owner } from "../identities/index.ts";
-import type { ChannelName } from "../channels/index.ts";
 import type { IsoTime } from "../time/index.ts";
 import type { WithAttachments } from "../attachments/index.ts";
 
@@ -46,7 +46,7 @@ export interface Author {
 }
 
 /** The fields every message has, top-level or reply. */
-export interface MessageFields extends WithAttachments {
+export interface MessageFields extends WithAttachments, WithRoute {
   readonly id: MessageId;
   readonly channel: ChannelName;
   readonly author: Author;

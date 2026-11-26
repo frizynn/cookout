@@ -23,6 +23,10 @@ const BEFORE_INSERT = "CREATE TRIGGER fault BEFORE INSERT ON identities FOR EACH
 const AT_COMMIT = `CREATE CONSTRAINT TRIGGER fault AFTER INSERT ON identities DEFERRABLE INITIALLY DEFERRED
   FOR EACH ROW EXECUTE FUNCTION fault()`;
 const BEFORE_SEARCH = [
+  "DROP TABLE board_limits",
+  "DROP TABLE message_routes",
+  "ALTER TABLE messages DROP COLUMN route",
+  "ALTER TABLE channels DROP COLUMN owner, DROP COLUMN router, DROP COLUMN router_secret, DROP COLUMN fallback",
   "ALTER TABLE messages DROP COLUMN deleted_at, DROP COLUMN deleted_by",
   "ALTER TABLE agent_join_requests DROP COLUMN denied_at",
   "ALTER TABLE login_credentials DROP COLUMN made_with",

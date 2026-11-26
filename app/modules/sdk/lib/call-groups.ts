@@ -9,6 +9,7 @@ import type {
 } from "../../messages/client.ts";
 import type { IdentityMessageCountResponse, IdentityResponse } from "../../identities/index.ts";
 import type { AgentApprovalCalls } from "./agent-sessions.ts";
+import type { ChannelRoutingCalls } from "../../channels/client.ts";
 import type { EventCalls } from "./events.ts";
 import type { IdentityAvatarCalls } from "./avatars.ts";
 import type { LoginCalls } from "./logins.ts";
@@ -26,6 +27,7 @@ export type CallGroups = LoginCalls &
   IdentityAvatarCalls &
   IdentityDeletionCalls &
   DescriptionCalls<IdentityResponse> &
+  ChannelRoutingCalls &
   ClosedThreadCalls &
   MessageDeleteCalls &
   OpenThreadCalls &

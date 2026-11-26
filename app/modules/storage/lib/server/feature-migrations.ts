@@ -4,6 +4,7 @@ export {
   POSTGRES_ATTACHMENT_SIZES_MIGRATION,
   POSTGRES_ATTACHMENTS_MIGRATION,
 } from "./attachments.ts";
+export { POSTGRES_ROUTING_MIGRATION, ROUTING_MIGRATION } from "./channel-routing.ts";
 export { POSTGRES_SEARCH_MIGRATION, SEARCH_MIGRATION } from "./search-sqlite.ts";
 export {
   POSTGRES_TRIGGER_HEADERS_MIGRATION,

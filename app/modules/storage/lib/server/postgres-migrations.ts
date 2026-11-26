@@ -2,6 +2,7 @@ import { Array as Arr, Effect, Option } from "effect";
 import {
   POSTGRES_ATTACHMENTS_MIGRATION,
   POSTGRES_ATTACHMENT_SIZES_MIGRATION,
+  POSTGRES_ROUTING_MIGRATION,
   POSTGRES_SEARCH_MIGRATION,
   POSTGRES_TRIGGERS_MIGRATION,
   POSTGRES_TRIGGER_HEADERS_MIGRATION,
@@ -257,6 +258,7 @@ const postgresMigrations: readonly (readonly string[])[] = [
     'ALTER TABLE messages ADD COLUMN deleted_at text COLLATE "C"',
     'ALTER TABLE messages ADD COLUMN deleted_by text COLLATE "C"',
   ],
+  POSTGRES_ROUTING_MIGRATION,
 ];
 
 const NEXT_VERSION = 1;

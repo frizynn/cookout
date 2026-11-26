@@ -15,7 +15,7 @@ import type {
   ThreadResponse,
   TopLevelMessage,
 } from "../../../messages/index.ts";
-import { MentionsText, dataText, messageColumns, replyTargets, toMessage } from "./message-rows-sqlite.ts";
+import { MentionsText, RouteColumn, dataText, messageColumns, replyTargets, toMessage } from "./message-rows-sqlite.ts";
 import { insertAttachments, sqlAttachments } from "./attachments.ts";
 import { isPlaced, placeIn, placed, threadIdOf, withKnownMentions } from "./messages.ts";
 import { latestOf, stampedIn, takeId } from "./message-sequence-sqlite.ts";
@@ -38,8 +38,8 @@ const ONE_AT_A_TIME = { concurrency: 1 } as const;
 const isFoundRow = Schema.is(Schema.Struct({ found: Schema.Literal(FOUND) }));
 
 const INSERT_MESSAGE = `INSERT INTO messages
-  (id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, harness, scheduled_message_id)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  (id, channel, author_name, author_owner, text, data, reply_to, mentions, created_at, harness, scheduled_message_id, route)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 function replyToOf(message: Message): MessageId | null {
   if (message.kind === "reply") {
@@ -84,6 +84,7 @@ function insert(db: SqlDatabase, message: Message, data: string | null): Fails<v
     const replyTo = replyToOf(message);
     const { harness = null, author, channel, createdAt, id, text } = message;
     const schedule = scheduleOf(message);
+    const route = yield* Schema.encodeEffect(RouteColumn)(message.route ?? null).pipe(Effect.mapError(unreadable));
     const columns = [
       id,
       channel,
@@ -96,6 +97,7 @@ function insert(db: SqlDatabase, message: Message, data: string | null): Fails<v
       createdAt,
       harness,
       schedule,
+      route,
     ] as const;
     yield* db.run(INSERT_MESSAGE, ...columns);
   });

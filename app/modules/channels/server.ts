@@ -5,18 +5,21 @@
  */
 import { Array as Arr, Context, DateTime, Effect, Layer, PubSub } from "effect";
 import { AssetStore, Storage } from "../storage/server.ts";
-import { Caller, requireAdmin } from "../identities/server.ts";
 import {
+  BoardLimitsResponseSchema,
   ChannelResponseSchema,
+  ChannelRoutingResponseSchema,
   CreateChannelRequestSchema,
   ListChannelsQuerySchema,
   ListChannelsResponseSchema,
 } from "./lib/server/wire.ts";
+import { Caller, requireAdmin } from "../identities/server.ts";
 import type { DeletedChannel, StorageUnavailable } from "../storage/server.ts";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
+import type { RoutingCalls, RoutingCallsNeeds } from "./lib/server/routing.ts";
 import { channelPath, channelsPath, isChannelName } from "./index.ts";
+import { routingCallsOf, routingRoutes } from "./lib/server/routing.ts";
 import type { Channel } from "./index.ts";
-import type { IsoTime } from "../time/index.ts";
 import type { Refusal } from "../http/index.ts";
 import type { Route } from "../http/server.ts";
 import type { Scope } from "effect";
@@ -43,7 +46,7 @@ function missingChannel(name: string): Refusal {
   return { code: "channel_not_found", message: `There is no channel named ${echoed(name)}.`, status: NOT_FOUND };
 }
 
-function stamped(fields: NewChannel, createdAt: IsoTime): Channel {
+function stamped(fields: NewChannel, createdAt: Channel["createdAt"]): Channel {
   if (typeof fields.description === "string") {
     return { createdAt, description: fields.description, name: fields.name };
   }
@@ -77,7 +80,11 @@ interface ChannelsNeeds {
   readonly storage: Storage["Service"];
 }
 
-function channelsOn({ assets, publish, storage }: ChannelsNeeds): Omit<ChannelsService, "created" | "deleted"> {
+function channelsOn({
+  assets,
+  publish,
+  storage,
+}: ChannelsNeeds): Omit<ChannelsService, "created" | "deleted" | keyof RoutingCalls> {
   return {
     create: (creator, fields) =>
       Effect.gen(function* createChannel() {
@@ -124,7 +131,12 @@ function channelsOn({ assets, publish, storage }: ChannelsNeeds): Omit<ChannelsS
  */
 export const channelNotFound: (name: string) => Refusal = missingChannel;
 
-export interface ChannelsService {
+/**
+ * The channel calls. `setRouting` replaces who hears a person's unmentioned top-level messages in a channel (its owner,
+ * or its router and fallback), refusing with 404 `channel_not_found`, 422 `routing_agent_invalid` and 422
+ * `routing_conflict`; `limits` and `setLimits` read and replace the board's limits on agents talking to agents.
+ */
+export interface ChannelsService extends RoutingCalls {
   /**
    * Makes a channel, stamped with the current time, and subscribes `creator` to it in the same storage change.
    * Refuses with 409 `channel_exists` when the name is in use.
@@ -160,7 +172,7 @@ export class Channels extends Context.Service<Channels, ChannelsService>()(
 ) {}
 
 /** `Channels` on the running `Storage` and `AssetStore`. */
-export const channelsLayer: Layer.Layer<Channels, never, Storage | AssetStore> = Layer.effect(
+export const channelsLayer: Layer.Layer<Channels, never, Storage | AssetStore | RoutingCallsNeeds> = Layer.effect(
   Channels,
   Effect.gen(function* channelsOnStorage() {
     const storage = yield* Storage;
@@ -173,6 +185,7 @@ export const channelsLayer: Layer.Layer<Channels, never, Storage | AssetStore> =
     };
     return {
       ...channelsOn({ assets, publish, storage }),
+      ...(yield* routingCallsOf(missingChannel)),
       created: PubSub.subscribe(createdHub),
       deleted: PubSub.subscribe(deletedHub),
     };
@@ -236,6 +249,7 @@ export const channelRoutes: readonly Route<Caller | Channels>[] = [
     method: "DELETE",
     path: channelPath,
   },
+  ...routingRoutes(Effect.service(Channels)),
 ];
 
 /** The Schemas of a channel and its name, for other modules' answers that hold channels. */
@@ -243,6 +257,14 @@ export { ChannelNameSchema, ChannelSchema } from "./lib/server/wire.ts";
 
 /** The response Schemas of the channel routes, for the SDK's generated validators. */
 export const channelResponseSchemas = {
+  BoardLimitsResponse: BoardLimitsResponseSchema,
   ChannelResponse: ChannelResponseSchema,
+  ChannelRoutingResponse: ChannelRoutingResponseSchema,
   ListChannelsResponse: ListChannelsResponseSchema,
 };
+
+/**
+ * The seam every call to a channel's router goes through: the live one POSTs the signed body with Effect's `HttpClient`
+ * and never follows a redirect; tests answer for a router instead.
+ */
+export { type RouterAsk, RouterCaller, type RouterCallerService, type RouterPick } from "./lib/server/router-caller.ts";

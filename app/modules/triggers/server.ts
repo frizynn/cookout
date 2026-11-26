@@ -40,7 +40,13 @@ export { triggerRoutes } from "./lib/server/routes.ts";
  * The seam every call to a trigger URL goes through: `triggerCallerLive` POSTs with Effect's `HttpClient` and never
  * follows a redirect, so one counts as a failed call. Tests swap in their own.
  */
-export { type TriggerCall, TriggerCaller, type TriggerCallerService, triggerCallerLive } from "./lib/server/caller.ts";
+export {
+  type TriggerCall,
+  TriggerCaller,
+  type TriggerCallerService,
+  type TriggerWake,
+  triggerCallerLive,
+} from "./lib/server/caller.ts";
 
 /** What a trigger URL answered: its status and, for a failed call, its response body. */
 export { type TriggerAnswer } from "./lib/server/answer.ts";

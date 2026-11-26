@@ -11,16 +11,17 @@ import {
   seenWithoutReplyTo,
   threadDeleted,
 } from "./refusals.ts";
-import type { ChannelName } from "../../../channels/index.ts";
 import type { Refusal } from "./refusals.ts";
+import type { Routing } from "./routing.ts";
 import { channelNotFound } from "../../../channels/server.ts";
+import { checkedDraft } from "./routing.ts";
 import { isIdentityName } from "../../../identities/index.ts";
 import { isoTimeOf } from "../../../time/server.ts";
 import { mentionPattern } from "../../index.ts";
 import { refuseIfMoved } from "./thread-moved.ts";
 
 interface PostMessage {
-  readonly channel: ChannelName;
+  readonly channel: NewMessage["channel"];
   readonly text: string;
   readonly data?: JsonValue;
   readonly replyTo?: MessageId;
@@ -113,6 +114,8 @@ interface Posting {
   readonly append: (message: NewMessage) => Fails<Appended>;
   readonly attaching: Attaching;
   readonly storage: Storage["Service"];
+  readonly routing: Routing;
+  readonly routes: boolean;
 }
 
 function withAttachments(message: NewMessage, { attachments }: StoredFiles): NewMessage {
@@ -160,10 +163,20 @@ function postWith(posting: Posting): (author: Identity, message: PostMessage) =>
         return yield* Effect.fail(unfit.value);
       }
       const { attachments = [], ...rest } = message;
+      const routed = yield* Effect.flatMap(DateTime.now, (now) =>
+        checkedDraft({
+          author,
+          message: newMessage(author, rest, isoTimeOf(now)),
+          routes: posting.routes,
+          routing: posting.routing,
+        }),
+      );
       const files = yield* posting.attaching.store({ attachments, text: rest.text });
-      const now = yield* DateTime.now;
-      const stored = withAttachments(newMessage(author, rest, isoTimeOf(now)), files);
-      const result = yield* posting.hub.appendThenPublish(appendUnmoved(posting, author, rest), stored).pipe(
+      const stored = posting.hub.appendThenPublish(
+        appendUnmoved(posting, author, rest),
+        withAttachments(routed, files),
+      );
+      const result = yield* stored.pipe(
         Effect.flatMap(appendedOr(rest)),
         Effect.onError(() => files.remove),
       );
@@ -188,8 +201,9 @@ function isAppendResult(result: RunResult): result is Appended {
 function postScheduledWith({
   attaching,
   hub,
+  routing,
   storage,
-}: Omit<Posting, "append">): (
+}: Omit<Posting, "append" | "routes">): (
   author: Identity,
   message: PostMessage,
   run: ScheduledRunParts,
@@ -202,8 +216,9 @@ function postScheduledWith({
         () => runMoved,
       );
     }
-    return postWith({ append, attaching, hub, storage })(author, message);
+    return postWith({ append, attaching, hub, routes: true, routing, storage })(author, message);
   };
 }
 
 export { type Appended, type Hub, type PostMessage, type ScheduledRunParts, postScheduledWith, postWith };
+export { type Routing, type RoutingNeeds, openRouting } from "./routing.ts";

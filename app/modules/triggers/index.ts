@@ -23,6 +23,13 @@ export type TriggerSkip = "agent_session_live";
 export const triggerSkips = ["agent_session_live"] as const satisfies readonly TriggerSkip[];
 
 /**
+ * Why a trigger call wakes an agent, sent as `reason`: it was mentioned, it owns the channel a person posted in
+ * without a mention, it takes part in a thread a person replied in without a mention, or the channel's router or
+ * fallback sent it the person's message.
+ */
+export type WakeReason = "mention" | "channel-owner" | "thread" | "routed";
+
+/**
  * How the last call to a trigger URL went: when it was made, and either the HTTP status the URL answered or, when it
  * answered nothing (a timeout, a refused connection), why. `ok` is true only for a `2xx`, or for a mention that called
  * nothing on purpose: then `skipped` says why, and it has no status or error, as it neither failed nor reached the URL.

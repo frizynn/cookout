@@ -16,7 +16,7 @@ import {
   readPositionsIn,
   receiptsOf,
 } from "./read-positions-sqlite.ts";
-import { followersOf, mentionsOwnAuthor, newestPerScope, reasonsIn } from "./inbox.ts";
+import { followersOf, mentionsOwnAuthor, newestPerScope, reasonsIn, routeReasonOf, routedTo } from "./inbox.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { InboxReason } from "../../../inbox/index.ts";
 import type { SqlDatabase } from "./adapters/sql-database.ts";
@@ -54,6 +54,8 @@ const ONE_AT_A_TIME = { concurrency: 1 } as const;
 
 const FOLLOW = "INSERT INTO follows (identity_name, thread_id) VALUES (?, ?) ON CONFLICT DO NOTHING";
 
+const ROUTE = "INSERT INTO message_routes (identity_name, message_id, reason) VALUES (?, ?, ?) ON CONFLICT DO NOTHING";
+
 const READ = 1;
 const UNREAD = 0;
 const ALL_IDS = Number.MAX_SAFE_INTEGER;
@@ -75,6 +77,9 @@ const REASONS = `SELECT m.id AS id, 'followed-thread' AS reason
   UNION ALL SELECT m.id, 'mention'
     FROM message_mentions AS mm JOIN messages AS m ON m.id = mm.message_id
     WHERE mm.identity_name = ?1 AND m.deleted_at IS NULL
+  UNION ALL SELECT m.id, mr.reason
+    FROM message_routes AS mr JOIN messages AS m ON m.id = mr.message_id
+    WHERE mr.identity_name = ?1 AND m.deleted_at IS NULL
   UNION ALL SELECT m.id, 'subscribed-channel'
     FROM subscriptions AS s JOIN messages AS m ON m.channel = s.channel AND m.reply_to IS NULL
     WHERE s.identity_name = ?1 AND m.deleted_at IS NULL`;
@@ -120,6 +125,11 @@ function recordAppended({ db, message }: Appended): Fails<readonly ReadReceipt[]
           name,
           message.id,
         ),
+      ONE_AT_A_TIME,
+    );
+    yield* Effect.forEach(
+      routedTo(message),
+      (name) => db.run(ROUTE, name, message.id, routeReasonOf(message)),
       ONE_AT_A_TIME,
     );
     yield* Effect.forEach(followersOf(message), (name) => db.run(FOLLOW, name, thread), ONE_AT_A_TIME);

@@ -101,6 +101,12 @@ const ReactionCountSchema = matchesWire<ReactionCount>()(
   }),
 );
 
+const MessageRouteSchema = Schema.Struct({
+  by: Schema.Literals(["channel-owner", "router", "fallback"]),
+  error: Schema.optionalKey(Schema.String),
+  to: Schema.Array(IdentityNameSchema),
+});
+
 const messageFields = {
   attachments: Schema.optionalKey(Schema.Array(AttachmentSchema)),
   author: AuthorSchema,
@@ -111,6 +117,7 @@ const messageFields = {
   id: MessageIdSchema,
   mentions: Schema.Array(IdentityNameSchema),
   reactions: Schema.optionalKey(Schema.Array(ReactionCountSchema)),
+  route: Schema.optionalKey(MessageRouteSchema),
   scheduledMessage: Schema.optionalKey(ScheduledMessageMarkerSchema),
   text: ShownTextSchema,
 };

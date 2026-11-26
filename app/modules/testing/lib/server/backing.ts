@@ -21,6 +21,7 @@ import {
   pausedMidRunStorage,
   unusableStorage,
 } from "./storage.ts";
+import type { RouterCaller } from "../../../channels/server.ts";
 import { Secrets } from "../../../secrets/server.ts";
 import type { Storage } from "../../../storage/server.ts";
 import type { Token } from "../../../identities/index.ts";
@@ -88,9 +89,9 @@ function storageFor(options: BackingOptions): Effect.Effect<Layer.Layer<Stores>,
   );
 }
 
-type Backing = Secrets | WebhookFake | TriggerCaller | ScriptedTriggers;
+type Backing = Secrets | WebhookFake | TriggerCaller | RouterCaller | ScriptedTriggers;
 
-function triggersOf(kind: BackingOptions["triggers"]): Layer.Layer<TriggerCaller | ScriptedTriggers> {
+function triggersOf(kind: BackingOptions["triggers"]): Layer.Layer<TriggerCaller | RouterCaller | ScriptedTriggers> {
   if (kind === "scripted") {
     return scriptedTriggers;
   }

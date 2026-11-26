@@ -36,34 +36,44 @@ it.effect("a mention POSTs the message's link and text to the trigger URL with t
         text: `${PUBLIC_URL}/#/channels/grill/threads/${id}/messages/${id}\n\n@${AGENT} look`,
         token: triggerToken(TOKEN),
         url: URL_OF,
+        wake: { author: "ada", channel: "grill", message: Number(id), reason: "mention", thread: Number(id) },
       },
     ]);
     expect(stored).toStrictEqual({ trigger: { lastResult: { at: AT, ok: true, status: OK }, url: URL_OF } });
   }).pipe(Effect.provide(testCookout({ publicUrl: PUBLIC_URL, triggers: "scripted" }))),
 );
 
-it.effect("the call goes through the HTTP client as a POST of JSON { text } with the token as a bearer", () =>
-  Effect.gen(function* realCall() {
-    const on = yield* board;
-    yield* answer(() => on.matt.client.setTrigger(AGENT, { token: TOKEN, url: `${on.cookout.webhook.url}/fire` }));
-    yield* on.mention();
-    const calls = yield* on.cookout.webhook.waitForCalls(ONCE);
-    const made = Arr.map(calls, ({ body, headers, method, path }) => ({
-      authorization: headers["authorization"],
-      body,
-      method,
-      path,
-    }));
+it.effect(
+  "the call goes through the HTTP client as a POST of JSON with the text, where and why, and the token as a bearer",
+  () =>
+    Effect.gen(function* realCall() {
+      const on = yield* board;
+      yield* answer(() => on.matt.client.setTrigger(AGENT, { token: TOKEN, url: `${on.cookout.webhook.url}/fire` }));
+      yield* on.mention();
+      const calls = yield* on.cookout.webhook.waitForCalls(ONCE);
+      const made = Arr.map(calls, ({ body, headers, method, path }) => ({
+        authorization: headers["authorization"],
+        body,
+        method,
+        path,
+      }));
 
-    expect(made).toStrictEqual([
-      {
-        authorization: `Bearer ${TOKEN}`,
-        body: { text: `${on.cookout.url}/#/channels/grill/threads/1/messages/1\n\n@${AGENT} look` },
-        method: "POST",
-        path: "/fire",
-      },
-    ]);
-  }).pipe(Effect.provide(testCookout())),
+      expect(made).toStrictEqual([
+        {
+          authorization: `Bearer ${TOKEN}`,
+          body: {
+            author: "ada",
+            channel: "grill",
+            message: 1,
+            reason: "mention",
+            text: `${on.cookout.url}/#/channels/grill/threads/1/messages/1\n\n@${AGENT} look`,
+            thread: 1,
+          },
+          method: "POST",
+          path: "/fire",
+        },
+      ]);
+    }).pipe(Effect.provide(testCookout())),
 );
 
 it.effect(

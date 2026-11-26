@@ -13,7 +13,7 @@ import {
 import type { Message, MessageId } from "../../../messages/index.ts";
 import type { Services, Watching } from "./watching.ts";
 import type { Storage, StorageUnavailable, StoredTrigger } from "../../../storage/server.ts";
-import type { TriggerFailure, TriggerResult } from "../../index.ts";
+import type { TriggerFailure, TriggerResult, WakeReason } from "../../index.ts";
 import type { IdentityName } from "../../../identities/index.ts";
 import type { Scope } from "effect";
 import type { TriggerAnswer } from "./answer.ts";
@@ -27,6 +27,12 @@ import { shownTrigger } from "./wire.ts";
 interface Mentioned {
   readonly message: Message;
   readonly trigger: StoredTrigger;
+  readonly reason: WakeReason;
+}
+
+interface Wake {
+  readonly agent: IdentityName;
+  readonly reason: WakeReason;
 }
 
 interface Settling extends Mentioned {
@@ -56,7 +62,7 @@ function isMentionedBy(message: Message, agent: IdentityName): boolean {
 }
 
 function callable(storage: Storage["Service"], message: Message) {
-  return (agent: IdentityName): Effect.Effect<readonly StoredTrigger[], StorageUnavailable> =>
+  return ({ agent, reason }: Wake): Effect.Effect<readonly Mentioned[], StorageUnavailable> =>
     Effect.gen(function* findCallable() {
       const identity = yield* storage.findIdentityByName(agent);
       const active = Predicate.isNotUndefined(identity) && identity.kind === "agent" && identity.deactivated !== true;
@@ -64,17 +70,63 @@ function callable(storage: Storage["Service"], message: Message) {
         return [];
       }
       const trigger = yield* storage.findTrigger(agent);
-      return Option.toArray(Option.fromUndefinedOr(trigger));
+      return Arr.map(Option.toArray(Option.fromUndefinedOr(trigger)), (found) => ({ message, reason, trigger: found }));
     });
 }
 
-function mentionedIn(storage: Storage["Service"], message: Message): Effect.Effect<readonly Mentioned[]> {
-  return Effect.forEach(message.mentions, callable(storage, message), ONE_AT_A_TIME).pipe(
-    Effect.map((found: readonly (readonly StoredTrigger[])[]) =>
-      Arr.map(Arr.flatten(found), (trigger) => ({ message, trigger })),
-    ),
-    Effect.orElseSucceed(Arr.empty),
+function isByPerson(message: Message): boolean {
+  return Predicate.isUndefined(message.author.owner);
+}
+
+function routedTo({ route }: Message): readonly IdentityName[] {
+  if (Predicate.isUndefined(route)) {
+    return [];
+  }
+  return route.to;
+}
+
+function participantsOf(messages: readonly Message[]): readonly IdentityName[] {
+  return Arr.flatMap(messages, (each) => [each.author.name, ...each.mentions, ...routedTo(each)]);
+}
+
+function threadWakes(
+  storage: Storage["Service"],
+  message: Message,
+): Effect.Effect<readonly Wake[], StorageUnavailable> {
+  if (message.kind !== "reply" || !isByPerson(message) || Arr.isReadonlyArrayNonEmpty(message.mentions)) {
+    return Effect.succeed([]);
+  }
+  return Effect.map(storage.getThread(message.replyTo), (thread) => {
+    if (Predicate.isUndefined(thread)) {
+      return [];
+    }
+    const others = Arr.filter(
+      participantsOf([thread.parent, ...thread.replies]),
+      (name) => name !== message.author.name,
+    );
+    return Arr.map(others, (agent) => ({ agent, reason: "thread" as const }));
+  });
+}
+
+function routeReasonOf({ route }: Message): WakeReason {
+  if (Predicate.isUndefined(route) || route.by !== "channel-owner") {
+    return "routed";
+  }
+  return "channel-owner";
+}
+
+function wakesOf(storage: Storage["Service"], message: Message): Effect.Effect<readonly Wake[], StorageUnavailable> {
+  const mentioned = Arr.map(message.mentions, (agent) => ({ agent, reason: "mention" as const }));
+  const routed = Arr.map(routedTo(message), (agent) => ({ agent, reason: routeReasonOf(message) }));
+  return Effect.map(threadWakes(storage, message), (thread) =>
+    Arr.dedupeWith([...mentioned, ...routed, ...thread], (first, second) => first.agent === second.agent),
   );
+}
+
+function mentionedIn(storage: Storage["Service"], message: Message): Effect.Effect<readonly Mentioned[]> {
+  return Effect.flatMap(wakesOf(storage, message), (wakes) =>
+    Effect.forEach(wakes, callable(storage, message), ONE_AT_A_TIME),
+  ).pipe(Effect.map(Arr.flatten), Effect.orElseSucceed(Arr.empty));
 }
 
 function secretsOf({ headers = [], token }: StoredTrigger): readonly string[] {
@@ -95,7 +147,7 @@ const SKIPPED_LIVE: Pick<TriggerResult, "ok" | "skipped"> = { ok: true, skipped:
 function callMade(
   services: Services,
   boardUrl: Effect.Effect<string>,
-  { message, trigger }: Mentioned,
+  { message, reason, trigger }: Mentioned,
 ): Effect.Effect<TriggerResult, StorageUnavailable> {
   const { caller, storage } = services;
   return Effect.gen(function* callTrigger() {
@@ -107,13 +159,22 @@ function callMade(
     }
     const base = yield* boardUrl;
     const text = textFor(base, message);
-    return yield* caller.call({ headers: trigger.headers ?? [], text, token: trigger.token, url: trigger.url }).pipe(
-      Effect.timeoutOrElse({ duration: Duration.seconds(TIMEOUT_SECONDS), orElse: () => Effect.fail(TIMED_OUT) }),
-      Effect.match({
-        onFailure: (error): TriggerResult => ({ at, error, ok: false }),
-        onSuccess: (answered) => resultOf(at, trigger, answered),
-      }),
-    );
+    const wake = {
+      author: message.author.name,
+      channel: message.channel,
+      message: message.id,
+      reason,
+      thread: threadOf(message),
+    };
+    return yield* caller
+      .call({ headers: trigger.headers ?? [], text, token: trigger.token, url: trigger.url, wake })
+      .pipe(
+        Effect.timeoutOrElse({ duration: Duration.seconds(TIMEOUT_SECONDS), orElse: () => Effect.fail(TIMED_OUT) }),
+        Effect.match({
+          onFailure: (error): TriggerResult => ({ at, error, ok: false }),
+          onSuccess: (answered) => resultOf(at, trigger, answered),
+        }),
+      );
   });
 }
 

@@ -1,14 +1,25 @@
 import { Array as Arr, Context, Effect, Function as Fn, Layer, Record, Schema } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http";
-import type { TriggerHeader, TriggerToken } from "../../index.ts";
+import type { RouterAsk, RouterCallerService, RouterPick } from "../../../channels/server.ts";
+import type { TriggerHeader, TriggerToken, WakeReason } from "../../index.ts";
+import { RouterCaller } from "../../../channels/server.ts";
 import type { TriggerAnswer } from "./answer.ts";
 import { isOkStatus } from "../../index.ts";
+
+interface TriggerWake {
+  readonly channel: string;
+  readonly thread: number;
+  readonly message: number;
+  readonly reason: WakeReason;
+  readonly author: string;
+}
 
 interface TriggerCall {
   readonly url: string;
   readonly token: TriggerToken;
   readonly headers: readonly TriggerHeader[];
   readonly text: string;
+  readonly wake: TriggerWake;
 }
 
 interface TriggerCallerService {
@@ -38,12 +49,12 @@ function answerOf(response: HttpClientResponse.HttpClientResponse): Effect.Effec
   return Effect.map(messageOf(response), (message) => ({ message, status }));
 }
 
-function requestOf({ headers, text, token, url }: TriggerCall): HttpClientRequest.HttpClientRequest {
+function requestOf({ headers, text, token, url, wake }: TriggerCall): HttpClientRequest.HttpClientRequest {
   const extra = Record.fromEntries(Arr.map(headers, ({ name, value }) => [name, value] as const));
   return HttpClientRequest.post(url).pipe(
     HttpClientRequest.setHeaders(extra),
     HttpClientRequest.setHeader("authorization", `Bearer ${token}`),
-    HttpClientRequest.bodyJsonUnsafe({ text }),
+    HttpClientRequest.bodyJsonUnsafe({ ...wake, text }),
   );
 }
 
@@ -58,13 +69,47 @@ function callerOn(client: HttpClient.HttpClient): TriggerCallerService {
   };
 }
 
+const Pick = Schema.Struct({ confidence: Schema.optionalKey(Schema.Finite), name: Schema.String });
+const Picks = Schema.Struct({ agents: Schema.Array(Pick) });
+
+function picksOf(response: HttpClientResponse.HttpClientResponse): Effect.Effect<readonly RouterPick[], string> {
+  if (!isOkStatus(response.status)) {
+    return Effect.fail(`the router answered ${String(response.status)}`);
+  }
+  return HttpClientResponse.schemaBodyJson(Picks)(response).pipe(
+    Effect.mapBoth({
+      onFailure: () => "the router's answer wasn't { agents: [{ name }] }",
+      onSuccess: ({ agents }) => agents,
+    }),
+  );
+}
+
+function routerRequestOf({ body, signature, url }: RouterAsk): HttpClientRequest.HttpClientRequest {
+  return HttpClientRequest.post(url).pipe(
+    HttpClientRequest.setHeader("cookout-signature", signature),
+    HttpClientRequest.bodyText(body, "application/json"),
+  );
+}
+
+function routerOn(client: HttpClient.HttpClient): RouterCallerService {
+  return {
+    ask: (ask) =>
+      client.execute(routerRequestOf(ask)).pipe(
+        Effect.mapError(() => "the router couldn't be reached"),
+        Effect.flatMap(picksOf),
+        Effect.provideService(HttpClient.TracerPropagationEnabled, false),
+      ),
+  };
+}
+
 const neverRedirected = FetchHttpClient.layer.pipe(
   Layer.provide(Layer.succeed(FetchHttpClient.RequestInit, { redirect: "manual" })),
 );
 
-const triggerCallerLive: Layer.Layer<TriggerCaller> = Layer.effect(
-  TriggerCaller,
-  Effect.map(HttpClient.HttpClient, callerOn),
+const triggerCallerLive: Layer.Layer<TriggerCaller | RouterCaller> = Layer.effectContext(
+  Effect.map(HttpClient.HttpClient, (client) =>
+    Context.make(TriggerCaller, callerOn(client)).pipe(Context.add(RouterCaller, routerOn(client))),
+  ),
 ).pipe(Layer.provide(neverRedirected));
 
-export { type TriggerCall, TriggerCaller, type TriggerCallerService, triggerCallerLive };
+export { type TriggerCall, TriggerCaller, type TriggerCallerService, type TriggerWake, triggerCallerLive };
