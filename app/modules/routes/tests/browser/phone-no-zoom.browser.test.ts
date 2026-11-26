@@ -13,6 +13,7 @@ const FIELDS = 'input:not([type="hidden"]), textarea, select, [contenteditable]'
 interface Field {
   readonly field: string;
   readonly fontSize: number;
+  readonly scrolled: number;
 }
 
 interface Measured {
@@ -23,6 +24,7 @@ interface Measured {
 interface Shown {
   readonly field: string;
   readonly fontSize: string;
+  readonly scrolled: number;
 }
 
 function fieldSizes(selector: string): Shown[] {
@@ -30,14 +32,22 @@ function fieldSizes(selector: string): Shown[] {
   for (const element of globalThis.document.querySelectorAll(selector)) {
     const name = element.getAttribute("aria-label") ?? element.getAttribute("name") ?? "";
     const { fontSize } = globalThis.getComputedStyle(element);
-    sizes.push({ field: `${element.tagName.toLowerCase()} ${name}`, fontSize });
+    if (element instanceof HTMLElement) {
+      element.focus();
+      element.blur();
+    }
+    sizes.push({ field: `${element.tagName.toLowerCase()} ${name}`, fontSize, scrolled: globalThis.scrollY });
   }
   return sizes;
 }
 
 async function measured(page: Page, screen: string): Promise<Measured> {
   const shown = await page.evaluate(fieldSizes, FIELDS);
-  const fields = shown.map(({ field, fontSize }) => ({ field, fontSize: Number(fontSize.replace(PX, "")) }));
+  const fields = shown.map(({ field, fontSize, scrolled }) => ({
+    field,
+    fontSize: Number(fontSize.replace(PX, "")),
+    scrolled,
+  }));
   return { fields, screen };
 }
 
@@ -109,13 +119,19 @@ async function everyScreen(page: Page): Promise<readonly Measured[]> {
 
 test.use(PHONE_USE);
 
-test("on a phone no text field on any screen is under 16 px, so none zooms the page when tapped", async ({ page }) => {
+test("on a phone no text field on any screen is under 16 px or scrolls the page when it takes focus", async ({
+  page,
+}) => {
   const screens = await everyScreen(page);
   const small = screens.flatMap(({ fields, screen }) =>
     fields.filter(({ fontSize }) => fontSize < SMALLEST_UNZOOMED_PX).map(({ field }) => `${screen}: ${field}`),
   );
+  const scrolling = screens.flatMap(({ fields, screen }) =>
+    fields.filter(({ scrolled }) => scrolled !== NONE).map(({ field }) => `${screen}: ${field}`),
+  );
   const withoutFields = screens.filter(({ fields }) => fields.length === NONE).map(({ screen }) => screen);
 
   expect(small).toStrictEqual([]);
+  expect(scrolling).toStrictEqual([]);
   expect(withoutFields).toStrictEqual([]);
 });
