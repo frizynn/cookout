@@ -74,6 +74,10 @@ async function tabbedIntoSidebar(page: Page): Promise<void> {
   await inSidebar(page).getByRole("button", { exact: true, name: "Collapse sidebar" }).focus();
   await page.keyboard.press("Tab");
 
+  await expect(inSidebar(page).getByRole("combobox", { exact: true, name: "Search" })).toBeFocused();
+
+  await page.keyboard.press("Tab");
+
   await expect(sidebarLink({ label: "Inbox", page })).toBeFocused();
 
   await page.keyboard.press("ArrowDown");

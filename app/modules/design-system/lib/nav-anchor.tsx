@@ -1,4 +1,3 @@
-import { NavLabel } from "./nav-label.tsx";
 import type { NavLinkParts } from "./parts.ts";
 import type { ReactNode } from "react";
 
@@ -59,9 +58,7 @@ export function NavAnchor(parts: NavAnchorParts): ReactNode {
       <span aria-hidden="true" className="flex w-4 justify-center text-muted-foreground">
         {ICONS[link.icon]}
       </span>
-      <span className={`flex-1 truncate ${textStyle(link)}`}>
-        <NavLabel label={link.label} />
-      </span>
+      <span className={`flex-1 truncate ${textStyle(link)}`}>{link.label}</span>
       {link.children}
     </a>
   );
