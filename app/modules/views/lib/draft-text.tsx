@@ -1,7 +1,8 @@
 import { Suggestions, TextArea } from "../../design-system/controls.tsx";
-import { useId, useSyncExternalStore } from "react";
+import { useId, useMemo, useSyncExternalStore } from "react";
 import type { Draft } from "../../composer/index.ts";
 import type { ReactNode } from "react";
+import { mentionMarks } from "./draft-marks.ts";
 import { useSuggestions } from "./use-suggestions.ts";
 
 const NONE = 0;
@@ -22,6 +23,7 @@ export function DraftText(props: DraftTextProps): ReactNode {
   const choosing = shown.options.length > NONE;
   const handleChoose = shown.onChoose;
   const list = useId();
+  const marks = useMemo(() => mentionMarks(written.text), [written.text]);
   return (
     <>
       <TextArea
@@ -32,6 +34,7 @@ export function DraftText(props: DraftTextProps): ReactNode {
         highlighted={written.highlighted}
         label={props.label}
         list={list}
+        marks={marks}
         name="text"
         onClose={handleClose}
         onEdit={handleEdit}

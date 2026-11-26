@@ -36,4 +36,5 @@ export { FilterField } from "./filter-field.tsx";
 export { ComboboxField } from "./combobox-field.tsx";
 export { SearchIcon } from "./search-icon.tsx";
 export { Listbox, type ListboxGroup, type ListboxOption } from "./listbox.tsx";
+export type { TextRange } from "./text-range.ts";
 export { ResultOption } from "./result-option.tsx";

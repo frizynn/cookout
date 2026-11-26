@@ -8,6 +8,7 @@
  *   every count badge of what is for the reader (bar, with ink text), and the warning dot of an agent the reader owns
  *   that went offline unexpectedly (bar: a ring with a dot in its middle).
  * - unread: the New line in a channel or thread, and nothing else.
+ * - draft-mention: an @name being written in the message box (a faint tint with a line under it), and nothing else.
  * - link: the focus ring only. Links, chips, statuses and other people's @names are neutral.
  * - foreground, muted-foreground: text; bold foreground is activity (unread, not for the reader).
  * - destructive: errors.
@@ -33,6 +34,7 @@
   --color-mention-ink: #1f1300;
   --color-unread: #ff6166;
   --color-link: #52a8ff;
+  --color-draft-mention: #52a8ff;
   --color-online: #3ecf71;
   --color-hover: rgb(255 255 255 / 0.035);
   --color-surface: #0f0f0f;
@@ -102,6 +104,7 @@
   --color-mention-fg: #8a5300;
   --color-unread: #e5484d;
   --color-link: #0068d6;
+  --color-draft-mention: #0068d6;
   --color-online: #1f9d4c;
   --color-hover: rgb(0 0 0 / 0.025);
   --color-surface: #ffffff;
@@ -125,6 +128,8 @@
     --color-mention-fg: #8a5300;
     --color-unread: #e5484d;
     --color-link: #0068d6;
+    --color-draft-mention: #0068d6;
+    --color-draft-mention: #0068d6;
     --color-online: #1f9d4c;
     --color-hover: rgb(0 0 0 / 0.025);
     --color-surface: #ffffff;

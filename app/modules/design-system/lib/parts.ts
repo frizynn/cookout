@@ -2,6 +2,7 @@ import type { AvatarParts, PresenceShown } from "./avatar-parts.ts";
 import type { ActionMenuParts } from "./menu-parts.ts";
 import type { PanelEdgeParts } from "./panel-edge-parts.ts";
 import type { ReactNode } from "react";
+import type { TextRange } from "./text-range.ts";
 
 interface Parts {
   readonly children: ReactNode;
@@ -49,6 +50,7 @@ interface DataAreaParts extends FieldParts {
 
 interface TextAreaParts extends FieldParts {
   readonly value: string;
+  readonly marks: readonly TextRange[];
   readonly caret: number;
   readonly onEdit: (text: string, caret: number) => void;
   readonly choosing: boolean;

@@ -1,5 +1,6 @@
 import type { ClipboardEvent, ReactNode } from "react";
 import { useCallback, useId } from "react";
+import { BoxMirror } from "./box-mirror.tsx";
 import type { TextAreaParts } from "./parts.ts";
 import { comboboxOf } from "./combobox.ts";
 import { useBoxKeys } from "./box-keys.ts";
@@ -50,24 +51,27 @@ export function TextArea(parts: TextAreaParts): ReactNode {
   return (
     <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
       <label htmlFor={id}>{parts.label}</label>
-      <textarea
-        aria-activedescendant={combobox.activeOption}
-        aria-autocomplete={combobox.autocomplete}
-        aria-controls={combobox.list}
-        aria-expanded={combobox.expanded}
-        className="rounded-md border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-muted-foreground"
-        id={id}
-        name={parts.name}
-        onChange={handleEdit}
-        onKeyDown={handleKeyDown}
-        onPaste={handlePaste}
-        onSelect={handleEdit}
-        ref={box}
-        required={parts.required}
-        role={combobox.role}
-        rows={ROWS}
-        value={value}
-      />
+      <div className="relative flex flex-col">
+        <BoxMirror marks={parts.marks} value={value} />
+        <textarea
+          aria-activedescendant={combobox.activeOption}
+          aria-autocomplete={combobox.autocomplete}
+          aria-controls={combobox.list}
+          aria-expanded={combobox.expanded}
+          className="relative rounded-md border bg-transparent px-3 py-2 text-sm text-foreground outline-none focus:border-muted-foreground"
+          id={id}
+          name={parts.name}
+          onChange={handleEdit}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          onSelect={handleEdit}
+          ref={box}
+          required={parts.required}
+          role={combobox.role}
+          rows={ROWS}
+          value={value}
+        />
+      </div>
     </div>
   );
 }
