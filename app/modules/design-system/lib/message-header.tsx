@@ -8,7 +8,7 @@ const AGENT = "agent";
 export function MessageHeader(parts: MessageHeaderParts): ReactNode {
   const { time } = parts;
   return (
-    <header className="flex items-baseline gap-2">
+    <header className="flex flex-wrap items-baseline gap-x-2">
       <HeaderName displayName={parts.displayName} name={parts.name} nameHref={parts.nameHref} />
       {parts.displayName !== null && <span className="text-xs text-muted-foreground">{`@${parts.name}`}</span>}
       {parts.note !== null && <span className="text-xs text-muted-foreground">{parts.note}</span>}
