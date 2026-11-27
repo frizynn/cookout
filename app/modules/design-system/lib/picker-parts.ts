@@ -1,6 +1,6 @@
 import type { CalendarDay, CalendarMonth, CalendarWeek } from "../../format/index.ts";
+import type { FieldIds, PromptFieldParts } from "./prompt-parts.ts";
 import type { KeyboardEvent, ReactNode } from "react";
-import type { FieldIds } from "./prompt-parts.ts";
 
 type PickerKind = "date" | "time";
 
@@ -72,7 +72,40 @@ interface TimeOptionParts {
   readonly onKey: (event: KeyboardEvent<HTMLButtonElement>) => void;
 }
 
+interface AgentChoice {
+  readonly name: string;
+  readonly displayName: string | null;
+}
+
+interface AgentFieldParts extends PromptFieldParts {
+  readonly agents: readonly AgentChoice[];
+  readonly value: string;
+  readonly onEdit: (name: string) => void;
+}
+
+interface AgentFaceParts {
+  readonly agent: AgentChoice | null;
+}
+
+interface AgentOptionParts {
+  readonly agent: AgentChoice | null;
+  readonly selected: boolean;
+  readonly onPick: (name: string) => void;
+  readonly onKey: (event: KeyboardEvent<HTMLButtonElement>) => void;
+}
+
+interface AgentListParts {
+  readonly agents: readonly AgentChoice[];
+  readonly selected: string;
+  readonly onPick: (name: string) => void;
+}
+
 export type {
+  AgentChoice,
+  AgentFaceParts,
+  AgentFieldParts,
+  AgentListParts,
+  AgentOptionParts,
   CalendarCellParts,
   CalendarHeaderParts,
   CalendarMarks,

@@ -1,4 +1,5 @@
-import { InputField, PickField } from "../../design-system/controls.tsx";
+import { AgentField, InputField } from "../../design-system/controls.tsx";
+import type { AgentChoice } from "../../design-system/controls.tsx";
 import type { ChannelSettings } from "./use-channel-settings.ts";
 import { FallbackWakeFields } from "./fallback-wake-fields.tsx";
 import type { Identity } from "../../sdk/index.ts";
@@ -18,33 +19,33 @@ interface ChannelRoutingFieldsProps {
   readonly settings: ChannelSettings;
 }
 
-function agentNames(identities: readonly Identity[]): readonly string[] {
+function agentsOf(identities: readonly Identity[]): readonly AgentChoice[] {
   return identities
     .filter((identity) => identity.kind === "agent" && identity.deactivated !== true)
-    .map((identity) => identity.name);
+    .map((identity) => ({ displayName: identity.displayName ?? null, name: identity.name }));
 }
 
-function withHeld(agents: readonly string[], held: string): readonly string[] {
-  if (held === "" || agents.includes(held)) {
+function withHeld(agents: readonly AgentChoice[], held: string): readonly AgentChoice[] {
+  if (held === "" || agents.some((agent) => agent.name === held)) {
     return agents;
   }
-  return [...agents, held];
+  return [...agents, { displayName: null, name: held }];
 }
 
 export function ChannelRoutingFields(props: ChannelRoutingFieldsProps): ReactNode {
   const { settings } = props;
-  const agents = agentNames(props.identities);
+  const agents = agentsOf(props.identities);
   const handleOwner = settings.editOwner;
   const handleRouter = settings.editRouter;
   const handleFallback = settings.editFallback;
   return (
     <>
-      <PickField
+      <AgentField
+        agents={withHeld(agents, settings.fields.owner)}
         error={null}
         help={TEXT.ownerHelp}
         label={TEXT.owner}
         onEdit={handleOwner}
-        options={withHeld(agents, settings.fields.owner)}
         required={false}
         value={settings.fields.owner}
       />
@@ -57,12 +58,12 @@ export function ChannelRoutingFields(props: ChannelRoutingFieldsProps): ReactNod
         required={false}
         value={settings.fields.router}
       />
-      <PickField
+      <AgentField
+        agents={withHeld(agents, settings.fields.fallback)}
         error={null}
         help={TEXT.fallbackHelp}
         label={TEXT.fallback}
         onEdit={handleFallback}
-        options={withHeld(agents, settings.fields.fallback)}
         required={false}
         value={settings.fields.fallback}
       />

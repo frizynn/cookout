@@ -22,6 +22,8 @@ export { InputField } from "./input-field.tsx";
 export { DividerButton } from "./divider-button.tsx";
 export { PressButton } from "./press-button.tsx";
 export { PickField } from "./pick-field.tsx";
+export { AgentField } from "./agent-field.tsx";
+export type { AgentChoice } from "./picker-parts.ts";
 export { PromptForm } from "./prompt-form.tsx";
 export { Suggestions } from "./suggestions.tsx";
 export { SendButton } from "./send-button.tsx";

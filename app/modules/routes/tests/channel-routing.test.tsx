@@ -1,6 +1,6 @@
-import { adminClient, newIdentity } from "./identities.ts";
+import { adminClient, agentShown, newIdentity } from "./identities.ts";
 import { expect, it } from "vitest";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { inFormDialog as inDialog, inPane, inSettings } from "./regions.ts";
 import { defaultBoardLimits } from "../../channels/index.ts";
 import { openAt } from "./render.tsx";
@@ -12,13 +12,20 @@ async function openSettings(channel: string): Promise<() => void> {
   return close;
 }
 
+async function pickOwner(agent: string): Promise<void> {
+  fireEvent.click(inDialog().getByRole("button", { name: "Owner: No one" }));
+  const list = await screen.findByRole("dialog", { name: "Owner" });
+  fireEvent.click(within(list).getByRole("button", { name: agentShown(agent) }));
+  await inDialog().findByRole("button", { name: `Owner: ${agent}` });
+}
+
 it("an admin picks a channel's owner in its settings, and the header names it", { timeout: 5000 }, async () => {
   expect.hasAssertions();
 
   await newIdentity({ kind: "agent", name: "web-route-owner-bot" });
   await adminClient().createChannel({ name: "web-route-owner" });
   const close = await openSettings("web-route-owner");
-  fireEvent.change(inDialog().getByRole("combobox", { name: "Owner" }), { target: { value: "web-route-owner-bot" } });
+  await pickOwner("web-route-owner-bot");
   fireEvent.click(inDialog().getByRole("button", { name: "Save" }));
   await inPane().findByText("Owner @web-route-owner-bot");
   const { channel } = await adminClient().getChannel("web-route-owner");
@@ -57,7 +64,7 @@ it("a refused routing shows why, and the settings stay open", { timeout: 5000 },
   await newIdentity({ kind: "agent", name: "web-route-both-bot" });
   await adminClient().createChannel({ name: "web-route-both" });
   const close = await openSettings("web-route-both");
-  fireEvent.change(inDialog().getByRole("combobox", { name: "Owner" }), { target: { value: "web-route-both-bot" } });
+  await pickOwner("web-route-both-bot");
   fireEvent.change(inDialog().getByRole("textbox", { name: "Router URL" }), {
     target: { value: "https://router.example/route" },
   });
