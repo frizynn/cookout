@@ -239,7 +239,7 @@ interface ShownTimeParts {
   readonly iso: string;
   readonly full: string;
   readonly shown: string;
-  readonly hidden: boolean;
+  readonly inGutter: boolean;
   readonly receipt: string | null;
 }
 

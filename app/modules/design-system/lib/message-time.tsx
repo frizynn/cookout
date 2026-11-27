@@ -4,9 +4,9 @@ import { Tooltip } from "./tooltip.tsx";
 
 const FOCUSABLE = 0;
 
-function shownClass(hidden: boolean): string {
-  if (hidden) {
-    return "invisible pt-1 text-[10px] group-focus-within:visible group-hover:visible";
+function shownClass(inGutter: boolean): string {
+  if (inGutter) {
+    return "pt-1 text-[10px]";
   }
   return "text-[11px]";
 }
@@ -22,7 +22,7 @@ export function MessageTime(parts: ShownTimeParts): ReactNode {
   return (
     <Tooltip lines={linesOf(parts)}>
       <time
-        className={`shrink-0 rounded-sm whitespace-nowrap tabular-nums text-muted-foreground ${shownClass(parts.hidden)}`}
+        className={`shrink-0 rounded-sm whitespace-nowrap tabular-nums text-muted-foreground ${shownClass(parts.inGutter)}`}
         dateTime={parts.iso}
         tabIndex={FOCUSABLE}
       >

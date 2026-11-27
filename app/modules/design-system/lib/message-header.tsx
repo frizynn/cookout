@@ -30,7 +30,7 @@ export function MessageHeader(parts: MessageHeaderParts): ReactNode {
       )}
       <MessageTime
         full={time.full}
-        hidden={false}
+        inGutter={false}
         iso={time.iso}
         receipt={time.receipt}
         shown={shownOf(time, narrow)}

@@ -14,7 +14,7 @@ export function MessageLayout(parts: MessageLayoutParts): ReactNode {
     <>
       <div className="flex w-9 shrink-0 justify-center">
         {parts.grouped && (
-          <MessageTime full={time.full} hidden iso={time.iso} receipt={time.receipt} shown={time.short} />
+          <MessageTime full={time.full} inGutter iso={time.iso} receipt={time.receipt} shown={time.short} />
         )}
         {!parts.grouped && <Avatar agent={parts.agent} name={parts.name} presence={parts.presence} />}
       </div>

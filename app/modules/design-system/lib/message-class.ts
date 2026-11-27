@@ -9,7 +9,7 @@ const MARKS: Readonly<Record<MessageItemParts["mark"], string>> = {
 
 function spacingOf(grouped: boolean): string {
   if (grouped) {
-    return "py-0.5";
+    return "pt-3 pb-0.5";
   }
   return "pt-2.5 pb-1";
 }
